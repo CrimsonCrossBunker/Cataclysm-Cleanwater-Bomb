@@ -2063,6 +2063,13 @@ bool Item_factory::has_iuse( const item_action_id &type )
     return iuse_function_list.find( type ) != iuse_function_list.end();
 }
 
+bool Item_factory::has_parameterless_iuse( const item_action_id &type )
+{
+    const auto it = iuse_function_list.find( type );
+    return it != iuse_function_list.end() &&
+           dynamic_cast<const iuse_function_wrapper *>( it->second.get_actor_ptr() ) != nullptr;
+}
+
 void Item_factory::add_iuse( const std::string &type, const use_function_pointer f )
 {
     iuse_function_list[ type ] = use_function( type, f );

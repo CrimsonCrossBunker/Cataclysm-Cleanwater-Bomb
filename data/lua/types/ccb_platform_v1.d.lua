@@ -711,6 +711,17 @@ local ModDefinition = {}
 ---@field variant_kind? 'generic'|'gun'|'drug' Selects the category of the native item-variant option.
 ---@field melee_to_hit? integer Native melee accuracy modifier.
 ---@field electronic_size_kb? integer Native electronic file size in kilobytes.
+---@field stackable? boolean Whether identical items combine into a stack.
+---@field stack_size? integer Positive number of units represented by the item's volume.
+---@field light? integer Native light emission.
+---@field max_worn? integer Native per-type wear limit.
+---@field insulation? number Native item insulation factor.
+---@field display_type? 'DEFAULT'|'BY_WEIGHT'|'BY_VOLUME'|'BY_LENGTH' Native presentation units.
+---@field expand_snippets? boolean Expand description snippet tags when the item is created.
+---@field techniques? string[] Replace the item's martial technique list.
+---@field weapon_categories? string[] Replace the item's weapon categories.
+---@field replace_qualities? boolean Clear inherited tool qualities before applying staged qualities.
+---@field replace_pockets? boolean Clear inherited pockets before applying staged pockets.
 ---@field default_container? string Default package item id; `null` explicitly disables inherited packaging.
 ---@field mass_grams? integer Non-negative mass in grams.
 ---@field mass_milligrams? integer Non-negative native signed-64-bit mass in milligrams; cannot be combined with mass_grams in one constructor.
@@ -769,8 +780,9 @@ function ItemDefinition:material(id, portions) end
 
 ---@param id string
 ---@param level integer
+---@param speed? number Positive native quality speed multiplier. Defaults to one.
 ---@return ItemDefinition self
-function ItemDefinition:quality(id, level) end
+function ItemDefinition:quality(id, level, speed) end
 
 ---@param id string
 ---@return ItemDefinition self
@@ -883,13 +895,26 @@ function ItemDefinition:armor_portion(options) end
 ---@field max_volume_ml integer Native container capacity in milliliters.
 ---@field max_weight_milligrams integer Native container capacity in milligrams.
 ---@field max_item_length_mm? integer Longest accepted item; defaults to the native volume-derived length.
+---@field min_item_length_mm? integer Shortest accepted item.
+---@field max_item_volume_ml? integer Maximum volume of an individual item.
+---@field min_item_volume_ml? integer Minimum volume of an individual item.
+---@field magazine_well_ml? integer Contents volume that does not enlarge an expanding pocket.
 ---@field moves? integer Item retrieval cost; defaults to 100 moves.
 ---@field rigid? boolean Contents do not expand the item's volume; defaults to false.
 ---@field watertight? boolean The pocket can contain liquids; defaults to false.
+---@field airtight? boolean The pocket can contain gas; defaults to false.
+---@field open_container? boolean The pocket spills when nested or tipped.
+---@field transparent? boolean The contents are visible.
+---@field fire_protection? boolean Protects contents from exploding in fire.
 ---@field holster? boolean The pocket holds at most one item; defaults to false.
 ---@field weight_multiplier? number Contents weight multiplier; defaults to one.
+---@field volume_multiplier? number Contents volume multiplier; defaults to one.
 ---@field volume_encumber_modifier? number Encumbrance multiplier due to contents; defaults to one.
+---@field spoil_multiplier? number Contents spoilage multiplier; defaults to one.
+---@field insulation? number Contents insulation multiplier; defaults to one.
+---@field sealed_spoil_multiplier? number Makes the pocket sealable and sets the sealed spoilage multiplier.
 ---@field allowed_items? string[] When supplied, only these item IDs are accepted.
+---@field allowed_flags? string[] When supplied, accepts items with any listed flag.
 
 ---Append an ordinary native storage pocket. Existing pockets keep their order.
 ---@param options ItemContainerPocketOptions
@@ -900,6 +925,27 @@ function ItemDefinition:container_pocket(options) end
 ---@param furniture_id string Native furniture id.
 ---@return ItemDefinition self
 function ItemDefinition:deploy_furniture(furniture_id) end
+
+---Install native appliance deployment using the given appliance base item.
+---@param base_item string Item ID used by the native appliance deployment action.
+---@return ItemDefinition self
+function ItemDefinition:deploy_appliance(base_item) end
+
+---@class ItemMapRevealOptions
+---@field radius integer Native overmap terrain search radius.
+---@field atlas_jurisdiction? string Native geographic atlas jurisdiction code.
+---@field terrains? { id: string, match: 'EXACT'|'TYPE'|'SUBTYPE'|'PREFIX'|'CONTAINS'|nil }[] Ordered overmap terrain queries. Match defaults to CONTAINS.
+---@field message? string|LocalizedText Message displayed after revealing.
+
+---Install the native map use action with its ordinary vision and prior-use rules.
+---@param options ItemMapRevealOptions
+---@return ItemDefinition self
+function ItemDefinition:reveal_map(options) end
+
+---Attach a registered native item action that requires no per-item configuration.
+---@param action string Native action ID.
+---@return ItemDefinition self
+function ItemDefinition:native_use(action) end
 
 ---Install the native capture and release action with a maximum creature size.
 ---@param max_size 'TINY'|'SMALL'|'MEDIUM'|'LARGE'|'HUGE'
@@ -948,7 +994,7 @@ function ItemDefinition:teach_spells(spells) end
 ---@return ItemDefinition self
 function ItemDefinition:martial_arts_manual() end
 
----Remove inherited native activation actions and staged on_use, teach_spells and martial_arts_manual.
+---Remove inherited native activation actions and staged on_use, native_use, reveal_map, deploy_appliance, teach_spells and martial_arts_manual.
 ---Call on_use afterwards to install a replacement action. Consumption hooks are independent.
 ---@return ItemDefinition self
 function ItemDefinition:clear_use_actions() end

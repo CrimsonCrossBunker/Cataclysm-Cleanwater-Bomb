@@ -60,6 +60,7 @@ extern "C" {
 #include "debug.h"
 #include "effect.h"
 #include "enum_conversions.h"
+#include "enums.h"
 #include "flag.h"
 #include "generic_factory.h"
 #include "init.h"
@@ -159,6 +160,7 @@ struct material_part {
 struct quality_level {
     std::string id;
     std::int64_t level = 1;
+    float speed = 1.0f;
 };
 
 struct item_definition_data {
@@ -242,6 +244,12 @@ struct item_definition_data {
         bool append = false;
         bool expand_snippets = false;
     };
+    struct map_reveal {
+        std::int64_t radius = 0;
+        std::string atlas_jurisdiction;
+        std::vector<std::pair<std::string, ot_match_type>> terrains;
+        authored_text message;
+    };
     std::string id;
     std::string copy_from;
     bool is_abstract = false;
@@ -266,6 +274,15 @@ struct item_definition_data {
     std::optional<std::vector<item_variant>> variants;
     std::optional<std::int64_t> melee_to_hit;
     std::optional<std::int64_t> electronic_size_kb;
+    std::optional<bool> stackable;
+    std::optional<std::int64_t> stack_size;
+    std::optional<std::int64_t> light;
+    std::optional<std::int64_t> max_worn;
+    std::optional<double> insulation;
+    std::optional<bool> expand_snippets;
+    std::optional<item_display_type> display_type;
+    std::optional<std::vector<std::string>> techniques;
+    std::optional<std::vector<std::string>> weapon_categories;
     bool has_name = false;
     bool has_description = false;
     bool has_symbol = false;
@@ -278,6 +295,7 @@ struct item_definition_data {
     bool has_looks_like = false;
     std::vector<material_part> materials;
     std::vector<quality_level> qualities;
+    bool replace_qualities = false;
     std::set<std::string> flags;
     bool clear_flags = false;
     std::map<std::string, double> melee_damage;
@@ -292,11 +310,15 @@ struct item_definition_data {
     std::optional<tool_data> tool;
     std::vector<magazine_well_data> magazine_wells;
     std::vector<pocket_data> container_pockets;
+    bool replace_pockets = false;
     std::optional<armor_data> armor;
     std::vector<armor_portion_definition> armor_portions;
     std::map<std::string, std::int64_t> ammo_pocket;
     std::vector<std::string> passive_enchantments;
     std::string deploy_furniture;
+    std::string deploy_appliance;
+    std::optional<map_reveal> reveal_map;
+    std::set<std::string> native_use_actions;
     std::string capture_size;
     std::optional<healing_data> healing;
     std::optional<activation_data> activation;
@@ -1078,12 +1100,17 @@ struct item_definition_handle {
         return *this;
     }
 
-    item_definition_handle &quality( const std::string &id, std::int64_t level ) {
+    item_definition_handle &quality( const std::string &id, std::int64_t level,
+                                     const sol::optional<double> &speed ) {
         require_building_handle( token, *definition, "item" );
-        if( id.empty() || level <= 0 || level > std::numeric_limits<int>::max() ) {
-            throw std::runtime_error( "item quality requires a non-empty id and positive level" );
+        const double selected_speed = speed.value_or( 1.0 );
+        if( id.empty() || level < std::numeric_limits<int>::min() ||
+            level > std::numeric_limits<int>::max() || !std::isfinite( selected_speed ) ||
+            selected_speed <= 0.0 || selected_speed > std::numeric_limits<float>::max() ||
+            static_cast<float>( selected_speed ) == 0.0f ) {
+            throw std::runtime_error( "item quality requires an id, native level and positive speed" );
         }
-        definition->qualities.push_back( { id, level } );
+        definition->qualities.push_back( { id, level, static_cast<float>( selected_speed ) } );
         return *this;
     }
 
@@ -1313,6 +1340,10 @@ struct item_definition_handle {
         const std::int64_t moves = options.get_or<std::int64_t>( "moves", 100 );
         const double weight_multiplier = options.get_or( "weight_multiplier", 1.0 );
         const double encumbrance_multiplier = options.get_or( "volume_encumber_modifier", 1.0 );
+        const double spoil_multiplier = options.get_or( "spoil_multiplier", 1.0 );
+        const double volume_multiplier = options.get_or( "volume_multiplier", 1.0 );
+        const double insulation = options.get_or( "insulation", 1.0 );
+        const auto sealed_spoil = options.get<sol::optional<double>>( "sealed_spoil_multiplier" );
         const auto nonnegative_int = []( const std::int64_t value ) {
             return value >= 0 && value <= std::numeric_limits<int>::max();
         };
@@ -1321,21 +1352,56 @@ struct item_definition_handle {
         };
         if( !nonnegative_int( volume ) || mass < 0 || ( length && !nonnegative_int( *length ) ) ||
             !nonnegative_int( moves ) || !nonnegative_float( weight_multiplier ) ||
-            !nonnegative_float( encumbrance_multiplier ) ) {
+            !nonnegative_float( encumbrance_multiplier ) || !nonnegative_float( spoil_multiplier ) ||
+            !nonnegative_float( volume_multiplier ) || !nonnegative_float( insulation ) ||
+            ( sealed_spoil && !nonnegative_float( *sealed_spoil ) ) ) {
             throw std::invalid_argument( "item container pocket has an invalid capacity, cost or multiplier" );
         }
+        const auto size_option = [&options, &nonnegative_int]( const char *field ) -> std::optional<int> {
+            if( const auto size = options.get<sol::optional<std::int64_t>>( field ) ) {
+                if( !nonnegative_int( *size ) ) {
+                    throw std::invalid_argument( std::string( "invalid item container pocket " ) + field );
+                }
+                return static_cast<int>( *size );
+            }
+            return std::nullopt;
+        };
         pocket_data pocket;
         pocket.was_loaded = true;
         pocket.raw_volume_capacity = units::from_milliliter( static_cast<int>( volume ) );
         pocket.max_contains_weight = units::from_milligram( mass );
         pocket.max_item_length = length ? units::from_millimeter( static_cast<int>( *length ) ) :
                                  units::default_length_from_volume( pocket.raw_volume_capacity ) * M_SQRT2;
+        if( const auto item_volume = size_option( "max_item_volume_ml" ) ) {
+            pocket.max_item_volume = units::from_milliliter( *item_volume );
+        }
+        pocket.min_item_volume = units::from_milliliter( size_option( "min_item_volume_ml" ).value_or( 0 ) );
+        pocket.min_item_length = units::from_millimeter( size_option( "min_item_length_mm" ).value_or( 0 ) );
+        pocket.magazine_well = units::from_milliliter( size_option( "magazine_well_ml" ).value_or( 0 ) );
         pocket.moves = static_cast<int>( moves );
         pocket.weight_multiplier = static_cast<float>( weight_multiplier );
         pocket.volume_encumber_modifier = static_cast<float>( encumbrance_multiplier );
+        pocket.spoil_multiplier = static_cast<float>( spoil_multiplier );
+        pocket.volume_multiplier = static_cast<float>( volume_multiplier );
+        pocket.insulation = static_cast<float>( insulation );
+        if( sealed_spoil ) {
+            pocket.sealed_data = cata::make_value<sealable_data>();
+            pocket.sealed_data->spoil_multiplier = static_cast<float>( *sealed_spoil );
+            pocket.sealed_data->was_loaded = true;
+        }
         pocket.watertight = options.get_or( "watertight", false );
+        pocket.airtight = options.get_or( "airtight", false );
+        pocket.open_container = options.get_or( "open_container", false );
+        pocket.transparent = options.get_or( "transparent", false );
+        pocket.fire_protection = options.get_or( "fire_protection", false );
         pocket.rigid = options.get_or( "rigid", false );
         pocket.holster = options.get_or( "holster", false );
+        if( const auto flags = options.get<sol::optional<sol::table>>( "allowed_flags" ) ) {
+            const std::size_t count = require_dense_array( *flags, "container pocket allowed flags", 0 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                pocket.add_flag_restriction( flag_id( flags->raw_get<std::string>( index ) ) );
+            }
+        }
         if( const auto restriction = options.get<sol::optional<sol::table>>( "allowed_items" ) ) {
             const std::size_t count = require_dense_array( *restriction, "container pocket allowed items", 1 );
             for( std::size_t index = 1; index <= count; ++index ) {
@@ -1356,6 +1422,42 @@ struct item_definition_handle {
             throw std::invalid_argument( "item deployment requires a furniture id" );
         }
         definition->deploy_furniture = id;
+        return *this;
+    }
+
+    item_definition_handle &deploy_appliance( const std::string &base_id ) {
+        require_building_handle( token, *definition, "item" );
+        if( base_id.empty() ) {
+            throw std::invalid_argument( "item deployment requires an appliance base item id" );
+        }
+        definition->deploy_appliance = base_id;
+        return *this;
+    }
+
+    item_definition_handle &reveal_map( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_definition_data::map_reveal reveal;
+        reveal.radius = options.get<std::int64_t>( "radius" );
+        reveal.atlas_jurisdiction = options.get_or( "atlas_jurisdiction", std::string() );
+        reveal.message = read_text_option( options, "message", {}, "map reveal message" );
+        if( const auto targets = options.get<sol::optional<sol::table>>( "terrains" ) ) {
+            const std::size_t count = require_dense_array( *targets, "map reveal terrains", 0 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                const sol::table target = targets->raw_get<sol::table>( index );
+                reveal.terrains.emplace_back( target.get<std::string>( "id" ),
+                                              io::string_to_enum<ot_match_type>( target.get_or( "match", std::string( "CONTAINS" ) ) ) );
+            }
+        }
+        definition->reveal_map = std::move( reveal );
+        return *this;
+    }
+
+    item_definition_handle &native_use( const std::string &action ) {
+        require_building_handle( token, *definition, "item" );
+        if( !Item_factory::has_parameterless_iuse( action ) ) {
+            throw std::invalid_argument( "Unknown or unavailable native item action '" + action + "'" );
+        }
+        definition->native_use_actions.insert( action );
         return *this;
     }
 
@@ -1438,6 +1540,9 @@ struct item_definition_handle {
     item_definition_handle &clear_use_actions() {
         require_building_handle( token, *definition, "item" );
         definition->clear_use_actions = true;
+        definition->deploy_appliance.clear();
+        definition->reveal_map.reset();
+        definition->native_use_actions.clear();
         definition->learned_spells.clear();
         definition->martial_arts_manual = false;
         definition->use_handler.clear();
@@ -3551,6 +3656,9 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "armor_portion", &item_definition_handle::armor_portion,
         "container_pocket", &item_definition_handle::container_pocket,
         "deploy_furniture", &item_definition_handle::deploy_furniture,
+        "deploy_appliance", &item_definition_handle::deploy_appliance,
+        "reveal_map", &item_definition_handle::reveal_map,
+        "native_use", &item_definition_handle::native_use,
         "capture_creature", &item_definition_handle::capture_creature,
         "heal", &item_definition_handle::heal,
         "activate_effects", &item_definition_handle::activate_effects,
@@ -3951,6 +4059,35 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             }
             definition->electronic_size_kb = *size;
         }
+        const auto read_optional = [&options]( const char *key, auto &target ) {
+            using value_type = typename std::decay_t<decltype( target )>::value_type;
+            if( const auto value = options.get<sol::optional<value_type>>( key ) ) {
+                target = *value;
+            }
+        };
+        read_optional( "stackable", definition->stackable );
+        read_optional( "stack_size", definition->stack_size );
+        read_optional( "light", definition->light );
+        read_optional( "max_worn", definition->max_worn );
+        read_optional( "insulation", definition->insulation );
+        read_optional( "expand_snippets", definition->expand_snippets );
+        definition->replace_qualities = options.get_or( "replace_qualities", false );
+        definition->replace_pockets = options.get_or( "replace_pockets", false );
+        if( const auto display = options.get<sol::optional<std::string>>( "display_type" ) ) {
+            definition->display_type = io::string_to_enum<item_display_type>( *display );
+        }
+        const auto read_ids = [&options]( const char *key, auto &target ) {
+            if( const auto ids = options.get<sol::optional<sol::table>>( key ) ) {
+                const std::size_t count = require_dense_array( *ids, key, 0 );
+                auto &values = target.emplace();
+                values.reserve( count );
+                for( std::size_t index = 1; index <= count; ++index ) {
+                    values.push_back( ids->raw_get<std::string>( index ) );
+                }
+            }
+        };
+        read_ids( "techniques", definition->techniques );
+        read_ids( "weapon_categories", definition->weapon_categories );
         if( const auto container = options.get<sol::optional<std::string>>( "default_container" ) ) {
             definition->default_container = *container;
         }
@@ -5619,6 +5756,23 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             if( definition.melee_to_hit && !native_int( *definition.melee_to_hit ) ) {
                 throw std::runtime_error( "item '" + definition.id + "' has invalid melee accuracy" );
             }
+            if( ( definition.stack_size && ( *definition.stack_size < 1 ||
+                                             !native_int( *definition.stack_size ) ) ) ||
+                ( definition.light && ( *definition.light < 0 ||
+                                        *definition.light > std::numeric_limits<unsigned>::max() ) ) ||
+                ( definition.max_worn && !native_int( *definition.max_worn ) ) ||
+                ( definition.insulation && !finite_native_float( *definition.insulation ) ) ) {
+                throw std::runtime_error( "item '" + definition.id + "' has invalid item properties" );
+            }
+            if( definition.reveal_map ) {
+                const auto &reveal = *definition.reveal_map;
+                if( !native_int( reveal.radius ) ) {
+                    throw std::runtime_error( "item '" + definition.id + "' has invalid map reveal radius" );
+                }
+                for( const auto &terrain : reveal.terrains ) {
+                    require_valid_id( terrain.first, "map reveal terrain" );
+                }
+            }
             if( definition.variants ) {
                 for( const auto &variant : *definition.variants ) {
                     require_valid_id( variant.id, "item variant" );
@@ -5648,7 +5802,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "item '" + definition.id +
                                               "' references unknown quality '" + quality.id + "'" );
                 }
-                if( quality.level <= 0 || !native_int( quality.level ) ) {
+                if( !native_int( quality.level ) ) {
                     throw std::runtime_error( "item '" + definition.id + "' has an invalid quality level" );
                 }
             }
@@ -5719,6 +5873,13 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "item '" + definition.id + "' has invalid armor values" );
             }
             for( const pocket_data &pocket : definition.container_pockets ) {
+                for( const flag_id &flag : pocket.get_flag_restrictions() ) {
+                    if( flag.is_null() || flag.str().empty() ||
+                        ( check_engine_state && json_flag_ids.count( flag.str() ) == 0 && !flag.is_valid() ) ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' has an unknown container pocket flag '" + flag.str() + "'" );
+                    }
+                }
                 for( const itype_id &item_id : pocket.item_id_restriction ) {
                     if( item_id.is_null() || item_id.str().empty() ||
                         ( check_engine_state && declared_item_ids.count( item_id.str() ) == 0 &&
@@ -7274,6 +7435,27 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( definition.has_category ) {
                         native->category_force = item_category_id( definition.category );
                     }
+                    if( definition.stackable ) {
+                        native->stackable_ = *definition.stackable;
+                    }
+                    if( definition.stack_size ) {
+                        native->stack_size = static_cast<int>( *definition.stack_size );
+                    }
+                    if( definition.light ) {
+                        native->light_emission = static_cast<unsigned>( *definition.light );
+                    }
+                    if( definition.max_worn ) {
+                        native->max_worn = static_cast<int>( *definition.max_worn );
+                    }
+                    if( definition.insulation ) {
+                        native->insulation_factor = static_cast<float>( *definition.insulation );
+                    }
+                    if( definition.display_type ) {
+                        native->display_type = *definition.display_type;
+                    }
+                    if( definition.expand_snippets ) {
+                        native->expand_snippets = *definition.expand_snippets;
+                    }
                     native->set_degradation_multiplier( 1.0f );
                     if( definition.has_looks_like ) {
                         // Tileset fallback keys can name sprites without registered item types.
@@ -7333,10 +7515,25 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( native->materials.empty() ) {
                         native->default_mat = material_id::NULL_ID();
                     }
+                    if( definition.replace_qualities ) {
+                        native->qualities.clear();
+                    }
                     for( const quality_level &quality : definition.qualities ) {
                         native->qualities[quality_id( quality.id )] = {
-                            static_cast<int>( quality.level ), 1.0F
+                            static_cast<int>( quality.level ), quality.speed
                         };
+                    }
+                    if( definition.techniques ) {
+                        native->techniques.clear();
+                        for( const std::string &id : *definition.techniques ) {
+                            native->techniques.emplace( id );
+                        }
+                    }
+                    if( definition.weapon_categories ) {
+                        native->weapon_category.clear();
+                        for( const std::string &id : *definition.weapon_categories ) {
+                            native->weapon_category.emplace( id );
+                        }
                     }
                     if( definition.clear_flags ) {
                         native->item_tags.clear();
@@ -7359,6 +7556,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         if( tool.charges_per_use ) {
                             native->tool->charges_per_use = static_cast<int>( *tool.charges_per_use );
                         }
+                    }
+                    if( definition.replace_pockets ) {
+                        native->pockets.clear();
                     }
                     for( const auto &well : definition.magazine_wells ) {
                         pocket_data pocket;
@@ -7529,6 +7729,23 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     if( definition.clear_use_actions ) {
                         native->use_methods.clear();
+                    }
+                    for( const std::string &action : definition.native_use_actions ) {
+                        native->use_methods.insert_or_assign( action, Item_factory::usage_from_string( action ) );
+                    }
+                    if( !definition.deploy_appliance.empty() ) {
+                        auto actor = std::make_unique<deploy_appliance_actor>();
+                        actor->appliance_base = itype_id( definition.deploy_appliance );
+                        native->use_methods.insert_or_assign( "deploy_appliance", use_function( std::move( actor ) ) );
+                    }
+                    if( definition.reveal_map ) {
+                        const auto &reveal = *definition.reveal_map;
+                        auto actor = std::make_unique<reveal_map_actor>();
+                        actor->radius = static_cast<int>( reveal.radius );
+                        actor->atlas_jurisdiction = reveal.atlas_jurisdiction;
+                        actor->omt_types = reveal.terrains;
+                        actor->message = reveal.message.native();
+                        native->use_methods.insert_or_assign( "reveal_map", use_function( std::move( actor ) ) );
                     }
                     if( !definition.learned_spells.empty() ) {
                         auto actor = std::make_unique<learn_spell_actor>();
@@ -9125,6 +9342,25 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.snippet_category.value_or( "inherit_snippets" ) );
                 hash_part( state, v.melee_to_hit ? std::to_string( *v.melee_to_hit ) : "inherit_accuracy" );
                 hash_part( state, v.electronic_size_kb ? std::to_string( *v.electronic_size_kb ) : "inherit_file_size" );
+                hash_part( state, v.stackable ? ( *v.stackable ? "stackable" : "nonstackable" ) : "inherit_stackable" );
+                hash_part( state, v.stack_size ? std::to_string( *v.stack_size ) : "inherit_stack_size" );
+                hash_part( state, v.light ? std::to_string( *v.light ) : "inherit_light" );
+                hash_part( state, v.max_worn ? std::to_string( *v.max_worn ) : "inherit_max_worn" );
+                hash_part( state, v.insulation ? std::to_string( *v.insulation ) : "inherit_insulation" );
+                hash_part( state, v.display_type ? std::to_string( static_cast<int>( *v.display_type ) ) :
+                           "inherit_display_type" );
+                hash_part( state, v.expand_snippets ? ( *v.expand_snippets ? "expand" : "unexpanded" ) :
+                           "inherit_expand_snippets" );
+                for( const auto &list : { &v.techniques, &v.weapon_categories } ) {
+                    hash_part( state, *list ? std::to_string( ( *list )->size() ) : "inherit_list" );
+                    if( *list ) {
+                        for( const auto &id : **list ) {
+                            hash_part( state, id );
+                        }
+                    }
+                }
+                hash_part( state, v.replace_qualities ? "replace_qualities" : "inherit_qualities" );
+                hash_part( state, v.replace_pockets ? "replace_pockets" : "inherit_pockets" );
                 hash_part( state, v.variant_kind ? std::to_string( static_cast<int>( *v.variant_kind ) ) :
                            "inherit_variant_kind" );
                 if( v.variants ) {
@@ -9146,6 +9382,21 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.default_container.value_or( "" ) );
                 hash_part( state, std::to_string( v.magazine_capacity ) );
                 hash_part( state, v.clear_use_actions ? "clear_use_actions" : "inherit_use_actions" );
+                hash_part( state, v.deploy_appliance );
+                if( v.reveal_map ) {
+                    hash_part( state, "reveal_map" );
+                    hash_part( state, std::to_string( v.reveal_map->radius ) );
+                    hash_part( state, v.reveal_map->atlas_jurisdiction );
+                    hash_part( state, v.reveal_map->message );
+                    for( const auto &[target, match] : v.reveal_map->terrains ) {
+                        hash_part( state, target );
+                        hash_part( state, std::to_string( static_cast<int>( match ) ) );
+                    }
+                }
+                hash_part( state, std::to_string( v.native_use_actions.size() ) );
+                for( const auto &action : v.native_use_actions ) {
+                    hash_part( state, action );
+                }
                 hash_part( state, v.martial_arts_manual ? "martial_arts_manual" : "inherit_manual" );
                 hash_part( state, v.clear_flags ? "clear_item_flags" : "inherit_item_flags" );
                 hash_part( state, v.clear_melee_damage ? "clear_melee_damage" : "inherit_melee_damage" );
@@ -9174,13 +9425,30 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, std::to_string( units::to_milliliter( pocket.raw_volume_capacity ) ) );
                     hash_part( state, std::to_string( units::to_milligram( pocket.max_contains_weight ) ) );
                     hash_part( state, std::to_string( units::to_millimeter( pocket.max_item_length ) ) );
+                    hash_part( state, std::to_string( units::to_millimeter( pocket.min_item_length ) ) );
+                    hash_part( state, std::to_string( units::to_milliliter( pocket.min_item_volume ) ) );
+                    hash_part( state, pocket.max_item_volume ?
+                               std::to_string( units::to_milliliter( *pocket.max_item_volume ) ) : "no_maximum_item_volume" );
+                    hash_part( state, std::to_string( units::to_milliliter( pocket.magazine_well ) ) );
                     hash_part( state, std::to_string( pocket.moves ) );
                     hash_part( state, std::to_string( pocket.weight_multiplier ) );
                     hash_part( state, std::to_string( pocket.volume_encumber_modifier ) );
-                    hash_part( state, pocket.watertight ? "watertight" : "porous" );
-                    hash_part( state, pocket.rigid ? "rigid" : "flexible" );
-                    hash_part( state, pocket.holster ? "holster" : "multi_item" );
+                    std::ostringstream factors;
+                    factors << std::hexfloat << pocket.spoil_multiplier << ' ' << pocket.volume_multiplier << ' '
+                            << pocket.insulation;
+                    if( pocket.sealed_data ) {
+                        factors << ' ' << pocket.sealed_data->spoil_multiplier;
+                    }
+                    hash_part( state, factors.str() );
+                    for( const bool option : { pocket.watertight, pocket.airtight, pocket.open_container,
+                                              pocket.transparent, pocket.fire_protection, pocket.rigid, pocket.holster } ) {
+                        hash_part( state, option ? "yes" : "no" );
+                    }
                     hash_part( state, pocket.default_magazine.str() );
+                    for( const flag_id &flag : pocket.get_flag_restrictions() ) {
+                        hash_part( state, "allowed_flag" );
+                        hash_part( state, flag.str() );
+                    }
                     for( const itype_id &item_id : pocket.item_id_restriction ) {
                         hash_part( state, "allowed_item" );
                         hash_part( state, item_id.str() );
@@ -9306,6 +9574,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 for( const auto &q : v.qualities ) {
                     hash_part( state, q.id );
                     hash_part( state, std::to_string( q.level ) );
+                    hash_part( state, std::to_string( q.speed ) );
                 }
                 for( const auto &id : v.flags ) {
                     hash_part( state, id );

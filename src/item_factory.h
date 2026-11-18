@@ -277,6 +277,7 @@ class Item_factory
          * @param type Iuse type id.
          */
         static bool has_iuse( const item_action_id &type );
+        static bool has_parameterless_iuse( const item_action_id &type );
 
         void load_item_blacklist( const JsonObject &json );
 
