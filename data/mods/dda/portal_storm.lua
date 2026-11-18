@@ -24,7 +24,7 @@ local function storm_present()
         or state.number("cause_early_portal_storm") == 1
 end
 
-function M.worsen()
+function M.worsen_default()
     local choice = random.weighted_index({ 1, 1, 3 })
     if choice == 1 then
         state.set("ps_base_str", math.min(state.number("ps_base_str") + 1, 8))
@@ -42,6 +42,10 @@ function M.worsen()
     end
 end
 
+function M.worsen(character)
+    ccb.runtime.call_character("portal_storm_worsen", character)
+end
+
 function M.start(character)
     if current_weather() == "portal_storm" or state.number("cause_portal_storm") == 1 then return end
     state.set("cause_early_portal_storm", 0)
@@ -56,18 +60,26 @@ function M.start(character)
     state.message(character, services.translate("Reality is breaking!"), "bad")
 end
 
-function M.start_early(character)
+function M.finish_early(character)
+    state.set("cause_early_portal_storm", 1)
+    state.checked(services.weather.refresh())
+    ccb.tasks.after_avatar_turn(random.native_int(30, 60), "portal_storm_start_due")
+    state.assign_mission(character, "MISSION_INVESTIGATE_PORTAL_STORM_CENTER")
+    state.message(character, services.translate("You suddenly register a buzzing in your senses.  It's getting louder, and your head starts to throb.  Somewhere nearby, a tiny cataclysm has begun (check mission log for details)."), "bad", true)
+end
+
+function M.start_early_default(character)
     if storm_present() then return end
     local location = services.world.find_location(state.position(character), nil,
         { min_radius = 30, max_radius = 75 })
     if location.found then
         state.set("portal_storm_center", coords.tripoint_abs_ms(location.position.x, location.position.y, 0))
     end
-    state.set("cause_early_portal_storm", 1)
-    state.checked(services.weather.refresh())
-    ccb.tasks.after_avatar_turn(random.native_int(30, 60), "portal_storm_start_due")
-    state.assign_mission(character, "MISSION_INVESTIGATE_PORTAL_STORM_CENTER")
-    state.message(character, services.translate("You suddenly register a buzzing in your senses.  It's getting louder, and your head starts to throb.  Somewhere nearby, a tiny cataclysm has begun (check mission log for details)."), "bad", true)
+    M.finish_early(character)
+end
+
+function M.start_early(character)
+    ccb.runtime.call_character("portal_storm_begin_early", character)
 end
 
 function M.stop(character)
@@ -83,7 +95,7 @@ function M.stop(character)
     local witnessed = "global_portal_storms_u_witnessed_portal_storm"
     state.checked(variables.set(character, witnessed, "yes", { include_before = false }))
     services.native_events.emit("u_var_changed", { witnessed, "yes" })
-    M.worsen()
+    M.worsen(character)
     character = dungeon.exit(character)
     state.remove_mission(character, "MISSION_INVESTIGATE_PORTAL_DUNGEON")
     state.remove_mission(character, "MISSION_INVESTIGATE_PORTAL_STORM_CENTER")
@@ -98,6 +110,7 @@ end
 ccb.runtime.handler("portal_storm_start_due", function(context)
     M.start(context.character)
 end)
+ccb.runtime.handler("portal_storm_finish_early", M.finish_early)
 ccb.runtime.handler("portal_storm_end_due", function(context)
     M.stop(context.character)
 end)
