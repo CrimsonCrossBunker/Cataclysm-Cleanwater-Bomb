@@ -422,6 +422,7 @@ struct item_group_entry_definition_data {
     bool group = false;
     std::int64_t probability = 100;
     std::string variant;
+    bool count_specified = false;
     std::int64_t count_min = 1;
     std::int64_t count_max = 1;
     std::int64_t charges_min = -1;
@@ -2003,6 +2004,7 @@ struct item_group_definition_handle {
             if( const sol::optional<sol::table> count =
                     options.get<sol::optional<sol::table>>( "count" ) ) {
                 require_dense_array( *count, "item-group count", 2, 2 );
+                value.count_specified = true;
                 value.count_min = count->raw_get<std::int64_t>( 1 );
                 value.count_max = count->raw_get<std::int64_t>( 2 );
             }
@@ -5671,8 +5673,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                                 entry_id, entry_type,
                                                 static_cast<int>( source_entry.probability ),
                                                 "Lua-first item-group entry " + source.id );
-                        if( source_entry.count_min != 1 || source_entry.count_max != 1 ||
-                            !source_entry.variant.empty() || source_entry.charges_min != -1 || source_entry.container ) {
+                        if( source_entry.count_specified || !source_entry.variant.empty() ||
+                            source_entry.charges_min != -1 || source_entry.container ) {
                             native_entry->modifier.emplace();
                             native_entry->modifier->count = {
                                 static_cast<int>( source_entry.count_min ),
