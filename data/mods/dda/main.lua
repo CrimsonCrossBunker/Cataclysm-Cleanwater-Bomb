@@ -452,3 +452,5 @@ require("craft_recipes.recipe_companion")
 require("activity_types")
 
 require("phone_recovery")
+
+require("item_groups")

@@ -14,102 +14,6 @@
     ]
   },
   {
-    "id": "kitchen_counters",
-    "//": "Items that might be found scattered around a kitchen counter.",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "group": "dishes_dining", "prob": 100 },
-      { "group": "dishes_utility", "prob": 50 },
-      { "group": "kitchen_appliances", "prob": 25 },
-      { "group": "SUS_cooking_bookcase", "prob": 15 },
-      { "group": "pillbox_any_used", "prob": 5 }
-    ]
-  },
-  {
-    "id": "dishes_dining",
-    "//": "Mundane household dishes that would be used for eating, not food prep.",
-    "//2": "May be some overlap for food prep dishes that could be used for serving, like mixing bowls and teapots.",
-    "//3": "If it would fit on a dining table, it would fit in this group.",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      [ "knife_butter", 90 ],
-      [ "fork", 90 ],
-      [ "spoon", 90 ],
-      [ "chopsticks", 90 ],
-      { "item": "knife_small", "variant": "knife_steak", "prob": 50 },
-      [ "glass", 50 ],
-      [ "ceramic_plate", 50 ],
-      [ "ceramic_bowl", 50 ],
-      [ "ceramic_cup", 20 ],
-      [ "ceramic_mug", 19 ],
-      [ "wine_glass", 20 ],
-      [ "plastic_plate", 50 ],
-      [ "tumbler_plastic", 50 ],
-      [ "bowl_pewter", 25 ],
-      [ "glass_plate", 20 ],
-      [ "glass_bowl", 20 ],
-      [ "bowl_wood", 5 ],
-      [ "plastic_spoon", 20 ],
-      [ "plastic_knife", 20 ],
-      [ "plastic_fork", 20 ],
-      [ "teapot", 5 ],
-      { "collection": [ { "item": "plastic_bowl_kids" }, { "item": "plastic_spoon_kids" } ], "prob": 50 }
-    ]
-  },
-  {
-    "id": "dishes_utility",
-    "//": "Mundane household dishes that would be used for cooking, not found on a dining table.",
-    "//2": "If it would be OK in a dishwasher but generally not as a table setting, it would fit in this group.",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      [ "pot", 50 ],
-      [ "pan", 50 ],
-      [ "steel_pan", 45 ],
-      [ "copper_pan", 35 ],
-      [ "pot_canning", 10 ],
-      [ "pot_copper", 25 ],
-      [ "iron_pot", 25 ],
-      [ "casserole", 25 ],
-      [ "stock_pot", 15 ],
-      [ "pressure_cooker", 5 ],
-      [ "dutch_oven", 5 ],
-      [ "teapot", 40 ],
-      [ "kettle", 40 ],
-      [ "colander_steel", 35 ],
-      [ "splatter_guard", 10 ],
-      [ "jar_glass_sealed", 50 ],
-      [ "jar_3l_glass_sealed", 40 ],
-      [ "bowl_pewter", 25 ],
-      { "item": "knife_huge", "variant": "knife_butcher", "prob": 20 },
-      [ "thermos", 15 ],
-      [ "tongs", 15 ],
-      [ "spatula", 15 ],
-      [ "whisk", 15 ],
-      [ "ladle", 15 ],
-      [ "rolling_pin", 15 ],
-      [ "garlic_press", 15 ],
-      [ "potato_masher", 15 ],
-      [ "carving_fork", 15 ],
-      [ "can_opener", 15 ],
-      [ "corkscrew", 10 ],
-      [ "peeler", 15 ],
-      [ "brush", 15 ],
-      { "item": "knife_small", "variant": "knife_paring", "prob": 25 },
-      { "item": "knife_large", "variant": "knife_bread", "prob": 20 },
-      { "item": "knife_large", "variant": "knife_chef", "prob": 20 },
-      { "item": "knife_large", "variant": "knife_carving", "prob": 20 },
-      { "item": "knife_huge", "variant": "knife_butcher", "prob": 10 },
-      { "item": "knife_cleaver", "variant": "knife_meat_cleaver", "prob": 10 },
-      { "item": "knife_cleaver", "variant": "knife_vegetable_cleaver", "prob": 10 },
-      [ "cutting_board", 20 ],
-      [ "bottle_opener", 15 ],
-      [ "mortar_pestle", 10 ]
-    ]
-  },
-  {
     "id": "kitchen_appliances",
     "//": "Mundane household appliances that you might find in a kitchen.",
     "type": "item_group",
@@ -369,21 +273,6 @@
           }
         ]
       }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "memorial_mansion",
-    "subtype": "collection",
-    "entries": [
-      { "item": "corpse_ash", "prob": 100, "count": [ 190, 396 ], "entry-wrapper": "crystal_urn" },
-      { "item": "photo_album", "prob": 80 },
-      { "item": "bouquet", "prob": 80 },
-      { "item": "candlestick", "prob": 50, "count": [ 1, 6 ] },
-      { "group": "liquor_and_spirits", "prob": 60 },
-      { "group": "wines_worthy", "prob": 50 },
-      { "item": "cigar", "prob": 50, "count": 5 },
-      { "group": "jewelry_accessories", "prob": 50 }
     ]
   },
   {
@@ -1054,32 +943,6 @@
   },
   {
     "type": "item_group",
-    "id": "dining",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "wrapper", "prob": 50 },
-      { "item": "wrapper_foil", "prob": 5 },
-      { "item": "knife_butter", "prob": 90 },
-      { "item": "knife_small", "variant": "knife_steak", "prob": 85 },
-      { "item": "fork", "prob": 90 },
-      { "item": "spoon", "prob": 90 },
-      { "item": "spork", "prob": 5 },
-      { "item": "foon", "prob": 5 },
-      { "group": "ketchup_sealed_rng", "prob": 10 },
-      { "group": "mustard_sealed_rng", "prob": 10 },
-      { "group": "barbecue_sauce_sealed_rng", "prob": 5 },
-      { "group": "honey_mustard_sealed_rng", "prob": 3 },
-      { "item": "soysauce", "prob": 10 },
-      { "item": "horseradish", "prob": 10 },
-      { "item": "glass", "prob": 90 },
-      { "item": "glass_bowl", "prob": 90 },
-      { "item": "glass_plate", "prob": 90 },
-      { "item": "bottle_glass", "prob": 10 },
-      { "group": "tinware", "prob": 10 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "cleaning",
     "subtype": "distribution",
     "entries": [
@@ -1198,23 +1061,6 @@
     ]
   },
   {
-    "id": "hoarder",
-    "//": "Items that might be found scattered around the home of a hoarder.",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "group": "SUS_trash_floor", "prob": 100 },
-      { "group": "cleaning", "prob": 20 },
-      { "group": "dishes_dining", "prob": 20 },
-      { "group": "dishes_utility", "prob": 10 },
-      { "group": "child_items", "prob": 10 },
-      { "group": "SUS_bathroom_sink", "prob": 10 },
-      { "group": "bed", "prob": 10 },
-      { "group": "games", "prob": 5 },
-      { "group": "SUS_junk_drawer", "prob": 1 }
-    ]
-  },
-  {
     "id": "cat_hoarder",
     "type": "item_group",
     "subtype": "distribution",
@@ -1230,87 +1076,6 @@
       { "item": "bag_plastic", "prob": 20 },
       { "item": "missing_poster_cat", "prob": 40 },
       { "item": "rope_6", "prob": 15 }
-    ]
-  },
-  {
-    "id": "untidy_floor_clutter",
-    "//": "Items you might find on the floor in a disorganized house.",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "item": "box_large", "prob": 10 },
-      {
-        "collection": [ { "group": "laundry", "prob": 75, "count": [ 3, 5 ] }, { "item": "basket_laundry", "prob": 100 } ],
-        "prob": 8
-      },
-      { "group": "coat_rack", "prob": 5 },
-      { "item": "hair_dryer", "prob": 3 },
-      { "item": "bucket", "prob": 3 },
-      { "item": "bucket_5gal", "prob": 3 },
-      { "item": "briefcase", "prob": 2 },
-      { "item": "suitcase_m", "prob": 2 },
-      { "item": "candle", "prob": 3, "charges": [ 5, 50 ] },
-      {
-        "collection": [
-          { "collection": [ { "item": "hammer", "prob": 100 }, { "item": "nail", "prob": 75, "charges": [ 2, 6 ] } ], "prob": 50 },
-          { "item": "pliers", "prob": 33 },
-          { "item": "paint_brush", "prob": 33 },
-          { "item": "xacto", "prob": 10 },
-          { "item": "screwdriver", "prob": 10 },
-          { "group": "duct_tape_roll_part", "prob": 100 },
-          { "group": "glue_weak_domestic", "prob": 5 },
-          { "group": "glue_strong_domestic", "prob": 5 },
-          { "item": "splinter", "prob": 10, "count": [ 2, 3 ] },
-          { "item": "toolbox_empty", "prob": 100 }
-        ],
-        "prob": 3
-      },
-      { "item": "extinguisher", "prob": 2 }
-    ]
-  },
-  {
-    "id": "messy_floor_clutter",
-    "//": "Items you might find on the floor in a disorganized and dirty house.",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "group": "laundry", "prob": 10 },
-      { "group": "SUS_trash_floor", "prob": 7 },
-      { "group": "untidy_floor_clutter", "prob": 7 },
-      { "group": "coins", "prob": 5 },
-      {
-        "collection": [ { "group": "SUS_trash_trashcan", "prob": 75, "count": [ 3, 6 ] }, { "item": "bag_garbage", "prob": 100 } ],
-        "prob": 2
-      }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "fungicide_bag_plastic_400",
-    "subtype": "collection",
-    "container-item": "bag_plastic_small",
-    "entries": [ { "item": "fungicide", "container-item": "null", "count": 400 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "insecticide_bag_plastic",
-    "subtype": "collection",
-    "container-item": "bag_plastic_small",
-    "entries": [ { "item": "insecticide", "container-item": "null", "count": 9 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "small_candles_in_box",
-    "subtype": "collection",
-    "container-item": "box_small",
-    "entries": [
-      {
-        "distribution": [
-          { "item": "candle_small", "charges": [ 0, 100 ], "container-item": "null", "count": [ 20, 45 ] },
-          { "item": "candle_small", "charges": [ 50, 100 ], "container-item": "null", "count": [ 20, 45 ] },
-          { "item": "candle_small", "charges": 100, "container-item": "null", "count": [ 20, 45 ] }
-        ]
-      }
     ]
   }
 ]

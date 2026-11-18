@@ -99,11 +99,6 @@
   },
   {
     "type": "item_group",
-    "id": "fertilizers",
-    "items": [ [ "fertilizer_liquid", 90 ], { "group": "fertilizer_commercial_bag_canvas_60", "prob": 60 } ]
-  },
-  {
-    "type": "item_group",
     "id": "hydro",
     "items": [
       [ "blueberries", 3 ],
@@ -182,56 +177,5 @@
       [ "raw_asparagus", 5 ],
       [ "brussels_sprout", 15 ]
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "orchard_supplies",
-    "subtype": "distribution",
-    "items": [
-      [ "fertilizer_liquid", 10 ],
-      { "group": "fertilizer_commercial_bag_canvas_60", "prob": 10 },
-      { "group": "insecticide_bag_plastic", "prob": 10 },
-      [ "pot_canning", 5 ],
-      { "item": "jar_3l_glass_sealed", "prob": 25, "count": [ 2, 10 ] },
-      { "item": "wooden_barrel", "prob": 20, "count": [ 2, 4 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "orchard_tools",
-    "subtype": "collection",
-    "items": [
-      [ "shovel", 5 ],
-      { "item": "trimmer_off", "prob": 5, "charges": [ 0, 600 ] },
-      [ "bucket", 5 ],
-      [ "bucket_5gal", 10 ],
-      [ "rake", 15 ],
-      [ "rake_plastic", 5 ],
-      [ "stepladder", 15 ],
-      { "item": "pointy_stick", "prob": 20, "count": [ 3, 10 ] },
-      [ "hammer", 10 ],
-      [ "rope_makeshift_6", 20 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "stored_pulp",
-    "ammo": 100,
-    "magazine": 100,
-    "subtype": "distribution",
-    "entries": [ { "item": "wooden_barrel", "prob": 100, "sealed": true }, { "prob": 100, "group": "juice_pulp_wooden_barrel_7_77" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "sometimes_manure",
-    "subtype": "distribution",
-    "entries": [ { "item": "null", "prob": 3 }, { "item": "feces_manure", "prob": 1, "count": 4 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "juice_pulp_wooden_barrel_7_77",
-    "subtype": "collection",
-    "container-item": "wooden_barrel",
-    "entries": [ { "item": "juice_pulp", "count": [ 7, 77 ] } ]
   }
 ]

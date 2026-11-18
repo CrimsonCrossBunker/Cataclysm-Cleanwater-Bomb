@@ -107,39 +107,6 @@
     ]
   },
   {
-    "id": "clothing_riding",
-    "type": "item_group",
-    "//": "Clothes that horse riders wear.",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "helmet_riding", "prob": 50 },
-      { "item": "helmet_riding_peakless", "prob": 50 },
-      { "item": "hat_hunting", "prob": 15 },
-      { "item": "knit_scarf", "prob": 25 },
-      { "item": "long_knit_scarf", "prob": 25 },
-      { "item": "longshirt", "prob": 50 },
-      { "item": "jacket_flannel", "prob": 50 },
-      { "item": "coat_winter", "prob": 20 },
-      { "item": "coat_light_winter", "prob": 30 },
-      { "item": "peacoat", "prob": 25 },
-      { "item": "gloves_wool", "prob": 25 },
-      { "item": "gloves_wool_fingerless", "prob": 12 },
-      { "item": "gloves_leather", "prob": 25 },
-      { "item": "leather_belt", "prob": 25 },
-      { "item": "breeches", "prob": 50 },
-      { "item": "pants_hiking", "prob": 50 },
-      { "item": "socks_wool", "prob": 25 },
-      { "item": "boots_hiking", "prob": 50 },
-      { "item": "boots_western", "prob": 50 },
-      { "item": "knee_high_boots", "prob": 50 },
-      { "item": "boots", "prob": 25 },
-      { "item": "boots_winter", "prob": 25 },
-      { "item": "boots_steel", "prob": 15 },
-      { "item": "boots_denim", "prob": 5 },
-      { "item": "sneakers_steel", "prob": 15 }
-    ]
-  },
-  {
     "id": "clothing_outdoor_set",
     "type": "item_group",
     "subtype": "collection",
@@ -178,32 +145,6 @@
           { "item": "leather_belt", "prob": 30 }
         ]
       }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "ear_protection",
-    "//": "used in shooting_range.",
-    "items": [
-      { "item": "powered_earmuffs", "prob": 10, "charges": [ 0, 100 ] },
-      [ "ear_plugs", 50 ],
-      { "item": "powered_earplugs", "prob": 10, "charges": [ 0, 100 ] }
-    ]
-  },
-  {
-    "id": "clothing_outdoor_shoes",
-    "type": "item_group",
-    "//": "Standard (non-winter) shoes suitable for wearing outdoors.",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "boots", "prob": 100 },
-      { "item": "boots_combat", "prob": 10 },
-      { "item": "boots_hiking", "prob": 40 },
-      { "item": "boots_western", "prob": 15 },
-      { "item": "knee_high_boots", "prob": 20 },
-      { "item": "thigh_high_boots", "prob": 20 },
-      { "item": "boots_denim", "prob": 2 },
-      { "item": "shoes_denim", "prob": 3 }
     ]
   },
   {
@@ -250,45 +191,6 @@
     ]
   },
   {
-    "id": "clothing_prisoner_shoes",
-    "type": "item_group",
-    "//": "All the footwear that prisoners might wear.",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "sneakers", "prob": 80 },
-      { "item": "boots", "prob": 70 },
-      { "item": "lowtops", "prob": 45 },
-      { "item": "golf_shoes", "prob": 20 },
-      { "item": "boots_combat", "prob": 10 },
-      { "item": "boots_hiking", "prob": 20 },
-      { "item": "shoes_denim", "prob": 5 }
-    ]
-  },
-  {
-    "id": "clothing_tactical_leg",
-    "type": "item_group",
-    "//": "Tactical gear that can be strapped to the legs",
-    "subtype": "distribution",
-    "entries": [ { "item": "legpouch_large", "prob": 100 }, { "item": "legrig", "prob": 100 } ]
-  },
-  {
-    "id": "clothing_tactical_torso",
-    "type": "item_group",
-    "//": "Tactical gear that can be strapped to the torso",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "ammo_satchel", "prob": 40 },
-      { "item": "ammo_pouch", "prob": 40 },
-      { "item": "backpack", "prob": 20 },
-      { "item": "camelbak", "prob": 40 },
-      { "item": "chestpouch", "prob": 40 },
-      { "item": "backpack_tactical_large", "prob": 20 },
-      { "item": "tacvest", "prob": 160 },
-      { "group": "molle_backpacks_and_accessories", "prob": 100 },
-      { "item": "rucksack", "prob": 80 }
-    ]
-  },
-  {
     "id": "clothing_watch",
     "type": "item_group",
     "subtype": "distribution",
@@ -304,42 +206,6 @@
       { "item": "fitness_band", "prob": 35 },
       { "item": "smart_watch", "prob": 50, "charges": [ 0, 80 ] },
       { "item": "smart_watch_adv", "prob": 25, "charges": [ 0, 40 ] }
-    ]
-  },
-  {
-    "id": "clothing_work_boots",
-    "type": "item_group",
-    "//": "Sturdy boots often worn by technicians and tradesmen.",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "boots", "prob": 60 },
-      { "item": "boots_hiking", "prob": 10 },
-      { "item": "boots_steel", "prob": 30 },
-      { "item": "toecaps", "prob": 30 },
-      { "item": "sneakers_steel", "prob": 21 }
-    ]
-  },
-  {
-    "id": "clothing_work_glasses",
-    "type": "item_group",
-    "//": "Eye protection often worn by technicians and tradesmen.",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "clothing_glasses", "prob": 10 },
-      { "item": "glasses_safety", "prob": 75 },
-      { "item": "goggles_welding", "prob": 15 }
-    ]
-  },
-  {
-    "id": "clothing_work_gloves",
-    "type": "item_group",
-    "//": "Protective gloves often worn by technicians and tradesmen.",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "gloves_leather", "prob": 30 },
-      { "item": "gloves_rubber", "prob": 10 },
-      { "item": "gloves_work", "prob": 60 },
-      { "item": "gloves_cut_resistant", "prob": 10 }
     ]
   },
   {
@@ -376,106 +242,6 @@
       { "group": "common_face_shields", "prob": 15 },
       { "item": "plastic_chin_guard", "prob": 10 },
       { "item": "attachable_ear_muffs", "prob": 5 }
-    ]
-  },
-  {
-    "id": "hat_hard_hooded_modified",
-    "type": "item_group",
-    "subtype": "collection",
-    "container-item": "hat_hard_hooded",
-    "items": [ { "group": "common_nape_protectors", "prob": 50 }, { "item": "plastic_chin_guard", "prob": 10 } ]
-  },
-  {
-    "id": "common_nape_protectors",
-    "type": "item_group",
-    "//": "Common nape protectors for a hard hat or helmet.",
-    "subtype": "distribution",
-    "entries": [ { "item": "nape_protector", "prob": 6 }, { "item": "mesh_nape_protector", "prob": 4 } ]
-  },
-  {
-    "id": "common_face_shields",
-    "type": "item_group",
-    "//": "Common face shields for a hard hat.",
-    "subtype": "distribution",
-    "entries": [ { "item": "face_shield_plastic", "prob": 75 }, { "item": "face_shield", "prob": 25 } ]
-  },
-  {
-    "id": "clothing_work_mask",
-    "type": "item_group",
-    "//": "Protective masks often worn by technicians and tradesmen.",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "mask_dust", "prob": 90 },
-      { "item": "mask_filter", "prob": 10, "charges": [ 0, 100 ] },
-      { "item": "mask_gas_half", "prob": 10, "charges": [ 0, 100 ] }
-    ]
-  },
-  {
-    "id": "clothing_work_pants",
-    "type": "item_group",
-    "//": "Pants often worn by technicians and tradesmen.",
-    "subtype": "distribution",
-    "entries": [ { "item": "technician_pants_gray", "prob": 60 }, { "item": "denim_overalls", "prob": 40 } ]
-  },
-  {
-    "id": "clothing_work_torso",
-    "type": "item_group",
-    "//": "Shirts and jackets often worn by technicians and laborers.",
-    "subtype": "distribution",
-    "entries": [
-      {
-        "collection": [
-          { "item": "technician_shirt_gray", "prob": 100 },
-          {
-            "distribution": [
-              { "item": "coat_rain", "prob": 30 },
-              { "item": "jacket_jean", "prob": 20 },
-              { "item": "vest_jean", "prob": 10 },
-              { "item": "jacket_light", "prob": 40 }
-            ],
-            "prob": 20
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "clothing_work_set",
-    "type": "item_group",
-    "subtype": "collection",
-    "//": "Set of clothes worn by technicians and laborers including protective gear",
-    "items": [
-      { "group": "clothing_work_boots" },
-      { "group": "clothing_work_glasses", "prob": 60 },
-      { "group": "clothing_work_gloves", "prob": 75 },
-      { "group": "clothing_work_hat", "prob": 60 },
-      { "group": "clothing_work_mask", "prob": 40 },
-      {
-        "distribution": [ { "item": "ear_plugs" }, { "item": "attached_ear_plugs_off" }, { "item": "attachable_ear_muffs" } ],
-        "prob": 60
-      },
-      { "item": "tool_belt", "prob": 25 },
-      {
-        "distribution": [
-          { "collection": [ { "group": "clothing_work_pants" }, { "group": "clothing_work_torso" } ], "prob": 80 },
-          { "item": "technician_coveralls", "prob": 15 },
-          { "item": "technician_coveralls_h", "prob": 5 }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "clothing_chainsaw_protection",
-    "type": "item_group",
-    "//": "Protective equipment often worn in professions that make use of chainsaws and other sawing tools.",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "gloves_cut_resistant", "prob": 70 },
-      { "item": "armguard_cut_resistant", "prob": 60 },
-      { "item": "chaps_cut_resistant", "prob": 50 },
-      { "item": "apron_cut_resistant", "prob": 45 },
-      { "item": "balaclava_cut_resistant", "prob": 10 },
-      { "item": "throat_guard_cut_resistant", "prob": 5 }
     ]
   },
   {
@@ -520,210 +286,9 @@
     ]
   },
   {
-    "id": "plumbing_clothing",
-    "type": "item_group",
-    "//": "wearable utility or protective gear you can buy in a common hardware store or find on a jobsite",
-    "//2": "Not intended to be a set of clothing for NPCs or monsters",
-    "items": [
-      [ "tool_belt", 200 ],
-      [ "knee_pads", 70 ],
-      [ "gloves_leather", 70 ],
-      [ "gloves_rubber", 50 ],
-      [ "boots_rubber", 20 ],
-      [ "boots", 70 ],
-      [ "boots_steel", 50 ],
-      { "item": "toecaps", "prob": 30 },
-      [ "sneakers_steel", 28 ],
-      [ "fishing_waders", 20 ],
-      [ "denim_overalls", 20 ],
-      [ "technician_coveralls", 15 ],
-      [ "technician_coveralls_h", 5 ],
-      [ "apron_plastic", 30 ],
-      [ "apron_leather", 10 ],
-      { "item": "mask_filter", "prob": 20, "charges": [ 0, 100 ] },
-      [ "hat_hard", 50 ],
-      { "item": "wearable_light", "prob": 100, "charges": [ 0, 100 ] }
-    ]
-  },
-  {
-    "id": "prof-plumbing_gear",
-    "type": "item_group",
-    "subtype": "collection",
-    "//": "wearable utility or protective gear for a plumbing job, includes tools",
-    "//2": "Intended to be a set of clothing for NPCs or monsters",
-    "items": [
-      { "item": "tool_belt", "prob": 60 },
-      { "group": "tools_plumbing", "count": [ 1, 2 ] },
-      { "group": "tools_common_small", "count": [ 1, 2 ] },
-      { "group": "supplies_plumbing" },
-      { "group": "large_bags" },
-      { "item": "knee_pads", "prob": 30 },
-      {
-        "distribution": [ { "item": "gloves_leather", "prob": 70 }, { "item": "gloves_rubber", "prob": 30 } ],
-        "prob": 40
-      },
-      {
-        "distribution": [
-          { "item": "boots_rubber" },
-          { "item": "boots" },
-          { "item": "boots_steel" },
-          { "item": "sneakers_steel" },
-          { "item": "fishing_waders" }
-        ]
-      },
-      { "distribution": [ { "item": "socks" }, { "item": "socks_ankle" } ] },
-      {
-        "distribution": [
-          { "collection": [ { "group": "clothing_work_pants" }, { "group": "clothing_work_torso" } ], "prob": 75 },
-          { "item": "technician_coveralls", "prob": 20 },
-          { "item": "technician_coveralls_h", "prob": 5 }
-        ]
-      },
-      [ "hat_hard", 50 ],
-      {
-        "distribution": [ { "item": "apron_plastic", "prob": 30 }, { "item": "apron_leather", "prob": 10 } ],
-        "prob": 30
-      },
-      { "item": "mask_filter", "prob": 20, "charges": [ 0, 100 ] },
-      { "item": "wearable_light", "prob": 70, "charges": [ 0, 100 ] }
-    ]
-  },
-  {
-    "id": "boxing_clothes",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "item": "tank_top", "prob": 40 },
-      { "item": "shorts", "prob": 40 },
-      { "item": "boxing_gloves", "prob": 50 },
-      { "item": "headgear", "prob": 50 },
-      { "item": "mouthpiece", "prob": 50 },
-      { "item": "jersey", "variant": "generic", "prob": 40 },
-      { "item": "coat_rain", "prob": 15 },
-      { "item": "hood_rain", "prob": 15 },
-      { "item": "unitard", "prob": 10 },
-      { "item": "gloves_wraps", "prob": 45 },
-      { "item": "jeans", "prob": 30 },
-      { "item": "jeans_ripped", "prob": 5 },
-      { "item": "sports_bra", "prob": 25 },
-      { "item": "jacket_leather", "prob": 20 },
-      { "item": "jacket_varsity", "prob": 10 },
-      { "prob": 30, "group": "bottle_otc_painkiller_20" },
-      { "item": "water_clean", "prob": 30 },
-      { "item": "sports_drink", "prob": 30 },
-      { "group": "used_1st_aid", "prob": 20 },
-      { "item": "fitness_band", "prob": 25 }
-    ]
-  },
-  {
-    "id": "donated_clothes",
-    "type": "item_group",
-    "subtype": "collection",
-    "items": [
-      { "group": "underwear" },
-      { "group": "clothing_outdoor_torso" },
-      { "group": "clothing_outdoor_pants" },
-      { "item": "socks" },
-      { "item": "boots" }
-    ]
-  },
-  {
-    "id": "judo_belts",
-    "type": "item_group",
-    "items": [
-      [ "judo_belt_white", 100 ],
-      [ "judo_belt_yellow", 50 ],
-      [ "judo_belt_orange", 25 ],
-      [ "judo_belt_green", 15 ],
-      [ "judo_belt_blue", 5 ],
-      [ "judo_belt_brown", 4 ],
-      [ "judo_belt_black", 1 ]
-    ]
-  },
-  {
-    "id": "gi",
-    "type": "item_group",
-    "items": [
-      [ "karate_gi", 100 ],
-      [ "tabi_gi", 25 ],
-      [ "judo_gi", 50 ],
-      [ "keikogi", 25 ],
-      [ "zubon_gi", 25 ],
-      [ "hakama_gi", 10 ],
-      [ "obi_gi", 10 ],
-      [ "mouthpiece", 5 ],
-      [ "jikatabi_sneakers", 5 ],
-      [ "geta", 1 ],
-      [ "haori", 1 ],
-      [ "yukata", 1 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "shirts_summer_womens",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "camisole", "prob": 5 },
-      { "item": "halter_top", "prob": 5 },
-      { "item": "tank_top", "variant": "tank_top_cheerleader", "prob": 1 },
-      { "item": "cheerleader_top_short", "prob": 1 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "pants_summer_womens",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "skirt", "prob": 5 },
-      { "item": "skirt_denim", "prob": 5 },
-      { "item": "skirt_leather", "prob": 5 },
-      { "item": "skirt_long", "prob": 5 },
-      { "item": "leggings", "prob": 3 },
-      { "item": "tights", "prob": 4 },
-      { "item": "hot_pants", "prob": 4 },
-      { "item": "hot_pants_fur", "prob": 1 },
-      { "item": "hot_pants_leather", "prob": 1 },
-      { "item": "cheerleader_skirt", "prob": 1 },
-      { "item": "cheerleader_skirt_short", "prob": 1 }
-    ]
-  },
-  {
-    "id": "dress_shop",
-    "type": "item_group",
-    "items": [
-      [ "skirt", 40 ],
-      [ "skirt_long", 40 ],
-      [ "skirt_denim", 15 ],
-      [ "skirt_leather", 5 ],
-      [ "dress", 120 ],
-      [ "sundress", 50 ],
-      [ "nanoskirt", 30 ],
-      [ "camisole", 60 ],
-      [ "corset", 20 ],
-      [ "corset_waist", 20 ],
-      [ "unitard", 5 ],
-      [ "leotard", 10 ],
-      [ "stockings", 50 ],
-      [ "garter_belt", 25 ],
-      [ "leggings", 20 ],
-      [ "tights", 50 ],
-      [ "cheongsam", 1 ]
-    ]
-  },
-  {
     "id": "dress_shoes",
     "type": "item_group",
     "items": [ [ "dress_shoes", 50 ], [ "heels", 50 ], [ "espadrilles", 20 ] ]
-  },
-  {
-    "id": "wedding_dresses",
-    "type": "item_group",
-    "items": [ [ "dress", 50 ], [ "veil_wedding", 150 ], [ "dress_wedding", 150 ] ]
-  },
-  {
-    "id": "wedding_suits",
-    "type": "item_group",
-    "items": [ [ "tux", 100 ], [ "suit", 80 ], [ "waistcoat", 50 ], [ "dress_shirt", 100 ], [ "undershirt", 50 ] ]
   },
   {
     "type": "item_group",
@@ -1144,24 +709,6 @@
   },
   {
     "type": "item_group",
-    "id": "suits",
-    "items": [
-      [ "dress_shirt", 100 ],
-      { "group": "neckties", "prob": 50 },
-      [ "tieclip", 30 ],
-      [ "collarpin", 30 ],
-      [ "undershirt", 100 ],
-      [ "suit", 100 ],
-      [ "waistcoat", 70 ],
-      [ "tophat", 30 ],
-      [ "tux", 50 ],
-      [ "gown", 50 ],
-      [ "long_glove_white", 30 ],
-      [ "breeches", 10 ]
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "winter",
     "ammo": 50,
     "magazine": 100,
@@ -1218,61 +765,6 @@
   },
   {
     "type": "item_group",
-    "id": "fur_coats_unisex",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "trenchcoat_fur", "prob": 4 },
-      { "item": "duster_fur", "prob": 4 },
-      { "item": "sleeveless_trenchcoat_fur", "prob": 2 },
-      { "item": "sleeveless_duster_fur", "prob": 2 },
-      { "item": "coat_fur", "prob": 4 },
-      { "item": "cloak_fur", "prob": 1 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "fur_pants_womens",
-    "subtype": "distribution",
-    "entries": [ { "item": "hot_pants_fur", "prob": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "fur_hats_unisex",
-    "subtype": "distribution",
-    "entries": [ { "item": "hat_fur", "prob": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "fur_gloves_unisex",
-    "subtype": "distribution",
-    "entries": [ { "item": "gloves_fur", "prob": 30 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "fur_shoes_unisex",
-    "subtype": "distribution",
-    "entries": [ { "item": "boots_fur", "prob": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "fancyfurs",
-    "items": [
-      [ "hat_fur", 300 ],
-      [ "hat_faux_fur", 300 ],
-      [ "sleeveless_trenchcoat_fur", 10 ],
-      [ "sleeveless_duster_fur", 10 ],
-      [ "sleeveless_trenchcoat_faux_fur", 10 ],
-      [ "coat_faux_fur", 300 ],
-      [ "coat_fur", 400 ],
-      [ "gloves_fur", 300 ],
-      [ "boots_fur", 200 ],
-      [ "trenchcoat_faux_fur", 50 ],
-      [ "duster_faux_fur", 50 ],
-      [ "pants_faux_fur", 50 ]
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "hatstore_hats",
     "items": [
       [ "hat_cotton", 30 ],
@@ -1306,20 +798,6 @@
   },
   {
     "type": "item_group",
-    "id": "hatstore_accessories",
-    "items": [
-      [ "scarf", 50 ],
-      [ "knit_scarf", 50 ],
-      [ "long_knit_scarf", 30 ],
-      [ "scarf_long", 30 ],
-      [ "bandana", 100 ],
-      [ "hairpin", 50 ],
-      [ "fc_hairpin", 20 ],
-      [ "barrette", 30 ]
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "shoestore_shoes",
     "items": [
       [ "sneakers", 100 ],
@@ -1348,11 +826,6 @@
       [ "mocassins", 40 ],
       { "item": "heels", "variant": "heels_flag", "prob": 120, "event": "independence_day" }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "shoestore_accessories",
-    "items": [ [ "socks", 100 ], [ "socks_ankle", 75 ], [ "thermal_socks", 25 ], [ "socks_wool", 50 ], [ "string_36", 200 ] ]
   },
   {
     "type": "item_group",
@@ -1655,51 +1128,6 @@
   },
   {
     "type": "item_group",
-    "id": "allclothes_damaged",
-    "subtype": "distribution",
-    "items": [ { "group": "allclothes", "damage": [ 3, 4 ] } ]
-  },
-  {
-    "type": "item_group",
-    "id": "postman_carried",
-    "subtype": "collection",
-    "container-item": "mbag",
-    "on_overflow": "spill",
-    "items": [
-      { "item": "letter", "container-item": "envelope" },
-      { "item": "letter", "container-item": "envelope" },
-      { "item": "postcard", "container-item": "envelope" },
-      { "item": "letter", "count": [ 0, 5 ] },
-      { "item": "postcard", "count": [ 0, 5 ] },
-      { "item": "envelope", "count": [ 0, 5 ] },
-      { "item": "newest_newspaper", "count": [ 0, 5 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "postman_gear",
-    "subtype": "collection",
-    "items": [
-      { "distribution": [ { "item": "postman_hat", "prob": 80 }, { "item": "hat_ball", "prob": 20 } ] },
-      { "item": "postman_shirt" },
-      { "item": "postman_shorts" },
-      { "group": "postman_carried" },
-      { "item": "wristwatch" },
-      { "item": "leather_belt", "prob": 70 },
-      {
-        "distribution": [
-          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] },
-          {
-            "collection": [ { "distribution": [ { "item": "bra" }, { "item": "sports_bra" } ] }, { "item": "panties" } ]
-          }
-        ]
-      },
-      { "item": "socks" },
-      { "item": "sneakers" }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "construction_worker",
     "subtype": "distribution",
     "entries": [
@@ -1732,52 +1160,6 @@
   },
   {
     "type": "item_group",
-    "id": "fireman_torso",
-    "items": [ [ "bunker_coat", 80 ], [ "vest", 30 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "fireman_pants",
-    "items": [ [ "bunker_pants", 80 ], [ "nomex_suit", 40 ], [ "pants_cargo", 10 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "fireman_boots",
-    "items": [
-      [ "boots_bunker", 70 ],
-      [ "boots_steel", 20 ],
-      [ "sneakers_steel", 15 ],
-      [ "boots_combat", 5 ],
-      [ "boots_rubber", 10 ],
-      [ "boots_hiking", 5 ],
-      [ "nomex_socks", 40 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "fireman_gloves",
-    "items": [
-      [ "fire_gauntlets", 60 ],
-      [ "gloves_medical", 5 ],
-      [ "gloves_tactical", 20 ],
-      [ "gloves_rubber", 10 ],
-      [ "nomex_gloves", 30 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "fireman_head",
-    "items": [
-      [ "firehelmet", 60 ],
-      [ "hat_knit", 5 ],
-      [ "nomex_hood", 40 ],
-      { "item": "hat_hard", "variant": "red_hat_hard", "prob": 15 },
-      { "item": "hat_hard_hooded", "variant": "red_hat_hard", "prob": 6 },
-      [ "hat_noise_cancelling", 5 ]
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "fireman_mask",
     "items": [
       { "item": "mask_bunker", "prob": 70 },
@@ -1794,152 +1176,6 @@
       { "item": "mask_filter", "prob": 10, "charges": [ 0, -1 ] },
       { "item": "goggles_nv", "prob": 2, "charges": [ 0, 100 ] },
       { "item": "goggles_ir", "prob": 1, "charges": [ 0, 100 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "survivorzed_suits",
-    "items": [
-      [ "survivor_jumpsuit", 8 ],
-      [ "lsurvivor_jumpsuit", 10 ],
-      [ "hsurvivor_jumpsuit", 6 ],
-      [ "wsurvivor_jumpsuit", 6 ],
-      [ "wsurvivor_jumpsuit_nofur", 4 ],
-      [ "touring_suit", 16 ],
-      [ "armor_larmor", 28 ],
-      [ "armor_blarmor", 14 ],
-      [ "armor_farmor", 8 ],
-      [ "armor_plarmor", 2 ],
-      [ "armor_riot", 10 ],
-      [ "armor_scrapsuit", 12 ],
-      [ "armor_tiresuit", 12 ],
-      [ "armor_chitin", 2 ],
-      [ "armor_junk_lightplate", 1 ],
-      [ "cuirass_lightplate", 2 ],
-      [ "armor_junk_plate", 1 ],
-      { "item": "chainmail_junk_hauberk", "prob": 1 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "survivorzed_tops",
-    "items": [
-      [ "vest", 40 ],
-      [ "kevlar", 16 ],
-      [ "jacket_army", 5 ],
-      [ "jacket_army_modern", 16 ],
-      [ "combat_shirt", 5 ],
-      [ "trenchcoat", 12 ],
-      [ "trenchcoat_leather", 10 ],
-      [ "trenchcoat_fur", 5 ],
-      [ "sleeveless_trenchcoat", 7 ],
-      [ "sleeveless_trenchcoat_leather", 5 ],
-      [ "sleeveless_trenchcoat_fur", 2 ],
-      [ "duster", 12 ],
-      [ "duster_leather", 10 ],
-      [ "duster_fur", 5 ],
-      [ "sleeveless_duster", 7 ],
-      [ "sleeveless_duster_leather", 5 ],
-      [ "sleeveless_duster_fur", 2 ],
-      [ "peacoat", 14 ],
-      [ "greatcoat", 7 ],
-      [ "vest_leather", 22 ],
-      [ "bunker_coat", 6 ],
-      [ "bookplate", 10 ],
-      [ "tireplate", 10 ],
-      [ "ballistic_vest_esapi", 2 ],
-      { "group": "military_ballistic_vest", "prob": 4 },
-      [ "corset", 1 ],
-      [ "corset_waist", 1 ],
-      [ "football_armor", 18 ],
-      [ "jacket_leather", 12 ],
-      [ "tacjacket", 30 ],
-      [ "jacket_varsity", 6 ],
-      [ "leather_police_jacket", 12 ],
-      [ "jacket_jean", 8 ],
-      [ "jacket_flannel", 6 ],
-      [ "cuirass_scrap", 12 ],
-      [ "cuirass_tire", 12 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "survivorzed_bottoms",
-    "items": [
-      [ "pants_tactical", 15 ],
-      [ "pants_hiking", 12 ],
-      [ "pants_cargo", 40 ],
-      [ "shorts_cargo", 22 ],
-      [ "pants_army", 28 ],
-      [ "winter_pants_army", 10 ],
-      [ "bunker_pants", 14 ],
-      [ "pants_leather", 18 ],
-      [ "chaps_leather", 10 ],
-      [ "legguard_scrap", 12 ],
-      [ "legguard_tire", 12 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "survivorzed_gloves",
-    "items": [
-      [ "gloves_survivor", 8 ],
-      [ "gloves_fsurvivor", 2 ],
-      [ "gloves_fingerless", 28 ],
-      [ "gloves_fingerless_mod", 20 ],
-      [ "gloves_tactical", 12 ],
-      [ "gauntlets_larmor", 14 ],
-      [ "gauntlets_chitin", 2 ],
-      [ "armguard_larmor", 7 ],
-      [ "vambrace_larmor", 6 ],
-      [ "armguard_chitin", 1 ],
-      [ "armguard_scrap", 12 ],
-      [ "armguard_tire", 12 ],
-      [ "gloves_fur", 4 ],
-      [ "gloves_leather", 22 ],
-      [ "gloves_work", 22 ],
-      [ "gloves_plate", 2 ],
-      [ "gloves_wraps", 1 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "survivorzed_boots",
-    "items": [
-      [ "boots_survivor", 8 ],
-      [ "boots_wsurvivor", 4 ],
-      [ "boots", 20 ],
-      [ "boots_scrap", 12 ],
-      [ "boots_steel", 28 ],
-      [ "sneakers_steel", 20 ],
-      [ "boots_denim", 2 ],
-      [ "boots_hiking", 24 ],
-      [ "boots_combat", 12 ],
-      [ "boots_larmor", 14 ],
-      [ "boots_fur", 22 ],
-      [ "boots_plate", 2 ],
-      [ "boots_bunker", 8 ],
-      [ "footrags", 1 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "survivorzed_head",
-    "items": [
-      [ "hood_survivor", 8 ],
-      [ "hood_wsurvivor", 4 ],
-      [ "helmet_army", 26 ],
-      [ "tac_helmet", 22 ],
-      [ "helmet_riot", 18 ],
-      [ "tac_fullhelmet", 8 ],
-      [ "helmet_larmor", 14 ],
-      [ "pickelhaube", 1 ],
-      [ "firehelmet", 2 ],
-      [ "helmet_barbute", 1 ],
-      [ "helmet_plate", 1 ],
-      [ "helmet_scrap", 12 ],
-      [ "survivor_goggles", 10 ],
-      [ "hood_rain", 14 ]
     ]
   },
   {
@@ -2042,91 +1278,6 @@
       [ "survnote", 30 ],
       [ "gaiter_boot", 5 ],
       [ "gaiter_boot_heavy", 5 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "museum_armor",
-    "items": [
-      { "item": "armor_junk_plate", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "chainmail_junk_hauberk", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "gloves_plate", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "boots_plate", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "armor_junk_lightplate", "prob": 45, "damage": [ 2, 4 ] },
-      { "item": "cuirass_lightplate", "prob": 45, "damage": [ 2, 4 ] },
-      { "item": "armor_lc_armguard", "prob": 30, "damage": [ 2, 4 ] },
-      { "item": "armor_lc_leg_guard", "prob": 30, "damage": [ 2, 4 ] },
-      { "item": "helmet_barbute", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "helmet_conical", "prob": 30, "damage": [ 2, 4 ] },
-      { "item": "armor_lamellar", "prob": 20, "damage": [ 2, 4 ] },
-      { "item": "armor_lorica", "prob": 25, "damage": [ 2, 4 ] },
-      { "item": "armor_samurai", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "helmet_kabuto", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "helmet_nasal", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "helmet_galea", "prob": 40, "damage": [ 2, 4 ] },
-      { "item": "gambeson", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "gambeson_pants", "prob": 40, "damage": [ 2, 4 ] },
-      { "item": "legguard_metal", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "helmet_corinthian", "prob": 45, "damage": [ 2, 4 ] },
-      { "item": "armor_cuirass", "prob": 25, "damage": [ 2, 4 ] },
-      { "item": "legguard_bronze", "prob": 20, "damage": [ 2, 4 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "museum_armor_torso",
-    "items": [
-      { "item": "armor_junk_plate", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "chainmail_junk_hauberk", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "armor_junk_lightplate", "prob": 45, "damage": [ 2, 4 ] },
-      { "item": "cuirass_lightplate", "prob": 45, "damage": [ 2, 4 ] },
-      { "item": "armor_lamellar", "prob": 20, "damage": [ 2, 4 ] },
-      { "item": "armor_lorica", "prob": 25, "damage": [ 2, 4 ] },
-      { "item": "armor_samurai", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "gambeson", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "armor_cuirass", "prob": 25, "damage": [ 2, 4 ] },
-      { "item": "chainmail_junk_suit", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "chainmail_junk_vest", "prob": 3, "damage": [ 2, 4 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "museum_armor_legs",
-    "items": [
-      { "item": "armor_lc_leg_guard", "prob": 30, "damage": [ 2, 4 ] },
-      { "item": "legguard_metal", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "legguard_bronze", "prob": 20, "damage": [ 2, 4 ] },
-      { "item": "chainmail_junk_legs", "prob": 10, "damage": [ 2, 4 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "museum_armor_feet",
-    "items": [
-      { "item": "boots_plate", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "chainmail_junk_feet", "prob": 40, "damage": [ 2, 4 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "museum_armor_head",
-    "items": [
-      { "item": "helmet_barbute", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "helmet_conical", "prob": 30, "damage": [ 2, 4 ] },
-      { "item": "helmet_kabuto", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "helmet_nasal", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "helmet_galea", "prob": 40, "damage": [ 2, 4 ] },
-      { "item": "chainmail_junk_hood", "prob": 30, "damage": [ 2, 4 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "museum_armor_arms",
-    "items": [
-      { "item": "armor_lc_armguard", "prob": 30, "damage": [ 2, 4 ] },
-      { "item": "gloves_plate", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "chainmail_junk_arms", "prob": 30, "damage": [ 2, 4 ] },
-      { "item": "chainmail_junk_hands", "prob": 30, "damage": [ 2, 4 ] }
     ]
   },
   {
@@ -2357,18 +1508,6 @@
     ]
   },
   {
-    "id": "unisex_coat_rack",
-    "type": "item_group",
-    "//": "clothing found on a coat rack",
-    "subtype": "collection",
-    "items": [
-      { "group": "scarfs_unisex", "prob": 40 },
-      { "group": "bags_unisex", "prob": 20 },
-      { "group": "coats_unisex", "prob": 70 },
-      { "group": "hats_unisex", "prob": 70 }
-    ]
-  },
-  {
     "id": "hats_unisex",
     "type": "item_group",
     "//": "unisex hats for domestic locations",
@@ -2512,67 +1651,6 @@
     "items": [ { "item": "halter_top", "prob": 30 }, { "item": "tank_top", "prob": 15 }, { "item": "camisole", "prob": 15 } ]
   },
   {
-    "id": "pants_unisex",
-    "type": "item_group",
-    "//": "pants and leg coverings for domestic locations.",
-    "subtype": "distribution",
-    "items": [
-      {
-        "distribution": [
-          { "item": "hot_pants", "prob": 40 },
-          { "item": "hot_pants_fur", "prob": 5 },
-          { "item": "hot_pants_leather", "prob": 35 }
-        ],
-        "prob": 10
-      },
-      {
-        "distribution": [
-          { "item": "chaps_leather", "prob": 30 },
-          { "item": "motorbike_pants", "prob": 35 },
-          { "item": "breeches", "prob": 25 },
-          { "item": "pants_ski", "prob": 45 },
-          { "item": "pants_checkered", "prob": 55 },
-          { "item": "pants_fur", "prob": 5 },
-          { "item": "pants_faux_fur", "prob": 15 }
-        ],
-        "prob": 20
-      },
-      { "item": "jeans", "prob": 80 },
-      { "item": "jeans_ripped", "prob": 7 },
-      { "item": "jeans_skinny", "prob": 15 },
-      { "item": "leg_warmers", "prob": 20 },
-      { "item": "leggings", "prob": 30 },
-      { "item": "legguard_hard", "prob": 3 },
-      { "item": "pants", "prob": 70 },
-      { "item": "pants_cargo", "prob": 60 },
-      { "item": "pants_leather", "prob": 20 },
-      { "item": "shorts", "prob": 50 },
-      { "item": "shorts_cargo", "prob": 60 },
-      { "item": "shorts_denim", "prob": 40 },
-      { "item": "b_shorts", "prob": 60 }
-    ]
-  },
-  {
-    "id": "pants_womens",
-    "type": "item_group",
-    "//": "women's pants and leg coverings for domestic locations.",
-    "subtype": "distribution",
-    "items": [
-      { "item": "nanoskirt", "prob": 1 },
-      { "item": "skirt", "prob": 50 },
-      { "item": "skirt_long", "prob": 40 },
-      { "item": "skirt_denim", "prob": 20 },
-      { "item": "skirt_leather", "prob": 10 }
-    ]
-  },
-  {
-    "id": "pants_mens",
-    "type": "item_group",
-    "//": "men's pants and leg coverings for domestic locations.",
-    "subtype": "distribution",
-    "items": [ { "item": "kilt", "prob": 50 }, { "item": "kilt_leather", "prob": 25 } ]
-  },
-  {
     "id": "gloves_unisex",
     "type": "item_group",
     "//": "gloves and mittens for domestic locations.",
@@ -2596,35 +1674,6 @@
       { "group": "costume_gloves", "prob": 1 },
       { "group": "costume_gloves", "prob": 70, "event": "halloween" },
       { "group": "christmas_common_gloves", "prob": 70, "event": "christmas" }
-    ]
-  },
-  {
-    "id": "gloves_womens",
-    "type": "item_group",
-    "//": "women's gloves and mittens for domestic locations.",
-    "subtype": "distribution",
-    "items": [ { "item": "long_glove_white", "prob": 5 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "formal_set_mens",
-    "subtype": "collection",
-    "entries": [
-      {
-        "distribution": [
-          {
-            "collection": [
-              {
-                "collection": [ { "item": "undershirt", "prob": 30 }, { "item": "dress_shirt" }, { "item": "waistcoat", "prob": 20 } ]
-              },
-              { "item": "breeches" }
-            ]
-          },
-          { "distribution": [ { "item": "suit", "prob": 50 }, { "item": "tux", "prob": 50 } ] }
-        ]
-      },
-      { "item": "dress_shoes" },
-      { "collection": [ { "item": "tophat", "prob": 50 }, { "item": "collarpin", "prob": 50 } ] }
     ]
   },
   {
@@ -2668,13 +1717,6 @@
       { "item": "bodysuit_lycra", "variant": "flag_suit", "prob": 50, "event": "independence_day" },
       { "group": "costume_suits", "prob": 70, "event": "halloween" }
     ]
-  },
-  {
-    "id": "suits_mens",
-    "type": "item_group",
-    "//": "suits, full body coverage for men.",
-    "subtype": "distribution",
-    "items": [ { "item": "tux", "prob": 30 }, { "item": "thawb", "prob": 10 }, { "item": "cassock", "prob": 10 } ]
   },
   {
     "id": "suits_womens",
@@ -2851,12 +1893,5 @@
         "prob": 10
       }
     ]
-  },
-  {
-    "id": "shoes_womens",
-    "type": "item_group",
-    "//": "women's only shoes",
-    "subtype": "distribution",
-    "items": [ { "item": "heels", "prob": 100 } ]
   }
 ]

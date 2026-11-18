@@ -1,22 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "monparts",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "meat", "prob": 50 },
-      { "item": "veggy", "prob": 30 },
-      { "item": "meat_tainted", "prob": 60 },
-      { "item": "veggy_tainted", "prob": 35 },
-      { "item": "royal_jelly", "prob": 8 },
-      { "item": "ant_egg", "prob": 5 },
-      { "item": "bee_sting", "prob": 5 },
-      { "item": "fighter_sting", "prob": 5 },
-      { "item": "chitin_piece", "prob": 10 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "ant_food",
     "subtype": "distribution",
     "entries": [
@@ -73,68 +57,9 @@
   },
   {
     "type": "item_group",
-    "id": "kraken_food",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "meat", "prob": 50 },
-      { "item": "fish", "prob": 80 },
-      { "item": "meat_tainted", "prob": 60 },
-      { "item": "arm", "prob": 4 },
-      { "item": "leg", "prob": 4 },
-      { "item": "rock", "prob": 40 },
-      { "item": "razorclaw_roe", "prob": 5 },
-      { "item": "stick", "prob": 95 },
-      { "item": "survivormap", "prob": 1 },
-      { "item": "wetsuit", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "wetsuit_thick", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "homemade_bomb_act", "prob": 1 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "razorclaw_nest",
-    "subtype": "distribution",
-    "entries": [ { "item": "razorclaw_roe", "count": [ 1, 6 ] } ]
-  },
-  {
-    "type": "item_group",
     "id": "ant_egg",
     "subtype": "distribution",
     "entries": [ { "item": "ant_egg", "prob": 5 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "biollante",
-    "subtype": "distribution",
-    "entries": [ { "item": "biollante_bud", "prob": 1 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "fungal_sting",
-    "subtype": "distribution",
-    "entries": [ { "item": "fighter_sting", "prob": 5 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "cow",
-    "subtype": "distribution",
-    "entries": [ { "item": "cow_bell", "prob": 1 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "dog_cop",
-    "subtype": "distribution",
-    "entries": [ { "item": "kevlar_harness", "prob": 1 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "dog_clothes",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "rubber_harness_dog", "prob": 50 },
-      { "item": "leather_harness_dog", "prob": 25 },
-      { "item": "kevlar_harness", "prob": 1 }
-    ]
   },
   {
     "type": "item_group",
@@ -147,70 +72,6 @@
       { "item": "beekeeping_hood", "prob": 5 },
       { "item": "beekeeping_suit", "prob": 5 },
       { "item": "beekeeping_gloves", "prob": 5 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "bug_parts",
-    "//": "Bug butchery remains",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "chitin_piece", "prob": 70 },
-      { "item": "acidchitin_piece", "prob": 30 },
-      { "item": "endochitin", "prob": 70 },
-      { "item": "mutant_bug_hydrogen_sacs", "prob": 30 },
-      { "item": "mutant_bug_lungs", "prob": 10, "count": 4 },
-      { "item": "mutant_bug_organs", "prob": 10 },
-      { "item": "sinew", "prob": 10 },
-      { "item": "bee_sting", "prob": 10 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "vertebrate_parts",
-    "//": "Normal/mutated animal remains",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "skull_canis", "prob": 10 },
-      { "item": "skull_canis_medium", "prob": 15 },
-      { "item": "skull_feline_small", "prob": 15 },
-      { "item": "skull_rodent", "prob": 25 },
-      { "item": "skull_pig", "prob": 10 },
-      { "item": "skull_bovine", "prob": 5 },
-      { "item": "skull_cervine", "prob": 10 },
-      { "item": "skull_moose", "prob": 3 },
-      { "item": "bone", "prob": 80 },
-      { "item": "feather", "prob": 80 },
-      { "item": "raw_leather", "prob": 30 },
-      { "item": "raw_fur", "prob": 30 },
-      { "item": "wool_staple", "prob": 30 },
-      { "item": "sinew", "prob": 5 },
-      { "item": "brain", "prob": 5, "count": 4 },
-      { "item": "lung", "prob": 5, "count": 4 },
-      { "item": "liver", "prob": 5, "count": 4 },
-      { "item": "sweetbread", "prob": 5, "count": 4 },
-      { "item": "stomach", "prob": 5 },
-      { "item": "stomach_large", "prob": 5 },
-      { "item": "kidney", "prob": 5, "count": 4 },
-      { "item": "jabberwock_heart", "prob": 1 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "human_parts",
-    "//": "(demi)human remains",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "skull_human", "prob": 20 },
-      { "item": "bone_human", "prob": 80 },
-      { "item": "raw_hleather", "prob": 30 },
-      { "item": "raw_demihumanleather", "prob": 5 },
-      { "item": "raw_hfur", "prob": 1 },
-      { "item": "sinew", "prob": 5 },
-      { "item": "hstomach", "prob": 5 },
-      { "item": "demihuman_stomach", "prob": 1 },
-      { "item": "hstomach_large", "prob": 5 },
-      { "item": "demihuman_stomach_large", "prob": 1 }
     ]
   },
   {

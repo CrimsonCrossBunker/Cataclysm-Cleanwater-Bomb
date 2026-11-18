@@ -285,33 +285,5 @@
       { "item": "ai_338mag_10", "prob": 50 },
       { "group": "on_hand_300" }
     ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "nested_converted_mdrx",
-    "//": "An item group for a random, personally-converted weapon to spawn.",
-    "entries": [
-      {
-        "distribution": [
-          { "group": "nested_mdrx_retool_223rem", "prob": 30 },
-          { "group": "nested_mdrx_retool_300blk", "prob": 20 },
-          { "group": "nested_mdrx_retool_308win", "prob": 15 }
-        ],
-        "prob": 100
-      }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "nested_converted_axmc",
-    "//": "An item group for a random, personally-converted weapon to spawn.",
-    "entries": [
-      {
-        "distribution": [ { "group": "nested_axmc_retool_300win", "prob": 20 }, { "group": "nested_axmc_retool_308win", "prob": 20 } ],
-        "prob": 100
-      }
-    ]
   }
 ]

@@ -14,12 +14,6 @@
   {
     "type": "item_group",
     "subtype": "collection",
-    "id": "female_underwear_child",
-    "groups": [ "female_underwear_top_child", "female_underwear_bottom" ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
     "id": "male_underwear",
     "groups": [ "male_underwear_top", "male_underwear_bottom" ]
   },
@@ -73,21 +67,6 @@
       [ "boxer_briefs", 50 ],
       [ "long_underpants", 20 ],
       [ "under_armor_shorts", 20 ]
-    ]
-  },
-  {
-    "id": "underwear_unisex",
-    "type": "item_group",
-    "//": "unisex underwear",
-    "subtype": "distribution",
-    "items": [
-      { "item": "thermal_suit", "prob": 1 },
-      { "item": "thermal_outfit", "prob": 1 },
-      { "item": "long_undertop", "prob": 30 },
-      { "item": "under_armor", "prob": 10 },
-      { "item": "undershirt", "prob": 40 },
-      { "item": "under_armor_shorts", "prob": 10 },
-      { "item": "long_underpants", "prob": 30 }
     ]
   },
   {

@@ -197,46 +197,5 @@
       [ "joint", 10 ],
       { "group": "civilian_phones", "prob": 50 }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "college_lake",
-    "items": [
-      { "group": "bikini", "prob": 120 },
-      [ "flag_swimsuit", 100 ],
-      [ "trunks", 100 ],
-      [ "rashguard", 30 ],
-      [ "speedo", 50 ],
-      [ "swim_briefs", 60 ],
-      [ "towel", 100 ],
-      [ "goggles_swim", 30 ],
-      [ "swim_fins", 20 ],
-      [ "flotation_vest", 50 ],
-      [ "swimming_kickboard", 15 ],
-      [ "diving_watch", 10 ],
-      [ "sunglasses", 60 ],
-      [ "fitover_sunglasses", 20 ],
-      [ "flip_flops", 50 ],
-      [ "flip_flops_exp", 5 ],
-      [ "wetsuit_spring", 10 ],
-      [ "wetsuit_spring_sleeveless", 10 ],
-      { "group": "tools_fishingrods_commercial", "prob": 30 },
-      [ "straw_hat", 80 ],
-      [ "straw_fedora", 80 ],
-      [ "silver_ear", 20 ],
-      [ "bead_ear", 20 ],
-      [ "silver_necklace", 20 ],
-      [ "silver_bracelet", 20 ],
-      [ "silver_locket", 20 ],
-      { "item": "radio", "prob": 20, "charges": [ 0, 100 ] },
-      { "prob": 80, "group": "bottle_otc_painkiller_1_20" },
-      { "item": "inhaler", "prob": 30, "charges": [ 10, 100 ] },
-      [ "beer", 80 ],
-      [ "wine_barley", 20 ],
-      { "prob": 20, "group": "cig_box_cigarette_1_20" },
-      { "item": "weed", "prob": 10, "count": [ 1, 5 ] },
-      [ "joint", 10 ],
-      { "group": "civilian_phones", "prob": 50 }
-    ]
   }
 ]

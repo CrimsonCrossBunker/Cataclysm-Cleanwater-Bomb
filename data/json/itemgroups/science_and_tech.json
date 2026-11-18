@@ -361,23 +361,6 @@
   },
   {
     "type": "item_group",
-    "id": "mutagen_or_serum_kit",
-    "//": "odds of serum kit is so low for there is only three at this moment, would be very repetitive.  TODO increase odds to get serum once there would be more of them.",
-    "items": [ { "group": "mutagen_kits", "prob": 100 }, { "group": "serum_kits", "prob": 30 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "mutagen_kits",
-    "items": [
-      { "group": "mutagenic_field_kit", "prob": 15 },
-      { "group": "mutagen_catalyst_kit", "prob": 35 },
-      { "group": "mutagen_primer_kit", "prob": 55 },
-      { "group": "mutagen_kit", "prob": 55 },
-      { "group": "mutagen_slurry_kit", "prob": 75 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "mutagenic_field_kit",
     "container-item": "box_small_plastic",
     "subtype": "collection",
@@ -520,100 +503,6 @@
   },
   {
     "type": "item_group",
-    "id": "mutagen_slurry_kit",
-    "subtype": "collection",
-    "items": [
-      { "item": "mutagen", "prob": 100, "container-item": "30gal_barrel_mutagen", "charges": [ 30, 50 ] },
-      { "item": "lab_file_mutagen_guide", "prob": 100 },
-      { "item": "lab_file_mutation_testing", "prob": 100 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "serum_kits",
-    "items": [
-      { "group": "regen_serum_kit", "prob": 1 },
-      { "group": "super_soldier_serum_kit", "prob": 1 },
-      { "group": "resilience_serum_kit", "prob": 1 },
-      { "group": "learning_serum_kit", "prob": 1 },
-      { "group": "speed_serum_kit", "prob": 1 },
-      { "group": "night_ops_serum_kit", "prob": 1 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "regen_serum_kit",
-    "container-item": "box_small_plastic",
-    "subtype": "collection",
-    "items": [
-      { "item": "syringe", "prob": 100, "count": 1 },
-      { "item": "serum_regen", "prob": 100, "count": [ 8, 12 ] },
-      { "item": "bubblewrap", "prob": 100, "count": [ 12, 20 ] },
-      { "item": "lab_file_serum_testing", "prob": 100, "variant": "lab_file_serum_testing_regen" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "super_soldier_serum_kit",
-    "container-item": "box_small_plastic",
-    "subtype": "collection",
-    "items": [
-      { "item": "syringe", "prob": 100, "count": 1 },
-      { "item": "serum_super_soldier", "prob": 100, "count": [ 8, 12 ] },
-      { "item": "bubblewrap", "prob": 100, "count": [ 12, 20 ] },
-      { "item": "lab_file_serum_testing", "prob": 100, "variant": "lab_file_serum_testing_super_soldier" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "resilience_serum_kit",
-    "container-item": "box_small_plastic",
-    "subtype": "collection",
-    "items": [
-      { "item": "syringe", "prob": 100, "count": 1 },
-      { "item": "serum_resilience", "prob": 100, "count": [ 8, 12 ] },
-      { "item": "bubblewrap", "prob": 100, "count": [ 12, 20 ] },
-      { "item": "lab_file_serum_testing", "prob": 100, "variant": "lab_file_serum_testing_resilience" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "learning_serum_kit",
-    "container-item": "box_small_plastic",
-    "subtype": "collection",
-    "items": [
-      { "item": "syringe", "prob": 100, "count": 1 },
-      { "item": "serum_learning", "prob": 100, "count": [ 8, 12 ] },
-      { "item": "bubblewrap", "prob": 100, "count": [ 12, 20 ] },
-      { "item": "lab_file_serum_testing", "prob": 100, "variant": "lab_file_serum_testing_learning" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "speed_serum_kit",
-    "container-item": "box_small_plastic",
-    "subtype": "collection",
-    "items": [
-      { "item": "syringe", "prob": 100, "count": 1 },
-      { "item": "serum_speed", "prob": 100, "count": [ 8, 12 ] },
-      { "item": "bubblewrap", "prob": 100, "count": [ 12, 20 ] },
-      { "item": "lab_file_serum_testing", "prob": 100, "variant": "lab_file_serum_testing_speed" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "night_ops_serum_kit",
-    "container-item": "box_small_plastic",
-    "subtype": "collection",
-    "items": [
-      { "item": "syringe", "prob": 100, "count": 1 },
-      { "item": "serum_night_operations", "prob": 100, "count": [ 8, 12 ] },
-      { "item": "bubblewrap", "prob": 100, "count": [ 12, 20 ] },
-      { "item": "lab_file_serum_testing", "prob": 100, "variant": "lab_file_serum_testing_night_ops" }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "teleport",
     "items": [
       [ "screwdriver", 40 ],
@@ -634,33 +523,6 @@
       [ "teleporter", 10 ],
       { "prob": 5, "group": "antiparasitic_bottle_plastic_pill_prescription_1_10" }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "goo",
-    "items": [
-      { "group": "supplies_reagents_lab", "prob": 20 },
-      [ "jumpsuit", 20 ],
-      { "item": "jumpsuit_pocketless", "variant": "orange", "prob": 1 },
-      [ "gloves_rubber", 20 ],
-      [ "apron_plastic", 20 ],
-      { "item": "mask_filter", "prob": 30, "charges": [ 0, 100 ] },
-      [ "goggles_chem", 35 ],
-      [ "glasses_safety", 5 ],
-      { "item": "lighter", "prob": 60, "charges": [ 0, 100 ] },
-      [ "boots_rubber", 20 ],
-      [ "recipe_medicalmut", 2 ],
-      [ "canister_goo", 16 ],
-      [ "recipe_labchem", 2 ],
-      [ "recipe_creepy", 2 ],
-      [ "recipe_animal", 1 ],
-      [ "recipe_chimera", 1 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "cloning_vat",
-    "items": [ [ "fetus", 1 ], [ "arm", 4 ], [ "leg", 4 ] ]
   },
   {
     "type": "item_group",
@@ -697,18 +559,6 @@
       [ "anesthetic", 20 ],
       { "item": "rocuronium", "prob": 10, "count": [ 2, 8 ] },
       { "item": "anesthetic_kit", "prob": 10, "charges": [ 0, -1 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "yrax_scrap",
-    "items": [
-      [ "yrax_sensor", 5 ],
-      [ "yrax_robotics", 20 ],
-      [ "yrax_computer", 5 ],
-      [ "yrax_scrap", 40 ],
-      [ "yrax_metal", 40 ],
-      [ "yrax_electronics", 20 ]
     ]
   },
   {
@@ -757,11 +607,5 @@
       [ "beaker", 10 ],
       [ "test_tube", 10 ]
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "any_centrifuge",
-    "subtype": "distribution",
-    "items": [ [ "microcentrifuge", 1 ], [ "centrifuge", 1 ] ]
   }
 ]

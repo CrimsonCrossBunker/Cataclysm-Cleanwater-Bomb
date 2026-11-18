@@ -1,24 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "bags",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "small_bags", "prob": 92 },
-      { "item": "backpack", "prob": 38 },
-      { "item": "backpack_hiking", "prob": 3 },
-      { "item": "backpack_hunting", "prob": 1 },
-      { "item": "backpack_tactical_large", "prob": 1 },
-      { "item": "bigback", "prob": 1 },
-      { "item": "travelpack", "prob": 5 },
-      { "item": "rucksack", "prob": 1 },
-      { "group": "large_gym_bags", "prob": 5 },
-      { "item": "leg_bag", "prob": 1 },
-      { "item": "quiver_takedown_bow", "prob": 1 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "large_bags",
     "subtype": "distribution",
     "entries": [
@@ -50,57 +32,6 @@
       { "item": "backpack_denim", "prob": 3 },
       { "item": "backpack_leather", "prob": 8 },
       { "item": "briefcase", "prob": 10 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "small_gym_bags",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "duffelbag_gym_xxs", "prob": 2 },
-      { "item": "duffelbag_gym_xs", "prob": 5 },
-      { "item": "duffelbag_gym_s", "prob": 20 },
-      { "item": "duffelbag_gym_m", "prob": 25 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "large_gym_bags",
-    "subtype": "distribution",
-    "entries": [ { "item": "duffelbag_gym_l", "prob": 10 }, { "item": "duffelbag_gym_xl", "prob": 1 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "gym_bags",
-    "subtype": "distribution",
-    "entries": [ { "group": "small_gym_bags", "prob": 5 }, { "group": "large_gym_bags", "prob": 1 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "gun_cases",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "rifle_case_soft", "prob": 50 },
-      { "item": "rifle_case_soft_leather", "prob": 30 },
-      { "item": "rifle_case_soft_2", "prob": 40 },
-      { "item": "rifle_case_soft_leather_2", "prob": 30 },
-      { "item": "rifle_case_xl_soft_leather", "prob": 30 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "bags_trip",
-    "subtype": "distribution",
-    "entries": [ { "item": "suitcase_l", "prob": 37 }, { "item": "suitcase_m", "prob": 55 }, { "item": "duffelbag", "prob": 8 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "large_duffelbags",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "large_gym_bags", "prob": 100 },
-      { "item": "duffelbag_l_poly", "prob": 60 },
-      { "item": "duffelbag_xl_nylon", "prob": 30 }
     ]
   },
   {

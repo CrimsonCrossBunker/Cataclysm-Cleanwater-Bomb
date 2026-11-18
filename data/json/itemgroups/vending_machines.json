@@ -1,48 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "default_vending_machine",
-    "subtype": "collection",
-    "entries": [ { "group": "vending_drink", "prob": 50 }, { "group": "vending_drink", "prob": 50 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "vending_food",
-    "entries": [
-      { "group": "vending_food_items", "count": [ 5, 20 ] },
-      { "group": "vending_food_items", "prob": 66, "count": [ 5, 25 ] },
-      { "group": "vending_food_items", "prob": 20, "count": [ 5, 25 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "vending_drink",
-    "entries": [
-      { "group": "vending_drink_items", "count": [ 5, 20 ] },
-      { "group": "vending_drink_items", "prob": 66, "count": [ 5, 25 ] },
-      { "group": "vending_drink_items", "prob": 20, "count": [ 5, 25 ] }
-    ]
-  },
-  {
-    "id": "vending_drink_home_impr",
-    "type": "item_group",
-    "items": [
-      [ "water_clean", 50 ],
-      [ "water_mineral", 20 ],
-      [ "oj", 40 ],
-      [ "pineapple_juice", 35 ],
-      [ "juice", 35 ],
-      [ "cranberry_juice", 35 ],
-      [ "cola", 50 ],
-      [ "lemonlime", 45 ],
-      [ "V8", 15 ],
-      { "group": "chewing_gum_full", "prob": 15 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "vending_food_items",
     "items": [
       { "group": "candy_chocolate", "prob": 615 },

@@ -68,17 +68,5 @@
       { "item": "mugwort", "prob": 5, "count": [ 1, 3 ] },
       { "item": "salsify_raw", "prob": 5, "count": [ 1, 3 ] }
     ]
-  },
-  {
-    "id": "forage_winter",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [ { "item": "wintergreen_berry", "prob": 2, "count": [ 1, 3 ] } ]
-  },
-  {
-    "id": "forage_mushroom",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [ { "item": "mushroom", "prob": 4, "count": [ 1, 3 ] }, { "item": "mushroom_morel", "prob": 2, "count": [ 1, 4 ] } ]
   }
 ]

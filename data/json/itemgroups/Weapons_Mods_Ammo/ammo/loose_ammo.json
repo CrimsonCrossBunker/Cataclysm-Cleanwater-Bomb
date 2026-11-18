@@ -29,16 +29,6 @@
   {
     "type": "item_group",
     "subtype": "distribution",
-    "id": "380_loose",
-    "items": [
-      { "item": "380_FMJ", "charges": [ 1, 10 ], "prob": 60 },
-      { "item": "380_JHP", "charges": [ 1, 10 ], "prob": 80 },
-      { "item": "380_p", "charges": [ 1, 10 ], "prob": 10 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
     "id": "40_loose",
     "items": [ { "item": "40fmj", "charges": [ 1, 10 ], "prob": 60 }, { "item": "40sw", "charges": [ 1, 10 ], "prob": 80 } ]
   },
@@ -63,12 +53,6 @@
       { "item": "shot_bird", "charges": [ 1, 10 ], "prob": 10 },
       { "item": "shot_slug", "charges": [ 1, 10 ], "prob": 1 }
     ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "308_loose",
-    "items": [ { "item": "308", "charges": [ 1, 10 ], "prob": 7 }, { "item": "762_51", "charges": [ 1, 10 ], "prob": 3 } ]
   },
   {
     "type": "item_group",
@@ -101,16 +85,6 @@
   {
     "type": "item_group",
     "subtype": "distribution",
-    "id": "20_loose",
-    "items": [
-      { "item": "20shot_buck", "charges": [ 1, 10 ], "prob": 2 },
-      { "item": "20shot_bird", "charges": [ 1, 10 ], "prob": 10 },
-      { "item": "20shot_slug", "charges": [ 1, 10 ], "prob": 1 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
     "id": "410_loose",
     "items": [
       { "item": "410shot_000", "charges": [ 1, 10 ], "prob": 2 },
@@ -138,18 +112,6 @@
       { "item": "30carbine_jsp", "charges": [ 1, 10 ], "prob": 1 },
       { "item": "30carbine", "charges": [ 1, 10 ], "prob": 4 }
     ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "32_loose",
-    "items": [ { "item": "32_acp", "charges": [ 1, 10 ], "prob": 4 }, { "item": "32_acp_jhp", "charges": [ 1, 10 ], "prob": 1 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "357sig_loose",
-    "items": [ { "item": "357sig_jhp", "charges": [ 1, 10 ], "prob": 1 }, { "item": "357sig_fmj", "charges": [ 1, 10 ], "prob": 7 } ]
   },
   {
     "type": "item_group",

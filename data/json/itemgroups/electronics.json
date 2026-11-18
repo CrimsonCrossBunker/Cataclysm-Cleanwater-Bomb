@@ -132,51 +132,6 @@
   {
     "type": "item_group",
     "subtype": "distribution",
-    "id": "new_usb_drives",
-    "//": "new_X e-devices are for brand-new or freshly issued e-devices, usually empty",
-    "items": [ "usb_drive" ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "used_usb_drives",
-    "//": "used_X e-devices are for e-devices that have previous use and should have contents",
-    "items": [ [ "usb_drive", 5 ], [ "usb_drive_older", 1 ] ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "civilian_usb_drives",
-    "//": "these civilian_X e-devices are pre-loaded with general files to avoid repetition; if you want more specific contents, give used_X a contents-group in its own entry",
-    "items": [
-      { "item": "usb_drive", "prob": 5, "contents-group": "civilian_portable_efiles" },
-      { "item": "usb_drive_older", "prob": 1, "contents-group": "civilian_portable_efiles" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "new_memory_cards",
-    "items": [ { "item": "memory_card" } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "used_memory_cards",
-    "items": [ [ "memory_card", 5 ], [ "memory_card_older", 1 ] ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "civilian_memory_cards",
-    "items": [
-      { "item": "memory_card", "prob": 5, "contents-group": "civilian_portable_efiles" },
-      { "item": "memory_card", "prob": 1, "contents-group": "civilian_portable_efiles" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
     "id": "new_laptops",
     "items": [ { "item": "laptop", "charges": 200 } ]
   },
@@ -195,12 +150,6 @@
   {
     "type": "item_group",
     "subtype": "distribution",
-    "id": "new_eink_tablet_pcs",
-    "items": [ { "item": "eink_tablet_pc", "charges": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
     "id": "used_eink_tablet_pcs",
     "items": [ { "item": "eink_tablet_pc", "charges": [ 0, -1 ] } ]
   },
@@ -209,12 +158,6 @@
     "subtype": "distribution",
     "id": "civilian_eink_tablet_pcs",
     "items": [ { "item": "eink_tablet_pc", "charges": [ 0, -1 ], "contents-group": "civilian_einktablet_efiles" } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "new_phones",
-    "items": [ { "group": "new_phones_case", "prob": 10 }, { "group": "new_phones_no_case", "prob": 90 } ]
   },
   {
     "type": "item_group",
@@ -231,12 +174,6 @@
       { "item": "cell_phone", "prob": 1, "charges": 100 },
       { "group": "smart_phone_maybe_locked", "prob": 17, "charges": 100 }
     ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "civilian_phones",
-    "items": [ { "group": "civilian_phones_case", "prob": 10 }, { "group": "civilian_phones_no_case", "prob": 90 } ]
   },
   {
     "type": "item_group",
@@ -280,29 +217,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "smart_phone_maybe_locked",
-    "items": [
-      { "item": "smart_phone", "prob": 25, "charges": [ 0, 24 ] },
-      { "item": "smart_phone_locked", "prob": 75, "charges": [ 0, 24 ] }
-    ]
-  },
-  {
-    "id": "box_of_batteries_unopened",
-    "type": "item_group",
-    "subtype": "distribution",
-    "container-item": "box_paper_small",
-    "items": [
-      { "item": "light_minus_battery_cell", "charges": 1000, "prob": 3, "count": 8 },
-      { "item": "light_minus_disposable_cell", "charges": 1000, "prob": 30, "count": 8 },
-      { "item": "light_battery_cell", "charges": 1000, "prob": 160, "count": 8 },
-      { "item": "light_battery_cell", "charges": 1000, "prob": 16, "count": 16 },
-      { "item": "light_cell_rechargeable", "charges": 1000, "prob": 16, "count": 8 },
-      { "item": "light_cell_rechargeable", "charges": 1000, "prob": 1, "count": 12 },
-      { "item": "medium_battery_cell", "charges": 1000, "prob": 15, "count": 4 }
-    ]
-  },
-  {
     "id": "box_of_batteries_random",
     "type": "item_group",
     "subtype": "distribution",
@@ -316,23 +230,5 @@
       { "item": "light_cell_rechargeable", "charges": 1000, "prob": 1, "count": [ 0, 12 ] },
       { "item": "medium_battery_cell", "charges": 1000, "prob": 15, "count": [ 0, 4 ] }
     ]
-  },
-  {
-    "id": "batteries",
-    "type": "item_group",
-    "subtype": "collection",
-    "items": [ { "group": "box_of_batteries_random", "count": [ 1, 3 ] } ]
-  },
-  {
-    "id": "soldering_tool",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [ { "item": "soldering_iron" }, { "item": "soldering_iron_portable", "charges": [ 0, 56 ] } ]
-  },
-  {
-    "id": "soldering_supplies",
-    "type": "item_group",
-    "subtype": "collection",
-    "items": [ { "group": "soldering_tool" }, { "group": "solder_wire_spool_part" } ]
   }
 ]

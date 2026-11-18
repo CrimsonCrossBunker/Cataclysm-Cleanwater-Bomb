@@ -51,16 +51,6 @@
   },
   {
     "type": "item_group",
-    "id": "hardware_plumbing",
-    "items": [
-      { "group": "plumbing_clothing", "prob": 100 },
-      { "group": "tools_plumbing", "prob": 100 },
-      { "group": "supplies_plumbing", "prob": 50 },
-      [ "survnote", 1 ]
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "mechanics",
     "ammo": 100,
     "items": [
@@ -104,44 +94,6 @@
       { "item": "disinfectant", "prob": 30, "charges": [ 1, 10 ] },
       { "item": "anesthetic_kit", "prob": 10, "charges": [ 0, -1 ] },
       { "item": "gold_dental_grill", "prob": 1 }
-    ]
-  },
-  {
-    "id": "horse_stable_riding_gear",
-    "type": "item_group",
-    "items": [
-      [ "horse_tack", 35 ],
-      [ "book_horse_tack", 20 ],
-      [ "saddlebag", 30 ],
-      [ "horse_bridle", 35 ],
-      [ "horse_stirrups", 20 ],
-      [ "fitted_horseshoes", 25 ],
-      [ "horseshoe", 20 ]
-    ]
-  },
-  {
-    "id": "farrier_tools",
-    "type": "item_group",
-    "//": "Set of mostly fluff farrier tools.",
-    "subtype": "collection",
-    "entries": [
-      { "item": "hoof_pick", "prob": 75 },
-      { "item": "horseshoe_pliers", "prob": 75 },
-      { "item": "nail_puller", "prob": 75 },
-      { "item": "hoof_tester", "prob": 75 },
-      { "item": "hoof_nippers", "prob": 75 },
-      { "item": "pockknife", "prob": 65 },
-      { "item": "hoof_rasp", "prob": 65 },
-      { "item": "hammer_peen", "variant": "peen_ball", "prob": 65 },
-      { "item": "hammer_peen", "variant": "peen_straight", "prob": 65 },
-      { "item": "hammer_peen", "variant": "peen_cross", "prob": 65 },
-      { "item": "hammer_peen", "variant": "rounding", "prob": 65 },
-      { "item": "hammer", "prob": 65 },
-      { "item": "pritchel", "prob": 65 },
-      { "item": "clinch_block", "prob": 65 },
-      { "item": "clinch_pliers", "prob": 65 },
-      { "item": "clinch_cutter", "prob": 65 },
-      { "item": "hoof_stand", "prob": 65 }
     ]
   }
 ]

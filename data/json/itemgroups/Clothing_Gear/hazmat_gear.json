@@ -1,14 +1,5 @@
 [
   {
-    "id": "hazmat_suits",
-    "type": "item_group",
-    "//": "Various types of hazmat suits, without masks",
-    "items": [
-      { "collection": [ { "item": "cleansuit" }, { "item": "gloves_rubber" }, { "item": "boots_rubber" } ], "prob": 40 },
-      [ "hazmat_suit", 60 ]
-    ]
-  },
-  {
     "id": "hazmat_masks",
     "type": "item_group",
     "//": "Full face protection worn with hazmat suits",
@@ -40,44 +31,6 @@
         ],
         "prob": 10
       }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "hazmat_torso",
-    "items": [ [ "cleansuit", 40 ], [ "technician_coveralls", 60 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "hazmat_boots",
-    "items": [ [ "boots_rubber", 1 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "hazmat_gloves",
-    "items": [ [ "gloves_medical", 60 ], [ "gloves_rubber", 40 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "hazmat_full",
-    "items": [ [ "hazmat_suit", 100 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "hazmat_eyes",
-    "items": [ [ "glasses_safety", 50 ] ]
-  },
-  {
-    "id": "decontamination_room",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [
-      { "item": "hazmat_suit", "prob": 60 },
-      { "group": "papr_kit", "prob": 80 },
-      { "item": "rad_monitor", "prob": 33, "charges": [ 0, 100 ] },
-      { "prob": 33, "group": "iodine_bottle_plastic_pill_supplement_1_10" },
-      { "group": "full_1st_aid", "prob": 15 },
-      { "item": "geiger_off", "prob": 15, "charges": [ 0, 100 ] }
     ]
   },
   {

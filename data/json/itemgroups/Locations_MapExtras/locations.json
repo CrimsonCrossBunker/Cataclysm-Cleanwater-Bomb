@@ -1,67 +1,5 @@
 [
   {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "smokelounge_items",
-    "entries": [
-      { "item": "cigar", "prob": 65, "count": 5 },
-      { "group": "cigar_box_opened", "prob": 25 },
-      { "item": "ecig", "prob": 25, "count": 40 },
-      { "prob": 35, "group": "cig_box_cigarette_20" },
-      { "prob": 45, "group": "tobacco_bag_plastic_20" },
-      { "item": "rolling_paper", "prob": 15 },
-      { "item": "pipe_tobacco", "prob": 10 }
-    ]
-  },
-  {
-    "id": "cop_armory",
-    "type": "item_group",
-    "magazine": 100,
-    "subtype": "distribution",
-    "entries": [
-      { "group": "ammo_cop", "prob": 80 },
-      { "group": "guns_cop", "prob": 100 },
-      { "group": "mags_cop", "prob": 40 },
-      { "group": "ammo_swat", "prob": 20 },
-      { "item": "gasbomb", "prob": 1 },
-      { "group": "guns_swat", "prob": 20 },
-      { "group": "mags_swat", "prob": 20 },
-      { "group": "gear_eod", "prob": 20 },
-      { "group": "molle_papr_kit", "prob": 10 },
-      { "item": "survnote", "prob": 1 }
-    ]
-  },
-  {
-    "id": "vfw_tools",
-    "type": "item_group",
-    "items": [ [ "boots_steel", 50 ], [ "boots_hiking", 10 ] ]
-  },
-  {
-    "id": "vfw_books",
-    "type": "item_group",
-    "items": [
-      [ "mag_traps", 20 ],
-      [ "manual_traps", 12 ],
-      [ "trappers_companion", 2 ],
-      [ "mag_guns", 40 ],
-      [ "mag_rifle", 40 ],
-      [ "mag_shotgun", 15 ],
-      [ "mag_survival", 40 ],
-      [ "textbook_firstaid", 8 ],
-      [ "pocket_firstaid", 2 ],
-      [ "pocket_survival", 2 ],
-      [ "pocket_firearms", 2 ],
-      [ "mag_archery", 15 ],
-      [ "manual_archery", 8 ],
-      [ "book_archery", 2 ]
-    ]
-  },
-  {
-    "id": "vfw_alcohol",
-    "type": "item_group",
-    "items": [ [ "beer", 20 ], [ "vodka", 2 ] ]
-  },
-  {
     "id": "energy_weapon_armory",
     "type": "item_group",
     "subtype": "distribution",
@@ -80,22 +18,6 @@
     "magazine": 100,
     "subtype": "distribution",
     "entries": [ { "group": "guns_common", "prob": 100 }, { "group": "ammo_common_boxed_used", "prob": 50 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "mansion_guns",
-    "magazine": 100,
-    "ammo": 100,
-    "subtype": "distribution",
-    "entries": [
-      { "group": "guns_pistol_common", "prob": 162 },
-      { "group": "guns_rifle_common", "prob": 36 },
-      { "group": "guns_shotgun_common", "prob": 2 },
-      { "group": "guns_display_pieces", "prob": 20 },
-      { "group": "guns_collectible", "prob": 2 },
-      { "group": "ammo_common_boxed", "prob": 40 },
-      { "group": "mags_common", "prob": 40 }
-    ]
   },
   {
     "type": "item_group",
@@ -122,24 +44,6 @@
       { "group": "drugs_emergency", "prob": 40 },
       { "group": "softdrugs", "prob": 20 },
       { "group": "harddrugs", "prob": 5 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "hospital_incubator",
-    "items": [ [ "blanket", 90 ], [ "child_book", 10 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "waitingroom",
-    "items": [
-      { "group": "magazines", "prob": 2000 },
-      { "group": "kids_books", "prob": 35 },
-      { "group": "stand_flyer", "prob": 100 },
-      [ "recipe_augs", 20 ],
-      [ "decoy_anarch", 50 ],
-      { "group": "newspaper_recent", "prob": 200 },
-      [ "survnote", 1 ]
     ]
   },
   {
@@ -246,30 +150,9 @@
   },
   {
     "type": "item_group",
-    "id": "hospital_samples",
-    "items": [ [ "blood", 20 ], [ "vacutainer", 10 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "hospital_oxygen",
-    "items": [
-      { "item": "smoxygen_tank", "charges": 0, "count": [ 0, 4 ] },
-      { "item": "smoxygen_tank", "prob": 60, "charges": [ 0, 12 ] },
-      { "item": "oxygen_tank", "charges": 0, "count": [ 0, 2 ] },
-      { "item": "oxygen_tank", "prob": 40, "charges": [ 0, 24 ] }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "cave_minerals",
     "subtype": "distribution",
     "entries": [ { "item": "material_niter", "prob": 20 }, { "item": "material_limestone", "prob": 5 } ]
-  },
-  {
-    "id": "prison_textile",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "item": "blanket", "prob": 25 }, { "item": "jumpsuit_pocketless", "variant": "orange", "prob": 70 } ]
   },
   {
     "id": "boxing_misc",
@@ -290,134 +173,6 @@
       { "prob": 15, "group": "cig_box_cigarette_1_20" },
       { "item": "matches", "prob": 10, "charges": [ 1, 20 ] },
       { "item": "ref_matches", "prob": 10, "charges": [ 1, 32 ] }
-    ]
-  },
-  {
-    "id": "corpse_male_mortuary",
-    "type": "item_group",
-    "//": "For mortuary",
-    "subtype": "collection",
-    "entries": [
-      { "group": "male_underwear_top" },
-      { "group": "male_underwear_bottom" },
-      { "item": "corpse" },
-      { "item": "sheet" },
-      { "item": "bag_body_bag" }
-    ]
-  },
-  {
-    "id": "corpse_female_mortuary",
-    "type": "item_group",
-    "//": "For mortuary",
-    "subtype": "collection",
-    "entries": [
-      { "group": "female_underwear_top" },
-      { "group": "female_underwear_bottom" },
-      { "item": "corpse" },
-      { "item": "sheet" },
-      { "item": "bag_body_bag" }
-    ]
-  },
-  {
-    "id": "corpse_viewing",
-    "type": "item_group",
-    "//": "For mortuary",
-    "subtype": "collection",
-    "entries": [
-      { "group": "female_underwear_top" },
-      { "group": "female_underwear_bottom" },
-      { "item": "gold_ring" },
-      { "item": "veil_wedding" },
-      { "item": "dress_wedding" },
-      { "item": "corpse" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "oa_ig_rd_desks",
-    "//": "for ws_regional_dump",
-    "items": [
-      { "group": "box_of_batteries_random", "prob": 30 },
-      { "group": "candy_chocolate", "prob": 570 },
-      { "group": "snacks", "prob": 820 },
-      { "item": "radio", "prob": 10, "charges": [ 0, 100 ] },
-      [ "eyedrops", 10 ],
-      [ "cotton_patchwork", 30 ],
-      { "item": "paper", "prob": 30, "count": [ 30, 80 ] },
-      [ "foon", 30 ],
-      [ "spork", 30 ],
-      { "item": "cell_phone", "prob": 10, "charges": [ 0, 150 ] },
-      [ "file", 40 ],
-      [ "mag_mechanics", 20 ],
-      [ "manual_mechanics", 10 ],
-      [ "manual_driving", 10 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "oa_ig_rd_lockers",
-    "//": "for ws_regional_dump",
-    "items": [
-      { "group": "box_of_batteries_random", "prob": 50 },
-      { "item": "radio", "prob": 10, "charges": [ 0, 100 ] },
-      [ "cotton_patchwork", 30 ],
-      { "item": "flashlight", "prob": 20, "charges": [ 0, 300 ] },
-      { "item": "heavy_flashlight", "prob": 10, "charges": [ 0, 300 ] },
-      [ "jumper_cable", 20 ],
-      [ "jumper_cable_heavy", 10 ],
-      [ "hd_tow_cable", 5 ],
-      [ "pliers", 10 ],
-      [ "battery_motorbike", 10 ],
-      [ "battery_car", 10 ],
-      [ "stereo", 10 ],
-      [ "wrench", 10 ],
-      [ "screwdriver", 15 ],
-      { "group": "glue_weak_domestic", "prob": 5 },
-      { "group": "glue_strong_domestic", "prob": 5 },
-      [ "boots", 70 ],
-      [ "boots_steel", 50 ],
-      [ "sneakers_steel", 35 ],
-      [ "boots_hiking", 10 ],
-      [ "denim_overalls", 10 ],
-      [ "technician_coveralls", 15 ],
-      [ "technician_coveralls_h", 5 ],
-      [ "gloves_rubber", 20 ],
-      [ "gloves_leather", 45 ],
-      [ "shovel", 45 ],
-      [ "crowbar", 15 ],
-      [ "gloves_work", 45 ],
-      { "item": "mask_filter", "prob": 30, "charges": [ 0, 100 ] },
-      { "item": "mask_gas_half", "prob": 25, "charges": [ 0, 100 ] },
-      [ "glasses_safety", 40 ],
-      [ "hat_hard", 50 ],
-      [ "hat_hard_hooded", 25 ],
-      { "item": "wearable_light", "prob": 5, "charges": [ 0, 100 ] },
-      [ "ear_plugs", 50 ],
-      { "item": "flashlight", "prob": 40, "charges": [ 0, 300 ] },
-      [ "boots_rubber", 20 ],
-      { "group": "tools_toolbox", "prob": 5 },
-      [ "apron_cotton", 5 ],
-      [ "apron_leather", 3 ],
-      [ "apron_plastic", 20 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "oa_ig_rd_electronic_trash",
-    "//": "for ws_regional_dump",
-    "items": [
-      { "group": "ammo_pocket_batteries", "prob": 10 },
-      [ "solar_panel", 15 ],
-      [ "jumper_cable", 5 ],
-      [ "extension_cable", 5 ],
-      [ "pipe", 20 ],
-      [ "stereo", 6 ],
-      [ "toaster", 20 ],
-      [ "television", 20 ],
-      [ "microwave", 20 ],
-      [ "multi_cooker", 1 ],
-      [ "waffleiron", 25 ],
-      [ "radio", 15 ]
     ]
   },
   {
@@ -515,28 +270,6 @@
   },
   {
     "type": "item_group",
-    "id": "alloy_sheet_storage",
-    "subtype": "distribution",
-    "entries": [ { "item": "alloy_sheet", "prob": 50, "count": [ 5, 10 ] }, { "item": "alloy_plate", "prob": 50 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "steel_mill_storage",
-    "subtype": "collection",
-    "entries": [
-      { "group": "alloy_sheet_storage", "prob": 100, "count": [ 1, 2 ] },
-      {
-        "distribution": [
-          { "item": "hard_steel_armor", "prob": 50, "count": [ 10, 30 ] },
-          { "item": "hard_plate", "prob": 50, "count": [ 1, 3 ] }
-        ],
-        "prob": 50
-      },
-      { "group": "metal_workshop", "prob": 50, "count": [ 1, 3 ] }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "steel_mill_mill",
     "//": "for the steel mill in the well, steel mill",
     "items": [
@@ -575,12 +308,6 @@
       { "item": "material_aluminium_ingot", "prob": 10, "count": [ 1, 5 ] },
       { "group": "supplies_machining", "prob": 70, "count": [ 1, 5 ] }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "oa_ig_ash_pile",
-    "//": "for ws_regional_dump",
-    "items": [ [ "ash", 10 ] ]
   },
   {
     "id": "fishing_items",
@@ -632,290 +359,6 @@
       [ "bucket", 100 ],
       [ "bucket_5gal", 100 ],
       [ "fishing_hook_basic", 100 ]
-    ]
-  },
-  {
-    "id": "recycle_paper",
-    "type": "item_group",
-    "items": [
-      { "group": "schematics", "prob": 2 },
-      { "group": "magazines", "prob": 300 },
-      [ "ZSG", 10 ],
-      [ "glassblowing_book", 15 ],
-      [ "textbook_chemistry", 15 ],
-      { "group": "novels", "prob": 75 },
-      { "group": "literature", "prob": 20 },
-      { "group": "religious_books", "prob": 10 },
-      { "group": "kids_books", "prob": 20 },
-      { "item": "wrapper_foil_roll", "prob": 25 },
-      [ "recipe_bows", 15 ],
-      [ "manual_stabbing", 20 ],
-      [ "manual_dodge", 20 ],
-      [ "manual_driving", 20 ],
-      [ "manual_throw", 20 ],
-      [ "manual_zui_quan", 20 ],
-      [ "howto_computer", 20 ],
-      [ "touristmap", 25 ],
-      [ "restaurantmap", 25 ],
-      { "group": "roadmap_stock", "prob": 25 },
-      [ "trailmap", 25 ],
-      [ "modern_tanner", 20 ],
-      [ "pocket_survival", 20 ],
-      [ "godco_flier", 15 ],
-      [ "flyer", 120 ],
-      { "item": "paper", "prob": 500, "count": [ 10, 60 ] },
-      [ "wrapper", 150 ],
-      [ "phonebook", 110 ],
-      [ "box_small_folded", 400 ],
-      [ "box_medium_folded", 400 ],
-      [ "box_large_folded", 200 ],
-      [ "box_oversize_folded", 200 ],
-      { "group": "newspaper", "prob": 1000 }
-    ]
-  },
-  {
-    "id": "recycle_electronic",
-    "type": "item_group",
-    "items": [
-      { "group": "used_usb_drives", "prob": 45, "contents-group": "efiles_scrap" },
-      { "group": "used_memory_cards", "prob": 80, "contents-group": "efiles_scrap" },
-      { "item": "two_way_radio", "prob": 30, "charges": [ 0, 15 ] },
-      [ "transponder", 25 ],
-      [ "receiver", 25 ],
-      [ "small_lcd_screen", 10 ],
-      [ "large_lcd_screen", 10 ],
-      { "item": "radiocontrol", "prob": 15, "charges": [ 0, 25 ] },
-      { "item": "radio_car", "prob": 15, "charges": [ 0, 25 ] },
-      [ "RAM", 45 ],
-      { "item": "radio", "prob": 25, "charges": [ 0, 15 ] },
-      [ "power_supply", 25 ],
-      [ "processor", 25 ],
-      [ "laptop_hard_case", 10 ],
-      { "item": "mp3", "prob": 20, "charges": [ 0, 15 ] },
-      { "group": "used_laptops", "prob": 20, "contents-group": "efiles_scrap" },
-      { "item": "hotplate", "prob": 20 },
-      { "item": "flashlight", "prob": 30, "charges": [ 0, 10 ] },
-      { "item": "coffeemaker", "prob": 20 },
-      [ "clock", 30 ],
-      [ "alarmclock", 25 ],
-      [ "circuit", 25 ],
-      { "item": "cell_phone", "prob": 35, "charges": [ 0, 15 ] },
-      [ "e_scrap", 55 ],
-      [ "amplifier", 25 ],
-      { "item": "smart_lamp", "prob": 5, "charges": [ 0, 100 ] },
-      { "item": "reading_light", "prob": 10, "charges": [ 0, 100 ] },
-      { "item": "carver_off", "prob": 5 },
-      { "item": "coffeemaker", "prob": 5 },
-      { "item": "dehydrator", "prob": 5 },
-      { "item": "food_processor", "prob": 5 },
-      { "item": "hotplate", "prob": 5 },
-      { "item": "multi_cooker", "prob": 5 },
-      { "item": "vac_sealer", "prob": 5 }
-    ]
-  },
-  {
-    "id": "recycle_plastic",
-    "type": "item_group",
-    "items": [
-      [ "barrette", 30 ],
-      { "group": "sex_accessories_domestic", "prob": 20 },
-      [ "bubblewrap", 30 ],
-      [ "syringe", 35 ],
-      [ "glowstick_dead", 15 ],
-      { "item": "credit_card", "prob": 5 },
-      [ "id_science", 3 ],
-      [ "sandbox_kit", 5 ],
-      [ "ear_spool", 15 ],
-      { "item": "lighter", "prob": 35, "charges": [ 0, 15 ] },
-      { "item": "pipe_cpvc", "prob": 35, "count": [ 2, 9 ] },
-      [ "funnel", 25 ],
-      [ "canteen", 20 ],
-      [ "basket_laundry", 20 ],
-      [ "plastic_pot_flower", 35 ],
-      [ "gloves_medical", 20 ],
-      [ "fitover_sunglasses", 20 ],
-      [ "goggles_swim", 20 ],
-      [ "bag_plastic", 150 ],
-      [ "plastic_shopping_bag", 200 ],
-      [ "jug_plastic", 120 ],
-      [ "jerrycan", 15 ],
-      [ "bottle_plastic", 150 ],
-      [ "bottle_plastic_small", 150 ],
-      [ "cup_plastic", 100 ],
-      [ "bowl_plastic", 100 ],
-      [ "plastic_chunk", 150 ],
-      [ "plastic_plate", 50 ],
-      [ "tumbler_plastic", 50 ],
-      [ "plastic_bowl_kids", 25 ],
-      { "group": "pillbox_any_empty", "prob": 15 }
-    ]
-  },
-  {
-    "id": "recycle_glass",
-    "type": "item_group",
-    "items": [
-      [ "glass_sheet", 10 ],
-      [ "glasses_reading", 20 ],
-      [ "glasses_bifocal", 20 ],
-      [ "glasses_eye", 20 ],
-      { "item": "marble", "prob": 20, "charges": [ 1, 3 ] },
-      [ "fish_bowl", 15 ],
-      [ "jar_3l_glass_sealed", 120 ],
-      [ "magnifying_glass", 20 ],
-      [ "mirror", 30 ],
-      { "item": "glass_shard", "prob": 650, "count": [ 1, 8 ] },
-      [ "crackpipe", 5 ],
-      [ "glass", 80 ],
-      [ "glass_bowl", 80 ],
-      [ "glass_plate", 80 ],
-      [ "bottle_glass", 150 ],
-      [ "pipe_glass", 10 ],
-      [ "jar_glass_sealed", 120 ],
-      [ "flask_glass", 60 ],
-      [ "tempered_glass_sheet", 5 ]
-    ]
-  },
-  {
-    "id": "recycle_aluminum",
-    "type": "item_group",
-    "items": [
-      [ "teleumbrella", 15 ],
-      [ "cane", 30 ],
-      [ "wizard_cane", 1 ],
-      [ "toaster", 30 ],
-      [ "stethoscope", 2 ],
-      { "item": "spray_can", "prob": 45, "charges": [ 1, 3 ] },
-      { "item": "aluminum_foil", "prob": 40, "charges": [ 1, 10 ] },
-      [ "wrapper_foil", 20 ],
-      [ "cup_foil", 1 ],
-      [ "golf_club", 3 ],
-      [ "bat_metal", 2 ],
-      [ "can_drink", 130 ],
-      [ "can_drink", 130 ],
-      [ "keg", 15 ],
-      [ "material_aluminium_ingot", 25 ],
-      [ "xlframe", 10 ],
-      [ "survival_kit_box", 1 ],
-      [ "wearable_light", 5 ],
-      [ "rebreather", 1 ],
-      [ "small_scuba_tank", 1 ],
-      [ "hand_pump", 3 ],
-      [ "pilot_light", 30 ],
-      [ "waffleiron", 30 ]
-    ]
-  },
-  {
-    "id": "recycle_copper",
-    "type": "item_group",
-    "items": [
-      [ "cu_pipe", 45 ],
-      { "item": "cable", "prob": 50, "count": [ 1, 20 ] },
-      { "item": "copper_wire", "prob": 50, "count": [ 1, 20 ] },
-      [ "pot_copper", 30 ],
-      [ "pot_makeshift_copper", 15 ],
-      [ "copper_pan", 15 ],
-      { "item": "copper", "prob": 40, "charges": [ 1, 20 ] },
-      [ "copper_ear", 25 ],
-      [ "copper_bracelet", 25 ],
-      [ "copper_necklace", 25 ],
-      [ "copper_ring", 25 ],
-      [ "copper_hairpin", 25 ],
-      [ "copper_locket", 25 ],
-      [ "jumper_cable", 10 ],
-      [ "jumper_cable_heavy", 10 ],
-      [ "extension_cable", 10 ],
-      [ "antenna", 30 ]
-    ]
-  },
-  {
-    "id": "recycle_iron",
-    "type": "item_group",
-    "items": [
-      { "item": "oil_lamp", "prob": 20, "charges": [ 0, 3 ] },
-      [ "steam_triple_small", 1 ],
-      [ "steam_triple_medium", 1 ],
-      [ "spring", 150 ],
-      [ "pastaextruder", 75 ],
-      { "item": "nail", "prob": 300, "charges": [ 1, 15 ] },
-      { "item": "nuts_bolts", "prob": 60, "count": [ 5, 30 ] },
-      [ "well_pump", 50 ],
-      [ "manhole_cover", 20 ],
-      [ "hairpin", 120 ],
-      [ "dutch_oven", 5 ],
-      [ "pan", 90 ],
-      [ "cow_bell", 20 ],
-      [ "flask_hip", 25 ],
-      [ "iron_pot", 20 ]
-    ]
-  },
-  {
-    "id": "recycle_battery",
-    "type": "item_group",
-    "items": [
-      { "group": "ammo_any_batteries", "prob": 200 },
-      [ "storage_battery", 25 ],
-      [ "medium_storage_battery", 35 ],
-      [ "small_storage_battery", 45 ],
-      [ "battery_motorbike", 30 ],
-      [ "battery_car", 35 ]
-    ]
-  },
-  {
-    "id": "recycle_steel",
-    "type": "item_group",
-    "items": [
-      [ "can_food", 65 ],
-      [ "can_food", 65 ],
-      [ "can_medium", 65 ],
-      [ "can_medium", 65 ],
-      { "item": "scrap", "prob": 50, "charges": [ 1, 3 ] },
-      { "item": "lc_steel_chunk", "prob": 50, "charges": [ 1, 2 ] },
-      { "item": "lc_steel_lump", "prob": 50, "charges": [ 1, 2 ] },
-      [ "jerrycan_big", 25 ],
-      { "item": "jumper_cable_heavy", "prob": 20 },
-      { "item": "jumper_cable", "prob": 30 },
-      { "item": "lc_wire", "prob": 80, "count": [ 0, 40 ] },
-      { "item": "mc_wire", "prob": 20, "count": [ 0, 40 ] },
-      { "item": "hc_wire", "prob": 20, "count": [ 0, 40 ] },
-      { "item": "qt_wire", "prob": 10, "count": [ 0, 40 ] },
-      [ "wheel_metal", 25 ],
-      [ "foot_crank", 25 ],
-      [ "chain", 35 ],
-      [ "rebar", 35 ],
-      [ "pipe", 40 ],
-      [ "muffler", 30 ],
-      [ "pot", 30 ],
-      [ "pot_canning", 10 ],
-      [ "stock_pot", 10 ],
-      [ "steel_pan", 10 ],
-      [ "teapot", 25 ],
-      [ "kettle", 25 ],
-      [ "fuel_tin", 25 ],
-      [ "fishing_hook_basic", 35 ],
-      [ "spike", 30 ],
-      [ "wire_barbed", 25 ],
-      [ "sheet_metal", 25 ],
-      [ "sheet_metal_small", 40 ],
-      [ "frame", 20 ],
-      [ "basket", 25 ],
-      [ "wrench", 10 ],
-      [ "wrench_large", 5 ],
-      [ "shovel", 10 ],
-      [ "claw_bar", 2 ],
-      [ "crowbar", 10 ],
-      [ "crucible", 3 ],
-      [ "beartrap", 5 ],
-      [ "blade", 35 ],
-      [ "spoon", 35 ],
-      [ "fork", 35 ],
-      [ "knife_butter", 35 ],
-      { "item": "knife_small", "variant": "knife_steak", "prob": 35 },
-      [ "tourist_table", 10 ],
-      [ "canister_empty", 45 ],
-      [ "tongs", 10 ],
-      [ "pressure_cooker", 10 ],
-      [ "sieve_steel", 10 ],
-      [ "hand_controls", 1 ]
     ]
   },
   {
@@ -1001,29 +444,6 @@
   },
   {
     "type": "item_group",
-    "id": "cavern",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "rock", "prob": 40 },
-      { "item": "rock_flaking", "prob": 15 },
-      { "item": "flint", "prob": 5 },
-      { "item": "rock_large", "prob": 10 },
-      { "item": "jackhammer_mining", "prob": 2, "charges": [ 0, 1200 ] },
-      { "item": "elec_jackhammer_mining", "prob": 1 },
-      { "item": "flashlight", "prob": 40, "charges": [ 0, 300 ] },
-      { "item": "dynamite", "prob": 5 },
-      { "item": "matches", "prob": 60, "charges": [ 1, 20 ] },
-      { "item": "ref_matches", "prob": 60, "charges": [ 1, 32 ] },
-      { "item": "55gal_drum", "prob": 10 },
-      { "item": "30gal_drum", "prob": 15 },
-      { "item": "grapnel", "prob": 1 },
-      { "group": "tools_toolbox", "prob": 1 },
-      { "item": "apron_leather", "prob": 2 },
-      { "item": "apron_cut_resistant", "prob": 3 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "golf_cart",
     "subtype": "distribution",
     "entries": [
@@ -1037,11 +457,6 @@
       { "item": "golf_club", "prob": 75 },
       { "item": "pencil", "prob": 20 }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "golf_green",
-    "items": [ [ "golf_tee", 100 ], [ "golf_ball", 65 ], [ "golf_club", 3 ] ]
   },
   {
     "id": "museum_primitive",
@@ -1098,92 +513,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "museum_melee",
-    "items": [
-      { "item": "hollow_cane", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "sword_cane", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "katana_fake", "prob": 8, "damage": [ 2, 4 ] },
-      { "item": "katana_inferior", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "cutlass_fake", "prob": 8, "damage": [ 2, 4 ] },
-      { "item": "cutlass_inferior", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "scimitar_inferior", "prob": 7, "damage": [ 2, 4 ] },
-      { "item": "scimitar_fake", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "arming_sword_fake", "prob": 7, "damage": [ 2, 4 ] },
-      { "item": "arming_sword_inferior", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "broadsword_fake", "prob": 8, "damage": [ 2, 4 ] },
-      { "item": "broadsword_inferior", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "longsword_fake", "prob": 8, "damage": [ 2, 4 ] },
-      { "item": "longsword_inferior", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "qiang", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "jian_fake", "prob": 8, "damage": [ 2, 4 ] },
-      { "item": "jian_inferior", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "rapier_fake", "prob": 8, "damage": [ 2, 4 ] },
-      { "item": "cavalry_sabre_fake", "prob": 8, "damage": [ 2, 4 ] },
-      { "item": "estoc_inferior", "prob": 4, "damage": [ 2, 4 ] },
-      { "item": "estoc_fake", "prob": 5, "damage": [ 2, 4 ] },
-      { "item": "kris", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "kris_fake", "prob": 8, "damage": [ 2, 4 ] },
-      { "item": "zweihander_fake", "prob": 6, "damage": [ 2, 4 ] },
-      { "item": "zweihander_inferior", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "nodachi_fake", "prob": 6, "damage": [ 2, 4 ] },
-      { "item": "bullwhip", "prob": 6, "damage": [ 2, 4 ] },
-      { "item": "wakizashi_fake", "prob": 8, "damage": [ 2, 4 ] },
-      { "item": "wakizashi_inferior", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "q_staff", "prob": 8, "damage": [ 2, 4 ] },
-      { "item": "i_staff", "prob": 6, "damage": [ 2, 4 ] },
-      { "item": "glaive", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "naginata_inferior", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "halberd", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "halberd_fake", "prob": 6, "damage": [ 2, 4 ] },
-      { "item": "lucern_hammer", "prob": 1, "damage": [ 2, 4 ] },
-      { "item": "lucern_hammerfake", "prob": 4, "damage": [ 2, 4 ] },
-      { "item": "battleaxe_fake", "prob": 6, "damage": [ 2, 4 ] },
-      { "item": "battleaxe_inferior", "prob": 10, "damage": [ 2, 4 ] },
-      { "item": "mace", "prob": 1, "damage": [ 2, 4 ] },
-      { "item": "mace_fake", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "mace_inferior", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "morningstar", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "morningstar_fake", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "morningstar_inferior", "prob": 4, "damage": [ 2, 4 ] },
-      { "item": "warhammer", "prob": 1, "damage": [ 2, 4 ] },
-      { "item": "warhammer_fake", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "warhammer_inferior", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "scythe_war", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "pike", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "spear_steel", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "ji", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "dao", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "sword_xiphos", "prob": 4, "damage": [ 2, 4 ] },
-      { "item": "khopesh", "prob": 1, "damage": [ 2, 4 ] },
-      { "item": "khopesh_fake", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "khopesh_inferior", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "iron_khopesh", "prob": 1, "damage": [ 2, 4 ] },
-      { "item": "iron_khopesh_fake", "prob": 2, "damage": [ 2, 4 ] },
-      { "item": "iron_khopesh_inferior", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "spear_dory", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "pike_bronze", "prob": 3, "damage": [ 2, 4 ] },
-      { "item": "cestus", "prob": 4, "damage": [ 2, 4 ] },
-      { "item": "bagh_nakha", "prob": 2, "damage": [ 2, 4 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "museum_guns",
-    "items": [
-      { "item": "pistol_flintlock", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "carbine_flintlock", "prob": 40, "damage": [ 2, 4 ] },
-      { "item": "rifle_flintlock", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "flintlock_pouch", "prob": 30, "damage": [ 2, 4 ] },
-      { "item": "flintlock_ammo", "prob": 60, "damage": [ 2, 4 ] },
-      { "item": "flintlock_shot", "prob": 40, "damage": [ 2, 4 ] },
-      { "item": "colt_army", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "colt_navy", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "36navy", "prob": 50, "damage": [ 2, 4 ] },
-      { "item": "44army", "prob": 50, "damage": [ 2, 4 ] }
-    ]
-  },
-  {
     "id": "museum_misc",
     "type": "item_group",
     "items": [
@@ -1199,18 +528,6 @@
       { "group": "tinware", "prob": 50, "damage": [ 2, 4 ] },
       { "item": "crown_golden", "prob": 10, "damage": [ 2, 4 ] },
       { "item": "fluid_preserved_brain", "prob": 20 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "museum_security",
-    "items": [
-      [ "television", 90 ],
-      [ "tonfa", 20 ],
-      { "item": "tazer", "prob": 20, "charges": [ 0, 500 ] },
-      { "item": "flashlight", "prob": 40, "charges": [ 0, 300 ] },
-      { "item": "two_way_radio", "prob": 10, "charges": [ 0, 100 ] },
-      [ "camera_control", 5 ]
     ]
   },
   {
@@ -1297,84 +614,6 @@
       [ "chem_aluminium_sulphate", 20 ],
       [ "plunger_toilet", 10 ],
       [ "plunger_futuristic", 5 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "mine_materials",
-    "subtype": "collection",
-    "entries": [
-      { "item": "coal_lump", "prob": 20, "count": [ 2, 20 ] },
-      { "item": "rock", "prob": 40, "count": [ 1, 10 ] },
-      { "item": "rock_large", "prob": 10, "count": [ 1, 10 ] },
-      { "item": "rock_flaking", "prob": 20, "count": [ 1, 10 ] },
-      { "item": "flint", "prob": 5, "count": [ 1, 10 ] },
-      { "item": "material_shrd_limestone", "prob": 40, "count": [ 1, 10 ] },
-      { "item": "material_limestone", "prob": 40, "count": [ 1, 10 ] },
-      { "item": "material_niter", "prob": 5, "count": [ 1, 10 ] },
-      { "item": "material_sand", "prob": 50, "charges": 500, "container-item": "bag_canvas" },
-      { "item": "material_soil", "prob": 50, "charges": [ 1, 2 ], "container-item": "bag_canvas" },
-      { "item": "chunk_sulfur", "prob": 5, "count": [ 1, 10 ] },
-      { "item": "material_rocksalt", "prob": 5, "count": [ 1, 10 ] },
-      { "item": "material_rhodonite", "prob": 5, "count": [ 1, 10 ] },
-      { "item": "material_zincite", "prob": 5, "count": [ 1, 10 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "mine_equipment",
-    "ammo": 80,
-    "magazine": 100,
-    "items": [
-      [ "water_clean", 90 ],
-      { "group": "used_1st_aid", "prob": 35 },
-      [ "rope_30", 35 ],
-      [ "chain", 20 ],
-      [ "boots_steel", 50 ],
-      [ "sneakers_steel", 35 ],
-      [ "denim_overalls", 20 ],
-      [ "technician_coveralls", 10 ],
-      [ "technician_coveralls_h", 10 ],
-      [ "gloves_leather", 45 ],
-      { "item": "mask_filter", "prob": 30, "charges": [ 0, 100 ] },
-      { "group": "gasmask_bag_full", "prob": 10 },
-      [ "glasses_safety", 40 ],
-      { "group": "SUS_welding_gear", "prob": 70 },
-      { "item": "goggles_nv", "prob": 1, "charges": [ 0, 100 ] },
-      { "item": "goggles_ir", "prob": 2, "charges": [ 0, 100 ] },
-      [ "hat_hard", 50 ],
-      { "item": "wearable_light", "prob": 20, "charges": [ 0, 100 ] },
-      [ "ear_plugs", 50 ],
-      [ "backpack", 18 ],
-      [ "backpack_denim", 20 ],
-      [ "slingpack", 19 ],
-      [ "briefcase", 20 ],
-      [ "backpack_leather", 18 ],
-      { "group": "box_of_batteries_random", "prob": 10 },
-      { "group": "ammo_heavy_batteries", "prob": 40 },
-      { "item": "flashlight", "prob": 40, "charges": [ 0, 300 ] },
-      { "item": "heavy_flashlight", "prob": 10, "charges": [ 0, 300 ] },
-      [ "pickaxe", 1 ],
-      { "item": "jackhammer_mining", "prob": 2, "charges": [ 0, 1200 ] },
-      { "item": "elec_jackhammer_mining", "prob": 1, "charges": [ 0, 7920 ] },
-      [ "dynamite", 5 ],
-      { "item": "UPS_OFF", "prob": 5, "charges": [ 0, 1000 ] },
-      [ "jerrycan", 10 ],
-      [ "jerrycan_big", 10 ],
-      { "item": "gasoline_lantern", "prob": 5, "charges": [ 0, 500 ] },
-      { "item": "electric_lantern", "prob": 8, "charges": [ 0, 100 ] },
-      { "item": "oil_lamp", "prob": 5, "charges": [ 0, 750 ] },
-      [ "lamp_oil", 5 ],
-      [ "shovel", 10 ],
-      [ "e_tool", 5 ],
-      { "group": "hat_hard_flashlight", "prob": 40 },
-      [ "bucket", 5 ],
-      [ "bucket_5gal", 20 ],
-      [ "grapnel", 1 ],
-      { "group": "tools_toolbox", "prob": 1 },
-      [ "apron_leather", 5 ],
-      [ "apron_cut_resistant", 10 ],
-      { "item": "remotevehcontrol", "prob": 10, "charges": [ 0, 100 ] }
     ]
   },
   {
@@ -1507,20 +746,6 @@
   },
   {
     "type": "item_group",
-    "id": "prison_armor",
-    "items": [
-      [ "helmet_riot", 25 ],
-      { "group": "gasmask_bag_full", "prob": 10 },
-      [ "armor_riot", 25 ],
-      [ "armor_riot_arm", 15 ],
-      [ "armor_riot_leg", 15 ],
-      [ "armor_riot_torso", 5 ],
-      [ "gloves_tactical", 10 ],
-      [ "emergency_book", 1 ]
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "cop_evidence",
     "subtype": "distribution",
     "entries": [
@@ -1608,21 +833,6 @@
     ]
   },
   {
-    "id": "forensic_locker",
-    "type": "item_group",
-    "magazine": 100,
-    "subtype": "collection",
-    "entries": [
-      { "item": "coat_lab", "prob": 100 },
-      { "item": "mask_dust", "prob": 100 },
-      { "item": "gloves_rubber", "prob": 100 },
-      { "item": "boots_rubber", "prob": 100 },
-      { "item": "glasses_safety", "prob": 50 },
-      { "item": "apron_plastic", "prob": 25 },
-      { "item": "file", "prob": 25 }
-    ]
-  },
-  {
     "id": "forensic_lab",
     "type": "item_group",
     "magazine": 100,
@@ -1638,95 +848,6 @@
       { "item": "cotton_patchwork", "custom-flags": [ "FILTHY" ], "prob": 20 },
       { "item": "slime_scrap", "prob": 3, "container-item": "bag_zipper" },
       { "item": "raw_hleather", "prob": 1, "container-item": "bag_zipper" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "contraband",
-    "//": "concealable items only plz",
-    "subtype": "distribution",
-    "entries": [
-      { "prob": 25, "group": "caffeine_bottle_plastic_pill_supplement_1_10" },
-      { "prob": 4, "group": "oxycodone_bottle_plastic_pill_prescription_1_10" },
-      { "item": "morphine", "prob": 4, "count": [ 1, 4 ] },
-      { "prob": 10, "group": "adderall_bottle_plastic_pill_prescription_1_10" },
-      { "prob": 10, "group": "xanax_bottle_plastic_pill_prescription_1_10" },
-      { "item": "adrenaline_injector", "prob": 2 },
-      { "prob": 2, "group": "crack_bag_zipper_1_4" },
-      { "item": "crackpipe", "prob": 2 },
-      { "item": "lighter", "prob": 20, "charges": [ 0, 100 ] },
-      { "group": "chewing_gum_used_caff", "prob": 10 },
-      { "group": "chewing_gum_used_nic", "prob": 10 },
-      { "item": "lsd", "prob": 2, "count": [ 1, 5 ] },
-      { "item": "joint", "prob": 10 },
-      { "item": "rolling_paper", "prob": 5 },
-      { "prob": 2, "group": "heroin_bag_zipper_1_4" },
-      { "item": "syringe", "prob": 2 },
-      { "item": "mag_porn", "prob": 30 },
-      { "item": "mag_survival", "prob": 20 },
-      { "item": "mag_cutting", "prob": 10 },
-      { "item": "mag_stabbing", "prob": 20 },
-      { "item": "mag_melee", "prob": 10 },
-      { "item": "mag_traps", "prob": 10 },
-      { "item": "mp3", "prob": 9, "charges": [ 0, 100 ] },
-      { "item": "cell_phone", "prob": 80, "charges": [ 0, 150 ] },
-      { "group": "civilian_phones", "prob": 10 },
-      { "group": "used_usb_drives", "prob": 20, "contents-group": "efiles_contraband" },
-      { "group": "used_eink_tablet_pcs", "prob": 5, "contents-group": "efiles_contraband" },
-      { "item": "camera", "prob": 3, "charges": [ 0, 150 ] },
-      { "item": "camera_pro", "prob": 1, "charges": [ 0, 150 ] },
-      { "item": "gold_watch", "prob": 3 },
-      { "item": "silver_watch", "prob": 6 },
-      { "item": "pocketwatch", "prob": 2 },
-      { "item": "gold_dental_grill", "prob": 2 },
-      { "item": "diamond_dental_grill", "prob": 1 },
-      { "item": "picklocks", "prob": 4 },
-      { "item": "chisel", "prob": 2 },
-      { "item": "scissors", "prob": 10 },
-      { "item": "screwdriver", "prob": 8 },
-      { "item": "knife_small", "variant": "knife_steak", "prob": 4 },
-      { "item": "chain", "prob": 10 },
-      { "item": "glass_shiv", "prob": 30 },
-      { "item": "bottle_glass", "prob": 5 },
-      { "item": "knuckle_brass", "prob": 7 },
-      { "item": "knuckle_steel_forged", "prob": 3 },
-      { "item": "switchblade", "prob": 4 },
-      { "item": "throwing_knife", "prob": 5 },
-      { "item": "throwing_knife", "count": [ 1, 6 ], "entry-wrapper": "leg_sheath6", "prob": 1 },
-      { "item": "leg_sheath6", "prob": 2 },
-      { "item": "punch_dagger", "container-item": "gartersheath1", "prob": 1 },
-      { "item": "gartersheath1", "prob": 10 },
-      { "item": "gartersheath2", "prob": 5 },
-      { "item": "tazer", "prob": 1, "charges": [ 0, 100 ] },
-      { "prob": 30, "group": "cig_box_cigarette_1_20" },
-      { "item": "rope_6", "prob": 5 },
-      { "item": "rope_30", "prob": 2 },
-      { "group": "duct_tape_roll_part", "prob": 10 },
-      { "group": "ammo_pocket_batteries_full", "prob": 15 },
-      { "item": "matches", "prob": 10, "charges": [ 0, 20 ] },
-      { "item": "ref_matches", "prob": 10, "charges": [ 0, 32 ] },
-      { "group": "chewing_gum_used", "prob": 10 },
-      { "item": "panties", "prob": 2 },
-      { "item": "sharp_toothbrush", "prob": 10 },
-      { "item": "razor_blade", "prob": 20 },
-      { "item": "soap", "prob": 5, "charges": [ 1, 10 ] },
-      { "group": "detergent_small_box_part", "prob": 5 },
-      { "group": "borax_box_part", "prob": 5 },
-      { "item": "knitting_needles", "prob": 1 },
-      { "item": "survnote", "prob": 2 },
-      { "item": "ankle_wallet_pouch", "prob": 5 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "ambulance_equipment",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "tools_medical", "prob": 100 },
-      { "item": "bag_body_bag", "prob": 5 },
-      { "group": "drugs_emergency", "prob": 50 },
-      { "prob": 10, "group": "quikclot_bag_plastic_1_6" },
-      { "item": "badge_doctor", "prob": 2 }
     ]
   },
   {
@@ -1831,22 +952,6 @@
       { "item": "tallit_katan", "prob": 20 },
       { "item": "menorah", "prob": 5 },
       { "group": "small_candles_in_box", "prob": 2 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "synagogue_books",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "book_judaica_hardcover", "prob": 70 },
-      { "item": "book_judaica_softcover", "prob": 50 },
-      { "item": "book_judaica_siddur", "prob": 35 },
-      { "item": "holybook_tanakh", "prob": 50 },
-      { "item": "holybook_talmud", "prob": 20 },
-      { "item": "essay_book", "prob": 25 },
-      { "item": "poetry_book", "prob": 15 },
-      { "group": "literature", "prob": 35 },
-      { "item": "philosophy_book", "prob": 25 }
     ]
   },
   {
@@ -2641,86 +1746,6 @@
     ]
   },
   {
-    "id": "mil_base_ash",
-    "type": "item_group",
-    "//": "Remains of bodies burned in the corpse pits.",
-    "items": [ [ "ash", 3 ] ]
-  },
-  {
-    "id": "mil_base_bodybag",
-    "type": "item_group",
-    "//": "A corpse of a civilian or a soldier that died on the base, put in a bodybag.",
-    "subtype": "collection",
-    "entries": [
-      { "distribution": [ { "group": "mil_base_corpse_soldier", "prob": 100 }, { "group": "everyday_corpse", "prob": 120 } ] },
-      { "item": "bag_body_bag" }
-    ]
-  },
-  {
-    "id": "mil_base_corpse_soldier",
-    "type": "item_group",
-    "//": "Nested to damage corpse.",
-    "subtype": "collection",
-    "entries": [ { "group": "mil_base_corpse_corpse_soldier", "damage": [ 2, 4 ] } ]
-  },
-  {
-    "id": "mil_base_corpse_corpse_soldier",
-    "type": "item_group",
-    "//": "Nested to damage all gear.",
-    "subtype": "collection",
-    "container-item": "corpse_generic_human",
-    "entries": [ { "group": "mil_base_clothes_corpse_soldier", "damage": [ 1, 4 ] } ]
-  },
-  {
-    "id": "mil_base_clothes_corpse_soldier",
-    "type": "item_group",
-    "//": "Soldier clothes, without gear.",
-    "subtype": "collection",
-    "items": [
-      { "group": "clothing_soldier_shirt" },
-      {
-        "distribution": [ { "item": "combat_shirt", "prob": 50 }, { "item": "jacket_army_modern", "prob": 50 } ],
-        "prob": 50
-      },
-      { "item": "elbow_pads", "prob": 10 },
-      { "item": "laptop_hard_case", "prob": 2 },
-      { "item": "pants_army", "prob": 75 },
-      { "group": "loaded_webbing_belt", "prob": 50 },
-      { "item": "knee_pads", "prob": 10 },
-      { "distribution": [ { "item": "socks", "prob": 95 }, { "item": "socks_wool", "prob": 5 } ], "prob": 90 },
-      { "item": "boots_combat", "prob": 50 },
-      { "item": "helmet_army", "prob": 10 },
-      { "item": "gloves_tactical", "prob": 10 },
-      { "group": "military_ballistic_vest", "prob": 10 },
-      { "group": "clothing_tactical_leg", "prob": 5 },
-      { "item": "military_poncho", "prob": 40 },
-      { "item": "military_poncho_heavy", "prob": 40 },
-      { "item": "military_poncho_liner", "prob": 40 },
-      {
-        "distribution": [
-          { "collection": [ { "item": "sports_bra" }, { "item": "boy_shorts" } ] },
-          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] }
-        ]
-      },
-      { "group": "clothing_watch", "prob": 5 },
-      { "item": "dog_tag", "prob": 20 }
-    ]
-  },
-  {
-    "id": "mil_base_casing_hmg",
-    "type": "item_group",
-    "//": "HMG casing and linkage fired in a machine gun nest.",
-    "subtype": "collection",
-    "entries": [ { "item": "ammolink50" }, { "item": "50_casing" } ]
-  },
-  {
-    "id": "mil_base_hmg",
-    "type": "item_group",
-    "//": "M2 browning in a machine gun nest.",
-    "subtype": "distribution",
-    "entries": [ { "item": "m2browning", "charges": [ 0, 100 ] } ]
-  },
-  {
     "id": "mil_base_bed_hospital",
     "type": "item_group",
     "subtype": "distribution",
@@ -2733,55 +1758,6 @@
     "entries": [
       { "item": "bandages", "prob": 25, "count": [ 1, 3 ] },
       { "item": "cotton_patchwork", "prob": 100, "custom-flags": [ "FILTHY" ] }
-    ]
-  },
-  {
-    "id": "mil_base_books",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [ { "group": "book_military", "prob": 50 }, { "group": "novels", "prob": 150 } ]
-  },
-  {
-    "id": "mil_base_coats",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "distribution": [ { "item": "trenchcoat", "prob": 80 }, { "item": "trenchcoat_leather", "prob": 60 } ], "prob": 40 },
-      {
-        "distribution": [ { "item": "coat_rain", "prob": 80 }, { "item": "peacoat", "prob": 50 }, { "item": "greatcoat", "prob": 35 } ],
-        "prob": 80
-      },
-      {
-        "distribution": [
-          { "item": "combat_shirt", "prob": 40 },
-          { "item": "jacket_army_modern", "prob": 40 },
-          { "item": "winter_jacket_army", "prob": 20 }
-        ],
-        "prob": 100
-      }
-    ]
-  },
-  {
-    "id": "mil_base_iv",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [ { "item": "blood", "prob": 100 }, { "group": "saline_bottle_random", "prob": 80 }, { "item": "bag_iv", "prob": 50 } ]
-  },
-  {
-    "id": "mil_base_mess_hall",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "item": "plastic_fork" }, { "item": "mess_tray" } ]
-  },
-  {
-    "id": "mil_base_tent_civilian",
-    "type": "item_group",
-    "//": "Personal items left behind by civilians in their tents.",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "sleeping_bag", "prob": 100 },
-      { "item": "blanket", "prob": 100 },
-      { "group": "default_zombie_items_bags", "prob": 80, "count": [ 1, 3 ] }
     ]
   },
   {
@@ -2837,68 +1813,6 @@
   },
   {
     "type": "item_group",
-    "id": "moonshine_brew",
-    "items": [
-      [ "moonshine", 60 ],
-      [ "still", 20 ],
-      [ "thermometer", 20 ],
-      [ "brew_moonshine", 5 ],
-      { "prob": 35, "group": "cornbread_in_bag" },
-      { "prob": 25, "group": "yeast_bag_plastic" },
-      { "prob": 20, "group": "sugar_various" },
-      { "group": "ethanol_bottle_liter_part", "prob": 5 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "exodii_tools",
-    "items": [
-      { "group": "tools_blacksmith", "prob": 50 },
-      { "group": "supplies_metal", "prob": 40 },
-      {
-        "collection": [
-          { "item": "oxy_torch", "prob": 100 },
-          {
-            "distribution": [
-              { "item": "weldtank", "prob": 100, "count": [ 1, 2 ] },
-              { "item": "tinyweldtank", "prob": 100, "count": [ 1, 3 ] },
-              { "item": "smallweldtank", "prob": 100, "count": [ 1, 3 ] }
-            ],
-            "prob": 100
-          },
-          {
-            "distribution": [
-              { "item": "brazing_rod_bronze", "prob": 75, "charges": [ 100, 360 ] },
-              { "item": "brazing_rod_alloy", "prob": 50, "charges": [ 80, 360 ] }
-            ]
-          }
-        ],
-        "prob": 25
-      },
-      [ "oxy_torch", 25 ],
-      { "item": "weldtank", "prob": 12, "count": [ 1, 2 ] },
-      { "item": "smallweldtank", "prob": 12, "count": [ 1, 3 ] },
-      { "item": "tinyweldtank", "prob": 12, "count": [ 1, 3 ] },
-      { "item": "oxygen_cylinder", "prob": 10, "count": [ 1, 2 ] },
-      { "item": "polisher", "prob": 15, "charges": [ 0, 100 ] },
-      [ "sandpaper", 20 ],
-      [ "vac_mold", 15 ],
-      { "item": "welder", "prob": 10 },
-      { "item": "welding_blanket", "prob": 10, "count": [ 0, 1 ] },
-      {
-        "distribution": [
-          { "item": "welding_rod_steel", "prob": 30, "charges": [ 1000, 1600 ], "entry-wrapper": "tube_welding_rod" },
-          { "item": "welding_rod_alloy", "prob": 20, "charges": [ 1000, 1600 ], "entry-wrapper": "tube_welding_rod" },
-          { "item": "welding_wire_steel", "prob": 20, "charges": [ 1000, 1600 ], "entry-wrapper": "spool_welding" },
-          { "item": "welding_wire_alloy", "prob": 15, "charges": [ 1000, 1600 ], "entry-wrapper": "spool_welding" },
-          { "item": "brazing_rod_bronze", "prob": 10, "charges": [ 500, 1500 ], "entry-wrapper": "tube_welding_rod" },
-          { "item": "brazing_rod_alloy", "prob": 5, "charges": [ 400, 1200 ], "entry-wrapper": "tube_welding_rod" }
-        ]
-      }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "exodii_ammo_crate",
     "subtype": "collection",
     "items": [
@@ -2907,36 +1821,6 @@
       { "group": "full_exodiiBRmag_153", "count": [ 1, 5 ] },
       { "group": "full_exodiiBRmag_26", "count": [ 4, 30 ] },
       { "item": "grenade", "count": [ 1, 10 ], "prob": 20 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "nursing_home_clothes",
-    "entries": [
-      {
-        "distribution": [
-          { "item": "jersey", "prob": 5 },
-          { "item": "longshirt", "prob": 20 },
-          { "item": "buttonshirt", "variant": "striped", "prob": 10 },
-          { "item": "denim_shirt", "prob": 5 },
-          { "item": "sweater", "prob": 20 },
-          { "item": "sweatshirt", "prob": 20 },
-          { "item": "tshirt", "prob": 10 },
-          { "item": "polo_shirt", "prob": 10 }
-        ]
-      },
-      {
-        "distribution": [
-          { "item": "pants_checkered", "prob": 10 },
-          { "item": "pants", "prob": 40 },
-          { "item": "jeans", "prob": 20 },
-          { "item": "jeans_skinny", "prob": 5 },
-          { "item": "pants", "variant": "pants_flag", "prob": 5 },
-          { "item": "breeches", "prob": 25 }
-        ]
-      },
-      { "item": "slippers", "prob": 50 }
     ]
   }
 ]

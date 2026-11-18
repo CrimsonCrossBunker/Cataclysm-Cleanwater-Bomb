@@ -173,23 +173,5 @@
         "prob": 20
       }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "SUS_exodii_botrack",
-    "items": [
-      [ "exodii_sensor", 20 ],
-      [ "exodii_motor", 30 ],
-      [ "spring", 50 ],
-      [ "ch_steel_lump", 10 ],
-      [ "pipe", 10 ],
-      [ "frame", 20 ],
-      [ "hdframe", 20 ],
-      [ "exodii_computer", 25 ],
-      [ "exodii_chassis", 50 ],
-      [ "exodii_drone_chassis", 40 ],
-      [ "cyborg_matrix", 50 ],
-      [ "sheet_metal", 10 ]
-    ]
   }
 ]
