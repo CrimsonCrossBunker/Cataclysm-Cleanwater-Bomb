@@ -1155,27 +1155,6 @@
     "false_effect": [ { "u_message": "Entering torpor outdoors would only result in you dying from the sun's rays.", "type": "bad" } ]
   },
   {
-    "id": "ACT_VAMPIRE_TORPOR",
-    "type": "activity_type",
-    "activity_level": "NO_EXERCISE",
-    "verb": "slumbering",
-    "based_on": "time",
-    "can_resume": false,
-    "interruptable": false,
-    "interruptable_with_kb": false,
-    "rooted": true,
-    "completion_eoc": "EOC_REGAIN_SLEEP_AND_EARTH_SLEEP_CHECK_REAL"
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_REGAIN_SLEEP_AND_EARTH_SLEEP_CHECK_REAL",
-    "effect": [
-      { "math": [ "u_val('sleepiness') = 0" ] },
-      { "math": [ "u_val('sleep_deprivation') = 0" ] },
-      { "run_eocs": "EOC_EARTH_SLEEP_CHECK_REAL" }
-    ]
-  },
-  {
     "type": "effect_type",
     "id": "effect_vampire_torpor",
     "name": [ "Torpor" ],
@@ -1790,70 +1769,6 @@
         "u_add_effect": "vampire_need_living_blood",
         "intensity": { "math": [ "u_effect_intensity('vampire_need_living_blood') + 1" ] },
         "duration": "PERMANENT"
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_EARTH_SLEEP_CHECK",
-    "//": "This allows the torpor EOC to run the check without needing an extra copy of the EOC.",
-    "eoc_type": "EVENT",
-    "required_event": "character_wakes_up",
-    "effect": [ { "run_eocs": "EOC_EARTH_SLEEP_CHECK_REAL" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_EARTH_SLEEP_CHECK_REAL",
-    "condition": {
-      "or": [
-        { "math": [ "u_val('pos_z') <= -1" ] },
-        {
-          "and": [
-            {
-              "or": [
-                { "u_is_on_terrain_with_flag": "DIGGABLE" },
-                { "u_is_on_terrain": "t_rock_floor" },
-                { "u_is_on_terrain": "t_rock_floor_no_roof" }
-              ]
-            },
-            { "not": { "u_is_on_terrain": "t_vitrified_sand" } },
-            { "not": { "u_is_on_terrain": "t_pit_corpsed" } },
-            { "not": { "u_is_on_terrain": "t_fungus" } },
-            { "not": { "u_is_on_terrain": "t_glassed_sand" } },
-            { "not": { "u_is_on_terrain": "t_rubber_mulch" } },
-            { "not": { "u_is_on_terrain": "t_swater_surf" } },
-            { "not": { "u_is_on_terrain": "t_woodchips" } }
-          ]
-        }
-      ]
-    },
-    "effect": [
-      {
-        "run_eocs": [
-          {
-            "id": "EOC_EARTH_SLEEP_CHECK_SATISFIED",
-            "condition": { "u_has_trait": "VAMPIRE_WEAKNESS_EARTH_SLEEP" },
-            "effect": [ { "u_message": "Your sleep has been restful, thanks to the proximity of the earth.", "type": "info" } ]
-          }
-        ]
-      }
-    ],
-    "false_effect": [
-      {
-        "run_eocs": [
-          {
-            "id": "EOC_EARTH_SLEEP_CHECK_PENALTY",
-            "condition": { "u_has_trait": "VAMPIRE_WEAKNESS_EARTH_SLEEP" },
-            "effect": [
-              { "u_add_effect": "effect_earth_sleeper_penalty", "duration": "24 hours", "intensity": 1 },
-              { "math": [ "u_val('sleepiness') += 550" ] },
-              {
-                "u_message": "You struggle to awaken, feeling tired and weakened.  Having slept away from the earth, your sleep wasn't as restful as it should've been.",
-                "type": "bad"
-              }
-            ]
-          }
-        ]
       }
     ]
   },

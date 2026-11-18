@@ -115,3 +115,22 @@ content.add(content.ActivityType {
     interruptable = false,
     interruptable_with_keyboard = false,
 }:on_finish("finish_keypad_entry"))
+
+ccb.runtime.handler("finish_treesinging", function(activity)
+    local character = activity.character
+    if character.subtype == "avatar" then
+        services.messages.add(services.translate(
+            "As your song fades, you open your eyes to find a large growth of wood lying on the ground in front of you, separated from the tree without violence."),
+            "good")
+    end
+    checked(services.inventory.receive_item(character, services.types.id("item", "log_treesung"), 1))
+end, 1)
+
+content.add(content.ActivityType {
+    id = "ACT_ARVORE_TREESINGING",
+    verb = content.text("treesinging"),
+    based_on = "time",
+    activity_level = 2,
+    can_resume = false,
+    rooted = true,
+}:on_finish("finish_treesinging"))

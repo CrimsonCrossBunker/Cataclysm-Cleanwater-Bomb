@@ -758,27 +758,6 @@
     ]
   },
   {
-    "id": "ACT_ARVORE_TREESINGING",
-    "type": "activity_type",
-    "activity_level": "LIGHT_EXERCISE",
-    "verb": "treesinging",
-    "based_on": "time",
-    "can_resume": false,
-    "rooted": true,
-    "completion_eoc": "EOC_ARVORE_TREE_SINGING_COMPLETE"
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_ARVORE_TREE_SINGING_COMPLETE",
-    "effect": [
-      {
-        "u_message": "As your song fades, you open your eyes to find a large growth of wood lying on the ground in front of you, separated from the tree without violence.",
-        "type": "good"
-      },
-      { "u_spawn_item": "log_treesung", "count": 1, "suppress_message": true }
-    ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_ARVORE_TREE_SINGING_LEARN_RECIPES",
     "recurrence": [ "6 h", "36 h" ],
