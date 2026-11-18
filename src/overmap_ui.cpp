@@ -2084,12 +2084,12 @@ static void show_north_america_chart( point_abs_omt center, bool reveal_all )
                 !known( north_america::jurisdiction_at( project_to<coords::ms>( city.position ) ) ) ) {
                 continue;
             }
-            mvwputch( chart, screen + point( 0, 1 ), c_white, 'o' );
+            mvwputch( chart, screen + point::south, c_white, 'o' );
             if( screen == cursor ) {
                 city_name = city.name;
             }
         }
-        mvwputch( chart, cursor + point( 0, 1 ), c_white, '+' );
+        mvwputch( chart, cursor + point::south, c_white, '+' );
         const std::string_view code = north_america::jurisdiction_at( project_to<coords::ms>( center ) );
         const std::string location = city_name.empty() ? std::string( code ) : city_name;
         mvwprintz( chart, point( 0, height + 1 ), c_light_gray, _( "%.1f km/cell  %s" ),
