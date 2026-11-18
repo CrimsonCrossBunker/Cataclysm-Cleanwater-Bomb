@@ -21,18 +21,6 @@
   },
   {
     "id": "dimensional_perambulator",
-    "type": "ITEM",
-    "category": "veh_parts",
-    "name": { "str": "dimensional perambulator" },
-    "description": "A perambulator, for perambulating through dimensions",
-    "weight": "1 kg",
-    "volume": "5 L",
-    "material": [ "lc_steel" ],
-    "symbol": "#",
-    "color": "dark_gray"
-  },
-  {
-    "id": "dimensional_perambulator",
     "type": "vehicle_part",
     "name": { "str": "Dimensional Perambulator" },
     "item": "dimensional_perambulator",
