@@ -6786,6 +6786,10 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                 break;
             }
             case items_content_apply_phase::item_groups: {
+                std::set<std::string_view> staged_item_ids;
+                for( const item_registration &item_entry : pimpl_->items ) {
+                    staged_item_ids.insert( item_entry.definition->id );
+                }
                 for( const item_group_registration &entry : pimpl_->item_groups ) {
                     const item_group_id id( entry.definition->id );
                     auto previous = item_controller->m_template_groups.find( id );
@@ -6856,23 +6860,15 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                             const Single_item_creator::Type entry_type = source_entry.group ?
                                     Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
                             std::string entry_id = source_entry.id;
-                            if( !source_entry.group ) {
-                                const bool declared_in_transaction = std::any_of(
-                                        pimpl_->items.begin(), pimpl_->items.end(),
-                                [&source_entry]( const item_registration & item_entry ) {
-                                    return item_entry.definition->id == source_entry.id;
-                                } );
-                                if( !declared_in_transaction ) {
-                                    const itype_id migrated_item = item_controller->migrate_id(
-                                                                       itype_id( source_entry.id ) );
-                                    if( !item::type_is_defined( migrated_item ) ) {
-                                        DebugLog( D_WARNING, D_MAIN ) << "Lua-first item group '" << source.id
-                                                                      << "' skipped unavailable item '"
-                                                                      << source_entry.id << "'";
-                                        continue;
-                                    }
-                                    entry_id = migrated_item.str();
+                            if( !source_entry.group && staged_item_ids.count( entry_id ) == 0 ) {
+                                const itype_id migrated_item = item_controller->migrate_id( itype_id( entry_id ) );
+                                if( !item::type_is_defined( migrated_item ) ) {
+                                    DebugLog( D_WARNING, D_MAIN ) << "Lua-first item group '" << source.id
+                                                                  << "' skipped unavailable item '"
+                                                                  << source_entry.id << "'";
+                                    continue;
                                 }
+                                entry_id = migrated_item.str();
                             }
                             auto native_entry = std::make_unique<Single_item_creator>(
                                                     entry_id, entry_type,
