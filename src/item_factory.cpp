@@ -1708,10 +1708,32 @@ void Item_factory::finalize()
         }
     }
 }
+void item_blacklist_t::rebuild( const std::vector<itype> &templates )
+{
+    blacklist.clear();
+    std::set<itype_id> whitelist;
+    for( const auto &[include, entries] : sub_blacklist ) {
+        auto &target = include ? whitelist : blacklist;
+        target.insert( entries.begin(), entries.end() );
+    }
+    if( !whitelist.empty() ) {
+        for( const itype_id &id : blacklist ) {
+            whitelist.erase( id );
+        }
+        blacklist.clear();
+        for( const itype &type : templates ) {
+            if( whitelist.count( type.id ) == 0 ) {
+                blacklist.insert( type.id );
+            }
+        }
+    }
+}
+
 void item_blacklist_t::clear()
 {
     blacklist.clear();
     sub_blacklist.clear();
+    finalized = false;
 }
 
 static const migration *item_template_migration( const std::vector<migration> &entries )
@@ -1741,38 +1763,8 @@ bool Item_factory::has_template_migration( const itype_id &id ) const
 
 void Item_factory::finalize_item_blacklist()
 {
-    // Populate a whitelist, and a blacklist with items on whitelists and items on blacklists
-    std::set<itype_id> whitelist;
-    for( const std::pair<bool, std::set<itype_id>> &blacklist : item_blacklist.sub_blacklist ) {
-        // True == whitelist, false == blacklist
-        if( blacklist.first ) {
-            whitelist.insert( blacklist.second.begin(), blacklist.second.end() );
-        } else {
-            item_blacklist.blacklist.insert( blacklist.second.begin(), blacklist.second.end() );
-        }
-    }
-
-    bool whitelist_exists = !whitelist.empty();
-    // Remove all blacklisted items on the whitelist
-    std::set<itype_id> &blacklist = item_blacklist.blacklist;
-    for( const itype_id &it : whitelist ) {
-        if( blacklist.count( it ) ) {
-            whitelist.erase( it );
-        }
-    }
-
-    // Now, populate the blacklist with all the items that aren't whitelists, but only if a whitelist exists.
-    if( whitelist_exists ) {
-        blacklist.clear();
-        for( const itype &item : item_factory.get_all() ) {
-            if( !whitelist.count( item.id ) ) {
-                blacklist.insert( item.id );
-            }
-        }
-    }
-
-    // And clear the blacklists we made in-between
-    item_blacklist.sub_blacklist.clear();
+    item_blacklist.rebuild( item_factory.get_all() );
+    item_blacklist.finalized = true;
 
     for( const itype_id &blackout : item_blacklist.blacklist ) {
         auto candidate = find_template_list_const( blackout );
@@ -1952,31 +1944,8 @@ void cata::lua_platform::detail::truncate_platform_item_blacklist(
         return;
     }
     item_blacklist.sub_blacklist.resize( count );
-    item_blacklist.blacklist.clear();
-    std::set<itype_id> whitelist;
-    for( const std::pair<bool, std::set<itype_id>> &entry :
-         item_blacklist.sub_blacklist ) {
-        if( entry.first ) {
-            whitelist.insert( entry.second.begin(), entry.second.end() );
-        } else {
-            item_blacklist.blacklist.insert( entry.second.begin(),
-                                             entry.second.end() );
-        }
-    }
-    const bool whitelist_exists = !whitelist.empty();
-    std::set<itype_id> &blacklist = item_blacklist.blacklist;
-    for( const itype_id &item : whitelist ) {
-        if( blacklist.count( item ) ) {
-            whitelist.erase( item );
-        }
-    }
-    if( whitelist_exists ) {
-        blacklist.clear();
-        for( const itype &item : item_controller->get_generic_factory().get_all() ) {
-            if( whitelist.count( item.id ) == 0 ) {
-                blacklist.insert( item.id );
-            }
-        }
+    if( item_blacklist.finalized ) {
+        item_blacklist.rebuild( item_controller->get_generic_factory().get_all() );
     }
 }
 
@@ -5178,30 +5147,61 @@ void itype::load( const JsonObject &jo, std::string_view src )
     replace_materials( replace_val, *this );
 }
 
-void Item_factory::add_migration( const migration &m )
+void Item_factory::set_migration_mod_order( const std::vector<mod_id> &mods )
 {
-    auto it = migrations.find( m.id );
-    if( it == migrations.end() ) {
-        migrations[m.id] = {m};
-        return;
-    }
-
-    for( migration &old : it->second ) {
-        if( old.from_variant ) {
-            continue;
-        }
-        // If we find one that isn't from variant, overwrite it
-        old = m;
-        return;
-    }
-
-    // Otherwise, we're specifying a new one.
-    it->second.push_back( m );
+    migration_mod_order = mods;
 }
 
-void Item_factory::load_migration( const JsonObject &jo )
+void Item_factory::add_migration( const migration &m )
+{
+    // JSON and Lua register at different stages. Match native load order:
+    // core, base packs, companion directories, then world-local data.
+    const auto load_position = [this]( std::string_view source ) ->
+    std::tuple<int, std::size_t, std::string_view> {
+        if( source == "core" ) {
+            return { 0, 0, {} };
+        }
+        const std::size_t separator = source.find( '#' );
+        const std::string_view owner = source.substr( 0, separator );
+        const auto found = std::find_if( migration_mod_order.begin(), migration_mod_order.end(),
+        [owner]( const mod_id & id ) {
+            return id.str() == owner;
+        } );
+        if( found == migration_mod_order.end() ) {
+            return { 3, 0, {} };
+        }
+        const auto index = static_cast<std::size_t>( found - migration_mod_order.begin() );
+        if( separator == std::string_view::npos ) {
+            return { 1, index, {} };
+        }
+        return { 2, index, source.substr( separator + 1 ) };
+    };
+    const auto position = load_position( m.source );
+    auto &entries = migrations[m.id];
+    if( m.from_variant ) {
+        // The native reader takes the first migration matching a saved variant.
+        const auto next = std::find_if( entries.begin(), entries.end(),
+        [&load_position, &position]( const migration & old ) {
+            return old.from_variant && load_position( old.source ) > position;
+        } );
+        entries.insert( next, m );
+        return;
+    }
+
+    const auto blanket = std::find_if( entries.begin(), entries.end(), []( const migration & old ) {
+        return !old.from_variant;
+    } );
+    if( blanket == entries.end() ) {
+        entries.push_back( m );
+    } else if( load_position( blanket->source ) <= position ) {
+        *blanket = m;
+    }
+}
+
+void Item_factory::load_migration( const JsonObject &jo, const std::string_view source )
 {
     migration m;
+    m.source = source;
     optional( jo, false, "replace", m.replace );
     optional( jo, false, "variant", m.variant );
     optional( jo, false, "from_variant", m.from_variant );
@@ -5226,11 +5226,7 @@ void Item_factory::load_migration( const JsonObject &jo )
                                            id.str() ) );
         }
         m.id = id;
-        if( m.from_variant ) {
-            migrations[ m.id ].push_back( m );
-        } else {
-            add_migration( m );
-        }
+        add_migration( m );
     }
 }
 
@@ -5377,6 +5373,7 @@ void Item_factory::clear()
     migrated_ammo.clear();
     migrated_magazines.clear();
     migrations.clear();
+    migration_mod_order.clear();
 
     frozen = false;
 }

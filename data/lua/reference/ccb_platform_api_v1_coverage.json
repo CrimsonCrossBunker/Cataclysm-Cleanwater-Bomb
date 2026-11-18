@@ -369,6 +369,12 @@
       "synchronized": true
     },
     {
+      "declared_class": "ItemMigrationDefinition",
+      "in_public_contract": true,
+      "native_name": "ItemMigrationDefinition",
+      "synchronized": true
+    },
+    {
       "declared_class": "ItemUseContext",
       "in_public_contract": true,
       "native_name": "ItemUseContext",
@@ -1091,13 +1097,13 @@
   ],
   "platform_sync": {
     "contract_export_roots_missing_from_inventory": [],
-    "luals_class_count": 895,
-    "luals_function_count": 1546,
-    "native_export_root_count": 181,
-    "native_export_roots_declared": 181,
-    "native_export_roots_in_public_contract": 181,
+    "luals_class_count": 898,
+    "luals_function_count": 1547,
+    "native_export_root_count": 182,
+    "native_export_roots_declared": 182,
+    "native_export_roots_in_public_contract": 182,
     "native_registration_file_count": 124,
-    "public_contract_export_root_count": 181,
+    "public_contract_export_root_count": 182,
     "synchronized": true,
     "unmatched_native_export_roots": []
   },

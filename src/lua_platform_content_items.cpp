@@ -2102,6 +2102,17 @@ struct butchery_requirement_definition_handle {
     }
 };
 
+struct item_migration_definition_data {
+    std::vector<itype_id> from;
+    migration specification;
+    bool registered = false;
+};
+
+struct item_migration_definition_handle {
+    std::shared_ptr<item_migration_definition_data> definition;
+    std::shared_ptr<owner_token> token;
+};
+
 struct item_action_definition_handle {
     std::shared_ptr<item_action_definition_data> definition;
     std::shared_ptr<owner_token> token;
@@ -2709,6 +2720,8 @@ struct items_content_transaction::impl {
     std::vector<json_flag_registration> json_flags;
     std::vector<math_function_registration> math_functions;
     std::vector<material_registration> materials;
+    std::vector<std::shared_ptr<item_migration_definition_data>> item_migrations;
+    std::vector<std::pair<itype_id, std::optional<std::vector<migration>>>> item_migration_undo;
     std::vector<damage_type_registration> damage_types;
     std::vector<ammunition_type_registration> ammunition_types;
     std::vector<item_category_registration> item_categories;
@@ -2947,6 +2960,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "ButcheryRequirementDefinition", sol::no_constructor,
         "id", sol::property( &butchery_requirement_definition_handle::id ),
         "requirement", &butchery_requirement_definition_handle::requirement );
+    ccb.new_usertype<item_migration_definition_handle>( "ItemMigrationDefinition", sol::no_constructor );
     ccb.new_usertype<item_action_definition_handle>(
         "ItemActionDefinition", sol::no_constructor,
         "id", sol::property( &item_action_definition_handle::id ) );
@@ -3310,6 +3324,54 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             definition->has_magazine_capacity = true;
         }
         return item_definition_handle{ std::move( definition ), transaction->token };
+    } );
+    content.set_function( "ItemMigration", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<item_migration_definition_data>();
+        const sol::object from = options["from"];
+        if( from.is<sol::table>() ) {
+            const sol::table ids = from.as<sol::table>();
+            const std::size_t count = require_dense_array( ids, "item migration source ids", 1, 4096 );
+            definition->from.reserve( count );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                definition->from.emplace_back( ids.raw_get<std::string>( index ) );
+            }
+        } else {
+            definition->from.emplace_back( from.as<std::string>() );
+        }
+        migration &native = definition->specification;
+        native.replace = itype_id( options.get<std::string>( "to" ) );
+        native.variant = options.get_or( "variant", std::string() );
+        native.from_variant = options.get<std::optional<std::string>>( "from_variant" );
+        const auto charges = options.get_or<std::int64_t>( "charges", 0 );
+        if( charges < 0 || charges > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( "item migration charges must be a nonnegative native integer" );
+        }
+        native.charges = static_cast<int>( charges );
+        native.sealed = options.get_or( "sealed", true );
+        native.reset_item_vars = options.get_or( "reset_item_vars", false );
+        if( const auto flags = options.get<std::optional<sol::table>>( "flags" ) ) {
+            const std::size_t count = require_dense_array( *flags, "item migration flags", 0, 4096 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                native.flags.insert( flags->raw_get<std::string>( index ) );
+            }
+        }
+        if( const auto contents = options.get<std::optional<sol::table>>( "contents" ) ) {
+            const std::size_t count = require_dense_array( *contents, "item migration contents", 0, 4096 );
+            native.contents.reserve( count );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                const sol::table entry = contents->raw_get<sol::table>( index );
+                const auto quantity = entry.get<std::int64_t>( "count" );
+                if( quantity < 0 || quantity > std::numeric_limits<int>::max() ) {
+                    throw std::runtime_error( "item migration content count must be a nonnegative native integer" );
+                }
+                native.contents.push_back( { itype_id( entry.get<std::string>( "id" ) ),
+                                             static_cast<int>( quantity ) } );
+            }
+        }
+        return item_migration_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "Recipe", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
@@ -3749,6 +3811,16 @@ bool items_content_transaction::register_definition( const sol::object &value,
         }
         registrations.push_back( { operation, handle.definition } );
     };
+    if( value.is<item_migration_definition_handle>() ) {
+        const auto handle = value.as<item_migration_definition_handle>();
+        if( handle.token != pimpl_->token || operation != definition_operation::add ) {
+            throw std::runtime_error( "item migrations must be added by their owning Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "item migration" );
+        handle.definition->registered = true;
+        pimpl_->item_migrations.push_back( handle.definition );
+        return true;
+    }
     if( value.is<item_definition_handle>() ) {
         const item_definition_handle &handle = value.as<item_definition_handle>();
         register_catalog( handle, pimpl_->items, "item" );
@@ -4115,6 +4187,19 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         std::set<std::string> declared_item_ids;
         for( const item_registration &entry : pimpl_->items ) {
             declared_item_ids.insert( entry.definition->id );
+        }
+        for( const auto &entry : pimpl_->item_migrations ) {
+            const migration &native = entry->specification;
+            require_valid_id( native.replace.str(), "item migration replacement" );
+            for( const itype_id &id : entry->from ) {
+                require_valid_id( id.str(), "item migration source" );
+                if( id == native.replace ) {
+                    throw std::runtime_error( "item migration cannot replace '" + id.str() + "' with itself" );
+                }
+            }
+            for( const migration::content &carried : native.contents ) {
+                require_valid_id( carried.id.str(), "item migration content" );
+            }
         }
         std::set<std::string> declared_recipe_ids;
         for( const recipe_registration &entry : pimpl_->recipes ) {
@@ -5386,6 +5471,19 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
     try {
         switch( phase ) {
             case items_content_apply_phase::foundations: {
+                for( const auto &entry : pimpl_->item_migrations ) {
+                    migration native = entry->specification;
+                    native.source = pimpl_->owner;
+                    auto &registry = item_controller->migrations;
+                    for( const itype_id &id : entry->from ) {
+                        const auto previous = registry.find( id );
+                        pimpl_->item_migration_undo.emplace_back(
+                            id, previous == registry.end() ? std::nullopt :
+                            std::optional<std::vector<migration>>( previous->second ) );
+                        native.id = id;
+                        item_controller->add_migration( native );
+                    }
+                }
                 for( const json_flag_registration &entry : pimpl_->json_flags ) {
                     const flag_id id( entry.definition->id );
                     pimpl_->json_flag_undo.emplace_back(
@@ -6874,6 +6972,15 @@ void items_content_transaction::rollback_phase( const items_content_rollback_pha
     };
     switch( phase ) {
         case items_content_rollback_phase::foundations:
+            for( auto it = pimpl_->item_migration_undo.rbegin(); it != pimpl_->item_migration_undo.rend();
+                 ++it ) {
+                if( it->second ) {
+                    item_controller->migrations[it->first] = std::move( *it->second );
+                } else {
+                    item_controller->migrations.erase( it->first );
+                }
+            }
+            pimpl_->item_migration_undo.clear();
             restore_factory( detail::damage_type_registry(), pimpl_->damage_type_undo );
             restore_factory( detail::vitamin_registry(), pimpl_->vitamin_undo );
             for( auto it = pimpl_->skill_undo.rbegin(); it != pimpl_->skill_undo.rend(); ++it ) {
@@ -7052,6 +7159,7 @@ void items_content_transaction::commit()
     if( !pimpl_->applied ) {
         return;
     }
+    pimpl_->item_migration_undo.clear();
     pimpl_->tool_quality_undo.clear();
     pimpl_->skill_display_undo.clear();
     pimpl_->skill_undo.clear();
@@ -7263,6 +7371,32 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
     // deterministic iteration order while vectors retain Lua declaration order.
     switch( phase ) {
         case items_content_fingerprint_phase::foundations:
+            for( const auto &entry : pimpl_->item_migrations ) {
+                const migration &native = entry->specification;
+                hash_part( state, "item_migration" );
+                hash_part( state, std::to_string( entry->from.size() ) );
+                for( const itype_id &id : entry->from ) {
+                    hash_part( state, id.str() );
+                }
+                hash_part( state, native.replace.str() );
+                hash_part( state, native.variant );
+                hash_part( state, native.from_variant ? "from_variant" : "blanket" );
+                if( native.from_variant ) {
+                    hash_part( state, *native.from_variant );
+                }
+                hash_part( state, std::to_string( native.charges ) );
+                hash_part( state, native.sealed ? "sealed" : "unsealed" );
+                hash_part( state, native.reset_item_vars ? "reset_vars" : "keep_vars" );
+                hash_part( state, std::to_string( native.flags.size() ) );
+                for( const std::string &flag : native.flags ) {
+                    hash_part( state, flag );
+                }
+                hash_part( state, std::to_string( native.contents.size() ) );
+                for( const migration::content &carried : native.contents ) {
+                    hash_part( state, carried.id.str() );
+                    hash_part( state, std::to_string( carried.count ) );
+                }
+            }
             for( const json_flag_registration &entry : pimpl_->json_flags ) {
                 hash_part( state, "json_flag" );
                 hash_part( state, operation_name( entry.operation ) );

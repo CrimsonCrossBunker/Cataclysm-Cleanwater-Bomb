@@ -3635,6 +3635,24 @@ function WeatherGeneratorDefinition:clear_whitelist() end
 ---@class MigrationDefinition
 local MigrationDefinition = {}
 
+---@class ItemMigrationContentOptions
+---@field id string Item id inserted into the migrated item.
+---@field count integer Nonnegative item count or count-by-charges quantity.
+
+---@class ItemMigrationDefinitionOptions
+---@field from string|string[] Legacy item id or dense array of ids.
+---@field to string Replacement item id.
+---@field from_variant? string Apply only when the old item has this variant.
+---@field variant? string Variant assigned on the resulting item.
+---@field flags? string[] Item flags added on migration.
+---@field charges? integer Positive charges replace the saved charge count; zero preserves it.
+---@field contents? ItemMigrationContentOptions[] Items inserted in the declared order.
+---@field sealed? boolean Seal migrated contents; defaults to true.
+---@field reset_item_vars? boolean Reset instance variables to the replacement item's defaults.
+
+---@class ItemMigrationDefinition
+local ItemMigrationDefinition = {}
+
 ---@class TraitGroupDefinitionOptions
 ---@field id string Stable trait-group id.
 
@@ -6850,6 +6868,10 @@ function CcbPlatformContent.WeatherGenerator(options) end
 ---@param options MigrationDefinitionOptions
 ---@return MigrationDefinition
 function CcbPlatformContent.Migration(options) end
+
+---@param options ItemMigrationDefinitionOptions
+---@return ItemMigrationDefinition
+function CcbPlatformContent.ItemMigration(options) end
 
 ---@param options TraitGroupDefinitionOptions
 ---@return TraitGroupDefinition

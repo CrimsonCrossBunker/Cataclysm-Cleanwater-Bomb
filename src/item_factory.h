@@ -79,13 +79,16 @@ class migration
         };
         std::vector<content> contents;
         bool sealed = true;
+        std::string source;
 };
 
 struct item_blacklist_t {
     std::set<itype_id> blacklist;
 
     std::vector<std::pair<bool, std::set<itype_id>>> sub_blacklist;
+    bool finalized = false;
 
+    void rebuild( const std::vector<itype> &templates );
     void clear();
 };
 
@@ -210,7 +213,8 @@ class Item_factory
         void finalize();
 
         /** Migrations transform items loaded from legacy saves */
-        void load_migration( const JsonObject &jo );
+        void load_migration( const JsonObject &jo, std::string_view source );
+        void set_migration_mod_order( const std::vector<mod_id> &mods );
 
         // Add or overwrite a migration
         void add_migration( const migration &m );
@@ -358,6 +362,7 @@ class Item_factory
 
         void clear();
 
+        std::vector<mod_id> migration_mod_order;
         void finalize_item_blacklist();
 
         /** Applies part of finalization that don't depend on other items. */

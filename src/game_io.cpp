@@ -59,6 +59,7 @@
 #include "get_version.h"
 #include "hash_utils.h"
 #include "init.h"
+#include "item_factory.h"
 #include "input.h"
 #include "item.h"
 #include "json.h"
@@ -701,6 +702,7 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
     canonicalize_mod_list( canonical_packs );
     ammunition_type::set_mod_load_order( canonical_packs );
     requirement_data::set_mod_load_order( canonical_packs );
+    item_controller->set_migration_mod_order( canonical_packs );
     for( const auto &mod : canonical_packs ) {
         // Suppress missing mods the player chose to leave in the modlist
         if( !mod.is_valid() ) {

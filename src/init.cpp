@@ -387,8 +387,8 @@ void DynamicDataLoader::initialize()
     add( "ITEM", &items::load );
     add( "ITEM_CATEGORY", &item_category::load_item_cat );
 
-    add( "MIGRATION", []( const JsonObject & jo ) {
-        item_controller->load_migration( jo );
+    add( "MIGRATION", []( const JsonObject & jo, const std::string & src ) {
+        item_controller->load_migration( jo, src );
     } );
 
     add( "charge_removal_blacklist", load_charge_removal_blacklist );

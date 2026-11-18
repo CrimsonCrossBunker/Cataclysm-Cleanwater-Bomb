@@ -3677,7 +3677,7 @@ struct content_transaction::impl {
     std::vector<achievement_id> achievement_undo;
     std::vector<detail::platform_blacklist_data> blacklist_undo;
     std::optional<detail::monster_filter_state> monster_filter_undo;
-    std::size_t item_blacklist_undo = 0;
+    std::optional<std::size_t> item_blacklist_undo;
     std::vector<std::pair<map_extra_id, std::optional<map_extra>>> map_extra_undo;
     std::vector<std::pair<weather_generator_id, std::optional<weather_generator>>>
     weather_generator_undo;
@@ -9291,7 +9291,7 @@ bool content_transaction::apply( std::string &error )
         for( const blacklist_registration &entry : pimpl_->blacklists ) {
             const detail::platform_blacklist_data &source = *entry.definition;
             if( source.kind == "item" ) {
-                if( pimpl_->item_blacklist_undo == 0 ) {
+                if( !pimpl_->item_blacklist_undo ) {
                     pimpl_->item_blacklist_undo =
                         detail::platform_item_blacklist_count();
                 }
@@ -10767,10 +10767,10 @@ void content_transaction::rollback()
         pimpl_->monster_filter_undo.reset();
     }
 
-    if( pimpl_->item_blacklist_undo != 0 ) {
-        detail::truncate_platform_item_blacklist( pimpl_->item_blacklist_undo );
+    if( pimpl_->item_blacklist_undo ) {
+        detail::truncate_platform_item_blacklist( *pimpl_->item_blacklist_undo );
     }
-    pimpl_->item_blacklist_undo = 0;
+    pimpl_->item_blacklist_undo.reset();
 
     for( auto it = pimpl_->map_extra_undo.rbegin();
          it != pimpl_->map_extra_undo.rend(); ++it ) {
@@ -11266,7 +11266,7 @@ void content_transaction::commit()
     pimpl_->achievement_undo.clear();
     pimpl_->blacklist_undo.clear();
     pimpl_->monster_filter_undo.reset();
-    pimpl_->item_blacklist_undo = 0;
+    pimpl_->item_blacklist_undo.reset();
     pimpl_->map_extra_undo.clear();
     pimpl_->weather_generator_undo.clear();
     pimpl_->migration_undo.clear();
