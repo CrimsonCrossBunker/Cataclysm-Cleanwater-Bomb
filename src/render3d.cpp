@@ -137,7 +137,7 @@ constexpr float VEH_WSH_GLASS_FRAC = 12.0f / 32.0f;
 constexpr float VEH_MIRROR_Z = 0.80f;
 
 // the whole rendered z range must be inside map memory's prepared region; the
-// prepare call below anchors that region's z window at 0 (see draw_terrain_window)
+// prepare call below anchors that region at the loaded map's Z origin
 static_assert( fov_3d_z_range >= OVERMAP_DEPTH &&fov_3d_z_range >= OVERMAP_HEIGHT,
                "map memory region must cover every rendered z-level" );
 
@@ -2417,7 +2417,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // visibility caches outside that range are stale (same formula as
     // map::lowest_vision_level)
     const int lowest_vis_z = std::max( std::min( cz, upos.z() - fov_3d_z_range ),
-                                       -OVERMAP_DEPTH );
+                                       here.min_z() );
     // per-tile visibility, exactly when 2D draws the real tile: LOW/LIT/BRIGHT
     // are the lit levels map::get_visibility maps to CLEAR. everything else
     // draws memory or a vision-effect tile in 2D, so 3D must not show it
@@ -2491,8 +2491,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     };
     // render every z-level: per-level rules (seen-only below, roof mode above,
     // open air skipped) keep the cost proportional to what actually exists
-    const int zmin = -OVERMAP_DEPTH;
-    const int zmax = OVERMAP_HEIGHT;
+    const int zmin = here.min_z();
+    const int zmax = here.max_z();
 
     // dollhouse cutout: a column whose view-level tile is seen, indoors and
     // walkable gets a translucent roof, so interiors show from inside. limited
@@ -5028,13 +5028,10 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     if( tiles ) {
         avatar &you = get_avatar();
         const tripoint_bub_ms upos = you.pos_bub();
-        // prepare_region caches p1.z +/- fov_3d_z_range; anchoring the window
-        // at z=0 makes it cover the whole rendered range
-        // [-OVERMAP_DEPTH, +OVERMAP_HEIGHT] no matter which level the player is
-        // on (the static_assert above keeps that invariant)
+        // Center the read window on the loaded Z origin to cover every rendered level.
         you.prepare_map_memory_region(
-            here.get_abs( tripoint_bub_ms( 0, 0, 0 ) ),
-            here.get_abs( tripoint_bub_ms( MAPSIZE_X - 1, MAPSIZE_Y - 1, 0 ) ) );
+            here.get_abs( tripoint_bub_ms( 0, 0, here.z_origin() ) ),
+            here.get_abs( tripoint_bub_ms( MAPSIZE_X - 1, MAPSIZE_Y - 1, here.z_origin() ) ) );
         const level_cache &mem_level = here.get_cache_ref( upos.z() );
         static tripoint_bub_ms last_sweep_pos = tripoint_bub_ms( -1, -1, -1 );
         static time_point last_sweep_turn = calendar::turn_zero;
