@@ -109,7 +109,7 @@ std::optional<normals> at( coordinates location, bool with_elevation )
         if( d < 1e-16 ) {
             return station_with_reference( entry.second );
         }
-        const closest_stations::iterator insert = std::find_if( closest.begin(),
+        closest_stations::iterator insert = std::find_if( closest.begin(),
         closest.end(), [d]( const auto & candidate ) {
             return !candidate.second || d < candidate.first;
         } );
