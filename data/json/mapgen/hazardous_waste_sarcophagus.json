@@ -390,28 +390,5 @@
         }
       }
     }
-  },
-  {
-    "id": "hazardous_waste",
-    "type": "item_group",
-    "items": [
-      { "item": "water_sewage", "container-item": "55gal_drum", "charges": [ 26, 126 ], "prob": 40 },
-      { "prob": 2, "group": "meat_tainted_55gal_drum_3_20" },
-      { "group": "toxic_waste_mx_chems", "prob": 35 },
-      { "item": "55gal_drum", "prob": 50 }
-    ]
-  },
-  {
-    "id": "nanomaterials",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "item": "nanomaterial", "count": [ 25, 75 ], "prob": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "meat_tainted_55gal_drum_3_20",
-    "subtype": "collection",
-    "container-item": "55gal_drum",
-    "entries": [ { "item": "meat_tainted", "count": [ 3, 20 ] } ]
   }
 ]

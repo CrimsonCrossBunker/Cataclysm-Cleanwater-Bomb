@@ -50,33 +50,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Pablo_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "boxer_briefs" },
-      { "item": "socks" },
-      { "item": "tank_top" },
-      { "item": "buttonshirt", "variant": "striped" },
-      { "item": "pants" },
-      { "item": "jacket_evac" },
-      { "item": "porkpie" },
-      { "item": "dress_shoes" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Pablo_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "knife_swissarmy" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Pablo_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "heavy_flashlight", "charges": 200 } ]
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

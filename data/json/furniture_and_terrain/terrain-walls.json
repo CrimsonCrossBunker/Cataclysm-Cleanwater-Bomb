@@ -1,20 +1,5 @@
 [
   {
-    "type": "item_group",
-    "id": "wall_bash_results",
-    "subtype": "collection",
-    "entries": [
-      { "item": "rock", "count": [ 0, 2 ] },
-      { "item": "wood_panel", "count": [ 0, 1 ] },
-      { "item": "nail", "charges": [ 4, 16 ] },
-      { "item": "splinter", "count": [ 1, 5 ] },
-      { "item": "2x4", "count": [ 1, 2 ], "prob": 25 },
-      { "item": "pipe", "count": [ 0, 2 ], "prob": 10 },
-      { "item": "cu_pipe", "count": [ 0, 2 ], "prob": 10 },
-      { "item": "cable", "count": [ 0, 67 ], "prob": 10 }
-    ]
-  },
-  {
     "type": "terrain",
     "abstract": "t_abstract_column",
     "name": { "str": "abstract column", "//~": "NO_I18N" },

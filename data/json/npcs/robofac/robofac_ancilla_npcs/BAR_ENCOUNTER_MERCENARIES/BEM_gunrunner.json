@@ -22,34 +22,6 @@
     "shopkeeper_price_rules": [ { "group": "BEM_GUNRUNNER_STOCK", "markup": 3.5 } ]
   },
   {
-    "type": "item_group",
-    "id": "BEM_GUNRUNNER_worn",
-    "subtype": "collection",
-    "items": [
-      { "group": "military_ballistic_vest_pristine" },
-      { "item": "legpouch_large" },
-      { "group": "NC_BOUNTY_HUNTER_pants" },
-      { "item": "pants_army" },
-      { "group": "NC_BOUNTY_HUNTER_coat" },
-      { "item": "boots_combat" },
-      { "item": "rope_loop" },
-      { "item": "molle_pack" },
-      { "item": "under_armor" },
-      { "item": "under_armor_shorts" },
-      { "item": "holster" },
-      { "item": "sunglasses" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "BEM_GUNRUNNER_STOCK",
-    "subtype": "collection",
-    "entries": [
-      { "group": "SUS_rivtech_loot", "prob": 100, "count": [ 3, 6 ] },
-      { "group": "guns_energy", "prob": 50, "count": [ 1, 4 ] }
-    ]
-  },
-  {
     "id": [ "BEM_GUNRUNNER_1" ],
     "type": "talk_topic",
     "dynamic_line": "&You find the gun runner intently assessing the swirling smoke of a stale cigarette.  <mypronoun> barely acknowledges your approach.  \"Let's cut it short, I have come upon an excess supply of exotic weaponry and let's say that it would be expedient for it to disappear and you seem like just the kind of person I'm looking for.\"\n\n<mypronoun> hands you an inventory list, loosely annotated in a piece of graph paper.\n\n\"No harm in looking right?\"",

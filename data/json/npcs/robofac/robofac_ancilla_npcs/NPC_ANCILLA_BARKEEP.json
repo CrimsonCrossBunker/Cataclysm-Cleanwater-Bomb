@@ -32,45 +32,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_ANCILLA_BARKEEP_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "jeans" },
-      { "group": "NC_BOUNTY_HUNTER_coat" },
-      { "item": "boots_combat" },
-      { "item": "boxer_briefs" },
-      { "item": "tshirt" },
-      { "item": "apron_leather" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ANCILLA_BARKEEP_carry",
-    "subtype": "collection",
-    "items": [  ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ANCILLA_BARKEEP_wield",
-    "subtype": "collection",
-    "items": [ { "item": "sheet_cotton" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ANCILLA_BARKEEP_stock",
-    "subtype": "collection",
-    "entries": [
-      { "item": "water_clean", "prob": 100, "count": [ 4, 8 ] },
-      { "group": "beer_in_container", "prob": 100, "count": [ 4, 12 ] },
-      { "group": "mixed_alcoholic_drinks", "prob": 100, "count": [ 2, 4 ] },
-      { "group": "soda_in_small_container", "prob": 100, "count": [ 2, 4 ] },
-      { "group": "alcohol", "prob": 100, "count": [ 2, 10 ] },
-      { "group": "salty_snacks", "prob": 100, "count": [ 2, 10 ] },
-      { "group": "cannedfood", "prob": 100, "count": [ 4, 15 ] }
-    ]
-  },
-  {
     "id": [ "TALK_ANCILLA_BARKEEP", "TALK_ANCILLA_BEM_HUMAN_SAMPLE_REWARD" ],
     "type": "talk_topic",
     "dynamic_line": {

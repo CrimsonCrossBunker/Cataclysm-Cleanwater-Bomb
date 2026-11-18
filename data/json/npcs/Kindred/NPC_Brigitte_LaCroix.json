@@ -37,42 +37,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "BONE_SEER_Brigitte_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "boxer_briefs" },
-      { "item": "socks" },
-      { "item": "tshirt" },
-      { "item": "jacket_leather_bone" },
-      { "item": "gloves_liner" },
-      { "item": "helmet_skull" },
-      { "item": "gloves_leather" },
-      { "item": "pants_leather" },
-      { "item": "boots_bone" },
-      { "item": "backpack_leather" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "BONE_SEER_Brigitte_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "2h_flail_steel" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_BONE_SEER_misc",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "needle_bone", "prob": 40 },
-      { "group": "glue_weak_domestic", "prob": 20 },
-      { "item": "bone_flute", "prob": 10 },
-      { "item": "bone_human", "prob": 10 },
-      { "item": "broth_bone", "prob": 60 },
-      { "item": "water_clean", "prob": 90 }
-    ]
-  },
-  {
     "type": "mutation",
     "id": "seer_mark",
     "name": { "str": "Mark of the Seer" },

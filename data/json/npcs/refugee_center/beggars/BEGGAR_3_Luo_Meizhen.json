@@ -73,22 +73,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_BEGGAR_3_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "bra" },
-      { "item": "socks" },
-      { "item": "panties" },
-      { "item": "camisole" },
-      { "item": "hoodie" },
-      { "item": "jeans" },
-      { "item": "lowtops" },
-      { "item": "gloves_light" },
-      { "item": "jacket_evac" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_REFUGEE_BEGGAR_3",
     "dynamic_line": {

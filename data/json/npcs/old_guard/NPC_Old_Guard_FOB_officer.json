@@ -57,19 +57,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_OG_OFFICER_misc",
-    "subtype": "collection",
-    "items": [
-      { "item": "two_way_radio" },
-      { "item": "p320mag_17rd_9x19mm", "prob": 45 },
-      { "item": "pencil", "count": 2 },
-      { "item": "pen" },
-      { "item": "cotton_patchwork" },
-      { "item": "red_pen" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_OLD_GUARD_FOB_OFFICER",
     "dynamic_line": [ "I don't have any use for you right now.  You will be informed if I need you, soldier." ],

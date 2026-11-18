@@ -22,40 +22,6 @@
     "shopkeeper_price_rules": [ { "group": "BEM_EXODII_HUNTER_STOCK", "markup": 10 } ]
   },
   {
-    "type": "item_group",
-    "id": "BEM_EXODII_HUNTER_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "helmet_sallet_raised" },
-      { "item": "survivor_goggles" },
-      { "item": "torso_bandolier_shotgun" },
-      { "item": "briefs" },
-      { "item": "pants_tactical", "variant": "tactical_pants_desert" },
-      { "item": "turtleneck_shirt_rolled" },
-      { "item": "coat_fur", "variant": "coat_tiger_fur" },
-      { "item": "socks_wool" },
-      { "item": "knee_high_boots", "variant": "chelsea_boots" },
-      { "item": "duffelbag_xl_nylon" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "BEM_EXODII_HUNTER_wield",
-    "subtype": "collection",
-    "items": [ { "item": "pamd71z" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "BEM_EXODII_HUNTER_STOCK",
-    "subtype": "collection",
-    "entries": [
-      { "group": "EXODII_CBM_Store_Tier1", "prob": 100, "count": [ 1, 2 ] },
-      { "group": "EXODII_CBM_Store_Tier2", "prob": 80, "count": 1 },
-      { "group": "EXODII_CBM_Store_Tier3", "prob": 40, "count": 1 },
-      { "group": "EXODII_CBM_Store_Tier4", "prob": 20, "count": 1 }
-    ]
-  },
-  {
     "id": [ "BEM_EXODII_HUNTER_1" ],
     "type": "talk_topic",
     "dynamic_line": {

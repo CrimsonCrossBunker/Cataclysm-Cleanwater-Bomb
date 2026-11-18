@@ -213,64 +213,6 @@
     "faction": "robofac"
   },
   {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_INTERCOM_trade",
-    "subtype": "collection",
-    "entries": [ { "group": "robofac_basic_trade", "count": [ 15, 25 ], "prob": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_INTERCOM_trade_hm12",
-    "subtype": "collection",
-    "entries": [ { "item": "hm12", "count": 1, "prob": 50 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_INTERCOM_trade_armor",
-    "subtype": "collection",
-    "entries": [ { "group": "robofac_armor_pieces", "count": [ 4, 8 ], "prob": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_INTERCOM_trade_military",
-    "subtype": "collection",
-    "entries": [ { "group": "robofac_armor_pieces_military", "count": [ 0, 2 ], "prob": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_INTERCOM_trade_envirosuit",
-    "subtype": "collection",
-    "entries": [ { "item": "robofac_enviro_suit", "count": 1, "prob": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_INTERCOM_XM_EXOSKELETONS",
-    "subtype": "collection",
-    "entries": [
-      { "item": "integrated_bio_robofac_xmleg", "prob": 70, "count": [ 1, 2 ] },
-      { "item": "integrated_bio_robofac_xmarm", "prob": 70, "count": [ 1, 2 ] },
-      { "item": "integrated_bio_robofac_xmback", "prob": 70, "count": [ 1, 2 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_INTERCOM_LENS",
-    "subtype": "collection",
-    "entries": [
-      { "item": "robofac_lens_helmet", "prob": 100, "count": [ 1, 2 ] },
-      { "item": "robofac_lens_mask_bal", "prob": 70, "count": [ 1, 2 ] },
-      { "item": "robofac_lens_mask_filter", "prob": 70, "count": [ 1, 2 ] },
-      { "item": "robofac_lens_mask_gas", "prob": 70, "count": [ 1, 2 ] },
-      { "item": "robofac_lens_mask_papr", "prob": 70, "count": [ 1, 2 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_INTERCOM_MVAS",
-    "subtype": "collection",
-    "entries": [ { "item": "robofac_head_rig_ar", "prob": 100, "count": 1 } ]
-  },
-  {
     "id": "robofac_blacklist",
     "type": "shopkeeper_blacklist",
     "entries": [

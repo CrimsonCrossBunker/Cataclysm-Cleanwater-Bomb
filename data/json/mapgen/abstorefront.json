@@ -218,11 +218,6 @@
     }
   },
   {
-    "id": "methchef",
-    "type": "item_group",
-    "items": [ [ "meth", 90 ], [ "pan", 50 ] ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": "abstorefront_2",
     "object": {

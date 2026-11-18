@@ -85,23 +85,5 @@
       },
       "items": { "b": { "item": "EXODII_Workshop_Damaged", "chance": 100, "repeat": [ 3, 12 ] } }
     }
-  },
-  {
-    "type": "item_group",
-    "id": "EXODII_Workshop_Damaged",
-    "subtype": "distribution",
-    "items": [
-      { "item": "brogyeki", "prob": 20, "damage": [ 1, 4 ] },
-      { "item": "brogyaga", "prob": 5, "damage": [ 1, 4 ] },
-      { "item": "pamd68", "prob": 60, "damage": [ 1, 4 ] },
-      { "item": "pamd71z", "prob": 10, "damage": [ 1, 4 ] },
-      { "item": "sapra", "prob": 10, "damage": [ 1, 4 ] },
-      { "item": "armor_lorica", "prob": 20, "damage": [ 1, 4 ] },
-      { "item": "helmet_corinthian", "prob": 60, "damage": [ 1, 4 ] },
-      { "item": "armor_thessalonian", "prob": 80, "damage": [ 1, 4 ] },
-      { "item": "leggings_thessalonian", "prob": 80, "damage": [ 1, 4 ] },
-      { "item": "sword_xiphos", "prob": 50, "damage": [ 1, 4 ] },
-      { "item": "spear_dory", "prob": 30, "damage": [ 1, 4 ] }
-    ]
   }
 ]

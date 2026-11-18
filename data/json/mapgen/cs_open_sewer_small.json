@@ -21,38 +21,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "os_items",
-    "items": [
-      { "item": "flashlight", "prob": 50, "charges": [ 0, 300 ] },
-      { "item": "heavy_flashlight", "prob": 40, "charges": [ 0, 300 ] },
-      [ "gloves_work", 30 ],
-      [ "gloves_rubber", 60 ],
-      [ "boots_rubber", 60 ],
-      [ "hat_hard", 60 ],
-      [ "shovel", 40 ],
-      [ "jackhammer", 5 ],
-      [ "jackhammer_mining", 1 ],
-      [ "elec_jackhammer", 5 ],
-      [ "elec_jackhammer_mining", 1 ],
-      [ "folding_poncho", 40 ],
-      [ "radio", 40 ],
-      [ "well_pump", 10 ],
-      { "group": "tools_toolbox", "prob": 5 },
-      [ "wrench", 15 ],
-      [ "wrench_48", 30 ],
-      [ "bag_canvas", 40 ],
-      [ "jumper_cable", 40 ],
-      [ "jumper_cable_heavy", 20 ],
-      [ "glasses_safety", 25 ],
-      [ "goggles_chem", 5 ],
-      [ "crowbar", 15 ],
-      [ "mask_filter", 30 ],
-      { "item": "mask_gas_half", "prob": 25, "charges": [ 0, 100 ] },
-      [ "electric_lantern", 30 ]
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "cs_open_sewer" ],
     "object": {

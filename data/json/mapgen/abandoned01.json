@@ -1,16 +1,5 @@
 [
   {
-    "id": "stash_water",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [
-      { "item": "funnel" },
-      { "item": "water_clean", "container-item": "bottle_plastic", "sealed": false },
-      { "item": "water_clean", "container-item": "jug_plastic", "charges": [ 7, 15 ], "sealed": false },
-      { "item": "water_clean", "container-item": "30gal_drum", "charges": [ 150, 350 ] }
-    ]
-  },
-  {
     "id": "cabin_suicide",
     "type": "item_group",
     "subtype": "collection",
@@ -25,38 +14,6 @@
       { "group": "cabin_suicide_shoes" },
       { "group": "cabin_suicide_extras", "count": [ 3, 6 ] }
     ]
-  },
-  {
-    "id": "cabin_suicide_shirt",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [ [ "hoodie", 30 ], [ "kevlar", 10 ], [ "longshirt", 40 ], [ "undershirt", 20 ] ]
-  },
-  {
-    "id": "cabin_suicide_over",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      [ "tacvest", 20 ],
-      [ "jacket_light", 30 ],
-      [ "jacket_leather", 30 ],
-      [ "jacket_evac", 30 ],
-      [ "jacket_army", 30 ],
-      [ "jacket_flannel", 30 ],
-      [ "vest", 10 ]
-    ]
-  },
-  {
-    "id": "cabin_suicide_legs",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [ [ "jeans", 35 ], [ "pants", 40 ], [ "pants_cargo", 20 ] ]
-  },
-  {
-    "id": "cabin_suicide_shoes",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [ [ "boots", 35 ], [ "boots_combat", 6 ], [ "boots_hiking", 15 ], [ "boots_survivor", 5 ], [ "sneakers", 40 ] ]
   },
   {
     "id": "cabin_suicide_extras",

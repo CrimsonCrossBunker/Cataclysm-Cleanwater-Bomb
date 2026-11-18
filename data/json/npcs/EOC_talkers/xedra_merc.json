@@ -30,35 +30,5 @@
         "topic": "TALK_DONE"
       }
     ]
-  },
-  {
-    "id": "xedra_officer_set",
-    "//": "equipment dropped by the XEDRA officer boss",
-    "type": "item_group",
-    "subtype": "collection",
-    "items": [
-      { "group": "clothing_soldier_shirt" },
-      { "distribution": [ { "item": "socks", "prob": 95 }, { "item": "socks_wool", "prob": 5 } ] },
-      {
-        "distribution": [
-          { "collection": [ { "item": "sports_bra" }, { "item": "boy_shorts" } ] },
-          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] }
-        ]
-      },
-      { "group": "clothing_tactical_leg" },
-      { "group": "clothing_watch" },
-      { "item": "phase_immersion_suit" },
-      { "item": "phase_immersion_helmet" },
-      { "item": "phase_immersion_cca" },
-      { "item": "military_papr_blower_off" },
-      { "item": "id_science_security_black" },
-      { "item": "survivor_machete_qt", "variant": "xedra_machete", "container-item": "scabbard" },
-      {
-        "collection": [
-          { "item": "rm103a_pistol", "prob": 100, "charges": 6, "container-item": "holster" },
-          { "group": "field_xedra_officer" }
-        ]
-      }
-    ]
   }
 ]

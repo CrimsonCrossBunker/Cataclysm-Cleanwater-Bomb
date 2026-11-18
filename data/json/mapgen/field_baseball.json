@@ -96,19 +96,6 @@
     "furniture": { "B": "f_trashcan", "F": "f_stool", "G": "f_locker", "H": "f_table", "I": "f_bench", "J": "f_bench" }
   },
   {
-    "id": "baseball_equip",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "bat", "prob": 55 },
-      { "item": "baseball", "prob": 80 },
-      { "item": "armguard_hard", "prob": 55 },
-      { "item": "legguard_hard", "prob": 55 },
-      { "item": "hat_ball", "prob": 75 },
-      { "item": "helmet_ball", "prob": 65 }
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "s_baseballfield_a2_2" ],
     "object": {

@@ -58,25 +58,6 @@
   },
   {
     "type": "item_group",
-    "id": "NC_ROBOFAC_MERC_1_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "under_armor" },
-      { "item": "under_armor_shorts" },
-      { "item": "socks" },
-      { "item": "ring_wedding" },
-      { "item": "robofac_enviro_suit" },
-      { "group": "molle_backpacks_and_accessories" },
-      { "group": "clothing_watch" },
-      { "item": "robofac_kevlar_vambraces" },
-      { "item": "robofac_kevlar_greaves" },
-      { "item": "knife_combat", "container-item": "bootsheath" },
-      { "group": "robofac_mantle_merc" },
-      { "group": "robofac_helmet_merc" }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "NC_ROBOFAC_MERC_1_carry",
     "subtype": "collection",
     "items": [

@@ -1,11 +1,5 @@
 [
   {
-    "id": "some_diesel",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [ { "item": "diesel", "charges": [ 1000, 10000 ], "prob": 100, "container-item": "null" } ]
-  },
-  {
     "type": "furniture",
     "id": "f_active_backup_generator",
     "name": "active backup generator",

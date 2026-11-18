@@ -1476,12 +1476,5 @@
       "success_lie": ".",
       "failure": "Of course, you have no evidence."
     }
-  },
-  {
-    "type": "item_group",
-    "id": "fertility_supplements",
-    "subtype": "collection",
-    "container-item": "bottle_plastic_pill_supplement",
-    "entries": [ { "item": "fert_supplement", "container-item": "null", "count": 25 } ]
   }
 ]

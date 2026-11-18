@@ -57,12 +57,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "brogyeki_weapon_override",
-    "entries": [ { "item": "brogyeki", "charges": 2 } ]
-  },
-  {
     "type": "shopkeeper_blacklist",
     "id": "cyborg_type_9_shopkeep_blacklist",
     "entries": [

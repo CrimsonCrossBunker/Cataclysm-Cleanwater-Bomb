@@ -79,36 +79,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "Liam_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "socks" },
-      { "item": "boxer_shorts" },
-      { "item": "longshirt" },
-      { "item": "hoodie" },
-      { "item": "jeans" },
-      { "item": "backpack" },
-      { "item": "boots" },
-      { "item": "gloves_light" },
-      { "item": "jacket_light" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "Liam_carry",
-    "subtype": "collection",
-    "entries": [
-      { "group": "candy_chocolate" },
-      { "group": "foodintincan" },
-      { "item": "multitool" },
-      { "item": "lighter", "charges": 100 },
-      { "group": "bottle_otc_painkiller_20" },
-      { "item": "bandages", "count": 3 },
-      { "item": "water_clean", "container-item": "canteen" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_Liam_Meeting1",
     "dynamic_line": {

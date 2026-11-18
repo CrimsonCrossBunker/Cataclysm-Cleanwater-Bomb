@@ -40,34 +40,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Fatima_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "bra" },
-      { "item": "panties" },
-      { "item": "socks" },
-      { "item": "technician_pants_gray" },
-      { "item": "technician_shirt_gray" },
-      { "item": "jacket_evac" },
-      { "item": "headscarf" },
-      { "item": "sneakers_steel" },
-      { "item": "slingpack" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Fatima_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "weldtank" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Fatima_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "oxy_torch" } ]
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

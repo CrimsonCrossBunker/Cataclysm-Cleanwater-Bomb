@@ -26,26 +26,6 @@
     "skills": [ { "skill": "firstaid", "bonus": 8 }, { "skill": "electronics", "bonus": 8 } ]
   },
   {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_SCIENTIST_GARAGE_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "under_armor" },
-      { "item": "under_armor_shorts" },
-      { "item": "socks" },
-      { "item": "robofac_enviro_suit" },
-      { "item": "welding_papr_helmet_raised", "contents-item": [ "diving_flashlight_small_hipower" ] },
-      { "item": "basic_papr_belt_off" },
-      { "item": "coat_lab" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_SCIENTIST_GARAGE_wield",
-    "subtype": "collection",
-    "items": [ { "item": "red_pen" } ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_ROBOFAC_SCIENTIST_GARAGE",
     "dynamic_line": {

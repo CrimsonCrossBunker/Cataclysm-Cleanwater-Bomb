@@ -23,22 +23,6 @@
   },
   {
     "type": "item_group",
-    "id": "BEM_DRUGRUNNER_worn",
-    "subtype": "collection",
-    "items": [
-      { "group": "military_ballistic_vest_pristine" },
-      { "group": "NC_BOUNTY_HUNTER_pants" },
-      { "item": "pants_army" },
-      { "group": "NC_BOUNTY_HUNTER_coat" },
-      { "item": "boots_combat" },
-      { "item": "molle_pack" },
-      { "item": "under_armor" },
-      { "item": "under_armor_shorts" },
-      { "item": "holster" }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "BEM_DRUGRUNNER_stock",
     "subtype": "collection",
     "entries": [
@@ -61,12 +45,5 @@
       { "text": "Sure, let see what you offer.", "topic": "TALK_DONE", "effect": "start_trade" },
       { "text": "Not interested.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "pure_meth_bag_zipper_1_6",
-    "subtype": "collection",
-    "container-item": "bag_zipper",
-    "entries": [ { "item": "pure_meth", "container-item": "null", "count": [ 1, 6 ] } ]
   }
 ]

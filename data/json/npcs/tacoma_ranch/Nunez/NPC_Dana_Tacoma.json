@@ -68,12 +68,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "TACOMA_Dana_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "bandages", "count": 3 } ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_TACOMA_Dana_1",
     "dynamic_line": {

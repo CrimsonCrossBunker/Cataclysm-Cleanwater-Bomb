@@ -32,29 +32,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "HUB01_ADzvonko_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "bra" },
-      { "item": "panties" },
-      { "item": "socks" },
-      { "item": "jumpsuit", "variant": "robofac" },
-      { "item": "sneakers" },
-      { "item": "sweater" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "HUB01_ADzvonko_carried",
-    "subtype": "collection",
-    "entries": [ { "group": "wallets_science" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "HUB01_ADzvonko_wield"
-  },
-  {
     "type": "talk_topic",
     "id": "HUB01_ADzvonko_Intro",
     "dynamic_line": {

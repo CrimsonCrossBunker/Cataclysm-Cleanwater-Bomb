@@ -81,53 +81,5 @@
       { "skill": "stabbing", "bonus": { "rng": [ 2, 6 ] } },
       { "skill": "cutting", "bonus": { "rng": [ 2, 6 ] } }
     ]
-  },
-  {
-    "id": "bandit_quartermaster_sell",
-    "type": "item_group",
-    "subtype": "distribution",
-    "//": "Stuff a quartermaster from the Hell's Raiders might sell.",
-    "entries": [
-      { "group": "preserved_food", "prob": 50 },
-      { "group": "cannedfood", "prob": 70 },
-      { "group": "big_canned_food", "prob": 30 },
-      { "group": "dry_goods", "prob": 40 }
-    ]
-  },
-  {
-    "id": "bandit_merchant_sell",
-    "type": "item_group",
-    "subtype": "distribution",
-    "//": "Stuff a fenceman from the Hell's Raiders might sell.",
-    "entries": [
-      { "group": "bandit_drugs", "prob": 30 },
-      { "group": "bandit_guns&ammo", "prob": 25 },
-      { "group": "traveler", "prob": 50 },
-      { "group": "alcohol", "prob": 30 }
-    ]
-  },
-  {
-    "id": "bandit_drugs",
-    "type": "item_group",
-    "subtype": "distribution",
-    "//": "Stuff a fenceman from the Hell's Raiders might sell.",
-    "entries": [
-      { "group": "drugs_pharmacy", "prob": 80 },
-      { "group": "drugs_analgesic", "prob": 80 },
-      { "group": "tobacco_products", "prob": 80 },
-      { "group": "drugs_soldier", "prob": 40 }
-    ]
-  },
-  {
-    "id": "bandit_guns&ammo",
-    "type": "item_group",
-    "subtype": "distribution",
-    "//": "Stuff a fenceman from the Hell's Raiders might sell.",
-    "entries": [
-      { "group": "guns_pistol_common", "prob": 270 },
-      { "group": "guns_smg_improvised", "prob": 90 },
-      { "group": "guns_rifle_common", "prob": 175 },
-      { "group": "ammo_common_boxed", "prob": 300 }
-    ]
   }
 ]

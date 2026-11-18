@@ -33,48 +33,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_EXODII_FREE_MERCHANT_storage",
-    "subtype": "distribution",
-    "entries": [ { "item": "duffelbag", "prob": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_EXODII_FREE_MERCHANT_coat",
-    "subtype": "distribution",
-    "entries": [ { "item": "trenchcoat", "prob": 80 }, { "item": "vest", "prob": 60 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "NC_EXODII_FREE_MERCHANT_misc",
-    "items": [
-      { "item": "jerky", "count": [ 10, 25 ], "prob": 100 },
-      { "item": "tallow", "prob": 100, "count": [ 20, 50 ] },
-      { "item": "pemmican", "count": [ 10, 25 ], "prob": 100 },
-      { "item": "dry_meat", "count": [ 10, 25 ], "prob": 100 },
-      { "item": "dry_fish", "count": [ 10, 25 ], "prob": 100 },
-      { "item": "dry_veggy", "prob": 100, "count": [ 20, 50 ] },
-      { "item": "dry_fruit", "count": [ 10, 25 ], "prob": 100 },
-      { "group": "solder_wire_spool", "count": [ 2, 5 ] },
-      { "item": "welding_rod_steel", "count": [ 750, 4000 ], "entry-wrapper": "tube_welding_rod" },
-      { "item": "welding_rod_alloy", "count": [ 750, 4000 ], "entry-wrapper": "tube_welding_rod" },
-      { "item": "welding_wire_steel", "count": [ 333, 2000 ], "entry-wrapper": "spool_welding" },
-      { "item": "welding_wire_alloy", "count": [ 500, 3000 ], "entry-wrapper": "spool_welding" },
-      { "item": "brazing_rod_bronze", "count": [ 250, 2000 ], "entry-wrapper": "tube_welding_rod" },
-      { "item": "brazing_rod_alloy", "count": [ 250, 2000 ], "entry-wrapper": "tube_welding_rod" },
-      { "item": "scrap", "count": [ 125, 250 ] },
-      { "item": "nuts_bolts", "count": [ 10, 25 ] },
-      { "item": "sheet_metal_small", "count": [ 50, 100 ] },
-      { "item": "lc_steel_chunk", "count": [ 100, 200 ] },
-      { "item": "lc_steel_lump", "count": [ 50, 100 ] },
-      { "item": "sheet_metal", "count": [ 25, 50 ] },
-      { "item": "lc_steel_lump", "count": [ 25, 50 ] },
-      { "item": "mc_steel_lump", "count": [ 25, 50 ] },
-      { "item": "hc_steel_lump", "count": [ 25, 50 ] }
-    ]
-  },
-  {
     "id": "TALK_EXODII_FREE_MERCHANT",
     "type": "talk_topic",
     "dynamic_line": {

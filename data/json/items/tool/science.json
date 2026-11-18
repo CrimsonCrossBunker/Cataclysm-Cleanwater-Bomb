@@ -152,19 +152,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "toy_makerspace_kit",
-    "type": "item_group",
-    "subtype": "collection",
-    "container-item": "maker_kit_box",
-    "items": [
-      { "item": "engineering_makerspace_kit" },
-      { "item": "bubblewrap", "count": 2 },
-      { "item": "manual_makerspace" },
-      { "item": "screwdriver" },
-      { "item": "wrench_small" }
-    ]
-  },
-  {
     "id": "engineering_robotics_kit",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -193,19 +180,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "toy_robot_kit",
-    "type": "item_group",
-    "subtype": "collection",
-    "container-item": "robot_kit_box",
-    "items": [
-      { "item": "engineering_robotics_kit" },
-      { "item": "bubblewrap", "count": 2 },
-      { "item": "manual_robotics_kit" },
-      { "item": "screwdriver" },
-      { "item": "wrench_small" }
-    ]
-  },
-  {
     "id": "engineering_engine_kit",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -223,19 +197,6 @@
     "pocket_data": [ { "pocket_type": "MAGAZINE", "watertight": true, "ammo_restriction": { "conc_alcohol": 750 } } ],
     "melee_damage": { "bash": 3 },
     "tool_ammo": [ "conc_alcohol" ]
-  },
-  {
-    "id": "toy_engine_kit",
-    "type": "item_group",
-    "subtype": "collection",
-    "container-item": "stirling_kit_box",
-    "items": [
-      { "item": "engineering_engine_kit" },
-      { "item": "bubblewrap", "count": 2 },
-      { "item": "manual_engine_kit" },
-      { "item": "screwdriver" },
-      { "item": "wrench_small" }
-    ]
   },
   {
     "id": "vac_oven_small",

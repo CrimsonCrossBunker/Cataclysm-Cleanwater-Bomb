@@ -1,22 +1,5 @@
 [
   {
-    "type": "item_group",
-    "id": "ga_items_1",
-    "items": [
-      [ "seed_celery", 10 ],
-      [ "seed_tomato", 10 ],
-      [ "seed_zucchini", 10 ],
-      [ "seed_lettuce", 10 ],
-      [ "seed_cucumber", 10 ],
-      [ "seed_carrot", 10 ],
-      [ "seed_pumpkin", 10 ],
-      [ "seed_bottle_gourd", 2 ],
-      [ "seed_broccoli", 10 ],
-      [ "seed_spurge", 10 ],
-      [ "gloves_work", 10 ]
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "cs_gardening_allotment" ],
     "object": {

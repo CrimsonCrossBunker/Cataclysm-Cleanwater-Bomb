@@ -43,19 +43,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_BEGGAR_2_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "boxer_shorts" },
-      { "item": "socks_wool" },
-      { "item": "fursuit", "variant": "dinosuit" },
-      { "item": "cardboard_crown_loose" },
-      { "item": "boots_winter" },
-      { "item": "coat_winter" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_REFUGEE_BEGGAR_2",
     "dynamic_line": {

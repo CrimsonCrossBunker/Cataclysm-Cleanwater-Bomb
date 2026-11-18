@@ -1,15 +1,5 @@
 [
   {
-    "id": "weed_farm",
-    "type": "item_group",
-    "items": [
-      { "item": "weed", "prob": 70, "count": [ 0, 20 ] },
-      { "item": "seed_weed", "prob": 60, "count": 2 },
-      { "item": "cannabis", "prob": 50 },
-      { "item": "withered", "prob": 70 }
-    ]
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "cannabis_extraction_equipment_nested_1x1",
     "object": {

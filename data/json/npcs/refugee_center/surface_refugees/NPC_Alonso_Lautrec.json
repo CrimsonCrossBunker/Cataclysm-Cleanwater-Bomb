@@ -38,31 +38,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Alonso_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "boxer_briefs" },
-      { "item": "socks" },
-      { "item": "tshirt" },
-      { "item": "jacket_leather" },
-      { "item": "sunglasses" },
-      { "item": "dress_shoes" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Alonso_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "mag_porn" }, { "group": "sex_accessories_domestic" }, { "item": "condom" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Alonso_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "cudgel" } ]
-  },
-  {
     "type": "effect_type",
     "id": "Alonso_pants_restored",
     "//": "Gates Alonso's fine services behind a mission."

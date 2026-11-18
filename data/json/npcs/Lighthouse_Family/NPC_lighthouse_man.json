@@ -25,25 +25,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NPC_lighthouse_man_shop",
-    "subtype": "collection",
-    "items": [
-      { "item": "fish_bait", "count": [ 15, 35 ] },
-      { "item": "fish", "count": [ 5, 20 ] },
-      { "item": "fish_smoked", "count": [ 1, 4 ] },
-      { "item": "fish_cooked", "count": [ 4, 14 ] },
-      { "item": "salted_fish", "count": [ 2, 6 ] },
-      { "item": "fish_fried", "count": [ 2, 6 ] },
-      { "item": "soup_fish", "count": [ 35, 50 ], "container-item": "bottle_plastic" },
-      { "item": "fishspear", "prob": 20, "count": [ 4, 8 ] },
-      [ "doublespeargun", 20 ],
-      [ "fish_trap", 55 ],
-      [ "fishing_hook_bone", 100 ],
-      [ "fishing_rod_basic", 100 ]
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": [
       "TALK_lighthouse_man_1",

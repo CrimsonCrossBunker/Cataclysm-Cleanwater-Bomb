@@ -28,25 +28,6 @@
   },
   {
     "type": "item_group",
-    "id": "NC_ANCILLA_GRUNT_worn",
-    "subtype": "collection",
-    "items": [
-      { "group": "military_ballistic_vest_pristine" },
-      { "item": "legpouch_large", "contents-group": "army_mags_m4" },
-      { "group": "NC_BOUNTY_HUNTER_pants" },
-      { "item": "pants_army" },
-      { "group": "NC_BOUNTY_HUNTER_coat" },
-      { "item": "boots_combat" },
-      { "item": "slingpack" },
-      { "item": "under_armor" },
-      { "item": "under_armor_shorts" },
-      { "item": "holster" },
-      { "item": "survivor_machete_qt", "container-item": "scabbard" },
-      { "item": "gloves_fingerless_mod" }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "NC_ANCILLA_GRUNT_carry",
     "subtype": "collection",
     "items": [

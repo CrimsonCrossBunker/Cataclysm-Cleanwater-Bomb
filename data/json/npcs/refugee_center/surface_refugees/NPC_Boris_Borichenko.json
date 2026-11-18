@@ -42,33 +42,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Boris_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "briefs" },
-      { "item": "socks" },
-      { "item": "tank_top" },
-      { "item": "technician_shirt_gray" },
-      { "item": "technician_pants_gray" },
-      { "item": "jacket_flannel" },
-      { "item": "hat_knit" },
-      { "item": "boots" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Boris_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "multitool" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Boris_wield",
-    "subtype": "collection",
-    "entries": [ { "group": "tools_toolbox" } ]
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

@@ -415,28 +415,5 @@
       { "skill": "rifle", "bonus": { "rng": [ 7, 10 ] } },
       { "skill": "archery", "bonus": { "rng": [ 8, 10 ] } }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_Isherwood_swat_worn",
-    "subtype": "collection",
-    "entries": [
-      { "distribution": [ { "item": "backpack_leather" }, { "item": "wicker_backpack" }, { "item": "slingpack" } ] },
-      { "item": "armor_riot" },
-      {
-        "collection": [ { "item": "3006", "container-item": "ammo_pouch" }, { "item": "3006", "charges": [ 24, 28 ] } ]
-      },
-      { "item": "3006", "charges": [ 24, 28 ] },
-      { "distribution": [ { "item": "boxer_briefs" }, { "item": "boxer_shorts" }, { "item": "briefs" } ] },
-      { "distribution": [ { "item": "tshirt" }, { "item": "undershirt" } ] },
-      { "distribution": [ { "item": "jeans" }, { "item": "pants_cargo" }, { "item": "pants_leather" } ] },
-      { "item": "leather_belt", "prob": 50 },
-      { "item": "gloves_fingerless", "prob": 50 },
-      { "item": "helmet_riot" },
-      { "item": "armor_riot_arm" },
-      { "item": "armor_riot_leg" },
-      { "distribution": [ { "item": "boots" }, { "item": "boots_western" } ] },
-      { "item": "socks", "prob": 50 }
-    ]
   }
 ]

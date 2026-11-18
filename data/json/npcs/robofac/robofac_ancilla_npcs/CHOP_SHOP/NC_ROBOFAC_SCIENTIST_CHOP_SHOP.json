@@ -33,32 +33,6 @@
     "skills": [ { "skill": "firstaid", "bonus": 8 }, { "skill": "electronics", "bonus": 8 } ]
   },
   {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_SCIENTIST_CHOP_SHOP_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "under_armor" },
-      { "item": "under_armor_shorts" },
-      { "item": "socks" },
-      { "item": "robofac_enviro_suit" },
-      { "item": "basic_papr_helmet", "contents-item": [ "diving_flashlight_small_hipower" ] },
-      { "item": "basic_papr_belt_off" },
-      { "item": "coat_lab" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_SCIENTIST_CHOP_SHOP_carry",
-    "subtype": "collection",
-    "items": [ { "item": "exodii_chop_shop_head", "count": 1 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_SCIENTIST_CHOP_SHOP_wield",
-    "subtype": "collection",
-    "items": [ { "item": "soldering_iron_portable" } ]
-  },
-  {
     "id": [ "NC_ROBOFAC_SCIENTIST_CHOP_SHOP" ],
     "type": "talk_topic",
     "dynamic_line": "&The scientist looks shocked to see you, and quickly tucks a large object under their lab coat.  They then address you with a quivering, yet indignant tone.  \"Wh-who are you?  How did you get in here?  You shouldn't be here.\"",

@@ -40,24 +40,6 @@
     }
   },
   {
-    "id": "house_suicide_clothing",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "group": "underwear" }, { "group": "shoes" }, { "group": "pants" }, { "group": "shirts" } ]
-  },
-  {
-    "id": "house_suicide_shotgun",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "group": "guns_shotgun_common" }, { "item": "shot_hull", "charges": 1 }, { "item": "corpse", "damage": [ 2, 3 ] } ]
-  },
-  {
-    "id": "oxy_small",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "group": "oxycodone_bottle_plastic_pill_prescription_1" } ]
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "bathroom_suicide",
     "object": {
@@ -150,12 +132,5 @@
       "palettes": [ "roof_palette" ],
       "terrain": { ".": "t_shingle_flat_roof" }
     }
-  },
-  {
-    "type": "item_group",
-    "id": "oxycodone_bottle_plastic_pill_prescription_1",
-    "subtype": "collection",
-    "container-item": "bottle_plastic_pill_prescription",
-    "entries": [ { "item": "oxycodone", "container-item": "null" } ]
   }
 ]

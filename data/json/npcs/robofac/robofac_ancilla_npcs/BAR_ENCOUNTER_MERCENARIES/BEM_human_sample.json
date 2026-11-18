@@ -128,11 +128,5 @@
     "type": "mapgen",
     "update_mapgen_id": "EOC_BEM_HUMAN_SAMPLE_BUY_MAP",
     "object": { "place_loot": [ { "group": "BEM_human_sample_drop", "x": 13, "y": 4, "repeat": [ 1, 3 ] } ] }
-  },
-  {
-    "id": "BEM_human_sample_drop",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "item": "human_sample", "container-item": "flask_glass", "count": 3 } ]
   }
 ]

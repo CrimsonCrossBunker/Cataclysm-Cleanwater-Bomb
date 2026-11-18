@@ -11,20 +11,6 @@
     ]
   },
   {
-    "id": "radiation_equipment",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [
-      { "group": "hazmat_torso", "prob": 30 },
-      { "group": "papr_kit", "prob": 20 },
-      { "group": "hazmat_full", "prob": 10 },
-      { "group": "clothing_work_set", "prob": 20 },
-      { "group": "lab_torso", "prob": 20 },
-      { "group": "hazmat_mask", "prob": 30 },
-      { "group": "rad_gear", "prob": 30 }
-    ]
-  },
-  {
     "id": "radiation_meds",
     "type": "item_group",
     "subtype": "collection",
@@ -37,49 +23,6 @@
       { "group": "drugs_emergency", "prob": 30 },
       { "group": "drugs_heal_simple", "prob": 20 },
       { "group": "drugs_analgesic", "prob": 10 }
-    ]
-  },
-  {
-    "id": "repair_storage",
-    "type": "item_group",
-    "subtype": "collection",
-    "items": [
-      { "group": "tools_common", "prob": 50 },
-      { "group": "tools_electronics", "prob": 50 },
-      { "group": "tools_lighting_industrial", "prob": 20 },
-      { "group": "supplies_electronics", "prob": 50 },
-      { "group": "hardware", "prob": 75 },
-      { "group": "hardware_plumbing", "prob": 75 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "decontamination",
-    "subtype": "collection",
-    "items": [
-      { "item": "soap", "prob": 20 },
-      { "item": "towel", "prob": 20 },
-      { "item": "saline", "prob": 20 },
-      { "group": "detergent_small_box", "prob": 20 },
-      { "item": "mop", "prob": 10 },
-      { "item": "boots_rubber", "prob": 10 },
-      { "item": "gloves_rubber", "prob": 20 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "packaging",
-    "subtype": "collection",
-    "items": [
-      { "item": "bag_plastic", "prob": 90 },
-      { "item": "bubblewrap", "prob": 60 },
-      { "item": "bag_canvas", "prob": 50 },
-      { "item": "bag_canvas_small", "prob": 50 },
-      { "item": "box_small", "prob": 40 },
-      { "item": "wrapper", "prob": 60 },
-      { "item": "paper", "prob": 10, "count": [ 5, 10 ] },
-      { "item": "cup_plastic", "prob": 10 },
-      { "item": "styrofoam_cup", "prob": 10 }
     ]
   },
   {

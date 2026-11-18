@@ -32,26 +32,6 @@
     "carry_override": "NC_ROBOFAC_MERC_MONSTER_CORPSE_1_carry"
   },
   {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_MERC_MONSTER_CORPSE_1_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "under_armor" },
-      { "item": "under_armor_shorts" },
-      { "item": "socks" },
-      { "item": "robofac_enviro_suit" },
-      { "group": "clothing_watch" },
-      { "item": "knife_combat", "container-item": "bootsheath" },
-      { "group": "robofac_helmet_merc" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_MERC_MONSTER_CORPSE_1_carry",
-    "subtype": "collection",
-    "items": [ { "item": "RobofacCoin", "count": [ 15, 18 ] }, { "group": "charged_smart_phone" } ]
-  },
-  {
     "id": [ "TALK_ROBOFAC_MERC_MONSTER_CORPSE_1" ],
     "type": "talk_topic",
     "dynamic_line": "Ah, the other contractor.  We've got things covered up here… but I guess you're going down into the \"thing.\"  If you've got coins, I've got a bit of spare equipment that might be useful.",

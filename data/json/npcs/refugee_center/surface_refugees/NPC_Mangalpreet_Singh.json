@@ -39,37 +39,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Mangalpreet_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "breeches" },
-      { "item": "tank_top" },
-      { "item": "socks" },
-      { "item": "leggings" },
-      { "item": "robe" },
-      { "item": "headscarf" },
-      { "item": "boots" },
-      { "group": "REFUGEE_Mangalpreet_wield" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Mangalpreet_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "holybook_granth" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Mangalpreet_wield",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "knife_small", "variant": "knife_steak", "container-item": "sheath", "prob": 4 },
-      { "item": "knife_huge", "variant": "knife_butcher", "container-item": "sheath", "prob": 2 },
-      { "item": "kukri", "container-item": "sheath", "prob": 1 }
-    ]
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [ "TALK_REFUGEE_Mangalpreet_2", "TALK_REFUGEE_Mangalpreet_Background", "TALK_REFUGEE_Mangalpreet_Situation" ],

@@ -36,32 +36,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Guneet_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "boxer_shorts" },
-      { "item": "socks" },
-      { "item": "tshirt" },
-      { "item": "jeans" },
-      { "item": "turban" },
-      { "item": "sneakers" },
-      { "item": "scabbard" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Guneet_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "portable_game" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Guneet_wield",
-    "subtype": "distribution",
-    "entries": [ { "item": "scimitar_inferior", "prob": 3 }, { "item": "scimitar", "prob": 2 } ]
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

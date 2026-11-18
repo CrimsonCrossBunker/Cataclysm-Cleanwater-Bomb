@@ -48,19 +48,6 @@
     "skills": [ { "skill": "fabrication", "bonus": { "rng": [ 2, 6 ] } } ]
   },
   {
-    "type": "item_group",
-    "id": "NC_BEGGAR_4_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "socks" },
-      { "item": "briefs" },
-      { "item": "tank_top" },
-      { "item": "long_underpants" },
-      { "item": "slippers" },
-      { "item": "house_coat" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_REFUGEE_BEGGAR_4",
     "dynamic_line": {

@@ -334,12 +334,6 @@
     }
   },
   {
-    "id": "the_thing_victim",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "group": "mine_equipment", "prob": 60 }, { "item": "corpse", "damage": 4 } ]
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "mine_finale_archaeology",
     "object": {

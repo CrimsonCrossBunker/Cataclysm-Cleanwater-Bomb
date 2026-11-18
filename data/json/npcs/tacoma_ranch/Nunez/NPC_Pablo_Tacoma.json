@@ -50,33 +50,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "TACOMA_Pablo_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "boxer_briefs" },
-      { "item": "socks" },
-      { "item": "tank_top" },
-      { "item": "buttonshirt", "variant": "striped" },
-      { "item": "pants" },
-      { "item": "armor_scrapsuit" },
-      { "item": "helmet_scrap" },
-      { "item": "motorbike_boots" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "TACOMA_Pablo_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "knife_swissarmy" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "TACOMA_Pablo_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "bat_metal" } ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_TACOMA_Pablo_1",
     "dynamic_line": "*looks up at you from a ledger, takes a moment to place you, then smiles broadly.  \"Great to see you, my friend.  To what do I owe the pleasure?\"",

@@ -1,53 +1,5 @@
 [
   {
-    "type": "item_group",
-    "id": "wall_deconstruction_results",
-    "subtype": "collection",
-    "entries": [
-      { "item": "rock", "count": [ 0, 4 ] },
-      { "item": "wood_panel", "count": [ 0, 2 ] },
-      { "item": "nail", "charges": [ 8, 32 ] },
-      { "item": "splinter", "count": [ 0, 4 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "concrete_deconstruction_results",
-    "subtype": "collection",
-    "entries": [
-      { "item": "rock", "count": [ 5, 10 ] },
-      { "item": "scrap", "count": [ 5, 8 ] },
-      { "item": "rebar", "count": [ 0, 2 ] },
-      { "item": "material_sand", "count": [ 50, 125 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "road_deconstruction_results",
-    "subtype": "collection",
-    "entries": [
-      { "item": "rock", "count": [ 10, 30 ] },
-      { "item": "pebble", "count": [ 50, 200 ] },
-      { "item": "material_sand", "count": [ 50, 400 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "metal_door_deconstruction_results",
-    "subtype": "collection",
-    "entries": [
-      { "item": "scrap", "count": [ 15, 30 ] },
-      { "item": "sheet_metal", "count": [ 4, 8 ] },
-      { "item": "hinge", "count": [ 0, 1 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "teeth_deconstruction_result",
-    "subtype": "collection",
-    "entries": [ { "item": "nm_teeth", "count": [ 30, 50 ] } ]
-  },
-  {
     "type": "construction",
     "id": "constr_remove_window_empty",
     "group": "remove_empty_window",

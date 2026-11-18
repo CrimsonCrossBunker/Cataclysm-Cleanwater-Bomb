@@ -1,26 +1,5 @@
 [
   {
-    "id": "standing_stones_accident",
-    "type": "item_group",
-    "subtype": "collection",
-    "items": [
-      [ "holy_symbol", 5 ],
-      [ "holy_symbol_wood", 4 ],
-      [ "essay_book", 6 ],
-      [ "poetry_book", 6 ],
-      [ "philosophy_book", 2 ],
-      [ "holybook_havamal", 8 ],
-      [ "robe", 3 ],
-      [ "tunic", 3 ]
-    ]
-  },
-  {
-    "id": "standing_stones_libation",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "item": "mead", "container-item": "bowl_clay", "charges": [ 2, 7 ] } ]
-  },
-  {
     "id": "GROUP_STANDING_STONES",
     "type": "monstergroup",
     "monsters": [ { "monster": "mon_null", "weight": 900 }, { "monster": "mon_darkman", "weight": 100, "conditions": [ "NIGHT" ] } ]

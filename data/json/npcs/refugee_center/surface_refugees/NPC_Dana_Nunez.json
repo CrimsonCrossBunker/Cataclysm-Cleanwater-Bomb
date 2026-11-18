@@ -48,31 +48,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Dana_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "bra" },
-      { "item": "panties" },
-      { "item": "socks" },
-      { "item": "longshirt" },
-      { "item": "jeans" },
-      { "item": "jacket_evac" },
-      { "item": "boots" },
-      { "item": "purse" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Dana_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "emer_blanket" }, { "item": "lighter" }, { "item": "bandages", "count": 3 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Dana_wield"
-  },
-  {
     "type": "effect_type",
     "id": "dana_baking_sold",
     "//": "Applied as a timer to keep Dana from having unlimited bread in stock"

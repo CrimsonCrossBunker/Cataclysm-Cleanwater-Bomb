@@ -23,28 +23,6 @@
     "carry_override": "NPC_ROBOFAC_MERC_PAT_carry"
   },
   {
-    "type": "item_group",
-    "id": "NPC_ROBOFAC_MERC_PAT_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "boxer_shorts" },
-      { "item": "tshirt" },
-      { "item": "hat_ball" },
-      { "item": "jacket_evac" },
-      { "item": "socks" },
-      { "item": "robofac_enviro_suit_casual" },
-      { "item": "smart_watch_adv" },
-      { "item": "ar_glasses_advanced" },
-      { "item": "colt_python", "container-item": "XL_holster" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NPC_ROBOFAC_MERC_PAT_carry",
-    "subtype": "collection",
-    "items": [ { "item": "RobofacCoin", "count": [ 15, 18 ] }, { "group": "charged_smart_phone" } ]
-  },
-  {
     "id": [ "TALK_ROBOFAC_MERC_PAT" ],
     "type": "talk_topic",
     "dynamic_line": {

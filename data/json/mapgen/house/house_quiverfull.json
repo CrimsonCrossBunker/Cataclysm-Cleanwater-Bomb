@@ -8,12 +8,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "book_house_quiverfull_bible",
-    "subtype": "collection",
-    "items": [ { "item": "holybook_bible1", "prob": 100 } ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "house_quiverfull" ],
     "object": {

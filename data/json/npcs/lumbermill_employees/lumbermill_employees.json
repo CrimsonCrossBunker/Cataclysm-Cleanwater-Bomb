@@ -91,27 +91,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "LUMBERMILL_MERCHANT_trade",
-    "subtype": "collection",
-    "entries": [
-      { "item": "2x4", "prob": 100, "count": [ 10, 20 ] },
-      { "item": "plank_short", "prob": 100, "count": [ 20, 30 ] },
-      { "item": "plank_long", "prob": 100, "count": [ 5, 10 ] },
-      { "item": "wooden_post", "prob": 100, "count": [ 5, 10 ] },
-      { "item": "wooden_post_short", "prob": 100, "count": [ 5, 20 ] },
-      { "item": "wooden_post_long", "prob": 100, "count": [ 5, 10 ] },
-      { "item": "wood_panel", "prob": 100, "count": [ 5, 10 ] },
-      { "item": "wood_sheet", "prob": 100, "count": [ 1, 5 ] },
-      { "item": "wood_beam", "prob": 100, "count": [ 1, 3 ] },
-      { "item": "log", "prob": 100, "count": [ 1, 10 ] },
-      { "item": "long_pole", "prob": 100, "count": [ 1, 2 ] },
-      { "item": "wood_block", "prob": 100, "count": [ 1, 10 ] },
-      { "item": "stick_long", "prob": 100, "count": [ 1, 20 ] },
-      { "item": "stick", "prob": 100, "count": [ 1, 20 ] }
-    ]
-  },
-  {
     "id": "LUMBERMILL_MERCHANT_blacklist",
     "type": "shopkeeper_blacklist",
     "entries": [ { "group": "LUMBERMILL_MERCHANT_trade" } ]
@@ -126,55 +105,6 @@
       { "item": "saw", "damage": [ 0, 2 ], "prob": 10 },
       { "item": "chainsaw_off", "damage": [ 0, 2 ], "prob": 25, "charges": [ 250, 500 ] },
       { "item": "elec_chainsaw_off", "damage": [ 0, 2 ], "prob": 25, "charges": [ 250, 500 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_LUMBERJACK_worn",
-    "subtype": "collection",
-    "entries": [
-      { "distribution": [ { "group": "clothing_work_boots" }, { "item": "boots_combat" }, { "item": "boots_denim" } ] },
-      {
-        "distribution": [
-          { "item": "hat_hard" },
-          { "group": "hat_hard_modified" },
-          { "item": "hat_hard_hooded" },
-          { "group": "hat_hard_hooded_modified" },
-          { "item": "hat_ball" }
-        ],
-        "prob": 70
-      },
-      {
-        "distribution": [ { "item": "gloves_leather" }, { "item": "gloves_work" }, { "item": "gloves_cut_resistant" } ],
-        "prob": 70
-      },
-      { "distribution": [ { "group": "clothing_glasses" }, { "item": "glasses_safety" } ], "prob": 70 },
-      { "group": "clothing_watch", "prob": 70 },
-      { "item": "tool_belt", "prob": 60 },
-      { "group": "underwear" },
-      { "group": "socks_unisex" },
-      {
-        "distribution": [
-          { "item": "apron_cut_resistant" },
-          { "item": "apron_leather" },
-          { "item": "chaps_cut_resistant" },
-          { "item": "chaps_leather" }
-        ],
-        "prob": 60
-      },
-      {
-        "distribution": [
-          {
-            "collection": [
-              { "distribution": [ { "group": "clothing_work_pants" }, { "item": "pants_cargo" }, { "item": "jeans" } ] },
-              { "group": "clothing_work_torso" }
-            ],
-            "prob": 80
-          },
-          { "item": "technician_coveralls", "prob": 15 },
-          { "item": "technician_coveralls_h", "prob": 5 }
-        ]
-      }
     ]
   }
 ]

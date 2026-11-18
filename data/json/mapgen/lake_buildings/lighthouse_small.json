@@ -1,42 +1,5 @@
 [
   {
-    "type": "item_group",
-    "id": "lighthouse_rainwater",
-    "items": [ { "item": "water_clean", "charges": [ 50, 200 ], "container-item": "30gal_barrel" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "lighthouse_fuel",
-    "items": [ { "item": "diesel", "charges": [ 0, 50000 ], "container-item": "30gal_drum" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "lighthouse_food",
-    "subtype": "collection",
-    "container-item": "box_medium",
-    "entries": [
-      {
-        "distribution": [
-          { "item": "can_sardine", "count": [ 1, 10 ] },
-          { "item": "can_tomato", "count": [ 1, 10 ] },
-          { "item": "soup_veggy", "count": [ 1, 10 ] },
-          { "item": "soup_meat", "count": [ 1, 10 ] },
-          { "item": "soup_chicken", "count": [ 1, 10 ] },
-          { "item": "soup_mushroom", "count": [ 1, 10 ] },
-          { "item": "soup_tomato", "count": [ 1, 10 ] },
-          { "item": "soup_dumplings", "count": [ 1, 10 ] },
-          { "item": "curry_veggy", "count": [ 1, 10 ] },
-          { "item": "curry_meat", "count": [ 1, 10 ] },
-          { "item": "can_corn", "count": [ 1, 10 ] },
-          { "item": "noodles_fast", "count": [ 1, 10 ] }
-        ],
-        "prob": 90
-      },
-      { "item": "con_milk", "count": [ 0, 10 ], "prob": 25 },
-      { "item": "instant_coffee", "count": [ 0, 5 ], "prob": 50 }
-    ]
-  },
-  {
     "type": "palette",
     "id": "lighthouse_small_palette",
     "terrain": {

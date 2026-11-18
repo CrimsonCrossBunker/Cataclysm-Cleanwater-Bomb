@@ -33,30 +33,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "HUB01_DNovak_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "bra" },
-      { "item": "panties" },
-      { "item": "socks" },
-      { "item": "jumpsuit", "variant": "robofac" },
-      { "item": "boots_steel" },
-      { "item": "vest" },
-      { "item": "gloves_work" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "HUB01_DNovak_carried",
-    "subtype": "collection",
-    "entries": [ { "group": "wallet_full" }, { "item": "flashlight" }, { "item": "screwdriver_set" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "HUB01_DNovak_wield"
-  },
-  {
     "type": "talk_topic",
     "id": "HUB01_DNovak_Intro",
     "dynamic_line": {

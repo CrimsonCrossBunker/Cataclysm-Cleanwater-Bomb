@@ -40,33 +40,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Uyen_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "bra" },
-      { "item": "panties" },
-      { "item": "socks" },
-      { "item": "dress" },
-      { "item": "leggings" },
-      { "item": "jacket_leather" },
-      { "item": "boots_combat" },
-      { "item": "slingpack" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Uyen_carried",
-    "subtype": "collection",
-    "entries": [ { "group": "full_1st_aid" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Uyen_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "scalpel" } ]
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

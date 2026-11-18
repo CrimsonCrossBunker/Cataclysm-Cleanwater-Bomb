@@ -271,22 +271,5 @@
       "↨": { "monster": "mon_zombie", "chance": 5 },
       "←": { "monster": "mon_zombie_scientist", "chance": 70 }
     }
-  },
-  {
-    "id": "lubricant",
-    "type": "item_group",
-    "items": [
-      { "item": "motor_oil", "container-item": "metal_tank", "charges": [ 2000, 60000 ], "prob": 50 },
-      { "item": "motor_oil", "container-item": "jerrycan_big", "charges": [ 0, 20000 ], "prob": 30 },
-      { "item": "metal_tank", "prob": 20 }
-    ]
-  },
-  {
-    "id": "oil_drums",
-    "type": "item_group",
-    "items": [
-      { "item": "crude_oil", "container-item": "55gal_drum", "charges": [ 180000, 200000 ], "prob": 60 },
-      { "item": "55gal_drum", "prob": 30 }
-    ]
   }
 ]

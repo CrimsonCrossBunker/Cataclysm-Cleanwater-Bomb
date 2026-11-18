@@ -1182,44 +1182,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "test_npc_belt",
-    "items": [ [ "leather_belt", 50 ], [ "tool_belt", 10 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "test_npc_eyes",
-    "items": [ [ "glasses_safety", 20 ], [ "sunglasses", 20 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "test_npc_hat",
-    "items": [
-      [ "hat_ball", 20 ],
-      [ "hat_hard", 5 ],
-      [ "hat_boonie", 5 ],
-      [ "hat_cotton", 20 ],
-      [ "hat_fur", 5 ],
-      [ "hat_knit", 20 ],
-      [ "hat_newsboy", 10 ],
-      [ "cowboy_hat", 10 ],
-      [ "hat_sombrero", 5 ],
-      [ "10gal_hat", 5 ],
-      [ "straw_hat", 5 ],
-      [ "hat_hunting", 10 ],
-      [ "hat_hard_hooded", 5 ],
-      [ "helmet_bike", 10 ],
-      [ "helmet_riot", 5 ],
-      [ "helmet_motor", 5 ],
-      [ "helmet_skid", 5 ],
-      [ "helmet_ball", 5 ],
-      [ "helmet_football", 5 ],
-      [ "pot_helmet", 10 ],
-      [ "firehelmet", 5 ],
-      [ "helmet_army", 5 ]
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_TEST_FACTION_TRUST",
     "dynamic_line": "This is a test conversation that shouldn't appear in the game.",

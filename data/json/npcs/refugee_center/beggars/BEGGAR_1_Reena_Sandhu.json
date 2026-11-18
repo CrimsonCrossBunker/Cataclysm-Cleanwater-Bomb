@@ -52,20 +52,6 @@
     "skills": [ { "skill": "speech", "bonus": { "rng": [ 0, 3 ] } }, { "skill": "cooking", "bonus": { "rng": [ 0, 3 ] } } ]
   },
   {
-    "type": "item_group",
-    "id": "NC_BEGGAR_1_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "bra" },
-      { "item": "panties" },
-      { "item": "socks" },
-      { "item": "jeans" },
-      { "item": "sweater" },
-      { "item": "sneakers" },
-      { "item": "blanket" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_REFUGEE_BEGGAR_1",
     "dynamic_line": {

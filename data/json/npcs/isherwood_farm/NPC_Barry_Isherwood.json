@@ -37,26 +37,6 @@
     "weapon_override": "naked_prisoner"
   },
   {
-    "type": "item_group",
-    "id": "NC_Isherwood_Barry_equip",
-    "//": "This is given to him upon returning home, rather than at spawn.",
-    "subtype": "collection",
-    "entries": [
-      { "item": "backpack_leather" },
-      { "item": "jacket_flannel" },
-      { "item": "ammo_pouch" },
-      { "item": "boxer_shorts" },
-      { "item": "tshirt" },
-      { "item": "pants_cargo" },
-      { "item": "leather_belt" },
-      { "item": "gloves_fingerless" },
-      { "item": "cowboy_hat" },
-      { "item": "boots" },
-      { "item": "socks" },
-      { "item": "browning_blr", "charges": 4, "contents-group": "NC_ISHERWOOD_rifle_mods" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_ISHERWOOD_BARRY_RESCUE",
     "dynamic_line": "*crouches on the bottom of his cell, shivering, then looks up as you approach.  He blinks a few times, then stands up.  He's totally nude, and his tanned body is covered in tiny, precise-looking scars of varying ages.  \"I can't believe my eyes.  Please get me outta here…\"",

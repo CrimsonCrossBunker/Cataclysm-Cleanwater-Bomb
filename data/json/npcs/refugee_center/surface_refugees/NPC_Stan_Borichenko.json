@@ -38,33 +38,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Stan_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "briefs" },
-      { "item": "socks" },
-      { "item": "tie_skinny" },
-      { "item": "dress_shirt" },
-      { "item": "pants" },
-      { "item": "blazer" },
-      { "item": "glasses_eye" },
-      { "item": "sneakers" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Stan_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "photo_album" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Stan_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "camera_pro" } ]
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

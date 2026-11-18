@@ -574,11 +574,6 @@
     }
   },
   {
-    "type": "item_group",
-    "id": "fully_loaded_medium_battery_cell",
-    "items": [ { "item": "medium_battery_cell", "prob": 100, "charges": 100 } ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [
       [ "mil_base_5e", "mil_base_6e", "mil_base_7e", "mil_base_8e" ],

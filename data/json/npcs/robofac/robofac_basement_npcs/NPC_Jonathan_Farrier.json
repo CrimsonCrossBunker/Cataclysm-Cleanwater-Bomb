@@ -34,30 +34,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "HUB01_JFarrier_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "briefs" },
-      { "item": "socks" },
-      { "item": "jumpsuit", "variant": "robofac" },
-      { "item": "bandana" },
-      { "item": "boots_steel" },
-      { "item": "tool_belt" },
-      { "item": "gloves_work" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "HUB01_JFarrier_carried",
-    "subtype": "collection",
-    "entries": [ { "group": "wallet_full" }, { "item": "multitool" }, { "item": "screwdriver_set" }, { "item": "hammer" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "HUB01_JFarrier_wield"
-  },
-  {
     "type": "talk_topic",
     "id": "HUB01_JFarrier_Intro",
     "dynamic_line": {

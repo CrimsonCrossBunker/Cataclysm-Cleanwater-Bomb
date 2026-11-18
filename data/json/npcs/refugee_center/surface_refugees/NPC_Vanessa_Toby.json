@@ -42,31 +42,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Vanessa_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "panties" },
-      { "item": "socks" },
-      { "item": "sneakers" },
-      { "item": "bra" },
-      { "item": "dress" },
-      { "item": "jacket_jean" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Vanessa_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "lighter" }, { "item": "ecig", "count": 40 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Vanessa_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "scissors" } ]
-  },
-  {
     "type": "effect_type",
     "id": "vanessa_haircut_in_progress"
   },

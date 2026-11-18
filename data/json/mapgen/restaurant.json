@@ -364,34 +364,6 @@
     }
   },
   {
-    "id": "foodperson_mask_loaded",
-    "type": "item_group",
-    "subtype": "collection",
-    "container-item": "foodperson_mask",
-    "entries": [ { "item": "medium_battery_cell" } ]
-  },
-  {
-    "id": "foodperson_outfit",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [
-      { "group": "foodperson_mask_loaded" },
-      { "item": "cape_fp" },
-      { "item": "chestguard_hard" },
-      { "item": "legguard_hard" },
-      { "item": "armguard_hard" },
-      { "item": "gloves_rubber" },
-      { "item": "boots_rubber" }
-    ]
-  },
-  {
-    "id": "dead_foodperson",
-    "type": "item_group",
-    "subtype": "collection",
-    "container-item": "corpse",
-    "entries": [ { "group": "foodperson_outfit" } ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "s_restaurant_foodplace_roof" ],
     "object": {

@@ -14,19 +14,6 @@
   {
     "type": "item_group",
     "subtype": "collection",
-    "id": "holster_glock19_fed",
-    "entries": [
-      {
-        "item": "glock_19",
-        "variant": "glock_19_cop",
-        "charges": 15,
-        "contents-item": [ "red_dot_sight", "sights_mount_pistol" ]
-      }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
     "id": "glock17_mags",
     "entries": [
       { "item": "glockmag", "ammo-item": "9mm", "charges": 15 },
@@ -34,12 +21,6 @@
       { "item": "glockmag", "ammo-item": "9mm", "charges": 15 },
       { "item": "glockmag", "ammo-item": "9mm", "charges": 15 }
     ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "army_grenades_40x46",
-    "entries": [ { "item": "40x46mm_m433", "charges": 4 } ]
   },
   {
     "type": "item_group",
@@ -104,24 +85,6 @@
   {
     "type": "item_group",
     "subtype": "collection",
-    "id": "charged_cell_phone",
-    "entries": [ { "item": "cell_phone", "charges": 150 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "charged_laptop",
-    "entries": [ { "item": "laptop", "charges": 600 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "charged_soldering_iron",
-    "entries": [ { "item": "soldering_iron_portable", "charges": 150 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
     "id": "charged_electrical_measuring",
     "entries": [
       { "item": "voltmeter" },
@@ -149,24 +112,6 @@
   {
     "type": "item_group",
     "subtype": "collection",
-    "id": "charged_flashlight",
-    "entries": [ { "item": "flashlight", "charges": 300 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "charged_heavy_flashlight",
-    "entries": [ { "item": "heavy_flashlight", "charges": 300 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "charged_mp3",
-    "entries": [ { "item": "mp3", "charges": 150 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
     "id": "charged_two_way_radio",
     "entries": [ { "item": "light_battery_cell", "ammo-item": "battery", "charges": 300, "container-item": "two_way_radio" } ]
   },
@@ -181,68 +126,6 @@
     "subtype": "collection",
     "id": "charged_tazer",
     "entries": [ { "item": "medium_battery_cell", "ammo-item": "battery", "charges": 1200, "container-item": "tazer" } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "charged_ref_lighter",
-    "entries": [ { "item": "ref_lighter", "charges": 50 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "charged_cigs",
-    "entries": [ { "item": "cig", "count": 20, "container-item": "null", "entry-wrapper": "box_cigarette" } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "rolling_cigs",
-    "entries": [
-      { "item": "tobacco", "count": 20, "container-item": "null", "entry-wrapper": "bag_plastic" },
-      { "item": "rolling_paper", "count": 20 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "pipe_smoke",
-    "entries": [
-      { "item": "tobacco", "count": 20, "container-item": "null", "entry-wrapper": "bag_plastic" },
-      { "item": "pipe_tobacco" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "weed_pack",
-    "entries": [ { "item": "weed", "count": 5, "container-item": "null", "entry-wrapper": "bag_zipper" } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "can_o_beans",
-    "entries": [ { "item": "can_beans", "count": 2, "container-item": "null", "entry-wrapper": "can_medium" } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "charged_aspirin",
-    "entries": [ { "item": "aspirin", "count": 20, "container-item": "null", "entry-wrapper": "bottle_plastic_pill_painkiller" } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "charged_antibiotic",
-    "entries": [
-      { "item": "antibiotics", "count": 10, "container-item": "null", "entry-wrapper": "bottle_plastic_pill_prescription" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "charged_matches",
-    "entries": [ { "item": "matches", "charges": 20 } ]
   },
   {
     "type": "item_group",
@@ -364,17 +247,6 @@
   {
     "type": "item_group",
     "subtype": "collection",
-    "id": "quiver_modern_archer",
-    "entries": [
-      { "item": "arrow_cf", "count": 16 },
-      { "item": "bow_sight" },
-      { "item": "bow_stabilizer_set" },
-      { "item": "manual_archery" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
     "id": "quiver_bow_hunter",
     "entries": [ { "item": "arrow_cf", "count": 10 } ]
   },
@@ -387,80 +259,8 @@
   {
     "type": "item_group",
     "subtype": "collection",
-    "id": "bandolier_shotgun_hunter",
-    "entries": [ { "item": "shot_00", "charges": 18 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "bandolier_rifle_hunter",
-    "entries": [ { "item": "270win_jsp", "charges": 16 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "bandolier_swat_cqc1",
-    "entries": [ { "item": "shot_00", "charges": 12 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "bandolier_swat_cqc2",
-    "entries": [ { "item": "shot_slug", "charges": 12 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "quiver_naturalist",
-    "entries": [ { "item": "arrow_wood", "count": 20 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
     "id": "flintlock_pouch_reenactor",
     "entries": [ { "item": "flintlock_ammo", "charges": 14 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "bandolier_ww_gunslinger",
-    "entries": [ { "item": "45colt_jhp", "charges": 18 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "bandolier_cowboy",
-    "entries": [ { "item": "357mag_jhp", "charges": 18 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "dog_lover_bag",
-    "entries": [
-      { "item": "rubber_harness_dog" },
-      { "item": "rubber_harness_dog" },
-      { "item": "dog_whistle" },
-      { "item": "dogfood_dry", "count": 4, "container-item": "null", "entry-wrapper": "bag_plastic" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "ninja_grenade_pouch",
-    "entries": [ { "item": "flashbang" }, { "item": "flashbang" }, { "item": "smokebomb" }, { "item": "smokebomb" } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "leg_sheath6_throwing_knives",
-    "entries": [
-      { "item": "throwing_knife" },
-      { "item": "throwing_knife" },
-      { "item": "throwing_knife" },
-      { "item": "throwing_knife" },
-      { "item": "throwing_knife" },
-      { "item": "throwing_knife" }
-    ]
   },
   {
     "type": "item_group",
@@ -479,12 +279,6 @@
       { "item": "762R_clip", "ammo-item": "762_54R", "charges": 5 },
       { "item": "762R_clip", "ammo-item": "762_54R", "charges": 5 }
     ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "flintlock_pouch_skyfarer",
-    "entries": [ { "item": "36navy", "charges": 14 } ]
   },
   {
     "type": "profession_item_substitutions",

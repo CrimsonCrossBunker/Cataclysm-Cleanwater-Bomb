@@ -45,12 +45,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_EXODII_TYPE_2_carried",
-    "//": "Golden krar for Luliya.",
-    "items": [ { "item": "krar_golden" } ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_LULIYA",
     "dynamic_line": {

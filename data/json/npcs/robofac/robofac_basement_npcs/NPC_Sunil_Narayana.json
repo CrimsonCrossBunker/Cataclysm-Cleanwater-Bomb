@@ -33,29 +33,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "HUB01_SNarayana_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "boxer_briefs" },
-      { "item": "socks" },
-      { "item": "jumpsuit", "variant": "robofac" },
-      { "item": "boots" },
-      { "item": "hat_ball" },
-      { "item": "gloves_work" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "HUB01_SNarayana_carried",
-    "subtype": "collection",
-    "entries": [ { "group": "wallet_full" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "HUB01_SNarayana_wield"
-  },
-  {
     "type": "talk_topic",
     "id": "HUB01_SNarayana_Intro",
     "dynamic_line": {

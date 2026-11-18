@@ -29,30 +29,9 @@
   },
   {
     "type": "item_group",
-    "id": "REFUGEE_Aleesha_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "sports_bra" },
-      { "item": "boxer_shorts" },
-      { "item": "socks" },
-      { "item": "tshirt" },
-      { "item": "skirt" },
-      { "item": "sneakers" },
-      { "item": "mbag" },
-      { "item": "blanket" }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "REFUGEE_Aleesha_carried",
     "subtype": "collection",
     "entries": [ { "item": "novel_coa" }, { "group": "civilian_phones", "ammo-item": "battery", "charges": 120 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Aleesha_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "cudgel" } ]
   },
   {
     "type": "talk_topic",

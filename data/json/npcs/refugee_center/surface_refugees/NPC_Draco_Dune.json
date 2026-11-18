@@ -28,33 +28,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Draco_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "boxer_shorts" },
-      { "item": "socks" },
-      { "item": "sweater" },
-      { "item": "jeans" },
-      { "item": "jacket_leather" },
-      { "item": "hat_ball" },
-      { "item": "sunglasses" },
-      { "item": "boots_combat" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Draco_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "lc_wire" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Draco_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "crowbar" } ]
-  },
-  {
     "type": "npc",
     "id": "refugee_DracoDune",
     "name_unique": "Draco Dune",

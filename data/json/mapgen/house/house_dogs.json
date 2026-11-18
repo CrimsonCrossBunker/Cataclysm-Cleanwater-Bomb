@@ -1,19 +1,5 @@
 [
   {
-    "id": "dogfight",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [
-      { "item": "postman_shirt" },
-      { "item": "postman_shorts" },
-      { "item": "postman_hat" },
-      { "group": "underwear" },
-      { "item": "dress_shoes" },
-      { "item": "corpse" },
-      { "group": "mail_postal" }
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "house_dogs" ],
     "//": "uses house_08_basement",

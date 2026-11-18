@@ -24,10 +24,6 @@
     "//": "Skills intentionally kept low.  This character should probably have a higher chance of having insanity type traits eventually."
   },
   {
-    "type": "item_group",
-    "id": "naked_prisoner"
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_MI-GO_PRISONER1",
     "dynamic_line": [

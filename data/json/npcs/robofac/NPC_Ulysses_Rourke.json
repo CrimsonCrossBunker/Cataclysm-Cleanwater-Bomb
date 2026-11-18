@@ -39,28 +39,5 @@
     "carry_override": "NC_robofac_security_head_misc",
     "worn_override": "NC_robofac_security_head_worn",
     "weapon_override": "NC_robofac_security_head_weapon"
-  },
-  {
-    "type": "item_group",
-    "id": "NC_robofac_security_head_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "under_armor" },
-      { "item": "under_armor_shorts" },
-      { "item": "rm13_armor", "contents-item": [ "rm13_battery", "rebreather_cartridge_regen" ] },
-      { "item": "legrig", "count": 2 },
-      { "item": "tacvest" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_robofac_security_head_weapon",
-    "items": [ { "item": "fn_p90", "charges": 50 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_robofac_security_head_misc",
-    "subtype": "collection",
-    "entries": [ { "item": "flashbang", "count": 2 }, { "item": "fnp90mag", "count": 3, "charges": 50 } ]
   }
 ]

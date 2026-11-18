@@ -68,73 +68,9 @@
   },
   {
     "type": "item_group",
-    "id": "John_Bailey_worn",
-    "subtype": "collection",
-    "//": "Needs some editing, this is a quick version.  Should be equipped to last to mid-game at least, but feel mostly scavenged.",
-    "entries": [
-      { "item": "boots_combat" },
-      { "item": "socks" },
-      { "item": "level_3_vest", "variant": "national_guard_armor_vest", "contents-group": "some_steel_front_plates" },
-      { "item": "boxer_shorts" },
-      { "item": "pants_army" },
-      { "item": "legguard_hard" },
-      { "item": "tshirt" },
-      { "item": "sweatshirt" },
-      { "item": "spearsling" },
-      { "item": "tac_helmet" },
-      { "item": "backpack_hiking" },
-      { "item": "wristwatch" },
-      { "item": "bandolier_pistol", "contents-group": "john_bailey_bandolier" },
-      { "item": "holster", "contents-group": "john_bailey_pistol" },
-      { "item": "bow_sling", "contents-item": "compbow_low" },
-      { "item": "quiver", "contents-group": "john_bailey_quiver" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "John_Bailey_carried",
-    "subtype": "collection",
-    "//": "Needs some editing, and randomization.  Should carry a first aid kit, food and a bit of prep, and some random loot he's gathered from his travels.  We could pare down what he has on his person and move a bit more to his bike.",
-    "entries": [
-      { "group": "candy_chocolate" },
-      { "group": "snacks" },
-      { "group": "beer_in_container" },
-      { "group": "foodintincan" },
-      { "group": "charged_two_way_radio" },
-      { "group": "soup_packet" },
-      { "item": "dogfood_dry" },
-      { "item": "lighter", "charges": 100 },
-      { "group": "bottle_otc_painkiller_20" },
-      { "item": "bandages", "count": [ 1, 3 ] },
-      { "item": "pot" },
-      { "item": "FMCNote", "count": 10 },
-      { "item": "357mag_fmj", "count": 2 },
-      { "item": "water_clean", "container-item": "camelbak" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "John_Bailey_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "spear_pipe" } ]
-  },
-  {
-    "type": "item_group",
     "id": "john_bailey_pistol",
     "subtype": "collection",
     "entries": [ { "item": "sw_619", "ammo-item": "357mag_fmj", "charges": 7 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "john_bailey_bandolier",
-    "subtype": "collection",
-    "entries": [ { "item": "357mag_fmj", "charges": 18 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "john_bailey_quiver",
-    "subtype": "collection",
-    "entries": [ { "item": "arrow_cf", "count": 20 } ]
   },
   {
     "type": "talk_topic",

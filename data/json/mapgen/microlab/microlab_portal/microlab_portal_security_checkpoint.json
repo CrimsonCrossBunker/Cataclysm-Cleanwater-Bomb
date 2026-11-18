@@ -1,18 +1,5 @@
 [
   {
-    "id": "mercenary_battle_traces",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [
-      {
-        "distribution": [ { "item": "shot_hull", "prob": 30 }, { "item": "223_casing", "prob": 70, "count": [ 3, 5 ] } ],
-        "prob": 100
-      },
-      { "item": "xedra40", "prob": 1 },
-      { "item": "xedra10", "prob": 1 }
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [
       [

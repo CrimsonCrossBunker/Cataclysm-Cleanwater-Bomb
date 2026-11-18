@@ -1,25 +1,5 @@
 [
   {
-    "id": "dive_shop_tanks",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "item": "small_scuba_tank", "prob": 40, "charges": [ 5, 20 ] },
-      { "item": "scuba_tank", "prob": 60, "charges": [ 10, 60 ] }
-    ]
-  },
-  {
-    "id": "dive_shop_books",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "manual_swimming", "prob": 100 },
-      { "item": "emergency_book", "prob": 50 },
-      { "item": "manual_first_aid", "prob": 20 },
-      { "item": "textbook_firstaid", "prob": 10 }
-    ]
-  },
-  {
     "type": "palette",
     "id": "dive_shop_palette",
     "palettes": [ "parametrized_walls_palette" ],

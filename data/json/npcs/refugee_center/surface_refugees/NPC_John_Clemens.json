@@ -38,36 +38,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_John_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "briefs" },
-      { "item": "socks" },
-      { "item": "tshirt", "variant": "flag_shirt" },
-      { "item": "jeans" },
-      { "item": "leather_belt" },
-      { "item": "bandana" },
-      { "item": "holster" },
-      { "item": "duster_leather" },
-      { "item": "sunglasses" },
-      { "item": "cowboy_hat" },
-      { "item": "boots_western" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_John_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "novel_western" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_John_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "colt_army" } ]
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

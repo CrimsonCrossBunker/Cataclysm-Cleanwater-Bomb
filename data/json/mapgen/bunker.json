@@ -194,25 +194,6 @@
   },
   {
     "type": "item_group",
-    "id": "bunker_basement_books",
-    "items": [
-      { "group": "book_military", "prob": 50 },
-      { "group": "book_survival", "prob": 50 },
-      { "group": "magazines", "prob": 80 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "bunker_basement_drugs",
-    "items": [ { "group": "drugs_pharmacy", "prob": 70 }, { "group": "drugs_soldier", "prob": 50 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "bunker_basement_food",
-    "items": [ { "group": "cannedfood", "prob": 80 }, { "group": "pasta_ingredients", "prob": 50 } ]
-  },
-  {
-    "type": "item_group",
     "id": "bunker_basement_suicide",
     "subtype": "collection",
     "items": [
@@ -220,33 +201,6 @@
       { "item": "45_casing", "charges": 1 },
       { "group": "underwear" },
       { "item": "corpse" }
-    ]
-  },
-  {
-    "id": "bunker_basement_clothing",
-    "type": "item_group",
-    "items": [
-      { "group": "clothing_soldier_shirt", "prob": 20 },
-      { "item": "jacket_army", "prob": 20 },
-      { "item": "pants_army", "prob": 20 },
-      { "item": "boots_combat", "prob": 20 },
-      { "item": "helmet_army", "prob": 20 },
-      { "item": "gloves_tactical", "prob": 10 },
-      { "item": "elbow_pads", "prob": 10 },
-      { "group": "clothing_tactical_leg", "prob": 15 },
-      { "group": "clothing_tactical_torso", "prob": 15 },
-      { "group": "underwear" },
-      { "distribution": [ { "item": "socks", "prob": 95 }, { "item": "socks_wool", "prob": 5 } ] },
-      {
-        "distribution": [
-          { "group": "clothing_glasses", "prob": 60 },
-          { "item": "glasses_bal", "prob": 30 },
-          { "item": "goggles_nv", "prob": 5 },
-          { "item": "goggles_ir", "prob": 5 }
-        ],
-        "prob": 20
-      },
-      { "group": "clothing_watch", "prob": 5 }
     ]
   }
 ]

@@ -37,27 +37,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Rhyzaea_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "bra" },
-      { "item": "panties" },
-      { "item": "socks" },
-      { "item": "skirt" },
-      { "item": "leggings" },
-      { "item": "sweater" },
-      { "item": "boots_hiking" },
-      { "item": "purse" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "REFUGEE_Rhyzaea_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "stick" } ]
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

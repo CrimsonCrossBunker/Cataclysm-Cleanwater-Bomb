@@ -1,11 +1,5 @@
 [
   {
-    "type": "item_group",
-    "id": "book_motel",
-    "subtype": "collection",
-    "items": [ { "item": "phonebook", "prob": 100 }, { "item": "holybook_bible3", "prob": 100 } ]
-  },
-  {
     "type": "palette",
     "id": "motel_2x2_palette",
     "palettes": [ "parametrized_walls_palette" ],

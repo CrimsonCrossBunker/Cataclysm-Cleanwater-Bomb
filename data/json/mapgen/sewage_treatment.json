@@ -120,29 +120,6 @@
     "vehicles": { "Ł": { "vehicle": "hand_truck", "chance": 75 } }
   },
   {
-    "id": "treatment_chemicals",
-    "type": "item_group",
-    "items": [
-      { "item": "bleach", "container-item": "55gal_drum", "charges": [ 10, 126 ], "prob": 50 },
-      { "item": "chem_sulphuric_acid", "container-item": "55gal_drum", "charges": [ 2, 50 ], "prob": 20 },
-      {
-        "collection": [ { "group": "quicklime_barrel", "prob": 40, "count": [ 1, 2 ] }, { "group": "quicklime_barrel_part" } ],
-        "prob": 60
-      },
-      { "item": "55gal_drum", "prob": 50 }
-    ]
-  },
-  {
-    "id": "sewage_samples",
-    "type": "item_group",
-    "items": [
-      { "item": "water_sewage", "container-item": "flask_glass", "charges": 1, "prob": 50 },
-      { "item": "water", "container-item": "flask_glass", "charges": 1, "prob": 50 },
-      { "item": "water_clean", "container-item": "flask_glass", "charges": 1, "prob": 30 },
-      { "prob": 10, "group": "slime_scrap_flask_glass_1" }
-    ]
-  },
-  {
     "type": "monstergroup",
     "id": "GROUP_SEWAGE_TREATMENT",
     "is_animal": true,
@@ -624,12 +601,6 @@
     }
   },
   {
-    "id": "cannibal_corpse",
-    "type": "item_group",
-    "subtype": "collection",
-    "items": [ { "group": "clothing_work_set", "prob": 40 }, { "group": "supplies_plumbing", "prob": 20 }, { "item": "corpse" } ]
-  },
-  {
     "id": "human_remains",
     "type": "item_group",
     "subtype": "collection",
@@ -640,12 +611,5 @@
       { "item": "bone_human", "prob": 90, "count": [ 1, 5 ] },
       { "item": "cotton_patchwork", "prob": 90, "count": [ 1, 4 ], "custom-flags": [ "FILTHY" ] }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "slime_scrap_flask_glass_1",
-    "subtype": "collection",
-    "container-item": "flask_glass",
-    "entries": [ { "item": "slime_scrap" } ]
   }
 ]
