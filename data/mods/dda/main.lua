@@ -476,3 +476,5 @@ require("injection_serums")
 require("map_item_actions")
 
 require("readable_files")
+
+require("tarot_cards")
