@@ -723,6 +723,8 @@ local ModDefinition = {}
 ---@field weapon_categories? string[] Replace the item's weapon categories.
 ---@field replace_qualities? boolean Clear inherited tool qualities before applying staged qualities.
 ---@field replace_pockets? boolean Clear inherited pockets before applying staged pockets.
+---@field minimum_skills? table<string, integer> Replace native skill requirements by skill ID.
+---@field throwing_recovery_chance? integer Native recovery probability after a throw, from 0 to 100.
 ---@field default_container? string Default package item id; `null` explicitly disables inherited packaging.
 ---@field mass_grams? integer Non-negative mass in grams.
 ---@field mass_milligrams? integer Non-negative native signed-64-bit mass in milligrams; cannot be combined with mass_grams in one constructor.
@@ -764,6 +766,40 @@ function ItemDefinition:melee_damage(damage_type, amount) end
 ---Clear inherited and staged melee damage. Add replacement values with melee_damage.
 ---@return ItemDefinition self
 function ItemDefinition:clear_melee_damage() end
+
+---@class ItemDamageEntry
+---@field type string Native damage type ID.
+---@field amount? number Base damage, defaults to zero.
+---@field armor_penetration? number Flat penetration, defaults to zero.
+---@field armor_multiplier? number Armor multiplier, defaults to one.
+---@field damage_multiplier? number Damage multiplier, defaults to one.
+---@field constant_armor_multiplier? number Unconditional armor multiplier, defaults to one.
+---@field constant_damage_multiplier? number Unconditional damage multiplier, defaults to one.
+
+---Replace the native throwing damage profile. An empty list restores native default derivation.
+---@param entries ItemDamageEntry[] Ordered damage entries. Native rules combine repeated types.
+---@return ItemDefinition self
+function ItemDefinition:throwing_damage(entries) end
+
+---@class ItemThrowCorrection
+---@field required_flags? string[][] Each inner list is a conjunction. A projectile can match any clause or an ammunition type below.
+---@field allowed_ammo? string[] Native ammunition-type IDs.
+---@field min_mass_milligrams? integer Minimum mass of a single projectile.
+---@field max_mass_milligrams? integer Maximum mass of a single projectile.
+---@field max_volume_ml? integer Maximum volume of a single projectile.
+---@field max_length_mm? integer Maximum length of the projectile.
+---@field full_bonus_skill? integer Throwing skill required for the full beneficial multiplier.
+---@field damage_multiplier? number Defaults to one.
+---@field range_multiplier? number Defaults to one.
+---@field stamina_multiplier? number Defaults to one.
+---@field dispersion_multiplier? number Defaults to one.
+---@field speed_multiplier? number Defaults to one.
+---@field weight_multiplier? number Defaults to one.
+
+---Set a complete throwing correction for compatible projectiles while this item is wielded. Pass nil to clear an inherited profile.
+---@param options? ItemThrowCorrection
+---@return ItemDefinition self
+function ItemDefinition:throw_correction(options) end
 
 ---@class ItemNumericAdjustment
 ---@field factor? number Positive multiplier. Choose this or offset.
@@ -849,6 +885,12 @@ function ItemDefinition:clear_mounted_charge() end
 ---@return ItemDefinition self
 function ItemDefinition:quality(id, level, speed) end
 
+---Adjust an existing quality level, preserving its native speed multiplier.
+---@param id string Existing staged or inherited quality ID.
+---@param level_offset integer Signed level adjustment in the native integer range.
+---@return ItemDefinition self
+function ItemDefinition:adjust_quality(id, level_offset) end
+
 ---@param id string
 ---@return ItemDefinition self
 function ItemDefinition:flag(id) end
@@ -888,6 +930,10 @@ function ItemDefinition:conditional_names(rules) end
 ---@field type string Native ammunition-type id, including a type staged by this Mod.
 ---@field count? integer Positive native signed-int default charges. Omission preserves an inherited slot; a new slot defaults to one.
 ---@field stack_size? integer Positive native signed-int charges represented by the volume. Omission preserves an inherited slot; native finalization derives a new slot's size from default charges.
+---@field damage? ItemDamageEntry[] Replace the native ammunition damage entries.
+---@field dispersion? integer Nonnegative native ammunition dispersion.
+---@field loudness? integer Nonnegative native ammunition loudness. Omit for inherited or calculated loudness.
+---@field recovery_chance? integer Nonnegative native recovery chance after firing.
 
 ---Create or update the native ammunition slot, preserving all unspecified inherited ballistics and effects.
 ---@param options ItemAmmunitionDefinitionOptions

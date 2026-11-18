@@ -234,6 +234,93 @@ float item_option_float( const sol::table &options, const char *field, double fa
     return static_cast<float>( value );
 }
 
+std::optional<int> read_nonnegative_item_int( const sol::table &options, const char *field )
+{
+    const auto raw = options.get<sol::optional<std::int64_t>>( field );
+    if( !raw ) {
+        return std::nullopt;
+    }
+    const int value = item_option_int( *raw, field );
+    if( value < 0 ) {
+        throw std::invalid_argument( std::string( field ) + " cannot be negative" );
+    }
+    return value;
+}
+
+damage_instance read_item_damage( const sol::table &entries )
+{
+    const std::size_t count = require_dense_array( entries, "item damage entries", 0 );
+    damage_instance result;
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::table options = entries.raw_get<sol::table>( index );
+        const std::string type = options.get<std::string>( "type" );
+        if( type.empty() ) {
+            throw std::invalid_argument( "item damage type cannot be empty" );
+        }
+        result.add_damage( damage_type_id( type ),
+                           item_option_float( options, "amount", 0.0 ),
+                           item_option_float( options, "armor_penetration", 0.0 ),
+                           item_option_float( options, "armor_multiplier", 1.0 ),
+                           item_option_float( options, "damage_multiplier", 1.0 ),
+                           item_option_float( options, "constant_armor_multiplier", 1.0 ),
+                           item_option_float( options, "constant_damage_multiplier", 1.0 ) );
+    }
+    return result;
+}
+
+throw_correction_data read_throw_correction( const sol::table &options )
+{
+    throw_correction_data correction;
+    if( const auto flags = options.get<sol::optional<sol::table>>( "required_flags" ) ) {
+        const std::size_t count = require_dense_array( *flags, "throw correction flag alternatives", 0 );
+        for( std::size_t i = 1; i <= count; ++i ) {
+            const sol::table required = flags->raw_get<sol::table>( i );
+            const std::size_t clause_size = require_dense_array( required, "throw correction flag clause", 1 );
+            std::vector<flag_id> clause;
+            for( std::size_t j = 1; j <= clause_size; ++j ) {
+                clause.emplace_back( required.raw_get<std::string>( j ) );
+            }
+            correction.required_flags.push_back( std::move( clause ) );
+        }
+    }
+    if( const auto ammo = options.get<sol::optional<sol::table>>( "allowed_ammo" ) ) {
+        const std::size_t count = require_dense_array( *ammo, "throw correction ammunition types", 0 );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            correction.allowed_ammo.emplace( ammo->raw_get<std::string>( index ) );
+        }
+    }
+    const auto mass = [&options]( const char *field ) -> std::optional<units::mass> {
+        const auto value = options.get<sol::optional<std::int64_t>>( field );
+        if( !value ) {
+            return std::nullopt;
+        }
+        if( *value < 0 ) {
+            throw std::invalid_argument( std::string( field ) + " cannot be negative" );
+        }
+        return units::from_milligram( *value );
+    };
+    correction.min_weight = mass( "min_mass_milligrams" );
+    correction.max_weight = mass( "max_mass_milligrams" );
+    if( correction.min_weight && correction.max_weight && *correction.min_weight > *correction.max_weight ) {
+        throw std::invalid_argument( "throw correction minimum mass exceeds its maximum" );
+    }
+    if( const auto volume = read_nonnegative_item_int( options, "max_volume_ml" ) ) {
+        correction.max_volume = units::from_milliliter( *volume );
+    }
+    if( const auto length = read_nonnegative_item_int( options, "max_length_mm" ) ) {
+        correction.max_length = units::from_millimeter( *length );
+    }
+    correction.full_bonus_skill = read_nonnegative_item_int( options, "full_bonus_skill" );
+    correction.damage_multiplier = item_option_float( options, "damage_multiplier", 1.0 );
+    correction.range_multiplier = item_option_float( options, "range_multiplier", 1.0 );
+    correction.stamina_multiplier = item_option_float( options, "stamina_multiplier", 1.0 );
+    correction.dispersion_multiplier = item_option_float( options, "dispersion_multiplier", 1.0 );
+    correction.speed_multiplier = item_option_float( options, "speed_multiplier", 1.0 );
+    correction.weight_multiplier = item_option_float( options, "weight_multiplier", 1.0 );
+    correction.was_loaded = true;
+    return correction;
+}
+
 item_transformation read_item_transformation( const sol::table &options )
 {
     item_transformation result;
@@ -343,6 +430,10 @@ struct item_definition_data {
         std::string type;
         std::optional<std::int64_t> count;
         std::optional<std::int64_t> stack_size;
+        std::optional<damage_instance> damage;
+        std::optional<int> dispersion;
+        std::optional<int> loudness;
+        std::optional<int> recovery_chance;
     };
     struct comestible_data {
         std::string type;
@@ -444,11 +535,17 @@ struct item_definition_data {
     std::optional<mounted_charge_profile> mounted_charge;
     bool clear_mounted_charge = false;
     std::vector<quality_level> qualities;
+    std::vector<std::pair<quality_id, int>> quality_adjustments;
     bool replace_qualities = false;
     std::set<std::string> flags;
     bool clear_flags = false;
     std::map<std::string, double> melee_damage;
     bool clear_melee_damage = false;
+    std::optional<damage_instance> throwing_damage;
+    std::optional<int> throwing_recovery_chance;
+    std::optional<throw_correction_data> throw_correction;
+    bool replace_throw_correction = false;
+    std::optional<std::map<skill_id, int>> minimum_skills;
     std::optional<item_melee_damage> melee_bonuses;
     std::optional<item_melee_damage> melee_factors;
     std::map<std::string, std::int64_t> magazine_ammo;
@@ -1226,6 +1323,20 @@ struct item_definition_handle {
         return *this;
     }
 
+    item_definition_handle &throwing_damage( const sol::table &entries ) {
+        require_building_handle( token, *definition, "item" );
+        definition->throwing_damage = read_item_damage( entries );
+        return *this;
+    }
+
+    item_definition_handle &throw_correction( const sol::optional<sol::table> &options ) {
+        require_building_handle( token, *definition, "item" );
+        definition->throw_correction = options ?
+                                       std::make_optional( read_throw_correction( *options ) ) : std::nullopt;
+        definition->replace_throw_correction = true;
+        return *this;
+    }
+
     item_definition_handle &adjust_measurements( const sol::table &options ) {
         require_building_handle( token, *definition, "item" );
         for( const auto &[field, member] : item_measurement_changes::fields ) {
@@ -1374,6 +1485,13 @@ struct item_definition_handle {
         return *this;
     }
 
+    item_definition_handle &adjust_quality( const std::string &quality, std::int64_t offset ) {
+        require_building_handle( token, *definition, "item" );
+        definition->quality_adjustments.emplace_back( quality_id( quality ),
+                item_option_int( offset, "quality level offset" ) );
+        return *this;
+    }
+
     item_definition_handle &flag( const std::string &id ) {
         require_building_handle( token, *definition, "item" );
         if( id.empty() ) {
@@ -1480,6 +1598,12 @@ struct item_definition_handle {
         if( const auto stack_size = options.get<sol::optional<std::int64_t>>( "stack_size" ) ) {
             value.stack_size = *stack_size;
         }
+        if( const auto damage = options.get<sol::optional<sol::table>>( "damage" ) ) {
+            value.damage = read_item_damage( *damage );
+        }
+        value.dispersion = read_nonnegative_item_int( options, "dispersion" );
+        value.loudness = read_nonnegative_item_int( options, "loudness" );
+        value.recovery_chance = read_nonnegative_item_int( options, "recovery_chance" );
         definition->ammunition = std::move( value );
         return *this;
     }
@@ -3853,6 +3977,47 @@ void hash_part( std::uint64_t &state, const authored_text &text )
     }
 }
 
+void hash_item_damage( std::uint64_t &state, const damage_instance &damage )
+{
+    hash_part( state, std::to_string( damage.damage_units.size() ) );
+    for( const damage_unit &unit : damage ) {
+        hash_part( state, unit.type.str() );
+        std::ostringstream values;
+        values << std::hexfloat << unit.amount << ' ' << unit.res_pen << ' ' << unit.res_mult << ' '
+               << unit.damage_multiplier << ' ' << unit.unconditional_res_mult << ' '
+               << unit.unconditional_damage_mult;
+        hash_part( state, values.str() );
+    }
+}
+
+void hash_throw_correction( std::uint64_t &state, const throw_correction_data &correction )
+{
+    hash_part( state, std::to_string( correction.required_flags.size() ) );
+    for( const auto &clause : correction.required_flags ) {
+        hash_part( state, std::to_string( clause.size() ) );
+        for( const flag_id &flag : clause ) {
+            hash_part( state, flag.str() );
+        }
+    }
+    hash_part( state, std::to_string( correction.allowed_ammo.size() ) );
+    for( const ammotype &ammo : correction.allowed_ammo ) {
+        hash_part( state, ammo.str() );
+    }
+    for( const auto &bound : { correction.min_weight, correction.max_weight } ) {
+        hash_part( state, bound ? std::to_string( units::to_milligram( *bound ) ) : "unbounded" );
+    }
+    hash_part( state, correction.max_volume ?
+               std::to_string( units::to_milliliter( *correction.max_volume ) ) : "unbounded" );
+    hash_part( state, correction.max_length ?
+               std::to_string( units::to_millimeter( *correction.max_length ) ) : "unbounded" );
+    hash_part( state, correction.full_bonus_skill ? std::to_string( *correction.full_bonus_skill ) : "none" );
+    std::ostringstream values;
+    values << std::hexfloat << correction.damage_multiplier << ' ' << correction.range_multiplier << ' '
+           << correction.stamina_multiplier << ' ' << correction.dispersion_multiplier << ' '
+           << correction.speed_multiplier << ' ' << correction.weight_multiplier;
+    hash_part( state, values.str() );
+}
+
 void hash_item_transformation( std::uint64_t &state, const item_transformation &result )
 {
     hash_part( state, result.target.str() );
@@ -4058,6 +4223,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "price_postapoc_cents", &item_definition_handle::price_postapoc,
         "melee_damage", &item_definition_handle::melee,
         "clear_melee_damage", &item_definition_handle::clear_melee_damage,
+        "throwing_damage", &item_definition_handle::throwing_damage,
+        "throw_correction", &item_definition_handle::throw_correction,
         "adjust_measurements", &item_definition_handle::adjust_measurements,
         "adjust_melee_damage", &item_definition_handle::adjust_melee_damage,
         "magazine_ammo", &item_definition_handle::magazine_ammo,
@@ -4069,6 +4236,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "mounted_charge", &item_definition_handle::mounted_charge,
         "clear_mounted_charge", &item_definition_handle::clear_mounted_charge,
         "quality", &item_definition_handle::quality,
+        "adjust_quality", &item_definition_handle::adjust_quality,
         "flag", &item_definition_handle::flag,
         "clear_flags", &item_definition_handle::clear_flags,
         "variants", &item_definition_handle::variants,
@@ -4511,6 +4679,21 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         definition->replace_qualities = options.get_or( "replace_qualities", false );
         definition->replace_pockets = options.get_or( "replace_pockets", false );
+        definition->throwing_recovery_chance = read_nonnegative_item_int( options, "throwing_recovery_chance" );
+        if( definition->throwing_recovery_chance && *definition->throwing_recovery_chance > 100 ) {
+            throw std::invalid_argument( "throwing_recovery_chance must be within 0..100" );
+        }
+        if( const auto skills = options.get<sol::optional<sol::table>>( "minimum_skills" ) ) {
+            std::map<skill_id, int> required;
+            for( const auto &entry : *skills ) {
+                if( entry.first.get_type() != sol::type::string || !entry.second.is<lua_Integer>() ) {
+                    throw std::invalid_argument( "minimum_skills requires skill IDs and integer levels" );
+                }
+                required.emplace( skill_id( entry.first.as<std::string>() ),
+                                  item_option_int( entry.second.as<std::int64_t>(), "minimum skill level" ) );
+            }
+            definition->minimum_skills = std::move( required );
+        }
         if( const auto display = options.get<sol::optional<std::string>>( "display_type" ) ) {
             definition->display_type = io::string_to_enum<item_display_type>( *display );
         }
@@ -7938,6 +8121,18 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->ememory_size = units::from_kilobytes(
                                                    static_cast<units::ememory::value_type>( *definition.electronic_size_kb ) );
                     }
+                    if( definition.throwing_damage ) {
+                        native->thrown_damage = *definition.throwing_damage;
+                    }
+                    if( definition.throwing_recovery_chance ) {
+                        native->thrown_recovery_chance = *definition.throwing_recovery_chance;
+                    }
+                    if( definition.replace_throw_correction ) {
+                        native->throw_correction = definition.throw_correction;
+                    }
+                    if( definition.minimum_skills ) {
+                        native->min_skills = *definition.minimum_skills;
+                    }
                     if( definition.conditional_names ) {
                         native->conditional_names.clear();
                         native->conditional_names.reserve( definition.conditional_names->size() );
@@ -7997,6 +8192,16 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->qualities[quality_id( quality.id )] = {
                             static_cast<int>( quality.level ), quality.speed
                         };
+                    }
+                    for( const auto &[quality, offset] : definition.quality_adjustments ) {
+                        const auto existing_quality = native->qualities.find( quality );
+                        if( existing_quality == native->qualities.end() ) {
+                            throw std::runtime_error( "item '" + definition.id +
+                                                      "' cannot adjust missing quality '" + quality.str() + "'" );
+                        }
+                        int &level = existing_quality->second.level;
+                        level = item_option_int( static_cast<std::int64_t>( level ) + offset,
+                                                 "adjusted quality level" );
                     }
                     if( definition.techniques ) {
                         native->techniques.clear();
@@ -8121,6 +8326,18 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         }
                         if( ammo.stack_size ) {
                             native->ammo->stack_size = static_cast<int>( *ammo.stack_size );
+                        }
+                        if( ammo.damage ) {
+                            native->ammo->damage = *ammo.damage;
+                        }
+                        if( ammo.dispersion ) {
+                            native->ammo->dispersion = *ammo.dispersion;
+                        }
+                        if( ammo.loudness ) {
+                            native->ammo->loudness = *ammo.loudness;
+                        }
+                        if( ammo.recovery_chance ) {
+                            native->ammo->recovery_chance = *ammo.recovery_chance;
                         }
                         native->ammo->was_loaded = true;
                     }
@@ -9890,6 +10107,28 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, std::to_string( extra ) );
                     hash_part( state, factor.str() );
                 }
+                if( v.throwing_damage ) {
+                    hash_part( state, "throwing_damage" );
+                    hash_item_damage( state, *v.throwing_damage );
+                }
+                if( v.throwing_recovery_chance ) {
+                    hash_part( state, "throwing_recovery_chance" );
+                    hash_part( state, std::to_string( *v.throwing_recovery_chance ) );
+                }
+                if( v.replace_throw_correction ) {
+                    hash_part( state, v.throw_correction ? "replace_throw_correction" : "clear_throw_correction" );
+                    if( v.throw_correction ) {
+                        hash_throw_correction( state, *v.throw_correction );
+                    }
+                }
+                if( v.minimum_skills ) {
+                    hash_part( state, "minimum_skills" );
+                    hash_part( state, std::to_string( v.minimum_skills->size() ) );
+                    for( const auto &[skill, level] : *v.minimum_skills ) {
+                        hash_part( state, skill.str() );
+                        hash_part( state, std::to_string( level ) );
+                    }
+                }
                 if( v.clear_mounted_charge ) {
                     hash_part( state, "clear_mounted_charge" );
                 } else if( v.mounted_charge ) {
@@ -9916,6 +10155,11 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     }
                 }
                 hash_part( state, v.replace_qualities ? "replace_qualities" : "inherit_qualities" );
+                for( const auto &[quality, offset] : v.quality_adjustments ) {
+                    hash_part( state, "adjust_quality" );
+                    hash_part( state, quality.str() );
+                    hash_part( state, std::to_string( offset ) );
+                }
                 hash_part( state, v.replace_pockets ? "replace_pockets" : "inherit_pockets" );
                 hash_part( state, v.variant_kind ? std::to_string( static_cast<int>( *v.variant_kind ) ) :
                            "inherit_variant_kind" );
@@ -10147,6 +10391,22 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, ammo.type );
                     hash_part( state, ammo.count ? std::to_string( *ammo.count ) : "inherited_count" );
                     hash_part( state, ammo.stack_size ? std::to_string( *ammo.stack_size ) : "inherited_stack_size" );
+                    if( ammo.damage ) {
+                        hash_part( state, "ammo_damage" );
+                        hash_item_damage( state, *ammo.damage );
+                    }
+                    if( ammo.dispersion ) {
+                        hash_part( state, "ammo_dispersion" );
+                        hash_part( state, std::to_string( *ammo.dispersion ) );
+                    }
+                    if( ammo.loudness ) {
+                        hash_part( state, "ammo_loudness" );
+                        hash_part( state, std::to_string( *ammo.loudness ) );
+                    }
+                    if( ammo.recovery_chance ) {
+                        hash_part( state, "ammo_recovery_chance" );
+                        hash_part( state, std::to_string( *ammo.recovery_chance ) );
+                    }
                 }
                 if( v.comestible ) {
                     const item_definition_data::comestible_data &food = *v.comestible;
