@@ -329,54 +329,6 @@
     "tool_ammo": [ "money" ]
   },
   {
-    "id": "robofac_test_data",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "card_plastic_abstract",
-    "color": "yellow",
-    "name": { "str": "prototype I/O recorder" },
-    "description": "A small, transparent card that was attached to the prototype robot's CPU.  It might contain the data the intercom spoke of.",
-    "category": "other",
-    "price": "5 USD",
-    "extend": { "flags": [ "MISSION_ITEM" ] }
-  },
-  {
-    "id": "gasdiscount_silver",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "currency",
-    "copy-from": "card_plastic_abstract",
-    "color": "yellow",
-    "name": { "str": "silver gas discount card" },
-    "description": "This card gives you a little discount on the purchase of gasoline.",
-    "price": "5 USD",
-    "extend": { "flags": [ "GAS_DISCOUNT", "DISCOUNT_VALUE_1" ] }
-  },
-  {
-    "id": "gasdiscount_gold",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "currency",
-    "copy-from": "card_plastic_abstract",
-    "color": "yellow",
-    "name": { "str": "gold gas discount card" },
-    "description": "This card gives you a good discount on the purchase of gasoline.",
-    "price": "5 USD",
-    "extend": { "flags": [ "GAS_DISCOUNT", "DISCOUNT_VALUE_2" ] }
-  },
-  {
-    "id": "gasdiscount_platinum",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "currency",
-    "copy-from": "card_plastic_abstract",
-    "color": "yellow",
-    "name": { "str": "platinum gas discount card" },
-    "description": "This card gives you a splendid discount on the purchase of gasoline.",
-    "price": "5 USD",
-    "extend": { "flags": [ "GAS_DISCOUNT", "DISCOUNT_VALUE_3" ] }
-  },
-  {
     "id": "wallet_travel",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
@@ -433,53 +385,5 @@
       }
     ],
     "armor": [ { "encumbrance": 0, "covers": [ "torso" ], "specifically_covers": [ "torso_neck" ] } ]
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "id": "training_dummy_light",
-    "symbol": "@",
-    "color": "brown",
-    "name": { "str": "training dummy", "str_pl": "training dummies" },
-    "category": "other",
-    "description": "A hand-made humanoid figure, useful for training in close quarters combat.  This one is made from wood and has some duct tape to mark the striking points.  Use the construction menu (* by default) to embed it into the ground for training.",
-    "price": "150 USD",
-    "price_postapoc": "6 USD",
-    "material": [ "wood" ],
-    "weight": "50 kg",
-    "volume": "80 L",
-    "melee_damage": { "bash": 12 }
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "id": "training_dummy_heavy",
-    "symbol": "@",
-    "color": "light_gray",
-    "name": { "str": "armored training dummy", "str_pl": "armored training dummies" },
-    "category": "other",
-    "description": "A hand-made humanoid figure, useful for training in close quarters combat.  This one is covered in scrap armor and looks on guard.  Use the construction menu (* by default) to embed it into the ground for training.",
-    "price": "150 USD",
-    "price_postapoc": "10 USD",
-    "material": [ "steel", "wood" ],
-    "weight": "55 kg",
-    "volume": "80 L",
-    "melee_damage": { "bash": 14 }
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "id": "archery_target_box",
-    "symbol": "@",
-    "color": "brown",
-    "name": { "str": "box archery target" },
-    "category": "other",
-    "description": "A soft target for archery, consisting of tightly-packed cloth stuffed into a cardboard box, with a bullseye marked on the front.  Must be set up in the construction menu (* by default) to use.",
-    "price": "30 USD",
-    "price_postapoc": "2 USD",
-    "material": [ { "type": "cotton", "portion": 9 }, { "type": "cardboard" } ],
-    "weight": "16 kg",
-    "volume": "50 L",
-    "longest_side": "60 cm"
   }
 ]

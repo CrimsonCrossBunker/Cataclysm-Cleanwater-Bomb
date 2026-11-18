@@ -201,3 +201,127 @@ do
     }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "robofac_test_data",
+        copy_from = "card_plastic_abstract",
+        color = "yellow",
+        name = ccb.content.plural_text("prototype I/O recorder", "prototype I/O recorders"),
+        description = ccb.content.text("A small, transparent card that was attached to the prototype robot's CPU.  It might contain the data the intercom spoke of."),
+        category = "other",
+        price_cents = 500,
+    }
+    item:flag("MISSION_ITEM")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "gasdiscount_silver",
+        category = "currency",
+        copy_from = "card_plastic_abstract",
+        color = "yellow",
+        name = ccb.content.plural_text("silver gas discount card", "silver gas discount cards"),
+        description = ccb.content.text("This card gives you a little discount on the purchase of gasoline."),
+        price_cents = 500,
+    }
+    item:flag("GAS_DISCOUNT")
+    item:flag("DISCOUNT_VALUE_1")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "gasdiscount_gold",
+        category = "currency",
+        copy_from = "card_plastic_abstract",
+        color = "yellow",
+        name = ccb.content.plural_text("gold gas discount card", "gold gas discount cards"),
+        description = ccb.content.text("This card gives you a good discount on the purchase of gasoline."),
+        price_cents = 500,
+    }
+    item:flag("GAS_DISCOUNT")
+    item:flag("DISCOUNT_VALUE_2")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "gasdiscount_platinum",
+        category = "currency",
+        copy_from = "card_plastic_abstract",
+        color = "yellow",
+        name = ccb.content.plural_text("platinum gas discount card", "platinum gas discount cards"),
+        description = ccb.content.text("This card gives you a splendid discount on the purchase of gasoline."),
+        price_cents = 500,
+    }
+    item:flag("GAS_DISCOUNT")
+    item:flag("DISCOUNT_VALUE_3")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "training_dummy_light",
+        symbol = "@",
+        color = "brown",
+        name = ccb.content.plural_text("training dummy", "training dummies"),
+        category = "other",
+        description = ccb.content.text("A hand-made humanoid figure, useful for training in close quarters combat.  This one is made from wood and has some duct tape to mark the striking points.  Use the construction menu (* by default) to embed it into the ground for training."),
+        price_cents = 15000,
+        price_postapoc_cents = 600,
+        mass_milligrams = 50000000,
+        volume_ml = 80000,
+    }
+    item:material("wood", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 12)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "training_dummy_heavy",
+        symbol = "@",
+        color = "light_gray",
+        name = ccb.content.plural_text("armored training dummy", "armored training dummies"),
+        category = "other",
+        description = ccb.content.text("A hand-made humanoid figure, useful for training in close quarters combat.  This one is covered in scrap armor and looks on guard.  Use the construction menu (* by default) to embed it into the ground for training."),
+        price_cents = 15000,
+        price_postapoc_cents = 1000,
+        mass_milligrams = 55000000,
+        volume_ml = 80000,
+    }
+    item:material("steel", 1)
+    item:material("wood", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 14)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "archery_target_box",
+        symbol = "@",
+        color = "brown",
+        name = ccb.content.plural_text("box archery target", "box archery targets"),
+        category = "other",
+        description = ccb.content.text("A soft target for archery, consisting of tightly-packed cloth stuffed into a cardboard box, with a bullseye marked on the front.  Must be set up in the construction menu (* by default) to use."),
+        price_cents = 3000,
+        price_postapoc_cents = 200,
+        mass_milligrams = 16000000,
+        volume_ml = 50000,
+        longest_side_mm = 600,
+    }
+    item:material("cotton", 9)
+    item:material("cardboard", 1)
+    item:tool()
+    content.add(item)
+end
