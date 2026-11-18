@@ -42,20 +42,5 @@
     "type": "item_group",
     "copy-from": "science",
     "extend": { "items": [ { "group": "magical_reagents", "prob": 18 } ] }
-  },
-  {
-    "type": "item_group",
-    "id": "midden_heap",
-    "//": "a large pile of trash, made for goblin encampments.",
-    "subtype": "collection",
-    "items": [
-      { "group": "SUS_trash_floor", "prob": 100 },
-      { "group": "SUS_trash_forest_manmade", "prob": 95 },
-      { "group": "SUS_trash_floor", "prob": 80 },
-      { "group": "SUS_trash_forest_manmade", "prob": 70 },
-      { "group": "SUS_trash_floor", "prob": 50 },
-      { "group": "SUS_trash_forest_manmade", "prob": 25 },
-      { "item": "denarius", "prob": 15 }
-    ]
   }
 ]

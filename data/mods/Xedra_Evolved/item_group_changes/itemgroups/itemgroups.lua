@@ -112,3 +112,44 @@ do
     group:group("dreamforged_khopesh_ench", 1)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "fae_furs", kind = "distribution" }
+    group:item("hat_fur", 30)
+    group:item("hat_faux_fur", 30)
+    group:item("sleeveless_trenchcoat_fur", 10)
+    group:item("sleeveless_duster_fur", 10)
+    group:item("sleeveless_trenchcoat_faux_fur", 10)
+    group:item("coat_faux_fur", 30)
+    group:item("coat_fur", 30)
+    group:item("gloves_fur", 30)
+    group:item("boots_fur", 20)
+    group:item("trenchcoat_faux_fur", 10)
+    group:item("duster_faux_fur", 10)
+    group:item("pants_faux_fur", 10)
+    group:item("boots_glimmer_fur", 8)
+    group:item("cloak_glimmer_fur", 10)
+    group:item("coat_glimmer_fur", 1)
+    group:item("duster_glimmer_fur", 1)
+    group:item("sleeveless_duster_glimmer_fur", 1)
+    group:item("sleeveless_trenchcoat_glimmer_fur", 1)
+    content.upsert_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "blood_containers", kind = "distribution" }
+    group:item("flask_hip")
+    group:item("bowl_skull")
+    group:entry { item = "blood", container = "flask_hip", probability = 40 }
+    group:entry { item = "blood", container = "2lcanteen", probability = 20 }
+    group:entry { item = "blood", container = "bag_iv", probability = 40 }
+    group:entry { item = "blood", container = "bottle_glass", probability = 40 }
+    group:entry { item = "blood", container = "bottle_plastic", probability = 30 }
+    group:entry { item = "blood", container = "bottle_plastic_small", probability = 20 }
+    group:entry { item = "blood", container = "camelbak", probability = 20 }
+    group:entry { item = "blood", container = "canteen", probability = 20 }
+    group:entry { item = "blood", container = "thermos", probability = 10 }
+    group:entry { item = "blood", container = "blood_camel", probability = 5 }
+    group:entry { item = "blood", container = "blood_bank", probability = 1 }
+    content.upsert_item_group(group)
+end

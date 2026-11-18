@@ -157,3 +157,13 @@ do
     group:item("bionic_maintenance_toolkit", 20)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "broken_robots", kind = "collection" }
+    group:entry { item = "scrap", count = { 2, 4 } }
+    group:entry { item = "ch_steel_chunk", count = { 0, 2 } }
+    group:entry { item = "glass_shard", count = { 0, 2 } }
+    group:item("spring", 20)
+    group:item("material_aluminium_ingot", 20)
+    content.upsert_item_group(group)
+end

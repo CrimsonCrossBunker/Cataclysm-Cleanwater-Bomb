@@ -318,3 +318,16 @@ do
     group:item("flask_mana_regen", 10)
     content.add(group)
 end
+
+do
+    -- a large pile of trash, made for goblin encampments.
+    local group = content.ItemGroup { id = "midden_heap", kind = "collection" }
+    group:group("SUS_trash_floor")
+    group:group("SUS_trash_forest_manmade", 95)
+    group:group("SUS_trash_floor", 80)
+    group:group("SUS_trash_forest_manmade", 70)
+    group:group("SUS_trash_floor", 50)
+    group:group("SUS_trash_forest_manmade", 25)
+    group:item("denarius", 15)
+    content.upsert_item_group(group)
+end

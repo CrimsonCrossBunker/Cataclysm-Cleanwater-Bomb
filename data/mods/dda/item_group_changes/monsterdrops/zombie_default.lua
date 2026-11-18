@@ -380,3 +380,43 @@ do
     group:group("vending_food_items", 5)
     content.add(group)
 end
+
+do
+    -- contains clothing (always), a wallet (30% chance), and items in pockets or a bag (80~% chance)
+    local group = content.ItemGroup { id = "default_zombie_death_drops", kind = "collection" }
+    group:entry { group = "wallets", damage = { 1, 4 }, probability = 30 }
+    group:entry {
+        distribution = {
+            {
+                collection = {
+                    { group = "default_zombie_clothes" },
+                    {
+                        distribution = {
+                            { group = "default_zombie_items", probability = 80 },
+                            { group = "default_zombie_items_pockets", probability = 20 },
+                        },
+                    },
+                },
+                probability = 99,
+            },
+            {
+                distribution = {
+                    {
+                        collection = {
+                            { group = "postman_gear", damage = { 1, 4 } },
+                            { group = "default_zombie_items_pockets", probability = 10 },
+                        },
+                    },
+                    {
+                        collection = {
+                            { group = "prof-plumbing_gear", damage = { 1, 4 } },
+                            { group = "default_zombie_items_pockets", probability = 10 },
+                        },
+                    },
+                },
+                probability = 1,
+            },
+        },
+    }
+    content.upsert_item_group(group)
+end

@@ -101,3 +101,26 @@ do
     group:item("cow_candy", 10)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "child_items", kind = "distribution" }
+    group:item("candy3")
+    group:item("cookies", 300)
+    group:item("grahmcrackers", 200)
+    group:item("marshmallow")
+    group:item("gum", 150)
+    group:item("smores", 50)
+    group:item("cow_candy", 80)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "bed", kind = "distribution" }
+    group:item("candy3", 5)
+    group:item("cookies", 3)
+    group:item("marshmallow", 2)
+    group:item("gum", 2)
+    group:item("smores", 1)
+    group:item("cow_candy", 1)
+    content.extend_item_group(group)
+end

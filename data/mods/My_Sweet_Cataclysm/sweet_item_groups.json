@@ -7,30 +7,6 @@
   },
   {
     "type": "item_group",
-    "id": "child_items",
-    "copy-from": "child_items",
-    "extend": {
-      "items": [
-        [ "candy3", 100 ],
-        [ "cookies", 300 ],
-        [ "grahmcrackers", 200 ],
-        [ "marshmallow", 100 ],
-        [ "gum", 150 ],
-        [ "smores", 50 ],
-        [ "cow_candy", 80 ]
-      ]
-    }
-  },
-  {
-    "type": "item_group",
-    "id": "bed",
-    "copy-from": "bed",
-    "extend": {
-      "items": [ [ "candy3", 5 ], [ "cookies", 3 ], [ "marshmallow", 2 ], [ "gum", 2 ], [ "smores", 1 ], [ "cow_candy", 1 ] ]
-    }
-  },
-  {
-    "type": "item_group",
     "id": "bedroom",
     "copy-from": "bedroom",
     "extend": {

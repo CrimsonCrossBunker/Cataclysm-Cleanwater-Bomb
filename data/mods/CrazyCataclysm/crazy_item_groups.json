@@ -6,11 +6,6 @@
     "extend": { "items": [ [ "bio_chest_gun", 5 ] ] }
   },
   {
-    "type": "item_group",
-    "id": "bionics_op",
-    "items": [ [ "bio_chest_gun", 1 ] ]
-  },
-  {
     "id": "virology_lab_fridge",
     "type": "item_group",
     "copy-from": "virology_lab_fridge",
