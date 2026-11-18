@@ -22,6 +22,8 @@ require("raid_consumables")
 
 require("raid_services")
 
+require("raid_information")
+
 require("raid_death")
 
 require("island_defenses")
