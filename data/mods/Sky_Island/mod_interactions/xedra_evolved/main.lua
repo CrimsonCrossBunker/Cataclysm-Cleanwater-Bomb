@@ -16,3 +16,7 @@ content.add(content.Mutation {
     purifiable = false,
     player_display = false,
 })
+
+content.replace(content.Blacklist { kind = "scenario", whitelist = true }
+    :entry("scenario_warper")
+    :entry("scenario_warper_unique_paths"))

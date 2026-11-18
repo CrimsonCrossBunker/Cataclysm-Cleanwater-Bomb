@@ -67,9 +67,7 @@ content.add(content.Scenario {
     on_start = "sky_island_start",
 })
 
-local whitelist = content.Blacklist { kind = "scenario", whitelist = true }
-whitelist:entry("scenario_warper")
 if content.is_mod_active("xedra_evolved") then
-    whitelist:entry(require("mod_interactions.xedra_evolved.scenarios"))
+    require("mod_interactions.xedra_evolved.scenarios")
 end
-content.add(whitelist)
+content.replace(content.Blacklist { kind = "scenario", whitelist = true }:entry("scenario_warper"))
