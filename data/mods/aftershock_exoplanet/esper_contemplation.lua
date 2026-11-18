@@ -170,9 +170,12 @@ ccb.runtime.handler("esper_study_exhausted", function(event)
     if has_effect(character, studying) then
         checked(services.effects.remove(character, id("effect", studying)))
         if character.subtype ~= "npc" then
-            services.presentation.notice(services.translate(
+            local notice = services.translate(
                 "You're so exhausted you can barely think straight, and certainly can't concentrate on studying your powers."
-            ))
+            )
+            services.presentation.notice(notice)
+            services.activities.offer_interruption("")
+            services.messages.add(notice, "neutral")
         end
     end
 end, 1)
