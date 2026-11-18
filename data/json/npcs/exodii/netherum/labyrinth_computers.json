@@ -37,32 +37,6 @@
   },
   {
     "type": "talk_topic",
-    "id": "COMP_LS_Exit_Controls2_home",
-    "dynamic_line": "&<color_light_green> @User > skill -EXIT -@User\n<color_light_green>Really exit?  You will not be able to return to the same place.",
-    "responses": [
-      {
-        "text": "Yes.",
-        "effect": [ { "u_add_var": "stuck_in_labyrinth", "value": "no" }, { "run_eocs": "EOC_LS_Exit_labyrinth" } ],
-        "topic": "TALK_DONE"
-      },
-      { "text": "No.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "COMP_LS_Exit_Controls2_string_dimension",
-    "dynamic_line": "&<color_light_green> @User > skill -EXIT -@User\n<color_light_green>Really exit?  You will not be able to return to the same place.",
-    "responses": [
-      {
-        "text": "Yes.",
-        "effect": [ { "u_add_var": "stuck_in_labyrinth", "value": "no" }, { "run_eocs": "EOC_LS_SD_Exit_labyrinth" } ],
-        "topic": "TALK_DONE"
-      },
-      { "text": "No.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "COMP_LS_Exit_Controls_Temp_overgrown",
     "dynamic_line": {
       "compare_string": [ "yes", { "u_val": "traveled_safehouse_to_labyrinth" } ],

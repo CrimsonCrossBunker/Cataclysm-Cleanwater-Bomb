@@ -24,6 +24,8 @@ require("raid_death")
 
 require("island_defenses")
 
+require("dimension_returns")
+
 require("recipes")
 
 if require("ccb").content.is_mod_active("magiclysm") then

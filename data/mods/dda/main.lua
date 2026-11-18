@@ -141,6 +141,10 @@ require("portal_storm_timers")
 
 require("portal_storm_cycle")
 
+require("labyrinth_returns")
+
+require("labyrinth_return_topics")
+
 require("highland_incense_content")
 
 require("highland_incense")
