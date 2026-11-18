@@ -4,6 +4,10 @@ require("requirements")
 
 require("item_groups")
 
+require("npc_merchants.definitions")
+
+require("npc_merchants.dialogue")
+
 require("constructions")
 
 require("effect_enchantments")
