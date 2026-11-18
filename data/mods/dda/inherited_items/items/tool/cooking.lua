@@ -900,3 +900,92 @@ do
     item:tool { ammo_types = { "battery" } }
     content.add(item)
 end
+
+do
+    -- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+    local item = content.Item {
+        id = "propane_cooker",
+        name = ccb.content.plural_text("propane cooker", "propane cookers"),
+        description = ccb.content.text("A simple heater powered by propane.  It is designed for cooking food."),
+        mass_milligrams = 800000,
+        volume_ml = 1250,
+        price_cents = 5000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "green",
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:quality("HOTPLATE", 2)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:firestarter { moves = 500, moves_slow = 6000 }
+    item:clear_flags()
+    item:flag("FIRESTARTER")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:tool { charges_per_use = 2, ammo_types = { "propane" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_flags = { "GAS_TANK" },
+        default_magazine = "small_propane_tank",
+    }
+    content.add(item)
+end
+
+do
+    -- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+    local item = content.Item {
+        id = "biogas_cooker",
+        name = ccb.content.plural_text("biogas cooker", "biogas cookers"),
+        description = ccb.content.text("A simple heater powered by biogas.  It is designed for cooking food."),
+        copy_from = "propane_cooker",
+        looks_like = "propane_cooker",
+        replace_pockets = true,
+    }
+    item:clear_use_actions()
+    item:native_use("HOTPLATE")
+    item:native_use("HEAT_FOOD")
+    item:firestarter { moves = 500, moves_slow = 6000 }
+    item:tool { charges_per_use = 8, ammo_types = { "biogas" } }
+    item:magazine_pocket { ammo_capacities = { biogas = 3000 }, airtight = true, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    -- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+    local item = content.Item {
+        id = "acetylene_cooker",
+        name = ccb.content.plural_text("acetylene cooker", "acetylene cookers"),
+        description = ccb.content.text("A simple heater powered by acetylene welding gas.  It is designed for cooking food."),
+        mass_milligrams = 850000,
+        volume_ml = 1500,
+        price_cents = 5000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "green",
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:material("brass", 1)
+    item:material("steel", 1)
+    item:quality("HOTPLATE", 2)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:firestarter { moves = 500, moves_slow = 6000 }
+    item:clear_flags()
+    item:flag("FIRESTARTER")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:tool { charges_per_use = 1, ammo_types = { "weldgas" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_items = { "tinyweldtank", "smallweldtank", "weldtank" },
+    }
+    content.add(item)
+end
