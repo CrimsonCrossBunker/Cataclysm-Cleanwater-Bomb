@@ -11,6 +11,10 @@ ccb.runtime.handler("portal_storm_worsen", function()
     storm.worsen_default()
 end)
 
+ccb.runtime.handler("portal_storm_start", function(character)
+    storm.start(character)
+end)
+
 ccb.runtime.handler("portal_storm_cancel", function(character)
     storm.stop(character)
 end)
