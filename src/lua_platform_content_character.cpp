@@ -357,7 +357,7 @@ struct profession_group_definition_data {
 struct widget_clause_definition_data {
     std::string id;
     std::string symbol;
-    std::string text;
+    authored_text text;
     std::string color;
     std::int64_t value = std::numeric_limits<int>::min();
     std::vector<std::string> widgets;
@@ -1169,7 +1169,7 @@ struct widget_definition_handle {
         widget_clause_definition_data clause;
         clause.id = options.get_or( "id", std::string() );
         clause.symbol = options.get_or( "symbol", options.get_or( "sym", std::string() ) );
-        clause.text = options.get_or( "text", std::string() );
+        clause.text = detail::read_singular_text( options["text"], {}, "widget clause text" );
         clause.color = options.get_or( "color", std::string() );
         clause.value = options.get_or < std::int64_t > (
                            "value", std::numeric_limits < int >::min() );
@@ -6296,7 +6296,7 @@ void character_content_transaction::impl::apply_widget()
             widget_clause result;
             result.id = value.id;
             result.sym = value.symbol;
-            result.text = no_translation( value.text );
+            result.text = value.text.native();
             result.color = value.color.empty() ? c_unset :
                            color_from_string( value.color, report_color_error::no );
             result.value = static_cast < int >( value.value );

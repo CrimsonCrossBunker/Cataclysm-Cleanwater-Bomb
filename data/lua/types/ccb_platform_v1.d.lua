@@ -5706,9 +5706,23 @@ local VehiclePlacementDefinition = {}
 ---@field id any
 ---@field vehicle any
 local VehicleSpawnDefinition = {}
+---@class WidgetClauseDefinitionOptions
+---@field id? string Clause id passed to the condition handler.
+---@field text? string|LocalizedText Text displayed when this clause is selected.
+---@field symbol? string
+---@field sym? string Alias of symbol.
+---@field color? string Native color id.
+---@field value? integer Native threshold.
+---@field condition? string Named handler receiving avatar, widget, clause, and bodypart. Returns a boolean.
+---@field condition_handler? string Alias of condition.
+---@field parse_tags? boolean
+---@field widgets? string[] Child widget ids.
+
 ---@class WidgetDefinitionOptions
 ---@field id string Stable widget id.
 ---@field label? string|LocalizedText Player-facing label; plural text is rejected.
+---@field clauses? WidgetClauseDefinitionOptions[]
+---@field default_clause? WidgetClauseDefinitionOptions
 ---@field description? string Native widget description.
 ---@field [string] any Other accepted native widget options.
 
@@ -5716,10 +5730,10 @@ local VehicleSpawnDefinition = {}
 ---@field bodypart any
 ---@field break_at any
 ---@field child any
----@field clause any
+---@field clause fun(self:WidgetDefinition, options:WidgetClauseDefinitionOptions):WidgetDefinition
 ---@field color any
 ---@field custom_value any
----@field default_clause any
+---@field default_clause fun(self:WidgetDefinition, options:WidgetClauseDefinitionOptions):WidgetDefinition
 ---@field flag any
 ---@field id any
 local WidgetDefinition = {}
