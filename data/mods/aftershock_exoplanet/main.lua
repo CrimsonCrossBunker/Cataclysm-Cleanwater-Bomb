@@ -103,3 +103,5 @@ require("armor_recipes")
 require("craft_recipes")
 
 require("camp_recipes")
+
+require("esper_contemplation")

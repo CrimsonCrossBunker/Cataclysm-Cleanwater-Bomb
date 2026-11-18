@@ -1,14 +1,6 @@
 [
   {
     "type": "effect_type",
-    "id": "effect_afs_esper_studying_power",
-    "//": "Hidden effect, used as a tracker",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "rating": "good"
-  },
-  {
-    "type": "effect_type",
     "id": "effect_afs_esper_tincture_side_effects",
     "name": [ "" ],
     "desc": [ "" ],
