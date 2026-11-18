@@ -32,21 +32,6 @@
     "melee_damage": { "bash": 9 }
   },
   {
-    "id": "can_sealer",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "can sealer" },
-    "description": "A hand-crank-powered cast steel machine designed to automatically seal tin cans.",
-    "weight": "9800 g",
-    "volume": "5 L",
-    "price": "525 USD",
-    "price_postapoc": "25 USD",
-    "material": [ "steel" ],
-    "symbol": ";",
-    "color": "light_gray",
-    "melee_damage": { "bash": 8 }
-  },
-  {
     "id": "carver_off",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -208,52 +193,6 @@
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "melee_damage": { "bash": 3 },
     "tool_ammo": [ "charcoal", "coal" ]
-  },
-  {
-    "id": "clay_pot",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "clay pot" },
-    "description": "A crude clay pot used for cooking.",
-    "weight": "480 g",
-    "volume": "2100 ml",
-    "price": "25 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "clay" ],
-    "symbol": ")",
-    "color": "brown",
-    "pocket_data": [
-      {
-        "max_contains_volume": "2 L",
-        "max_contains_weight": "2100 g",
-        "open_container": true,
-        "watertight": true,
-        "rigid": true
-      }
-    ],
-    "qualities": [ [ "COOK", 3 ], [ "BOIL", 2 ], [ "CONTAIN", 1 ], [ "CHEM", 1 ] ],
-    "use_action": [ "HEAT_ALL_ITEMS" ],
-    "flags": [ "ALLOWS_REMOTE_USE" ],
-    "melee_damage": { "bash": 1 }
-  },
-  {
-    "id": "clay_teapot",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "clay teapot" },
-    "description": "A clay teapot.  Now all you need is tea and water.",
-    "weight": "429 g",
-    "volume": "787 ml",
-    "price": "20 USD",
-    "price_postapoc": "10 cent",
-    "to_hit": { "grip": "bad", "length": "hand", "surface": "any", "balance": "uneven" },
-    "material": [ "clay" ],
-    "symbol": ")",
-    "color": "brown",
-    "pocket_data": [ { "max_contains_volume": "750 ml", "max_contains_weight": "2 kg", "watertight": true, "rigid": true } ],
-    "qualities": [ [ "BOIL", 1 ] ],
-    "use_action": [ "HEAT_LIQUID_ITEMS" ],
-    "melee_damage": { "bash": 1 }
   },
   {
     "id": "coffeemaker",
@@ -517,23 +456,6 @@
     "melee_damage": { "bash": 3 }
   },
   {
-    "id": "milk_cream_jar",
-    "type": "ITEM",
-    "category": "food",
-    "name": { "str": "milk cream jar" },
-    "looks_like": "jar_glass_sealed",
-    "description": "This jar contains raw milk separated into cream.  It is sealed until you are ready to use it.",
-    "weight": "3461 g",
-    "volume": "3850 ml",
-    "longest_side": "298 mm",
-    "price": "10 cent",
-    "price_postapoc": "10 cent",
-    "material": [ "glass" ],
-    "symbol": "%",
-    "color": "white",
-    "melee_damage": { "bash": 8 }
-  },
-  {
     "id": "milk_cream_rising_active",
     "type": "ITEM",
     "category": "food",
@@ -673,21 +595,6 @@
     "tool_ammo": [ "lamp_oil" ]
   },
   {
-    "id": "pastaextruder",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "pasta extruder" },
-    "description": "A pasta extruder powered by a hand crank.  Useful in making pasta.  It comes with various heads to make various kinds of pasta.",
-    "weight": "650 g",
-    "volume": "1 L",
-    "price": "20 USD",
-    "price_postapoc": "1 USD",
-    "material": [ "iron" ],
-    "symbol": ")",
-    "color": "dark_gray",
-    "melee_damage": { "bash": 10 }
-  },
-  {
     "id": "pickles_ferment_active",
     "type": "ITEM",
     "category": "food",
@@ -809,53 +716,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "sieve_primitive",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "wicker sieve" },
-    "description": "A primitive sieve constructed from woven strips of plant material.  Early sieves like this were used to sift grain, though the openings on this one are too small for that.",
-    "weight": "50 g",
-    "volume": "500 ml",
-    "price": "3 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "paper" ],
-    "symbol": ";",
-    "qualities": [ [ "SIEVE", 1 ], [ "WINNOW", 1 ] ],
-    "color": "light_gray",
-    "melee_damage": { "bash": 1 }
-  },
-  {
-    "id": "sieve_steel",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "sieve" },
-    "description": "This is no mere strainer for noodles; it's a laboratory-grade sieve used to separate particles of certain sizes.  You could use this to do a really good job sifting flour, remove dust and soil from grain, or perhaps conduct gradation tests for any civil engineers you might know.  This one has been constructed from steel mesh.",
-    "volume": "500 ml",
-    "weight": "318 g",
-    "price": "7 USD",
-    "price_postapoc": "50 cent",
-    "material": [ "steel" ],
-    "symbol": ";",
-    "color": "dark_gray",
-    "qualities": [ [ "SIEVE", 2 ], [ "STRAIN", 1 ], [ "WINNOW", 1 ] ],
-    "melee_damage": { "bash": 2 }
-  },
-  {
-    "id": "sieve_steel_makeshift",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "makeshift sieve" },
-    "description": "Some fine steel mesh attached to a length of thicker steel wire, forming a rigid frame.  Useful for sieving.",
-    "volume": "106 ml",
-    "weight": "170 g",
-    "price": "7 USD",
-    "price_postapoc": "50 cent",
-    "material": [ "steel" ],
-    "symbol": ";",
-    "color": "dark_gray",
-    "qualities": [ [ "SIEVE", 2 ], [ "STRAIN", 1 ], [ "WINNOW", 1 ] ]
-  },
-  {
     "id": "still",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -911,26 +771,6 @@
     "use_action": { "type": "link_up", "cable_length": 2, "charge_rate": "110 W" },
     "melee_damage": { "bash": 8 },
     "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "waffleiron",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "waffle iron" },
-    "description": "A waffle iron, generally used for making waffles.",
-    "weight": "520 g",
-    "volume": "870 ml",
-    "longest_side": "30 cm",
-    "price": "16 USD",
-    "price_postapoc": "10 cent",
-    "to_hit": { "grip": "solid", "length": "hand", "surface": "any", "balance": "clumsy" },
-    "material": [ "aluminum" ],
-    "symbol": ")",
-    "color": "dark_gray",
-    "qualities": [ [ "COOK", 1 ] ],
-    "use_action": [ "HEAT_SOLID_ITEMS" ],
-    "//": "Based on https://www.amazon.com/dp/B07WWW1S84",
-    "melee_damage": { "bash": 10 }
   },
   {
     "id": "water_purifier",

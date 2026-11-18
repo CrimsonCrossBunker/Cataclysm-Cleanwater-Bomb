@@ -171,21 +171,6 @@
     "price_postapoc": "40 cent"
   },
   {
-    "id": "scythe_toy",
-    "type": "ITEM",
-    "symbol": "/",
-    "color": "light_gray",
-    "name": { "str": "grim reaper's scythe" },
-    "description": "A long, crooked tool used to reap souls, with a skull engraved in its blade.  Let the harvest begin.",
-    "weight": "586 g",
-    "volume": "3550 ml",
-    "longest_side": "150 cm",
-    "price": "30 USD",
-    "price_postapoc": "5 cent",
-    "material": [ "plastic" ],
-    "flags": [ "COSPLAY_PROPS" ]
-  },
-  {
     "id": "shovel",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

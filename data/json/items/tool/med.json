@@ -360,30 +360,6 @@
     "melee_damage": { "bash": 10 }
   },
   {
-    "id": "vacutainer",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "blood draw kit" },
-    "description": "A kit for drawing blood, including a test tube for holding the sample.  Use this tool to draw blood, either from yourself or from a corpse you are standing on.",
-    "weight": "13 g",
-    "volume": "262 ml",
-    "price": "30 USD",
-    "price_postapoc": "1 USD",
-    "material": [ "plastic" ],
-    "symbol": ";",
-    "color": "light_cyan",
-    "use_action": [ "BLOOD_DRAW" ],
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "watertight": true,
-        "rigid": true,
-        "max_contains_volume": "250 ml",
-        "max_contains_weight": "500 g"
-      }
-    ]
-  },
-  {
     "id": "wrapped_rad_badge",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

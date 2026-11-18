@@ -37,32 +37,6 @@
     "tool_ammo": [ "fish_bait" ]
   },
   {
-    "id": "fishing_hook_basic",
-    "type": "ITEM",
-    "name": { "str": "fishing hook" },
-    "description": "A simple metal fishing hook.",
-    "weight": "1 g",
-    "volume": "1 ml",
-    "price": "25 cent",
-    "price_postapoc": "25 cent",
-    "material": [ "steel" ],
-    "symbol": ",",
-    "color": "cyan"
-  },
-  {
-    "id": "fishing_hook_bone",
-    "type": "ITEM",
-    "name": { "str": "improvised fishing hook" },
-    "description": "An improvised fishing hook carved from wood or bone.",
-    "weight": "1 g",
-    "volume": "1 ml",
-    "price": "25 cent",
-    "price_postapoc": "25 cent",
-    "material": [ "bone" ],
-    "symbol": ",",
-    "color": "white"
-  },
-  {
     "id": "fishing_rod_basic",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

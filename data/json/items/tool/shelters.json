@@ -17,22 +17,6 @@
     "melee_damage": { "bash": 4 }
   },
   {
-    "type": "ITEM",
-    "id": "large_damaged_shelter_kit",
-    "symbol": ";",
-    "color": "brown",
-    "name": { "str": "large damaged shelter" },
-    "description": "A huge shelter made of sticks and skins, very bulky but with plenty of space.  This is broken and cannot be deployed.",
-    "price": "100 USD",
-    "price_postapoc": "1 USD 50 cent",
-    "material": [ "wood", "leather" ],
-    "weight": "15 kg",
-    "volume": "17 L",
-    "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "clumsy" },
-    "flags": [ "TRADER_AVOID" ],
-    "melee_damage": { "bash": 4 }
-  },
-  {
     "id": "large_tent_kit",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -137,20 +121,5 @@
       "door_closed": "f_canvas_door"
     },
     "melee_damage": { "bash": 4 }
-  },
-  {
-    "type": "ITEM",
-    "id": "tent_pole",
-    "symbol": "/",
-    "color": "dark_gray",
-    "name": { "str": "aluminum tent pole" },
-    "description": "A light, collapsible tent pole made from aluminum, perfect for pitching a tent.",
-    "looks_like": "long_pole",
-    "material": [ "aluminum" ],
-    "weight": "225 g",
-    "volume": "100 ml",
-    "longest_side": "90 cm",
-    "to_hit": { "grip": "solid", "length": "short", "surface": "any", "balance": "neutral" },
-    "melee_damage": { "bash": 1 }
   }
 ]
