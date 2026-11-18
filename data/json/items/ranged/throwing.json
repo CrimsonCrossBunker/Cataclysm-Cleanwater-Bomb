@@ -1,20 +1,5 @@
 [
   {
-    "id": "bolas",
-    "type": "ITEM",
-    "category": "weapons",
-    "name": { "str": "bolas", "str_pl": "bolases" },
-    "description": "Some ropes with weights, designed to tangle the legs of a target when thrown, usually at an animal.  Used by the Gauchos of Argentina.",
-    "weight": "400 g",
-    "volume": "750 ml",
-    "price": "6 USD",
-    "price_postapoc": "50 cent",
-    "material": [ "cotton", "stone" ],
-    "symbol": ";",
-    "color": "blue",
-    "flags": [ "NOGIB", "TANGLE", "PRIMITIVE_RANGED_WEAPON" ]
-  },
-  {
     "type": "ITEM",
     "id": "disc_golf",
     "category": "other",
@@ -29,35 +14,6 @@
     "weight": "170 g",
     "thrown_damage": [ { "damage_type": "bash", "amount": 1 } ],
     "melee_damage": { "bash": 2 }
-  },
-  {
-    "type": "ITEM",
-    "id": "frisbee",
-    "category": "other",
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "name": { "str": "frisbee" },
-    "symbol": "o",
-    "color": "yellow",
-    "description": "A plastic frisbee made for outdoor games.",
-    "material": [ "plastic" ],
-    "volume": "500 ml",
-    "weight": "175 g"
-  },
-  {
-    "id": "net",
-    "type": "ITEM",
-    "category": "weapons",
-    "name": { "str": "net" },
-    "description": "A mesh of string and weights, traditionally used to catch fish and to entangle opponents in combat.",
-    "weight": "1100 g",
-    "volume": "1500 ml",
-    "price": "6 USD 50 cent",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "cotton", "stone" ],
-    "symbol": "H",
-    "color": "white",
-    "flags": [ "NOGIB", "TANGLE", "PRIMITIVE_RANGED_WEAPON" ]
   },
   {
     "type": "ITEM",
