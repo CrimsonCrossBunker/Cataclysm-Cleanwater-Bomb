@@ -59,6 +59,7 @@ extern "C" {
 #include "creature.h"
 #include "debug.h"
 #include "effect.h"
+#include "enum_conversions.h"
 #include "flag.h"
 #include "generic_factory.h"
 #include "init.h"
@@ -611,10 +612,13 @@ struct item_group_entry_definition_data {
     bool count_specified = false;
     std::int64_t count_min = 1;
     std::int64_t count_max = 1;
+    bool charges_specified = false;
     std::int64_t charges_min = -1;
     std::int64_t charges_max = -1;
     std::optional<std::string> container = std::nullopt;
     std::optional<std::string> wrapper = std::nullopt;
+    std::optional<std::string> wrapper_variant = std::nullopt;
+    std::optional<bool> sealed = std::nullopt;
     std::optional<Item_group::Type> subgroup = std::nullopt;
     std::vector<item_group_entry_definition_data> children = {};
     std::optional<std::pair<int, int>> damage = std::nullopt;
@@ -627,6 +631,10 @@ struct item_group_definition_data {
     std::string kind = "distribution";
     std::int64_t with_ammo = 0;
     std::int64_t with_magazine = 0;
+    std::optional<std::string> container;
+    std::optional<std::string> container_variant;
+    Item_spawn_data::overflow_behaviour overflow = Item_spawn_data::overflow_behaviour::none;
+    bool sealed = true;
     std::vector<item_group_entry_definition_data> entries;
     bool registered = false;
 };
@@ -2686,6 +2694,12 @@ struct item_group_definition_handle {
             if( const auto wrapper = options.get<sol::optional<std::string>>( "wrapper" ) ) {
                 value.wrapper = *wrapper;
             }
+            if( const auto variant = options.get<sol::optional<std::string>>( "wrapper_variant" ) ) {
+                value.wrapper_variant = *variant;
+            }
+            if( const auto sealed = options.get<sol::optional<bool>>( "sealed" ) ) {
+                value.sealed = *sealed;
+            }
             if( const sol::optional<sol::table> count =
                     options.get<sol::optional<sol::table>>( "count" ) ) {
                 require_dense_array( *count, "item-group count", 2, 2 );
@@ -2696,6 +2710,7 @@ struct item_group_definition_handle {
             if( const sol::optional<sol::table> charges =
                     options.get<sol::optional<sol::table>>( "charges" ) ) {
                 require_dense_array( *charges, "item-group charges", 2, 2 );
+                value.charges_specified = true;
                 value.charges_min = charges->raw_get<std::int64_t>( 1 );
                 value.charges_max = charges->raw_get<std::int64_t>( 2 );
             }
@@ -4060,6 +4075,15 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->kind = options.get_or( "kind", std::string( "distribution" ) );
         definition->with_ammo = options.get_or<std::int64_t>( "with_ammo", 0 );
         definition->with_magazine = options.get_or<std::int64_t>( "with_magazine", 0 );
+        if( const auto container = options.get<sol::optional<std::string>>( "container" ) ) {
+            definition->container = *container;
+        }
+        if( const auto variant = options.get<sol::optional<std::string>>( "container_variant" ) ) {
+            definition->container_variant = *variant;
+        }
+        const std::string overflow = options.get_or( "overflow", std::string( "none" ) );
+        definition->overflow = io::string_to_enum<Item_spawn_data::overflow_behaviour>( overflow );
+        definition->sealed = options.get_or( "sealed", true );
         return item_group_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -5141,12 +5165,22 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "item group '" + definition.id +
                                           "' has invalid kind, chances, or duplicate registration" );
             }
+            if( ( definition.container && ( definition.container->empty() ||
+                                            ( *definition.container != "null" && check_engine_state &&
+                                              declared_item_ids.count( *definition.container ) == 0 &&
+                                              !item::type_is_defined( itype_id( *definition.container ) ) ) ) ) ||
+                ( definition.container_variant && !definition.container ) ||
+                ( definition.overflow != Item_spawn_data::overflow_behaviour::none &&
+                  !definition.container ) ) {
+                throw std::runtime_error( "item group '" + definition.id + "' has an invalid container" );
+            }
             item_group_children.emplace( definition.id, std::vector<std::string>() );
             validate_operation( entry.operation,
                                 item_group::group_is_defined( item_group_id( definition.id ) ),
                                 definition.id, "item group" );
             if( entry.operation == definition_operation::extend ) {
-                if( definition.with_ammo != 0 || definition.with_magazine != 0 ) {
+                if( definition.with_ammo != 0 || definition.with_magazine != 0 ||
+                    definition.container || !definition.sealed ) {
                     throw std::runtime_error( "item group extension '" + definition.id +
                                               "' may only append entries" );
                 }
@@ -5192,6 +5226,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     group_entry.count_max < group_entry.count_min || !native_int( group_entry.count_max ) ||
                     group_entry.charges_min < -1 || group_entry.charges_max < group_entry.charges_min ||
                     !native_int( group_entry.charges_max ) ||
+                    ( group_entry.wrapper_variant && !group_entry.wrapper ) ||
                     ( group_entry.group && ( !group_entry.variant.empty() ||
                                              group_entry.charges_min != -1 || group_entry.charges_max != -1 ) ) ) {
                     throw std::runtime_error( "item group '" + id + "' contains an invalid entry" );
@@ -6777,6 +6812,12 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                           kind, 100, static_cast<int>( source.with_ammo ),
                                           static_cast<int>( source.with_magazine ),
                                           "Lua-first item group " + source.id );
+                        if( source.container ) {
+                            replacement->container_item = itype_id( *source.container );
+                        }
+                        replacement->container_item_variant = source.container_variant;
+                        replacement->on_overflow = source.overflow;
+                        replacement->sealed = source.sealed;
                         native = replacement.get();
                     }
                     const auto load_contents = []( const std::vector<item_group_contents_entry> &contents,
@@ -6838,7 +6879,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                                     static_cast<int>( source_entry.probability ),
                                                     "Lua-first item-group entry " + source.id );
                             if( source_entry.count_specified || !source_entry.variant.empty() ||
-                                source_entry.charges_min != -1 || source_entry.container ||
+                                source_entry.charges_specified || source_entry.container || source_entry.sealed ||
                                 source_entry.damage || source_entry.dirt || !source_entry.contents.empty() ) {
                                 native_entry->modifier.emplace();
                                 native_entry->modifier->count = {
@@ -6863,13 +6904,19 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                     native_entry->modifier->contents = load_contents( source_entry.contents, parent );
                                 }
                                 if( source_entry.container ) {
-                                    native_entry->modifier->container = std::make_unique<Single_item_creator>(
+                                    auto container = std::make_unique<Single_item_creator>(
                                                                             *source_entry.container, Single_item_creator::S_ITEM, 100,
                                                                             "Lua-first item-group container " + source.id );
+                                    container->inherit_ammo_mag_chances( parent.with_ammo, parent.with_magazine );
+                                    native_entry->modifier->container = std::move( container );
+                                }
+                                if( source_entry.sealed ) {
+                                    native_entry->modifier->sealed = *source_entry.sealed;
                                 }
                             }
                             if( source_entry.wrapper ) {
                                 native_entry->container_item = itype_id( *source_entry.wrapper );
+                                native_entry->container_item_variant = source_entry.wrapper_variant;
                             }
                             parent.add_entry( std::move( native_entry ) );
                         }
@@ -8561,6 +8608,16 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, std::to_string( e.count_max ) );
                     hash_part( state, std::to_string( e.charges_min ) );
                     hash_part( state, std::to_string( e.charges_max ) );
+                    if( e.charges_specified && e.charges_min == -1 && e.charges_max == -1 ) {
+                        hash_part( state, "explicit_default_charges" );
+                    }
+                    if( e.wrapper_variant ) {
+                        hash_part( state, "wrapper_variant" );
+                        hash_part( state, *e.wrapper_variant );
+                    }
+                    if( e.sealed ) {
+                        hash_part( state, *e.sealed ? "sealed" : "unsealed" );
+                    }
                     hash_part( state, e.container ? "container" : "default_container" );
                     hash_part( state, e.container.value_or( "" ) );
                     hash_part( state, e.wrapper ? "wrapper" : "no_wrapper" );
@@ -8593,6 +8650,18 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.kind );
                 hash_part( state, std::to_string( v.with_ammo ) );
                 hash_part( state, std::to_string( v.with_magazine ) );
+                if( v.container ) {
+                    hash_part( state, "container" );
+                    hash_part( state, *v.container );
+                    if( v.container_variant ) {
+                        hash_part( state, "container_variant" );
+                        hash_part( state, *v.container_variant );
+                    }
+                    hash_part( state, io::enum_to_string( v.overflow ) );
+                }
+                if( !v.sealed ) {
+                    hash_part( state, "unsealed" );
+                }
                 hash_entries( hash_entries, v.entries );
             }
             break;
