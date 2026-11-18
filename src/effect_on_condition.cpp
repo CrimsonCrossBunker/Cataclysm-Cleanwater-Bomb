@@ -231,7 +231,9 @@ character_task_migration psychic_learning_migration( const char *id, const char 
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 238> migrated_character_tasks = {{
+const std::array<character_task_migration, 239> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_unvitrified_return" ),
+          "return_from_vitrification_due", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_HEDGE_RESEARCH_FOCUS_DRAIN" ),
           "hedge_tome_focus_due", nullptr },
         { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_FARM" ),
@@ -683,6 +685,16 @@ static void process_new_eocs( queued_eocs &eoc_queue,
                             cata::lua_platform::script_persistent_tripoint{ target->second.tripoint().raw() } );
                     json.end_object();
                     task_data.emplace( "target", diag_value( serialized.str() ) );
+                }
+            } else if( entry.eoc == effect_on_condition_id( "EOC_unvitrified_return" ) ) {
+                const auto item_id = entry.context.find( "id" );
+                if( item_id != entry.context.end() ) {
+                    std::ostringstream serialized;
+                    JsonOut json( serialized );
+                    json.start_object();
+                    cata::lua_platform::detail::write_persistent_value( json, item_id->second.to_string() );
+                    json.end_object();
+                    task_data.emplace( "item_id", diag_value( serialized.str() ) );
                 }
             }
             if( migration->spell ) {

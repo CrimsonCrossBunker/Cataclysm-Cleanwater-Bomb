@@ -334,24 +334,5 @@
         "weight": 1
       }
     ]
-  },
-  {
-    "id": "imperfect_doll_complete",
-    "type": "ITEM",
-    "name": { "str": "imperfect doll" },
-    "description": "Its legs are mismatched, its arms misshapen, its eyes more crooked than its smile.  Everywhere, it sparkles with the golden thread that has put it back together.  It's beautiful.",
-    "category": "other",
-    "material": [ "cotton" ],
-    "price": "0 cent",
-    "price_postapoc": "100 kUSD",
-    "symbol": "@",
-    "color": "white",
-    "looks_like": "talking_doll",
-    "use_action": {
-      "type": "effect_on_conditions",
-      "description": "Hug the imperfect doll.",
-      "effect_on_conditions": [ "EOC_queue_unvitrified_return" ]
-    },
-    "flags": [ "SLEEP_AID", "NO_SALVAGE", "INTEGRATED", "ZERO_WEIGHT", "TRADER_AVOID", "MISSION_ITEM" ]
   }
 ]
