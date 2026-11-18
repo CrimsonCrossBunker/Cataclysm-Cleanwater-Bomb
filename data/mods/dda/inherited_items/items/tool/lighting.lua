@@ -803,3 +803,393 @@ do
     item:tool { power_milliwatts = 1321 }
     content.add(item)
 end
+
+do
+    -- Based on this: https://www.amazon.com/dp/B0843HQMZ1
+    local item = content.Item {
+        id = "candle",
+        ascii_picture = "candle",
+        name = ccb.content.plural_text("candle", "candles"),
+        description = ccb.content.text("A thick wax candle.  It doesn't provide very much light, but it can burn for quite a long time.  You'll need a lighter or matches to light it."),
+        mass_milligrams = 400000,
+        volume_ml = 466,
+        longest_side_mm = 102,
+        price_cents = 100,
+        price_postapoc_cents = 50,
+        symbol = ",",
+        color = "white",
+        replace_pockets = true,
+    }
+    item:material("paraffin_wax", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "candle_lit" },
+        message = ccb.content.text("You light the candle."),
+        menu_text = ccb.content.text("Light", "verb"),
+        need_fire = 1,
+    }
+    item:clear_flags()
+    item:flag("BURNOUT")
+    item:flag("NO_RELOAD")
+    item:flag("NO_UNLOAD")
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { candle_wax = 100 }, rigid = true }
+    content.add(item)
+end
+
+do
+    -- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+    local item = content.Item {
+        id = "candle_lit",
+        ascii_picture = "candle",
+        copy_from = "candle",
+        looks_like = "candle",
+        name = ccb.content.plural_text("burning candle", "burning candles"),
+        description = ccb.content.text("A thick wax candle.  It doesn't provide very much light, but it can burn for quite a long time.  This candle is lit."),
+        light = 8,
+    }
+    item:clear_use_actions()
+    item:firestarter { moves = 500, moves_slow = 6000 }
+    item:transform_on_use {
+        result = { target = "candle" },
+        message = ccb.content.text("The candle winks out."),
+        menu_text = ccb.content.text("Extinguish"),
+        ammo_scale = 0,
+    }
+    item:flag("WATER_EXTINGUISH")
+    item:flag("TRADER_AVOID")
+    item:flag("WIND_EXTINGUISH")
+    item:flag("FIRESTARTER")
+    item:flag("SPAWN_ACTIVE")
+    item:tool { turns_per_charge = 1260 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "gasoline_lantern",
+        name = ccb.content.plural_text("gasoline lantern (off)", "gasoline lanterns (off)"),
+        description = ccb.content.text("A small gasoline-powered lantern.  It does not provide much light, but it lasts a long time.  Use it to turn it on."),
+        mass_milligrams = 1400000,
+        volume_ml = 750,
+        price_cents = 3000,
+        price_postapoc_cents = 100,
+        symbol = ";",
+        color = "yellow",
+        replace_pockets = true,
+    }
+    item:material("glass", 1)
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "gasoline_lantern_on" },
+        menu_text = ccb.content.text("Light", "verb"),
+        message = ccb.content.text("You light the lamp."),
+        need_charges = 1,
+        need_fire = 1,
+        need_charges_message = ccb.content.text("The lamp is empty."),
+    }
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    item:tool { charges_per_use = 1, ammo_types = { "gasoline" } }
+    item:magazine_pocket { ammo_capacities = { gasoline = 500 }, watertight = true }
+    content.add(item)
+end
+
+do
+    -- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+    local item = content.Item {
+        id = "gasoline_lantern_on",
+        copy_from = "gasoline_lantern",
+        looks_like = "gasoline_lantern",
+        name = ccb.content.plural_text("gasoline lantern (on)", "gasoline lanterns (on)"),
+        description = ccb.content.text("A small gasoline-powered lantern.  It does not provide much light, but it lasts a long time.  It is turned on.  Use it to turn it off."),
+        light = 15,
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "gasoline_lantern" },
+        message = ccb.content.text("The lamp is extinguished."),
+        menu_text = ccb.content.text("Turn off"),
+        ammo_scale = 0,
+    }
+    item:firestarter { moves = 500, moves_slow = 6000 }
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("FIRESTARTER")
+    item:flag("FIRE")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "gasoline_lantern" }
+    item:tool { turns_per_charge = 60 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "handflare",
+        name = ccb.content.plural_text("flare", "flares"),
+        description = ccb.content.text("A slow-burning magnesium flare.  Use it to strike the striker and light it.  It will produce a bright light for about a half hour."),
+        symbol = ";",
+        color = "light_red",
+        mass_milligrams = 128000,
+        volume_ml = 250,
+        price_cents = 400,
+        price_postapoc_cents = 100,
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:material("powder", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "handflare_lit" },
+        menu_text = ccb.content.text("Strike the striker"),
+        message = ccb.content.text("You strike your flare and light it."),
+    }
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:tool { ammo_types = { "flare_nitrate" } }
+    item:magazine_pocket { ammo_capacities = { flare_nitrate = 300 }, rigid = true }
+    content.add(item)
+end
+
+do
+    -- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+    local item = content.Item {
+        id = "handflare_lit",
+        copy_from = "handflare",
+        looks_like = "handflare",
+        name = ccb.content.plural_text("active flare", "active flares"),
+        description = ccb.content.text("A burning magnesium flare that is producing light.  It will last for about a half hour before burning out."),
+        color = "white",
+        light = 240,
+    }
+    item:clear_use_actions()
+    item:firestarter { moves = 500, moves_slow = 6000 }
+    item:clear_flags()
+    item:flag("FIRE")
+    item:flag("CHARGEDIM")
+    item:flag("FLAMING")
+    item:flag("TRADER_AVOID")
+    item:flag("FIRESTARTER")
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "handflare_dead" }
+    item:tool { turns_per_charge = 6, revert_message = ccb.content.text("The flare sputters out") }
+    content.add(item)
+end
+
+do
+    -- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+    local item = content.Item {
+        id = "sigflare_lit",
+        copy_from = "handflare",
+        looks_like = "handflare",
+        name = ccb.content.plural_text("active flare", "active flares"),
+        description = ccb.content.text("A bright burning flare that is producing light.  It will last for about a minute before burning out."),
+        color = "white",
+        light = 720,
+        countdown_turns = 60,
+    }
+    item:clear_use_actions()
+    item:firestarter { moves = 500, moves_slow = 6000 }
+    item:clear_flags()
+    item:flag("FIRE")
+    item:flag("CHARGEDIM")
+    item:flag("FLAMING")
+    item:flag("TRADER_AVOID")
+    item:flag("FIRESTARTER")
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:transform_into { target = "handflare_dead" }
+    item:tool { revert_message = ccb.content.text("The flare sputters out") }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "oxylamp",
+        name = ccb.content.plural_text("acetylene lamp (off)", "acetylene lamps (off)"),
+        description = ccb.content.text("An antique brass lamp designed to run from a pressurized cylinder of acetylene.  It is an efficient, if somewhat dangerous, light source."),
+        mass_milligrams = 800000,
+        volume_ml = 500,
+        price_cents = 6500,
+        price_postapoc_cents = 100,
+        symbol = ";",
+        color = "red",
+        replace_pockets = true,
+    }
+    item:material("copper", 1)
+    item:material("glass", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "oxylamp_on" },
+        menu_text = ccb.content.text("Light", "verb"),
+        message = ccb.content.text("You light the lamp."),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The lamp must be attached to a welding tank to light."),
+    }
+    item:tool { charges_per_use = 1, ammo_types = { "weldgas" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_items = { "tinyweldtank", "weldtank", "smallweldtank" },
+    }
+    content.add(item)
+end
+
+do
+    -- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+    local item = content.Item {
+        id = "oxylamp_on",
+        copy_from = "oxylamp",
+        looks_like = "oxylamp",
+        name = ccb.content.plural_text("acetylene lamp (on)", "acetylene lamps (on)"),
+        light = 30,
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "oxylamp" },
+        menu_text = ccb.content.text("Turn off"),
+        message = ccb.content.text("The lamp is extinguished."),
+        ammo_scale = 0,
+    }
+    item:firestarter { moves = 500, moves_slow = 6000 }
+    item:clear_flags()
+    item:flag("FIRESTARTER")
+    item:flag("TRADER_AVOID")
+    item:flag("FIRE")
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "oxylamp" }
+    item:tool { turns_per_charge = 240 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "propane_lantern",
+        name = ccb.content.plural_text("propane lantern (off)", "propane lanterns (off)"),
+        description = ccb.content.text("A small propane-powered lantern.  It does not provide much light, but it lasts a long time.  Use it to turn it on."),
+        mass_milligrams = 1400000,
+        volume_ml = 750,
+        price_cents = 3000,
+        price_postapoc_cents = 100,
+        symbol = ";",
+        color = "yellow",
+        replace_pockets = true,
+    }
+    item:material("glass", 1)
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "propane_lantern_on" },
+        menu_text = ccb.content.text("Light", "verb"),
+        message = ccb.content.text("You light the lamp."),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The lamp is empty."),
+    }
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    item:tool { charges_per_use = 1, ammo_types = { "propane" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        watertight = true,
+        allowed_items = { "small_propane_tank" },
+    }
+    content.add(item)
+end
+
+do
+    -- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+    local item = content.Item {
+        id = "propane_lantern_on",
+        copy_from = "propane_lantern",
+        looks_like = "propane_lantern",
+        name = ccb.content.plural_text("propane lantern (on)", "propane lanterns (on)"),
+        description = ccb.content.text("A small propane-powered lantern.  It does not provide much light, but it lasts a long time.  It is turned on.  Use it to turn it off."),
+        light = 15,
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "propane_lantern" },
+        message = ccb.content.text("The lamp is extinguished."),
+        menu_text = ccb.content.text("Turn off"),
+        ammo_scale = 0,
+    }
+    item:firestarter { moves = 500, moves_slow = 6000 }
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("FIRESTARTER")
+    item:flag("FIRE")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "propane_lantern" }
+    item:tool { turns_per_charge = 60 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "candle_small",
+        name = ccb.content.plural_text("small candle", "small candles"),
+        description = ccb.content.text("A thin wax candle.  It doesn't provide very much light and will burn relatively quickly.  You'll need a lighter or matches to light it."),
+        mass_milligrams = 4000,
+        volume_ml = 45,
+        longest_side_mm = 150,
+        price_cents = 50,
+        price_postapoc_cents = 2,
+        symbol = ",",
+        color = "blue_white",
+        replace_pockets = true,
+    }
+    item:material("paraffin_wax", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "candle_small_lit" },
+        menu_text = ccb.content.text("Light", "verb"),
+        message = ccb.content.text("You light the candle."),
+        need_fire = 1,
+    }
+    item:clear_flags()
+    item:flag("BURNOUT")
+    item:flag("NO_RELOAD")
+    item:flag("NO_UNLOAD")
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { candle_wax = 100 }, rigid = true }
+    content.add(item)
+end
+
+do
+    -- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+    local item = content.Item {
+        id = "candle_small_lit",
+        copy_from = "candle_small",
+        looks_like = "candle_small",
+        name = ccb.content.plural_text("burning small candle", "burning small candles"),
+        description = ccb.content.text("A thin wax candle.  It doesn't provide very much light and will burn relatively quickly.  This candle is lit."),
+        light = 6,
+    }
+    item:clear_use_actions()
+    item:firestarter { moves = 500, moves_slow = 6000 }
+    item:transform_on_use {
+        result = { target = "candle_small" },
+        message = ccb.content.text("The candle winks out."),
+        menu_text = ccb.content.text("Extinguish"),
+        ammo_scale = 0,
+    }
+    item:flag("WATER_EXTINGUISH")
+    item:flag("TRADER_AVOID")
+    item:flag("WIND_EXTINGUISH")
+    item:flag("FIRESTARTER")
+    item:flag("SPAWN_ACTIVE")
+    item:tool { turns_per_charge = 63 }
+    content.add(item)
+end
