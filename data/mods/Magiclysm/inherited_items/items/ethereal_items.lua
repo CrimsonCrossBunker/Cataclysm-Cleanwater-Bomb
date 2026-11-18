@@ -80,3 +80,42 @@ do
     item:throwing_damage { { type = "pure", amount = 40 } }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "item_kelvinist_icy_freezing_container",
+        category = "container",
+        name = ccb.content.plural_text("freezer field", "freezer fields"),
+        looks_like = "art_sphere",
+        description = ccb.content.text("A large, hollow sphere of ice.  Food placed inside will not rot."),
+        mass_milligrams = 3000000,
+        volume_ml = 92000,
+        longest_side_mm = 550,
+        price_cents = 0,
+        price_postapoc_cents = 0,
+        melee_to_hit = -1,
+        symbol = "o",
+        color = "white",
+        replace_pockets = true,
+        replace_qualities = true,
+        phase = "solid",
+    }
+    item:material("water", 1)
+    item:container_pocket {
+        max_volume_ml = 70000,
+        max_weight_milligrams = 70000000,
+        rigid = true,
+        watertight = true,
+        spoil_multiplier = 0.0,
+    }
+    item:clear_flags()
+    item:flag("UNBREAKABLE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("NO_REPAIR")
+    item:flag("NO_SALVAGE")
+    item:flag("TRADER_AVOID")
+    item:quality("CONTAIN", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    content.add(item)
+end

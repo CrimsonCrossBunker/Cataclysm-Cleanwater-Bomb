@@ -33,3 +33,22 @@ do
     item:adjust_measurements { price_cents = { factor = 10 }, volume_ml = { factor = 10 }, mass_milligrams = { factor = 10 } }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "demon_chitin_flux",
+        category = "spare_parts",
+        symbol = ",",
+        color = "red",
+        name = ccb.content.plural_text("flux of demon chitin", "flux of demon chitin"),
+        description = ccb.content.text("Demon chitin turned into a paste like substance referred to as flux.  Used to create new; and fill in, repairing existing demon chitin items."),
+        price_cents = 1000,
+        mass_milligrams = 500,
+        volume_ml = 1,
+        phase = "solid",
+    }
+    item:material("demon_chitin", 1)
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    content.add(item)
+end

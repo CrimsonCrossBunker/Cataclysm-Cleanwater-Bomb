@@ -1212,37 +1212,6 @@
     "use_action": { "type": "heal", "disinfectant_power": 3, "bite": 0.9, "move_cost": 1 }
   },
   {
-    "id": "item_kelvinist_icy_freezing_container",
-    "type": "ITEM",
-    "category": "container",
-    "name": { "str": "freezer field" },
-    "looks_like": "art_sphere",
-    "description": "A large, hollow sphere of ice.  Food placed inside will not rot.",
-    "weight": "3 kg",
-    "volume": "92 L",
-    "longest_side": "550 mm",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "to_hit": -1,
-    "material": [ "water" ],
-    "phase": "solid",
-    "symbol": "o",
-    "color": "white",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "rigid": true,
-        "watertight": true,
-        "max_contains_volume": "70 L",
-        "max_contains_weight": "70 kg",
-        "spoil_multiplier": 0.0
-      }
-    ],
-    "flags": [ "UNBREAKABLE_MELEE", "NONCONDUCTIVE", "NO_REPAIR", "NO_SALVAGE", "TRADER_AVOID" ],
-    "qualities": [ [ "CONTAIN", 1 ] ],
-    "melee_damage": { "bash": 1 }
-  },
-  {
     "id": "aura_bearmantle",
     "type": "ITEM",
     "subtypes": [ "ARMOR", "ARTIFACT" ],
