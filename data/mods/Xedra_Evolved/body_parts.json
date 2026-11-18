@@ -104,16 +104,6 @@
     "sub_parts": [ "karma_hand" ]
   },
   {
-    "id": "karma_hand",
-    "type": "sub_body_part",
-    "max_coverage": 10,
-    "parent": "bp_null",
-    "side": "left",
-    "opposite": "karma_hand",
-    "name": "karma hand",
-    "name_multiple": "karma hands"
-  },
-  {
     "id": "stalker_eyes",
     "type": "body_part",
     "name": "stalker's eyes",
@@ -135,16 +125,6 @@
     "flags": [ "IGNORE_TEMP", "LIMB_UPPER", "BIONIC_LIMB", "CRAFT_IN_DARKNESS" ],
     "smash_message": "You use your flippin' face to smash the %s.  EXTREME.",
     "sub_parts": [ "stalker_eye", "stalker_eye" ]
-  },
-  {
-    "id": "stalker_eye",
-    "type": "sub_body_part",
-    "max_coverage": 10,
-    "parent": "bp_null",
-    "side": "right",
-    "opposite": "stalker_eye",
-    "name": "stalker eye",
-    "name_multiple": "stalker eyes"
   },
   {
     "id": "gracken_eyes",
@@ -181,16 +161,6 @@
     ]
   },
   {
-    "id": "gracken_eye",
-    "type": "sub_body_part",
-    "max_coverage": 10,
-    "parent": "bp_null",
-    "side": "right",
-    "opposite": "gracken_eye",
-    "name": "gracken eye",
-    "name_multiple": "gracken eyes"
-  },
-  {
     "id": "devil_tail",
     "type": "body_part",
     "name": "devil's tail",
@@ -224,16 +194,6 @@
     "mend_rate": 1000,
     "smash_efficiency": 1.5,
     "smash_message": "You smash %s with your tail!"
-  },
-  {
-    "id": "devil_tail_tip",
-    "type": "sub_body_part",
-    "max_coverage": 10,
-    "parent": "bp_null",
-    "side": "left",
-    "opposite": "devil_tail_tip",
-    "name": "devil's tail tip",
-    "name_multiple": "devil's tail tips"
   },
   {
     "id": "assist_arm_r",
@@ -277,16 +237,6 @@
     "opposite_part": "assist_arm_r",
     "side": "left",
     "sub_parts": [ "assist_hand" ]
-  },
-  {
-    "id": "assist_hand",
-    "type": "sub_body_part",
-    "max_coverage": 10,
-    "parent": "bp_null",
-    "side": "left",
-    "opposite": "assist_hand",
-    "name": "assistant's  hand",
-    "name_multiple": "assistant's hands"
   },
   {
     "id": "data_shunt",
@@ -341,16 +291,6 @@
     "unarmed_damage": [ { "damage_type": "heat", "amount": 10 } ]
   },
   {
-    "id": "salamander_wing_subpart_r",
-    "type": "sub_body_part",
-    "max_coverage": 100,
-    "parent": "salamander_wing_r",
-    "side": "right",
-    "opposite": "salamander_wing_subpart_l",
-    "name": "salamander wing",
-    "name_multiple": "salamander wing"
-  },
-  {
     "id": "salamander_wing_l",
     "copy-from": "salamander_wing_r",
     "type": "body_part",
@@ -368,15 +308,5 @@
     "opposite_part": "salamander_wing_r",
     "side": "left",
     "sub_parts": [ "salamander_wing_subpart_l" ]
-  },
-  {
-    "id": "salamander_wing_subpart_l",
-    "type": "sub_body_part",
-    "max_coverage": 100,
-    "parent": "salamander_wing_l",
-    "side": "left",
-    "opposite": "salamander_wing_subpart_r",
-    "name": "salamander wing",
-    "name_multiple": "salamander wing"
   }
 ]

@@ -190,3 +190,7 @@ require("vehicle_part_categories")
 require("overmap_locations")
 
 require("field_emissions")
+
+require("sub_body_parts")
+require("bionic_sub_body_parts")
+require("mutation_sub_body_parts")

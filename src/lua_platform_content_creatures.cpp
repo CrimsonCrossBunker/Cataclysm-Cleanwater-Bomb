@@ -572,7 +572,7 @@ struct sub_body_part_definition_data {
     bool secondary = false;
     // Legacy sub body parts default to zero maximum coverage.
     std::int64_t maximum_coverage = 0;
-    std::vector<std::string> locations_under;
+    std::optional<std::vector<std::string>> locations_under;
     std::string similar_body_part;
     std::map<std::string, double> unarmed_damage;
     bool registered = false;
@@ -1570,7 +1570,10 @@ struct sub_body_part_definition_handle {
         if( id.empty() ) {
             throw std::runtime_error( "sub-body-part lower location cannot be empty" );
         }
-        definition->locations_under.push_back( id );
+        if( !definition->locations_under ) {
+            definition->locations_under.emplace();
+        }
+        definition->locations_under->push_back( id );
         return *this;
     }
 
@@ -3330,7 +3333,18 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->maximum_coverage = options.get_or<std::int64_t>( "maximum_coverage", 0 );
         definition->similar_body_part = options.get_or(
                                             "similar_body_part", std::string() );
-        return sub_body_part_definition_handle{ std::move( definition ), pimpl_->token };
+        sub_body_part_definition_handle handle{ std::move( definition ), pimpl_->token };
+        const sol::object under = options.raw_get<sol::object>( "locations_under" );
+        if( under.valid() && under.get_type() != sol::type::nil ) {
+            const sol::table locations = under.as<sol::table>();
+            const std::size_t count = require_dense_array( locations, "locations_under", 0,
+                                      std::numeric_limits<std::size_t>::max() );
+            handle.definition->locations_under.emplace();
+            for( std::size_t i = 1; i <= count; ++i ) {
+                handle.location_under( locations.raw_get<std::string>( i ) );
+            }
+        }
+        return handle;
     } );
     content.set_function( "Wound", [this]( const sol::table & options ) {
         auto definition = std::make_shared<wound_type_definition_data>();
@@ -4963,12 +4977,12 @@ void creatures_content_transaction::impl::apply_sub_body_part()
         native.parent = bodypart_str_id( source.parent );
         native.secondary = source.secondary;
         native.max_coverage = static_cast<int>( source.maximum_coverage );
-        if( source.locations_under.empty() ) {
-            native.locations_under.push_back( id );
-        } else {
-            for( const std::string &location : source.locations_under ) {
+        if( source.locations_under ) {
+            for( const std::string &location : *source.locations_under ) {
                 native.locations_under.emplace_back( location );
             }
+        } else {
+            native.locations_under.push_back( id );
         }
         if( !source.similar_body_part.empty() ) {
             native.similar_bodypart = sub_bodypart_str_id( source.similar_body_part );
@@ -6827,9 +6841,14 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, value.secondary ? "secondary" : "primary" );
             hash_part( state, std::to_string( value.maximum_coverage ) );
             hash_part( state, value.similar_body_part );
-            for( const std::string &location : value.locations_under ) {
-                hash_part( state, "under" );
-                hash_part( state, location );
+            if( value.locations_under ) {
+                if( value.locations_under->empty() ) {
+                    hash_part( state, "no_locations_under" );
+                }
+                for( const std::string &location : *value.locations_under ) {
+                    hash_part( state, "under" );
+                    hash_part( state, location );
+                }
             }
             for( const auto &[damage_id, amount] : value.unarmed_damage ) {
                 hash_part( state, damage_id );

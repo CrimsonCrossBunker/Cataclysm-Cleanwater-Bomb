@@ -1731,6 +1731,7 @@ function ItemGroupDefinition:entry(options) end
 ---@field secondary? boolean
 ---@field maximum_coverage? integer Positive percentage no greater than 100.
 ---@field similar_body_part? string Existing or same-transaction SubBodyPart id used for armor coverage.
+---@field locations_under? string[] Lower locations in order; defaults to this part.
 
 ---@class SubBodyPartDefinition
 ---@field id string

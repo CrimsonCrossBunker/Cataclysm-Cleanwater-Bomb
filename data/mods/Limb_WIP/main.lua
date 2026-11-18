@@ -9,3 +9,5 @@ require("mutation_enchantments")
 require("overlay_enchantments")
 
 require("item_enchantments")
+
+require("sub_body_parts")

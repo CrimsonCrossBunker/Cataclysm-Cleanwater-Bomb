@@ -162,3 +162,5 @@ require("sidebar_extensions")
 require("construction_groups")
 
 require("field_emissions")
+
+require("sub_body_parts")

@@ -150,3 +150,10 @@ tips:text(ccb.content.text("Just because a location is filled with zombies or we
 ccb.content.add(tips)
 
 require("weather_types")
+
+ccb.content.add(ccb.content.SubBodyPart {
+    id = "sub_bp_null",
+    parent = "bp_null",
+    name = "Null sub_body_part, if you see this please report it",
+    plural_name = "",
+})
