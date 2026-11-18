@@ -185,12 +185,6 @@
   },
   {
     "type": "jmath_function",
-    "id": "psionics_contemplation_kcal_cost",
-    "num_args": 1,
-    "return": "(1.2 * _0) * rng( 0.3, 1.7) * u_nether_attunement_power_scaling * (u_effect_intensity('effect_nether_attunement_extra_kcal') > 0 ? 3 : 1)"
-  },
-  {
-    "type": "jmath_function",
     "id": "matrix_awakening_odds",
     "num_args": 1,
     "return": "100 * (e ^ ( ( _0 - max( (u_enchant_val('awakening_odds_traits_mod', 0) * 0.75), 0) ) / -1.7) )"
@@ -225,48 +219,6 @@
     "id": "concentration_nether_attunement_influences",
     "num_args": 0,
     "return": "(concentration_calculations() > 1 ? concentration_calculations(): 1) * (u_has_proficiency('prof_concentration_basic') ? 0.9: 1) + (u_has_proficiency('prof_concentration_intermediate') ? 0.9: 1) + (u_has_proficiency('prof_concentration_master') ? 0.8: 1)"
-  },
-  {
-    "type": "jmath_function",
-    "id": "learn_new_power_learn_roll",
-    "num_args": 0,
-    "return": "max( (rand(u_skill('metaphysics') ) ), ( u_skill('metaphysics') / 2 ) ) + rand(u_val('intelligence') / 2 ) + (u_has_proficiency(u_latest_studied_power_proficiency) * 5) + rng(-2,8) + rng(-2,8) + learn_new_power_additional_modifiers()"
-  },
-  {
-    "type": "jmath_function",
-    "id": "learn_new_power_additional_modifiers",
-    "num_args": 0,
-    "return": "(u_effect_intensity('effect_disease_psionic_drain') > 5 ? 1 : 0) + (u_effect_intensity('effect_disease_psionic_drain') > 10 ? 1 : 0) + (u_effect_intensity('psi_nether_attention') > 0 ? 2 : 0)"
-  },
-  {
-    "type": "jmath_function",
-    "id": "learn_new_power_difficulty_setting",
-    "num_args": 0,
-    "return": "(u_latest_studied_power_difficulty * 1.5) + 7 + clamp( ( (u_vitamin('vitamin_maintained_powers') * 2) - 1 ), 0, 10) + (concentration_calculations() < 0 ? ( concentration_calculations() * -1 ) : 0)"
-  },
-  {
-    "type": "jmath_function",
-    "id": "learn_new_power_lower_time_bound",
-    "num_args": 1,
-    "return": "(((_0 + 2) * 60) * 60) * 0.8"
-  },
-  {
-    "type": "jmath_function",
-    "id": "learn_new_power_upper_time_bound",
-    "num_args": 1,
-    "return": "(((_0 + 2) * 60) * 60) * 1.2"
-  },
-  {
-    "type": "jmath_function",
-    "id": "learn_new_power_lower_nether_attunement_level",
-    "num_args": 0,
-    "return": "u_latest_studied_power_difficulty * 10"
-  },
-  {
-    "type": "jmath_function",
-    "id": "learn_new_power_upper_nether_attunement_level",
-    "num_args": 0,
-    "return": "u_latest_studied_power_difficulty * 20"
   },
   {
     "type": "jmath_function",

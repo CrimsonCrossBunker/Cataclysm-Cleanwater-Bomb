@@ -98,9 +98,12 @@ ccb.runtime.handler("psychic_contemplation_exhausted", function(event)
     end
     local character = event.actors.character or services.characters.avatar()
     if remove_contemplation_effects(character) and character.subtype ~= "npc" then
-        services.presentation.notice(services.translate(
+        local notice = services.translate(
             "You're so exhausted you can barely think straight, and certainly can't concentrate on studying your powers."
-        ))
+        )
+        services.presentation.notice(notice)
+        services.activities.offer_interruption("")
+        services.messages.add(notice, "neutral")
     end
 end, 1)
 ccb.runtime.on("game:character_gains_effect", "psychic_contemplation_exhausted")

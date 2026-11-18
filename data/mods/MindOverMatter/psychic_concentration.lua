@@ -457,4 +457,4 @@ ccb.runtime.handler("effect_ends_concentration", function(event)
 end, 1)
 ccb.runtime.on("game:character_gains_effect", "effect_ends_concentration")
 
-return stop_all
+return { stop_all = stop_all, limit = concentration_limit }
