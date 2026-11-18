@@ -117,6 +117,14 @@ local function finalize(character, discipline)
     end
 end
 
+local function teach_knack_recipes(character)
+    for _, spell in ipairs(knack_recipes) do
+        if spell_level(character, spell) >= 1 then
+            value(services.recipes.learn(character, id("recipe", "practice_" .. spell)))
+        end
+    end
+end
+
 ccb.runtime.handler("teach_existing_psionics_recipes", function(event)
     local character = event.actors.character or services.characters.avatar()
     for _, discipline in ipairs(disciplines) do
@@ -125,14 +133,72 @@ ccb.runtime.handler("teach_existing_psionics_recipes", function(event)
         end
     end
     if has_trait(character, "PSYCHIC_KNACK") then
-        for _, spell in ipairs(knack_recipes) do
-            if spell_level(character, spell) >= 1 then
-                value(services.recipes.learn(character, id("recipe", "practice_" .. spell)))
-            end
-        end
+        teach_knack_recipes(character)
     end
 end, 1)
 ccb.runtime.on("game:game_begin", "teach_existing_psionics_recipes")
+
+local wild_talent_spells = {
+    id("spell", "biokin_flexibility_knack"),
+    id("spell", "biokin_adrenaline_knack"),
+    id("spell", "clair_better_senses_knack"),
+    id("spell", "clair_danger_sense_knack"),
+    id("spell", "clair_examine_item_knack"),
+    id("spell", "clair_astral_projection_knack"),
+    id("spell", "electrokinetic_see_electric_knack"),
+    id("spell", "electrokinetic_pain_immune_knack"),
+    id("spell", "electrokinetic_hacking_interface_knack"),
+    id("spell", "photokinetic_camouflage_knack"),
+    id("spell", "photokinetic_hide_ugly_knack"),
+    id("spell", "photokinetic_radio_knack"),
+    id("spell", "pyrokinetic_intensify_flames_knack"),
+    id("spell", "pyrokinetic_flash_knack"),
+    id("spell", "pyrokinetic_eruption_knack"),
+    id("spell", "pyrokinetic_call_flames_knack"),
+    id("spell", "pyrokinetic_cloak_knack"),
+    id("spell", "telekinetic_pull_knack"),
+    id("spell", "telekinetic_push_knack"),
+    id("spell", "telekinetic_slam_down_knack"),
+    id("spell", "telekinetic_wave_knack"),
+    id("spell", "telepathic_shield_knack"),
+    id("spell", "telepathic_mind_sense_knack"),
+    id("spell", "telepathic_morale_knack"),
+    id("spell", "telepathic_blast_knack"),
+    id("spell", "telepathic_mesmerize_knack"),
+    id("spell", "telepathic_animal_mind_control_knack"),
+    id("spell", "telepathic_invisibility_knack"),
+    id("spell", "telepathic_blast_radius_knack"),
+    id("spell", "vita_health_power_knack"),
+    id("spell", "vita_concentrated_healing_knack"),
+    id("spell", "vita_remove_poison_knack"),
+    id("spell", "vita_cure_disease_knack"),
+    id("spell", "vita_banish_illness_knack"),
+}
+
+ccb.runtime.handler("grant_starting_wild_talents", function(event)
+    local character = event.actors.character or services.characters.avatar()
+    if not has_trait(character, "PSYCHIC_KNACK") then
+        return
+    end
+    local rolls = 0
+    for count = 1, 6 do
+        local marker = "PSYCHIC_KNACK_WILD_TALENT_" .. count
+        if has_trait(character, marker) then
+            value(services.mutations.erase(character, id("mutation", marker)))
+            set_number(character, "knack_wild_talent_iterations", count)
+            rolls = count
+        end
+    end
+    if rolls == 0 then
+        return
+    end
+    for _ = 1, rolls do
+        value(services.progression.grant_random_missing(character, "spell", wild_talent_spells))
+    end
+    value(services.spells.adjust_school_levels(character, id("mutation", "PSYCHIC_KNACK"), 4))
+    teach_knack_recipes(character)
+end, 1)
+ccb.runtime.on("game:game_start", "grant_starting_wild_talents")
 
 local function meditate(character)
     value(services.activities.assign_timed(character, id("activity", "ACT_CRYSTAL_AWAKENING_MEDITATION"),
