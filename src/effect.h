@@ -427,7 +427,7 @@ class effect
 
         bool kill_roll( bool reduced, bool is_monster = false ) const;
         std::string get_death_message() const;
-        event_type death_event() const;
+        std::optional<event_type> death_event() const;
 
         /** Returns the modifier caused by addictions. Currently only handles painkiller addictions. */
         double get_addict_mod( const std::string &arg, int addict_level ) const;

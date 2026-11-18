@@ -2314,12 +2314,12 @@ void Creature::process_effects()
             const bool reduced = resists_effect( e );
             if( e.kill_roll( reduced, is_monster() ) ) {
                 add_msg_if_player( m_bad, e.get_death_message() );
-                if( is_avatar() ) {
+                if( const auto event = e.death_event(); is_avatar() && event ) {
                     std::map<std::string, cata_variant> event_data;
                     std::pair<std::string, cata_variant> data_obj( "character",
                             cata_variant::make<cata_variant_type::character_id>( as_character()->getID() ) );
                     event_data.insert( data_obj );
-                    cata::event sent( e.death_event(), calendar::turn, std::move( event_data ) );
+                    cata::event sent( *event, calendar::turn, std::move( event_data ) );
                     get_event_bus().send( sent );
                 }
                 die( &here, e.get_source().resolve_creature() );

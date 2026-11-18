@@ -2069,7 +2069,7 @@ function MonsterAttackDefinition:on_hit(handler_id) end
 ---@field apply_message? string|LocalizedText Player-facing application message.
 ---@field rating? 'neutral'|'good'|'bad'|'mixed' Message rating; defaults to neutral.
 ---@field death_message? string|LocalizedText Player-facing death message.
----@field death_event? string Native event with only a character field; required when death chances are specified.
+---@field death_event? string Native event with only a character field. When supplied, sent on avatar death from this effect.
 ---@field harmful_cough? boolean Whether coughing causes damage.
 ---@field apply_memorial_log? string Memorial text recorded when applied.
 ---@field remove_memorial_log? string Memorial text recorded when removed.
@@ -2134,6 +2134,10 @@ function EffectTypeDefinition:resist_trait(id) end
 ---@param id string Existing or same-transaction EffectType id.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:resist_effect(id) end
+---Use resistance values when the target has this effect. An absent effect does not grant resistance.
+---@param id string Native effect id, including an id supplied by another enabled Mod.
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:resist_optional_effect(id) end
 ---Append an effect to remove during native processing, in authored order.
 ---@param id string Existing or same-transaction EffectType id.
 ---@return EffectTypeDefinition self
@@ -2154,10 +2158,10 @@ function EffectTypeDefinition:enchantment(id) end
 ---@class EffectDeathChanceOptions
 ---@field numerator integer Non-positive values disable the roll at this intensity.
 ---@field denominator integer Positive native probability denominator.
----@field resisted_numerator integer Numerator while resisted.
----@field resisted_denominator integer Positive denominator while resisted.
+---@field resisted_numerator? integer Numerator for the next entry in the resisted series.
+---@field resisted_denominator? integer Positive denominator. Supply both resisted fields together.
 
----@param options EffectDeathChanceOptions Appends the next intensity's chance; higher intensities reuse the last entry.
+---@param options EffectDeathChanceOptions Appends to the normal series and optionally the separate resisted series. Higher intensities repeat the last entry. With an empty resisted series, resistance skips the roll.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:death_chance(options) end
 

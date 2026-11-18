@@ -1744,14 +1744,9 @@ std::string effect::get_death_message() const
     return eff_type->death_msg.translated();
 }
 
-event_type effect::death_event() const
+std::optional<event_type> effect::death_event() const
 {
-    if( eff_type->death_event.has_value() ) {
-        return *eff_type->death_event;
-    }
-
-    debugmsg( "Asked for death event from effect of type %s, but it lacks one!", eff_type->id.str() );
-    return event_type::num_event_types;
+    return eff_type->death_event;
 }
 
 void reset_effect_types()
