@@ -180,3 +180,7 @@ require("craft_recipes")
 require("practice_recipes")
 
 require("dreamforged_recipes")
+
+require("treesinging_recipes")
+
+require("nether_sorcery_study")

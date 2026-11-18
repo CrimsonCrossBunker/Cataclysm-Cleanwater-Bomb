@@ -9,16 +9,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_NETHER_SORCERY_LIGHT_CANCEL",
-    "effect": [
-      {
-        "if": { "and": [ { "math": [ "u_val('fine_detail_vision_mod') >= 4" ] }, { "not": { "u_has_flag": "READ_IN_DARKNESS" } } ] },
-        "then": [ "u_cancel_activity", { "u_message": "It's too dark to continue studying the occult.", "type": "bad" } ]
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_XE_NETHER_SORCERY_WEARINESS_COST",
     "eoc_type": "EVENT",
     "required_event": "spellcasting_finish",
