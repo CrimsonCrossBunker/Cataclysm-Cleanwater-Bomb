@@ -172,6 +172,38 @@ on_due("serum_learning_hallucinations", function(character)
     after(character, "serum_learning_hallucinations", 1800, 5400)
 end)
 
+local slow_time = id("effect", "regen_serum_slow_time")
+local whole_body = id("body_part", "bp_null")
+
+ccb.runtime.handler("serum_learning_slow_time", function(impact)
+    if not random.native_probability(1, 5) then
+        return
+    end
+
+    local target = impact.target_creature
+    if value(effects.has(target, slow_time, whole_body, -1)) then
+        return
+    end
+
+    local applied = effects.add(target, slow_time, duration(random.native_int(3, 10), "turn"), {
+        body_part = whole_body,
+    })
+    if not applied.ok and applied.error.code ~= "rejected" then
+        error(applied.error.message)
+    end
+end)
+
+content.add(content.Spell {
+    id = "learning_serum_time_slow_perception_spell",
+    name = "Lore Serum Slow Time",
+    description = "Applies the time slow effect from the Lore Serum.",
+    message = "",
+    valid_targets = { "self" },
+    shape = "blast",
+    flags = { "NO_EXPLOSION_SFX" },
+    base_casting_time = 100,
+}:lua_impact("serum_learning_slow_time"))
+
 local grip = id("limb_score", "grip")
 local balance = id("limb_score", "balance")
 local function loses_grip(character, dexterity)

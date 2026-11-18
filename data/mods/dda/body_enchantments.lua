@@ -1,7 +1,7 @@
 local ccb = require("ccb")
 local content = ccb.content
 
--- data/json/effects_on_condition/medicine_eocs/learning_serum_eoc.json
+-- Lore serum combat enchantments.
 ccb.runtime.handler("body_enchantment_active_inline_ench_learning_serum_main_2", function(ctx)
     return (((ctx.character_inputs.nearby_monsters["monsters_1"] + ctx.character_inputs.nearby_characters["characters_1"]) > 0))
 end)
