@@ -352,3 +352,31 @@ do
     item:magazine_pocket { ammo_capacities = { paper = 90 }, rigid = false }
     content.add(item)
 end
+
+do
+    -- Based on https://www.amazon.com/dp/B000U9WXEC, although the volume calculated from package dimensions has been multiplied by 0.5 because there really is not a reasonable way to calculate fan volume without the numbers going into extremes
+    local item = content.Item {
+        id = "fan",
+        symbol = ",",
+        name = ccb.content.plural_text("desk fan", "desk fans"),
+        description = ccb.content.text("A small fan, used to propel air around a room."),
+        color = "light_gray",
+        price_cents = 2500,
+        price_postapoc_cents = 10,
+        mass_milligrams = 1588000,
+        volume_ml = 19265,
+        melee_to_hit = -3,
+        charged_qualities = { { id = "WINNOW", level = 1 } },
+    }
+    item:material("aluminum", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:flag("FRAGILE_MELEE")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 3, charge_milliwatts = 35000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:tool { charges_per_use = 4, ammo_types = { "battery" } }
+    content.add(item)
+end
