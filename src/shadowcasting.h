@@ -14,6 +14,8 @@
 #include "map_scale_constants.h"
 #include "mdarray.h"
 
+struct fragment_cloud;
+
 
 // For light we store four values, depending on the direction that the light
 // comes from.  This allows us to determine whether the side of the wall the
