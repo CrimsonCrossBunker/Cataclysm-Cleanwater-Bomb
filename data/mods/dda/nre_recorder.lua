@@ -1,0 +1,95 @@
+local ccb = require("ccb")
+local services = ccb.services
+local state = require("portal_storm_state")
+local travel = require("dimension_travel")
+local persistent = ccb.state.world
+local id = services.types.id
+local M = {}
+
+function M.has_recorder(character)
+    return state.checked(services.inventory.has_items(character, id("item", "nre_recorder"), 0, 1))
+        or state.checked(services.inventory.has_items(character, id("item", "robofac_mobile_weather_station"), 0, 1))
+end
+
+function M.capture(character)
+    if not M.has_recorder(character) then return end
+    travel.set(character, "generic_nre_anomaly", travel.number(character, "generic_nre_anomaly") + 1)
+    state.message(character, services.translate("The NRE recorder emits a sharp beep!"), "info")
+end
+
+local significant = {
+    mon_hound_tindalos = true, mon_darkman = true, mon_zombie_phase_shrike = true,
+    mon_swarm_structure = true, mon_better_half = true, mon_hallucinator = true,
+    mon_archunk_strong = true, mon_void_spider = true, mon_XEDRA_officer = true,
+    mon_eigenspectre_3 = true, mon_eigenspectre_4 = true, mon_living_vector = true,
+}
+
+ccb.runtime.handler("nre_anomaly_kill", function(event)
+    local character = event.actors.killer
+    if not character or not M.has_recorder(character) then return end
+    if significant[event.data.victim_type] then
+        travel.set(character, "generic_nre_anomaly", travel.number(character, "generic_nre_anomaly") + 1)
+        state.message(character, services.translate("The NRE recorder emits a sharp beep!"), "info")
+    end
+end)
+ccb.runtime.on("game:character_kills_monster", "nre_anomaly_kill")
+
+local function weather()
+    return services.weather.current().weather.value
+end
+
+local function awake()
+    local current = weather()
+    return current == "portal_storm" or current == "distant_portal_storm" or current == "close_portal_storm"
+end
+
+local function schedule()
+    ccb.tasks.after_avatar_turn(300, "nre_storm_record_due")
+    persistent.set("nre_storm_record_timer", "scheduled")
+end
+
+local function wake()
+    if persistent.get("nre_storm_record_timer") == "dormant" and awake() then schedule() end
+end
+
+ccb.runtime.handler("nre_storm_record_due", function(payload)
+    local character = payload.character
+    local current = weather()
+    local eligible = current == "portal_storm"
+        or (current == "distant_portal_storm" and services.random.native_int(0, 11) == 0)
+        or current == "close_portal_storm"
+    local recorded = eligible and M.has_recorder(character) and state.checked(services.creatures.snapshot(character)).outside
+    if recorded then
+        local count = travel.number(character, "portal_storm_record") + 1
+        travel.set(character, "portal_storm_record", count)
+        if count >= 25 then
+            state.message(character, services.translate("The NRE recorder emits a three beep sequence!"), "info")
+        elseif count >= 3 then
+            state.message(character, services.translate("The NRE recorder emits a two beep sequence!"), "info")
+        elseif count >= 1 then
+            state.message(character, services.translate("The NRE recorder emits a sharp beep!"), "info")
+        end
+    end
+    if recorded or awake() then schedule() else persistent.set("nre_storm_record_timer", "dormant") end
+end)
+
+ccb.runtime.handler("nre_storm_record_ready", function(event)
+    if event.actors.character.subtype ~= "avatar" then return end
+    if ccb.tasks.has_avatar_turn("nre_storm_record_due") then
+        persistent.set("nre_storm_record_timer", "scheduled")
+    elseif event.new_character then
+        schedule()
+    else
+        persistent.set("nre_storm_record_timer", "dormant")
+        wake()
+    end
+end)
+ccb.runtime.on("character_ready", "nre_storm_record_ready")
+ccb.runtime.handler("nre_storm_record_weather", wake)
+ccb.runtime.hook("on_weather_changed", "nre_storm_record_weather")
+ccb.runtime.handler("nre_storm_record_conditions", function(event)
+    if event.actors.character.subtype == "avatar" then wake() end
+end)
+ccb.runtime.on("character_conditions_changed", "nre_storm_record_conditions")
+
+return M

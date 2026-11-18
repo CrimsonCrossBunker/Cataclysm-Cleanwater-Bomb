@@ -161,6 +161,8 @@ require("portal_active_effects")
 
 require("portal_passive_effects")
 
+require("nre_recorder")
+
 require("highland_incense_content")
 
 require("highland_incense")
