@@ -29,26 +29,6 @@
     "melee_damage": { "bash": 30 }
   },
   {
-    "id": "louverture",
-    "copy-from": "mace",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str_sp": "the Louverture" },
-    "description": "An oddly-vented mace with an internal fuel reservoir built into the pommel.  Can be engaged to ignite large puffs of gasoline and start fires.",
-    "proportional": { "weight": 1.2, "volume": 1.1 },
-    "charges_per_use": 100,
-    "extend": { "flags": [ "FIRESTARTER" ] },
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "watertight": true, "ammo_restriction": { "gasoline": 500 } } ],
-    "use_action": {
-      "type": "cast_spell",
-      "spell_id": "bring_the_sun",
-      "no_fail": true,
-      "level": 1,
-      "need_wielding": true,
-      "mundane": true
-    }
-  },
-  {
     "id": "bring_the_sun",
     "type": "SPELL",
     "name": { "str": "Ignite Gasoline" },
