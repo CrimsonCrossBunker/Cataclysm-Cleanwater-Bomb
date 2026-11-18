@@ -21,30 +21,6 @@
     "extend": { "flags": [ "ALLOWS_REMOTE_USE", "PSEUDO" ] }
   },
   {
-    "id": "spinwheelitem",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "spinning wheel" }
-  },
-  {
-    "id": "scutcheritem",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "stationary scutcher" }
-  },
-  {
-    "id": "fake_burrowing",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str_sp": "teeth and claws" },
-    "extend": { "flags": [ "TRADER_AVOID" ] },
-    "use_action": [ "DIG" ],
-    "qualities": [ [ "DIG", 2 ] ]
-  },
-  {
     "id": "internal_mp3_music",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
@@ -172,117 +148,6 @@
     "flags": [ "INTEGRATED", "UNBREAKABLE", "PERSONAL", "NO_REPAIR", "ALLOWS_NATURAL_ATTACKS", "DIMENSIONAL_ANCHOR", "SPAWN_ACTIVE" ]
   },
   {
-    "id": "fake_goggles",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str_sp": "bionic goggles" },
-    "qualities": [ [ "GLARE", 1 ] ]
-  },
-  {
-    "id": "bio_scalpel",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str_sp": "autonomous surgical scalpels" },
-    "description": "A system of surgical-grade scalpels.  They allow you to make precise cuts on corpses.",
-    "techniques": [ "PRECISE" ],
-    "extend": { "flags": [ "TRADER_AVOID", "BIONIC_WEAPON", "UNBREAKABLE_MELEE", "SPEAR" ] },
-    "qualities": [ [ "CUT", 2 ], [ "CUT_FINE", 5 ], [ "BUTCHER", 14 ] ],
-    "to_hit": { "grip": "weapon", "length": "hand", "surface": "point", "balance": "neutral" },
-    "melee_damage": { "stab": 8 }
-  },
-  {
-    "id": "fake_razor",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "bionic razor" },
-    "qualities": [ [ "BUTCHER", 8 ], [ "CUT", 1 ] ]
-  },
-  {
-    "id": "fake_sharp_metal_wreckage",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "sharp piece of wreckage" },
-    "qualities": [ [ "CUT", 1 ] ]
-  },
-  {
-    "id": "boulder_anvil",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "fake_item",
-    "name": { "str": "boulder anvil" },
-    "qualities": [ [ "ANVIL", 1 ] ]
-  },
-  {
-    "id": "fake_anvil",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "fake_item",
-    "name": { "str": "anvil" },
-    "qualities": [ [ "ANVIL", 3 ] ]
-  },
-  {
-    "id": "fake_anvil_heavy",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "fake_item",
-    "name": { "str": "heavy anvil" },
-    "qualities": [ [ "ANVIL", 4 ] ]
-  },
-  {
-    "id": "fake_firestarter",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "bionic firestarter" },
-    "extend": { "flags": [ "FIRESTARTER", "USES_BIONIC_POWER" ] }
-  },
-  {
-    "id": "fake_radio",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "bionic radio" },
-    "extend": { "flags": [ "TWO_WAY_RADIO", "USES_BIONIC_POWER" ] }
-  },
-  {
-    "id": "fake_tire_changer",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "tire changer" },
-    "extend": { "flags": [ "ALLOWS_REMOTE_USE", "PSEUDO" ] },
-    "qualities": [ [ "PRY", 1 ], [ "PRESSURIZATION", 1 ] ]
-  },
-  {
-    "id": "fake_power_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "fake_item",
-    "name": { "str": "fake power tool", "//~": "NO_I18N" },
-    "extend": { "flags": [ "ALLOWS_REMOTE_USE", "PSEUDO", "USE_UPS" ] },
-    "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "fake_arc_furnace",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "fake_power_tool",
-    "name": { "str": "arc furnace" }
-  },
-  {
-    "id": "fake_beverly_shear",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Beverly shear" },
-    "extend": { "flags": [ "ALLOWS_REMOTE_USE" ] },
-    "qualities": [ [ "SAW_M", 2 ] ]
-  },
-  {
     "abstract": "fake_appliance_tool",
     "name": { "str": "fake appliance tool", "//~": "NO_I18N" },
     "type": "ITEM",
@@ -331,58 +196,6 @@
     "charged_qualities": [ { "id": "TEMPER", "level": 2, "speed": 0.8 } ]
   },
   {
-    "id": "glassblowers_crucible_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "glassblower's crucible" },
-    "copy-from": "fake_appliance_tool",
-    "symbol": "o",
-    "color": "brown",
-    "extend": { "flags": [ "ALLOWS_REMOTE_USE" ] }
-  },
-  {
-    "id": "tablesaw_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "table saw" },
-    "copy-from": "fake_appliance_tool"
-  },
-  {
-    "id": "mitresaw_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "mitre saw" },
-    "copy-from": "fake_appliance_tool"
-  },
-  {
-    "id": "bandsaw_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "band saw" },
-    "copy-from": "fake_appliance_tool"
-  },
-  {
-    "id": "router_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "router" },
-    "copy-from": "fake_appliance_tool"
-  },
-  {
-    "id": "planer_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "planer" },
-    "copy-from": "fake_appliance_tool"
-  },
-  {
-    "id": "jointer_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "jointer" },
-    "copy-from": "fake_appliance_tool"
-  },
-  {
     "id": "catalytic_cracking_reactor_tool",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -393,13 +206,6 @@
     "charged_qualities": [ [ "EXTRACT", 3 ] ]
   },
   {
-    "id": "hydraulic_press_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "fake_appliance_tool",
-    "name": { "str": "hydraulic press", "str_pl": "hydraulic presses" }
-  },
-  {
     "id": "air_compressor_tool",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -407,79 +213,6 @@
     "name": { "str": "air compressor" },
     "charges_per_use": 50,
     "charged_qualities": [ [ "PRESSURIZATION", 2 ] ]
-  },
-  {
-    "id": "pseudo_exercise_machine",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "exercise machine" },
-    "copy-from": "fake_crafting_tool",
-    "material": [ "steel" ],
-    "symbol": "T",
-    "color": "dark_gray"
-  },
-  {
-    "id": "pseudo_punching_bag",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "heavy punching bag" },
-    "copy-from": "fake_crafting_tool",
-    "symbol": "0",
-    "color": "dark_gray"
-  },
-  {
-    "id": "pseudo_ergometer_mechanical",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "mechanical ergometer" },
-    "copy-from": "fake_crafting_tool",
-    "symbol": "5",
-    "color": "dark_gray"
-  },
-  {
-    "id": "pseudo_treadmill_mechanical",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "gravity treadmill" },
-    "copy-from": "fake_crafting_tool",
-    "symbol": "L",
-    "color": "dark_gray"
-  },
-  {
-    "id": "pseudo_training_dummy_light",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "training dummy", "str_pl": "training dummies" },
-    "copy-from": "fake_crafting_tool",
-    "symbol": "@",
-    "color": "brown"
-  },
-  {
-    "id": "pseudo_training_dummy_heavy",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "armored training dummy", "str_pl": "armored training dummies" },
-    "copy-from": "fake_crafting_tool",
-    "symbol": "@",
-    "color": "brown"
-  },
-  {
-    "id": "pseudo_archery_target_box",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "box archery target" },
-    "copy-from": "fake_crafting_tool",
-    "symbol": "@",
-    "color": "brown"
-  },
-  {
-    "id": "pseudo_archery_target_bale",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "bale archery target" },
-    "copy-from": "fake_crafting_tool",
-    "symbol": "@",
-    "color": "yellow"
   },
   {
     "id": "pseudo_magazine",
@@ -504,39 +237,6 @@
     "color": "red"
   },
   {
-    "id": "fake_lift_light",
-    "copy-from": "fake_crafting_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "light hoist" },
-    "qualities": [ [ "LIFT", 2 ], [ "ROPE", 2 ], [ "SUSPENDING", 2 ] ]
-  },
-  {
-    "id": "fake_lift_medium",
-    "copy-from": "fake_crafting_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "sturdy hoist" },
-    "qualities": [ [ "LIFT", 8 ], [ "ROPE", 2 ], [ "SUSPENDING", 2 ] ]
-  },
-  {
-    "id": "fake_lift_heavy",
-    "copy-from": "fake_crafting_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "heavy-duty hoist" },
-    "qualities": [ [ "LIFT", 40 ], [ "ROPE", 2 ], [ "SUSPENDING", 2 ] ]
-  },
-  {
-    "id": "pseudo_app_oxygen_concentrator",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "oxygen concentrator" },
-    "copy-from": "fake_crafting_tool",
-    "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "default_magazine": "pseudo_battery" } ],
-    "tool_ammo": [ "battery" ]
-  },
-  {
     "id": "pseudo_app_hd_compressor_unit",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -546,14 +246,6 @@
     "charges_per_use": 100,
     "charged_qualities": [ [ "PRESSURIZATION", 10 ] ],
     "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "concrete_mix_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "concrete mixer" },
-    "copy-from": "fake_appliance_tool",
-    "charges_per_use": 20
   },
   {
     "id": "fake_dynamite_50lbs",
@@ -581,14 +273,6 @@
     "melee_damage": { "bash": 4 }
   },
   {
-    "id": "fake_lathe",
-    "copy-from": "fake_appliance_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "lathe" },
-    "charges_per_use": 25
-  },
-  {
     "id": "fake_mill_vertical",
     "copy-from": "fake_appliance_tool",
     "type": "ITEM",
@@ -596,19 +280,5 @@
     "name": { "str": "vertical mill" },
     "charged_qualities": [ [ "DRILL", 3 ] ],
     "charges_per_use": 25
-  },
-  {
-    "id": "fake_deep_fryer",
-    "copy-from": "fake_appliance_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "deep fryer" }
-  },
-  {
-    "id": "fake_oil_press_industrial",
-    "copy-from": "fake_appliance_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "industrial oil press", "str_pl": "industrial oil presses" }
   }
 ]
