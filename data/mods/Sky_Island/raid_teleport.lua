@@ -4,24 +4,11 @@ local id = services.types.id
 local state = require("raid_state")
 local missions = require("raid_missions")
 local challenge = require("raid_challenge")
+local merchant_map = require("merchant_map")
 local M = {}
 
-local function remove_merchants()
-    for _, name in ipairs {
-        "nest_sky_island_exodii_merchant_remove",
-        "nest_sky_island_ammo_merchant_remove",
-        "nest_sky_island_triffid_decor_merchant_remove",
-        "nest_sky_island_merchants_itemt_remove",
-    } do
-        local target = state.checked(services.overmap.tile_token(
-            state.point("OM_island_n"):project_to("omt")))
-        local update = state.checked(services.mapgen.update_token(id("update_mapgen", name)))
-        state.checked(services.mapgen.run_update(target, update))
-    end
-end
-
 function M.dimension_shift(character)
-    if state.number("skyisland_merchant_stall") == 1 then remove_merchants() end
+    if state.number("skyisland_merchant_stall") == 1 then merchant_map.clear() end
     if not services.gameplay.mods.is_loaded("backrooms") then challenge.prepare(character) end
     services.gameplay.environment.clear_saved_dimension(state.string("sky_island_target_region_settings"))
     state.set("OM_HQ_origin", state.position(character))

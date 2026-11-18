@@ -2,6 +2,7 @@ local ccb = require("ccb")
 local services = ccb.services
 local state = require("raid_state")
 local challenge = require("raid_challenge")
+local merchant_map = require("merchant_map")
 local id = services.types.id
 local M = {}
 
@@ -101,19 +102,13 @@ local function materials(character)
     end
 end
 
-local merchant_updates = {
-    "nest_sky_island_exodii_merchant_add",
-    "nest_sky_island_human_ammo_merchant_add",
-    "nest_sky_island_triffid_decor_merchant_add",
-}
-
 local function merchants(character)
     if not (services.random.native_int(0, 6) == 0
         or state.checked(services.effects.has(character, id("effect", "effect_sky_island_merchant_attraction")))) then
         return
     end
     local choice = services.random.weighted_index { 1, 1, 1 }
-    update_map(state.point("OM_island_n"), merchant_updates[choice])
+    merchant_map.place(choice)
     state.message(character, ccb.services.translate("As you return to the island, you notice the trade stall in the north has an occupant."), "good")
     state.checked(services.effects.remove(character, id("effect", "effect_sky_island_merchant_attraction")))
 end
