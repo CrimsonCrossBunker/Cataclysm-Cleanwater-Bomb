@@ -11,3 +11,5 @@ require("inline_enchantment_values")
 require("xp_progression")
 
 require("sidebar_extensions")
+
+require("effect_types")
