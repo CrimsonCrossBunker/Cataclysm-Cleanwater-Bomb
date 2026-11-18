@@ -88,3 +88,55 @@ do
     }
     content.add(item)
 end
+
+do
+    -- intended fields: use_action (transform to primed grenade); name; description
+    -- NO_I18N
+    -- NO_I18N
+    local item = content.Item {
+        id = "abstract_gas_bomb_inactive",
+        abstract = true,
+        category = "weapons",
+        looks_like = "smokebomb",
+        name = content.plural_text("gas grenade", "gas grenades"),
+        description = content.text("A canister grenade filled with a variety of chemicals."),
+        mass_milligrams = 431000,
+        volume_ml = 459,
+        longest_side_mm = 158,
+        price_cents = 500,
+        price_postapoc_cents = 500,
+        symbol = "*",
+        color = "dark_gray",
+    }
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("RADIO_MODABLE")
+    item:flag("RADIO_INVOKE_PROC")
+    item:flag("BOMB")
+    item:flag("GRENADE")
+    item:flag("CYLINDER_GRENADE")
+    content.add(item)
+end
+
+do
+    -- intended fields: revert_to active grenade; name
+    local item = content.Item {
+        id = "abstract_gas_bomb_primed",
+        abstract = true,
+        copy_from = "abstract_gas_bomb_inactive",
+        description = ccb.content.text("This grenade has had its pin removed and will shortly be expelling highly toxic gas."),
+        looks_like = "smokebomb_act",
+        price_cents = 0,
+        price_postapoc_cents = 0,
+        countdown_turns = 5,
+    }
+    item:clear_use_actions()
+    item:message_on_use {
+        message = ccb.content.text("You've already pulled the pin, try throwing it instead."),
+        menu_text = ccb.content.text("Pull pin"),
+    }
+    item:clear_flags()
+    item:flag("DANGEROUS")
+    item:flag("SPAWN_ACTIVE")
+    content.add(item)
+end

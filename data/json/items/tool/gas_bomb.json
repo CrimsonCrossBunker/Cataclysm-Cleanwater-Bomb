@@ -1,36 +1,5 @@
 [
   {
-    "abstract": "abstract_gas_bomb_inactive",
-    "type": "ITEM",
-    "category": "weapons",
-    "looks_like": "smokebomb",
-    "name": { "str": "gas grenade", "//~": "NO_I18N" },
-    "description": { "str": "A canister grenade filled with a variety of chemicals.", "//~": "NO_I18N" },
-    "weight": "431 g",
-    "volume": "459 ml",
-    "longest_side": "158 mm",
-    "price": "5 USD",
-    "price_postapoc": "5 USD",
-    "material": [ "steel" ],
-    "symbol": "*",
-    "color": "dark_gray",
-    "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE", "CYLINDER_GRENADE" ],
-    "//": "intended fields: use_action (transform to primed grenade); name; description"
-  },
-  {
-    "abstract": "abstract_gas_bomb_primed",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_inactive",
-    "description": "This grenade has had its pin removed and will shortly be expelling highly toxic gas.",
-    "looks_like": "smokebomb_act",
-    "price": "0 USD",
-    "price_postapoc": "0 USD",
-    "use_action": { "type": "message", "message": "You've already pulled the pin, try throwing it instead.", "name": "Pull pin" },
-    "countdown_interval": "5 seconds",
-    "flags": [ "DANGEROUS", "SPAWN_ACTIVE" ],
-    "//": "intended fields: revert_to active grenade; name"
-  },
-  {
     "id": "tool_rocket_candy",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
