@@ -151,24 +151,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_PORTAL_EFFECTS_CENTER",
-    "recurrence": [ "45 seconds", "1 minutes" ],
-    "global": true,
-    "condition": {
-      "and": [
-        { "is_weather": "portal_storm" },
-        { "math": [ "portal_dungeon_level == 0" ] },
-        "u_is_outside",
-        { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_PORTAL_PROOF" },
-        { "math": [ "talked_to_storm != 1" ] },
-        { "x_in_y_chance": { "x": 7, "y": 10 } }
-      ]
-    },
-    "deactivate_condition": { "not": { "is_weather": "portal_storm" } },
-    "effect": [ { "open_dialogue": { "topic": "TALK_PORTAL_STORM" } }, { "math": [ "talked_to_storm = 1" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_PORTAL_TELEPORT_STUCK_START",
     "condition": { "and": [ { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_PORTAL_PROOF" }, { "not": "u_driving" } ] },
     "effect": [
@@ -305,110 +287,6 @@
         "key": "portal_dungeon_entrance"
       },
       { "mapgen_update": "portal_dungeon_entrance", "target_var": { "global_val": "portal_dungeon" } }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_STORM_DUNGEON",
-    "effect": [
-      { "u_location_variable": { "global_val": "portal_dungeon_original_loc" } },
-      {
-        "set_string_var": [ "Somewhere", "Nowhere", "Everywhere", "Yesterday", "Tomorrow" ],
-        "target_var": { "global_val": "place_name" },
-        "i18n": true
-      },
-      {
-        "place_override": { "global_val": "place_name", "default": "Error" },
-        "key": "portal_dungeon",
-        "length": "infinite"
-      },
-      { "u_add_effect": "blind", "duration": 0 },
-      { "u_add_effect": "effect_temporary_levitation", "duration": 0 },
-      {
-        "u_travel_to_dimension": "portal_storm_dungeon_dimension",
-        "npc_travel_radius": 0,
-        "npc_travel_filter": "none",
-        "fail_message": "Nothing seems to change.",
-        "success_message": "The screaming rage of the portal storm folds in upon itself."
-      },
-      { "u_location_variable": { "context_val": "make_sure_were_at_level_0" }, "z_adjust": 0, "z_override": true },
-      { "u_teleport": { "context_val": "make_sure_were_at_level_0" } },
-      {
-        "if": { "u_is_on_terrain": "t_open_air" },
-        "then": [
-          {
-            "u_location_variable": { "context_val": "portal_storm_dungeon_teleportation" },
-            "target_params": { "om_terrain": "default_portal_storm_dungeon_overmap", "min_distance": 1, "search_range": 10, "random": true },
-            "target_max_radius": 24,
-            "terrain": "t_floor_warped"
-          },
-          { "u_teleport": { "context_val": "portal_storm_dungeon_teleportation" } }
-        ]
-      },
-      { "math": [ "portal_dungeon_level = 1" ] },
-      { "math": [ "visited_a_portal_dungeon = 1" ] },
-      { "u_message": "You are trapped in <global_val:place_name>!" },
-      { "u_spawn_item": "item_portal_storm_dimension_returner", "suppress_message": true, "force_equip": true },
-      { "u_add_effect": "effect_portal_storm_dungeon_time_tracker", "duration": "2 days" },
-      { "u_message": { "global_val": "portal_storm_voice_mood", "default": "none" }, "snippet": true },
-      {
-        "u_message": "You can faintly feel the real world, somewhere in a direction you couldn't name, a fragment of reality in this unearthly place.  With enough effort, you could follow the trail back to the world you left behind.",
-        "type": "info"
-      },
-      { "run_eocs": "EOC_PORTAL_STORM_DUNGEON_CRAWLING_TRACKER", "time_in_future": 60 }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_STORM_DUNGEON_CRAWLING_TRACKER",
-    "condition": { "current_dimension": "portal_storm_dungeon_dimension" },
-    "effect": [
-      {
-        "switch": { "math": [ "u_effect_intensity('effect_portal_storm_dungeon_time_tracker')" ] },
-        "cases": [
-          {
-            "case": 0,
-            "effect": {
-              "u_spawn_monster": "mon_pale_reflection",
-              "real_count": 1,
-              "min_radius": 10,
-              "max_radius": 24,
-              "spawn_message": "Something your mind can't fully parse appears, despite the distance and obstacles you know where it is.  You can feel its presence as if it was a part of you."
-            }
-          },
-          {
-            "case": 5,
-            "effect": {
-              "u_spawn_monster": "mon_twisted_reflection",
-              "real_count": 1,
-              "min_radius": 10,
-              "max_radius": 24,
-              "spawn_message": "Something your mind can't fully parse appears, despite the distance and obstacles you know where it is.  You can feel its presence as if it was a part of you."
-            }
-          },
-          {
-            "case": 10,
-            "effect": {
-              "u_spawn_monster": "mon_dark_reflection",
-              "real_count": 1,
-              "min_radius": 10,
-              "max_radius": 24,
-              "spawn_message": "Something your mind can't fully parse appears, despite the distance and obstacles you know where it is.  You can feel its presence as if it was a part of you."
-            }
-          },
-          {
-            "case": 15,
-            "effect": {
-              "u_spawn_monster": "mon_better_half",
-              "real_count": 1,
-              "min_radius": 10,
-              "max_radius": 24,
-              "spawn_message": "Something your mind can't fully parse appears, despite the distance and obstacles you know where it is.  You can feel its presence as if it was a part of you."
-            }
-          }
-        ]
-      },
-      { "run_eocs": "EOC_PORTAL_STORM_DUNGEON_CRAWLING_TRACKER", "time_in_future": 120 }
     ]
   },
   {

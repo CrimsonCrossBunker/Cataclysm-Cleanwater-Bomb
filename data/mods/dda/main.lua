@@ -163,6 +163,10 @@ require("portal_passive_effects")
 
 require("nre_recorder")
 
+require("portal_storm_dungeon")
+
+require("portal_storm_dialogue")
+
 require("highland_incense_content")
 
 require("highland_incense")

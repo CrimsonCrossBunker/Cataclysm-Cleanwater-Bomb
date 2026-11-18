@@ -129,6 +129,20 @@ local effects = {
 
 local timers = {
     {
+        handler = "portal_center_dialogue_due", key = "portal_center_dialogue_timer", minimum = 45, maximum = 60,
+        awake = function() return weather() == "portal_storm" end,
+        eligible = function(character)
+            return weather() == "portal_storm" and state.number("portal_dungeon_level") == 0
+                and state.checked(services.creatures.snapshot(character)).outside
+                and not state.checked(services.inventory.has_worn_flag(character, id("json_flag", "PORTAL_PROOF")))
+                and state.number("talked_to_storm") ~= 1 and services.random.native_probability(7, 10)
+        end,
+        effect = function(character)
+            state.checked(services.characters.open_topic(character, "TALK_PORTAL_STORM"))
+            state.set("talked_to_storm", 1)
+        end,
+    },
+    {
         handler = "portal_passive_effects_due", key = "portal_passive_effects_timer", minimum = 20, maximum = 55,
         awake = function() return weather() == "portal_storm" end,
         eligible = function() return occurrence(5, 8) end,
