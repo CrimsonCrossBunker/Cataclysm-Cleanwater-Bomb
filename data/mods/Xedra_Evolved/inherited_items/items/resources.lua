@@ -60,3 +60,33 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- 2 days
+    local item = content.Item {
+        id = "tanning_glimmer_pelt",
+        category = "spare_parts",
+        name = ccb.content.plural_text("tanning glimmer fur pelt", "tanning glimmer fur pelts"),
+        description = ccb.content.text("A treated fae animal pelt that is undergoing the chemical processes required to become fur.  You will be able to activate it to unroll and make use of it when it is done."),
+        mass_milligrams = 684000,
+        volume_ml = 1000,
+        price_cents = 0,
+        price_postapoc_cents = 0,
+        symbol = ",",
+        color = "brown",
+    }
+    item:material("fur", 1)
+    item:material("flesh", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "tanned_glimmer_pelt" },
+        message = ccb.content.text("You carefully unfold the tanning fae fur pelt and shake it clean."),
+        moves = 150,
+        minimum_age_turns = 28800,
+        not_ready_message = ccb.content.text("The tanning fae fur pelt isn't done yet."),
+    }
+    item:clear_flags()
+    item:flag("NO_SALVAGE")
+    item:tool()
+    content.add(item)
+end
