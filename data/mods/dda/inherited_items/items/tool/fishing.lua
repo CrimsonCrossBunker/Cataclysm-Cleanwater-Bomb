@@ -110,3 +110,130 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- 7 lead subst. for 8 bismuth, which doesn't have its own material
+    local item = content.Item {
+        id = "fishing_rod_2pc_packed",
+        name = ccb.content.plural_text("two-piece fishing rod (packed)", "two-piece fishing rods (packed)"),
+        description = ccb.content.text("A commercial two-piece fishing rod that has been disassembled for ease of transport and storage."),
+        mass_milligrams = 1050000,
+        volume_ml = 1300,
+        longest_side_mm = 1000,
+        price_cents = 22000,
+        price_postapoc_cents = 1600,
+        melee_to_hit = 0,
+        symbol = "/",
+        color = "blue",
+        looks_like = "PR24-extended",
+    }
+    item:material("lead", 7)
+    item:material("steel", 4)
+    item:material("cotton", 4)
+    item:material("fiberglass", 4)
+    item:clear_flags()
+    item:flag("SHEATH_SPEAR")
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "fishing_rod_2pc" },
+        menu_text = ccb.content.text("Assemble"),
+        message = ccb.content.text("You put together your two-piece fishing rod."),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "fishing_rod_2pc",
+        copy_from = "fishing_rod_2pc_packed",
+        name = ccb.content.plural_text("two-piece fishing rod", "two-piece fishing rods"),
+        description = ccb.content.text("A commercial two-piece fishing rod, assembled and ready for use."),
+        volume_ml = 1250,
+        longest_side_mm = 1900,
+        melee_to_hit = 1,
+        replace_qualities = true,
+        looks_like = "fishing_rod_professional",
+    }
+    item:quality("FISHING_ROD", 2)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "fishing_rod_2pc_packed" },
+        menu_text = ccb.content.text("Disassemble"),
+        message = ccb.content.text("You take apart your two-piece fishing rod."),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 5)
+    item:melee_damage("cut", 1)
+    item:flag("FRAGILE_MELEE")
+    item:flag("SHEATH_SPEAR")
+    item:flag("REACH_ATTACK")
+    item:tool()
+    content.add(item)
+end
+
+do
+    -- 7 lead subst. for 8 bismuth, which doesn't have its own material
+    local item = content.Item {
+        id = "fishing_rod_tele_packed",
+        name = ccb.content.plural_text("telescoping fishing rod (packed)", "telescoping fishing rods (packed)"),
+        description = ccb.content.text("A commercial telescoping fishing rod that has been retracted for ease of transport and storage."),
+        mass_milligrams = 1150000,
+        volume_ml = 600,
+        longest_side_mm = 500,
+        price_cents = 25000,
+        price_postapoc_cents = 1750,
+        melee_to_hit = 0,
+        symbol = "/",
+        color = "dark_gray",
+        looks_like = "PR24-retracted",
+    }
+    item:material("lead", 7)
+    item:material("steel", 5)
+    item:material("cotton", 4)
+    item:material("fiberglass", 4)
+    item:clear_flags()
+    item:flag("BELT_CLIP")
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "fishing_rod_tele" },
+        menu_text = ccb.content.text("Extend"),
+        message = ccb.content.text("You extend your telescoping fishing rod."),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "fishing_rod_tele",
+        copy_from = "fishing_rod_tele_packed",
+        name = ccb.content.plural_text("telescoping fishing rod", "telescoping fishing rods"),
+        description = ccb.content.text("A commercial telescoping fishing rod, extended and ready for use."),
+        volume_ml = 1300,
+        longest_side_mm = 2100,
+        melee_to_hit = 1,
+        replace_qualities = true,
+        looks_like = "fishing_rod_professional",
+    }
+    item:quality("FISHING_ROD", 2)
+    item:clear_flags()
+    item:flag("SHEATH_SPEAR")
+    item:flag("FRAGILE_MELEE")
+    item:flag("REACH_ATTACK")
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "fishing_rod_tele_packed" },
+        menu_text = ccb.content.text("Retract"),
+        message = ccb.content.text("You retract your telescoping fishing rod."),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 5)
+    item:melee_damage("cut", 1)
+    item:tool()
+    content.add(item)
+end
