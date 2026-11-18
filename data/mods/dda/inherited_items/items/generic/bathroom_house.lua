@@ -392,3 +392,29 @@ do
     }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "hair_dryer",
+        name = ccb.content.plural_text("hair dryer", "hair dryers"),
+        description = ccb.content.text("This tool dries your hair by pushing air through a coil of hot wires.  The heat can be toggled on and off."),
+        symbol = "(",
+        color = "dark_gray",
+        price_cents = 2100,
+        price_postapoc_cents = 0,
+        volume_ml = 500,
+        mass_milligrams = 680000,
+        melee_to_hit = -3,
+        charged_qualities = { { id = "WINNOW", level = 1 }, { id = "BLOW_HOT_AIR", level = 1 } },
+    }
+    item:material("plastic", 1)
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 1500000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:tool { charges_per_use = 35, ammo_types = { "battery" } }
+    content.add(item)
+end
