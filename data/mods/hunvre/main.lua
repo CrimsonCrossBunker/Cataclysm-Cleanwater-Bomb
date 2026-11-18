@@ -24,3 +24,5 @@ require("weather_generators")
 require("weather_types")
 
 require("scenario_filters")
+
+require("overmap_locations")

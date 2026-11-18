@@ -154,3 +154,5 @@ content.add(definition)
 require("requirements")
 
 require("weather_generators")
+
+require("overmap_locations")

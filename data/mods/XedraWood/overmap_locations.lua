@@ -1,0 +1,6 @@
+local content = require("ccb").content
+
+content.add(content.OvermapLocation {
+    id = "river_bank",
+    terrains = { "river_ne", "river_se", "river_sw", "river_nw", "river" },
+})

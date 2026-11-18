@@ -4412,9 +4412,22 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<overmap_location_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        return overmap_location_definition_handle{
-            std::move( definition ), transaction->token
+        overmap_location_definition_handle handle{ std::move( definition ), transaction->token };
+        const auto read_list = [&options, &handle]( const char *key, auto add ) {
+            const sol::object option = options.raw_get<sol::object>( key );
+            if( !option.valid() || option.get_type() == sol::type::nil ) {
+                return;
+            }
+            const sol::table entries = option.as<sol::table>();
+            const std::size_t count = require_dense_array( entries, key, 0,
+                                      std::numeric_limits<std::size_t>::max() );
+            for( std::size_t i = 1; i <= count; ++i ) {
+                ( handle.*add )( entries.raw_get<std::string>( i ) );
+            }
         };
+        read_list( "terrains", &overmap_location_definition_handle::terrain );
+        read_list( "flags", &overmap_location_definition_handle::terrain_flag );
+        return handle;
     } );
     content.set_function( "MapExtraCollection", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {

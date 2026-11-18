@@ -1,10 +1,5 @@
 [
   {
-    "type": "overmap_location",
-    "id": "backfloorchamber",
-    "terrains": [ "backfloorchamber" ]
-  },
-  {
     "type": "overmap_terrain",
     "id": "backfloorchamber",
     "name": "backroom chamber",

@@ -5,11 +5,6 @@
     "subtypes": [ { "terrain": "road", "locations": [ "space" ], "basic_cost": 0 } ]
   },
   {
-    "type": "overmap_location",
-    "id": "space",
-    "terrains": [ "outer_space" ]
-  },
-  {
     "type": "overmap_terrain",
     "id": "outer_space",
     "vision_levels": "large_building",

@@ -2359,6 +2359,8 @@ function OvermapVisionDefinition:blend_adjacent() end
 
 ---@class OvermapLocationDefinitionOptions
 ---@field id string Stable overmap-location predicate id.
+---@field terrains? string[] Native terrain-type IDs accepted by this location.
+---@field flags? string[] Native terrain flags accepted by this location.
 
 ---@class OvermapLocationDefinition
 ---@field id string

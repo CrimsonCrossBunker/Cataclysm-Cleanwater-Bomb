@@ -9,3 +9,5 @@ require("weather_generators")
 require("portal_storm_cycle")
 
 require("scenario_filters")
+
+require("overmap_locations")

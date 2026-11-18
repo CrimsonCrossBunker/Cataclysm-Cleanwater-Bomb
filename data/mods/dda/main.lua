@@ -186,3 +186,5 @@ require("scenario_filters")
 require("construction_categories")
 require("construction_groups")
 require("vehicle_part_categories")
+
+require("overmap_locations")

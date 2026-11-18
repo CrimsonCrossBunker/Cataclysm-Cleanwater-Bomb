@@ -47,11 +47,6 @@
     "flags": [ "NO_ROTATE" ]
   },
   {
-    "type": "overmap_location",
-    "id": "netherum_labyrinth_sparkling_chasm",
-    "terrains": [ "netherum_labyrinth_sparkling_chasm" ]
-  },
-  {
     "type": "overmap_terrain",
     "name": "home away from home",
     "id": "labyrinth_safehouse",
@@ -130,10 +125,5 @@
     "see_cost": "high",
     "travel_cost_type": "impassable",
     "flags": [ "NO_ROTATE" ]
-  },
-  {
-    "type": "overmap_location",
-    "id": "labyrinth2",
-    "terrains": [ "labyrinth2" ]
   }
 ]

@@ -11,11 +11,6 @@
     "see_cost": "all_clear"
   },
   {
-    "type": "overmap_location",
-    "id": "string_dimension_crossroads",
-    "terrains": [ "string_dimension_crossroads" ]
-  },
-  {
     "type": "overmap_terrain",
     "id": [ "string_dimension_void" ],
     "flags": [ "NO_ROTATE" ],
@@ -34,11 +29,6 @@
     "sym": " ",
     "color": "black",
     "see_cost": "opaque"
-  },
-  {
-    "type": "overmap_location",
-    "id": "string_dimension_true_void",
-    "terrains": [ "string_dimension_true_void" ]
   },
   {
     "type": "overmap_terrain",

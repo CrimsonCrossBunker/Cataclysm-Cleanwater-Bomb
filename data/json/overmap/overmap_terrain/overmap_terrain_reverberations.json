@@ -36,11 +36,6 @@
     "see_cost": "all_clear"
   },
   {
-    "type": "overmap_location",
-    "id": "inner_cabins",
-    "terrains": [ "inner_cabins" ]
-  },
-  {
     "type": "overmap_terrain",
     "id": [ "inner_cabins_cabin" ],
     "name": "cabin",

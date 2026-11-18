@@ -1,0 +1,67 @@
+local content = require("ccb").content
+
+content.add(content.OvermapLocation {
+    id = "mesa",
+    terrains = {
+        "mesa",
+        "mesa_edge_v1",
+        "mesa_corner_v1",
+        "mesa_2way_v1",
+        "mesa_3way_v1",
+        "mesa_edge_top_v1",
+        "mesa_corner_top_v1",
+        "mesa_2way_top_v1",
+        "mesa_3way_top_v1",
+        "mesa_edge_v2",
+        "mesa_corner_v2",
+        "mesa_2way_v2",
+        "mesa_3way_v2",
+        "mesa_edge_top_v2",
+        "mesa_corner_top_v2",
+        "mesa_2way_top_v2",
+        "mesa_3way_top_v2",
+    },
+})
+
+content.replace(content.OvermapLocation {
+    id = "land",
+    terrains = { "forest", "forest_thick", "forest_water", "field", "forest_trail" },
+})
+
+content.replace(content.OvermapLocation {
+    id = "wilderness",
+    terrains = { "forest", "forest_thick", "field", "forest_trail" },
+})
+
+content.replace(content.OvermapLocation {
+    id = "subterranean_empty",
+    terrains = { "deep_rock", "sandstone", "empty_rock", "solid_earth" },
+})
+
+content.add(content.OvermapLocation {
+    id = "canyon",
+    terrains = {
+        "canyon_2way_ground",
+        "canyon_3way_ground",
+        "canyon_edge_ground",
+        "canyon_corner_ground",
+        "canyon_2way",
+        "canyon_3way",
+        "canyon_edge",
+        "canyon_corner",
+        "canyon_2way_bottom",
+        "canyon_3way_bottom",
+        "canyon_edge_bottom",
+        "canyon_corner_bottom",
+    },
+})
+
+content.replace(content.OvermapLocation {
+    id = "subterranean",
+    terrains = { "empty_rock", "sandstone", "sewer", "solid_earth" },
+})
+
+content.replace(content.OvermapLocation {
+    id = "subterranean_subway",
+    terrains = { "empty_rock", "sandstone", "subway" },
+})
