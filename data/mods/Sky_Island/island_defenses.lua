@@ -26,8 +26,8 @@ end)
 do
     local spell = content.Spell {
         id = "island_hostile_eviction",
-        name = content.text("Evict Hostile"),
-        description = content.text("Designate a hostile for the island to banish.  Only works on the island."),
+        name = ccb.content.text("Evict Hostile"),
+        description = ccb.content.text("Designate a hostile for the island to banish.  Only works on the island."),
         teachable = false,
         valid_targets = { "hostile" },
         spell_class = "NONE",
@@ -46,8 +46,8 @@ end
 do
     local spell = content.Spell {
         id = "island_close_tear_and_portal",
-        name = content.text("Close Breach"),
-        description = content.text("Designate a tear in reality or a portal for the island to close.  Only works on the island."),
+        name = ccb.content.text("Close Breach"),
+        description = ccb.content.text("Designate a tear in reality or a portal for the island to close.  Only works on the island."),
         teachable = false,
         valid_targets = { "ground" },
         spell_class = "NONE",
@@ -69,10 +69,10 @@ end
 local transform = content.TerrainTransform { id = "ter_close_tears_and_portals" }
 transform:field {
     inputs = { "fd_fatigue" }, results = { { "fd_null", 1 } },
-    message = content.text("The tear in reality vanishes in a shower of sparks!"),
+    message = ccb.content.text("The tear in reality vanishes in a shower of sparks!"),
 }
 transform:trap {
     inputs = { "tr_portal" }, results = { { "tr_glass", 1 } },
-    message = content.text("Sparks appear across the portal and it shatters into shards of glass!"),
+    message = ccb.content.text("Sparks appear across the portal and it shatters into shards of glass!"),
 }
 content.add(transform)

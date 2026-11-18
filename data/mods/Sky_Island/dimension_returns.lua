@@ -20,9 +20,9 @@ ccb.runtime.handler("portal_dungeon_return_transport", function(character)
     if not away then options = { npc_travel_radius = 0, npc_travel_filter = "none", item_travel_radius = -1 } end
     local result = state.checked(services.relocation.travel_to_dimension(target, options))
     local success = away
-        and services.translate("The shifting halls warp and fold on themselves and turn inside out, revealing the world below.")
-        or services.translate("The shifting halls warp and fold on themselves and turn inside out, revealing your island in the sky.")
-    state.message(character, result.accepted and success or services.translate("You feel a prickle at the edge of your senses."))
+        and ccb.services.translate("The shifting halls warp and fold on themselves and turn inside out, revealing the world below.")
+        or ccb.services.translate("The shifting halls warp and fold on themselves and turn inside out, revealing your island in the sky.")
+    state.message(character, result.accepted and success or ccb.services.translate("You feel a prickle at the edge of your senses."))
 end)
 
 local function unanchored(character)
@@ -39,7 +39,7 @@ local function schedule(character, dimension, minimum, maximum)
 end
 
 local function push(character)
-    state.message(character, services.translate("You feel a slight push in a direction you can't name, but soon it ceases.  You have a feeling it'll happen again later."))
+    state.message(character, ccb.services.translate("You feel a slight push in a direction you can't name, but soon it ceases.  You have a feeling it'll happen again later."))
 end
 
 ccb.runtime.handler("portal_highlands_return", function(character)
@@ -47,7 +47,7 @@ ccb.runtime.handler("portal_highlands_return", function(character)
         returning.home(character)
         state.checked(services.achievements.complete(id("achievement", "achievement_reach_highlands")))
     elseif environment.dimension() == "highlands" then
-        state.message(character, services.translate("You feel a prickle at the edge of your senses."))
+        state.message(character, ccb.services.translate("You feel a prickle at the edge of your senses."))
         schedule(character, "highlands", 36 * 3600, 60 * 3600)
     end
 end)
@@ -78,7 +78,7 @@ ccb.runtime.handler("portal_string_dimension_return", function(character)
         state.checked(services.world.reschedule_events("string_dimension_lights_on", services.time.duration(0, "turn")))
         state.checked(services.achievements.complete(id("achievement", "achievement_reach_string_dimension")))
     elseif environment.dimension() == "string_dimension" then
-        state.message(character, services.translate("You feel a prickle at the edge of your senses."))
+        state.message(character, ccb.services.translate("You feel a prickle at the edge of your senses."))
         schedule(character, "string_dimension", 2 * 60)
     end
 end)

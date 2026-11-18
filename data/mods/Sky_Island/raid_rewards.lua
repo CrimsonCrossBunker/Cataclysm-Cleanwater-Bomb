@@ -13,7 +13,7 @@ ccb.runtime.handler("sky_warp_shard_reward", function(payload)
     if state.number("challenge_mode_active") == 1 then
         state.set("totalbonus", state.number("totalbonus") * state.number("challenge_mode_reward_multiplier"))
     end
-    state.message(character, services.translate("You retrieved the warp shards from the statue."), "mixed")
+    state.message(character, ccb.services.translate("You retrieved the warp shards from the statue."), "mixed")
     sickness.bonus(character)
     local count = math.tointeger(math.modf(state.number("totalbonus", 1)))
     state.checked(services.inventory.receive_item(character, id("item", "warptoken"), count))
@@ -27,8 +27,8 @@ end)
 local function statue(name, description, handler)
     local definition = content.Furniture {
         id = name,
-        name = content.text("Warp Shard Obelisk"),
-        description = content.text(description),
+        name = ccb.content.text("Warp Shard Obelisk"),
+        description = ccb.content.text(description),
         color = "dark_gray", symbol = "S", looks_like = "f_statue",
         move_cost_mod = -1, required_str = -1, coverage = 0, transparent = true,
     }

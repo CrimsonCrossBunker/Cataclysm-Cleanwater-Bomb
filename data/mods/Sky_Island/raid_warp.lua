@@ -7,7 +7,7 @@ local M = {}
 
 function M.confirm(character)
     if character.subtype ~= "avatar" then return end
-    local question = services.translate("This will warp you home directly, bypassing the mission structure and need to find an exit point.  Do you want to warp home directly?")
+    local question = ccb.services.translate("This will warp you home directly, bypassing the mission structure and need to find an exit point.  Do you want to warp home directly?")
     if not services.interaction.confirm(state.text(character, question)) then return end
     state.checked(services.characters.cast_spell(character, id("spell", "warp_home_real")))
     if state.checked(services.inventory.has_items(character, id("item", "warp_skyward_beacon"), 1, 0)) then
@@ -35,9 +35,9 @@ ccb.runtime.handler("sky_warped_return_shard", function(impact)
     local character = impact.target_creature
     if not character then return end
     if not state.checked(services.inventory.has_items(character, id("item", "warptoken"), 1, 0)) then
-        state.message(character, services.translate("You have no warp shards!"), "bad")
+        state.message(character, ccb.services.translate("You have no warp shards!"), "bad")
     elseif not M.no_enemies(character) then
-        state.message(character, services.translate("You cannot warp home with enemies nearby!"), "bad")
+        state.message(character, ccb.services.translate("You cannot warp home with enemies nearby!"), "bad")
     else
         state.checked(services.inventory.consume_by_type(character, id("item", "warptoken"), 1, 0))
         M.confirm(character)

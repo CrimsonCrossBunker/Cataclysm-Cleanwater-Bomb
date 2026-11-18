@@ -4,12 +4,12 @@ local state = require("raid_state")
 local M = {}
 
 local warnings = {
-    { "horde", function() return services.translate("Something is different about this dimension.  It feels like everything is following you.") end },
-    { "city", function() return services.translate("Something is different about this dimension.  The city appears to never end.") end },
-    { "hot", function() return services.translate("Something is different about this dimension.  Everything feels hotter than it should be.") end },
-    { "cold", function() return services.translate("Something is different about this dimension.  Everything feels colder than it should be.") end },
-    { "short", function() return services.translate("Something is different about this dimension.  You feel that you have less time than normal.") end },
-    { "slow", function() return services.translate("Something is different about this dimension.  You're moving slower than normal.") end },
+    { "horde", function() return ccb.services.translate("Something is different about this dimension.  It feels like everything is following you.") end },
+    { "city", function() return ccb.services.translate("Something is different about this dimension.  The city appears to never end.") end },
+    { "hot", function() return ccb.services.translate("Something is different about this dimension.  Everything feels hotter than it should be.") end },
+    { "cold", function() return ccb.services.translate("Something is different about this dimension.  Everything feels colder than it should be.") end },
+    { "short", function() return ccb.services.translate("Something is different about this dimension.  You feel that you have less time than normal.") end },
+    { "slow", function() return ccb.services.translate("Something is different about this dimension.  You're moving slower than normal.") end },
 }
 
 for _, warning in ipairs(warnings) do
@@ -21,7 +21,7 @@ end
 
 local function signal_hordes(character)
     state.checked(services.hordes.broadcast_signal(state.position(character), 5000))
-    state.message(character, services.translate("Your skin itches, you can feel them closing in."), "bad")
+    state.message(character, ccb.services.translate("Your skin itches, you can feel them closing in."), "bad")
 end
 
 ccb.runtime.handler("sky_raid_horde_signal", function(payload)

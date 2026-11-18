@@ -2,7 +2,6 @@ local ccb = require("ccb")
 local content = ccb.content
 local services = ccb.services
 local state = require("raid_state")
-local text = content.text
 local handler_id = "sky_island_expedition_timer_condition"
 local home_terrain = { "sky_island_core", "sky_island_edge", "sky_island_corner" }
 
@@ -19,7 +18,7 @@ end
 local conditions = {}
 local timer = content.Widget {
     id = "sky_island_expedition_timer",
-    label = text("Expedition Timer"),
+    label = ccb.content.text("Expedition Timer"),
     style = "text",
 }
 
@@ -40,7 +39,7 @@ local function pulses_left_is(expected)
     end
 end
 
-clause("safe_at_home", text("HOME SAFE"), "light_blue", at_home)
+clause("safe_at_home", ccb.content.text("HOME SAFE"), "light_blue", at_home)
 clause("nine_left", ("+-"):rep(8) .. "+", "light_blue", elapsed_is(0))
 clause("eight_left", ("+-"):rep(7) .. "+", "green", function()
     return state.number("readablepulsesleft") >= 8
@@ -57,11 +56,11 @@ for _, row in ipairs {
     local id, pulses, color = table.unpack(row)
     clause(id, ("+-"):rep(pulses - 1) .. "+", color, pulses_left_is(pulses))
 end
-clause("over_deadline", text("DANGER"), "i_light_red", elapsed_is(9))
-clause("over_deadline_one", text("SEVERE DANGER"), "i_light_red", elapsed_is(10))
-clause("over_deadline_two", text("EXTREME DANGER"), "i_red", elapsed_is(11))
-clause("over_deadline_three", text("CATASTROPHIC DANGER"), "i_red", elapsed_is(12))
-clause("over_deadline_four", text("IMMINENT DEATH"), "i_red", function(character)
+clause("over_deadline", ccb.content.text("DANGER"), "i_light_red", elapsed_is(9))
+clause("over_deadline_one", ccb.content.text("SEVERE DANGER"), "i_light_red", elapsed_is(10))
+clause("over_deadline_two", ccb.content.text("EXTREME DANGER"), "i_red", elapsed_is(11))
+clause("over_deadline_three", ccb.content.text("CATASTROPHIC DANGER"), "i_red", elapsed_is(12))
+clause("over_deadline_four", ccb.content.text("IMMINENT DEATH"), "i_red", function(character)
     return state.checked(services.effects.has(character, services.types.id("effect", "warpdisintegration")))
 end)
 

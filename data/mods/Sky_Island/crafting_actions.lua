@@ -25,22 +25,22 @@ local function choose_water(character)
         end
     end
     return services.targeting.choose_adjacent_where_at(center,
-        services.translate("Select nearby water source"), "", candidates, false, true)
+        ccb.services.translate("Select nearby water source"), "", candidates, false, true)
 end
 
 local pond_locations = {
     { "northwest", -1, -1,
-        function() return services.translate("Northwest") end,
-        function() return services.translate("Place a pond in the northwest.") end },
+        function() return ccb.services.translate("Northwest") end,
+        function() return ccb.services.translate("Place a pond in the northwest.") end },
     { "northeast", 1, -1,
-        function() return services.translate("Northeast") end,
-        function() return services.translate("Place a pond in the northeast.") end },
+        function() return ccb.services.translate("Northeast") end,
+        function() return ccb.services.translate("Place a pond in the northeast.") end },
     { "southwest", -1, 1,
-        function() return services.translate("Southwest") end,
-        function() return services.translate("Place a pond in the southwest.") end },
+        function() return ccb.services.translate("Southwest") end,
+        function() return ccb.services.translate("Place a pond in the southwest.") end },
     { "southeast", 1, 1,
-        function() return services.translate("Southeast") end,
-        function() return services.translate("Place a pond in the southeast.") end },
+        function() return ccb.services.translate("Southeast") end,
+        function() return ccb.services.translate("Place a pond in the southeast.") end },
 }
 
 local function create_pond()
@@ -49,7 +49,7 @@ local function create_pond()
         entries[#entries + 1] = { id = location[1], label = location[4](), description = location[5]() }
     end
     local choice = services.interaction.choose(entries, {
-        title = services.translate("Choose the location for a pond"), allow_cancel = false,
+        title = ccb.services.translate("Choose the location for a pond"), allow_cancel = false,
         highlight_disabled = false, show_descriptions = true,
     })
     if not choice.accepted then return end
@@ -71,7 +71,7 @@ ccb.runtime.handler("sky_craft_warped_pond", function(payload)
         else
             state.checked(services.inventory.receive_item(payload.character, id("item", "warptoken"), 30))
             state.message(payload.character,
-                services.translate("You must be near a water source to created a warped pond."))
+                ccb.services.translate("You must be near a water source to created a warped pond."))
         end
     end
 end)

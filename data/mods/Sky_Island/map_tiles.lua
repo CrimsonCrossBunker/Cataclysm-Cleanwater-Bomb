@@ -1,5 +1,5 @@
-local content = require("ccb").content
-local text = content.text
+local ccb = require("ccb")
+local content = ccb.content
 
 content.add(content.ItemGroup { id = "sky_island_autodoc_bash_parts", kind = "collection" }
     :entry { item = "processor", probability = 25 }
@@ -28,8 +28,8 @@ content.add(content.ItemGroup { id = "sky_island_autodoc_deconstruct_parts", kin
 -- The island boundary prevents the warp obelisk from being pushed over the edge.
 content.add(content.Terrain {
     id = "t_fake_air",
-    name = text("open air"),
-    description = text("This is the edge of the island.  A metaphysical border stops you from going over the edge yourself, but anything you drop here will be gone forever."),
+    name = ccb.content.text("open air"),
+    description = ccb.content.text("This is the edge of the island.  A metaphysical border stops you from going over the edge yourself, but anything you drop here will be gone forever."),
     looks_like = "t_open_air",
     symbol = " ",
     color = "i_cyan",
@@ -43,8 +43,8 @@ content.add(content.Terrain {
 
 content.add(content.Terrain {
     id = "t_traderwall",
-    name = text("warpglass wall"),
-    description = text("A shimmering translucent barrier that almost yields to the touch, but adamantly refuses entry."),
+    name = ccb.content.text("warpglass wall"),
+    description = ccb.content.text("A shimmering translucent barrier that almost yields to the touch, but adamantly refuses entry."),
     looks_like = "t_wall_glass",
     symbol = "#",
     color = "light_cyan",
@@ -68,8 +68,8 @@ content.add(content.Terrain {
 
 content.add(content.Terrain {
     id = "t_traderwall_stone",
-    name = text("masonry wall"),
-    description = text("A wall of carefully cut and laid stones, joined with mortar.  The exterior has been finished with plaster and whitewashed.  You notice that it seems to have no scratches on it whatsoever."),
+    name = ccb.content.text("masonry wall"),
+    description = ccb.content.text("A wall of carefully cut and laid stones, joined with mortar.  The exterior has been finished with plaster and whitewashed.  You notice that it seems to have no scratches on it whatsoever."),
     looks_like = "t_stone_masonry_wall_whitewashed",
     symbol = "#",
     color = "white",
@@ -81,8 +81,8 @@ content.add(content.Terrain {
     bash = {
         minimum_strength = 4000,
         maximum_strength = 5000,
-        sound = text("crash!"),
-        failure_sound = text("glzt!"),
+        sound = ccb.content.text("crash!"),
+        failure_sound = ccb.content.text("glzt!"),
         result = "t_traderwall_stone",
     },
 }
@@ -95,8 +95,8 @@ content.add(content.Terrain {
 
 content.add(content.Terrain {
     id = "t_trader_thatch_roof",
-    name = text("thatched roof"),
-    description = text("A section of roof made out of straw.  It seems extraordinarily thickly woven together."),
+    name = ccb.content.text("thatched roof"),
+    description = ccb.content.text("A section of roof made out of straw.  It seems extraordinarily thickly woven together."),
     looks_like = "t_thatch_roof",
     symbol = ".",
     color = "yellow",
@@ -104,8 +104,8 @@ content.add(content.Terrain {
     bash = {
         minimum_strength = 4000,
         maximum_strength = 5000,
-        sound = text("crash!"),
-        failure_sound = text("glzt!"),
+        sound = ccb.content.text("crash!"),
+        failure_sound = ccb.content.text("glzt!"),
         result = "t_trader_thatch_roof",
     },
 }
@@ -114,8 +114,8 @@ content.add(content.Terrain {
 
 content.add(content.Terrain {
     id = "t_wall_r_glow",
-    name = text("red glowing wall"),
-    description = text("A red wall emitting otherworldly glow, enough to be noticeable at night."),
+    name = ccb.content.text("red glowing wall"),
+    description = ccb.content.text("A red wall emitting otherworldly glow, enough to be noticeable at night."),
     looks_like = "t_wall_r",
     color = "red",
     light_emitted = 120,
@@ -125,8 +125,8 @@ content.add(content.Terrain {
 
 content.add(content.Terrain {
     id = "t_warprock",
-    name = text("warped rock"),
-    description = text("A sparkly-black stone that's glassy smooth to the touch.  Seems indestructible by normal means."),
+    name = ccb.content.text("warped rock"),
+    description = ccb.content.text("A sparkly-black stone that's glassy smooth to the touch.  Seems indestructible by normal means."),
     looks_like = "t_rock",
     symbol = "#",
     color = "dark_gray",
@@ -138,8 +138,8 @@ content.add(content.Terrain {
     bash = {
         minimum_strength = 4000,
         maximum_strength = 5000,
-        sound = text("crash!"),
-        failure_sound = text("glzt!"),
+        sound = ccb.content.text("crash!"),
+        failure_sound = ccb.content.text("glzt!"),
         result = "t_warprock",
     },
 }
@@ -152,8 +152,8 @@ content.add(content.Terrain {
 
 content.add(content.Furniture {
     id = "f_si_autodoc_2",
-    name = text("Warped Autodoc Mk. XXII"),
-    description = text("A surgical apparatus used for the installation and removal of bionics.  The term name 'Autodoc' is something of a misnomer, as it can only operate if programmed beforehand, something that a plethora of labels warn against doing without expertise.  Bluish-purple sparks occasionally emit from some of the mechanisms."),
+    name = ccb.content.text("Warped Autodoc Mk. XXII"),
+    description = ccb.content.text("A surgical apparatus used for the installation and removal of bionics.  The term name 'Autodoc' is something of a misnomer, as it can only operate if programmed beforehand, something that a plethora of labels warn against doing without expertise.  Bluish-purple sparks occasionally emit from some of the mechanisms."),
     looks_like = "f_autodoc",
     symbol = "&",
     color = "light_cyan",
@@ -165,8 +165,8 @@ content.add(content.Furniture {
     bash = {
         minimum_strength = 8,
         maximum_strength = 150,
-        sound = text("crunch!"),
-        failure_sound = text("whack!"),
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whack!"),
         drops = "sky_island_autodoc_bash_parts",
     },
     deconstruct_drops = "sky_island_autodoc_deconstruct_parts",
@@ -179,8 +179,8 @@ content.add(content.Furniture {
 
 content.add(content.Furniture {
     id = "f_si_autodoc_3",
-    name = text("Warped Autodoc Mk. XXXIII"),
-    description = text("A surgical apparatus used for the installation and removal of bionics.  The term name 'Autodoc' is something of a misnomer, as it can only operate if programmed beforehand, something that a plethora of labels warn against doing without expertise.  Bluish-purple sparks frequently emit from some of the mechanisms, and the entire machine has a faint violet glow."),
+    name = ccb.content.text("Warped Autodoc Mk. XXXIII"),
+    description = ccb.content.text("A surgical apparatus used for the installation and removal of bionics.  The term name 'Autodoc' is something of a misnomer, as it can only operate if programmed beforehand, something that a plethora of labels warn against doing without expertise.  Bluish-purple sparks frequently emit from some of the mechanisms, and the entire machine has a faint violet glow."),
     looks_like = "f_autodoc",
     symbol = "&",
     color = "light_cyan",
@@ -193,8 +193,8 @@ content.add(content.Furniture {
     bash = {
         minimum_strength = 8,
         maximum_strength = 150,
-        sound = text("crunch!"),
-        failure_sound = text("whack!"),
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whack!"),
         drops = "sky_island_autodoc_bash_parts",
     },
     deconstruct_drops = "sky_island_autodoc_deconstruct_parts",

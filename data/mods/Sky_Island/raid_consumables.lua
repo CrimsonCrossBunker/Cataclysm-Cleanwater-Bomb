@@ -40,7 +40,7 @@ ccb.runtime.handler("sky_skyward_beacon", function(context)
         state.checked(services.activities.assign_timed(character, id("activity", "ACT_WARP_HOME"),
             services.time.duration(60, "turn")))
     else
-        state.message(character, services.translate("You cannot warp home with enemies nearby!"), "bad")
+        state.message(character, ccb.services.translate("You cannot warp home with enemies nearby!"), "bad")
     end
     return activation_charge(context)
 end)
@@ -49,7 +49,7 @@ ccb.runtime.handler("sky_waterwalking_stone", function(context)
     local character = context.character
     if not character then return nil end
     state.checked(services.inventory.consume_by_type(character, id("item", "warp_waterwalking_stone"), 1, 0))
-    state.message(character, services.translate("You feel somehow lighter."), "good")
+    state.message(character, ccb.services.translate("You feel somehow lighter."), "good")
     state.add_effect(character, "effect_warped_waterwalking", 180)
     return activation_charge(context)
 end)
@@ -57,8 +57,8 @@ end)
 do
     local item = content.Item {
         id = "warphome",
-        name = content.text("homeward mote"),
-        description = content.text("Though visibly little more than a glowing dustbunny, this strange ethereal mote of warp essence reveals, on closer inspection, something more.  A tiny, twisting, half-visible thread of shimmering bluish-purple trails away into the sky and far out of sight, unimpeded by any obstacles.\n\nTaking this rare and valuable artifact with you on an expedition is essentially buying life insurance.  If you die with this mote in your inventory, you will instead be restored to full health and brought home, WITH all items and equipment carried.  But this effect will only last for a single expedition.  Even if you extract safely, any and all motes carried on your person when you return home will be DESTROYED."),
+        name = ccb.content.text("homeward mote"),
+        description = ccb.content.text("Though visibly little more than a glowing dustbunny, this strange ethereal mote of warp essence reveals, on closer inspection, something more.  A tiny, twisting, half-visible thread of shimmering bluish-purple trails away into the sky and far out of sight, unimpeded by any obstacles.\n\nTaking this rare and valuable artifact with you on an expedition is essentially buying life insurance.  If you die with this mote in your inventory, you will instead be restored to full health and brought home, WITH all items and equipment carried.  But this effect will only last for a single expedition.  Even if you extract safely, any and all motes carried on your person when you return home will be DESTROYED."),
         mass_grams = 15,
         volume_ml = 5,
         looks_like = "fishing_hook_basic",
@@ -69,15 +69,15 @@ do
     item:flag("TRADER_AVOID")
     item:flag("UNBREAKABLE")
     item:tool()
-    item:on_use("sky_homeward_mote", content.text("Activate"), content.text("A hasty escape."))
+    item:on_use("sky_homeward_mote", ccb.content.text("Activate"), ccb.content.text("A hasty escape."))
     content.add(item)
 end
 
 do
     local item = content.Item {
         id = "warpextender",
-        name = content.text("earthbound pill"),
-        description = content.text("This pseudomagical pill extends the amount of time you can stay earthside by 4 pulses, or about 50% of a normal trip.  They're precious, but should help buy time for a difficult extract.  However, the air of the lower world destabilizes its structure and it will only last a single trip to the surface"),
+        name = ccb.content.text("earthbound pill"),
+        description = ccb.content.text("This pseudomagical pill extends the amount of time you can stay earthside by 4 pulses, or about 50% of a normal trip.  They're precious, but should help buy time for a difficult extract.  However, the air of the lower world destabilizes its structure and it will only last a single trip to the surface"),
         mass_grams = 15,
         volume_ml = 5,
         looks_like = "panacea",
@@ -95,8 +95,8 @@ end
 do
     local item = content.Item {
         id = "warp_skyward_beacon",
-        name = content.plural_text("skyward beacon", "skyward beacon"),
-        description = content.text("This smooth purplish sphere seems like it wants to rise right out of your hand.  If you activate it, you will return directly to the island with everything you are carrying."),
+        name = ccb.content.plural_text("skyward beacon", "skyward beacon"),
+        description = ccb.content.text("This smooth purplish sphere seems like it wants to rise right out of your hand.  If you activate it, you will return directly to the island with everything you are carrying."),
         mass_grams = 5,
         volume_ml = 5,
         category = "other",
@@ -107,15 +107,15 @@ do
     item:material("alien_resin", 1)
     item:flag("UNBREAKABLE")
     item:ammunition { type = "components", count = 1, stack_size = 100 }
-    item:on_use("sky_skyward_beacon", content.text("Activate"), content.text("Return to the sky."))
+    item:on_use("sky_skyward_beacon", ccb.content.text("Activate"), ccb.content.text("Return to the sky."))
     content.add(item)
 end
 
 do
     local item = content.Item {
         id = "warp_waterwalking_stone",
-        name = content.plural_text("flotation stone", "flotation stone"),
-        description = content.text("This smooth, whorled stone seems cool and wet to the touch, but when you take your hand off it your skin is perfectly dry.  If you activate it, you will be able to walk on the surface of water for three minutes."),
+        name = ccb.content.plural_text("flotation stone", "flotation stone"),
+        description = ccb.content.text("This smooth, whorled stone seems cool and wet to the touch, but when you take your hand off it your skin is perfectly dry.  If you activate it, you will be able to walk on the surface of water for three minutes."),
         mass_grams = 5,
         volume_ml = 5,
         category = "other",
@@ -126,15 +126,15 @@ do
     item:material("alien_resin", 1)
     item:flag("UNBREAKABLE")
     item:ammunition { type = "components", count = 1, stack_size = 100 }
-    item:on_use("sky_waterwalking_stone", content.text("Activate"), content.text("Cross the waters."))
+    item:on_use("sky_waterwalking_stone", ccb.content.text("Activate"), ccb.content.text("Cross the waters."))
     content.add(item)
 end
 
 do
     local item = content.Item {
         id = "quickheal",
-        name = content.text("quickheal pill"),
-        description = content.text("This pseudomagical pill will heal all your damaged parts, but only if swallowed while on your sanctuary island.  No reason to bring this into the field."),
+        name = ccb.content.text("quickheal pill"),
+        description = ccb.content.text("This pseudomagical pill will heal all your damaged parts, but only if swallowed while on your sanctuary island.  No reason to bring this into the field."),
         mass_grams = 15, volume_ml = 5,
         looks_like = "panacea",
         symbol = "!",

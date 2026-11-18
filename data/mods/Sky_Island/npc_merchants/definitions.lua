@@ -15,8 +15,8 @@ content.add(content.Npc {
     id = "si_exodii_cbm_merchant",
     class = "NC_SKY_ISLAND_EXODII_CBM_MERCHANT",
     faction = "sky_island_traders",
-    unique_name = content.text("┟┰┰┵═┼╧┤"),
-    suffix = content.text("Merchant"),
+    unique_name = ccb.content.text("┟┰┰┵═┼╧┤"),
+    suffix = ccb.content.text("Merchant"),
     attitude = 0,
     mission = "SHOPKEEP",
     chat = "TALK_SI_EXODII_MERCHANT",
@@ -27,7 +27,7 @@ content.add(content.Npc {
         altruism = -1,
     },
     snippets = {
-        snip_bye = content.text("╄╓══╛, ┚┠┰┤!"),
+        snip_bye = ccb.content.text("╄╓══╛, ┚┠┰┤!"),
     },
 })
 
@@ -41,8 +41,8 @@ content.add(
 
 content.add(content.NpcClass {
     id = "NC_SKY_ISLAND_EXODII_CBM_MERCHANT",
-    name = content.text("Cyborg, type 1"),
-    job_description = content.text("I'm a cyborg."),
+    name = ccb.content.text("Cyborg, type 1"),
+    job_description = ccb.content.text("I'm a cyborg."),
     common = false,
     sells_belongings = false,
     traits = "NC_SKY_ISLAND_EXODII_CBM_MERCHANT_TRAITS",
@@ -137,7 +137,7 @@ content.add(content.NpcClass {
 content.add(
     content.ShopkeeperWhitelist {
         id = "si_exodii_cbm_merchant_whitelist",
-        message = content.text("<npcname> jerks their head up and to their right before pointing to a bowl of precious gems."),
+        message = ccb.content.text("<npcname> jerks their head up and to their right before pointing to a bowl of precious gems."),
     }
         :entry("pearl", "", "", "")
         :entry("ruby", "", "", "")
@@ -159,8 +159,8 @@ content.add(
 
 content.add(content.Faction {
     id = "sky_island_traders",
-    name = content.text("The Merchants"),
-    description = content.text("A group of traders following the inscrutable whims of whatever powers are behind this island."),
+    name = ccb.content.text("The Merchants"),
+    description = ccb.content.text("A group of traders following the inscrutable whims of whatever powers are behind this island."),
     likes = 30,
     respects = 30,
     known = false,
@@ -183,8 +183,8 @@ content.add(content.Npc {
     id = "si_human_ammo_merchant",
     class = "NC_SKY_ISLAND_HUMAN_AMMO_MERCHANT",
     faction = "sky_island_traders",
-    unique_name = content.text("Tabani"),
-    suffix = content.text("Merchant"),
+    unique_name = ccb.content.text("Tabani"),
+    suffix = ccb.content.text("Merchant"),
     gender = "male",
     attitude = 0,
     mission = "SHOPKEEP",
@@ -196,7 +196,7 @@ content.add(content.Npc {
         altruism = -1,
     },
     snippets = {
-        snip_bye = content.text("Far gesund, cuma!"),
+        snip_bye = ccb.content.text("Far gesund, cuma!"),
     },
 })
 
@@ -213,8 +213,8 @@ content.add(
 
 content.add(content.NpcClass {
     id = "NC_SKY_ISLAND_HUMAN_AMMO_MERCHANT",
-    name = content.text("Human Ammo Merchant"),
-    job_description = content.text("I sell people ammo in exchange for ammo."),
+    name = ccb.content.text("Human Ammo Merchant"),
+    job_description = ccb.content.text("I sell people ammo in exchange for ammo."),
     common = false,
     sells_belongings = false,
     traits = "NC_SKY_ISLAND_HUMAN_AMMO_MERCHANT_TRAITS",
@@ -298,7 +298,7 @@ content.add(content.NpcClass {
 content.add(
     content.ShopkeeperWhitelist {
         id = "si_human_ammo_merchant_whitelist",
-        message = content.text("<npcname> consults his book and says, \"We in ploom dælath, freond.\"."),
+        message = ccb.content.text("<npcname> consults his book and says, \"We in ploom dælath, freond.\"."),
     }
         :entry("", "ammo", "", "")
 )
@@ -308,8 +308,8 @@ content.add(
     content.Item {
         id = "si_human_ammo_merchant_phrasebook",
         copy_from = "book_pulp_newage_tpl",
-        name = content.text("wīsdōmes uord"),
-        description = content.text("Some kind of phrasebook."),
+        name = ccb.content.text("wīsdōmes uord"),
+        description = ccb.content.text("Some kind of phrasebook."),
         symbol = "?",
         looks_like = "novel_pulp",
         color = "light_cyan",
@@ -336,8 +336,8 @@ content.add(content.Npc {
     id = "si_triffid_decor_merchant",
     class = "NC_SKY_ISLAND_TRIFFID_DECOR_MERCHANT",
     faction = "sky_island_traders",
-    unique_name = content.text("Triffid"),
-    suffix = content.text("Merchant"),
+    unique_name = ccb.content.text("Triffid"),
+    suffix = ccb.content.text("Merchant"),
     attitude = 0,
     mission = "SHOPKEEP",
     chat = "TALK_SI_TRIFFID_DECOR_MERCHANT",
@@ -348,7 +348,7 @@ content.add(content.Npc {
         altruism = -6,
     },
     snippets = {
-        snip_bye = content.text("…"),
+        snip_bye = ccb.content.text("…"),
     },
 })
 
@@ -362,8 +362,8 @@ content.add(
 
 content.add(content.NpcClass {
     id = "NC_SKY_ISLAND_TRIFFID_DECOR_MERCHANT",
-    name = content.text("Triffid Decor Merchant"),
-    job_description = content.text("I sell people decor pieces in exchange for seeds."),
+    name = ccb.content.text("Triffid Decor Merchant"),
+    job_description = ccb.content.text("I sell people decor pieces in exchange for seeds."),
     common = false,
     sells_belongings = false,
     traits = "NC_SKY_ISLAND_TRIFFID_DECOR_MERCHANT_TRAITS",
@@ -468,7 +468,7 @@ content.add(content.NpcClass {
 content.add(
     content.ShopkeeperWhitelist {
         id = "si_triffid_decor_merchant_whitelist",
-        message = content.text("<npcname>'s fronds wave back and forth vigorously."),
+        message = ccb.content.text("<npcname>'s fronds wave back and forth vigorously."),
     }
         :entry("", "seeds", "", "")
         :entry("apple", "", "", "")

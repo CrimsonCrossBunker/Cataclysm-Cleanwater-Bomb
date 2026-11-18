@@ -6,59 +6,59 @@ local id = services.types.id
 
 local menus = {
     length = {
-        title = function() return services.translate("Select Expedition Length.\nNPCs: <global_val:si_npcs_will_join_raid_warning> join expeditions.\nChallenge Mode: <global_val:challenge_mode_warning>") end,
+        title = function() return ccb.services.translate("Select Expedition Length.\nNPCs: <global_val:si_npcs_will_join_raid_warning> join expeditions.\nChallenge Mode: <global_val:challenge_mode_warning>") end,
         entries = {
-            { id = "quick", label = function() return services.translate("Quick Expedition") end, hotkey = "1",
-                description = function() return services.translate("A simple, brief expedition at the normal time limit.  Missions and exits will be close together.  A good chance to quickly gather supplies and experience.") end },
-            { id = "large", label = function() return services.translate("Large Expedition") end, hotkey = "2",
-                description = function() return services.translate("A longer expedition that offers twice the time.  Missions and exits will be scattered over a wider area.  You will have more opportunity to dig deeper into surrounding points of interest, but also need more time to travel.  Missions offer extra warp shards as rewards.") end },
-            { id = "extended", label = function() return services.translate("Extended Expedition") end, hotkey = "3",
-                description = function() return services.translate("A very long expedition that triples the time limit.  Missions and exits will be very far away.  You will have time for extended activities, but a good deal of your time will be spent trying to reach objectives over potentially dangerous terrain.  Missions offer even more warp shards as rewards.") end },
-            { id = "npcs", label = function() return services.translate("Toggle NPC Mode") end, hotkey = "4",
-                description = function() return services.translate("Toggles NPC Mode, changing whether NPCs will join you on a raid or not.") end },
-            { id = "challenge", label = function() return services.translate("Toggle Challenge Mode") end, hotkey = "5",
-                description = function() return services.translate("Toggles Challenge Mode, granting more rewards at the cost of harder expeditions.  A random difficulty modifier will be applied.") end },
-            { id = "cancel", label = function() return services.translate("Cancel") end, hotkey = "6",
-                description = function() return services.translate("Stay on the island for now.") end },
+            { id = "quick", label = function() return ccb.services.translate("Quick Expedition") end, hotkey = "1",
+                description = function() return ccb.services.translate("A simple, brief expedition at the normal time limit.  Missions and exits will be close together.  A good chance to quickly gather supplies and experience.") end },
+            { id = "large", label = function() return ccb.services.translate("Large Expedition") end, hotkey = "2",
+                description = function() return ccb.services.translate("A longer expedition that offers twice the time.  Missions and exits will be scattered over a wider area.  You will have more opportunity to dig deeper into surrounding points of interest, but also need more time to travel.  Missions offer extra warp shards as rewards.") end },
+            { id = "extended", label = function() return ccb.services.translate("Extended Expedition") end, hotkey = "3",
+                description = function() return ccb.services.translate("A very long expedition that triples the time limit.  Missions and exits will be very far away.  You will have time for extended activities, but a good deal of your time will be spent trying to reach objectives over potentially dangerous terrain.  Missions offer even more warp shards as rewards.") end },
+            { id = "npcs", label = function() return ccb.services.translate("Toggle NPC Mode") end, hotkey = "4",
+                description = function() return ccb.services.translate("Toggles NPC Mode, changing whether NPCs will join you on a raid or not.") end },
+            { id = "challenge", label = function() return ccb.services.translate("Toggle Challenge Mode") end, hotkey = "5",
+                description = function() return ccb.services.translate("Toggles Challenge Mode, granting more rewards at the cost of harder expeditions.  A random difficulty modifier will be applied.") end },
+            { id = "cancel", label = function() return ccb.services.translate("Cancel") end, hotkey = "6",
+                description = function() return ccb.services.translate("Stay on the island for now.") end },
         },
     },
     destination = {
-        title = function() return services.translate("Select a starting location") end,
+        title = function() return ccb.services.translate("Select a starting location") end,
         entries = {
-            { id = "field", label = function() return services.translate("Target: Field") end, hotkey = "1",
-                description = function() return services.translate("Arrive in a barren field.  This usually means landing in the open wilderness, but there's always the chance you'll find yourself at an empty lot in town.") end },
-            { id = "basement", label = function() return services.translate("Target: Basement") end, hotkey = "2",
-                description = function() return services.translate("Arrive inside an underground basement.  This will tend to put you somewhere in suburbia, but there are always exceptions.") end },
-            { id = "roof", label = function() return services.translate("Target: Rooftop") end, hotkey = "3",
-                description = function() return services.translate("Arrive on a building roof someplace.  Usually this means houses, but you never know for sure.  This will always be one story off the ground.") end },
-            { id = "labs", label = function() return services.translate("Target: Lab") end, hotkey = "4",
-                description = function() return services.translate("Arrive somewhere in a hidden government lab.  This is a highly dangerous method.  Due to the dimensional shielding these labs project, this expedition will cost 1 Labs Catalyst to begin.\nBE WARNED!  You will begin inside a sealed lab, so make sure you have the means to get out!  A second card, to unlock the surface exit, is one option.  You may also consider a homeward mote or a warp skyward beacon.") end },
-            { id = "cancel", label = function() return services.translate("Cancel") end, hotkey = "5",
-                description = function() return services.translate("Stay on the island for now.") end },
+            { id = "field", label = function() return ccb.services.translate("Target: Field") end, hotkey = "1",
+                description = function() return ccb.services.translate("Arrive in a barren field.  This usually means landing in the open wilderness, but there's always the chance you'll find yourself at an empty lot in town.") end },
+            { id = "basement", label = function() return ccb.services.translate("Target: Basement") end, hotkey = "2",
+                description = function() return ccb.services.translate("Arrive inside an underground basement.  This will tend to put you somewhere in suburbia, but there are always exceptions.") end },
+            { id = "roof", label = function() return ccb.services.translate("Target: Rooftop") end, hotkey = "3",
+                description = function() return ccb.services.translate("Arrive on a building roof someplace.  Usually this means houses, but you never know for sure.  This will always be one story off the ground.") end },
+            { id = "labs", label = function() return ccb.services.translate("Target: Lab") end, hotkey = "4",
+                description = function() return ccb.services.translate("Arrive somewhere in a hidden government lab.  This is a highly dangerous method.  Due to the dimensional shielding these labs project, this expedition will cost 1 Labs Catalyst to begin.\nBE WARNED!  You will begin inside a sealed lab, so make sure you have the means to get out!  A second card, to unlock the surface exit, is one option.  You may also consider a homeward mote or a warp skyward beacon.") end },
+            { id = "cancel", label = function() return ccb.services.translate("Cancel") end, hotkey = "5",
+                description = function() return ccb.services.translate("Stay on the island for now.") end },
         },
     },
     labs = {
-        title = function() return services.translate("Select a starting location") end,
+        title = function() return ccb.services.translate("Select a starting location") end,
         entries = {
-            { id = "science", label = function() return services.translate("Target: Science Lab") end, hotkey = "1",
-                description = function() return services.translate("Arrive in subterranean science lab.\nBE WARNED!  You will begin inside a sealed lab, so make sure you have the means to get out!  A second card, to unlock the surface exit, is one option.  You may also consider a homeward mote or a warp skyward beacon.") end },
-            { id = "microlab", label = function() return services.translate("Target: Large Science Lab") end, hotkey = "2",
-                description = function() return services.translate("Arrive in a sprawling lab built around a hallway.\nBE WARNED!  You will begin inside a sealed lab, so make sure you have the means to get out!  A second card, to unlock the surface exit, is one option.  You may also consider a homeward mote or a warp skyward beacon.") end },
-            { id = "research", label = function() return services.translate("Target: Research Facility") end, hotkey = "3",
-                description = function() return services.translate("Arrive in an above-ground research facility.\nBE WARNED!  The facility was extremely damaged by the Cataclysm and the environment is filled with hostiles.  Be prepared when you undertake this mission.") end },
-            { id = "tcl", label = function() return services.translate("Target: Tran-Coastal Logistics") end, hotkey = "4",
-                description = function() return services.translate("Arrive in a lab within a shipping facility.\nBE WARNED!  You will begin inside a sealed facility, so make sure you have the means to get out!  You may also consider a homeward mote or a warp skyward beacon.") end },
-            { id = "cancel", label = function() return services.translate("Cancel") end, hotkey = "5",
-                description = function() return services.translate("Stay on the island for now.") end },
+            { id = "science", label = function() return ccb.services.translate("Target: Science Lab") end, hotkey = "1",
+                description = function() return ccb.services.translate("Arrive in subterranean science lab.\nBE WARNED!  You will begin inside a sealed lab, so make sure you have the means to get out!  A second card, to unlock the surface exit, is one option.  You may also consider a homeward mote or a warp skyward beacon.") end },
+            { id = "microlab", label = function() return ccb.services.translate("Target: Large Science Lab") end, hotkey = "2",
+                description = function() return ccb.services.translate("Arrive in a sprawling lab built around a hallway.\nBE WARNED!  You will begin inside a sealed lab, so make sure you have the means to get out!  A second card, to unlock the surface exit, is one option.  You may also consider a homeward mote or a warp skyward beacon.") end },
+            { id = "research", label = function() return ccb.services.translate("Target: Research Facility") end, hotkey = "3",
+                description = function() return ccb.services.translate("Arrive in an above-ground research facility.\nBE WARNED!  The facility was extremely damaged by the Cataclysm and the environment is filled with hostiles.  Be prepared when you undertake this mission.") end },
+            { id = "tcl", label = function() return ccb.services.translate("Target: Tran-Coastal Logistics") end, hotkey = "4",
+                description = function() return ccb.services.translate("Arrive in a lab within a shipping facility.\nBE WARNED!  You will begin inside a sealed facility, so make sure you have the means to get out!  You may also consider a homeward mote or a warp skyward beacon.") end },
+            { id = "cancel", label = function() return ccb.services.translate("Cancel") end, hotkey = "5",
+                description = function() return ccb.services.translate("Stay on the island for now.") end },
         },
     },
     backrooms = {
-        title = function() return services.translate("Select a starting location") end,
+        title = function() return ccb.services.translate("Select a starting location") end,
         entries = {
-            { id = "level_zero", label = function() return services.translate("Target: Level 0") end, hotkey = "1",
-                description = function() return services.translate("Arrive in the boundless monotone yellow space of level 0.") end },
-            { id = "cancel", label = function() return services.translate("Cancel") end, hotkey = "2",
-                description = function() return services.translate("Stay on the island for now.") end },
+            { id = "level_zero", label = function() return ccb.services.translate("Target: Level 0") end, hotkey = "1",
+                description = function() return ccb.services.translate("Arrive in the boundless monotone yellow space of level 0.") end },
+            { id = "cancel", label = function() return ccb.services.translate("Cancel") end, hotkey = "2",
+                description = function() return ccb.services.translate("Stay on the island for now.") end },
         },
     },
 }
@@ -92,7 +92,7 @@ local function choose(character, menu)
 end
 
 local function cancel(character)
-    state.message(character, services.translate("You decide not to go out just yet."))
+    state.message(character, ccb.services.translate("You decide not to go out just yet."))
 end
 
 local locations = {
@@ -149,13 +149,13 @@ ccb.runtime.handler("sky_raid_obelisk", function(payload)
         if selection == "npcs" then
             local enabled = state.number("si_npcs_will_join_raid") ~= 1
             state.set("si_npcs_will_join_raid", enabled and 1 or 0)
-            state.message(character, enabled and services.translate("NPCs <color_green>will</color> join you on expeditions.")
-                or services.translate("NPCs <color_red>will not</color> join you on expeditions."), "neutral", true)
+            state.message(character, enabled and ccb.services.translate("NPCs <color_green>will</color> join you on expeditions.")
+                or ccb.services.translate("NPCs <color_red>will not</color> join you on expeditions."), "neutral", true)
         elseif selection == "challenge" then
             local enabled = state.number("challenge_mode_active") ~= 1
             state.set("challenge_mode_active", enabled and 1 or 0)
-            state.message(character, enabled and services.translate("Challenge Mode has been activated.")
-                or services.translate("Challenge Mode has been deactivated."), "neutral", true)
+            state.message(character, enabled and ccb.services.translate("Challenge Mode has been activated.")
+                or ccb.services.translate("Challenge Mode has been deactivated."), "neutral", true)
         else
             if selection == "cancel" then cancel(character)
             elseif selection then expedition(character, ({ quick = 0, large = 1, extended = 2 })[selection]) end

@@ -1,4 +1,5 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 content.add(content.Monster {
     id = "mon_si_jabberwock",
@@ -9,8 +10,8 @@ content.add(content.Monster {
 
 content.add(content.Monster {
     id = "mon_zombie_bio_op",
-    name = content.text("zombie bio-operator"),
-    description = content.text("This armored soldier zombie appears to have been some sort of special forces agent.  Its malfunctioning equipment sends out occasional showers of sparks."),
+    name = ccb.content.text("zombie bio-operator"),
+    description = ccb.content.text("This armored soldier zombie appears to have been some sort of special forces agent.  Its malfunctioning equipment sends out occasional showers of sparks."),
     copy_from = "mon_zombie_base",
     difficulty_adjustment = 5,
     hp = 120,

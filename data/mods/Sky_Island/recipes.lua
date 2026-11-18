@@ -2008,8 +2008,8 @@ end
 do
     local recipe = warped_recipe {
         id = "recipe_craft_random_artifact",
-        name = content.text("materialize random artifact"),
-        description = content.text("Utilizing the unstable, reality-changing nature of the warp shards, you could combine several to create a powerful semi-magical item.  This is a skill you have no way of practicing and a field of science no one's ever really touched, so exactly what you'd get from it is anyone's guess."),
+        name = ccb.content.text("materialize random artifact"),
+        description = ccb.content.text("Utilizing the unstable, reality-changing nature of the warp shards, you could combine several to create a powerful semi-magical item.  This is a skill you have no way of practicing and a field of science no one's ever really touched, so exactly what you'd get from it is anyone's guess."),
         subcategory = "CSC_WARP_ITEMS",
         duration_moves = 6000,
         flags = { "SECRET", "BLIND_EASY" },
@@ -2107,8 +2107,8 @@ end
 do
     local recipe = warped_recipe {
         id = "sky_island_warped_pond",
-        name = content.text("Warped Pond"),
-        description = content.text("Create a pond on your island.  You must be standing next to a water source to successfully create the pond."),
+        name = ccb.content.text("Warped Pond"),
+        description = ccb.content.text("Create a pond on your island.  You must be standing next to a water source to successfully create the pond."),
         subcategory = "CSC_WARP_UPGRADES",
         duration_moves = 0,
     }

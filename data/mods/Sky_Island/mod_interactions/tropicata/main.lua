@@ -1,4 +1,5 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 content.add(
     content.Construction {
@@ -27,7 +28,7 @@ content.add(
 
 content.add(content.ConstructionGroup {
     id = "warped_mango_tree",
-    name = content.text("Grow a Warped Mango Tree"),
+    name = ccb.content.text("Grow a Warped Mango Tree"),
 })
 
 content.add(
@@ -57,7 +58,7 @@ content.add(
 
 content.add(content.ConstructionGroup {
     id = "warped_papaya_tree",
-    name = content.text("Grow a Warped Papaya Tree"),
+    name = ccb.content.text("Grow a Warped Papaya Tree"),
 })
 
 content.add(
@@ -87,7 +88,7 @@ content.add(
 
 content.add(content.ConstructionGroup {
     id = "warped_pomegranate_tree",
-    name = content.text("Grow a Warped Pomegranate Tree"),
+    name = ccb.content.text("Grow a Warped Pomegranate Tree"),
 })
 
 content.add(
@@ -117,7 +118,7 @@ content.add(
 
 content.add(content.ConstructionGroup {
     id = "warped_coconut_tree",
-    name = content.text("Grow a Warped Coconut Tree"),
+    name = ccb.content.text("Grow a Warped Coconut Tree"),
 })
 
 content.add(
@@ -147,7 +148,7 @@ content.add(
 
 content.add(content.ConstructionGroup {
     id = "warped_orange_tree",
-    name = content.text("Grow a Warped Orange Tree"),
+    name = ccb.content.text("Grow a Warped Orange Tree"),
 })
 
 content.add(
@@ -177,7 +178,7 @@ content.add(
 
 content.add(content.ConstructionGroup {
     id = "warped_lemon_tree",
-    name = content.text("Grow a Warped Lemon Tree"),
+    name = ccb.content.text("Grow a Warped Lemon Tree"),
 })
 
 content.add(
@@ -207,7 +208,7 @@ content.add(
 
 content.add(content.ConstructionGroup {
     id = "warped_grapefruit_tree",
-    name = content.text("Grow a Warped Grapefruit Tree"),
+    name = ccb.content.text("Grow a Warped Grapefruit Tree"),
 })
 
 content.add(
@@ -231,5 +232,5 @@ content.add(
 
 content.add(content.ConstructionGroup {
     id = "warped_cactus",
-    name = content.text("Grow a Warped Cholla Cactus"),
+    name = ccb.content.text("Grow a Warped Cholla Cactus"),
 })

@@ -1,10 +1,11 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 content.add(
     content.Item {
         id = "warp_druid_wood_floor_tokens",
-        name = content.plural_text("sapwood-floor tokens", "sapwood-floor tokens"),
-        description = content.text("A group of small squares of living wood, rough and unpolished.  You can use them to transform a section of flooring into living wood."),
+        name = ccb.content.plural_text("sapwood-floor tokens", "sapwood-floor tokens"),
+        description = ccb.content.text("A group of small squares of living wood, rough and unpolished.  You can use them to transform a section of flooring into living wood."),
         category = "other",
         symbol = ".",
         color = "light_gray",

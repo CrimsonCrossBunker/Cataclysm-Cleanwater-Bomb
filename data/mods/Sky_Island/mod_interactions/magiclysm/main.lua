@@ -2,16 +2,17 @@ require("mod_interactions.magiclysm.items")
 
 require("recipes_magiclysm")
 
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 content.add(content.ConstructionGroup {
     id = "floor_to_sapwood_floor",
-    name = content.text("Warp floor into a living wood floor"),
+    name = ccb.content.text("Warp floor into a living wood floor"),
 })
 
 content.add(content.ConstructionGroup {
     id = "wall_to_sapwood_wall",
-    name = content.text("Warp wall into a living wood wall"),
+    name = ccb.content.text("Warp wall into a living wood wall"),
 })
 
 content.add(

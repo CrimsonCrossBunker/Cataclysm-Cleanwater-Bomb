@@ -1,4 +1,5 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 content.add(content.ItemGroup {
     id = "skyisland_autodoc_copy_byproducts",
@@ -599,145 +600,145 @@ content.add(
 
 content.add(content.ConstructionGroup {
     id = "sow_grass",
-    name = content.text("Cover soil with grass"),
+    name = ccb.content.text("Cover soil with grass"),
 })
 
 content.add(content.ConstructionGroup {
     id = "floor_to_wood_floor",
-    name = content.text("Warp floor into a wood floor"),
+    name = ccb.content.text("Warp floor into a wood floor"),
 })
 
 content.add(content.ConstructionGroup {
     id = "wall_to_wood_wall",
-    name = content.text("Warp wall into a wood wall"),
+    name = ccb.content.text("Warp wall into a wood wall"),
 })
 
 content.add(content.ConstructionGroup {
     id = "floor_to_flagstone_floor",
-    name = content.text("Warp floor into a worked stone floor"),
+    name = ccb.content.text("Warp floor into a worked stone floor"),
 })
 
 content.add(content.ConstructionGroup {
     id = "wall_to_stone_wall",
-    name = content.text("Warp wall into a worked stone wall"),
+    name = ccb.content.text("Warp wall into a worked stone wall"),
 })
 
 content.add(content.ConstructionGroup {
     id = "floor_to_sand_floor",
-    name = content.text("Warp floor into fine sand"),
+    name = ccb.content.text("Warp floor into fine sand"),
 })
 
 content.add(content.ConstructionGroup {
     id = "floor_to_flesh_floor",
-    name = content.text("Warp floor into living flesh"),
+    name = ccb.content.text("Warp floor into living flesh"),
 })
 
 content.add(content.ConstructionGroup {
     id = "wall_to_flesh_wall",
-    name = content.text("Warp wall into living flesh"),
+    name = ccb.content.text("Warp wall into living flesh"),
 })
 
 content.add(content.ConstructionGroup {
     id = "autodoc_copy",
-    name = content.text("Store Autodoc onto copyplate"),
+    name = ccb.content.text("Store Autodoc onto copyplate"),
 })
 
 content.add(content.ConstructionGroup {
     id = "autodoc_paste",
-    name = content.text("Place Autodoc from copyplate"),
+    name = ccb.content.text("Place Autodoc from copyplate"),
 })
 
 content.add(content.ConstructionGroup {
     id = "autodoc_couch_conversion",
-    name = content.text("Convert sofa into Autodoc couch"),
+    name = ccb.content.text("Convert sofa into Autodoc couch"),
 })
 
 content.add(content.ConstructionGroup {
     id = "build_sofa",
-    name = content.text("Build sofa"),
+    name = ccb.content.text("Build sofa"),
 })
 
 content.add(content.ConstructionGroup {
     id = "warped_apple_tree",
-    name = content.text("Grow a Warped Apple Tree"),
+    name = ccb.content.text("Grow a Warped Apple Tree"),
 })
 
 content.add(content.ConstructionGroup {
     id = "warped_cherry_tree",
-    name = content.text("Grow a Warped Cherry Tree"),
+    name = ccb.content.text("Grow a Warped Cherry Tree"),
 })
 
 content.add(content.ConstructionGroup {
     id = "warped_maple_tree",
-    name = content.text("Grow a Warped Maple Tree"),
+    name = ccb.content.text("Grow a Warped Maple Tree"),
 })
 
 content.add(content.ConstructionGroup {
     id = "warped_pear_tree",
-    name = content.text("Grow a Warped Pear Tree"),
+    name = ccb.content.text("Grow a Warped Pear Tree"),
 })
 
 content.add(content.ConstructionGroup {
     id = "warped_plum_tree",
-    name = content.text("Grow a Warped Plum Tree"),
+    name = ccb.content.text("Grow a Warped Plum Tree"),
 })
 
 content.add(content.ConstructionGroup {
     id = "warped_peach_tree",
-    name = content.text("Grow a Warped Peach Tree"),
+    name = ccb.content.text("Grow a Warped Peach Tree"),
 })
 
 content.add(content.ConstructionGroup {
     id = "warped_oak_tree",
-    name = content.text("Grow a Warped Oak Tree"),
+    name = ccb.content.text("Grow a Warped Oak Tree"),
 })
 
 content.add(content.ConstructionGroup {
     id = "warped_pine_tree",
-    name = content.text("Grow a Warped Pine Tree"),
+    name = ccb.content.text("Grow a Warped Pine Tree"),
 })
 
 content.add(content.ConstructionGroup {
     id = "warped_birch_tree",
-    name = content.text("Grow a Warped Birch Tree"),
+    name = ccb.content.text("Grow a Warped Birch Tree"),
 })
 
 content.add(content.ConstructionGroup {
     id = "warped_mulberry_tree",
-    name = content.text("Grow a Warped Mulberry Tree"),
+    name = ccb.content.text("Grow a Warped Mulberry Tree"),
 })
 
 content.add(content.ConstructionGroup {
     id = "water_into_pond",
-    name = content.text("Warp water into a pond"),
+    name = ccb.content.text("Warp water into a pond"),
 })
 
 content.add(content.ConstructionGroup {
     id = "water_into_deep_pond",
-    name = content.text("Deepen a warped pond"),
+    name = ccb.content.text("Deepen a warped pond"),
 })
 
 content.add(content.ConstructionGroup {
     id = "build_birdbath_from_token",
-    name = content.text("Transform the token into a birdbath"),
+    name = ccb.content.text("Transform the token into a birdbath"),
 })
 
 content.add(content.ConstructionGroup {
     id = "build_statue_from_token",
-    name = content.text("Transform the token into a statue"),
+    name = ccb.content.text("Transform the token into a statue"),
 })
 
 content.add(content.ConstructionGroup {
     id = "build_display_case_from_token",
-    name = content.text("Transform the token into a display case"),
+    name = ccb.content.text("Transform the token into a display case"),
 })
 
 content.add(content.ConstructionGroup {
     id = "build_planter_from_token",
-    name = content.text("Transform the token into a display case"),
+    name = ccb.content.text("Transform the token into a display case"),
 })
 
 content.add(content.ConstructionGroup {
     id = "transform_door_into_glass_door",
-    name = content.text("Transform a closed door into a glass door"),
+    name = ccb.content.text("Transform a closed door into a glass door"),
 })

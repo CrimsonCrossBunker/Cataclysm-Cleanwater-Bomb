@@ -1,6 +1,5 @@
 local ccb = require("ccb")
 local content = ccb.content
-local services = ccb.services
 local state = require("raid_state")
 local difficulty = require("raid_services")
 
@@ -11,7 +10,7 @@ end)
 
 ccb.runtime.handler("sky_island_start_due", function(payload)
     local character = payload.character
-    state.message(character, services.translate("Welcome to Sky Islands.\n\nSpeak to the Heart of the Island to get your bearings, accept missions, manage upgrades, change your difficulty settings, and more."), "neutral", true)
+    state.message(character, ccb.services.translate("Welcome to Sky Islands.\n\nSpeak to the Heart of the Island to get your bearings, accept missions, manage upgrades, change your difficulty settings, and more."), "neutral", true)
     state.set("OM_HQ_origin", state.position(character))
     difficulty.defaults(character)
     state.set("currentpulselength", state.number("sicknessintervals"))
@@ -51,17 +50,17 @@ ccb.runtime.handler("sky_island_start_due", function(payload)
     end
 end)
 
-local location = content.StartLocation { id = "sloc_skyisland", name = content.text("Sky Island") }
+local location = content.StartLocation { id = "sloc_skyisland", name = ccb.content.text("Sky Island") }
 location:terrain("sky_island_core")
 content.add(location)
 
 content.add(content.Scenario {
     id = "scenario_warper",
-    name = content.text("Warper", "scenario_male"),
-    female_name = content.text("Warper", "scenario_female"),
-    description = content.text("As if the world ending wasn't enough, it seems some kind of extradimensional powers that be have taken an interest in you.  You have been placed on a floating island high above the Earth, safe but isolated.  Only by using the reality-bending powers of warp technology can you visit the world below in brief, randomly-targeted excursions.  Venture down, gather supplies, and return with only what you can carry to upgrade your home base and your stash over time.  The powers of the warp make you unable to ever truly die, so on failing such an expedition, you will simply lose all items and equipment you were carrying and be swiftly returned home at low health.", "scen_desc_male"),
-    female_description = content.text("As if the world ending wasn't enough, it seems some kind of extradimensional powers that be have taken an interest in you.  You have been placed on a floating island high above the Earth, safe but isolated.  Only by using the reality-bending powers of warp technology can you visit the world below in brief, randomly-targeted excursions.  Venture down, gather supplies, and return with only what you can carry to upgrade your home base and your stash over time.  The powers of the warp make you unable to ever truly die, so on failing such an expedition, you will simply lose all items and equipment you were carrying and be swiftly returned home at low health.", "scen_desc_female"),
-    start_name = content.text("Warper", "start_name"),
+    name = ccb.content.text("Warper", "scenario_male"),
+    female_name = ccb.content.text("Warper", "scenario_female"),
+    description = ccb.content.text("As if the world ending wasn't enough, it seems some kind of extradimensional powers that be have taken an interest in you.  You have been placed on a floating island high above the Earth, safe but isolated.  Only by using the reality-bending powers of warp technology can you visit the world below in brief, randomly-targeted excursions.  Venture down, gather supplies, and return with only what you can carry to upgrade your home base and your stash over time.  The powers of the warp make you unable to ever truly die, so on failing such an expedition, you will simply lose all items and equipment you were carrying and be swiftly returned home at low health.", "scen_desc_male"),
+    female_description = ccb.content.text("As if the world ending wasn't enough, it seems some kind of extradimensional powers that be have taken an interest in you.  You have been placed on a floating island high above the Earth, safe but isolated.  Only by using the reality-bending powers of warp technology can you visit the world below in brief, randomly-targeted excursions.  Venture down, gather supplies, and return with only what you can carry to upgrade your home base and your stash over time.  The powers of the warp make you unable to ever truly die, so on failing such an expedition, you will simply lose all items and equipment you were carrying and be swiftly returned home at low health.", "scen_desc_female"),
+    start_name = ccb.content.text("Warper", "start_name"),
     points = 0, locations = { "sloc_skyisland" },
     flags = { "LONE_START", "CHALLENGE" },
     on_start = "sky_island_start",

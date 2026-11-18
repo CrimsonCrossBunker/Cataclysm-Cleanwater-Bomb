@@ -108,8 +108,8 @@ function M.teleport_followers(character, variable)
                 point.x + services.random.native_int(-2, 2),
                 point.y + services.random.native_int(-2, 2), point.z)
             M.set(variable, point)
-            M.teleport(npc, point, services.translate("Your followers teleport with you."),
-                services.translate("It seems some of your followers couldn't teleport with you."))
+            M.teleport(npc, point, ccb.services.translate("Your followers teleport with you."),
+                ccb.services.translate("It seems some of your followers couldn't teleport with you."))
         end
     end
 end

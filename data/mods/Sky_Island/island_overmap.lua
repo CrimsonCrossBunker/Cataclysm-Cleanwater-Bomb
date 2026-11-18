@@ -11,7 +11,7 @@ for _, id in ipairs {
 } do
     content.add(content.OvermapTerrain {
         id = id,
-        name = content.text("sky island"),
+        name = ccb.content.text("sky island"),
         symbol = "#",
         color = "c_white",
         monster_density = 0,

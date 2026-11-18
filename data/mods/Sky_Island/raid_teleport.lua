@@ -48,8 +48,8 @@ local function landing(character)
         state.add_effect(character, "effect_warped_super_clairvoyance",
             state.number("scoutingclairvoyancetime", 3), 1)
     end
-    state.message(character, services.translate("You're still materializing and not fully visible yet.  In about <global_val:invistime> seconds, the world will be able to see you, so if you were warped into danger, now's your chance to get to cover."))
-    state.message(character, services.translate("You've arrived!\nPress a key when ready and random missions will be generated for this expedition.  This may take another minute."), "neutral", true)
+    state.message(character, ccb.services.translate("You're still materializing and not fully visible yet.  In about <global_val:invistime> seconds, the world will be able to see you, so if you were warped into danger, now's your chance to get to cover."))
+    state.message(character, ccb.services.translate("You've arrived!\nPress a key when ready and random missions will be generated for this expedition.  This may take another minute."), "neutral", true)
     state.add_trait(character, "awayfromhome")
     state.set("timeawayfromhome", -state.number("bonuspulses"))
     state.add_effect(character, "warpsickness", 1, 6, true)
@@ -78,8 +78,8 @@ function M.arrive(character)
     end
     state.copy("OM_missionspot", "OM_missionspot_npc")
     state.teleport_followers(character, "OM_missionspot_npc")
-    state.teleport(character, state.point("OM_missionspot"), services.translate("You arrive on the raid."),
-        services.translate("It seems the portal couldn't find a valid location."))
+    state.teleport(character, state.point("OM_missionspot"), ccb.services.translate("You arrive on the raid."),
+        ccb.services.translate("It seems the portal couldn't find a valid location."))
     landing(character)
     if state.number("saved_portal_storms") > 0 then
         ccb.tasks.after_character_turn(character,
