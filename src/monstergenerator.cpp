@@ -297,6 +297,12 @@ std::optional<mon_action_death> MonsterGenerator::get_death_function( const std:
            : std::optional<mon_action_death>();
 }
 
+std::optional<mon_action_defend> MonsterGenerator::find_defense( const std::string &id ) const
+{
+    const auto defense = defense_map.find( id );
+    return defense == defense_map.end() ? std::nullopt : std::optional( defense->second );
+}
+
 MonsterGenerator::MonsterGenerator()
     : mon_templates( "monster type" )
     , mon_species( "species" )
@@ -1270,11 +1276,11 @@ void mtype::load( const JsonObject &jo, const std::string_view src )
 
     if( jo.has_member( "special_when_hit" ) ) {
         JsonArray jsarr = jo.get_array( "special_when_hit" );
-        const auto iter = gen.defense_map.find( jsarr.get_string( 0 ) );
-        if( iter == gen.defense_map.end() ) {
+        const auto defense = gen.find_defense( jsarr.get_string( 0 ) );
+        if( !defense ) {
             jsarr.throw_error( "Invalid monster defense function" );
         }
-        sp_defense = iter->second;
+        sp_defense = *defense;
         def_chance = jsarr.get_int( 1 );
     } else if( !was_loaded ) {
         sp_defense = &mdefense::none;

@@ -93,6 +93,7 @@ class MonsterGenerator
         void check_monster_definitions() const;
 
         std::optional<mon_action_death> get_death_function( const std::string &f ) const;
+        std::optional<mon_action_defend> find_defense( const std::string &id ) const;
         const std::vector<mtype> &get_all_mtypes() const;
         mtype_id get_valid_hallucination() const;
         friend struct mtype;

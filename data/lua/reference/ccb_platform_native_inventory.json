@@ -860,7 +860,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_content_creatures.cpp",
-          "line": 2982
+          "line": 2989
         },
         "direct_roots": [
           "AnatomyDefinition",
@@ -2170,7 +2170,7 @@
       "registration_name": "AnatomyDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3079,
+        "line": 3086,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2212,7 +2212,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3081
+                "line": 3088
               }
             ]
           },
@@ -2229,7 +2229,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1939
+                "line": 1944
               }
             ]
           },
@@ -2246,7 +2246,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1940
+                "line": 1945
               }
             ]
           },
@@ -2263,7 +2263,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3082
+                "line": 3089
               }
             ]
           }
@@ -2663,7 +2663,7 @@
       "registration_name": "BehaviorDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 2985,
+        "line": 2992,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2705,7 +2705,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2988
+                "line": 2995
               }
             ]
           },
@@ -2722,7 +2722,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2987
+                "line": 2994
               }
             ]
           },
@@ -2739,7 +2739,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1152
+                "line": 1157
               }
             ]
           },
@@ -2756,7 +2756,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1153
+                "line": 1158
               }
             ]
           },
@@ -2773,7 +2773,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2991
+                "line": 2998
               }
             ]
           },
@@ -2790,7 +2790,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2992
+                "line": 2999
               }
             ]
           },
@@ -2807,7 +2807,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2989
+                "line": 2996
               }
             ]
           },
@@ -2824,7 +2824,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2990
+                "line": 2997
               }
             ]
           }
@@ -3408,7 +3408,7 @@
       "registration_name": "BodyGraphDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3083,
+        "line": 3090,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3450,7 +3450,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3085
+                "line": 3092
               }
             ]
           },
@@ -3467,7 +3467,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1959
+                "line": 1964
               }
             ]
           },
@@ -3484,7 +3484,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1960
+                "line": 1965
               }
             ]
           },
@@ -3501,7 +3501,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3087
+                "line": 3094
               }
             ]
           },
@@ -3518,7 +3518,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3086
+                "line": 3093
               }
             ]
           }
@@ -3532,7 +3532,7 @@
       "registration_name": "BodyPartDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3050,
+        "line": 3057,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3574,7 +3574,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3055
+                "line": 3062
               }
             ]
           },
@@ -3591,7 +3591,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3063
+                "line": 3070
               }
             ]
           },
@@ -3608,7 +3608,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3059
+                "line": 3066
               }
             ]
           },
@@ -3625,7 +3625,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3065
+                "line": 3072
               }
             ]
           },
@@ -3642,7 +3642,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3057
+                "line": 3064
               }
             ]
           },
@@ -3659,7 +3659,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3060
+                "line": 3067
               }
             ]
           },
@@ -3676,7 +3676,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3052
+                "line": 3059
               }
             ]
           },
@@ -3693,7 +3693,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3066
+                "line": 3073
               }
             ]
           },
@@ -3710,7 +3710,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3062
+                "line": 3069
               }
             ]
           },
@@ -3727,7 +3727,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3053
+                "line": 3060
               }
             ]
           },
@@ -3744,7 +3744,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1587
+                "line": 1592
               }
             ]
           },
@@ -3761,7 +3761,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1588
+                "line": 1593
               }
             ]
           },
@@ -3778,7 +3778,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3056
+                "line": 3063
               }
             ]
           },
@@ -3795,7 +3795,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3058
+                "line": 3065
               }
             ]
           },
@@ -3812,7 +3812,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3054
+                "line": 3061
               }
             ]
           },
@@ -3829,7 +3829,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3067
+                "line": 3074
               }
             ]
           },
@@ -3846,7 +3846,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3061
+                "line": 3068
               }
             ]
           },
@@ -3863,7 +3863,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3064
+                "line": 3071
               }
             ]
           }
@@ -5230,7 +5230,7 @@
       "registration_name": "ConnectGroupDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3145,
+        "line": 3152,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -5272,7 +5272,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3147
+                "line": 3154
               }
             ]
           },
@@ -5289,7 +5289,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2501
+                "line": 2508
               }
             ]
           },
@@ -5306,7 +5306,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2502
+                "line": 2509
               }
             ]
           }
@@ -6201,7 +6201,7 @@
       "registration_name": "DiseaseTypeDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3118,
+        "line": 3125,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6243,7 +6243,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3121
+                "line": 3128
               }
             ]
           },
@@ -6260,7 +6260,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3120
+                "line": 3127
               }
             ]
           },
@@ -6277,7 +6277,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2361
+                "line": 2368
               }
             ]
           },
@@ -6294,7 +6294,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2362
+                "line": 2369
               }
             ]
           }
@@ -6397,7 +6397,7 @@
       "registration_name": "EffectTypeDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 2993,
+        "line": 3000,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6439,7 +6439,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3006
+                "line": 3013
               }
             ]
           },
@@ -6456,7 +6456,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3007
+                "line": 3014
               }
             ]
           },
@@ -6473,7 +6473,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2999
+                "line": 3006
               }
             ]
           },
@@ -6490,7 +6490,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2997
+                "line": 3004
               }
             ]
           },
@@ -6507,7 +6507,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3009
+                "line": 3016
               }
             ]
           },
@@ -6524,7 +6524,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3000
+                "line": 3007
               }
             ]
           },
@@ -6541,7 +6541,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2995
+                "line": 3002
               }
             ]
           },
@@ -6558,7 +6558,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3002
+                "line": 3009
               }
             ]
           },
@@ -6575,7 +6575,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3001
+                "line": 3008
               }
             ]
           },
@@ -6592,7 +6592,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3008
+                "line": 3015
               }
             ]
           },
@@ -6609,7 +6609,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2996
+                "line": 3003
               }
             ]
           },
@@ -6626,7 +6626,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1219
+                "line": 1224
               }
             ]
           },
@@ -6643,7 +6643,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1220
+                "line": 1225
               }
             ]
           },
@@ -6660,7 +6660,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2998
+                "line": 3005
               }
             ]
           },
@@ -6677,7 +6677,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3005
+                "line": 3012
               }
             ]
           },
@@ -6694,7 +6694,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3004
+                "line": 3011
               }
             ]
           },
@@ -6711,7 +6711,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3003
+                "line": 3010
               }
             ]
           }
@@ -6725,7 +6725,7 @@
       "registration_name": "EmissionDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3134,
+        "line": 3141,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6767,7 +6767,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3136
+                "line": 3143
               }
             ]
           },
@@ -6784,7 +6784,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2448
+                "line": 2455
               }
             ]
           },
@@ -6801,7 +6801,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2449
+                "line": 2456
               }
             ]
           },
@@ -6818,7 +6818,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3137
+                "line": 3144
               }
             ]
           }
@@ -8658,7 +8658,7 @@
       "registration_name": "FieldTypeDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3025,
+        "line": 3032,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8700,7 +8700,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3031
+                "line": 3038
               }
             ]
           },
@@ -8717,7 +8717,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3029
+                "line": 3036
               }
             ]
           },
@@ -8734,7 +8734,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3027
+                "line": 3034
               }
             ]
           },
@@ -8751,7 +8751,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3030
+                "line": 3037
               }
             ]
           },
@@ -8768,7 +8768,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3028
+                "line": 3035
               }
             ]
           },
@@ -8785,7 +8785,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2267
+                "line": 2274
               }
             ]
           },
@@ -8802,7 +8802,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2268
+                "line": 2275
               }
             ]
           }
@@ -14915,7 +14915,7 @@
       "registration_name": "MonsterAttackDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3010,
+        "line": 3017,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -14957,7 +14957,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3012
+                "line": 3019
               }
             ]
           },
@@ -14974,7 +14974,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3014
+                "line": 3021
               }
             ]
           },
@@ -14991,7 +14991,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1369
+                "line": 1374
               }
             ]
           },
@@ -15008,7 +15008,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1370
+                "line": 1375
               }
             ]
           },
@@ -15025,7 +15025,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3015
+                "line": 3022
               }
             ]
           },
@@ -15042,7 +15042,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3013
+                "line": 3020
               }
             ]
           }
@@ -15056,7 +15056,7 @@
       "registration_name": "MonsterDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3088,
+        "line": 3095,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -15098,7 +15098,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3110
+                "line": 3117
               }
             ]
           },
@@ -15115,7 +15115,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3098
+                "line": 3105
               }
             ]
           },
@@ -15132,7 +15132,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3100
+                "line": 3107
               }
             ]
           },
@@ -15149,7 +15149,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3096
+                "line": 3103
               }
             ]
           },
@@ -15166,7 +15166,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3093
+                "line": 3100
               }
             ]
           },
@@ -15183,7 +15183,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3104
+                "line": 3111
               }
             ]
           },
@@ -15200,7 +15200,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3111
+                "line": 3118
               }
             ]
           },
@@ -15217,7 +15217,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3097
+                "line": 3104
               }
             ]
           },
@@ -15234,7 +15234,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3109
+                "line": 3116
               }
             ]
           },
@@ -15251,7 +15251,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3090
+                "line": 3097
               }
             ]
           },
@@ -15268,7 +15268,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3107
+                "line": 3114
               }
             ]
           },
@@ -15285,7 +15285,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3094
+                "line": 3101
               }
             ]
           },
@@ -15302,7 +15302,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3099
+                "line": 3106
               }
             ]
           },
@@ -15319,7 +15319,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3091
+                "line": 3098
               }
             ]
           },
@@ -15336,7 +15336,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2033
+                "line": 2038
               }
             ]
           },
@@ -15353,7 +15353,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2034
+                "line": 2039
               }
             ]
           },
@@ -15370,7 +15370,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3101
+                "line": 3108
               }
             ]
           },
@@ -15387,7 +15387,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3113
+                "line": 3120
               }
             ]
           },
@@ -15404,7 +15404,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3112
+                "line": 3119
               }
             ]
           },
@@ -15421,7 +15421,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3092
+                "line": 3099
               }
             ]
           },
@@ -15438,7 +15438,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3108
+                "line": 3115
               }
             ]
           },
@@ -15455,7 +15455,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3095
+                "line": 3102
               }
             ]
           },
@@ -15472,7 +15472,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3105
+                "line": 3112
               }
             ]
           },
@@ -15489,7 +15489,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3106
+                "line": 3113
               }
             ]
           },
@@ -15506,7 +15506,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3103
+                "line": 3110
               }
             ]
           },
@@ -15523,7 +15523,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3102
+                "line": 3109
               }
             ]
           }
@@ -15537,7 +15537,7 @@
       "registration_name": "MonsterFactionDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3138,
+        "line": 3145,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -15579,7 +15579,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3141
+                "line": 3148
               }
             ]
           },
@@ -15596,7 +15596,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3140
+                "line": 3147
               }
             ]
           },
@@ -15613,7 +15613,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2467
+                "line": 2474
               }
             ]
           },
@@ -15630,7 +15630,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2468
+                "line": 2475
               }
             ]
           }
@@ -15644,7 +15644,7 @@
       "registration_name": "MonsterFlagDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3122,
+        "line": 3129,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -15686,7 +15686,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3124
+                "line": 3131
               }
             ]
           },
@@ -15703,7 +15703,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2380
+                "line": 2387
               }
             ]
           },
@@ -15720,7 +15720,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2381
+                "line": 2388
               }
             ]
           }
@@ -15963,7 +15963,7 @@
       "registration_name": "MoraleTypeDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3114,
+        "line": 3121,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16005,7 +16005,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3116
+                "line": 3123
               }
             ]
           },
@@ -16022,7 +16022,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2345
+                "line": 2352
               }
             ]
           },
@@ -16039,7 +16039,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2346
+                "line": 2353
               }
             ]
           },
@@ -16056,7 +16056,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3117
+                "line": 3124
               }
             ]
           }
@@ -16177,7 +16177,7 @@
       "registration_name": "MutationCategoryDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3148,
+        "line": 3155,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16219,7 +16219,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3150
+                "line": 3157
               }
             ]
           },
@@ -16236,7 +16236,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3152
+                "line": 3159
               }
             ]
           },
@@ -16253,7 +16253,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3151
+                "line": 3158
               }
             ]
           },
@@ -16270,7 +16270,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2511
+                "line": 2518
               }
             ]
           },
@@ -16287,7 +16287,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2512
+                "line": 2519
               }
             ]
           }
@@ -16301,7 +16301,7 @@
       "registration_name": "MutationDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3153,
+        "line": 3160,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16343,7 +16343,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3158
+                "line": 3165
               }
             ]
           },
@@ -16360,7 +16360,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3167
+                "line": 3174
               }
             ]
           },
@@ -16377,7 +16377,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3168
+                "line": 3175
               }
             ]
           },
@@ -16394,7 +16394,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3170
+                "line": 3177
               }
             ]
           },
@@ -16411,7 +16411,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3164
+                "line": 3171
               }
             ]
           },
@@ -16428,7 +16428,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3157
+                "line": 3164
               }
             ]
           },
@@ -16445,7 +16445,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3155
+                "line": 3162
               }
             ]
           },
@@ -16462,7 +16462,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3163
+                "line": 3170
               }
             ]
           },
@@ -16479,7 +16479,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3156
+                "line": 3163
               }
             ]
           },
@@ -16496,7 +16496,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2536
+                "line": 2543
               }
             ]
           },
@@ -16513,7 +16513,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2537
+                "line": 2544
               }
             ]
           },
@@ -16530,7 +16530,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3161
+                "line": 3168
               }
             ]
           },
@@ -16547,7 +16547,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3169
+                "line": 3176
               }
             ]
           },
@@ -16564,7 +16564,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3162
+                "line": 3169
               }
             ]
           },
@@ -16581,7 +16581,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3160
+                "line": 3167
               }
             ]
           },
@@ -16598,7 +16598,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3159
+                "line": 3166
               }
             ]
           },
@@ -16615,7 +16615,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3165
+                "line": 3172
               }
             ]
           },
@@ -16632,7 +16632,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3166
+                "line": 3173
               }
             ]
           }
@@ -16646,7 +16646,7 @@
       "registration_name": "MutationTypeDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3142,
+        "line": 3149,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16688,7 +16688,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3144
+                "line": 3151
               }
             ]
           },
@@ -16705,7 +16705,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2491
+                "line": 2498
               }
             ]
           },
@@ -16722,7 +16722,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2492
+                "line": 2499
               }
             ]
           }
@@ -27299,7 +27299,7 @@
       "registration_name": "SpeciesDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3125,
+        "line": 3132,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -27341,7 +27341,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3131
+                "line": 3138
               }
             ]
           },
@@ -27358,7 +27358,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3128
+                "line": 3135
               }
             ]
           },
@@ -27375,7 +27375,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3132
+                "line": 3139
               }
             ]
           },
@@ -27392,7 +27392,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3130
+                "line": 3137
               }
             ]
           },
@@ -27409,7 +27409,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3129
+                "line": 3136
               }
             ]
           },
@@ -27426,7 +27426,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3127
+                "line": 3134
               }
             ]
           },
@@ -27443,7 +27443,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2390
+                "line": 2397
               }
             ]
           },
@@ -27460,7 +27460,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 2391
+                "line": 2398
               }
             ]
           },
@@ -27477,7 +27477,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3133
+                "line": 3140
               }
             ]
           }
@@ -28223,7 +28223,7 @@
       "registration_name": "SubBodyPartDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3032,
+        "line": 3039,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -28265,7 +28265,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3034
+                "line": 3041
               }
             ]
           },
@@ -28282,7 +28282,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3037
+                "line": 3044
               }
             ]
           },
@@ -28299,7 +28299,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3035
+                "line": 3042
               }
             ]
           },
@@ -28316,7 +28316,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1546
+                "line": 1551
               }
             ]
           },
@@ -28333,7 +28333,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1547
+                "line": 1552
               }
             ]
           },
@@ -28350,7 +28350,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3036
+                "line": 3043
               }
             ]
           },
@@ -28367,7 +28367,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3038
+                "line": 3045
               }
             ]
           }
@@ -32113,7 +32113,7 @@
       "registration_name": "WeakpointSetDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3016,
+        "line": 3023,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -32155,7 +32155,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3020
+                "line": 3027
               }
             ]
           },
@@ -32172,7 +32172,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3021
+                "line": 3028
               }
             ]
           },
@@ -32189,7 +32189,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3023
+                "line": 3030
               }
             ]
           },
@@ -32206,7 +32206,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3022
+                "line": 3029
               }
             ]
           },
@@ -32223,7 +32223,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3024
+                "line": 3031
               }
             ]
           },
@@ -32240,7 +32240,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3018
+                "line": 3025
               }
             ]
           },
@@ -32257,7 +32257,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1428
+                "line": 1433
               }
             ]
           },
@@ -32274,7 +32274,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1429
+                "line": 1434
               }
             ]
           },
@@ -32291,7 +32291,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3019
+                "line": 3026
               }
             ]
           }
@@ -33003,7 +33003,7 @@
       "registration_name": "WoundDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3039,
+        "line": 3046,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -33045,7 +33045,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3045
+                "line": 3052
               }
             ]
           },
@@ -33062,7 +33062,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3044
+                "line": 3051
               }
             ]
           },
@@ -33079,7 +33079,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3049
+                "line": 3056
               }
             ]
           },
@@ -33096,7 +33096,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3041
+                "line": 3048
               }
             ]
           },
@@ -33113,7 +33113,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3046
+                "line": 3053
               }
             ]
           },
@@ -33130,7 +33130,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3042
+                "line": 3049
               }
             ]
           },
@@ -33147,7 +33147,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1719
+                "line": 1724
               }
             ]
           },
@@ -33164,7 +33164,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1720
+                "line": 1725
               }
             ]
           },
@@ -33181,7 +33181,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3043
+                "line": 3050
               }
             ]
           },
@@ -33198,7 +33198,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3047
+                "line": 3054
               }
             ]
           },
@@ -33215,7 +33215,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3048
+                "line": 3055
               }
             ]
           }
@@ -33229,7 +33229,7 @@
       "registration_name": "WoundFixDefinition",
       "registration": {
         "path": "src/lua_platform_content_creatures.cpp",
-        "line": 3068,
+        "line": 3075,
         "installer": "platform_v1.creatures_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -33271,7 +33271,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3077
+                "line": 3084
               }
             ]
           },
@@ -33288,7 +33288,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3072
+                "line": 3079
               }
             ]
           },
@@ -33305,7 +33305,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3070
+                "line": 3077
               }
             ]
           },
@@ -33322,7 +33322,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3071
+                "line": 3078
               }
             ]
           },
@@ -33339,7 +33339,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1831
+                "line": 1836
               }
             ]
           },
@@ -33356,7 +33356,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 1832
+                "line": 1837
               }
             ]
           },
@@ -33373,7 +33373,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3075
+                "line": 3082
               }
             ]
           },
@@ -33390,7 +33390,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3076
+                "line": 3083
               }
             ]
           },
@@ -33407,7 +33407,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3078
+                "line": 3085
               }
             ]
           },
@@ -33424,7 +33424,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3074
+                "line": 3081
               }
             ]
           },
@@ -33441,7 +33441,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_content_creatures.cpp",
-                "line": 3073
+                "line": 3080
               }
             ]
           }

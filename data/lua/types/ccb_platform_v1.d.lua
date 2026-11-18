@@ -1906,16 +1906,22 @@ function BodyGraphDefinition:row(row, fill_row) end
 ---@return BodyGraphDefinition self
 function BodyGraphDefinition:part(symbol, options) end
 
+---@class MonsterDefenseDefinitionOptions
+---@field id string Native defense id.
+---@field chance integer Trigger probability from zero through 100.
+
 ---@class MonsterDefinitionOptions
 ---@field id string Stable native monster id.
----@field name string|LocalizedText Counted name; LocalizedText may carry its plural.
+---@field copy_from? string Concrete monster or native abstract to inherit before data finalization.
+---@field name? string|LocalizedText Counted name. Omit to keep the inherited name.
+---@field defense? MonsterDefenseDefinitionOptions Native reaction when the monster is struck.
 ---@field plural_name? string Player-facing plural name.
 ---@field description? string|LocalizedText Player-facing description.
 ---@field symbol? string Exactly one display-cell glyph.
 ---@field color? string Native color name.
 ---@field looks_like? string Tileset fallback id.
 ---@field body_type? string Native visual body-type tag.
----@field default_faction string Existing or same-transaction MonsterFaction id.
+---@field default_faction? string Existing or same-transaction MonsterFaction id. Omit to inherit the parent's faction.
 ---@field harvest? string Existing or same-transaction Harvest id; defaults to `human`.
 ---@field dissect? string Existing or same-transaction Harvest id.
 ---@field decay? string Existing or same-transaction Harvest id.

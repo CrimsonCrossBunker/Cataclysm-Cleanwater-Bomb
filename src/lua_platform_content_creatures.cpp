@@ -69,6 +69,7 @@ extern "C" {
 #include "mattack_common.h"
 #include "mondefense.h"
 #include "monfaction.h"
+#include "mod_tracker.h"
 #include "monstergenerator.h"
 #include "morale_types.h"
 #include "mtype.h"
@@ -715,6 +716,8 @@ struct monster_attack_reference_definition_data {
 
 struct monster_definition_data {
     std::string id;
+    std::string copy_from;
+    std::set<std::string> authored_options;
     authored_text name;
     std::string plural_name;
     authored_text description;
@@ -752,6 +755,8 @@ struct monster_definition_data {
     std::int64_t bleed_rate = 100;
     double status_chance_multiplier = 1.0;
     double luminance = 0.0;
+    std::string defense;
+    std::int64_t defense_chance = 0;
     bool regenerates_in_dark = false;
     bool regenerates_morale = false;
     bool aggressive_to_characters = true;
@@ -2036,6 +2041,7 @@ struct monster_definition_handle {
         monster_definition_handle &name( const sol::object &value ) {
             set_counted_name( token, *definition, definition->name, definition->plural_name,
                               value, "monster name", "monster" );
+            definition->authored_options.insert( "name" );
             return *this;
         }
 
@@ -2048,6 +2054,7 @@ struct monster_definition_handle {
         monster_definition_handle &description( const sol::object &value ) {
             set_authored_text( token, *definition, definition->description, value,
                                "monster description", "monster" );
+            definition->authored_options.insert( "description" );
             return *this;
         }
 
@@ -3411,6 +3418,14 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "Monster", [this]( const sol::table & options ) {
         auto definition = std::make_shared<monster_definition_data>();
         definition->id = options.get_or( "id", std::string() );
+        definition->copy_from = options.get_or( "copy_from", std::string() );
+        if( !definition->copy_from.empty() ) {
+            for( const auto &option : options ) {
+                if( option.first.is<std::string>() ) {
+                    definition->authored_options.insert( option.first.as<std::string>() );
+                }
+            }
+        }
         definition->name = read_counted_name_option( options, "name", "plural_name",
                            {}, {}, definition->plural_name, "monster name" );
         definition->description = read_text_option( options, "description", {},
@@ -3455,6 +3470,13 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->status_chance_multiplier = options.get_or(
                 "status_chance_multiplier", 1.0 );
         definition->luminance = options.get_or( "luminance", 0.0 );
+        if( const auto defense = options.get<std::optional<sol::table>>( "defense" ) ) {
+            definition->defense = defense->get<std::string>( "id" );
+            definition->defense_chance = defense->get<std::int64_t>( "chance" );
+            if( definition->defense.empty() ) {
+                throw std::runtime_error( "monster defense requires a built-in defense id" );
+            }
+        }
         definition->regenerates_in_dark = options.get_or(
                                               "regenerates_in_dark", false );
         definition->regenerates_morale = options.get_or(
@@ -4368,6 +4390,11 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
         }
         for( const auto &entry : pimpl_->monsters ) {
             const auto &definition = *entry.definition;
+            if( !definition.defense.empty() &&
+                ( definition.defense_chance < 0 || definition.defense_chance > 100 ||
+                  !MonsterGenerator::generator().find_defense( definition.defense ) ) ) {
+                throw std::runtime_error( "monster '" + definition.id + "' has an invalid defense" );
+            }
             if( definition.grab_strength < 0 || !fits_native_int( definition.grab_strength ) ||
                 !io::string_to_enum_optional<mdeath_type>( definition.death_corpse_type ) ) {
                 throw std::runtime_error( "monster '" + definition.id + "' has invalid grab or death options" );
@@ -5503,90 +5530,165 @@ void creatures_content_transaction::impl::apply_monster()
         { "MATING_SEASON", mon_trigger::MATING_SEASON },
         { "BRIGHT_LIGHT", mon_trigger::BRIGHT_LIGHT }
     };
-    for( const monster_registration &entry : this->monsters ) {
-        const mtype_id id( entry.definition->id );
-        this->monster_undo.emplace_back(
-            id, id.is_valid() ? std::optional<mtype>( id.obj() ) : std::nullopt );
+    auto &registry = detail::monster_type_registry();
+    auto &generator = MonsterGenerator::generator();
+    auto &loader = DynamicDataLoader::get_instance();
+    if( !this->monsters.empty() && !loader.is_data_finalized() ) {
+        registry.resolve_deferred();
+    }
+    const auto find_parent = [&registry]( const std::string & id ) -> const mtype * {
+        const mtype_id parent_id( id );
+        return registry.is_valid( parent_id ) ? &registry.obj( parent_id ) : registry.find_abstract( id );
+    };
+    std::vector<std::size_t> order;
+    std::string inheritance_error;
+    if( !detail::resolve_platform_inheritance_order( this->monsters,
+    []( const monster_registration & entry ) {
+        return entry.definition->id;
+    }, []( const monster_registration & entry ) {
+        return entry.definition->copy_from;
+    }, [&find_parent]( const std::string & id ) {
+        return find_parent( id ) != nullptr;
+    }, order, inheritance_error, "monster" ) ) {
+        throw std::runtime_error( inheritance_error );
+    }
+    for( const std::size_t index : order ) {
+        const monster_registration &entry = this->monsters[index];
         const monster_definition_data &source = *entry.definition;
+        const mtype_id id( source.id );
+        const mtype *previous = id.is_valid() ? &id.obj() : nullptr;
+        if( entry.operation == definition_operation::add && previous && !previous->src.empty() &&
+            loader.source_load_order( previous->src.back().second.str() ) >
+            loader.source_load_order( this->owner ) ) {
+            continue;
+        }
+        this->monster_undo.emplace_back( id, previous ? std::optional<mtype>( *previous ) : std::nullopt );
+        const bool inherited = !source.copy_from.empty();
         mtype native;
+        if( inherited ) {
+            if( loader.is_data_finalized() ) {
+                throw std::runtime_error( "monster inheritance requires the authored, unscaled registry" );
+            }
+            native = *find_parent( source.copy_from );
+            native.armor_proportional.reset();
+            native.armor_relative.reset();
+            native.weakpoints_deferred_deleted.clear();
+            if( native.looks_like.empty() ) {
+                native.looks_like = source.copy_from;
+            }
+        }
         native.id = id;
-        native.src.emplace_back( id, mod_id( this->owner ) );
+        mod_tracker::assign_src( native, this->owner );
         native.was_loaded = true;
-        native.name = native_counted_name( source.name, source.plural_name );
-        native.description = source.description.empty() ? translation() :
-                             source.description.native();
-        native.sym = source.symbol;
-        native.color = color_from_string( source.color, report_color_error::no );
-        native.looks_like = source.looks_like;
-        native.bodytype = source.body_type;
-        native.default_faction = mfaction_str_id( source.default_faction );
-        native.harvest = harvest_id( source.harvest );
-        native.dissect = source.dissect.empty() ? harvest_id::NULL_ID() :
-                         harvest_id( source.dissect );
-        native.decay = source.decay.empty() ? harvest_id::NULL_ID() :
-                       harvest_id( source.decay );
-        native.speed_desc = speed_description_id( source.speed_description );
-        native.death_drops = source.death_drops.empty() ? item_group_id::NULL_ID() :
-                             item_group_id( source.death_drops );
-        native.volume = units::from_milliliter<std::int64_t>( source.volume_ml );
-        native.weight = units::from_gram<std::int64_t>( source.weight_grams );
-        native.phase = monster_phases.at( source.phase );
-        native.difficulty_adjustment = static_cast<int>( source.difficulty_adjustment );
-        native.hp = static_cast<int>( source.hp );
-        native.speed = static_cast<int>( source.speed );
-        native.agro = static_cast<int>( source.aggression );
-        native.morale = static_cast<int>( source.morale );
-        native.tracking_distance = static_cast<int>( source.tracking_distance );
-        native.attack_cost = static_cast<int>( source.attack_cost );
-        native.grab_strength = static_cast<int>( source.grab_strength );
-        native.melee_skill = static_cast<int>( source.melee_skill );
-        native.melee_dice = static_cast<int>( source.melee_dice );
-        native.melee_sides = static_cast<int>( source.melee_sides );
-        native.melee_dice_ap = static_cast<int>( source.melee_armor_penetration );
-        native.sk_dodge = static_cast<int>( source.dodge );
-        native.vision_day = static_cast<int>( source.vision_day );
-        native.vision_night = static_cast<int>( source.vision_night );
-        native.regenerates = static_cast<int>( source.regenerates );
-        native.bleed_rate = static_cast<int>( source.bleed_rate );
-        native.status_chance_multiplier = static_cast<float>(
-                                              source.status_chance_multiplier );
-        native.luminance = static_cast<float>( source.luminance );
-        native.regenerates_in_dark = source.regenerates_in_dark;
-        native.regen_morale = source.regenerates_morale;
-        native.aggro_character = source.aggressive_to_characters;
-        native.sp_defense = &mdefense::none;
-        native.mdeath_effect.lua_platform_mod = this->owner;
-        native.mdeath_effect.lua_platform_handler = source.death_handler;
-        native.mdeath_effect.corpse_type = io::string_to_enum<mdeath_type>( source.death_corpse_type );
-        native.mdeath_effect.death_message = source.death_message.native();
-        native.families.families = source.weakpoint_families;
-        native.mat.clear();
-        native.mat_portion_total = 0;
-        if( source.materials.empty() ) {
-            native.mat.emplace( material_flesh, 1 );
-            native.mat_portion_total = 1;
-        } else {
-            for( const auto &[material, portions] : source.materials ) {
-                native.mat.emplace( material_id( material ), static_cast<int>( portions ) );
-                native.mat_portion_total += static_cast<int>( portions );
+        const auto set_option = [&]( const char *option, auto & target, auto value ) {
+            if( !inherited || source.authored_options.count( option ) != 0 ) {
+                target = std::move( value );
+            }
+        };
+        set_option( "name", native.name, native_counted_name( source.name, source.plural_name ) );
+        set_option( "description", native.description, source.description.empty() ? translation() :
+                             source.description.native() );
+        set_option( "symbol", native.sym, source.symbol );
+        set_option( "color", native.color, color_from_string( source.color, report_color_error::no ) );
+        set_option( "looks_like", native.looks_like, source.looks_like );
+        set_option( "body_type", native.bodytype, source.body_type );
+        set_option( "default_faction", native.default_faction, mfaction_str_id( source.default_faction ) );
+        set_option( "harvest", native.harvest, harvest_id( source.harvest ) );
+        set_option( "dissect", native.dissect, source.dissect.empty() ? harvest_id::NULL_ID() :
+                         harvest_id( source.dissect ) );
+        set_option( "decay", native.decay, source.decay.empty() ? harvest_id::NULL_ID() :
+                       harvest_id( source.decay ) );
+        set_option( "speed_description", native.speed_desc, speed_description_id( source.speed_description ) );
+        set_option( "death_drops", native.death_drops, source.death_drops.empty() ? item_group_id::NULL_ID() :
+                             item_group_id( source.death_drops ) );
+        set_option( "volume_ml", native.volume, units::from_milliliter<std::int64_t>( source.volume_ml ) );
+        set_option( "weight_grams", native.weight, units::from_gram<std::int64_t>( source.weight_grams ) );
+        set_option( "phase", native.phase, monster_phases.at( source.phase ) );
+        set_option( "difficulty_adjustment", native.difficulty_adjustment, static_cast<int>( source.difficulty_adjustment ) );
+        set_option( "hp", native.hp, static_cast<int>( source.hp ) );
+        set_option( "speed", native.speed, static_cast<int>( source.speed ) );
+        set_option( "aggression", native.agro, static_cast<int>( source.aggression ) );
+        set_option( "morale", native.morale, static_cast<int>( source.morale ) );
+        set_option( "tracking_distance", native.tracking_distance, static_cast<int>( source.tracking_distance ) );
+        set_option( "attack_cost", native.attack_cost, static_cast<int>( source.attack_cost ) );
+        set_option( "grab_strength", native.grab_strength, static_cast<int>( source.grab_strength ) );
+        set_option( "melee_skill", native.melee_skill, static_cast<int>( source.melee_skill ) );
+        set_option( "melee_dice", native.melee_dice, static_cast<int>( source.melee_dice ) );
+        set_option( "melee_sides", native.melee_sides, static_cast<int>( source.melee_sides ) );
+        set_option( "melee_armor_penetration", native.melee_dice_ap, static_cast<int>( source.melee_armor_penetration ) );
+        set_option( "dodge", native.sk_dodge, static_cast<int>( source.dodge ) );
+        set_option( "vision_day", native.vision_day, static_cast<int>( source.vision_day ) );
+        set_option( "vision_night", native.vision_night, static_cast<int>( source.vision_night ) );
+        set_option( "regenerates", native.regenerates, static_cast<int>( source.regenerates ) );
+        set_option( "bleed_rate", native.bleed_rate, static_cast<int>( source.bleed_rate ) );
+        set_option( "status_chance_multiplier", native.status_chance_multiplier, static_cast<float>(
+                                              source.status_chance_multiplier ) );
+        set_option( "luminance", native.luminance, static_cast<float>( source.luminance ) );
+        set_option( "regenerates_in_dark", native.regenerates_in_dark, source.regenerates_in_dark );
+        set_option( "regenerates_morale", native.regen_morale, source.regenerates_morale );
+        set_option( "aggressive_to_characters", native.aggro_character, source.aggressive_to_characters );
+        if( !source.defense.empty() ) {
+            native.sp_defense = generator.find_defense( source.defense ).value();
+            native.def_chance = static_cast<unsigned int>( source.defense_chance );
+        } else if( !inherited ) {
+            native.sp_defense = &mdefense::none;
+            native.def_chance = 0;
+        }
+        if( !inherited || !source.death_handler.empty() ) {
+            native.mdeath_effect.lua_platform_mod = this->owner;
+            native.mdeath_effect.lua_platform_handler = source.death_handler;
+        }
+        set_option( "death_corpse_type", native.mdeath_effect.corpse_type,
+                    io::string_to_enum<mdeath_type>( source.death_corpse_type ) );
+        set_option( "death_message", native.mdeath_effect.death_message, source.death_message.native() );
+        for( const ::weakpoint_family &family : source.weakpoint_families ) {
+            auto &families = native.families.families;
+            families.erase( std::remove_if( families.begin(), families.end(),
+            [&family]( const ::weakpoint_family & existing ) {
+                return existing.id == family.id;
+            } ), families.end() );
+            families.push_back( family );
+        }
+        if( !inherited || !source.materials.empty() ) {
+            native.mat.clear();
+            native.mat_portion_total = 0;
+            if( source.materials.empty() ) {
+                native.mat.emplace( material_flesh, 1 );
+                native.mat_portion_total = 1;
+            } else {
+                for( const auto &[material, portions] : source.materials ) {
+                    native.mat.emplace( material_id( material ), static_cast<int>( portions ) );
+                    native.mat_portion_total += static_cast<int>( portions );
+                }
             }
         }
         for( const std::string &species : source.species ) {
             native.species.emplace( species );
         }
-        native.categories = source.categories;
-        native.pre_flags_.clear();
+        native.categories.insert( source.categories.begin(), source.categories.end() );
         for( const std::string &flag : source.flags ) {
             native.pre_flags_.emplace( flag );
+        }
+        if( !source.armor.empty() ) {
+            native.armor = resistances{};
         }
         for( const auto &[damage_id, value] : source.armor ) {
             native.armor.set_resist( damage_type_id( damage_id ),
                                      static_cast<float>( value ) );
         }
+        if( !source.melee_damage.empty() ) {
+            native.melee_damage = damage_instance{};
+        }
         for( const auto &[damage_id, value] : source.melee_damage ) {
             native.melee_damage.add_damage( damage_type_id( damage_id ),
                                             static_cast<float>( value.amount ),
                                             static_cast<float>( value.armor_penetration ) );
+        }
+        if( !inherited || !source.attacks.empty() ) {
+            native.special_attacks.clear();
+            native.special_attacks_names.clear();
+            native.lua_platform_attack_mod = this->owner;
+            native.lua_platform_attack_handlers = source.attack_handlers;
         }
         for( const monster_attack_reference_definition_data &source_attack :
              source.attacks ) {
@@ -5607,8 +5709,6 @@ void creatures_content_transaction::impl::apply_monster()
                                             mtype_special_attack( std::move( actor ) ) );
             native.special_attacks_names.push_back( source_attack.id );
         }
-        native.lua_platform_attack_mod = this->owner;
-        native.lua_platform_attack_handlers = source.attack_handlers;
         for( const std::string &set : source.weakpoint_sets ) {
             native.weakpoints_deferred.emplace_back( set );
         }
@@ -5642,12 +5742,14 @@ void creatures_content_transaction::impl::apply_monster()
         for( const std::string &trigger : source.placate_triggers ) {
             native.placate.set( monster_triggers.at( trigger ) );
         }
-        mtype &inserted = detail::monster_type_registry().insert( native );
-        MonsterGenerator::generator().finalize_lua_first_mtype_if_ready(
-            inserted, DynamicDataLoader::get_instance().is_data_finalized() );
+        mtype &inserted = registry.insert( native );
+        generator.finalize_lua_first_mtype_if_ready( inserted, loader.is_data_finalized() );
     }
     if( !this->monsters.empty() ) {
-        MonsterGenerator::generator().refresh_hallucination_monsters();
+        if( !loader.is_data_finalized() ) {
+            registry.resolve_deferred();
+        }
+        generator.refresh_hallucination_monsters();
     }
     this->next_apply_phase = creatures_content_apply_phase::finalize;
 }
@@ -6871,6 +6973,13 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, operation_name( entry.operation ) );
             const monster_definition_data &value = *entry.definition;
             hash_part( state, value.id );
+            hash_part( state, value.copy_from );
+            for( const std::string &option : value.authored_options ) {
+                hash_part( state, "authored_option" );
+                hash_part( state, option );
+            }
+            hash_part( state, value.defense );
+            hash_part( state, std::to_string( value.defense_chance ) );
             hash_part( state, value.name );
             hash_part( state, value.plural_name );
             hash_part( state, value.description );
