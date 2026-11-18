@@ -64,20 +64,6 @@
     "variants": [ { "symbols": "&", "symbols_broken": "x" } ]
   },
   {
-    "id": "door_lock",
-    "type": "ITEM",
-    "name": { "str": "door lock set" },
-    "description": "Some wires and gears for connecting door handles and an unlocking knob to a latching mechanism, and a sturdy lock to go on the outer surface.  If installed on a door or a hatch, this can be used to lock it.",
-    "symbol": "+",
-    "color": "dark_gray",
-    "material": [ "steel" ],
-    "category": "veh_parts",
-    "weight": "500 g",
-    "volume": "300 ml",
-    "price": "30 USD",
-    "price_postapoc": "72 cent"
-  },
-  {
     "type": "vehicle_part",
     "id": "veh_binoculars",
     "name": { "str": "binoculars" },
