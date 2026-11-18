@@ -1,6 +1,5 @@
 #include "lightmap.h"
 #include "vision_preparation.h"
-#include <system_error> // IWYU pragma: associated
 #include "shadowcasting.h" // IWYU pragma: associated
 
 #include <algorithm>
@@ -9,38 +8,46 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <list>
 #include <map>
 #include <memory>
+#include <new>
 #include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>
 
 #include "avatar.h"
-#include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
-#include "colony.h"
+#include "coordinates.h"
 #include "cuboid_rectangle.h"
 #include "debug.h"
 #include "field.h"
+#include "field_type.h"
 #include "fragment_cloud.h" // IWYU pragma: keep
 #include "game.h"
+#include "game_constants.h"
 #include "item.h"
+#include "item_pocket.h"
 #include "item_stack.h"
 #include "level_cache.h"
 #include "line.h"
+#include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "map_scale_constants.h"
 #include "map_visibility.h"
 #include "mapdata.h"
-#include "messages.h"
+#include "math_defines.h"
+#include "mdarray.h"
 #include "monster.h"
 #include "mp_gamestate.h"
-#include "mp_client_conn.h"
 #include "mtype.h"
 #include "npc.h"
+#include "options.h"
+#include "overmap_ui.h"
 #include "profiling.h"
 #include "point.h"
 #include "string_formatter.h"
@@ -48,7 +55,6 @@
 #include "tileray.h"
 #include "type_id.h"
 #include "units.h"
-#include "units_utility.h"
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -1434,11 +1440,12 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
                 if( !vision_preparation_ ) {
                     vision_preparation_ = std::make_unique<vision_preparation::frame>( workers );
                 }
-                auto request = vision_preparation_->try_acquire( MAX_VIEW_DISTANCE - penalty );
+                vision_preparation::frame::lease request = vision_preparation_->try_acquire(
+                            MAX_VIEW_DISTANCE - penalty );
                 if( request ) {
                     {
                         CATA_PROFILE_SCOPE_NAMED( "vision.capture" );
-                        auto &values = vision_preparation_->capture();
+                        vision_preparation::snapshot &values = vision_preparation_->capture();
                         values.origin = casting_origin;
                         values.offset_distance = penalty;
                         values.numerator = 1.0f;

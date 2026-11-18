@@ -2,11 +2,11 @@
 #ifndef CATA_SRC_OVERMAP_H
 #define CATA_SRC_OVERMAP_H
 
-#include <cstdint>
 #include <algorithm>
 #include <array>
 #include <bitset>
 #include <climits>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <iosfwd>
@@ -23,8 +23,8 @@
 #include <vector>
 
 #include "basecamp.h"
-#include "catacharset.h"
 #include "cata_variant.h"
+#include "catacharset.h"
 #include "city.h"
 #include "colony.h"
 #include "color.h"
@@ -58,9 +58,10 @@ class monster;
 class npc;
 class overmap_connection;
 struct horde_entity;
-struct pp_resolved_generator;
 struct map_data_summary;
+struct pp_resolved_generator;
 struct region_settings;
+
 namespace north_america
 {
 enum class terrain;

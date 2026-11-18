@@ -7,7 +7,6 @@
 #include "character_action_guard.h"
 #include "item_uid.h"
 #include "vehicle_uid.h"
-#include "map_memory.h"
 #include "render_backend.h"
 #include "mp_world_session.h"
 #include "npc_lifetime.h"
@@ -20,33 +19,30 @@
 #include <climits>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <cwctype>
 #include <exception>
 #include <functional>
+#include <initializer_list>
 #include <iomanip>
-#include <iostream>
 #include <iterator>
 #include <limits>
 #include <list>
-#include <locale>
 #include <map>
 #include <memory>
 #include <numeric>
-#include <queue>
 #include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <imgui/imgui.h>
 
 #if defined(EMSCRIPTEN)
     #include <emscripten.h>
@@ -56,13 +52,12 @@
 #include "action.h"
 #if defined(__ANDROID__)
     #include "android_hud.h"
+    #include "android_ui_mode.h"
 #endif
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "activity_handlers.h"
 #include "activity_item_handling.h"
-#include "activity_type.h"
-#include "android_ui_mode.h"
-#include "ascii_art.h"
 #include "auto_note.h"
 #include "auto_pickup.h"
 #include "avatar.h"
@@ -73,41 +68,40 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "butchery.h"
-#include "butchery_requirements.h"
 #include "cached_options.h"
+#include "calendar.h"
 #include "cata_imgui.h"
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
-#include "cata_variant.h"
 #include "catacharset.h"
-#include "char_validity_check.h"
 #include "character.h"
 #include "character_attire.h"
+#include "character_id.h"
 #include "character_martial_arts.h"
 #include "city.h"
 #include "climbing.h"
+#include "clone_ptr.h"
 #include "clzones.h"
-#include "colony.h"
 #include "color.h"
 #include "computer.h"
 #include "computer_session.h"
 #include "condition.h"
-#include "construction.h"
-#include "construction_group.h"
 #include "contents_change_handler.h"
 #include "coordinates.h"
+#include "creature.h"
 #include "creature_tracker.h"
 #include "cuboid_rectangle.h"
 #include "current_map.h"
+#include "cursesdef.h"
 #include "cursesport.h" // IWYU pragma: keep
 #include "damage.h"
 #include "debug.h"
 #include "debug_capture.h"
 #include "debug_menu.h"
-#include "dependency_tree.h"
 #include "dialogue.h"
 #include "dialogue_chatbin.h"
+#include "dialogue_helpers.h"
 #include "diary.h"
 #include "distraction_manager.h"
 #include "editmap.h"
@@ -118,64 +112,55 @@
 #include "event.h"
 #include "event_bus.h"
 #include "faction.h"
-#include "fault.h"
 #include "field.h"
 #include "field_type.h"
 #include "filesystem.h"
 #include "flag.h"
-#include "flexbuffer_json-inl.h"
-#include "flexbuffer_json.h"
 #include "flood_fill.h"
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "game_ui.h"
 #include "gamemode.h"
 #include "gates.h"
+#include "global_vars.h"
 #include "get_version.h"
-#include "harvest.h"
 #include "iexamine.h"
-#include "imgui/imgui_stdlib.h"
-#include "init.h"
 #include "input.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "input_popup.h"
-#include "inventory.h"
+#include "inventory_ui.h"
 #include "item.h"
-#include "item_category.h"
-#include "item_contents.h"
 #include "item_insert.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_reload.h"
 #include "item_search.h"
-#include "item_stack.h"
 #include "item_wakeup.h"
-#include "iteminfo_query.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
-#include "json.h"
+#include "kill_statistics.h"
 #include "kill_tracker.h"
 #include "level_cache.h"
 #include "lightmap.h"
 #include "line.h"
 #include "live_view.h"
-#include "loading_ui.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_loader.h"
 #include "lua_platform_runtime.h"
 #include "magic.h"
 #include "magic_enchantment.h"
-#include "main_menu.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "map_scale_constants.h"
 #include "map_selector.h"
+#include "map_simulation_regions.h"
 #include "mapbuffer.h"
 #include "mapdata.h"
-#include "mapsharing.h"
 #include "maptile_fwd.h"
 #include "memorial_logger.h"
+#include "memory_fast.h"
 #include "messages.h"
 #include "mission.h"
 #include "mod_manager.h"
@@ -188,7 +173,6 @@
 #include "mp_inventory_activity.h"
 #include "item_activation.h"
 #include "tool_activity_target.h"
-#include "thread_pool.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
     #include "mp_melee.h"
@@ -197,6 +181,7 @@
 #endif
 #include "mtype.h"
 #include "npc.h"
+#include "npc_opinion.h"
 #include "npctrade.h"
 #include "omdata.h"
 #include "options.h"
@@ -210,9 +195,12 @@
 #include "past_achievements_info.h"
 #include "path_info.h"
 #include "pathfinding.h"
-#include "perf.h"
 #include "pickup.h"
+#include "pimpl.h"
 #include "player_activity.h"
+#include "player_identity.h"
+#include "pocket_type.h"
+#include "point.h"
 #include "popup.h"
 #include "power_network.h"
 #include "profession.h"
@@ -233,17 +221,18 @@
 #include "start_location.h"
 #include "stats_tracker.h"
 #include "string_formatter.h"
-#include "string_input_popup.h"
+#include "submap.h"
 #include "surroundings_menu.h"
 #include "talker.h"
-#include "temp_crafting_inventory.h"
 #include "text_snippets.h"
 #include "tileray.h"
 #include "timed_event.h"
 #include "translation.h"
 #include "translation_cache.h"
+#include "translation_manager.h"
 #include "translations.h"
 #include "trap.h"
+#include "type_id.h"
 #include "ui_helpers.h"
 #include "ui_extended_description.h"
 #include "ui_manager.h"
@@ -257,18 +246,19 @@
 #include "vehicle.h"
 #include "vehicle_control.h"
 #include "vehicle_turning.h"
+#include "view_action.h"
 #include "viewer.h"
 #include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
-#include "wcwidth.h"
 #include "weakpoint.h"
 #include "weather.h"
 #include "weather_type.h"
 #include "worldfactory.h"
-#include "zzip.h"
 
 #if defined(TILES)
+    #include <SDL3/SDL.h>
+
     #include "sdl_utils.h"
 #endif // TILES
 
@@ -277,6 +267,8 @@
 #else
     #define UNUSED
 #endif
+
+class temp_crafting_inventory;
 
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_TRAVELLING( "ACT_TRAVELLING" );
@@ -397,6 +389,8 @@ static const ter_str_id ter_t_elevator( "t_elevator" );
 static const ter_str_id ter_t_lava( "t_lava" );
 static const ter_str_id ter_t_manhole( "t_manhole" );
 static const ter_str_id ter_t_manhole_cover( "t_manhole_cover" );
+static const ter_str_id ter_t_rock( "t_rock" );
+static const ter_str_id ter_t_rock_floor( "t_rock_floor" );
 
 static const trait_id trait_BADKNEES( "BADKNEES" );
 static const trait_id trait_CENOBITE( "CENOBITE" );
@@ -9721,8 +9715,8 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
     weather.set_nextweather( calendar::turn );
     if( move_player ) {
         if( debug_landing && atlas && om_dest.z() < -OVERMAP_DEPTH &&
-            here.ter( player_pos ) == ter_str_id( "t_rock" ).id() ) {
-            here.ter_set( player_pos, ter_str_id( "t_rock_floor" ).id() );
+            here.ter( player_pos ) == ter_t_rock.id() ) {
+            here.ter_set( player_pos, ter_t_rock_floor.id() );
         }
         place_player( player_pos );
     }

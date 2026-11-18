@@ -5,6 +5,7 @@
 #include <optional>
 
 #include "coordinates.h"
+#include "point.h"
 
 class map;
 

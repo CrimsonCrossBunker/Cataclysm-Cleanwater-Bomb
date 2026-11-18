@@ -5,6 +5,7 @@
 #include <array>
 #include <optional>
 #include <string>
+#include <string_view>
 
 class JsonObject;
 
@@ -45,7 +46,7 @@ coordinates offset_metres( coordinates origin, double east, double north );
 double precipitation_rate( const monthly_normal &normal, double days_in_game_month,
                            double hour, int day, unsigned seed, double spatial_phase = 0 );
 
-void load_station( const JsonObject &jo, const std::string &src );
+void load_station( const JsonObject &jo, std::string_view src );
 void reset();
 } // namespace regional_climate
 

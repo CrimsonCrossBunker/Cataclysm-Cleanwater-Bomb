@@ -44,9 +44,9 @@ static const flag_id json_flag_MISSION_ITEM( "MISSION_ITEM" );
 
 static Item_spawn_data *get_local_spawn_group( const item_group_id &id )
 {
-    const item_group_id &local = north_america::regional_item_group( id );
-    if( local != id ) {
-        if( Item_spawn_data *group = item_controller->get_group( local ) ) {
+    const item_group_id *const local = north_america::regional_item_group( id );
+    if( local && *local != id ) {
+        if( Item_spawn_data *group = item_controller->get_group( *local ) ) {
             return group;
         }
     }

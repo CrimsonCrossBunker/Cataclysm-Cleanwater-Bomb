@@ -6,6 +6,7 @@
 
 #include "character_id.h"
 #include "coordinates.h"
+#include "point.h"
 #include "safe_reference.h"
 
 class Character;

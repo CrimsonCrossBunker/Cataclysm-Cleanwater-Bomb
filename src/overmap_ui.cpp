@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
@@ -37,6 +38,7 @@
 #include "debug.h"
 #include "debug_menu.h"
 #include "display.h"
+#include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
@@ -56,18 +58,17 @@
 #include "mapdata.h"
 #include "mapgen_parameter.h"
 #include "mapgendata.h"
-#include "messages.h"
 #include "mission.h"
 #include "mongroup.h"
 #include "mp_gamestate.h"
 #include "mtype.h"
+#include "north_america.h"
+#include "north_america_elevation.h"
+#include "north_america_transport.h"
 #include "npc.h"
 #include "omdata.h"
 #include "options.h"
 #include "output.h"
-#include "north_america.h"
-#include "north_america_elevation.h"
-#include "north_america_transport.h"
 #include "overmap.h"
 #include "overmap_debug.h"
 #include "overmap_types.h"
@@ -2083,12 +2084,12 @@ static void show_north_america_chart( point_abs_omt center, bool reveal_all )
                 !known( north_america::jurisdiction_at( project_to<coords::ms>( city.position ) ) ) ) {
                 continue;
             }
-            mvwputch( chart, screen + point( 0, 1 ), c_white, 'o' );
+            mvwputch( chart, screen + point::south, c_white, 'o' );
             if( screen == cursor ) {
                 city_name = city.name;
             }
         }
-        mvwputch( chart, cursor + point( 0, 1 ), c_white, '+' );
+        mvwputch( chart, cursor + point::south, c_white, '+' );
         const std::string_view code = north_america::jurisdiction_at( project_to<coords::ms>( center ) );
         const std::string location = city_name.empty() ? std::string( code ) : city_name;
         mvwprintz( chart, point( 0, height + 1 ), c_light_gray, _( "%.1f km/cell  %s" ),

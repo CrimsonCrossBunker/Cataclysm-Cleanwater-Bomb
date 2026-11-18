@@ -1,27 +1,53 @@
-#include "cata_catch.h"
-
 #include <algorithm>
+#include <array>
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
 #include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 
+#include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "game.h"
+#include "city.h"
+#include "common_types.h"
 #include "coordinates.h"
+#include "game.h"
+#include "line.h"
 #include "map.h"
+#include "map_helpers.h"
 #include "map_scale_constants.h"
 #include "mapgendata.h"
-#include "map_helpers.h"
-#include "mapdata.h"
-#include "line.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
 #include "north_america_elevation.h"
-#include "regional_climate.h"
 #include "north_america_transport.h"
+#include "omdata.h"
 #include "overmap.h"
+#include "overmap_location.h"
 #include "overmap_test_helpers.h"
 #include "overmapbuffer.h"
+#include "point.h"
+#include "regional_climate.h"
 #include "rng.h"
+#include "type_id.h"
+
+static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
+static const oter_type_str_id oter_type_road( "road" );
+static const oter_type_str_id oter_type_shelter( "shelter" );
+static const oter_type_str_id oter_type_shelter_roof( "shelter_roof" );
+static const oter_type_str_id oter_type_shelter_under( "shelter_under" );
+
+static const overmap_location_id overmap_location_land( "land" );
+
+static const overmap_special_id overmap_special_Motel( "Motel" );
+static const overmap_special_id
+overmap_special_house_regional_cape_cod( "house_regional_cape_cod" );
+
+static const ter_str_id ter_t_open_air( "t_open_air" );
+static const ter_str_id ter_t_rock( "t_rock" );
+static const ter_str_id ter_t_water_moving_dp( "t_water_moving_dp" );
 
 TEST_CASE( "atlas_elevation_distinguishes_sea_level_from_local_storeys", "[north_america]" )
 {
@@ -78,19 +104,19 @@ TEST_CASE( "atlas_extended_map_window_loads_original_rock_and_air", "[north_amer
 
     window.load( tripoint_abs_sm( site, -30 ), false, false );
     REQUIRE( window.inbounds_z( -30 ) );
-    CHECK( window.ter( tripoint_bub_ms( middle, -30 ) ) == ter_str_id( "t_rock" ).id() );
+    CHECK( window.ter( tripoint_bub_ms( middle, -30 ) ) == ter_t_rock.id() );
     CHECK( !window.inbounds_z( 0 ) );
     REQUIRE( window.ensure_z_in_window( tripoint_bub_ms( middle, -41 ) ) );
     CHECK( window.get_abs_sub().z() == -30 );
-    CHECK( window.ter( tripoint_bub_ms( middle, -41 ) ) == ter_str_id( "t_rock" ).id() );
+    CHECK( window.ter( tripoint_bub_ms( middle, -41 ) ) == ter_t_rock.id() );
 
     window.load( tripoint_abs_sm( site, 30 ), false, false );
     REQUIRE( window.inbounds_z( 30 ) );
-    CHECK( window.ter( tripoint_bub_ms( middle, 30 ) ) == ter_str_id( "t_open_air" ).id() );
+    CHECK( window.ter( tripoint_bub_ms( middle, 30 ) ) == ter_t_open_air.id() );
     CHECK( !window.inbounds_z( -30 ) );
     REQUIRE( window.ensure_z_in_window( tripoint_bub_ms( middle, 41 ) ) );
     CHECK( window.get_abs_sub().z() == 30 );
-    CHECK( window.ter( tripoint_bub_ms( middle, 41 ) ) == ter_str_id( "t_open_air" ).id() );
+    CHECK( window.ter( tripoint_bub_ms( middle, 41 ) ) == ter_t_open_air.id() );
 }
 
 TEST_CASE( "atlas_diagonal_slopes_have_visible_relief", "[north_america]" )
@@ -201,10 +227,10 @@ TEST_CASE( "north_america_plans_connected_street_classes", "[north_america]" )
     const point_abs_omt origin = center - point( 20, 20 );
     constexpr int width = 41;
     const auto area = north_america::road_network( origin, width, width );
-    const auto at = [&]( int x, int y ) -> const north_america::road_cell & {
-        return area[y * width + x];
+    const auto at = [&]( const point & position ) -> const north_america::road_cell & {
+        return area[position.y * width + position.x];
     };
-    CHECK( at( 20, 20 ).street == urban_road::arterial );
+    CHECK( at( point( 20, 20 ) ).street == urban_road::arterial );
     for( const urban_road street : {
              urban_road::local, urban_road::collector, urban_road::arterial
          } ) {
@@ -215,21 +241,22 @@ TEST_CASE( "north_america_plans_connected_street_classes", "[north_america]" )
     int turns = 0;
     for( int y = 0; y < width - 1; ++y ) {
         for( int x = 0; x < width - 1; ++x ) {
-            const std::size_t links = at( x, y ).connections;
-            if( at( x, y ).street == urban_road::local && om_lines::all[links].mapgen == 1 ) {
+            const point cell( x, y );
+            const std::size_t links = at( cell ).connections;
+            if( at( cell ).street == urban_road::local && om_lines::all[links].mapgen == 1 ) {
                 ++turns;
             }
             CHECK( om_lines::has_segment( links, om_direction::type::east ) ==
-                   om_lines::has_segment( at( x + 1, y ).connections, om_direction::type::west ) );
+                   om_lines::has_segment( at( cell + point::east ).connections, om_direction::type::west ) );
             CHECK( om_lines::has_segment( links, om_direction::type::south ) ==
-                   om_lines::has_segment( at( x, y + 1 ).connections, om_direction::type::north ) );
+                   om_lines::has_segment( at( cell + point::south ).connections, om_direction::type::north ) );
         }
     }
     CHECK( turns > 15 );
     for( int offset = 0; offset < width; ++offset ) {
         const auto single = north_america::road_network( origin + point( 20, offset ), 1, 1 ).front();
-        CHECK( single.connections == at( 20, offset ).connections );
-        CHECK( single.street == at( 20, offset ).street );
+        CHECK( single.connections == at( point( 20, offset ) ).connections );
+        CHECK( single.street == at( point( 20, offset ) ).street );
     }
 }
 
@@ -239,7 +266,7 @@ TEST_CASE( "atlas_start_clearance_measures_from_the_city_edge", "[north_america]
     const int district_width = north_america::urban_district_size();
     std::optional<point_abs_omt> city_edge;
     for( const point_abs_om &om : closest_points_first( winnipeg, 2 ) ) {
-        for( const auto &district : north_america::urban_districts_in( om ) ) {
+        for( const north_america::urban_district &district : north_america::urban_districts_in( om ) ) {
             const point_abs_omt east = district.center + point( district_width - district_width / 2, 0 );
             if( !north_america::in_urban_footprint( east ) ) {
                 city_edge = east - point::east;
@@ -276,9 +303,9 @@ TEST_CASE( "outskirts_shelter_can_be_added_beyond_the_existing_city", "[north_am
     REQUIRE_FALSE( shelter.is_invalid() );
     CHECK( square_dist( town.raw(), shelter.xy().raw() ) >= 18 );
     CHECK( om->is_far_from_city( shelter ) );
-    CHECK( om->ter( shelter )->get_type_id() == oter_type_str_id( "shelter" ) );
-    CHECK( om->ter( shelter + tripoint::below )->get_type_id() == oter_type_str_id( "shelter_under" ) );
-    CHECK( om->ter( shelter + tripoint::above )->get_type_id() == oter_type_str_id( "shelter_roof" ) );
+    CHECK( om->ter( shelter )->get_type_id() == oter_type_shelter );
+    CHECK( om->ter( shelter + tripoint::below )->get_type_id() == oter_type_shelter_under );
+    CHECK( om->ter( shelter + tripoint::above )->get_type_id() == oter_type_shelter_roof );
 }
 
 TEST_CASE( "atlas_city_development_tapers_and_rounds_the_fringe", "[north_america]" )
@@ -303,19 +330,17 @@ TEST_CASE( "atlas_curving_bridge_has_one_continuous_deck", "[north_america][worl
     clear_map();
     map &here = get_map();
     const mapgendata base( here, mapgendata::dummy_settings );
-    const oter_type_str_id bridge( "atlas_road_bridge" );
     const std::size_t links = om_lines::set_segment(
                                   om_lines::set_segment( 0, om_direction::type::north ), om_direction::type::east );
-    mapgendata corner( base, bridge->get_linear( links ) );
+    mapgendata corner( base, oter_type_atlas_road_bridge->get_linear( links ) );
     REQUIRE( north_america::draw_mapped_road( corner ) );
 
-    const ter_str_id water( "t_water_moving_dp" );
     for( int i = 0; i < SEEX; ++i ) {
-        CHECK( here.ter( tripoint_bub_ms( SEEX, i, 0 ) ) != water.id() );
-        CHECK( here.ter( tripoint_bub_ms( SEEX + i, SEEY, 0 ) ) != water.id() );
+        CHECK( here.ter( tripoint_bub_ms( SEEX, i, 0 ) ) != ter_t_water_moving_dp.id() );
+        CHECK( here.ter( tripoint_bub_ms( SEEX + i, SEEY, 0 ) ) != ter_t_water_moving_dp.id() );
     }
-    CHECK( here.ter( tripoint_bub_ms( SEEX, 2 * SEEY - 1, 0 ) ) == water.id() );
-    CHECK( here.ter( tripoint_bub_ms( 0, SEEY, 0 ) ) == water.id() );
+    CHECK( here.ter( tripoint_bub_ms( SEEX, 2 * SEEY - 1, 0 ) ) == ter_t_water_moving_dp.id() );
+    CHECK( here.ter( tripoint_bub_ms( 0, SEEY, 0 ) ) == ter_t_water_moving_dp.id() );
 }
 
 TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][worldgen]" )
@@ -331,9 +356,7 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
 
     const auto &districts = north_america::urban_districts_in( location );
     const int radius = north_america::urban_district_size() / 2;
-    const overmap_location_id land( "land" );
     const point_abs_omt origin = project_to<coords::omt>( location );
-    const oter_type_str_id road( "road" );
     const oter_id flank_ns = north_america::avenue_flank( true );
     const oter_id flank_ew = north_america::avenue_flank( false );
     REQUIRE( flank_ns );
@@ -369,7 +392,7 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
                     CHECK( ( om->ter( p + step ) == terrain || om->ter( p - step ) == terrain ) );
                     continue;
                 }
-                if( terrain->is_water() || terrain->type_is( road ) ) {
+                if( terrain->is_water() || terrain->type_is( oter_type_road ) ) {
                     continue;
                 }
                 const point_abs_omt absolute = origin + p.xy().raw();
@@ -382,7 +405,7 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
                 if( district == districts.end() || north_america::urban_density( *district, absolute ) < 75 ) {
                     continue;
                 }
-                if( land->test( terrain ) ) {
+                if( overmap_location_land->test( terrain ) ) {
                     ++vacant;
                 } else {
                     ++developed;
@@ -438,9 +461,9 @@ TEST_CASE( "atlas_city_building_can_be_placed_at_an_overmap_edge",
 {
     const auto om = std::make_unique<overmap>( point_abs_om::zero );
     const tripoint_om_omt edge( 0, OMAPY / 2, 0 );
-    const overmap_special_id house( "house_regional_cape_cod" );
+    const overmap_special_id &house = overmap_special_house_regional_cape_cod;
     const city town( "" );
-    const auto facing = om_direction::type::north;
+    const om_direction::type facing = om_direction::type::north;
     REQUIRE( house.is_valid() );
     om->ter_set( edge, oter_id( "field" ) );
 
@@ -489,11 +512,10 @@ TEST_CASE( "atlas_special_placement_does_not_generate_neighbor_overmaps",
         }
     }
 
-    const overmap_special_id motel( "Motel" );
-    REQUIRE( motel.is_valid() );
-    REQUIRE( motel->get_constraints().occurrences.min > 0 );
-    overmap_special_batch specials( origin, { &motel.obj() } );
-    const auto count_before = overmap_buffer.global_state.overmap_count;
+    REQUIRE( overmap_special_Motel.is_valid() );
+    REQUIRE( overmap_special_Motel->get_constraints().occurrences.min > 0 );
+    overmap_special_batch specials( origin, { &overmap_special_Motel.obj() } );
+    const int count_before = overmap_buffer.global_state.overmap_count;
     overmap_test_helper::place_specials( *om, specials );
     CHECK( overmap_buffer.global_state.overmap_count == count_before );
     REQUIRE( !specials.empty() );
@@ -505,7 +527,7 @@ TEST_CASE( "atlas_start_reveals_only_existing_overmaps", "[north_america][worldg
     const point_abs_om origin( -953, 580 );
     const tripoint_abs_omt p( project_to<coords::omt>( origin ), 0 );
     REQUIRE_FALSE( overmap_buffer.get_existing( origin ) );
-    const auto count_before = overmap_buffer.global_state.overmap_count;
+    const int count_before = overmap_buffer.global_state.overmap_count;
     CHECK_FALSE( overmap_buffer.reveal_route( p, p + point::east, 3, false, true ) );
     CHECK_FALSE( overmap_buffer.reveal( p, 3, []( const oter_id & ) {
         return true;

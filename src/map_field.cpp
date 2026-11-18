@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <array>
-#include <bitset>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -19,7 +18,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "lua_platform_runtime.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -37,6 +35,7 @@
 #include "game.h"
 #include "item.h"
 #include "itype.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_field.h"
 #include "map_iterator.h"
@@ -388,7 +387,8 @@ void map::furniture_terrain_emit_fields( const map_simulation_regions *regions )
     }
     const auto emit_at = [&]( const std::vector<tripoint_bub_ms> &indexed, const auto & emissions ) {
         // An emission's Lua handler may mutate the map and its index.
-        const auto positions = indexed;
+        // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+        const std::vector<tripoint_bub_ms> positions = indexed;
         for( const tripoint_bub_ms &p : positions ) {
             const tripoint_abs_sm submap_position = project_to<coords::sm>( get_abs( p ) );
             if( !has_loaded_submap( p ) || ( regions && !regions->owns( *this, submap_position ) ) ) {
