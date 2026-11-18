@@ -20,13 +20,5 @@
     "can_resume": false,
     "interruptable_with_kb": true,
     "completion_eoc": "EOC_SMARTPHONE_RECOVERY_ADVANCED_2"
-  },
-  {
-    "id": "ACT_SALINE_INFUSE",
-    "type": "activity_type",
-    "activity_level": "NO_EXERCISE",
-    "verb": "infusing saline",
-    "based_on": "time",
-    "do_turn_eoc": "SALINE_INFUSION_eff"
   }
 ]

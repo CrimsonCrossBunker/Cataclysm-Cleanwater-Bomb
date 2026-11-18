@@ -1,5 +1,6 @@
 local ccb = require("ccb")
 local content = ccb.content
+local services = ccb.services
 
 content.add(content.ActivityType {
     id = "ACT_CONTEXTUAL_ACTION",
@@ -1272,3 +1273,29 @@ content.add(content.ActivityType {
     can_resume = false,
     auto_needs = true,
 })
+
+ccb.runtime.handler("saline_infusion_turn", function(activity)
+    local character = activity.character
+    local infusion = services.variables.get_number(character, "amount_of_saline_infused")
+    if not infusion.ok then
+        error(infusion.error.message)
+    end
+    local blood_id = services.types.id("vitamin", "blood")
+    local blood = services.needs.get_vitamin(character, blood_id)
+    if not blood.ok then
+        error(blood.error.message)
+    end
+    -- Native vitamin assignment truncates the resulting level toward zero on every turn.
+    local amount = math.modf(blood.value + (infusion.value.value or 0) * (10 / 4) / 3600)
+    local updated = services.needs.set_vitamin(character, blood_id, amount)
+    if not updated.ok then
+        error(updated.error.message)
+    end
+end, 1)
+
+content.add(content.ActivityType {
+    id = "ACT_SALINE_INFUSE",
+    verb = ccb.content.text("infusing saline"),
+    based_on = "time",
+    activity_level = 1,
+}:on_turn("saline_infusion_turn"))
