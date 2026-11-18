@@ -470,3 +470,5 @@ require("contact_lenses")
 require("fidget_spinner")
 
 require("saline_infusion")
+
+require("injection_serums")

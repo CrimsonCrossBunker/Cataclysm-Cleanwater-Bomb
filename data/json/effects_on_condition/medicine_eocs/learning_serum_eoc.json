@@ -1,50 +1,5 @@
 [
   {
-    "type": "effect_on_condition",
-    "id": "EOC_SERUM_LEARNING",
-    "effect": [
-      { "u_consume_item": { "context_val": "id" } },
-      { "math": [ "_serum_duration = rng(time('12 h'), time('24 h'))" ] },
-      { "math": [ "_serum_duration *= serum_duration_adjustments()" ] },
-      { "u_add_effect": "learning_serum_main", "duration": { "context_val": "serum_duration" } },
-      {
-        "if": { "math": [ "u_effect_intensity('learning_serum_main') <= 1" ] },
-        "then": { "run_eocs": "EOC_SERUM_LEARNING_HALLUCINATION_CHANCE", "time_in_future": [ "30 minutes", "90 minutes" ] }
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_APPLY_LEARNING_SERUM_CRASH",
-    "eoc_type": "EVENT",
-    "required_event": "character_loses_effect",
-    "condition": { "and": [ { "compare_string": [ "learning_serum_main", { "context_val": "effect" } ] } ] },
-    "effect": [ { "run_eocs": "EOC_APPLY_LEARNING_SERUM_CRASH_2", "time_in_future": 1 } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_APPLY_LEARNING_SERUM_CRASH_2",
-    "//": "This is necessary because character_loses_effect triggers before the effect is actually removed",
-    "effect": { "u_add_effect": "learning_serum_crash", "duration": [ "3 h", "6 h" ] }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_SERUM_LEARNING_HALLUCINATION_CHANCE",
-    "condition": { "u_has_any_effect": [ "learning_serum_main", "learning_serum_crash" ] },
-    "effect": [
-      {
-        "switch": { "math": [ "rand(3)" ] },
-        "cases": [
-          {
-            "case": 3,
-            "effect": [ { "u_add_effect": "resilience_serum_side_effect_hallucinations", "duration": { "math": [ "1800 + rand(1800)" ] } } ]
-          }
-        ]
-      },
-      { "run_eocs": "EOC_SERUM_LEARNING_HALLUCINATION_CHANCE", "time_in_future": [ "30 minutes", "90 minutes" ] }
-    ]
-  },
-  {
     "type": "effect_type",
     "id": "learning_serum_main",
     "name": [ "Injected 76x-\"Lore\"" ],
