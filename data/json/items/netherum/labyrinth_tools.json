@@ -51,13 +51,5 @@
     "color": "yellow",
     "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "uneven" },
     "melee_damage": { "bash": 1 }
-  },
-  {
-    "type": "ITEM",
-    "id": "nl_surg_int_unit",
-    "name": { "str": "surgical bonebot brain" },
-    "material": [ "cyber_bone", "anomaly" ],
-    "description": "The core of a surgical bonebot, dug out of its head capsule.  Its shape very much resembles a human brain, but is made of what appears to be hard, dark glass.  It looks a bit like a fancy, and creepy, decoration.",
-    "copy-from": "ai_module"
   }
 ]

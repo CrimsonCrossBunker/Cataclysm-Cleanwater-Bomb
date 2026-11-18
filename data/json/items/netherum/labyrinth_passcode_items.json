@@ -37,19 +37,5 @@
         }
       ]
     }
-  },
-  {
-    "type": "ITEM",
-    "id": "ls_sd_passcode_used",
-    "name": { "str": "holographic shard (used)", "str_pl": "holographic shards (used)" },
-    "category": "artifact",
-    "symbol": ",",
-    "color": "blue",
-    "description": "A palm-sized shard of alien glass, reflecting light in holographic prisms.",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "material": [ "anomaly" ],
-    "weight": "10 g",
-    "volume": "5 ml"
   }
 ]
