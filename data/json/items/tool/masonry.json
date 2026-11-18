@@ -1,48 +1,5 @@
 [
   {
-    "id": "masonrysaw_off",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "masonry saw (off)", "str_pl": "masonry saws (off)" },
-    "description": "A construction tool for cutting through concrete or other surfaces.  It runs on gasoline.  Using this item will cause it to turn on, turning it into a very powerful but unwieldy melee weapon or a terrible chainsaw.",
-    "weight": "4500 g",
-    "volume": "2500 ml",
-    "longest_side": "25 cm",
-    "price": "80 USD",
-    "price_postapoc": "5 USD",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "line", "balance": "clumsy" },
-    "material": [ "steel", "plastic" ],
-    "symbol": "/",
-    "color": "blue",
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "gasoline": 450 }, "watertight": true, "rigid": true } ],
-    "charges_per_use": 5,
-    "techniques": [ "SWEEP" ],
-    "use_action": {
-      "type": "effect_on_conditions",
-      "menu_text": "Turn on",
-      "effect_on_conditions": [
-        {
-          "id": "EOC_toolweapon_activate__masonrysaw",
-          "condition": { "math": [ "rng(0, 10) - n_damage_level() > 5" ] },
-          "effect": {
-            "run_eocs": "EOC_toolweapon_activate",
-            "variables": {
-              "turn_cost": { "math": [ "0.8" ] },
-              "transform_target": "masonrysaw_on",
-              "success_message": { "i18n": true, "str": "With a roar, the <npc_name> screams to life!" },
-              "volume": 20,
-              "failure_message": { "i18n": true, "str": "You yank the cord, but nothing happens." }
-            }
-          },
-          "false_effect": { "u_message": "You yank the cord, but nothing happens." }
-        }
-      ]
-    },
-    "flags": [ "NONCONDUCTIVE", "FRAGILE_MELEE" ],
-    "melee_damage": { "bash": 4 },
-    "tool_ammo": [ "gasoline" ]
-  },
-  {
     "id": "electric_masonrysaw_off",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -74,50 +31,5 @@
     "faults": [ { "fault_group": "electronic_general" } ],
     "melee_damage": { "bash": 4 },
     "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "heavy_masonrysaw_off",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "heavy masonry saw (off)", "str_pl": "heavy masonry saws (off)" },
-    "//": "based on Hilti DSH 900-X 16 inch Gas cut-off saw",
-    "description": "A heavy construction tool for cutting demolishing concrete.  It runs on gasoline.  Using this item will cause it to turn on, turning it into a formidable demolition tool, a terrible chainsaw, and an unwieldy melee weapon.",
-    "weight": "12400 g",
-    "volume": "20000 ml",
-    "longest_side": "86 cm",
-    "price": "2000 USD",
-    "price_postapoc": "10 USD",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "line", "balance": "clumsy" },
-    "material": [ "steel", "plastic" ],
-    "symbol": "/",
-    "color": "blue",
-    "looks_like": "masonrysaw_off",
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "gasoline": 450 }, "watertight": true, "rigid": true } ],
-    "charges_per_use": 5,
-    "techniques": [ "SWEEP" ],
-    "use_action": {
-      "type": "effect_on_conditions",
-      "menu_text": "Turn on",
-      "effect_on_conditions": [
-        {
-          "id": "EOC_toolweapon_activate_heavy_masonrysaw",
-          "condition": { "math": [ "rng(0, 10) - n_damage_level() > 5" ] },
-          "effect": {
-            "run_eocs": "EOC_toolweapon_activate",
-            "variables": {
-              "turn_cost": 0.8,
-              "transform_target": "heavy_masonrysaw_on",
-              "success_message": { "i18n": true, "str": "With a roar, the <npc_name> screams to life!" },
-              "volume": 20,
-              "failure_message": { "i18n": true, "str": "You yank the cord, but nothing happens." }
-            }
-          },
-          "false_effect": { "u_message": "You yank the cord, but nothing happens." }
-        }
-      ]
-    },
-    "flags": [ "NONCONDUCTIVE", "FRAGILE_MELEE" ],
-    "melee_damage": { "bash": 6 },
-    "tool_ammo": [ "gasoline" ]
   }
 ]

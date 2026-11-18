@@ -505,3 +505,117 @@ do
     item:on_tick("tick_elec_chainsaw_cord_on")
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "chainsaw_off",
+        name = ccb.content.plural_text("chainsaw (off)", "chainsaws (off)"),
+        description = ccb.content.text("A treecutting tool moonlighting as a weapon of opportunity.  If loaded with gas, using this item will turn it on, turning it into a very powerful but unwieldy melee weapon."),
+        mass_milligrams = 6577000,
+        volume_ml = 2500,
+        longest_side_mm = 820,
+        price_cents = 8000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -2,
+        symbol = "/",
+        color = "red",
+        techniques = { "SWEEP" },
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("FRAGILE_MELEE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 10)
+    item:tool { charges_per_use = 5, ammo_types = { "gasoline" } }
+    item:magazine_pocket { ammo_capacities = { gasoline = 450 }, watertight = true, rigid = true }
+    item:clear_use_actions()
+    item:on_use("start_chainsaw_off", ccb.content.text("Turn on"), nil, { id = "activate_power" })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "chainsaw_on",
+        copy_from = "chainsaw_off",
+        looks_like = "chainsaw_off",
+        name = ccb.content.plural_text("chainsaw (on)", "chainsaws (on)"),
+        description = ccb.content.text("This chainsaw is on and making a lot of noise.  Use it to turn it off."),
+        melee_to_hit = -2,
+        techniques = { "SWEEP" },
+        replace_qualities = true,
+    }
+    item:quality("AXE", 4)
+    item:quality("BUTCHER", -100)
+    item:clear_flags()
+    item:flag("MESSY")
+    item:flag("TRADER_AVOID")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POWERED")
+    item:flag("FRAGILE_MELEE")
+    item:flag("SPAWN_ACTIVE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:melee_damage("cut", 18)
+    item:transform_into { target = "chainsaw_off" }
+    item:tool { charges_per_use = 0, turns_per_charge = 4 }
+    item:clear_use_actions()
+    item:on_use("stop_chainsaw", ccb.content.text("Turn off"), nil, { ammo_scale = 0 })
+    item:clear_tick_actions()
+    item:on_tick("tick_chainsaw_on")
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "elec_chainsaw_off",
+        name = ccb.content.plural_text("electric chainsaw (off)", "electric chainsaws (off)"),
+        description = ccb.content.text("A treecutting tool moonlighting as a weapon of opportunity.  If loaded with batteries, using this item will turn it on, turning it into a very powerful but unwieldy melee weapon."),
+        mass_milligrams = 6577000,
+        volume_ml = 2500,
+        longest_side_mm = 820,
+        price_cents = 8000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -2,
+        symbol = "/",
+        color = "red",
+        techniques = { "SWEEP" },
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("FRAGILE_MELEE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 10)
+    item:tool { charges_per_use = 5, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_flags = { "BATTERY_HEAVY" },
+        default_magazine = "heavy_battery_cell",
+    }
+    item:clear_use_actions()
+    item:on_use("start_elec_chainsaw_off", ccb.content.text("Turn on"), nil, { id = "activate_power" })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "elec_chainsaw_cord_off",
+        copy_from = "elec_chainsaw_off",
+        looks_like = "elec_chainsaw_off",
+        price_cents = 6600,
+        name = ccb.content.plural_text("corded electric chainsaw (off)", "corded electric chainsaws (off)"),
+        description = ccb.content.text("A treecutting tool moonlighting as a weapon of opportunity.  It has a short electric cord, which you can connect to the generator or your home grid.  Extension cord not included."),
+        replace_pockets = true,
+    }
+    item:clear_use_actions()
+    item:link_cable { cable_length = 4, charge_milliwatts = 2400000 }
+    item:tool()
+    item:on_use("start_elec_chainsaw_cord_off", ccb.content.text("Turn on"), nil, { id = "activate_power" })
+    content.add(item)
+end

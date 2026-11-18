@@ -79,47 +79,5 @@
     "flags": [ "DURABLE_MELEE" ],
     "weapon_category": [ "SHORT_SWORDS" ],
     "melee_damage": { "bash": 3, "cut": 20 }
-  },
-  {
-    "id": "trimmer_off",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "hedge trimmer (off)", "str_pl": "hedge trimmers (off)" },
-    "description": "A cordless, double-sided, gasoline-powered hedge trimmer.  A long line of sharp-edged teeth extends from the engine; turning the trimmer on will make them rapidly vibrate.  The poor man's chainsaw as far as the zombies are concerned.",
-    "weight": "4500 g",
-    "volume": "2500 ml",
-    "longest_side": "100 cm",
-    "price": "40 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "line", "balance": "clumsy" },
-    "material": [ "ch_steel", "plastic" ],
-    "symbol": "/",
-    "color": "green",
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "watertight": true, "ammo_restriction": { "gasoline": 600 } } ],
-    "charges_per_use": 5,
-    "use_action": {
-      "type": "effect_on_conditions",
-      "menu_text": "Turn on",
-      "effect_on_conditions": [
-        {
-          "id": "EOC_toolweapon_activate__trimmer",
-          "condition": { "math": [ "rng(0, 10) - n_damage_level() > 3" ] },
-          "effect": {
-            "run_eocs": "EOC_toolweapon_activate",
-            "variables": {
-              "turn_cost": { "math": [ "0.8" ] },
-              "transform_target": "trimmer_on",
-              "success_message": { "i18n": true, "str": "With a roar, the hedge trimmer leaps to life!" },
-              "volume": 15,
-              "failure_message": { "i18n": true, "str": "You yank the cord, but nothing happens." }
-            }
-          },
-          "false_effect": { "u_message": "You yank the cord, but nothing happens." }
-        }
-      ]
-    },
-    "flags": [ "NONCONDUCTIVE" ],
-    "melee_damage": { "bash": 4, "cut": 5 },
-    "tool_ammo": [ "gasoline" ]
   }
 ]

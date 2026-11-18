@@ -482,3 +482,32 @@ do
     item:on_tick("tick_trimmer_on")
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "trimmer_off",
+        name = ccb.content.plural_text("hedge trimmer (off)", "hedge trimmers (off)"),
+        description = ccb.content.text("A cordless, double-sided, gasoline-powered hedge trimmer.  A long line of sharp-edged teeth extends from the engine; turning the trimmer on will make them rapidly vibrate.  The poor man's chainsaw as far as the zombies are concerned."),
+        mass_milligrams = 4500000,
+        volume_ml = 2500,
+        longest_side_mm = 1000,
+        price_cents = 4000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -2,
+        symbol = "/",
+        color = "green",
+        replace_pockets = true,
+    }
+    item:material("ch_steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:melee_damage("cut", 5)
+    item:tool { charges_per_use = 5, ammo_types = { "gasoline" } }
+    item:magazine_pocket { ammo_capacities = { gasoline = 600 }, rigid = true, watertight = true }
+    item:clear_use_actions()
+    item:on_use("start_trimmer_off", ccb.content.text("Turn on"), nil, { id = "activate_power" })
+    content.add(item)
+end

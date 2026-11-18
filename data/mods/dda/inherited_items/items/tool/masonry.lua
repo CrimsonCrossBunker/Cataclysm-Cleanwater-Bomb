@@ -122,3 +122,65 @@ do
     item:on_tick("tick_heavy_masonrysaw_on")
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "masonrysaw_off",
+        name = ccb.content.plural_text("masonry saw (off)", "masonry saws (off)"),
+        description = ccb.content.text("A construction tool for cutting through concrete or other surfaces.  It runs on gasoline.  Using this item will cause it to turn on, turning it into a very powerful but unwieldy melee weapon or a terrible chainsaw."),
+        mass_milligrams = 4500000,
+        volume_ml = 2500,
+        longest_side_mm = 250,
+        price_cents = 8000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -2,
+        symbol = "/",
+        color = "blue",
+        techniques = { "SWEEP" },
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("FRAGILE_MELEE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:tool { charges_per_use = 5, ammo_types = { "gasoline" } }
+    item:magazine_pocket { ammo_capacities = { gasoline = 450 }, watertight = true, rigid = true }
+    item:clear_use_actions()
+    item:on_use("start_masonrysaw_off", ccb.content.text("Turn on"), nil, { id = "activate_power" })
+    content.add(item)
+end
+
+do
+    -- based on Hilti DSH 900-X 16 inch Gas cut-off saw
+    local item = content.Item {
+        id = "heavy_masonrysaw_off",
+        name = ccb.content.plural_text("heavy masonry saw (off)", "heavy masonry saws (off)"),
+        description = ccb.content.text("A heavy construction tool for cutting demolishing concrete.  It runs on gasoline.  Using this item will cause it to turn on, turning it into a formidable demolition tool, a terrible chainsaw, and an unwieldy melee weapon."),
+        mass_milligrams = 12400000,
+        volume_ml = 20000,
+        longest_side_mm = 860,
+        price_cents = 200000,
+        price_postapoc_cents = 1000,
+        melee_to_hit = -2,
+        symbol = "/",
+        color = "blue",
+        looks_like = "masonrysaw_off",
+        techniques = { "SWEEP" },
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("FRAGILE_MELEE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 6)
+    item:tool { charges_per_use = 5, ammo_types = { "gasoline" } }
+    item:magazine_pocket { ammo_capacities = { gasoline = 450 }, watertight = true, rigid = true }
+    item:clear_use_actions()
+    item:on_use("start_heavy_masonrysaw_off", ccb.content.text("Turn on"), nil, { id = "activate_power" })
+    content.add(item)
+end
