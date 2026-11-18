@@ -2,6 +2,8 @@ require("flags")
 
 require("requirements")
 
+require("materials")
+
 require("items")
 
 require("deployable_furniture")
