@@ -1,5 +1,51 @@
 local ccb = require("ccb")
 local content = ccb.content
+local services = ccb.services
+local id = services.types.id
+
+local function checked(result)
+    if not result.ok then
+        error(result.error.message)
+    end
+    return result.value
+end
+
+local function can_groom(character)
+    return not checked(services.mutations.has(character, id("mutation", "EXODII_BODY_1")))
+        and not checked(services.mutations.has(character, id("mutation", "EXODII_BODY_1b")))
+        and not checked(services.bionics.has(character, id("bionic", "bio_robofac_xmlens")))
+end
+
+local function trim(topic)
+    return function(use)
+        local character = use.character
+        if character and character.subtype == "avatar" then
+            if can_groom(character) then
+                checked(services.characters.open_topic(character, topic))
+            else
+                use:message(use:expand_text(ccb.services.translate("You don't have any hair to style!")))
+            end
+        end
+        return 0
+    end
+end
+
+ccb.runtime.handler("trim_item_hair", trim("TALK_CUT_YOUR_HAIR"))
+ccb.runtime.handler("trim_item_beard", trim("TALK_CUT_YOUR_BEARD"))
+
+ccb.runtime.handler("apply_item_makeup", function(use)
+    local character = use.character
+    if character and character.subtype == "avatar" then
+        if checked(services.mutations.has(character, id("mutation", "VANITY"))) then
+            use:message(use:expand_text(ccb.services.translate(
+                "You apply some makeup.  The world will now get to know the true meaning of beauty.")))
+        else
+            use:message(use:expand_text(ccb.services.translate(
+                "You apply some makeup.  It feels good to take care of yourself.")))
+        end
+    end
+    return 0
+end)
 
 do
     local item = content.Item {
@@ -265,5 +311,123 @@ do
     item:clear_flags()
     item:flag("NO_SALVAGE")
     item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "elec_hairtrimmer",
+        name = ccb.content.plural_text("electric hair trimmer", "electric hair trimmers"),
+        description = ccb.content.text("A pocket-sized electric trimmer made for cutting hair.  You can use it to cut your hair if it's supplied with batteries.  It requires 1 unit of charge per use."),
+        mass_milligrams = 138000,
+        volume_ml = 191,
+        longest_side_mm = 150,
+        price_cents = 3000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "yellow",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:material("aluminum", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_flags = { "BATTERY_MEDIUM" },
+        default_magazine = "medium_battery_cell",
+    }
+    item:clear_use_actions()
+    item:on_use("trim_item_hair", ccb.content.text("Activate"), ccb.content.text("Trim your hair"))
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "shavingkit",
+        name = ccb.content.plural_text("shaving kit", "shaving kits"),
+        description = ccb.content.text("A compact, lightweight shaving kit made for travelers.  You can use it to shave if it's supplied with soap.  It requires 1 unit of soap per use."),
+        mass_milligrams = 99000,
+        volume_ml = 735,
+        longest_side_mm = 210,
+        price_cents = 1000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "white",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:tool { charges_per_use = 1, ammo_types = { "soap" } }
+    item:magazine_pocket { ammo_capacities = { soap = 10 } }
+    item:clear_use_actions()
+    item:on_use("trim_item_beard", ccb.content.text("Activate"), ccb.content.text("Trim your beard"))
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "survivor_hairtrimmer",
+        name = ccb.content.plural_text("makeshift haircut kit", "makeshift haircut kits"),
+        description = ccb.content.text("A kit containing various improvised tools for cutting hair."),
+        mass_milligrams = 642000,
+        volume_ml = 1000,
+        longest_side_mm = 200,
+        price_cents = 1000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "brown",
+    }
+    item:material("leather", 1)
+    item:material("glass", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    item:tool()
+    item:clear_use_actions()
+    item:on_use("trim_item_hair", ccb.content.text("Activate"), ccb.content.text("Trim your hair"))
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "survivor_shavingkit",
+        name = ccb.content.plural_text("makeshift shaving kit", "makeshift shaving kits"),
+        description = ccb.content.text("A makeshift shaving kit.  You can use it to shave if it's supplied with soap.  It requires 1 unit of soap per use."),
+        mass_milligrams = 540000,
+        volume_ml = 750,
+        longest_side_mm = 150,
+        price_cents = 1000,
+        price_postapoc_cents = 100,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "brown",
+        replace_pockets = true,
+    }
+    item:material("leather", 1)
+    item:material("glass", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    item:tool { charges_per_use = 1, ammo_types = { "soap" } }
+    item:magazine_pocket { ammo_capacities = { soap = 10 } }
+    item:clear_use_actions()
+    item:on_use("trim_item_beard", ccb.content.text("Activate"), ccb.content.text("Trim your beard"))
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "makeup_kit",
+        copy_from = "hair_dye_kit",
+        looks_like = "hair_dye_kit",
+        name = ccb.content.plural_text("makeup kit", "makeup kits"),
+        description = ccb.content.text("A kit containing all the essential tools and products for makeup, it even includes nail polish."),
+    }
+    item:tool()
+    item:clear_use_actions()
+    item:on_use("apply_item_makeup", ccb.content.text("Apply makeup"), ccb.content.text("Apply makeup"))
     content.add(item)
 end

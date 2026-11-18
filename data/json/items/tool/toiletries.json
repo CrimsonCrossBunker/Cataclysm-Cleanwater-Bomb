@@ -18,88 +18,6 @@
     "melee_damage": { "bash": 6 }
   },
   {
-    "id": "elec_hairtrimmer",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "electric hair trimmer" },
-    "description": "A pocket-sized electric trimmer made for cutting hair.  You can use it to cut your hair if it's supplied with batteries.  It requires 1 unit of charge per use.",
-    "weight": "138 g",
-    "volume": "191 ml",
-    "longest_side": "15 cm",
-    "price": "30 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "uneven" },
-    "material": [ "plastic", "aluminum" ],
-    "symbol": ";",
-    "color": "yellow",
-    "charges_per_use": 1,
-    "use_action": { "type": "effect_on_conditions", "description": "Trim your hair", "effect_on_conditions": [ "barber_hair" ] },
-    "pocket_data": [
-      { "pocket_type": "MAGAZINE_WELL", "flag_restriction": [ "BATTERY_MEDIUM" ], "default_magazine": "medium_battery_cell" }
-    ],
-    "melee_damage": { "bash": 1 },
-    "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "shavingkit",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "shaving kit" },
-    "description": "A compact, lightweight shaving kit made for travelers.  You can use it to shave if it's supplied with soap.  It requires 1 unit of soap per use.",
-    "weight": "99 g",
-    "volume": "735 ml",
-    "longest_side": "21 cm",
-    "price": "10 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "clumsy" },
-    "material": [ "plastic" ],
-    "symbol": ";",
-    "color": "white",
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "soap": 10 } } ],
-    "charges_per_use": 1,
-    "use_action": { "type": "effect_on_conditions", "description": "Trim your beard", "effect_on_conditions": [ "barber_beard" ] },
-    "tool_ammo": [ "soap" ]
-  },
-  {
-    "id": "survivor_hairtrimmer",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "makeshift haircut kit" },
-    "description": "A kit containing various improvised tools for cutting hair.",
-    "weight": "642 g",
-    "volume": "1 L",
-    "longest_side": "20 cm",
-    "price": "10 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "clumsy" },
-    "material": [ "leather", "glass" ],
-    "symbol": ";",
-    "color": "brown",
-    "use_action": { "type": "effect_on_conditions", "description": "Trim your hair", "effect_on_conditions": [ "barber_hair" ] },
-    "melee_damage": { "bash": 1 }
-  },
-  {
-    "id": "survivor_shavingkit",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "makeshift shaving kit" },
-    "description": "A makeshift shaving kit.  You can use it to shave if it's supplied with soap.  It requires 1 unit of soap per use.",
-    "weight": "540 g",
-    "volume": "750 ml",
-    "longest_side": "15 cm",
-    "price": "10 USD",
-    "price_postapoc": "1 USD",
-    "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "clumsy" },
-    "material": [ "leather", "glass" ],
-    "symbol": ";",
-    "color": "brown",
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "soap": 10 } } ],
-    "charges_per_use": 1,
-    "use_action": { "type": "effect_on_conditions", "description": "Trim your beard", "effect_on_conditions": [ "barber_beard" ] },
-    "melee_damage": { "bash": 1 },
-    "tool_ammo": [ "soap" ]
-  },
-  {
     "id": "hair_dye_kit",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -115,19 +33,5 @@
     "symbol": ")",
     "color": "brown",
     "use_action": { "type": "effect_on_conditions", "description": "Dye your hair", "effect_on_conditions": [ "use_hair_dye_kit" ] }
-  },
-  {
-    "id": "makeup_kit",
-    "copy-from": "hair_dye_kit",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "makeup kit" },
-    "description": "A kit containing all the essential tools and products for makeup, it even includes nail polish.",
-    "use_action": {
-      "type": "effect_on_conditions",
-      "menu_text": "Apply makeup",
-      "description": "Apply makeup",
-      "effect_on_conditions": [ "EOC_apply_makeup" ]
-    }
   }
 ]
