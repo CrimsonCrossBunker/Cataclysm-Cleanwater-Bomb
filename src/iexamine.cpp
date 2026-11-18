@@ -6627,14 +6627,7 @@ void iexamine::invalid( Character &/*you*/, const tripoint_bub_ms &examp )
     debugmsg( "Called invalid iexamine function on %s!", get_map().tername( examp ) );
 }
 
-/**
- * Given then name of one of the above functions, returns the matching function
- * pointer. If no match is found, defaults to iexamine::none but prints out a
- * debug message as a warning.
- * @param function_name The name of the function to get.
- * @return A function pointer to the specified function.
- */
-iexamine_functions iexamine_functions_from_string( const std::string &function_name )
+std::optional<iexamine_functions> find_iexamine_functions( const std::string &function_name )
 {
     struct function_data {
         translation name;
@@ -6750,7 +6743,14 @@ iexamine_functions iexamine_functions_from_string( const std::string &function_n
         }
     }
 
-    //No match found
+    return std::nullopt;
+}
+
+iexamine_functions iexamine_functions_from_string( const std::string &function_name )
+{
+    if( auto functions = find_iexamine_functions( function_name ) ) {
+        return *functions;
+    }
     debugmsg( "Could not find an iexamine function matching '%s'!", function_name );
     return iexamine_functions{&iexamine::always_false, &iexamine::none, no_translation( "invalid" ) };
 }

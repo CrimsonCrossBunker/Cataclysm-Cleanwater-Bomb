@@ -283,6 +283,7 @@ struct iexamine_functions {
     };
 };
 
+std::optional<iexamine_functions> find_iexamine_functions( const std::string &function_name );
 iexamine_functions iexamine_functions_from_string( const std::string &function_name );
 
 // Find the best available intercom operator for a faction.

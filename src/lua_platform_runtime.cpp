@@ -903,6 +903,7 @@ struct furniture_definition_data {
     std::string lockpick_result;
     std::string crafting_pseudo_item;
     std::string deployed_item;
+    std::string builtin_examine;
     std::string examine_handler;
     std::string examine_name;
     bool registered = false;
@@ -4616,6 +4617,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->crafting_pseudo_item =
             options.get_or( "crafting_pseudo_item", std::string() );
         definition->deployed_item = options.get_or( "deployed_item", std::string() );
+        definition->builtin_examine = options.get_or( "builtin_examine", std::string() );
         definition->examine_handler = options.get_or(
                                           "on_examine",
                                           options.get_or( "examine_handler", std::string() ) );
@@ -6811,15 +6813,23 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     }
                 }
                 if( !definition.crafting_pseudo_item.empty() &&
+                    declared_item_ids.count( definition.crafting_pseudo_item ) == 0 &&
                     !itype_id( definition.crafting_pseudo_item ).is_valid() ) {
                     throw std::runtime_error( "furniture '" + definition.id +
                                               "' references an invalid pseudo item" );
                 }
                 if( !definition.deployed_item.empty() &&
+                    declared_item_ids.count( definition.deployed_item ) == 0 &&
                     !itype_id( definition.deployed_item ).is_valid() ) {
                     throw std::runtime_error( "furniture '" + definition.id +
                                               "' references an invalid deployed item" );
                 }
+            }
+            if( !definition.builtin_examine.empty() &&
+                !find_iexamine_functions( definition.builtin_examine ) ) {
+                throw std::runtime_error( "furniture '" + definition.id +
+                                          "' references unknown built-in examine action '" +
+                                          definition.builtin_examine + "'" );
             }
             if( !definition.examine_handler.empty() &&
                 owner_runtime.handlers.count( definition.examine_handler ) == 0 ) {
@@ -8810,6 +8820,13 @@ bool content_transaction::apply( std::string &error )
             }
             native.crafting_pseudo_item = itype_id( source.crafting_pseudo_item );
             native.deployed_item = itype_id( source.deployed_item );
+            native.oxytorch = cata::make_value<activity_data_furn>();
+            native.boltcut = cata::make_value<activity_data_furn>();
+            native.hacksaw = cata::make_value<activity_data_furn>();
+            native.prying = cata::make_value<activity_data_furn>();
+            if( !source.builtin_examine.empty() ) {
+                native.set_examine( iexamine_functions_from_string( source.builtin_examine ) );
+            }
             if( !source.examine_handler.empty() ) {
                 native.examine_actor.emplace_back(
                     std::make_unique<lua_platform_examine_actor>(
@@ -11114,6 +11131,10 @@ std::string content_transaction::fingerprint() const
         hash_part( state, value.lockpick_result );
         hash_part( state, value.crafting_pseudo_item );
         hash_part( state, value.deployed_item );
+        if( !value.builtin_examine.empty() ) {
+            hash_part( state, "builtin_examine" );
+            hash_part( state, value.builtin_examine );
+        }
         hash_part( state, value.examine_handler );
         hash_part( state, value.examine_name );
         for( const std::string &flag : value.flags ) {

@@ -3365,6 +3365,7 @@ function ConstructionDefinition:post_flag(flag_id) end
 ---@field lockpick_result? string Furniture id to transform into when lockpicked.
 ---@field crafting_pseudo_item? string Item id used for in-place crafting.
 ---@field deployed_item? string Item id that deploys this furniture.
+---@field builtin_examine? string Native examine action, such as deployed_furniture.
 
 ---@class FurnitureDefinition
 ---@field id string
