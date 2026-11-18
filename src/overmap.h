@@ -511,6 +511,8 @@ class overmap
         std::vector<pp_resolved_generator> *pp_decisions( const tripoint_om_omt & );
         std::string *join_used_at( const om_pos_dir & );
         std::vector<oter_id> predecessors( const tripoint_om_omt & );
+        bool has_riot_damage( const tripoint_om_omt &p ) const;
+        void set_riot_damage( const tripoint_om_omt &p );
         void set_seen( const tripoint_om_omt &p, om_vision_level val, bool force = false );
         om_vision_level seen( const tripoint_om_omt &p ) const;
         bool seen_more_than( const tripoint_om_omt &p, om_vision_level test ) const;
@@ -684,6 +686,7 @@ class overmap
         };
 
         std::array<map_layer, OVERMAP_LAYERS> layer;
+        std::unordered_set<tripoint_om_omt> riot_damage;
         std::unordered_map<tripoint_abs_omt, scent_trace> scents;
 
         // Records the locations where a given overmap special was placed, which
@@ -971,11 +974,11 @@ class overmap
                                           const cata::flat_set<string_id<overmap_location>> &locations );
 
         bool can_place_special( const overmap_special &special, const tripoint_om_omt &p,
-                                om_direction::type dir, bool must_be_unexplored ) const;
+                                om_direction::type dir, bool must_be_unexplored, int margin = 1 ) const;
 
         std::vector<tripoint_om_omt> place_special(
             const overmap_special &special, const tripoint_om_omt &p, om_direction::type dir,
-            const city &cit, bool must_be_unexplored, bool force );
+            const city &cit, bool must_be_unexplored, bool force, int margin = 1 );
 
         // DEBUG ONLY!
         void debug_force_add_group( const mongroup &group );

@@ -30,6 +30,7 @@
 #include "math_parser_diag_value.h"
 #include "map.h"
 #include "mapdata.h"
+#include "north_america_elevation.h"
 #include "output.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
@@ -245,10 +246,14 @@ void Character::update_body( const time_point &from, const time_point &to )
     if( !is_npc() || has_native_player_control() ) {
         update_stamina( to_turns<int>( to - from ) );
     }
-    if( can_recover_oxygen() && oxygen < get_oxygen_max() ) {
+    const int oxygen_capacity = get_oxygen_max();
+    if( north_america::elevation_active() ) {
+        oxygen = std::min( oxygen, oxygen_capacity );
+    }
+    if( can_recover_oxygen() && oxygen < oxygen_capacity ) {
         oxygen += std::max( static_cast<int>( to_turns<int>( to - from ) * get_stamina() * 5 * get_modifier(
                 character_modifier_stamina_recovery_breathing_mod )  / get_stamina_max() ), 1 );
-        oxygen = std::min( oxygen, get_oxygen_max() );
+        oxygen = std::min( oxygen, oxygen_capacity );
     }
     update_stomach( from, to );
     recalculate_enchantment_cache();

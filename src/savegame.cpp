@@ -506,6 +506,8 @@ void overmap::unserialize( const JsonObject &jsobj )
             pp_decisions_index.emplace( p.first, &*it );
         }
     }
+    riot_damage.clear();
+    jsobj.read( "riot_damage", riot_damage );
     std::vector<tripoint_abs_omt> camps_to_place;
     // Extract layers first so predecessor deduplication can happen.
     if( jsobj.has_member( "layers" ) ) {
@@ -1583,6 +1585,7 @@ void overmap::serialize( std::ostream &fout ) const
     json.end_array();
     fout << std::endl;
 
+    json.member( "riot_damage", riot_damage );
     json.member( "pp_decision_storage", pp_decision_storage );
     fout << std::endl;
     json.member( "pp_decisions_index" );

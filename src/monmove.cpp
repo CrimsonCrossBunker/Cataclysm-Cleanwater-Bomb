@@ -42,6 +42,7 @@
 #include "map_iterator.h"
 #include "map_movement_query.h"
 #include "map_scale_constants.h"
+#include "north_america_elevation.h"
 #include "mapdata.h"
 #include "mattack_common.h"
 #include "messages.h"
@@ -169,7 +170,7 @@ bool monster::is_immune_field( const field_type_id &fid ) const
 
 static bool z_is_valid( int z )
 {
-    return z >= -OVERMAP_DEPTH && z <= OVERMAP_HEIGHT;
+    return get_map().inbounds_z( z );
 }
 
 bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
@@ -585,7 +586,10 @@ void monster::plan()
         monster_destination_plan goal( *this, here, destination, kind );
         return goal.commit( propose_monster_destination( goal.view() ), here );
     };
-    std::bitset<OVERMAP_LAYERS> seen_levels = here.get_inter_level_visibility( posz() );
+    const auto seen_levels = here.get_inter_level_visibility( posz() );
+    const auto sees_level = [&]( int z ) {
+        return here.inbounds_z( z ) && seen_levels.test( here.layer_for_z( z ) );
+    };
     monster_attitude mood = attitude();
     Character &player_character = get_player_character();
     // If this monster locks on via LoS, refresh the locked-on tracking effect
@@ -594,7 +598,7 @@ void monster::plan()
         add_effect( effect_monster_locked_on, 2_minutes );
     }
     // If we can see the player, move toward them or flee.
-    if( friendly == 0 && seen_levels.test( player_character.posz() + OVERMAP_DEPTH ) &&
+    if( friendly == 0 && sees_level( player_character.posz() ) &&
         sees( here, player_character ) ) {
         mon_plan.dist = rate_target_impl( player_character, mon_plan.dist, mon_plan.smart_planning, true );
         mon_plan.fleeing = mon_plan.fleeing || is_fleeing( player_character );
@@ -620,7 +624,7 @@ void monster::plan()
     } else if( friendly != 0 && !mon_plan.docile ) {
         const auto consider = [&]( monster & tmp ) {
             if( tmp.friendly == 0 && tmp.attitude_to( *this ) == Attitude::HOSTILE &&
-                seen_levels.test( tmp.posz() + OVERMAP_DEPTH ) ) {
+                sees_level( tmp.posz() ) ) {
                 float rating = rate_target( tmp, mon_plan.dist, mon_plan.smart_planning );
                 const monster_target_selection selection( { mon_plan.dist, 0, mon_plan.fleeing },
                         monster_target_kind::friendly_monster, rating );
@@ -660,7 +664,7 @@ void monster::plan()
         if( faction_att == MFA_NEUTRAL || faction_att == MFA_FRIENDLY ) {
             continue;
         }
-        if( !seen_levels.test( who.posz() + OVERMAP_DEPTH ) ) {
+        if( !sees_level( who.posz() ) ) {
             continue;
         }
 
@@ -729,8 +733,8 @@ void monster::plan()
             const mf_attitude faction_att = faction->attitude( other );
             return !( faction_att == MFA_NEUTRAL || faction_att == MFA_FRIENDLY );
         },
-        [this, &seen_levels, &mon_plan, &valid_targets]( Creature * other ) {
-            if( !seen_levels.test( other->posz() + OVERMAP_DEPTH ) ) {
+        [this, &sees_level, &mon_plan, &valid_targets]( Creature * other ) {
+            if( !sees_level( other->posz() ) ) {
                 return;
             }
             monster *mon_ptr = dynamic_cast<monster *>( other );
@@ -802,8 +806,8 @@ void monster::plan()
         tracker.for_each_reachable( *this, [actual_faction]( const mfaction_id & other ) {
             return actual_faction == other;
         },
-        [this, &seen_levels, &mon_plan]( Creature * other ) {
-            if( !seen_levels.test( other->posz() + OVERMAP_DEPTH ) ) {
+        [this, &sees_level, &mon_plan]( Creature * other ) {
+            if( !sees_level( other->posz() ) ) {
                 return;
             }
             monster *mon_ptr = dynamic_cast<monster *>( other );
@@ -1875,6 +1879,13 @@ int monster::calc_movecost( const map &here, const tripoint_bub_ms &from,
     int movecost = std::max( tilecosts[from] + tilecosts[to], 1 ) * 25;
     if( !has_flag( json_flag_FLIES ) && !has_flag( json_flag_SNOWWALKING ) ) {
         movecost += snow_move_penalty( get_weather().get_snow_cover( here, to ) );
+    }
+    const bool swimming = swims() &&
+                          here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_SWIMMABLE, to );
+    if( ( !flies() || swimming ) && north_america::elevation_active() ) {
+        const double grade = north_america::grade_between( here, from, to );
+        movecost = std::max( 1, static_cast<int>( std::lround(
+                                 movecost * north_america::grade_move_multiplier( grade ) ) ) );
     }
 
     add_msg_debug( debugmode::DF_MONMOVE, "%s t1:%i  t2:%i movecost: %i", name(), tilecosts[from],

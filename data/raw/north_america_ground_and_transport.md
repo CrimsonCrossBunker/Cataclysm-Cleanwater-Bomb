@@ -24,8 +24,8 @@ NASA National Snow and Ice Data Center DAAC. Permaice shapefile, North American
 grid. Accessed 2026-11-15. [Dataset and citation](https://doi.org/10.7265/skbg-kf16)
 
 Ground temperature tends to the local annual climate normal. Seasonal and
-daily variations decay at different rates with depth. The floor number is used
-as an approximate depth because exact floor elevations are unavailable.
+daily variations decay at different rates with depth. Each underground level is four metres below local grade. See the
+[atlas elevation notes](north_america_elevation.md) for the datum and climate model.
 [Very shallow soil temperature model](https://doi.org/10.1186/s40517-019-0135-6)
 
 ## Roads and settlements
@@ -38,6 +38,17 @@ crossings are simplified at the overmap grid resolution. The chart uses the
 same roads and the existing Natural Earth river, lake, and city layers.
 [Natural Earth cultural vectors](https://www.naturalearthdata.com/downloads/10m-cultural-vectors/)
 [Natural Earth physical vectors](https://www.naturalearthdata.com/downloads/10m-physical-vectors/)
+
+Mapped routes are laid across water even when an overmap contains no dry land.
+The [NYC Street Centerline](https://data.cityofnewyork.us/d/inkn-q76z) fills gaps
+in the East River crossings, the Harlem River Washington Bridge, the FDR Drive,
+West Street, and sections of the Henry Hudson Parkway. The supplemental
+`north_america_nyc.transport` uses the same projected segment format as the
+main transport file. It also includes generalized George Washington and
+Queensboro bridge decks and their approaches. Parallel carriageways on the
+major East River bridges share a centreline. Mapped crossings use raised
+decks, original bridges and bridgeheads, with curved deck sections joining
+turns in the mapped routes. [NYC DOT bridge inventory](https://www.nyc.gov/html/dot/html/infrastructure/bridges.shtml)
 
 Road width uses the expressway class and the population of nearby cities in
 areas without lane counts. The Ontario Road Network segment layer supplies

@@ -160,8 +160,8 @@ def jurisdiction_maps(source):
         str(source), encoding="utf-8", encodingErrors="replace"
     ) as regions:
         names = {
-            r["iso_3166_2"]: r["name_en"] or r["name"]
-            for r in regions.iterRecords()
+            record["iso_3166_2"]: record["name_en"] or record["name"]
+            for record in regions.iterRecords()
         }
     for code in sorted(codes):
         name = DISPLAY_NAMES.get(code) or names[code]

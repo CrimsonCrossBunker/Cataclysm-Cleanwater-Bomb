@@ -65,6 +65,7 @@
 #include "move_mode.h"
 #include "mutation.h"
 #include "npc.h"
+#include "north_america_elevation.h"
 #include "options.h"
 #include "output.h"
 #include "pimpl.h"
@@ -2582,6 +2583,10 @@ void Character::update_stamina( int turns )
                         effective_regen_rate * get_modifier( character_modifier_stamina_recovery_breathing_mod ) );
     // only apply stim-related and mutant stamina boosts if you don't have bionic lungs
     if( !has_bionic( bio_synlungs ) ) {
+        if( north_america::elevation_active() && get_map().inbounds( pos_bub() ) ) {
+            const double height = north_america::altitude_at( get_map(), pos_bub() );
+            stamina_recovery *= std::min( 1.0, north_america::pressure_ratio_at_height( height ) );
+        }
         stamina_recovery = enchantment_cache->modify_value( enchant_vals::mod::REGEN_STAMINA,
                            stamina_recovery );
         // TODO: recovering stamina causes hunger/thirst/sleepiness.

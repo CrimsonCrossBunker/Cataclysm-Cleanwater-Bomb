@@ -3955,7 +3955,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
                 // Trade-off: only applies to already-seen tiles; unseen tiles below
                 // are not drilled through to avoid showing never-seen terrain.
                 if( overmap_buffer.ter( omp )->can_see_down_through() ) {
-                    for( int z = omp.z() - 1; z >= -OVERMAP_DEPTH; --z ) {
+                    for( int z = std::min( omp.z() - 1, OVERMAP_HEIGHT ); z >= -OVERMAP_DEPTH; --z ) {
                         const tripoint_abs_omt lower( omp.xy(), z );
                         if( overmap_buffer.seen( lower ) == om_vision_level::unseen ) {
                             break;
@@ -4655,7 +4655,7 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
 
         // game::w_terrain can be drawn by the tilecontext.
         // skip the normal drawing code for it.
-        if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
+        if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) && get_map().z_origin() == 0 ) {
             const SDL_FRect dest3d{
                 static_cast<float>( win->pos.x * fontwidth ),
                 static_cast<float>( win->pos.y * fontheight ),
@@ -7450,8 +7450,10 @@ static void CheckMessages()
                         if( !is_quick_shortcut_touch ) {
                             update_finger_repeat_delay();
                         }
-                        const bool capture_imgui = android_ui_mode::is_new_ui_build() &&
-                                                   imclient && imclient->any_window_shown();
+                        const bool capture_imgui = android_imgui_touch::should_capture(
+                                                       android_ui_mode::is_new_ui_build(),
+                                                       imclient && imclient->any_window_shown(),
+                                                       touch_input_context.get_hud_scene_id() );
                         if( capture_imgui ) {
                             android_cancel_imgui_touch();
                             const ImVec2 position = android_imgui_touch_position(

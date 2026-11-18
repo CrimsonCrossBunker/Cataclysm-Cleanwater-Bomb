@@ -123,6 +123,7 @@
 #include "mutation.h"
 #include "npc.h"
 #include "omdata.h"
+#include "north_america_elevation.h"
 #include "options.h"
 #include "output.h"
 #include "overlay_ordering.h"
@@ -721,7 +722,13 @@ int Character::count_threshold_substitute_traits() const
 
 int Character::get_oxygen_max() const
 {
-    return 30 + ( has_bionic( bio_synlungs ) ? 30 : 2 * get_str() );
+    const int capacity = 30 + ( has_bionic( bio_synlungs ) ? 30 : 2 * get_str() );
+    if( !north_america::elevation_active() || !get_map().inbounds( pos_bub() ) ) {
+        return capacity;
+    }
+    const double altitude = north_america::altitude_at( get_map(), pos_bub() );
+    return std::max( 1, static_cast<int>( std::lround( capacity *
+                                          std::min( 1.2, north_america::pressure_ratio_at_height( altitude ) ) ) ) );
 }
 
 void Character::randomize_heartrate()
@@ -6810,6 +6817,9 @@ std::vector < run_cost_effect > Character::run_cost_effects( float &movecost,
 
     if( water_walking ) {
         movecost = 100;
+    } else if( destination && north_america::elevation_active() ) {
+        const double grade = north_america::grade_between( here, pos_bub(), *destination );
+        run_cost_effect_mul( north_america::grade_move_multiplier( grade ), _( "Slope" ) );
     }
 
     if( movecost > 105 ) {
