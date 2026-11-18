@@ -1,5 +1,11 @@
 #include "pet_inventory_ui.h"
 
+#include <character_id.h>
+#include <clone_ptr.h>
+#include <coordinates.h>
+#include <item_uid.h>
+#include <memory_fast.h>
+#include <monster_uid.h>
 #include <type_id.h>
 #include <algorithm>
 #include <cstddef>
@@ -22,6 +28,7 @@
 #include "cursesdef.h"
 #include "enums.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "input_context.h"
 #include "inventory.h"
 #include "item.h"
@@ -29,9 +36,7 @@
 #include "item_pocket.h"
 #include "itype.h"
 #include "json.h"
-#include "line.h"
 #include "map.h"
-#include "messages.h"
 #include "monster.h"
 #include "mtype.h"
 #include "output.h"
@@ -51,6 +56,8 @@
 #include "units.h"
 #include "units_utility.h"
 #include "value_ptr.h"
+
+class activity_actor;
 
 static const activity_id ACT_PET_TRANSFER( "ACT_PET_TRANSFER" );
 

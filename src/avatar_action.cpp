@@ -1,5 +1,4 @@
 #include <coordinates.h>
-#include <cstdint>
 #include <input_enums.h>
 #include <item_disposition.h>
 #include <item_uid.h>
@@ -9,8 +8,10 @@
 #include <player_activity.h>
 #include <safe_reference.h>
 #include <translation.h>
+#include <units.h>
 #include <algorithm>
 #include <climits>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <map>

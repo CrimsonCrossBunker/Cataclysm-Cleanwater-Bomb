@@ -22,6 +22,7 @@
 #include <vehicle_turret_control.h>
 #include <vehicle_uid.h>
 #include <walking.h>
+#include <weakpoint.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -284,6 +285,7 @@ static const activity_id ACT_OPEN_GATE( "ACT_OPEN_GATE" );
 static const activity_id ACT_OPEN_TILE( "ACT_OPEN_TILE" );
 static const activity_id ACT_OPERATION( "ACT_OPERATION" );
 static const activity_id ACT_OXYTORCH( "ACT_OXYTORCH" );
+static const activity_id ACT_PET_TRANSFER( "ACT_PET_TRANSFER" );
 static const activity_id ACT_PICKAXE( "ACT_PICKAXE" );
 static const activity_id ACT_PICKUP( "ACT_PICKUP" );
 static const activity_id ACT_PLANT_SEED( "ACT_PLANT_SEED" );
@@ -343,6 +345,7 @@ static const ammotype ammo_plutonium( "plutonium" );
 static const bionic_id bio_lockpick( "bio_lockpick" );
 static const bionic_id bio_painkiller( "bio_painkiller" );
 static const bionic_id bio_remote( "bio_remote" );
+static const damage_type_id damage_bash( "bash" );
 static const efftype_id effect_asocial_dissatisfied( "asocial_dissatisfied" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
@@ -20027,7 +20030,7 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
             safe_reference<Creature> hit_target;
             const bodypart_id torso( "torso" );
             target->deal_melee_hit( mount.get(), hit_spread, false,
-                                    damage_instance( damage_type_id( "bash" ), damage ), dealt,
+                                    damage_instance( damage_bash, damage ), dealt,
                                     weakpoint_attack(), &torso, &who, &hit_target );
             if( !rider || !context ) {
                 return;
@@ -20265,7 +20268,7 @@ deserialize_functions = {
     { ACT_MILK, &milk_activity_actor::deserialize },
     { ACT_MOP, &mop_activity_actor::deserialize },
     { ACT_MOUNTED_CHARGE, &mounted_charge_activity_actor::deserialize },
-    { activity_id( "ACT_PET_TRANSFER" ), &pet_inventory_ui::transfer_activity_actor::deserialize },
+    { ACT_PET_TRANSFER, &pet_inventory_ui::transfer_activity_actor::deserialize },
     { ACT_MOVE_ITEMS, &move_items_activity_actor::deserialize },
     { ACT_MOVE_LOOT, &zone_sort_activity_actor::deserialize },
     { ACT_MULTIPLE_BUTCHER, &multi_butchery_activity_actor::deserialize },

@@ -1,8 +1,8 @@
-#include "north_america_elevation.h"
 #include "overmapbuffer.h"
 
 #include <cata_path.h>
 #include <map_scale_constants.h>
+#include <math_parser_diag_value.h>
 #include <monster_uid.h>
 #include <type_id.h>
 #include <algorithm>
@@ -19,8 +19,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "basecamp.h"
 #include "avatar.h"
+#include "basecamp.h"
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
@@ -49,6 +49,7 @@
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
+#include "north_america_elevation.h"
 #include "npc.h"
 #include "npc_lifetime.h"
 #include "omdata.h"

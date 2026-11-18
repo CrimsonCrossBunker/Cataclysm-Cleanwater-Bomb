@@ -18,6 +18,8 @@
 
 class Character;
 class JsonObject;
+class JsonOut;
+class JsonValue;
 class item;
 class monster;
 

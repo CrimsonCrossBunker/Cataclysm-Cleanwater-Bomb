@@ -24,6 +24,7 @@
 #include <subbodypart.h>
 #include <tool_activity_target.h>
 #include <type_id.h>
+#include <vehicle_power_connection.h>
 #include <visitable.h>
 #include <weighted_list.h>
 
@@ -121,9 +122,9 @@
 #include "move_mode.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "north_america_elevation.h"
 #include "npc.h"
 #include "omdata.h"
-#include "north_america_elevation.h"
 #include "options.h"
 #include "output.h"
 #include "overlay_ordering.h"

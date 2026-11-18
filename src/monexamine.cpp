@@ -1,5 +1,7 @@
 #include "monexamine.h"
 
+#include <math_parser_diag_value.h>
+#include <ret_val.h>
 #include <list>
 #include <map>
 #include <memory>

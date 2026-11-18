@@ -32,12 +32,11 @@
 #include "simple_pathfinding.h"
 #include "type_id.h"
 
+class Character;
 class JsonObject;
 class JsonOut;
 class JsonValue;
-class Character;
 class basecamp;
-class character_id;
 class monster;
 class npc;
 class overmap_special;

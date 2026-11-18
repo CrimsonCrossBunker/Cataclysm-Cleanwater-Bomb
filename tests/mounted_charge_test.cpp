@@ -1,24 +1,28 @@
-#include <cstddef>
-#include "clone_ptr.h"
-#include "activity_actor.h"
-#include <algorithm>
 #include <bodypart.h>
 #include <coordinates.h>
-#include <cstdint>
-#include <initializer_list>
 #include <item_location.h>
 #include <item_uid.h>
-#include <memory>
 #include <monster_uid.h>
-#include <optional>
+#include <npc_opinion.h>
 #include <pimpl.h>
 #include <player_activity.h>
 #include <point.h>
 #include <ret_val.h>
+#include <safe_reference.h>
+#include <units.h>
+#include <weakpoint.h>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <initializer_list>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "avatar_action.h"
@@ -27,12 +31,14 @@
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "character_martial_arts.h"
+#include "clone_ptr.h"
 #include "creature.h"
 #include "damage.h"
 #include "faction.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "item.h"
+#include "item_factory.h"
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
@@ -42,6 +48,7 @@
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "martialarts.h"
+#include "melee.h"
 #include "mod_manager.h"
 #include "mondefense.h"
 #include "monster.h"
@@ -50,6 +57,7 @@
 #include "npc.h"
 #include "player_helpers.h"
 #include "type_id.h"
+#include "worldfactory.h"
 
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_cut( "cut" );
@@ -78,11 +86,6 @@ static const skill_id skill_bashing( "bashing" );
 static const skill_id skill_cutting( "cutting" );
 static const skill_id skill_melee( "melee" );
 static const skill_id skill_stabbing( "stabbing" );
-
-#include <utility>
-#include "item_factory.h"
-#include "melee.h"
-#include "worldfactory.h"
 
 namespace
 {
@@ -638,8 +641,8 @@ TEST_CASE( "wild_charge_survives_saving_and_hits_with_the_mount_instead_of_the_w
     melee::clear_stats();
     player.activity.do_turn( player );
     CHECK( target.get_hp() < 500 );
-    CHECK( target.has_effect( efftype_id( "downed" ) ) );
-    CHECK( target.has_effect( efftype_id( "stunned" ) ) );
+    CHECK( target.has_effect( effect_downed ) );
+    CHECK( target.has_effect( effect_stunned ) );
     CHECK( melee::get_stats().attack_count == 0 );
     CHECK( player.pos_bub() == start + tripoint( 3, 0, 0 ) );
 }

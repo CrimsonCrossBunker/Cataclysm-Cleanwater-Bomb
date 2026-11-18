@@ -1,13 +1,22 @@
+#include <activity_actor.h>
+#include <bodypart.h>
+#include <cata_utility.h>
+#include <character_id.h>
+#include <clone_ptr.h>
+#include <coordinates.h>
+#include <point.h>
 #include <cstdint>
+#include <functional>
+#include <list>
 #include <memory>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "character.h"
 #include "damage.h"
 #include "flexbuffer_json.h"
 #include "item.h"
@@ -30,6 +39,18 @@
 #include "type_id.h"
 #include "units.h"
 
+static const damage_type_id damage_bash( "bash" );
+
+static const efftype_id effect_ridden( "ridden" );
+
+static const itype_id itype_anvil( "anvil" );
+static const itype_id itype_aspirin( "aspirin" );
+static const itype_id itype_backpack( "backpack" );
+static const itype_id itype_padded_armor_horse( "padded_armor_horse" );
+static const itype_id itype_rock( "rock" );
+
+static const mtype_id mon_horse( "mon_horse" );
+
 static const pet_slot_id pet_slot_armor( "armor" );
 static const pet_slot_id pet_slot_storage( "storage" );
 
@@ -37,9 +58,9 @@ TEST_CASE( "loaded_backpack_can_be_installed_on_a_horse", "[monster][pet_equipme
 {
     clear_avatar();
     avatar &rider = get_avatar();
-    monster horse( mtype_id( "mon_horse" ) );
-    item bag( itype_id( "backpack" ) );
-    item cargo( itype_id( "rock" ) );
+    monster horse( mon_horse );
+    item bag( itype_backpack );
+    item cargo( itype_rock );
     cargo.set_var( "cargo_marker", "keep" );
     REQUIRE( bag.put_in( cargo, pocket_type::CONTAINER ).success() );
     const units::mass loaded_weight = bag.weight();
@@ -61,12 +82,12 @@ TEST_CASE( "failed_horse_equipment_installation_keeps_loaded_bag", "[monster][pe
 {
     clear_avatar();
     avatar &rider = get_avatar();
-    monster horse( mtype_id( "mon_horse" ) );
+    monster horse( mon_horse );
     while( horse.get_carried_weight() <= horse.weight_capacity() ) {
-        horse.add_item( item( itype_id( "anvil" ) ) );
+        horse.add_item( item( itype_anvil ) );
     }
-    item bag( itype_id( "backpack" ) );
-    REQUIRE( bag.put_in( item( itype_id( "rock" ) ), pocket_type::CONTAINER ).success() );
+    item bag( itype_backpack );
+    REQUIRE( bag.put_in( item( itype_rock ), pocket_type::CONTAINER ).success() );
     item_location source = rider.i_add( bag );
     const units::mass original_weight = source->weight();
     const int original_moves = rider.get_moves();
@@ -84,11 +105,11 @@ TEST_CASE( "mounted_equipment_transfer_does_not_double_count_the_rider",
 {
     clear_avatar();
     avatar &rider = get_avatar();
-    monster horse( mtype_id( "mon_horse" ) );
+    monster horse( mon_horse );
     horse.mounted_player = &rider;
-    horse.add_effect( efftype_id( "ridden" ), 1_turns, true );
-    item bag( itype_id( "backpack" ) );
-    REQUIRE( bag.put_in( item( itype_id( "rock" ) ), pocket_type::CONTAINER ).success() );
+    horse.add_effect( effect_ridden, 1_turns, true );
+    item bag( itype_backpack );
+    REQUIRE( bag.put_in( item( itype_rock ), pocket_type::CONTAINER ).success() );
     item_location source = rider.i_add( bag );
     const units::mass before = horse.get_load_weight();
     CHECK( before == horse.get_carried_weight() + rider.get_weight() );
@@ -105,7 +126,7 @@ TEST_CASE( "horse_overmap_markers_follow_identity_and_survive_saving", "[monster
     avatar &rider = get_avatar();
     restore_on_out_of_scope restore_markers( overmap_buffer.global_state.tracked_pets );
     overmap_buffer.global_state.tracked_pets.clear();
-    monster horse( mtype_id( "mon_horse" ) );
+    monster horse( mon_horse );
     horse.friendly = -1;
     horse.unique_name = "Comet";
     overmap_buffer.update_tracked_pet( horse, rider );
@@ -178,8 +199,8 @@ TEST_CASE( "same_named_horses_keep_separate_overmap_markers", "[monster][overmap
     avatar &rider = get_avatar();
     restore_on_out_of_scope restore_markers( overmap_buffer.global_state.tracked_pets );
     overmap_buffer.global_state.tracked_pets.clear();
-    monster first( mtype_id( "mon_horse" ) );
-    monster second( mtype_id( "mon_horse" ) );
+    monster first( mon_horse );
+    monster second( mon_horse );
     first.friendly = -1;
     second.friendly = -1;
     first.unique_name = "Comet";
@@ -208,7 +229,7 @@ TEST_CASE( "horse_mounting_counts_equipment_and_cargo", "[monster][mount][pet_eq
     horse.friendly = -1;
     REQUIRE( rider.can_mount( horse ) );
     while( horse.get_load_weight( &rider ) <= horse.weight_capacity() ) {
-        horse.add_item( item( itype_id( "rock" ) ) );
+        horse.add_item( item( itype_rock ) );
     }
     REQUIRE( horse.get_carried_weight() <= horse.weight_capacity() );
     CHECK_FALSE( rider.can_mount( horse ) );
@@ -229,7 +250,7 @@ TEST_CASE( "overloaded_ridden_horse_moves_more_slowly", "[monster][mount][pet_eq
     const double unloaded_speed = rider.mount_speed();
     REQUIRE( unloaded_speed > 0.0 );
     while( horse.get_load_weight() <= horse.weight_capacity() ) {
-        horse.add_item( item( itype_id( "anvil" ) ) );
+        horse.add_item( item( itype_anvil ) );
     }
     CHECK( rider.mount_speed() < unloaded_speed );
     CHECK( rider.mount_speed() > 0.0 );
@@ -239,9 +260,9 @@ TEST_CASE( "horse_cargo_can_transfer_partial_charge_stacks", "[monster][pet_equi
 {
     clear_avatar();
     avatar &rider = get_avatar();
-    monster horse( mtype_id( "mon_horse" ) );
-    REQUIRE( horse.equip_pet_equipment( pet_slot_storage, item( itype_id( "backpack" ) ) ) );
-    item medicine( itype_id( "aspirin" ) );
+    monster horse( mon_horse );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_storage, item( itype_backpack ) ) );
+    item medicine( itype_aspirin );
     medicine.charges = 10;
     const item_location source = rider.i_add( medicine );
     const pet_inventory_ui::transfer_request outgoing { true, source, 0, 3 };
@@ -258,7 +279,7 @@ TEST_CASE( "horse_cargo_can_transfer_partial_charge_stacks", "[monster][pet_equi
     CHECK( contents.front()->charges == 3 );
     REQUIRE( pet_inventory_ui::transfer_item( rider, horse,
     { false, item_location(), cargo_uid, 2 } ).success() );
-    CHECK( rider.charges_of( itype_id( "aspirin" ) ) == 9 );
+    CHECK( rider.charges_of( itype_aspirin ) == 9 );
     CHECK( contents.front()->charges == 1 );
 }
 
@@ -269,12 +290,12 @@ TEST_CASE( "animal_cargo_activity_moves_one_item_per_turn_and_can_be_cancelled",
     clear_map_without_vision();
     clear_creatures();
     avatar &rider = get_avatar();
-    REQUIRE( rider.wear_item( item( itype_id( "backpack" ) ), false ) );
+    REQUIRE( rider.wear_item( item( itype_backpack ), false ) );
     monster &horse = spawn_test_monster( "mon_horse", rider.pos_bub() + tripoint::east );
     horse.friendly = -1;
-    REQUIRE( horse.equip_pet_equipment( pet_slot_storage, item( itype_id( "backpack" ) ) ) );
-    const item_location first_source = rider.i_add( item( itype_id( "rock" ) ) );
-    const item_location second_source = rider.i_add( item( itype_id( "aspirin" ) ) );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_storage, item( itype_backpack ) ) );
+    const item_location first_source = rider.i_add( item( itype_rock ) );
+    const item_location second_source = rider.i_add( item( itype_aspirin ) );
     std::vector<pet_inventory_ui::transfer_request> requests {
         { true, first_source, 0, 1 }, { true, second_source, 0, 1 }
     };
@@ -320,8 +341,8 @@ TEST_CASE( "animal_cargo_activity_stops_when_the_animal_is_unavailable",
     avatar &rider = get_avatar();
     monster &horse = spawn_test_monster( "mon_horse", rider.pos_bub() + tripoint::east );
     horse.friendly = -1;
-    REQUIRE( horse.equip_pet_equipment( pet_slot_storage, item( itype_id( "backpack" ) ) ) );
-    const item_location source = rider.i_add( item( itype_id( "rock" ) ) );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_storage, item( itype_backpack ) ) );
+    const item_location source = rider.i_add( item( itype_rock ) );
     rider.assign_activity( pet_inventory_ui::transfer_activity_actor( horse.uid().get_value(),
     rider.getID(), { { true, source, 0, 1 } } ) );
     REQUIRE( rider.activity );
@@ -354,12 +375,12 @@ TEST_CASE( "animal_cargo_resume_rechecks_reach_after_partial_completion",
     clear_map_without_vision();
     clear_creatures();
     avatar &rider = get_avatar();
-    REQUIRE( rider.wear_item( item( itype_id( "backpack" ) ), false ) );
+    REQUIRE( rider.wear_item( item( itype_backpack ), false ) );
     monster &horse = spawn_test_monster( "mon_horse", rider.pos_bub() + tripoint::east );
     horse.friendly = -1;
-    REQUIRE( horse.equip_pet_equipment( pet_slot_storage, item( itype_id( "backpack" ) ) ) );
-    const item_location first = rider.i_add( item( itype_id( "rock" ) ) );
-    const item_location second = rider.i_add( item( itype_id( "aspirin" ) ) );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_storage, item( itype_backpack ) ) );
+    const item_location first = rider.i_add( item( itype_rock ) );
+    const item_location second = rider.i_add( item( itype_aspirin ) );
     rider.assign_activity( pet_inventory_ui::transfer_activity_actor( horse.uid().get_value(),
     rider.getID(), { { true, first, 0, 1 }, { true, second, 0, 1 } } ) );
     rider.set_moves( 100 );
@@ -389,15 +410,15 @@ TEST_CASE( "animal_cargo_resume_rechecks_reach_after_partial_completion",
 
 TEST_CASE( "padded_horse_barding_reduces_actual_damage", "[monster][pet_equipment][armor]" )
 {
-    monster horse( mtype_id( "mon_horse" ) );
+    monster horse( mon_horse );
     const int initial_hp = horse.get_hp();
-    const damage_instance strike( damage_type_id( "bash" ), 30 );
+    const damage_instance strike( damage_bash, 30 );
     const float unarmored = horse.deal_damage( nullptr, bodypart_id( "torso" ), strike ).total_damage();
     horse.set_hp( initial_hp );
-    const item barding( itype_id( "padded_armor_horse" ) );
+    const item barding( itype_padded_armor_horse );
     REQUIRE( horse.equip_pet_equipment( pet_slot_armor, barding ) );
     CHECK( horse.get_carried_weight() == barding.weight() );
-    CHECK( horse.get_worn_armor_val( damage_type_id( "bash" ) ) > 0 );
+    CHECK( horse.get_worn_armor_val( damage_bash ) > 0 );
     const float armored = horse.deal_damage( nullptr, bodypart_id( "torso" ), strike ).total_damage();
     CHECK( armored < unarmored );
 }

@@ -1,6 +1,7 @@
 #include "melee.h"
 
 #include <mounted_charge.h>
+#include <safe_reference.h>
 #include <algorithm>
 #include <array>
 #include <climits>
