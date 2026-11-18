@@ -1056,6 +1056,12 @@ function RecipeDefinition:learn_by_disassembly(skill_id, level) end
 ---@return RecipeDefinition self
 function RecipeDefinition:requires_skill(id, level) end
 
+---Require the crafter to meet a native primary-stat minimum to start crafting.
+---@param name "strength"|"dexterity"|"intelligence"|"perception"
+---@param minimum integer Native non-negative stat value. Zero clears the requirement.
+---@return RecipeDefinition self
+function RecipeDefinition:requires_stat(name, minimum) end
+
 ---@param requirement_id string Native Requirement id.
 ---@param multiplier integer Positive multiplier.
 ---@return RecipeDefinition self

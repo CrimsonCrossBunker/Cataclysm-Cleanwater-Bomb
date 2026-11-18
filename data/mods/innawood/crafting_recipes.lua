@@ -124,3 +124,19 @@ content.retire_recipe("xs_gloves_faux_fur", "xs_gloves_faux_fur")
 content.retire_recipe("xl_gloves_faux_fur", "xl_gloves_faux_fur")
 
 content.retire_recipe("gloves_faux_fur", "gloves_faux_fur")
+
+content.replace(content.Recipe {
+    id = "bandages_makeshift",
+    result = "bandages_makeshift",
+    category = "CC_OTHER",
+    subcategory = "CSC_OTHER_MEDICAL",
+    skill = "tailor",
+    duration_moves = 900,
+    activity_level = NO_EXERCISE,
+    autolearn = true,
+    result_multiplier = 1,
+    flags = { "BLIND_EASY" },
+}:component_any({
+    { id = "cotton_patchwork", count = 1 },
+    { id = "fibercloth_patchwork", count = 1 },
+}))

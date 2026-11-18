@@ -1,4 +1,6 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
+local services = ccb.services
 
 local NO_EXERCISE = 1
 local MODERATE_EXERCISE = 4
@@ -367,3 +369,25 @@ content.add(content.Recipe {
         })
     :learn_automatically("launcher", 0)
 )
+
+ccb.runtime.handler("start_target_practice", function(craft)
+    for _ = 1, craft.batch do
+        local result = services.activities.target_practice(craft.character)
+        if not result.ok then
+            error(result.error.message)
+        end
+    end
+end, 1)
+
+content.add(content.Recipe {
+    id = "prac_target",
+    name = ccb.content.text("target practice"),
+    description = ccb.content.text("The best way to train firearm skill is to shoot a firearm.  Do exactly that."),
+    category = "CC_PRACTICE",
+    subcategory = "CSC_PRACTICE_RANGED",
+    duration_moves = 0,
+    activity_level = NO_EXERCISE,
+    autolearn = true,
+    flags = { "SECRET", "ALWAYS_START_ON_GROUND" },
+    scripted_output = true,
+}:on_complete("start_target_practice"))

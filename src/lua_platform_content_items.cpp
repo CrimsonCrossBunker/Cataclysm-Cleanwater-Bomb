@@ -37,6 +37,7 @@ extern "C" {
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
@@ -45,6 +46,7 @@ extern "C" {
 
 #include "ammo.h"
 #include "ammo_effect.h"
+#include "bonuses.h"
 #include "butchery.h"
 #include "butchery_requirements.h"
 #include "body_part_set.h"
@@ -453,6 +455,7 @@ struct recipe_definition_data {
     std::vector<std::vector<component_requirement>> components;
     std::vector<std::vector<component_requirement>> tools;
     std::map<std::string, std::int64_t> required_skills;
+    std::map<scaling_stat, int> required_stats;
     recipe_requirement_sets external_requirements;
     std::vector<recipe_step_definition_data> steps;
     std::int64_t disassembly_moves = 0;
@@ -1655,6 +1658,25 @@ struct recipe_definition_handle {
     recipe_definition_handle &requires_skill( const std::string &id, std::int64_t level ) {
         require_building_handle( token, *definition, "recipe" );
         definition->add_required_skill( id, level );
+        return *this;
+    }
+
+    recipe_definition_handle &requires_stat( const std::string &name, std::int64_t minimum ) {
+        require_building_handle( token, *definition, "recipe" );
+        static const std::map<std::string_view, scaling_stat> stats = {
+            { "strength", STAT_STR }, { "dexterity", STAT_DEX },
+            { "intelligence", STAT_INT }, { "perception", STAT_PER }
+        };
+        const auto stat = stats.find( name );
+        if( stat == stats.end() || minimum < 0 || minimum > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error(
+                "recipe stat requirement needs a primary stat and a native non-negative minimum" );
+        }
+        if( minimum == 0 ) {
+            definition->required_stats.erase( stat->second );
+        } else {
+            definition->required_stats[stat->second] = static_cast<int>( minimum );
+        }
         return *this;
     }
 
@@ -3371,6 +3393,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "quality_any", &recipe_definition_handle::quality_any,
         "learn_by_disassembly", &recipe_definition_handle::learn_by_disassembly,
         "requires_skill", &recipe_definition_handle::requires_skill,
+        "requires_stat", &recipe_definition_handle::requires_stat,
         "requirement", &recipe_definition_handle::requirement,
         "proficiency", &recipe_definition_handle::proficiency,
         "book", &recipe_definition_handle::book,
@@ -7373,6 +7396,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.morale_modifier = { entry.definition->morale_bonus, entry.definition->morale_duration };
                     native.practice_data = entry.definition->practice;
                     native.character_resources = entry.definition->character_resources;
+                    native.character_requirements_ = entry.definition->required_stats;
                     for( const auto &[skill, level] : entry.definition->disassembly_learning ) {
                         native.learn_by_disassembly[skill_id( skill )] = static_cast<int>( level );
                     }
@@ -8949,6 +8973,11 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 }
                 hash_part( state, std::to_string( v.character_resources.mana ) );
                 hash_part( state, std::to_string( v.character_resources.stamina ) );
+                for( const auto &[stat, minimum] : v.required_stats ) {
+                    hash_part( state, "recipe_stat_requirement" );
+                    hash_part( state, std::to_string( static_cast<int>( stat ) ) );
+                    hash_part( state, std::to_string( minimum ) );
+                }
                 hash_part( state, v.reversible ? "reversible" : "irreversible" );
                 hash_part( state, v.variant );
                 hash_part( state, v.container );

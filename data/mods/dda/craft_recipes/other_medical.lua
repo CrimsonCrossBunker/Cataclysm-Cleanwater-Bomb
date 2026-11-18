@@ -672,3 +672,20 @@ content.add(content.Recipe {
     :component("vitc_tablet", 1)
     :quality("CUT_FINE", 2, 1)
 )
+
+-- Tearing a sheet by hand requires brute force.
+content.add(content.Recipe {
+    id = "bandages_makeshift",
+    result = "bandages_makeshift",
+    category = "CC_*",
+    subcategory = "CSC_*_NESTED",
+    duration_moves = 1600,
+    activity_level = NO_EXERCISE,
+    autolearn = true,
+    result_multiplier = 2,
+    flags = { "BLIND_EASY" },
+}:requires_stat("strength", 5)
+    :component_any({
+        { id = "sheet_cotton", count = 1 },
+        { id = "sheet_cotton_patchwork", count = 1 },
+    }))

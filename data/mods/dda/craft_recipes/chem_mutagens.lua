@@ -1,4 +1,6 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
+local services = ccb.services
 
 local LIGHT_EXERCISE = 2
 
@@ -1804,3 +1806,48 @@ content.add(content.Recipe {
     :proficiency("prof_chem_synth")
     :batch_discount(20, 5)
 )
+
+ccb.runtime.handler("study_alpha_mutagen", function(craft)
+    local character = craft.character
+    if character.subtype ~= "avatar" then
+        return
+    end
+    local snapshot = services.characters.snapshot(character)
+    if not snapshot.ok then
+        error(snapshot.error.message)
+    end
+    local text
+    if snapshot.value.stats.intelligence >= 9 then
+        text = ccb.services.translate("You realize from reading this that you need at least one to two more doses of primer than usual to make the irreversible change compared to other mutagens.")
+    else
+        text = ccb.services.translate("Yep, this is a recipe for some advanced substance.")
+    end
+    for _ = 1, craft.batch do
+        services.messages.add(text, "mixed")
+    end
+end, 1)
+
+content.add(content.Recipe {
+    id = "mutagen_alpha",
+    result = "mutagen_alpha",
+    category = "CC_*",
+    subcategory = "CSC_*_NESTED",
+    skill = "chemistry",
+    difficulty = 8,
+    duration_moves = 120000,
+    activity_level = LIGHT_EXERCISE,
+    autolearn = false,
+    flags = { "SECRET" },
+}:requires_skill("firstaid", 1)
+    :result_charges(1)
+    :book("recipe_alpha", 7)
+    :proficiency("prof_intro_chemistry")
+    :proficiency("prof_organic_chemistry")
+    :proficiency("prof_intro_chem_synth")
+    :proficiency("prof_chem_synth")
+    :requirement("mutagen_production_standard", 50)
+    :component_any({ { id = "mutagen_slime", count = 3 }, { id = "iv_mutagen_slime", count = 1 } })
+    :component_any({ { id = "mutagen_plant", count = 3 }, { id = "iv_mutagen_plant", count = 1 } })
+    :component_any({ { id = "mutagen_bird", count = 3 }, { id = "iv_mutagen_bird", count = 1 } })
+    :component_any({ { id = "purifier", count = 4 }, { id = "iv_purifier", count = 1 } })
+    :on_complete("study_alpha_mutagen"))
