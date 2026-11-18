@@ -4201,13 +4201,22 @@ sol::table receive_inventory_items(
         throw std::invalid_argument( "Item receipt quantity must fit the native signed integer range" );
     }
     bool force_equip = false;
+    std::optional<itype_id> container_id;
     if( options ) {
         for( const auto &option : *options ) {
-            if( option.first.get_type() != sol::type::string ||
-                option.first.as<std::string>() != "force_equip" || !option.second.is<bool>() ) {
-                throw std::invalid_argument( "Item receipt options accept only boolean force_equip" );
+            if( option.first.get_type() != sol::type::string ) {
+                throw std::invalid_argument( "Item receipt option names must be strings" );
             }
-            force_equip = option.second.as<bool>();
+            const std::string key = option.first.as<std::string>();
+            if( key == "force_equip" && option.second.is<bool>() ) {
+                force_equip = option.second.as<bool>();
+            } else if( !group && key == "container" && option.second.is<script_game_id>() ) {
+                const script_game_id container = option.second.as<script_game_id>();
+                require_id_kind( container, "item", "services.inventory.receive_item container" );
+                container_id.emplace( container.value() );
+            } else {
+                throw std::invalid_argument( "Invalid item receipt option '" + key + "'" );
+            }
         }
     }
     sol::state_view state( lua );
@@ -4220,9 +4229,14 @@ sol::table receive_inventory_items(
     std::size_t attempted = 0;
     std::size_t accepted = 0;
     const tripoint_abs_ms spawn_position = character->pos_abs();
-    const auto deliver = [&]( item &created ) {
+    const auto preserve_spawn_location = [&]( item &created ) {
         if( created.has_flag( flag_PRESERVE_SPAWN_LOC ) ) {
             created.preserve_location( spawn_position );
+        }
+    };
+    const auto deliver = [&]( item &created, const bool preserve_location = true ) {
+        if( preserve_location ) {
+            preserve_spawn_location( created );
         }
         ++attempted;
         if( force_equip ) {
@@ -4240,7 +4254,13 @@ sol::table receive_inventory_items(
         }
     } else {
         item created( itype_id( type.value() ), calendar::turn );
-        if( created.count_by_charges() ) {
+        if( container_id ) {
+            preserve_spawn_location( created );
+            item container( *container_id, calendar::turn );
+            created.charges = static_cast<int>( quantity );
+            container.put_in( created, pocket_type::CONTAINER );
+            deliver( container, false );
+        } else if( created.count_by_charges() ) {
             created.charges = static_cast<int>( quantity );
             deliver( created );
         } else {

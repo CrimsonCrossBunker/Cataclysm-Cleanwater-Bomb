@@ -9874,6 +9874,15 @@ function CcbCharactersApi.explosion(character, options) end
 ---@return CcbResult
 function CcbCharactersApi.emit(character, emission, chance) end
 
+---@class CcbCharacterCastSpellOptions
+---@field hit_self? boolean Build the native fake spell with the self-hit policy.
+---@field min_level? integer Native minimum spell level. Defaults to zero.
+---@field max_level? integer Native level cap. Use -1 for no cap.
+---@field message? string Message shown for the player caster after casting.
+---@field npc_message? string Message shown for an NPC caster after casting.
+---@field target? TripointCoord Explicit native target for a noninteractive cast.
+---@field targeted? boolean Run native targeting. Cannot be combined with an explicit target.
+
 ---@param character GameHandle Character caster.
 ---@param spell GameId GameId<spell> to construct as a native fake spell.
 ---@param options? CcbCharacterCastSpellOptions
@@ -11922,6 +11931,7 @@ function CcbInventoryApi.give_group(character, group, options) end
 
 ---@class CcbInventoryReceiptOptions
 ---@field force_equip? boolean Use native wear/wield/inventory fallback; defaults to false. This native dispatch has no success return and counts as an accepted attempt after dispatch.
+---@field container? GameId For receive_item, create one container of this item type and attempt to fill it with the requested charges before delivery.
 
 ---Deliver native-default items through native i_add_or_drop, including drop fallback.
 ---Preserves default ammunition and PRESERVE_SPAWN_LOC; charge-counted items use quantity as their charges.
@@ -14431,6 +14441,12 @@ function CcbRegistryApi.monster_default_faction(id) end
 
 ---@class CcbSpawnsApi
 local CcbSpawnsApi = {}
+
+---Select one monster using the native group weights and game RNG.
+---@param group GameId GameId<monster_group>.
+---@return GameId monster GameId<monster>.
+function CcbSpawnsApi.choose_monster_from_group(group) end
+
 ---@param monster_type GameId Monster definition ID.
 ---@param position TripointCoord Loaded absolute map-square coordinate.
 ---@param radius? integer Search radius 0..60, default 0; center first, then nearest available ring.
