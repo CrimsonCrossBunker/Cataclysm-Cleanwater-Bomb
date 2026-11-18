@@ -33,7 +33,8 @@
 #include "rng.h"
 #include "type_id.h"
 
-static const overmap_special_id overmap_special_house_regional_cape_cod( "house_regional_cape_cod" );
+static const overmap_special_id
+overmap_special_house_regional_cape_cod( "house_regional_cape_cod" );
 
 static const ter_str_id ter_t_open_air( "t_open_air" );
 static const ter_str_id ter_t_rock( "t_rock" );
