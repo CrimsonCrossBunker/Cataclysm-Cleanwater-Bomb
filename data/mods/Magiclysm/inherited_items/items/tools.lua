@@ -77,3 +77,26 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "demon_forge",
+        name = ccb.content.plural_text("demon forge", "demon forges"),
+        description = ccb.content.text("This is a portable version of the charcoal forge that is magically enhanced and fortified with demon spider chitin in order to be able to resmelt magical metals into their workable ingot form."),
+        mass_milligrams = 8000000,
+        volume_ml = 8000,
+        price_cents = 200000,
+        symbol = ";",
+        color = "red",
+        replace_pockets = true,
+    }
+    item:material("demon_chitin", 40)
+    item:material("cement", 60)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 9)
+    item:tool { ammo_types = { "alumentum" }, crafting_subtype = "forge" }
+    item:magazine_pocket { ammo_capacities = { alumentum = 500 } }
+    content.add(item)
+end

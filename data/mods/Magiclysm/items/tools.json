@@ -1,23 +1,5 @@
 [
   {
-    "id": "demon_forge",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "demon forge" },
-    "description": "This is a portable version of the charcoal forge that is magically enhanced and fortified with demon spider chitin in order to be able to resmelt magical metals into their workable ingot form.",
-    "weight": "8 kg",
-    "volume": "8 L",
-    "price": "2 kUSD",
-    "material": [ { "type": "demon_chitin", "portion": 40 }, { "type": "cement", "portion": 60 } ],
-    "symbol": ";",
-    "color": "red",
-    "sub": "forge",
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "alumentum": 500 } } ],
-    "flags": [ "ALLOWS_REMOTE_USE" ],
-    "melee_damage": { "bash": 9 },
-    "tool_ammo": [ "alumentum" ]
-  },
-  {
     "id": "sewing_kit",
     "name": "sewing kit",
     "copy-from": "sewing_kit",
