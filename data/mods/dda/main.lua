@@ -159,8 +159,6 @@ require("labyrinth_returns")
 
 require("labyrinth_return_topics")
 
-require("lixa_hallway")
-
 require("void_spider_death")
 
 require("void_spider_spells")
@@ -178,6 +176,8 @@ require("portal_active_effects")
 require("portal_passive_effects")
 
 require("nre_recorder")
+
+require("lixa_hallway")
 
 require("science_items")
 
