@@ -3681,6 +3681,7 @@ struct content_transaction::impl {
     std::vector<detail::platform_blacklist_data> blacklist_undo;
     std::optional<detail::monster_filter_state> monster_filter_undo;
     std::optional<std::size_t> item_blacklist_undo;
+    std::optional<std::size_t> scenario_blacklist_undo;
     std::vector<std::pair<map_extra_id, std::optional<map_extra>>> map_extra_undo;
     std::vector<std::pair<weather_generator_id, std::optional<weather_generator>>>
     weather_generator_undo;
@@ -5383,8 +5384,9 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                 throw std::runtime_error( "cannot register a blacklist definition owned by another Mod" );
             }
             require_building_handle( handle.token, *handle.definition, "blacklist" );
-            if( operation != definition_operation::add ) {
-                throw std::runtime_error( "blacklists cannot be edited or replaced" );
+            if( operation != definition_operation::add &&
+                ( operation != definition_operation::replace || handle.definition->kind != "scenario" ) ) {
+                throw std::runtime_error( "only scenario blacklists support replacement" );
             }
             handle.definition->registered = true;
             transaction->blacklists.push_back( { operation, handle.definition } );
@@ -9319,12 +9321,16 @@ bool content_transaction::apply( std::string &error )
                     pimpl_->monster_filter_undo = detail::capture_platform_monster_filter();
                 }
                 detail::insert_platform_monster_blacklist( source );
+            } else if( source.kind == "scenario" ) {
+                if( !pimpl_->scenario_blacklist_undo ) {
+                    pimpl_->scenario_blacklist_undo = detail::platform_scenario_blacklist_count();
+                }
+                detail::insert_platform_scenario_blacklist( source, pimpl_->owner,
+                        entry.operation == definition_operation::replace );
             } else {
                 pimpl_->blacklist_undo.push_back( source );
                 if( source.kind == "trait" ) {
                     detail::insert_platform_trait_blacklist( source.entries );
-                } else if( source.kind == "scenario" ) {
-                    detail::insert_platform_scenario_blacklist( source );
                 } else if( source.kind == "profession" ) {
                     detail::insert_platform_profession_blacklist( source );
                 } else {
@@ -10750,8 +10756,6 @@ void content_transaction::rollback()
          it != pimpl_->blacklist_undo.rend(); ++it ) {
         if( it->kind == "trait" ) {
             detail::erase_platform_trait_blacklist( it->entries );
-        } else if( it->kind == "scenario" ) {
-            detail::erase_platform_scenario_blacklist( *it );
         } else if( it->kind == "profession" ) {
             detail::erase_platform_profession_blacklist( *it );
         } else {
@@ -10769,6 +10773,10 @@ void content_transaction::rollback()
         detail::truncate_platform_item_blacklist( *pimpl_->item_blacklist_undo );
     }
     pimpl_->item_blacklist_undo.reset();
+    if( pimpl_->scenario_blacklist_undo ) {
+        detail::truncate_platform_scenario_blacklist( *pimpl_->scenario_blacklist_undo );
+    }
+    pimpl_->scenario_blacklist_undo.reset();
 
     for( auto it = pimpl_->map_extra_undo.rbegin();
          it != pimpl_->map_extra_undo.rend(); ++it ) {
@@ -11265,6 +11273,7 @@ void content_transaction::commit()
     pimpl_->blacklist_undo.clear();
     pimpl_->monster_filter_undo.reset();
     pimpl_->item_blacklist_undo.reset();
+    pimpl_->scenario_blacklist_undo.reset();
     pimpl_->map_extra_undo.clear();
     pimpl_->weather_generator_undo.clear();
     pimpl_->migration_undo.clear();
@@ -11310,6 +11319,15 @@ std::string content_transaction::fingerprint() const
     pimpl_->world.append_fingerprint( state );
     for( const blacklist_registration &entry : pimpl_->blacklists ) {
         const detail::platform_blacklist_data &value = *entry.definition;
+        if( value.kind == "scenario" ) {
+            hash_part( state, "scenario_filter" );
+            hash_part( state, operation_name( entry.operation ) );
+            hash_part( state, value.whitelist ? "allow" : "block" );
+            for( const std::string &id : value.entries ) {
+                hash_part( state, "id" );
+                hash_part( state, id );
+            }
+        }
         if( value.kind != "monster" ) {
             continue;
         }

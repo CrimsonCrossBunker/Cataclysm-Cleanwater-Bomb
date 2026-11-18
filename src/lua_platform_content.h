@@ -348,7 +348,10 @@ void insert_platform_trait_blacklist( const std::vector<std::string> &entries );
 void insert_platform_item_blacklist( const platform_blacklist_data &value );
 void truncate_platform_item_blacklist( std::size_t count );
 std::size_t platform_item_blacklist_count();
-void insert_platform_scenario_blacklist( const platform_blacklist_data &value );
+void insert_platform_scenario_blacklist( const platform_blacklist_data &value,
+                                         const std::string &source, bool replace );
+std::size_t platform_scenario_blacklist_count();
+void truncate_platform_scenario_blacklist( std::size_t count );
 void insert_platform_profession_blacklist( const platform_blacklist_data &value );
 void erase_platform_profession_blacklist( const platform_blacklist_data &value );
 struct platform_trait_group_entry {
@@ -368,7 +371,6 @@ void append_platform_monster_adjustment( const std::string &species,
         const std::string &special );
 std::size_t platform_monster_adjustment_count();
 void truncate_platform_monster_adjustments( std::size_t count );
-void erase_platform_scenario_blacklist( const platform_blacklist_data &value );
 void insert_platform_savegame_blacklist( const platform_blacklist_data &value );
 void erase_platform_savegame_blacklist( const platform_blacklist_data &value );
 void erase_platform_trait_blacklist( const std::vector<std::string> &entries );

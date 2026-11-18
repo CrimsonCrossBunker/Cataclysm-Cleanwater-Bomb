@@ -12,6 +12,7 @@
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "init.h"
 #include "localized_comparator.h"
 #include "lua_platform_content.h"
 #include "mission.h"
@@ -76,7 +77,56 @@ bool string_id<scenario>::is_valid() const
     return all_scenarios.is_valid( *this );
 }
 
-static scen_blacklist sc_blacklist;
+namespace
+{
+
+struct scenario_filter_layer {
+    scen_blacklist filter;
+    std::string source;
+    bool replace;
+};
+
+scen_blacklist sc_blacklist;
+std::vector<scenario_filter_layer> scenario_filter_layers;
+bool scenario_filter_finalized = false;
+
+std::set<string_id<scenario>> scenario_filter_exclusions( const scen_blacklist &filter )
+{
+    std::set<string_id<scenario>> exclusions;
+    for( const scenario &entry : scenario::get_all() ) {
+        if( filter.scenarios.count( entry.ident() ) == 0 ) {
+            exclusions.insert( entry.ident() );
+        }
+    }
+    return exclusions;
+}
+
+void resolve_scenario_filter()
+{
+    const auto &loader = DynamicDataLoader::get_instance();
+    std::vector<const scenario_filter_layer *> ordered;
+    ordered.reserve( scenario_filter_layers.size() );
+    for( const scenario_filter_layer &layer : scenario_filter_layers ) {
+        ordered.push_back( &layer );
+    }
+    std::stable_sort( ordered.begin(), ordered.end(), [&loader]( const auto *a, const auto *b ) {
+        return loader.source_load_order( a->source ) < loader.source_load_order( b->source );
+    } );
+    sc_blacklist = {};
+    for( const scenario_filter_layer *layer : ordered ) {
+        if( layer->replace ) {
+            sc_blacklist = layer->filter;
+        } else {
+            sc_blacklist.whitelist = layer->filter.whitelist;
+            sc_blacklist.scenarios.insert( layer->filter.scenarios.begin(), layer->filter.scenarios.end() );
+        }
+    }
+    if( scenario_filter_finalized && sc_blacklist.whitelist ) {
+        sc_blacklist.scenarios = scenario_filter_exclusions( sc_blacklist );
+    }
+}
+
+} // namespace
 
 scen_blacklist cata::lua_platform::detail::scenario_blacklist_snapshot()
 {
@@ -319,6 +369,8 @@ void scenario::check_all()
 void scenario::finalize_all()
 {
     all_scenarios.finalize();
+    scenario_filter_finalized = false;
+    resolve_scenario_filter();
     sc_blacklist.finalize();
 }
 
@@ -443,85 +495,75 @@ bool scenario::scen_is_blacklisted() const
     return sc_blacklist.scenarios.count( id ) != 0;
 }
 
-void scen_blacklist::load_scen_blacklist( const JsonObject &jo, std::string_view src )
+void scen_blacklist::load_scen_blacklist( const JsonObject &jo, const std::string_view src )
 {
-    sc_blacklist.load( jo, src );
+    scen_blacklist filter;
+    filter.load( jo, src );
+    scenario_filter_layers.push_back( { std::move( filter ), std::string( src ), true } );
+    resolve_scenario_filter();
 }
 
 void scen_blacklist::load( const JsonObject &jo, std::string_view )
 {
-    if( !scenarios.empty() ) {
-        DebugLog( D_INFO, DC_ALL ) <<
-                                   "Attempted to load scenario blacklist with an existing scenario blacklist, resetting blacklist info";
-        reset_scenarios_blacklist();
-    }
-
-    const std::string bl_stype = jo.get_string( "subtype" );
-
-    if( bl_stype == "whitelist" ) {
+    const std::string subtype = jo.get_string( "subtype" );
+    if( subtype == "whitelist" ) {
         whitelist = true;
-    } else if( bl_stype == "blacklist" ) {
+    } else if( subtype == "blacklist" ) {
         whitelist = false;
     } else {
         jo.throw_error( "Blacklist subtype is not a valid subtype." );
     }
 
+    scenarios.clear();
     for( const std::string line : jo.get_array( "scenarios" ) ) {
         scenarios.emplace( line );
     }
 }
 
 void cata::lua_platform::detail::insert_platform_scenario_blacklist(
-    const platform_blacklist_data &value )
+    const platform_blacklist_data &value, const std::string &source, bool replace )
 {
-    sc_blacklist.whitelist = value.whitelist;
-    for( const std::string &entry : value.entries ) {
-        sc_blacklist.scenarios.emplace( entry );
+    scen_blacklist filter;
+    filter.whitelist = value.whitelist;
+    for( const std::string &id : value.entries ) {
+        filter.scenarios.emplace( id );
     }
+    scenario_filter_layers.push_back( { std::move( filter ), source, replace } );
+    resolve_scenario_filter();
 }
 
-void cata::lua_platform::detail::erase_platform_scenario_blacklist(
-    const platform_blacklist_data &value )
+std::size_t cata::lua_platform::detail::platform_scenario_blacklist_count()
 {
-    for( const std::string &entry : value.entries ) {
-        sc_blacklist.scenarios.erase( string_id<scenario>( entry ) );
+    return scenario_filter_layers.size();
+}
+
+void cata::lua_platform::detail::truncate_platform_scenario_blacklist( std::size_t count )
+{
+    if( count >= scenario_filter_layers.size() ) {
+        return;
     }
+    scenario_filter_layers.resize( count );
+    resolve_scenario_filter();
 }
 
 void scen_blacklist::finalize()
 {
-    std::vector<string_id<scenario>> all_scens;
-    std::vector<scenario> all_scenarios = scenario::get_all();
-    all_scens.reserve( all_scenarios.size() );
-    for( const scenario &scen : all_scenarios ) {
-        all_scens.emplace_back( scen.ident() );
-    }
-    for( const string_id<scenario> &sc : sc_blacklist.scenarios ) {
-        if( std::find( all_scens.begin(), all_scens.end(), sc ) == all_scens.end() ) {
+    for( const string_id<scenario> &id : scenarios ) {
+        if( !id.is_valid() ) {
             debugmsg( "Scenario blacklist contains invalid scenario" );
         }
     }
-
-    if( sc_blacklist.whitelist ) {
-        std::set<string_id<scenario>> listed_scenarios = sc_blacklist.scenarios;
-        sc_blacklist.scenarios.clear();
-        for( const scenario &scen : scenario::get_all() ) {
-            sc_blacklist.scenarios.insert( scen.ident() );
-        }
-        for( auto i = sc_blacklist.scenarios.begin(); i != sc_blacklist.scenarios.end(); ) {
-            if( listed_scenarios.count( *i ) != 0 ) {
-                i = sc_blacklist.scenarios.erase( i );
-            } else {
-                ++i;
-            }
-        }
+    if( whitelist ) {
+        scenarios = scenario_filter_exclusions( *this );
     }
+    scenario_filter_finalized = true;
 }
 
 void reset_scenarios_blacklist()
 {
-    sc_blacklist.scenarios.clear();
-    sc_blacklist.whitelist = false;
+    sc_blacklist = {};
+    scenario_filter_layers.clear();
+    scenario_filter_finalized = false;
 }
 
 std::vector<string_id<profession>> scenario::permitted_professions( bool is_npc ) const
