@@ -1,0 +1,78 @@
+local ccb = require("ccb")
+
+-- Adds a missile launch option to the finale's computer
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "silo_finale" },
+    weight = 400,
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "  │││││││││││           ",
+            " ││~~~~~~~~~│││││ │││││ ",
+            "││~~~~~~~~~~~││Y│││4│a││",
+            "│~~~~~~~~~~~~~+........│",
+            "│~~~~~~~~~~~~~|.││││││.│",
+            "│~~~~~~~~~~~~~|.|x..a│.│",
+            "│~~~~~~~~~~~~~|.|x...│.│",
+            "│~~~~~~~~~~~~~|.|6c..+.│",
+            "│~~~~~~~~~~~~~|.|x...│Y│",
+            "│~~~~~~~~~~~~~|.|x...│││",
+            "│~~~~~~~~~~~~~|.│....│  ",
+            "│~~~~~~~~~~~~~│.│%%%%│││",
+            "││~~~~~~~~~~~││.││││││^│",
+            " ││~~~~~~~~~│││..+....$│",
+            "  │││││││││││ ││││Y│<│$│",
+            "                 │││││││",
+        },
+        terrain = {
+            [" "] = "t_rock",
+            ["│"] = "t_wall_metal",
+            ["."] = "t_thconc_floor",
+            ["~"] = "t_metal_floor_no_roof",
+            ["|"] = "t_reinforced_glass_shutter_open",
+            ["?"] = "t_door_metal_c_peep",
+            ["+"] = "t_door_metal_locked",
+            ["<"] = "t_stairs_up",
+            Y = "t_card_military",
+            ["^"] = "t_elevator_control_off",
+            ["$"] = "t_elevator",
+        },
+        furniture = {
+            x = "f_console_broken",
+            ["%"] = "f_machinery_electronic",
+            ["1"] = "f_speaker_cabinet",
+            ["4"] = "f_speaker_cabinet",
+            a = "f_air_conditioner",
+            c = "f_chair",
+        },
+        fill_terrain = "t_thconc_floor",
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Missile Controls"),
+                access_denied = ccb.content.text("ERROR!  Access denied!  Unauthorized access will be met with lethal force!"),
+                security = 1,
+                failures = { "alarm", "damage", "secubots" },
+                menu = {
+                    { label = ccb.content.text("Launch Missile"), action = "miss_launch" },
+                    { label = ccb.content.text("Disarm Missile"), action = "miss_disarm" },
+                },
+            },
+        },
+        graffiti_placements = {
+            {
+                text = ccb.content.text("Warning!  Automatic security measures engaged due to the lockdown order!"),
+                x = 17,
+                y = 20,
+            },
+        },
+        monster_placements = { { id = "mon_zombie_hazmat", x = 8, y = 15 } },
+    },
+}

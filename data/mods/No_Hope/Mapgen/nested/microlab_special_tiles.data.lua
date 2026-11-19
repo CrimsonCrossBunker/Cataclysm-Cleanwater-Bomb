@@ -1,0 +1,65 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "microlab_generic_tile",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "^|FFF|c  c|  |c  c|     ",
+            " ||||||||||  |||||||||| ",
+            " |D      D|  |^^^^|ccc| ",
+            " |@@    @@|       2   2 ",
+            "^|D   T  D|       |   | ",
+            "||@@    @@|  |2(((||||||",
+            "r|        2  |       O| ",
+            "r|||||2||||  |  RR   O| ",
+            "r|l  | | l|  |  RR   O| ",
+            " |l  | 2 l|  |       O| ",
+            "2||||||||||22|  |-tt-|||",
+            "           YY|  |-((--|^",
+            "           YY|  |-@Ti-|^",
+            "|||||2||||||||5G|-@ ;-||",
+            " |        |---5----2--| ",
+            " | cc  cc |-p   Y   p-| ",
+            " | cc  cc |-p   7   p-|t",
+            " |     cc |-p   / T p-|t",
+            "||     cc |-         -||",
+            " |2|||    |-(- -(-   -| ",
+            " |   |dh d|-T-6-T-ppp-| ",
+            " 2   |dddd|-----------| ",
+            " |||||||||||||||||||||| ",
+            "     |ttt |^^| cc |     ",
+        },
+        palettes = { "microlab" },
+        terrain = { G = "t_card_science" },
+        furniture = { ["7"] = "f_autodoc", ["/"] = "f_autodoc_couch", T = "f_counter", p = "f_counter" },
+        item_groups = {
+            p = { group = "bionics", chance = 20 },
+            T = {
+                { group = "bionics_sci", chance = 50, repetitions = { 1, 2 } },
+                { group = "bionics", chance = 50, repetitions = { 1, 3 } },
+            },
+            ["7"] = { group = "autodoc_supplies", chance = 100 },
+        },
+        loot_placements = { { id = "anesthetic_kit", x = 20, y = 15, ammo = 100 } },
+        monster_group_placements = { { group = "GROUP_LAB", x = { 2, 21 }, y = { 2, 21 }, repetitions = { 1, 5 } } },
+        monster_glyphs = { T = { id = "mon_prototype_cyborg" } },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Surgery room computer"),
+                access_denied = ccb.content.text("ERROR!  Access denied!  Unauthorized access will be met with lethal force!"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("Open Storage Chambers"),
+                        security = 5,
+                        action = "release_bionics",
+                    },
+                    { label = ccb.content.text("Manifest"), action = "list_bionics" },
+                },
+                failures = { "manhacks", "secubots" },
+            },
+        },
+    },
+}
