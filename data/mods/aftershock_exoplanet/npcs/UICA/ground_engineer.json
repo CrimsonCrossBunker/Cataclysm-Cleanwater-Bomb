@@ -9,11 +9,5 @@
     "mission": "GUARD_PATROL",
     "chat": "TALK_UICA_GROUND_ENGINEER",
     "faction": "UICA"
-  },
-  {
-    "id": "TALK_UICA_GROUND_ENGINEER",
-    "type": "talk_topic",
-    "dynamic_line": [ "Keep it civil, salvor.", "No time to talk now.", { "u_male": [ "Sir." ], "no": [ "Ma'am" ] } ],
-    "responses": [ { "text": "…", "topic": "TALK_DONE" } ]
   }
 ]
