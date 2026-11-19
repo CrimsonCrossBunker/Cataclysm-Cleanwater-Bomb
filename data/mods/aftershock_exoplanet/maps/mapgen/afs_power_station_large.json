@@ -102,41 +102,5 @@
         { "chunks": [ { "param": "lightstatus", "fallback": "null" } ], "x": 0, "y": 24 }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ [ "afs_pwr_large_2_roof", "afs_pwr_large_entrance_roof" ] ],
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                [[[[[[[[[[[[[[[[[[[[            ",
-        "                [££££££££££££££££££[            ",
-        "                [££££££££££££££££££[            ",
-        "                [£££££££££2££££1£££[            ",
-        "                [£3££££££££££££££££[            ",
-        "                [[[[[[[[[[[[[[[[[[[[            ",
-        "                                                ",
-        "                                                "
-      ],
-      "palettes": [ "afs_habitat_structure", "afs_habitat_exterior" ],
-      "terrain": { " ": "t_open_air" },
-      "furniture": { "1": "f_small_satellite_dish", "2": "f_vent_pipe", "3": "f_solar_unit" }
-    }
   }
 ]

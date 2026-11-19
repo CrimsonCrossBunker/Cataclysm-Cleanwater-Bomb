@@ -1,0 +1,43 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_pwr_sub_s_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "               [[[[[[[[[",
+            "               [£££££££[",
+            "               [££22£1£[",
+            "               [£££££££[",
+            "               [££22£££[",
+            "               [£££££££[",
+            "               [£4££33£[",
+            "               [£££££££[",
+            "               [[[[[[[[[",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "afs_habitat_structure", "afs_habitat_exterior" },
+        terrain = { [" "] = "t_open_air" },
+        furniture = {
+            ["1"] = "f_small_satellite_dish",
+            ["2"] = "f_vent_pipe",
+            ["3"] = "f_solar_unit",
+            ["4"] = "f_standing_tank",
+        },
+        fill_terrain = "t_tar_flat_roof",
+    },
+}
