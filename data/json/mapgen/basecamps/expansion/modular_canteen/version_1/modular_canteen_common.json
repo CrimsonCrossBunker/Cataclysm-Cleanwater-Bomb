@@ -1,16 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmk_0",
-    "object": { "mapgensize": [ 6, 6 ], "palettes": [ "fbmk_common_palette" ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "faction_base_canteen_0",
-    "object": { "place_nested": [ { "chunks": [ "fbmk_0" ], "x": 10, "y": 10 } ] }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmk_canteen_fireplace",
     "object": {
       "set": [
@@ -49,28 +39,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmk_canteen_counters",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "rows": [
-        "       ",
-        "     c ",
-        "       ",
-        "  ccc  ",
-        "       ",
-        " rr rr ",
-        "       "
-      ],
-      "palettes": [ "fbmk_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "faction_base_canteen_counters",
-    "object": { "place_nested": [ { "chunks": [ "fbmk_canteen_counters" ], "x": 9, "y": 7 } ] }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmk_canteen_smoking_kiln",
     "object": {
       "set": [
@@ -84,28 +52,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmk_canteen_pantry",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "rows": [
-        "       ",
-        " rrrrU ",
-        " V     ",
-        " rrrr  ",
-        " V     ",
-        " rrrrU ",
-        "       "
-      ],
-      "palettes": [ "fbmk_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmk_canteen_pantry_furniture",
-    "object": { "place_nested": [ { "chunks": [ "fbmk_canteen_pantry" ], "x": 3, "y": 7 } ] }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmk_canteen_butchery_rack",
     "object": {
       "set": [
@@ -114,60 +60,5 @@
       ],
       "place_loot": [ { "item": "knife_huge", "variant": "knife_butcher", "x": 16, "y": 12 } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmk_canteen_dining_furniture",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "rows": [
-        "hth hth",
-        "hth hth",
-        "hth hth",
-        "hth hth",
-        "       ",
-        "       ",
-        "       "
-      ],
-      "palettes": [ "fbmk_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmk_canteen_dining_furniture",
-    "object": { "place_nested": [ { "chunks": [ "fbmk_canteen_dining_furniture" ], "x": 9, "y": 15 } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmk_canteen_planters",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "ppp",
-        "ppp",
-        "   "
-      ],
-      "palettes": [ "fbmk_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmk_canteen_planters_1",
-    "object": { "place_nested": [ { "chunks": [ "fbmk_canteen_planters" ], "x": 4, "y": 4 } ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmk_canteen_planters_2",
-    "object": { "place_nested": [ { "chunks": [ "fbmk_canteen_planters" ], "x": 8, "y": 4 } ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmk_canteen_planters_3",
-    "object": { "place_nested": [ { "chunks": [ "fbmk_canteen_planters" ], "x": 14, "y": 4 } ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmk_canteen_planters_4",
-    "object": { "place_nested": [ { "chunks": [ "fbmk_canteen_planters" ], "x": 18, "y": 4 } ] }
   }
 ]
