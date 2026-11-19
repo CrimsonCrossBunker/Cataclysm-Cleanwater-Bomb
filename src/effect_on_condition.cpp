@@ -239,7 +239,23 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 284> migrated_character_tasks = {{
+const std::array<character_task_migration, 292> migrated_character_tasks = {{
+        { effect_on_condition_id( "eoc_cd_delight_strength_enhancement_tick" ),
+          "tick_strength", nullptr, false, "cata_delight" },
+        { effect_on_condition_id( "eoc_cd_delight_dexterity_enhancement_tick" ),
+          "tick_dexterity", nullptr, false, "cata_delight" },
+        { effect_on_condition_id( "eoc_cd_delight_perception_enhancement_tick" ),
+          "tick_perception", nullptr, false, "cata_delight" },
+        { effect_on_condition_id( "eoc_cd_delight_intelligence_enhancement_tick" ),
+          "tick_intelligence", nullptr, false, "cata_delight" },
+        { effect_on_condition_id( "eoc_cd_delight_detoxification_tick" ),
+          "tick_detoxification", nullptr, false, "cata_delight" },
+        { effect_on_condition_id( "eoc_cd_delight_focus_regen_tick" ),
+          "tick_focus", nullptr, false, "cata_delight" },
+        { effect_on_condition_id( "eoc_cd_delight_satiety_tick" ),
+          "tick_satiety", nullptr, false, "cata_delight" },
+        { effect_on_condition_id( "eoc_cd_delight_nourishment_tick" ),
+          "tick_nourishment", nullptr, false, "cata_delight" },
         { effect_on_condition_id( "EOC_OPEN_IMPERIAL_ROAD_MAINTAIN" ),
           "maintain_imperial_road_gate", nullptr, true, "ccb" },
         { effect_on_condition_id( "EOC_LOSE_WHISPER_LEAVES" ),
