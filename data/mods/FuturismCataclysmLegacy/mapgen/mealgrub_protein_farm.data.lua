@@ -1,5 +1,35 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "fcl_mealgrub_protein_farm",
+    layout = {
+        terrain = {
+            [" "] = "t_region_groundcover_urban",
+            ["-"] = "t_wall_metal",
+            ["|"] = "t_concrete_wall",
+            [":"] = "t_reinforced_door_glass_c",
+            ["="] = "t_wall_glass",
+            ["("] = "t_reinforced_glass",
+            ["3"] = "t_door_metal_c",
+            ["4"] = "t_door_metal_pickable",
+            ["ó"] = "t_metal_ventilation_shutter",
+            Y = "t_thconc_floor_olight",
+            R = "t_railing",
+            [">"] = "t_stairs_down",
+            ["<"] = "t_stairs_up",
+        },
+        furniture = {
+            b = "f_bench",
+            d = "f_desk",
+            h = "f_chair",
+            l = "f_locker",
+            t = "f_metal_table",
+            G = "f_utility_shelf",
+            ["^"] = "f_indoor_plant",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "fcl_mealgrub_protein_farm_n3",
