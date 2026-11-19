@@ -1,0 +1,83 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "backroom_stairs_bottom",
+    layout = {
+        rows = {
+            "---Q---Q---oo---Q----Q--",
+            "-        -    -   Q     ",
+            "Q        Q    Q     q q ",
+            "---Q---  -    -  ---- - ",
+            "Q   -    -    -     Q - ",
+            "-   -         ------- --",
+            "-                       ",
+            "-   -----Q---Q------    ",
+            "-          -            ",
+            "-          O            ",
+            "-----o--===?===---o-----",
+            "o       =     =         ",
+            "o       ?  <  ?         ",
+            "---Q--o-=     =-o---o---",
+            "Q   Q  -===?===   -     ",
+            "-      -  -  -    -     ",
+            "------o-  -o----o---o---",
+            "-         -       -     ",
+            "Q         -       -     ",
+            "--------  ----- ----o---",
+            "Q         -       -     ",
+            "-   -----Q-       -     ",
+            "-   Q  q  -----   -     ",
+            "Q                 -     ",
+        },
+        palettes = { "backrooms_palette" },
+        terrain = {
+            ["?"] = {
+                { id = "t_door_c", copies = 20 },
+                { id = "t_door_o", copies = 20 },
+                { id = "t_backroom_wall_gray", copies = 60 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "backroom_stairs_top",
+    layout = {
+        rows = {
+            "---Q---Q---oo---Q----Q--",
+            "-        -    -   Q     ",
+            "Q        Q    Q     q q ",
+            "---Q---  -    -  ---- - ",
+            "Q   -    -    -     Q - ",
+            "-   -         ------- --",
+            "-                       ",
+            "-   -----Q---Q------    ",
+            "-          -            ",
+            "-          O            ",
+            "-----o--===?===---o-----",
+            "o       =     =         ",
+            "o       ?  >  ?         ",
+            "---Q--o-=     =-o---o---",
+            "Q   Q  -===?===   -     ",
+            "-      -  -  -    -     ",
+            "------o-  -o----o---o---",
+            "-         -       -     ",
+            "Q         -       -     ",
+            "--------  ----- ----o---",
+            "Q         -       -     ",
+            "-   -----Q-       -     ",
+            "-   Q  q  -----   -     ",
+            "Q                 -     ",
+        },
+        palettes = { "backrooms_palette" },
+        terrain = {
+            ["?"] = {
+                { id = "t_door_c", copies = 20 },
+                { id = "t_door_o", copies = 20 },
+                { id = "t_backroom_wall_gray", copies = 60 },
+            },
+        },
+    },
+}
