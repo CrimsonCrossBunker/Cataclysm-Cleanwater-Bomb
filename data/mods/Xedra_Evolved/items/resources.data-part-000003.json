@@ -1,0 +1,25 @@
+[
+  {
+    "id": "concentrated_underhill_essence",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "comestible_type": "MED",
+    "name": { "str_sp": "concentrated underhill essence" },
+    "description": "The distilled essence of the Fae.  Can be used as part of rituals.",
+    "weight": "9 g",
+    "volume": "5 ml",
+    "charges": 1,
+    "price": "8 USD",
+    "price_postapoc": "10 cent",
+    "symbol": "~",
+    "color": "light_blue",
+    "phase": "liquid",
+    "looks_like": "fae_blood",
+    "use_action": {
+      "type": "consume_drug",
+      "activation_message": "You drink some concentrated underhill essence.",
+      "vitamins": [ [ "underhill_essence", 100 ] ]
+    },
+    "flags": [ "WATER_DISSOLVE" ]
+  }
+]
