@@ -1,11 +1,5 @@
 [
   {
-    "//CCB": "此文件为撤销 PR #86231 恢复 — 刀片陷阱城市地图块",
-    "type": "mapgen",
-    "update_mapgen_id": "mx_city_trap",
-    "object": { "place_nested": [ { "chunks": [ "3x3_city_trap" ], "x": [ 4, 17 ], "y": [ 4, 17 ] } ] }
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "3x3_city_trap",
     "object": {
