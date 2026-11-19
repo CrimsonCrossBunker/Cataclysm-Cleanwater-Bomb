@@ -202,35 +202,5 @@
       { "text": "Let's talk about the camp.", "topic": "TALK_CAMP" },
       { "text": "<lets_go>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "TALK_TRAIN_PERSUADE",
-    "type": "talk_topic",
-    "dynamic_line": "Why should I teach you?",
-    "responses": [
-      {
-        "text": "Come on, we're friends.",
-        "trial": { "type": "PERSUADE", "difficulty": 0, "mod": [ [ "TRUST", 6 ], [ "VALUE", 2 ], [ "ANGER", -6 ] ] },
-        "success": { "topic": "TALK_TRAIN" },
-        "failure": { "topic": "TALK_DENY_PERSONAL", "effect": { "npc_add_effect": "asked_to_train", "duration": 21600 } }
-      },
-      { "text": "<end_talking_nevermind>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_nevermind>  <lets_go>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_TRAIN_SEMINAR_PERSUADE",
-    "type": "talk_topic",
-    "dynamic_line": "Why should I host a training seminar?",
-    "responses": [
-      {
-        "text": "Come on, we're friends.",
-        "trial": { "type": "PERSUADE", "difficulty": 0, "mod": [ [ "TRUST", 6 ], [ "VALUE", 2 ], [ "ANGER", -6 ] ] },
-        "success": { "topic": "TALK_TRAIN_SEMINAR" },
-        "failure": { "topic": "TALK_DENY_PERSONAL", "effect": { "npc_add_effect": "asked_to_train", "duration": 21600 } }
-      },
-      { "text": "<end_talking_nevermind>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_nevermind>  <lets_go>", "topic": "TALK_DONE" }
-    ]
   }
 ]
