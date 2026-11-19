@@ -39,22 +39,5 @@
       { "skill": "gun", "bonus": { "rng": [ 1, 3 ] } },
       { "skill": "melee", "bonus": { "rng": [ 3, 5 ] } }
     ]
-  },
-  {
-    "id": "TALK_FORGE_PIRATE",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "u_is_wearing": "badge_marshal",
-      "yes": [
-        "Walk away afore I kill ya where you stand.",
-        "You've got a lot of nerve wearing that badge these days.",
-        "Boys, I think we should drown this fool."
-      ],
-      "no": [ "Watch your step.", "Talk to Captain Tavrel.", "Ahoy and other nautical terms!" ]
-    },
-    "responses": [
-      { "text": "Obviously I should speak to someone else.", "topic": "TALK_DONE" },
-      { "text": "Pirates should be hung until dead.", "topic": "TALK_DONE", "effect": "hostile" }
-    ]
   }
 ]
