@@ -20,59 +20,5 @@
     "monster": { "8": { "group": "GROUP_WASP_QUEEN" } },
     "furniture": { ":": "f_cellphone_booster", "#": "f_small_satellite_dish" },
     "nested": { "O": { "chunks": [ "wasp_brood" ] } }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "wasp_gibs",
-    "weight": 100,
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_fields": [ { "field": "fd_blood", "x": 0, "y": 0, "intensity": [ 1, 3 ], "repeat": [ 0, 3 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "wasp_gibs",
-    "weight": 100,
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_fields": [ { "field": "fd_blood_insect", "x": 0, "y": 0, "intensity": [ 1, 3 ], "repeat": [ 0, 3 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "wasp_gibs",
-    "weight": 100,
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_fields": [ { "field": "fd_blood_invertebrate", "x": 0, "y": 0, "intensity": [ 1, 3 ], "repeat": [ 0, 3 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "wasp_gibs",
-    "weight": 80,
-    "object": { "mapgensize": [ 1, 1 ], "place_loot": [ { "group": "bug_parts", "x": 0, "y": 0, "repeat": [ 0, 3 ], "chance": 50 } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "wasp_gibs",
-    "weight": 80,
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_loot": [ { "group": "vertebrate_parts", "x": 0, "y": 0, "repeat": [ 0, 3 ], "chance": 50 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "wasp_gibs",
-    "weight": 80,
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_loot": [
-        { "group": "human_parts", "x": 0, "y": 0, "repeat": [ 0, 3 ], "chance": 50 },
-        { "group": "wasp_lair", "x": 0, "y": 0, "repeat": [ 0, 1 ], "chance": 25 }
-      ]
-    }
   }
 ]
