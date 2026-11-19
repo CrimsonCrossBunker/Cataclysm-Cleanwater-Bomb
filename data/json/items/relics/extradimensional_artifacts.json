@@ -37,31 +37,5 @@
     "power_draw": "0 W",
     "charges_per_use": 0,
     "pocket_data": [  ]
-  },
-  {
-    "id": "string_dimension_hypercube",
-    "type": "ITEM",
-    "subtypes": [ "ARTIFACT" ],
-    "category": "artifacts",
-    "name": { "str": "transparent hypercube" },
-    "description": "A transparent cube within a cube.  It seems to be made of clear plastic or glass, but it feels quite solid, despite also seeming weightless.  Impossibly, the inside seems larger than the outside - as you tilt it here and there, you can peer into its depths.  It's full of stars.",
-    "material": [ "anomaly" ],
-    "symbol": "[",
-    "volume": "500 ml",
-    "longest_side": "8 cm",
-    "weight": "0 g",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "max_contains_volume": "125000 ml",
-        "max_contains_weight": "125000 g",
-        "max_item_length": "50 cm",
-        "weight_multiplier": 0.5,
-        "volume_multiplier": 0.5,
-        "rigid": true
-      }
-    ],
-    "flags": [ "ZERO_WEIGHT", "TARDIS" ],
-    "passive_effects": [ { "id": "ITEM_ENCH_dda_string_dimension_hypercube_0" } ]
   }
 ]
