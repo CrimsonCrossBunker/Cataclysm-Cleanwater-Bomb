@@ -124,23 +124,5 @@
       { "text": "Thanks.  Can we talk about something else?", "topic": "TALK_NONE" },
       { "text": "Thanks.  See you later.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "TALK_CANNOT_PRODUCE_DREAMDROSS_MANA",
-    "type": "talk_topic",
-    "dynamic_line": "I can't do that right now.  I need time to recover my mana.",
-    "responses": [
-      { "text": "Got it.  Can we talk about something else?", "topic": "TALK_NONE" },
-      { "text": "Got it.  See you later.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_CANNOT_PRODUCE_DREAMDROSS_TIME",
-    "type": "talk_topic",
-    "dynamic_line": "I can't do that right now.  I need time to gather more dreamdross.",
-    "responses": [
-      { "text": "Got it.  Can we talk about something else?", "topic": "TALK_NONE" },
-      { "text": "Got it.  See you later.", "topic": "TALK_DONE" }
-    ]
   }
 ]
