@@ -251,13 +251,5 @@
     "flags": [ "NUTRIENT_OVERRIDE", "TRADER_AVOID" ],
     "contamination": [ { "disease": "black_nether_water_disease", "probability": 100 } ],
     "fun": -5
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "id": "egg_pigeon_passenger",
-    "name": { "str": "feral pigeon egg" },
-    "copy-from": "egg_pigeon",
-    "extend": { "rot_spawn": { "monster": "mon_pigeon_passenger", "chance": 70 } }
   }
 ]
