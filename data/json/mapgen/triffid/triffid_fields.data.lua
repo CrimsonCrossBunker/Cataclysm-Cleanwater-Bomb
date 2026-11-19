@@ -374,3 +374,12 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_megafernification",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "megafernification", x = 0, y = 0 } },
+    },
+}

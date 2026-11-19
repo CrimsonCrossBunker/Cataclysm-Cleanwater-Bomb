@@ -1,7 +1,0 @@
-[
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "1x1_megafernification",
-    "object": { "mapgensize": [ 1, 1 ], "place_ter_furn_transforms": [ { "transform": "megafernification", "x": 0, "y": 0 } ] }
-  }
-]
