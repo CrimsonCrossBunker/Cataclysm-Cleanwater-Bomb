@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "mom_texopapalotl_crew_shed_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "       ________         ",
+            "       ________         ",
+            "       ________         ",
+            "       ________         ",
+            "       ________         ",
+            "       ________         ",
+            "       ________         ",
+            "       ________         ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        terrain = { [" "] = "t_open_air", _ = { { id = "t_wood_roof", copies = 20 }, { id = "t_open_air" } } },
+        fill_terrain = "t_open_air",
+    },
+}

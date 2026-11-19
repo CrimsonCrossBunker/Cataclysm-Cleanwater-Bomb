@@ -54,39 +54,5 @@
       "place_item": [ { "item": "skull_human", "x": 8, "y": 11 }, { "item": "bone_human", "amount": [ 5, 13 ], "x": 8, "y": 11 } ],
       "traps": { "R": "tr_mom_find_dead_fifth_sun_ocelopilli_trooper" }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "mom_texopapalotl_crew_shed_roof",
-    "object": {
-      "fill_ter": "t_open_air",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "       ________         ",
-        "       ________         ",
-        "       ________         ",
-        "       ________         ",
-        "       ________         ",
-        "       ________         ",
-        "       ________         ",
-        "       ________         ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { " ": "t_open_air", "_": [ [ "t_wood_roof", 20 ], "t_open_air" ] }
-    }
   }
 ]
