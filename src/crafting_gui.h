@@ -14,6 +14,7 @@ class JsonObject;
 class temp_crafting_inventory;
 class recipe;
 class recipe_subset;
+struct quality_requirement;
 
 // ImGui still exposes the previous tab during the frame that queues SetSelected.
 // Do not interpret that stale visible tab as a mouse selection.
@@ -35,6 +36,14 @@ std::pair<Character *, const recipe *> select_crafter_and_crafting_recipe( int &
         bool camp_crafting = false, temp_crafting_inventory *inventory_override = nullptr );
 std::pair<std::vector<const recipe *>, bool> recipes_from_cat( const recipe_subset
         &available_recipes, const crafting_category_id &cat, const std::string &subcat );
+
+/**
+ * List what satisfies any of the alternative quality requirements: the crafter's own
+ * bionics, mutations and body parts, providers in `inv`, and every other item type with
+ * the quality.
+ */
+void show_quality_providers( const std::vector<quality_requirement> &alternatives,
+                             const temp_crafting_inventory &inv, const Character &crafter );
 
 void load_recipe_category( const JsonObject &jsobj, const std::string &src );
 void reset_recipe_categories();

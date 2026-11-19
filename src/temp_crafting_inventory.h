@@ -10,6 +10,8 @@
 #include <list>
 #include <map>
 #include <optional>
+#include <set>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -65,6 +67,10 @@ class temp_crafting_inventory : public read_only_visitable
         item &add_item_copy( const item &item );
         item &add_pseudo_item( const itype_id &id );
         item &add_pseudo_item( const item &item );
+        /** Records the furniture, terrain or vehicle part that supplied this pseudo tool type. */
+        void add_pseudo_source( const itype_id &id, const std::string &source );
+        /** Sources recorded for `it` when it is this inventory's pseudo tool, else empty. */
+        const std::set<std::string> &pseudo_sources( const item &it ) const;
 
         // inherited from visitable. note: temp_owned_items are copied into items
         VisitResponse visit_items( const std::function<VisitResponse( item *, item * )> &func ) const
@@ -119,6 +125,7 @@ class temp_crafting_inventory : public read_only_visitable
         std::map<itype_id, int> max_empty_liq_cont;
 
         std::map<itype_id, item *> pseudo_items;
+        std::map<itype_id, std::set<std::string>> pseudo_source_names;
 };
 
 /** Candidate index for one paused, read-only crafting menu.  Borrowed items and

@@ -1598,6 +1598,16 @@ void vpart_position::form_inventory( map &here, temp_crafting_inventory &inv,
             continue;
         }
         inv.add_pseudo_item( src_tool.tool );
+        const std::string part_name = vehicle().part( src_tool.part_index ).name( false );
+        std::string source;
+        if( vehicle().is_appliance() ) {
+            //~ Source of a crafting tool. %s: appliance name.
+            source = string_format( _( "%s (appliance)" ), part_name );
+        } else {
+            //~ Source of a crafting tool. %s: vehicle part name.
+            source = string_format( _( "%s (vehicle)" ), part_name );
+        }
+        inv.add_pseudo_source( src_tool.tool.typeId(), source );
     }
 }
 

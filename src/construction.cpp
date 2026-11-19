@@ -33,6 +33,7 @@
 #include "craft_command.h"
 #include "craft_reservation.h"
 #include "crafting.h"
+#include "crafting_gui.h"
 #include "creature.h"
 #include "cursesdef.h"
 #include "debug.h"
@@ -542,6 +543,49 @@ static shared_ptr_fast<game::draw_callback_t> construction_preview_callback(
 
 static std::string has_pre_flags_colorize( const construction &con );
 
+static void show_construction_quality_providers( const construction_group_str_id &group,
+        const temp_crafting_inventory &inv, const Character &you )
+{
+    std::vector<std::string> labels;
+    std::vector<std::vector<quality_requirement>> groups;
+    for( const construction *con : constructions_by_group( group ) ) {
+        for( const std::vector<quality_requirement> &alternatives :
+             con->requirements->get_qualities() ) {
+            std::vector<std::string> names;
+            names.reserve( alternatives.size() );
+            for( const quality_requirement &qr : alternatives ) {
+                names.push_back( qr.to_string() );
+            }
+            std::string label = string_join( names, _( " OR " ) );
+            if( std::find( labels.begin(), labels.end(), label ) == labels.end() ) {
+                labels.push_back( std::move( label ) );
+                groups.push_back( alternatives );
+            }
+        }
+    }
+
+    if( groups.empty() ) {
+        popup( _( "This construction needs no tool qualities." ) );
+        return;
+    }
+    if( groups.size() == 1 ) {
+        show_quality_providers( groups.front(), inv, you );
+        return;
+    }
+    uilist menu;
+    menu.settext( _( "Tool qualities needed by this construction:" ) );
+    for( size_t i = 0; i < labels.size(); ++i ) {
+        menu.addentry( static_cast<int>( i ), true, MENU_AUTOASSIGN, labels[i] );
+    }
+    while( true ) {
+        menu.query();
+        if( menu.ret < 0 || menu.ret >= static_cast<int>( groups.size() ) ) {
+            return;
+        }
+        show_quality_providers( groups[menu.ret], inv, you );
+    }
+}
+
 construction_id construction_menu( const bool blueprint )
 {
     // filter_mode: 0 = all, 1 = ready (skills & materials satisfied, but location not satisfied),
@@ -601,6 +645,7 @@ construction_id construction_menu( const bool blueprint )
     ctxt.register_action( "SCROLL_STAGE_DOWN" );
     ctxt.register_action( "CONFIRM" );
     ctxt.register_action( "TOGGLE_UNAVAILABLE_CONSTRUCTIONS" );
+    ctxt.register_action( "LIST_QUALITY_ITEMS" );
     ctxt.register_action( "QUIT" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
     ctxt.register_action( "FILTER" );
@@ -1066,6 +1111,9 @@ construction_id construction_menu( const bool blueprint )
                                  colorize( mode_name, c_light_green ),
                                  ctxt.get_desc( "TOGGLE_UNAVAILABLE_CONSTRUCTIONS" ) ) );
             notes.push_back( string_format(
+                                 _( "Press [<color_yellow>%s</color>] to list items for tool qualities." ),
+                                 ctxt.get_desc( "LIST_QUALITY_ITEMS" ) ) );
+            notes.push_back( string_format(
                                  _( "Press [<color_yellow>%s</color>] to view and edit keybindings." ),
                                  ctxt.get_desc( "HELP_KEYBINDINGS" ) ) );
 
@@ -1136,6 +1184,11 @@ construction_id construction_menu( const bool blueprint )
             load_available_constructions( available, cat_available, filter_mode );
             // force main UI to refresh so the notes update immediately
             g->invalidate_main_ui_adaptor();
+        } else if( action == "LIST_QUALITY_ITEMS" ) {
+            if( !constructs.empty() && select < static_cast<int>( constructs.size() ) ) {
+                show_construction_quality_providers( constructs[select], total_inv,
+                                                     player_character );
+            }
         } else if( action == "CONFIRM" ) {
             if( constructs.empty() || select >= static_cast<int>( constructs.size() ) ) {
                 // Nothing to be done here

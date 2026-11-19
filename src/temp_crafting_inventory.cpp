@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -29,6 +30,8 @@
 #include "pimpl.h"
 #include "pocket_type.h"
 #include "point.h"
+#include "string_formatter.h"
+#include "translations.h"
 #include "type_id.h"
 #include "value_ptr.h"
 #include "vehicle_selector.h"
@@ -152,6 +155,7 @@ void temp_crafting_inventory::clear()
     temp_owned_items.clear();
     max_empty_liq_cont.clear();
     pseudo_items.clear();
+    pseudo_source_names.clear();
 }
 
 void temp_crafting_inventory::add_item_ref( item &item )
@@ -205,6 +209,22 @@ item &temp_crafting_inventory::add_pseudo_item( const item &it )
     } else {
         return *iter->second;
     }
+}
+
+void temp_crafting_inventory::add_pseudo_source( const itype_id &id, const std::string &source )
+{
+    pseudo_source_names[id].insert( source );
+}
+
+const std::set<std::string> &temp_crafting_inventory::pseudo_sources( const item &it ) const
+{
+    static const std::set<std::string> none;
+    const auto pseudo = pseudo_items.find( it.typeId() );
+    if( pseudo == pseudo_items.end() || pseudo->second != &it ) {
+        return none;
+    }
+    const auto found = pseudo_source_names.find( it.typeId() );
+    return found == pseudo_source_names.end() ? none : found->second;
 }
 
 void temp_crafting_inventory::add_all_ref( const read_only_visitable &v )
@@ -334,11 +354,17 @@ void temp_crafting_inventory::form_from_map( map &m, std::vector<tripoint_bub_ms
         // a temporary hack while trees are terrain
         if( !pseudo_tools_reserved && t->has_flag( ter_furn_flag::TFLAG_TREE ) ) {
             add_pseudo_item( itype_butchery_tree_pseudo );
+            //~ Source of a crafting tool. %s: terrain name.
+            const std::string source = string_format( _( "%s (terrain)" ), t->name() );
+            add_pseudo_source( itype_butchery_tree_pseudo, source );
         }
         // Another terrible hack, as terrain can't provide pseudo items, and construction can't do multi-step furniture
         ter_id brick_oven( "t_brick_oven" );
         if( !pseudo_tools_reserved && t == brick_oven ) {
             add_pseudo_item( itype_brick_oven_pseudo );
+            //~ Source of a crafting tool. %s: terrain name.
+            const std::string source = string_format( _( "%s (terrain)" ), t->name() );
+            add_pseudo_source( itype_brick_oven_pseudo, source );
         }
         const furn_id &f = m.furn( p );
         const furn_t &fo = f.obj();
@@ -350,6 +376,9 @@ void temp_crafting_inventory::form_from_map( map &m, std::vector<tripoint_bub_ms
                 // Not enough sunlight for this tool
             } else {
                 item &furn_item = add_pseudo_item( fo.crafting_pseudo_item );
+                //~ Source of a crafting tool. %s: furniture name.
+                const std::string source = string_format( _( "%s (furniture)" ), fo.name() );
+                add_pseudo_source( fo.crafting_pseudo_item, source );
                 for( const itype *ammo : fo.crafting_ammo_item_types() ) {
                     if( furn_item.has_pocket_type( pocket_type::MAGAZINE ) ) {
                         // NOTE: This only works if the pseudo item has a MAGAZINE pocket, not a MAGAZINE_WELL!
