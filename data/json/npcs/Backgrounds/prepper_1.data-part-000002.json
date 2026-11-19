@@ -66,41 +66,5 @@
       { "text": "<done_conversation_section>", "topic": "TALK_FRIEND_CONVERSATION" },
       { "text": "<end_talking>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "BGSS_PREPPER_1_LMOE2",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "gendered_line": "The shelter?  Bought the land pretty cheap.  I hired a contractor to build the thing but did the door myself.  Metal pin in the door frame.  Can't open unless you remove it.  There's a little pulley inside you have to pull up to reset.  They made dozens of these in the area, and I couldn't sleep knowing just any <name_b> at that company could waltz in as soon as shit hit the fan.  They'd know exactly where to go and what to do!  Nah… how do you think I've made it this long?  Always keep a trick up your sleeve.",
-      "relevant_genders": [ "npc" ]
-    },
-    "responses": [
-      { "text": "A contractor?  How much does something like a survivalist shelter cost?", "topic": "BGSS_PREPPER_1_LMOE4" },
-      {
-        "text": "But we're good to go, right?  I mean… the door is the only trick you had?  No clever traps hidden in the walls or anything?",
-        "topic": "BGSS_PREPPER_1_LMOE3"
-      },
-      {
-        "text": "You wouldn't keep ALL your tricks and secrets from me, though, would you?  After everything we've been through?",
-        "condition": {
-          "and": [
-            { "not": { "compare_string": [ "yes", { "u_val": "mission_BGSS_prepper_1_asked_about_secrets" } ] } },
-            { "not": { "compare_string": [ "yes", { "u_val": "mission_BGSS_prepper_1_found_computer" } ] } }
-          ]
-        },
-        "//": "Even though material possessions have been made trivially easy to obtain in the apocalypse, the prepper still values their stash, hence the difficult trial here.",
-        "trial": { "type": "PERSUADE", "difficulty": -75, "mod": [ [ "TRUST", 1 ], [ "VALUE", 1 ], [ "ANGER", -8 ] ] },
-        "success": {
-          "topic": "BGSS_PREPPER_1_SHARELOOTSUCCESS",
-          "effect": { "u_add_var": "mission_BGSS_prepper_1_asked_about_secrets", "value": "yes" }
-        },
-        "failure": {
-          "topic": "BGSS_PREPPER_1_SHARELOOTFAILURE",
-          "effect": { "u_add_var": "mission_BGSS_prepper_1_asked_about_secrets", "value": "yes" },
-          "opinion": { "trust": -6, "value": -3, "anger": 5 }
-        }
-      },
-      { "text": "That's all I wanted to know.", "topic": "TALK_DONE" }
-    ]
   }
 ]
