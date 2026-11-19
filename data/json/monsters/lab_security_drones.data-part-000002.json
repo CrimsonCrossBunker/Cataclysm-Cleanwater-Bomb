@@ -1,0 +1,35 @@
+[
+  {
+    "id": "yellow_maintenance_check",
+    "type": "SPELL",
+    "name": { "str": "Ocher Maintenance Badge Trait", "//~": "NO_I18N" },
+    "//": "renamed player facing name to ocher.",
+    "description": { "str": "Adds trait for badge check.", "//~": "NO_I18N" },
+    "valid_targets": [ "hostile" ],
+    "flags": [ "SILENT", "NO_EXPLOSION_SFX" ],
+    "message": "the drone scans for your ID badge.",
+    "min_damage": 10000,
+    "max_damage": 10000,
+    "min_range": 15,
+    "max_range": 15,
+    "max_level": 1,
+    "shape": "line",
+    "effect": "effect_on_condition",
+    "effect_str": "YELLOW_MAINTENANCE_ALARM"
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "YELLOW_MAINTENANCE_ALARM",
+    "effect": [
+      {
+        "if": { "u_has_item": "id_science_maintenance_yellow" },
+        "then": [ { "u_message": "Hello, valued employee." }, { "u_message": "lab_safety_maintenance_snippets", "snippet": true } ],
+        "else": [
+          { "u_message": "Remain in place, unauthorized person.  Security has been activated." },
+          { "mapgen_update": "concrete_wall_o_lab_res_8_NW", "om_terrain": "lab_res_8_NWD" },
+          { "mapgen_update": "concrete_wall_o_lab_res_8_NE", "om_terrain": "lab_res_8_NED" }
+        ]
+      }
+    ]
+  }
+]
