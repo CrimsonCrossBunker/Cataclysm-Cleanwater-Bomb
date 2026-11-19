@@ -1,0 +1,83 @@
+[
+  {
+    "id": "death_ray",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT", "GUN" ],
+    "name": { "str": "death ray" },
+    "description": "The Aetheric Death Ray, glowing a menacing green.  It hums with a barely controlled hatred of organic life.  It must recharge on its own, as there are no ports or battery slots on it.  It's sleek and smooth and evil.",
+    "weight": "2792 g",
+    "volume": "3965 ml",
+    "longest_side": "114 cm",
+    "melee_damage": { "bash": 6 },
+    "material": [ "mc_steel" ],
+    "symbol": "(",
+    "color": "magenta",
+    "skill": "rifle",
+    "ammo": [ "aetheric_charge" ],
+    "ammo_to_fire": 10,
+    "range": 30,
+    "ranged_damage": { "damage_type": "pure", "amount": 35 },
+    "dispersion": 15,
+    "durability": 8,
+    "loudness": 45,
+    "heat_per_shot": 15,
+    "cooling_value": 6,
+    "overheat_threshold": 150,
+    "valid_mod_locations": [
+      [ "emitter", 1 ],
+      [ "lens", 1 ],
+      [ "grip", 1 ],
+      [ "heat sink", 1 ],
+      [ "radiator", 1 ],
+      [ "rail", 1 ],
+      [ "sights", 1 ],
+      [ "sling", 1 ],
+      [ "stock", 1 ],
+      [ "stock accessory", 1 ],
+      [ "underbarrel", 1 ]
+    ],
+    "ammo_effects": [ "LASER", "PLASMA_BUBBLE", "IGNITE" ],
+    "faults": [
+      { "fault": "fault_overheat_explosion" },
+      { "fault": "fault_overheat_venting" },
+      { "fault": "fault_overheat_melting" },
+      { "fault": "fault_overheat_safety" }
+    ],
+    "flags": [
+      "NEVER_JAMS",
+      "NO_SALVAGE",
+      "NO_REPAIR",
+      "NON_FOULING",
+      "NEEDS_NO_LUBE",
+      "TRADER_AVOID",
+      "OVERHEATS",
+      "NO_UNLOAD",
+      "NO_RELOAD",
+      "INVENTOR_CRAFTED"
+    ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "aetheric_charge": 4800 }, "airtight": true } ],
+    "charge_info": { "recharge_type": "periodic", "time": "30 s", "regenerate_ammo": true }
+  },
+  {
+    "id": "bio_launcher",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR" ],
+    "name": { "str": "bio detonator" },
+    "description": "A long, huge barrel drum mortar with a small device in the very end.  It is collapsible, and you can comfortably wear it using a strap.",
+    "looks_like": "m3_carlgustav",
+    "material": [ "mc_steel" ],
+    "weight": "2560 g",
+    "volume": "5896 ml",
+    "longest_side": "1200 mm",
+    "symbol": "[",
+    "color": "dark_gray",
+    "charges_per_use": 1,
+    "use_action": { "type": "cast_spell", "spell_id": "bio_explosion", "no_fail": true, "level": 0, "need_wielding": true },
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "bio_warhead": 1 } } ],
+    "armor": [
+      { "encumbrance": [ 10, 12 ], "coverage": 70, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] }
+    ],
+    "flags": [ "TRADER_AVOID", "PADDED", "BELTED", "OVERSIZE", "WATER_FRIENDLY", "MUNDANE", "INVENTOR_CRAFTED" ],
+    "tool_ammo": [ "bio_warhead" ]
+  }
+]
