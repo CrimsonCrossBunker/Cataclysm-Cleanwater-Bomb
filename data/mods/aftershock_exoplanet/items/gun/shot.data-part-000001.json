@@ -1,0 +1,27 @@
+[
+  {
+    "id": "afs_marsec_t72_shotgun",
+    "copy-from": "underbarrel_base",
+    "type": "ITEM",
+    "subtypes": [ "GUN", "GUNMOD" ],
+    "name": { "str": "MarSec. T72 shotgun" },
+    "description": "The single round 00 bore barrel built at the center of the T72 revolver.  Can function as a backup in case the power pack of the main weapon is depleted.",
+    "volume": "250 ml",
+    "integral_volume": "0 ml",
+    "install_time": "0 s",
+    "material": [ "steel" ],
+    "symbol": ":",
+    "color": "light_red",
+    "location": "underbarrel",
+    "mod_targets": [ "pistol" ],
+    "flags": [ "RELOAD_ONE", "NO_UNLOAD", "IRREMOVABLE" ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "shot": 1 } } ],
+    "ammo": [ "shot" ],
+    "skill": "shotgun",
+    "range": -6,
+    "dispersion": 600,
+    "durability": 10,
+    "reload": 150,
+    "clip_size": 1
+  }
+]
