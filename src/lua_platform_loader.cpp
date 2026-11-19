@@ -69,6 +69,7 @@ extern "C" {
 #include "omdata.h"
 #include "output.h"
 #include "recipe_dictionary.h"
+#include "trap.h"
 #include "vehicle_group.h"
 #include "widget.h"
 #include <functional>
@@ -4691,6 +4692,36 @@ void write_static_tile_furniture( JsonOut &json, const sol::table &options )
     write_static_tile_object( json, options, "workbench", "workbench", write_static_tile_workbench );
 }
 
+void write_static_trap( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "copy_from", "copy-from" }, { "color", "color" },
+        { "symbol", "symbol" }, { "action", "action" }, { "map_regen", "map_regen" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "visibility", "visibility" }, { "avoidance", "avoidance" },
+        { "difficulty", "difficulty" }, { "trap_radius", "trap_radius" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "always_invisible", "always_invisible" }, { "benign", "benign" }
+    } );
+    write_item_ids( json, options, { { "flags", "flags" } } );
+    if( const auto flags = options.get<sol::optional<sol::table>>( "extend_flags" ) ) {
+        json.member( "extend" );
+        json.start_object();
+        json.member( "flags", bounded_string_array( *flags, "extend_flags",
+                std::numeric_limits<std::size_t>::max(), "trap" ) );
+        json.end_object();
+    }
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    if( const auto handler = options.get<sol::optional<std::string>>( "trigger_handler" ) ) {
+        if( handler->empty() || handler->find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument( "trap requires a registered trigger handler name" );
+        }
+        json.member( "//ccb_lua_trap_handler", *handler );
+    }
+}
+
 using static_catalog_writer = void ( * )( JsonOut &, const sol::table & );
 
 template<typename Loader>
@@ -4834,6 +4865,8 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "terrain", write_static_tile_terrain, load_terrain ) );
     content.set_function( "define_furniture", static_catalog_definition(
                               resolved.id, "furniture", write_static_tile_furniture, load_furniture ) );
+    content.set_function( "define_trap", static_catalog_definition(
+                              resolved.id, "trap", write_static_trap, trap::load_trap ) );
     install_static_dialogue_predicates( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );

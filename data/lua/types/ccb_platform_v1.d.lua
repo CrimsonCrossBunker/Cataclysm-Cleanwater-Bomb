@@ -7649,6 +7649,28 @@ function CcbPlatformContent.define_construction(options) end
 ---@field character GameHandle
 ---@field position {coordinate_space:"abs_ms",x:integer,y:integer,z:integer} Absolute map-square position being examined.
 
+---@class StaticTrapOptions
+---@field id string
+---@field copy_from? string Native trap supplying inherited fields.
+---@field name? string|LocalizedText
+---@field color? string
+---@field symbol? string
+---@field action? string Native action used if a trigger handler returns true.
+---@field map_regen? string Native mapgen update ID.
+---@field visibility? integer
+---@field avoidance? integer
+---@field difficulty? integer
+---@field trap_radius? integer
+---@field always_invisible? boolean
+---@field benign? boolean
+---@field flags? string[]
+---@field extend_flags? string[] Flags to add to inherited flags.
+---@field trigger_handler? string Handler in the owning runtime, receiving CcbTrapTriggerContext.
+
+---Define a trap at its ordered position during native content loading.
+---@param options StaticTrapOptions
+function CcbPlatformContent.define_trap(options) end
+
 ---@class StaticMapTileOptions
 ---@field id? string Stable identifier. Provide either id or abstract.
 ---@field abstract? string Abstract definition available for inheritance.
@@ -11084,12 +11106,6 @@ local CcbPlatformInteractionApi = {}
 ---@param message string
 ---@return boolean confirmed
 function CcbPlatformInteractionApi.confirm(message) end
-
----Open a native conversation with a topic and no NPC, during an active callback.
----@param speaker GameHandle Exact live avatar; a non-avatar speaker is ignored.
----@param topic string Native dialogue topic ID.
----@return boolean started
-function CcbPlatformInteractionApi.open_topic(speaker, topic) end
 
 ---@class PlatformInteractionTextInputOptions
 ---@field default? string Raw initial editable value; defaults to empty. No extra byte or NUL restriction is imposed.

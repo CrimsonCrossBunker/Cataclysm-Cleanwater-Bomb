@@ -38,7 +38,7 @@ end
 
 ccb.runtime.handler("examine_t_afs_starcrane_control", function(ctx)
     local actor = ctx.character
-    services.interaction.open_topic(actor, "THI_CONTROL_START")
+    checked(services.characters.open_topic(actor, "THI_CONTROL_START"))
 end)
 
 ccb.runtime.handler("examine_t_afs_gun_ship_engine_console_burnt", function(ctx)
@@ -53,5 +53,55 @@ ccb.runtime.handler("examine_t_cell_entrance_console", function(ctx)
     if ask(actor, ccb.services.translate("Do you want to open the cell?"), true) then
         message(ctx, ccb.services.translate("The cell grates retract into the floor and ceiling."), "neutral", true)
         transform_radius(actor, 5, "transform_gratings")
+    end
+end)
+
+local function ship_setting(key)
+    return checked(services.variables.get_global_number(key)).value or 0
+end
+
+local function store_ship_setting(key, value)
+    checked(services.variables.set_global(key, value, { include_before = false }))
+end
+
+local function apply_ship_update(position, name)
+    local target = checked(services.overmap.tile_token(position:project_to("omt")))
+    local update = checked(services.mapgen.update_token(id("update_mapgen", name)))
+    checked(services.mapgen.run_update(target, update))
+end
+
+ccb.runtime.handler("examine_f_your_ship_panel", function(ctx)
+    local actor = ctx.character
+    if ship_setting("your_ship_lights_dim") == 1 then
+        transform_radius(actor, 40, "your_ship_lights_on")
+        message(ctx, ccb.services.translate("The ship's lights brighten."), "neutral", false)
+        store_ship_setting("your_ship_lights_dim", 0)
+    else
+        transform_radius(actor, 40, "your_ship_dim_lights")
+        message(ctx, ccb.services.translate("The ship's lights dim to a low glow."), "neutral", false)
+        store_ship_setting("your_ship_lights_dim", 1)
+    end
+end)
+
+ccb.runtime.handler("examine_t_landing_stair_control", function(ctx)
+    local actor = ctx.character
+    local origin = checked(services.creatures.snapshot(actor)).position
+    if services.overmap.matches_location(origin:project_to("omt"), "high_orbit_salus_4tp") then
+        message(ctx, ccb.services.translate("You cant deploy the stairs while in space."), "neutral", false)
+        return
+    end
+    local raised = ship_setting("your_ship_stairs_up") == 1
+    local position = services.world.find_location(origin).position
+    local transform = raised and "your_ship_stairs_down" or "your_ship_stairs_up"
+    checked(services.world.transform_radius(position, 20, id("terrain_furniture_transform", transform)))
+    local below = position:add(services.coords.tripoint_rel_ms(0, 0, -1))
+    if raised then
+        apply_ship_update(below, "your_ship_stairs_deployed")
+        message(ctx, ccb.services.translate("The boarding stairs descend"), "neutral", false)
+        store_ship_setting("your_ship_stairs_up", 0)
+    else
+        apply_ship_update(below, "your_ship_stairs_retract")
+        message(ctx, ccb.services.translate("The boarding stairs retract upward."), "neutral", false)
+        store_ship_setting("your_ship_stairs_up", 1)
     end
 end)

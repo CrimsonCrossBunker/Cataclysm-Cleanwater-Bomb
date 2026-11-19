@@ -129,7 +129,6 @@ extern "C" {
 #include "rng.h"
 #include "sounds.h"
 #include "talker.h"
-#include "talker_topic.h"
 #include "text_snippets.h"
 #include "translation.h"
 #include "type_id.h"
@@ -4408,29 +4407,6 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     services["native_events"] = std::move( native_events );
 
     cata::lua_platform::install_game_interaction_api( services, require_write, has_callback );
-    sol::table interaction = services["interaction"];
-    interaction.set_function( "open_topic", [require_write, has_callback, runtime_generation,
-            world_generation]( const cata::lua_platform::game_handle & speaker,
-    const std::string & topic ) {
-        require_write();
-        if( !has_callback() ) {
-            throw std::runtime_error( "services.interaction.open_topic requires an active callback" );
-        }
-        const auto resolved = speaker.resolve_creature( runtime_generation(), world_generation() );
-        if( !resolved ) {
-            throw std::runtime_error( "services.interaction.open_topic requires a live speaker" );
-        }
-        Character *character = resolved.value->as_character();
-        avatar *target = character != nullptr ? character->as_avatar() : nullptr;
-        if( target == nullptr ) {
-            return false;
-        }
-        if( topic.empty() || topic.find( '\0' ) != std::string::npos ) {
-            throw std::invalid_argument( "services.interaction.open_topic requires a nonempty topic" );
-        }
-        target->talk_to( get_talker_for( std::vector<std::string> { topic } ), false, false, true );
-        return true;
-    } );
     const auto play_audible_sound = [weak, require_write](
                                         std::string_view id, std::string_view variant,
                                         const sol::optional<int> &requested_volume,

@@ -83,7 +83,7 @@ end)
 
 ccb.runtime.handler("examine_f_impaled_officer", function(ctx)
     local actor = ctx.character
-    services.interaction.open_topic(actor, "TALK_XEDRA_MERC_MAIN")
+    checked(services.characters.open_topic(actor, "TALK_XEDRA_MERC_MAIN"))
 end)
 
 ccb.runtime.handler("examine_f_empty_spike", function(ctx)
@@ -94,14 +94,14 @@ end)
 ccb.runtime.handler("examine_f_vitrified_doll", function(ctx)
     local actor = ctx.character
     if not (has_item(actor, "imperfect_doll_complete")) then
-        services.interaction.open_topic(actor, "vitrified_doll_talk_main")
+        checked(services.characters.open_topic(actor, "vitrified_doll_talk_main"))
     end
 end)
 
 ccb.runtime.handler("examine_f_vitrified_bookcase_talker", function(ctx)
     local actor = ctx.character
     if not (has_item(actor, "imperfect_doll_features")) then
-        services.interaction.open_topic(actor, "vitrified_bookcase_talk_main")
+        checked(services.characters.open_topic(actor, "vitrified_bookcase_talk_main"))
     else
         message(ctx, ccb.services.translate("This bookshelf is complete, now."), "good", false)
     end
@@ -213,7 +213,7 @@ end)
 
 ccb.runtime.handler("examine_t_nl_mission_water_cooler", function(ctx)
     local actor = ctx.character
-    services.interaction.open_topic(actor, "COMP_LS_Water_Cooler_Exit_Controls")
+    checked(services.characters.open_topic(actor, "COMP_LS_Water_Cooler_Exit_Controls"))
 end)
 
 ccb.runtime.handler("examine_t_nl_obelisk_earth_broken", function(ctx)
@@ -229,7 +229,7 @@ end)
 ccb.runtime.handler("examine_t_vitrified_pool_talker", function(ctx)
     local actor = ctx.character
     if not (has_item(actor, "imperfect_doll_legs")) then
-        services.interaction.open_topic(actor, "vitrified_pool_talk_main")
+        checked(services.characters.open_topic(actor, "vitrified_pool_talk_main"))
     else
         message(ctx, ccb.services.translate("The sailboat drifts in slow circles through the sand."), "good", false)
     end
@@ -238,7 +238,7 @@ end)
 ccb.runtime.handler("examine_t_vitrified_soil_talker", function(ctx)
     local actor = ctx.character
     if not (has_item(actor, "imperfect_doll_arms")) then
-        services.interaction.open_topic(actor, "vitrified_soil_talk_main")
+        checked(services.characters.open_topic(actor, "vitrified_soil_talk_main"))
     else
         message(ctx, ccb.services.translate("A tiny glass sprout has begun to grow here."), "good", false)
     end
@@ -250,5 +250,39 @@ ccb.runtime.handler("examine_t_door_metal_elocked_xedra3", function(ctx)
         transform_radius(actor, 2, "unlock_elock_xedra3")
     else
         message(ctx, ccb.services.translate("You press four random buttons and nothing happens."), "neutral", true)
+    end
+end)
+
+local function robofac_elevator(key, dz)
+    return function(ctx)
+        local actor = ctx.character
+        if not checked(services.mutations.has(actor, id("mutation", "PROF_HUB01_ANCILLIARY"))) then
+            message(ctx, ccb.services.translate(
+                "The control panels' screen flashes before displaying \"UNAUTHORIZED\" in bold red letters."),
+                "neutral", true)
+            return
+        end
+        local origin = checked(services.creatures.snapshot(actor)).position
+        local position = services.world.find_location(origin).position:add(services.coords.tripoint_rel_ms(0, 0, dz))
+        checked(services.variables.set(actor, key, position, { include_before = false }))
+        message(ctx, ccb.services.translate("The elevator starts moving before you can touch the panel."),
+            "neutral", true)
+        local destination = checked(services.variables.get_tripoint(actor, key)).value
+            or services.coords.tripoint_abs_ms(0, 0, 0)
+        checked(services.relocation.teleport_character(actor, destination))
+    end
+end
+
+ccb.runtime.handler("examine_t_elevator_control_robofac_up", robofac_elevator("robofac_elevator_up", 1))
+ccb.runtime.handler("examine_t_elevator_control_robofac_down", robofac_elevator("robofac_elevator_down", -1))
+
+ccb.runtime.handler("examine_f_piano", function(ctx)
+    local actor = ctx.character
+    checked(services.morale.add(actor, id("morale", "morale_music"), 5, 10))
+    local position = checked(services.creatures.snapshot(actor)).position
+    services.sound.emit(position, 10, "music", ccb.services.translate("music"))
+    if actor.subtype == "avatar" then
+        local text = services.snippets.native_random("play_piano") or ""
+        message(ctx, text, "neutral", false)
     end
 end)

@@ -127,7 +127,7 @@ void trap::load_trap( const JsonObject &jo, const std::string &src )
     trap_factory.load( jo, src );
 }
 
-void trap::load( const JsonObject &jo, std::string_view )
+void trap::load( const JsonObject &jo, std::string_view source )
 {
     mandatory( jo, was_loaded, "id", id );
     mandatory( jo, was_loaded, "name", name_ );
@@ -158,6 +158,23 @@ void trap::load( const JsonObject &jo, std::string_view )
         act = trap_function_from_string( jo.get_string( "action" ) );
     } else if( !was_loaded ) {
         jo.throw_error( "Missing mandatory member \"action\"" );
+    }
+    if( const auto lua_trigger = jo.get_member_opt( "//ccb_lua_trap_handler" ) ) {
+        if( lua_trigger->has_source_file() ) {
+            lua_trigger->throw_error( "Lua trap metadata is reserved for ordered Lua definitions" );
+        }
+        lua_platform_trigger_handler = lua_trigger->get_string();
+        if( lua_platform_trigger_handler.empty() ||
+            lua_platform_trigger_handler.find( '\0' ) != std::string::npos ) {
+            lua_trigger->throw_error( "Lua trap requires a registered trigger handler name" );
+        }
+        lua_platform_mod = source;
+        if( jo.get_string( "action", "" ) == "none" ) {
+            eocs.clear();
+        }
+    } else if( jo.has_member( "action" ) ) {
+        lua_platform_mod.clear();
+        lua_platform_trigger_handler.clear();
     }
     optional( jo, was_loaded, "map_regen", map_regen, update_mapgen_none );
     optional( jo, was_loaded, "benign", benign, false );
