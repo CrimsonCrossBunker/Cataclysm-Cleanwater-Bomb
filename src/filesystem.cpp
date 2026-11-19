@@ -451,11 +451,12 @@ std::vector<cata_path> get_ordered_mod_data_files( const cata_path &root_path,
 {
     static const std::string lua_suffix = ".data.lua";
     const auto slot_name = []( const std::filesystem::path & path ) {
-        std::string name = path.filename().generic_u8string();
+        const std::filesystem::path filename = path.filename();
+        const std::string name = filename.generic_u8string();
         if( string_ends_with( name, lua_suffix ) ) {
-            name.replace( name.size() - lua_suffix.size(), lua_suffix.size(), ".json" );
+            return std::filesystem::u8path( name.substr( 0, name.size() - lua_suffix.size() ) + ".json" );
         }
-        return name;
+        return filename;
     };
     return find_file_if_bfs( root_path, true,
     [exclude_interactions]( const std::filesystem::directory_entry & entry, bool is_dir ) {
@@ -464,8 +465,8 @@ std::vector<cata_path> get_ordered_mod_data_files( const cata_path &root_path,
                !( exclude_interactions && name_contains( entry, "mod_interactions", false, true ) );
     },
     [&slot_name]( const std::filesystem::path & lhs, const std::filesystem::path & rhs ) {
-        const std::string left = slot_name( lhs );
-        const std::string right = slot_name( rhs );
+        const auto left = slot_name( lhs );
+        const auto right = slot_name( rhs );
         return left == right ? lhs.extension() == ".json" && rhs.extension() != ".json" : left < right;
     } );
 }
