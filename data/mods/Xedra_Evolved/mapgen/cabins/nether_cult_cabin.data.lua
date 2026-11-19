@@ -387,3 +387,146 @@ ccb.content.define_mapgen {
         monster_placements = { { group = "GROUP_ZOMBIE", x = { 0, 3 }, y = { 0, 3 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "cabin_nether_cult_basement_4x4_opening_rec_area",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "gSSS",
+            "   S",
+            " t S",
+            "   S",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = { g = { { group = "SUS_trash_trashcan" } }, t = { group = "homebooks" } },
+        monster_placements = { { group = "GROUP_NETHER_CULT", x = { 0, 3 }, y = { 0, 3 }, chance = 50 } },
+        parameters = {
+            carpet_type = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_carpet_concrete_yellow", weight = 1 },
+                        { id = "t_carpet_concrete_green", weight = 1 },
+                        { id = "t_carpet_concrete_purple", weight = 1 },
+                        { id = "t_carpet_concrete_red", weight = 1 },
+                    },
+                },
+                scope = "nested",
+            },
+        },
+        terrain = {
+            [" "] = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            S = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            g = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            t = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+        },
+        furniture = { g = "f_trashcan", S = "f_sofa", t = "f_table" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "cabin_nether_cult_basement_4x4_library",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "-----",
+            "-CtLA",
+            "+   A",
+            "-   A",
+            "-CtCA",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                choices = {
+                    { id = "null", weight = 80 },
+                    { id = "cabin_nether_cult_basement_4x4_star_vampire_overlay", weight = 10 },
+                    { id = "cabin_nether_cult_basement_4x4_huntsman_overlay", weight = 10 },
+                    { id = "cabin_nether_cult_basement_4x4_library_lies", weight = 1 },
+                },
+            },
+        },
+        item_groups = {
+            A = {
+                { group = "homebooks", chance = 75 },
+                { group = "esoteric_books", chance = 50, repetitions = { 1, 2 } },
+                { group = "deduction_books", chance = 10 },
+                { group = "hedge_magic_books", chance = 25, repetitions = { 1, 2 } },
+            },
+        },
+        parameters = {
+            carpet_type = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_carpet_concrete_yellow", weight = 1 },
+                        { id = "t_carpet_concrete_green", weight = 1 },
+                        { id = "t_carpet_concrete_purple", weight = 1 },
+                        { id = "t_carpet_concrete_red", weight = 1 },
+                    },
+                },
+                scope = "nested",
+            },
+        },
+        terrain = {
+            ["-"] = "t_wall_wood",
+            ["+"] = { { id = "t_door_c", copies = 2 }, { id = "t_door_o", copies = 1 } },
+            [" "] = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            A = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            C = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            L = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            t = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+        },
+        furniture = { A = "f_bookcase", C = "f_armchair", L = "f_floor_lamp", t = "f_table" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "cabin_nether_cult_basement_6x6_meeting_room",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "------",
+            "g cc  ",
+            " cttc ",
+            " cttc ",
+            "L cc  ",
+            "------",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            g = { { group = "SUS_trash_trashcan" } },
+            t = { group = "nether_cabin_ritual_cult_meeting_room", chance = 50, repetitions = { 2, 5 } },
+        },
+        monster_placements = { { group = "GROUP_NETHER_CULT", x = { 0, 3 }, y = { 0, 3 }, chance = 25 } },
+        parameters = {
+            carpet_type = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_carpet_concrete_yellow", weight = 1 },
+                        { id = "t_carpet_concrete_green", weight = 1 },
+                        { id = "t_carpet_concrete_purple", weight = 1 },
+                        { id = "t_carpet_concrete_red", weight = 1 },
+                    },
+                },
+                scope = "nested",
+            },
+        },
+        terrain = {
+            ["-"] = "t_wall_wood",
+            [" "] = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            g = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            L = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            t = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+            c = { parameter = "carpet_type", fallback = "t_carpet_concrete_yellow" },
+        },
+        furniture = { c = "f_chair", g = "f_trashcan", t = "f_table" },
+    },
+}
