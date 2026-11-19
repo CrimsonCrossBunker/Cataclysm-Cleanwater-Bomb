@@ -319,14 +319,5 @@
         "encumbrance": 10
       }
     ]
-  },
-  {
-    "id": "iso_sorcerers_robe",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR" ],
-    "name": { "str": "robe of the gloaming tower" },
-    "copy-from": "robe_wizard",
-    "looks_like": "robe_wizard",
-    "description": "A black robe fading into dark blue at the hem, indicating your status as one of the Arch-wizards of the Dreaming City."
   }
 ]
