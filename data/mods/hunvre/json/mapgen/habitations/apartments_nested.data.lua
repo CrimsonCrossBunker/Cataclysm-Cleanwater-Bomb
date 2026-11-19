@@ -1,5 +1,15 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "communal_shower",
+    layout = {
+        item_groups = { L = { { group = "locker_gym", chance = 50, repetitions = 3 } } },
+        palettes = { "base" },
+        furniture = { s = "f_shower", L = "f_locker" },
+        terrain = { ["."] = "t_linoleum_white" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "11x11_communal_showers_n",
