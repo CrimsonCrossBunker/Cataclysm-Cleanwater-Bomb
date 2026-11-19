@@ -306,3 +306,58 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_highway_road_flat",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "       |...............|",
+            "       |...............|",
+            "       |.......*.......|",
+            "       |.......*.......|",
+            "       |...............|",
+            "       |...............|",
+            "       |.......*.......|",
+            "       |.......*.......|",
+            "       |...............|",
+            "       |...............|",
+            "       |.......*.......|",
+            "       |.......*.......|",
+            "       |...............|",
+            "       |...............|",
+            "       |.......*.......|",
+            "       |.......*.......|",
+            "       |...............|",
+            "       |...............|",
+            "       |.......*.......|",
+            "       |.......*.......|",
+            "       |...............|",
+            "       |...............|",
+            "       |.......*.......|",
+            "       |.......*.......|",
+        },
+        palettes = { "highway_palette" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            {
+                id = "24x24_highway_road_bridge_ramp",
+                x = 0,
+                y = 0,
+                neighbors = { above = "hw_road_bridge" },
+            },
+        },
+        item_group_placements = {
+            {
+                group = "SUS_trash_highway_shoulder",
+                x = { 0, 9 },
+                y = { 0, 23 },
+                chance = 10,
+                repetitions = { 0, 32 },
+            },
+            { group = "road", x = { 8, 23 }, y = { 0, 23 }, chance = 20 },
+        },
+        vehicle_placements = { { id = "highway", x = 10, y = 10, fuel = -1, status = 1, chance = 10, rotation = 270 } },
+    },
+}
