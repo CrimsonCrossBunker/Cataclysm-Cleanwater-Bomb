@@ -1,25 +1,5 @@
 [
   {
-    "abstract": "mmask",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "category": "armor",
-    "name": { "str": "magic mask", "//~": "NO_I18N" },
-    "description": { "str": "A generic magic mask.", "//~": "NO_I18N" },
-    "weight": "442 g",
-    "volume": "750 ml",
-    "price": "2 kUSD",
-    "to_hit": -3,
-    "material": [ "steel", "leather" ],
-    "symbol": "[",
-    "color": "dark_gray",
-    "warmth": 10,
-    "material_thickness": 2,
-    "environmental_protection": 1,
-    "flags": [ "WATER_FRIENDLY", "STURDY" ],
-    "armor": [ { "encumbrance": 10, "coverage": 95, "covers": [ "eyes", "mouth" ], "rigid_layer_only": true } ]
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
     "id": "mmask_disappearance",
