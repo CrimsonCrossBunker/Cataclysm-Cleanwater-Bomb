@@ -204,3 +204,103 @@ ccb.content.define_mapgen {
         nested = { { id = "crystal_field_chunk_center_2x2", x = 4, y = 4 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "crystal_field_chunk_center_2x2",
+    weight = 1000,
+    layout = {
+        size = { width = 2, height = 2 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "crystal_field_chunk_center_2x2",
+    weight = 500,
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "N ",
+            " N",
+        },
+        furniture = { N = { { id = "f_nether_crystal_structure", copies = 1 }, { id = "f_null", copies = 1 } } },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_group_placements = {
+            {
+                group = "GROUP_CRYSTAL_FIELD_PSYCHOACTIVE",
+                x = { 0, 1 },
+                y = { 0, 1 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+        field_placements = {
+            { id = "fd_fatigue", x = 0, y = 1, intensity = { 2, 3 } },
+            { id = "fd_fatigue", x = 1, y = 0, intensity = { 2, 3 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "crystal_field_chunk_center_2x2",
+    weight = 500,
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            " N",
+            "N ",
+        },
+        furniture = { N = { { id = "f_nether_crystal_structure", copies = 1 }, { id = "f_null", copies = 1 } } },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_group_placements = {
+            {
+                group = "GROUP_CRYSTAL_FIELD_PSYCHOACTIVE",
+                x = { 0, 1 },
+                y = { 0, 1 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+        field_placements = {
+            { id = "fd_fatigue", x = 0, y = 0, intensity = { 2, 3 } },
+            { id = "fd_fatigue", x = 1, y = 1, intensity = { 2, 3 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "crystal_field_chunk_center_2x2",
+    weight = 500,
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "NC",
+            "CN",
+        },
+        terrain = { C = "t_nether_stone" },
+        furniture = { N = { { id = "f_nether_crystal_structure", copies = 1 }, { id = "f_null", copies = 1 } } },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = { C = { group = "dist_matrix_crystals", chance = 50 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "crystal_field_chunk_center_2x2",
+    weight = 500,
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "CN",
+            "NC",
+        },
+        terrain = { C = "t_nether_stone" },
+        furniture = { N = { { id = "f_nether_crystal_structure", copies = 1 }, { id = "f_null", copies = 1 } } },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = { C = { group = "dist_matrix_crystals", chance = 50 } },
+    },
+}
