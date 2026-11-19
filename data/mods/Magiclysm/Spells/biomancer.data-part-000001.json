@@ -1,0 +1,24 @@
+[
+  {
+    "id": "light_healing",
+    "type": "SPELL",
+    "name": "Knit the Rent Flesh",
+    "description": "Cause the target's wounds to writhe, the flesh to crawl back together, and their injuries to heal.  Disturbing, and painful, but effective.",
+    "valid_targets": [ "self", "ally" ],
+    "min_damage": { "math": [ "(u_spell_level('light_healing') * -0.5) - 1" ] },
+    "max_damage": { "math": [ "(u_spell_level('light_healing') * -1.1) - 4" ] },
+    "max_level": 15,
+    "min_range": 0,
+    "max_range": 4,
+    "range_increment": 0.75,
+    "effect": "attack",
+    "shape": "blast",
+    "base_casting_time": 300,
+    "base_energy_cost": 800,
+    "extra_effects": [ { "id": "eoc_restoration_setup", "hit_self": true }, { "id": "biomantic_pain_caused_light", "hit_self": true } ],
+    "flags": [ "RESTORATION_SPELL", "RANDOM_DAMAGE", "SOMATIC", "VERBAL", "NO_PROJECTILE" ],
+    "spell_class": "BIOMANCER",
+    "difficulty": 2,
+    "magic_type": "magiclysm_restoration_magic"
+  }
+]
