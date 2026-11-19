@@ -1,0 +1,57 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = {
+        {
+            "mall_a_65_basement", "mall_a_66_basement", "mall_a_67_basement", "mall_a_68_basement",
+            "mall_a_69_basement", "mall_a_70_basement", "mall_a_71_basement",
+        },
+    },
+    layout = {
+        rows = {
+            "                                                                   #{*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,{#                                                                   ",
+            "                                                                   #{,*,*,*,*,*,*,*,*,*,*,*,*,*,*,*{#                                                                   ",
+            "                                                                   #{*,*,*,*,*,*,*}*,{,*,*,*,*,*,*,{#                                                                   ",
+            "                                                                   #Y,*,*,*,*,*,*,{,*}*,*,*,*,*,*,*Y#                                                                   ",
+            "                                                                   #{*,*,*,*,*,*,*}*,{,*,*,*,*,*,*,{#                                                                   ",
+            "                                                                   #{,*,*,*,*,*,*,{,*}*,*,*,*,*,*,*{#                                                                   ",
+            "                                                                   #{*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,{#                                                                   ",
+            "                                                                   #*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,**#                                                                   ",
+            "                                                                   #§*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,§#                                                                   ",
+            "                                                                   #*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,**#                                                                   ",
+            "                                                                   #>*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,>#                                                                   ",
+            "                                                                   #>***Ŋ**********§§**********Ŋ***>#                                                                   ",
+            "                                                                   ##+++########################+++##                                                                   ",
+            "                                                                    |ŊEE|                      |ŊEE|                                                                    ",
+            "                                                                    |EEE|                      |EEE|                                                                    ",
+            "                                                                    |EEE|                      |EEE|                                                                    ",
+            "                                                                    |||||                      |||||                                                                    ",
+            "                                                                                                                                                                        ",
+            "                                                                                                                                                                        ",
+            "                                                                                                                                                                        ",
+            "                                                                                                                                                                        ",
+            "                                                                                                                                                                        ",
+            "                                                                                                                                                                        ",
+            "                                                                                                                                                                        ",
+        },
+        palettes = { "parametrized_linoleum_palette", "mall_palette_basement" },
+        terrain = {
+            ["#"] = "t_brick_wall",
+            ["*"] = "t_linoleum_gray",
+            [","] = "t_linoleum_white",
+            ["{"] = "t_linoleum_gray",
+            Y = "t_linoleum_gray",
+            ["}"] = "t_linoleum_white",
+            ["§"] = "t_linoleum_gray",
+        },
+        furniture = { ["{"] = "f_bench", ["}"] = "f_bench", Y = "f_trashcan" },
+        fill_terrain = "t_thconc_floor",
+        nested_glyphs = { ["§"] = { id = "fire_extinguisher" } },
+        vehicle_placements = {
+            { id = "food_cart", x = 75, y = 3, rotation = 270 },
+            { id = "ice_cream_cart", x = 93, y = 3, rotation = 180 },
+        },
+        monster_placements = { { group = "GROUP_MALL", x = { 72, 95 }, y = { 0, 9 }, repetitions = { 8, 12 } } },
+    },
+}

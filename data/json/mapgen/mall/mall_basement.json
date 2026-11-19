@@ -62,66 +62,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [
-      [
-        "mall_a_65_basement",
-        "mall_a_66_basement",
-        "mall_a_67_basement",
-        "mall_a_68_basement",
-        "mall_a_69_basement",
-        "mall_a_70_basement",
-        "mall_a_71_basement"
-      ]
-    ],
-    "object": {
-      "fill_ter": "t_thconc_floor",
-      "rows": [
-        "                                                                   #{*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,{#                                                                   ",
-        "                                                                   #{,*,*,*,*,*,*,*,*,*,*,*,*,*,*,*{#                                                                   ",
-        "                                                                   #{*,*,*,*,*,*,*}*,{,*,*,*,*,*,*,{#                                                                   ",
-        "                                                                   #Y,*,*,*,*,*,*,{,*}*,*,*,*,*,*,*Y#                                                                   ",
-        "                                                                   #{*,*,*,*,*,*,*}*,{,*,*,*,*,*,*,{#                                                                   ",
-        "                                                                   #{,*,*,*,*,*,*,{,*}*,*,*,*,*,*,*{#                                                                   ",
-        "                                                                   #{*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,{#                                                                   ",
-        "                                                                   #*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,**#                                                                   ",
-        "                                                                   #§*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,§#                                                                   ",
-        "                                                                   #*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,**#                                                                   ",
-        "                                                                   #>*,*,*,*,*,*,*,*,*,*,*,*,*,*,*,>#                                                                   ",
-        "                                                                   #>***Ŋ**********§§**********Ŋ***>#                                                                   ",
-        "                                                                   ##+++########################+++##                                                                   ",
-        "                                                                    |ŊEE|                      |ŊEE|                                                                    ",
-        "                                                                    |EEE|                      |EEE|                                                                    ",
-        "                                                                    |EEE|                      |EEE|                                                                    ",
-        "                                                                    |||||                      |||||                                                                    ",
-        "                                                                                                                                                                        ",
-        "                                                                                                                                                                        ",
-        "                                                                                                                                                                        ",
-        "                                                                                                                                                                        ",
-        "                                                                                                                                                                        ",
-        "                                                                                                                                                                        ",
-        "                                                                                                                                                                        "
-      ],
-      "palettes": [ "parametrized_linoleum_palette", "mall_palette_basement" ],
-      "terrain": {
-        "#": "t_brick_wall",
-        "*": "t_linoleum_gray",
-        ",": "t_linoleum_white",
-        "{": "t_linoleum_gray",
-        "Y": "t_linoleum_gray",
-        "}": "t_linoleum_white",
-        "§": "t_linoleum_gray"
-      },
-      "furniture": { "{": "f_bench", "}": "f_bench", "Y": "f_trashcan" },
-      "place_vehicles": [
-        { "vehicle": "food_cart", "x": 75, "y": 3, "rotation": 270 },
-        { "vehicle": "ice_cream_cart", "x": 93, "y": 3, "rotation": 180 }
-      ],
-      "place_monster": [ { "group": "GROUP_MALL", "x": [ 72, 95 ], "y": [ 0, 9 ], "repeat": [ 8, 12 ] } ],
-      "nested": { "§": { "chunks": [ "fire_extinguisher" ] } }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ [ "mall_a_67_sub_basement", "mall_a_68_sub_basement", "mall_a_69_sub_basement" ] ],
     "object": {
       "fill_ter": "t_thconc_floor",
