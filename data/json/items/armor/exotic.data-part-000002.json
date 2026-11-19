@@ -1,0 +1,34 @@
+[
+  {
+    "id": "migo_plate_naked",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "copy-from": "migo_plate_base",
+    "name": { "str": "plate of scarred flesh", "str_pl": "plates of scarred flesh" },
+    "description": "A chunk of otherworldly flesh that seems to have been forced into the shape of a ballistic plate with a slightly concave profile.  There is no armor left on this plate, just a mass of writhing alien flesh oozing in pain.  However, it looks like it is slowly growing back.",
+    "weight": "1000 g",
+    "volume": "1533 ml",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "material": [ "flesh" ],
+    "symbol": ",",
+    "color": "dark_gray",
+    "material_thickness": 4,
+    "//": "transforms over a day",
+    "countdown_interval": "24 hours",
+    "countdown_action": { "type": "message", "message": "The plate of scarred flesh expands as it grows." },
+    "revert_to": "migo_plate_undergrown",
+    "flags": [ "ABLATIVE_LARGE", "CANT_WEAR", "TRADER_AVOID", "SPAWN_ACTIVE" ],
+    "armor": [
+      {
+        "encumbrance": 2,
+        "coverage": 0,
+        "covers": [ "torso" ],
+        "specifically_covers": [ "torso_upper" ],
+        "material": [ { "type": "flesh", "covered_by_mat": 100, "thickness": 4.0 } ]
+      }
+    ],
+    "delete": { "material": [ "alien_carapace" ] }
+  }
+]
