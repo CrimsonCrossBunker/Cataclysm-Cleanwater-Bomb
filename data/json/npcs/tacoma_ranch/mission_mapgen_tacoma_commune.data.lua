@@ -1641,3 +1641,31 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "tacoma_commune_greenhouse_bartender_beets",
+    layout = {
+        size = { width = 13, height = 13 },
+        rows = {
+            "             ",
+            " b           ",
+            " b           ",
+            " b           ",
+            " b           ",
+            " b           ",
+            " r           ",
+            " b           ",
+            " b           ",
+            " b           ",
+            " b           ",
+            " b           ",
+            "             ",
+        },
+        furniture = { r = "f_rack", b = "f_planter" },
+        sealed_item_glyphs = {
+            b = { item = { id = "seed_sugar_beet", chance = 100 }, furniture = "f_planter_seedling" },
+        },
+        item_spawns = { r = { id = "g_shovel", chance = 100 } },
+    },
+}
