@@ -1,0 +1,337 @@
+local ccb = require("ccb")
+
+-- Numbers for weight, volume, and length calculations are based upon weapon without caliber conversion. The difference will be made up for with integrated stats from the installable caliber conversion.
+-- NO_TURRET should be removed once vehicle turrets are capable of mounting guns with mods attached. As it stands, trying to mount this style of weapon would require the player to remove the conversion kit, thus rendering it unusable anyhow.
+ccb.content.define_item {
+    id = "modular_deagle",
+    looks_like = "glock_17",
+    name = ccb.content.plural_text("Desert Eagle pistol", "Desert Eagle pistol"),
+    description = ccb.content.text("An icon of popular culture more than a practical weapon, this massive pistol can shoot a variety of magnum handgun rounds depending on the conversion kit and magazine used."),
+    mass = "1407 g",
+    volume = "671 ml",
+    length = "29 cm",
+    price = "1 kUSD 600 USD",
+    survival_price = "27 USD 50 cent",
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "modular_deagle",
+            name = ccb.content.text("Desert Eagle Mark XIX pistol"),
+            description = ccb.content.text("Needing little introduction, the Desert Eagle's impact on popular culture is almost as massive as the pistol itself.  The newest Mark XIX model introduced a more modern optics rail.  It was sold in multiple hard-hitting magnum calibers and can swap between them using conversion kits and the appropriate magazine."),
+            weight = 10000,
+        },
+        {
+            id = "modular_deagle_gold",
+            name = ccb.content.text("golden Desert Eagle Mark XIX pistol"),
+            description = ccb.content.text("Needing little introduction, the Desert Eagle's impact on popular culture is almost as massive as the pistol itself.  The newest Mark XIX model introduced a more modern optics rail.  It was sold in multiple hard-hitting magnum calibers and can swap between them using conversion kits and the appropriate magazine.  For maximum style points (or tackiness, depending on taste), this one is plated in what appears to be 24-karat gold."),
+        },
+    },
+    materials = { "steel", "plastic" },
+    symbol = "(",
+    color = "light_gray",
+    flags = { "ALLOWS_BODY_BLOCK", "NO_TURRET" },
+    weapon_categories = { "AUTOMATIC_PISTOLS" },
+    faults = {
+        { fault = "fault_gun_blackpowder" },
+        { fault = "fault_gun_dirt" },
+        { fault = "fault_gun_chamber_spent" },
+        { fault = "fault_fail_to_feed" },
+        { fault = "fault_stovepipe" },
+        { fault = "fault_double_feed" },
+    },
+    melee_damage = { bash = 12 },
+    gun = {
+        reload_noise_volume = 10,
+        ammunition = { "NULL" },
+        skill = "pistol",
+        dispersion = 480,
+        durability = 7,
+        min_cycle_recoil = 1413,
+        mod_locations = {
+            { id = "bore", count = 1 },
+            { id = "mechanism", count = 2 },
+            { id = "rail mount", count = 1 },
+            { id = "stock mount", count = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "henry_big_boy",
+    copy_from = "gun_base_rifle_manual",
+    looks_like = "modular_ar15",
+    name = ccb.content.text("Henry Big Boy .44 rifle"),
+    description = ccb.content.text("This fine lever-action rifle is chambered in the powerful .44 Magnum cartridge and features a sleek octagonal barrel with a tube fed magazine.  Go get 'em cowboy!"),
+    mass = "3937 g",
+    volume = "2310 ml",
+    length = "98 cm",
+    price = "899 USD 95 cent",
+    survival_price = "16 USD",
+    materials = { "steel", "wood" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["44"] = 10 } } },
+    inheritance = { add = { flags = { "LEVER_ACTION" } } },
+    gun = {
+        barrel_length = "508 mm",
+        range = 7,
+        ammunition = { "44" },
+        dispersion = 180,
+        clip_size = 10,
+        mod_locations = {
+            { id = "barrel", count = 1 },
+            { id = "mechanism", count = 2 },
+            { id = "rail mount", count = 1 },
+            { id = "sights mount", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "stock accessory", count = 1 },
+            { id = "stock mount", count = 1 },
+            { id = "underbarrel mount", count = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "rifle_44",
+    copy_from = "gun_base_rifle_manual",
+    looks_like = "modular_ar15",
+    name = ccb.content.text(".44 Magnum pipe rifle"),
+    description = ccb.content.text("A home-made rifle.  It is simply a pipe attached to a stock, with a hammer to strike the single round it holds."),
+    ascii_picture = "lg_pipe_gun",
+    mass = "2114 g",
+    volume = "2 L",
+    length = "100 cm",
+    price = "100 USD",
+    survival_price = "5 USD",
+    materials = { "steel", "wood" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["44"] = 1 } } },
+    gun = {
+        ammunition = { "44" },
+        damage = { type = "bullet", amount = -1 },
+        dispersion = 550,
+        durability = 6,
+        blackpowder_tolerance = 60,
+        loudness = 25,
+        clip_size = 1,
+        reload_time = 200,
+        barrel_volume = "750 ml",
+        barrel_length = "600 mm",
+        mod_locations = { { id = "sling", count = 1 }, { id = "sights mount", count = 1 } },
+    },
+}
+
+-- If someone makes a sw269 ascii picture, make this only the ruger's art
+-- 165.1mm + 41mm max OAL for 44mag. Revolvers just built different.
+ccb.content.define_item {
+    id = "sw629",
+    copy_from = "gun_base_handgun_manual",
+    looks_like = "sw_619",
+    name = ccb.content.text(".44 revolver"),
+    description = ccb.content.text("A stainless steel, six-shot, double-action revolver with a matte black plastic handle manufactured by Smith & Wesson.  Though hardly the most powerful handgun in the world anymore, it could still blow a zombie's head clean off."),
+    ascii_picture = "redhawk",
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "ruger_redhawk",
+            name = ccb.content.text("Ruger Redhawk revolver"),
+            description = ccb.content.text("One of the most powerful handguns in the world when it was released in 1979, the Redhawk offers very sturdy construction, with an appearance that is reminiscent of \"Wild West\" revolvers."),
+        },
+        {
+            id = "sw629",
+            name = ccb.content.text("S&W 629 revolver"),
+            description = ccb.content.text("A stainless steel, six-shot, double-action revolver with a matte black plastic handle manufactured by Smith & Wesson.  Though hardly the most powerful handgun in the world any more, it could still blow a zombie's head clean off."),
+        },
+    },
+    mass = "1267 g",
+    volume = "675 ml",
+    length = "30 cm",
+    price = "861 USD",
+    survival_price = "27 USD 50 cent",
+    materials = { "steel", "plastic" },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            rigid = true,
+            ammunition = { ["44"] = 6 },
+            allowed_speedloaders = { "44_speedloader6" },
+        },
+    },
+    gun = {
+        barrel_length = "206 mm",
+        ammunition = { "44" },
+        dispersion = 280,
+        clip_size = 6,
+        mod_locations = {
+            { id = "barrel", count = 1 },
+            { id = "mechanism", count = 2 },
+            { id = "sights mount", count = 1 },
+            { id = "stock mount", count = 1 },
+        },
+    },
+}
+
+-- 350 x 153 x 70, but trimmed massively
+ccb.content.define_item {
+    id = "colt_anaconda_8",
+    copy_from = "gun_base_handgun_manual",
+    looks_like = "sw_619",
+    name = ccb.content.text(".44 long barrel hunting revolver"),
+    description = ccb.content.text("A large-frame revolver with a modern plastic handle.  Too large for law enforcement, it was mostly used by sport shooters and hunters, for the manufacturer deemed it to be the most accurate .44-caliber revolver in their line.  This one has an extended 8-inch barrel."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "colt_anaconda_8",
+            name = ccb.content.text("Colt Anaconda"),
+            description = ccb.content.text("A large-frame double-action revolver with a modern plastic handle.  Too large for law enforcement, it was mostly used by sport shooters and hunters, for Colt deemed it to be the most accurate .44-caliber revolver in their line.  This one has an extended 8-inch barrel."),
+        },
+    },
+    mass = "1672 g",
+    volume = "1384 ml",
+    length = "350 mm",
+    price = "1499 USD",
+    survival_price = "15 USD",
+    materials = { "steel", "plastic" },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            rigid = true,
+            ammunition = { ["44"] = 6 },
+            allowed_speedloaders = { "44_speedloader6" },
+        },
+    },
+    gun = {
+        barrel_length = "203 mm",
+        ammunition = { "44" },
+        dispersion = 280,
+        clip_size = 6,
+        mod_locations = {
+            { id = "barrel", count = 1 },
+            { id = "mechanism", count = 2 },
+            { id = "rail mount", count = 1 },
+            { id = "sights mount", count = 1 },
+            { id = "stock mount", count = 1 },
+        },
+    },
+}
+
+-- 300 x 153 x 70, but trimmed massively
+ccb.content.define_item {
+    id = "colt_anaconda_6",
+    copy_from = "colt_anaconda_8",
+    name = ccb.content.text(".44 hunting revolver"),
+    description = ccb.content.text("A large-frame revolver with a modern plastic handle.  Too large for law enforcement, it was mostly used by sport shooters and hunters, for the manufacturer deemed it to be the most accurate .44-caliber revolver in their line.  This one has a 6-inch barrel."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "colt_anaconda",
+            name = ccb.content.text("Colt Anaconda"),
+            description = ccb.content.text("A large-frame double-action revolver with a modern plastic handle.  Too large for law enforcement, it was mostly used by sport shooters and hunters, for Colt deemed it to be the most accurate .44-caliber revolver in their line.  This one has a 6-inch barrel."),
+        },
+    },
+    mass = "1499 g",
+    volume = "1299 ml",
+    length = "300 mm",
+    gun = { barrel_length = "153 mm" },
+}
+
+-- 240 x 153 x 70, but trimmed massively
+ccb.content.define_item {
+    id = "colt_anaconda_4",
+    copy_from = "colt_anaconda_8",
+    name = ccb.content.text(".44 short barrel hunting revolver"),
+    description = ccb.content.text("A large-frame revolver with a modern plastic handle.  Too large for law enforcement, it was mostly used by sport shooters and hunters, for the manufacturer deemed it to be the most accurate .44-caliber revolver in their line.  This one has a shortened 4-inch barrel."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "colt_anaconda",
+            name = ccb.content.text("Colt Anaconda"),
+            description = ccb.content.text("A large-frame double-action revolver with a modern plastic handle.  Too large for law enforcement, it was mostly used by sport shooters and hunters, for Colt deemed it to be the most accurate .44-caliber revolver in their line.  This one has a shortened 4-inch barrel."),
+        },
+    },
+    mass = "1499 g",
+    volume = "1053 ml",
+    length = "240 mm",
+    gun = { barrel_length = "102 mm" },
+}
+
+-- Stats from https://rossiusa.com/rifles/lever-action-rifles/349-r92-triple-black-wood-black-cerakote-44-mag-16-in
+ccb.content.define_item {
+    id = "rossi_r92_44_16",
+    copy_from = "gun_base_rifle_manual",
+    looks_like = "modular_ar15",
+    name = ccb.content.text(".44 lever-action rifle"),
+    description = ccb.content.text("This lever-action rifle is chambered in the powerful .44 Magnum cartridge, with an 16\" barrel with a tube-fed magazine.  Go get 'em cowboy!"),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "rossi_r92_44_16",
+            name = ccb.content.plural_text("Rossi R92 16\"", "Rossi R92s 16\""),
+            description = ccb.content.text("The R92 is a widely successful line of lever-action rifles from Rossi, featuring a wide array of different calibers and barrel lengths.  These aim to be less reproductions of old rifles, but rather modern takes on the lever-action formula.  This particular one features all-black furniture, a 16\" barrel, and 8 rounds of .44 Magnum, along with a large lever loop."),
+        },
+    },
+    mass = "2529 g",
+    volume = "2076 ml",
+    length = "879 mm",
+    price = "1060 USD 99 cent",
+    survival_price = "16 USD",
+    materials = { "steel", "wood" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["44"] = 8 } } },
+    inheritance = { add = { flags = { "LEVER_ACTION" } } },
+    gun = {
+        barrel_length = "419 mm",
+        range = 5,
+        ammunition = { "44" },
+        dispersion = 160,
+        clip_size = 8,
+        mod_locations = {
+            { id = "barrel", count = 1 },
+            { id = "mechanism", count = 2 },
+            { id = "rail mount", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "stock accessory", count = 1 },
+            { id = "stock mount", count = 1 },
+            { id = "underbarrel mount", count = 1 },
+        },
+    },
+}
+
+-- Stats from https://rossiusa.com/rifles/lever-action-rifles/368-r92-hardwood-polished-black-oxide-44-mag-20-in
+ccb.content.define_item {
+    id = "rossi_r92_44_20",
+    copy_from = "gun_base_rifle_manual",
+    looks_like = "modular_ar15",
+    name = ccb.content.text("long-barreled .44 lever-action rifle"),
+    description = ccb.content.text("This lever-action rifle is chambered in the powerful .44 Magnum cartridge, with an 20\" barrel with a tube-fed magazine.  Go get 'em cowboy!"),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "rossi_r92_44_16",
+            name = ccb.content.plural_text("Rossi R92 20\"", "Rossi R92s 20\""),
+            description = ccb.content.text("The R92 is a widely successful line of lever-action rifles from Rossi, featuring a wide array of different calibers and barrel lengths.  These aim to be less reproductions of old rifles, but rather modern takes on the lever-action formula.  This particular one features all-black furniture, a 20\" barrel, and 10 rounds of .44 Magnum."),
+        },
+    },
+    mass = "2705 g",
+    volume = "2015 ml",
+    length = "965 mm",
+    price = "1060 USD 99 cent",
+    survival_price = "16 USD",
+    materials = { "steel", "wood" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["44"] = 10 } } },
+    inheritance = { add = { flags = { "LEVER_ACTION" } } },
+    gun = {
+        barrel_length = "508 mm",
+        range = 7,
+        ammunition = { "44" },
+        dispersion = 140,
+        clip_size = 10,
+        mod_locations = {
+            { id = "barrel", count = 1 },
+            { id = "mechanism", count = 2 },
+            { id = "rail mount", count = 1 },
+            { id = "sights mount", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "stock accessory", count = 1 },
+            { id = "stock mount", count = 1 },
+            { id = "underbarrel mount", count = 1 },
+        },
+    },
+}
