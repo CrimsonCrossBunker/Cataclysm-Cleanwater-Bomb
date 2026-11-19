@@ -1,22 +1,5 @@
 [
   {
-    "id": "oxygen_jelly_quick",
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "comestible_type": "FOOD",
-    "name": { "str_sp": "Quick-release Oxyjelly" },
-    "description": "Oxyjelly made to cause a big burst of oxygen, helping against asthma and smoke inhalation.",
-    "category": "food",
-    "weight": "3 g",
-    "volume": "2 ml",
-    "price": "1 cent",
-    "price_postapoc": "1 cent",
-    "symbol": "*",
-    "color": "blue",
-    "flags": [ "INVENTOR_CRAFTED" ],
-    "use_action": [ "OXYGEN_BOTTLE" ]
-  },
-  {
     "id": "oxygen_jelly_long",
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
