@@ -1,0 +1,27 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "meat_tainted",
+    "category": "other",
+    "name": { "str": "chunk of tainted meat", "str_pl": "of tainted meat chunks" },
+    "weight": "238 g",
+    "color": "red",
+    "spoils_in": "4 hours",
+    "use_action": [ "POISON" ],
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "calories": 174,
+    "description": "A piece of meat that's obviously unhealthy.  You could eat it, but it will poison you.",
+    "display_type": "BY_WEIGHT",
+    "price": "0 cent",
+    "price_postapoc": "10 cent",
+    "material": [ "flesh" ],
+    "volume": "250 ml",
+    "fun": -10,
+    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE", "RAW" ],
+    "smoking_result": "dry_meat_tainted",
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
+  }
+]

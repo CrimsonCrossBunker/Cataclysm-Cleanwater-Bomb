@@ -1,0 +1,26 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "tainted_marrow",
+    "category": "other",
+    "name": { "str": "portion of tainted bone marrow", "str_pl": "of tainted bone marrow portions" },
+    "weight": "60 g",
+    "volume": "65 ml",
+    "color": "red",
+    "spoils_in": "4 hours",
+    "use_action": [ "POISON" ],
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "calories": 235,
+    "description": "A wet, green chunk of spongy goop extracted from a rotten bone.  You could eat it, but it will poison you.",
+    "display_type": "BY_WEIGHT",
+    "price": "0 cent",
+    "price_postapoc": "10 cent",
+    "material": [ "flesh" ],
+    "fun": -10,
+    "flags": [ "TRADER_AVOID", "RAW" ],
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
+  }
+]

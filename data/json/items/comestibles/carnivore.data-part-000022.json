@@ -1,0 +1,13 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "raw_tainted_fur",
+    "name": { "str_sp": "tainted pelt" },
+    "copy-from": "raw_fur",
+    "spoils_in": "6 hours",
+    "use_action": [ "POISON" ],
+    "description": "A carefully folded raw pelt harvested from an unnatural creature.  The smell of rot is overwhelming, with bits of flesh cling to the mangy, sickly patches of fur still present on the pelt.  This can't be used for anything useful.",
+    "price": "0 cent"
+  }
+]

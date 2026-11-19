@@ -1,0 +1,27 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "fat_tainted",
+    "category": "other",
+    "name": { "str": "chunk of tainted fat", "str_pl": "of tainted fat chunks" },
+    "weight": "192 g",
+    "color": "yellow",
+    "spoils_in": "4 hours",
+    "use_action": [ "POISON" ],
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "calories": 9,
+    "description": "A watery yellow glob of fat from some unnatural creature or other.  Something is… wrong with it.  It doesn't seem like normal fat.",
+    "display_type": "BY_WEIGHT",
+    "price": "0 cent",
+    "price_postapoc": "25 cent",
+    "//": "Not for use in edible recipes, and should require ~200% as much as normal for applicable inedible recipes.",
+    "material": [ "flesh" ],
+    "volume": "250 ml",
+    "fun": -10,
+    "flags": [ "RAW" ],
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
+  }
+]

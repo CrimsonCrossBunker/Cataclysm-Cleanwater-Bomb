@@ -1,0 +1,26 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "meat_mi-go",
+    "category": "other",
+    "name": { "str": "chunk of mi-go meat", "str_pl": "of mi-go meat chunks" },
+    "weight": "238 g",
+    "color": "pink",
+    "spoils_in": "90 days",
+    "//": "It's so alien few micro organisms are able to degrade it.",
+    "use_action": [ "POISON" ],
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "calories": 0,
+    "description": "A piece of mi-go meat that's obviously alien, given its pink color, odd odor, and strange texture.  It would not be advisable to try to eat it.",
+    "display_type": "BY_WEIGHT",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "material": [ "mi-go_flesh" ],
+    "volume": "250 ml",
+    "fun": -10,
+    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE" ],
+    "stackable": true
+  }
+]

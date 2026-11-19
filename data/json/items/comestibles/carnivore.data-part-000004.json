@@ -1,0 +1,22 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "meat_mutant_tainted",
+    "copy-from": "mutant_meat",
+    "name": { "str": "chunk of tainted mutant meat", "str_pl": "of tainted mutant meat chunks" },
+    "color": "magenta",
+    "snippet_category": "tainted_mutant_meat_desc",
+    "looks_like": "meat",
+    "cooks_like": "meat_mutant_tainted_cooked",
+    "cook_result": "meat_mutant_tainted_cooked",
+    "cook_cost_energy": "300 kJ",
+    "spoils_in": "4 hours",
+    "use_action": [ "POISON" ],
+    "price": "0 cent",
+    "price_postapoc": "5 cent",
+    "fun": -15,
+    "flags": [ "TRADER_AVOID", "BAD_TASTE", "RAW" ],
+    "smoking_result": "meat_mutant_tainted_smoked"
+  }
+]

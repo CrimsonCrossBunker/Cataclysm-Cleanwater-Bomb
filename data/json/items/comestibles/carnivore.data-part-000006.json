@@ -1,0 +1,25 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "comestible_type": "FOOD",
+    "id": "ruined_chunks",
+    "//": "This item should not get any use whatsoever, it is merely conservation of mass and an attractor for carrion.",
+    "symbol": "¨",
+    "name": { "str_sp": "butchery refuse" },
+    "category": "other",
+    "volume": "300 ml",
+    "weight": "250 g",
+    "color": "black",
+    "looks_like": "feces_manure",
+    "description": "Eugh.  This is a mess of dirt, excreta, connective tissue, and bits of matter like hair and claws, leftover from the butchering process.  Eating it isn't even worth thinking about.",
+    "material": [ "flesh" ],
+    "spoils_in": "8 hours",
+    "fun": -18,
+    "use_action": [ "POISON" ],
+    "contamination": [ { "disease": "bad_food", "probability": 100 } ],
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
+  }
+]

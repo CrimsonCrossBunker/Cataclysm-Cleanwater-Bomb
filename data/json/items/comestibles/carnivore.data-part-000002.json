@@ -1,0 +1,44 @@
+[
+  {
+    "id": "raw_curing_fatty_meat_active",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "copy-from": "raw_cured_fatty_meat",
+    "name": { "str": "slab of raw curing porkbelly", "str_pl": "of raw curing porkbelly slabs" },
+    "description": "Porkbelly in the process of becoming fully cured with salt and sugar, capable of becoming bacon.  The flavor is slowly developing at this stage, and is significantly unpleasant due to the residual salt.  Activate it once completed to make use of the final product.",
+    "price": "5 USD",
+    "price_postapoc": "2 USD 50 cent",
+    "fun": -15,
+    "flags": [ "SPAWN_ACTIVE" ],
+    "countdown_interval": "8 hours",
+    "revert_to": "raw_cured_fatty_meat"
+  },
+  {
+    "id": "raw_curing_meat_active",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "copy-from": "flesh",
+    "name": { "str_sp": "raw meat (curing)" },
+    "//": "Meat that is still in the timed curing stage; distinct from fully cured raw meat.",
+    "conditional_names": [
+      { "type": "VITAMIN", "condition": "human_flesh_vitamin", "name": { "str_sp": "raw human meat (curing)" } },
+      { "type": "FLAG", "condition": "STRICT_HUMANITARIANISM", "name": { "str_sp": "raw demihuman meat (curing)" } },
+      { "type": "COMPONENT_ID_SUBSTRING", "condition": "mutant", "name": { "str_sp": "raw mutant meat (curing)" } }
+    ],
+    "description": "Raw meat packed in salt and undergoing a week-long cure.  It is unpleasantly salty and cannot be cooked normally until the cure finishes and the meat is washed.",
+    "looks_like": "raw_curing_fatty_meat_active",
+    "display_type": "BY_WEIGHT",
+    "weight": "275 g",
+    "volume": "250 ml",
+    "price": "5 USD",
+    "price_postapoc": "1 USD",
+    "spoils_in": "21 days",
+    "calories": 402,
+    "quench": -15,
+    "fun": -10,
+    "vitamins": [ [ "calcium", 2 ], [ "iron", 12 ], [ "meat_allergen", 1 ] ],
+    "flags": [ "RAW", "SPAWN_ACTIVE" ],
+    "countdown_interval": "7 days",
+    "revert_to": "raw_cured_meat"
+  }
+]

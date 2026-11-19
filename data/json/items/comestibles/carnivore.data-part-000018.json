@@ -1,0 +1,25 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "tallow_tainted",
+    "name": { "str_sp": "tainted tallow" },
+    "category": "chems",
+    "weight": "128 g",
+    "color": "light_gray",
+    "use_action": [ "POISON" ],
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "quench": -10,
+    "calories": 18,
+    "description": "A smooth grayish block of cleaned and rendered monster fat.  It will remain 'fresh' for a very long time, and can be used as an ingredient in many projects.  You could eat it, but it will poison you.",
+    "price": "1 cent",
+    "price_postapoc": "12 cent",
+    "//": "Not for use in edible/foodsafe recipes.  Inefficiency is handled by tainted tallow recipe requiring 200% as much materials input as regular tallow recipe.",
+    "material": [ "flesh" ],
+    "volume": "62 ml",
+    "fun": -18,
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
+  }
+]
