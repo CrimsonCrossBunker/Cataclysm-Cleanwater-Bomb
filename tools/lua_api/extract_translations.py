@@ -368,16 +368,15 @@ def _literal_string_field(tokens: list[_LuaToken], table: _LuaTable, field: str)
 
 
 def _content_definition_tables(
-    tokens: list[_LuaToken], tables: dict[int, _LuaTable], name: str
+    tokens: list[_LuaToken], tables: dict[int, _LuaTable], *names: str
 ) -> list[_LuaTable]:
     matches = []
     for table in tables.values():
         constructor = table.token_index - 1
         if constructor >= 0 and tokens[constructor].value == "(":
             constructor -= 1
-        if constructor >= 4 and [t.value for t in tokens[constructor - 4:constructor + 1]] == [
-            "ccb", ".", "content", ".", name
-        ]:
+        if (constructor >= 4 and tokens[constructor].value in names and
+                [t.value for t in tokens[constructor - 4:constructor]] == ["ccb", ".", "content", "."]):
             matches.append(table)
     return matches
 
@@ -437,13 +436,13 @@ def _literal_table_array_field(
 
 def _vehicle_part_translation_edits(source: str) -> list[tuple[int, int, str]]:
     """Extract the same variant and derived base labels as ordered native data."""
-    if "define_vehicle_part" not in source:
+    if "define_vehicle_part" not in source and "VehiclePart" not in source:
         return []
     tokens = _lua_tokens(source)
     tables = _dialogue_tables(tokens)
     edits = []
     empty = ('""', "''")
-    for part in _content_definition_tables(tokens, tables, "define_vehicle_part"):
+    for part in _content_definition_tables(tokens, tables, "define_vehicle_part", "VehiclePart"):
         base_labels = [
             label.value
             for entry in _literal_table_array_field(tokens, tables, part, "variant_bases")
