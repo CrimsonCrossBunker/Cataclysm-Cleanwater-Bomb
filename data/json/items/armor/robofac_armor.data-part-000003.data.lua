@@ -1,86 +1,54 @@
 local ccb = require("ccb")
 
--- NO_I18N
--- skip encumbrance for additional parts of same body part
--- skip encumbrance for additional parts of same body part
 ccb.content.define_item {
-    id = "robofac_mantle",
-    abstract = true,
-    category = "armor",
-    name = ccb.content.text_without_extraction("abstract mantle"),
-    mass = "6853 g",
-    volume = "6600 ml",
-    price = "600 USD",
-    survival_price = "50 USD",
-    materials = { "ceramic" },
-    symbol = ",",
-    color = "dark_gray",
-    flags = { "ABLATIVE_MANTLE", "CANT_WEAR", "OUTER" },
-    armor = {
-        thickness = 7,
-        environmental_protection = 5,
-        warmth = 15,
-        portions = {
-            { encumbrance = 5, coverage = 95, covers = { "torso" }, subparts = { "torso_upper" } },
-            {
-                encumbrance = 0,
-                coverage = 60,
-                vitals_coverage = 90,
-                covers = { "torso" },
-                subparts = { "torso_lower" },
-            },
-            {
-                encumbrance = 2,
-                coverage = 95,
-                vitals_coverage = 90,
-                covers = { "arm_l", "arm_r" },
-                subparts = { "arm_shoulder_l", "arm_shoulder_r" },
-            },
-            {
-                encumbrance = 0,
-                coverage = 85,
-                vitals_coverage = 90,
-                covers = { "arm_l", "arm_r" },
-                subparts = { "arm_upper_l", "arm_upper_r" },
+    id = "robofac_head_rig_ar_on",
+    copy_from = "robofac_head_rig_ar",
+    name = ccb.content.plural_text("Hub 01 visual augmentation headgear (on)", "Hub 01 visual augmentation headgear (on)"),
+    description = ccb.content.text("Heavy duty hooded headwear for the true frontier explorer, made with robust Nylon sheeting reinforced with Kevlar fibers.  The top consists of a series of plastic plates with hooks and velcro strips, perhaps for attaching additional parts, and an integrated camera array.  A multi-faceted augmented reality headset rests of the forehead like a pair of slim, boxy ski goggles, with side plugs for auxiliary devices.  The AR lenses are equipped with adaptive light correction, light amplification and thermal imaging, and an augmented reality overlay equipped with various gadgets, including a rangefinder and adaptive targeting system, making target acquisition quicker.  The AR system is currently turned on, and continually draining batteries.  Use it to turn it off."),
+    revert_to = "robofac_head_rig_ar",
+    inheritance = {
+        add = {
+            flags = {
+                "SPAWN_ACTIVE", "ZOOM", "THERMOMETER", "HYGROMETER", "BAROMETER", "TWO_WAY_RADIO",
+                "WATCH", "ALARMCLOCK", "SUN_GLASSES",
             },
         },
     },
-}
-
--- NO_I18N
--- skip encumbrance for additional parts of same body part
-ccb.content.define_item {
-    id = "robofac_skirt",
-    abstract = true,
-    category = "armor",
-    name = ccb.content.text_without_extraction("abstract armored skirt"),
-    mass = "2454 g",
-    volume = "3500 ml",
-    price = "600 USD",
-    survival_price = "50 USD",
-    materials = { "ceramic" },
-    symbol = ",",
-    color = "dark_gray",
-    flags = { "ABLATIVE_SKIRT", "CANT_WEAR", "OUTER" },
+    subtype_order = { "tool", "armor", "artifact" },
+    tool = { power_draw = "320 mW" },
     armor = {
-        thickness = 7,
-        environmental_protection = 5,
-        warmth = 15,
         portions = {
             {
-                encumbrance = 2,
-                coverage = 100,
-                vitals_coverage = 90,
-                covers = { "leg_l", "leg_r" },
-                subparts = { "leg_hip_l", "leg_hip_r" },
+                materials = {
+                    { id = "nylon", coverage = 100, thickness = 1.5 },
+                    { id = "kevlar", coverage = 100, thickness = 1.5 },
+                },
+                covers = { "head" },
+                coverage = 95,
+                encumbrance = 50,
+                volume_encumbrance = 0,
             },
             {
-                encumbrance = 0,
-                coverage = 85,
-                vitals_coverage = 90,
-                covers = { "leg_l", "leg_r" },
-                subparts = { "leg_upper_l", "leg_upper_r" },
+                materials = { { id = "hard_plastic_transp", coverage = 100, thickness = 2 } },
+                covers = { "eyes" },
+                coverage = 100,
+                encumbrance = 5,
+                rigid_only = true,
+                volume_encumbrance = 0,
             },
         },
+    },
+    artifact = { enchantments = { "nvg_great", "THERMAL_VISION_GOOD", "AR_targeting_system" } },
+    use_actions = {
+        {
+            kind = "transform",
+            ammo_scale = 0,
+            menu_text = ccb.content.text("Turn off"),
+            message = ccb.content.text("Your AR system turns off."),
+            target = "robofac_head_rig_ar",
+        },
+        "CAMERA",
+        "EBOOKSAVE",
+        "E_FILE_DEVICE",
     },
 }
