@@ -1,5 +1,21 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "fbmf_2_common_palette",
+    layout = {
+        terrain = {
+            F = "t_splitrail_fence",
+            g = "t_splitrail_fencegate_c",
+            m = "t_dirtmound",
+            p = "t_palisade",
+            P = "t_palisade_pulley",
+            G = "t_palisade_gate",
+            [";"] = "t_dirt",
+        },
+        furniture = { [";"] = "f_clear" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "fbmf_2",

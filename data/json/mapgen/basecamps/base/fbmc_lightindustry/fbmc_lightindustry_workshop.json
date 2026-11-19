@@ -1,8 +1,0 @@
-[
-  {
-    "type": "palette",
-    "id": "fbmc_lightindustry_workshop_palette",
-    "terrain": { "x": "t_null" },
-    "furniture": { "x": "f_clear" }
-  }
-]

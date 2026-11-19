@@ -1,5 +1,10 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "fbmc_lightindustry_workshop_palette",
+    layout = { terrain = { x = "t_null" }, furniture = { x = "f_clear" } },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { "faction_base_lightindustry_workshop_0" },

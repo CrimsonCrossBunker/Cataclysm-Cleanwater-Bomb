@@ -1,5 +1,7 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette { id = "fbbb_palette", layout = { terrain = { [","] = "t_dirt" }, furniture = {} } }
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "fbbb",

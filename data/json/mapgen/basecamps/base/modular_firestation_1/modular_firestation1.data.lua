@@ -1,5 +1,34 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "fbmc_firestation1_palette",
+    layout = {
+        terrain = {
+            u = "t_rootcellar",
+            ["."] = "t_dirt",
+            ["^"] = "t_dirtmound",
+            G = "t_privacy_fencegate_c",
+            ["#"] = "t_privacy_fence",
+        },
+        furniture = {
+            u = "f_clear",
+            ["."] = "f_clear",
+            ["^"] = "f_clear",
+            G = "f_clear",
+            ["#"] = "f_clear",
+            h = "f_chair",
+            t = "f_table",
+            c = "f_counter",
+            r = "f_rack",
+            L = "f_locker",
+            s = "f_sofa",
+            C = "f_armchair",
+            B = "f_bookcase",
+            ["-"] = "f_clear",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "fbmc_firestation1_kitchen1",

@@ -1,0 +1,161 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "fbmw_2_common_palette",
+    layout = {
+        terrain = { [";"] = "t_dirt" },
+        furniture = {
+            [";"] = "f_clear",
+            A = "f_anvil",
+            b = "f_bench",
+            B = "f_bookcase",
+            c = "f_workbench",
+            C = "f_chimney",
+            f = "f_forge_rock",
+            h = "f_stool",
+            k = "f_clay_kiln",
+            L = "f_dresser",
+            M = "f_armchair",
+            Q = "f_bellows",
+            r = "f_rack_wood",
+            t = "f_table",
+            x = "f_kiln_empty",
+            z = "f_55gal_firebarrel",
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmw_2_concrete_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_thconc_floor",
+            ["+"] = "t_door_metal_c",
+            r = "t_concrete_roof",
+            v = "t_window_no_curtains",
+            w = "t_sconc_wall",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmw_2_log_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor",
+            ["+"] = "t_door_c",
+            r = "t_wood_treated_roof",
+            v = "t_window_no_curtains",
+            w = "t_wall_log",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmw_2_metal_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_scrap_floor",
+            ["+"] = "t_door_metal_c",
+            r = "t_metal_flat_roof",
+            v = "t_window_no_curtains",
+            w = "t_scrap_wall",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmw_2_migo_resin_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor_resin",
+            ["+"] = "t_resin_hole_c",
+            r = "t_resin_roof",
+            v = "t_wall_resin_cage",
+            w = "t_wall_resin",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmw_2_rammed_earth_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor_primitive",
+            ["+"] = "t_door_makeshift_c",
+            r = "t_log_sod_roof",
+            v = "t_window_empty",
+            w = "t_wall_rammed_earth",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmw_2_rock_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor",
+            ["+"] = "t_door_c",
+            r = "t_wood_treated_roof",
+            v = "t_window_no_curtains",
+            w = "t_rock_wall",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmw_2_wad_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor_primitive",
+            ["+"] = "t_door_makeshift_c",
+            r = "t_log_sod_roof",
+            v = "t_wall_wattle_half",
+            w = "t_wall_wattle",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmw_2_wood_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor",
+            ["+"] = "t_door_c",
+            r = "t_wood_treated_roof",
+            v = "t_window_no_curtains",
+            w = "t_wall_wood",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmw_2_brick_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor",
+            ["+"] = "t_rdoor_c",
+            r = "t_wood_treated_roof",
+            v = "t_window_no_curtains",
+            w = "t_brick_wall",
+        },
+        furniture = {},
+    },
+}

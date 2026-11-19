@@ -1,5 +1,69 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "fbmc_firestation1_palette_white_wall",
+    layout = {
+        terrain = { ["|"] = "t_wall_w", d = "t_door_c" },
+        furniture = { ["|"] = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_firestation1_palette_log",
+    layout = {
+        terrain = { ["|"] = "t_wall_log", d = "t_door_c" },
+        furniture = { ["|"] = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_firestation1_palette_metal",
+    layout = {
+        terrain = { ["|"] = "t_scrap_wall", d = "t_door_c" },
+        furniture = { ["|"] = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_firestation1_palette_migo",
+    layout = {
+        terrain = { d = "t_door_c", ["|"] = "t_wall_resin" },
+        furniture = { ["|"] = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_firestation1_palette_rammed_earth",
+    layout = {
+        terrain = { d = "t_door_makeshift_c", ["|"] = "t_wall_rammed_earth" },
+        furniture = { ["|"] = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_firestation1_palette_rock",
+    layout = {
+        terrain = { ["|"] = "t_rock_wall", d = "t_door_c" },
+        furniture = { ["|"] = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_firestation1_palette_wad",
+    layout = {
+        terrain = { d = "t_door_makeshift_c", ["|"] = "t_wall_wattle" },
+        furniture = { ["|"] = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_firestation1_palette_wood",
+    layout = {
+        terrain = { ["|"] = "t_wall_wood", d = "t_door_c" },
+        furniture = { ["|"] = "f_clear", d = "f_clear" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "fbmc_firestation1_living_area",

@@ -1,9 +1,0 @@
-[
-  {
-    "type": "palette",
-    "id": "fbmc_shelter_palette",
-    "terrain": { ".": "t_dirt" },
-    "//": "Dummy terrain entry to satisfy need for non empty terrain section",
-    "furniture": { "h": "f_chair", "t": "f_table", "L": "f_locker", "s": "f_sofa", "C": "f_armchair", "x": "f_clear" }
-  }
-]

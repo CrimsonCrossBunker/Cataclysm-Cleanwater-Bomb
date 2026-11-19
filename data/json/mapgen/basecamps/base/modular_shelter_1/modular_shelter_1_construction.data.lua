@@ -1,5 +1,45 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "fbmc_shelter_1_palette_log",
+    layout = {
+        terrain = { w = "t_wall_log", d = "t_door_c", X = "t_floor" },
+        furniture = { w = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_shelter_1_palette_rock",
+    layout = {
+        terrain = { w = "t_rock_wall", d = "t_door_c", X = "t_floor" },
+        furniture = { w = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_shelter_1_palette_standard",
+    layout = {
+        terrain = { w = "t_wall", d = "t_door_c", X = "t_floor" },
+        furniture = { w = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_shelter_1_palette_wad",
+    layout = {
+        terrain = { w = "t_wall_wattle", d = "t_door_makeshift_c", X = "t_floor" },
+        furniture = { w = "f_clear", d = "f_clear" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmc_shelter_1_palette_wood",
+    layout = {
+        terrain = { w = "t_wall_wood", d = "t_door_c", X = "t_floor" },
+        furniture = { w = "f_clear", d = "f_clear" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "fbmc_shelter_1_bedroom_NW",

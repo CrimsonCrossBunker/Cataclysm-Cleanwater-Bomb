@@ -1,5 +1,21 @@
 local ccb = require("ccb")
 
+-- Dummy terrain entry to satisfy need for non empty terrain section
+ccb.content.define_mapgen_palette {
+    id = "fbmc_shelter_1_palette",
+    layout = {
+        terrain = { ["."] = "t_dirt" },
+        furniture = {
+            h = "f_chair",
+            t = "f_table",
+            x = "f_coffee_table",
+            L = "f_locker",
+            s = "f_sofa",
+            ["*"] = "f_clear",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "fbmc_shelter_1_bed_NW",

@@ -1,0 +1,177 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "fbmk_2_common_palette",
+    layout = {
+        terrain = {
+            d = "t_door_c",
+            B = "t_grass",
+            o = "t_window_no_curtains",
+            w = "t_wall_wood",
+            ["."] = "t_floor",
+            [","] = "t_dirtfloor",
+            S = "t_dirtfloor",
+            U = "t_rootcellar",
+            [";"] = "t_dirt",
+        },
+        furniture = {
+            b = "f_bench",
+            t = "f_table",
+            K = "f_kiln_empty",
+            a = "f_stool",
+            r = "f_rack_wood",
+            R = "f_rack",
+            h = "f_chair",
+            S = "f_smoking_rack",
+            V = "f_fvat_empty",
+            B = "f_birdbath",
+            H = "f_butcher_rack",
+            c = "f_counter",
+            p = "f_planter",
+            T = "f_standing_tank",
+            I = "f_rack",
+            D = "f_still",
+            s = "f_woodstove",
+            M = "f_wind_mill",
+            e = "f_bookcase",
+            [";"] = "f_clear",
+            C = "f_chimney",
+            P = "f_vent_pipe",
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmk_2_concrete_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_thconc_floor",
+            ["+"] = "t_door_metal_c",
+            r = "t_concrete_roof",
+            v = "t_window_no_curtains",
+            w = "t_sconc_wall",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmk_2_log_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor",
+            ["+"] = "t_door_c",
+            r = "t_wood_treated_roof",
+            v = "t_window_no_curtains",
+            w = "t_wall_log",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmk_2_metal_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_scrap_floor",
+            ["+"] = "t_door_metal_c",
+            r = "t_metal_flat_roof",
+            v = "t_window_no_curtains",
+            w = "t_scrap_wall",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmk_2_migo_resin_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor_resin",
+            ["+"] = "t_resin_hole_c",
+            r = "t_resin_roof",
+            v = "t_wall_resin_cage",
+            w = "t_wall_resin",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmk_2_rammed_earth_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor_primitive",
+            ["+"] = "t_door_makeshift_c",
+            r = "t_log_sod_roof",
+            v = "t_window_empty",
+            w = "t_wall_rammed_earth",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmk_2_rock_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor",
+            ["+"] = "t_door_c",
+            r = "t_wood_treated_roof",
+            v = "t_window_no_curtains",
+            w = "t_rock_wall",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmk_2_wad_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor_primitive",
+            ["+"] = "t_door_makeshift_c",
+            r = "t_log_sod_roof",
+            v = "t_wall_wattle_half",
+            w = "t_wall_wattle",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmk_2_wood_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor",
+            ["+"] = "t_door_c",
+            r = "t_wood_treated_roof",
+            v = "t_window_no_curtains",
+            w = "t_wall_wood",
+        },
+        furniture = {},
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "fbmk_2_brick_palette",
+    layout = {
+        terrain = {
+            [","] = "t_dirtfloor",
+            ["."] = "t_floor",
+            ["+"] = "t_rdoor_c",
+            r = "t_wood_treated_roof",
+            v = "t_window_no_curtains",
+            w = "t_brick_wall",
+        },
+        furniture = {},
+    },
+}
