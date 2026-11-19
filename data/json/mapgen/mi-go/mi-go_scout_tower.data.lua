@@ -183,3 +183,52 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "barry_mi-go_scout_tower_3",
+    layout = {
+        rows = {
+            "vvvvvvvvvvvvvvvvvvvvvvvv",
+            "vvvvvvvvvvvvvvvvvvvvvvvv",
+            "vvvvvvvvvvvvvvvvvvvvvvvv",
+            "vvvvvvvvvvvv||vvvvvvvvvv",
+            "vvvvvvvvvv||||||vvvvvvvv",
+            "vvvvvvvv|||    |||vvvvvv",
+            "vvvvvv|||        |||vvvv",
+            "vvvv|||            ||vvv",
+            "vvv||<              |vvv",
+            "vvv||>       6      ||vv",
+            "vvvv||               |vv",
+            "vvvvv|               |vv",
+            "vvvvv|              ||vv",
+            "vvvv||              |vvv",
+            "vv|||               |vvv",
+            "||| +              ||vvv",
+            "||  |||          |||vvvv",
+            "|| 14 ||||||||  ||vvvvvv",
+            "v|   ||vvvvvv||||vvvvvvv",
+            "v|||||vvvvvvvvvvvvvvvvvv",
+            "vvvvvvvvvvvvvvvvvvvvvvvv",
+            "vvvvvvvvvvvvvvvvvvvvvvvv",
+            "vvvvvvvvvvvvvvvvvvvvvvvv",
+            "vvvvvvvvvvvvvvvvvvvvvvvv",
+        },
+        palettes = { "mi-go_palette" },
+        fill_terrain = "t_floor_resin",
+        nested = {
+            { id = "mi-go_scout_tower_cells", x = 4, y = 3 },
+            { id = "mi-go_encampment1_room17", x = 1, y = 14 },
+        },
+        npc_placements = { { id = "isherwood_barry", x = 18, y = 15, unique_id = "BARRY_MISSION" } },
+        monster_placements = {
+            {
+                group = "GROUP_MI-GO_SCOUT_TOWER",
+                x = 12,
+                y = 12,
+                pack_size = { 1, 2 },
+                patrol = { { x = { 8, 16 }, y = { 8, 16 } } },
+            },
+        },
+    },
+}
