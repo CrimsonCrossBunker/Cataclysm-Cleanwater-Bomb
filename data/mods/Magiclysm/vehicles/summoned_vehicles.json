@@ -53,38 +53,5 @@
       { "x": 0, "y": 1, "parts": [ "frame#cross", "wheel_mount_light", "wheel_motorbike", "seat" ] },
       { "x": 1, "y": 1, "parts": [ "frame_handle", "box" ] }
     ]
-  },
-  {
-    "type": "vehicle_part",
-    "id": "mana_frame",
-    "copy-from": "frame_abstract",
-    "name": "mana frame",
-    "breaks_into": "EMPTY_GROUP",
-    "color": "magenta",
-    "damage_modifier": 10,
-    "noise_factor": 1,
-    "fuel_type": "mana",
-    "durability": 20,
-    "item": "mana_wheel",
-    "m2c": 90,
-    "rolling_resistance": 0.45,
-    "wheel_terrain_modifiers": { "FLAT": [ 0, 4 ], "ROAD": [ 0, 2 ] },
-    "contact_area": 20,
-    "description": "A shape of pure mana that can float and carry items.",
-    "size": "37500 ml",
-    "power": "200 W",
-    "flags": [
-      "NO_INSTALL_HIDDEN",
-      "ENGINE",
-      "STABLE",
-      "E_STARTS_INSTANTLY",
-      "STEERABLE",
-      "WHEEL",
-      "OBSTACLE",
-      "CARGO",
-      "MAGIC_FOLLOW",
-      "FLOATS"
-    ],
-    "damage_reduction": { "all": 12 }
   }
 ]

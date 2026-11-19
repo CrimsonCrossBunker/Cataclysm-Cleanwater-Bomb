@@ -1,0 +1,40 @@
+local ccb = require("ccb")
+
+ccb.content.define_vehicle_part {
+    id = "wildwood_weaver_shelter",
+    breaks_into = {
+        { count = 1, item = "mag_brokeweaver" },
+        { count = { 1, 5 }, item = "scrap_cotton" },
+        { count = { 4, 20 }, item = "mag_awakened_water" },
+    },
+    categories = { "utility" },
+    color = "green",
+    description = ccb.content.text("A shelter woven from wildwood weaver's webs.  It can be used to rest, and the weaver provides assistance in any tailoring task."),
+    durability = 15,
+    flags = {
+        "BED",
+        "OPAQUE",
+        "BOARDABLE",
+        "NONBELTABLE",
+        "APPLIANCE",
+        "EXTRA_DRAG",
+        "NO_INSTALL_HIDDEN",
+        "HUGE_OK",
+        "ROOF",
+    },
+    comfort = 5,
+    floor_bedding_warmth = 500,
+    pseudo_tools = {
+        { id = "spinwheelitem" },
+        { id = "mag_pseudo_weaver" },
+        { id = "scutcheritem" },
+        { id = "loom_frame" },
+        { id = "shed_stick" },
+        { id = "towel", hotkey = "t" },
+    },
+    item = "mag_awoken_weaver",
+    location = "center",
+    looks_like = "t_leanto",
+    name = ccb.content.text("awoken weaver shelter"),
+    variants = { { symbols = "&", broken_symbols = "x" } },
+}
