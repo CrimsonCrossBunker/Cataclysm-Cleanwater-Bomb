@@ -1,10 +1,5 @@
 [
   {
-    "id": "EOC_MOM_BIOKINESIS_VITAKINESIS_LAB_SHADOW_URGE_PROCESS",
-    "type": "effect_on_condition",
-    "effect": { "open_dialogue": { "topic": "TALK_MOM_SHADOW_URGE_MACHINE" } }
-  },
-  {
     "id": "EOC_MOM_BIOKINESIS_VITAKINESIS_LAB_SHADOW_URGE_SELECT_BIOKINETIC_CRYSTAL",
     "type": "effect_on_condition",
     "effect": [

@@ -224,3 +224,5 @@ require("zener_cards")
 require("terrain_transforms")
 
 require("monster_groups")
+
+require("tile_interactions")
