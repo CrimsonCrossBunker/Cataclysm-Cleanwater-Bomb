@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_USE_EWWWW_DE_ZOMBIE",
-    "effect": [ { "u_add_effect": "effect_ewwww_de_zombie", "duration": { "math": [ "10800 + rand(10800)" ] } } ]
-  }
-]
