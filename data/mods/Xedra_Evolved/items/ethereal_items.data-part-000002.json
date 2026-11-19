@@ -1,0 +1,81 @@
+[
+  {
+    "id": "aura_drunken_master",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": "Drunken Master aura",
+    "description": "Hey I thought this was America…",
+    "weight": "1 g",
+    "volume": "1 ml",
+    "price": "36 USD 46 cent",
+    "symbol": "o",
+    "color": "white",
+    "material": [ "dreamstuff" ],
+    "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE" ],
+    "max_worn": 1,
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Xedra_Evolved_aura_drunken_master_0" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARTIFACT" ],
+    "id": "xe_oneiric_hammer",
+    "name": { "str": "Oneiric Hammer" },
+    "description": "The platonic embodiment of a blacksmiths hammer.  This hammer is necessary to forge or repair items made of forged dreamstuff.",
+    "weight": "1337 g",
+    "color": "brown",
+    "symbol": "/",
+    "material": [ "dreamstuff" ],
+    "flags": [ "NONCONDUCTIVE", "BELT_CLIP", "TRADER_AVOID", "UNBREAKABLE_MELEE", "NO_REPAIR", "NO_SALVAGE", "MAGIC_FOCUS" ],
+    "volume": "1250 ml",
+    "price": "0 cent",
+    "qualities": [ [ "DREAM_HAMMER", 1 ] ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "scrap_dreamdross": 100 } } ],
+    "charges_per_use": 1,
+    "use_action": [
+      {
+        "type": "repair_item",
+        "item_action_type": "repair_metal",
+        "materials": [ "forged_dreamstuff", "moon_tears", "moon_tears_fine_chain" ],
+        "skill": "deduction",
+        "tool_quality": 0,
+        "cost_scaling": 0.1,
+        "move_cost": 100
+      }
+    ],
+    "melee_damage": { "bash": 30 },
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_xe_oneiric_hammer_0" } ]
+  },
+  {
+    "id": "winch_stone",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "constructed winch", "str_pl": "constructed winches" },
+    "description": "A small token that floats near your right hand.  It pulls you to determined coordinates when you command it.",
+    "weight": "1 g",
+    "volume": "1 ml",
+    "material": [ "dreamstuff" ],
+    "symbol": "*",
+    "color": "dark_gray",
+    "flags": [
+      "SINGLE_USE",
+      "TRADER_AVOID",
+      "AURA",
+      "SEMITANGIBLE",
+      "OVERSIZE",
+      "NO_TAKEOFF",
+      "NONCONDUCTIVE",
+      "UNBREAKABLE",
+      "ALLOWS_NATURAL_ATTACKS"
+    ],
+    "max_worn": 1,
+    "armor": [ { "encumbrance": 0, "coverage": 0, "covers": [ "hand_r" ] } ],
+    "use_action": {
+      "type": "effect_on_conditions",
+      "consume": true,
+      "description": "Jump.",
+      "effect_on_conditions": [ "EOC_WINCH_TELEPORT" ]
+    }
+  }
+]
