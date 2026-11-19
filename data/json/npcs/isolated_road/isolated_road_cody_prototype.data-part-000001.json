@@ -1,0 +1,16 @@
+[
+  {
+    "id": "TALK_BLACKSMITH_PROTOTYPE_FEELING_IT",
+    "type": "talk_topic",
+    "dynamic_line": [
+      "Yeah!  I feel a lot better now that Jay and I are talking again, and we've been putting some serious work into this stuff.  If you wanted to help source parts and do some testing, we could definitely get some prototypes made."
+    ],
+    "responses": [
+      {
+        "text": "Alright.",
+        "effect": [ { "u_add_var": "dialogue_artisans_blacksmith_can_prototype", "value": "yes" } ],
+        "topic": "TALK_BLACKSMITH_SERVICES"
+      }
+    ]
+  }
+]
