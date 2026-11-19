@@ -7671,6 +7671,60 @@ function CcbPlatformContent.define_construction(options) end
 ---@param options StaticTrapOptions
 function CcbPlatformContent.define_trap(options) end
 
+---Define an item action name at its ordered position during native content loading.
+---@param options ItemActionDefinitionOptions
+function CcbPlatformContent.define_item_action(options) end
+
+---@class StaticProficiencyCategoryOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+
+---Define a proficiency category at its ordered position during native content loading.
+---@param options StaticProficiencyCategoryOptions
+function CcbPlatformContent.define_proficiency_category(options) end
+
+---@class StaticProficiencyBonus
+---@field attribute "strength"|"dexterity"|"intelligence"|"perception"|"stamina"
+---@field value number
+
+---@class StaticProficiencyOptions: StaticProficiencyCategoryOptions
+---@field category string
+---@field can_learn boolean
+---@field ignore_focus? boolean
+---@field teachable? boolean
+---@field time_to_learn? string Training duration with its unit, such as "30 m".
+---@field time_multiplier? number
+---@field skill_penalty? number
+---@field weakpoint_bonus? number
+---@field weakpoint_penalty? number
+---@field requires? string[]
+---@field bonuses? table<string, StaticProficiencyBonus[]>
+
+---Define a proficiency at its ordered position during native content loading.
+---@param options StaticProficiencyOptions
+function CcbPlatformContent.define_proficiency(options) end
+
+---@class StaticStartLocationTarget
+---@field overmap_terrain string
+---@field match? "exact"|"type"|"subtype"|"prefix"|"contains"
+---@field parameters? table<string, string>
+
+---@class StaticStartLocationOptions
+---@field id string
+---@field name? string|LocalizedText
+---@field copy_from? string
+---@field targets? (string|StaticStartLocationTarget)[]
+---@field city_size? [integer, integer]
+---@field city_distance? [integer, integer]
+---@field z_levels? [integer, integer]
+---@field flags? string[]
+---@field extend_flags? string[]
+
+---Define a start location at its ordered position during native content loading.
+---@param options StaticStartLocationOptions
+function CcbPlatformContent.define_start_location(options) end
+
 ---@class StaticMapTileOptions
 ---@field id? string Stable identifier. Provide either id or abstract.
 ---@field abstract? string Abstract definition available for inheritance.

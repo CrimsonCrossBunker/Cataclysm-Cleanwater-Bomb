@@ -57,6 +57,7 @@ extern "C" {
 #include "native_file_path.h"
 #include "generic_factory.h"
 #include "harvest.h"
+#include "item_action.h"
 #include "item_factory.h"
 #include "itype.h"
 #include "json.h"
@@ -68,7 +69,9 @@ extern "C" {
 #include "mutation.h"
 #include "omdata.h"
 #include "output.h"
+#include "proficiency.h"
 #include "recipe_dictionary.h"
+#include "start_location.h"
 #include "trap.h"
 #include "vehicle_group.h"
 #include "widget.h"
@@ -4722,6 +4725,101 @@ void write_static_trap( JsonOut &json, const sol::table &options )
     }
 }
 
+void write_static_named_definition( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+}
+
+void write_static_proficiency_category( JsonOut &json, const sol::table &options )
+{
+    write_static_named_definition( json, options );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+}
+
+void write_static_proficiency_bonus( JsonOut &json, const sol::table &bonus )
+{
+    json.start_object();
+    json.member( "type", bonus.get<std::string>( "attribute" ) );
+    json.member( "value", bonus.get<double>( "value" ) );
+    json.end_object();
+}
+
+void write_static_proficiency( JsonOut &json, const sol::table &options )
+{
+    write_static_proficiency_category( json, options );
+    write_item_fields<std::string>( json, options, {
+        { "category", "category" }, { "time_to_learn", "time_to_learn" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "can_learn", "can_learn" }, { "ignore_focus", "ignore_focus" }, { "teachable", "teachable" }
+    } );
+    write_item_fields<double>( json, options, {
+        { "time_multiplier", "default_time_multiplier" }, { "skill_penalty", "default_skill_penalty" },
+        { "weakpoint_bonus", "default_weakpoint_bonus" },
+        { "weakpoint_penalty", "default_weakpoint_penalty" }
+    } );
+    write_item_ids( json, options, { { "requires", "required_proficiencies" } } );
+    if( const auto bonuses = options.get<sol::optional<sol::table>>( "bonuses" ) ) {
+        json.member( "bonuses" );
+        json.start_object();
+        for( const auto &[category, values] : *bonuses ) {
+            const std::string name = category.as<std::string>();
+            json.member( name );
+            write_static_values<sol::table>( json, values.as<sol::table>(), name.c_str(),
+                                             write_static_proficiency_bonus );
+        }
+        json.end_object();
+    }
+}
+
+void write_static_start_location_target( JsonOut &json, const sol::object &target )
+{
+    if( target.get_type() == sol::type::string ) {
+        json.write( target.as<std::string>() );
+        return;
+    }
+    const sol::table options = target.as<sol::table>();
+    json.start_object();
+    json.member( "om_terrain", options.get<std::string>( "overmap_terrain" ) );
+    if( const auto match = options.get<sol::optional<std::string>>( "match" ) ) {
+        json.member( "om_terrain_match_type", to_upper_case( *match ) );
+    }
+    if( const auto parameters = options.get<sol::optional<sol::table>>( "parameters" ) ) {
+        json.member( "parameters" );
+        json.start_object();
+        for( const auto &[name, value] : *parameters ) {
+            json.member( name.as<std::string>(), value.as<std::string>() );
+        }
+        json.end_object();
+    }
+    json.end_object();
+}
+
+void write_static_start_location( JsonOut &json, const sol::table &options )
+{
+    write_static_named_definition( json, options );
+    write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
+    if( const auto targets = options.get<sol::optional<sol::table>>( "targets" ) ) {
+        json.member( "terrain" );
+        write_static_values<sol::object>( json, *targets, "targets", write_static_start_location_target );
+    }
+    for( const auto &[field, native] : {
+             std::pair{ "city_size", "city_sizes" }, std::pair{ "city_distance", "city_distance" },
+             std::pair{ "z_levels", "allowed_z_levels" }
+         } ) {
+        write_mapgen_range( json, native, options.raw_get<sol::object>( field ) );
+    }
+    write_item_ids( json, options, { { "flags", "flags" } } );
+    if( const auto flags = options.get<sol::optional<sol::table>>( "extend_flags" ) ) {
+        json.member( "extend" );
+        json.start_object();
+        json.member( "flags", bounded_string_array( *flags, "extend_flags",
+                     std::numeric_limits<std::size_t>::max(), "start location" ) );
+        json.end_object();
+    }
+}
+
 using static_catalog_writer = void ( * )( JsonOut &, const sol::table & );
 
 template<typename Loader>
@@ -4867,6 +4965,18 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "furniture", write_static_tile_furniture, load_furniture ) );
     content.set_function( "define_trap", static_catalog_definition(
                               resolved.id, "trap", write_static_trap, trap::load_trap ) );
+    content.set_function( "define_proficiency_category", static_catalog_definition(
+                              resolved.id, "proficiency_category", write_static_proficiency_category,
+                              proficiency_category::load_proficiency_categories ) );
+    content.set_function( "define_proficiency", static_catalog_definition(
+                              resolved.id, "proficiency", write_static_proficiency,
+                              proficiency::load_proficiencies ) );
+    content.set_function( "define_item_action", static_catalog_definition(
+                              resolved.id, "item_action", write_static_named_definition, []( const JsonObject & jo ) {
+        item_action_generator::generator().load_item_action( jo );
+    } ) );
+    content.set_function( "define_start_location", static_catalog_definition(
+                              resolved.id, "start_location", write_static_start_location, start_locations::load ) );
     install_static_dialogue_predicates( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );
