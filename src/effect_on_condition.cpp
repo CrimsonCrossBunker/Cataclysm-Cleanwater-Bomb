@@ -239,7 +239,19 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 310> migrated_character_tasks = {{
+const std::array<character_task_migration, 316> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_ARVORE_SPELL_EXPERIENCE_INCREASER" ),
+          "arvore_practice_due", "arvore_practice_timer" },
+        { effect_on_condition_id( "EOC_HOMULLUS_SPELL_EXPERIENCE_INCREASER" ),
+          "homullus_practice_due", "homullus_practice_timer" },
+        { effect_on_condition_id( "EOC_IERDE_SPELL_EXPERIENCE_INCREASER" ),
+          "ierde_practice_due", "ierde_practice_timer" },
+        { effect_on_condition_id( "EOC_SALAMANDER_SPELL_EXPERIENCE_INCREASER" ),
+          "salamander_practice_due", "salamander_practice_timer" },
+        { effect_on_condition_id( "EOC_SYLPH_SPELL_EXPERIENCE_INCREASER" ),
+          "sylph_practice_due", "sylph_practice_timer" },
+        { effect_on_condition_id( "EOC_UNDINE_SPELL_EXPERIENCE_INCREASER" ),
+          "undine_practice_due", "undine_practice_timer" },
         { effect_on_condition_id( "EOC_BLOOD_OF_SAINTS_AGAINST_VAMPIRISM" ),
           "blood_of_saints_treatment_due", nullptr, true },
         { effect_on_condition_id( "EOC_ALIEN_MEADOW_BUSH_2_BERRIES_2" ),

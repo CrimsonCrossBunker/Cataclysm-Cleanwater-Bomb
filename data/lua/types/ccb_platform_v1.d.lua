@@ -14961,6 +14961,12 @@ function CcbInventoryApi.items_with_flag(character, flag) end
 ---@return CcbResult result value is a dense array of live item handles.
 function CcbInventoryApi.worn_items(character) end
 
+---Check for a carried instance or a positive native charge count of this item type.
+---@param character GameHandle Exact live Character handle.
+---@param item_type GameId GameId<item>.
+---@return CcbResult result value is true when the Character has the item type.
+function CcbInventoryApi.has_type(character, item_type) end
+
 ---@param character GameHandle Exact live Character handle.
 ---@param item_type GameId Valid GameId<item> queried with native u_has_items/npc_has_items count and charge rules.
 ---@param count integer Non-negative requested item count, at most 1000000000.

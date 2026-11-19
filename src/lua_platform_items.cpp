@@ -8098,6 +8098,25 @@ void install_item_api(
         }, false, current_runtime_generation(), current_world_generation() );
     } );
     inventory.set_function(
+        "has_type",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &handle, const script_game_id &type ) {
+        require_read();
+        require_id_kind( type, "item", "services.inventory.has_type" );
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Character *character = resolve_exact_character(
+                                         handle, current_runtime_generation(),
+                                         current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const itype_id native( type.value() );
+        const talker_character_const actor( character );
+        const bool found = actor.charges_of( native ) > 0 || actor.has_amount( native, 1 );
+        return make_game_value_result( state, sol::make_object( state, found ) );
+    } );
+    inventory.set_function(
         "has_items",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & character,
