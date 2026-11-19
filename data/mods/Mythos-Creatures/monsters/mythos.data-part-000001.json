@@ -1,0 +1,35 @@
+[
+  {
+    "id": "mon_ghast",
+    "type": "MONSTER",
+    "name": { "str": "ghast" },
+    "looks_like": "mon_zombie_biter",
+    "description": "This vaguely humanoid creature is almost as big as a pony.  It has long hooved legs on which it hops, clawed hands, and a hideous noseless head with oversized teeth.",
+    "default_faction": "yig",
+    "bodytype": "bear",
+    "species": [ "MYTHOS" ],
+    "volume": "62500 ml",
+    "weight": "81500 g",
+    "hp": 95,
+    "speed": 55,
+    "material": [ "flesh" ],
+    "symbol": "g",
+    "color": "dark_gray",
+    "aggression": 50,
+    "morale": 50,
+    "melee_skill": 3,
+    "melee_dice": 2,
+    "melee_dice_sides": 4,
+    "melee_damage": [ { "damage_type": "cut", "amount": 0 } ],
+    "weakpoints": [
+      { "name": "the leg", "armor_mult": { "physical": 0.5 }, "coverage": 18 },
+      { "name": "the head", "is_head": true, "armor_mult": { "physical": 0.5 }, "coverage": 3 },
+      { "name": "the eye", "is_head": true, "armor_mult": { "physical": 0 }, "coverage": 1 }
+    ],
+    "vision_night": 3,
+    "harvest": "demihuman",
+    "special_attacks": [ { "type": "bite", "cooldown": 5, "min_mul": 0.75 }, [ "scratch", 20 ] ],
+    "flags": [ "SEES", "HEARS", "HAS_MIND", "SMELLS", "WARM", "BASHES", "GROUP_BASH", "SUNDEATH", "PUSH_MON" ],
+    "armor": { "bash": 5, "cut": 3, "bullet": 2 }
+  }
+]
