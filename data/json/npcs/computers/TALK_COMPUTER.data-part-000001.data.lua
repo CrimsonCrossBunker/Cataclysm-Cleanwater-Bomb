@@ -1,7 +1,17 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "COMP_EMERGENCY_MESSAGE",
-    line = ccb.content.text("GREETINGS CITIZEN.  A BIOLOGICAL ATTACK HAS TAKEN PLACE AND A STATE OF EMERGENCY HAS BEEN DECLARED.  EMERGENCY PERSONNEL WILL BE AIDING YOU SHORTLY.  TO ENSURE YOUR SAFETY PLEASE FOLLOW THE STEPS BELOW.\n 1. DO NOT PANIC.\n 2. REMAIN INSIDE THE BUILDING.\n 3. SEEK SHELTER IN THE BASEMENT.\n 4. USE PROVIDED GAS MASKS.\n 5. AWAIT FURTHER INSTRUCTIONS."),
-    replies = { { text = ccb.content.text("Press any key."), next_topic = "COMP_REFUGEE_CENTER_MAIN" } },
+    id = "COMP_REFUGEE_CENTER_MAIN",
+    line = ccb.content.text("The computer awaits input…"),
+    replies = {
+        { text = ccb.content.text("Emergency Message."), next_topic = "COMP_EMERGENCY_MESSAGE" },
+        {
+            when = predicates.has_mission("MISSION_OLD_GUARD_NEC_COMMO_2"),
+            text = ccb.content.text("Disable External Power"),
+            next_topic = "COMP_DISABLE_EXTERNAL_POWER",
+        },
+        { text = ccb.content.text("Contact Us"), next_topic = "COMP_FIND_REFUGEE_CENTER" },
+        { text = ccb.content.text("Log off."), next_topic = "TALK_DONE" },
+    },
 }
