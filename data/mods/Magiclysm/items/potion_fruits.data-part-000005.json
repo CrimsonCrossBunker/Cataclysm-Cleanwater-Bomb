@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_POTION_FRUIT_RASPBERRY",
-    "effect": [ { "math": [ "u_pain() -= 3" ] } ]
-  }
-]

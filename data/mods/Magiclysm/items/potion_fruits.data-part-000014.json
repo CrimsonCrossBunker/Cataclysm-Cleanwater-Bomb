@@ -1,10 +1,5 @@
 [
   {
-    "type": "effect_on_condition",
-    "id": "EOC_POTION_FRUIT_MAYAPPLE",
-    "effect": [ { "u_add_effect": "effect_pfruit_eat_poison", "duration": { "math": [ "250 + rand(1500)" ] } } ]
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "potion_fruit_m_stellatum_berries",

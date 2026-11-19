@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_POTION_FRUIT_ELDERBERRY",
-    "effect": [ { "math": [ "u_val('sleepiness') -= 25" ] } ]
-  }
-]
