@@ -1,5 +1,49 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "sand_pit_palette",
+    layout = {
+        terrain = {
+            ["-"] = "t_railroad_rubble",
+            M = "t_railroad_rubble",
+            ["8"] = "t_railroad_rubble",
+            ["9"] = "t_railroad_rubble",
+            ["0"] = "t_railroad_rubble",
+            ["~"] = "t_sand",
+            ["5"] = "t_sand",
+            ["6"] = "t_sand",
+            ["7"] = "t_sand",
+            ["■"] = {
+                { id = "t_grass", copies = 50 },
+                { id = "t_grass_long", copies = 25 },
+                { id = "t_grass_tall", copies = 10 },
+                { id = "t_grass_dead", copies = 5 },
+            },
+            ["░"] = { { id = "t_dirt", copies = 25 }, { id = "t_region_groundcover", copies = 1 } },
+            ["▓"] = {
+                { id = "t_pavement", copies = 20 },
+                { id = "t_region_groundcover_urban", copies = 1 },
+            },
+            x = "t_open_air",
+            ["1"] = "t_earth_ramp_down_low",
+            ["2"] = "t_earth_ramp_down_high",
+            ["3"] = "t_earth_ramp_up_low",
+            ["4"] = "t_earth_ramp_up_high",
+            ["≈"] = "t_water_sh",
+        },
+        furniture = {
+            M = "f_machinery_old",
+            ["■"] = { { id = "f_region_weed", copies = 1 }, { id = "f_null", copies = 25 } },
+            ["5"] = "f_sand_mound_short",
+            ["6"] = "f_sand_mound_mid",
+            ["7"] = "f_sand_mound_tall",
+            ["8"] = "f_gravel_mound_short",
+            ["9"] = "f_gravel_mound_mid",
+            ["0"] = "f_gravel_mound_tall",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = {
