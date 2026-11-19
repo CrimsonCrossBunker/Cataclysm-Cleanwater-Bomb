@@ -744,3 +744,95 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "office_bottom_ew",
+    layout = {
+        size = { width = 24, height = 24 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_concrete_wall",
+                x = 0,
+                y = 23,
+                end_x = 5,
+                end_y = 23,
+            },
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_strconc_floor",
+                x = 6,
+                y = 23,
+                end_x = 7,
+                end_y = 23,
+            },
+            {
+                shape = "line",
+                operation = "furniture",
+                id = "f_null",
+                x = 6,
+                y = 23,
+                end_x = 7,
+                end_y = 23,
+            },
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_concrete_wall",
+                x = 8,
+                y = 23,
+                end_x = 23,
+                end_y = 23,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "office_left_ns",
+    layout = {
+        size = { width = 24, height = 24 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_concrete_wall",
+                x = 0,
+                y = 0,
+                end_x = 0,
+                end_y = 15,
+            },
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_strconc_floor",
+                x = 0,
+                y = 16,
+                end_x = 0,
+                end_y = 17,
+            },
+            {
+                shape = "line",
+                operation = "furniture",
+                id = "f_null",
+                x = 6,
+                y = 23,
+                end_x = 7,
+                end_y = 23,
+            },
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_concrete_wall",
+                x = 0,
+                y = 18,
+                end_x = 0,
+                end_y = 23,
+            },
+        },
+    },
+}

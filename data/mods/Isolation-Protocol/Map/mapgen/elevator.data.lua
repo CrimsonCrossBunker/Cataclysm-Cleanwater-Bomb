@@ -294,3 +294,13 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "iso_first_elevator",
+    layout = {
+        fill_terrain = "t_strconc_floor",
+        nested = { { id = "iso_elevator", x = 0, y = 0 } },
+        zone_placements = { { id = "ZONE_START_POINT", faction = "your_followers", x = 9, y = 14 } },
+    },
+}
