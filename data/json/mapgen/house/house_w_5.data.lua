@@ -90,3 +90,132 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_w_5",
+    layout = {
+        rows = {
+            "...[....``G......``.``..",
+            ".[...%µ````µ%..[.``.``..",
+            "....%````````%...``.``ë.",
+            "..##oo##*####o###£££££##",
+            "..#è      |yà  #~~~~~~ë#",
+            "..#            #~~~~~~U#",
+            "..#        Y   #~~~~~~~o",
+            "..#       |||||#~~~~~~U#",
+            "..#       +w|>w#~~~~~~~o",
+            "..#|||||  |||+|#~~~~~~U#",
+            "..#ä           *~~~~éUU#",
+            ".%o      ||||||##~#o####",
+            ".%o      | &   #```````.",
+            ".%o      |     o%`%[%``.",
+            ".^#      |     o%``````.",
+            "### |||  |     #........",
+            "#F1      |+|||+#........",
+            "o2   1|    |D|D#........",
+            "o5   O||+|+|+||#........",
+            "#3 4y |t |ç    #........",
+            "#| || |B |   § o........",
+            "#6s6| |Bi|     #........",
+            "##o##*##o###o###........",
+            "..%.````................",
+        },
+        palettes = { "domestic_general_and_variant_palette", "standard_domestic_landscaping_palette" },
+        terrain = {
+            ["µ"] = "t_column",
+            ["£"] = "t_door_metal_locked",
+            U = "t_thconc_floor",
+            ["~"] = "t_thconc_floor",
+            ["é"] = "t_thconc_floor",
+            ["ù"] = "t_region_groundcover_urban",
+            G = "t_region_groundcover_urban",
+            ["ë"] = "t_gates_control_concrete",
+        },
+        furniture = { ["ù"] = "f_region_weed" },
+        fill_terrain = "t_floor",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "roof_6x6_garden_4", weight = 15 },
+                    { id = "roof_6x6_garden_1", weight = 15 },
+                    { id = "greenhouse_6x6_herbal", weight = 25 },
+                    { id = "greenhouse_6x6_vegetable", weight = 25 },
+                    { id = "pond_6x6", weight = 25 },
+                    { id = "shed_6x6_junk", weight = 25 },
+                    { id = "shed_6x6_woodworker", weight = 25 },
+                },
+                x = 17,
+                y = 15,
+            },
+        },
+        nested_glyphs = {
+            ["&"] = {
+                choices = {
+                    { id = "bedroom_4x4_adult_1_E", weight = 20 },
+                    { id = "bedroom_4x4_adult_1_N", weight = 20 },
+                    { id = "bedroom_4x4_adult_2_E", weight = 20 },
+                    { id = "bedroom_4x4_adult_2_N", weight = 20 },
+                },
+            },
+            ["ä"] = {
+                choices = {
+                    { id = "diningroom_5x5_N_S", weight = 50 },
+                    { id = "diningroom_5x5_E_W", weight = 50 },
+                },
+            },
+            ["§"] = {
+                choices = {
+                    { id = "bonus_room_2x2_2", weight = 50 },
+                    { id = "bonus_room_2x2_3", weight = 50 },
+                    { id = "bonus_room_2x2_4_S", weight = 50 },
+                    { id = "bonus_room_2x2_4_E", weight = 50 },
+                },
+            },
+            ["è"] = {
+                choices = {
+                    { id = "livingroom_5x5_N_1", weight = 20 },
+                    { id = "livingroom_5x5_S_1", weight = 20 },
+                    { id = "livingroom_5x5_E_1", weight = 20 },
+                    { id = "livingroom_5x5_W_1", weight = 20 },
+                },
+            },
+            ["ç"] = {
+                choices = {
+                    { id = "bonus_room_3x3_1", weight = 40 },
+                    { id = "bonus_room_3x3_S_5", weight = 20 },
+                    { id = "bonus_room_3x3_E_7", weight = 40 },
+                    { id = "bonus_room_3x3_S_7", weight = 40 },
+                },
+            },
+            ["à"] = {
+                choices = {
+                    { id = "bonus_room_3x3_4", weight = 20 },
+                    { id = "bonus_room_3x3_E_6", weight = 20 },
+                    { id = "bonus_room_3x3_S_6", weight = 20 },
+                    { id = "bonus_room_3x3_E_8", weight = 30 },
+                    { id = "bonus_room_3x3_S_8", weight = 30 },
+                },
+            },
+        },
+        vehicle_placements = {
+            {
+                id = "showroom_small_vehicles",
+                x = 17,
+                y = 7,
+                rotation = 270,
+                chance = 20,
+                status = 0,
+            },
+            {
+                id = "showroom_small_vehicles",
+                x = 19,
+                y = 7,
+                rotation = 270,
+                chance = 20,
+                status = 0,
+            },
+        },
+    },
+}

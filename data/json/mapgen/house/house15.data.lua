@@ -129,3 +129,57 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "house_15" },
+    layout = {
+        rows = {
+            "......%%p------%%%......",
+            ".....%````````````%.....",
+            "....%``````````````%....",
+            "...%````````````````%...",
+            "..%`````%%%%%%%%`````%..",
+            ".%`````%!!!!!!!!%`````%.",
+            ".%````%%#oooooo#%%````%.",
+            ".%```%%##HHHHHH##%%```%.",
+            ".^```%##E      E##%```%.",
+            ".#o*o##Es llll sE##*oo#.",
+            ".#I  y|          34 12#.",
+            ".#h @@|R  yaay       5#.",
+            ".#  @@|R |||||| hffh O#.",
+            ".#   d|  |L>qq| hffh F#.",
+            ".# y  +             Y6#.",
+            ".#+||+|||+|+||+|||+|||#.",
+            ".#D|9 |   | S|   |  + #.",
+            ".#v|St| @ | t| @ |WZ|$o.",
+            ".###o##y@d|89|d@y##o###.",
+            "......##o##o###o##...^..",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+        },
+        palettes = {
+            "domestic_general_construction_and_variant_palette",
+            "standard_domestic_landscaping_palette",
+        },
+        terrain = { ["%"] = "t_region_shrub_fruit" },
+        furniture = {
+            ["!"] = "f_bluebell",
+            ["$"] = { { id = "f_treadmill" }, { id = "f_treadmill_mechanical" } },
+        },
+        fill_terrain = "t_floor",
+        nested = { { id = "rolling_trash_can_1x1", x = 5, y = 0 } },
+        loot_placements = {
+            {
+                group = "livingroom",
+                x = { 7, 16 },
+                y = { 7, 9 },
+                chance = 90,
+                repetitions = { 1, 6 },
+            },
+        },
+        monster_group_placements = { { group = "GROUP_ZOMBIE", x = { 1, 22 }, y = { 2, 21 }, chance = 5 } },
+    },
+}

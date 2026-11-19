@@ -70,3 +70,43 @@ ccb.content.define_mapgen {
         fill_terrain = "t_thconc_floor",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "house_17" },
+    layout = {
+        rows = {
+            "......p..%--%...........",
+            ".........%--%...........",
+            ".........%--%...........",
+            ".........%--%...........",
+            ".........%--%...........",
+            ".........%--%...........",
+            ".##o#o##.%--%.##o#o##...",
+            ".# @@d #.%--%.# d@@ #^..",
+            ".o @@  o.%--%.o  @@ o...",
+            ".#     o.%--%.o     #...",
+            ".o     o.%--%.o     o...",
+            ".#     #.%--%.#     #...",
+            ".#+|I  ##o**o##  I|+#...",
+            ".#D|I y|y    y|y I|D#...",
+            ".###|+||R    R||+|||#...",
+            "..^#6 éY          |>#...",
+            "...#1       HHHHH + #...",
+            "...oO  CJA sH   H |q#...",
+            "...o2  5JA sH l H ||#o#.",
+            "...#3F47JA        +  8#.",
+            "...###oo###+++##o##S Bo.",
+            "..........#UZW#...#t B#.",
+            "..........#####...##o##.",
+            "........................",
+        },
+        palettes = {
+            "domestic_general_construction_and_variant_palette",
+            "standard_domestic_landscaping_palette",
+        },
+        fill_terrain = "t_floor",
+        nested = { { id = "rolling_trash_can_1x1", x = 7, y = 1 } },
+        monster_group_placements = { { group = "GROUP_ZOMBIE", x = { 2, 21 }, y = { 2, 21 }, chance = 6 } },
+    },
+}

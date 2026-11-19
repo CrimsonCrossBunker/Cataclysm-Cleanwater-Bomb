@@ -40,3 +40,57 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_21",
+    layout = {
+        rows = {
+            "........%`%.............",
+            ".......p.`..............",
+            ".........`.......[......",
+            "........%`%..!..........",
+            ".........`.......!..[...",
+            "...[....%`%...!.........",
+            ".........`..............",
+            "........%`%..##o#oo##...",
+            "....%%%%!````*÷   ET#...",
+            "...##ooo###oo#||Y  E#...",
+            "...#x    |34527|    o...",
+            "...#x  H         hfho...",
+            "...o  lH  YJJJy  hfh#...",
+            "...o   H           y#...",
+            "...# E   |1FO÷6||+||#...",
+            "..^#RR yR###o*##B~~t#^..",
+            "...#||+||#jjj``#B8SQ#...",
+            "...#d   P#`````######...",
+            "...o@@ hIo!````.%%.%....",
+            "...o@@  Io!.............",
+            "...#D   y#!.............",
+            "...##ooo##..............",
+            "........................",
+            "........................",
+        },
+        palettes = {
+            "domestic_general_and_variant_palette", "standard_domestic_lino_bathroom",
+            "standard_domestic_landscaping_palette",
+        },
+        terrain = { j = "t_concrete" },
+        fill_terrain = "t_floor",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 25 },
+                    { id = "playset_4x4_2", weight = 25 },
+                    { id = "firepit_5x5_1", weight = 25 },
+                    { id = "firepit_5x5_2", weight = 25 },
+                    { id = "playset_4x4_1", weight = 25 },
+                },
+                x = { 12, 15 },
+                y = 19,
+            },
+            { id = "rolling_trash_can_1x1", x = 5, y = 1 },
+        },
+        item_placements = { { id = "stereo", x = 4, y = 11, chance = 100 } },
+    },
+}

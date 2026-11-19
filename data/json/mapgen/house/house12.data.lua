@@ -86,3 +86,52 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "house_12" },
+    layout = {
+        rows = {
+            "......--................",
+            "......--p...............",
+            "......--.........X......",
+            "......--................",
+            "......--................",
+            "......--....#####o###...",
+            "......--....#z|ET  s#...",
+            "......--....#D+   @@#...",
+            "..ŦŦŦŦ--ŦŦŦŦ#D+   @@#...",
+            "..Ŧ..%--%...#v|    so...",
+            "..Ŧ..%--%.###||     o...",
+            "..Ŧ%%%--%%#6| +    E#...",
+            "..###o**o##+| |y  II#...",
+            "..#RR       + |||+|##...",
+            "..#     é134| W|d d#^...",
+            "..oEE      F| Z||+|#....",
+            "..o   H hh 2| ||Q B#....",
+            "..oll H ff O| +   Bo....",
+            "..#   H ff 5|+|8Sty#....",
+            ".^#HHHH hh Y|>##o###....",
+            "..##oo##oo#####.........",
+            ".................u......",
+            "........................",
+            "........................",
+        },
+        palettes = {
+            "domestic_general_construction_and_variant_palette",
+            "standard_domestic_landscaping_palette",
+        },
+        fill_terrain = "t_floor",
+        nested = { { id = "rolling_trash_can_1x1", x = 5, y = 1 } },
+        loot_placements = {
+            {
+                group = "livingroom",
+                x = { 3, 7 },
+                y = { 13, 19 },
+                chance = 90,
+                repetitions = { 1, 4 },
+            },
+        },
+        monster_group_placements = { { group = "GROUP_ZOMBIE", x = { 2, 21 }, y = { 2, 21 }, chance = 10 } },
+    },
+}

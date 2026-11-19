@@ -35,3 +35,99 @@ ccb.content.define_mapgen {
         fill_terrain = "t_shingle_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_inner_garden",
+    layout = {
+        rows = {
+            "...%..p``%%%%%%%%`````..",
+            ".%.....``%......%`````§.",
+            ".......``%.....##°°°°°##",
+            ".#%%%##:¶#:#:#:#~~~~~~§#",
+            ".#:::#L  |ù    #~~~~~~~#",
+            "^#yTy#|:¶|     #~~~~~~##",
+            "##é            #~~~~~~N#",
+            "#h             #~~~~~~U#",
+            "##             #~~~~~~U#",
+            ".#             +~~~~~~U#",
+            ".#     y y:¶#::#::::::##",
+            ".##|OL|| |:```````````#.",
+            ".µ#5      :`#à..à..`j`#.",
+            ".%#1  3A  ¶`.......`j`#.",
+            ".^#2FF4A  :`#......`j`#.",
+            "###||||| |:```````````#.",
+            "#y    +  y:¶#:¶#:¶::::#.",
+            "o  è  |R    +     £   #.",
+            "o     |R |++|HsH      #.",
+            "#D    ||+|Wg||||      #.",
+            "#######S ||||S +      #.",
+            ".....^#t 9|9  t| |DDDD#.",
+            "......###o#o###########.",
+            "........................",
+        },
+        palettes = { "domestic_general_and_variant_palette", "standard_domestic_landscaping_palette" },
+        terrain = {
+            ["µ"] = "t_region_groundcover_urban",
+            ["§"] = "t_gates_mech_control",
+            ["°"] = "t_door_metal_locked",
+            ["~"] = "t_thconc_floor",
+            j = "t_concrete",
+            U = "t_thconc_floor",
+            N = "t_thconc_floor",
+        },
+        furniture = { ["µ"] = "f_region_weed" },
+        fill_terrain = "t_floor",
+        nested = { { id = "rolling_trash_can_1x1", x = 3, y = 1 } },
+        nested_glyphs = {
+            ["£"] = { choices = { { id = "bedroom_4x4_adult_1_E", weight = 20 } } },
+            ["à"] = {
+                choices = {
+                    { id = "garden_3x3_1", weight = 50 },
+                    { id = "garden_3x3_2", weight = 33 },
+                    { id = "garden_3x3_3", weight = 33 },
+                },
+            },
+            ["é"] = {
+                choices = {
+                    { id = "diningroom_5x5_N_S", weight = 50 },
+                    { id = "diningroom_6x6_N_S_1A", weight = 50 },
+                },
+            },
+            ["ù"] = {
+                choices = {
+                    { id = "livingroom_5x5_N_1", weight = 20 },
+                    { id = "livingroom_5x5_S_1", weight = 20 },
+                    { id = "livingroom_5x5_E_1", weight = 20 },
+                    { id = "livingroom_5x5_E_2", weight = 20 },
+                    { id = "livingroom_5x5_W_1", weight = 20 },
+                },
+            },
+            ["è"] = {
+                choices = {
+                    { id = "bonus_room_3x3_S_6", weight = 40 },
+                    { id = "bonus_room_3x3_S_5", weight = 20 },
+                    { id = "bonus_room_3x3_S_7", weight = 40 },
+                },
+            },
+        },
+        vehicle_placements = {
+            {
+                id = "showroom_small_vehicles",
+                x = 17,
+                y = 5,
+                rotation = 270,
+                chance = 20,
+                status = 0,
+            },
+            {
+                id = "showroom_small_vehicles",
+                x = 19,
+                y = 5,
+                rotation = 270,
+                chance = 20,
+                status = 0,
+            },
+        },
+    },
+}

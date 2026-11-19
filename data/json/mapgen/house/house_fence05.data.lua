@@ -76,3 +76,48 @@ ccb.content.define_mapgen {
         fill_terrain = "t_shingle_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_fence05_2",
+    layout = {
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_bathroom" },
+        rows = {
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "......,,,,,,,,,,,,,,,...",
+            "......,,,,,,,,,,,,,,,...",
+            "......,,,,,,,,,,,,,,,...",
+            "......##oo#######oo##...",
+            "......#¤ y|dd|!|sETy#...",
+            "......o@@ |++|+|H   #...",
+            "......o@@    + |H  x#...",
+            "......#¤   Db| |H  so...",
+            "......#||||||| |||+|#...",
+            "....,,#y    +      $#^..",
+            "....,,#¤  Db|RR     #...",
+            "....,,o@@ |||||+||| o...",
+            "......o@@ +d|~~~~B| o...",
+            ".,,,,.#¤  +d|tS88B|>#...",
+            ".,,,,.##oo###########...",
+            ".,,,,........^..........",
+            ".,,,,...................",
+            "........................",
+        },
+        terrain = { [","] = "t_shingle_flat_roof", ["."] = "t_open_air" },
+        furniture = { ["!"] = "f_clothing_rail", ["$"] = "f_table" },
+        fill_terrain = "t_floor",
+        item_groups = {
+            ["$"] = { group = "table_foyer", chance = 50 },
+            ["!"] = {
+                { group = "dress_shop", chance = 50, repetitions = { 1, 2 } },
+                { group = "jackets", chance = 30, repetitions = { 1, 2 } },
+            },
+        },
+        loot_placements = { { id = "television", x = 19, y = 12 } },
+    },
+}
