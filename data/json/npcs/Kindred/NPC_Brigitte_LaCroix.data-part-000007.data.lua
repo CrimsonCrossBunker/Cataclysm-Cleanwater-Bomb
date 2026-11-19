@@ -1,97 +1,84 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_COOPER3",
-    line = ccb.content.text("You do not realize the gravity of your claim.  When you understand the Song better, you will understand the danger of his actions."),
+    id = "TALK_BONE_SEER_OTHERS",
+    line = ccb.content.text("There are others who know the power the bones hold, but not all of them are my kin.  Not anymore, at least."),
+    on_enter = {
+        {
+            actions = { actions.set_actor_value("speaker", "dialogue_kindred_knows_kindred", "yes") },
+        },
+    },
     replies = {
-        { text = ccb.content.text("I see."), next_topic = "TALK_BONE_SEER" },
-        { text = ccb.content.text("We'll see about that."), next_topic = "TALK_BONE_SEER" },
+        {
+            text = ccb.content.text("What do you mean 'not anymore'?"),
+            next_topic = "TALK_BONE_SEER_COOPER",
+        },
+        {
+            text = ccb.content.text("Why do you gather these bones again?"),
+            next_topic = "TALK_BONE_SEER_BONES",
+        },
+        {
+            text = ccb.content.text("Thank you for all the information, but I have to go now."),
+            next_topic = "TALK_DONE",
+        },
     },
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_BONES",
-    line = ccb.content.text("The song can be woven in many forms.  Carved bone charms, weapons and armor all hold immense power, and when the time comes, me and my Kindred shall amass enough Song to restore this world as it was before.  Restore it, or end it.  Makes no difference."),
-    replies = { { text = ccb.content.text("End the world?  What?"), next_topic = "TALK_BONE_SEER_END" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_END",
-    line = ccb.content.text("The Song holds immeasurable power.  A grand symphony could revert the Cataclysm - or accelerate it to a time beyond all.  But with the world looking as is, both options are preferable."),
-    replies = {
+    id = "TALK_BONE_SEER_COOPER",
+    line = ccb.content.text("Some time ago, a man named Cooper joined me and my kin.  He showed great promise and devotion to our cause, but in his effort to weave songs, he justified increasingly grim actions.  We tried to stop him when we learned of this, but he managed to get away.  If you ever come across him, be sure to thread carefully, and if you can, stop him."),
+    on_enter = {
         {
-            text = ccb.content.text("A strange belief, but maybe there is some truth to it."),
-            next_topic = "TALK_BONE_SEER_POSITIVE",
+            actions = { actions.set_actor_value("speaker", "dialogue_kindred_cooper_knows_cooper", "yes") },
         },
-        {
-            text = ccb.content.text("Well, at least you're trying to help."),
-            next_topic = "TALK_BONE_SEER_POSITIVE",
-        },
-        { text = ccb.content.text("You're nuts."), next_topic = "TALK_BONE_SEER_INSULT" },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_POSITIVE",
-    line = ccb.content.gendered_line("Your mind is open.  More than most.  Perhaps one day, you too will feel the power of the song and become Kindred.  For now, traveler, listen, listen and feel the song.", { "speaker" }),
-    replies = { { text = ccb.content.text("I… thank you."), next_topic = "TALK_BONE_SEER" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_INSULT",
-    line = ccb.content.text("Your skepticism does not surprise me.  Perhaps one day, you too will hear the inevitability of the song, feel its power.  But until you do, you will remain just another survivor, path to the Kindred closed."),
-    replies = { { text = ccb.content.text("Alright."), next_topic = "TALK_BONE_SEER" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_ABOUT",
-    line = ccb.content.text("I grew up in Louisiana with my grandmother.  Great cook.  Made the best boudin I've ever had.  Each night, she would tell me stories; mostly folklore and myths, like about the rougarou, or the Honey Island Swamp monster but… she sometimes told me about me about the Song, and the bones.  The way she talked about it was… different, serious.  Didn't give it much thought back then; I was just a child, after all.  I moved here a few years back for work, before the Cataclysm, before everything changed.  I do miss home sometimes, but at least the rats here are smaller.  Never could stand the things.  Anyway… thank you for asking.  Been a while since I could simply talk to someone."),
     replies = {
         {
-            text = ccb.content.text("Why didn't your parents raise you?"),
-            next_topic = "TALK_BONE_SEER_PARENTS",
+            text = ccb.content.text("Wait, Cooper?  Darren Cooper?  I've already met him."),
+            next_topic = "TALK_BONE_SEER_METCOOPER2",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_cooper" } }),
         },
-        { text = ccb.content.text("What's boudin?"), next_topic = "TALK_BONE_SEER_BOUDIN" },
         {
-            text = ccb.content.text("What do you mean she talked about the Song 'differently'?"),
-            next_topic = "TALK_BONE_SEER_GRANDMA",
+            text = ccb.content.text("What exactly did he do?"),
+            next_topic = "TALK_BONE_SEER_COOPER2",
         },
-        { text = ccb.content.text("What's wrong with rats?"), next_topic = "TALK_BONE_SEER_RATS" },
         {
-            text = ccb.content.text("Thank you for sharing.  <done_conversation_section>"),
+            text = ccb.content.text("Sounds like there is another side to this.  Sometimes, what is necessary is not pretty."),
+            next_topic = "TALK_BONE_SEER_COOPER3",
+            actions = { actions.set_actor_value("speaker", "dialogue_kindred_admires_cooper", "yes") },
+        },
+        {
+            text = ccb.content.text("What cause is that?  What do you do with the bones?"),
+            next_topic = "TALK_BONE_SEER_BONES",
+        },
+        {
+            text = ccb.content.text("I see.  <done_conversation_section>"),
             next_topic = "TALK_BONE_SEER",
         },
     },
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_PARENTS",
-    line = ccb.content.text("They died when I was very young.  Car accident.  I… don't have any memories of them, but my grandmother raised me as her own."),
-    replies = { { text = ccb.content.text("She sounds nice."), next_topic = "TALK_BONE_SEER_ABOUT" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_BOUDIN",
-    line = ccb.content.text("Spicy sausage, green onions, rice.  She'd batter and deep fry them, make boudin balls.  A dish to die for."),
-    replies = {
-        { text = ccb.content.text("Sounds delicious."), next_topic = "TALK_BONE_SEER_ABOUT" },
-        { text = ccb.content.text("Not my kind of thing."), next_topic = "TALK_BONE_SEER_ABOUT" },
+    id = "TALK_BONE_SEER_COOPER2",
+    line = ccb.content.text("He began killing others to get their bones as fresh as possible.  Later, he… he started carving the bones of the living.  Thought the anguish alone would empower the song.  The goal of the Kindred is to banish the shadow of the Cataclysm, not to cast it.  Such heinous acts will likely twist the song of the world, but I don't think Cooper realizes it.  To him, the end justifies any means."),
+    on_enter = {
+        {
+            actions = {
+                actions.set_actor_value("speaker", "dialogue_kindred_cooper_knows_cooper_kill", "yes"),
+            },
+        },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_GRANDMA",
-    line = ccb.content.text("Unlike the other stories, she spoke with determination, reverence even.  I didn't realize it back then but it wasn't just a story; she knew that this wasn't just another tale."),
-    replies = { { text = ccb.content.text("I see."), next_topic = "TALK_BONE_SEER_ABOUT" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_RATS",
-    line = ccb.content.text("Ever since a young age, I hated rats.  Can't quite say why; they always struck me as something… foul.  I even have nightmares about them sometimes.  Not too long ago, I had one about a man-sized rat, shambling on it's hind legs.  It chased me up a tall building and then pushed me off, snickering.  Maybe the Song was trying to tell me something, but then again, maybe it was just a bad dream."),
     replies = {
         {
-            text = ccb.content.text("Strange dream, but we all have fears, sometimes irrational."),
-            next_topic = "TALK_BONE_SEER_ABOUT",
+            text = ccb.content.text("Well… shit.  <done_conversation_section>"),
+            next_topic = "TALK_BONE_SEER",
+        },
+        {
+            text = ccb.content.text("What if he is right?  Maybe what you do isn't enough and he's the only one to do what it takes."),
+            next_topic = "TALK_BONE_SEER_COOPER3",
+            actions = { actions.set_actor_value("speaker", "dialogue_kindred_admires_cooper", "yes") },
         },
     },
 }

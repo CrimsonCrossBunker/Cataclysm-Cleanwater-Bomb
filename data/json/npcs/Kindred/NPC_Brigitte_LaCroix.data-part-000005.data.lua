@@ -1,15 +1,26 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_BONE_SEER_SONG3",
-    line = ccb.content.text("Only when you crush the bones of a body does it cease to rise.  Only if you examine the bones can you see what was, the story of the bones.  Whatever causes this change is alive, writhing within us all; an inevitable part of this new world.  It holds the power of change.  When we hold the bones, we hold the power.  Thus the strength.  Together… they form a beautiful song."),
+    id = "TALK_BONE_SEER_SONG2",
+    line = ccb.content.text("When it all happened, the Cataclysm, something… changed.  You can see it in all creatures, most of all in their bones.  They break, morph, rise again, over and over - a never-ending cycle.  The dead walk again, horrors rip and tear each other apart.  And within each one… the quiet hum of raw strength.  Only by taking the bones does the cycle end - their story, their song, their strength; they become yours to use."),
+    on_enter = {
+        {
+            actions = { actions.set_actor_value("speaker", "dialogue_song_asked_about_song", "yes") },
+        },
+    },
     replies = {
         {
             text = ccb.content.text("What do you actually do with the bones?"),
             next_topic = "TALK_BONE_SEER_BONES",
         },
         {
-            text = ccb.content.text("Does anyone else share this belief?"),
+            text = ccb.content.text("I'm still not sure what you mean."),
+            next_topic = "TALK_BONE_SEER_SONG3",
+        },
+        {
+            text = ccb.content.text("Does anyone else, uh, believe this?"),
             next_topic = "TALK_BONE_SEER_OTHERS",
         },
     },
