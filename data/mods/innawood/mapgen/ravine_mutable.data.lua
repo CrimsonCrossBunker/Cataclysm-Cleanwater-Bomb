@@ -1,5 +1,44 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "ravine_corner_parameters",
+    layout = {
+        parameters = {
+            variant = {
+                value_type = "nested_mapgen",
+                default = { weighted = { "24x24_ravine_corner_v1", "24x24_ravine_corner_v2" } },
+                scope = "map_stack",
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "ravine_2way_parameters",
+    layout = {
+        parameters = {
+            variant = {
+                value_type = "nested_mapgen",
+                default = { weighted = { "24x24_ravine_2way_v1", "24x24_ravine_2way_v2" } },
+                scope = "map_stack",
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "ravine_3way_parameters",
+    layout = {
+        parameters = {
+            variant = {
+                value_type = "nested_mapgen",
+                default = { weighted = { "24x24_ravine_3way_v1", "24x24_ravine_3way_v2" } },
+                scope = "map_stack",
+            },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "24x24_ravine_straight_v1",
