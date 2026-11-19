@@ -1,0 +1,35 @@
+[
+  {
+    "id": "BGSS_SCAVENGER_MERC_1_FREE_MERCHANTS",
+    "type": "talk_topic",
+    "dynamic_line": "Fucking dull.  Caravan patrols were a bit more fun, for a while, but a guy can only eat so much road dust.  Guarding that pile of bricks full of sad-sack pussies who can't even justify surviving <the_cataclysm>?  Well, I dunno.  They're not a bad bunch but I'm fine not working for them now.",
+    "responses": [
+      {
+        "text": "Why was someone with your skillset guarding a warehouse?  Must've been some warehouse.",
+        "condition": { "and": [ { "u_has_intelligence": 7 }, { "u_has_perception": 8 } ] },
+        "topic": "BGSS_SCAVENGER_MERC_1_STORY4"
+      },
+      { "text": "What was working for the Old Guard like?", "topic": "BGSS_SCAVENGER_MERC_1_OLD_GUARD" },
+      { "text": "Thanks for that.", "topic": "TALK_FRIEND_CONVERSATION" },
+      { "text": "Thanks for that.  <lets_go>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "BGSS_SCAVENGER_MERC_1_OLD_GUARD",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "gendered_line": "Good work, and some fun stuff, but risky.  Without a few hands at my side that I trust, I wouldn't take more of their work.  If I had a solid team, though, I'd happily work for Uncle Sam again.",
+      "relevant_genders": [ "npc" ]
+    },
+    "responses": [
+      {
+        "text": "Why was a guy with your skillset guarding a warehouse?  Must've been some warehouse.",
+        "condition": { "and": [ { "u_has_intelligence": 7 }, { "u_has_perception": 8 } ] },
+        "topic": "BGSS_SCAVENGER_MERC_1_STORY4"
+      },
+      { "text": "What was working for the Free Merchants like?", "topic": "BGSS_SCAVENGER_MERC_1_FREE_MERCHANTS" },
+      { "text": "Thanks for that.", "topic": "TALK_FRIEND_CONVERSATION" },
+      { "text": "Thanks for that.  <lets_go>", "topic": "TALK_DONE" }
+    ]
+  }
+]
