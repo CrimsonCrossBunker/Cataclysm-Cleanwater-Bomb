@@ -1,26 +1,5 @@
 [
   {
-    "id": "TALK_GREAT_LIBRARY_LIBRARIAN_Intro",
-    "type": "talk_topic",
-    "dynamic_line": "Before you ask, we can't lend out books anymore.  We've had too many stolen and destroyed.  If you want to read something, either do it here or I will need to sell it to you for something useful, like a book.  Oh, my name is Elvira Fish, I run Circulations here.  I hope you learn something.",
-    "speaker_effect": [
-      {
-        "sentinel": "has_onetime_greeting_effect",
-        "condition": { "not": { "u_has_effect": "u_Elvira_onetime_greeting" } },
-        "effect": [ { "u_add_effect": "u_Elvira_onetime_greeting", "duration": "12 hours" } ]
-      }
-    ],
-    "responses": [
-      { "text": "Can you answer some questions for me?", "topic": "TALK_GREAT_LIBRARY_LIBRARIAN_Talk" },
-      {
-        "text": "Let me look at what you have.",
-        "topic": "TALK_GREAT_LIBRARY_LIBRARIAN_DoneTrading",
-        "effect": "start_trade"
-      },
-      { "text": "I just want to browse.  <end_talking_bye>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
     "id": [
       "TALK_GREAT_LIBRARY_LIBRARIAN_Talk",
       "TALK_GREAT_LIBRARY_LIBRARIAN_AboutGreeting_End",
