@@ -1,26 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_BEGGAR_2_DINO2",
-    "dynamic_line": "I know all kinds of weird useless stuff.  I've seen things at churches, I've seen things on farms, I've seen whole exhibits way out, a whole zoo even.  And there's someone pretending to be me, but it's not me, because I would know.  Or you would know.  One of us would be us.  Those Swampers, they know what's happening.  They're creatures of light come back to save us all.  Or eat us, I forget.  Oh and that Old Guard Repo Man hates them and Red is out there somewhere in the great red yonder.",
-    "responses": [
-      {
-        "text": "Yes.  How do I find the someone pretending to be you?",
-        "topic": "TALK_REFUGEE_BEGGAR_2_DINO_Directions",
-        "condition": {
-          "and": [
-            { "not": { "u_has_mission": "MISSION_REACH_FAKE_DAVE" } },
-            { "not": { "compare_string": [ "yes", { "u_val": "found_fake_dave" } ] } }
-          ]
-        }
-      },
-      { "text": "What was that about cardboard?", "topic": "TALK_REFUGEE_BEGGAR_2_CARDBOARD" },
-      { "text": "Why are you sitting out here?", "topic": "TALK_REFUGEE_BEGGAR_2_REFUGEE" },
-      { "text": "I think I have to get going…", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_REFUGEE_BEGGAR_2_DINO_Directions",
     "dynamic_line": "Wait, what if I'm the probe?  What if you're the probe?  Let me mark that on your map nice and big.",
     "speaker_effect": { "effect": { "assign_mission": "MISSION_REACH_FAKE_DAVE" } },
