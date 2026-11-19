@@ -1,0 +1,63 @@
+[
+  {
+    "id": "mon_utilibot_fire",
+    "type": "MONSTER",
+    "copy-from": "mon_utilibot_const",
+    "name": "TsKBEM Brandspojt",
+    "description": "An old and decidedly uncommon firefighter robot of Soviet design.  Crab-like in form, its back mounts a squat water tank beneath a turreted water cannon.  While effective for its original function, the design lacks the flexibility of others from the TsKBEM, and most Brandspojt units still in existence are museum pieces.",
+    "color": "yellow",
+    "luminance": 100,
+    "melee_skill": 3,
+    "melee_dice": 4,
+    "melee_dice_sides": 5,
+    "melee_dice_ap": 4,
+    "melee_damage": [ { "damage_type": "cut", "amount": 1 } ],
+    "starting_ammo": { "water": 1000 },
+    "special_attacks": [
+      {
+        "type": "gun",
+        "cooldown": 0,
+        "move_cost": 100,
+        "gun_type": "watercannon",
+        "fake_skills": [ [ "gun", 2 ], [ "launcher", 2 ] ],
+        "fake_dex": 8,
+        "ranges": [ [ 0, 5, "BURST" ] ]
+      }
+    ],
+    "extend": { "flags": [ "FIREPROOF", "BASHES" ] }
+  },
+  {
+    "id": "mon_fumigator",
+    "type": "MONSTER",
+    "copy-from": "base_drone",
+    "name": { "str": "Croplord 2SPL", "str_pl": "Croplords 2SPL" },
+    "description": "Twin linked rotors allow this ubiquitous EINAC drone to comfortably hover above fields and deploy pesticides at prodigious rates.  They have no ability to detect humans within their work areas and will readily disperse lethal pesticides near them.",
+    "default_faction": "rampant_machine",
+    "symbol": "y",
+    "diff": 40,
+    "speed": 100,
+    "hp": 120,
+    "volume": "1750 ml",
+    "weight": "1 kg",
+    "color": "green",
+    "melee_skill": 8,
+    "melee_dice": 1,
+    "melee_dice_sides": 8,
+    "morale": 20,
+    "starting_ammo": { "afs_foamtoxic": 400 },
+    "death_function": { "corpse_type": "BROKEN", "message": "The Croplord crashes into the ground." },
+    "special_attacks": [
+      {
+        "type": "gun",
+        "move_cost": 80,
+        "cooldown": 3,
+        "gun_type": "afs_foamgun",
+        "ammo_type": "afs_foamtoxic",
+        "fake_skills": [ [ "gun", 2 ], [ "launcher", 2 ] ],
+        "fake_dex": 8,
+        "ranges": [ [ 0, 6, "DEFAULT" ] ]
+      }
+    ],
+    "extend": { "flags": [ "DROPS_AMMO" ] }
+  }
+]

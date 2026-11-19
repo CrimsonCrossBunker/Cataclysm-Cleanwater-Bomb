@@ -1,0 +1,55 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_utilibot_hostile",
+    copy_from = "mon_utilibot_const",
+    name = ccb.content.plural_text("rampant Udarnik", "rampant Udarniks"),
+    description = ccb.content.text("An erratic and dangerous Udarnik that mistakenly attempts to hammer everything in its sights.  Although this corrupted robot is not built for combat, its sheer size and hydraulic strength make it extremely dangerous up close."),
+    default_faction = "rampant_machine",
+    color = "yellow",
+    melee_skill = 4,
+    morale = 20,
+    aggression = 50,
+    melee_dice = 4,
+    melee_sides = 5,
+    melee_armor_penetration = 4,
+    attacks = { { id = "smash", throw_strength = 96 } },
+    inheritance = { add = { flags = { "BASHES", "DESTROYS", "ATTACKMON" } } },
+}
+
+-- Its in Russian.  Not a typo.
+ccb.content.define_monster {
+    id = "mon_zenit",
+    name = ccb.content.plural_text("TsKBEM Zenit", "TsKBEM Zenit"),
+    looks_like = "mon_hazmatbot",
+    description = ccb.content.text("An ancient security drone intended to safeguard extractive outposts in hostile environments.  Its construction vaguely recalls an alien crustacean, with a single sensory oculus and four spade-like legs mounted underneath a disk of space-ship grade armor.  Zenit units can mount a wide variety of \"deterrent\" weapon modules, and it's difficult to tell what this rogue unit is capable of."),
+    default_faction = "rampant_machine",
+    species = { "ROBOT" },
+    volume = "62 L",
+    mass = "81500 g",
+    hp = 1200,
+    speed = 70,
+    materials = { "steel" },
+    symbol = "M",
+    color = "yellow",
+    morale = 80,
+    aggression = 50,
+    anger_triggers = { "HURT", "PLAYER_CLOSE", "FRIEND_ATTACKED" },
+    vision_day = 50,
+    melee_skill = 6,
+    melee_dice = 4,
+    melee_sides = 5,
+    melee_armor_penetration = 4,
+    bleed_rate = 0,
+    attacks = { { id = "zenit_control", cooldown = 5 } },
+    weakpoint_sets = { "afs_wps_robot", "afs_wps_robot_explode", "afs_wps_zenit" },
+    flags = {
+        "SEES", "HEARS", "ELECTRONIC", "BIOLOGICALPROOF", "NO_BREATHE", "PRIORITIZE_TARGETS",
+        "PATH_AVOID_DANGER", "STUN_IMMUNE",
+    },
+    armor = { bash = 30, cut = 50, bullet = 60, afs_laser = 30, afs_plasma = 20, electric = 10 },
+    death = {
+        drops = { groups = { { id = "broken_robots", weight = 3 } } },
+        outcome = { corpse = "BROKEN" },
+    },
+}

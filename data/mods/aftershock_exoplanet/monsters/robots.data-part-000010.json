@@ -1,0 +1,77 @@
+[
+  {
+    "id": "mon_advbot_emp",
+    "type": "MONSTER",
+    "copy-from": "mon_advbot_base",
+    "name": { "str": "Wraitheon Frequency", "str_pl": "Wraitheon Frequencies" },
+    "description": "An autonomous weapons platform, made to disrupt or disable electronics - especially other robots - with an electromagnetic pulse.",
+    "default_faction": "WraitheonRobotics",
+    "diff": 10,
+    "melee_dice": 4,
+    "melee_dice_sides": 5,
+    "melee_dice_ap": 4,
+    "special_attacks": [
+      {
+        "type": "gun",
+        "cooldown": 2,
+        "gun_type": "emp_gun",
+        "fake_skills": [ [ "gun", 5 ], [ "rifle", 5 ] ],
+        "fake_dex": 10,
+        "ranges": [ [ 0, 4, "BURST" ], [ 4, 8, "AUTO" ], [ 9, 16, "DEFAULT" ] ],
+        "require_targeting_player": true,
+        "require_targeting_npc": true,
+        "require_targeting_monster": true,
+        "target_moving_vehicles": true,
+        "targeting_cost": 10,
+        "targeting_timeout": 1,
+        "targeting_timeout_extend": -1,
+        "targeting_sound": "\"Hostile detected.\"",
+        "targeting_volume": 10
+      }
+    ],
+    "armor": { "bash": 30, "cut": 50, "bullet": 60, "afs_laser": 30, "afs_plasma": 20, "electric": 10 }
+  },
+  {
+    "id": "mon_shock_mine",
+    "type": "MONSTER",
+    "name": { "str": "shock-mine" },
+    "//": "A monster so that the player and other monsters can shoot at it without the need of custom AI.",
+    "description": "A bulky device that will constantly discharge electricity in a small radius around it.",
+    "default_faction": "rampant_machine",
+    "species": [ "ROBOT" ],
+    "diff": 12,
+    "volume": "1 L",
+    "weight": "1200 g",
+    "hp": 5,
+    "speed": 100,
+    "material": [ "steel" ],
+    "symbol": "i",
+    "color": "light_gray",
+    "aggression": 100,
+    "morale": 100,
+    "bleed_rate": 0,
+    "vision_night": 4,
+    "luminance": 10,
+    "emit_fields": [ { "emit_id": "emit_spark", "delay": "1 s" } ],
+    "special_attacks": [
+      {
+        "type": "gun",
+        "cooldown": 1,
+        "gun_type": "afs_mine_shocker",
+        "fake_skills": [ [ "gun", 2 ], [ "rifle", 3 ] ],
+        "ranges": [ [ 0, 5, "DEFAULT" ] ]
+      },
+      {
+        "type": "spell",
+        "spell_data": { "id": "shock_mine_control", "min_level": 1, "hit_self": true },
+        "allow_no_target": true,
+        "monster_message": "",
+        "cooldown": 3
+      }
+    ],
+    "death_function": { "corpse_type": "BROKEN" },
+    "//2": "Deliberately electric and not electronic, so it can be immune to electric damage and EMP.",
+    "flags": [ "SEES", "NOHEAD", "ELECTRIC", "BIOLOGICALPROOF", "COLDPROOF", "IMMOBILE", "NO_BREATHE" ],
+    "armor": { "bash": 5, "cut": 2, "bullet": 3, "stab": 0, "electric": 100 }
+  }
+]
