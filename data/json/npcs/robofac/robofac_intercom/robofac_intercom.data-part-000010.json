@@ -1,17 +1,60 @@
 [
   {
-    "id": "TALK_ROBOFAC_INTERCOM_1_JOBS_2",
+    "id": "TALK_ROBOFAC_ABOUT_EXODII_2",
     "type": "talk_topic",
-    "dynamic_line": "Certainly.  I've just finished speaking with a certain individual, who has authorized you limited access to a selection of our internal stores.  We will provide you with pay for contracts in the form of tokens to be used as an exchange currency, which you can then trade for goods.  We are also amenable to bartering in exchange for supplies that are currently difficult for us to obtain from outside the facility.",
+    "dynamic_line": "Inter-dimensional travellers you say?  What kind of tech do these beings operate?  And how were you able to communicate with them?",
     "speaker_effect": {
       "effect": [
-        { "npc_add_var": "dialogue_intercom_npc_intercom_trade", "value": "yes" },
-        { "set_string_var": "yes", "target_var": { "global_val": "hub01_intercom_trade_unlocked" } },
-        { "u_add_var": "dialogue_intercom_completed_robofac_intercom_1", "value": "yes" },
-        { "finish_mission": "MISSION_ROBOFAC_INTERCOM_1", "success": true }
-      ],
-      "sentinel": "unlocked_trade"
+        { "u_add_var": "u_informed_robofac_of_exodii", "value": "yes" },
+        { "math": [ "hub01_knows_exodii = 1" ] },
+        { "u_add_effect": "robofac_surveillance", "duration": "30 days" },
+        { "u_add_faction_trust": 1 }
+      ]
     },
-    "responses": [ { "text": "I'll keep that in mind.  Let's get down to business.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES_FIRST" } ]
+    "responses": [
+      { "text": "Alright listen up.", "topic": "TALK_GIVE_ROBOFAC_EXODII_INFO" },
+      { "text": "Information doesn't come cheap my friend.", "topic": "TALK_ROBOFAC_EXODII_INFO_REWARD" },
+      {
+        "text": "I've said more than I ought to have.  I'm leaving.",
+        "topic": "TALK_DONE",
+        "effect": { "u_add_faction_trust": -1 }
+      }
+    ]
+  },
+  {
+    "id": "TALK_GIVE_ROBOFAC_EXODII_INFO",
+    "type": "talk_topic",
+    "dynamic_line": "Well?",
+    "speaker_effect": { "effect": [ { "u_add_var": "u_give_robofac_exodii_info", "value": "yes" } ] },
+    "responses": [
+      {
+        "text": "They are a race of inter-dimensional beings who call themselves the Exodii.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.",
+        "topic": "TALK_FINISH_ROBOFAC_EXODII_DISCUSSION",
+        "effect": [ { "u_add_faction_trust": 1 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      },
+      {
+        "text": "They are a race of inter-dimensional beings who call themselves the Exodii and they use a mix of futuristic and ancient technology the latter being mostly due to their last landing place being an ancient battlefield of some sort.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  While their choice for personal defense was more along the lines of ancient gear like spears and swords.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.",
+        "topic": "TALK_FINISH_ROBOFAC_EXODII_DISCUSSION",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_talk_exodii_about_medieval_stock" } ] },
+        "effect": [ { "u_add_faction_trust": 2 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      },
+      {
+        "text": "They are a race of inter-dimensional beings who call themselves the Exodii.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.  They are here to mine this place of any useful metal, gather any tech they deem worth saving and maybe even grab a couple of survivors to join their ranks before they move out.",
+        "topic": "TALK_FINISH_ROBOFAC_EXODII_DISCUSSION",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_know_exodii_purpose2" } ] },
+        "effect": [ { "u_add_faction_trust": 2 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      },
+      {
+        "text": "They are a race of inter-dimensional beings who call themselves the Exodii and they use a mix of futuristic and ancient technology the latter being mostly due to their last landing place being an ancient battlefield of some sort.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  However their choice for personal defense was more along the lines of ancient gear like spears and swords.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.  They are here to mine this place of any useful metal, gather any tech they deem worth saving and maybe even grab a couple of survivors to join their ranks before they move out.",
+        "topic": "TALK_FINISH_ROBOFAC_EXODII_DISCUSSION",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "u_know_exodii_purpose2" } ] },
+            { "compare_string": [ "yes", { "u_val": "u_talk_exodii_about_medieval_stock" } ] }
+          ]
+        },
+        "effect": [ { "u_add_faction_trust": 3 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      }
+    ]
   }
 ]

@@ -1,38 +1,23 @@
 [
   {
-    "id": "TALK_ROBOFAC_INTERCOM_ARMOR_POSITIVE",
+    "//": "This exchange is used when the player is already a mercenary for Hub 01, so the intercom is much more informal about it",
+    "id": "TALK_ROBOFAC_INTERCOM_FREE_MERCHANT_DELIVERY_MERCENARY",
     "type": "talk_topic",
-    "dynamic_line": "We've solved that issue with our more recent prototypes.\"  There is a brief pause.  \"You seem like a good candidate.  We will transfer over the additional pieces to complete that prototype set, with the goal of collecting additional field data.  The core armor platform is solid, and we have been iterating on supplementary pieces we would be willing to trade to you.  Any feedback on their performance would be appreciated.",
-    "speaker_effect": { "effect": { "math": [ "u_hub01_good_candidate = 1" ] } },
+    "dynamic_line": "Oh!  Good.  We had written that off as a non-starter.  Just drop it into the tray and we'll bring it in.",
     "responses": [
       {
-        "text": "Thank you.",
-        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES",
-        "effect": [ { "u_spawn_item": "robofac_basic_vambraces" }, { "u_spawn_item": "robofac_basic_greaves" } ]
+        "text": "[Hand over the FEMA data.]",
+        "condition": { "u_has_items": { "item": "fema_data", "count": 1 } },
+        "effect": [
+          { "u_consume_item": "fema_data", "count": 1, "popup": true },
+          { "u_add_var": "dialogue_intercom_completed_free_merchants_hub_delivery_1", "value": "yes" }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_FREE_MERCHANT_DELIVERY_MERCENARY_END"
       },
       {
-        "text": "Hopefully it serves me better than the good doctor.",
-        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES",
-        "effect": [ { "u_spawn_item": "robofac_basic_vambraces" }, { "u_spawn_item": "robofac_basic_greaves" } ]
-      },
-      {
-        "text": "We'll see what happens.",
-        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES",
-        "effect": [ { "u_spawn_item": "robofac_basic_vambraces" }, { "u_spawn_item": "robofac_basic_greaves" } ]
+        "text": "I don't have the drive with me right now; I'll give it to you when I have it.",
+        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES"
       }
     ]
-  },
-  {
-    "id": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_ASK",
-    "type": "talk_topic",
-    "dynamic_line": "It was a modified Wraitheon chassis, with a custom AI.  We'd hoped that it would interact with the outside world for us, but you know how well that went.  That particular line of study is now on hiatus, given that the project lead… well, you know.",
-    "speaker_effect": {
-      "effect": [
-        { "npc_add_var": "dialogue_intercom_told_about_prototype", "value": "yes" },
-        { "set_string_var": "yes", "target_var": { "global_val": "hub01_intercom_told_prototype" } }
-      ],
-      "sentinel": "told_about_prototype"
-    },
-    "responses": [ { "text": "Right.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES" } ]
   }
 ]
