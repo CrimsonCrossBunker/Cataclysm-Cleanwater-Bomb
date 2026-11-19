@@ -41767,7 +41767,7 @@
         "lua_name": "LocalizedText",
         "registration": {
           "installer": "platform_v1.install_mod_definition",
-          "line": 368,
+          "line": 369,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },
@@ -41949,7 +41949,7 @@
         "lua_name": "ModDefinition",
         "registration": {
           "installer": "platform_v1.install_mod_definition",
-          "line": 369,
+          "line": 370,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },

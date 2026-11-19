@@ -55,6 +55,7 @@ extern "C" {
 #include "json_loader.h"
 #include "mapgen.h"
 #include "omdata.h"
+#include "output.h"
 #include "recipe_dictionary.h"
 #include <functional>
 
@@ -1372,7 +1373,7 @@ void write_mapgen_terrain_matchers( JsonOut &json, const sol::table &matches )
             json.start_object();
             json.member( "om_terrain", matcher.get<std::string>( "terrain" ) );
             if( const auto mode = matcher.get<sol::optional<std::string>>( "match" ) ) {
-                json.member( "om_terrain_match_type", *mode );
+                json.member( "om_terrain_match_type", to_upper_case( *mode ) );
             }
             json.end_object();
         }
