@@ -33,3 +33,12 @@ ccb.content.define_mapgen {
         palettes = { "roof_palette" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mechanical_fluid",
+    layout = {
+        size = { width = 1, height = 1 },
+        field_placements = { { id = "fd_mechanical_fluid", x = 0, y = 0, intensity = 1, age_turns = 10 } },
+    },
+}
