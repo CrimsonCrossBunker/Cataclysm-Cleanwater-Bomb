@@ -1,0 +1,60 @@
+local ccb = require("ccb")
+
+ccb.content.define_mutation {
+    id = "AFS_PHYSICAL_CAPABILITY_GENEMOD",
+    name = ccb.content.text("Genemod: Improved Physical Capability"),
+    points = 3,
+    description = ccb.content.text("Your strength, coordination, and sensory acuity have been increased through genemod treatments."),
+    cancels = {
+        "MYOPIC",
+        "HYPEROPIC",
+        "BADHEARING",
+        "ESPER_ADVANCEMENT_OKAY",
+        "ESPER_STARTER_ADVANCEMENT_OKAY",
+    },
+    enchantments = { "INLINE_ENCH_AFS_PHYSICAL_CAPABILITY_GENEMOD_0" },
+    flags = { "IMMUNE_HEARING_DAMAGE" },
+}
+
+ccb.content.define_mutation {
+    id = "AFS_MENTAL_CAPABILITY_GENEMOD",
+    name = ccb.content.text("Genemod: Improved Mental Flexibility"),
+    points = 3,
+    cancels = { "FORGETFUL", "ESPER_ADVANCEMENT_OKAY", "ESPER_STARTER_ADVANCEMENT_OKAY" },
+    description = ccb.content.text("Your concentration and memorization abilities have been increased through genemod treatments."),
+    enchantments = { "INLINE_ENCH_AFS_MENTAL_CAPABILITY_GENEMOD_0" },
+}
+
+ccb.content.define_mutation {
+    id = "AFS_HEALTH_CAPABILITY_GENEMOD",
+    name = ccb.content.text("Genemod: Improved Health"),
+    points = 3,
+    description = ccb.content.text("Your resistance to disease and infection, as well as your ability to recover from injuries, have been improved through genemod treatments."),
+    enchantments = { "INLINE_ENCH_AFS_HEALTH_CAPABILITY_GENEMOD_0" },
+    cancels = {
+        "SLOWHEALER",
+        "SLOWHEALER2",
+        "SLOWHEALER3",
+        "ESPER_ADVANCEMENT_OKAY",
+        "ESPER_STARTER_ADVANCEMENT_OKAY",
+    },
+    flags = { "MEND_ALL" },
+}
+
+ccb.content.define_mutation {
+    id = "AFS_RECOVERY_CAPABILITY_GENEMOD",
+    name = ccb.content.text("Genemod: Efficient System"),
+    points = 3,
+    description = ccb.content.text("The efficiency of your metabolic processes, from the length of your sleep cycle to losing fatigue after exercise, have been improved through genemod treatments."),
+    cancels = { "SLEEPY", "SLEEPY2", "ESPER_ADVANCEMENT_OKAY", "ESPER_STARTER_ADVANCEMENT_OKAY" },
+    enchantments = { "INLINE_ENCH_AFS_RECOVERY_CAPABILITY_GENEMOD_0" },
+}
+
+ccb.content.define_mutation {
+    id = "AFS_BEAUTY_GENEMOD",
+    name = ccb.content.text("Genemod: Beauty"),
+    points = 3,
+    description = ccb.content.text("Your physical appearance has been improved through genemod treatments."),
+    enchantments = { "INLINE_ENCH_AFS_BEAUTY_GENEMOD_0" },
+    cancels = { "UGLY", "DEFORMED", "DEFORMED2", "ESPER_ADVANCEMENT_OKAY", "ESPER_STARTER_ADVANCEMENT_OKAY" },
+}
