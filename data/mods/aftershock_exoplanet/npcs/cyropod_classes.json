@@ -60,45 +60,5 @@
       { "skill": "electronics", "bonus": { "rng": [ 1, 5 ] } },
       { "skill": "firstaid", "bonus": { "rng": [ 1, 4 ] } }
     ]
-  },
-  {
-    "id": "TALK_THAWED_1",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "npc_val": "dialogue_thawed_thawed_has_talked" } ],
-      "no": "What year is it?  How long have I been asleep?",
-      "yes": "Anymore bad news?"
-    },
-    "speaker_effect": { "effect": { "npc_add_var": "dialogue_thawed_thawed_has_talked", "value": "yes" } },
-    "responses": [
-      {
-        "switch": true,
-        "condition": { "compare_string": [ "yes", { "npc_val": "dialogue_thawed_thawed_has_talked" } ] },
-        "text": "Hey.  Let's chat for a second.",
-        "topic": "TALK_STRANGER_NEUTRAL"
-      },
-      {
-        "switch": true,
-        "default": true,
-        "text": "I thawed you out of that pod.  Listen, I could use your help…",
-        "trial": { "type": "PERSUADE", "difficulty": 0 },
-        "success": { "topic": "TALK_THAWED_FRIENDLY", "opinion": { "trust": 1, "value": 1 } },
-        "failure": { "topic": "TALK_THAWED_WARY", "opinion": { "anger": 1, "fear": 1 } }
-      },
-      {
-        "switch": true,
-        "default": true,
-        "text": "If you won't help me, I am going to hurt you.",
-        "trial": { "type": "INTIMIDATE", "difficulty": 20, "mod": [ [ "AGGRESSION", -2 ], [ "BRAVERY", -2 ] ] },
-        "success": { "topic": "TALK_THAWED_FEARFUL", "opinion": { "trust": -4, "fear": 3, "value": -1, "anger": 4 } },
-        "failure": { "topic": "TALK_THAWED_BREAKDOWN", "opinion": { "trust": -4, "value": -5, "anger": 10 } }
-      },
-      {
-        "switch": true,
-        "default": true,
-        "text": "Sorry, no need to get angry.  I'll get out of your way.",
-        "topic": "TALK_DONE"
-      }
-    ]
   }
 ]
