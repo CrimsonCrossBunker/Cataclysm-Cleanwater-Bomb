@@ -38,15 +38,5 @@
       },
       { "text": "Do you miss any food from the old days?", "topic": "TALK_FRIEND_Liam_CHAT_Food" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_FRIEND_Liam_CHAT_Friends4ever",
-    "dynamic_line": {
-      "compare_string": [ "ddotd", { "u_val": "flag_modded" } ],
-      "no": "Aww, of course.  No matter what happens, you're always you and I'm always me, right?  We've been through worse than this.\"  He pauses, his brow furrowed.  \"Well, okay, maybe we haven't.  But we've stuck through it all for so many years, what's a little apocalypse gonna change?  Or a little mutation, or grievous bodily harm, or zombies, or interdimensional monster attacks and serious life-altering PTSD, or whatever.  Who cares.  You're my family, more than my birth family ever was.",
-      "yes": "<talk_snippet_modded_liam_Friends4ever>"
-    },
-    "responses": [ { "text": "[Continue chatting.]", "topic": "TALK_DONE" } ]
   }
 ]

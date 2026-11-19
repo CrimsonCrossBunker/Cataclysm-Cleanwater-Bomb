@@ -1,60 +1,14 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_Liam_Opinions_directions_isherwood",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "u_met_an_isherwood" } ],
-      "yes": "Isn't he just directing us out to that Isherwood farm?",
-      "no": "Sounds good.  I'm a bit nervous about what we might find, though.  Who knows what the apocalypse would do to a bunch of gun-toting back country folks?  On the other hand, maybe they're sweet, salt-of-the-earth types.  Only one way to find out!"
+    "id": "TALK_Liam_Opinions_MISSION_FREE_MERCHANTS_EVAC_5",
+    "dynamic_line": "Look, you're the one that agreed to this.  I don't know why you keep agreeing to this stuff.  Maybe we can check hardware stores?  Or just eat a lot of jarred food, and keep the empties?  A hundred jars.  That's a lot, my friend.\"  He shakes his head.  \"You don't have to agree to do *everything* people ask you to do, you know?",
+    "speaker_effect": {
+      "effect": { "u_add_var": "u_liam_opinion_liam_MISSION_FREE_MERCHANTS_EVAC_5", "value": "yes" },
+      "sentinel": "liam_opinion_liam_MISSION_FREE_MERCHANTS_EVAC_5"
     },
-    "responses": [ { "text": "Right.  I'd like your opinion on something else.", "topic": "TALK_Liam_Opinions" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_Liam_Opinions_directions_hub01",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "dialogue_intercom_u_discovered_robofac_intercom" } ],
-      "yes": {
-        "math": [ "u_hub01_completed_missions >= 1" ],
-        "yes": "Is that just that Hub place, with the intercom?  Not that it's not cool, but it's nothing new to us.  Woah… we've really seen some shit, haven't we.",
-        "no": "It sounds to me like this might be that intercom we found out in that weird building?  I'm just guessing.  We should go confirm."
-      },
-      "no": "Hell yeah, this sounds so badass!  Let's be careful though, 'secret lab' sounds like a place that's gonna have some defenses."
-    },
-    "responses": [ { "text": "You bet.  I'd like your opinion on something else.", "topic": "TALK_Liam_Opinions" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_Liam_Opinions_directions_exodii",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Rubik" } ],
-      "yes": "We've been there, remember?  It's got those cyborg guys, the cockney ones.",
-      "no": "Far-fetched and awesome!  Let's go see.  Maybe it's an abandoned theme park or something."
-    },
-    "responses": [ { "text": "I'd like your opinion on something else.", "topic": "TALK_Liam_Opinions" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_Liam_Opinions_directions_artisans",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "u_met_isolated_road_artisans" } ],
-      "yes": {
-        "concatenate": [
-          "We've been there, remember",
-          {
-            "compare_string": [ "yes", { "u_val": "u_met_isolated_road_cody" } ],
-            "yes": "?  Cody, the blacksmith, she's the food lady",
-            "no": "?  I'm guessing the blacksmith we didn't talk to is the one who would have fed us"
-          },
-          {
-            "compare_string": [ "yes", { "u_val": "u_met_isolated_road_jay" } ],
-            "yes": ", and Jay is the one with the weird bullet bank.",
-            "no": ", and the other guy there must be the one with the bullet bank."
-          }
-        ]
-      },
-      "no": "I'm open to anything if it means getting fed.  Ugh, unless it's unidentified meat.  I guess we have to be more careful of strangers than we used to.  Still, let's find out."
-    },
-    "responses": [ { "text": "I'd like your opinion on something else.", "topic": "TALK_Liam_Opinions" } ]
+    "responses": [
+      { "text": "Your objection is noted.  I'd like your opinion on something else, though.", "topic": "TALK_Liam_Opinions" }
+    ]
   }
 ]

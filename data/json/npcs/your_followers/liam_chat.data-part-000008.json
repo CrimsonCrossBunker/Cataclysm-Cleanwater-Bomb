@@ -1,26 +1,12 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_Liam_Opinions_MISSION_FREE_MERCHANTS_EVAC_5",
-    "dynamic_line": "Look, you're the one that agreed to this.  I don't know why you keep agreeing to this stuff.  Maybe we can check hardware stores?  Or just eat a lot of jarred food, and keep the empties?  A hundred jars.  That's a lot, my friend.\"  He shakes his head.  \"You don't have to agree to do *everything* people ask you to do, you know?",
-    "speaker_effect": {
-      "effect": { "u_add_var": "u_liam_opinion_liam_MISSION_FREE_MERCHANTS_EVAC_5", "value": "yes" },
-      "sentinel": "liam_opinion_liam_MISSION_FREE_MERCHANTS_EVAC_5"
-    },
-    "responses": [
-      { "text": "Your objection is noted.  I'd like your opinion on something else, though.", "topic": "TALK_Liam_Opinions" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_Liam_Opinions_MISSION_BROKER_1",
+    "id": "TALK_Liam_Opinions_MISSION_FREE_MERCHANTS_HUB_DELIVERY_1",
     "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "u_liam_opinion_liam_MISSION_FREE_MERCHANTS_EVAC_5" } ],
-      "yes": "*shakes his head at you.  \"Look, you asked last time, and I told you you didn't have to keep taking jobs like this.  Now you're asking again?  *I dunno, stop offering to bring a billion jars to people if you don't know where to find them.*\"  He laughs.  \"I'm just messing with you.\"  His eyes narrow.  \"Or am I?\"",
-      "no": "Look, you're the one that agreed to this.  I don't know why you keep agreeing to this stuff.  Maybe we can check hardware stores?  Or just eat a lot of jarred food, and keep the empties?  A hundred jars.  That's a lot, my friend.\"  He shakes his head.  \"You don't have to agree to do *everything* people ask you to do, you know?"
+      "math": [ "u_hub01_completed_missions >= 1" ],
+      "yes": "I'm thinking this kinda sounds like that intercom and their vague-yet-menacing government agency.\"  He pauses.  \"That might be a deep cut, if you never listened to Night Vale.  Anyway, I bet that's where we're going.",
+      "no": "I'm thinking this sounds *awesome*, and also possibly we're gonna die.  At least we'll die investigating a vague-yet-menacing government agency.\"  He pauses.  \"That might be a deep cut, if you never listened to Night Vale."
     },
-    "responses": [
-      { "text": "Your objection is noted.  I'd like your opinion on something else, though.", "topic": "TALK_Liam_Opinions" }
-    ]
+    "responses": [ { "text": "Yep, same page.  I'd like your opinion on something else, actually.", "topic": "TALK_Liam_Opinions" } ]
   }
 ]

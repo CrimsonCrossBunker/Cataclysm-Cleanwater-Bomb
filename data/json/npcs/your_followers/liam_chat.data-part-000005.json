@@ -1,0 +1,12 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_Liam_Jenny_CrushAccuse",
+    "dynamic_line": "*stares at you wide-eyed for a beat, then breaks into a shy grin.  \"Aw man, busted.  You *know* I dig those distracted nerdy chicks who don't react to my presence in any way.  It's all good though, you know?  Don't tell her.  I barely know her and it's not like she's in a place to be dating some stranger.\"",
+    "speaker_effect": { "effect": { "u_add_var": "u_liam_jenny_feelings", "value": "crushing_hard" } },
+    "responses": [
+      { "text": "Your secret's safe with me.  <done_conversation_section>", "topic": "TALK_Liam_SOCIAL" },
+      { "text": "Your secret's safe with me.  <lets_go>", "topic": "TALK_DONE" }
+    ]
+  }
+]
