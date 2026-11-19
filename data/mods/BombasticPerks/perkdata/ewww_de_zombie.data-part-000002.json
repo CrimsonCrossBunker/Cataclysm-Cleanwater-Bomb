@@ -1,0 +1,15 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_EWWWW_DE_ZOMBIE_ATTACK_ZOMBIE_SUPPRESSOR",
+    "eoc_type": "EVENT",
+    "required_event": "monster_takes_damage",
+    "condition": "has_beta",
+    "effect": [
+      {
+        "if": { "and": [ { "u_has_species": "ZOMBIE" }, { "npc_has_effect": "effect_ewwww_de_zombie" } ] },
+        "then": [ { "npc_add_effect": "effect_ewwww_de_zombie_canceller", "duration": 120 } ]
+      }
+    ]
+  }
+]
