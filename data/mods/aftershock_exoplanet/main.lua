@@ -6,6 +6,7 @@ require("region_settings")
 
 require("dimensions")
 require("spaceport")
+require("npc_shop_rules")
 
 local ccb = require("ccb")
 local content = ccb.content
