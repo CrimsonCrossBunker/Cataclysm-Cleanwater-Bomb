@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "paintballgun",
+    looks_like = "hk_mp5",
+    symbol = "(",
+    color = "light_gray",
+    name = ccb.content.text("paintball gun"),
+    description = ccb.content.text("A fairly harmless gun that shoots small paintballs."),
+    price = "80 USD",
+    survival_price = "50 cent",
+    materials = { "aluminum", "plastic" },
+    flags = { "NEVER_JAMS", "NON_FOULING" },
+    mass = "1600 g",
+    volume = "1250 ml",
+    accuracy = -1,
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { paintball = 50 } } },
+    melee_damage = { bash = 5 },
+    gun = {
+        reload_noise_volume = 6,
+        skill = "smg",
+        ammunition = { "paintball" },
+        range = 8,
+        damage = { type = "bash", amount = 1 },
+        dispersion = 150,
+        durability = 7,
+        clip_size = 50,
+        reload_time = 50,
+        mod_locations = {
+            { id = "sling", count = 1 },
+            { id = "rail mount", count = 1 },
+            { id = "sights mount", count = 1 },
+            { id = "stock mount", count = 1 },
+            { id = "underbarrel mount", count = 1 },
+        },
+    },
+}
