@@ -1,28 +1,30 @@
 local ccb = require("ccb")
 
-ccb.content.define_dialogue_topic {
-    id = "TALK_FORGE_LORD_DIVINER",
-    line = ccb.content.text("Are you looking for something?  I can help with anything but your own stuff.  You'll have to ask your mother for help with that."),
-    replies = {
-        {
-            text = ccb.content.text("Can you help me find something?"),
-            next_topic = "TALK_FORGE_DIVINER_FIND_WHAT",
-        },
-        {
-            text = ccb.content.text("What are you doing here?"),
-            next_topic = "TALK_FORGE_DIVINER_DOING",
-        },
-        { text = ccb.content.text("Well, bye."), next_topic = "TALK_DONE" },
+-- This is a unique NPC who doesn't get randomly selected background traits
+ccb.content.define_npc_class {
+    id = "NC_FORGE_LORD_DIVINER",
+    name = ccb.content.text("Diviner"),
+    job_description = ccb.content.text("I see the past, the present, and the future."),
+    traits = {
+        { trait = "VAULT_DEFENDER" },
+        { trait = "LIBRARY_DEFENDER" },
+        { group = "NPC_starting_traits" },
+        { group = "Appearance_demographics" },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_FORGE_DIVINER_DOING",
-    line = ccb.content.text("What are any of us really doing here in this dead and dying world?  I specialize in scrying, and while I wish I could say I'm in it to help lost souls find their way, the collective pockets of a thousand realities is a very good incentive.  I can help you find any number of things, but I take no responsibility for what happens when you find what you're looking for."),
-    replies = {
+    common = false,
+    intelligence = { one_in = 4 },
+    perception = { one_in = 4 },
+    worn = "NC_FORGE_LIBRARIAN_clothes",
+    skills = {
         {
-            text = ccb.content.text("Let's talk business then."),
-            next_topic = "TALK_FORGE_LORD_DIVINER",
+            skill = "ALL",
+            level = {
+                mul = { { one_in = 3 }, { sum = { { dice = { 2, 2 } }, { constant = -2 }, { one_in = 4 } } } },
+            },
         },
+        { skill = "unarmed", bonus = { one_in = 2 } },
+        { skill = "melee", bonus = { one_in = 2 } },
+        { skill = "gun", bonus = { rng = { 0, 2 } } },
+        { skill = "speech", bonus = { rng = { 1, 3 } } },
     },
 }

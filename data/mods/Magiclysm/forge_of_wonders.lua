@@ -6,6 +6,10 @@ ccb.runtime.handler("forge_of_wonders_display_stock_is_sellable", function()
     return false
 end)
 
+ccb.runtime.handler("trigger_forge_lockdown_on_death", function(context)
+    context.cast_spell(services.types.id("spell", "SPELL_FORGE_LOCKDOWN"))
+end)
+
 local function checked(result)
     if not result.ok then error(result.error.message) end
     return result.value

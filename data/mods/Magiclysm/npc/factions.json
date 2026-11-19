@@ -220,12 +220,6 @@
     "description": "Builders and merchants of magical wonders.  They expect to weather this Cataclysm through trade and innovation.  They will take any coin from any land."
   },
   {
-    "type": "effect_on_condition",
-    "id": "EOC_DEATH_FORGE_LORD",
-    "eoc_type": "NPC_DEATH",
-    "effect": [ { "u_cast_spell": { "id": "SPELL_FORGE_LOCKDOWN" } } ]
-  },
-  {
     "type": "SPELL",
     "id": "SPELL_FORGE_LOCKDOWN",
     "name": { "str": "SPELL_FORGE_LOCKDOWN", "//~": "NO_I18N" },

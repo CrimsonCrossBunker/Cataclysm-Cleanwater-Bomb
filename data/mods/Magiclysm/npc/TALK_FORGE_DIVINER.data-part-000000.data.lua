@@ -1,30 +1,15 @@
 local ccb = require("ccb")
 
--- This is a unique NPC who doesn't get randomly selected background traits
-ccb.content.define_npc_class {
-    id = "NC_FORGE_LORD_DIVINER",
-    name = ccb.content.text("Diviner"),
-    job_description = ccb.content.text("I see the past, the present, and the future."),
-    traits = {
-        { trait = "VAULT_DEFENDER" },
-        { trait = "LIBRARY_DEFENDER" },
-        { group = "NPC_starting_traits" },
-        { group = "Appearance_demographics" },
-    },
-    common = false,
-    intelligence = { one_in = 4 },
-    perception = { one_in = 4 },
-    worn = "NC_FORGE_LIBRARIAN_clothes",
-    skills = {
-        {
-            skill = "ALL",
-            level = {
-                mul = { { one_in = 3 }, { sum = { { dice = { 2, 2 } }, { constant = -2 }, { one_in = 4 } } } },
-            },
-        },
-        { skill = "unarmed", bonus = { one_in = 2 } },
-        { skill = "melee", bonus = { one_in = 2 } },
-        { skill = "gun", bonus = { rng = { 0, 2 } } },
-        { skill = "speech", bonus = { rng = { 1, 3 } } },
-    },
+-- The Diviner of the Forge of Wonders.
+ccb.content.define_npc {
+    id = "forge_lord_diviner",
+    unique_name = ccb.content.text("Mary Machen"),
+    suffix = ccb.content.text("Diviner"),
+    class = "NC_FORGE_LORD_DIVINER",
+    attitude = 0,
+    mission = "SHOPKEEP",
+    gender = "female",
+    chat = "TALK_FORGE_LORD_DIVINER",
+    faction = "forge_lords",
+    on_death = "trigger_forge_lockdown_on_death",
 }
