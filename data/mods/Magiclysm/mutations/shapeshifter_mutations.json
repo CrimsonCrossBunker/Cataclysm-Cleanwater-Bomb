@@ -1,20 +1,6 @@
 [
   {
     "type": "mutation",
-    "id": "DRUID_SHIFTER_BEAR_FORM",
-    "name": { "str": "Form of the Forest King" },
-    "points": 0,
-    "description": "You can transform yourself into a bear.  Roar.",
-    "starting_trait": false,
-    "purifiable": false,
-    "valid": false,
-    "active": true,
-    "activated_is_setup": true,
-    "activated_eocs": [ "EOC_DRUID_SHIFTER_BEAR_FORM_activated" ],
-    "deactivated_eocs": [ "EOC_DRUID_SHIFTER_BEAR_FORM_deactivated" ]
-  },
-  {
-    "type": "mutation",
     "id": "DRUID_SHIFTER_BEAR_FORM_TRAITS",
     "name": "Bear Form",
     "points": 98,
@@ -42,20 +28,6 @@
   },
   {
     "type": "mutation",
-    "id": "DRUID_SHIFTER_COUGAR_FORM",
-    "name": { "str": "Form of the Stalking Hunter" },
-    "points": 0,
-    "description": "You can transform yourself into a cougar and stalk your enemies.",
-    "starting_trait": false,
-    "purifiable": false,
-    "valid": false,
-    "active": true,
-    "activated_is_setup": true,
-    "activated_eocs": [ "EOC_DRUID_SHIFTER_COUGAR_FORM_activated" ],
-    "deactivated_eocs": [ "EOC_DRUID_SHIFTER_COUGAR_FORM_deactivated" ]
-  },
-  {
-    "type": "mutation",
     "id": "DRUID_SHIFTER_COUGAR_FORM_TRAITS",
     "name": "Cougar Form",
     "points": 98,
@@ -72,20 +44,6 @@
     ],
     "flags": [ "MUTE", "NO_SPELLCASTING", "QUADRUPED_RUN", "TOUGH_FEET", "TEMPORARY_SHAPESHIFT", "TEMPORARY_SHAPESHIFT_NO_HANDS" ],
     "override_look": { "id": "mon_cougar", "tile_category": "monster" }
-  },
-  {
-    "type": "mutation",
-    "id": "DRUID_SHIFTER_DEER_FORM",
-    "name": { "str": "Form of the Swift Runner" },
-    "points": 0,
-    "description": "You can transform yourself into a deer.",
-    "starting_trait": false,
-    "purifiable": false,
-    "valid": false,
-    "active": true,
-    "activated_is_setup": true,
-    "activated_eocs": [ "EOC_DRUID_SHIFTER_DEER_FORM_activated" ],
-    "deactivated_eocs": [ "EOC_DRUID_SHIFTER_DEER_FORM_deactivated" ]
   },
   {
     "type": "mutation",
@@ -149,20 +107,6 @@
       { "part": "torso", "ignored": 100 }
     ],
     "override_look": { "id": "mon_fish_carp", "tile_category": "monster" }
-  },
-  {
-    "type": "mutation",
-    "id": "DRUID_SHIFTER_RAVEN_FORM",
-    "name": { "str": "Form of the Soaring Wings" },
-    "points": 0,
-    "description": "You can transform yourself into a raven and take wing.",
-    "starting_trait": false,
-    "purifiable": false,
-    "valid": false,
-    "active": true,
-    "activated_is_setup": true,
-    "activated_eocs": [ "EOC_DRUID_SHIFTER_RAVEN_FORM_activated" ],
-    "deactivated_eocs": [ "EOC_DRUID_SHIFTER_RAVEN_FORM_deactivated" ]
   },
   {
     "type": "mutation",
