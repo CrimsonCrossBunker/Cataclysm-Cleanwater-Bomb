@@ -1,0 +1,68 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "MSU14_MAIN",
+    "dynamic_line": "&<color_red>WARNING: ADMINISTRATIVE LOCKDOWN IN EFFECT.  USAGE OF SYSTEM 14 HAS BEEN CURTAILED.</color>\n\n",
+    "responses": [
+      {
+        "text": "Install the Hub software package.",
+        "topic": "MSU14_MISSION_COMPLETE",
+        "condition": { "u_has_mission": "RD_1" }
+      },
+      {
+        "text": "Attempt to access System 14.",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "computer_hacking_msu14_hack" } ] } },
+        "trial": { "type": "SKILL_CHECK", "difficulty": 5, "skill_required": "computer" },
+        "success": { "topic": "MSU14_UNIT_ACCESS" },
+        "failure": { "topic": "MSU14_HACK_FAILURE" }
+      },
+      { "text": "Browse stored documents.", "topic": "MSU14_PRE_DOCS" },
+      { "text": "Log Off", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "MSU14_MISSION_COMPLETE",
+    "dynamic_line": "&Processing 1 of 1 - Installing Sys3_rnp_4b12\n[====================] 100%\nThe operation completed successfully.\n\nRestart to apply changes.\nDo you want to restart now?  (Y/N)\n\n",
+    "responses": [
+      {
+        "text": "Restart the computer and leave.",
+        "topic": "TALK_DONE",
+        "effect": { "npc_first_topic": "MSU14_LOCKED_START" }
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "MSU14_PRE_DOCS",
+    "dynamic_line": "&Listing all saved files:\nA. P-144MS TALON UGV platform - Generative optimizations",
+    "responses": [
+      {
+        "text": "View and print the Talon Schematics.",
+        "topic": "MSU14_DOCS_SUCCESS",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "computer_hacking_msu14_printed_docs" } ] } }
+      },
+      {
+        "text": "View and print the Talon Schematics.",
+        "topic": "MSU14_DOCS_FAILURE",
+        "condition": { "compare_string": [ "yes", { "u_val": "computer_hacking_msu14_printed_docs" } ] }
+      },
+      { "text": "Return.", "topic": "MSU14_MAIN" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "MSU14_DOCS_SUCCESS",
+    "dynamic_line": "&Printing…",
+    "responses": [
+      {
+        "text": "Return.",
+        "topic": "MSU14_MAIN",
+        "effect": [
+          { "u_spawn_item": "schematics_secubot", "count": 1 },
+          { "u_add_var": "computer_hacking_msu14_printed_docs", "value": "yes" }
+        ]
+      }
+    ]
+  }
+]
