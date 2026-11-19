@@ -57,42 +57,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "abandonedwarehouse",
-    "object": {
-      "fill_ter": "t_thconc_floor",
-      "rotation": [ 1, 1 ],
-      "rows": [
-        "                        ",
-        "                        ",
-        "           aaa          ",
-        "        dddaaadddddddd  ",
-        "        d|||+||||||||d  ",
-        "        6|6.........|d  ",
-        "aaaaaaaaa-.......^..|d  ",
-        "aaaaaaaaa-..........|d  ",
-        "aaaaaaaaa-...^....^.|d  ",
-        "aaaaaaaaa-..........|d  ",
-        "aaaaaaaaa-..........|d  ",
-        "aaaaaaaaa-..........|d  ",
-        "        d|..........|d  ",
-        "aaaaaaaaa-..........|d  ",
-        "aaaaaaaaa-......^...|d  ",
-        "aaaaaaaaa-..........|d  ",
-        "aaaaaaaaa-....^..^.^|d  ",
-        "aaaaaaaaa-......^^.#|d  ",
-        "aaaaaaaaa-.....^^^^.|d  ",
-        "       d6|6...^.^^..|d  ",
-        "       dd||||||||||||d  ",
-        "        dddddddddd4ddd  ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "abwarehouse_palette" ],
-      "furniture": { "#": "f_makeshift_bed" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "abandonedwarehouse_roof",
     "object": {
       "fill_ter": "t_flat_roof",

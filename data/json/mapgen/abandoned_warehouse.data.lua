@@ -1,0 +1,38 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "abandonedwarehouse",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "           aaa          ",
+            "        dddaaadddddddd  ",
+            "        d|||+||||||||d  ",
+            "        6|6.........|d  ",
+            "aaaaaaaaa-.......^..|d  ",
+            "aaaaaaaaa-..........|d  ",
+            "aaaaaaaaa-...^....^.|d  ",
+            "aaaaaaaaa-..........|d  ",
+            "aaaaaaaaa-..........|d  ",
+            "aaaaaaaaa-..........|d  ",
+            "        d|..........|d  ",
+            "aaaaaaaaa-..........|d  ",
+            "aaaaaaaaa-......^...|d  ",
+            "aaaaaaaaa-..........|d  ",
+            "aaaaaaaaa-....^..^.^|d  ",
+            "aaaaaaaaa-......^^.#|d  ",
+            "aaaaaaaaa-.....^^^^.|d  ",
+            "       d6|6...^.^^..|d  ",
+            "       dd||||||||||||d  ",
+            "        dddddddddd4ddd  ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "abwarehouse_palette" },
+        furniture = { ["#"] = "f_makeshift_bed" },
+        fill_terrain = "t_thconc_floor",
+        rotation = { 1, 1 },
+    },
+}
