@@ -1,0 +1,61 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "house_07" },
+    layout = {
+        rows = {
+            "...[%%%%--%%%%[..p......",
+            ".###oooo**oooo#########.",
+            ".#RR y       L| UJJJq #.",
+            ".#      h     | 6   6 #.",
+            ".#a     ffh   | 6 A 6 #.",
+            ".#R    hff    | 6   6 #.",
+            ".#R       h   |       #^",
+            ".#R         |||+||||||#.",
+            ".#          >>|      1#.",
+            ".#y   H       |  AJ2 5o.",
+            ".os   Hr     T|   J3 Oo.",
+            ".os   HrE    E|  AJ4 F#.",
+            ".#    H       +      7#.",
+            ".# E  l      E|  h   éo.",
+            ".#||||||     T|h      o.",
+            ".#t    +    RR|rrr   Y#.",
+            ".#     |||+||||||||+||#.",
+            ".#BB  b|y  ssdII    Ey#.",
+            ".oBB   +      h       #.",
+            ".oBB   +              #.",
+            ".#    S|||+|||R   @@ T#.",
+            ".#ww  8|vD  D|R  d@@d #.",
+            ".#################oo###.",
+            "............^...........",
+        },
+        palettes = {
+            "domestic_general_construction_and_variant_palette",
+            "standard_domestic_landscaping_palette",
+        },
+        fill_terrain = "t_floor",
+        nested = { { id = "rolling_trash_can_1x1", x = 2, y = 0 } },
+        loot_placements = {
+            {
+                group = "livingroom",
+                x = { 1, 10 },
+                y = { 1, 13 },
+                chance = 90,
+                repetitions = { 1, 5 },
+            },
+        },
+        monster_group_placements = { { group = "GROUP_ZOMBIE", x = { 2, 21 }, y = { 2, 21 }, chance = 2 } },
+        tile_edits = {
+            {
+                shape = "point",
+                operation = "terrain",
+                id = "t_tree_apple",
+                x = { 0, 14 },
+                y = { 0, 0 },
+                one_in = 40,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
