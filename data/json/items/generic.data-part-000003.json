@@ -1,24 +1,6 @@
 [
   {
     "type": "ITEM",
-    "subtypes": [ "AMMO" ],
-    "id": "paper",
-    "name": { "str_sp": "paper" },
-    "category": "spare_parts",
-    "weight": "3 g",
-    "color": "white",
-    "symbol": "`",
-    "description": "A piece of paper.  Can be used to start fires.",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "material": [ "paper" ],
-    "flags": [ "TINDER", "PAPER_SHAPED" ],
-    "volume": "6 ml",
-    "longest_side": "297 mm",
-    "ammo_type": "paper"
-  },
-  {
-    "type": "ITEM",
     "id": "lens",
     "symbol": ".",
     "color": "light_cyan",
