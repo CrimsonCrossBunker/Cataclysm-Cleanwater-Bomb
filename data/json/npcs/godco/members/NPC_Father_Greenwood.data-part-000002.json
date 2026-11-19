@@ -14,11 +14,5 @@
       { "text": "I'm looking for work.  Can I do anything for your congregation?", "topic": "TALK_MISSION_LIST" },
       { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_GODCO_Greenwood_Confessed",
-    "dynamic_line": { "u_male": true, "yes": "We all have, brother, we all have.", "no": "We all have, sister, we all have." },
-    "responses": [ { "text": "Thanks for your time, Reverend.", "topic": "TALK_DONE" } ]
   }
 ]
