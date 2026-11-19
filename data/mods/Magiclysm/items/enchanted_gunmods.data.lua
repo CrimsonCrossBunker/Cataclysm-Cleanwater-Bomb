@@ -1,0 +1,136 @@
+local ccb = require("ccb")
+
+-- Combination of the doubled best stats of the homemade & solvent trap suppressors w/ +1 enchantment & volume reduction to half
+ccb.content.define_item {
+    id = "magic_suppressor",
+    name = ccb.content.plural_text("'Silent Winds' suppressor", "'Silent Winds' suppressors"),
+    description = ccb.content.text("Rather than using purely wipe media, an additional localized silence spell in this tube quiets gunshots going through to hearing-safe levels."),
+    mass = "804 g",
+    volume = "375 ml",
+    price = "770 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "white",
+    flags = { "CONSUMABLE" },
+    melee_damage = { bash = 3 },
+    gunmod = {
+        location = ccb.content.text("muzzle"),
+        targets = {
+            ccb.content.text("pistol", "gun_type_type"),
+            ccb.content.text("smg", "gun_type_type"),
+            ccb.content.text("rifle", "gun_type_type"),
+        },
+        install_time = "20 s",
+        handling_modifier = 2,
+        consume_chance = 220,
+        consume_divisor = 242,
+        loudness_modifier = -33,
+    },
+}
+
+ccb.content.define_item {
+    id = "mana_laser_rail",
+    name = ccb.content.plural_text("mana laser sight (rail)", "mana laser sights (rail)"),
+    description = ccb.content.text("A small visible-light laser using light shown through a mana crystal that mounts on a firearm's accessory rail to enhance ease and speed of target acquisition.  Aside from increased weight, there are no drawbacks.  You can rotate the attachment rail to fit under the barrel."),
+    mass = "108 g",
+    volume = "250 ml",
+    integral_volume = "0 L",
+    price = "360 USD",
+    materials = { "plastic", "steel" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "LASER_SIGHT" },
+    gunmod = {
+        location = ccb.content.text("rail"),
+        targets = {
+            ccb.content.text("smg", "gun_type_type"),
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("pistol", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+        },
+        install_time = "1 m",
+        sight_dispersion = 27,
+        field_of_view = 3000,
+        aim_speed_modifier = 15,
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            menu_text = ccb.content.text("Rotate"),
+            target = "mana_laser_under",
+            message = ccb.content.text("You rotate the laser sight."),
+        },
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 2 } },
+}
+
+ccb.content.define_item {
+    id = "mana_laser_under",
+    name = ccb.content.plural_text("mana laser sight (underbarrel)", "mana laser sights (underbarrel)"),
+    description = ccb.content.text("A small visible-light laser using light shown through a mana crystal that mounts on a firearm's accessory rail to enhance ease and speed of target acquisition.  Aside from increased weight, there are no drawbacks.  You can rotate the attachment rail to fit on the rail."),
+    mass = "108 g",
+    volume = "250 ml",
+    integral_volume = "0 L",
+    price = "360 USD",
+    materials = { "plastic", "steel" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "PUMP_RAIL_COMPATIBLE", "LASER_SIGHT" },
+    gunmod = {
+        location = ccb.content.text("underbarrel"),
+        targets = {
+            ccb.content.text("smg", "gun_type_type"),
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("pistol", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("bow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+        },
+        install_time = "30 m",
+        sight_dispersion = 27,
+        field_of_view = 3000,
+        aim_speed_modifier = 15,
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            menu_text = ccb.content.text("Rotate"),
+            target = "mana_laser_rail",
+            message = ccb.content.text("You rotate the laser sight."),
+        },
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 2 } },
+}
+
+ccb.content.define_item {
+    id = "mana_dot_sight",
+    name = ccb.content.plural_text("mana dot sight", "mana dot sights"),
+    description = ccb.content.text("Adds a blue dot optic made from crystallized mana to the top of your gun, replacing the iron sights.  Increases accuracy and weight."),
+    mass = "270 g",
+    volume = "250 ml",
+    integral_volume = "0 L",
+    price = "680 USD",
+    materials = { "plastic", "steel" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS" },
+    gunmod = {
+        location = ccb.content.text("sights"),
+        targets = {
+            ccb.content.text("smg", "gun_type_type"),
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+            ccb.content.text("pistol", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+        },
+        install_time = "30 m",
+        sight_dispersion = 21,
+        field_of_view = 540,
+        aim_speed_modifier = 12,
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 2 } },
+}
