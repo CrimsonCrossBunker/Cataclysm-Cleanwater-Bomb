@@ -1,42 +1,44 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_NPC_SCRAP_TRADER_STORY",
+    id = "TALK_NPC_SCRAP_TRADER",
     line = {
-        when = predicates.has_trait("interlocutor", "BGSS_No_Past_2"),
-        yes = ccb.content.text("I know I worked in salvage, but I don't remember much else about it.  I just remember finding this place and deciding to stay here."),
-        no = {
-            when = predicates.has_trait("interlocutor", "BGSS_No_Past_3"),
-            yes = ccb.content.text("I know I worked in salvage, but I don't remember much else about it.  I just remember finding this place and deciding to stay here."),
-            no = ccb.content.text("Well, I held a modest job here as a scrap yard worker.  Business was fair most days, but when <the_cataclysm> hit, I decided to head out here.  With all the craziness going on in the cities and whatnot, I decided to just stay here for while.  I figure someone might find a use for the leftover metal lying around, so I started selling it to anyone who passed by."),
+        when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }),
+        yes = ccb.content.text("Hello there.  Nice to see you, <name_g>."),
+        no = ccb.content.text("Haven't seen another face in quite a while.  Not a living one, at least.  State your business.  Maybe you got some use for some of this scrap metal?"),
+    },
+    on_enter = {
+        {
+            actions = { actions.set_actor_value("interlocutor", "dialogue_first_meeting_knows_u", "yes") },
         },
     },
     replies = {
         {
-            text = ccb.content.text("Why stay here of all places?"),
-            next_topic = "TALK_NPC_SCRAP_TRADER_FORT",
+            text = ccb.content.text("Nice to meet you."),
+            next_topic = "TALK_NPC_SCRAP_TRADER_INTRO",
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } })),
         },
-        { text = ccb.content.text("Hmm."), next_topic = "TALK_NONE" },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_NPC_SCRAP_TRADER_FORT",
-    line = {
-        when = predicates.has_trait("interlocutor", "BGSS_No_Past_2"),
-        yes = ccb.content.text("Well, this place had some barbed wire, metalworking tools, and plenty of supplies.  I made the walls myself.  I didn't know of anywhere else to go either."),
-        no = {
-            when = predicates.has_trait("interlocutor", "BGSS_No_Past_3"),
-            yes = ccb.content.text("Well, this place had some barbed wire, metalworking tools, and plenty of supplies.  I made the walls myself.  I didn't know of anywhere else to go either."),
-            no = ccb.content.text("Like I said, I came out here when the dead got pissed off.  This place had some barbed wire, metalworking tools, and plenty of stuff to make weapons out of.  Even the walls are my own making."),
-        },
-    },
-    replies = {
-        { text = ccb.content.text("Interesting."), next_topic = "TALK_NONE" },
         {
-            text = ccb.content.text("Think I could stay here?"),
-            next_topic = "TALK_NPC_SCRAP_TRADER_HOME_STAY",
+            text = ccb.content.text("Hands up, <name_b>!"),
+            trial = { kind = "intimidate", difficulty = 30 },
+            success = {
+                next_topic = "TALK_WEAPON_DROPPED",
+                actions = { "drop_weapon" },
+                opinion = { trust = -4, fear = 3 },
+            },
+            failure = { next_topic = "TALK_DONE", actions = { "hostile" } },
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } })),
+        },
+        {
+            text = ccb.content.text("Pleasure to see you again, <name_g>."),
+            next_topic = "TALK_NPC_SCRAP_TRADER_INTRO",
+            when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }),
+        },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_bye>"),
+            next_topic = "TALK_DONE",
         },
     },
 }
