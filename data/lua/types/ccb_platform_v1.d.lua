@@ -8525,11 +8525,23 @@ function CcbPlatformContent.Item(options) end
 ---@field faults? StaticItemFault[]
 ---@field qualities? StaticItemQuality[]
 ---@field inheritance? StaticItemInheritance
----@field armor? StaticItemArmor Supply exactly one subtype.
+---@field armor? StaticItemArmor
 ---@field comestible? StaticItemComestible
 ---@field ammunition? StaticItemAmmunition
 ---@field magazine? StaticItemMagazine
 ---@field gun? StaticItemGun
+---@field tool? StaticOrderedTool
+---@field pet_armor? StaticOrderedPetArmor
+---@field seed? StaticOrderedSeed
+---@field milling? StaticOrderedMilling
+---@field bionic? StaticOrderedBionicItem
+---@field wheel? StaticOrderedWheel
+---@field subtype_order? string[] List all configured subtype fields in native loading order when using multiple subtypes.
+---@field use_actions? StaticOrderedItemAction[]
+---@field tick_actions? StaticOrderedItemAction[]
+---@field countdown_action? StaticOrderedItemAction
+---@field drop_action? StaticOrderedItemAction
+---@field countdown_interval? string Duration with a native unit.
 
 ---Register an item in the Mod's ordered data load, preserving native inheritance and finalization.
 ---@param options StaticItemOptions
@@ -17798,3 +17810,155 @@ function CcbSpellsApi.adjust_casting(character, property, amount, options) end
 ---Define a spell with a native effect at its ordered position during content loading.
 ---@param options StaticSpellOptions
 function CcbPlatformContent.define_spell(options) end
+
+---@class StaticOrderedTool
+---@field max_charges? integer
+---@field initial_charges? integer
+---@field charges_per_use? integer
+---@field charge_factor? integer
+---@field turns_per_charge? integer
+---@field fuel_efficiency? number
+---@field power_draw? string Power with a native unit.
+---@field crafting_subtype? string Native equivalent crafting tool ID.
+---@field transfer_rate? string Electronic transfer rate with a native unit.
+---@field ammo_types? string|string[]
+---@field revert_message? string|LocalizedText
+
+---@class StaticOrderedPetArmor
+---@field thickness? number
+---@field environmental_protection? integer
+---@field protection_with_filter? integer
+---@field max_pet_volume? string
+---@field min_pet_volume? string
+---@field body_type? string
+---@field power_armor? boolean
+
+---@class StaticOrderedSeedStage
+---@field stage string Native growth stage flag.
+---@field duration string Duration with a native unit.
+
+---@class StaticOrderedCropClimate
+---@field base_c number
+---@field optimum_c number
+---@field min_c number
+---@field max_c number
+---@field degree_days number
+---@field water_mm number
+---@field growing_days integer
+---@field water_peak? number
+
+---@class StaticOrderedSeed
+---@field plant_name? string|LocalizedText
+---@field fruit? string
+---@field growth_temperature? string
+---@field required_terrain_flag? string
+---@field drop_seeds? boolean
+---@field water_consumption? integer
+---@field byproducts? string[]
+---@field growth_stages? StaticOrderedSeedStage[]
+---@field climate? StaticOrderedCropClimate
+
+---@class StaticOrderedMilling
+---@field result? string
+---@field recipe? string
+
+---@class StaticOrderedBionicItem
+---@field difficulty? integer
+---@field upgrade? boolean
+---@field installation? string Native installation-data ID.
+
+---@class StaticOrderedWheel
+---@field diameter? integer Native wheel diameter in inches.
+---@field width? integer Native wheel width in inches.
+
+---@class StaticOrderedNamedAction
+---@field kind 'native'
+---@field id string Native item action ID.
+---@field ammo_scale integer Native ammunition use multiplier.
+
+---@class StaticOrderedTransformAction
+---@field kind 'transform'
+---@field ammo_scale? integer
+---@field target? string
+---@field target_group? string
+---@field variant_kind? string
+---@field container? string
+---@field target_ammo? string
+---@field target_timer? string
+---@field target_charges? integer
+---@field sound_volume? integer
+---@field moves? integer
+---@field chance? integer
+---@field need_fire? integer
+---@field need_charges? integer
+---@field sealed? boolean
+---@field set_timer? boolean
+---@field need_worn? boolean
+---@field need_wielding? boolean
+---@field need_empty? boolean
+---@field qualities? table<string, integer>
+---@field message? string|LocalizedText
+---@field menu_text? string|LocalizedText
+---@field damage_failure? string|LocalizedText
+---@field need_charges_message? string|LocalizedText
+---@field need_fire_message? string|LocalizedText
+
+---@class StaticOrderedDrugVitamin
+---@field id string
+---@field minimum integer
+---@field maximum? integer Defaults to minimum.
+
+---@class StaticOrderedDrugEffect
+---@field id string
+---@field duration? string|integer
+---@field bodypart? string
+---@field permanent? boolean
+---@field intensity? integer
+
+---@class StaticOrderedDrugAction
+---@field kind 'consume_drug'
+---@field ammo_scale? integer
+---@field message? string|LocalizedText
+---@field moves? integer
+---@field used_up_item? string
+---@field charges_needed? table<string, integer>
+---@field tools_needed? table<string, integer>
+---@field fields_produced? table<string, integer>
+---@field stat_adjustments? table<string, integer>
+---@field vitamins? StaticOrderedDrugVitamin[]
+---@field effects? StaticOrderedDrugEffect[]
+
+---@class StaticOrderedHolsterAction
+---@field kind 'holster'
+---@field ammo_scale? integer
+---@field prompt? string|LocalizedText
+---@field message? string|LocalizedText
+
+---@class StaticOrderedMessageAction
+---@field kind 'message'
+---@field ammo_scale? integer
+---@field menu_text? string|LocalizedText
+---@field message? string|LocalizedText
+
+---@class StaticOrderedMolleAttachAction
+---@field kind 'attach_molle'
+---@field ammo_scale? integer
+---@field size integer
+---@field moves? integer
+
+---@class StaticOrderedMolleDetachAction
+---@field kind 'detach_molle'
+---@field ammo_scale? integer
+---@field moves? integer
+
+---@class StaticOrderedCastSpellAction
+---@field kind 'cast_spell'
+---@field ammo_scale? integer
+---@field spell string
+---@field level integer
+---@field no_fail boolean
+---@field need_worn? boolean
+---@field need_wielding? boolean
+---@field mundane? boolean
+
+---@alias StaticOrderedItemAction string|StaticOrderedNamedAction|StaticOrderedTransformAction|StaticOrderedDrugAction|StaticOrderedHolsterAction|StaticOrderedMessageAction|StaticOrderedMolleAttachAction|StaticOrderedMolleDetachAction|StaticOrderedCastSpellAction
