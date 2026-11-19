@@ -419,3 +419,124 @@ ccb.content.define_mapgen {
         palettes = { "microlab_no_meat" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "microlab_no_meat_generic_edge" },
+    layout = {
+        fill_terrain = "t_strconc_floor",
+        nested = {
+            { id = "microlab_no_meat_generic_edge_tile", x = 0, y = 0 },
+            { otherwise = { "concrete_wall_ew" }, x = 0, y = 0, neighbors = { north = "microlab" } },
+            { otherwise = { "concrete_wall_ns" }, x = 23, y = 0, neighbors = { east = "microlab" } },
+            {
+                otherwise = { "concrete_wall_ew" },
+                x = 0,
+                y = 23,
+                neighbors = { south = "microlab" },
+            },
+            { otherwise = { "concrete_wall_ns" }, x = 0, y = 0, neighbors = { west = "microlab" } },
+            {
+                id = "concrete_wall_hole_ew",
+                x = 0,
+                y = 0,
+                neighbors = { north = "mlb_generic_subhallway" },
+            },
+            {
+                id = "concrete_wall_hole_ns",
+                x = 23,
+                y = 0,
+                neighbors = { east = "mlb_generic_subhallway" },
+            },
+            {
+                id = "concrete_wall_hole_ew",
+                x = 0,
+                y = 23,
+                neighbors = { south = "mlb_generic_subhallway" },
+            },
+            {
+                id = "concrete_wall_hole_ns",
+                x = 0,
+                y = 0,
+                neighbors = { west = "mlb_generic_subhallway" },
+            },
+            {
+                otherwise = { "concrete_corner" },
+                x = 0,
+                y = 0,
+                neighbors = { north_west = "microlab" },
+            },
+            {
+                otherwise = { "concrete_corner" },
+                x = 23,
+                y = 0,
+                neighbors = { north_east = "microlab" },
+            },
+            {
+                otherwise = { "concrete_corner" },
+                x = 23,
+                y = 23,
+                neighbors = { south_east = "microlab" },
+            },
+            {
+                otherwise = { "concrete_corner" },
+                x = 0,
+                y = 23,
+                neighbors = { south_west = "microlab" },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_MICROLAB",
+                chance = 80,
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 1, 5 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "microlab_no_meat_sub_station" },
+    layout = {
+        rows = {
+            "##|                  |##",
+            "##|^                 |##",
+            "##|^ hhhh  YY   hhhh |##",
+            "##|^                 |##",
+            "##|^ hhhh       hhhh |##",
+            "##|^                 |##",
+            "##|^          |^^^^^^|##",
+            "##||(((((|    ||||||||##",
+            "###|l h  ( YY |#########",
+            "###|l    ( YY |#########",
+            "###|l    (    |#########",
+            "###||2||||    |#########",
+            "###|     |    |#########",
+            "###|   hd|G55||#########",
+            "###|  ddd|   ^|#########",
+            "###||5(((|   ^|||||||###",
+            "###|B          VV ^^|###",
+            "###|B      YY      ?|###",
+            "###|B dddd YY    t ?|###",
+            "###|B d hd         ?|###",
+            "###|B          t? ^^|###",
+            "###||||||||  ||||||||###",
+            "##########|22|##########",
+            "##########|  |##########",
+        },
+        palettes = { "microlab_no_meat" },
+        terrain = { G = "t_card_science" },
+        fill_terrain = "t_strconc_floor",
+        nested = {
+            { id = "concrete_wall_ns", x = 23, y = 0, neighbors = { east = "microlab" } },
+            { id = "concrete_wall_ns", x = 0, y = 0, neighbors = { west = "microlab" } },
+        },
+        item_groups = {
+            l = { { group = "guns_milspec", chance = 10 }, { group = "ammo_milspec", chance = 70 } },
+            t = { group = "magazines", chance = 90 },
+        },
+    },
+}
