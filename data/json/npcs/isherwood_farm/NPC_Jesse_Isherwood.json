@@ -49,52 +49,5 @@
       { "skill": "rifle", "bonus": { "rng": [ 4, 6 ] } },
       { "skill": "archery", "bonus": { "rng": [ 4, 6 ] } }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ISHERWOOD_JESSE",
-    "dynamic_line": {
-      "u_is_wearing": "badge_marshal",
-      "yes": "Leave our property, Marshal.",
-      "no": "Hello.  We don't see many people these days."
-    },
-    "responses": [
-      {
-        "text": "Yeah, I'm a Marshal, what are you going to do about it?",
-        "topic": "TALK_LEAVE_NOW_MARSHAL",
-        "effect": "hostile",
-        "opinion": { "trust": -20, "value": -20 },
-        "condition": { "u_is_wearing": "badge_marshal" }
-      },
-      {
-        "text": "…",
-        "topic": "TALK_LEAVE_NOW_MARSHAL",
-        "opinion": { "trust": -20, "value": -20 },
-        "condition": { "u_is_wearing": "badge_marshal" }
-      },
-      {
-        "text": "Hi, it looks like you are doing well here.",
-        "topic": "TALK_ISHERWOOD_JESSE_TALK1",
-        "condition": { "not": { "u_is_wearing": "badge_marshal" } },
-        "effect": { "u_add_var": "u_met_Jesse_Isherwood", "value": "yes" }
-      },
-      {
-        "text": "Hi, Jack and Claire suggested I come down here and meet you.",
-        "topic": "TALK_MET_JACK_CLAIRE",
-        "condition": {
-          "and": [ { "not": { "u_is_wearing": "badge_marshal" } }, { "compare_string": [ "yes", { "u_val": "u_met_Jack_Isherwood" } ] } ]
-        }
-      },
-      {
-        "text": "Can I do anything for you?",
-        "topic": "TALK_MISSION_LIST",
-        "condition": { "not": { "u_is_wearing": "badge_marshal" } }
-      },
-      {
-        "text": "<end_talking_leave>",
-        "topic": "TALK_DONE",
-        "condition": { "not": { "u_is_wearing": "badge_marshal" } }
-      }
-    ]
   }
 ]
