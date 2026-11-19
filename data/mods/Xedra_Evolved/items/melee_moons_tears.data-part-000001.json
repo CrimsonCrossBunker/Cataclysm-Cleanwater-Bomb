@@ -1,0 +1,12 @@
+[
+  {
+    "type": "ITEM",
+    "id": "moons_tears_estoc",
+    "copy-from": "ch_estoc",
+    "looks_like": "ch_estoc",
+    "name": { "str_sp": "moon's tears estoc" },
+    "description": "A thin thrusting sword, a sort of predecessor to the rapier, forged from some silvery metal that seems to shine with a soft internal light.  It's surprisingly sharp.",
+    "replace_materials": { "ch_steel": "moon_tears", "kevlar": "leather" },
+    "proportional": { "melee_damage": { "stab": 1.2 }, "weight": 0.56 }
+  }
+]
