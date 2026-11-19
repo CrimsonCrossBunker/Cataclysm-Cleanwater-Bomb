@@ -1,0 +1,20 @@
+[
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_POI_cabin_3_reverberation_hint",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_knows_u_cyborg" } ],
+      "yes": "&You hear a chirp in your comm and Pat's voice comes over the line: \"Pat ta' <pat_robo_nickname>.  Some'a your recent images are wicked twisted with errors and noise.  Not sure what's nearby, but it's messin' with the signal.  Ovah.\"",
+      "no": "&You hear a chirp in your comm and Pat's voice comes over the line: \"Pat heah.  Some'a your recent images are wicked twisted with errors and noise.  Not sure what's nearby, but it's messin' with the signal.  Ovah.\""
+    },
+    "responses": [
+      {
+        "text": "I'm close to the cabin we talked about.  Think that's it?  Over.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_POI_cabin_3_reverberation_hint_1",
+        "condition": { "u_has_mission": "MISSION_ROBOFAC_PAT_RECON_10" }
+      },
+      { "text": "I'll be careful.  Thanks, Pat.  Over and out.", "topic": "TALK_DONE" },
+      { "text": "[Chirp Pat twice and stay silent]", "topic": "TALK_DONE" }
+    ]
+  }
+]

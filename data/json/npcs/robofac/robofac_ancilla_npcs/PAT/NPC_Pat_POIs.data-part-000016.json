@@ -1,0 +1,34 @@
+[
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_POI_morgantown_2b_far",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_knows_u_cyborg" } ],
+      "yes": "&You hear a chirp in your comm and Pat's voice comes over the line: \"Pat ta' <pat_robo_nickname>.  Gettin' a bit too close to Morgantown for my likin'.  Ovah.\"",
+      "no": "&You hear a chirp in your comm and Pat's voice comes over the line: \"Pat heah.  Gettin' a bit too close to Morgantown for my likin'.  Ovah.\""
+    },
+    "responses": [
+      {
+        "text": "Morgantown?  Look, I'm close to the place that merc said they saw a creature in the woods.  Must be there, yeah?  What do you know about Morgantown?  Over.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_POI_morgantown_2b_far_1",
+        "condition": { "u_has_mission": "MISSION_ROBOFAC_PAT_RECON_9" }
+      },
+      {
+        "text": "Morgantown?  I've got an address from some \"XEDRA\" notebook leading me that direction.  Over.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_POI_morgantown_2b_far_1",
+        "condition": { "u_has_mission": "MISSION_XEDRA_FIELD_STATION_2" }
+      },
+      { "text": "Morgantown?  Never heard of it.  Over.", "topic": "TALK_ROBOFAC_MERC_PAT_POI_morgantown_2b_far_1" },
+      {
+        "text": "Not now, Pat.  We'll talk about this later.  Over and out.",
+        "topic": "TALK_DONE",
+        "effect": { "u_add_var": "robofac_pat_talk_morgantown_2b_later", "value": "yes" }
+      },
+      {
+        "text": "[Chirp Pat twice and stay silent]",
+        "topic": "TALK_DONE",
+        "effect": { "u_add_var": "robofac_pat_talk_morgantown_2b_later", "value": "yes" }
+      }
+    ]
+  }
+]

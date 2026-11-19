@@ -1,0 +1,120 @@
+[
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_POI_lost_signal_string_dimension",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_saw_exodii" } ],
+      "yes": "That's fahkin' insane.  Look, I've been pourin' over the data the system collected while ya' was there, and the weathah is out of control.  Cold.  Real low preshah.  But also, when I'm checkin' temps and the rangefindah, I'm seein' little blops of heat in the distance, with some sorta structahs.  Lots'a little ones, and one big one.  Anothah thing.  I picked up some fahkin' radio signals, but I can't understand'em.  It's the EXACT same shit those robots from the scrap castle are kickin' out.  Odd, right?  If I had a dollah to bet, I bet if you looked around you'd find more'a them robots.  Dunno if it's anything you saw, but if ya' can get back, and wanna go back, may be worth explorin'.",
+      "no": "That's fahkin' insane.  Look, I've been pourin' over the data the system collected while ya' was there, and the weathah is out of control.  Cold.  Real low preshah.  But also, when I'm checkin' temps and the rangefindah, I'm seein' little blops of heat in the distance, with some sorta structahs.  Lots'a little ones, and one big one.  Anothah thing.  I picked up some fahkin' radio signals, but I can't understand'em.  But it's somethin' I've picked up heah now and again, too.  Somethin' is alive theah.  Dunno if it's anything you saw, but if ya' can get back, and wanna go back, may be worth explorin'."
+    },
+    "responses": [
+      {
+        "text": "I'll remember that, Pat.",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "effect": { "math": [ "robofac_pat_lost_signal_string_dimension = 0" ] }
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_POI_lost_signal_labyrinth",
+    "type": "talk_topic",
+    "dynamic_line": "Me neithah.",
+    "responses": [
+      {
+        "text": "[shrug at Pat]",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "effect": { "math": [ "robofac_pat_lost_signal_labyrinth = 0" ] }
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_POI_lost_signal_radiosphere",
+    "type": "talk_topic",
+    "dynamic_line": "Ya' fahkin' kiddin' me.  I don't even know what to say.",
+    "responses": [
+      {
+        "text": "[shrug at Pat]",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "effect": { "math": [ "robofac_pat_lost_signal_radiosphere = 0" ] }
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_POI_lost_signal_cabin_reverb",
+    "type": "talk_topic",
+    "dynamic_line": "Ya' fahkin' kiddin' me.  I don't even know what to say.",
+    "responses": [
+      {
+        "text": "[shrug at Pat]",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "effect": { "math": [ "robofac_pat_lost_signal_cabin_reverb = 0" ] }
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_POI_lost_signal_spider_dimension",
+    "type": "talk_topic",
+    "dynamic_line": "Ya' fahkin' kiddin' me.  I don't even know what to say.",
+    "responses": [
+      {
+        "text": "[shrug at Pat]",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "effect": { "math": [ "robofac_pat_lost_signal_spider_dimension = 0" ] }
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_POI_lost_signal_portal_storm_dungeon",
+    "type": "talk_topic",
+    "dynamic_line": "Well that's a real mind-fahk.  Think ya' go can go back?  Doesn't seem too fahkin' wise, but I guess it wasn't so wise in the first place, anyhow.",
+    "responses": [
+      {
+        "text": "[shrug at Pat]",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "effect": { "math": [ "robofac_pat_lost_signal_portal_storm_dungeon = 0" ] }
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_POI_lost_signal_highlands",
+    "type": "talk_topic",
+    "dynamic_line": "That's straight freakin' nuts.  But.  You were theah long enough for me to get some good data from ya' rangefindah and othah instruments.  Theah's definitely some man-made shit theah, but I didn't pick up a single other radio signal or anythin' of the sort.  Dunno what to make'a that.",
+    "responses": [
+      {
+        "text": "Not sure, Pat.  But I'll let you know if I learn anything.",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "effect": { "math": [ "robofac_pat_lost_signal_highlands = 0" ] }
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_POI_scarlet_storm",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_knows_u_cyborg" } ],
+      "yes": "&You hear a chirp in your comm and Pat's voice comes over the line: \"Pat ta' <pat_robo_nickname>.  I'm startin' ta' lose ya'.  Ovah.\"",
+      "no": "&You hear a chirp in your comm and Pat's voice comes over the line: \"Pat heah.  I'm startin' ta' lose ya'.  Ovah.\""
+    },
+    "responses": [
+      {
+        "text": "I'm getting close to that storm you told me about.  Pick up any more recon?  Over.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_POI_scarlet_storm_recon",
+        "condition": { "u_has_mission": "MISSION_ROBOFAC_PAT_RECON_13" }
+      },
+      {
+        "text": "Looks like I'm in some sort of storm, or fog.  It's not very clear.  Over.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_POI_scarlet_storm_1"
+      },
+      {
+        "text": "Not now, Pat.  We'll talk about this later.  Over and out.",
+        "topic": "TALK_DONE",
+        "effect": { "u_add_var": "robofac_pat_talk_scarlet_storm_later", "value": "yes" }
+      },
+      {
+        "text": "[Quickly Chirp the radio twice and stay silent]",
+        "topic": "TALK_DONE",
+        "effect": { "u_add_var": "robofac_pat_talk_scarlet_storm_later", "value": "yes" }
+      }
+    ]
+  }
+]
