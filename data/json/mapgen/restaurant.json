@@ -83,21 +83,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "3x3_foodplace_stairwell",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "#@+",
-        "#< ",
-        "###"
-      ],
-      "palettes": [ "restaurant_palette" ],
-      "terrain": { "<": "t_stairs_up", "+": "t_door_metal_locked", "@": "t_card_fp", " ": "t_null" },
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "24x24_chef_survivor",
     "object": {
       "mapgensize": [ 24, 24 ],
@@ -152,64 +137,6 @@
         { "group": "cannedfood_commercial", "x": [ 16, 18 ], "y": 18, "chance": 50, "repeat": [ 2, 4 ] }
       ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "24x24_angry_diners",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "   @@   @@    @@   @@   ",
-        "                        ",
-        "                        ",
-        "   @@   @@    @@   @@   ",
-        "                        ",
-        "   @@   @@    @@   @@   ",
-        "                        ",
-        "                        ",
-        "   @@   @@    @@   @@   ",
-        "                        ",
-        "                        ",
-        " @                      ",
-        "                      @ ",
-        " @      @      @        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "nested": { "@": { "chunks": [ [ "1x1_GROUP_GROCERY", 1 ], [ "null", 4 ] ] } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "13x13_checkered_floor",
-    "object": {
-      "mapgensize": [ 13, 13 ],
-      "rows": [
-        "wgwgwgwgwgwgw",
-        "gwgwgwgwgwgwg",
-        "wgwgwgwgwgwgw",
-        "             ",
-        "             ",
-        "             ",
-        "             ",
-        "             ",
-        "             ",
-        "             ",
-        "             ",
-        "             ",
-        "             "
-      ],
-      "terrain": { "w": "t_linoleum_white", "g": "t_linoleum_gray" },
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
     }
   },
   {
@@ -811,40 +738,6 @@
           "y": 9
         }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "s_restaurant_upper_roof_2" ],
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "     -----              ",
-        "     -...-              ",
-        "     -----              ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ]
     }
   }
 ]
