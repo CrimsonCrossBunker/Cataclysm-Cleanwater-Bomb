@@ -1,0 +1,22 @@
+[
+  {
+    "id": "MISSION_ROBOFAC_PAT_RECON_11",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ],
+      "yes": "Check this out.\"  Pat double clicks an audio file and an old version of Winamp opens up.  The sound starts immediately, but nothing but static fills your earpiece.  Pat stops it after a moment.  \"Nothin', right?  Wrong.  I recorded somethin' - someone talkin' - but it's just gone.  Just not theah.  Somethin's afoot.  I'm pretty sure the source is this radio tower, heah.  Check it out, maybe?",
+      "no": "Check this out.\"  Pat hits play on the recorder, and nothing but static plays for a moment before they stop it.  \"Nothin', right?  Wrong.  I recorded somethin' - someone talkin' - but it's just gone.  Just not theah.  Somethin's afoot.  I'm pretty sure the source is this radio tower, heah.  Check it out, maybe?"
+    },
+    "responses": [ { "text": "Maybe I'll check it out.  Thanks.", "topic": "TALK_DONE" } ]
+  },
+  {
+    "id": "MISSION_ROBOFAC_PAT_RECON_12",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ],
+      "yes": "Right, look at this heah.  Merc I talked to said they wandered deep into this fahkin' mine and found all these strange ass spirals.  Even drew a map.\"  Pat uploads a scan of a sketched map to your headset HUD.  \"Fahkah wasn't right in the head, I'll tell ya' that.  Anyway.  Sounds like the kinda strange shit that's right up your alley, though.  Check it out.",
+      "no": "Right, look at this heah.  Merc I talked to said they wandered deep into this fahkin' mine and found all these strange ass spirals.  Even drew a map.\"  Pat flips over the paper to show you a sketched map.  \"Fahkah wasn't right in the head, I'll tell ya' that.  Anyway.  Sounds like the kinda strange shit that's right up your alley, though.  Check it out."
+    },
+    "responses": [ { "text": "Maybe I'll check it out.  Thanks.", "topic": "TALK_DONE" } ]
+  }
+]

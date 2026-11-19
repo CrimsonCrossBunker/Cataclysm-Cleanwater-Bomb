@@ -1,0 +1,12 @@
+[
+  {
+    "id": "MISSION_ROBOFAC_PAT_RECON_9",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ],
+      "yes": "Merc told me she saw some sort'a creature in the woods.  I made her prove it.  She shows me this.\"  Pat uploads a scanned, blurry Polaroid photo showing a fence in the forest, with some small, dark smear of a creature moving behind it.  Pat then drops a digital pin in your HUDs map application.  \"Figure you can't see much, but this place is where the merc saw it.  Maybe worth a look.",
+      "no": "Merc told me she saw some sort'a creature in the woods.  I made her prove it.  She shows me this.\"  Pat pulls out a blurry Polaroid photo showing a fence in the forest, with some small, dark smear of a creature moving behind it. \"Figure you can't see much, but this place is where the merc saw it.  Maybe worth a look."
+    },
+    "responses": [ { "text": "Maybe I'll check it out.  Thanks.", "topic": "TALK_DONE" } ]
+  }
+]
