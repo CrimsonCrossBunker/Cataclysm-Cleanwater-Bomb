@@ -1,0 +1,59 @@
+[
+  {
+    "id": "grenadebandolier",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "large grenade pouch", "str_pl": "large grenade pouches" },
+    "description": "A pouch for holding up to four full-sized grenades of various types, with straps for attaching it to your belt or other webbing.",
+    "weight": "600 g",
+    "volume": "1250 ml",
+    "price": "30 USD",
+    "price_postapoc": "12 USD 50 cent",
+    "material": [ "nylon" ],
+    "symbol": "[",
+    "looks_like": "leather_belt",
+    "color": "dark_gray",
+    "material_thickness": 2,
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "750 ml",
+        "max_contains_weight": "2 kg",
+        "moves": 30,
+        "flag_restriction": [ "GRENADE" ],
+        "max_item_length": "180 mm",
+        "volume_encumber_modifier": 0.3
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "750 ml",
+        "max_contains_weight": "2 kg",
+        "moves": 30,
+        "flag_restriction": [ "GRENADE" ],
+        "max_item_length": "180 mm",
+        "volume_encumber_modifier": 0.3
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "750 ml",
+        "max_contains_weight": "2 kg",
+        "moves": 30,
+        "flag_restriction": [ "GRENADE" ],
+        "max_item_length": "180 mm",
+        "volume_encumber_modifier": 0.3
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "750 ml",
+        "max_contains_weight": "2 kg",
+        "moves": 30,
+        "flag_restriction": [ "GRENADE" ],
+        "max_item_length": "180 mm",
+        "volume_encumber_modifier": 0.3
+      }
+    ],
+    "use_action": { "type": "holster", "holster_prompt": "Stash grenades", "holster_msg": "You stash your %s." },
+    "flags": [ "WATER_FRIENDLY", "BELTED", "PALS_LARGE" ],
+    "armor": [ { "coverage": 25, "covers": [ "torso" ], "specifically_covers": [ "torso_upper" ] } ]
+  }
+]
