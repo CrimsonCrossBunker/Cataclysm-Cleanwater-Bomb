@@ -36,33 +36,5 @@
     "furniture": { "?": "f_null" },
     "items": { ";": { "item": "SUS_toilet", "chance": 50 } },
     "toilets": { ";": {  } }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "hallway_shrapnel",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "place_monster": [
-        { "monster": "mon_structural_spur", "x": 0, "y": 4, "repeat": [ 2, 4 ] },
-        {
-          "monster": "mon_shrapnel_swarm",
-          "x": [ 0, 6 ],
-          "y": [ 0, 6 ],
-          "spawn_data": {
-            "patrol": [
-              { "x": 6, "y": 6 },
-              { "x": 6, "y": 18 },
-              { "x": 18, "y": 18 },
-              { "x": 18, "y": 6 },
-              { "x": 6, "y": 8 },
-              { "x": 7, "y": 16 },
-              { "x": 17, "y": 16 },
-              { "x": 6, "y": 14 }
-            ]
-          },
-          "repeat": [ 5, 10 ]
-        }
-      ]
-    }
   }
 ]

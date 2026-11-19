@@ -1,44 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ [ "microlab_portal_MSU14_elevator" ] ],
-    "object": {
-      "fill_ter": "t_strconc_floor",
-      "rows": [
-        "#########|É55Ú|#########",
-        "#####|||||T  T|||||#####",
-        "#####|ÑÑ 5 YY =XXX|#####",
-        "#####|Ñh |É55Ú|||||#####",
-        "#####|ddd|    |XXX|#####",
-        "##||||===|    |===||||##",
-        "##|XX=  YYPPPPYY  =XX|##",
-        "##|XX=    PPPP    =XX|##",
-        "##|XX=    PPPP    =XX|##",
-        "##||||^ YYPPPPYY ^||||##",
-        "####|N            N|####",
-        "####||||  ||||  ||||####",
-        "#####|--22-``-22--|#####",
-        "#####|-Eee-``-eeE-|#####",
-        "#####|-eee-``-eee-|#####",
-        "#####|-----``-----|#####",
-        "#####||||||||||||||#####",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################"
-      ],
-      "palettes": [ "microlab_generic" ],
-      "terrain": { "`": "t_open_air", "É": "t_card_science_security_black", "Ú": "t_card_science_mu" },
-      "items": { "Ñ": [ { "item": "guns_milspec", "chance": 10 }, { "item": "ammo_milspec", "chance": 70 } ] },
-      "monster": { "T": { "monster": "mon_turret_rifle", "spawn_data": { "ammo": [ { "ammo_id": "556", "qty": [ 30, 90 ] } ] } } },
-      "furniture": { "Ñ": "f_locker" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ [ "microlab_portal_MSU14" ] ],
     "object": {
       "fill_ter": "t_strconc_floor",

@@ -1,0 +1,46 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "microlab_portal_MSU14_elevator" } },
+    layout = {
+        rows = {
+            "#########|É55Ú|#########",
+            "#####|||||T  T|||||#####",
+            "#####|ÑÑ 5 YY =XXX|#####",
+            "#####|Ñh |É55Ú|||||#####",
+            "#####|ddd|    |XXX|#####",
+            "##||||===|    |===||||##",
+            "##|XX=  YYPPPPYY  =XX|##",
+            "##|XX=    PPPP    =XX|##",
+            "##|XX=    PPPP    =XX|##",
+            "##||||^ YYPPPPYY ^||||##",
+            "####|N            N|####",
+            "####||||  ||||  ||||####",
+            "#####|--22-``-22--|#####",
+            "#####|-Eee-``-eeE-|#####",
+            "#####|-eee-``-eee-|#####",
+            "#####|-----``-----|#####",
+            "#####||||||||||||||#####",
+            "########################",
+            "########################",
+            "########################",
+            "########################",
+            "########################",
+            "########################",
+            "########################",
+        },
+        palettes = { "microlab_generic" },
+        terrain = {
+            ["`"] = "t_open_air",
+            ["É"] = "t_card_science_security_black",
+            ["Ú"] = "t_card_science_mu",
+        },
+        furniture = { ["Ñ"] = "f_locker" },
+        fill_terrain = "t_strconc_floor",
+        item_groups = {
+            ["Ñ"] = { { group = "guns_milspec", chance = 10 }, { group = "ammo_milspec", chance = 70 } },
+        },
+        monster_glyphs = { T = { id = "mon_turret_rifle", ammunition = { { id = "556", quantity = { 30, 90 } } } } },
+    },
+}
