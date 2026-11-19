@@ -490,3 +490,30 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "tunnel_rocks",
+    layout = {
+        size = { width = 24, height = 24 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        tile_edits = {
+            {
+                shape = "point",
+                operation = "furniture",
+                id = "f_boulder_medium",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 8, 30 },
+            },
+            {
+                shape = "point",
+                operation = "furniture",
+                id = "f_boulder_large",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 8, 14 },
+            },
+        },
+    },
+}

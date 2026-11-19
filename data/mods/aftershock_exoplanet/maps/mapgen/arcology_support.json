@@ -179,16 +179,6 @@
     }
   },
   {
-    "//": "7x7 bulk chemical storage",
-    "type": "mapgen",
-    "nested_mapgen_id": "lab_room_7x7_rare",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "place_furniture": [ { "furn": "f_standing_tank", "x": 3, "y": 3 } ],
-      "place_nested": [ { "chunks": [ "lab_filltank_chem" ], "x": 3, "y": 3 } ]
-    }
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "lab_filltank_chem",
     "object": { "mapgensize": [ 1, 1 ], "place_liquids": [ { "amount": [ 200, 800 ], "x": 0, "y": 0, "liquid": "bleach" } ] }
@@ -202,12 +192,6 @@
     "type": "mapgen",
     "nested_mapgen_id": "lab_filltank_chem",
     "object": { "mapgensize": [ 1, 1 ], "place_liquids": [ { "amount": [ 100, 400 ], "x": 0, "y": 0, "liquid": "salt_water" } ] }
-  },
-  {
-    "//": "7x7 glass monster cage",
-    "type": "mapgen",
-    "nested_mapgen_id": "lab_room_7x7_rare",
-    "object": { "mapgensize": [ 7, 7 ], "place_nested": [ { "chunks": [ "glass_monster_cage" ], "x": 1, "y": 1 } ] }
   },
   {
     "//": "7x7 chem_storage",
@@ -469,16 +453,6 @@
       "terrain": { "a": "t_thconc_floor" },
       "item": { "a": { "item": "ash", "chance": 90 } },
       "place_nested": [ { "chunks": [ "sub_f_ash" ], "x": [ 0, 6 ], "y": [ 0, 6 ], "repeat": [ 2, 4 ] } ]
-    }
-  },
-  {
-    "//": "7x7 spider overlay",
-    "type": "mapgen",
-    "nested_mapgen_id": "lab_add_spiders_7x7",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "place_monsters": [ { "monster": "GROUP_SPIDER", "x": [ 0, 6 ], "y": [ 0, 6 ], "density": 0.1 } ],
-      "place_fields": [ { "field": "fd_web", "x": [ 0, 6 ], "y": [ 0, 6 ], "repeat": 40 } ]
     }
   }
 ]

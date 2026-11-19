@@ -1058,3 +1058,39 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- forest map for when adjacent forests exists
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "formless_forest",
+    layout = {
+        size = { width = 24, height = 24 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        tile_edits = {
+            {
+                shape = "point",
+                operation = "terrain",
+                id = "t_region_groundcover_forest",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 50, 200 },
+            },
+            {
+                shape = "point",
+                operation = "terrain",
+                id = "t_region_shrub",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 50, 100 },
+            },
+            {
+                shape = "point",
+                operation = "terrain",
+                id = "t_region_tree",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 20, 50 },
+            },
+        },
+    },
+}

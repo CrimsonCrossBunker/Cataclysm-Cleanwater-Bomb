@@ -173,3 +173,35 @@ ccb.content.define_mapgen {
         item_groups = { a = { group = "science", chance = 10 } },
     },
 }
+
+-- 7x7 bulk chemical storage
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_room_7x7_rare",
+    layout = {
+        size = { width = 7, height = 7 },
+        nested = { { id = "lab_filltank_chem", x = 3, y = 3 } },
+        furniture_placements = { { id = "f_standing_tank", x = 3, y = 3 } },
+    },
+}
+
+-- 7x7 glass monster cage
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_room_7x7_rare",
+    layout = {
+        size = { width = 7, height = 7 },
+        nested = { { id = "glass_monster_cage", x = 1, y = 1 } },
+    },
+}
+
+-- 7x7 spider overlay
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_add_spiders_7x7",
+    layout = {
+        size = { width = 7, height = 7 },
+        monster_group_placements = { { group = "GROUP_SPIDER", x = { 0, 6 }, y = { 0, 6 }, density = 0.1 } },
+        field_placements = { { id = "fd_web", x = { 0, 6 }, y = { 0, 6 }, repetitions = 40 } },
+    },
+}

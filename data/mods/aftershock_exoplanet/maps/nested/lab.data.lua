@@ -16,3 +16,30 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "open_cryo_pod1",
+    layout = {
+        size = { width = 1, height = 1 },
+        npc_placements = { { id = "cryo_hacker", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "open_cryo_pod3",
+    layout = {
+        size = { width = 1, height = 1 },
+        npc_placements = { { id = "cryo_doctor", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "open_cryo_pod4",
+    layout = {
+        size = { width = 1, height = 1 },
+        npc_placements = { { id = "cryo_scientist", x = 0, y = 0 } },
+    },
+}
