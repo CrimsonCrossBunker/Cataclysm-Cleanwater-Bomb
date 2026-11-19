@@ -758,16 +758,6 @@
     ]
   },
   {
-    "type": "ter_furn_transform",
-    "id": "portal_cage_transform",
-    "furniture": [ { "result": [ "f_absence" ], "valid_furniture": [ "f_null" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "portal_cage_revert_transform",
-    "furniture": [ { "result": [ "f_null" ], "valid_furniture": [ "f_absence" ] } ]
-  },
-  {
     "id": "skunk_squirt",
     "type": "SPELL",
     "name": { "str": "Skunk Spray", "//~": "NO_I18N" },
@@ -987,11 +977,6 @@
         }
       ]
     }
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "clear_portal_walls",
-    "terrain": [ { "result": [ "t_floor_warped" ], "valid_terrain": [ "t_wall_warped" ] } ]
   },
   {
     "type": "SPELL",

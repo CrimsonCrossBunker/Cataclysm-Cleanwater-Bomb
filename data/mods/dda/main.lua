@@ -502,3 +502,5 @@ require("tarot_cards")
 require("dimension_orbs")
 
 require("vitrification_return")
+
+require("terrain_transforms")

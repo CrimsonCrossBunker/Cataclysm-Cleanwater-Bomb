@@ -27,65 +27,6 @@
     }
   },
   {
-    "type": "ter_furn_transform",
-    "id": "tft_null",
-    "//": "transform won't accept null in a switch statement, so for now this is the solution. Does nothing.",
-    "terrain": [ { "result": "t_null", "valid_terrain": [ "t_null" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "struc_carcrash_rubble",
-    "terrain": [
-      {
-        "result": "t_floor",
-        "valid_terrain": [
-          "t_door_white_frame",
-          "t_door_frame",
-          "t_door_lab_frame",
-          "t_door_red_frame",
-          "t_door_green_frame",
-          "t_door_gray_frame",
-          "t_mdoor_lab_frame",
-          "t_mdoor_frame"
-        ],
-        "valid_flags": [ "DOOR", "WALL", "WINDOW", "BARRICADABLE_DOOR", "BARRICADABLE_DOOR_DAMAGED" ]
-      },
-      {
-        "result": "t_dirtmoundfloor",
-        "valid_terrain": [ "t_gutter_downspout" ],
-        "valid_flags": [ "DIGGABLE", "TREE", "SHRUB", "FLOWER" ]
-      }
-    ],
-    "furniture": [ { "result": "f_rubble", "valid_furniture": [ "f_null" ], "valid_flags": [ "BLOCKSDOOR", "TRANSPARENT" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "struc_carcrash_dirt",
-    "terrain": [ { "result": "t_dirtmoundfloor", "valid_flags": [ "DIGGABLE", "TREE", "SHRUB", "FLOWER" ] } ],
-    "furniture": [ { "result": "f_null", "valid_flags": [ "BLOCKSDOOR", "TRANSPARENT" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "struc_carcrash_clear",
-    "terrain": [
-      {
-        "result": "t_floor",
-        "valid_terrain": [
-          "t_door_white_frame",
-          "t_door_frame",
-          "t_door_lab_frame",
-          "t_door_red_frame",
-          "t_door_green_frame",
-          "t_door_gray_frame",
-          "t_mdoor_lab_frame",
-          "t_mdoor_frame"
-        ],
-        "valid_flags": [ "DOOR", "WINDOW", "WALL", "BARRICADABLE_DOOR", "BARRICADABLE_DOOR_DAMAGED" ]
-      }
-    ],
-    "furniture": [ { "result": "f_null", "valid_flags": [ "BLOCKSDOOR", "TRANSPARENT" ] } ]
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "carcrash_10x10_rand",
     "//": "Randomizes between the three car crash variants. The walls for the structure being damaged start at y:3.",

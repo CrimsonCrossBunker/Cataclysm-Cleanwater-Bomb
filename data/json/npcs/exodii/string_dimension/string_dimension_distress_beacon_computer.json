@@ -66,21 +66,6 @@
     "responses": [ { "text": "[Step away]", "topic": "TALK_DONE" } ]
   },
   {
-    "type": "ter_furn_transform",
-    "id": "ter_local_sd_distress_beacon_1",
-    "furniture": [ { "result": "f_string_dimension_distress_beacon_1", "valid_furniture": [ "f_console" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "ter_local_sd_distress_beacon_2",
-    "furniture": [ { "result": "f_string_dimension_distress_beacon_2", "valid_furniture": [ "f_console" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "ter_local_sd_distress_beacon_3",
-    "furniture": [ { "result": "f_string_dimension_distress_beacon_3", "valid_furniture": [ "f_console" ] } ]
-  },
-  {
     "type": "furniture",
     "id": "f_string_dimension_distress_beacon_1",
     "copy-from": "f_console_broken",

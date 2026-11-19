@@ -1,10 +1,5 @@
 [
   {
-    "type": "ter_furn_transform",
-    "id": "deactivate_imperial_road_gate",
-    "terrain": [ { "result": "t_highland_bronze_floor_inactive", "valid_terrain": [ "t_highland_bronze_floor" ] } ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_HIGHLANDS_DIMENSION_TELEPORT",
     "global": true,

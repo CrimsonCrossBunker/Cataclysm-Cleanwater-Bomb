@@ -16,10 +16,5 @@
       "or": [ { "not": { "u_has_trait": "WEB_WALKER" } }, { "u_has_trait": "WEB_SPINNER" }, { "u_has_trait": "WEB_WEAVER" } ]
     },
     "effect": [ { "u_transform_radius": 0, "ter_furn_transform": "spider_clear_webs" } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "spider_clear_webs",
-    "field": [ { "result": "fd_null", "valid_field": [ "fd_web" ] } ]
   }
 ]

@@ -213,18 +213,6 @@
     "false_effect": [ { "u_message": "You feel a prickle at the edge of your senses." } ]
   },
   {
-    "type": "ter_furn_transform",
-    "id": "transform_LS_teleport_default_dimension_spire_to_safehouse",
-    "terrain": [
-      {
-        "result": "t_nl_obelisk_earth_broken",
-        "valid_terrain": [ "t_nl_obelisk_earth" ],
-        "message": "You hear a resounding CRACK!",
-        "message_good": false
-      }
-    ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_LS_teleport_default_dimension_spire_to_safehouse",
     "condition": { "and": [ { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" }, { "not": "u_driving" } ] },

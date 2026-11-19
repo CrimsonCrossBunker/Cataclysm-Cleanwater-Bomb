@@ -1948,18 +1948,6 @@
     }
   },
   {
-    "type": "ter_furn_transform",
-    "id": "LIXA_power_out",
-    "terrain": [
-      { "result": [ "t_carpet_concrete_green" ], "valid_terrain": [ "t_carpet_concrete_green_olight" ] },
-      { "result": [ "t_thconc_floor" ], "valid_terrain": [ "t_thconc_floor_olight" ] }
-    ],
-    "furniture": [
-      { "result": [ "f_console_broken" ], "valid_furniture": [ "f_console" ] },
-      { "result": [ "f_null" ], "valid_furniture": [ "f_LIXA_unfold_barrier" ] }
-    ]
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "LIXA_sad_graffiti",
     "object": { "mapgensize": [ 1, 1 ], "place_graffiti": [ { "snippet": "LIXA_lab_graffiti_sad_snips", "x": 0, "y": 0 } ] }

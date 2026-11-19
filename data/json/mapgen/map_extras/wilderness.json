@@ -852,10 +852,5 @@
     "type": "mapgen",
     "nested_mapgen_id": "1x1_upturn_earth",
     "object": { "mapgensize": [ 1, 1 ], "place_ter_furn_transforms": [ { "transform": "upturn_earth", "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "upturn_earth",
-    "terrain": [ { "result": "t_dirtmound", "valid_flags": [ "DIGGABLE" ] } ]
   }
 ]

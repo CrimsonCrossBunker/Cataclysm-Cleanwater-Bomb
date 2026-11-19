@@ -44,17 +44,6 @@
     }
   },
   {
-    "type": "ter_furn_transform",
-    "id": "unlock_elock_xedra3",
-    "terrain": [
-      {
-        "result": [ "t_door_metal_c" ],
-        "valid_terrain": [ "t_door_metal_elocked_xedra3" ],
-        "message": "You enter the code and door mechanism clicks as it unlocks."
-      }
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "xedra_fishing_shack_0" ],
     "object": {

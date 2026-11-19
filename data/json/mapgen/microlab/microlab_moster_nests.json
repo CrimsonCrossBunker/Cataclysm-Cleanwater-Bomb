@@ -90,11 +90,6 @@
     }
   },
   {
-    "type": "ter_furn_transform",
-    "id": "microlab_triffidize",
-    "terrain": [ { "result": [ "t_strconc_floor", [ "t_region_groundcover_forest", 3 ] ], "valid_terrain": [ "t_strconc_floor" ] } ]
-  },
-  {
     "id": "GROUP_MLAB_RUST_ZOMBIE",
     "type": "monstergroup",
     "monsters": [

@@ -1,25 +1,5 @@
 [
   {
-    "type": "ter_furn_transform",
-    "id": "merc_spike_transform",
-    "furniture": [ { "result": [ "f_empty_spike" ], "valid_furniture": [ "f_impaled_officer" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "merc_darkness_transform",
-    "terrain": [ { "result": [ "t_nether_glass_floor", [ "t_strconc_floor", 3 ] ], "valid_terrain": [ "t_strconc_floor" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "merc_darkness_transform_walls",
-    "terrain": [
-      {
-        "result": [ "t_nether_glass_floor", [ "t_nether_glass_wall", 2 ] ],
-        "valid_terrain": [ "t_wall_glass", "t_concrete_wall" ]
-      }
-    ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_HAUNTING",
     "condition": { "or": [ { "math": [ "XEDRA_OFFICER_STATUS == 1" ] }, "u_is_outside" ] },

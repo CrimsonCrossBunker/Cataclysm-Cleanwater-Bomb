@@ -162,11 +162,6 @@
     "max_range": 10
   },
   {
-    "type": "ter_furn_transform",
-    "id": "exodii_foam",
-    "terrain": [ { "result": "t_foam_wall", "valid_flags": [ "FLAT" ] } ]
-  },
-  {
     "id": "sapra",
     "looks_like": "smle_mk3",
     "type": "ITEM",

@@ -160,20 +160,5 @@
     "type": "mapgen",
     "nested_mapgen_id": "1x1_wall_to_paper",
     "object": { "mapgensize": [ 1, 1 ], "place_ter_furn_transforms": [ { "transform": "wall_to_paper", "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "remove_door",
-    "terrain": [ { "result": "t_door_frame", "valid_flags": [ "DOOR", "BARRICADABLE_DOOR_DAMAGED", "BARRICADABLE_DOOR" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "remove_window",
-    "terrain": [ { "result": [ "t_window_frame" ], "valid_flags": [ "WINDOW" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "wall_to_paper",
-    "terrain": [ { "result": [ "t_paper" ], "valid_flags": [ "WALL" ] } ]
   }
 ]
