@@ -1,6 +1,37 @@
 local ccb = require("ccb")
 
 ccb.content.define_mapgen {
+    kind = "update",
+    id = "mx_bandits_block",
+    layout = {
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                neighbors = {
+                    north = { { terrain = "road", match = "type" } },
+                    east = { { terrain = "forest", match = "prefix" } },
+                    south = { { terrain = "road", match = "type" } },
+                    west = { { terrain = "forest", match = "prefix" } },
+                },
+                id = "24x24_bandits_block_horizontal",
+            },
+            {
+                x = 0,
+                y = 0,
+                neighbors = {
+                    north = { { terrain = "forest", match = "prefix" } },
+                    east = { { terrain = "road", match = "type" } },
+                    south = { { terrain = "forest", match = "prefix" } },
+                    west = { { terrain = "road", match = "type" } },
+                },
+                id = "24x24_bandits_block_vertical",
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
     kind = "nested",
     id = "24x24_bandits_block_horizontal",
     layout = {
