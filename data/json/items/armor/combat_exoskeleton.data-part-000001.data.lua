@@ -1,13 +1,13 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
-    id = "combat_exoskeleton_medium_on",
-    copy_from = "combat_exoskeleton_medium",
-    name = ccb.content.plural_text("combat exoskeleton mk2 (on)", "combat exoskeletons m2 (on)"),
-    revert_to = "combat_exoskeleton_medium",
+    id = "combat_exoskeleton_heavy_on",
+    copy_from = "combat_exoskeleton_heavy",
+    name = ccb.content.plural_text("combat exoskeleton mk1 (on)", "combat exoskeletons mk1 (on)"),
+    revert_to = "combat_exoskeleton_heavy",
     inheritance = { add = { flags = { "GAS_PROOF", "WATCH", "PARTIAL_DEAF", "TWO_WAY_RADIO", "SPAWN_ACTIVE" } } },
     subtype_order = { "tool", "armor" },
-    tool = { power_draw = "175 W" },
+    tool = { power_draw = "200 W" },
     armor = {
         portions = {
             {
@@ -30,7 +30,7 @@ ccb.content.define_item {
                 layers = { "NORMAL", "OUTER" },
                 volume_encumbrance = 0.3,
                 covers = { "torso" },
-                encumbrance = 12,
+                encumbrance = 14,
                 coverage = 100,
                 materials = {
                     { id = "lycra", thickness = 0.2 },
@@ -45,7 +45,7 @@ ccb.content.define_item {
                 layers = { "NORMAL", "OUTER" },
                 volume_encumbrance = 0,
                 covers = { "head", "arm_l", "arm_r", "leg_l", "leg_r" },
-                encumbrance = 12,
+                encumbrance = 14,
                 coverage = 100,
                 materials = {
                     { id = "lycra", thickness = 0.2 },
@@ -103,7 +103,7 @@ ccb.content.define_item {
             ammo_scale = 0,
             menu_text = ccb.content.text("Turn off"),
             message = ccb.content.text("You turn the exoskeleton off.\n>>Initiating shutdown sequence…\n>>Shutting down."),
-            target = "combat_exoskeleton_medium",
+            target = "combat_exoskeleton_heavy",
         },
         { kind = "attach_molle", size = 10 },
         { kind = "detach_molle" },
