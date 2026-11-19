@@ -239,7 +239,29 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 292> migrated_character_tasks = {{
+const std::array<character_task_migration, 303> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_BIOKIN_POTION_COMEDOWN" ),
+          "come_down_from_biokin_elixir", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_CLAIR_POTION_COMEDOWN" ),
+          "come_down_from_clair_elixir", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_ELECTROKIN_POTION_COMEDOWN" ),
+          "come_down_from_electrokin_elixir", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_PHOTOKIN_POTION_COMEDOWN" ),
+          "come_down_from_photokin_elixir", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_PYROKIN_POTION_COMEDOWN" ),
+          "come_down_from_pyrokin_elixir", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_TELEKIN_POTION_COMEDOWN" ),
+          "come_down_from_telekin_elixir", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_TELEPATH_POTION_COMEDOWN" ),
+          "come_down_from_telepath_elixir", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_TELEPORT_POTION_COMEDOWN" ),
+          "come_down_from_teleport_elixir", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_VITAKIN_POTION_COMEDOWN" ),
+          "come_down_from_vitakin_elixir", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_DRAIN_RESIST_POTION_COMEDOWN" ),
+          "come_down_from_noetic_resilience", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_TELEPORT_POTION_COMEDOWN_TELEPORT" ),
+          "blink_during_teleport_elixir_comedown", "teleport_elixir_blink_state", false, "mindovermatter" },
         { effect_on_condition_id( "eoc_cd_delight_strength_enhancement_tick" ),
           "tick_strength", nullptr, false, "cata_delight" },
         { effect_on_condition_id( "eoc_cd_delight_dexterity_enhancement_tick" ),
