@@ -1,0 +1,76 @@
+[
+  {
+    "id": "zenfs_moon_phase_text",
+    "type": "widget",
+    "style": "text",
+    "text_align": "right",
+    "clauses": [
+      { "id": "new_moon", "text": "New moon  ", "color": "white", "condition": { "math": [ "moon_phase() == 0" ] } },
+      {
+        "id": "waxing_crescent",
+        "text": "Wax.crescent",
+        "color": "white",
+        "condition": { "math": [ "moon_phase() == 1" ] }
+      },
+      { "id": "half_moon", "text": "Half moon  ", "color": "white", "condition": { "math": [ "moon_phase() == 2" ] } },
+      {
+        "id": "waxing_gibbous",
+        "text": "Wax.gibbous ",
+        "color": "white",
+        "condition": { "math": [ "moon_phase() == 3" ] }
+      },
+      { "id": "full_moon", "text": "Full moon  ", "color": "white", "condition": { "math": [ "moon_phase() == 4" ] } },
+      {
+        "id": "waning_gibbous",
+        "text": "Wan.gibbous ",
+        "color": "white",
+        "condition": { "math": [ "moon_phase() == 5" ] }
+      },
+      { "id": "half_moon", "text": "Half moon  ", "color": "white", "condition": { "math": [ "moon_phase() == 6" ] } },
+      {
+        "id": "waning_crescent",
+        "text": "Wan.crescent",
+        "color": "white",
+        "condition": { "math": [ "moon_phase() == 7" ] }
+      },
+      { "id": "dark_moon", "text": "Dark moon  ", "color": "white", "condition": { "math": [ "moon_phase() == 8" ] } }
+    ]
+  },
+  {
+    "id": "zenfs_moon_phase_text_right",
+    "type": "widget",
+    "style": "text",
+    "text_align": "right",
+    "clauses": [
+      { "id": "new_moon", "text": "New moon", "color": "white", "condition": { "math": [ "moon_phase() == 0" ] } },
+      {
+        "id": "waxing_crescent",
+        "text": "Waxing crescent",
+        "color": "white",
+        "condition": { "math": [ "moon_phase() == 1" ] }
+      },
+      { "id": "half_moon", "text": "Half moon", "color": "white", "condition": { "math": [ "moon_phase() == 2" ] } },
+      {
+        "id": "waxing_gibbous",
+        "text": "Waxing gibbous",
+        "color": "white",
+        "condition": { "math": [ "moon_phase() == 3" ] }
+      },
+      { "id": "full_moon", "text": "Full moon", "color": "white", "condition": { "math": [ "moon_phase() == 4" ] } },
+      {
+        "id": "waning_gibbous",
+        "text": "Waning gibbous",
+        "color": "white",
+        "condition": { "math": [ "moon_phase() == 5" ] }
+      },
+      { "id": "half_moon", "text": "Half moon", "color": "white", "condition": { "math": [ "moon_phase() == 6" ] } },
+      {
+        "id": "waning_crescent",
+        "text": "Waning crescent",
+        "color": "white",
+        "condition": { "math": [ "moon_phase() == 7" ] }
+      },
+      { "id": "dark_moon", "text": "Dark moon", "color": "white", "condition": { "math": [ "moon_phase() == 8" ] } }
+    ]
+  }
+]

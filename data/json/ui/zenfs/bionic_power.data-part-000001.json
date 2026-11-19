@@ -1,0 +1,25 @@
+[
+  {
+    "id": "zenfs_bionicpower_label",
+    "type": "widget",
+    "style": "text",
+    "string": "Power",
+    "width": 5,
+    "clauses": [
+      {
+        "id": "label_invisible",
+        "text": { "str": "     ", "//~": "NO_I18N" },
+        "color": "c_black",
+        "condition": { "math": [ "u_val('power_max') <= 0" ] }
+      },
+      {
+        "id": "label_visible",
+        "text": "Power",
+        "color": "c_light_gray",
+        "condition": { "math": [ "u_val('power_max') > 0" ] }
+      }
+    ],
+    "flags": [ "W_LABEL_NONE" ],
+    "padding": 0
+  }
+]

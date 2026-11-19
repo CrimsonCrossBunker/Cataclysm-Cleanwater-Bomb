@@ -44,11 +44,5 @@
         "condition": { "math": [ "u_val('activity_level') == 5" ] }
       }
     ]
-  },
-  {
-    "id": "zenfs_activity_desc_A",
-    "type": "widget",
-    "copy-from": "zenfs_activity_desc",
-    "label": "A"
   }
 ]
