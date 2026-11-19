@@ -1,0 +1,17 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "dry_veggy_tainted",
+    "category": "other",
+    "name": { "str": "dehydrated alien fungus chunk" },
+    "copy-from": "dry_veggy",
+    "looks_like": "dry_mushroom",
+    "use_action": [ "POISON" ],
+    "description": "Pieces of alien mushroom that have been dried to prevent them from rotting away.  They will still poison you if you eat them.",
+    "display_type": "BY_WEIGHT",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "flags": [ "EDIBLE_FROZEN", "FUNGAL_VECTOR" ]
+  }
+]

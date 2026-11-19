@@ -1,0 +1,16 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "buckwheat_cooked",
+    "name": { "str_sp": "cooked buckwheat" },
+    "copy-from": "buckwheat",
+    "spoils_in": "20 days",
+    "description": "A serving of cooked buckwheat porridge.  Healthy and nutritious but bland.",
+    "price": "1 USD 20 cent",
+    "price_postapoc": "50 cent",
+    "flags": [ "EATEN_HOT" ],
+    "into": "null",
+    "recipe": ""
+  }
+]
