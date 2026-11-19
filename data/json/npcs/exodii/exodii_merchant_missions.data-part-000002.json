@@ -1,0 +1,46 @@
+[
+  {
+    "id": "TALK_EXODII_MERCHANT_mission_1_explain",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "Have you seen our big stompy quads?  There's a lot of things we're good at, but sneaky and subtle we aren't.  If we want a meet cute, first we've got to lay out the hempen mats.",
+      "str": "Hat ye kennt our great clanks an' stompers?  There be many a thing we can do right good, but for the supple an' smooth, we b'ain't.  Wish'n we to make a meet-cute, must we first lay out the hempen mats."
+    },
+    "responses": [
+      { "text": "Hold up, did you just say \"meet cute\"?", "topic": "TALK_EXODII_MERCHANT_Meetcute" },
+      {
+        "text": "I am guessing it doesn't matter, but what do you mean about hempen mats?",
+        "effect": { "u_add_var": "rubik_personal_questions", "value": "hempen_mats" },
+        "topic": "TALK_EXODII_MERCHANT_Hempen1"
+      },
+      {
+        "text": "OK, fine.  Tell me more about this job that you can't do.",
+        "topic": "TALK_EXODII_MERCHANT_mission_1_intro1"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
+      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_EXODII_MERCHANT_mission_1_intro1",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "It's a bit hard to explain, but I'll do my best.  The forces we send far out, what I'd call 'escolts'… explorers?  They've scouted a place with a bit of promise, as far as I can tell.  A wall of concrete around a bunker.  That's not so odd in a place like this, but this one has people coming and going.  There's something still in there, and I wonder who.  Are they friendly or not?  What would you think about doing some scouting yourself?",
+      "str": "It be a right coddle to yark, but ol' Rubik'll do as can.  Them as we send a'far, what I'd assert as 'escolts'… explorers?  They's escolted a place with a mite o' promise, an I'm ken.  A wall o' crete-stone, abreast a rattlin' clunker… a 'bunker'.  Not so odd in a deadlands alas, but this'n gots the comin's and goin's.  Sommat's still in there, an' ol' Rubik wonders who.  Be they friend or foe?  What say ye t'helpin' with a mite o' escoltin' y'self?"
+    },
+    "responses": [
+      { "text": "Why can't one of you do this?", "topic": "TALK_EXODII_MERCHANT_mission_1_explain" },
+      {
+        "text": "Well, today's your lucky day, my metal friend.  I already know the place quite well.",
+        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_intercom_u_discovered_robofac_intercom" } ] },
+        "topic": "TALK_EXODII_MERCHANT_mission_1_met_hub"
+      },
+      {
+        "text": "What exactly do you want me to do?  Scout out this bunker and contact the people in it?",
+        "topic": "TALK_EXODII_MERCHANT_mission_1_intro2"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
+      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
+    ]
+  }
+]
