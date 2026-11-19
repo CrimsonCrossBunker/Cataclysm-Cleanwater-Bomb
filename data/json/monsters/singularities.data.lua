@@ -1,0 +1,53 @@
+local ccb = require("ccb")
+
+-- A weaker, limbless, quicker devourer that can absorb nearby flesh and bone to make more of itself.  Becomes a regular devourer after a half-life of a day.
+ccb.content.define_monster {
+    id = "mon_singularity_reclaimer_spawn",
+    name = ccb.content.plural_text("reclaimer spawn", "reclaimer spawns"),
+    description = ccb.content.text("A smaller, featureless mass of writhing flesh with appendages stretching towards nearby corpses to absorb them."),
+    default_faction = "zombie",
+    body_type = "blob",
+    species = { "ZOMBIE" },
+    difficulty_adjustment = 6,
+    volume = "187500 ml",
+    mass = "244500 g",
+    hp = 122,
+    speed = 80,
+    materials = { "flesh" },
+    symbol = "0",
+    color = "red",
+    scents_tracked = { "sc_human", "sc_fetid" },
+    aggression = 100,
+    morale = 100,
+    melee_skill = 3,
+    melee_dice = 3,
+    melee_sides = 3,
+    bleed_rate = 0,
+    vision_day = 15,
+    vision_night = 15,
+    melee_damage = { { type = "cut", amount = 0 } },
+    upgrade = { half_life = 1, monster = "mon_devourer" },
+    attacks = {
+        { reference = "ABSORB_ITEMS", cooldown = 5 },
+        { reference = "ABSORB_MEAT", cooldown = 5 },
+        { reference = "SPLIT", cooldown = 5 },
+    },
+    absorb_ml_per_hp = 250,
+    split_move_cost = 100,
+    absorb_move_cost_max = 300,
+    absorb_move_cost_per_ml = 0.025,
+    absorb_materials = { "flesh", "bone" },
+    regenerates = 1,
+    flags = {
+        "SEES", "HEARS", "SMELLS", "STUMBLES", "WARM", "BASHES", "GROUP_BASH", "POISON", "NOHEAD",
+        "NO_BREATHE", "REVIVES", "BILE_BLOOD", "PUSH_MON", "FILTHY",
+    },
+    armor = { bash = 3, cut = 3, bullet = 2, electric = 1 },
+    death = {
+        outcome = {
+            message = ccb.content.text("The %s explodes in a shower of gore!"),
+            corpse = "NO_CORPSE",
+            spell = { id = "death_blood", hit_self = true, min_level = 0 },
+        },
+    },
+}
