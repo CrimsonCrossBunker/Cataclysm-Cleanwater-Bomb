@@ -485,18 +485,5 @@
       "success_lie": "What?!  You liar!",
       "failure": "Wow, you failed?  How…"
     }
-  },
-  {
-    "//": "MISSION_PYROMANIAC mission set this topic as starting topic for mission giver.",
-    "type": "talk_topic",
-    "id": "MISSION_PYROMANIAC",
-    "dynamic_line": "Are we there yet, <name_g>?  I can't wait to burn that tree!",
-    "responses": [
-      {
-        "text": "We're here.  Let's do it!",
-        "topic": "TALK_MISSION_INQUIRE",
-        "condition": { "and": [ "mission_complete", { "u_has_items": { "item": "tinder", "count": 1 } } ] }
-      }
-    ]
   }
 ]
