@@ -1,0 +1,16 @@
+[
+  {
+    "type": "terrain",
+    "id": "t_bay_ramp_control",
+    "name": "cargo bay ramp control",
+    "description": "A large console used to lower and raise the cargo bay ramp.  The ramp needs to be retracted before you can take off.",
+    "roof": "t_metal_flat_roof",
+    "looks_like": "t_intercom",
+    "move_cost": 0,
+    "coverage": 65,
+    "flags": [ "NOITEM", "SUPPORTS_ROOF", "NO_SCENT", "TRANSPARENT", "SHORT" ],
+    "symbol": "o",
+    "color": "white",
+    "examine_action": { "type": "effect_on_condition", "effect_on_conditions": [ "EOC_SHIP_RAMP" ] }
+  }
+]

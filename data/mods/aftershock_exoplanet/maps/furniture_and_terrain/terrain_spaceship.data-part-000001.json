@@ -1,0 +1,16 @@
+[
+  {
+    "type": "terrain",
+    "id": "t_afs_starcrane_control",
+    "name": "THI-14 StarCrane instrument panel",
+    "description": "A large console, instrument panels and control surfaces.  You can fly the ship from here.",
+    "roof": "t_metal_flat_roof",
+    "looks_like": "t_intercom",
+    "move_cost": 0,
+    "coverage": 65,
+    "flags": [ "NOITEM", "SUPPORTS_ROOF", "NO_SCENT", "TRANSPARENT", "SHORT" ],
+    "symbol": "o",
+    "color": "white",
+    "examine_action": { "type": "effect_on_condition", "effect_on_conditions": [ "EOC_THI_CONTROL" ] }
+  }
+]

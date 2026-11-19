@@ -1,0 +1,71 @@
+local ccb = require("ccb")
+
+ccb.content.define_furniture {
+    id = "f_atomic_butter_churn",
+    name = ccb.content.text("atomic butter churn on a stand"),
+    description = ccb.content.text("The Rivtech Atomic Butter Churn in deployed state.  It hums menacingly.  Ready to add raw milk and salt.  It will churn till the earth is a cinder."),
+    symbol = "H",
+    color = "light_green",
+    crafting_pseudo_item = "atomic_pseudo_churn",
+    move_cost_mod = -1,
+    coverage = 70,
+    required_strength = -1,
+    flags = {
+        "NOITEM",
+        "SEALED",
+        "ALLOW_FIELD_EFFECT",
+        "TRANSPARENT",
+        "EASY_DECONSTRUCT",
+        "CONTAINER",
+        "LIQUIDCONT",
+    },
+    deconstruct = { drops = { { item = "atomic_butterchurn", count = 1 } } },
+    builtin_examine = "keg",
+    keg_capacity = "11250 ml",
+    bash = {
+        minimum_strength = 12,
+        maximum_strength = 50,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump."),
+        drops = {
+            { item = "plastic_chunk", count = { 6, 8 } },
+            { item = "water_faucet", chance = 50 },
+            { item = "sheet_metal_small", count = { 6, 12 } },
+            { item = "scrap", count = { 10, 20 } },
+        },
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_diamond_press",
+    name = ccb.content.text("diamond press on a stand"),
+    description = ccb.content.text("Matrioshka Fabritechnics Diamond Press deployed and ready to crush some things on a molecular level.  DO NOT INSERT ANY PART OF YOUR ANATOMY."),
+    symbol = "H",
+    color = "light_cyan",
+    crafting_pseudo_item = "pseudo_diamond_press",
+    move_cost_mod = -1,
+    coverage = 70,
+    required_strength = -1,
+    flags = {
+        "NOITEM",
+        "SEALED",
+        "ALLOW_FIELD_EFFECT",
+        "TRANSPARENT",
+        "EASY_DECONSTRUCT",
+        "CONTAINER",
+        "LIQUIDCONT",
+    },
+    deconstruct = { drops = { { item = "diamond_press", count = 1 } } },
+    bash = {
+        minimum_strength = 12,
+        maximum_strength = 50,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump."),
+        drops = {
+            { item = "plastic_chunk", count = { 6, 8 } },
+            { item = "water_faucet", chance = 50 },
+            { item = "sheet_metal_small", count = { 6, 12 } },
+            { item = "scrap", count = { 10, 20 } },
+        },
+    },
+}

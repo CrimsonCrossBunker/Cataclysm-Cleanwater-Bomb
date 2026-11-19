@@ -1,0 +1,17 @@
+[
+  {
+    "type": "terrain",
+    "id": "t_augustmoon_shuttle_console",
+    "name": "Shuttle Guidance Console",
+    "description": "The simplified guidance interface of a drone shuttle.  Activating it will transport you to Port Augustmoon.",
+    "symbol": "6",
+    "looks_like": "t_afs_shuttlepod_g",
+    "color": "light_blue",
+    "move_cost": 0,
+    "coverage": 50,
+    "roof": "t_flat_roof",
+    "connect_groups": "INDOORFLOOR",
+    "flags": [ "NOITEM", "INDOORS" ],
+    "examine_action": { "type": "effect_on_condition", "effect_on_conditions": [ "EOC_AFS_AUGUSTMOON_SHUTTLE_TP" ] }
+  }
+]

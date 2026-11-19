@@ -1,0 +1,63 @@
+[
+  {
+    "type": "furniture",
+    "id": "f_security_panel",
+    "name": "security override panel",
+    "symbol": "e",
+    "description": "A slim wall mounted metal panel covering an electronic interface to manually override nearby security systems.",
+    "color": "blue",
+    "move_cost_mod": 1,
+    "required_str": -1,
+    "flags": [ "TRANSPARENT" ],
+    "examine_action": {
+      "type": "effect_on_condition",
+      "effect_on_conditions": [
+        {
+          "id": "EOC_unlock_afs_security_panel",
+          "effect": [
+            { "math": [ "_t_delay = time('20 m')" ] },
+            {
+              "run_eocs": "EOC_start_lock_hack",
+              "variables": { "furn_pos": { "context_val": "pos" }, "t_delay": { "context_val": "t_delay" }, "difficulty": 10, "t_radius": 6 },
+              "alpha_talker": "avatar"
+            }
+          ]
+        }
+      ]
+    },
+    "bash": {
+      "str_min": 6,
+      "str_max": 30,
+      "sound": "smash!",
+      "sound_fail": "whump.",
+      "items": [
+        { "item": "cable", "count": [ 1, 2 ] },
+        { "item": "plastic_chunk", "count": [ 1, 2 ] },
+        { "item": "scrap", "count": [ 1, 2 ] },
+        { "item": "mc_steel_chunk", "count": [ 0, 1 ] }
+      ]
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_security_panel_10",
+    "name": "security override panel",
+    "copy-from": "f_security_panel",
+    "examine_action": {
+      "type": "effect_on_condition",
+      "effect_on_conditions": [
+        {
+          "id": "EOC_unlock_afs_security_panel_10",
+          "effect": [
+            { "math": [ "_t_delay = time('20 m')" ] },
+            {
+              "run_eocs": "EOC_start_lock_hack",
+              "variables": { "furn_pos": { "context_val": "pos" }, "t_delay": { "context_val": "t_delay" }, "difficulty": 10, "t_radius": 10 },
+              "alpha_talker": "avatar"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
