@@ -1,0 +1,161 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_BEGGAR_1_GAVE_FOOD",
+    "dynamic_line": "This is wonderful of you, I really appreciate it.",
+    "speaker_effect": [ { "effect": { "u_bulk_donate": 1 } }, { "effect": { "run_eocs": [ "EOC_BEGGAR_TEST_IF_FOOD_CANNIBAL" ] } } ],
+    "responses": [
+      { "text": "What are you doing here?", "topic": "TALK_REFUGEE_BEGGAR_1_INTRO" },
+      { "text": "No problem.  <end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_BEGGAR_1_LEAVE",
+    "dynamic_line": "Where else?  I can't fight those things out there.  I'm in terrible physical condition, don't have any useful skills, and I'm terrified of <zombies> and violence.  How am I supposed to find a safe place?",
+    "responses": [
+      { "text": "Why don't you scavenge your own food?", "topic": "TALK_REFUGEE_BEGGAR_1_SCAVENGE" },
+      { "text": "What did you do before <the_cataclysm>?", "topic": "TALK_REFUGEE_BEGGAR_1_EXPERTISE" },
+      {
+        "condition": { "not": "u_has_camp" },
+        "text": "Come with me.  Maybe you're not the greatest adventurer, but it's better than living here.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_JOIN"
+      },
+      {
+        "condition": { "and": [ "u_has_camp", { "not": { "compare_string": [ "yes", { "u_val": "general_recruit_reena_recruited" } ] } } ] },
+        "text": "I have a camp of my own, away from here.  You could come there.  There aren't many people left, we could use anyone regardless of skills.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_RECRUIT1"
+      },
+      {
+        "condition": { "not": { "npc_has_effect": "beggar_has_eaten" } },
+        "text": "I might have some food for you.  Let me check.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_GIVE_FOOD"
+      },
+      { "condition": { "npc_has_effect": "beggar_has_eaten" }, "text": "<end_talking_leave>", "topic": "TALK_DONE" },
+      {
+        "condition": { "not": { "npc_has_effect": "beggar_has_eaten" } },
+        "text": "I'm sorry, I can't help you.",
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_BEGGAR_1_SCAVENGE",
+    "dynamic_line": "Out there?  That's suicide!  People that go out there don't come back, people who can hold their own… unlike me.  I'd rather take my chances begging for scraps and waiting for someone in the center to die and make room for me, thanks.",
+    "responses": [
+      { "text": "Why don't you go somewhere else?", "topic": "TALK_REFUGEE_BEGGAR_1_LEAVE" },
+      { "text": "What did you do before <the_cataclysm>?", "topic": "TALK_REFUGEE_BEGGAR_1_EXPERTISE" },
+      {
+        "condition": { "not": "u_has_camp" },
+        "text": "Come with me.  Maybe you're not the greatest adventurer, but it's better than living here.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_JOIN"
+      },
+      {
+        "condition": { "and": [ "u_has_camp", { "not": { "compare_string": [ "yes", { "u_val": "general_recruit_reena_recruited" } ] } } ] },
+        "text": "I have a camp of my own, away from here.  Maybe you can't scavenge, but we can use any warm bodies that can lift a tool.  You'd be safer and better fed there.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_RECRUIT1"
+      },
+      {
+        "condition": { "not": { "npc_has_effect": "beggar_has_eaten" } },
+        "text": "I might have some food for you.  Let me check.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_GIVE_FOOD"
+      },
+      { "condition": { "npc_has_effect": "beggar_has_eaten" }, "text": "<end_talking_leave>", "topic": "TALK_DONE" },
+      {
+        "condition": { "not": { "npc_has_effect": "beggar_has_eaten" } },
+        "text": "I'm sorry, I can't help you.",
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_BEGGAR_1_EXPERTISE",
+    "dynamic_line": "I was a high school math teacher.  It was a good job, I loved it.  Funny enough, it's not super applicable after the end of the world.  I mean, at some point people are going to need a teacher again, but right now they just want food, shelter, and clothing.",
+    "responses": [
+      { "text": "Why don't you go somewhere else?", "topic": "TALK_REFUGEE_BEGGAR_1_LEAVE" },
+      { "text": "Why don't you scavenge your own food?", "topic": "TALK_REFUGEE_BEGGAR_1_SCAVENGE" },
+      {
+        "condition": { "not": "u_has_camp" },
+        "text": "Come with me.  Maybe you're not the greatest adventurer, but it's better than living here.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_JOIN"
+      },
+      {
+        "condition": { "and": [ "u_has_camp", { "not": { "compare_string": [ "yes", { "u_val": "general_recruit_reena_recruited" } ] } } ] },
+        "text": "I have a camp of my own, away from here.  Maybe they can't use your skills here, but I could.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_RECRUIT1"
+      },
+      {
+        "condition": { "not": { "npc_has_effect": "beggar_has_eaten" } },
+        "text": "I might have some food for you.  Let me check.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_GIVE_FOOD"
+      },
+      { "condition": { "npc_has_effect": "beggar_has_eaten" }, "text": "<end_talking_leave>", "topic": "TALK_DONE" },
+      {
+        "condition": { "not": { "npc_has_effect": "beggar_has_eaten" } },
+        "text": "I'm sorry, I can't help you.",
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_BEGGAR_1_JOIN",
+    "dynamic_line": "That's a kind offer of you, but I think I'd rather take my chances here than risking it out there again.  I remember <the_cataclysm>, I'm not in any hurry to face that again.",
+    "responses": [
+      { "text": "Why don't you go somewhere else?", "topic": "TALK_REFUGEE_BEGGAR_1_LEAVE" },
+      { "text": "Why don't you scavenge your own food?", "topic": "TALK_REFUGEE_BEGGAR_1_SCAVENGE" },
+      { "text": "What did you do before <the_cataclysm>?", "topic": "TALK_REFUGEE_BEGGAR_1_EXPERTISE" },
+      {
+        "condition": { "not": { "npc_has_effect": "beggar_has_eaten" } },
+        "text": "I might have some food for you.  Let me check.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_GIVE_FOOD"
+      },
+      { "condition": { "npc_has_effect": "beggar_has_eaten" }, "text": "<end_talking_leave>", "topic": "TALK_DONE" },
+      {
+        "condition": { "not": { "npc_has_effect": "beggar_has_eaten" } },
+        "text": "I'm sorry, I can't help you.",
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_BEGGAR_1_RECRUIT1",
+    "dynamic_line": {
+      "npc_has_effect": "beggar_has_eaten",
+      "yes": "That's quite the offer, but I don't think I'd survive the trip.  I don't think you realize how useless I am in this world.",
+      "no": "I'm sorry, I'm too hungry to make a big decision like that."
+    },
+    "responses": [
+      {
+        "text": "I can keep you safe.  I'll take you there myself.",
+        "condition": { "npc_has_effect": "beggar_has_eaten" },
+        "trial": {
+          "type": "PERSUADE",
+          "difficulty": 100,
+          "//": "This is a very difficult sell-job unless you've earned her trust with food",
+          "mod": [ [ "TRUST", 4 ], [ "VALUE", 2 ], [ "OWED", 3 ], [ "ANGER", -2 ], [ "FEAR", -6 ], [ "BRAVERY", 1 ] ]
+        },
+        "success": {
+          "topic": "TALK_REFUGEE_BEGGAR_1_RECRUIT2",
+          "effect": { "u_add_var": "general_recruit_reena_recruited", "value": "yes" }
+        },
+        "failure": { "topic": "TALK_REFUGEE_BEGGAR_1_RECRUIT_NO" }
+      },
+      {
+        "condition": { "not": { "npc_has_effect": "beggar_has_eaten" } },
+        "text": "I might have some food for you.  Let me check.",
+        "topic": "TALK_REFUGEE_BEGGAR_1_GIVE_FOOD"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "condition": { "npc_has_effect": "beggar_has_eaten" }, "text": "<end_talking_leave>", "topic": "TALK_DONE" },
+      {
+        "condition": { "not": { "npc_has_effect": "beggar_has_eaten" } },
+        "text": "I'm sorry, I can't help you.",
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]
