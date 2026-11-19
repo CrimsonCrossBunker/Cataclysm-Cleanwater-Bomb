@@ -1,51 +1,56 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_MISSION_OFFER_SEER",
-    line = ccb.content.text("If you wish to be set on the path to enlightenment, first you must learn to listen and hear the song.  Go out, butcher an untainted creature and feel the power between your fingertips.  Then bring me the bones and I shall carve them for you."),
-    replies = {
-        {
-            text = ccb.content.text("Well, I guess I oughta see where this goes.  I'm in."),
-            next_topic = "TALK_MISSION_ACCEPTED_SEER",
-            native_actions = { "assign_mission" },
+    id = "TALK_MISSION_LIST_SEER",
+    line = {
+        when = predicates.available_missions("interlocutor", 0, 0),
+        yes = {
+            when = predicates.assigned_missions(0, 0),
+            yes = ccb.content.text("The song is… quiet for now.  Perhaps with time, more notes will be etched in the bones of this world."),
+            no = {
+                when = predicates.assigned_missions(2),
+                yes = ccb.content.text("An acolyte should not take on too many songs at once."),
+                no = ccb.content.text("That is all for now."),
+            },
         },
-        { text = ccb.content.text("Not interested."), next_topic = "TALK_MISSION_REJECTED_SEER" },
+        no = {
+            when = predicates.available_missions("interlocutor", 2),
+            yes = {
+                when = predicates.assigned_missions(0, 0),
+                yes = ccb.content.text("There are bones to etch, songs to sing.  Wish to join me?"),
+                no = {
+                    when = predicates.assigned_missions(2),
+                    yes = ccb.content.text("Do you wish to take on more songs?"),
+                    no = ccb.content.text("Do you believe you can take on the burden of additional bones?"),
+                },
+            },
+            no = {
+                when = predicates.assigned_missions(0, 0),
+                yes = ccb.content.text("A song may yet be sung by you, should you wish to."),
+                no = {
+                    when = predicates.assigned_missions(2),
+                    yes = ccb.content.text("There is an additional song you could take on, if you'd like."),
+                    no = ccb.content.text("I know of certain bones that could be of use, if you'd like to know more."),
+                },
+            },
+        },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_MISSION_ACCEPTED_SEER",
-    line = ccb.content.text("Excellent.  Now be on your way."),
     replies = {
         {
-            text = ccb.content.text("Consider it done.  But I also wanted to ask…"),
-            next_topic = "TALK_BONE_SEER",
-        },
-        {
-            text = ccb.content.text("Where should I start?"),
-            next_topic = "TALK_MISSION_ADVICE_SEER",
-        },
-        {
-            text = ccb.content.text("Can you share some equipment to aid me in this?"),
-            next_topic = "TALK_SHARE_EQUIPMENT_SEER",
-        },
-        { text = ccb.content.text("I'm off then."), next_topic = "TALK_DONE" },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_MISSION_ADVICE_SEER",
-    line = ccb.content.text("The shambling corpses we see all around move in discord.  Their song can be used, but for an Acolyte, this would be needlessly hard.  Be sure to carve an unspoiled living creature."),
-    replies = {
-        {
-            text = ccb.content.text("So, a creature that isn't a zombie, or a monster.  Got it."),
+            text = ccb.content.text("I see."),
             next_topic = "TALK_NONE",
+            when = predicates.available_missions("interlocutor", 0, 0),
+        },
+        {
+            text = ccb.content.text("I'm listening."),
+            next_topic = "TALK_MISSION_OFFER_SEER",
+            when = predicates.negate(predicates.available_missions("interlocutor", 0, 0)),
+        },
+        {
+            text = ccb.content.text("Perhaps another time, Seer."),
+            next_topic = "TALK_NONE",
+            when = predicates.negate(predicates.available_missions("interlocutor", 0, 0)),
         },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_SHARE_EQUIPMENT_SEER",
-    line = ccb.content.text("The path to enlightenment is for you to walk.  For me to aid you would ultimately impede your progress and muddle your song."),
-    replies = { { text = ccb.content.text("I see.  Very well then."), next_topic = "TALK_NONE" } },
 }

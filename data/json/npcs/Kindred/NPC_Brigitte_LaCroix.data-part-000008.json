@@ -22,44 +22,5 @@
       "success_lie": "So you say, but the song sings otherwise.",
       "failure": "Then you shall try again, until you hear."
     }
-  },
-  {
-    "id": "TALK_MISSION_LIST_SEER",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "has_no_available_mission": {
-        "has_no_assigned_mission": "The song is… quiet for now.  Perhaps with time, more notes will be etched in the bones of this world.",
-        "no": { "has_many_assigned_missions": "An acolyte should not take on too many songs at once.", "no": "That is all for now." }
-      },
-      "no": {
-        "has_many_available_missions": {
-          "has_no_assigned_mission": "There are bones to etch, songs to sing.  Wish to join me?",
-          "no": {
-            "has_many_assigned_missions": "Do you wish to take on more songs?",
-            "no": "Do you believe you can take on the burden of additional bones?"
-          }
-        },
-        "no": {
-          "has_no_assigned_mission": "A song may yet be sung by you, should you wish to.",
-          "no": {
-            "has_many_assigned_missions": "There is an additional song you could take on, if you'd like.",
-            "no": "I know of certain bones that could be of use, if you'd like to know more."
-          }
-        }
-      }
-    },
-    "responses": [
-      { "text": "I see.", "topic": "TALK_NONE", "condition": "has_no_available_mission" },
-      {
-        "text": "I'm listening.",
-        "topic": "TALK_MISSION_OFFER_SEER",
-        "condition": { "not": "has_no_available_mission" }
-      },
-      {
-        "text": "Perhaps another time, Seer.",
-        "topic": "TALK_NONE",
-        "condition": { "not": "has_no_available_mission" }
-      }
-    ]
   }
 ]
