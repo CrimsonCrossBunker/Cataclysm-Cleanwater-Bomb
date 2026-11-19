@@ -1,0 +1,26 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ISHERWOOD_JACK_TOPICS",
+    "dynamic_line": "Go on…",
+    "responses": [
+      {
+        "text": "I'm here to deliver some resources.",
+        "topic": "TALK_ISHERWOOD_JACK_RESOURCES",
+        "condition": {
+          "and": [
+            { "not": { "u_is_wearing": "badge_marshal" } },
+            { "compare_string": [ "yes", { "u_val": "u_scavenge_for_Jack_Isherwood" } ] }
+          ]
+        }
+      },
+      { "text": "A farm must be a pretty safe place these days.", "topic": "TALK_JACK_FARM" },
+      { "text": "Tell me about your wife, is she around?", "topic": "TALK_JACK_WIFE" },
+      { "text": "Your daughter lives down the road?", "topic": "TALK_JACK_DAUGHTER" },
+      { "text": "Where is your brother's place?", "topic": "TALK_JACK_BROTHER" },
+      { "text": "Let's trade items.", "topic": "TALK_ISHERWOOD_JACK", "effect": "start_trade" },
+      { "text": "Can I do anything for you?", "topic": "TALK_MISSION_LIST" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
