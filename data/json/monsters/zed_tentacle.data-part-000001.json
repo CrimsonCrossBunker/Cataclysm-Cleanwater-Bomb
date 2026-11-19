@@ -1,0 +1,48 @@
+[
+  {
+    "id": "mon_zombie_strider",
+    "type": "MONSTER",
+    "name": { "str": "zombie strider" },
+    "description": "In front of you lies the most disgusting rendition of a starfish you've ever seen.  Not just the arms, but the legs and even the head have been horrendously deformed and stretched several meters long.  It walks around hunchback, looking through the remains of its head for its next victim.",
+    "copy-from": "mon_zombie_base",
+    "species": [ "ZOMBIE" ],
+    "diff": 10,
+    "hp": 180,
+    "speed": 60,
+    "color": "dark_gray_cyan",
+    "melee_skill": 6,
+    "vision_day": 8,
+    "grab_strength": 50,
+    "special_attacks": [
+      { "id": "grab", "cooldown": 5, "move_cost": 50, "range": 2 },
+      { "id": "grab_2", "cooldown": 5, "move_cost": 50, "range": 2 },
+      {
+        "id": "stretch_attack",
+        "cooldown": 5,
+        "move_cost": 50,
+        "range": 2,
+        "no_adjacent": true,
+        "damage_max_instance": [ { "damage_type": "bash", "amount": 4 } ]
+      },
+      {
+        "id": "tentacle",
+        "cooldown": 10,
+        "no_adjacent": true,
+        "damage_max_instance": [ { "damage_type": "bash", "amount": 4 } ]
+      },
+      { "id": "ranged_pull", "cooldown": 5, "no_adjacent": true, "grab_data": { "pull_weight_ratio": 1.5 } },
+      { "id": "push_away" },
+      {
+        "type": "leap",
+        "cooldown": 3,
+        "move_cost": 100,
+        "max_range": 2,
+        "min_consider_range": 2,
+        "condition": { "not": { "u_has_effect": "maimed_leg" } },
+        "ignore_dest_danger": true,
+        "message": "The zombie strider takes a long step!"
+      }
+    ],
+    "upgrades": false
+  }
+]
