@@ -47,25 +47,5 @@
       { "skill": "electronics", "bonus": { "rng": [ 0, 2 ] } },
       { "skill": "speech", "bonus": { "rng": [ 10, 20 ] } }
     ]
-  },
-  {
-    "id": "TALK_FORGE_LORD",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "u_is_wearing": "badge_marshal",
-      "yes": [
-        "The government doesn't subsidize your purchases here anymore.",
-        "Do you have any tales of adventure I could write down?",
-        "In case you were wondering, we no longer respect any pre-existing weapon laws."
-      ],
-      "no": [ "Welcome to the Forge of Wonders.", "Here to trade, I hope?", "Bring me tales and we can trade." ]
-    },
-    "responses": [
-      { "text": "Let's trade.", "effect": "start_trade", "topic": "TALK_FORGE_LORD" },
-      { "text": "What are you doing here?", "topic": "TALK_FORGE_LORD_DOING" },
-      { "text": "I have some stories for you.", "topic": "TALK_FORGE_LORD_BOOKS_DELIVER" },
-      { "text": "Anything interesting being worked on?", "topic": "TALK_FORGE_LORD_ASK_INTERVAL" },
-      { "text": "Well, bye.", "topic": "TALK_DONE" }
-    ]
   }
 ]
