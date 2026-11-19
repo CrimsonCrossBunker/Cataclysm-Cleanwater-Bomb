@@ -1,0 +1,43 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "afs_vahagn_smartgun",
+    copy_from = "gun_base_rifle_semi",
+    looks_like = "modular_ar15",
+    name = ccb.content.plural_text("Wraitheon Vahagn 10XR", "Wraitheon Vahagn 10XRs"),
+    description = ccb.content.text("The legendary apex of smartgun technology, believed to be an urban legend by most.  Bleeding-edge targeting systems allow it to track up 6 distinct targets simultaneously, with every trigger pull delivering a burst of two 7.5mm microjet darts to each target with a precision that is best described as supernatural.  One needs only to point the weapon in the general direction of the enemy, and the Vahagn will do the rest.\n\nProhibitive cost and complexity kept this weapon from ever seeing the light of day, and only a handful of prototypes are believed to exist within the black market.  Finding one here can only mean that corporate forces beyond the ordinary have made Salus IV their battleground."),
+    mass = "3800 g",
+    volume = "4300 ml",
+    length = "830 mm",
+    price = "2350 kUSD",
+    materials = { "superalloy", "plastic" },
+    symbol = "(",
+    color = "red",
+    variants = {},
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            allowed_items = { "afs_vahagn_smartgun_mag" },
+        },
+    },
+    melee_damage = { bash = 12 },
+    flags = { "NEVER_JAMS", "MUNDANE", "WONT_TRAIN_MARKSMANSHIP" },
+    subtype_order = { "artifact", "gun" },
+    artifact = { enchantments = { "ench_smart_gun" } },
+    gun = {
+        modes = { { id = "DEFAULT", label = ccb.content.text("SMART TRACK"), quantity = 2 } },
+        built_in_mods = { "afs_smart_scope" },
+        skill = ccb.content.text("smartgun", "gun_type_type"),
+        mod_locations = { { id = ccb.content.text("sling"), count = 1 } },
+        ammunition = { "afs_7.50mm_smart" },
+        dispersion = 0,
+        durability = 9,
+        blackpowder_tolerance = 0,
+        min_cycle_recoil = 0,
+        handling = 25,
+        effects = { "VAHAGN" },
+    },
+}
