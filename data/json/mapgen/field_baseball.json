@@ -94,39 +94,5 @@
       "|": "t_concrete_wall"
     },
     "furniture": { "B": "f_trashcan", "F": "f_stool", "G": "f_locker", "H": "f_table", "I": "f_bench", "J": "f_bench" }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "s_baseballfield_a2_2" ],
-    "object": {
-      "fill_ter": "t_open_air",
-      "rows": [
-        "                        ",
-        "                        ",
-        "              ||||||||  ",
-        "              ||||||||  ",
-        "              ||||||||  ",
-        "       |||||||||||||||  ",
-        "       |      |      |  ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { "|": "t_concrete_roof" }
-    }
   }
 ]

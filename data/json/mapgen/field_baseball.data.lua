@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "s_baseballfield_a2_2" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "              ||||||||  ",
+            "              ||||||||  ",
+            "              ||||||||  ",
+            "       |||||||||||||||  ",
+            "       |      |      |  ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        terrain = { ["|"] = "t_concrete_roof" },
+        fill_terrain = "t_open_air",
+    },
+}
