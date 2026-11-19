@@ -271,40 +271,5 @@
         "t": { "item": "tea_dishes", "chance": 30, "repeat": [ 1, 2 ] }
       }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "s_teashop_upper_roof_1",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                ....... ",
-        "                ....... ",
-        "                ....... ",
-        "                ....... ",
-        "                ....... ",
-        "                ....... ",
-        "                 ...... ",
-        "                 ...... ",
-        "                 ...... ",
-        "                 ...... ",
-        "                 ...... ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
-    }
   }
 ]
