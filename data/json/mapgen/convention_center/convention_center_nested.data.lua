@@ -707,3 +707,56 @@ ccb.content.define_mapgen {
         nested_glyphs = { ["§"] = { id = "fire_extinguisher" } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "conference_small_meeting",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "     nn nny",
+            "h          ",
+            "h   h h    ",
+            "           ",
+            "  h     h  ",
+            "          §",
+            "  h     h  ",
+            "           ",
+            "    h h    ",
+            "           ",
+            " hhh      a",
+        },
+        palettes = { "convention_nested_palette" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        nested_glyphs = { ["§"] = { id = "fire_extinguisher" } },
+        loot_placements = { { id = "coffeemaker", x = { 5, 6 }, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "conference_big_meeting",
+    layout = {
+        size = { width = 14, height = 14 },
+        rows = {
+            "a    nn      y",
+            "              ",
+            "     h  h    n",
+            "   h      h  n",
+            "              ",
+            "  h        h  ",
+            "             §",
+            "              ",
+            "  h        h  ",
+            "              ",
+            "   h      h   ",
+            "     h  h     ",
+            "*             ",
+            "* **         y",
+        },
+        palettes = { "convention_nested_palette" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        nested_glyphs = { ["§"] = { id = "fire_extinguisher" } },
+        loot_placements = { { id = "coffeemaker", x = { 5, 6 }, y = 0 } },
+    },
+}
