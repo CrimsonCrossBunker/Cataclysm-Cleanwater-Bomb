@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "drug_lab_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "           .......      ",
+            "           .......      ",
+            "           .......      ",
+            "           .......      ",
+            "           .......      ",
+            "           .......      ",
+            "           .......      ",
+            "           .......      ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        terrain = { ["."] = "t_thatch_roof", [" "] = "t_open_air" },
+        fill_terrain = "t_thatch_roof",
+    },
+}
