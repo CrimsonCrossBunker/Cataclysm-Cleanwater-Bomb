@@ -1,0 +1,16 @@
+[
+  {
+    "id": "BGSS_PREPPER_1_LMOE",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "mission_BGSS_prepper_1_started_quest" } ],
+      "no": "I still haven't made it there.  Every time I've tried I've been headed off by the <zombies>.  Who knows, maybe someday.",
+      "yes": "The shelter's in your hands, at this point."
+    },
+    "responses": [
+      { "text": "Could you tell me that story again?", "topic": "BGSS_PREPPER_1_STORY1" },
+      { "text": "<done_conversation_section>", "topic": "TALK_FRIEND" },
+      { "text": "<end_talking>", "topic": "TALK_DONE" }
+    ]
+  }
+]
