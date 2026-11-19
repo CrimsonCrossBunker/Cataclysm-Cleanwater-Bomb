@@ -1,0 +1,20 @@
+[
+  {
+    "id": "mana_wheel",
+    "category": "veh_parts",
+    "type": "ITEM",
+    "subtypes": [ "WHEEL" ],
+    "name": "mana wheel",
+    "description": "A column of mana energy that enables a floating disk to move.",
+    "weight": "500 g",
+    "volume": "500 ml",
+    "price": "1 cent",
+    "to_hit": -4,
+    "material": [ "steel" ],
+    "symbol": "]",
+    "color": "light_gray",
+    "diameter": 20,
+    "width": 10,
+    "melee_damage": { "bash": 8 }
+  }
+]

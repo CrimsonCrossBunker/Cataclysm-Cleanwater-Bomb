@@ -1,0 +1,20 @@
+local ccb = require("ccb")
+
+ccb.content.define_vehicle {
+    id = "bicycle_orichalcum",
+    name = ccb.content.text("Bicycle"),
+    blueprint = { "o#o" },
+    mounts = {
+        { x = 0, y = 0, parts = { "folding_orichalcum_frame", "saddle", "horn_bicycle", "foot_pedals" } },
+        {
+            x = 1,
+            y = 0,
+            parts = { "folding_orichalcum_frame", "wheel_mount_light_steerable", "wheel_bicycle" },
+        },
+        {
+            x = -1,
+            y = 0,
+            parts = { "folding_orichalcum_frame", "wheel_mount_light", "wheel_bicycle", "basketsm" },
+        },
+    },
+}
