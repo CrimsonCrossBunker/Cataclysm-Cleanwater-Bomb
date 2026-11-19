@@ -1,6 +1,7 @@
 local ccb = require("ccb")
 
 return ccb.ModDefinition {
+    ordered_data_files = true,
     world_options = {
         OVERRIDE_VEHICLE_INIT_STATE = true,
         VEHICLE_STATUS_AT_SPAWN = 1,
