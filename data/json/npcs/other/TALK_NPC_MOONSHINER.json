@@ -59,14 +59,5 @@
       },
       { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_NPC_MOONSHINER_STORY",
-    "dynamic_line": {
-      "gendered_line": "I run this distillery you're standing in, before <the_cataclysm> it wasn't so legal with the law.  I was in <city> making a deal on my product when a horde of rioters busted in, so I ran for it.  I thought my business would be a nice place to stay, so I came out here.",
-      "relevant_genders": [ "npc" ]
-    },
-    "responses": [ { "text": "Huh.", "topic": "TALK_NONE" } ]
   }
 ]
