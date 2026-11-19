@@ -1,0 +1,27 @@
+[
+  {
+    "type": "technique",
+    "id": "TECH_XE_MA_ARVORE_VENOM_ATTACK",
+    "name": "Nightshade's Touch",
+    "messages": [ "As you strike %s, you infuse them with the essence of nightshade.", "<npcname> hits %s." ],
+    "skill_requirements": [ { "name": "unarmed", "level": 3 }, { "name": "gramarye", "level": 4 } ],
+    "unarmed_allowed": true,
+    "crit_ok": true,
+    "melee_allowed": true,
+    "attack_vectors": [ "vector_punch", "vector_knee", "vector_shin", "vector_foot_toes", "vector_null" ],
+    "required_buffs_any": [ "xe_ma_buff_arvore_block", "xe_ma_buff_arvore_block_increase" ],
+    "eocs": [
+      {
+        "id": "EOC_TECH_XE_MA_ARVORE_VENOM_ATTACK",
+        "effect": [
+          {
+            "if": { "u_has_trait": "ARVORE_WOOD_CLAWS_active" },
+            "then": { "math": [ "n_has_arvore_jagged_claw_out = 2" ] },
+            "else": { "math": [ "n_has_arvore_jagged_claw_out = 1" ] }
+          },
+          { "npc_cast_spell": { "id": "tech_xe_ma_arvore_venom_attack_spell", "hit_self": true } }
+        ]
+      }
+    ]
+  }
+]
