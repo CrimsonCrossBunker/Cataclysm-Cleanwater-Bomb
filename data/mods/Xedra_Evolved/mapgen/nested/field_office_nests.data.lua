@@ -1679,3 +1679,165 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_8x8_containment",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "|-gggg-|",
+            "|,,,,,,|",
+            "g,,,,,,g",
+            "g,,,,,,g",
+            "|,,,,,,|",
+            "|-gLLg-|",
+            "........",
+            ".cxc6cc.",
+        },
+        palettes = { "lab_palette" },
+        rotation = { 0, 0 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Border Patrol Containment Room Controls"),
+                security = 4,
+                menu = {
+                    {
+                        label = ccb.content.text("EMERGENCY CONTAINMENT UNLOCK"),
+                        action = "unlock",
+                        security = 4,
+                    },
+                    {
+                        label = ccb.content.text("EMERGENCY CLEANSE"),
+                        action = "terminate",
+                        security = 7,
+                    },
+                },
+                failures = { "damage", "shutdown" },
+            },
+        },
+        monster_placements = { { group = "GROUP_MARCH_LORDS", x = 3, y = 4 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_8x8_containment_empty",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "|-gggg-|",
+            "|,,,,,,|",
+            "g,,,,,,g",
+            "g,,,,,,g",
+            "|,,,,,,|",
+            "|-gLLg-|",
+            "........",
+            ".cxc6cc.",
+        },
+        palettes = { "lab_palette" },
+        rotation = { 0, 0 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Border Patrol Containment Room Controls"),
+                security = 4,
+                menu = {
+                    {
+                        label = ccb.content.text("EMERGENCY CONTAINMENT UNLOCK"),
+                        action = "unlock",
+                        security = 4,
+                    },
+                    {
+                        label = ccb.content.text("EMERGENCY CLEANSE"),
+                        action = "terminate",
+                        security = 7,
+                    },
+                },
+                failures = { "damage", "shutdown" },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_8x8_containment_broken",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "|-gggg-|",
+            "|,,,,,,|",
+            "g,,,,,,g",
+            "g,,,,,,g",
+            "|,,,,,,|",
+            "|-g^^g-|",
+            "........",
+            ".cxc6cc.",
+        },
+        palettes = { "lab_palette" },
+        rotation = { 0, 0 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Border Patrol Containment Room Controls"),
+                security = 4,
+                menu = {
+                    {
+                        label = ccb.content.text("EMERGENCY CONTAINMENT UNLOCK"),
+                        action = "unlock",
+                        security = 4,
+                    },
+                    {
+                        label = ccb.content.text("EMERGENCY CLEANSE"),
+                        action = "terminate",
+                        security = 7,
+                    },
+                },
+                failures = { "damage", "shutdown" },
+            },
+        },
+        monster_placements = { { group = "GROUP_MARCH_LORDS", x = 3, y = 4 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_8x8_containment_empty",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "|-gggg-|",
+            "|,,,,,,|",
+            "g,,,,,,L",
+            "g,,,,,,g",
+            "|,,,,,,|",
+            "|-gggg-|",
+            "........",
+            ".cxc6cc.",
+        },
+        palettes = { "lab_palette" },
+        rotation = { 0, 0 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Border Patrol Containment Room Controls"),
+                security = 4,
+                menu = {
+                    {
+                        label = ccb.content.text("EMERGENCY CONTAINMENT UNLOCK"),
+                        action = "unlock",
+                        security = 4,
+                    },
+                    {
+                        label = ccb.content.text("EMERGENCY CLEANSE"),
+                        action = "terminate",
+                        security = 7,
+                    },
+                },
+                failures = { "damage", "shutdown" },
+            },
+        },
+    },
+}

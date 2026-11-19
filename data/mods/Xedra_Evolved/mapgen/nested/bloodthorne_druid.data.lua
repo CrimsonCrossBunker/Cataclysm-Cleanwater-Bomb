@@ -127,3 +127,31 @@ ccb.content.define_mapgen {
         monster_placements = { { id = "mon_vampire_feral", x = 2, y = 1, chance = 70 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_6x6_greenhouse_bloodthorne",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "%#++#%",
+            "%1__1%",
+            "#1__1#",
+            "#1__1#",
+            "%1__1%",
+            "%####%",
+        },
+        terrain = {
+            _ = "t_railroad_rubble",
+            ["#"] = "t_reinforced_glass_shutter_open",
+            ["+"] = "t_reinforced_door_glass_c",
+            ["%"] = "t_reinforced_glass_shutter",
+            ["$"] = "t_wall_glass",
+        },
+        furniture = { S = "f_statue" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "roof_6x6_greenhouse_roof", x = 0, y = 0, z = 1 } },
+        sealed_item_glyphs = { ["1"] = { item = { id = "seed_rose" }, furniture = "f_planter_mature" } },
+    },
+}

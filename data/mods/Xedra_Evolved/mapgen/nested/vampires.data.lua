@@ -88,3 +88,28 @@ ccb.content.define_mapgen {
         field_placements = { { id = "fd_blood", x = { 0, 4 }, y = { 0, 4 }, intensity = { 1, 3 }, age_turns = 10 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_6x6_bat_house_1",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "%#++#%",
+            "%1  1%",
+            "#1  1#",
+            "#1  1#",
+            "%1  1%",
+            "%#++#%",
+        },
+        terrain = {
+            ["#"] = "t_reinforced_glass_shutter_open",
+            ["+"] = "t_reinforced_door_glass_c",
+            ["%"] = "t_reinforced_glass_shutter",
+            ["$"] = "t_wall_glass",
+        },
+        furniture = { ["1"] = "f_bat_roost" },
+        rotation = { 0, 3 },
+        sealed_item_glyphs = { ["1"] = { item = { id = "seed_rose" }, furniture = "f_planter_mature" } },
+    },
+}
