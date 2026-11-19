@@ -535,3 +535,204 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lab_security_z0N",
+    layout = {
+        rows = {
+            "``||||||||||||||||||||||",
+            "``||||||||||||||||||||||",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``|££££££££££££££££££££|",
+            "÷÷=;;;;;;;;;;;;;;;;;;;;=",
+            "__=;;;;;;;;;;;;;;;;;;;;=",
+            "÷÷=;;;;;;;;;;;;;;;;;;;;=",
+            "__=;;;;;;;;;;;;;;;;;;;;=",
+            "÷÷=;;;;;;;;;;;;;;;;;;;;=",
+            "__=;;;;;;;;;;;;;;;;;;;;=",
+            "÷÷=;;;;;;;;;;;;;;;;;;;;=",
+            "``6££££££££££££££££££££¥",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``||||||||||+|||||ɤJJJ||",
+            "``|......|H....H|;;;h;J|",
+            "``|......|H..s.H|;;;;;J|",
+            "``|......|..ë||||;;è;;J|",
+            "``|......|...+.S|;;;;;P|",
+            "``|......|+|||..|;;;;;P|",
+            "|||......|.@@|Yt|;;;;;;|",
+        },
+        nested = {
+            {
+                x = 3,
+                y = 18,
+                choices = {
+                    { id = "lab_security_6x6_open", weight = 50 },
+                    { id = "lab_generic_6x6_open", weight = 50 },
+                },
+            },
+        },
+        item_spawns = {
+            s = {
+                {
+                    id = {
+                        select = { parameter = "spawn_location", fallback = "lab_security_z0N" },
+                        cases = {
+                            lab_security_z0N = "id_science_maintenance_green",
+                            lab_security_z0S = "null",
+                        },
+                    },
+                },
+            },
+        },
+        trap_placements = {
+            {
+                id = "tr_light_on_lab_security_z0N_A",
+                x = { 4, 22 },
+                y = { 2, 16 },
+                repetitions = { 2, 4 },
+            },
+            {
+                id = "tr_light_on_lab_security_z0N_B",
+                x = { 4, 22 },
+                y = { 2, 16 },
+                repetitions = { 2, 4 },
+            },
+        },
+        sign_placements = {
+            {
+                text = ccb.content.text("<color_white_green>Relaxation Zone</color>"),
+                x = 14,
+                y = 17,
+            },
+        },
+        monster_group_placements = {
+            { group = "GROUP_LAB_MAINTENANCE", x = { 5, 20 }, y = { 5, 14 }, density = 0.15 },
+            { group = "GROUP_LAB_BASIC_SECURITY", x = { 5, 12 }, y = 20, density = 0.05 },
+            { group = "GROUP_LAB_MAINTENANCE", x = { 11, 21 }, y = { 19, 21 }, density = 0.1 },
+        },
+        vehicle_placements = { { id = "semi_truck", x = 16, y = 10, chance = 20, rotation = 180 } },
+        fill_terrain = "t_linoleum_white",
+        palettes = { "lab_common_palette", "lab_security_palette" },
+        parameters = {
+            spawn_location = {
+                value_type = "string",
+                default = {
+                    weighted = {
+                        { id = "lab_security_z0N", weight = 1 },
+                        { id = "lab_security_z0S", weight = 2 },
+                    },
+                },
+            },
+        },
+        terrain = {
+            J = "t_thconc_floor",
+            P = "t_thconc_floor",
+            ["ɤ"] = "t_thconc_floor",
+            h = "t_thconc_floor",
+            ["`"] = "t_sidewalk",
+            ["¥"] = "t_card_science_maintenance_green",
+            ["6"] = "t_card_science_transport_1",
+            ["÷"] = "t_zebra",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lab_security_z0S",
+    layout = {
+        rows = {
+            "|||......|tY|@@.|;;;;;;|",
+            "``|......|..|||+|;;;;;P|",
+            "``|......|S.+...|;;è;;P|",
+            "``|......||||ë..|;;;;;J|",
+            "``|......|H.s..H|;;;;;J|",
+            "``|......|H....H|;;;h;J|",
+            "``|||||||||||+||||ɤJJJ||",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``6££££££££££££££££££££¥",
+            "÷÷=;;;;;;;;;;;;;;;;;;;;=",
+            "__=;;;;;;;;;;;;;;;;;;;;=",
+            "÷÷=;;;;;;;;;;;;;;;;;;;;=",
+            "__=;;;;;;;;;;;;;;;;;;;;=",
+            "÷÷=;;;;;;;;;;;;;;;;;;;;=",
+            "__=;;;;;;;;;;;;;;;;;;;;=",
+            "÷÷=;;;;;;;;;;;;;;;;;;;;=",
+            "``|££££££££££££££££££££|",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``|;;;;;;;;;;;;;;;;;;;;|",
+            "``||||||||||||||||||||||",
+            "``||||||||||||||||||||||",
+        },
+        nested = {
+            {
+                x = 3,
+                y = 0,
+                choices = {
+                    { id = "lab_security_6x6_open", weight = 50 },
+                    { id = "lab_generic_6x6_open", weight = 50 },
+                },
+            },
+        },
+        item_spawns = {
+            s = {
+                {
+                    id = {
+                        select = { parameter = "spawn_location", fallback = "lab_security_z0N" },
+                        cases = {
+                            lab_security_z0S = "id_science_maintenance_green",
+                            lab_security_z0N = "null",
+                        },
+                    },
+                },
+            },
+        },
+        sign_placements = { { text = ccb.content.text("<color_white_green>Relaxation Zone</color>"), x = 11, y = 6 } },
+        trap_placements = {
+            {
+                id = "tr_light_on_lab_security_z0S_A",
+                x = { 4, 22 },
+                y = { 2, 16 },
+                repetitions = { 2, 4 },
+            },
+            {
+                id = "tr_light_on_lab_security_z0S_B",
+                x = { 4, 22 },
+                y = { 2, 16 },
+                repetitions = { 2, 4 },
+            },
+        },
+        vehicle_placements = { { id = "semi_truck", x = 16, y = 16, chance = 20, rotation = 180 } },
+        fill_terrain = "t_linoleum_white",
+        palettes = { "lab_common_palette", "lab_security_palette" },
+        parameters = {
+            spawn_location = {
+                value_type = "string",
+                default = {
+                    weighted = {
+                        { id = "lab_security_z0N", weight = 1 },
+                        { id = "lab_security_z0S", weight = 2 },
+                    },
+                },
+            },
+        },
+        terrain = {
+            J = "t_thconc_floor",
+            P = "t_thconc_floor",
+            ["ɤ"] = "t_thconc_floor",
+            h = "t_thconc_floor",
+            ["`"] = "t_sidewalk",
+            ["¥"] = "t_card_science_maintenance_green",
+            ["6"] = "t_card_science_transport_1",
+            ["÷"] = "t_zebra",
+        },
+    },
+}
