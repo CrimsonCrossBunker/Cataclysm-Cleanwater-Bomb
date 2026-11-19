@@ -34,3 +34,41 @@ ccb.content.define_mapgen {
         fill_terrain = "t_barkfloor",
     },
 }
+
+-- Pillar in the center is unavoidable to keep the tree structurally sound, even with magic
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "house_elf_01" },
+    layout = {
+        rows = {
+            "...........__...........",
+            "...........__...........",
+            "...###....#**#....##....",
+            "...#%#o####  ##o#####...",
+            "...#%T RRR%  %P  hr##...",
+            "..##R     %  +   %%##...",
+            "..#%R     +  %%%%%##....",
+            "..##%EllE%%   Vll%###...",
+            "...#%%%%%%        %%#...",
+            "...olHHHH%  %%T   h%##..",
+            "...#%    + %%%%  hf%##..",
+            "..##%%xxx% %%%%7 hf%##..",
+            "..##%%%%%%+%%%%3  h%##..",
+            "..##%Bt%R  %%%%2   yo...",
+            "...#%B %   D%O     %#...",
+            "...#%S +   D%m JJ5 1#...",
+            "..##%%%%  hI%%%%%% %##..",
+            "..##%@@    %%tWZ + %##..",
+            "..##%@@   T%%    %%##...",
+            "..##%¤  %%%%##S ####....",
+            "..###%#########o#.......",
+            "....###.................",
+            "........................",
+            "........................",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_landscaping_palette" },
+        terrain = { ["%"] = "t_druid_wood_wall", ["#"] = "t_triffid_bark_wall" },
+        fill_terrain = "t_heartwood_floor",
+        item_placements = { { id = "television", x = 7, y = 11 } },
+    },
+}

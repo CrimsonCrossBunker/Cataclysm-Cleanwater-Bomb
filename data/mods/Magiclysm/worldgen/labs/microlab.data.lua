@@ -1,0 +1,91 @@
+local ccb = require("ccb")
+
+-- XEDRA magical research location
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "microlab_generic_tile",
+    weight = 750,
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "     | cc 2  2 cc |     ",
+            "     |    |^^|    |cccc ",
+            "  ||||||||||||||||||||c ",
+            "  |------------------|6 ",
+            "  |-UUUUdd6-        -|r ",
+            "|||-β   h 6-   ¢¢¢¢ -||2",
+            "  |-β      2   ¢ØØ¢ -|  ",
+            "  |-β      2   ¢ØØ¢ -|c ",
+            "  |-☿h     -   ¢¢¢¢ -|c ",
+            "  |-BB     -ββ☿     -|  ",
+            "2|G---22-------------|||",
+            "  5                 -|  ",
+            "  5                 -|  ",
+            "|||--------  --------|||",
+            "  |-dddddd-  -llii ~-|c ",
+            "  |-h  h h-  2     ~-|  ",
+            "  |-      -  --------|  ",
+            " c|-      3  2     U-|c ",
+            "|||-dh   h-  -     U-|||",
+            " c|-6dBBBd-  -ββ   U-|F ",
+            " c|------------------|F ",
+            " c||||||||||||||||||||||",
+            " cccc|c   |^^|    |  cc ",
+            "    c|c   2  2    |     ",
+        },
+        palettes = { "microlab_generic" },
+        terrain = { G = "t_card_science", ["Ø"] = "t_rock_floor", ["¢"] = "t_rock_floor" },
+        furniture = { ["☿"] = "f_alembic", ["β"] = "f_magic_bench", ["Ø"] = "f_magic_circle" },
+        item_placements = {
+            { id = "candle", x = 15, y = 5, chance = 100 },
+            { id = "candle", x = 15, y = 8, chance = 100 },
+            { id = "candle", x = 18, y = 5, chance = 100 },
+            { id = "candle", x = 18, y = 8, chance = 100 },
+        },
+        loot_placements = { { group = "xedra_thaumaturgical_lab_secret_spells", x = 12, y = 9, chance = 100 } },
+        item_groups = {
+            B = {
+                { group = "magic_shop_books", chance = 33, repetitions = { 1, 3 } },
+                { group = "magus_items", chance = 20, repetitions = { 1, 2 } },
+            },
+            ["β"] = { group = "magic_tools_and_loot", chance = 75 },
+            U = {
+                { group = "magic_shop_clothes", chance = 20 },
+                { group = "enchanted_worn_items", chance = 20 },
+                { group = "enchanted_small_items", chance = 10 },
+            },
+            l = {
+                { group = "lab_shoes", chance = 50, repetitions = { 2, 3 } },
+                { group = "lab_torso_research_thaumaturge", chance = 50, repetitions = { 2, 3 } },
+                { group = "lab_pants", chance = 50, repetitions = { 2, 3 } },
+                { group = "underwear", chance = 50, repetitions = { 2, 3 } },
+            },
+        },
+        monster_placements = {
+            {
+                id = "mon_feral_lab_magician",
+                chance = 33,
+                x = { 5, 17 },
+                y = { 4, 19 },
+                repetitions = { 2, 4 },
+            },
+            {
+                id = "mon_feral_lab_magician",
+                chance = 100,
+                x = { 5, 16 },
+                y = { 4, 9 },
+                repetitions = { 1, 2 },
+            },
+            { id = "mon_feral_radiation_mage", chance = 100, x = { 12, 18 }, y = { 4, 9 } },
+        },
+        monster_group_placements = {
+            {
+                group = "GROUP_LAB",
+                chance = 2,
+                x = { 2, 21 },
+                y = { 2, 21 },
+                repetitions = { 1, 5 },
+            },
+        },
+    },
+}
