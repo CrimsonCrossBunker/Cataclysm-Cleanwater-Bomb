@@ -19,3 +19,5 @@ require("item_group_changes")
 require("generic_items")
 
 require("inherited_items")
+
+require("monster_groups")

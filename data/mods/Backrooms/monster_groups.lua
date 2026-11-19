@@ -1,0 +1,22 @@
+local ccb = require("ccb")
+local content = ccb.content
+
+content.add(content.MonsterGroup { id = "GROUP_BACKROOMS", load_mode = "append" }
+    :group("GROUP_ZOMBIE", 920, 1, 1, 2)
+    :group("GROUP_PET_CATS", 15, 1, 1, 1)
+    :group("GROUP_PET_DOGS", 15, 1, 1, 1)
+    :monster("mon_mutant_experimental", 1, 1, 1, 1)
+    :monster("mon_broken_cyborg", 1, 1, 1, 1)
+    :monster("mon_zomborg", 1, 1, 1, 1)
+    :monster("mon_skeleton_brute", 1, 1, 1, 1)
+    :monster("mon_cougar", 4, 1, 1, 1)
+    :monster("mon_bobcat", 4, 1, 1, 1)
+    :monster("mon_bear", 4, 1, 1, 1)
+    :monster("mon_moose", 4, 1, 1, 1)
+    :monster("mon_wolf", 4, 1, 1, 1)
+    :monster("mon_coyote", 4, 1, 1, 1)
+    :monster("mon_duck", 4, 1, 1, 1)
+    :monster("mon_goose_canadian", 4, 1, 1, 1)
+    :monster("mon_raccoon", 4, 1, 1, 1)
+    :monster("mon_opossum", 4, 1, 1, 1)
+    :monster("mon_chipmunk", 4, 1, 1, 1))
