@@ -1,41 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "afs_tunnel_base",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************",
-        "************************"
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
-      "palettes": [ "afs_tunnel_any" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "tunnel_natural_feature_large",
     "object": {
       "mapgensize": [ 24, 24 ],
@@ -68,75 +33,6 @@
       "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "palettes": [ "afs_tunnel_any" ],
       "place_loot": [ { "group": "afs_dead_survivor", "x": [ 0, 23 ], "y": [ 0, 23 ], "chance": 80, "repeat": [ 0, 2 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "tunnel_natural_feature",
-    "object": {
-      "mapgensize": [ 12, 12 ],
-      "rows": [
-        "            ",
-        "  ,, ,,,    ",
-        " ,,,,,,  ,, ",
-        "  ,,IssI,,, ",
-        "   ,s,ww,,, ",
-        "  ,,,sww ,  ",
-        "  ,,Iww,,,, ",
-        "  ,wwI,, ,  ",
-        "    ww,I    ",
-        "   , ,,,    ",
-        "   ,    ,,  ",
-        "            "
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
-      "palettes": [ "afs_tunnel_any" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "tunnel_natural_feature",
-    "object": {
-      "mapgensize": [ 12, 12 ],
-      "rows": [
-        "            ",
-        "            ",
-        "            ",
-        "  ,##  ##   ",
-        "  ##  ,###  ",
-        "    ,,ss,   ",
-        "  ##ss ,,,  ",
-        "  ###   s   ",
-        "   #  ww##  ",
-        "         ## ",
-        "    ######  ",
-        "      ##    "
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
-      "palettes": [ "afs_tunnel_any" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "tunnel_natural_feature",
-    "object": {
-      "mapgensize": [ 12, 12 ],
-      "rows": [
-        "            ",
-        " ,,I    ,   ",
-        " ,,,   ,,,  ",
-        "s,,#,I ,,,, ",
-        "  #sss,,,#, ",
-        ",Iss,,ss,,, ",
-        ",,,,,sss,,, ",
-        " ,,,,  II,  ",
-        " ,,#,,,,##,,",
-        ",,,I ,,  ## ",
-        "     I#,,#, ",
-        "         ,, "
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
-      "palettes": [ "afs_tunnel_any" ]
     }
   },
   {

@@ -1,0 +1,294 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_tunnel_river_start",
+    layout = {
+        fill_terrain = "t_rock_floor",
+        nested = {
+            { id = "afs_tunnel_base", x = 0, y = 0 },
+            { id = "afs_tunnel_straight_tile", x = 0, y = 0 },
+            { id = "afs_tunnel_river_start_tile", x = 0, y = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_tunnel_river_end",
+    layout = {
+        fill_terrain = "t_rock_floor",
+        nested = {
+            { id = "afs_tunnel_base", x = 0, y = 0 },
+            { id = "afs_tunnel_end_tile", x = 0, y = 0 },
+            { id = "afs_tunnel_river_end_tile", x = 0, y = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_tunnel_river_straight",
+    layout = {
+        fill_terrain = "t_rock_floor",
+        nested = {
+            { id = "afs_tunnel_base", x = 0, y = 0 },
+            { id = "afs_tunnel_straight_tile", x = 0, y = 0 },
+            { id = "afs_tunnel_river_straight_tile", x = 0, y = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_tunnel_river_curved",
+    layout = {
+        fill_terrain = "t_rock_floor",
+        nested = {
+            { id = "afs_tunnel_base", x = 0, y = 0 },
+            { id = "afs_tunnel_curved_tile", x = 0, y = 0 },
+            { id = "afs_tunnel_river_curved_tile", x = 0, y = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_tunnel_river_tee",
+    layout = {
+        fill_terrain = "t_rock_floor",
+        nested = {
+            { id = "afs_tunnel_tee_tile", x = 0, y = 0 },
+            { id = "afs_tunnel_river_con", x = 0, y = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_tunnel_river_four_way",
+    layout = {
+        fill_terrain = "t_rock_floor",
+        nested = {
+            { id = "afs_tunnel_base", x = 0, y = 0 },
+            { id = "afs_tunnel_four_way_tile", x = 0, y = 0 },
+            { id = "afs_tunnel_river_con", x = 0, y = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_tunnel_river_start_tile",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "          ,,,,          ",
+            "         ,,,,,,,        ",
+            "        ,,,,ss,,,,,     ",
+            "     ,,,,,ss,ss,,,      ",
+            "       ss,wwww,,,       ",
+            "      ,,,wWWWWws,,      ",
+            "    ,,,,wWWWWw,ss,,     ",
+            "     ,,wWWWWwwwww,,     ",
+            "     ,,wWWWWWWWWww,,    ",
+            "      ,,wWWWWWWWWw,,,   ",
+            "     ,,wwWWWWWWWWwws,   ",
+            "     ,,,wwWWWWWWWWWw,,  ",
+            "   ,,,,wwwWWWWWWwww,,   ",
+            "    I,,wWWWWwwwww,,s    ",
+            "   ,,,,,wwWWWWww,I,     ",
+            "    ,,,,,,wWWWWw,,,     ",
+            "     ,ss,wWWWWw,,       ",
+            "    ,,,,wWWWWw,,I       ",
+            "     ,,,wwWWWWw,,,      ",
+            "    ,,,,,wWWWWw,,,I,    ",
+        },
+        palettes = { "afs_tunnel_any" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_tunnel_river_straight_tile",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "        ,wWWWWw,,       ",
+            "        ,,wWWWWw,,      ",
+            "       ,s,wWWWWws,      ",
+            "       ,,wWWWWw,s,      ",
+            "       ,,,wWWWWw,,      ",
+            "      ,,,wWWWWw,,       ",
+            "      s wWWWWw,,        ",
+            "      ,wWWWWw,,         ",
+            "     ,s,wWWWWw,,        ",
+            "     sIs,wWWWWw,        ",
+            "      ,,wWWWWwI,,       ",
+            "        wWWWWw,,        ",
+            "       wWWWWwI,,s       ",
+            "       wWWWWw,,ss,      ",
+            "        wWWWWw,F,,      ",
+            "       ,,wWWWWw,,       ",
+            "     ,,,,,wWWWWw,,      ",
+            "      ,sI,,wWWWWw       ",
+            "     ,,ss,,wWWWWw       ",
+            "       F,,,wWWWWw       ",
+            "      ,,,FwWWWWw,       ",
+            "        ,,,wWWWWw,      ",
+            "       ,,wWWWWw,,       ",
+            "      ,,wWWWWw,         ",
+        },
+        palettes = { "afs_tunnel_any" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_tunnel_river_straight_tile",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "         wWWWWw,        ",
+            "          wWWWWw,       ",
+            "          wWWWWw,,,     ",
+            "         wWWWWw,,,      ",
+            "         ,wWWWWw,       ",
+            "       ,,wWWWWw         ",
+            "      ,,wWWWWw,         ",
+            "     ,,wWWWWw,,,        ",
+            "     IsssWWWWw,,        ",
+            "     ,sFswWWWWwI,       ",
+            "     ,s,wWWWWw,,,       ",
+            "     ,,wWWWWwI,,        ",
+            "      IwWWWWwI,         ",
+            "        wWWWWw,,        ",
+            "         wWWWWw,,,      ",
+            "          wWWWWw,,      ",
+            "          ,wWWWWw,s,    ",
+            "          ,wWWWWw,s,    ",
+            "          ,wWWWWw,,     ",
+            "        s,wWWWWw,,,,    ",
+            "        ,s,wWWWWw,      ",
+            "        I,wWWWWw,s      ",
+            "      I,,wWWWWw,s,      ",
+            "      ,,wWWWWw,,,       ",
+        },
+        palettes = { "afs_tunnel_any" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_tunnel_river_curved_tile",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                  ,, ,,w",
+            "               ,,,,,,,wW",
+            "              ,,wwwwwwWW",
+            "            Is,wWWWwWWWW",
+            "           ,,swWWWWWWWWW",
+            "         ssF,wwWWWWWwwww",
+            "         ,,wwwWWWWwws,,,",
+            "        ,,,wWWWWWw,ss,, ",
+            "       ,,sswWWWWwwsIs,, ",
+            "        IF,wWWWw,,,,s,  ",
+            "        ,,wWWWWw,,,,    ",
+            "        ,s,wWWWWw,      ",
+            "       sFswWWWWw,I      ",
+            "      ,I,wWWWWw,,       ",
+            "      ,,wWWWWw,,        ",
+        },
+        palettes = { "afs_tunnel_any" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_tunnel_river_end_tile",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "########################",
+            "########################",
+            "########WW##############",
+            "######WWWWWW#WWW########",
+            "#######WWWWWWWWWW#W#####",
+            "######WWWWWWWWWWWW######",
+            "####WWWWWWWWWWWW########",
+            "#####WWWWWWWWWWWWW######",
+            "#####WWWWWWWWWWWWWW#####",
+            "########WWWWWWWWW#######",
+            "#####WWWWWWWWWWWW#######",
+            "######WWWWWWWWWWWW######",
+            "#####WWWWWWWWWWWWW######",
+            "#####WWWWWWWWWWWWWW#####",
+            "####WWWWWWWWWWWWWWw#####",
+            "####wwWWWWWWWWWwww######",
+            "###sswWWWWWWWWWwss######",
+            "###s,wwWWWWWWWwssss#####",
+            "####ssswWWWWWww,,sss####",
+            "######IwwWWWWw,,ss######",
+            "###,,ss,,wwWWWw,,, #####",
+            "####,ss,wWWWWW,,,,  ####",
+            "####,#IwwWWWWw,,      ##",
+            "##   ,,,,wWWWWw,,,   ###",
+        },
+        palettes = { "afs_tunnel_any" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_tunnel_river_con",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "      ,,,wWWWWww        ",
+            "   ,,,s,wwWWWWWWw,,,    ",
+            "  ,,wwwwwwwwwwwwww,,    ",
+            "  ,,wwwWWWWWWWWWWw,,,   ",
+            " ,,wwWWWWWWWWWWWWw,,,,  ",
+            " ,swWWWWWWWWWWWWWwww,   ",
+            " ,swWWWWWWWWWWWWWWwww,  ",
+            ",wwWWWWWWWWWWWWWWWwww,, ",
+            ",wWWWWWWWWWWWWWWWWww,,, ",
+            "wWWWWWWWWWWWWWWWww,,I,,,",
+            "wWWWWWWWWWWWWWWWws,ss,w ",
+            "wWWWWWWWWWWWWWWWwwwwwwWw",
+            "WWWWWWWWWWWWWWWWWWWwWWWw",
+            ",wWWWWWWWWWWWWWWWWWWWWWW",
+            ",wwwwWWWWWWWWWWWWWWWwwww",
+            " ,swWWWWWWWWWWWWWWWws,,,",
+            ",,sswWWWWWWWWWWWWw,ss,, ",
+            " ,s,,wWWWWWWWWWWWwsIs,, ",
+            "  ,,,WWWWWWWWWWw,,,,s,  ",
+            "  ,,,wWWWWWWWWWw,,,,    ",
+            "  ,,,,wwwwwwWWWWw,      ",
+            "    ,,,sFswWWWWw,I      ",
+            "    ,,,I,wWWWWw,,       ",
+            "      ,,wWWWWw,,        ",
+        },
+        palettes = { "afs_tunnel_any" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
