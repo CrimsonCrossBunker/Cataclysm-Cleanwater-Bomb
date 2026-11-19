@@ -1,19 +1,5 @@
 [
   {
-    "id": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_GUN_YES",
-    "//": "quick access to prototype menu through the merc vouching",
-    "type": "talk_topic",
-    "dynamic_line": "Yes, Foster gave you quite a recommendation.  Very well - I will authorize you access to our prototype fabrication services for agents in the field.  This includes the Hybrid Weapons Platform, alongside the ability to order spare or replacement parts for your field gear.",
-    "speaker_effect": { "effect": [ { "u_add_var": "dialogue_intercom_u_hub_prototypes", "value": "yes" } ] },
-    "responses": [
-      {
-        "text": "Great.  What exactly is this 'Hybrid Weapons Platform', anyway?",
-        "topic": "TALK_ROBOFAC_INTERCOM_RIFLE_REQUEST"
-      },
-      { "text": "What about another project?", "topic": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_MENU" }
-    ]
-  },
-  {
     "id": "TALK_ROBOFAC_INTERCOM_RIFLE_BREAKTHROUGH",
     "//": "getting an HWP",
     "type": "talk_topic",
