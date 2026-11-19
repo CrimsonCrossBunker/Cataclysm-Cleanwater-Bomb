@@ -1,0 +1,41 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "trailhead",
+    layout = {
+        nested_glyphs = { ["6"] = { choices = { { id = "null", weight = 1 } } } },
+        terrain = {
+            [" "] = "t_region_soil",
+            [","] = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            [";"] = { { id = "t_region_groundcover" }, { id = "t_region_soil" } },
+            ["."] = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            b = "t_region_soil",
+            t = "t_trunk",
+            s = "t_region_soil",
+            ["6"] = "t_region_soil",
+            ["="] = "t_region_soil",
+            ["-"] = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            ["|"] = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            ["#"] = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            B = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            w = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            ["+"] = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            [":"] = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            c = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            W = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            T = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            ["7"] = { { id = "t_region_tree" }, { id = "t_region_shrub" } },
+            f = "t_region_soil",
+        },
+        furniture = {
+            b = "f_boulder_small",
+            s = { { id = "f_region_flower", copies = 1 }, { id = "f_null", copies = 100 } },
+            B = { { id = "f_region_flower", copies = 1 }, { id = "f_null", copies = 100 } },
+            ["="] = { { id = "f_region_flower", copies = 1 }, { id = "f_null", copies = 100 } },
+            w = { { id = "f_region_flower", copies = 1 }, { id = "f_null", copies = 100 } },
+            [","] = { { id = "f_region_flower", copies = 1 }, { id = "f_null", copies = 100 } },
+            [";"] = { { id = "f_region_flower", copies = 1 }, { id = "f_null", copies = 100 } },
+            ["."] = { { id = "f_region_flower", copies = 1 }, { id = "f_null", copies = 100 } },
+        },
+    },
+}
