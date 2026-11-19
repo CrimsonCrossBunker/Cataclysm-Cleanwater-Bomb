@@ -1,5 +1,75 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "hollow_village5_roofs", "hollow_village6_roofs" } },
+    layout = {
+        rows = {
+            "                         TTTT                   ",
+            "                         TTTT                   ",
+            "        TTTTT   TTTT     TTTT                   ",
+            "        TTTTT   TTTT     TTTT                   ",
+            "  TTTTT TTTTT TTTTTTTT   TTTT                   ",
+            "  TTTTT       TTTTTTTT                          ",
+            "  TT TT       TTTTTTTT                          ",
+            "  TTTTT       TT TT TT                          ",
+            "  TTTTT       TTTTTTTT                          ",
+            "              TTTTTTTT                          ",
+            "  TTTTTT                                        ",
+            "  TTTTTT                                        ",
+            "  TTTTTT                                        ",
+            "  TTT TT        TTTTTT                          ",
+            "  TTTTTT        TTTTTT                          ",
+            "  TTTTTT        TTT TT                          ",
+            "               TTTTTTT                          ",
+            "               TTTTTTT                          ",
+            "  TTTT         TTTT TT                          ",
+            "  TTTT         TTTTTTT                          ",
+            "  TTTT         TTTTTTT                          ",
+            "  TTTT         TTTTTTT                          ",
+            "                                                ",
+            "                                                ",
+        },
+        fill_terrain = "t_open_air",
+        terrain = { T = "t_thatch_roof" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "hollow_village7_roofs", "hollow_village8_roofs", "hollow_village9_roofs" } },
+    layout = {
+        rows = {
+            "                                                                        ",
+            "                  TTTTT  TTTTTT                                         ",
+            "                  TTTTT  TTTTTT        TTTTTT                           ",
+            "                  TTTTT  TTTTTT        TTTTTT                           ",
+            "                  TTTTT  TTT TT        TT TTT                           ",
+            "                         TTTTTT        TTTTTT                           ",
+            "                         TTTTTT                                         ",
+            "                         TTTTTT                                         ",
+            "                                                                        ",
+            "                                                 TTTTTTTT               ",
+            "                                                 TTTTTTTT               ",
+            "                                                 TTT TTTT               ",
+            "                                                 TTTTTTTT               ",
+            "                                       TTTTTTTT  TTTTTTTT               ",
+            "                                       TTTTTTTT                         ",
+            "                                       TTTT TTT   TTTTTT                ",
+            "                                       TTTTTTTT   TTTTTT                ",
+            "                  TTTTTTTTTTT          TTTTTTTT   TT TTT                ",
+            "                  TTTTTTTTTTT                     TTTTTT                ",
+            "                  TTTTTT TTTT                     TTTTTT                ",
+            "                  TTTTTTTTTTT                                           ",
+            "                  TTTTTTTTTTT                                           ",
+            "                                                                        ",
+            "                                                                        ",
+        },
+        fill_terrain = "t_open_air",
+        terrain = { T = "t_thatch_roof" },
+    },
+}
+
 ccb.content.define_overmap_terrain {
     id = {
         "hollow_village5_roofs", "hollow_village6_roofs", "hollow_village7_roofs",
