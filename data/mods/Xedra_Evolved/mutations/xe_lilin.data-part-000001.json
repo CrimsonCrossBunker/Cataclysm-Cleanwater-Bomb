@@ -1,0 +1,19 @@
+[
+  {
+    "type": "mutation",
+    "id": "LILIN_TURN_INTO_OWL",
+    "name": { "str": "On Silent Wings" },
+    "points": 8,
+    "description": "You can transform yourself into an owl and take wing on the night air.  You won't be able to drain ruach while you are in this form.",
+    "starting_trait": false,
+    "purifiable": false,
+    "active": true,
+    "activated_is_setup": true,
+    "prereqs": [ "LILIN_HOLD_MORE_RUACH_2", "LILIN_HOLD_MORE_RUACH_3" ],
+    "prereqs2": [ "LILIN_AVOID_SLEEP" ],
+    "category": [ "LILIN" ],
+    "activation_msg": "",
+    "activated_eocs": [ "EOC_LILIN_TURN_INTO_OWL_activated" ],
+    "deactivated_eocs": [ "EOC_LILIN_TURN_INTO_OWL_deactivated" ]
+  }
+]

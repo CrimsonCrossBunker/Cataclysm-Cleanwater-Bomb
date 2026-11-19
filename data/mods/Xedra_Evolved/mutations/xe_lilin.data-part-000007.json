@@ -1,0 +1,32 @@
+[
+  {
+    "type": "mutation",
+    "id": "LILIN_TRANSFORM_INTO_WAR_OWL_FORM",
+    "name": { "str": "The Strix's Wrath" },
+    "points": 10,
+    "description": "You can combine your forms, transforming into a large owl-human hybrid with wings, rending talons, and a deadly beak.  You won't be able to drain ruach while you are in this form.",
+    "starting_trait": false,
+    "purifiable": false,
+    "active": true,
+    "activated_is_setup": true,
+    "prereqs": [ "LILIN_SPEED_DODGE_BOOST" ],
+    "prereqs2": [ "LILIN_TURN_INTO_OWL" ],
+    "category": [ "LILIN" ],
+    "threshreq": [ "THRESH_LILIN" ],
+    "activation_msg": "",
+    "activated_eocs": [ "EOC_LILIN_TRANSFORM_INTO_WAR_OWL_FORM_activated" ],
+    "deactivated_eocs": [ "EOC_LILIN_TRANSFORM_INTO_WAR_OWL_FORM_deactivated" ]
+  },
+  {
+    "type": "mutation",
+    "id": "LILIN_WAR_OWL_FORM_LEAPER",
+    "name": { "str": "Strix's Leap" },
+    "description": "While you cannot fly, with your bird-like legs and your wings, you can leap quite a distance.",
+    "valid": false,
+    "points": 0,
+    "active": true,
+    "activated_is_setup": false,
+    "activation_msg": "",
+    "activated_eocs": [ "EOC_LILIN_STRIX_LEAP" ]
+  }
+]

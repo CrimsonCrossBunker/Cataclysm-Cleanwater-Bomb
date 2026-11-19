@@ -1,0 +1,52 @@
+[
+  {
+    "type": "mutation",
+    "id": "LILIN_TEMPORARY_GLORIOUS",
+    "name": { "//~": "Name comes from Genesis 29:17", "str": "Of Beautiful Form" },
+    "description": "You can use your powers to spin a web of illusion around yourself, increasing your attractiveness to a supernatural degree.  While the harsh light of the sun destroys the illusion, you need merely to move back into the shadows to restore it.",
+    "points": 2,
+    "purifiable": false,
+    "prereqs": [ "BEAUTIFUL" ],
+    "prereqs2": [ "LILIN_BONUS_PERSUASION" ],
+    "category": [ "LILIN" ],
+    "changes_to": [ "LILIN_TEMPORARY_GLORIOUS_2" ],
+    "active": true,
+    "activated_is_setup": true,
+    "activation_msg": "",
+    "activated_eocs": [ "EOC_LILIN_TEMPORARY_GLORIOUS_activated" ],
+    "processed_eocs": [ "EOC_LILIN_TEMPORARY_GLORIOUS_processed" ],
+    "deactivated_eocs": [ "EOC_LILIN_TEMPORARY_GLORIOUS_deactivated" ]
+  },
+  {
+    "type": "mutation",
+    "id": "LILIN_TEMPORARY_GLORIOUS_2",
+    "name": { "//~": "Name comes from II Samuel 14:25", "str": "Without Blemish" },
+    "description": "You can use your powers to spin a web of illusion around yourself, increasing your attractiveness to a supernatural degree.  While the harsh light of the sun destroys the illusion, you need merely to move back into the shadows to restore it.  You have grown so powerful that this illusion requires almost no effort and can be <color_green>maintained for weeks</color> at a time.",
+    "points": 2,
+    "purifiable": false,
+    "prereqs": [ "LILIN_TEMPORARY_GLORIOUS" ],
+    "prereqs2": [ "LILIN_LIMB_SCORE_BONUSES_AT_NIGHT" ],
+    "category": [ "LILIN" ],
+    "threshreq": [ "THRESH_LILIN" ],
+    "active": true,
+    "activated_is_setup": true,
+    "activation_msg": "",
+    "activated_eocs": [ "EOC_LILIN_TEMPORARY_GLORIOUS_activated" ],
+    "processed_eocs": [ "EOC_LILIN_TEMPORARY_GLORIOUS_processed" ],
+    "deactivated_eocs": [ "EOC_LILIN_TEMPORARY_GLORIOUS_deactivated" ]
+  },
+  {
+    "type": "mutation",
+    "id": "LILIN_ATTRIBUTE_BONUSES",
+    "name": { "str": "Might of the Nephilim" },
+    "description": "Like the monstrous children of angels and humans, your prowess surpasses mortal limits.  Activate this trait to empower yourself.",
+    "points": 4,
+    "purifiable": false,
+    "category": [ "LILIN" ],
+    "active": true,
+    "activated_is_setup": true,
+    "activation_msg": "",
+    "activated_eocs": [ "EOC_LILIN_ATTRIBUTE_BONUSES_activated" ],
+    "deactivated_eocs": [ "EOC_LILIN_ATTRIBUTE_BONUSES_deactivated" ]
+  }
+]
