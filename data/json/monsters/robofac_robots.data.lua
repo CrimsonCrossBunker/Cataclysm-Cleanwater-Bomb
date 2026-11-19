@@ -1,0 +1,43 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_robofac_hound",
+    name = ccb.content.plural_text("Hub 01 HOUND", "Hub 01 HOUNDs"),
+    description = ccb.content.text("A quadrupedal Hub 01 Hostile Overstimulation & Unmanned Neutralization Drone, armed with a taser and noise-generator to distract, disorient, and ultimately neutralize nearby enemies."),
+    species = { "ROBOT" },
+    default_faction = "robofac_spy",
+    difficulty_adjustment = 4,
+    volume = "108500 ml",
+    mass = "32700 g",
+    hp = 50,
+    speed = 130,
+    materials = { "steel" },
+    symbol = ";",
+    color = "light_green",
+    aggression = 100,
+    morale = 100,
+    bleed_rate = 0,
+    melee_damage = { { type = "bash", amount = 0 } },
+    vision_day = 10,
+    vision_night = 6,
+    revert_item = "bot_robofac_hound",
+    attacks = {
+        { reference = "SHRIEK_ALERT", cooldown = 20 },
+        { reference = "SHRIEK_STUN", cooldown = 10 },
+        { reference = "TAZER", cooldown = 1 },
+    },
+    flags = {
+        "SEES",
+        "ELECTRONIC",
+        "COLDPROOF",
+        "NO_BREATHE",
+        "PATH_AVOID_DANGER",
+        "STUN_IMMUNE",
+        "SWARMS",
+    },
+    armor = { bash = 12, cut = 12, bullet = 10, electric = 5 },
+    death = {
+        drops = { groups = { { id = "robots", weight = 4 }, { id = "skitterbot", weight = 1 } } },
+        outcome = { corpse = "BROKEN" },
+    },
+}

@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_robofac_camspy",
+    name = ccb.content.plural_text("Hub 01 camspy", "Hub 01 camspies"),
+    description = ccb.content.text("A white and brown quadcopter drone mounting what looks to be a camera dome and a large antenna array.  It calmly hovers a comfortable distance above the ground, surveiling its surroundings with cold indifference."),
+    default_faction = "robofac_spy",
+    species = { "ROBOT_FLYING" },
+    difficulty_adjustment = 2,
+    volume = "30 L",
+    mass = "40750 g",
+    hp = 20,
+    speed = 120,
+    materials = { "steel" },
+    symbol = "e",
+    color = "light_gray",
+    morale = 100,
+    melee_damage = { { type = "cut", amount = 0 } },
+    dodge = 3,
+    revert_item = "bot_robofac_camspy",
+    bleed_rate = 0,
+    tracking_distance = 10,
+    aggression = -99,
+    attacks = { { reference = "DEPART", cooldown = 34560 } },
+    vision_day = 50,
+    pathing = { max_distance = 50, avoid_traps = true },
+    flags = {
+        "PATH_AVOID_DANGER", "SEES", "FLIES", "ELECTRONIC", "COLDPROOF", "BIOLOGICALPROOF", "NO_BREATHE",
+        "NOHEAD", "HEARS", "GOODHEARING", "PRIORITIZE_TARGETS", "STUN_IMMUNE", "PACIFIST",
+        "KEEP_DISTANCE",
+    },
+    armor = { bash = 8, cut = 10, bullet = 8 },
+    death = {
+        drops = { groups = { { id = "robots", weight = 4 }, { id = "eyebot", weight = 1 } } },
+        outcome = { corpse = "BROKEN" },
+    },
+}
