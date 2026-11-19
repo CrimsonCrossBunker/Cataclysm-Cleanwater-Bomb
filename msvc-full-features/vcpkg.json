@@ -8,7 +8,7 @@
     "sdl3": {
       "description": "Build the SDL3 tiles backend.",
       "dependencies": [
-        "sdl3",
+        { "name": "sdl3", "features": [ "vulkan" ] },
         { "name": "sdl3-image", "features": [ "jpeg", "png" ] },
         "sdl3-ttf",
         { "name": "sdl3-mixer",
