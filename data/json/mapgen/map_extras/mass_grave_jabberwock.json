@@ -1,11 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "mx_mass_grave_jabberwock",
-    "object": { "place_nested": [ { "chunks": [ [ "mass_grave_jabberwock_finished", 10 ] ], "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
     "//": "corpses ",
     "nested_mapgen_id": "mass_grave_jabberwock_finished",
     "object": {
