@@ -1,0 +1,155 @@
+[
+  {
+    "id": "aura_feral",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": "feral aura",
+    "//": "Needs to remain an item instead of an effect until enchantment mutations from effects are fixed.",
+    "description": "The manifestation of your rage.  It won't disappear until you calm down.",
+    "weight": "500 mg",
+    "volume": "1 ml",
+    "price": "36 USD 46 cent",
+    "symbol": "o",
+    "color": "white",
+    "material": [ "magical_material" ],
+    "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE" ],
+    "max_worn": 1,
+    "passive_effects": [ { "id": "ench_aura_feral" } ]
+  },
+  {
+    "id": "aura_feral_plus",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": "enhanced feral aura",
+    "//": "Needs to remain an item instead of an effect until enchantment mutations from effects are fixed.",
+    "description": "The manifestation of your rage.  It won't disappear until you calm down.",
+    "weight": "500 mg",
+    "volume": "1 ml",
+    "price": "36 USD 46 cent",
+    "symbol": "o",
+    "color": "white",
+    "material": [ "magical_material" ],
+    "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE" ],
+    "max_worn": 1,
+    "passive_effects": [ { "id": "ench_aura_feral_plus" } ]
+  },
+  {
+    "id": "aura_werewolf",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": "werewolf aura",
+    "description": "You have become the werewolf.  Boys becoming men, men becoming wolves.",
+    "weight": "500 mg",
+    "volume": "1 ml",
+    "price": "36 USD 46 cent",
+    "symbol": "o",
+    "color": "white",
+    "material": [ "magical_material" ],
+    "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE" ],
+    "max_worn": 1,
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Magiclysm_aura_werewolf_0" },
+      { "id": "ITEM_ENCH_Magiclysm_aura_werewolf_1" }
+    ]
+  },
+  {
+    "id": "dragon_shell_black",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": "Black Dragon Shell",
+    "description": "An aura of black and green draconic energy, swirling around your body protecting you and punishing those who strike you.",
+    "weight": "1 g",
+    "volume": "1 ml",
+    "material": [ "concentrated_mana" ],
+    "symbol": "o",
+    "color": "green",
+    "warmth": 0,
+    "material_thickness": 0.4,
+    "environmental_protection": 2,
+    "flags": [ "AURA", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE", "OVERSIZE", "PADDED", "UNBREAKABLE", "ALLOWS_NATURAL_ATTACKS" ],
+    "max_worn": 1,
+    "armor": [
+      {
+        "encumbrance": 0,
+        "coverage": 100,
+        "covers": [ "head", "mouth", "eyes", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "leg_l", "leg_r", "foot_l", "foot_r" ]
+      }
+    ],
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Magiclysm_dragon_shell_black_0" }
+    ]
+  },
+  {
+    "id": "subzero_talons",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": { "str_sp": "subzero talons" },
+    "description": "Claws made from ice, able to freeze on contact while mauling foes.  You, however, feel only a slight chill on your hands.",
+    "weight": "100 g",
+    "volume": "100 ml",
+    "longest_side": "15 cm",
+    "price": "1 cent",
+    "material": [ "concentrated_mana" ],
+    "symbol": "[",
+    "color": "light_gray",
+    "qualities": [ [ "CUT", 2 ], [ "CUT_FINE", 1 ], [ "BUTCHER", 12 ] ],
+    "to_hit": { "grip": "weapon", "length": "hand", "surface": "every", "balance": "good" },
+    "weapon_category": [ "CLAWS" ],
+    "flags": [
+      "UNBREAKABLE_MELEE",
+      "NONCONDUCTIVE",
+      "NO_UNWIELD",
+      "MAGIC_FOCUS",
+      "TRADER_AVOID",
+      "NO_REPAIR",
+      "NO_SALVAGE",
+      "UNRESTRICTED"
+    ],
+    "techniques": [ "WBLOCK_2", "RAPID" ],
+    "armor": [
+      {
+        "encumbrance": 5,
+        "coverage": 20,
+        "covers": [ "hand_l", "hand_r" ],
+        "specifically_covers": [ "hand_back_l", "hand_back_r" ]
+      }
+    ],
+    "melee_damage": { "bash": 6, "cut": 12 },
+    "passive_effects": [ { "id": "ench_subzero_talons" } ]
+  },
+  {
+    "id": "item_armor_magus_mage_conjured_armor",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "category": "armor",
+    "copy-from": "armor_lc_lightplate",
+    "name": { "str_sp": "force armor" },
+    "description": "A summoned suit of armor made of pure force.  It gets stronger and sturdier with each spell level and is affected by your intelligence, though its glow also increases.",
+    "weight": "1 g",
+    "material": [ "concentrated_mana" ],
+    "warmth": 0,
+    "material_thickness": 0,
+    "flags": [ "MORPHIC", "OUTER", "STURDY", "NO_REPAIR", "NO_SALVAGE", "TRADER_AVOID", "PADDED", "UNRESTRICTED" ],
+    "max_worn": 1,
+    "armor": [
+      {
+        "encumbrance": 8,
+        "coverage": 100,
+        "covers": [ "head", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "leg_l", "leg_r", "foot_l", "foot_r" ]
+      }
+    ],
+    "passive_effects": [ { "id": "ench_armor_spirit" }, { "id": "ITEM_ENCH_Magiclysm_item_armor_magus_mage_conjured_armor_1" } ]
+  },
+  {
+    "id": "longsword_holy",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "copy-from": "longsword",
+    "name": { "str": "force blade" },
+    "description": "This is a summoned mana sword, between the lighter arming sword and later two-handed swords in size.  It glows shiny, and its edge is sharper the more spell level and intelligence you have.",
+    "material": [ "concentrated_mana" ],
+    "flags": [ "UNBREAKABLE_MELEE", "NONCONDUCTIVE", "NO_REPAIR", "NO_SALVAGE", "MAGIC_FOCUS", "TRADER_AVOID" ],
+    "melee_damage": { "bash": 11, "cut": 1 },
+    "passive_effects": [ { "id": "ench_longsword_holy" } ]
+  }
+]

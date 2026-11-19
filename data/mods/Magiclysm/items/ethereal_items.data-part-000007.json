@@ -1,0 +1,17 @@
+[
+  {
+    "id": "overcharge_burn_scar",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": { "str": "overcharge burn" },
+    "description": "Ouch, this really smarts!  It'll go away soon, maybe?",
+    "weight": "500 mg",
+    "volume": "1 ml",
+    "symbol": "~",
+    "color": "light_red",
+    "material": [ "magical_material" ],
+    "flags": [ "NO_TAKEOFF", "TRADER_AVOID", "BLIND" ],
+    "armor": [ { "encumbrance": 18, "covers": [ "eyes", "mouth" ] } ],
+    "passive_effects": [ { "id": "ench_overcharge_burn_scar" } ]
+  }
+]

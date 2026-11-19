@@ -1,0 +1,34 @@
+[
+  {
+    "id": "finger_firelighter",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": "finger firelighter",
+    "description": "This is a small flame you can hold in your hand.  With a thought, you can cause it to light something on fire, or you can throw it to ignite something flammable.",
+    "weight": "1 g",
+    "volume": "1 ml",
+    "price": "0 cent",
+    "symbol": ",",
+    "color": "red",
+    "use_action": [ { "type": "firestarter", "moves": 20 } ],
+    "drop_action": { "type": "emit_actor", "emits": [ "emit_tiny_fire" ] },
+    "light": 8,
+    "flags": [ "TRADER_AVOID", "FIRESTARTER", "FLAMING", "WATER_EXTINGUISH" ]
+  },
+  {
+    "id": "electric_lighter",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": "stable spark",
+    "description": "Small electric spark, that does not disappear under your force.  With a thought, you can cause it to light something on fire, or you can throw it to ignite something flammable.",
+    "weight": "1 g",
+    "volume": "1 ml",
+    "price": "0 cent",
+    "symbol": ",",
+    "color": "yellow",
+    "use_action": [ { "type": "firestarter", "moves": 20 } ],
+    "drop_action": { "type": "emit_actor", "emits": [ "emit_tiny_fire" ] },
+    "light": 8,
+    "flags": [ "TRADER_AVOID", "FIRESTARTER" ]
+  }
+]
