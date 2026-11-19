@@ -1010,14 +1010,17 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
     //part density
     float part_dens = 0.0f;
 
+    const bool solid_ground = vert_coll && vertical_velocity < 0 &&
+                              here.has_flag_ter( ter_furn_flag::TFLAG_NATURAL_UNDERGROUND, pos ) &&
+                              here.impassable_ter_furn( pos ) && north_america::elevation_active();
     std::optional<field_entry> potential_impassable_field = here.get_impassable_field_at( pos );
-    if( potential_impassable_field.has_value() ) {
-        // impassable fields are not destructible
+    if( solid_ground || potential_impassable_field ) {
+        // An impact does not excavate solid ground or remove impassable fields.
         ret.type = veh_coll_other;
         mass2 = 1000;
         e = 0.10f;
         part_dens = 80;
-        ret.target_name = potential_impassable_field.value().name();
+        ret.target_name = solid_ground ? here.disp_name( pos ) : potential_impassable_field->name();
     } else if( is_body_collision ) {
         // Check any monster/NPC/player on the way
         // body
@@ -2480,6 +2483,7 @@ vehicle *vehicle::act_on_map( map &here )
         dp.z() = -1;
         is_flying = false;
         flight_altitude_m.reset();
+        requested_z_change = 0;
     } else {
         dp.z() = requested_z_change;
         requested_z_change = 0;

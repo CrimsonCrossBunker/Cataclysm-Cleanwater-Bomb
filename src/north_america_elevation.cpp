@@ -22,6 +22,7 @@
 #include "calendar.h"
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
+#include "cata_utility.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "filesystem.h"
@@ -362,8 +363,8 @@ void grade_generated_surface( mapgendata &dat )
     const point median_offset = divided ? om_direction::displace( terrain->get_dir() ).raw() :
                                 point::zero;
     const std::string &terrain_name = terrain->get_type_id().str();
-    const bool airfield = terrain_name.starts_with( "helipad" ) ||
-                          terrain_name.starts_with( "runway" );
+    const bool airfield = string_starts_with( terrain_name, "helipad" ) ||
+                          string_starts_with( terrain_name, "runway" );
     const std::optional<point_abs_ms> pad_center = airfield ?
             special_foundation_center( dat.pos() ) : std::nullopt;
     const int pad_height = airfield ? to_centimetres( surface_elevation(
