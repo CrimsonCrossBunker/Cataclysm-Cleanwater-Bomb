@@ -1,0 +1,26 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "bring_the_sun",
+    name = ccb.content.text("Ignite Gasoline"),
+    description = ccb.content.text("Releases a blast of ignited gasoline directly in front of you."),
+    effect = "attack",
+    shape = "cone",
+    valid_targets = { "ally", "hostile", "ground" },
+    flags = { "IGNITE_FLAMMABLE" },
+    message = ccb.content.text("with a crack a cloud of gasoline ignites!"),
+    max_level = 1,
+    min_damage = 10,
+    max_damage = 12,
+    damage_increment = 0.0,
+    min_range = 1,
+    max_range = 1,
+    range_increment = 0.0,
+    min_aoe = 100,
+    max_aoe = 100,
+    aoe_increment = 0.0,
+    base_casting_time = 50,
+    energy_source = "MANA",
+    difficulty = 2,
+    damage_type = "heat",
+}
