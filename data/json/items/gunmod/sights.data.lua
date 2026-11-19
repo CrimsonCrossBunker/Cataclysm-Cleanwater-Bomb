@@ -1,0 +1,387 @@
+local ccb = require("ccb")
+
+-- https://amz.run/7V0e
+ccb.content.define_item {
+    id = "bow_sight",
+    name = ccb.content.plural_text("five pin bow sight", "five pin bow sights"),
+    description = ccb.content.text("A set of adjustable optic fiber aiming pins with a bracket to mount on modern bows.  It takes more time to calibrate but can improve accuracy more effectively."),
+    mass = "240 g",
+    volume = "553 ml",
+    integral_volume = "553 ml",
+    price = "50 USD",
+    survival_price = "5 USD",
+    materials = { { id = "aluminum", portions = 90 }, { id = "plastic", portions = 10 } },
+    symbol = ":",
+    color = "dark_gray",
+    gunmod = {
+        install_time = "60 m",
+        location = ccb.content.text("sights"),
+        targets = { ccb.content.text("bow", "gun_type_type") },
+        sight_dispersion = 23,
+        field_of_view = 900,
+        aim_speed_modifier = 8,
+    },
+    minimum_skills = { { id = "archery", count = 2 } },
+}
+
+ccb.content.define_item {
+    id = "bow_sight_pin",
+    name = ccb.content.plural_text("single pin bow sight", "single pin bow sights"),
+    description = ccb.content.text("A single aluminum pin with a bracket to mount on modern bows.  Quick to use."),
+    mass = "80 g",
+    volume = "50 ml",
+    integral_volume = "0 ml",
+    price = "30 USD",
+    survival_price = "1 USD",
+    materials = { "aluminum", "plastic" },
+    symbol = ":",
+    color = "dark_gray",
+    gunmod = {
+        install_time = "20 m",
+        location = ccb.content.text("sights"),
+        targets = { ccb.content.text("bow", "gun_type_type") },
+        sight_dispersion = 30,
+        aim_speed_modifier = 8,
+        field_of_view = 900,
+    },
+}
+
+ccb.content.define_item {
+    id = "bow_scope",
+    name = ccb.content.plural_text("bow scope", "bow scopes"),
+    description = ccb.content.text("A single magnifying scope mounted on an adjustable bracket, with accompanying clarifier peep sight.  Designed for extra long shots, but easily adjusted for short range.  Spectacularly accurate."),
+    mass = "180 g",
+    volume = "250 ml",
+    integral_volume = "0 ml",
+    price = "200 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { "aluminum", "plastic", "glass" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "ZOOM" },
+    gunmod = {
+        install_time = "20 m",
+        location = ccb.content.text("sights"),
+        targets = { ccb.content.text("bow", "gun_type_type") },
+        sight_dispersion = 10,
+        field_of_view = 270,
+    },
+    minimum_skills = { { id = "archery", count = 3 } },
+}
+
+-- EOTech XPS3
+ccb.content.define_item {
+    id = "holo_sight",
+    name = ccb.content.plural_text("holographic sight", "holographic sights"),
+    description = ccb.content.text("An advanced optic with an adjustable circular hologram reticle superimposed on the field of view.  Used extensively by military forces, it increases accuracy and weight.  This is a step up from a red dot sight."),
+    mass = "255 g",
+    volume = "290 ml",
+    price = "680 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { "plastic", "steel" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS" },
+    gunmod = {
+        install_time = "5 m",
+        location = ccb.content.text("sights"),
+        targets = {
+            ccb.content.text("smg", "gun_type_type"),
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+        },
+        sight_dispersion = 23,
+        aim_speed_modifier = 10,
+        field_of_view = 720,
+        added_slots = { { id = "magnifier", count = 1 } },
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 3 } },
+}
+
+ccb.content.define_item {
+    id = "improve_sights",
+    name = ccb.content.plural_text("iron sights", "iron sights"),
+    description = ccb.content.text("A basic set of iron sights."),
+    mass = "60 g",
+    volume = "10 ml",
+    integral_volume = "0 ml",
+    integral_mass = "0 g",
+    price = "720 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "steel" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS" },
+    gunmod = {
+        install_time = "10 m",
+        location = ccb.content.text("sights"),
+        targets = {
+            ccb.content.text("smg", "gun_type_type"),
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("pistol", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+        },
+        sight_dispersion = 30,
+        field_of_view = 360,
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 1 } },
+}
+
+ccb.content.define_item {
+    id = "pistol_scope",
+    name = ccb.content.plural_text("pistol scope", "pistol scopes"),
+    description = ccb.content.text("A small scope intended for use on a handgun.  Increases weight but improves accuracy greatly."),
+    mass = "212 g",
+    volume = "200 ml",
+    price = "540 USD",
+    survival_price = "5 USD",
+    materials = { "aluminum", "glass" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS" },
+    gunmod = {
+        install_time = "5 m",
+        location = ccb.content.text("sights"),
+        targets = { ccb.content.text("pistol", "gun_type_type"), ccb.content.text("smg", "gun_type_type") },
+        sight_dispersion = 8,
+        field_of_view = 360,
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 4 } },
+}
+
+ccb.content.define_item {
+    id = "red_dot_sight",
+    name = ccb.content.plural_text("red dot sight", "red dot sights"),
+    description = ccb.content.text("A red dot optic meant to be attached to the top of the weapon, replacing the iron sights.  Increases accuracy and weight."),
+    mass = "150 g",
+    volume = "80 ml",
+    price = "680 USD",
+    survival_price = "5 USD",
+    materials = { "plastic", "steel" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS" },
+    gunmod = {
+        install_time = "5 m",
+        location = ccb.content.text("sights"),
+        targets = {
+            ccb.content.text("smg", "gun_type_type"),
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+            ccb.content.text("pistol", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+        },
+        sight_dispersion = 27,
+        aim_speed_modifier = 10,
+        field_of_view = 630,
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 2 } },
+}
+
+-- Leupold Mark 6
+ccb.content.define_item {
+    id = "rifle_scope",
+    name = ccb.content.plural_text("rifle scope", "rifle scopes"),
+    description = ccb.content.text("A 3-18x44 rifle scope.  It is adjustable for windage and elevation in 1/10th mrad increments and is remarkably small and light for its magnification."),
+    mass = "669 g",
+    volume = "485 ml",
+    price = "680 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { "aluminum", "glass" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS", "ZOOM" },
+    gunmod = {
+        location = ccb.content.text("sights"),
+        targets = {
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+        },
+        install_time = "5 m",
+        sight_dispersion = 0,
+        aim_speed_modifier = -1,
+        field_of_view = 270,
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 4 } },
+}
+
+-- Leupold Mark 6
+ccb.content.define_item {
+    id = "rifle_scope_high_end_mount",
+    name = ccb.content.plural_text("high end rifle scope", "high end rifle scopes"),
+    description = ccb.content.text("A 3-18x44 rifle scope.  It is adjustable for windage and elevation in 1/10th mrad increments and is remarkably small and light for its magnification.  This one has an additional rail on the top of its ring mounts for an additional backup optic."),
+    mass = "700 g",
+    volume = "485 ml",
+    price = "680 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { "aluminum", "glass" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS", "ZOOM" },
+    gunmod = {
+        location = ccb.content.text("sights"),
+        targets = {
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+        },
+        install_time = "5 m",
+        sight_dispersion = 0,
+        aim_speed_modifier = -1,
+        field_of_view = 270,
+        added_slots = { { id = "sights", count = 1 } },
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 4 } },
+}
+
+ccb.content.define_item {
+    id = "acog_scope",
+    name = ccb.content.plural_text("ACOG scope", "ACOG scopes"),
+    description = ccb.content.text("A 4x32 TA01 Advanced Combat Optical Gunsight with a tritium-illuminated crosshair."),
+    mass = "280 g",
+    volume = "112 ml",
+    price = "680 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { "aluminum", "glass" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS", "ZOOM" },
+    gunmod = {
+        location = ccb.content.text("sights"),
+        targets = {
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+            ccb.content.text("smg", "gun_type_type"),
+        },
+        install_time = "5 m",
+        sight_dispersion = 8,
+        field_of_view = 270,
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 4 } },
+}
+
+-- based on the EOTECH G43
+ccb.content.define_item {
+    id = "holo_magnifier",
+    name = ccb.content.plural_text("sight magnifier", "sight magnifiers"),
+    description = ccb.content.text("A sleek compact 3x magnifier designed to sit behind a modern holographic sight.  Mounted on a lever to quickly flip in and out of the sights picture, the magnifier allows the full functionality of a high end close quarters sight while also allowing you to engage targets at range."),
+    mass = "320 g",
+    volume = "390 ml",
+    price = "669 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { "steel", "glass" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS", "ZOOM" },
+    gunmod = {
+        location = ccb.content.text("magnifier"),
+        targets = {
+            ccb.content.text("smg", "gun_type_type"),
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+        },
+        install_time = "5 m",
+        sight_dispersion = 13,
+        field_of_view = 270,
+        aim_speed_modifier = 5,
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 3 } },
+}
+
+ccb.content.define_item {
+    id = "hybrid_sight_4x",
+    copy_from = "acog_scope",
+    name = ccb.content.plural_text("hybrid ACOG scope", "hybrid ACOG scopes"),
+    description = ccb.content.text("A high end 4x32 military grade ACOG scope.  This one has additional mounting brackets on top for another sight."),
+    flags = { "DISABLE_SIGHTS", "ZOOM" },
+    gunmod = { added_slots = { { id = "sights", count = 1 } } },
+}
+
+ccb.content.define_item {
+    id = "riv_scope",
+    copy_from = "rifle_scope",
+    name = ccb.content.plural_text("RS1219 scope", "RS1219 scopes"),
+    description = ccb.content.text("An integral component of the RM11B rifle system, the RS1219 Accipiter digital scope provides auto-adjusting focal length, a user-selectable reticle, and an offset reflex sight for close objectives."),
+    mass = "0 g",
+    volume = "0 ml",
+    price = "0 cent",
+    materials = { "superalloy", "ceramic" },
+    flags = { "ZOOM", "IRREMOVABLE" },
+    gunmod = { aim_speed_modifier = 0 },
+}
+
+ccb.content.define_item {
+    id = "tele_sight",
+    name = ccb.content.plural_text("telescopic sight", "telescopic sights"),
+    description = ccb.content.text("A simple hand-crafted telescopic sight, essentially a small telescope with crosshairs.  Not as good as the ones made before the Cataclysm.  Increases weight but improves accuracy."),
+    mass = "300 g",
+    volume = "250 ml",
+    price = "300 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "plastic", "steel", "glass" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS", "CONSUMABLE", "ZOOM" },
+    gunmod = {
+        location = ccb.content.text("sights"),
+        targets = {
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("shotgun", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("launcher", "gun_type_type"),
+        },
+        install_time = "10 m",
+        consume_chance = 1000,
+        consume_divisor = 505,
+        sight_dispersion = 15,
+        aim_speed_modifier = -1,
+        field_of_view = 270,
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 3 } },
+}
+
+ccb.content.define_item {
+    id = "tele_sight_pistol",
+    name = ccb.content.plural_text("telescopic pistol sight", "telescopic pistol sights"),
+    description = ccb.content.text("A simple telescopic sight intended for use on a handgun.  Increases weight but improves accuracy greatly."),
+    mass = "220 g",
+    volume = "150 ml",
+    price = "270 USD",
+    survival_price = "5 USD",
+    materials = { "plastic", "steel", "glass" },
+    symbol = ":",
+    color = "dark_gray",
+    flags = { "DISABLE_SIGHTS", "CONSUMABLE", "ZOOM" },
+    gunmod = {
+        install_time = "10 m",
+        location = ccb.content.text("sights"),
+        targets = { ccb.content.text("pistol", "gun_type_type"), ccb.content.text("smg", "gun_type_type") },
+        sight_dispersion = 20,
+        aim_speed_modifier = -1,
+        field_of_view = 270,
+        consume_chance = 1000,
+        consume_divisor = 85,
+    },
+    minimum_skills = { { id = "weapon", count = 2 }, { id = "gun", count = 3 } },
+}
+
+-- Kokura also made and issued 2.5x rifle scopes for the Type 99, but those are vanishingly rare when compared against Nagoya-built, non-adjustable 4x scopes. That being said, Nagoya also built a small number of 2.5x scopes and dabbled with an adjustable 4x close to the end of production, but those are also comparatively rare enough to be hand-waved away.
+ccb.content.define_item {
+    id = "type99_scope",
+    copy_from = "rifle_scope",
+    name = ccb.content.plural_text("Nagoya 99 gun scope", "Nagoya 99 gun scopes"),
+    description = ccb.content.text("A basic and antique 4x rifle optic: essentially a non-adjustable telescopic sight built by the Nagoya Arsenal during the Second World War and issued for mounting on Type 99 sniper rifles."),
+    gunmod = { range_multiplier = 2, targets = { ccb.content.text("type99", "gun_type_type") } },
+}
