@@ -61,7 +61,6 @@
       }
     ],
     "onhit_eocs": [ "EOC_PERK_SPEND_INSIGHT", "EOC_PERK_PRESSURE_STRIKES_SCHEDULE" ],
-    "onkill_eocs": [ "EOC_PERK_TWILIGHT_FORM" ],
     "techniques": [
       "tec_perk_stagger_strike",
       "tec_perk_feint",

@@ -9,7 +9,6 @@ local blind_check = id("effect", "perk_blind_check")
 local insight_flag = id("json_flag", "MELEE_PERK_INSIGHT")
 local infinite = id("json_flag", "MELEE_PERK_INSIGHT_INFINITE")
 local sixth_sense = id("json_flag", "MELEE_PERK_SIXTH_SENSE")
-local whole_body = id("body_part", "bp_null")
 local insight_spell = id("spell", "perk_insight_spell")
 
 local function checked(result)
@@ -18,9 +17,7 @@ local function checked(result)
 end
 
 local function intensity(actor, effect)
-    local result = effects.get(actor, effect, whole_body)
-    if not result.ok and result.error.code == "not_found" then return -1 end
-    return checked(result).intensity
+    return checked(effects.exact_intensity(actor, effect)) or -1
 end
 
 local function gain_insight(actor)
@@ -83,3 +80,27 @@ ccb.runtime.handler("martial_perks_insight_ready", function(event)
     if not tasks.has_character_turn(actor, due) then tasks.after_character_turn(actor, 1, due) end
 end)
 ccb.runtime.on("character_ready", "martial_perks_insight_ready")
+
+ccb.runtime.handler("perk_insight_ranged_attack", function(event)
+    local actor = event.actors.speaker or event.actors.attacker or services.characters.avatar()
+    if not actor:is_valid() or not checked(services.creatures.has_flag_text(actor, "MELEE_PERK_MYSTIC_SHOT")) then
+        return
+    end
+    if checked(services.characters.has_flag(actor, insight_flag)) then
+        checked(services.variables.set(actor, "perk_last_insight", intensity(actor, insight), { include_before = false }))
+        checked(effects.remove(actor, insight))
+    end
+end)
+ccb.runtime.on("game:character_ranged_attacks_character", "perk_insight_ranged_attack")
+ccb.runtime.on("game:character_ranged_attacks_monster", "perk_insight_ranged_attack")
+
+local function restore_after_kill(actor)
+    if not checked(services.creatures.has_flag_text(actor, "MELEE_PERK_TWILIGHT_FORM")) then return end
+
+    local spent = checked(services.variables.get_number(actor, "perk_last_insight")).value or 0
+    local restored = math.modf(spent * 0.5)
+    local applied = effects.add(actor, insight, services.time.duration(4, "day"), { intensity = restored })
+    if not applied.ok and applied.error.code ~= "rejected" then error(applied.error.message) end
+end
+
+return { restore_after_kill = restore_after_kill }

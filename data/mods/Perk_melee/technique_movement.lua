@@ -4,7 +4,9 @@ local effects = services.effects
 local inventory = services.inventory
 local variables = services.variables
 local id = services.types.id
+local insight = require("insight")
 local step_radius = { min_radius = 1, max_radius = 1, allow_unloaded_candidates = true }
+local reach_marker = "duelist_reach_modified"
 
 local function checked(result)
     if not result.ok then error(result.error.message) end
@@ -35,10 +37,21 @@ local function teleport(character, destination)
     return checked(services.relocation.teleport_character(character, destination)).handle
 end
 
+local function remove_duelist_reach(character, reach)
+    local weapon = checked(inventory.wielded(character))
+    local weapon_uid = weapon and weapon.locator.stable_id
+    for _, item in ipairs(checked(inventory.carried_items(character))) do
+        -- The original removal selected the wielded item and any marked carried item.
+        if item.locator.stable_id == weapon_uid or number(item, reach_marker) == 1 then
+            checked(services.items.set_flag(item, reach, false))
+            set_number(item, reach_marker, 0)
+        end
+    end
+end
+
 local function adjust_duelist_reach(character, momentum_id)
     local momentum = checked(effects.exact_intensity(character, momentum_id)) or -1
     local reach = id("json_flag", "REACH_ATTACK")
-    local reach_marker = "duelist_reach_modified"
     if momentum <= 1 and has_flag(character, "MELEE_PERK_DUELIST_LUNGE")
         and (checked(inventory.wielded_matches(character, id("weapon_category", "LONG_THRUSTING_SWORDS")))
             or checked(inventory.wielded_matches(character, id("weapon_category", "FENCING_WEAPONRY")))) then
@@ -51,15 +64,7 @@ local function adjust_duelist_reach(character, momentum_id)
         return
     end
 
-    local weapon = checked(inventory.wielded(character))
-    local weapon_uid = weapon and weapon.locator.stable_id
-    for _, item in ipairs(checked(inventory.carried_items(character))) do
-        -- The original removal selected the wielded item and any marked carried item.
-        if item.locator.stable_id == weapon_uid or number(item, reach_marker) == 1 then
-            checked(services.items.set_flag(item, reach, false))
-            set_number(item, reach_marker, 0)
-        end
-    end
+    remove_duelist_reach(character, reach)
 end
 
 local function lose_poise(character)
@@ -186,12 +191,22 @@ ccb.runtime.handler("perk_style_paused", function(style)
     end
 end)
 
-ccb.runtime.handler("perk_style_kill_tempo", function(style)
+ccb.runtime.handler("perk_style_killed", function(style)
+    insight.restore_after_kill(style.character)
     if has_flag(style.character, "MELEE_PERK_TEMPO_ZONING") then
         local character = retreat(style.character)
         checked(effects.remove(character, id("effect", "mabuff:buff_perk_tempo")))
     end
 end)
+
+ccb.runtime.handler("perk_momentum_ended", function(event)
+    if event.data.effect ~= "mabuff:buff_perk_momentum" then return end
+    local character = event.actors.character or services.characters.avatar()
+    if character:is_valid() then
+        remove_duelist_reach(character, id("json_flag", "REACH_ATTACK"))
+    end
+end)
+ccb.runtime.on("game:character_loses_effect", "perk_momentum_ended")
 
 ccb.runtime.handler("perk_tempo_assault", function(event)
     local attacker = event.actors.speaker
