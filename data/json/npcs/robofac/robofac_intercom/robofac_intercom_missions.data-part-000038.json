@@ -1,0 +1,71 @@
+[
+  {
+    "id": [
+      "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_OFFER",
+      "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_What",
+      "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_How",
+      "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_Which",
+      "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_Prototype"
+    ],
+    "type": "talk_topic",
+    "dynamic_line": {
+      "math": [ "hub01_told_u_about_warehouse_autodoc == 1" ],
+      "yes": "As you are aware, we have recovered advanced equipment from the Exodii warehouse.  Analysis indicates it may constitute an automated surgical suite; however, additional hardware is required to fully assemble and activate the system.  Given your successful retrieval of the Trifacet, we are offering you the contract as a priority.  Research is in need of an Exodii \"worker\".\"\n\n\"The Exodii have demonstrated extreme hazard potential.  Accordingly, should you accept this contract, a prototype HOUND unit will be assigned to you to assist in your operation.\"\n\n\"This contract includes the standard hazard pay of 4 HGC and an indefinite license to use the HOUND unit.  Additionally, we anticipate that your involvement will facilitate critical technical developments, which may become available to you in due course.",
+      "no": "Our robotics research division has requested new robot specimens.  Given your successful retrieval of the Trifacet, we are offering you the contract as a priority.  Research is in need of an Exodii \"worker\".\"\n\n\"The Exodii have demonstrated extreme hazard potential.  Accordingly, should you accept this contract, a prototype HOUND unit will be assigned to you to assist in your operation.\"\n\n\"This contract includes the standard hazard pay of 4 HGC and an indefinite license to use the HOUND unit.  Additionally, we anticipate that your involvement will facilitate critical technical developments, which may become available to you in due course."
+    },
+    "responses": [
+      {
+        "text": "So take down an Exodii worker and bring it to you?  I'm in.",
+        "condition": {
+          "or": [
+            { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Rubik" } ] },
+            { "compare_string": [ "yes", { "u_val": "hub01_explained_exodii" } ] }
+          ]
+        },
+        "effect": [
+          { "assign_mission": "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI" },
+          { "u_spawn_item": "bot_robofac_hound", "count": 1 },
+          { "u_spawn_item": "powered_earplugs", "count": 1 }
+        ],
+        "topic": "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ACCEPTED"
+      },
+      {
+        "text": "What's an Exodii?",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Rubik" } ] } },
+        "effect": { "u_add_var": "hub01_explained_exodii", "value": "yes" },
+        "topic": "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_What"
+      },
+      {
+        "text": "How am I supposed to take down an Exodii worker?",
+        "condition": {
+          "or": [
+            { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Rubik" } ] },
+            { "compare_string": [ "yes", { "u_val": "hub01_explained_exodii" } ] }
+          ]
+        },
+        "topic": "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_How"
+      },
+      {
+        "text": "What exactly am I looking for?",
+        "condition": {
+          "or": [
+            { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Rubik" } ] },
+            { "compare_string": [ "yes", { "u_val": "hub01_explained_exodii" } ] }
+          ]
+        },
+        "topic": "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_Which"
+      },
+      {
+        "text": "Tell me more about this prototype HOUND.",
+        "condition": {
+          "or": [
+            { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Rubik" } ] },
+            { "compare_string": [ "yes", { "u_val": "hub01_explained_exodii" } ] }
+          ]
+        },
+        "topic": "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_Prototype"
+      },
+      { "text": "What else do you have available?", "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS" }
+    ]
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_COMPLETE",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "math": [ "hub01_told_u_about_warehouse_autodoc == 1" ],
+      "yes": "&The intercom's tray slides open, filled with your payment.  \"Excellent.  In addition to your contracting fee you may keep the HOUND.  We would appreciate periodic reports on its field performance.\"\n\nYou hear a THUNK as something covers the microphone, and through scratches and muffled words, you heard \"Permission--tell-----okay.\"\n\nYou then hear the intercom click off, there is a moment of silence, and it clicks on again.  \"Ahem, so, as discussed earlier, we think this unit will lead to some important developments that will need field testing.  If things go as planned we will happily offer you a place in our field testing program.  Please occasionally check with us about project status.\"",
+      "no": "&The intercom's tray slides open, filled with your payment.  \"Excellent.  In addition to your contracting fee you may keep the HOUND.  We would appreciate periodic reports on its field performance.\""
+    },
+    "responses": [ { "text": "Thank you.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES" } ]
+  },
+  {
+    "id": "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_COMPLETE_ALT",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "math": [ "hub01_told_u_about_warehouse_autodoc == 1" ],
+      "yes": "&The intercom is silent a long moment, and then you hear a keyboard clacking and the tray slides open, filled with your payment.  \"Yes, this will do.  In addition to your contracting fee you may of course keep the HOUND.  We would appreciate periodic reports on its field performance.\"\n\nYou hear a THUNK as something covers the microphone, and through scratches and muffled words, you heard \"Permission--tell-----okay.\"\n\nYou then hear the intercom click off, there is a moment of silence, and it clicks on again.  \"Ahem, so, as discussed earlier, we think this unit will lead to some important developments that will need field testing.  If things go as planned we will happily offer you a place in our field testing program.  Please occasionally check with us about project status.\"",
+      "no": "&The intercom is silent a long moment, and then you hear a keyboard clacking and the tray slides open, filled with your payment.  \"Yes, this will do.  In addition to your contracting fee you may of course keep the HOUND.  We would appreciate periodic reports on its field performance.\""
+    },
+    "responses": [ { "text": "Thank you.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES" } ]
+  },
+  {
+    "id": "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1",
+    "type": "mission_definition",
+    "name": { "str": "Data Retrieval" },
+    "description": "Reach the LIXA facility, and search the area for anything of interest.  The intercom warned you about a number of undead aboveground, and the high probability of more underground.",
+    "goal": "MGOAL_NULL",
+    "difficulty": 5,
+    "value": 0,
+    "start": {
+      "assign_mission_target": { "om_terrain": "LIXA_road_guard", "om_special": "physics_lab_LIXA", "reveal_radius": 1, "z": 0 }
+    },
+    "end": {
+      "effect": [
+        { "u_spawn_item": "RobofacCoin", "count": 5 },
+        { "u_add_var": "dialogue_intercom_completed_robofac_intercom_lixa_sm_1", "value": "yes" },
+        { "math": [ "u_hub01_completed_missions++" ] }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "…",
+      "offer": "…",
+      "accepted": "…",
+      "rejected": "…",
+      "advice": "…",
+      "inquire": "…",
+      "success": "…",
+      "success_lie": "…",
+      "failure": "…"
+    }
+  },
+  {
+    "id": [
+      "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_OFFER",
+      "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_WHAT_ELSE",
+      "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_OFFER_ADVICE",
+      "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_LIXA_ACRONYM",
+      "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_OFFER_ADVICE_Replacement",
+      "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_OFFER_ADVICE_HEW"
+    ],
+    "type": "talk_topic",
+    "dynamic_line": "During the Cataclysm, we lost contact with one of our sister sites, LIXA.  Aerial surveillance indicates that the facility's inhabitants are deceased, and beyond the now-zombified security detail, the site should be sparsely populated.  We want you to enter the facility and make a copy of what they were researching on the provided thumb drive.  Additionally, we will be providing you with a keycard that should at the very least get you in the front door.\"\n\n\"We're offering a standard 5 HGC for successful retrieval of the data.  If that isn't enough of an incentive, we do have a manifest from before we lost contact with the facility showing a handful of specialized powered suits in inventory.  You are free to take any that are left.",
+    "responses": [
+      {
+        "text": "Alright, I'll see if I can't get that data for you.",
+        "effect": [
+          { "assign_mission": "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1" },
+          { "u_spawn_item": "id_LIXA", "count": 1 },
+          { "u_spawn_item": "usb_drive_nano", "count": 1 }
+        ],
+        "topic": "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_ACCEPTED"
+      },
+      {
+        "text": "What can you tell me about what they were doing there?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_WHAT_ELSE"
+      },
+      { "text": "What does LIXA even mean?", "topic": "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_LIXA_ACRONYM" },
+      {
+        "text": "If I lose the ID card or the memory stick, what should I do?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_OFFER_ADVICE_Replacement"
+      },
+      {
+        "text": "You told me that the HEW system picked up \"spacetime anomalies\".  What does that mean?",
+        "condition": { "math": [ "HEW_lixa_data_sold > 0" ] },
+        "topic": "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_OFFER_ADVICE_HEW"
+      },
+      { "text": "What else do you have available?", "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS" }
+    ]
+  }
+]

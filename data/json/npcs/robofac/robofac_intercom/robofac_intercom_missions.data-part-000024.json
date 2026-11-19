@@ -1,0 +1,24 @@
+[
+  {
+    "id": [
+      "MISSION_ROBOFAC_INTERCOM_MWS_2_OFFER",
+      "MISSION_ROBOFAC_INTERCOM_MWS_2_OFFER_ADVICE_MWS",
+      "MISSION_ROBOFAC_INTERCOM_MWS_2_OFFER_ADVICE_Dangers"
+    ],
+    "type": "talk_topic",
+    "dynamic_line": "Unsurprisingly, the consumer-grade weather station malfunctioned during the storm recording.  Nevertheless, you've proved yourself a capable contractor.  Therefore, we'd like you to retrieve more advanced recording equipment.  Some time ago we lost contact with a DARPA-affiliated limnological test station, and we have reason to believe they kept sensitive recording equipment on hand.  We'd like you to retrieve it - for your standard contracting fee, of course.",
+    "responses": [
+      {
+        "text": "Alright, I'll find the advanced weather recording equipment.",
+        "effect": [ { "assign_mission": "MISSION_ROBOFAC_INTERCOM_MWS_2" } ],
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_2_ACCEPTED"
+      },
+      { "text": "What does the equipment look like?", "topic": "MISSION_ROBOFAC_INTERCOM_MWS_2_OFFER_ADVICE_MWS" },
+      {
+        "text": "Based on our previous work together, I'm guessing there may be some resistance?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_2_OFFER_ADVICE_Dangers"
+      },
+      { "text": "What else do you have available?", "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS" }
+    ]
+  }
+]

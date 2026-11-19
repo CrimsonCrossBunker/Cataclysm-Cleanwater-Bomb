@@ -1,0 +1,23 @@
+[
+  {
+    "id": [
+      "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_COMPLETE",
+      "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_COMPLETE_Prototype",
+      "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_COMPLETE_Binder"
+    ],
+    "type": "talk_topic",
+    "dynamic_line": "&The intercom tray quickly slides shut.\n\n\"We expected nothing less.  We hope you found the prototype's performance to be satisfactory.\"",
+    "responses": [
+      {
+        "text": "Will this weapon work on other robots, as well?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_COMPLETE_Prototype"
+      },
+      {
+        "text": "The handling procedures you gave me seemed to predate the Cataclysm.  How long had that robot been here?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_COMPLETE_Binder",
+        "effect": [ { "u_add_var": "global_portal_storms_u_heard_of_portal_storms", "value": "yes" } ]
+      },
+      { "text": "Thank you.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES" }
+    ]
+  }
+]

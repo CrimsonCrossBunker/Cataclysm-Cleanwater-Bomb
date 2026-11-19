@@ -1,0 +1,32 @@
+[
+  {
+    "id": [
+      "MISSION_ROBOFAC_INTERCOM_MWS_MONSTER_CORPSE_OFFER",
+      "MISSION_ROBOFAC_INTERCOM_MWS_MONSTER_CORPSE_OFFER_ADVICE_DANGERS",
+      "MISSION_ROBOFAC_INTERCOM_MWS_MONSTER_CORPSE_OFFER_ADVICE_FIELD_TEAM",
+      "MISSION_ROBOFAC_INTERCOM_MWS_MONSTER_CORPSE_OFFER_ADVICE_SCAN_LOCATION"
+    ],
+    "type": "talk_topic",
+    "dynamic_line": "The recording you brought us suggests that there is some underground source of alien organic volatiles.  We've cross-referenced with our existing geographic data, and we think we've identified several underground structures that may match the signatures you've brought us.  We'd like you and a field team to go to one of these and measure underground atmospheric conditions - with your HEW station, of course.",
+    "responses": [
+      {
+        "text": "Alright, so go underground to specific coordinates, set up the HEW station, and make a recording.  I'm in.",
+        "effect": [
+          { "assign_mission": "MISSION_ROBOFAC_INTERCOM_MWS_MONSTER_CORPSE_FIELD_TEAM" },
+          { "assign_mission": "MISSION_ROBOFAC_INTERCOM_MWS_MONSTER_CORPSE" }
+        ],
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_MONSTER_CORPSE_ACCEPTED"
+      },
+      {
+        "text": "Any idea what I can expect?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_MONSTER_CORPSE_OFFER_ADVICE_DANGERS"
+      },
+      { "text": "Field team?", "topic": "MISSION_ROBOFAC_INTERCOM_MWS_MONSTER_CORPSE_OFFER_ADVICE_FIELD_TEAM" },
+      {
+        "text": "Do I need to scan at these EXACT coordinates?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_MONSTER_CORPSE_OFFER_ADVICE_SCAN_LOCATION"
+      },
+      { "text": "What else do you have available?", "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS" }
+    ]
+  }
+]

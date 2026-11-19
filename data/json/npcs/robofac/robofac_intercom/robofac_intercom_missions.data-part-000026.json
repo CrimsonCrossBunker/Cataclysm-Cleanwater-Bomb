@@ -1,0 +1,19 @@
+[
+  {
+    "id": [ "MISSION_ROBOFAC_INTERCOM_MWS_3_OFFER", "MISSION_ROBOFAC_INTERCOM_MWS_3_OFFER_ADVICE_HEW" ],
+    "type": "talk_topic",
+    "dynamic_line": "We've confirmed that the Hazardous Environment unit that you've recovered is in working condition.  We are willing to pay you a standard contracting fee to repeat your previous storm recordings.",
+    "responses": [
+      {
+        "text": "Alright, let's get a real recording this time.",
+        "effect": [
+          { "u_spawn_item": "xedra_mobile_weather_station", "count": 1 },
+          { "assign_mission": "MISSION_ROBOFAC_INTERCOM_MWS_3" }
+        ],
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_3_ACCEPTED"
+      },
+      { "text": "Anything different from last time?", "topic": "MISSION_ROBOFAC_INTERCOM_MWS_3_OFFER_ADVICE_HEW" },
+      { "text": "What else do you have available?", "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS" }
+    ]
+  }
+]

@@ -1,0 +1,19 @@
+[
+  {
+    "id": "MISSION_ROBOFAC_INTERCOM_3_COMPLETE_1",
+    "type": "talk_topic",
+    "dynamic_line": "As we discussed during acceptance of the contract, we were aware of hazardous ground conditions, but we were unable to deduce further information other than what was available through long-range sensing.  If you would like to provide a description of the hazards present, we are willing to document them.",
+    "responses": [
+      {
+        "text": "[Detail the conditions at the collapsed tower and its basement.  This will advance time by ten minutes.]",
+        "effect": { "u_assign_activity": "ACT_GENERIC_EOC", "duration": "10 minutes" },
+        "topic": "MISSION_ROBOFAC_INTERCOM_3_COMPLETE_Explainer"
+      },
+      {
+        "text": "[Let them know how bad that mission REALLY was.]",
+        "topic": "MISSION_ROBOFAC_INTERCOM_3_COMPLETE_ChewingOut"
+      },
+      { "text": "…Just forget it.  Let's never speak of this again.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES" }
+    ]
+  }
+]
