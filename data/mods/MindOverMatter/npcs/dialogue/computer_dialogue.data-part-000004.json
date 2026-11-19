@@ -1,0 +1,7 @@
+[
+  {
+    "id": "EOC_OBSIDIAN_RING_COMPUTER_TELEPATH_DIALOGUE",
+    "type": "effect_on_condition",
+    "effect": [ "open_dialogue" ]
+  }
+]
