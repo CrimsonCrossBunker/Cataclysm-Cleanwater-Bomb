@@ -27,6 +27,7 @@ class player_activity;
 class vehicle;
 struct dialogue;
 struct mounted_charge_profile;
+struct oter_t;
 struct talk_topic;
 struct vehicle_part;
 struct w_point;
@@ -297,7 +298,7 @@ std::optional<bool> invoke_shop_condition_handler(
 
 /** Dispatch a Lua-authored overmap terrain entry or exit policy. */
 void invoke_overmap_terrain_handler(
-    std::string_view terrain_id, std::string_view phase,
+    const oter_t &terrain, std::string_view phase,
     const tripoint_abs_omt &old_position, const tripoint_abs_omt &new_position,
     const Character &character );
 

@@ -7333,6 +7333,7 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field spawns? StaticOvermapTerrainSpawns Native static monster-group spawns.
 ---@field mapgen? StaticOvermapMapgen[] Variants registered in array order.
 ---@field directional_mapgen? StaticDirectionalOvermapMapgen Variant lists for linear terrains.
+---@field on_entry? string Runtime handler ID owned by the defining Mod. An empty value clears an inherited entry handler.
 
 ---Define an overmap terrain or inheritance template at the Mod's native data load position.
 ---@param options StaticOvermapTerrainOptions

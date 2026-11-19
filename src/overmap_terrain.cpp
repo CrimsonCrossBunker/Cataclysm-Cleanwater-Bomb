@@ -606,7 +606,7 @@ static string_id<map_data_summary> map_data_for_travel_cost( oter_travel_cost_ty
     return map_data_summary_full_omt;
 }
 
-void oter_type_t::load( const JsonObject &jo, const std::string_view )
+void oter_type_t::load( const JsonObject &jo, const std::string_view src )
 {
     optional( jo, was_loaded, "sym", symbol, unicode_codepoint_from_symbol_reader, NULL_UNICODE );
 
@@ -620,6 +620,18 @@ void oter_type_t::load( const JsonObject &jo, const std::string_view )
     optional( jo, was_loaded, "mondensity", mondensity, 0 );
     optional( jo, was_loaded, "entry_eoc", entry_EOC );
     optional( jo, was_loaded, "exit_eoc", exit_EOC );
+    // The ordered Lua loader carries this through deferred native inheritance.
+    if( jo.has_member( "__ccb_on_entry" ) ) {
+        const std::string handler = jo.get_string( "__ccb_on_entry" );
+        entry_EOC = effect_on_condition_id::NULL_ID();
+        if( handler.empty() ) {
+            lua_entry_handler.reset();
+        } else {
+            lua_entry_handler = oter_lua_handler{ std::string( src ), handler };
+        }
+    } else if( jo.has_member( "entry_eoc" ) ) {
+        lua_entry_handler.reset();
+    }
     optional( jo, was_loaded, "spawns", static_spawns );
     optional( jo, was_loaded, "color", color, nc_color_reader{} );
     optional( jo, was_loaded, "land_use_code", land_use_code, overmap_land_use_code_id::NULL_ID() );

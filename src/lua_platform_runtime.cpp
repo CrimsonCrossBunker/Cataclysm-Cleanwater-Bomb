@@ -13160,7 +13160,7 @@ std::optional<bool> invoke_shop_condition_handler(
 }
 
 void invoke_overmap_terrain_handler(
-    std::string_view, std::string_view, const tripoint_abs_omt &,
+    const oter_t &, std::string_view, const tripoint_abs_omt &,
     const tripoint_abs_omt &, const Character & )
 {
 }

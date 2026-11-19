@@ -13332,7 +13332,7 @@ void character_moves( const tripoint_abs_ms &old_abs_pos, Character &who, const 
             return;
         }
         cata::lua_platform::invoke_overmap_terrain_handler(
-            past_ter->get_type_id().str(), "exit", old_abs_omt, new_abs_omt, who );
+            *past_ter, "exit", old_abs_omt, new_abs_omt, who );
 
         if( !lifetime ) {
             return;
@@ -13346,7 +13346,7 @@ void character_moves( const tripoint_abs_ms &old_abs_pos, Character &who, const 
             return;
         }
         cata::lua_platform::invoke_overmap_terrain_handler(
-            cur_ter->get_type_id().str(), "entry", old_abs_omt, new_abs_omt, who );
+            *cur_ter, "entry", old_abs_omt, new_abs_omt, who );
 
     }
 }

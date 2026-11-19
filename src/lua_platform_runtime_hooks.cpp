@@ -59,6 +59,7 @@
 #include "mtype.h"
 #include "move_mode.h"
 #include "npc.h"
+#include "omdata.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
 #include "player_activity.h"
@@ -2726,10 +2727,13 @@ std::optional<bool> invoke_shop_condition_handler(
 }
 
 void invoke_overmap_terrain_handler(
-    const std::string_view terrain_id, const std::string_view phase,
+    const oter_t &terrain, const std::string_view phase,
     const tripoint_abs_omt &old_position, const tripoint_abs_omt &new_position,
     const Character &character )
 {
+    const std::string &terrain_id = terrain.get_type_id().str();
+    const auto &entry = terrain.get_lua_entry_handler();
+    const bool bound_entry = phase == "entry" && entry.has_value();
     for( auto iterator = detail::active_runtime_values().rbegin();
          iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
@@ -2737,7 +2741,12 @@ void invoke_overmap_terrain_handler(
             continue;
         }
         std::string handler_id;
-        if( !owner->content.find_overmap_terrain_handler( terrain_id, phase, handler_id ) ) {
+        if( bound_entry ) {
+            if( owner->mod_id != entry->mod_id ) {
+                continue;
+            }
+            handler_id = entry->handler_id;
+        } else if( !owner->content.find_overmap_terrain_handler( terrain_id, phase, handler_id ) ) {
             continue;
         }
         if( handler_id.empty() || !owner->world_is_ready ) {
@@ -2771,6 +2780,10 @@ void invoke_overmap_terrain_handler(
             report_callback_error( *owner, handler_id, result );
         }
         return;
+    }
+    if( bound_entry ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first overmap terrain handler owner is unavailable for '"
+                                    << entry->mod_id << ':' << entry->handler_id << "'";
     }
 }
 

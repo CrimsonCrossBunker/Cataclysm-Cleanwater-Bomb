@@ -759,6 +759,9 @@ void load_static_overmap_terrain( const sol::table &options, const std::string &
     if( parent ) {
         json.member( "copy-from", *parent );
     }
+    if( const auto on_entry = options.get<sol::optional<std::string>>( "on_entry" ) ) {
+        json.member( "__ccb_on_entry", *on_entry );
+    }
     const sol::object name = options.raw_get<sol::object>( "name" );
     if( name.valid() && name.get_type() != sol::type::nil ) {
         const detail::authored_text text = detail::read_singular_text( name, {}, "overmap terrain name" );
