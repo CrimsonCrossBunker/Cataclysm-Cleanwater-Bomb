@@ -1,0 +1,19 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "q_staff_of_the_wise",
+    looks_like = "rune_magus_weapon",
+    copy_from = "q_staff",
+    name = ccb.content.plural_text("Staff of the Wise", "Staves of the Wise"),
+    description = ccb.content.text("The traditional staff of the Wise, carved with curving runes and enchanted with secret rites passed down from ages beyoned memory.  While wielding the staff, the cost of your enchantments is reduced by 33% and their casting time is reduced by 50%."),
+    mass = "1530 g",
+    volume = "1550 ml",
+    length = "185 cm",
+    price = "39 USD",
+    materials = { "wood" },
+    symbol = "/",
+    color = "brown",
+    techniques = { "WBLOCK_2", "RAPID", "SWEEP", "MOUNTED_CHARGE" },
+    flags = { "DURABLE_MELEE", "SHEATH_SPEAR", "TRADER_AVOID", "MAGIC_FOCUS", "WISE_SORCERY_AID" },
+    melee_damage = { bash = 20 },
+}
