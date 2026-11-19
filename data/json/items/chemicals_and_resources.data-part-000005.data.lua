@@ -1,0 +1,40 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "salt_water",
+    name = ccb.content.plural_text("salt water", "salt water"),
+    materials = { { id = "water", portions = 877 }, { id = "salt", portions = 123 } },
+    mass = "260 g",
+    color = "light_cyan",
+    default_container = "bottle_plastic",
+    sealed_container = false,
+    symbol = "~",
+    description = ccb.content.text("Water with salt added.  Not good for drinking."),
+    flags = { "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" },
+    price = "0 cent",
+    survival_price = "0 cent",
+    volume = "250 ml",
+    phase = "liquid",
+    category = "chems",
+    display_type = "BY_VOLUME",
+    comestible = { kind = "DRINK", quench = -30, healthy = -1, servings = 1, freezing_point = -2, fun = -1 },
+}
+
+ccb.content.define_item {
+    id = "soapy_water",
+    name = ccb.content.plural_text("soapy water", "soapy water"),
+    materials = { "water" },
+    mass = "260 g",
+    color = "light_cyan",
+    default_container = "bottle_plastic",
+    sealed_container = false,
+    symbol = "~",
+    description = ccb.content.text("Water with soap added.  Not good for drinking."),
+    price = "0 cent",
+    survival_price = "0 cent",
+    volume = "250 ml",
+    phase = "liquid",
+    category = "chems",
+    display_type = "BY_VOLUME",
+    comestible = { kind = "INVALID", quench = -5, healthy = -1, servings = 1, freezing_point = -2, fun = -1 },
+}
