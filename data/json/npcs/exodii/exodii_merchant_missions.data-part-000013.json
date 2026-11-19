@@ -1,77 +1,44 @@
 [
   {
-    "id": "TALK_EXODII_MERCHANT_String_Dimension_Exodii_Mission_Accepted",
+    "id": "TALK_EXODII_MERCHANT_mission_3_complete",
     "type": "talk_topic",
     "dynamic_line": {
-      "//~": "&Rubik hands you the device and nods.  \"Good luck.\"",
-      "str": "&Rubik hands you the device and nods.  \"Good fortune.\""
+      "//~": "You've done us a real service.  As promised, you can take one of these bionics as reward.  What would you like?",
+      "str": "&Rubik sighs, takes the head, stares at it for a moment, then sets it gently down on the counter.  They then reach below the counter and take out three clear plastic bags, each containing a different cybernetic module.  \"Ye've done us'n a true service, so as us'n promised, take one o' these dandies as true reward.  Which'll it be?  As y'like."
     },
     "responses": [
       {
-        "text": "[Take the device]",
-        "effect": { "assign_mission": "EXODII_MISSION_STRING_DIMENSION_EXODII" },
-        "topic": "TALK_DONE"
-      }
-    ]
-  },
-  {
-    "id": "TALK_EXODII_MERCHANT_String_Dimension_Exodii_Mission_Complete",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "u_has_trait": "CBM_Interface",
-      "yes": "&Rubik takes the device and nods.  \"Aye, that ye did.  A spell t'tease this out, no doubt.  Mayhap more than these lands see us'n.  But yer work be prized.  VERY prized.  What say ye for reward?\"  Rubik reaches into the desk in front of them and pulls out a tiny, green-glowing CRT, scrolling rapidly down a list to find three items, which they click slowly through.  'teleporter CBM', 'time dilation CBM', and 'probability travel CBM'.\n\n\"Think on it, decide on a last.\"",
-      "no": "&Rubik takes the device and nods.  \"Aye, that ye did.  A spell t'tease this out, no doubt.  Mayhap more than these lands see us'n.  But yer work be prized.  VERY prized.  What say ye for reward?\""
-    },
-    "responses": [
-      {
-        "text": "[Install Teleporter CBM] Teleporting sounds dangerous, but after this interdimensional travel, maybe I can handle it.",
-        "condition": { "or": [ { "u_has_trait": "CBM_Interface" }, { "u_has_trait": "NL_CBM_Interface" } ] },
+        "text": "[Install Diamond Cornea CBM] I like the look of those eye implants.  Let's try that.",
         "effect": [
           { "u_add_effect": "narcosis", "duration": "30 minutes" },
           { "u_add_effect": "sleep", "duration": "30 minutes" },
           { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "30 minutes" },
-          { "u_add_bionic": "bio_teleport" }
+          { "u_add_bionic": "bio_eye_enhancer" }
         ],
         "opinion": { "trust": 4, "value": 3 },
         "topic": "TALK_DONE"
       },
       {
-        "text": "[Install Time Dilation CBM] \"Time Dilation\" sounds like something that should surprise me.  But after the places I've now been?  I'm ready for it.",
-        "condition": { "or": [ { "u_has_trait": "CBM_Interface" }, { "u_has_trait": "NL_CBM_Interface" } ] },
+        "text": "[Install Muscle Augmentation CBM] Some new muscle fibers sound great.  Let's do those.",
         "effect": [
           { "u_add_effect": "narcosis", "duration": "30 minutes" },
           { "u_add_effect": "sleep", "duration": "30 minutes" },
           { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "30 minutes" },
-          { "u_add_bionic": "bio_time_freeze" }
+          { "u_add_bionic": "bio_str_enhancer" }
         ],
         "opinion": { "trust": 4, "value": 3 },
         "topic": "TALK_DONE"
       },
       {
-        "text": "[Install Probability Travel CBM] Phasing through barriers?  Would've helped in that maze of a node.  Let's do it.",
-        "condition": { "or": [ { "u_has_trait": "CBM_Interface" }, { "u_has_trait": "NL_CBM_Interface" } ] },
+        "text": "[Install Cerebral Booster CBM] Don't think I'd consider a brain implant before all of this, but didn't think I'd ever meet an alien, either.  Let's do that.",
         "effect": [
           { "u_add_effect": "narcosis", "duration": "30 minutes" },
           { "u_add_effect": "sleep", "duration": "30 minutes" },
           { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "30 minutes" },
-          { "u_add_bionic": "bio_probability_travel" }
+          { "u_add_bionic": "bio_int_enhancer" }
         ],
         "opinion": { "trust": 4, "value": 3 },
         "topic": "TALK_DONE"
-      },
-      {
-        "text": "Could I become a cyborg, like yourself?",
-        "condition": {
-          "and": [
-            { "not": { "u_has_trait": "CBM_Interface" } },
-            { "not": { "u_has_trait": "NL_CBM_Interface" } },
-            { "not": { "u_has_flag": "NO_CBM_INSTALLATION" } },
-            { "not": { "compare_string": [ "yes", { "u_val": "Rubik_exodized_u" } ] } }
-          ]
-        },
-        "effect": [ { "u_add_faction_trust": 5 } ],
-        "opinion": { "trust": 4, "value": 3 },
-        "topic": "TALK_EXODII_MERCHANT_ExodizeMe2"
       },
       {
         "text": "Actually, could you turn me into a full-blown robotic cyborg, like you?",
@@ -84,7 +51,7 @@
             { "math": [ "exodii_knows_u_double_crossed == 1" ] }
           ]
         },
-        "topic": "TALK_EXODII_MERCHANT_mission_string_dimension_ExodiiFrame_no"
+        "topic": "TALK_EXODII_MERCHANT_mission_3_ExodiiFrame_no"
       },
       {
         "text": "Actually, could you turn me into a full-blown robotic cyborg, like you?",
@@ -97,7 +64,7 @@
             { "math": [ "exodii_knows_u_double_crossed != 1" ] }
           ]
         },
-        "topic": "TALK_EXODII_MERCHANT_mission_string_dimension_ExodiiFrame_yes"
+        "topic": "TALK_EXODII_MERCHANT_mission_3_ExodiiFrame_yes"
       },
       {
         "text": "How about store credit instead?  [adds $1500 in store credit].",
@@ -106,7 +73,7 @@
         "topic": "TALK_DONE"
       },
       {
-        "text": "I don't need anything.  Helping you out is its own reward, Rubik.",
+        "text": "I don't need anything from you at the moment.  Let's call this a favor for a friend.  See you around, Rubik.",
         "effect": [ { "u_add_faction_trust": 4 } ],
         "opinion": { "trust": 7, "value": 5 },
         "topic": "TALK_DONE"
@@ -114,42 +81,42 @@
     ]
   },
   {
-    "id": "TALK_EXODII_MERCHANT_mission_string_dimension_ExodiiFrame_no",
+    "id": "TALK_EXODII_MERCHANT_mission_3_ExodiiFrame_no",
     "type": "talk_topic",
-    "dynamic_line": "No.  Can't offer ye that.",
+    "dynamic_line": {
+      "//~": "No.  As you can probably see, we can't spare the parts.  Too much risk these days.",
+      "str": "No.  As ye' can see, us'n can't spare the steelies.  Too much to danger."
+    },
     "responses": [
       {
-        "text": "[Install Teleporter CBM] Teleporting sounds dangerous, but after this interdimensional travel, maybe I can handle it.",
-        "condition": { "or": [ { "u_has_trait": "CBM_Interface" }, { "u_has_trait": "NL_CBM_Interface" } ] },
+        "text": "[Install Diamond Cornea CBM] I like the look of those eye implants.  Let's try that.",
         "effect": [
           { "u_add_effect": "narcosis", "duration": "30 minutes" },
           { "u_add_effect": "sleep", "duration": "30 minutes" },
           { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "30 minutes" },
-          { "u_add_bionic": "bio_teleport" }
+          { "u_add_bionic": "bio_eye_enhancer" }
         ],
         "opinion": { "trust": 4, "value": 3 },
         "topic": "TALK_DONE"
       },
       {
-        "text": "[Install Time Dilation CBM] \"Time Dilation\" sounds like something that should surprise me.  But after the places I've now been?  I'm ready for it.",
-        "condition": { "or": [ { "u_has_trait": "CBM_Interface" }, { "u_has_trait": "NL_CBM_Interface" } ] },
+        "text": "[Install Muscle Augmentation CBM] Some new muscle fibers sound great.  Let's do those.",
         "effect": [
           { "u_add_effect": "narcosis", "duration": "30 minutes" },
           { "u_add_effect": "sleep", "duration": "30 minutes" },
           { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "30 minutes" },
-          { "u_add_bionic": "bio_time_freeze" }
+          { "u_add_bionic": "bio_str_enhancer" }
         ],
         "opinion": { "trust": 4, "value": 3 },
         "topic": "TALK_DONE"
       },
       {
-        "text": "[Install Probability Travel CBM] Phasing through barriers?  Would've helped in that maze of a node.  Let's do it.",
-        "condition": { "or": [ { "u_has_trait": "CBM_Interface" }, { "u_has_trait": "NL_CBM_Interface" } ] },
+        "text": "[Install Cerebral Booster CBM] Don't think I'd consider a brain implant before all of this, but didn't think I'd ever meet an alien, either.  Let's do that.",
         "effect": [
           { "u_add_effect": "narcosis", "duration": "30 minutes" },
           { "u_add_effect": "sleep", "duration": "30 minutes" },
           { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "30 minutes" },
-          { "u_add_bionic": "bio_probability_travel" }
+          { "u_add_bionic": "bio_int_enhancer" }
         ],
         "opinion": { "trust": 4, "value": 3 },
         "topic": "TALK_DONE"
@@ -161,7 +128,7 @@
         "topic": "TALK_DONE"
       },
       {
-        "text": "I don't need anything.  Helping you out is its own reward, Rubik.",
+        "text": "I don't need anything from you at the moment.  Let's call this a favor for a friend.  See you around, Rubik.",
         "effect": [ { "u_add_faction_trust": 4 } ],
         "opinion": { "trust": 7, "value": 5 },
         "topic": "TALK_DONE"
@@ -169,7 +136,7 @@
     ]
   },
   {
-    "id": "TALK_EXODII_MERCHANT_mission_string_dimension_ExodiiFrame_yes",
+    "id": "TALK_EXODII_MERCHANT_mission_3_ExodiiFrame_yes",
     "type": "talk_topic",
     "dynamic_line": {
       "//~": "Hm.  That's a really big ask.  You seem to be the sort of person who would ask for this kind of thing, but are you certain you want to be permanently attached to this suitcase?  You sure you're thinking clearly?  This isn't like the CBMs I sell.  There's no going back.  And you better be able to produce enough power.  These need constant power.  Without it, you're as good as dead.  For a Cyberframe like mine, one power storage unit will last less than an hour of walking.  Less if you're fighting or running.  It's not an easy life.",
@@ -192,37 +159,34 @@
         "topic": "TALK_EXODII_MERCHANT_Exodize_Cyberframe"
       },
       {
-        "text": "[Install Teleporter CBM] Teleporting sounds dangerous, but after this interdimensional travel, maybe I can handle it.",
-        "condition": { "or": [ { "u_has_trait": "CBM_Interface" }, { "u_has_trait": "NL_CBM_Interface" } ] },
+        "text": "[Install Diamond Cornea CBM] I like the look of those eye implants.  Let's try that.",
         "effect": [
           { "u_add_effect": "narcosis", "duration": "30 minutes" },
           { "u_add_effect": "sleep", "duration": "30 minutes" },
           { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "30 minutes" },
-          { "u_add_bionic": "bio_teleport" }
+          { "u_add_bionic": "bio_eye_enhancer" }
         ],
         "opinion": { "trust": 4, "value": 3 },
         "topic": "TALK_DONE"
       },
       {
-        "text": "[Install Time Dilation CBM] \"Time Dilation\" sounds like something that should surprise me.  But after the places I've now been?  I'm ready for it.",
-        "condition": { "or": [ { "u_has_trait": "CBM_Interface" }, { "u_has_trait": "NL_CBM_Interface" } ] },
+        "text": "[Install Muscle Augmentation CBM] Some new muscle fibers sound great.  Let's do those.",
         "effect": [
           { "u_add_effect": "narcosis", "duration": "30 minutes" },
           { "u_add_effect": "sleep", "duration": "30 minutes" },
           { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "30 minutes" },
-          { "u_add_bionic": "bio_time_freeze" }
+          { "u_add_bionic": "bio_str_enhancer" }
         ],
         "opinion": { "trust": 4, "value": 3 },
         "topic": "TALK_DONE"
       },
       {
-        "text": "[Install Probability Travel CBM] Phasing through barriers?  Would've helped in that maze of a node.  Let's do it.",
-        "condition": { "or": [ { "u_has_trait": "CBM_Interface" }, { "u_has_trait": "NL_CBM_Interface" } ] },
+        "text": "[Install Cerebral Booster CBM] Don't think I'd consider a brain implant before all of this, but didn't think I'd ever meet an alien, either.  Let's do that.",
         "effect": [
           { "u_add_effect": "narcosis", "duration": "30 minutes" },
           { "u_add_effect": "sleep", "duration": "30 minutes" },
           { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "30 minutes" },
-          { "u_add_bionic": "bio_probability_travel" }
+          { "u_add_bionic": "bio_int_enhancer" }
         ],
         "opinion": { "trust": 4, "value": 3 },
         "topic": "TALK_DONE"
@@ -234,85 +198,11 @@
         "topic": "TALK_DONE"
       },
       {
-        "text": "I don't need anything.  Helping you out is its own reward, Rubik.",
+        "text": "I don't need anything from you at the moment.  Let's call this a favor for a friend.  See you around, Rubik.",
         "effect": [ { "u_add_faction_trust": 4 } ],
         "opinion": { "trust": 7, "value": 5 },
         "topic": "TALK_DONE"
       }
     ]
-  },
-  {
-    "id": "TALK_EXODII_MERCHANT_ANUS_FETICK_ALT",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "//~": "Maybe you could bring us a bit of good tea.  Not literally 'tea' of course.  That's my Anglic street slang.  I mean the stuff that puts you to sleep for surgery.  The Great Grey says your word for it is 'anesthetic'.  You bring us a thousand units of anesthetic, we'll fix you up with a wire and everything.",
-      "str": "Mayhap ye bringin' us a nip o' good tea.  Not 'tea', o'course.  I'm yarkin dockside Anglic here.  Us means the stuff what puts y'to sleep f'r a chirurgery.  The Great Grey says y'r assert for it is 'anus fetick'.  You bring us a thousand unit of 'anus fetick', us'll fix'n ye up with a wire an' a tiff."
-    },
-    "responses": [
-      {
-        "text": "One thousand units of, uh, anesthetic?  And you'll give me an upgrade?  Sure, I'd better start looking.",
-        "condition": {
-          "not": {
-            "or": [
-              { "u_has_mission": "RUBIK_ANUS_FETICK" },
-              { "compare_string": [ "yes", { "u_val": "mission_completed_anusfetick" } ] }
-            ]
-          }
-        },
-        "effect": { "assign_mission": "RUBIK_ANUS_FETICK" },
-        "topic": "TALK_DONE"
-      },
-      { "text": "What other work do you have?", "topic": "TALK_EXODII_MERCHANT_Jobs" }
-    ]
-  },
-  {
-    "id": "MISSION_EXODII_PAY_BACK_RIOT_GEAR",
-    "type": "mission_definition",
-    "name": { "str": "Pay Back The Riot Gear to Rubik" },
-    "goal": "MGOAL_NULL",
-    "difficulty": 1,
-    "value": 0,
-    "fail": { "effect": { "math": [ "faction_trust('exodii') -= 20" ] } },
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "has_generic_rewards": false,
-    "deadline": [ "20 days", "20 days" ],
-    "//": "Dialogue for this mission is handled externally.",
-    "dialogue": {
-      "describe": ".",
-      "offer": ".",
-      "accepted": ".",
-      "rejected": ".",
-      "advice": ".",
-      "inquire": ".",
-      "success": ".",
-      "success_lie": ".",
-      "failure": "."
-    }
-  },
-  {
-    "id": "MISSION_EXODII_LABYRINTHS_INTRO",
-    "type": "mission_definition",
-    "name": { "str": "Exodii Labyrinths" },
-    "description": "Rubik told me about a place described as interdimensional \"labyrinths\", where I might find all manner of things, including bionics.  He said I can go scout them out if I'm interested in trying to bring back valuable salvage.  I should go downstairs in the castle, and find a terminal next to a metal ring.  Somehow, using that will send me there.",
-    "goal": "MGOAL_NULL",
-    "destination": "exodii_base_x0y0z0",
-    "difficulty": 5,
-    "value": 0,
-    "start": {
-      "assign_mission_target": { "om_terrain": "exodii_base_x0y0z0", "om_special": "exodii_base", "reveal_radius": 2, "random": false }
-    },
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "has_generic_rewards": false,
-    "dialogue": {
-      "describe": "…",
-      "offer": "…",
-      "accepted": "…",
-      "rejected": "…",
-      "advice": "…",
-      "inquire": "…",
-      "success": "…",
-      "success_lie": "…",
-      "failure": "…"
-    }
   }
 ]

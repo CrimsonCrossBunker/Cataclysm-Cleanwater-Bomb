@@ -1,47 +1,69 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
--- Indeed, they failed.  That's how it goes, sometimes.  Maybe it's for the best.  Time will tell.
+-- Do you remember that bunker you found for us?  Well, turns out they're not so friendly.  We found out one of their people is running some sort of workshop, and we think that an explorer we lost is being held inside.  They're Exodii like me - lots of metal, not easy to miss.  I think they're being tortured, at the least.  If you, a mercenary, can recover them, we'd pay handsomely.
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_mission_4_complete_failed",
-    line = ccb.content.text("Aye, failed they did.  That's the way'o'things.  Mayhaps for the best.  Time'll tell."),
-    replies = { { text = ccb.content.text("Later, Rubik."), next_topic = "TALK_DONE" } },
-}
-
--- All dead.  That's a shame.  Could I interest you in a mercenary contract to get me some more information on this place?
-ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_String_Dimension_Exodii_Mission_Offer1",
-    line = ccb.content.text("All dead, eh?  A sorry shame.  Ahh, but, might I tempt ye with a pop-n-work's bond t'fetch us'n more ken?"),
+    id = "TALK_EXODII_MERCHANT_mission_3_intro",
+    line = ccb.content.text("Ye mind that bunker ye ferreted fer us'n?  Turns they be no kindly folk.  Us'n learned one o'their scavs keep'n a second hall, an' we reckon an escolt we lost be held fast inside.  One kin t'me - Exodii - much metal, deep red shell, hard t'miss.  Torture'n the like - bad if tassed this'n.  If ye can fetch 'em back pop-n-work-like, us'll pay ye right handsome."),
     replies = {
         {
-            text = ccb.content.text("You want to pay me to go back?  Sure, tell me more."),
-            next_topic = "TALK_EXODII_MERCHANT_String_Dimension_Exodii_Mission_Offer2",
+            text = ccb.content.text("Why can't one of you do this?"),
+            next_topic = "TALK_EXODII_MERCHANT_mission_3_explain",
         },
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_EXODII_MERCHANT_Talk",
+            text = ccb.content.text("What if the worst has happened, and they're dead?"),
+            next_topic = "TALK_EXODII_MERCHANT_mission_3_advice_dead",
         },
         {
-            text = ccb.content.text("<end_talking_leave>  <end_talking_bye>"),
+            text = ccb.content.text("So one of those scientists from the bunker abducted one of your people?  An exodii with a red frame?  You want me to find them?  I'll do it."),
+            actions = { actions.assign_mission("EXODII_MISSION_CHOP_SHOP") },
+            next_topic = "TALK_DONE",
+        },
+        {
+            text = ccb.content.text("I'm gonna need to think on this one.  See you later, Rubik."),
             next_topic = "TALK_DONE",
         },
     },
 }
 
--- If you can find your way back to that place, look all over for some sort of terminal or computer.  You may or may not find one with a plug for this contraption.  If you plug it in, and it works, and the Exodii there aren't too diverged from us, it should download lots of important data we can use.  Do this for me, and I'll reward you handsomely.
+-- I don't want them to know we are involved.  We've seen people like this in other otherlands, and we know it's dangerous to let them know too much about us.
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_String_Dimension_Exodii_Mission_Offer2",
-    line = ccb.content.text("If ye wend back that way, escolt fer some manner o' terminal, computer, the like.  Ye mayhap upon one wi' a jack fer this contraption.\"  Rubik pulls out a small, scrap metal device that looks like an otherworldly USB drive.  \"If ye set it in, an' it takes, an' the node strayed not o'er far from us'n, it should draw down a trove o' vital reckonin' we can make use of.  Do this fer me, an' us'll pay ye right handsome."),
+    id = "TALK_EXODII_MERCHANT_mission_3_explain",
+    line = ccb.content.text("Ol' Rubik don't want'n 'em kennin' us'n be involved.  Folk o' this kind we've spied in otherlands, an' we ken it be perilous t'let 'em learn o'er much about us'n."),
     replies = {
         {
-            text = ccb.content.text("So you want me to take that device, plug it into a computer there, download the data, and return it to you?  Sure, I can do that."),
-            next_topic = "TALK_EXODII_MERCHANT_String_Dimension_Exodii_Mission_Accepted",
+            text = ccb.content.text("Right, so you don't want them to know that you're involved.  I'll see if I can find this exodii with a red frame."),
+            actions = { actions.assign_mission("EXODII_MISSION_CHOP_SHOP") },
+            next_topic = "TALK_DONE",
         },
         {
             text = ccb.content.text_without_extraction("<done_conversation_section>"),
             next_topic = "TALK_EXODII_MERCHANT_Talk",
         },
         {
-            text = ccb.content.text("<end_talking_leave>  <end_talking_bye>"),
+            text = ccb.content.text("<end_talking_leave>  See you later, Rubik."),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+-- If that's the case, just bring back proof.  We know them well, so any part of their frame will do.  It's a deep red color.  Hard to miss.
+ccb.content.define_dialogue_topic {
+    id = "TALK_EXODII_MERCHANT_mission_3_advice_dead",
+    line = ccb.content.text("If that be the case, fetch back the proof ya' can.  Any piece'o'their frame will do, but I'd prefer all of it.  Deep red color.  Hard t'miss."),
+    replies = {
+        {
+            text = ccb.content.text("If they're dead, just bring back a piece of their red frame as proof.  Let's hope they're alive.  I'll see if I can find this exodii."),
+            actions = { actions.assign_mission("EXODII_MISSION_CHOP_SHOP") },
+            next_topic = "TALK_DONE",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_EXODII_MERCHANT_Talk",
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>  See you later, Rubik."),
             next_topic = "TALK_DONE",
         },
     },
