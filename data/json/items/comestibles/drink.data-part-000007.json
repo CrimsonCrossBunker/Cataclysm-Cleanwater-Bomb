@@ -1,0 +1,48 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "tea_willowbark",
+    "copy-from": "tea",
+    "name": { "str_sp": "willowbark tea" },
+    "conditional_names": [ { "type": "FLAG", "condition": "COLD", "name": { "str_sp": "iced willowbark tea" } } ],
+    "comestible_type": "MED",
+    "healthy": -1,
+    "sleepiness_mod": 0,
+    "stim": 0,
+    "calories": 0,
+    "description": "A bitter tea made by boiling willow bark in water, used since ancient times as a mild painkiller.",
+    "display_type": "BY_VOLUME",
+    "fun": -2,
+    "flags": [ "NO_AUTO_CONSUME" ],
+    "use_action": {
+      "type": "consume_drug",
+      "effects": [ { "id": "pkill1_nsaid", "duration": 90 }, { "id": "nausea", "duration": "5 m" } ]
+    }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "tea_bark",
+    "looks_like": "tea",
+    "name": { "str_sp": "bark tea" },
+    "conditional_names": [ { "type": "FLAG", "condition": "COLD", "name": { "str_sp": "iced bark tea" } } ],
+    "weight": "500 g",
+    "color": "brown",
+    "use_action": [ "ANTIPARASITIC" ],
+    "container": "bottle_plastic",
+    "comestible_type": "MED",
+    "symbol": "~",
+    "quench": -35,
+    "description": "Often regarded as folk medicine in some countries, bark tea tastes awful and tends to dry you out, but can help flush out stomach or other gut bugs.",
+    "display_type": "BY_VOLUME",
+    "price": "12 USD 50 cent",
+    "price_postapoc": "25 cent",
+    "volume": "500 ml",
+    "charges": 1,
+    "material": [ "water" ],
+    "phase": "liquid",
+    "flags": [ "EATEN_HOT", "NO_AUTO_CONSUME" ],
+    "fun": -5
+  }
+]

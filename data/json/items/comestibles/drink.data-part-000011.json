@@ -1,0 +1,28 @@
+[
+  {
+    "id": "brew_kvass",
+    "type": "ITEM",
+    "subtypes": [ "BREWABLE", "COMESTIBLE" ],
+    "comestible_type": "DRINK",
+    "name": { "str_sp": "unfermented kvass" },
+    "description": "A cloudy liquid with bits of bread and fruit floating around.  Needs to be fermented in a vat.",
+    "display_type": "BY_VOLUME",
+    "looks_like": "juice",
+    "color": "yellow",
+    "symbol": "~",
+    "price_postapoc": "1 cent",
+    "material": [ { "type": "water", "portion": 9 }, { "type": "alcohol", "portion": 1 } ],
+    "weight": "250 g",
+    "volume": "250 ml",
+    "charges": 1,
+    "phase": "liquid",
+    "flags": [ "EATEN_COLD" ],
+    "quench": 65,
+    "calories": 34,
+    "vitamins": [ [ "iron", 1 ], [ "wheat_allergen", 1 ] ],
+    "fun": -15,
+    "spoils_in": "7 days",
+    "brew_time": "3 days",
+    "brew_results": [ "kvass" ]
+  }
+]

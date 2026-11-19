@@ -1,0 +1,21 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "bee_balm_tea",
+    "name": { "str_sp": "bee balm tea" },
+    "copy-from": "tea",
+    "color": "green",
+    "comestible_type": "MED",
+    "use_action": [ "FLUMED" ],
+    "spoils_in": "10 days",
+    "calories": 2,
+    "description": "A healthy beverage made from bee balm steeped in boiling water.  Can be used to reduce negative effects of common cold or flu.",
+    "display_type": "BY_VOLUME",
+    "price": "1 USD",
+    "price_postapoc": "25 cent",
+    "fun": 1,
+    "flags": [ "EATEN_HOT", "NO_AUTO_CONSUME" ],
+    "vitamins": [ [ "caffeine", 15 ] ]
+  }
+]

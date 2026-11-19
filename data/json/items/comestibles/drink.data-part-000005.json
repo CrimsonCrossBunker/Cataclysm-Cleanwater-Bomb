@@ -1,0 +1,24 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "spurge_tea",
+    "name": { "str_sp": "spurge tea" },
+    "copy-from": "tea",
+    "color": "green",
+    "spoils_in": "10 days",
+    "calories": 1,
+    "comestible_type": "MED",
+    "description": "A healthy beverage made from spurge flowers steeped in boiling water.  Can be used to prevent asthma attacks.",
+    "display_type": "BY_VOLUME",
+    "price": "1 USD",
+    "price_postapoc": "25 cent",
+    "fun": 1,
+    "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" ],
+    "use_action": {
+      "type": "consume_drug",
+      "activation_message": "You no longer need to worry about asthma attacks, at least for a while.",
+      "effects": [ { "id": "took_antiasthmatic", "duration": 86400 } ]
+    }
+  }
+]
