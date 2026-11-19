@@ -1,0 +1,461 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "22_speedloader8",
+    looks_like = "38_speedloader",
+    name = ccb.content.text(".22 8-round speedloader"),
+    description = ccb.content.text("This speedloader can hold 8 rounds of .22 and quickly reload a compatible revolver."),
+    mass = "32 g",
+    volume = "47 ml",
+    price = "6 USD",
+    survival_price = "1 USD",
+    materials = { "steel", "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "SPEEDLOADER" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 8 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+ccb.content.define_item {
+    id = "marlin_tubeloader",
+    looks_like = "stanag30",
+    name = ccb.content.text("high capacity lever-action rifle tube loader"),
+    description = ccb.content.text("A tube which holds 19 rounds of .22, designed for quick reloading of a compatible rifle with a tubular magazine."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "marlin_tubeloader",
+            name = ccb.content.text("Marlin 39A 19-round tube loader"),
+            description = ccb.content.text("A tube which holds 19 rounds of .22, designed for quick reloading of a compatible rifle with a tubular magazine."),
+        },
+    },
+    mass = "10 g",
+    volume = "14 ml",
+    length = "49 cm",
+    price = "12 USD",
+    survival_price = "1 USD",
+    materials = { "steel" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "SPEEDLOADER" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 19 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+ccb.content.define_item {
+    id = "22_ar15mag_10",
+    name = ccb.content.text(".22 10-round conversion magazine"),
+    description = ccb.content.text("A black, 10-round polymer magazine for AR-platform rifles converted to fire .22 Long Rifle ammunition."),
+    mass = "130 g",
+    volume = "187 ml",
+    length = "110 mm",
+    price = "22 USD 99 cent",
+    survival_price = "50 cent",
+    materials = { "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 10 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+ccb.content.define_item {
+    id = "22_ar15mag_28",
+    name = ccb.content.text(".22 28-round conversion magazine"),
+    description = ccb.content.text("A black, 28-round polymer magazine for AR-platform rifles converted to fire .22 Long Rifle ammunition."),
+    mass = "220 g",
+    volume = "220 ml",
+    length = "184 mm",
+    price = "23 USD 99 cent",
+    survival_price = "70 cent",
+    materials = { "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 28 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+-- Was the sig mosquito, has been renamed to the more common GSG firefly
+ccb.content.define_item {
+    id = "mosquitomag",
+    looks_like = "glock17_17",
+    name = ccb.content.text("Firefly 10-round magazine"),
+    description = ccb.content.text("A factory specification 10-round magazine for the Firefly pistol."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "mosquitomag",
+            name = ccb.content.text("GSG Firefly 10-round magazine"),
+            description = ccb.content.text("A factory specification 10-round magazine for the GSG Firefly."),
+        },
+    },
+    mass = "60 g",
+    volume = "72 ml",
+    length = "9 cm",
+    price = "17 USD",
+    survival_price = "1 USD",
+    materials = { "steel" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 10 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+ccb.content.define_item {
+    id = "ruger1022bigmag",
+    looks_like = "stanag30",
+    name = ccb.content.text("25-round varmint magazine"),
+    description = ccb.content.text("An extended capacity 25-round magazine, for use with .22 caliber varmint rifles."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "ruger1022bigmag",
+            name = ccb.content.text("Ruger 10/22 25-round magazine"),
+            description = ccb.content.text("An extended 25-round stick magazine for the Ruger 10/22, known as the BX-25."),
+        },
+    },
+    mass = "245 g",
+    volume = "159 ml",
+    length = "162 mm",
+    price = "79 USD",
+    survival_price = "2 USD",
+    materials = { "steel", "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 25 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+ccb.content.define_item {
+    id = "ruger1022mag",
+    looks_like = "stanag30",
+    name = ccb.content.text("10-round varmint magazine"),
+    description = ccb.content.text("A flush fitting 10-round rotary magazine, for use with .22 caliber varmint rifles."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "ruger1022mag",
+            name = ccb.content.text("Ruger 10/22 10-round rotary magazine"),
+            description = ccb.content.text("A removable 10-round rotary magazine for the Ruger 10/22 which allows the magazine to fit flush with the bottom of the stock."),
+        },
+    },
+    mass = "57 g",
+    volume = "34 ml",
+    length = "4 cm",
+    price = "14 USD",
+    survival_price = "1 USD",
+    materials = { "steel", "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 10 } } },
+    magazine = { ammunition = { "22" }, reload_time = 160 },
+}
+
+ccb.content.define_item {
+    id = "ruger1022mag_15",
+    looks_like = "stanag30",
+    name = ccb.content.text("15-round varmint magazine"),
+    description = ccb.content.text("An extended capacity 15-round magazine, for use with .22 caliber varmint rifles."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "ruger1022mag_15",
+            name = ccb.content.text("Ruger 10/22 15-round magazine"),
+            description = ccb.content.text("An extended 15-round stick magazine for the Ruger 10/22, known as the BX-15."),
+        },
+    },
+    mass = "147 g",
+    volume = "95 ml",
+    length = "111 mm",
+    price = "31 USD 95 cent",
+    survival_price = "2 USD",
+    materials = { "steel", "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 15 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+ccb.content.define_item {
+    id = "ruger1022mag_30",
+    looks_like = "stanag30",
+    name = ccb.content.text("30-round varmint drum magazine"),
+    description = ccb.content.text("A 30-round capacity drum magazine for use in varmint rifles.  While the capacity is nothing to scoff at, it is less reliable than stick magazines."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "ruger1022mag_30",
+            name = ccb.content.text("Ruger 10/22 30-round drum magazine"),
+            description = ccb.content.text("The ProMag 30 round drum magazine is a high capacity after-market 10/22 magazine.  While a whole lot lighter and handier than larger drum mags, the fact that the capacity isn't much higher than a stick magazine makes this an unpopular choice, as it still comes with all the reliability issues drum magazines have."),
+        },
+    },
+    mass = "232 g",
+    volume = "170 ml",
+    length = "134 mm",
+    price = "39 USD 99 cent",
+    survival_price = "4 USD",
+    materials = { "steel", "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_BULKY" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 55 } } },
+    magazine = { ammunition = { "22" }, reload_time = 140, jam_multiplier = 2 },
+}
+
+ccb.content.define_item {
+    id = "ruger1022mag_32",
+    looks_like = "stanag30",
+    name = ccb.content.text("32-round varmint magazine"),
+    description = ccb.content.text("An extended capacity 32-round magazine, for use with .22 caliber varmint rifles."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "ruger1022bigmag",
+            name = ccb.content.text("Ruger 10/22 32-round magazine"),
+            description = ccb.content.text("An extended 32-round stick magazine for the Ruger 10/22 by ProMag.  While more reliable than a drum mag, it's surprisingly not by much."),
+        },
+    },
+    mass = "312 g",
+    volume = "204 ml",
+    length = "208 mm",
+    price = "20 USD 99 cent",
+    survival_price = "2 USD 50 cent",
+    materials = { "steel", "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 32 } } },
+    magazine = { ammunition = { "22" }, reload_time = 120, jam_multiplier = 1.5 },
+}
+
+ccb.content.define_item {
+    id = "ruger1022mag_55",
+    looks_like = "stanag30",
+    name = ccb.content.text("55-round varmint drum magazine"),
+    description = ccb.content.text("A 55-round capacity drum magazine for use in varmint rifles.  While the capacity is nothing to scoff at, it is less reliable than stick magazines."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "ruger1022mag_55",
+            name = ccb.content.text("Ruger 10/22 55-round drum magazine"),
+            description = ccb.content.text("The ProMag 55 round drum magazine is a high capacity after-market 10/22 magazine.  While cumbersome, heavy, and unreliable, the capacity is no doubt a selling factor.  While usually range toys, these mags may just make surviving a little bit easier."),
+        },
+    },
+    mass = "426 g",
+    volume = "311 ml",
+    length = "148 mm",
+    price = "98 USD 99 cent",
+    survival_price = "4 USD",
+    materials = { "steel", "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_BULKY" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 55 } } },
+    magazine = { ammunition = { "22" }, reload_time = 160, jam_multiplier = 2 },
+}
+
+ccb.content.define_item {
+    id = "ruger1022mag_70",
+    looks_like = "stanag30",
+    name = ccb.content.text("70-round varmint drum magazine"),
+    description = ccb.content.text("A 70-round capacity drum magazine for use in varmint rifles.  While the capacity is nothing to scoff at, it is less reliable than stick magazines."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "ruger1022mag_70",
+            name = ccb.content.text("Ruger 10/22 70-round drum magazine"),
+            description = ccb.content.text("The ProMag 70 round drum magazine is a high capacity after-market 10/22 magazine.  While cumbersome, heavy, and unreliable, the capacity is no doubt a selling factor.  While usually range toys, these mags may just make surviving a little bit easier."),
+        },
+    },
+    mass = "659 g",
+    volume = "450 ml",
+    length = "167 mm",
+    price = "109 USD 99 cent",
+    survival_price = "6 USD",
+    materials = { "steel", "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_BULKY" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 70 } } },
+    magazine = { ammunition = { "22" }, reload_time = 180, jam_multiplier = 2 },
+}
+
+ccb.content.define_item {
+    id = "ruger1022mag_110",
+    looks_like = "stanag30",
+    name = ccb.content.text("110-round varmint drum magazine"),
+    description = ccb.content.text("An 110-round capacity drum magazine for use in varmint rifles.  While the capacity is nothing to scoff at, it is less reliable than stick magazines."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "ruger1022mag_110",
+            name = ccb.content.text("Ruger 10/22 110-round drum magazine"),
+            description = ccb.content.text("The GSG-16 110 round drum magazine is the highest capacity 10/22 magazine on the (after)-market.  While cumbersome, heavy, and unreliable, the capacity is no doubt a selling factor.  While usually range toys, these mags may just make surviving a little bit easier."),
+        },
+    },
+    mass = "1492 g",
+    volume = "890 ml",
+    length = "344 mm",
+    price = "88 USD 99 cent",
+    survival_price = "8 USD",
+    materials = { "steel", "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_BULKY" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 110 } } },
+    magazine = { ammunition = { "22" }, reload_time = 200, jam_multiplier = 2.3 },
+}
+
+ccb.content.define_item {
+    id = "wp22mag",
+    looks_like = "glock17_17",
+    name = ccb.content.text(".22 10-round Walther magazine"),
+    description = ccb.content.text("A 10-round handgun magazine for use with Walther's .22 caliber pocket pistol."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "wp22mag",
+            name = ccb.content.text("P22 10-round magazine"),
+            description = ccb.content.text("A 10-round box magazine for the Walther P22."),
+        },
+    },
+    mass = "60 g",
+    volume = "44 ml",
+    length = "10 cm",
+    price = "32 USD 50 cent",
+    survival_price = "1 USD",
+    materials = { "steel", "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 10 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+ccb.content.define_item {
+    id = "ruger_mk4_mag",
+    looks_like = "glock17_17",
+    name = ccb.content.text("Ruger target pistol magazine"),
+    description = ccb.content.text("A 10-round magazine for a Ruger target pistol."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "ruger_mk4_mag",
+            name = ccb.content.text("Ruger Mark IV magazine"),
+            description = ccb.content.text("A Ruger Mark IV magazine, lightweight and with a magazine follower button to allow easier reloading.  Holds 10 rounds of .22, and is interchangeable with Mark II and Mark III varieties as well."),
+        },
+    },
+    mass = "73 g",
+    volume = "98 ml",
+    length = "152 mm",
+    price = "32 USD 95 cent",
+    survival_price = "2 USD",
+    materials = { "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 10 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+-- Based on https://www.browning.com/products/shooting-accessories/magazines/1911-22-magazine.html#Black
+ccb.content.define_item {
+    id = "1911_22_mag",
+    looks_like = "glock17_17",
+    name = ccb.content.text(".22 1911 pistol magazine"),
+    description = ccb.content.text("A 10-round magazine for a .22 1911 pistol."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "1911_22_mag",
+            name = ccb.content.text("1911-22 magazine"),
+            description = ccb.content.text("A magazine for the 1911-22 pistol, holding 10 rounds of .22 LR.  It features a magazine follower button to allow easier reloading, along with a cut-out in the side to see your round count."),
+        },
+    },
+    mass = "91 g",
+    volume = "44 ml",
+    length = "113 mm",
+    price = "59 USD 99 cent",
+    survival_price = "2 USD",
+    materials = { "steel" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 10 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+ccb.content.define_item {
+    id = "sr22_mag",
+    looks_like = "glock17_17",
+    name = ccb.content.text(".22 plinking handgun magazine"),
+    description = ccb.content.text("A 10-round magazine for the plinking handgun."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "sr22_mag",
+            name = ccb.content.text("SR22 magazine"),
+            description = ccb.content.text("A magazine for the SR22 pistol, holding 10 rounds of .22 LR."),
+        },
+    },
+    mass = "91 g",
+    volume = "44 ml",
+    length = "113 mm",
+    price = "37 USD 95 cent",
+    survival_price = "2 USD",
+    materials = { "steel" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 10 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+-- I couldn't find much conclusive data, but by all accounts it seems to share the dimensions of the G19's magazine.
+ccb.content.define_item {
+    id = "glock44_mag",
+    looks_like = "glock17_17",
+    name = ccb.content.text("Glock 44 10 round magazine"),
+    description = ccb.content.text("A compact, light-weight polymer magazine for use with the Glock 44."),
+    mass = "57 g",
+    volume = "76 ml",
+    length = "111 mm",
+    price = "25 USD",
+    survival_price = "1 USD",
+    materials = { "plastic", "steel" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 10 } } },
+    magazine = { ammunition = { "22" } },
+}
+
+ccb.content.define_item {
+    id = "mp1522_mag",
+    name = ccb.content.text(".22 10-round modern varmint rifle magazine"),
+    description = ccb.content.text("A black, 10-round polymer magazine for the modern varmint rifle.  It unfortunately is not compatible with AR-15 .22 conversion magazines."),
+    variant_kind = "gun",
+    variants = {
+        {
+            id = "mp1522_mag",
+            name = ccb.content.text("M&P 15-22 magazine"),
+            description = ccb.content.text("A black, 10-round polymer magazine for the M&P 15-22 rifle.  It unfortunately is not compatible with AR-15 .22 conversion magazines."),
+        },
+    },
+    mass = "130 g",
+    volume = "187 ml",
+    length = "110 mm",
+    price = "22 USD 99 cent",
+    survival_price = "50 cent",
+    materials = { "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["22"] = 10 } } },
+    magazine = { ammunition = { "22" } },
+}
