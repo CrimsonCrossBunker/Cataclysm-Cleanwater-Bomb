@@ -65,36 +65,5 @@
       },
       { "text": "Leave the traveler to their trauma.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "BEM_JABBERWOCK_2",
-    "type": "talk_topic",
-    "dynamic_line": "&<mypronoun> seems completely lost to the present, but you can't help but notice <mypossesivepronoun> gear is caked with mud and broken twigs.  It doesn't look like you'll be getting much conversation from this one.",
-    "responses": [
-      { "text": "Press on in search of a reaction.", "topic": "BEM_JABBERWOCK_3" },
-      { "text": "Try to find someone more interested in conversation.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "BEM_JABBERWOCK_3",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "gendered_line": "&Continued prodding manages to extract a baffling response from your interlocutor \"I- I've seen it, the god of our new world, a god of flesh and bone.\" <mypronoun> says with a maddened glare, as though this were some sort of shocking revelation.",
-      "relevant_genders": [ "npc" ]
-    },
-    "responses": [
-      {
-        "text": "Show your map to the mercenary, and have them mark where they saw this \"god\".",
-        "topic": "BEM_JABBERWOCK_4"
-      },
-      { "text": "Yeah I'm sure I have seen that one too.  Try to stay safe.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "BEM_JABBERWOCK_4",
-    "type": "talk_topic",
-    "dynamic_line": "&<mypronoun> silently points at your maps with a trembling hand.",
-    "speaker_effect": { "effect": { "assign_mission": "BEM_jabberwock_mission" } },
-    "responses": [ { "text": "Thank you.", "topic": "TALK_DONE", "effect": "end_conversation" } ]
   }
 ]

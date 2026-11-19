@@ -48,16 +48,5 @@
       },
       { "text": "See you around then.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "BEM_KEYCARD_SELLER_ASK",
-    "type": "talk_topic",
-    "dynamic_line": "Well that'd be telling.  Suffice to say that a few friends found them, and none of us are into the lab-dive business."
-  },
-  {
-    "id": "TALK_KEYCARD_SELLER_NO_DISCOUNTS",
-    "type": "talk_topic",
-    "dynamic_line": "Not a bargain bin kid, the price's the price.",
-    "responses": [ { "text": "See you around then.", "effect": "end_conversation", "topic": "TALK_DONE" } ]
   }
 ]
