@@ -1,29 +1,22 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_GODCO_Helena_Wanderer",
-    line = ccb.content.text("Just like all the sinners, roaming through Hell."),
+    id = "TALK_GODCO_Helena_Firstmeet",
+    line = ccb.content.text("I'm Helena, the caretaker of this flock.  Who might you be, wanderer?"),
     replies = {
         {
-            text = ccb.content.text("It certainly seems like it."),
-            next_topic = "TALK_GODCO_Helena_2",
+            text = ccb.content.text("I'm just passing through."),
+            next_topic = "TALK_GODCO_Helena_Wanderer",
         },
         {
-            text = ccb.content.text("See ya later, crazy lady."),
-            opinion = { value = -1, anger = 1 },
+            text = ccb.content.text("I'm not doing much wandering, I'm staying here."),
+            next_topic = "TALK_GODCO_Gemma_Firstmeet",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "general_meeting_godco_joinee" } }),
+        },
+        {
+            text = ccb.content.text("I'm just passing through.  <end_talking_bye>"),
             next_topic = "TALK_DONE",
         },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_GODCO_Helena_Joinee",
-    line = ccb.content.gendered_line("I'm glad you could make it here.  May the Lord have mercy on you.", { "speaker" }),
-    replies = {
-        {
-            text = ccb.content.text("Thank you, I hope he shares that sentiment."),
-            next_topic = "TALK_GODCO_Helena_2",
-        },
-        { text = ccb.content.text("Thank you.  <end_talking_bye>"), next_topic = "TALK_DONE" },
     },
 }

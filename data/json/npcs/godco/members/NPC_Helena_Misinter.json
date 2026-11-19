@@ -100,19 +100,5 @@
         "topic": "TALK_DONE"
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_GODCO_Helena_Firstmeet",
-    "dynamic_line": "I'm Helena, the caretaker of this flock.  Who might you be, wanderer?",
-    "responses": [
-      { "text": "I'm just passing through.", "topic": "TALK_GODCO_Helena_Wanderer" },
-      {
-        "text": "I'm not doing much wandering, I'm staying here.",
-        "topic": "TALK_GODCO_Gemma_Firstmeet",
-        "condition": { "compare_string": [ "yes", { "u_val": "general_meeting_godco_joinee" } ] }
-      },
-      { "text": "I'm just passing through.  <end_talking_bye>", "topic": "TALK_DONE" }
-    ]
   }
 ]

@@ -1,0 +1,28 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Helena_Accept_Contact_FreeMerch",
+    "dynamic_line": "Yes, you seem like a good fit for the job.  I'll pay you a small sum for getting some information about them.",
+    "responses": [
+      {
+        "text": "Alright, I'll go and see what's up.",
+        "effect": { "add_mission": "MISSION_GODCO_HELENA_VISIT_MERCHANTS" },
+        "topic": "TALK_DONE"
+      },
+      { "text": "Let's change the subject.", "topic": "TALK_GODCO_Helena_2" },
+      { "text": "Good luck with that.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Helena_Tell_FreeMerch",
+    "dynamic_line": "Really?  I'd pay a small sum for information about them.",
+    "responses": [
+      {
+        "text": "Well, they're…",
+        "effect": [ { "u_spawn_item": "icon", "count": 5 }, { "u_assign_activity": "ACT_WAIT_NPC", "duration": "30 minutes" } ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]
