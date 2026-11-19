@@ -12,41 +12,5 @@
     "city_sizes": [ 0, 20 ],
     "occurrences": [ 1, 1 ],
     "flags": [ "CLASSIC", "WILDERNESS", "MAN_MADE", "GLOBALLY_UNIQUE" ]
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "cabin_roof_3_reverberation_hint",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "          -----------   ",
-        "          -.........-   ",
-        "          -.O.......-   ",
-        "          -.........-   ",
-        "          - ........-   ",
-        "          -.........-   ",
-        "          -.........-   ",
-        "          -.........-   ",
-        "          5.........-   ",
-        "          -----------   ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" },
-      "graffiti": { "O": { "text": "IT HAPPENED HERE" } }
-    }
   }
 ]

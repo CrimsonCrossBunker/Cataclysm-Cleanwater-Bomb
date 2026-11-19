@@ -1015,3 +1015,14 @@ ccb.content.define_mapgen {
         monster_placements = { { id = "mon_golden_monolith", x = { 0, 7 }, y = { 0, 7 }, repetitions = { 1, 4 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "inner_cabins_tindalos_tear",
+    layout = {
+        size = { width = 8, height = 8 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        trap_placements = { { id = "tr_portal", x = 3, y = 3 } },
+        monster_placements = { { group = "GROUP_TINDALOS", x = 4, y = 4, chance = 100 } },
+    },
+}
