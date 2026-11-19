@@ -1,33 +1,38 @@
 [
   {
-    "id": [ "TALK_VAMPIRE_MENTOR_SACRIFICE" ],
+    "id": [ "TALK_VAMPIRE_MENTOR_BECOME_MORE_STRONGER" ],
     "type": "talk_topic",
     "dynamic_line": {
-      "str": "To become a true vampire, you must kill someone that cherishes you with your own hands.  It might be hard to bear at first, but with time you'll see how much it was worth it."
+      "u_has_mission": "GET_COMPONENTS_FOR_TIER_5",
+      "yes": "I cannot assist you until you bring back the components.  How is the search going?",
+      "no": "You are now ready to fully walk the path.  This time, you'll need to gather a few components before the ritual can be done.  I'll give you this book so you know what to look for."
     },
     "responses": [
       {
-        "text": "That's all?",
-        "effect": { "assign_mission": "KILL_YOUR_BEST_FRIEND" },
-        "topic": "TALK_VAMPIRE_MENTOR_SACRIFICE_1"
+        "text": "I'll begin the search then.",
+        "topic": "TALK_VAMPIRE_MENTOR_GATHER_TIER_5",
+        "condition": { "not": { "u_has_mission": "GET_COMPONENTS_FOR_TIER_5" } },
+        "effect": [
+          { "u_spawn_item": "vampire_mentor_book" },
+          { "u_add_var": "received_mentor_book", "value": "yes" },
+          { "assign_mission": "GET_COMPONENTS_FOR_TIER_5" }
+        ]
       },
       {
-        "text": "I'll do it, if it what it takes.",
-        "effect": { "assign_mission": "KILL_YOUR_BEST_FRIEND" },
-        "topic": "TALK_VAMPIRE_MENTOR_SACRIFICE_2"
+        "text": "A book?  You said I would only need a few components!",
+        "condition": { "not": { "u_has_mission": "GET_COMPONENTS_FOR_TIER_5" } },
+        "topic": "TALK_VAMPIRE_MENTOR_WHY_BOOK"
       },
       {
-        "text": "[Uncaring] Make someone love me and then kill them in return for immortality and power?  What's the downside?",
-        "topic": "TALK_VAMPIRE_MENTOR_SACRIFICE_1",
-        "condition": { "u_has_trait": "PSYCHOPATH" },
-        "effect": { "assign_mission": "KILL_YOUR_BEST_FRIEND" }
+        "text": "It's progressing.  See you.",
+        "condition": { "u_has_mission": "GET_COMPONENTS_FOR_TIER_5" },
+        "topic": "TALK_DONE"
       },
       {
-        "text": "[Pacifist] That's monstrous, of course I won't do that!",
-        "topic": "TALK_DONE",
-        "condition": { "u_has_trait": "PACIFIST" }
-      },
-      { "text": "I'm not doing that.  Bye.", "topic": "TALK_DONE" }
+        "text": "It'll wait for now.  See you.",
+        "condition": { "not": { "u_has_mission": "GET_COMPONENTS_FOR_TIER_5" } },
+        "topic": "TALK_DONE"
+      }
     ]
   }
 ]

@@ -1,0 +1,28 @@
+[
+  {
+    "id": [ "TALK_VAMPIRE_MENTOR_KILLING" ],
+    "type": "talk_topic",
+    "dynamic_line": { "str": "There are many vampires in this place.  Feel free to kill the others, I am not affiliated with them." },
+    "responses": [
+      {
+        "text": "I'm here to kill all vampires, no exceptions.  Prepare to die.",
+        "topic": "TALK_DONE",
+        "effect": [
+          "hostile",
+          { "npc_die": { "remove_corpse": true, "supress_message": true } },
+          { "u_message": "The mentor vanishes in a fine mist." }
+        ]
+      },
+      {
+        "text": "You seem more reasonable than the rest.  Would you like to be cured of your curse?",
+        "topic": "TALK_VAMPIRE_MENTOR_CURE"
+      },
+      { "text": "It can wait.  Can we talk?", "topic": "TALK_VAMPIRE_MENTOR_TALK" },
+      {
+        "text": "It can wait.  Can we discuss what you meant by \"mentor\"?",
+        "topic": "TALK_VAMPIRE_MENTOR_MENTORING"
+      },
+      { "text": "I just wanted to look around.  See you.", "topic": "TALK_DONE" }
+    ]
+  }
+]

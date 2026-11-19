@@ -1,12 +1,9 @@
 [
   {
-    "id": [ "TALK_VAMPIRE_MENTOR_KILLING_HELP" ],
+    "id": [ "TALK_VAMPIRE_MENTOR_CURE" ],
     "type": "talk_topic",
-    "dynamic_line": {
-      "str": "No thanks.  I've decided long ago to never gamble my life for someone else's cause.  I prefer waiting on the side, helping those who want my help."
-    },
+    "dynamic_line": { "str": "No.  I've long passed the point of no return.  Either your cure won't do anything, or it'll kill me." },
     "responses": [
-      { "text": "I want your help, mentor.", "topic": "TALK_VAMPIRE_MENTOR_MENTORING" },
       {
         "text": "Then you must die.",
         "topic": "TALK_DONE",
@@ -16,7 +13,8 @@
           { "u_message": "The mentor vanishes in a fine mist." }
         ]
       },
-      { "text": "Got it.  See you.", "topic": "TALK_DONE" }
+      { "text": "I understand.  Can we talk?", "topic": "TALK_VAMPIRE_MENTOR_TALK" },
+      { "text": "I just wanted to look around.  See you.", "topic": "TALK_DONE" }
     ]
   }
 ]

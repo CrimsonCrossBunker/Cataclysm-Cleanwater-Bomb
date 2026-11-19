@@ -1,36 +1,26 @@
 local ccb = require("ccb")
 
--- the lore is that a bunch of vampires decided to try and make becoming a true vampire as accessible as possible.  Some of them are doing it out of wanting to help new vampires, most are in to make many powerful vampires to fight the hunters, a few have other motivations.  This lore isn't communicated to the player.
+-- Note: the part about the kill being in melee only is due to bug #72281.  Remove it when the bug gets fixed
 ccb.content.define_dialogue_topic {
-    id = { "TALK_VAMPIRE_MENTOR_WE" },
-    line = ccb.content.text("I'm not the only vampire looking to assist others on the path.  We wrote this book together and occasionally meet to update and refine it, all in the goal of helping new vampires reach their true potential as easily as possible."),
-    replies = {
-        {
-            text = ccb.content.text("Alright.  What were we talking about before?"),
-            next_topic = "TALK_NONE",
-        },
-        {
-            text = ccb.content.text("Where are these other mentors?"),
-            next_topic = "TALK_VAMPIRE_MENTOR_WE_WHERE",
-        },
-        { text = ccb.content.text("See you."), next_topic = "TALK_DONE" },
-    },
+    id = { "TALK_VAMPIRE_MENTOR_SACRIFICE_1" },
+    line = ccb.content.text("They need to be completely trusting of you, someone that consider themselves your \"best friend forever\".  They also need to declare how much they love you right before you kill them, then you'll become a true vampire.  And I almost forgot: you also need to kill them in melee combat or else it won't work.\n\nAnd when you are done, return to me.  There is more that you must learn."),
+    replies = { { text = ccb.content.text("Got it.  See you."), next_topic = "TALK_DONE" } },
+}
+
+-- Note: the part about the kill being in melee only is due to bug #72281.  Remove it when the bug gets fixed
+ccb.content.define_dialogue_topic {
+    id = { "TALK_VAMPIRE_MENTOR_SACRIFICE_2" },
+    line = ccb.content.text("Do not worry about the pain, my friend.  It is always temporary, no matter how much it hurts.  After that, you won't ever be temporary again.  Keep in mind that they need to be completely trusting of you, someone that consider themselves your \"best friend forever\".  They also need to declare how much they love you right before you kill them, then you'll be freed from your limited time as you become a true vampire.  And I almost forgot: you also need to kill them in melee combat or else it won't work.\n\nAnd when you are done, return to me.  There is more that you must learn."),
+    replies = { { text = ccb.content.text("Got it.  See you."), next_topic = "TALK_DONE" } },
 }
 
 ccb.content.define_dialogue_topic {
-    id = { "TALK_VAMPIRE_MENTOR_WE_WHERE" },
-    line = ccb.content.text("I do not know of their whereabouts.  All what matters is that we know where to meet, but with the end of the world all meetings has been postponed indefinitely."),
+    id = { "TALK_VAMPIRE_MENTOR_GATHER_TIER_5" },
+    line = ccb.content.text("Here's the book.  It contains everything you need to know about the components you need to acquire.  Be sure to read it thoroughly as the rituals have very specific conditions to be accomplished.  Come back here when you'll have them all and you will fully walk the path."),
     replies = {
         {
-            text = ccb.content.text("Alright.  What were we talking about before?"),
-            next_topic = "TALK_NONE",
+            text = ccb.content.text("Thank you.  I'll bring back these components."),
+            next_topic = "TALK_DONE",
         },
-        { text = ccb.content.text("See you."), next_topic = "TALK_DONE" },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = { "TALK_VAMPIRE_MENTOR_BECAME_TIER_5" },
-    line = ccb.content.text("You have now reached the apex of the vampiric condition and do not need further guidance.  Go forth and claim your title and crown of ruler of the night!  Make it clear that you are the one on the throne!"),
-    replies = { { text = ccb.content.text("Got it.  Farewell, my friend."), next_topic = "TALK_DONE" } },
 }

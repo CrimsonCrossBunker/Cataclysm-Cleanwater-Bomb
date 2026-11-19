@@ -1,0 +1,80 @@
+[
+  {
+    "id": "TALK_MENTOR_CHAT",
+    "//": "Mostly the same as TALK_FRIEND_CHAT, but without the things vampires don't care for.",
+    "type": "talk_topic",
+    "dynamic_line": [
+      { "npc_has_intelligence": 8, "yes": "<insightfulchitchat>", "no": "<thoughtfulchitchat>" },
+      { "npc_has_perception": 8, "yes": "<insightfulchitchat>", "no": "<thoughtfulchitchat>" }
+    ],
+    "responses": [
+      {
+        "text": "<chitchat_player_responses>",
+        "topic": "TALK_DONE",
+        "switch": true,
+        "condition": { "not": { "u_has_trait": "PSYCHOPATH" } },
+        "effect": [ "morale_chat_activity", { "npc_add_effect": "asked_to_socialize", "duration": 7000 } ]
+      },
+      {
+        "text": "<chitchat_player_responses>",
+        "topic": "TALK_DONE",
+        "switch": true,
+        "condition": { "u_has_trait": "PSYCHOPATH" },
+        "effect": [
+          {
+            "u_add_morale": "morale_chat_uncaring",
+            "bonus": -10,
+            "max_bonus": -20,
+            "duration": "120 minutes",
+            "decay_start": "60 minutes"
+          },
+          { "npc_add_effect": "asked_to_socialize", "duration": 7000 }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "KILL_YOUR_BEST_FRIEND",
+    "type": "mission_definition",
+    "name": { "str": "Kill your best friend" },
+    "goal": "MGOAL_CONDITION",
+    "goal_condition": { "math": [ "0 == 1" ] },
+    "difficulty": 2,
+    "value": 240,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "Kill someone that is very close to you to push your vampirism further.",
+      "offer": "If you wish to become a true vampire, you must sacrifice someone that really, really likes you.",
+      "accepted": "It brings me joy to see someone willing to fully walk the path.  Remember, pain is always temporary, no matter how it hurts.  By this sacrifice, you won't ever be temporary again.",
+      "rejected": "I understand.  Some never wanted to walk the path.  Such wasted potential.",
+      "advice": "They need to be completely trusting of you, someone that thinks of themselves as your \"best friend forever\".  In addition, keep in mind that the sacrifice must be killed by none and nothing other than you, or else you'll have to find a new sacrifice.",
+      "inquire": "Have you found someone that considers you the best person in the world?",
+      "success": "You visibly succeeded.  You should gain more vampiric aptitudes soon.  However, you haven't fully walked the path yet.  Give your powers some time to grow, come here again and I'll explain what to do to completely walk the path!",
+      "success_lie": "Either your vampirism isn't advanced enough, or you tried to bypass the sacrifice.  Either way, do that sacrifice.",
+      "failure": "Someday you'll find a suitable sacrifice."
+    }
+  },
+  {
+    "id": "GET_COMPONENTS_FOR_TIER_5",
+    "type": "mission_definition",
+    "name": { "str": "Find the components for the vampiric ritual" },
+    "goal": "MGOAL_CONDITION",
+    "goal_condition": { "math": [ "0 == 1" ] },
+    "difficulty": 2,
+    "value": 240,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "Gather the components your book mention and bring them to your mentor.",
+      "offer": "",
+      "accepted": "",
+      "rejected": "",
+      "advice": "",
+      "inquire": "",
+      "success": "",
+      "success_lie": "",
+      "failure": ""
+    }
+  }
+]
