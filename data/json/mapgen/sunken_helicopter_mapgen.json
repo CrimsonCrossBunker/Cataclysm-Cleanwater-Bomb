@@ -62,40 +62,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ [ "sunken_heli_roof" ] ],
-    "object": {
-      "fill_ter": "t_water_cube",
-      "rows": [
-        "                        ",
-        "                        ",
-        "         OOx            ",
-        "        OOOOx           ",
-        "        OOOOO           ",
-        "        xOOOx           ",
-        "        xOXOO           ",
-        "        OOOOO           ",
-        "        OOOOO           ",
-        "        OOOOO           ",
-        "         xxO            ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { "O": "t_sunkenhelicopter_roof", "X": "t_sunkenhelicopter_rotor", "x": "t_sunkenhelicopter_frame" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ [ "nether_cucumber_lake_bed" ] ],
     "object": {
       "predecessor_mapgen": "lake_bed",

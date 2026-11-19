@@ -1,0 +1,40 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "sunken_heli_roof" } },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "         OOx            ",
+            "        OOOOx           ",
+            "        OOOOO           ",
+            "        xOOOx           ",
+            "        xOXOO           ",
+            "        OOOOO           ",
+            "        OOOOO           ",
+            "        OOOOO           ",
+            "         xxO            ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        terrain = {
+            O = "t_sunkenhelicopter_roof",
+            X = "t_sunkenhelicopter_rotor",
+            x = "t_sunkenhelicopter_frame",
+        },
+        fill_terrain = "t_water_cube",
+    },
+}
