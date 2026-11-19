@@ -6879,11 +6879,12 @@ function CcbPlatformContent.MathFunction(options) end
 function CcbPlatformContent.Mission(options) end
 
 ---@class MutationActivationPayload
----@field character GameHandle Exact activating Character.
+---@field character GameHandle Exact Character performing the mutation action.
 ---@field mutation GameId Native mutation ID.
 
 ---@class MutationDefinitionOptions
 ---@field on_activate? string Registered handler called after native activation costs with a MutationActivationPayload. Requires active=true.
+---@field on_deactivate? string Registered handler called after native deactivation and enchantment updates with a MutationActivationPayload, including repeated native deactivation. Requires active=true.
 ---@field activation_stays_on? boolean Keep the mutation powered after on_activate. Defaults to false.
 ---@field id string
 ---@field name string|LocalizedText
@@ -12392,6 +12393,11 @@ function CcbInventoryApi.items_of_type(character, item_type, shuffle) end
 ---@return CcbResult result value is a dense array of live item handles.
 function CcbInventoryApi.items_with_flag(character, flag) end
 
+---Capture all directly worn items in native carried-item order.
+---@param character GameHandle Exact live Character.
+---@return CcbResult result value is a dense array of live item handles.
+function CcbInventoryApi.worn_items(character) end
+
 ---@param character GameHandle Exact live Character handle.
 ---@param item_type GameId Valid GameId<item> queried with native u_has_items/npc_has_items count and charge rules.
 ---@param count integer Non-negative requested item count, at most 1000000000.
@@ -14733,6 +14739,7 @@ local CcbPlatformGameplayApi = {}
 
 ---@class CcbCreatureSnapshot
 ---@field kind 'avatar'|'npc'|'monster'|'creature'
+---@field size 'tiny'|'small'|'medium'|'large'|'huge'|'unknown'
 ---@field name string
 ---@field display_name string
 ---@field position TripointCoord

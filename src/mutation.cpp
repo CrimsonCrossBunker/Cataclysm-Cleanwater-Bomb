@@ -1063,6 +1063,9 @@ void Character::deactivate_mutation( const trait_id &mut )
         eoc->activate_activation_only( d, "a mutation deactivation", "mutation being activated",
                                        "mutation" );
     }
+    if( mdata.platform_on_deactivate ) {
+        mdata.platform_on_deactivate( *this );
+    }
     if( mdata.transform && !mdata.transform->msg_transform.empty() ) {
         add_msg_if_player( m_neutral, mdata.transform->msg_transform );
     }

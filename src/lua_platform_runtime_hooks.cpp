@@ -1813,8 +1813,8 @@ void invoke_mission_phase_handler(
     }
 }
 
-void invoke_mutation_activation_handler(
-    const std::string_view mod_id, const std::string_view mutation_id,
+void invoke_mutation_lifecycle_handler(
+    const std::string_view mod_id, const std::string_view mutation_id, const std::string_view phase,
     const std::string_view handler_id, Character &character )
 {
     const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
@@ -1823,7 +1823,7 @@ void invoke_mutation_activation_handler(
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
     if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Lua-first mutation activation unavailable for '"
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first mutation " << phase << " unavailable for '"
                                     << mod_id << ':' << handler_id << "'";
         return;
     }

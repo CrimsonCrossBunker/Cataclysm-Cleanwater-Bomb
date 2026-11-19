@@ -1146,6 +1146,7 @@ struct mutation_definition_data {
     std::optional<mutation_personality_definition_data> personality;
     authored_text activation_message;
     std::string activation_handler;
+    std::string deactivation_handler;
     bool activation_stays_on = false;
     std::string scent_type;
     std::string spawn_item;
@@ -4005,6 +4006,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->activation_message = read_text_option( options, "activation_message", {},
                                          "mutation activation message" );
         definition->activation_handler = options.get_or( "on_activate", std::string() );
+        definition->deactivation_handler = options.get_or( "on_deactivate", std::string() );
         definition->activation_stays_on = options.get_or( "activation_stays_on", false );
         definition->scent_type = options.get_or( "scent_type", std::string() );
         definition->spawn_item = options.get_or( "spawn_item", std::string() );
@@ -4982,6 +4984,11 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 ( !definition.active || owner_runtime.handlers.count( definition.activation_handler ) == 0 ) ) {
                 throw std::runtime_error( "mutation '" + definition.id +
                                           "' requires active=true and a registered activation handler" );
+            }
+            if( !definition.deactivation_handler.empty() &&
+                ( !definition.active || owner_runtime.handlers.count( definition.deactivation_handler ) == 0 ) ) {
+                throw std::runtime_error( "mutation '" + definition.id +
+                                          "' requires active=true and a registered deactivation handler" );
             }
             for( const std::string &id : definition.prereqs ) {
                 if( !mutation_exists( id ) ) {
@@ -6323,7 +6330,13 @@ void creatures_content_transaction::impl::apply_mutation()
             native.activated_is_setup = source.activation_stays_on;
             native.platform_on_activate = [owner = this->owner, mutation = source.id,
                                              handler = source.activation_handler]( Character & character ) {
-                detail::invoke_mutation_activation_handler( owner, mutation, handler, character );
+                detail::invoke_mutation_lifecycle_handler( owner, mutation, "activation", handler, character );
+            };
+        }
+        if( !source.deactivation_handler.empty() ) {
+            native.platform_on_deactivate = [owner = this->owner, mutation = source.id,
+                                               handler = source.deactivation_handler]( Character & character ) {
+                detail::invoke_mutation_lifecycle_handler( owner, mutation, "deactivation", handler, character );
             };
         }
         if( !source.scent_type.empty() ) {
@@ -7969,6 +7982,10 @@ void creatures_content_transaction::append_fingerprint(
                 hash_part( state, "on_activate" );
                 hash_part( state, value.activation_handler );
                 hash_part( state, value.activation_stays_on ? "stays_on" : "one_shot" );
+            }
+            if( !value.deactivation_handler.empty() ) {
+                hash_part( state, "on_deactivate" );
+                hash_part( state, value.deactivation_handler );
             }
             if( value.transform ) {
                 hash_part( state, "transform_message" );

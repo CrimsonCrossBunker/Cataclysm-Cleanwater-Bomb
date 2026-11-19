@@ -3669,7 +3669,7 @@ sol::table inventory_matching_items(
 
     std::vector<item_location> matches = character->all_items_loc();
     matches.erase( std::remove_if( matches.begin(), matches.end(), [&]( const item_location & location ) {
-        return !location || !matches_item( *location );
+        return !location || !matches_item( *character, *location );
     } ), matches.end() );
     if( shuffle && !matches.empty() ) {
         std::shuffle( matches.begin(), matches.end(), rng_get_engine() );
@@ -8072,7 +8072,7 @@ void install_item_api(
         }
         require_id_kind( type, "item", "services.inventory.items_of_type" );
         const itype_id id( type.value() );
-        return inventory_matching_items( lua_state, character, [&id]( const item & entry ) {
+        return inventory_matching_items( lua_state, character, [&id]( const Character &, const item & entry ) {
             return entry.typeId() == id;
         }, shuffled, current_runtime_generation(), current_world_generation() );
     } );
@@ -8083,8 +8083,18 @@ void install_item_api(
         require_read();
         require_id_kind( flag, "json_flag", "services.inventory.items_with_flag" );
         const flag_id id( flag.value() );
-        return inventory_matching_items( lua_state, character, [&id]( const item & entry ) {
+        return inventory_matching_items( lua_state, character, [&id]( const Character &, const item & entry ) {
             return entry.has_flag( id );
+        }, false, current_runtime_generation(), current_world_generation() );
+    } );
+    inventory.set_function(
+        "worn_items",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &character ) {
+        require_read();
+        return inventory_matching_items( lua_state, character, []( const Character & owner,
+        const item & entry ) {
+            return owner.is_worn( entry );
         }, false, current_runtime_generation(), current_world_generation() );
     } );
     inventory.set_function(

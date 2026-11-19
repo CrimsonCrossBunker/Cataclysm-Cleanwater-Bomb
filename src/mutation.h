@@ -303,6 +303,7 @@ struct mutation_branch {
         std::vector<effect_on_condition_id> processed_eocs;
         /** effect_on_conditions triggered when this mutation deactivates */
         std::vector<effect_on_condition_id> deactivated_eocs;
+        std::function<void( Character & )> platform_on_deactivate;
         /** mutation enchantments */
         std::vector<enchantment_id> enchantments;
 
