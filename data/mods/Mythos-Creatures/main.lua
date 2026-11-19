@@ -1,0 +1,1 @@
+require("monster_groups")
