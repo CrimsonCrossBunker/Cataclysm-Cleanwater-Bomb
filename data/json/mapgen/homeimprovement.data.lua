@@ -1,0 +1,62 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "home_improvement_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            " ---------------------- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -------####-5--------- ",
+            "        ##v##           ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities_c", weight = 5 },
+                    { id = "roof_2x2_utilities_d", weight = 40 },
+                    { id = "roof_2x2_utilities", weight = 50 },
+                    { id = "roof_2x2_golf", weight = 20 },
+                    { id = "roof_3x3_wine", weight = 30 },
+                },
+                x = { 3, 17 },
+                y = { 4, 7 },
+            },
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_4x4_party", weight = 15 },
+                    { id = "roof_4x4_utility", weight = 40 },
+                    { id = "roof_4x4_utility_1", weight = 30 },
+                    { id = "roof_6x6_utility", weight = 20 },
+                },
+                x = { 3, 15 },
+                y = { 10, 14 },
+            },
+        },
+    },
+}
