@@ -68,11 +68,5 @@
         "condition": { "math": [ "u_val('bmi_permil') > 30000" ] }
       }
     ]
-  },
-  {
-    "id": "weight_desc_no_label",
-    "type": "widget",
-    "copy-from": "weight_desc_label",
-    "flags": [ "W_LABEL_NONE" ]
   }
 ]
