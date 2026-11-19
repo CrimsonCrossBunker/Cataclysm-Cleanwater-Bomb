@@ -757,3 +757,16 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ls_ns_1x1_maze_loot_cbm",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            ".",
+        },
+        furniture = { ["."] = "f_metal_crate_c" },
+        item_groups = { ["."] = { group = "bionics", chance = 100, repetitions = { 1, 2 } } },
+    },
+}

@@ -1928,3 +1928,23 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "f_nl_powerbox_nest",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            ".",
+        },
+        furniture = { ["."] = "f_nl_powerbox" },
+        terrain = {
+            ["."] = {
+                { id = "t_nl_metal_floor_overgrown", copies = 8000 },
+                { id = "t_nl_metal_floor_grass", copies = 800 },
+            },
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = { { id = "bio_power_storage", x = 0, y = 0, chance = 60 } },
+    },
+}

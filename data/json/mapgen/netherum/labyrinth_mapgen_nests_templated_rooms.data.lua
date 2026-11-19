@@ -679,3 +679,73 @@ ccb.content.define_mapgen {
         palettes = { "labyrinthine_base_palette", "labyrinthine_item_palette_utility_tier0" },
     },
 }
+
+-- Two rooms full of general junk and monsters.  Set up so that any of the middle edge tiles can be an entrance.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ls_straight_2basic_rooms_anydoor",
+    layout = {
+        size = { width = 22, height = 22 },
+        rows = {
+            "1L((L_          _L((L1",
+            "1_____          _____1",
+            "_ßßßß_          _ßßßß_",
+            "_ṪṪṪṪ_          _ṪṪṪṪ_",
+            "_ßßßß_          _ßßßß_",
+            "1_____          _____1",
+            "1_____          _____1",
+            "_ßßßß_          _ßßßß_",
+            "_ṪṪṪṪ_          _ṪṪṪṪ_",
+            "_ßßßß_          _ßßßß_",
+            "1_____          _____1",
+            "1_____          _____1",
+            "_ßßßß_          _ßßßß_",
+            "_ṪṪṪṪ_          _ṪṪṪṪ_",
+            "_ßßßß_          _ßßßß_",
+            "1_____          _____1",
+            "1_____          _____1",
+            "_ßßßß_          _ßßßß_",
+            "_ṪṪṪṪ_          _ṪṪṪṪ_",
+            "_ßßßß_          _ßßßß_",
+            "1_____          _____1",
+            "1L((L_          _L((L1",
+        },
+        palettes = { "labyrinthine_base_palette", "labyrinthine_item_palette_dining_tier0" },
+        monster_group_glyphs = { ["1"] = { group = "GROUP_Labyrinth_Turret", density = 0.01 } },
+    },
+}
+
+-- Two rooms full of general junk and monsters.  Set up so that any of the middle edge tiles can be an entrance.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ls_straight_2basic_rooms_anydoor",
+    layout = {
+        size = { width = 22, height = 22 },
+        rows = {
+            "1L((L_          _L((L1",
+            "1_____          _____1",
+            "_ßßßß_          _ßßßß_",
+            "_ṪṪṪṪ_          _ṪṪṪṪ_",
+            "_ßßßß_          _ßßßß_",
+            "1_____          _____1",
+            "1_____          _____1",
+            "_ßßßß_          _ßßßß_",
+            "_ṪṪṪṪ_          _ṪṪṪṪ_",
+            "_ßßßß_          _ßßßß_",
+            "1_____          _____1",
+            "1_____          _____1",
+            "_ßßßß_          _ßßßß_",
+            "_ṪṪṪṪ_          _ṪṪṪṪ_",
+            "_ßßßß_          _ßßßß_",
+            "1_____          _____1",
+            "1_____          _____1",
+            "_ßßßß_          _ßßßß_",
+            "_ṪṪṪṪ_          _ṪṪṪṪ_",
+            "_ßßßß_          _ßßßß_",
+            "1_____          _____1",
+            "1L((L_          _L((L1",
+        },
+        palettes = { "labyrinthine_base_palette", "labyrinthine_item_palette_utility_tier0" },
+        monster_group_glyphs = { ["1"] = { group = "GROUP_Labyrinth_Turret", density = 0.01 } },
+    },
+}

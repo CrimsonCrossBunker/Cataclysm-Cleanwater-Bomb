@@ -55,3 +55,58 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- Treasure room with autodoc!
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "LS_10x10_deadend_1_room0",
+    layout = {
+        size = { width = 10, height = 10 },
+        rows = {
+            "|(U____U(|",
+            "(________(",
+            "U________U",
+            "E________E",
+            "B___äd___B",
+            "B___âL___B",
+            "E________E",
+            "U________U",
+            "(________(",
+            "|(UEBBEU(|",
+        },
+        palettes = { "labyrinthine_base_palette" },
+        item_groups = { U = { group = "LS_Rewardroom_Scatter_Passcode0", chance = 32 } },
+        item_group_placements = { { group = "LS_Rewardroom_Primary_Passcode0", x = 4, y = 4 } },
+    },
+}
+
+-- Room full of shelves, should have CBMs and weapons and a big fight
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "LS_10x10_deadend_1_room2",
+    layout = {
+        size = { width = 10, height = 10 },
+        rows = {
+            "|L______L|",
+            "U___¯¯___U",
+            "Ü________U",
+            "U___¯¯___U",
+            "U________U",
+            "U___¯¯___U",
+            "U________U",
+            "U___¯¯___U",
+            "U________U",
+            "|L______L|",
+        },
+        palettes = { "labyrinthine_base_palette" },
+        furniture = { ["Ü"] = "f_utility_shelf" },
+        monster_group_glyphs = { ["¯"] = { group = "GROUP_NETHER_REALITY_TEAR_FIELD", density = 0.01 } },
+        item_groups = {
+            ["Ü"] = { group = "LS_Rewardroom_Primary_Passcode2" },
+            U = {
+                { group = "LS_Rewardroom_Scatter_Passcode2", chance = 25 },
+                { group = "LS_Rewardroom_Primary_Passcode2", chance = 2 },
+            },
+        },
+    },
+}

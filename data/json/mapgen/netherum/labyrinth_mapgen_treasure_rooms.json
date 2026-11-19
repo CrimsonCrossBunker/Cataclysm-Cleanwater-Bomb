@@ -41,59 +41,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "LS_10x10_deadend_1_room0",
-    "//": "Treasure room with autodoc!",
-    "object": {
-      "mapgensize": [ 10, 10 ],
-      "rows": [
-        "|(U____U(|",
-        "(________(",
-        "U________U",
-        "E________E",
-        "B___äd___B",
-        "B___âL___B",
-        "E________E",
-        "U________U",
-        "(________(",
-        "|(UEBBEU(|"
-      ],
-      "palettes": [ "labyrinthine_base_palette" ],
-      "items": { "U": { "item": "LS_Rewardroom_Scatter_Passcode0", "chance": 32 } },
-      "place_items": [ { "item": "LS_Rewardroom_Primary_Passcode0", "x": 4, "y": 4 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "LS_10x10_deadend_1_room2",
-    "//": "Room full of shelves, should have CBMs and weapons and a big fight",
-    "object": {
-      "mapgensize": [ 10, 10 ],
-      "rows": [
-        "|L______L|",
-        "U___¯¯___U",
-        "Ü________U",
-        "U___¯¯___U",
-        "U________U",
-        "U___¯¯___U",
-        "U________U",
-        "U___¯¯___U",
-        "U________U",
-        "|L______L|"
-      ],
-      "palettes": [ "labyrinthine_base_palette" ],
-      "furniture": { "Ü": "f_utility_shelf" },
-      "monsters": { "¯": { "monster": "GROUP_NETHER_REALITY_TEAR_FIELD", "density": 0.01 } },
-      "items": {
-        "Ü": { "item": "LS_Rewardroom_Primary_Passcode2" },
-        "U": [
-          { "item": "LS_Rewardroom_Scatter_Passcode2", "chance": 25 },
-          { "item": "LS_Rewardroom_Primary_Passcode2", "chance": 2 }
-        ]
-      }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "ls_deadend_template_chasm",
     "//": "A double maze with a cutout in the middle, filled with enemies, and with a central turret.  The turret risks locking you in by destroying the path out.",
     "object": {

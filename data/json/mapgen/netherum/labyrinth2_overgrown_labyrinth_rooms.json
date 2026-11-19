@@ -237,17 +237,5 @@
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "computers": { "ç": { "name": "Active Terminal", "eocs": [ "EOC_LS_Computer" ], "chat_topics": [ "COMP_LS2_MAP" ] } }
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "f_nl_powerbox_nest",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "." ],
-      "furniture": { ".": "f_nl_powerbox" },
-      "place_item": [ { "item": "bio_power_storage", "x": 0, "y": 0, "chance": 60 } ],
-      "terrain": { ".": [ [ "t_nl_metal_floor_overgrown", 8000 ], [ "t_nl_metal_floor_grass", 800 ] ] },
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
   }
 ]

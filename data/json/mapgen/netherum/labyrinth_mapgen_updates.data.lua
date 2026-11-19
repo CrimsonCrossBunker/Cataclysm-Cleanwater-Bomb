@@ -47,3 +47,11 @@ ccb.content.define_mapgen {
         nested = { { id = "labyrinth_stairs_2_to_1", x = 0, y = 0 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "labyrinth_nl_string_dimension_encounter",
+    layout = {
+        monster_placements = { { id = "mon_fleshborg_2_3_string_dimension", x = 11, y = 11, chance = 100 } },
+    },
+}
