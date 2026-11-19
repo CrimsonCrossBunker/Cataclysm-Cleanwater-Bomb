@@ -1,0 +1,68 @@
+[
+  {
+    "id": "cryosuit_power_graph",
+    "type": "widget",
+    "style": "text",
+    "label": "CRYOSUIT POWER",
+    "width": 19,
+    "clauses": [
+      {
+        "id": "empty",
+        "text": "<color_red>      OFFLINE      </color>",
+        "condition": { "not": { "u_has_worn_with_flag": "ACTIVE_CRYOSUIT" } }
+      },
+      {
+        "id": "full10",
+        "text": { "str": "<color_red>▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇</color>", "//~": "NO_I18N" },
+        "condition": { "math": [ "u_cryosuit_power", ">=", "90" ] }
+      },
+      {
+        "id": "full9",
+        "text": { "str": "<color_red>▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇  </color>", "//~": "NO_I18N" },
+        "condition": { "math": [ "u_cryosuit_power", ">=", "80" ] }
+      },
+      {
+        "id": "full8",
+        "text": { "str": "<color_red>▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇    </color>", "//~": "NO_I18N" },
+        "condition": { "math": [ "u_cryosuit_power", ">=", "70" ] }
+      },
+      {
+        "id": "full7",
+        "text": { "str": "<color_red>▇ ▇ ▇ ▇ ▇ ▇ ▇      </color>", "//~": "NO_I18N" },
+        "condition": { "math": [ "u_cryosuit_power", ">=", "60" ] }
+      },
+      {
+        "id": "full6",
+        "text": { "str": "<color_red>▇ ▇ ▇ ▇ ▇ ▇        </color>", "//~": "NO_I18N" },
+        "condition": { "math": [ "u_cryosuit_power", ">=", "50" ] }
+      },
+      {
+        "id": "full5",
+        "text": { "str": "<color_red>▇ ▇ ▇ ▇ ▇          </color>", "//~": "NO_I18N" },
+        "condition": { "math": [ "u_cryosuit_power", ">=", "40" ] }
+      },
+      {
+        "id": "full4",
+        "text": { "str": "<color_red>▇ ▇ ▇ ▇            </color>", "//~": "NO_I18N" },
+        "condition": { "math": [ "u_cryosuit_power", ">=", "30" ] }
+      },
+      {
+        "id": "full3",
+        "text": { "str": "<color_red>▇ ▇ ▇              </color>", "//~": "NO_I18N" },
+        "condition": { "math": [ "u_cryosuit_power", ">=", "20" ] }
+      },
+      {
+        "id": "full2",
+        "text": { "str": "<color_red>▇ ▇                </color>", "//~": "NO_I18N" },
+        "condition": { "math": [ "u_cryosuit_power", ">=", "10" ] }
+      },
+      {
+        "id": "full1",
+        "text": { "str": "<color_red>▇                  </color>", "//~": "NO_I18N" },
+        "condition": { "math": [ "u_cryosuit_power", ">", "0" ] }
+      }
+    ],
+    "default_clause": { "text": "      BOOTING      ", "color": "red" },
+    "flags": [ "W_NO_PADDING" ]
+  }
+]
