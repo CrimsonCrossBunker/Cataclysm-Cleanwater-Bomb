@@ -1,0 +1,14 @@
+[
+  {
+    "id": "iv_mutagen_troglobite",
+    "copy-from": "iv_mutagen_troglobite",
+    "type": "ITEM",
+    "name": { "str": "gamer mutagenic primer" }
+  },
+  {
+    "id": "mutagen_troglobite",
+    "copy-from": "mutagen_troglobite",
+    "type": "ITEM",
+    "name": { "str": "gamer mutagen" }
+  }
+]

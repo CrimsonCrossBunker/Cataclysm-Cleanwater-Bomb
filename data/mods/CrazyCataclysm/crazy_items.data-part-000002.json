@@ -1,10 +1,73 @@
 [
   {
-    "id": "zweifire_on",
+    "id": "firekatana_off",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
     "category": "weapons",
-    "name": { "str": "flammenschwert", "str_pl": "flammenschwerter" },
+    "name": { "str": "Rising Sun" },
+    "description": "This is a katana with a nozzle just behind the cutting edge of the blade.  People love fire, and people love katana, so why not put them together?  The gas burners attached to this blade can really turn up the heat on your foes.  Use to ignite.",
+    "weight": "1400 g",
+    "volume": "2250 ml",
+    "price": "980 USD",
+    "material": [ "steel" ],
+    "symbol": "/",
+    "color": "light_gray",
+    "charges_per_use": 1,
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "gasoline": 50 }, "watertight": true } ],
+    "techniques": [ "RAPID", "WBLOCK_2" ],
+    "use_action": {
+      "type": "fireweapon_off",
+      "target_id": "firekatana_on",
+      "moves": 10,
+      "noise": 10,
+      "success_message": "The Sun rises."
+    },
+    "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 6 ] ],
+    "flags": [ "FIRE", "DURABLE_MELEE", "SHEATH_SWORD" ],
+    "melee_damage": { "bash": 4, "cut": 31 },
+    "tool_ammo": [ "gasoline" ]
+  },
+  {
+    "id": "firekatana_on",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "weapons",
+    "name": { "str": "Rising Sun" },
+    "description": "This is a katana that glows with the fury and heat of the SUN!  Well, okay it's not THAT hot, but getting hit with it still stings like the dickens.  Use to shut off the gas.",
+    "weight": "1400 g",
+    "volume": "2250 ml",
+    "price": "980 USD",
+    "material": [ "steel" ],
+    "symbol": "/",
+    "color": "red",
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "gasoline": 50 }, "watertight": true } ],
+    "turns_per_charge": 30,
+    "revert_to": "firekatana_off",
+    "techniques": [ "RAPID", "WBLOCK_2" ],
+    "use_action": [
+      { "type": "transform", "target": "firekatana_off", "msg": "The Sun sets.", "menu_text": "Turn off" },
+      { "type": "firestarter", "moves": 30 }
+    ],
+    "tick_action": [
+      {
+        "type": "fireweapon_on",
+        "noise_chance": 35,
+        "noise_message": "The Sun shines brightly.",
+        "charges_extinguish_message": "The Light Fades.",
+        "water_extinguish_message": "Your sword hisses in the water and goes out."
+      }
+    ],
+    "light": 240,
+    "flags": [ "FIRE", "CHARGEDIM", "FLAMING", "DURABLE_MELEE", "TRADER_AVOID", "WATER_EXTINGUISH" ],
+    "melee_damage": { "bash": 4, "cut": 31 },
+    "tool_ammo": [ "gasoline" ]
+  },
+  {
+    "id": "zweifire_off",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "weapons",
+    "name": { "str": "flammenschwert (aus)", "str_pl": "flammenschwerter (aus)" },
     "//": "All of this is SUPPOSED to be in German.",
     "//I18N": false,
     "description": "Ein großes zweihändiges Schwert aus Deutschland, an dessen Klinge sich, unter Zuführung von Benzin, eine anhaltende Flamme erzeugen lässt.  Es ist eine sehr mächtige Waffe.",
@@ -13,92 +76,20 @@
     "price": "1 kUSD 600 USD",
     "material": [ "steel" ],
     "symbol": "/",
-    "color": "red",
+    "color": "light_gray",
+    "charges_per_use": 1,
     "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "gasoline": 50 }, "watertight": true } ],
-    "turns_per_charge": 30,
-    "revert_to": "zweifire_off",
     "techniques": [ "WBLOCK_1", "WIDE", "BRUTAL", "SWEEP" ],
-    "use_action": [
-      {
-        "type": "transform",
-        "target": "zweifire_off",
-        "msg": "Die Flamme deines Schwertes erlischt.",
-        "menu_text": "Turn off"
-      },
-      { "type": "firestarter", "moves": 30 }
-    ],
-    "tick_action": [
-      {
-        "type": "fireweapon_on",
-        "noise_chance": 35,
-        "noise_message": "Das Feuer um deine Schwertklinge leuchtet hell!",
-        "charges_extinguish_message": "Deinem Flammenschwert ist der Brennstoff ausgegangen!",
-        "water_extinguish_message": "Dein Schwert zischt und erlischt."
-      }
-    ],
-    "light": 240,
-    "flags": [ "FIRE", "CHARGEDIM", "FLAMING", "DURABLE_MELEE", "TRADER_AVOID", "WATER_EXTINGUISH", "ALWAYS_TWOHAND" ],
+    "use_action": {
+      "type": "fireweapon_off",
+      "target_id": "zweifire_on",
+      "moves": 10,
+      "noise": 10,
+      "success_message": "Die Klinge deines Schwertes brennt!"
+    },
+    "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 1 ] ],
+    "flags": [ "DURABLE_MELEE", "SHEATH_SWORD", "ALWAYS_TWOHAND" ],
     "melee_damage": { "bash": 17, "cut": 40 },
     "tool_ammo": [ "gasoline" ]
-  },
-  {
-    "id": "battletorch",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str": "Louisville Slaughterer" },
-    "description": "This is sturdy wood bat, wrapped in gasoline-soaked rags and flame-resistant Nomex fabric.  Light it, and the ball game will REALLY heat up.  You'll need a lighter or matches to light it.",
-    "weight": "1485 g",
-    "volume": "2 L",
-    "price": "160 USD",
-    "to_hit": { "grip": "weapon", "length": "long", "surface": "any", "balance": "good" },
-    "material": [ "wood", "nomex" ],
-    "symbol": "/",
-    "color": "brown",
-    "initial_charges": 25,
-    "max_charges": 25,
-    "charges_per_use": 1,
-    "techniques": [ "WBLOCK_1" ],
-    "use_action": {
-      "target": "battletorch_lit",
-      "msg": "You light the Louisville Slaughterer.",
-      "need_fire": 1,
-      "menu_text": { "str": "Light", "ctxt": "verb" },
-      "type": "transform"
-    },
-    "flags": [ "DURABLE_MELEE" ],
-    "melee_damage": { "bash": 18 }
-  },
-  {
-    "id": "battletorch_lit",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str": "Louisville Slaughterer" },
-    "description": "This is a sturdy wood bat, wrapped in gasoline-soaked rags and flame-resistant Nomex fabric.  It is burning brightly, and makes it much easier to see the baselines at night games (It also makes the umpire FAR more likely to call a ball instead of a strike).",
-    "weight": "1485 g",
-    "volume": "2 L",
-    "price": "160 USD",
-    "to_hit": { "grip": "weapon", "length": "long", "surface": "any", "balance": "good" },
-    "material": [ "wood", "nomex" ],
-    "symbol": "/",
-    "color": "red",
-    "initial_charges": 25,
-    "max_charges": 25,
-    "turns_per_charge": 20,
-    "revert_to": "battletorch_done",
-    "techniques": [ "WBLOCK_1" ],
-    "use_action": [
-      { "type": "firestarter", "moves": 30 },
-      {
-        "target": "battletorch",
-        "msg": "The Louisville Slaughterer is extinguished.",
-        "menu_text": "Extinguish",
-        "type": "transform"
-      }
-    ],
-    "light": 310,
-    "flags": [ "FIRE", "CHARGEDIM", "FLAMING", "DURABLE_MELEE", "TRADER_AVOID", "WATER_EXTINGUISH", "SPAWN_ACTIVE" ],
-    "melee_damage": { "bash": 18 }
   }
 ]
