@@ -68,17 +68,5 @@
       "INLINE_ENCH_stalker_eyes_0",
       "INLINE_ENCH_stalker_eyes_1"
     ]
-  },
-  {
-    "type": "mutation",
-    "id": "LUCID_DREAM",
-    "name": { "str": "Sleeper" },
-    "active": true,
-    "points": 99,
-    "description": "You still sleep, yet your dreams still can impact the world.  Activate to wake up.",
-    "valid": false,
-    "starting_trait": false,
-    "purifiable": false,
-    "activated_eocs": [ "EOC_LUCID_DREAM_FORCE_END" ]
   }
 ]

@@ -14,21 +14,5 @@
     "cost": 25,
     "activation_msg": "Vines lash out toward your target.",
     "activated_eocs": [ "EOC_ARVORE_VINE_DRAG_activated" ]
-  },
-  {
-    "type": "mutation",
-    "id": "ARVORE_WOOD_CLAWS",
-    "name": { "str": "Jagged Wooden Claws" },
-    "points": 2,
-    "description": "At will, you can transform your hands into jagged wooden claws.  They are potent weapons but make anything other than combat more difficult.",
-    "types": [ "CLAWS" ],
-    "prereqs": [ "JAUNDICE_ARVORE_ALCHEMY", "ARVORE_SKIN_2", "ARVORE_SKIN_3" ],
-    "category": [ "ARVORE", "ARVORE_ALCHEMY" ],
-    "purifiable": false,
-    "activated_is_setup": true,
-    "active": true,
-    "activation_msg": "Your fingers itch as jagged wood rapidly covers them.",
-    "activated_eocs": [ "EOC_ARVORE_JAGGED_CLAWS_ON" ],
-    "deactivated_eocs": [ "EOC_ARVORE_JAGGED_CLAWS_ON" ]
   }
 ]

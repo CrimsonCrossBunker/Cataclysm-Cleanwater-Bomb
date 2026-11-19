@@ -221,16 +221,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_DHAMPIR_FANGS_activated",
-    "effect": [ { "math": [ "u_spell_level('vampire_drink_blood_with_fangs_spell') = 0" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_DHAMPIR_FANGS_deactivated",
-    "effect": [ { "math": [ "u_spell_level('vampire_drink_blood_with_fangs_spell') = -1" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_DHAMPIR_AVOID_EAT_SLEEP_DRINK_activated",
     "condition": { "math": [ "u_vitamin('human_blood_vitamin') > 0" ] },
     "effect": [

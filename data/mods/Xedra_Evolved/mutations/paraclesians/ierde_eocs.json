@@ -619,19 +619,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_IERDE_STONE_FORM_ON",
-    "effect": [
-      { "u_add_trait": "IERDE_STONE_FORM_TRAITS" },
-      { "u_message": "Your body stiffens as your flesh turns to stone and your joints to earth.", "type": "good" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_IERDE_STONE_FORM_OFF",
-    "effect": [ { "u_lose_trait": "IERDE_STONE_FORM_TRAITS" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_IERDE_BODY_OF_ADAMANT_LIMB_HEALER",
     "eoc_type": "EVENT",
     "required_event": "character_takes_damage",

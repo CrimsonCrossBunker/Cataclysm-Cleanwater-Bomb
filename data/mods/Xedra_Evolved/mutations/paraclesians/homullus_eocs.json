@@ -80,16 +80,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_HOMULLUS_BACKSTAGE_ON",
-    "condition": { "not": { "u_has_trait": "HOMULLUS_BACKSTAGE_active" } },
-    "effect": [
-      { "u_add_trait": "HOMULLUS_BACKSTAGE_active" },
-      { "u_message": "You seem to fade into the background.", "type": "good" }
-    ],
-    "false_effect": [ { "u_lose_trait": "HOMULLUS_BACKSTAGE_active" }, { "u_message": "You become more noticeable.", "type": "neutral" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_HOMULLUS_RUNNING_GIVE_STAMINA",
     "eoc_type": "EVENT",
     "required_event": "avatar_moves",

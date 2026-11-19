@@ -41,46 +41,5 @@
     "activated_eocs": [ "EOC_PARACLESIAN_FAE_SIGHT_ON" ],
     "processed_eocs": [ "EOC_PARACLESIAN_FAE_SIGHT_PROCESSING" ],
     "deactivated_eocs": [ "EOC_PARACLESIAN_FAE_SIGHT_OFF" ]
-  },
-  {
-    "type": "mutation",
-    "id": "PARACLESIAN_FAE_SIGHT_2",
-    "name": { "str": "Wyrd Sight" },
-    "points": 1,
-    "purifiable": false,
-    "visibility": 0,
-    "ugliness": 0,
-    "prereqs": [ "PARACLESIAN_FAE_SIGHT_1" ],
-    "description": "You can sense other nearby creatures from the Bright Lands.  Activate to enable your fae senses.",
-    "category": [
-      "ARVORE",
-      "IERDE",
-      "HOMULLUS",
-      "SALAMANDER",
-      "SYLPH",
-      "UNDINE",
-      "FAIR_FOLK_NOBLE",
-      "FAIR_FOLK_COMMONER_BROWNIE",
-      "FAIR_FOLK_COMMONER_POOKA",
-      "FAIR_FOLK_COMMONER_SELKIE",
-      "FAIR_FOLK_COMMONER_TROW"
-    ],
-    "threshreq": [
-      "THRESH_ARVORE",
-      "THRESH_IERDE",
-      "THRESH_HOMULLUS",
-      "THRESH_SALAMANDER",
-      "THRESH_SYLPH",
-      "THRESH_UNDINE",
-      "THRESH_FAIR_FOLK_NOBLE",
-      "THRESH_FAIR_FOLK_COMMONER_BROWNIE",
-      "THRESH_FAIR_FOLK_COMMONER_POOKA",
-      "THRESH_FAIR_FOLK_COMMONER_SELKIE",
-      "THRESH_FAIR_FOLK_COMMONER_TROW"
-    ],
-    "activated_is_setup": true,
-    "active": true,
-    "activated_eocs": [ "EOC_PARACLESIAN_WYRD_SIGHT_ON" ],
-    "deactivated_eocs": [ "EOC_PARACLESIAN_WYRD_SIGHT_OFF" ]
   }
 ]

@@ -1,0 +1,25 @@
+local ccb = require("ccb")
+
+ccb.content.define_mutation {
+    id = "ARVORE_MIND_CONTROL_POLLEN",
+    name = ccb.content.text("Enchanting Aroma"),
+    points = 4,
+    visibility = 0,
+    ugliness = -2,
+    types = { "SCENT" },
+    prerequisites = { "ARVORE_FLORAL_SCENT" },
+    cancels = { "SMELLY", "SMELLY2" },
+    description = ccb.content.text("The flowers in your hair produce an intoxicating smell.  You no longer smell anything like a human and other beings will react to you appropriately.  You can enhance this scent to an overpowering level, beguiling humans and making them more suggestible at the cost of greatly increasing the range at which others can smell you."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    scent_type = "sc_flower",
+    active = true,
+    activation_setup_only = true,
+    consumes_mana = true,
+    cost = 1,
+    cooldown = 10,
+    activation_message = ccb.content.text("A sweet scent fills the air."),
+    on_activate = "enable_trait_form",
+    on_deactivate = "disable_trait_form",
+}
