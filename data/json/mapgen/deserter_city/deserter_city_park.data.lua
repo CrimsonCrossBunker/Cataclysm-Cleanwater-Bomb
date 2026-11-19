@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "deserter_city_park",
+    layout = {
+        rows = {
+            "                        ",
+            "||||||||||||||||||||||| ",
+            "      4   zssz        | ",
+            "       t  bssb   t 4  | ",
+            "    t     bssb        | ",
+            "          bssb      t | ",
+            "       t  zssz    t   | ",
+            "    4      ss         | ",
+            "          zssz      4 | ",
+            "         ssssse       | ",
+            "z zbbbz zs~~~~sz zbbbz| ",
+            "ssssssssss~~~~ssssssss| ",
+            "ssssssssss~~~~ssssssss| ",
+            "z zbbbz zs~~~~sz zbbbz| ",
+            "         ssssss  4    | ",
+            "  t       zssz        | ",
+            "           ss       t | ",
+            "     4    zssz  t     | ",
+            "          bssb        | ",
+            "  t       bssb   4    | ",
+            "      t   bssb        | ",
+            "   t      zssz       4| ",
+            "      4    ss  t      | ",
+            "          zssz        | ",
+        },
+        palettes = { "park_scenic_palette" },
+        terrain = { ["|"] = "t_palisade" },
+        fill_terrain = "t_region_groundcover_urban",
+    },
+}
