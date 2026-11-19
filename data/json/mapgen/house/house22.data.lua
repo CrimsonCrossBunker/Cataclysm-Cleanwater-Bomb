@@ -1,5 +1,22 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "house_22_variant_palette",
+    layout = {
+        parameters = {
+            house_22_variant = {
+                value_type = "nested_mapgen",
+                default = {
+                    weighted = {
+                        { id = "house_22_normal", weight = 5 },
+                        { id = "house_22_construction", weight = 1 },
+                    },
+                },
+            },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "house_22_construction",

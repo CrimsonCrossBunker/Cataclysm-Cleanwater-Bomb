@@ -1,5 +1,22 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "house_05_variant_palette",
+    layout = {
+        parameters = {
+            house_05_variant = {
+                value_type = "nested_mapgen",
+                default = {
+                    weighted = {
+                        { id = "house_05_normal", weight = 5 },
+                        { id = "house_05_construction", weight = 1 },
+                    },
+                },
+            },
+        },
+    },
+}
+
 -- basic basement with a utility room, 2-3 bedrooms, possibly an office, and a large tv/rec room.
 ccb.content.define_mapgen {
     kind = "nested",
