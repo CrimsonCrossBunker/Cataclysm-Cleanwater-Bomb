@@ -1,0 +1,16 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "vitrified_soil_talk_main",
+    "dynamic_line": "This little mound of soil is unlike the jagged dirt around it.  It is smooth, welcoming, and pleasant to the touch.",
+    "responses": [
+      {
+        "text": "Plant the withered apple in the soil.",
+        "condition": { "u_has_item": "glass_apple" },
+        "effect": { "run_eocs": [ "EOC_swap_glass_apple_for_arms" ] },
+        "topic": "vitrified_soil_add_apple"
+      },
+      { "text": "Leave.", "topic": "TALK_DONE" }
+    ]
+  }
+]

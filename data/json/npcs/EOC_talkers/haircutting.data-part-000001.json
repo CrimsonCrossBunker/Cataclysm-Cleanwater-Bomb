@@ -1,16 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_CUT_HAIR_OR_BEARD",
-    "dynamic_line": "Do you want to shave, or cut your hair?",
-    "responses": [
-      { "text": "Shave your beard.", "topic": "TALK_CUT_YOUR_BEARD" },
-      { "text": "Cut your hair.", "topic": "TALK_CUT_YOUR_HAIR" },
-      { "text": "Don't do either.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_CUT_YOUR_HAIR",
     "dynamic_line": "How do you want your hair cut?",
     "responses": [
