@@ -1,0 +1,204 @@
+[
+  {
+    "id": "wetsuit_shorts_technical",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str_sp": "wetsuit technical shorts" },
+    "description": "A pair of stretchy neoprene shorts with large pockets.  Can be worn alone or adjusted to be worn over a wetsuit.",
+    "//": "Based on these: https://fourthelement.com/product/technical-shorts/",
+    "//2": "A recipe to make these into leg pouches?",
+    "weight": "500 g",
+    "volume": "1500 ml",
+    "price": "65 USD",
+    "price_postapoc": "1 USD 50 cent",
+    "material": [ "neoprene", "nylon", "nylon_2" ],
+    "symbol": "[",
+    "color": "dark_gray",
+    "looks_like": "wetsuit_shorts",
+    "armor": [
+      {
+        "material": [
+          { "type": "nylon", "covered_by_mat": 100, "thickness": 0.2 },
+          { "type": "neoprene", "covered_by_mat": 100, "thickness": 2.0 }
+        ],
+        "covers": [ "leg_l", "leg_r" ],
+        "coverage": 100,
+        "encumbrance": 4,
+        "volume_encumber_modifier": 0.25,
+        "specifically_covers": [ "leg_hip_l", "leg_hip_r" ]
+      },
+      {
+        "material": [
+          { "type": "nylon", "covered_by_mat": 100, "thickness": 0.2 },
+          { "type": "neoprene", "covered_by_mat": 100, "thickness": 2.0 },
+          { "type": "nylon_2", "covered_by_mat": 20, "thickness": 1.5 }
+        ],
+        "covers": [ "leg_l", "leg_r" ],
+        "coverage": 50,
+        "specifically_covers": [ "leg_upper_l", "leg_upper_r" ]
+      }
+    ],
+    "//3": "Two large pockets separated into four, two small zipper pockets on flaps, four bungee loops.",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1650 ml",
+        "max_contains_weight": "1500 g",
+        "max_item_length": "32 cm",
+        "moves": 80
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1650 ml",
+        "max_contains_weight": "1500 g",
+        "max_item_length": "32 cm",
+        "moves": 80
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1650 ml",
+        "max_contains_weight": "1500 g",
+        "max_item_length": "32 cm",
+        "moves": 100
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1650 ml",
+        "max_contains_weight": "1500 g",
+        "max_item_length": "32 cm",
+        "moves": 100
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "500 ml",
+        "max_contains_weight": "500 g",
+        "max_item_length": "19 cm",
+        "moves": 130
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "500 ml",
+        "max_contains_weight": "500 g",
+        "max_item_length": "19 cm",
+        "moves": 130
+      },
+      {
+        "holster": true,
+        "min_item_volume": "50 ml",
+        "max_contains_volume": "1 L",
+        "max_contains_weight": "1000 g",
+        "max_item_length": "70 cm",
+        "extra_encumbrance": 2,
+        "moves": 50,
+        "flag_restriction": [ "BELT_CLIP", "SHEATH_KNIFE" ]
+      },
+      {
+        "holster": true,
+        "min_item_volume": "50 ml",
+        "max_contains_volume": "1 L",
+        "max_contains_weight": "1000 g",
+        "max_item_length": "70 cm",
+        "extra_encumbrance": 2,
+        "moves": 50,
+        "flag_restriction": [ "BELT_CLIP", "SHEATH_KNIFE" ]
+      },
+      {
+        "holster": true,
+        "min_item_volume": "50 ml",
+        "max_contains_volume": "1 L",
+        "max_contains_weight": "1000 g",
+        "max_item_length": "70 cm",
+        "extra_encumbrance": 2,
+        "moves": 50,
+        "flag_restriction": [ "BELT_CLIP", "SHEATH_KNIFE" ]
+      },
+      {
+        "holster": true,
+        "min_item_volume": "50 ml",
+        "max_contains_volume": "1 L",
+        "max_contains_weight": "1000 g",
+        "max_item_length": "70 cm",
+        "extra_encumbrance": 2,
+        "moves": 50,
+        "flag_restriction": [ "BELT_CLIP", "SHEATH_KNIFE" ]
+      }
+    ],
+    "use_action": {
+      "type": "transform",
+      "msg": "You loosen your shorts.",
+      "target": "wetsuit_shorts_technical_loose",
+      "menu_text": "Loosen"
+    },
+    "warmth": 11,
+    "environmental_protection": 8,
+    "flags": [ "VARSIZE", "WATER_FRIENDLY", "WATERPROOF", "SKINTIGHT" ]
+  },
+  {
+    "id": "xl_wetsuit_shorts_technical",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "copy-from": "wetsuit_shorts_technical",
+    "name": { "str_sp": "wetsuit technical shorts" },
+    "proportional": { "weight": 1.25, "volume": 1.25, "price": 1.25 },
+    "use_action": {
+      "type": "transform",
+      "msg": "You loosen your shorts.",
+      "target": "xl_wetsuit_shorts_technical_loose",
+      "menu_text": "Loosen"
+    },
+    "extend": { "flags": [ "OVERSIZE", "PREFIX_XL" ] }
+  },
+  {
+    "id": "xs_wetsuit_shorts_technical",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "copy-from": "wetsuit_shorts_technical",
+    "name": { "str_sp": "wetsuit technical shorts" },
+    "proportional": { "weight": 0.75, "volume": 0.75, "price": 0.75 },
+    "use_action": {
+      "type": "transform",
+      "msg": "You loosen your shorts.",
+      "target": "xs_wetsuit_shorts_technical_loose",
+      "menu_text": "Loosen"
+    },
+    "extend": { "flags": [ "UNDERSIZE", "PREFIX_XS" ] }
+  },
+  {
+    "id": "wetsuit_shorts_technical_loose",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str_sp": "wetsuit technical shorts (loose)" },
+    "description": "A pair of stretchy neoprene shorts with large pockets.  Can be worn over a wetsuit or adjusted to be worn alone.",
+    "copy-from": "wetsuit_shorts_technical",
+    "use_action": { "type": "transform", "msg": "You tighten your shorts.", "target": "wetsuit_shorts_technical", "menu_text": "Tighten" },
+    "delete": { "flags": [ "SKINTIGHT" ] }
+  },
+  {
+    "id": "xl_wetsuit_shorts_technical_loose",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "copy-from": "xl_wetsuit_shorts_technical",
+    "name": { "str_sp": "wetsuit technical shorts (loose)" },
+    "use_action": {
+      "type": "transform",
+      "msg": "You tighten your shorts.",
+      "target": "xl_wetsuit_shorts_technical",
+      "menu_text": "Tighten"
+    },
+    "delete": { "flags": [ "SKINTIGHT" ] }
+  },
+  {
+    "id": "xs_wetsuit_shorts_technical_loose",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "copy-from": "xs_wetsuit_shorts_technical",
+    "name": { "str_sp": "wetsuit technical shorts (loose)" },
+    "use_action": {
+      "type": "transform",
+      "msg": "You tighten your shorts.",
+      "target": "xs_wetsuit_shorts_technical",
+      "menu_text": "Tighten"
+    },
+    "delete": { "flags": [ "SKINTIGHT" ] }
+  }
+]
