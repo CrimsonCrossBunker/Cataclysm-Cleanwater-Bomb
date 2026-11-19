@@ -1,0 +1,28 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "cooking_oil",
+    "name": { "str_sp": "vegetable cooking oil" },
+    "color": "yellow",
+    "sealed": false,
+    "comestible_type": "DRINK",
+    "symbol": "~",
+    "quench": -1,
+    "calories": 174,
+    "description": "Thin yellow vegetable oil used for cooking.",
+    "display_type": "BY_VOLUME",
+    "price": "40 cent",
+    "price_postapoc": "1 cent",
+    "material": [ "oil", "veggy" ],
+    "weight": "20 g",
+    "volume": "25 ml",
+    "charges": 1,
+    "phase": "liquid",
+    "fun": -25,
+    "use_action": [ "BLECH" ],
+    "flags": [ "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" ],
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "freezing_point": -26
+  }
+]
