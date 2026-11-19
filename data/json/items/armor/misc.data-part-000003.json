@@ -1,0 +1,59 @@
+[
+  {
+    "id": "sleeping_bag_roll",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "copy-from": "sleeping_bag",
+    "name": { "str": "rolled sleeping bag" },
+    "description": "A large sleeping bag that covers you head to toe, with a strap for carrying it on your back when not in use.  This one is medium weight.  Activate it to unroll it so you can use it for warmth.",
+    "looks_like": "sleeping_bag",
+    "material_thickness": 4,
+    "flags": [ "OVERSIZE", "BELTED" ],
+    "use_action": { "menu_text": "Unroll", "type": "transform", "target": "sleeping_bag", "msg": "You unroll the sleeping bag." },
+    "armor": [ { "encumbrance": 4, "coverage": 20, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ]
+  },
+  {
+    "id": "sleeping_bag_fur",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "fur sleeping bag" },
+    "description": "A large sleeping bag lined with fur, with a strap for carrying it on your back when not in use.  Who needs a tent?  It is currently unrolled; activate it roll it up for easy storage.",
+    "weight": "1175 g",
+    "volume": "2 L",
+    "price": "325 USD",
+    "price_postapoc": "20 USD",
+    "material": [ "cotton", "fur" ],
+    "symbol": "[",
+    "looks_like": "sleeping_bag",
+    "color": "brown",
+    "warmth": 100,
+    "material_thickness": 5,
+    "environmental_protection": 1,
+    "flags": [ "OVERSIZE", "OUTER" ],
+    "use_action": {
+      "menu_text": "Roll up",
+      "type": "transform",
+      "target": "sleeping_bag_fur_roll",
+      "msg": "You roll up the sleeping bag, preparing it for transport."
+    },
+    "armor": [
+      {
+        "encumbrance": 80,
+        "coverage": 100,
+        "covers": [ "torso", "head", "mouth", "arm_l", "arm_r", "hand_l", "hand_r", "leg_l", "leg_r", "foot_l", "foot_r" ]
+      }
+    ]
+  },
+  {
+    "id": "sleeping_bag_fur_roll",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "copy-from": "sleeping_bag_fur",
+    "name": { "str": "rolled fur sleeping bag" },
+    "description": "A large sleeping bag lined with fur, with a strap for carrying it on your back when not in use.  Who needs a tent?  Activate it to unroll it so you can use it for warmth.",
+    "looks_like": "sleeping_bag_roll",
+    "flags": [ "OVERSIZE", "BELTED" ],
+    "use_action": { "menu_text": "Unroll", "type": "transform", "target": "sleeping_bag_fur", "msg": "You unroll the sleeping bag." },
+    "armor": [ { "encumbrance": 5, "coverage": 20, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ]
+  }
+]
