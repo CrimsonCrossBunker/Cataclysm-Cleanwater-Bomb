@@ -452,3 +452,79 @@ ccb.content.define_mapgen {
         monster_placements = { { id = "mon_chicken", x = 10, y = 5, repetitions = { 5, 7 }, chance = 100 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "solar_farm_spawn",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "gods_community", x = { 1, 1 }, y = { 1, 1 } } },
+        furniture_placements = { { id = "f_solar_unit", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "godco_permanent_trader_predatory_roof",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "#####",
+            "#####",
+            "#####",
+            "#####",
+            "#####",
+        },
+        terrain = { ["#"] = "t_canvas_roof" },
+        faction_areas = { { id = "free_merchants", x = { 0, 5 }, y = { 0, 5 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "godco_permanent_trader_predatory",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "#####",
+            "#CCC#",
+            "#b..+",
+            "#CCb#",
+            "#####",
+        },
+        furniture = { C = "f_crate_o", b = "f_chair", ["#"] = "f_canvas_wall", ["+"] = "f_large_canvas_door" },
+        terrain = {
+            C = "t_dirtfloor",
+            b = "t_dirtfloor",
+            ["#"] = "t_dirtfloor",
+            ["+"] = "t_dirtfloor",
+            ["."] = "t_dirtfloor",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "godco_permanent_trader_predatory_roof", x = 0, y = 0, z = 1 } },
+        faction_areas = { { id = "free_merchants", x = { 0, 5 }, y = { 0, 5 } } },
+        npc_placements = {
+            { id = "FM_caravan_merchant_godco_predatory", x = 0, y = 1 },
+            { id = "FM_caravan_guard_predatory", x = 2, y = 3 },
+        },
+        zone_placements = {
+            { id = "LOOT_UNSORTED", faction = "free_merchants", x = { 1, 2 }, y = 3 },
+            {
+                id = "LOOT_ITEM_GROUP",
+                filter = "NC_EVAC_SHOPKEEP_misc",
+                faction = "free_merchants",
+                repetitions = { 2, 3 },
+                x = { 1, 3 },
+                y = 1,
+            },
+            {
+                id = "LOOT_ITEM_GROUP",
+                filter = "NC_EVAC_SHOPKEEP_misc",
+                faction = "free_merchants",
+                repetitions = { 2, 3 },
+                x = { 1, 3 },
+                y = 3,
+            },
+        },
+    },
+}
