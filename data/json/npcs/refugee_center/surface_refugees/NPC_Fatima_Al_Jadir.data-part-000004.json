@@ -93,15 +93,5 @@
       { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
       { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_Fatima_Teach_yesbarter",
-    "dynamic_line": "Oh, fine, you weasel.  I suppose I can manage for 3 notes.  I seriously can't go lower though, we'll be using up my resources and time and I gotta pay for the gas and the food somehow.",
-    "speaker_effect": { "effect": { "u_add_var": "barter_flag_Fatima_barter_success", "value": "yes" } },
-    "responses": [
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
