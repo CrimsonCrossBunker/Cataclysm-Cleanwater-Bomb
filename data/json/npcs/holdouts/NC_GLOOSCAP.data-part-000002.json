@@ -1,24 +1,34 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_GLOOSCAP_SOCIAL",
-    "dynamic_line": "Yes, thank you for sharing with me.  So what are you doing here?  What are you trying to accomplish?",
-    "speaker_effect": { "effect": { "u_add_var": "general_meeting_u_befriended_glooscap", "value": "yes" } },
+    "id": "TALK_GLOOSCAP_WHERE",
+    "dynamic_line": {
+      "gendered_line": "I'm used to it.  No, Glooscap has been a name here for a very long time.  Is your name foreign?",
+      "relevant_genders": [ "npc" ]
+    },
+    "speaker_effect": { "effect": { "u_add_var": "general_meeting_u_met_glooscap", "value": "yes" } },
     "responses": [
+      { "text": "No, my name has been a name here for a very long time too.", "topic": "TALK_GLOOSCAP" },
+      { "text": "No, I just made it up.", "topic": "TALK_GLOOSCAP" },
+      { "text": "Yes, I just got here.  What's happening?", "topic": "TALK_GLOOSCAP_HAPPENING" },
+      { "text": "I don't know about names, let's talk about something more interesting.", "topic": "TALK_GLOOSCAP" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_GLOOSCAP_MYTH",
+    "dynamic_line": "You know the real people's stories?  Yes, a lot like that.",
+    "speaker_effect": { "effect": { "u_add_var": "general_meeting_u_met_glooscap", "value": "yes" } },
+    "responses": [
+      { "text": "Cool, cool.  So you like myths and stuff?", "topic": "TALK_GLOOSCAP_MYTH_FAIL" },
       {
-        "text": "I'm just trying to survive.",
-        "effect": { "u_add_var": "general_meeting_u_befriended_glooscap", "value": "yes" },
-        "topic": "TALK_GLOOSCAP"
+        "text": "[INT 14] Do you have a twin named Malsumis?",
+        "topic": "TALK_GLOOSCAP_MYTH_SUCCESS",
+        "condition": { "u_has_intelligence": 14 }
       },
       {
-        "text": "[INT 14] I'm trying to understand what happened and see if I can make something better happen.",
-        "condition": { "u_has_intelligence": 14 },
-        "topic": "TALK_GLOOSCAP"
-      },
-      { "text": "I'm trying to become more powerful than whatever else is out there.", "topic": "TALK_GLOOSCAP" },
-      {
-        "text": "I'm trying to make a survivor settlement.  You should join!",
-        "topic": "TALK_SUGGEST_FOLLOW_GLOOSCAP"
+        "text": "Yes, I'm a very smart survivor of the apocalypse.  <end_talking_leave>  Later Glooscap.",
+        "topic": "TALK_DONE"
       }
     ]
   }
