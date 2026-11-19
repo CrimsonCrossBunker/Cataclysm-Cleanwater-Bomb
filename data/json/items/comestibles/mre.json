@@ -456,55 +456,5 @@
     "flags": [ "RAD_STERILIZED", "DECAY_EXPOSED_ATMOSPHERE" ],
     "looks_like": "cookies",
     "fun": 4
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "id": "mre_carrot_cake",
-    "name": { "str": "carrot pound cake" },
-    "copy-from": "mre_dessert",
-    "description": "Delicious cake with carrots blended seamlessly."
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "id": "mre_poppyseed_cake",
-    "copy-from": "mre_carrot_cake",
-    "name": { "str": "lemon poppy seed pound cake" },
-    "calories": 290,
-    "description": "Cake filled with the goodness of lemon and poppy seeds."
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "id": "mre_chocolate_pudding",
-    "copy-from": "mre_dessert",
-    "name": { "str_sp": "chocolate pudding" },
-    "calories": 300,
-    "weight": "75 g",
-    "description": "Pudding made with chocolate.  Yummy!"
-  },
-  {
-    "id": "mre_chocolate_cake",
-    "copy-from": "toastem",
-    "extend": { "flags": [ "RAD_STERILIZED", "DECAY_EXPOSED_ATMOSPHERE" ] },
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "name": { "str": "MRE toaster pastry", "str_pl": "MRE toaster pastries" },
-    "description": "A toaster pastry that has been specially sterilized to last longer.",
-    "variants": [
-      {
-        "id": "chocolate",
-        "name": { "str": "chocolate MRE toaster pastry", "str_pl": "chocolate MRE toaster pastries" },
-        "expand_snippets": true,
-        "description": "This one has a chocolate filling."
-      },
-      {
-        "id": "strawberry",
-        "name": { "str": "strawberry MRE toaster pastry", "str_pl": "strawberry MRE toaster pastries" },
-        "expand_snippets": true,
-        "description": "This one has a strawberry filling."
-      }
-    ]
   }
 ]

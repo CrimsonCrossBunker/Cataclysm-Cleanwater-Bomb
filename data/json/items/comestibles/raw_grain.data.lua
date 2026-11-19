@@ -1,0 +1,71 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "buckwheat_stalks",
+    name = ccb.content.plural_text("buckwheat stalks", "sheaves of buckwheat stalks"),
+    mass = "287 g",
+    color = "brown",
+    symbol = ",",
+    description = ccb.content.text("These leafy stalks only get about waist-high and technically aren't a grass, but thanks to their long stems and nutritious seeds, they can still be farmed like any other cereal crop."),
+    display_type = "BY_WEIGHT",
+    price = "25 cent",
+    survival_price = "20 cent",
+    materials = { "veggy" },
+    flags = { "FRESH_GRAIN", "INEDIBLE", "CATTLE" },
+    volume = "315 ml",
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        shelf_life = "22 days",
+        calories = 679,
+        pet_food = { "CATTLEFOOD" },
+        smoking_result = "dry_buckwheat_stalks",
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "dry_buckwheat_stalks",
+    name = ccb.content.plural_text("dried buckwheat stalks", "sheaves of dried buckwheat stalks"),
+    materials = { { id = "dry_plant", portions = 10 }, { id = "veggy", portions = 1 } },
+    mass = "258 g",
+    color = "brown",
+    symbol = ",",
+    description = ccb.content.text("A heap of dried buckwheat.  It'll need to be threshed before eating, unless you're a cow."),
+    display_type = "BY_WEIGHT",
+    flags = { "INEDIBLE", "CATTLE", "SMOKED", "NUTRIENT_OVERRIDE" },
+    price = "25 cent",
+    survival_price = "20 cent",
+    volume = "315 ml",
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        quench = -10,
+        calories = 679,
+        pet_food = { "CATTLEFOOD" },
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "threshed_buckwheat",
+    name = ccb.content.plural_text("threshed buckwheat", "handfuls of threshed buckwheat"),
+    materials = { "wheat" },
+    mass = "190 g",
+    color = "brown",
+    symbol = ",",
+    flags = { "INEDIBLE", "CATTLE", "BIRD", "RAT", "MOUSE", "NUTRIENT_OVERRIDE" },
+    description = ccb.content.text("A pile of buckwheat seeds with some chaff still mixed in.  Once it's winnowed, it'll be ready for use."),
+    display_type = "BY_WEIGHT",
+    price = "25 cent",
+    survival_price = "20 cent",
+    volume = "290 ml",
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        quench = -10,
+        calories = 677,
+        pet_food = { "CATTLEFOOD" },
+        vitamins = { { id = "wheat_allergen", amount = 1 } },
+    },
+}

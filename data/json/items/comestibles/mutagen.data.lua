@@ -1,0 +1,70 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "fetus",
+    category = "other",
+    name = ccb.content.plural_text("misshapen fetus", "misshapen fetuses"),
+    mass = "760 g",
+    color = "pink",
+    flags = { "TRADER_AVOID", "NUTRIENT_OVERRIDE" },
+    symbol = "%",
+    description = ccb.content.text("A deformed human fetus.  Eating this would be the most vile thing you can think of, and just might cause you to mutate."),
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "hflesh" },
+    volume = "250 ml",
+    comestible = {
+        shelf_life = "2 days",
+        kind = "FOOD",
+        healthy = -12,
+        calories = 156,
+        fun = -60,
+        vitamins = { { id = "mutagenic_slurry", amount = 15 }, { id = "meat_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "arm",
+    category = "other",
+    name = ccb.content.text("mutated arm"),
+    mass = "3767 g",
+    color = "brown",
+    flags = { "TRADER_AVOID", "NUTRIENT_OVERRIDE" },
+    symbol = "%",
+    description = ccb.content.text("A misshapen human arm.  Eating this would be incredibly disgusting and probably cause you to mutate."),
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "hflesh" },
+    volume = "4500 ml",
+    comestible = {
+        shelf_life = "2 days",
+        kind = "FOOD",
+        healthy = -8,
+        calories = 278,
+        fun = -20,
+        vitamins = { { id = "mutagenic_slurry", amount = 10 }, { id = "meat_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "leg",
+    category = "other",
+    name = ccb.content.text("mutated leg"),
+    mass = "11071 g",
+    color = "brown",
+    flags = { "TRADER_AVOID", "NUTRIENT_OVERRIDE" },
+    symbol = "%",
+    description = ccb.content.text("A malformed human leg.  This would be gross to eat, and probably cause mutations."),
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "hflesh" },
+    volume = "12 L",
+    comestible = {
+        shelf_life = "2 days",
+        kind = "FOOD",
+        healthy = -8,
+        calories = 399,
+        fun = -20,
+        vitamins = { { id = "mutagenic_slurry", amount = 10 }, { id = "meat_allergen", amount = 1 } },
+    },
+}

@@ -1,0 +1,131 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "hot_corn_casserole",
+    name = ccb.content.plural_text("piece of hot corn casserole", "pieces of hot corn casserole"),
+    mass = "178 g",
+    color = "yellow",
+    symbol = "%",
+    default_container = "casserole",
+    volume = "250 ml",
+    description = ccb.content.text("It's cheesy and indulgent, although the mix of tender kernels of corn, veggies, fresh herbs, and a pop of heat keep it in check so it's not too heavy for the apocalypse."),
+    price = "50 cent",
+    survival_price = "1 USD",
+    materials = { "veggy", "milk" },
+    flags = { "EATEN_HOT" },
+    comestible = {
+        kind = "FOOD",
+        shelf_life = "2 days",
+        calories = 301,
+        fun = 6,
+        vitamins = { { id = "veggy_allergen", amount = 1 }, { id = "milk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "cheesy_spinach_casserole",
+    name = ccb.content.plural_text("piece of cheesy spinach casserole", "pieces of cheesy spinach casserole"),
+    mass = "178 g",
+    color = "yellow",
+    symbol = "%",
+    default_container = "casserole",
+    volume = "250 ml",
+    description = ccb.content.text("This cheesy spinach casserole is cheesy, packed with hearty spinach, and totally delicious."),
+    price = "50 cent",
+    survival_price = "1 USD",
+    materials = { "veggy", "milk", "egg" },
+    flags = { "EATEN_HOT" },
+    comestible = {
+        kind = "FOOD",
+        shelf_life = "2 days",
+        calories = 301,
+        fun = 4,
+        vitamins = {
+            { id = "veggy_allergen", amount = 1 },
+            { id = "egg_allergen", amount = 1 },
+            { id = "milk_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "tuna_noodle_casserole",
+    name = ccb.content.plural_text("piece of fish noodle casserole", "pieces of fish noodle casserole"),
+    mass = "178 g",
+    color = "yellow",
+    symbol = "%",
+    default_container = "casserole",
+    volume = "250 ml",
+    description = ccb.content.text("Fish noodle casserole is a casserole primarily made with pasta and canned tuna, with canned peas and corn sometimes added."),
+    price = "50 cent",
+    survival_price = "1 USD",
+    materials = { "flesh", "wheat", "veggy" },
+    flags = { "EATEN_HOT" },
+    comestible = {
+        kind = "FOOD",
+        shelf_life = "2 days",
+        calories = 601,
+        fun = 6,
+        vitamins = {
+            { id = "meat_allergen", amount = 1 },
+            { id = "veggy_allergen", amount = 1 },
+            { id = "wheat_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "lazy_lobster_casserole",
+    name = ccb.content.plural_text("lazy lobster casserole", "lazy lobster casserole"),
+    mass = "178 g",
+    color = "yellow",
+    symbol = "%",
+    default_container = "casserole",
+    volume = "250 ml",
+    description = ccb.content.text("A classic New England casserole made with butter, lobster, and crackers, in roughly that order."),
+    price = "60 cent",
+    survival_price = "1 USD 50 cent",
+    materials = { "flesh", "wheat", "milk" },
+    flags = { "EATEN_HOT" },
+    comestible = {
+        kind = "FOOD",
+        shelf_life = "2 days",
+        calories = 601,
+        fun = 10,
+        vitamins = {
+            { id = "meat_allergen", amount = 1 },
+            { id = "wheat_allergen", amount = 1 },
+            { id = "milk_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "eggplant_parmigiana",
+    name = ccb.content.plural_text("eggplant parmigiana", "eggplant parmigiana"),
+    mass = "178 g",
+    color = "brown",
+    default_container = "casserole",
+    symbol = "p",
+    description = ccb.content.text("A good portion of tasty eggplant parmigiana."),
+    price = "1 USD",
+    survival_price = "3 USD",
+    materials = { { id = "veggy", portions = 10 }, { id = "milk", portions = 1 } },
+    volume = "250 ml",
+    flags = { "EDIBLE_FROZEN" },
+    comestible = {
+        shelf_life = "60 days",
+        kind = "FOOD",
+        quench = -2,
+        healthy = -1,
+        calories = 301,
+        vitamins = {
+            { id = "calcium", amount = 15 },
+            { id = "iron", amount = 2 },
+            { id = "vitC", amount = 7 },
+            { id = "veggy_allergen", amount = 1 },
+            { id = "milk_allergen", amount = 1 },
+        },
+        fun = 8,
+    },
+}

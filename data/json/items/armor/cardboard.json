@@ -128,14 +128,5 @@
     "copy-from": "cardboard_crown",
     "flags": [ "WATER_DISSOLVE", "FRAGILE_MELEE", "NO_WEAR_EFFECT", "FRAGILE", "OUTER", "POWERARMOR_COMPATIBLE", "SOFT" ],
     "use_action": { "type": "transform", "menu_text": "Adjust", "target": "cardboard_crown", "msg": "You adjust your cardboard crown." }
-  },
-  {
-    "id": "badge_cardboard",
-    "copy-from": "badge_abstract",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR" ],
-    "name": { "str": "cardboard badge" },
-    "description": "An honorable badge identifying the owner as a \"Knight Errant\" of \"House Da\".  The large letters slowly dwindle in size as the badge runs out of space, leaving out the last two letters of Dino Dave's name.",
-    "flags": [ "WATER_DISSOLVE", "FRAGILE_MELEE", "NO_WEAR_EFFECT", "FRAGILE" ]
   }
 ]

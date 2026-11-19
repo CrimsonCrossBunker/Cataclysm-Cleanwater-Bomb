@@ -85,28 +85,5 @@
         "description": "Foodplace brand \"Foodios\" cereal.  Foodios™ are Foodalicious™!"
       }
     ]
-  },
-  {
-    "id": "cereal_fp2",
-    "copy-from": "cereal_fp1",
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "name": { "str_sp": "Carpenter Crunch cereal" },
-    "description": "This is Foodplace brand \"Carpenter Crunch\" cereal with the iconic \"Breakfast Beaver\" mascot on the box.  It tastes kind of like nails.",
-    "fun": -1,
-    "spoils_in": "540 days",
-    "variants": [  ]
-  },
-  {
-    "id": "cereal_fp4",
-    "copy-from": "cereal_fp1",
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "name": { "str_sp": "Sugar Chomps cereal" },
-    "description": "Foodplace brand \"Sugar Chomps\" cereal.  \"Chocolate Frosted Crunchy Sugar Chomps: 8 essential vitamins packed into that rich, fudgy taste!\"",
-    "addiction_potential": 10,
-    "vitamins": [ [ "caffeine", 150 ] ],
-    "spoils_in": "540 days",
-    "variants": [  ]
   }
 ]
