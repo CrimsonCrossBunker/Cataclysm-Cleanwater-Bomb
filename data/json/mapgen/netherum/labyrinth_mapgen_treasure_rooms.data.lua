@@ -1,5 +1,52 @@
 local ccb = require("ccb")
 
+-- A double maze with a cutout in the middle, filled with enemies, and with a central turret.  The turret risks locking you in by destroying the path out.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ls_deadend_template_chasm",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "!vvvv..............vvvv!",
+            "1          ||2          ",
+            "                        ",
+            "                        ",
+            "      3                 ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "           5            ",
+            "            4           ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        nested_glyphs = {
+            ["1"] = { id = "ls_ns_11x23_maze" },
+            ["2"] = { id = "ls_ns_11x23_maze" },
+            ["3"] = {
+                choices = { { id = "ls_ns_9x9_maze_cutout", weight = 97 }, { id = "null", weight = 3 } },
+            },
+            ["4"] = {
+                choices = { { id = "ls_ns_9x9_maze_cutout", weight = 97 }, { id = "null", weight = 3 } },
+            },
+        },
+        monster_glyphs = { ["5"] = { id = "mon_labyrinth_turret_1_2" } },
+        palettes = { "labyrinthine_base_palette" },
+    },
+}
+
 -- Treasure room Circle of Wings
 ccb.content.define_mapgen {
     kind = "nested",
