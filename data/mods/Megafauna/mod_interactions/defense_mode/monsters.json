@@ -4,10 +4,5 @@
     "id": "MEGAFAUNA_DM",
     "flags": [ "ALL_SEEING", "NEMESIS" ],
     "bleeds": "fd_blood"
-  },
-  {
-    "type": "MONSTER_FACTION",
-    "name": "megafauna_dm",
-    "base_faction": "animal"
   }
 ]
