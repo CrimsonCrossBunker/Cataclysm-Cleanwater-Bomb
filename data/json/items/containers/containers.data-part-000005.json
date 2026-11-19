@@ -1,0 +1,158 @@
+[
+  {
+    "id": "condom",
+    "type": "ITEM",
+    "category": "container",
+    "name": { "str": "condom" },
+    "description": "A gentleman's balloon.  A single-use life preventer.  A thumbless latex mitten.  This could be used as a makeshift water container, but otherwise it's anyone's guess what it's for.",
+    "ascii_picture": "condom",
+    "weight": "5 g",
+    "volume": "15 ml",
+    "price": "0 cent",
+    "price_postapoc": "25 cent",
+    "material": [ "plastic" ],
+    "symbol": ")",
+    "color": "white",
+    "variant_type": "generic",
+    "variants": [
+      {
+        "id": "condom_plain",
+        "name": { "str": "condom" },
+        "description": "This one is plain, no coloring or flavoring.",
+        "ascii_picture": "condom_plain",
+        "weight": 200,
+        "append": true
+      },
+      {
+        "id": "condom_blue",
+        "name": { "str": "blue condom" },
+        "description": "This one is colored blue.",
+        "ascii_picture": "condom_blue",
+        "weight": 80,
+        "append": true
+      },
+      {
+        "id": "condom_red",
+        "name": { "str": "red condom" },
+        "description": "This one is colored red.",
+        "ascii_picture": "condom_red",
+        "weight": 80,
+        "append": true
+      },
+      {
+        "id": "condom_green",
+        "name": { "str": "green condom" },
+        "description": "This one is colored green.",
+        "ascii_picture": "condom_green",
+        "weight": 80,
+        "append": true
+      },
+      {
+        "id": "condom_yellow",
+        "name": { "str": "yellow condom" },
+        "description": "This one is colored yellow.",
+        "ascii_picture": "condom_yellow",
+        "weight": 80,
+        "append": true
+      },
+      {
+        "id": "condom_pink",
+        "name": { "str": "pink condom" },
+        "description": "This one is colored pink.",
+        "ascii_picture": "condom_pink",
+        "weight": 80,
+        "append": true
+      },
+      {
+        "id": "condom_ribbed",
+        "name": { "str": "ribbed condom" },
+        "description": "This one is ribbed for pleasure!",
+        "ascii_picture": "condom_ribbed",
+        "weight": 100,
+        "append": true
+      },
+      {
+        "id": "condom_flavored_cherry",
+        "name": { "str": "cherry flavored condom" },
+        "description": "A condom with cherry flavored lube, in red packaging to match.",
+        "ascii_picture": "condom_flavored_cherry",
+        "weight": 40,
+        "append": true
+      },
+      {
+        "id": "condom_flavored_banana",
+        "name": { "str": "banana flavored condom" },
+        "description": "A condom with banana flavored lube, in yellow packaging to match.",
+        "ascii_picture": "condom_flavored_banana",
+        "weight": 40,
+        "append": true
+      },
+      {
+        "id": "condom_flavored_strawberry",
+        "name": { "str": "strawberry flavored condom" },
+        "description": "A condom with strawberry flavored lube, in red packaging to match.",
+        "ascii_picture": "condom_flavored_strawberry",
+        "weight": 40,
+        "append": true
+      },
+      {
+        "id": "condom_flavored_orange",
+        "name": { "str": "orange flavored condom" },
+        "description": "A condom with orange flavored lube, in orange packaging to match.",
+        "ascii_picture": "condom_flavored_orange",
+        "weight": 40,
+        "append": true
+      }
+    ],
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "watertight": true,
+        "transparent": true,
+        "max_contains_volume": "3750 ml",
+        "max_contains_weight": "7 kg",
+        "max_item_length": "26 cm"
+      }
+    ],
+    "flags": [ "BANK_NOTE_SHAPED" ],
+    "properties": { "burst_when_filled": "75" }
+  },
+  {
+    "id": "bottle_gourd",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "clothing",
+    "name": { "str": "bottle gourd" },
+    "looks_like": "clay_canister",
+    "description": "A hard, watertight container made from a dried bottle gourd.  Can be used similar to a canteen or just for storing liquids.",
+    "ascii_picture": "bottle_gourd",
+    "weight": "300 g",
+    "volume": "2500 ml",
+    "price": "3 USD",
+    "price_postapoc": "60 cent",
+    "material": [ "wood" ],
+    "symbol": "6",
+    "color": "brown",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "rigid": true,
+        "watertight": true,
+        "max_contains_volume": "2250 ml",
+        "max_item_volume": "2501 ml",
+        "max_contains_weight": "2501 g",
+        "sealed_data": { "spoil_multiplier": 0.9 }
+      }
+    ],
+    "flags": [ "BELTED", "OVERSIZE", "WATER_FRIENDLY" ],
+    "armor": [
+      {
+        "material": [ { "type": "wood", "covered_by_mat": 100, "thickness": 2.0 } ],
+        "encumbrance": 3,
+        "coverage": 8,
+        "covers": [ "torso" ],
+        "specifically_covers": [ "torso_hanging_front" ]
+      }
+    ]
+  }
+]

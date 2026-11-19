@@ -1,0 +1,44 @@
+[
+  {
+    "id": "flask_hip",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "clothing",
+    "name": { "str": "hip flask" },
+    "looks_like": "2lcanteen",
+    "description": "A 250 mL metal flask with a hinged screw-on lid, commonly used to discreetly transport alcohol.",
+    "ascii_picture": "flask_hip",
+    "weight": "270 g",
+    "volume": "650 ml",
+    "longest_side": "13 cm",
+    "price": "40 USD",
+    "price_postapoc": "10 cent",
+    "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "neutral" },
+    "material": [ "steel" ],
+    "symbol": ")",
+    "color": "light_gray",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "rigid": true,
+        "watertight": true,
+        "max_contains_volume": "250 ml",
+        "max_item_volume": "17 ml",
+        "max_contains_weight": "1 kg"
+      }
+    ],
+    "qualities": [ [ "BOIL", 1 ] ],
+    "use_action": [ "HEAT_LIQUID_ITEMS" ],
+    "flags": [ "BELTED", "OVERSIZE", "WATER_FRIENDLY", "COLLAPSE_CONTENTS" ],
+    "melee_damage": { "bash": 3 },
+    "sided": true,
+    "armor": [
+      {
+        "material": [ { "type": "iron", "covered_by_mat": 100, "thickness": 1.0 } ],
+        "coverage": 2,
+        "covers": [ "leg_l", "leg_r" ],
+        "specifically_covers": [ "leg_hip_r", "leg_hip_l" ]
+      }
+    ]
+  }
+]
