@@ -1,223 +1,227 @@
 local ccb = require("ccb")
 
--- 2mm Nomex across the entire suit with a waterproof silicone outer to provide hazmat properties. Hands and feet reinforced/shaped with other materials to provide full-body hazmat protection with minimal encumbrance.
--- Back of hand from the wrist to the knuckles can be stiffer but still needs a little flexibility. This area can afford the most thickness on gloves.
--- Molded knuckle plates, spacious enough inside the gloves to flex your knuckles fine while providing extra knuckle protection because busting your knuckles sucks.
--- encumbrance accounted for above
--- A bit of Kevlar between the third and second knuckles, the part of the fingers where flexibility is least important.
--- Fingers need to be the most flexible and tactile part of the hand. Lycra/nylon blend (as the lycra material is defined) will give both those qualities while sacrificing the least protection.
--- encumbrance accounted for above
--- The boots are reinforced with plastic plates throughout to protect against penetration.
--- The Kevlar is 2mm thick over most of the boots, and 1mm thick for flexible joints.
--- Steel shank for excellent arch support and to maintain boot shape for longevity.
--- encumbrance accounted for above
--- Steel toes
--- encumbrance accounted for above
--- encumbrance accounted for above
 ccb.content.define_item {
-    id = "robofac_enviro_suit",
+    id = "entry_suit",
     category = "armor",
-    name = ccb.content.plural_text("Hub 01 environmental suit", "Hub 01 environmental suits"),
-    description = ccb.content.text("A lightweight environmental suit incorporating Kevlar-lined boots and gloves, worn by Hub personnel in their rare forays aboveground.  Colored brown and blue, the white seal of Hub 01 is embroidered on both of its upper arms.  It requires a separate gas mask for full protection."),
-    mass = "4000 g",
-    volume = "14 L",
-    price = "1 kUSD 175 USD",
-    survival_price = "20 USD",
-    materials = { "nomex", "kevlar", "hc_steel", "thermo_resin", "lycra", "vinyl" },
+    name = ccb.content.text("entry suit"),
+    description = ccb.content.text("A flame-resistant whole-body garment worn by firefighters as protection against extreme heat.  It requires a separate gas mask for full protection against smoke."),
+    mass = "2900 g",
+    volume = "6 L",
+    price = "2 kUSD 405 USD",
+    survival_price = "25 USD",
+    materials = { "nomex", "kevlar" },
     symbol = "[",
-    looks_like = "hazmat_suit",
-    color = "brown",
-    pockets = {
-        { kind = "CONTAINER", capacity = "250 ml", mass_limit = "1 kg", moves = 80 },
-        { kind = "CONTAINER", capacity = "250 ml", mass_limit = "1 kg", moves = 80 },
-    },
-    flags = { "VARSIZE", "WATERPROOF", "RAINPROOF", "GAS_PROOF", "RAD_PROOF", "ELECTRIC_IMMUNE", "STURDY" },
+    looks_like = "jumpsuit",
+    color = "light_gray",
+    length = "30 cm",
+    flags = { "VARSIZE", "WATERPROOF", "RAINPROOF", "GAS_PROOF", "STURDY", "OUTER" },
     armor = {
+        warmth = 30,
+        thickness = 5,
+        environmental_protection = 20,
         portions = {
             {
-                materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "kevlar", coverage = 100, thickness = 2 },
-                    { id = "thermo_resin", coverage = 30, thickness = 2 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
-                },
-                covers = { "hand_l", "hand_r" },
-                subparts = { "hand_back_r", "hand_back_l" },
+                encumbrance = 50,
                 coverage = 100,
-                encumbrance = { 16, 16 },
-            },
-            {
-                materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "kevlar", coverage = 100, thickness = 1 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                covers = {
+                    "head",
+                    "torso",
+                    "arm_l",
+                    "arm_r",
+                    "hand_l",
+                    "hand_r",
+                    "leg_l",
+                    "leg_r",
+                    "foot_l",
+                    "foot_r",
                 },
-                covers = { "hand_l", "hand_r" },
-                subparts = { "hand_palm_r", "hand_wrist_r", "hand_palm_l", "hand_wrist_l" },
-                coverage = 100,
-                encumbrance = { 0, 0 },
             },
-            {
-                materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "kevlar", coverage = 25, thickness = 1 },
-                    { id = "lycra", coverage = 100, thickness = 1 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
-                },
-                covers = { "hand_l", "hand_r" },
-                subparts = { "hand_fingers_r", "hand_fingers_l" },
-                coverage = 100,
-                encumbrance = { 0, 0 },
-            },
-            {
-                materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "thermo_resin", coverage = 85, thickness = 1 },
-                    { id = "kevlar", coverage = 100, thickness = 1 },
-                    { id = "kevlar", coverage = 90, thickness = 1 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
-                },
-                covers = { "foot_l", "foot_r" },
-                subparts = { "foot_ankle_l", "foot_heel_l", "foot_ankle_r", "foot_heel_r" },
-                coverage = 100,
-                encumbrance = { 25, 25 },
-            },
-            {
-                materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "hc_steel", coverage = 25, thickness = 1 },
-                    { id = "kevlar", coverage = 100, thickness = 2 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
-                },
-                covers = { "foot_l", "foot_r" },
-                subparts = { "foot_arch_l", "foot_arch_r" },
-                coverage = 100,
-                encumbrance = { 0, 0 },
-            },
-            {
-                materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "hc_steel", coverage = 100, thickness = 1 },
-                    { id = "kevlar", coverage = 100, thickness = 2 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
-                },
-                covers = { "foot_l", "foot_r" },
-                subparts = { "foot_toes_l", "foot_toes_r" },
-                coverage = 100,
-                encumbrance = { 0, 0 },
-            },
-            {
-                materials = {
-                    { id = "rubber", coverage = 100, thickness = 6 },
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                },
-                covers = { "foot_l", "foot_r" },
-                subparts = { "foot_sole_l", "foot_sole_r" },
-                coverage = 100,
-                encumbrance = { 0, 0 },
-            },
-            {
-                materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
-                },
-                covers = { "head", "torso", "leg_l", "leg_r", "arm_l", "arm_r" },
-                coverage = 100,
-                encumbrance = { 7, 7 },
-            },
-        },
-        warmth = 40,
-        environmental_protection = 20,
-    },
-    use_actions = {
-        {
-            kind = "transform",
-            menu_text = ccb.content.text("Wear casually"),
-            message = ccb.content.text("You slip out of the top of the suit and tie the sleeves around your waist."),
-            target = "robofac_enviro_suit_casual",
         },
     },
 }
 
--- The boots are reinforced with plastic plates throughout to protect against penetration.
--- The Kevlar is 2mm thick over most of the boots, and 1mm thick for flexible joints.
--- Steel shank for excellent arch support and to maintain boot shape for longevity.
--- encumbrance accounted for above
--- Steel toes
--- encumbrance accounted for above
--- encumbrance accounted for above
 ccb.content.define_item {
-    id = "robofac_enviro_suit_casual",
-    copy_from = "robofac_enviro_suit",
-    name = ccb.content.plural_text("Hub 01 environmental suit (casual)", "Hub 01 environmental suits (casual)"),
-    description = ccb.content.text("A lightweight environmental suit incorporating Kevlar-lined boots, worn by Hub personnel in their rare forays aboveground.  Colored brown and blue, the upper portion has been tied around the waist casually."),
-    inheritance = { remove = { flags = { "RAINPROOF", "GAS_PROOF", "RAD_PROOF", "ELECTRIC_IMMUNE" } } },
+    id = "xl_entry_suit",
+    name = ccb.content.text("entry suit"),
+    copy_from = "entry_suit",
+    armor = {},
+    inheritance = {
+        add = { flags = { "OVERSIZE", "PREFIX_XL" } },
+        scale = { mass = 1.125, volume = 1.13, price = 1.25 },
+    },
+}
+
+ccb.content.define_item {
+    id = "entry_suit_xs",
+    copy_from = "entry_suit",
+    looks_like = "entry_suit",
+    name = ccb.content.text("entry suit"),
+    armor = {},
+    inheritance = {
+        add = { flags = { "UNDERSIZE", "PREFIX_XS" } },
+        scale = { mass = 0.75, volume = 0.75, price = 0.5 },
+    },
+}
+
+-- real bite suits are made with linen, but we don't have linen, so denim is the closest approx. (canvas is always waterproofed and these suits are not)
+-- skip second entry for arm encumbrance
+ccb.content.define_item {
+    id = "bite_suit",
+    category = "armor",
+    name = ccb.content.text("canine bite suit"),
+    description = ccb.content.text("Designed to stop the injuries of dog bites, this thick, one piece suit is often used in the rehabilitation of abused animals and in training dogs by the police and military.  A base layer of aramid fabric has had strips of soft body armor sewn into it to mimic quilting, and to soften the blunt of animals jumping, slashing, or pouncing on the wearer."),
+    mass = "11556 g",
+    volume = "8255 ml",
+    price = "200 USD",
+    survival_price = "100 USD",
+    materials = { "kevlar", "denim" },
+    symbol = "[",
+    looks_like = "coat_winter",
+    color = "light_gray",
+    flags = { "VARSIZE", "STURDY", "NONCONDUCTIVE" },
     armor = {
+        warmth = 50,
+        thickness = 4,
+        valid_mods = { "steel_padded" },
         portions = {
             {
                 materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "thermo_resin", coverage = 85, thickness = 1 },
-                    { id = "kevlar", coverage = 100, thickness = 1 },
-                    { id = "kevlar", coverage = 90, thickness = 1 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                    { id = "kevlar", coverage = 95, thickness = 4 },
+                    { id = "denim", coverage = 100, thickness = 3 },
                 },
-                covers = { "foot_l", "foot_r" },
-                subparts = { "foot_ankle_l", "foot_heel_l", "foot_ankle_r", "foot_heel_r" },
+                covers = { "torso" },
                 coverage = 100,
-                encumbrance = { 25, 25 },
+                encumbrance = 30,
             },
             {
                 materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "hc_steel", coverage = 25, thickness = 1 },
-                    { id = "kevlar", coverage = 100, thickness = 2 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                    { id = "kevlar", coverage = 100, thickness = 4 },
+                    { id = "denim", coverage = 100, thickness = 3 },
                 },
-                covers = { "foot_l", "foot_r" },
-                subparts = { "foot_arch_l", "foot_arch_r" },
+                covers = { "arm_l", "arm_r" },
+                subparts = { "arm_upper_l", "arm_lower_l", "arm_upper_r", "arm_lower_r" },
                 coverage = 100,
-                encumbrance = { 0, 0 },
+                encumbrance = 30,
             },
             {
                 materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "hc_steel", coverage = 100, thickness = 1 },
-                    { id = "kevlar", coverage = 100, thickness = 2 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                    { id = "kevlar", coverage = 70, thickness = 4 },
+                    { id = "denim", coverage = 100, thickness = 3 },
                 },
-                covers = { "foot_l", "foot_r" },
-                subparts = { "foot_toes_l", "foot_toes_r" },
+                covers = { "arm_l", "arm_r" },
+                subparts = { "arm_elbow_l", "arm_shoulder_l", "arm_elbow_r", "arm_shoulder_r" },
                 coverage = 100,
-                encumbrance = { 0, 0 },
+                encumbrance = 0,
             },
             {
                 materials = {
-                    { id = "rubber", coverage = 100, thickness = 6 },
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                },
-                covers = { "foot_l", "foot_r" },
-                subparts = { "foot_sole_l", "foot_sole_r" },
-                coverage = 100,
-                encumbrance = { 0, 0 },
-            },
-            {
-                materials = {
-                    { id = "nomex", coverage = 100, thickness = 2 },
-                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                    { id = "kevlar", coverage = 95, thickness = 4 },
+                    { id = "kevlar", coverage = 100, thickness = 3 },
                 },
                 covers = { "leg_l", "leg_r" },
                 coverage = 100,
-                encumbrance = { 7, 7 },
+                encumbrance = 30,
             },
         },
     },
-    use_actions = {
-        {
-            kind = "transform",
-            menu_text = ccb.content.text("Wear normally"),
-            message = ccb.content.text("You untie the sleeves and put back on the top of the suit."),
-            target = "robofac_enviro_suit",
+}
+
+-- Should be substantially more difficult to repair than ordinary plastic - ch_steel is difficulty 7
+ccb.content.define_item {
+    id = "hazmat_suit",
+    repair_like = "ch_steel_lump",
+    category = "armor",
+    name = ccb.content.text("hazmat suit"),
+    description = ccb.content.text("An impermeable whole-body garment worn as protection against hazardous materials.  Restrictive and fragile, wearing it will provide complete protection against ambient radiation.  It requires a separate gas mask for full protection."),
+    mass = "5000 g",
+    volume = "17 L",
+    price = "1 kUSD 175 USD",
+    survival_price = "15 USD",
+    materials = { "plastic" },
+    symbol = "[",
+    looks_like = "beekeeping_suit",
+    color = "yellow",
+    flags = {
+        "VARSIZE",
+        "WATERPROOF",
+        "RAINPROOF",
+        "GAS_PROOF",
+        "RAD_PROOF",
+        "ELECTRIC_IMMUNE",
+        "OUTER",
+        "SOFT",
+    },
+    armor = {
+        warmth = 40,
+        thickness = 2,
+        environmental_protection = 20,
+        portions = {
+            {
+                encumbrance = 37,
+                coverage = 100,
+                covers = {
+                    "head",
+                    "torso",
+                    "arm_l",
+                    "arm_r",
+                    "hand_l",
+                    "hand_r",
+                    "leg_l",
+                    "leg_r",
+                    "foot_l",
+                    "foot_r",
+                },
+            },
         },
+    },
+}
+
+ccb.content.define_item {
+    id = "nomex_suit",
+    name = ccb.content.text("flame-resistant suit"),
+    description = ccb.content.text("A snug body suit made from thin and lightweight Nomex fire-resistant fabric.  Tough yet breathable, it is light and comfortable to wear under clothing."),
+    mass = "688 g",
+    volume = "1500 ml",
+    price = "130 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { "nomex" },
+    symbol = "[",
+    looks_like = "jumpsuit",
+    color = "light_gray",
+    flags = { "VARSIZE", "WATER_FRIENDLY", "SKINTIGHT", "STURDY" },
+    armor = {
+        warmth = 5,
+        thickness = 2,
+        environmental_protection = 2,
+        portions = {
+            {
+                encumbrance = 6,
+                coverage = 100,
+                covers = { "leg_l", "leg_r", "torso", "arm_l", "arm_r" },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "xl_nomex_suit",
+    name = ccb.content.text("flame-resistant suit"),
+    copy_from = "nomex_suit",
+    armor = {},
+    inheritance = {
+        add = { flags = { "OVERSIZE", "PREFIX_XL" } },
+        scale = { mass = 1.125, volume = 1.13, price = 1.25 },
+    },
+}
+
+ccb.content.define_item {
+    id = "nomex_suit_xs",
+    copy_from = "nomex_suit",
+    looks_like = "nomex_suit",
+    name = ccb.content.text("flame-resistant suit"),
+    armor = {},
+    inheritance = {
+        add = { flags = { "UNDERSIZE", "PREFIX_XS" } },
+        scale = { mass = 0.75, volume = 0.75, price = 0.5 },
     },
 }

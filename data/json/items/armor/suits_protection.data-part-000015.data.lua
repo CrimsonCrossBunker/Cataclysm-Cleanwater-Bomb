@@ -1,217 +1,151 @@
 local ccb = require("ccb")
 
+-- 2mm Nomex across the entire suit with a waterproof silicone outer to provide hazmat properties. Hands and feet reinforced/shaped with other materials to provide full-body hazmat protection with minimal encumbrance.
+-- Back of hand from the wrist to the knuckles can be stiffer but still needs a little flexibility. This area can afford the most thickness on gloves.
+-- Molded knuckle plates, spacious enough inside the gloves to flex your knuckles fine while providing extra knuckle protection because busting your knuckles sucks.
+-- encumbrance accounted for above
+-- A bit of Kevlar between the third and second knuckles, the part of the fingers where flexibility is least important.
+-- Fingers need to be the most flexible and tactile part of the hand. Lycra/nylon blend (as the lycra material is defined) will give both those qualities while sacrificing the least protection.
+-- encumbrance accounted for above
+-- The boots are reinforced with plastic plates throughout to protect against penetration.
+-- The Kevlar is 2mm thick over most of the boots, and 1mm thick for flexible joints.
+-- Steel shank for excellent arch support and to maintain boot shape for longevity.
+-- encumbrance accounted for above
+-- Steel toes
+-- encumbrance accounted for above
+-- encumbrance accounted for above
 ccb.content.define_item {
-    id = "suit",
-    name = ccb.content.text("suit"),
-    description = ccb.content.text("A full-body cotton suit.  Makes the apocalypse a truly gentlemanly experience."),
-    mass = "1587 g",
-    volume = "4750 ml",
-    price = "200 USD",
-    survival_price = "5 USD",
-    materials = { "cotton" },
-    symbol = "[",
-    looks_like = "jumpsuit",
-    color = "light_gray",
-    pockets = {
-        {
-            kind = "CONTAINER",
-            capacity = "700 ml",
-            mass_limit = "2 kg",
-            max_item_length = "15 cm",
-            moves = 80,
-        },
-        {
-            kind = "CONTAINER",
-            capacity = "700 ml",
-            mass_limit = "2 kg",
-            max_item_length = "15 cm",
-            moves = 80,
-        },
-        {
-            kind = "CONTAINER",
-            capacity = "250 ml",
-            mass_limit = "1 kg",
-            max_item_length = "12 cm",
-            moves = 120,
-        },
-        {
-            kind = "CONTAINER",
-            capacity = "250 ml",
-            mass_limit = "1 kg",
-            max_item_length = "12 cm",
-            moves = 120,
-        },
-        {
-            kind = "CONTAINER",
-            capacity = "350 ml",
-            mass_limit = "1 kg",
-            max_item_length = "12 cm",
-            moves = 80,
-        },
-        {
-            kind = "CONTAINER",
-            capacity = "350 ml",
-            mass_limit = "1 kg",
-            max_item_length = "12 cm",
-            moves = 80,
-        },
-        {
-            kind = "CONTAINER",
-            capacity = "250 ml",
-            mass_limit = "1 kg",
-            max_item_length = "10 cm",
-            moves = 100,
-        },
-        {
-            kind = "CONTAINER",
-            capacity = "250 ml",
-            mass_limit = "1 kg",
-            max_item_length = "10 cm",
-            moves = 100,
-        },
-    },
-    flags = { "VARSIZE", "POCKETS", "OUTER" },
-    armor = {
-        portions = {
-            { covers = { "torso" }, coverage = 95, encumbrance = { 7, 13 } },
-            { covers = { "leg_l", "leg_r" }, coverage = 95, encumbrance = { 7, 10 } },
-            { covers = { "arm_l", "arm_r" }, coverage = 95, encumbrance = { 7, 7 } },
-        },
-        warmth = 25,
-        thickness = 0.8,
-    },
-}
-
-ccb.content.define_item {
-    id = "touring_suit",
+    id = "robofac_resonance_suit",
     category = "armor",
-    name = ccb.content.text("track touring suit"),
-    description = ccb.content.text("A leather bodysuit with padding in high-impact areas, meant for motorcyclists out on the track.  The leather is stiff but makes the armor much sturdier and more protective than lighter counterparts."),
-    mass = "4700 g",
-    volume = "6500 ml",
-    price = "580 USD",
-    survival_price = "10 USD",
-    accuracy = { grip = "none", length = "hand", surface = "any", balance = "neutral" },
-    materials = { "leather", "plastic_pad" },
+    name = ccb.content.plural_text("Hub 01 hazardous materials suit", "Hub 01 hazardous materials suits"),
+    description = ccb.content.text("A hefty environmental suit incorporating Kevlar-lined boots and gloves, worn by Hub personnel in their rare forays aboveground.  This one has a large battery pack and otherworldly electronics which snake the entire exterior, making it substantially more cumbersome to wear than its base model.  Colored brown and blue, the white seal of Hub 01 is embroidered on both of its upper arms.  It requires a separate gas mask for full protection.  Activate it to turn on."),
+    mass = "5000 g",
+    volume = "18 L",
+    price = "1 kUSD 175 USD",
+    survival_price = "40 USD",
+    materials = { "nomex", "kevlar", "hc_steel", "thermo_resin", "lycra", "vinyl" },
     symbol = "[",
-    looks_like = "jumpsuit",
-    color = "light_red",
+    looks_like = "hazmat_suit",
+    color = "brown",
     pockets = {
         {
-            kind = "CONTAINER",
-            capacity = "800 ml",
-            mass_limit = "1 kg",
-            max_item_length = "13 cm",
-            moves = 120,
+            kind = "MAGAZINE_WELL",
+            rigid = true,
+            allowed_flags = { "BATTERY_HEAVY" },
+            default_magazine = "heavy_battery_cell",
         },
+    },
+    flags = {
+        "WATERPROOF", "RAINPROOF", "GAS_PROOF", "RAD_PROOF", "ELECTRIC_IMMUNE", "STURDY", "NO_REPAIR",
+        "NANOFAB_REPAIR",
+    },
+    subtype_order = { "armor", "tool", "artifact" },
+    armor = {
+        portions = {
+            {
+                materials = {
+                    { id = "nomex", coverage = 100, thickness = 2 },
+                    { id = "kevlar", coverage = 100, thickness = 2 },
+                    { id = "thermo_resin", coverage = 30, thickness = 2 },
+                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                },
+                covers = { "hand_l", "hand_r" },
+                subparts = { "hand_back_r", "hand_back_l" },
+                coverage = 100,
+                encumbrance = { 16, 16 },
+            },
+            {
+                materials = {
+                    { id = "nomex", coverage = 100, thickness = 2 },
+                    { id = "kevlar", coverage = 100, thickness = 1 },
+                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                },
+                covers = { "hand_l", "hand_r" },
+                subparts = { "hand_palm_r", "hand_wrist_r", "hand_palm_l", "hand_wrist_l" },
+                coverage = 100,
+                encumbrance = { 0, 0 },
+            },
+            {
+                materials = {
+                    { id = "nomex", coverage = 100, thickness = 2 },
+                    { id = "kevlar", coverage = 25, thickness = 1 },
+                    { id = "lycra", coverage = 100, thickness = 1 },
+                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                },
+                covers = { "hand_l", "hand_r" },
+                subparts = { "hand_fingers_r", "hand_fingers_l" },
+                coverage = 100,
+                encumbrance = { 0, 0 },
+            },
+            {
+                materials = {
+                    { id = "nomex", coverage = 100, thickness = 2 },
+                    { id = "thermo_resin", coverage = 85, thickness = 1 },
+                    { id = "kevlar", coverage = 100, thickness = 1 },
+                    { id = "kevlar", coverage = 90, thickness = 1 },
+                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                },
+                covers = { "foot_l", "foot_r" },
+                subparts = { "foot_ankle_l", "foot_heel_l", "foot_ankle_r", "foot_heel_r" },
+                coverage = 100,
+                encumbrance = { 25, 25 },
+            },
+            {
+                materials = {
+                    { id = "nomex", coverage = 100, thickness = 2 },
+                    { id = "hc_steel", coverage = 25, thickness = 1 },
+                    { id = "kevlar", coverage = 100, thickness = 2 },
+                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                },
+                covers = { "foot_l", "foot_r" },
+                subparts = { "foot_arch_l", "foot_arch_r" },
+                coverage = 100,
+                encumbrance = { 0, 0 },
+            },
+            {
+                materials = {
+                    { id = "nomex", coverage = 100, thickness = 2 },
+                    { id = "hc_steel", coverage = 100, thickness = 1 },
+                    { id = "kevlar", coverage = 100, thickness = 2 },
+                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                },
+                covers = { "foot_l", "foot_r" },
+                subparts = { "foot_toes_l", "foot_toes_r" },
+                coverage = 100,
+                encumbrance = { 0, 0 },
+            },
+            {
+                materials = {
+                    { id = "rubber", coverage = 100, thickness = 6 },
+                    { id = "nomex", coverage = 100, thickness = 2 },
+                },
+                covers = { "foot_l", "foot_r" },
+                subparts = { "foot_sole_l", "foot_sole_r" },
+                coverage = 100,
+                encumbrance = { 0, 0 },
+            },
+            {
+                materials = {
+                    { id = "nomex", coverage = 100, thickness = 2 },
+                    { id = "vinyl", coverage = 100, thickness = 0.2 },
+                },
+                covers = { "head", "torso", "leg_l", "leg_r", "arm_l", "arm_r" },
+                coverage = 100,
+                encumbrance = { 14, 14 },
+            },
+        },
+        warmth = 40,
+        environmental_protection = 20,
+    },
+    tool = { ammo_types = "battery" },
+    artifact = { enchantments = { "resonance_suit_active" } },
+    use_actions = {
         {
-            kind = "CONTAINER",
-            capacity = "800 ml",
-            mass_limit = "1 kg",
-            max_item_length = "13 cm",
-            moves = 120,
+            kind = "transform",
+            message = ccb.content.text("A tiny green LED on the chest of the %s lights up."),
+            target = "robofac_resonance_suit_on",
+            need_charges = 1,
+            need_charges_message = ccb.content.text("It seems like this device needs power."),
         },
-    },
-    flags = { "VARSIZE", "WATERPROOF", "RAINPROOF", "OUTER", "POCKETS", "STURDY", "BLOCK_WHILE_WORN" },
-    melee_damage = { bash = 2 },
-    armor = {
-        portions = {
-            {
-                materials = {
-                    { id = "plastic_pad", coverage = 90, thickness = 14.0 },
-                    { id = "leather", coverage = 100, thickness = 1.5 },
-                },
-                covers = { "torso" },
-                coverage = 100,
-                encumbrance = { 25, 25 },
-            },
-            {
-                materials = {
-                    { id = "plastic_pad", coverage = 80, thickness = 14.0 },
-                    { id = "leather", coverage = 100, thickness = 1.5 },
-                },
-                covers = { "arm_l", "arm_r" },
-                coverage = 100,
-                encumbrance = { 25, 25 },
-            },
-            {
-                materials = {
-                    { id = "plastic_pad", coverage = 80, thickness = 14.0 },
-                    { id = "leather", coverage = 100, thickness = 1.5 },
-                },
-                covers = { "leg_l", "leg_r" },
-                coverage = 100,
-                encumbrance = { 25, 25 },
-            },
-        },
-        warmth = 25,
-        thickness = 4.3,
-        valid_mods = { "steel_padded" },
-        environmental_protection = 3,
-    },
-}
-
-ccb.content.define_item {
-    id = "officer_uniform",
-    name = ccb.content.text("dress uniform"),
-    description = ccb.content.text("A military officer's dress uniform from before the Cataclysm, complete with rank and ribbons.  Just looking at it gives you an air of authority.  Perhaps not the most practical military wear, but a very stylish option."),
-    mass = "1653 g",
-    volume = "4750 ml",
-    price = "224 USD",
-    survival_price = "5 USD 50 cent",
-    materials = { "cotton" },
-    symbol = "[",
-    looks_like = "suit",
-    color = "dark_gray",
-    pockets = {
-        { kind = "CONTAINER", capacity = "700 ml", mass_limit = "2 kg", moves = 80 },
-        { kind = "CONTAINER", capacity = "700 ml", mass_limit = "2 kg", moves = 80 },
-        { kind = "CONTAINER", capacity = "250 ml", mass_limit = "1 kg", moves = 120 },
-        { kind = "CONTAINER", capacity = "250 ml", mass_limit = "1 kg", moves = 120 },
-        { kind = "CONTAINER", capacity = "350 ml", mass_limit = "1 kg", moves = 80 },
-        { kind = "CONTAINER", capacity = "350 ml", mass_limit = "1 kg", moves = 80 },
-        { kind = "CONTAINER", capacity = "250 ml", mass_limit = "1 kg", moves = 100 },
-        { kind = "CONTAINER", capacity = "250 ml", mass_limit = "1 kg", moves = 100 },
-    },
-    flags = { "OVERSIZE", "VARSIZE", "POCKETS", "RAINPROOF", "STURDY" },
-    armor = {
-        portions = {
-            { covers = { "torso" }, coverage = 95, encumbrance = { 7, 13 } },
-            { covers = { "leg_l", "leg_r" }, coverage = 95, encumbrance = { 7, 10 } },
-            { covers = { "arm_l", "arm_r" }, coverage = 95, encumbrance = { 7, 7 } },
-        },
-        warmth = 15,
-        thickness = 0.5,
-        environmental_protection = 3,
-    },
-}
-
-ccb.content.define_item {
-    id = "mil_flight_suit",
-    name = ccb.content.text("military flight suit"),
-    description = ccb.content.text("A sage-green US military flight suit.  It has various insignia embroidered onto it."),
-    mass = "1315 g",
-    volume = "4687 ml",
-    price = "220 USD 65 cent",
-    survival_price = "5 USD",
-    materials = { "nomex" },
-    symbol = "[",
-    looks_like = "touring_suit",
-    color = "green",
-    pockets = {
-        { kind = "CONTAINER", capacity = "700 ml", mass_limit = "2 kg", moves = 80 },
-        { kind = "CONTAINER", capacity = "700 ml", mass_limit = "2 kg", moves = 80 },
-        { kind = "CONTAINER", capacity = "250 ml", mass_limit = "1 kg", moves = 100 },
-        { kind = "CONTAINER", capacity = "250 ml", mass_limit = "1 kg", moves = 100 },
-    },
-    flags = { "VARSIZE", "POCKETS" },
-    armor = {
-        portions = {
-            { covers = { "torso" }, coverage = 95, encumbrance = { 1, 2 } },
-            { covers = { "arm_l", "arm_r" }, coverage = 50, encumbrance = { 1, 1 } },
-            { covers = { "leg_l", "leg_r" }, coverage = 80, encumbrance = { 1, 2 } },
-        },
-        warmth = 25,
-        thickness = 0.8,
     },
 }
