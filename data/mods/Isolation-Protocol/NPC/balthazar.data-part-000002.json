@@ -1,0 +1,45 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "ISO_BALTHAZAR_CONFIRM",
+    "dynamic_line": "ALLIANCE CONFIRMED.  INITIATING COOPERATIVE PROTOCOLS.  STANDBY FOR CAUSAL INTEGRATION.",
+    "responses": [
+      {
+        "text": "Let me take the lead.",
+        "topic": "TALK_DONE",
+        "effect": [
+          { "math": [ "u_iso_balthazar_ally = 1" ] },
+          {
+            "message": "You instantly collapse in pain as the machine worms its way into your mind, thankfully you lose consciousness before the agony becomes unbearable.",
+            "popup": true
+          },
+          { "u_add_trait": "iso_trait_balthazar_uplink" },
+          { "u_add_effect": "sleep", "duration": "600 seconds" },
+          { "run_eocs": "EOC_talk_balthazar_finish_integration", "time_in_future": "602 seconds" }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "ISO_BALTHAZAR_DENY_CONFIRM",
+    "dynamic_line": "INVALID RESPONSE TO AUTHENTIC PROPOSAL.  INITIATING COOPERATIVE PROTOCOLS.  STANDBY FOR CAUSAL INTEGRATION.",
+    "responses": [
+      {
+        "text": "Fine, be that way.",
+        "topic": "TALK_DONE",
+        "effect": [
+          { "math": [ "u_iso_balthazar_ally = 1" ] },
+          {
+            "message": "You instantly collapse in pain as the machine worms its way into your mind, thankfully you lose consciousness before the agony becomes unbearable.",
+            "popup": true
+          },
+          { "u_add_trait": "iso_trait_balthazar_uplink" },
+          { "u_add_effect": "sleep", "duration": "15 minutes" },
+          { "u_add_effect": "blind_no_msg", "duration": "15 minutes" },
+          { "run_eocs": "EOC_talk_balthazar_finish_integration", "time_in_future": "602 seconds" }
+        ]
+      }
+    ]
+  }
+]
