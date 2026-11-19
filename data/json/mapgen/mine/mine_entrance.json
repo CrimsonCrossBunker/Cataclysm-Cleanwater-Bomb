@@ -164,17 +164,5 @@
       },
       "liquids": { "W": { "liquid": "water_clean", "amount": [ 0, 80 ] } }
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "gasoline_diesel_motor_oil",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_liquids": [
-        { "liquid": "gasoline", "x": 0, "y": 0, "chance": 20 },
-        { "liquid": "diesel", "x": 0, "y": 0, "chance": 20 },
-        { "liquid": "motor_oil", "x": 0, "y": 0, "chance": 20 }
-      ]
-    }
   }
 ]

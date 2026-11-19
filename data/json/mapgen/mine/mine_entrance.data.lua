@@ -42,3 +42,16 @@ ccb.content.define_mapgen {
         field_placements = { { id = "fd_mechanical_fluid", x = 0, y = 0, intensity = 1, age_turns = 10 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "gasoline_diesel_motor_oil",
+    layout = {
+        size = { width = 1, height = 1 },
+        liquid_placements = {
+            { id = "gasoline", x = 0, y = 0, one_in = 20 },
+            { id = "diesel", x = 0, y = 0, one_in = 20 },
+            { id = "motor_oil", x = 0, y = 0, one_in = 20 },
+        },
+    },
+}
