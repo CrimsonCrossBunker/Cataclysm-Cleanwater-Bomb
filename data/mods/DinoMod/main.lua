@@ -33,3 +33,5 @@ require("sauropod_damage_spells")
 require("sauropod_control")
 
 require("sauropod_death")
+
+require("monster_groups")
