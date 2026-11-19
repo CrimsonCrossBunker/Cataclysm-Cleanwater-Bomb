@@ -1,0 +1,83 @@
+[
+  {
+    "id": "mon_troll",
+    "type": "MONSTER",
+    "name": "troll",
+    "description": "A monstrous, green-skinned humanoid, almost three meters tall but as thin as the average human.  Trolls are renowned for their thick hides and natural regenerative ability.",
+    "default_faction": "magical_beast",
+    "bodytype": "human",
+    "species": [ "MAGICAL_BEAST" ],
+    "volume": "200000 ml",
+    "weight": "225 kg",
+    "//": "Ratio taken from normal humans--D&D-esque trolls are supposed to be very thin for their size.",
+    "hp": 400,
+    "speed": 110,
+    "material": [ "flesh" ],
+    "symbol": "T",
+    "color": "light_green",
+    "aggression": 100,
+    "morale": 100,
+    "melee_skill": 5,
+    "melee_dice": 2,
+    "melee_dice_sides": 6,
+    "melee_damage": [ { "damage_type": "cut", "amount": 6 } ],
+    "dodge": 1,
+    "vision_day": 45,
+    "vision_night": 3,
+    "harvest": "human_large_leather",
+    "families": [ "prof_gross_anatomy", "prof_intro_biology", "prof_wp_demihuman", "prof_wp_hulk" ],
+    "weakpoint_sets": [ "wps_humanoid_body", "wps_vital_organs", "wps_eyes" ],
+    "grab_strength": 50,
+    "special_attacks": [
+      { "id": "bite_humanoid", "damage_max_instance": [ { "damage_type": "cut", "amount": 25, "armor_penetration": 12 } ] },
+      { "id": "grab", "cooldown": 15 },
+      {
+        "id": "scratch_humanoid",
+        "cooldown": 6,
+        "damage_max_instance": [ { "damage_type": "cut", "amount": 18, "armor_penetration": 8 } ]
+      },
+      {
+        "id": "slam",
+        "cooldown": 5,
+        "damage_max_instance": [ { "damage_type": "bash", "amount": 20 } ],
+        "condition": { "not": { "u_has_effect": "maimed_arm" } }
+      },
+      { "id": "smash", "throw_strength": 96 },
+      {
+        "id": "mon_troll_regenerate_limb",
+        "type": "spell",
+        "spell_data": { "id": "mon_troll_regenerate_limb_spell", "hit_self": true },
+        "cooldown": 15,
+        "condition": { "and": [ { "math": [ "u_hp('ALL') > 200" ] }, { "u_has_effect": "maimed_arm" } ] }
+      }
+    ],
+    "regenerates": 12,
+    "regeneration_modifiers": [ [ "onfire", -12 ] ],
+    "flags": [
+      "SEES",
+      "HEARS",
+      "SMELLS",
+      "KEENNOSE",
+      "HAS_MIND",
+      "PATH_AVOID_DANGER",
+      "PATH_AVOID_FIRE",
+      "WARM",
+      "GRABS",
+      "FLAMMABLE"
+    ],
+    "zombify_into": "mon_troll_zombie",
+    "armor": { "cut": 16, "bullet": 13, "heat": -15, "acid": -15 }
+  },
+  {
+    "id": "mon_troll_stone",
+    "type": "MONSTER",
+    "copy-from": "mon_troll",
+    "looks_like": "mon_troll",
+    "name": "rock troll",
+    "description": "A monstrous, gray-skinned humanoid, almost three meters tall but as thin as the average human.  Rock trolls have rocky skin that's almost impervious to hand weapons, but they turn to stone in the sunlight.",
+    "melee_damage": [ { "damage_type": "bash", "amount": 18 } ],
+    "armor": { "bash": 15, "stab": 40, "cut": 35, "bullet": 13, "heat": -30, "acid": -30 },
+    "extend": { "flags": [ "SUNDEATH" ] },
+    "death_function": { "eoc": "EOC_ROCK_TROLL_TURN_TO_STONE", "corpse_type": "NO_CORPSE", "message": "The %s turns to stone." }
+  }
+]
