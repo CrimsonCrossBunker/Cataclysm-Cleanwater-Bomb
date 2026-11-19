@@ -1,59 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ "afs_crashed_cargo_shuttle" ],
-    "object": {
-      "predecessor_mapgen": "glacial_field",
-      "rows": [
-        "                        ",
-        "               -        ",
-        "             ,,0-       ",
-        "        #####,,,        ",
-        "       #----##    T,,   ",
-        "      0-----0--   ,,    ",
-        "      ###,--##     ,    ",
-        "     , ##,--, -   T     ",
-        "    TT,##,--,, #   #    ",
-        "     T,##,--,### TT#    ",
-        "      #---RR--#  ###    ",
-        "      #-,-II-,,   ##,   ",
-        "       ,,#II,  ,   #,   ",
-        "       ,,######,    ,   ",
-        "       ,,#,####      , ,",
-        "         ,###,,,        ",
-        "      TT   ##,,, ,      ",
-        "            ##,, ,      ",
-        "             ##,,,      ",
-        "             ##,,,      ",
-        "                ,,,     ",
-        "         T,     .,,     ",
-        "         ,,             ",
-        "          ,            ,"
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "terrain": {
-        "-": "t_afs_space_ship_hull_wall",
-        "T": "t_intermodal_crate",
-        "q": "t_afs_escapepod_g",
-        "!": "t_metal_floor",
-        ",": "t_dirt",
-        "#": "t_dirtmound"
-      },
-      "furniture": {
-        "R": "f_afs_reactor_meltdown",
-        "#": [ [ "f_wreckage", 1 ], [ "f_null", 15 ] ],
-        "I": "f_afs_shuttle_fusion_engine",
-        "0": "f_afs_shuttle_manuevering_thruster"
-      },
-      "items": {
-        "T": { "item": "afs_useless_cargo", "chance": 100 },
-        ",": { "item": "afs_shuttle_debris", "chance": 30 },
-        "#": { "item": "afs_shuttle_debris", "chance": 6 }
-      }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "afs_crashed_cargo_shuttle_wraitheon" ],
     "object": {
       "predecessor_mapgen": "glacial_field",
