@@ -29,11 +29,5 @@
     "carry_override": "NC_robofac_generic_security_misc",
     "worn_override": "NC_robofac_generic_security_worn",
     "weapon_override": "NC_robofac_security_weapon"
-  },
-  {
-    "id": "TALK_HUB_SECURITY",
-    "type": "talk_topic",
-    "dynamic_line": [ "Keep it civil, merc.", "Just on watch, move along.", { "u_male": [ "Sir." ], "no": [ "Ma'am" ] } ],
-    "responses": [ { "text": "…", "topic": "TALK_DONE" } ]
   }
 ]
