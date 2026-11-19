@@ -9,11 +9,5 @@
         "condition": { "or": [ { "u_has_trait": "TELEPATH" }, { "math": [ "jmath_telepathy_knacks_combined_level() > 10" ] } ] }
       }
     ]
-  },
-  {
-    "id": [ "TALK_PORTAL_TRAVELER_telepathy" ],
-    "type": "talk_topic",
-    "dynamic_line": "«Jasz vata aralas mat!  On de farah shatan!  Mazeh jast ond!»",
-    "responses": [ { "text": "Well, that didn't help either.", "topic": "TALK_DONE" } ]
   }
 ]

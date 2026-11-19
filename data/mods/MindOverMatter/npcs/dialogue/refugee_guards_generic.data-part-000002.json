@@ -1,0 +1,23 @@
+[
+  {
+    "id": [ "TALK_EVAC_GUARD1" ],
+    "type": "talk_topic",
+    "responses": [
+      {
+        "text": "[Premonition] *Determine if <npc_name> is a threat*",
+        "topic": "TALK_EVAC_GUARD1_danger_sense",
+        "condition": {
+          "or": [
+            { "math": [ "u_spell_level('clair_danger_sense') >= 2" ] },
+            { "math": [ "u_spell_level('clair_danger_sense_knack') >= 8" ] }
+          ]
+        }
+      },
+      {
+        "text": "[Telepathy] *Read <npc_name>'s mind*",
+        "topic": "TALK_EVAC_GUARD1_scan",
+        "condition": { "or": [ { "u_has_trait": "TELEPATH" }, { "math": [ "jmath_telepathy_knacks_combined_level() > 10" ] } ] }
+      }
+    ]
+  }
+]
