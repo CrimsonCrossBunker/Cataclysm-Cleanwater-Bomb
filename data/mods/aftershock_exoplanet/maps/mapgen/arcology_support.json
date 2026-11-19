@@ -104,31 +104,6 @@
     }
   },
   {
-    "//": "Top level 'lab_spawn_XXXXX' templates are for use in floorplans.",
-    "//2": "Spawn for a room at least 7x7, walls often but not guaranteed.",
-    "type": "mapgen",
-    "nested_mapgen_id": "lab_spawn_7x7",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "place_nested": [
-        { "chunks": [ [ "lab_room_7x7", 97 ], [ "lab_room_7x7_rare", 3 ] ], "x": 0, "y": 0 },
-        { "chunks": [ "lab_maybe_effects_7x7" ], "x": 0, "y": 0 }
-      ]
-    }
-  },
-  {
-    "//": "Spawn for a room exactly 7x7 with doors only in the center of each wall.",
-    "type": "mapgen",
-    "nested_mapgen_id": "lab_spawn_7x7_crossdoors",
-    "object": {
-      "mapgensize": [ 9, 9 ],
-      "place_nested": [
-        { "chunks": [ [ "lab_room_7x7", 33 ], [ "lab_room_7x7_crossdoors", 63 ], [ "lab_room_7x7_rare", 3 ] ], "x": 0, "y": 0 },
-        { "chunks": [ "lab_maybe_effects_7x7" ], "x": 0, "y": 0 }
-      ]
-    }
-  },
-  {
     "//": "7x7 cyborg & dissector",
     "type": "mapgen",
     "nested_mapgen_id": "lab_room_7x7",
@@ -412,17 +387,6 @@
     }
   },
   {
-    "type": "mapgen",
-    "nested_mapgen_id": "sub_f_crate",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "X" ],
-      "palettes": [ "lab_palette", "lab_loot_research" ],
-      "//": "Places a crate, 25% chance of being pre-opened.",
-      "furniture": { "X": [ "f_crate_c", "f_crate_c", "f_crate_c", "f_crate_o" ] }
-    }
-  },
-  {
     "//": "7x7 machine room",
     "type": "mapgen",
     "nested_mapgen_id": "lab_room_7x7",
@@ -432,24 +396,6 @@
         { "chunks": [ "sub_t_machinery" ], "x": [ 0, 6 ], "y": [ 0, 6 ], "repeat": 10 },
         { "chunks": [ "sub_t_machinery", "sub_f_crate" ], "x": [ 0, 6 ], "y": [ 0, 6 ], "repeat": 5 }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "sub_t_machinery",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "A" ],
-      "furniture": {
-        "A": [
-          "f_machinery_heavy",
-          "f_machinery_heavy",
-          "f_machinery_electronic",
-          "f_machinery_light",
-          "f_centrifuge",
-          "f_console_broken"
-        ]
-      }
     }
   },
   {
@@ -585,14 +531,6 @@
       "furniture": { "a": "f_ash" },
       "item": { "a": [ { "item": "ash", "amount": 4, "chance": 100 }, { "item": "bone_human", "amount": [ 3, 5 ], "chance": 50 } ] },
       "items": { "a": { "item": "science", "chance": 10 } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "lab_maybe_effects_7x7",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "place_nested": [ { "chunks": [ [ "null", 98 ], [ "lab_add_spiders_7x7", 2 ] ], "x": 0, "y": 0 } ]
     }
   },
   {
