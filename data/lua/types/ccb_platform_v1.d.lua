@@ -7621,6 +7621,91 @@ function CcbPlatformContent.Item(options) end
 ---@param options StaticItemOptions
 function CcbPlatformContent.define_item(options) end
 
+---@alias StaticDialogueParticipant 'speaker'|'interlocutor'
+
+---@class StaticDialogueGenderedLine
+---@field gendered string
+---@field participants StaticDialogueParticipant[]
+
+---@class StaticDialogueRandomLine
+---@field choices StaticDialogueLine[] Choose one with the native dialogue RNG.
+
+---@class StaticDialogueJoinedLine
+---@field joined StaticDialogueLine[] Concatenate each line in order.
+
+---@alias StaticDialogueLine string|LocalizedText|StaticDialogueGenderedLine|StaticDialogueRandomLine|StaticDialogueJoinedLine
+
+---Record literal gendered dialogue text for native translation at display time.
+---@param text string
+---@param participants StaticDialogueParticipant[]
+---@return StaticDialogueGenderedLine
+function CcbPlatformContent.gendered_line(text, participants) end
+
+---@alias StaticDialogueNativeAction
+---| 'assign_mission'|'mission_success'|'mission_failure'|'clear_mission'|'mission_reward'
+---| 'start_trade'|'assign_guard'|'stop_guard'|'wake_up'|'reveal_stats'|'end_conversation'
+---| 'insult_combat'|'give_equipment'|'give_aid'|'give_all_aid'|'bionic_install'|'bionic_remove'
+---| 'follow'|'follow_only'|'deny_follow'|'deny_lead'|'deny_equipment'|'deny_train'|'deny_personal_info'
+---| 'hostile'|'flee'|'leave'|'stop_following'|'goto_location'|'stranger_neutral'|'start_mugging'
+---| 'player_leaving'|'drop_weapon'|'drop_stolen_item'|'remove_stolen_status'
+---| 'player_weapon_away'|'player_weapon_drop'|'lead_to_safety'|'start_training'
+---| 'start_training_npc'|'start_training_seminar'|'npc_rules_menu'|'clear_overrides'|'npc_thankful'|'nothing'
+
+---@class StaticDialogueOpinion
+---@field trust? integer
+---@field fear? integer
+---@field value? integer
+---@field anger? integer
+---@field owed? integer
+---@field sold? integer
+
+---@class StaticDialogueOutcome
+---@field next_topic? string Native topic id.
+---@field native_actions? StaticDialogueNativeAction[] Built-in conversation operations in execution order.
+---@field opinion? StaticDialogueOpinion
+---@field mission_opinion? StaticDialogueOpinion
+
+---@class StaticDialogueTrialModifier
+---@field score string Native dialogue trial score id.
+---@field scale integer
+
+---@class StaticDialogueTrial
+---@field kind? 'none'|'lie'|'persuade'|'intimidate'|'skill_check'
+---@field difficulty? integer Required for an active trial.
+---@field skill? string Required for a skill check.
+---@field modifiers? StaticDialogueTrialModifier[]
+
+---@class StaticDialogueReply : StaticDialogueOutcome
+---@field text? string|LocalizedText
+---@field trial? StaticDialogueTrial
+---@field success? StaticDialogueOutcome
+---@field failure? StaticDialogueOutcome
+---@field switch? boolean
+---@field default? boolean
+---@field show_always? boolean
+---@field show_reason? string
+---@field failure_topic? string
+---@field failure_explanation? string|LocalizedText
+
+---@class StaticDialogueRepeatReply
+---@field reply StaticDialogueReply
+---@field items? string[] Match items in inventory.
+---@field categories? string[] Match items by category.
+---@field interlocutor_inventory? boolean Use the interlocutor's inventory.
+---@field include_containers? boolean Compare category against a container's contents.
+
+---@class StaticDialogueTopicOptions
+---@field id string|string[] Topic id or aliases.
+---@field line? StaticDialogueLine
+---@field replies? StaticDialogueReply[]
+---@field repeat_replies? StaticDialogueRepeatReply[]
+---@field insert_before_standard_exits? boolean
+---@field replace_native_replies? boolean
+
+---Contribute dialogue in native Mod data order, appending to existing topics with the same id.
+---@param options StaticDialogueTopicOptions
+function CcbPlatformContent.define_dialogue_topic(options) end
+
 ---@class StaticMutationLinks
 ---@field categories? string[]
 ---@field prerequisites? string[]

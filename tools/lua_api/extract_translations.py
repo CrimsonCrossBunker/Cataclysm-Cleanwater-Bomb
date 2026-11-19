@@ -271,16 +271,23 @@ def _dialogue_translation_edits(source: str) -> list[tuple[int, int, str]]:
 
 
 def _gendered_translation_edits(source: str) -> list[tuple[int, int, str]]:
-    """Extract literal live-dialogue gendered text without evaluating Lua."""
-    if "gendered_text" not in source:
+    """Extract literal gendered dialogue without evaluating Lua."""
+    if "gendered_text" not in source and "gendered_line" not in source:
         return []
     tokens = _lua_tokens(source)
     edits = []
     roles = {"speaker": "u", "interlocutor": "npc"}
     for index, token in enumerate(tokens):
+        live_line = (
+            token.value == "gendered_text" and index > 0
+            and tokens[index - 1].value == ":"
+        )
+        static_line = (
+            token.value == "gendered_line" and index >= 4
+            and [t.value for t in tokens[index - 4:index]] == ["ccb", ".", "content", "."]
+        )
         if (
-            token.kind != "identifier" or token.value != "gendered_text" or
-            index == 0 or tokens[index - 1].value != ":" or
+            token.kind != "identifier" or not (live_line or static_line) or
             index + 4 >= len(tokens) or tokens[index + 1].value != "(" or
             tokens[index + 2].kind != "string" or
             tokens[index + 3].value != "," or tokens[index + 4].value != "{"

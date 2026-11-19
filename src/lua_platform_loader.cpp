@@ -11,6 +11,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <limits>
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -48,6 +49,7 @@ extern "C" {
 #include "lua_platform_sol.h"
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
+#include "dialogue.h"
 #include "native_file_path.h"
 #include "generic_factory.h"
 #include "item_factory.h"
@@ -2354,6 +2356,223 @@ void load_static_item( const sol::table &options, const std::string &source )
     items::load( json_loader::from_string( serialized.str() ).get_object(), source );
 }
 
+sol::table static_gendered_dialogue_line( sol::this_state state, const std::string &text,
+        const sol::table &participants )
+{
+    sol::state_view lua( state );
+    sol::table line = lua.create_table();
+    line["gendered"] = text;
+    line["participants"] = participants;
+    return line;
+}
+
+void write_static_dialogue_line( JsonOut &json, const sol::object &line )
+{
+    if( line.get_type() != sol::type::table ) {
+        write_item_text_value( json, "dialogue line", line, false );
+        return;
+    }
+    const sol::table options = line.as<sol::table>();
+    const auto choices = options.get<sol::optional<sol::table>>( "choices" );
+    const auto joined = options.get<sol::optional<sol::table>>( "joined" );
+    const auto gendered = options.get<sol::optional<std::string>>( "gendered" );
+    if( choices.has_value() + joined.has_value() + gendered.has_value() != 1 ) {
+        throw std::invalid_argument( "dialogue line requires choices, joined lines, or gendered text" );
+    }
+    if( choices || joined ) {
+        const sol::table &lines = choices ? *choices : *joined;
+        if( choices && lines.size() == 0 ) {
+            throw std::invalid_argument( "random dialogue line requires at least one choice" );
+        }
+        if( joined ) {
+            json.start_object();
+            json.member( "concatenate" );
+        }
+        json.start_array();
+        for( std::size_t i = 1, count = lines.size(); i <= count; ++i ) {
+            write_static_dialogue_line( json, lines.raw_get<sol::object>( i ) );
+        }
+        json.end_array();
+        if( joined ) {
+            json.end_object();
+        }
+        return;
+    }
+    const sol::table roles = options.get<sol::table>( "participants" );
+    std::vector<std::string> participants = bounded_string_array( roles, "participants", 2,
+                                            "gendered dialogue" );
+    for( std::string &role : participants ) {
+        if( role == "speaker" ) {
+            role = "u";
+        } else if( role == "interlocutor" ) {
+            role = "npc";
+        } else {
+            throw std::invalid_argument( "gendered dialogue participants must be speaker or interlocutor" );
+        }
+    }
+    json.start_object();
+    json.member( "gendered_line", *gendered );
+    json.member( "relevant_genders", participants );
+    json.end_object();
+}
+
+void write_static_dialogue_outcome( JsonOut &json, const sol::table &outcome )
+{
+    write_placement_member<std::string>( json, outcome, "next_topic", "topic" );
+    if( const auto actions = outcome.get<sol::optional<sol::table>>( "native_actions" ) ) {
+        static const std::set<std::string_view> available = {
+            "assign_mission", "mission_success", "mission_failure", "clear_mission", "mission_reward",
+            "start_trade", "assign_guard", "stop_guard", "wake_up", "reveal_stats", "end_conversation",
+            "insult_combat", "give_equipment", "give_aid", "give_all_aid", "bionic_install",
+            "bionic_remove", "follow", "follow_only", "deny_follow", "deny_lead", "deny_equipment",
+            "deny_train", "deny_personal_info", "hostile", "flee", "leave", "stop_following",
+            "goto_location", "stranger_neutral", "start_mugging", "player_leaving", "drop_weapon",
+            "drop_stolen_item", "remove_stolen_status", "player_weapon_away", "player_weapon_drop",
+            "lead_to_safety", "start_training", "start_training_npc", "start_training_seminar",
+            "npc_rules_menu", "clear_overrides", "npc_thankful", "nothing",
+        };
+        const auto names = bounded_string_array( *actions, "native_actions",
+                           std::numeric_limits<std::size_t>::max(), "dialogue reply" );
+        for( const std::string &name : names ) {
+            if( available.count( name ) == 0 ) {
+                throw std::invalid_argument( "unsupported native dialogue action: " + name );
+            }
+        }
+        json.member( "effect", names );
+    }
+    for( const char *field : { "opinion", "mission_opinion" } ) {
+        if( const auto opinion = outcome.get<sol::optional<sol::table>>( field ) ) {
+            json.member( field );
+            json.start_object();
+            write_item_fields<int>( json, *opinion, {
+                { "trust", "trust" }, { "fear", "fear" }, { "value", "value" },
+                { "anger", "anger" }, { "owed", "owed" }, { "sold", "sold" },
+            } );
+            json.end_object();
+        }
+    }
+}
+
+void write_static_dialogue_trial( JsonOut &json, const sol::table &trial )
+{
+    static const std::map<std::string_view, std::string_view> trial_kinds = {
+        { "none", "NONE" }, { "lie", "LIE" }, { "persuade", "PERSUADE" },
+        { "intimidate", "INTIMIDATE" }, { "skill_check", "SKILL_CHECK" },
+    };
+    json.member( "trial" );
+    json.start_object();
+    if( const auto kind = trial.get<sol::optional<std::string>>( "kind" ) ) {
+        const auto native = trial_kinds.find( *kind );
+        if( native == trial_kinds.end() ) {
+            throw std::invalid_argument( "unsupported dialogue trial: " + *kind );
+        }
+        json.member( "type", native->second );
+    }
+    write_placement_member<int>( json, trial, "difficulty", "difficulty" );
+    write_placement_member<std::string>( json, trial, "skill", "skill_required" );
+    if( const auto modifiers = trial.get<sol::optional<sol::table>>( "modifiers" ) ) {
+        json.member( "mod" );
+        json.start_array();
+        for( std::size_t i = 1, count = modifiers->size(); i <= count; ++i ) {
+            const sol::table modifier = modifiers->raw_get<sol::table>( i );
+            json.start_array();
+            json.write( modifier.get<std::string>( "score" ) );
+            json.write( modifier.get<int>( "scale" ) );
+            json.end_array();
+        }
+        json.end_array();
+    }
+    json.end_object();
+}
+
+void write_static_dialogue_reply( JsonOut &json, const sol::table &reply )
+{
+    json.start_object();
+    write_item_text( json, "text", reply.raw_get<sol::object>( "text" ), false );
+    write_static_dialogue_outcome( json, reply );
+    write_item_fields<bool>( json, reply, {
+        { "switch", "switch" }, { "default", "default" }, { "show_always", "show_always" },
+    } );
+    write_item_fields<std::string>( json, reply, {
+        { "show_reason", "show_reason" }, { "failure_topic", "failure_topic" },
+    } );
+    write_item_text( json, "failure_explanation", reply.raw_get<sol::object>( "failure_explanation" ), false );
+    if( const auto trial = reply.get<sol::optional<sol::table>>( "trial" ) ) {
+        write_static_dialogue_trial( json, *trial );
+    }
+    for( const char *field : { "success", "failure" } ) {
+        if( const auto outcome = reply.get<sol::optional<sol::table>>( field ) ) {
+            json.member( field );
+            json.start_object();
+            write_static_dialogue_outcome( json, *outcome );
+            json.end_object();
+        }
+    }
+    json.end_object();
+}
+
+void load_static_dialogue_topic( const sol::table &options, const std::string &source )
+{
+    std::ostringstream serialized;
+    JsonOut json( serialized );
+    json.start_object();
+    json.member( "type", "talk_topic" );
+    const sol::object id = options.raw_get<sol::object>( "id" );
+    if( id.get_type() == sol::type::table ) {
+        const auto ids = bounded_string_array( id.as<sol::table>(), "id",
+                         std::numeric_limits<std::size_t>::max(), "dialogue topic" );
+        if( ids.empty() ) {
+            throw std::invalid_argument( "dialogue topic requires at least one id" );
+        }
+        json.member( "id", ids );
+    } else {
+        json.member( "id", id.as<std::string>() );
+    }
+    const sol::object line = options.raw_get<sol::object>( "line" );
+    if( line.get_type() != sol::type::nil ) {
+        json.member( "dynamic_line" );
+        write_static_dialogue_line( json, line );
+    }
+    write_item_fields<bool>( json, options, {
+        { "insert_before_standard_exits", "insert_before_standard_exits" },
+        { "replace_native_replies", "replace_built_in_responses" },
+    } );
+    if( const auto replies = options.get<sol::optional<sol::table>>( "replies" ) ) {
+        json.member( "responses" );
+        json.start_array();
+        for( std::size_t i = 1, count = replies->size(); i <= count; ++i ) {
+            write_static_dialogue_reply( json, replies->raw_get<sol::table>( i ) );
+        }
+        json.end_array();
+    }
+    if( const auto repeats = options.get<sol::optional<sol::table>>( "repeat_replies" ) ) {
+        json.member( "repeat_responses" );
+        json.start_array();
+        for( std::size_t i = 1, count = repeats->size(); i <= count; ++i ) {
+            const sol::table repeat = repeats->raw_get<sol::table>( i );
+            json.start_object();
+            write_item_ids( json, repeat, { { "items", "for_item" }, { "categories", "for_category" } } );
+            if( repeat.get_or( "interlocutor_inventory", false ) ) {
+                json.member( "is_npc", true );
+            }
+            if( repeat.get_or( "include_containers", false ) ) {
+                json.member( "include_containers", true );
+            }
+            json.member( "response" );
+            write_static_dialogue_reply( json, repeat.get<sol::table>( "reply" ) );
+            json.end_object();
+        }
+        json.end_array();
+    }
+    json.end_object();
+
+    // Use the native accumulator so same-id contributions and aliases retain
+    // their JSON/Lua interleaving, including replies inserted above exits.
+    const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
+    static_cast<void>( definition.get_string( "type" ) );
+    load_talk_topic( definition, source );
+}
+
 void write_static_mutation_links( JsonOut &json, const sol::table &options )
 {
     write_item_ids( json, options, {
@@ -3346,6 +3565,10 @@ void load_mod_content_with_data( const mod_source &source,
         return selected_mod_ids.count( id ) != 0;
     } );
     content.set_function( "define_mapgen", load_static_mapgen );
+    content.set_function( "gendered_line", static_gendered_dialogue_line );
+    content.set_function( "define_dialogue_topic", [&resolved]( const sol::table &options ) {
+        load_static_dialogue_topic( options, resolved.id );
+    } );
     content.set_function( "define_item", [&resolved]( const sol::table &options ) {
         load_static_item( options, resolved.id );
     } );
