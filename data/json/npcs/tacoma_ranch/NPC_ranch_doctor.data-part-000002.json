@@ -31,19 +31,5 @@
       "no": "Are you all right?  Sci-fi bionic by robots in a stone castle?  I have some antipsychotics, if it helps."
     },
     "responses": [ { "text": "<end_talking_leave>", "topic": "TALK_DONE" } ]
-  },
-  {
-    "id": "TALK_RANCH_DOCTOR_SUPPLIES",
-    "type": "talk_topic",
-    "dynamic_line": "I'm running out of office supplies.  I know… of all the things to need at a time like this!  I just need to be able to keep track of and organize medical records so that I can focus on helping people.  Ten binders and a ream of paper should tide me over until some shipments come in.",
-    "responses": [
-      {
-        "text": "I'll see what I can find.",
-        "topic": "TALK_DONE",
-        "effect": [ { "npc_add_var": "mission_tacoma_ranch_doctor_completed_supplies", "value": "no" } ]
-      },
-      { "text": "<end_talking_nevermind>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
