@@ -106,23 +106,5 @@
         }
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_FRIEND_FOLLOWER_BLOODFEED_NOPE",
-    "dynamic_line": "Nope.  I'm not going to be your blood bag.  Find someone else for that.",
-    "responses": [
-      { "text": "Got it.  Can we talk about something else?", "topic": "TALK_FRIEND" },
-      { "text": "Got it.  See you later.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_FRIEND_FOLLOWER_BLOODFEED_IMPOSSIBLE",
-    "dynamic_line": "(As you approach to ask about letting you drink their blood, your senses tell you that whatever blood they have in their veins wouldn't nourish you at all, so you decide to not ask your question)",
-    "responses": [
-      { "text": "(Ask them about something else)", "topic": "TALK_FRIEND" },
-      { "text": "(Go do something else)", "topic": "TALK_DONE" }
-    ]
   }
 ]

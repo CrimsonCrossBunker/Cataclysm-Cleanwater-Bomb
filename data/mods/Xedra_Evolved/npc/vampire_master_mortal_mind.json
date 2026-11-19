@@ -104,14 +104,5 @@
         "condition": { "math": [ "u_vitamin('human_blood_vitamin') <= -501" ] }
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_YOUR_NEW_RENFIELD",
-    "dynamic_line": "[As your blood is consumed to reshape who they are, you see something die in their eyes, replaced by an obsession to follow your orders]",
-    "responses": [
-      { "text": "I want to discuss with you.", "topic": "TALK_FRIEND" },
-      { "text": "Just follow me and my orders for now.", "topic": "TALK_DONE" }
-    ]
   }
 ]
