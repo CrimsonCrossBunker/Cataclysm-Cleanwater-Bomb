@@ -1,0 +1,53 @@
+[
+  {
+    "id": "BGSS_LOST_PARTNER_2_NOTYET",
+    "type": "talk_topic",
+    "dynamic_line": "I appreciate the sentiment, but I don't think it would.  Drop it.",
+    "responses": [
+      {
+        "text": "OK.",
+        "effect": { "npc_add_effect": "player_BGSS_SAIDNO", "duration": 7000 },
+        "topic": "TALK_FRIEND_CONVERSATION"
+      },
+      {
+        "text": "<end_talking>",
+        "effect": { "npc_add_effect": "player_BGSS_SAIDNO", "duration": 7000 },
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "id": "BGSS_LOST_PARTNER_2_FUCKOFF",
+    "type": "talk_topic",
+    "dynamic_line": "Oh, just shut the fuck up already.  This doesn't have anything to do with you, or with us.",
+    "responses": [ { "text": "…", "effect": { "npc_add_effect": "player_BGSS_SAIDNO", "duration": 14000 }, "topic": "TALK_DONE" } ]
+  },
+  {
+    "id": "BGSS_LOST_PARTNER_2_STORY2",
+    "type": "talk_topic",
+    "dynamic_line": [
+      {
+        "npc_female": true,
+        "yes": "All right, fine.  I had someone.  I lost him.",
+        "no": "All right, fine.  I had someone.  I lost her."
+      }
+    ],
+    "responses": [
+      {
+        "text": "What happened?",
+        "effect": { "npc_add_effect": "player_BGSS_SAIDYES", "duration": "PERMANENT" },
+        "topic": "BGSS_LOST_PARTNER_2_STORY3"
+      },
+      {
+        "text": "Never mind.  Sorry I brought it up.",
+        "effect": { "npc_add_effect": "player_BGSS_SAIDYES", "duration": "PERMANENT" },
+        "topic": "TALK_FRIEND_CONVERSATION"
+      },
+      {
+        "text": "<end_talking>",
+        "effect": { "npc_add_effect": "player_BGSS_SAIDYES", "duration": "PERMANENT" },
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]
