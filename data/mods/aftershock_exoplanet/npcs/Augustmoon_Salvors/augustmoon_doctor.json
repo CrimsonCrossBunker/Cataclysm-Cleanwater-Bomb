@@ -108,27 +108,5 @@
       },
       { "text": "Never mind.", "topic": "TALK_NONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_MERCURIAL_DOCTOR_BIONICS_DONE",
-    "dynamic_line": [
-      "Now some protocol tests for brain damage.  Please stare at the light over there…",
-      "It might take some days for your nervous system to adapt.  Come back if you experience any concerning symptoms like…",
-      "I suggest you take it easy for a few days now."
-    ],
-    "responses": [ { "text": "…", "topic": "TALK_DONE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_MERCURIAL_DOCTOR_AID_DONE",
-    "dynamic_line": [
-      "Take it easy now, or come back soon.  All the same to me.",
-      {
-        "gendered_line": "Now try not to do whatever you did again.  No, don't tell me more.",
-        "relevant_genders": [ "u" ]
-      }
-    ],
-    "responses": [ { "text": "…", "topic": "TALK_DONE" } ]
   }
 ]
