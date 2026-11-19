@@ -1,16 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CHOP_SHOP_INTEL",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ],
-      "yes": "&Your HUD flicks on and low-resolution version of Pat's computer desktop becomes visible.  They start to scan old, grainy satellite images downloaded from Google maps.  \"Old strip mall, yeah?  But looky-theah.  Looks like theah's some window-vents ovah the fahkin' hoppah - the head - the fahkin' toilet.  If I were you, I'd climb up in theah, find ya' way in, make sure ya' set up an escape, and do what needs doin'.\"",
-      "no": "&Pat flips open their laptop and wiggles the cable attached to a makeshift battery.  It boots up after a moment and they clack away, looking at old, grainy satellite images downloaded from Google maps.  \"Old strip mall, yeah?  But looky-theah.  Looks like theah's some window-vents ovah the fahkin' hoppah - the head - the fahkin' toilet.  If I were you, I'd climb up in theah, find ya' way in, make sure ya' set up an escape, and do what needs doin'.\""
-    },
-    "responses": [ { "text": "Thanks, Pat.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" } ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CIRCUIT_SAFARI",
     "dynamic_line": {
       "compare_string": [ "yes", { "u_val": "robofac_pat_gave_circuit_safari_intel" } ],
@@ -54,19 +44,6 @@
           { "u_add_var": "robofac_pat_gave_circuit_safari_intel", "value": "yes" }
         ]
       }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CIRCUIT_SAFARI_TELL_PAT_ABOUT_IMPLANT",
-    "dynamic_line": "&Pat chortles.  \"Well, I dunno about all that, but it explains a lot about you, pal, not gonna lie.  In that case, just don't go lettin'em scan that ugly mug'a yours.  World's already sufferin' enough with extra copies of that goin' around, hah!\"",
-    "responses": [
-      {
-        "text": "Hah, will do, Pat.  So, about those coordinates…",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_gave_circuit_safari_intel" } ] } },
-        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CIRCUIT_SAFARI_INTEL"
-      },
-      { "text": "Hah, thanks, Pat.  Will do.  See you around.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" }
     ]
   }
 ]

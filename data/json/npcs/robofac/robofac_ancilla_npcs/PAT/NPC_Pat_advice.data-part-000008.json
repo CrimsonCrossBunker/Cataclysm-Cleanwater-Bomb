@@ -13,35 +13,5 @@
         ]
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_directions_isherwood",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "u_met_an_isherwood" } ],
-      "yes": "It's just that Isherwood farm, yeah?",
-      "no": "More recon is good for me.  Go locked and loaded, yeah?"
-    },
-    "responses": [ { "text": "Thanks a lot.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_directions_exodii",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Rubik" } ],
-      "yes": "You've been there, remember?  It's got those fahkin' robots!",
-      "no": "I say this a lot, but go strapped, yeah?  Don't like the sound of that."
-    },
-    "responses": [ { "text": "Thanks a lot.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_directions_artisans",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "u_met_isolated_road_artisans" } ],
-      "yes": "You've been there, remember?  Cody n' Jay.",
-      "no": "Could always use more bullets.  If it's like anywhere else, I bet they got work.  Make sure ya' check in if they do."
-    },
-    "responses": [ { "text": "Right.  Thanks a lot.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" } ]
   }
 ]

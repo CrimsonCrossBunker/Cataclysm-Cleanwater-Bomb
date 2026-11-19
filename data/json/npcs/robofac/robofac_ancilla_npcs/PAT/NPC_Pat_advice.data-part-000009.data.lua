@@ -1,24 +1,37 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_BEGGAR_2",
-    line = ccb.content.text("Takes all kinds, I guess.  Never been much for lizards.  Let's treat this as a 'you' job, yeah?"),
+    id = "TALK_ROBOFAC_MERC_PAT_ADVICE_directions_isherwood",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "u_met_an_isherwood" } }),
+        yes = ccb.content.text("It's just that Isherwood farm, yeah?"),
+        no = ccb.content.text("More recon is good for me.  Go locked and loaded, yeah?"),
+    },
+    replies = { { text = ccb.content.text("Thanks a lot."), next_topic = "TALK_ROBOFAC_MERC_PAT_ADVICE" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ROBOFAC_MERC_PAT_ADVICE_directions_exodii",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "general_meeting_u_met_Rubik" } }),
+        yes = ccb.content.text("You've been there, remember?  It's got those fahkin' robots!"),
+        no = ccb.content.text("I say this a lot, but go strapped, yeah?  Don't like the sound of that."),
+    },
+    replies = { { text = ccb.content.text("Thanks a lot."), next_topic = "TALK_ROBOFAC_MERC_PAT_ADVICE" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ROBOFAC_MERC_PAT_ADVICE_directions_artisans",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "u_met_isolated_road_artisans" } }),
+        yes = ccb.content.text("You've been there, remember?  Cody n' Jay."),
+        no = ccb.content.text("Could always use more bullets.  If it's like anywhere else, I bet they got work.  Make sure ya' check in if they do."),
+    },
     replies = {
         {
-            text = ccb.content.text("Yeah… Right.  I guess I'll handle it.  Thanks."),
+            text = ccb.content.text("Right.  Thanks a lot."),
             next_topic = "TALK_ROBOFAC_MERC_PAT_ADVICE",
         },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_SCIENCE_REP",
-    line = ccb.content.text("Workin' for the doctor is workin' for the feds.  Alright with me, but be careful."),
-    replies = { { text = ccb.content.text("Thanks."), next_topic = "TALK_ROBOFAC_MERC_PAT_ADVICE" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_RANCH_BARTENDER",
-    line = ccb.content.text("I think it's a GREAT idea.  Maybe we help'em out, they hook us up with a steady supply, yeah?  I heard some other mercs talkin' about a still they used to keep in the woods, before it all.  Maybe that's a good place to look?"),
-    replies = { { text = ccb.content.text("Thanks."), next_topic = "TALK_ROBOFAC_MERC_PAT_ADVICE" } },
 }
