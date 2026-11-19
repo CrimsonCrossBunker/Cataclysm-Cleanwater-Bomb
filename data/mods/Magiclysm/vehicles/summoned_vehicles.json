@@ -86,23 +86,5 @@
       "FLOATS"
     ],
     "damage_reduction": { "all": 12 }
-  },
-  {
-    "id": "mana",
-    "type": "ITEM",
-    "subtypes": [ "AMMO" ],
-    "category": "chems",
-    "name": { "str_sp": "mana core power" },
-    "description": { "str": "Seeing this is a bug.", "//~": "NO_I18N" },
-    "weight": "10 g",
-    "volume": "10 ml",
-    "phase": "solid",
-    "material": [ "mana" ],
-    "flags": [ "PSEUDO", "PERPETUAL" ],
-    "symbol": "?",
-    "color": "magenta",
-    "count": 1,
-    "ammo_type": "mana",
-    "melee_damage": { "bash": 1 }
   }
 ]
