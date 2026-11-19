@@ -1,0 +1,28 @@
+[
+  {
+    "id": "focused_bolt",
+    "type": "SPELL",
+    "name": "Focused Bolt",
+    "description": "You focus your mana into a microscopically thin pulsed beam of pure energy, capable of extreme range and precision; as well as unparalleled penetration, provided proper skill.  Once the invention of a notorious assassin, this spell has slain many a king and noble.  Passed on only through direct descendants over the ages, though occasionally shared by them to others.",
+    "effect": "attack",
+    "shape": "line",
+    "valid_targets": [ "hostile", "ground" ],
+    "flags": [ "EVOCATION_SPELL", "RANDOM_DAMAGE", "SOMATIC", "NO_LEGS", "CONCENTRATE", "SILENT", "NO_PROJECTILE" ],
+    "extra_effects": [ { "id": "eoc_evocation_setup", "hit_self": true } ],
+    "max_level": 30,
+    "min_damage": { "math": [ "(u_spell_level('focused_bolt') * 1) + 1" ] },
+    "max_damage": { "math": [ "(u_spell_level('focused_bolt') * 3) + 4" ] },
+    "damage_type": "nether",
+    "min_range": 5,
+    "max_range": 50,
+    "range_increment": 1.5,
+    "min_aoe": 5,
+    "max_aoe": 0,
+    "aoe_increment": -0.5,
+    "spell_class": "MAGUS",
+    "base_casting_time": 500,
+    "base_energy_cost": 400,
+    "magic_type": "magiclysm_evocation_magic",
+    "difficulty": 8
+  }
+]

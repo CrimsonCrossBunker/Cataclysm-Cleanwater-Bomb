@@ -1,0 +1,25 @@
+[
+  {
+    "id": "magic_missile",
+    "type": "SPELL",
+    "name": "Magic Missile",
+    "description": "I cast Magic Missile at the darkness!",
+    "valid_targets": [ "hostile" ],
+    "flags": [ "EVOCATION_SPELL", "RANDOM_DAMAGE", "VERBAL", "SOMATIC", "NO_LEGS", "SILENT", "NO_PROJECTILE" ],
+    "extra_effects": [ { "id": "eoc_evocation_setup", "hit_self": true } ],
+    "min_damage": { "math": [ "(u_spell_level('magic_missile') * 0.75) + 0" ] },
+    "max_damage": { "math": [ "(u_spell_level('magic_missile') * 1) + 3" ] },
+    "damage_type": "nether",
+    "min_range": 8,
+    "range_increment": 0.8,
+    "max_range": 20,
+    "base_energy_cost": 50,
+    "spell_class": "MAGUS",
+    "difficulty": 1,
+    "max_level": 15,
+    "base_casting_time": 100,
+    "magic_type": "magiclysm_evocation_magic",
+    "shape": "blast",
+    "effect": "attack"
+  }
+]
