@@ -117,14 +117,5 @@
     "id": "EOC_WEREWOLF_TRIGGERS_RED_HANDED_RAGE_CHANCE",
     "condition": { "math": [ "rand(15) > 14" ] },
     "effect": [ { "u_add_effect": "effect_werewolf_red_handed_rage_monster", "duration": 10 } ]
-  },
-  {
-    "id": "mon_werewolf_shadow_pack",
-    "copy-from": "mon_werewolf_elder",
-    "type": "MONSTER",
-    "looks_like": "mon_loup_garou",
-    "name": { "str": "shadow pack" },
-    "description": "A mighty hunter of the People from ages past, now given form again to join in the Hunt.",
-    "default_faction": "player"
   }
 ]
