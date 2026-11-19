@@ -1325,3 +1325,865 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- A nested map for the Phavian secret skyscraper lab room north on the north side, door in the lower right. This is a meeting room.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lrdoor",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "y......y",
+            "..ꞝccꞝ..",
+            "..cttc..",
+            "..cttc..",
+            "..cttc..",
+            "&.cttc..",
+            "d.ꞝccꞝ..",
+            "dddd....",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = {
+            { id = "water_clean", x = 4, y = 0, chance = 30, repetitions = { 1, 2 } },
+            { id = "water_clean", x = 5, y = 0, chance = 30, repetitions = { 1, 2 } },
+            { id = "water_clean", x = 6, y = 0, chance = 30, repetitions = { 1, 2 } },
+            { id = "water_clean", x = 7, y = 0, chance = 30, repetitions = { 1, 2 } },
+            { id = "water_clean", x = 7, y = 1, chance = 30, repetitions = { 1, 2 } },
+        },
+        item_groups = {
+            d = { group = "SUS_office_desk", chance = 50, repetitions = { 1, 2 } },
+            t = { group = "SUS_office_desk", chance = 20 },
+            ["&"] = { group = "SUS_trash_trashcan", chance = 75, repetitions = { 1, 2 } },
+            ["."] = { group = "SUS_office_mess", chance = 1 },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 0, 7 },
+                y = { 0, 7 },
+                chance = 50,
+                repetitions = { 2, 5 },
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        terrain = { t = "t_carpet_linoleum_gray_green", c = "t_carpet_linoleum_gray_green" },
+    },
+}
+
+-- A nested map for the Phavian secret skyscraper lab room north on the north side, door in the lower left. This is a meeting room.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lldoor",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "y......y",
+            "..ꞝccꞝ..",
+            "..cttc..",
+            "..cttc..",
+            "..cttc..",
+            "..cttc.&",
+            "..ꞝccꞝ.d",
+            "....dddd",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = {
+            { id = "water_clean", x = 4, y = 0, chance = 30, repetitions = { 1, 2 } },
+            { id = "water_clean", x = 5, y = 0, chance = 30, repetitions = { 1, 2 } },
+            { id = "water_clean", x = 6, y = 0, chance = 30, repetitions = { 1, 2 } },
+            { id = "water_clean", x = 7, y = 0, chance = 30, repetitions = { 1, 2 } },
+            { id = "water_clean", x = 7, y = 1, chance = 30, repetitions = { 1, 2 } },
+        },
+        item_groups = {
+            d = { group = "SUS_office_desk", chance = 50, repetitions = { 1, 2 } },
+            t = { group = "SUS_office_desk", chance = 20 },
+            ["&"] = { group = "SUS_trash_trashcan", chance = 75, repetitions = { 1, 2 } },
+            ["."] = { group = "SUS_office_mess", chance = 1 },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 0, 7 },
+                y = { 0, 7 },
+                chance = 50,
+                repetitions = { 2, 5 },
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        terrain = { t = "t_carpet_linoleum_gray_green", c = "t_carpet_linoleum_gray_green" },
+    },
+}
+
+-- A nested map for the Phavian secret skyscraper lab room north on the north side, door in the lower right. This is a general office room for writing reports
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lrdoor",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "dd&xFxdd",
+            "xc.c..c&",
+            "--....--",
+            "xc.....F",
+            "d.....cx",
+            "F..-...d",
+            "&c.-....",
+            "dxd-l..&",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            d = {
+                { group = "SUS_office_desk", chance = 30 },
+                { group = "dist_lab_file_phavian_internal", chance = 3 },
+            },
+            F = { group = "SUS_office_filing_cabinet", chance = 80 },
+            l = {
+                { group = "lab_torso", chance = 40, repetitions = { 1, 8 } },
+                { group = "lab_shoes", chance = 40, repetitions = { 1, 8 } },
+            },
+            ["&"] = { group = "SUS_trash_trashcan", chance = 75, repetitions = { 1, 2 } },
+            ["."] = { group = "SUS_office_mess", chance = 1 },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 6 },
+                y = { 1, 6 },
+                chance = 60,
+                repetitions = { 2, 5 },
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        terrain = {
+            ["."] = "t_carpet_linoleum_white_purple",
+            c = "t_carpet_linoleum_white_purple",
+            ["&"] = "t_carpet_linoleum_white_purple",
+            ["-"] = "t_carpet_linoleum_white_purple",
+        },
+    },
+}
+
+-- A nested map for the Phavian secret office lab room on the north side, door in the lower left.  This is a general office room for writing reports
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lldoor",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "ddxFx&dd",
+            "&c..c.cx",
+            "--....--",
+            "F.....cx",
+            "xc.....d",
+            "d...-..F",
+            "....-.c&",
+            "&..l-dxd",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            d = {
+                { group = "SUS_office_desk", chance = 30 },
+                { group = "dist_lab_file_phavian_internal", chance = 3 },
+                { group = "dist_lab_file_phavian_skyscraper_lab", chance = 3 },
+            },
+            F = { group = "SUS_office_filing_cabinet", chance = 80 },
+            l = {
+                { group = "lab_torso", chance = 40, repetitions = { 1, 8 } },
+                { group = "lab_shoes", chance = 40, repetitions = { 1, 8 } },
+            },
+            ["&"] = { group = "SUS_trash_trashcan", chance = 75, repetitions = { 1, 2 } },
+            ["."] = { group = "SUS_office_mess", chance = 1 },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 6 },
+                y = { 1, 6 },
+                chance = 60,
+                repetitions = { 2, 5 },
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        terrain = {
+            ["."] = "t_carpet_linoleum_white_purple",
+            c = "t_carpet_linoleum_white_purple",
+            ["&"] = "t_carpet_linoleum_white_purple",
+            ["-"] = "t_carpet_linoleum_white_purple",
+        },
+    },
+}
+
+-- A nested map for the Phavian secret skyscraper lab room north on the north side, door in the lower right. This is clairsentient location scout testing.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lrdoor",
+    weight = 850,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "........",
+            "..ꞝccꞝ..",
+            "..cttc..",
+            "..cttc..",
+            "..ꞝccꞝ..",
+            "........",
+            "dȼ.ȼ....",
+            "dxdx&..y",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            d = {
+                { group = "SUS_office_desk", chance = 80, repetitions = { 1, 2 } },
+                { group = "psi_testing_materials", chance = 50, repetitions = { 1, 2 } },
+            },
+            t = { group = "dist_maps", chance = 50, repetitions = { 1, 3 } },
+            ["&"] = { group = "SUS_trash_trashcan", chance = 75, repetitions = { 1, 2 } },
+            ["."] = { group = "SUS_office_mess", chance = 1 },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 0, 7 },
+                y = { 0, 7 },
+                chance = 50,
+                repetitions = { 2, 6 },
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette", "parametrized_carpets_nest_palette" },
+        terrain = {
+            t = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            c = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["ꞝ"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        furniture = { ["ȼ"] = "f_chair" },
+    },
+}
+
+-- A nested map for the Phavian secret skyscraper lab room north on the north side, door in the lower left. This is clairsentient location scout testing.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lldoor",
+    weight = 850,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "........",
+            "..ꞝccꞝ..",
+            "..cttc..",
+            "..cttc..",
+            "..ꞝccꞝ..",
+            "........",
+            "....ȼ.ȼd",
+            "y..&xdxd",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            d = {
+                { group = "SUS_office_desk", chance = 80, repetitions = { 1, 2 } },
+                { group = "psi_testing_materials", chance = 50, repetitions = { 1, 2 } },
+            },
+            t = { group = "dist_maps", chance = 50, repetitions = { 1, 3 } },
+            ["&"] = { group = "SUS_trash_trashcan", chance = 75, repetitions = { 1, 2 } },
+            ["."] = { group = "SUS_office_mess", chance = 1 },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 0, 7 },
+                y = { 0, 7 },
+                chance = 50,
+                repetitions = { 2, 6 },
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette", "parametrized_carpets_nest_palette" },
+        terrain = {
+            t = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            c = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["ꞝ"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        furniture = { ["ȼ"] = "f_chair" },
+    },
+}
+
+-- room for controlled awakening, doors in the lower right
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lrdoor",
+    weight = 750,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "........",
+            "...ct...",
+            "........",
+            ":f:==:f:",
+            "xc....cx",
+            "xc....cx",
+            "C.......",
+            "CCȻSl..&",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            C = {
+                { group = "psi_lab", chance = 60, repetitions = { 1, 3 } },
+                { group = "dist_lab_file_phavian_skyscraper_lab", chance = 5 },
+            },
+            ["Ȼ"] = { group = "cleaning", chance = 40, repetitions = { 1, 2 } },
+            l = {
+                { group = "lab_torso", chance = 40, repetitions = { 1, 8 } },
+                { group = "lab_shoes", chance = 40, repetitions = { 1, 8 } },
+            },
+            t = { { group = "dist_matrix_crystal_skyscraper_lab_group", chance = 85 } },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 7 },
+                y = { 1, 7 },
+                chance = 60,
+                repetitions = { 2, 6 },
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        furniture = { f = "f_air_filter", ["Ȼ"] = "f_counter" },
+    },
+}
+
+-- room for controlled awakening, doors in the lower left
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lldoor",
+    weight = 750,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "........",
+            "...tc...",
+            "........",
+            ":f:==:f:",
+            "xc....cx",
+            "xc....cx",
+            "........",
+            "&..lSȻCC",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            C = {
+                { group = "psi_lab", chance = 60, repetitions = { 1, 3 } },
+                { group = "dist_lab_file_phavian_skyscraper_lab", chance = 5 },
+            },
+            ["Ȼ"] = { group = "cleaning", chance = 40, repetitions = { 1, 2 } },
+            l = {
+                { group = "lab_torso", chance = 40, repetitions = { 1, 8 } },
+                { group = "lab_shoes", chance = 40, repetitions = { 1, 8 } },
+            },
+            t = { { group = "dist_matrix_crystal_skyscraper_lab_group", chance = 85 } },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 7 },
+                y = { 1, 7 },
+                chance = 60,
+                repetitions = { 2, 6 },
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        furniture = { f = "f_air_filter", ["Ȼ"] = "f_counter" },
+    },
+}
+
+-- room for testing blocking telepathy or clairsentience, doors in the lower left
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lldoor",
+    weight = 450,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "..P....C",
+            "cdP...cx",
+            "WWW....C",
+            "W.1...cȼ",
+            "WWW...cx",
+            "x......C",
+            "c.....cx",
+            "&..lSȻCC",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_spawns = {
+            ["ȼ"] = {
+                { id = "psionic_telepathic_dampener", chance = 70 },
+                { id = "schematics_telepathic_dampener", chance = 25 },
+            },
+            C = {
+                { id = "1l_lead", chance = 20 },
+                { id = "5l_steel", chance = 25 },
+                { id = "1l_gold", chance = 5 },
+                { id = "1l_tin", chance = 25 },
+                { id = "5l_copper", chance = 25 },
+                { id = "1l_silver", chance = 15 },
+                { id = "5l_iron", chance = 25 },
+                { id = "5l_brass", chance = 25 },
+                { id = "5l_aluminum", chance = 25 },
+                { id = "1l_platinum", chance = 5 },
+            },
+        },
+        item_groups = {
+            d = {
+                { group = "clairsentient_matrix_crystals_group", chance = 5 },
+                { group = "telepathic_matrix_crystals_group", chance = 5 },
+                { group = "psi_testing_materials", chance = 80, repetitions = { 2, 4 } },
+            },
+            C = {
+                { group = "psi_lab", chance = 20, repetitions = { 1, 3 } },
+                { group = "dist_lab_file_phavian_skyscraper_lab", chance = 5 },
+            },
+            ["Ȼ"] = { group = "cleaning", chance = 40, repetitions = { 1, 2 } },
+            l = {
+                { group = "lab_torso", chance = 40, repetitions = { 1, 8 } },
+                { group = "lab_shoes", chance = 40, repetitions = { 1, 8 } },
+            },
+            t = { { group = "dist_matrix_crystal_skyscraper_lab_group", chance = 85 } },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 7 },
+                y = { 1, 7 },
+                chance = 60,
+                repetitions = { 2, 6 },
+            },
+            {
+                group = "GROUP_FERAL_CLAIRSENTIENT_TELEPATH",
+                x = { 2, 6 },
+                y = { 2, 6 },
+                chance = 10,
+                repetitions = { 1, 2 },
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        terrain = { W = "t_wall_metal" },
+        furniture = { ["ȼ"] = "f_counter", P = "f_curtain" },
+    },
+}
+
+-- room for testing blocking telepathy or clairsentience, doors in the lower right
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lrdoor",
+    weight = 450,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "C....P..",
+            "xc...Pdc",
+            "C....WWW",
+            "ȼc...1.W",
+            "xc...WWW",
+            "C......x",
+            "cx.....c",
+            "CCȻSl..&",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_spawns = {
+            ["ȼ"] = {
+                { id = "psionic_telepathic_dampener", chance = 70 },
+                { id = "schematics_telepathic_dampener", chance = 25 },
+            },
+            C = {
+                { id = "1l_lead", chance = 20 },
+                { id = "5l_steel", chance = 25 },
+                { id = "1l_gold", chance = 5 },
+                { id = "1l_tin", chance = 25 },
+                { id = "5l_copper", chance = 25 },
+                { id = "1l_silver", chance = 15 },
+                { id = "5l_iron", chance = 25 },
+                { id = "5l_brass", chance = 25 },
+                { id = "5l_aluminum", chance = 25 },
+                { id = "1l_platinum", chance = 5 },
+            },
+        },
+        item_groups = {
+            d = {
+                { group = "psi_testing_materials", chance = 80, repetitions = { 2, 4 } },
+                { group = "telepathic_matrix_crystals_group", chance = 5 },
+                { group = "clairsentient_matrix_crystals_group", chance = 5 },
+            },
+            C = {
+                { group = "psi_lab", chance = 20, repetitions = { 1, 3 } },
+                { group = "dist_lab_file_phavian_skyscraper_lab", chance = 5 },
+            },
+            ["Ȼ"] = { group = "cleaning", chance = 40, repetitions = { 1, 2 } },
+            l = {
+                { group = "lab_torso", chance = 40, repetitions = { 1, 8 } },
+                { group = "lab_shoes", chance = 40, repetitions = { 1, 8 } },
+            },
+            t = { { group = "dist_matrix_crystal_skyscraper_lab_group", chance = 85 } },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 7 },
+                y = { 1, 7 },
+                chance = 60,
+                repetitions = { 2, 6 },
+            },
+            {
+                group = "GROUP_FERAL_CLAIRSENTIENT_TELEPATH",
+                x = { 2, 6 },
+                y = { 2, 6 },
+                chance = 10,
+                repetitions = { 1, 2 },
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        terrain = { W = "t_wall_metal" },
+        furniture = { ["ȼ"] = "f_counter", P = "f_curtain" },
+    },
+}
+
+-- room for creating matrix technology prototypes, doors in the lower left
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lldoor",
+    weight = 600,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "U......C",
+            "U..MM..M",
+            "U..CC..M",
+            "U..¢¢..C",
+            "&......C",
+            ":::==:::",
+            "........",
+            "&..llSĆĆ",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = { { id = "schematics_matrix_crystal_ground", x = 0, y = 0, chance = 75 } },
+        item_groups = {
+            ["¢"] = {
+                { group = "supplies_electronics", chance = 40, repetitions = { 1, 4 } },
+                { group = "hardware", chance = 20, repetitions = { 1, 3 } },
+                { group = "clairsentience_telepathy_matrix_technology", chance = 40 },
+            },
+            l = {
+                { group = "lab_torso", chance = 40, repetitions = { 1, 8 } },
+                { group = "lab_shoes", chance = 40, repetitions = { 1, 8 } },
+                { group = "hardware_clothing", chance = 60, repetitions = { 1, 5 } },
+                { group = "decontamination_room", chance = 10, repetitions = { 1, 3 } },
+            },
+            C = {
+                { group = "psi_lab_no_recipes", chance = 10, repetitions = { 1, 3 } },
+                { group = "supplies_electronics", chance = 40, repetitions = { 1, 4 } },
+                { group = "hardware", chance = 20, repetitions = { 1, 3 } },
+            },
+            U = {
+                { group = "psi_lab_no_recipes", chance = 40, repetitions = { 1, 3 } },
+                { group = "supplies_electronics", chance = 60, repetitions = { 1, 4 } },
+                { group = "hardware", chance = 40, repetitions = { 1, 5 } },
+            },
+            ["&"] = { group = "SUS_trash_trashcan", chance = 75, repetitions = { 1, 2 } },
+        },
+        monster_placements = {
+            {
+                id = "mon_zombie_technician",
+                x = { 1, 6 },
+                y = { 0, 4 },
+                repetitions = { 2, 4 },
+                chance = 50,
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        furniture = { ["¢"] = "f_counter", M = "f_machinery_electronic", ["Ć"] = "f_counter" },
+    },
+}
+
+-- room for creating matrix technology prototypes, doors in the lower right
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_north_lrdoor",
+    weight = 600,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "C......U",
+            "M..MM..U",
+            "M..CC..U",
+            "C..¢¢..U",
+            "C......&",
+            ":::==:::",
+            "........",
+            "ĆĆSll..&",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = { { id = "schematics_matrix_crystal_ground", x = 7, y = 0, chance = 75 } },
+        item_groups = {
+            ["¢"] = {
+                { group = "supplies_electronics", chance = 40, repetitions = { 1, 4 } },
+                { group = "hardware", chance = 20, repetitions = { 1, 3 } },
+                { group = "clairsentience_telepathy_matrix_technology", chance = 40 },
+            },
+            l = {
+                { group = "lab_torso", chance = 40, repetitions = { 1, 8 } },
+                { group = "lab_shoes", chance = 40, repetitions = { 1, 8 } },
+                { group = "hardware_clothing", chance = 60, repetitions = { 1, 5 } },
+                { group = "decontamination_room", chance = 10, repetitions = { 1, 3 } },
+            },
+            C = {
+                { group = "psi_lab_no_recipes", chance = 10, repetitions = { 1, 3 } },
+                { group = "supplies_electronics", chance = 40, repetitions = { 1, 4 } },
+                { group = "hardware", chance = 20, repetitions = { 1, 3 } },
+            },
+            U = {
+                { group = "psi_lab_no_recipes", chance = 40, repetitions = { 1, 3 } },
+                { group = "supplies_electronics", chance = 60, repetitions = { 1, 4 } },
+                { group = "hardware", chance = 40, repetitions = { 1, 5 } },
+            },
+            ["&"] = { group = "SUS_trash_trashcan", chance = 75, repetitions = { 1, 2 } },
+        },
+        monster_placements = {
+            {
+                id = "mon_zombie_technician",
+                x = { 1, 6 },
+                y = { 0, 4 },
+                repetitions = { 2, 4 },
+                chance = 50,
+            },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        furniture = { ["¢"] = "f_counter", M = "f_machinery_electronic", ["Ć"] = "f_counter" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_break_area_4x4",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            ".???",
+            "...?",
+            ".t.?",
+            "y..?",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            t = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_CLAIRSENTIENT_TELEPATH", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette", "parametrized_carpets_nest_palette" },
+        terrain = {
+            y = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            t = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_break_area_4x4",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "y???",
+            "....",
+            ".mtm",
+            "....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            t = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_CLAIRSENTIENT_TELEPATH", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette", "parametrized_carpets_nest_palette" },
+        terrain = {
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            t = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_break_area_4x4",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "ttt?",
+            "...?",
+            "...?",
+            ".???",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            t = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_CLAIRSENTIENT_TELEPATH", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette", "parametrized_carpets_nest_palette" },
+        terrain = {
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            t = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_break_area_4x4",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "mttm",
+            "....",
+            ".mm.",
+            "....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            t = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_CLAIRSENTIENT_TELEPATH", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette", "parametrized_carpets_nest_palette" },
+        terrain = {
+            t = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_break_area_4x4",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            ".ctc",
+            ".ctc",
+            ".ctc",
+            "y.c.",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            t = {
+                { group = "vending_food", chance = 20, repetitions = { 1, 2 } },
+                { group = "vending_drink", chance = 20, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_CLAIRSENTIENT_TELEPATH", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_lab_break_area_4x4",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            ".ctc",
+            "....",
+            ".ctc",
+            "....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            t = {
+                { group = "vending_food", chance = 20, repetitions = { 1, 2 } },
+                { group = "vending_drink", chance = 20, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_SKYSCRAPER_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_CLAIRSENTIENT_TELEPATH", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+    },
+}

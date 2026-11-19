@@ -1792,3 +1792,453 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_se",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "H.H.H",
+            "H.H.H",
+            "....H",
+            "sHHHs",
+            "     ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            s = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab", "parametrized_carpets_nest_palette" },
+        furniture = { H = "f_bench" },
+        terrain = {
+            y = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            H = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            s = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_se",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            " ...H",
+            " .s.H",
+            " ...H",
+            " .HHH",
+            "     ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            s = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab", "parametrized_carpets_nest_palette" },
+        terrain = {
+            y = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            H = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            s = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_se",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "    H",
+            "    H",
+            "    H",
+            " SRRz",
+            "     ",
+        },
+        item_groups = { z = { group = "SUS_trash_trashcan", chance = 80, repetitions = { 1, 2 } } },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab" },
+        furniture = { H = "f_bench" },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_sw",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "H.H.H",
+            "H.H.H",
+            "H....",
+            "sHHHs",
+            "     ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            s = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        item_placements = { { id = "lab_file_shadow_urge_password", x = 0, y = 3, chance = 15 } },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab", "parametrized_carpets_nest_palette" },
+        furniture = { H = "f_bench" },
+        terrain = {
+            y = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            H = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            s = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_sw",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "H... ",
+            "H.s. ",
+            "H... ",
+            "HHH. ",
+            "     ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            s = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        item_placements = { { id = "lab_file_shadow_urge_password", x = 2, y = 1, chance = 15 } },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab", "parametrized_carpets_nest_palette" },
+        terrain = {
+            y = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            H = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            s = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_sw",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "H    ",
+            "H    ",
+            "H    ",
+            "zRRS ",
+            "     ",
+        },
+        item_groups = { z = { group = "SUS_trash_trashcan", chance = 80, repetitions = { 1, 2 } } },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab" },
+        furniture = { H = "f_bench" },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_ne",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "sHHHs",
+            "H....",
+            "H.H.H",
+            "H.H.H",
+            "     ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            s = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab", "parametrized_carpets_nest_palette" },
+        furniture = { H = "f_bench" },
+        terrain = {
+            y = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            H = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            s = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_ne",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            " .HHH",
+            " ...H",
+            " .s.H",
+            " ...H",
+            "     ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            s = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab", "parametrized_carpets_nest_palette" },
+        terrain = {
+            y = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            H = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            s = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_ne",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            " SRRz",
+            "    H",
+            "    H",
+            "    H",
+            "     ",
+        },
+        item_groups = { z = { group = "SUS_trash_trashcan", chance = 80, repetitions = { 1, 2 } } },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab" },
+        furniture = { H = "f_bench" },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_nw",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "sHHHs",
+            "....H",
+            "H.H.H",
+            "H.H.H",
+            "     ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            s = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab", "parametrized_carpets_nest_palette" },
+        furniture = { H = "f_bench" },
+        terrain = {
+            y = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            H = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            s = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_nw",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "HHH. ",
+            "H... ",
+            "H.s. ",
+            "H... ",
+            "     ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            s = {
+                { group = "newspaper_recent", chance = 30, repetitions = { 1, 2 } },
+                { group = "book_mag_gen", chance = 50, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab", "parametrized_carpets_nest_palette" },
+        terrain = {
+            y = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            m = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            H = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            s = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+    },
+}
+
+-- Available space is 4x5
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_rest_area_4x4_corner_nw",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "zRRS ",
+            "H    ",
+            "H    ",
+            "H    ",
+            "     ",
+        },
+        item_groups = { z = { group = "SUS_trash_trashcan", chance = 80, repetitions = { 1, 2 } } },
+        monster_placements = {
+            {
+                group = "GROUP_PHAVIAN_CITY_HOSPITAL_LAB",
+                x = { 1, 2 },
+                y = { 1, 2 },
+                chance = 33,
+                repetitions = { 1, 3 },
+            },
+            { group = "GROUP_FERAL_BIOKINETIC_VITAKINETIC", x = { 1, 2 }, y = { 1, 2 }, chance = 5 },
+        },
+        palettes = { "phavian_hospital_lab" },
+        furniture = { H = "f_bench" },
+    },
+}
