@@ -51,27 +51,5 @@
       },
       { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": [
-      "TALK_GREAT_LIBRARY_LIBRARIAN_OutsideWorld",
-      "TALK_GREAT_LIBRARY_LIBRARIAN_OutsideWorld1",
-      "TALK_GREAT_LIBRARY_LIBRARIAN_OutsideWorld2"
-    ],
-    "type": "talk_topic",
-    "dynamic_line": "Some, here and there.  My responsibilities keep me here but I have spoken with traveling merchants.  They thought we wanted guns and were confused that we wished to trade books for books.  I must assume that most of the other survivors are more violent and less scholarly.",
-    "responses": [
-      {
-        "text": "Are there any other settlements around?",
-        "topic": "TALK_GREAT_LIBRARY_LIBRARIAN_Robofac",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_free_merchants_u_hub01_breadcrumb_accepted" } ] } }
-      },
-      {
-        "text": "Are there any other settlements around?",
-        "topic": "TALK_GREAT_LIBRARY_LIBRARIAN_OutsideWorld2",
-        "condition": { "compare_string": [ "yes", { "u_val": "general_free_merchants_u_hub01_breadcrumb_accepted" } ] }
-      },
-      { "text": "That's fine for now.", "topic": "TALK_GREAT_LIBRARY_LIBRARIAN_Talk" }
-    ]
   }
 ]
