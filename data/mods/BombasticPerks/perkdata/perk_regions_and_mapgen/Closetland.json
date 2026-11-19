@@ -6,15 +6,6 @@
     "object": { "fill_ter": "t_nether_glass_floor" }
   },
   {
-    "type": "overmap_terrain",
-    "id": "closetland_nether_glass",
-    "name": "Endless crystal",
-    "sym": "T",
-    "color": "light_red",
-    "see_cost": "none",
-    "flags": [ "NO_ROTATE" ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "perk_closetland_closet_area" ],
     "object": {
@@ -49,15 +40,6 @@
     }
   },
   {
-    "type": "overmap_terrain",
-    "id": "perk_closetland_closet_area",
-    "name": "Closetland",
-    "sym": "C",
-    "color": "light_red",
-    "see_cost": "none",
-    "flags": [ "NO_ROTATE" ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "perk_closetland_closet_area_roof" ],
     "object": {
@@ -90,15 +72,6 @@
       ],
       "terrain": { "O": "t_closetland_wood_roof", ".": "t_closetland_wood_roof", "-": "t_closetland_wood_roof" }
     }
-  },
-  {
-    "type": "overmap_terrain",
-    "id": "perk_closetland_closet_area_roof",
-    "name": "The roof",
-    "sym": "T",
-    "color": "light_red",
-    "see_cost": "none",
-    "flags": [ "NO_ROTATE" ]
   },
   {
     "type": "terrain",
