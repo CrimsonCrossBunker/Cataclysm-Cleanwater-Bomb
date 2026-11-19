@@ -254,25 +254,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "mi-go_encampment1_room10",
-    "//": "Left entry",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        ";||||.",
-        "||Ti|.",
-        "|V  +.",
-        "|   ||",
-        "||i  |",
-        ";|||+|"
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "palettes": [ "mi-go_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "mi-go_encampment1_room11",
     "object": {
       "mapgensize": [ 8, 8 ],
@@ -317,26 +298,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "mi-go_encampment1_room13",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        ".||||+..",
-        "||T   ..",
-        "| PT  ..",
-        "+   i&..",
-        "| PT  ..",
-        "||T   ..",
-        "||||||..",
-        "........"
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "palettes": [ "mi-go_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "mi-go_encampment1_room14",
     "//": "Large monster holding cell",
     "object": {
@@ -353,45 +314,6 @@
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "palettes": [ "mi-go_palette" ],
       "place_monsters": [ { "monster": "GROUP_ZOMBIE_BRUTE", "x": [ 1, 3 ], "y": [ 3, 4 ], "repeat": [ 1, 2 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "mi-go_encampment1_room15",
-    "//": "Roomfull of zaps",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "|+||...+",
-        "| F|||||",
-        "|     P|",
-        "||F  F||",
-        ".||||||;",
-        "........",
-        "........",
-        "........"
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "palettes": [ "mi-go_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "mi-go_encampment1_room16",
-    "//": "Right side entrance",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "|+|||",
-        "|   |",
-        "|||+|",
-        ".....",
-        "....."
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "palettes": [ "mi-go_palette" ]
     }
   },
   {
