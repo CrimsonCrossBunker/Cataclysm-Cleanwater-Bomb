@@ -1,0 +1,49 @@
+[
+  {
+    "id": "mon_wasp_mega",
+    "type": "MONSTER",
+    "name": { "str": "giant wasp queen" },
+    "description": "A yellowjacket queen grown to the size of a horse, towering over her daughters.  Even with her abdomen swollen with eggs and wings long unused she still poses a threat to interlopers, should her children have failed at subduing them.",
+    "copy-from": "mon_wasp_guard",
+    "looks_like": "mon_wasp_mega",
+    "diff": 4,
+    "proportional": { "hp": 4, "volume": 5, "weight": 5 },
+    "speed": 100,
+    "attack_cost": 100,
+    "melee_skill": 7,
+    "melee_dice": 4,
+    "melee_dice_sides": 5,
+    "special_attacks": [
+      {
+        "id": "sting",
+        "cooldown": 5,
+        "move_cost": 200,
+        "damage_max_instance": [ { "damage_type": "stab", "amount": 15, "armor_penetration": 60 } ],
+        "min_mul": 1,
+        "max_mul": 3,
+        "effects": [ { "id": "venom_weaken", "duration": 600 }, { "id": "downed", "duration": 1, "chance": 50 } ]
+      },
+      {
+        "type": "bite",
+        "cooldown": 3,
+        "move_cost": 100,
+        "damage_max_instance": [ { "damage_type": "cut", "amount": 10, "armor_penetration": 30 } ],
+        "min_mul": 1,
+        "max_mul": 3,
+        "condition": { "not": { "u_has_effect": "maimed_mandible" } }
+      }
+    ],
+    "//": "sting 15-45 damage, 6 hits to max intensity, 8 to max duration; bite 10-30",
+    "dodge": 3,
+    "vision_night": 15,
+    "bleed_rate": 60,
+    "harvest": "arachnid_wasp_queen",
+    "dissect": "dissect_insect_sample_huge",
+    "reproduction": { "baby_type": { "baby_egg": "egg_wasp" }, "baby_count": 4, "baby_timer": 5 },
+    "extend": { "flags": [ "PUSH_MON" ] },
+    "zombify_into": "mon_meat_cocoon_large",
+    "fungalize_into": "mon_wasp_mega_fungus",
+    "delete": { "flags": [ "HARDTOSHOOT", "FLIES" ] },
+    "armor": { "bash": 8, "cut": 30, "stab": 18, "bullet": 22, "electric": 4 }
+  }
+]

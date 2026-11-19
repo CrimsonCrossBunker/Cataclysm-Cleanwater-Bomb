@@ -1,0 +1,182 @@
+[
+  {
+    "id": "mon_stag_beetle_giant",
+    "type": "MONSTER",
+    "name": { "str": "massive stag beetle" },
+    "description": "This enormous stag beetle has reached mutated maturity, but continues to grow.  Thankfully, that growth is exposing vulnerable cracks of flesh in the strained chitin.",
+    "default_faction": "stag_beetle",
+    "bodytype": "insect",
+    "species": [ "INSECT" ],
+    "volume": "400 L",
+    "weight": "600 kg",
+    "diff": 2,
+    "hp": 350,
+    "speed": 80,
+    "material": [ "iflesh" ],
+    "symbol": "S",
+    "color": "brown",
+    "aggression": 5,
+    "morale": 30,
+    "aggro_character": false,
+    "melee_skill": 5,
+    "melee_dice": 6,
+    "melee_dice_sides": 6,
+    "melee_damage": [ { "damage_type": "cut", "amount": 9 } ],
+    "dodge": 1,
+    "weakpoint_sets": [ "wps_arthropod", "wps_arthropod_beetle" ],
+    "families": [ "prof_gross_anatomy", "prof_intro_biology", "prof_physiology", "prof_wp_basic_bug", "prof_wp_beetle" ],
+    "weakpoints": [
+      { "name": "a soft section of chitin", "armor_mult": { "physical": 0.33 }, "coverage": 20 },
+      { "name": "a crack in the chitin", "armor_mult": { "physical": 0 }, "coverage": 5 }
+    ],
+    "mountable_weight_ratio": 6,
+    "vision_day": 14,
+    "vision_night": 12,
+    "harvest": "arachnid_beetle",
+    "dissect": "dissect_insect_sample_large",
+    "anger_triggers": [ "FRIEND_ATTACKED", "FRIEND_DIED", "HURT" ],
+    "fear_triggers": [ "FIRE" ],
+    "special_attacks": [
+      {
+        "id": "stag_smash",
+        "throw_strength": 60,
+        "hit_dmg_u": "%1$s rams you in the %2$s!",
+        "hit_dmg_npc": "%1$s rams <npcname> in the %2$s!",
+        "no_dmg_msg_u": "%1$s rams your %2$s, but you hold steady!",
+        "no_dmg_msg_npc": "%1$s rams <npcname>'s %2$s, but they hold steady!",
+        "miss_msg_u": "%s flicks its horns at you, but you dodge!",
+        "miss_msg_npc": "%s flicks its horns at <npcname>, but they dodge!"
+      },
+      [ "EAT_CROP", 30 ],
+      [ "EAT_FOOD", 30 ],
+      [ "BROWSE", 60 ]
+    ],
+    "upgrades": { "age_grow": 60, "into": "mon_stag_beetle_mega" },
+    "reproduction": { "baby_type": { "baby_egg": "egg_stag_beetle" }, "baby_count": 1, "baby_timer": 32 },
+    "baby_flags": [ "SPRING", "SUMMER", "AUTUMN", "WINTER" ],
+    "zombify_into": "mon_meat_cocoon_large",
+    "flags": [
+      "SEES",
+      "HEARS",
+      "GOODHEARING",
+      "BASHES",
+      "DESTROYS",
+      "PATH_AVOID_DANGER",
+      "PUSH_MON",
+      "PUSH_VEH",
+      "PET_WONT_FOLLOW",
+      "PET_MOUNTABLE",
+      "PULP_PRYING",
+      "EATS"
+    ],
+    "armor": { "bash": 60, "cut": 72, "acid": 18, "heat": 8, "bullet": 50 }
+  },
+  {
+    "id": "mon_stag_beetle_mega",
+    "type": "MONSTER",
+    "name": { "str": "titan stag beetle" },
+    "description": "This stag beetle rivals an armored personnel carrier in size, bearing horns that could fell a tree and chitin thick enough to ignore most bullets.  Its bulky shell looks nigh-impenetrable, and the cracks have sealed with a foul paste.",
+    "copy-from": "mon_stag_beetle_giant",
+    "proportional": { "hp": 4, "speed": 0.75, "morale": 3, "melee_dice_sides": 2 },
+    "volume": "950 L",
+    "weight": "1000 kg",
+    "diff": 4,
+    "special_attacks": [
+      {
+        "id": "stag_smash",
+        "throw_strength": 120,
+        "damage_max_instance": [ { "damage_type": "bash", "amount": 45, "armor_multiplier": 0.5 } ]
+      }
+    ],
+    "weakpoint_sets": [ "wps_arthropod", "wps_arthropod_beetle" ],
+    "families": [ "prof_wp_basic_bug", "prof_wp_beetle" ],
+    "weakpoints": [ { "name": "a foul scar in the chitin", "armor_mult": { "physical": 0.33 }, "coverage": 20 } ],
+    "harvest": "arachnid_beetle_mega",
+    "dissect": "dissect_insect_sample_huge",
+    "reproduction": { "baby_type": { "baby_egg": "egg_stag_beetle" }, "baby_count": 1, "baby_timer": 364 },
+    "zombify_into": "mon_meat_cocoon_large",
+    "upgrades": false,
+    "armor": { "acid": 18, "heat": 8, "bash": 86, "cut": 100, "bullet": 75 }
+  },
+  {
+    "id": "mon_antlion_larva",
+    "type": "MONSTER",
+    "name": { "str": "giant antlion larva", "str_pl": "giant antlion larvae" },
+    "description": "This huge grub has powerful mandibles and a hungry look.  It hides in the dirt and awaits its prey.",
+    "default_faction": "antlion_grub",
+    "bodytype": "insect",
+    "species": [ "INSECT" ],
+    "volume": "108500 ml",
+    "weight": "106 kg",
+    "hp": 60,
+    "speed": 100,
+    "material": [ "iflesh" ],
+    "symbol": "u",
+    "color": "yellow",
+    "aggression": 80,
+    "morale": 100,
+    "melee_skill": 4,
+    "melee_dice": 1,
+    "melee_dice_sides": 8,
+    "melee_damage": [ { "damage_type": "cut", "amount": 6 } ],
+    "weakpoint_sets": [ "wps_arthropod" ],
+    "families": [ "prof_gross_anatomy", "prof_intro_biology", "prof_physiology", "prof_wp_basic_bug" ],
+    "weakpoints": [
+      {
+        "id": "mandible",
+        "name": "the mandibles",
+        "is_head": true,
+        "difficulty": { "ranged": 5, "melee": 3 },
+        "effects": [
+          {
+            "effect": "maimed_mandible",
+            "chance": 25,
+            "duration": [ "1 seconds", "10 seconds" ],
+            "message": "The %s's mandibles are maimed!",
+            "damage_required": [ 1, 20 ]
+          },
+          {
+            "effect": "maimed_mandible",
+            "chance": 50,
+            "duration": [ "5 seconds", "25 seconds" ],
+            "message": "The %s's mandibles are maimed!",
+            "damage_required": [ 21, 40 ]
+          },
+          {
+            "effect": "maimed_mandible",
+            "chance": 50,
+            "duration": 86400,
+            "message": "The %s's mandibles are destroyed!",
+            "damage_required": [ 41, 100 ]
+          }
+        ],
+        "coverage": 10
+      }
+    ],
+    "vision_day": 8,
+    "vision_night": 5,
+    "harvest": "arachnid",
+    "dissect": "dissect_subterranean_insect_small",
+    "upgrades": { "age_grow": 42, "into": "mon_antlion_giant" },
+    "anger_triggers": [ "PLAYER_WEAK", "PLAYER_CLOSE" ],
+    "fear_triggers": [ "FIRE" ],
+    "grab_strength": 3,
+    "special_attacks": [
+      { "id": "grab", "cooldown": 3 },
+      { "id": "ranged_pull", "cooldown": 10 },
+      { "id": "impale", "accuracy": 6, "attack_upper": false, "cooldown": 10 },
+      {
+        "type": "bite",
+        "attack_upper": false,
+        "cooldown": 4,
+        "accuracy": 8,
+        "infection_chance": 75,
+        "damage_max_instance": [ { "damage_type": "stab", "amount": 15, "armor_penetration": 12 } ],
+        "condition": { "not": { "u_has_effect": "maimed_mandible" } }
+      }
+    ],
+    "zombify_into": "mon_meat_cocoon_med",
+    "flags": [ "SEES", "SMELLS", "IMMOBILE", "DIGS", "RANGED_ATTACKER", "ATTACK_LOWER" ],
+    "armor": { "bash": 4, "cut": 10, "bullet": 10 }
+  }
+]

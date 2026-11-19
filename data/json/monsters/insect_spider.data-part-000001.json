@@ -1,0 +1,16 @@
+[
+  {
+    "id": "mon_silverfish_small",
+    "type": "MONSTER",
+    "name": { "str_sp": "oversized silverfish" },
+    "description": "An oversized mutated silverfish the size of a small dog.",
+    "copy-from": "mon_silverfish",
+    "proportional": { "armor": 0.45, "speed": 1.1, "morale": 0.67, "melee_dice_sides": 0.67 },
+    "volume": "15 L",
+    "weight": "15 kg",
+    "hp": 23,
+    "zombify_into": "mon_meat_cocoon_tiny",
+    "upgrades": { "age_grow": 30, "into": "mon_silverfish" },
+    "extend": { "flags": [ "NO_BREED" ] }
+  }
+]

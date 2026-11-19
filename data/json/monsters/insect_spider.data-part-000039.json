@@ -1,0 +1,73 @@
+[
+  {
+    "id": "mon_grasshopper_giant",
+    "type": "MONSTER",
+    "name": { "str": "giant grasshopper" },
+    "description": "A huge green grasshopper about the size of a big dog, with long and strong back legs.  It hops, it hops and never stops.",
+    "default_faction": "insect",
+    "bodytype": "insect",
+    "species": [ "INSECT" ],
+    "volume": "25000 ml",
+    "weight": "33 kg",
+    "hp": 40,
+    "speed": 180,
+    "move_skills": { "climb": 8 },
+    "attack_cost": 540,
+    "material": [ "iflesh" ],
+    "symbol": "g",
+    "color": "light_green",
+    "aggression": -10,
+    "morale": 10,
+    "melee_skill": 3,
+    "melee_dice": 1,
+    "melee_dice_sides": 4,
+    "melee_damage": [ { "damage_type": "cut", "amount": 2 } ],
+    "dodge": 4,
+    "weakpoint_sets": [ "wps_arthropod" ],
+    "families": [ "prof_gross_anatomy", "prof_intro_biology", "prof_physiology", "prof_wp_basic_bug" ],
+    "vision_day": 20,
+    "vision_night": 20,
+    "harvest": "arachnid",
+    "dissect": "dissect_insect_sample_single",
+    "reproduction": { "baby_type": { "baby_egg": "egg_grasshopper" }, "baby_count": 3, "baby_timer": 15 },
+    "baby_flags": [ "SPRING", "SUMMER", "AUTUMN" ],
+    "fear_triggers": [ "FIRE", "PLAYER_CLOSE" ],
+    "special_attacks": [
+      [ "EAT_CROP", 80 ],
+      [ "GRAZE", 300 ],
+      [ "BROWSE", 80 ],
+      {
+        "type": "leap",
+        "cooldown": 3,
+        "max_range": 10,
+        "allow_no_target": true,
+        "condition": { "not": { "u_has_effect": "maimed_leg" } }
+      }
+    ],
+    "zombify_into": "mon_meat_cocoon_tiny",
+    "flags": [ "SEES", "HEARS", "SMELLS", "PATH_AVOID_FALL", "PATH_AVOID_FIRE", "EATS" ],
+    "armor": { "bash": 5, "cut": 10 }
+  },
+  {
+    "id": "mon_grasshopper_nymph",
+    "type": "MONSTER",
+    "name": { "str": "grasshopper nymph" },
+    "description": "A grasshopper nymph the size of a rabbit.",
+    "copy-from": "mon_larva_abstract",
+    "symbol": "g",
+    "color": "light_green",
+    "upgrades": { "age_grow": 30, "into": "mon_grasshopper_giant" },
+    "special_attacks": [
+      {
+        "type": "leap",
+        "cooldown": 3,
+        "max_range": 4,
+        "allow_no_target": true,
+        "condition": { "not": { "u_has_effect": "maimed_leg" } }
+      },
+      [ "EAT_CROP", 100 ],
+      [ "GRAZE", 133 ],
+      [ "BROWSE", 133 ]
+    ]
+  }
+]

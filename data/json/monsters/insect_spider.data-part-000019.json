@@ -1,0 +1,68 @@
+[
+  {
+    "id": "mon_wasp",
+    "type": "MONSTER",
+    "name": { "str": "giant wasp" },
+    "description": "A gigantic wasp worker, scouring the landscape for an easy meal to feed the next generation.  Her abdomen glowers with ominous yellow stripes and ends in a half-hidden stinger the size of a kitchen knife.",
+    "default_faction": "wasp",
+    "bodytype": "flying insect",
+    "species": [ "INSECT_FLYING" ],
+    "volume": "62500 ml",
+    "weight": "81500 g",
+    "hp": 100,
+    "speed": 150,
+    "attack_cost": 150,
+    "material": [ "iflesh" ],
+    "symbol": "a",
+    "color": "yellow",
+    "aggression": -5,
+    "morale": 15,
+    "aggro_character": false,
+    "melee_skill": 7,
+    "melee_dice": 2,
+    "melee_dice_sides": 7,
+    "special_attacks": [
+      {
+        "id": "sting",
+        "move_cost": 300,
+        "cooldown": 5,
+        "damage_max_instance": [ { "damage_type": "stab", "amount": 10, "armor_penetration": 25 } ],
+        "min_mul": 0.5,
+        "max_mul": 2
+      },
+      {
+        "type": "bite",
+        "cooldown": 5,
+        "move_cost": 130,
+        "damage_max_instance": [ { "damage_type": "cut", "amount": 10, "armor_penetration": 20 } ],
+        "min_mul": 0.5,
+        "max_mul": 1.5,
+        "condition": { "not": { "u_has_effect": "maimed_mandible" } }
+      },
+      [ "EAT_CARRION", 100 ],
+      [ "EAT_FOOD", 100 ]
+    ],
+    "//": "sting 5-15 damage, 8 hits to max intensity, 9 to max duration",
+    "dodge": 7,
+    "bleed_rate": 80,
+    "weakpoint_sets": [ "wps_arthropod", "wps_arthropod_flying", "wps_arthropod_hymenoptera" ],
+    "families": [
+      "prof_gross_anatomy",
+      "prof_intro_biology",
+      "prof_physiology",
+      "prof_wp_basic_bug",
+      "prof_wp_hymenoptera",
+      "prof_wp_flying"
+    ],
+    "vision_day": 17,
+    "vision_night": 7,
+    "harvest": "arachnid_wasp",
+    "dissect": "dissect_insect_sample_single",
+    "anger_triggers": [ "FRIEND_ATTACKED", "PLAYER_CLOSE", "PLAYER_WEAK", "HOSTILE_SEEN" ],
+    "fear_triggers": [ "HURT", "FIRE" ],
+    "zombify_into": "mon_meat_cocoon_small",
+    "fungalize_into": "mon_wasp_fungus",
+    "flags": [ "SEES", "SMELLS", "HEARS", "FLIES", "SWARMS", "GROUP_MORALE", "CANPLAY", "HARDTOSHOOT", "PATH_AVOID_FIRE", "EATS" ],
+    "armor": { "bash": 5, "cut": 14, "stab": 12, "bullet": 12 }
+  }
+]

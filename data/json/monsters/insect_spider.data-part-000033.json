@@ -1,0 +1,104 @@
+[
+  {
+    "id": "mon_locust",
+    "type": "MONSTER",
+    "name": { "str": "giant locust" },
+    "description": "A yellow and brown mutated locust the size of a dog with big eyes and long, powerful legs.  You don't think it'll eat you, but it could cause massive damage to nearby plants.",
+    "default_faction": "locust",
+    "bodytype": "flying insect",
+    "species": [ "INSECT_FLYING" ],
+    "volume": "30 L",
+    "weight": "40750 g",
+    "hp": 30,
+    "speed": 90,
+    "move_skills": { "climb": 6 },
+    "material": [ "iflesh" ],
+    "symbol": "g",
+    "color": "brown",
+    "aggression": -5,
+    "morale": 10,
+    "melee_skill": 3,
+    "melee_dice": 1,
+    "melee_dice_sides": 6,
+    "melee_damage": [ { "damage_type": "cut", "amount": 3 } ],
+    "dodge": 2,
+    "weakpoint_sets": [ "wps_arthropod", "wps_arthropod_flying" ],
+    "families": [ "prof_gross_anatomy", "prof_intro_biology", "prof_physiology", "prof_wp_basic_bug", "prof_wp_flying" ],
+    "vision_day": 10,
+    "harvest": "arachnid_flying",
+    "dissect": "dissect_insect_sample_single",
+    "reproduction": { "baby_type": { "baby_egg": "egg_locust" }, "baby_count": 5, "baby_timer": 10 },
+    "baby_flags": [ "AUTUMN" ],
+    "anger_triggers": [ "FRIEND_ATTACKED" ],
+    "fear_triggers": [ "HURT", "FIRE" ],
+    "upgrades": { "age_grow": 42, "into": "mon_locust_mega" },
+    "special_attacks": [
+      {
+        "type": "leap",
+        "cooldown": 2,
+        "max_range": 8,
+        "allow_no_target": true,
+        "condition": { "not": { "u_has_effect": "maimed_leg" } }
+      },
+      [ "EAT_CROP", 60 ],
+      [ "BROWSE", 60 ],
+      [ "GRAZE", 120 ]
+    ],
+    "zombify_into": "mon_meat_cocoon_small",
+    "flags": [ "SEES", "HEARS", "SMELLS", "STUMBLES", "PATH_AVOID_FIRE", "EATS" ],
+    "armor": { "bash": 3, "cut": 4, "bullet": 3, "electric": 1 }
+  },
+  {
+    "id": "mon_locust_mega",
+    "type": "MONSTER",
+    "name": { "str": "famine" },
+    "description": "A cow-sized yellow and brown mutated locust with huge, staring eyes and long, powerful legs.  The bane of the post-apocalyptic farmer.",
+    "copy-from": "mon_locust",
+    "proportional": { "hp": 20, "speed": 0.25, "morale": 4, "dodge": 0.5, "vision_day": 2 },
+    "volume": "625 L",
+    "weight": "815 kg",
+    "melee_dice": 2,
+    "dissect": "dissect_insect_sample_large",
+    "special_attacks": [
+      {
+        "type": "leap",
+        "cooldown": 2,
+        "max_range": 4,
+        "allow_no_target": true,
+        "condition": { "not": { "u_has_effect": "maimed_leg" } }
+      },
+      [ "EAT_CROP", 30 ],
+      [ "BROWSE", 30 ],
+      [ "GRAZE", 90 ],
+      { "id": "smash", "throw_strength": 36, "cooldown": 30 }
+    ],
+    "zombify_into": "mon_meat_cocoon_large",
+    "extend": { "flags": [ "DESTROYS", "PUSH_MON", "PUSH_VEH" ] },
+    "armor": { "bash": 3, "cut": 4, "bullet": 3, "electric": 3 }
+  },
+  {
+    "id": "mon_locust_nymph",
+    "type": "MONSTER",
+    "name": { "str": "locust nymph" },
+    "description": "A locust the size of a rabbit.  You'd hate to think what a swarm of these could do.",
+    "copy-from": "mon_larva_abstract",
+    "default_faction": "locust",
+    "bodytype": "flying insect",
+    "species": [ "INSECT_FLYING" ],
+    "symbol": "g",
+    "color": "brown",
+    "upgrades": { "age_grow": 30, "into": "mon_locust" },
+    "special_attacks": [
+      {
+        "type": "leap",
+        "cooldown": 4,
+        "max_range": 4,
+        "allow_no_target": true,
+        "condition": { "not": { "u_has_effect": "maimed_leg" } }
+      },
+      [ "EAT_CROP", 60 ],
+      [ "BROWSE", 60 ],
+      [ "GRAZE", 800 ]
+    ]
+  }
+]

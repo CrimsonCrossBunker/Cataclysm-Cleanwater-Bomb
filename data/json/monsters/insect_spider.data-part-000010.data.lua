@@ -1,0 +1,55 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_spider_cellar_leg",
+    name = ccb.content.plural_text("detached spider leg", "detached spider legs"),
+    description = ccb.content.text("The strangely branching leg of a mutated cellar spider that… fell?  crawled?  off of the main body when hurt.  It now flails about blindly, irregular clawed appendages grasping at anything that comes close."),
+    color = "brown",
+    symbol = "7",
+    default_faction = "factionless",
+    body_type = "snake",
+    species = { "INSECT" },
+    materials = { "iflesh" },
+    volume = "10 L",
+    mass = "10 kg",
+    hp = 25,
+    aggression = 100,
+    morale = 100,
+    speed = 50,
+    attack_cost = 25,
+    melee_skill = 3,
+    melee_dice = 2,
+    melee_sides = 3,
+    melee_damage = { { type = "cut", amount = 4 } },
+    grab_strength = 10,
+    attacks = { { id = "grab", cooldown = 5 }, { reference = "SUICIDE", cooldown = 180 } },
+    dodge = 7,
+    bleed_rate = 0,
+    families = {
+        "prof_gross_anatomy",
+        "prof_intro_biology",
+        "prof_physiology",
+        "prof_wp_basic_bug",
+        "prof_wp_spider",
+    },
+    flags = {
+        "HEARS", "GOODHEARING", "STUMBLES", "WEBWALK", "GRABS", "ATTACKMON", "HARDTOSHOOT",
+        "STUN_IMMUNE", "NOHEAD",
+    },
+    death = { outcome = { corpse = "NO_CORPSE" } },
+}
+
+ccb.content.define_monster {
+    id = "mon_spider_jumping_small",
+    name = ccb.content.plural_text("oversized jumping spider", "oversized jumping spiders"),
+    description = ccb.content.text("A mutant spider the size of a small dog with long forelegs, big eyes, and oversized fangs."),
+    copy_from = "mon_spider_jumping_giant",
+    volume = "15 L",
+    mass = "20 kg",
+    zombify_into = "mon_meat_cocoon_tiny",
+    upgrade = { grow_at_age = 30, monster = "mon_spider_jumping_giant" },
+    inheritance = {
+        add = { flags = { "NO_BREED" } },
+        scale = { hp = 0.5, speed = 1.1, morale = 0.67, melee_sides = 0.67 },
+    },
+}

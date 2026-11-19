@@ -1,0 +1,100 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_dermatik_juvenile",
+    name = ccb.content.plural_text("juvenile dermatik", "juvenile dermatiks"),
+    description = ccb.content.text("A recently pupated parasitoid wasp the size of a large cat, with a raw fleshy look to her pale exoskeleton and a fully developed ovipositor extruding from her abdomen.  She sluggishly buzzes about on still-stiffening wings, ready to search for a suitable home for her many, many children."),
+    species = { "INSECT_FLYING" },
+    copy_from = "mon_dermatik",
+    difficulty_adjustment = 2,
+    volume = "8 L",
+    mass = "10 kg",
+    hp = 35,
+    speed = 90,
+    looks_like = "mon_dermatik",
+    aggression = 40,
+    morale = 10,
+    melee_skill = 3,
+    melee_dice = 1,
+    melee_sides = 4,
+    melee_damage = { { type = "cut", amount = 3 } },
+    dodge = 3,
+    armor = { bash = 1, cut = 3 },
+}
+
+ccb.content.define_monster {
+    id = "mon_dermatik_incubator_deer",
+    name = ccb.content.plural_text("motionless deer", "motionless deers"),
+    description = ccb.content.text("A paralyzed, emaciated deer.  It spasms as it notices your presence, terrified eyes darting around the muddy chamber when it fails to stand and flee."),
+    copy_from = "mon_deer",
+    default_faction = "dermatik",
+    mass = "45 kg",
+    hp = 40,
+    speed = 20,
+    aggression = 100,
+    morale = 100,
+    vision_day = 6,
+    vision_night = 6,
+    harvest = "incubator_mammal_deer",
+    dissect = "dissect_medical_sample_single",
+    attacks = {
+        { reference = "PARROT", cooldown = 6 },
+        {
+            spell = { id = "dermatik_emergence" },
+            casting_message = ccb.content.text("The sudden motion of their host cause some dermatik larvae to flee!"),
+            cooldown = 5,
+            kind = "spell",
+        },
+    },
+    reproduction = { offspring = { monster = "mon_dermatik_larva" }, count = 2, interval = 30 },
+    zombify_into = "mon_meat_cocoon_small",
+    flags = { "SEES", "HEARS", "SMELLS", "WARM", "IMMOBILE", "PACIFIST" },
+}
+
+ccb.content.define_monster {
+    id = "mon_dermatik_incubator_dog",
+    copy_from = "mon_dermatik_incubator_deer",
+    name = ccb.content.plural_text("helpless dog", "helpless dogs"),
+    symbol = "d",
+    color = "light_gray",
+    description = ccb.content.text("A barely living dog, panting in a pool of slime and blood.  As you draw near it lets out a faint whimper, and you see the smallest hint of a twitch in its tail."),
+    looks_like = "mon_dog",
+    zombify_into = "mon_meat_cocoon_tiny",
+    harvest = "incubator_mammal_dog",
+    mass = "20 kg",
+}
+
+ccb.content.define_monster {
+    id = "mon_dermatik_incubator_spider",
+    name = ccb.content.plural_text("twitching spider", "twitching spiders"),
+    copy_from = "mon_dermatik_incubator_deer",
+    materials = { "iflesh" },
+    species = { "SPIDER" },
+    looks_like = "mon_spider_web",
+    symbol = "s",
+    color = "yellow",
+    description = ccb.content.text("A giant, mutated spider lying on its back, legs twitching without pause.  A translucent slime, mixed with its ichor seeps from its joints, and its chitin is marked by numerous exit wounds."),
+    mass = "30 kg",
+    weakpoint_sets = { "wps_arthropod", "wps_arthropod_spider" },
+    families = {
+        "prof_gross_anatomy",
+        "prof_intro_biology",
+        "prof_physiology",
+        "prof_wp_basic_bug",
+        "prof_wp_spider",
+    },
+    harvest = "arachnid",
+    zombify_into = "mon_meat_cocoon_tiny",
+}
+
+ccb.content.define_monster {
+    id = "mon_ant_small",
+    name = ccb.content.plural_text("oversized ant", "oversized ants"),
+    description = ccb.content.text("A mutant red ant the size of a dog, covered in chitinous plates.  She possesses a pair of wriggling antennae and vicious-looking mandibles."),
+    copy_from = "mon_ant",
+    volume = "30 L",
+    mass = "40 kg",
+    upgrade = { grow_at_age = 30, monster = "mon_ant" },
+    zombify_into = "mon_meat_cocoon_small",
+    inheritance = { scale = { hp = 0.5, speed = 1.1, morale = 0.67, melee_sides = 0.67 } },
+}
