@@ -1,6 +1,6 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_Pablo_Tacoma",
-    line = ccb.content.text("I heard about that place.  What use would they have for an accountant, though?  If they have work for my wife Dana and I, I'd definitely consider it."),
+    id = "TALK_REFUGEE_Pablo_Background2_cleared",
+    line = ccb.content.text("Thanks for that, both for taking away the constant worry about all those <zombies> close at hand, and for putting those poor souls at rest at last."),
 }

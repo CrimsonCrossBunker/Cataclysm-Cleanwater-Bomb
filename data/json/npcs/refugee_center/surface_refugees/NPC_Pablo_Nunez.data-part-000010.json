@@ -1,0 +1,22 @@
+[
+  {
+    "id": "MISSION_TACOMA_Nunez",
+    "type": "mission_definition",
+    "name": { "str": "Find out if the Nunez family can find work at Tacoma Ranch." },
+    "goal": "MGOAL_NULL",
+    "difficulty": 2,
+    "value": 1000,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "Find out if the Nunez family can find work at Tacoma Ranch.",
+      "offer": "n/a",
+      "accepted": "n/a",
+      "rejected": "n/a",
+      "advice": "n/a",
+      "inquire": "n/a",
+      "success": "n/a",
+      "success_lie": "n/a",
+      "failure": "n/a"
+    }
+  }
+]
