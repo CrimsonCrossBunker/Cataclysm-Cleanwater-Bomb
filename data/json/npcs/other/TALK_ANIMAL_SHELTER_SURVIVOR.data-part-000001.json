@@ -1,0 +1,32 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",
+    "dynamic_line": "What can I do for you?",
+    "responses": [
+      { "text": "Who are you, exactly?", "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_WHO" },
+      {
+        "text": "I'd like to ask you a few questions.",
+        "topic": "TALK_FRIEND_CONVERSATION",
+        "condition": {
+          "and": [
+            { "math": [ "n_npc_trust() >= 2" ] },
+            { "compare_string": [ "yes", { "npc_val": "dialogue_first_meeting_knows_u" } ] }
+          ]
+        }
+      },
+      {
+        "text": "Wanna buy something, maybe sell off what you don't need?",
+        "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",
+        "effect": "start_trade"
+      },
+      { "text": "Could I buy one of your pets?", "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_BUY_PETS" },
+      {
+        "text": "Any jobs you need done?",
+        "condition": { "and": [ { "not": "has_assigned_mission" }, { "not": "has_many_assigned_missions" } ] },
+        "topic": "TALK_MISSION_LIST"
+      },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
