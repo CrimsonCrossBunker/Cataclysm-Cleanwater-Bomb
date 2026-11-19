@@ -1,0 +1,134 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ANCILLA_DOCTOR_BIONICS_BIONIC_LIMB_REPLACEMENT_2",
+    "dynamic_line": "&The Doc spends a long moment clacking away on the keyboard, until the machine beeps several times.  \"Yup, all looks good.  Healthy as a horse.  Well, good enough for the machine, at least.  Maybe too healthy, seeing as you still have all your limbs, but that's none of my business.\n\n\"So you're sure about this?  What can I do ya' for?  Not sure yet if you have any cybernetics installed that won't swap over, but if you do, I'll remove them first.\n\n\"Oh, and the important parts.  Firstly, it'll take 6 hours, and I don't have the spare supplies to keep you hydrated, so come fed and healthy.  Second, it's 20 HGC per limb - a nice discounted price.  Third, you'll need to come back here if you damage them - trust me, you don't want to go fucking with the electronics yourself.  Let the robot do it.  Got all that?\"",
+    "responses": [
+      {
+        "text": "[20 HGC] Give me a right bionic arm.",
+        "topic": "TALK_DONE",
+        "condition": {
+          "and": [
+            { "not": { "u_has_trait": "BIONIC_ARM_BASIC_RIGHT" } },
+            { "not": { "u_has_trait": "BIONIC_ARM_BASIC_BOTH" } },
+            { "not": { "u_has_trait": "BIONIC_ARM_BASIC_LEFT" } },
+            { "u_has_items": { "item": "RobofacCoin", "count": 20 } }
+          ]
+        },
+        "effect": [
+          { "u_add_effect": "narcosis", "duration": "6 hours" },
+          { "u_add_effect": "sleep", "duration": "6 hours" },
+          { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "6 hours" },
+          { "u_lose_bionic": "bio_robofac_xmarm" },
+          { "u_lose_bionic": "bio_armor_arms" },
+          { "u_add_trait": "BIONIC_ARM_BASIC_RIGHT" },
+          { "u_consume_item": "RobofacCoin", "count": 20, "popup": true }
+        ]
+      },
+      {
+        "text": "[20 HGC] Give me a left bionic arm.",
+        "topic": "TALK_DONE",
+        "condition": {
+          "and": [
+            { "not": { "u_has_trait": "BIONIC_ARM_BASIC_LEFT" } },
+            { "not": { "u_has_trait": "BIONIC_ARM_BASIC_BOTH" } },
+            { "not": { "u_has_trait": "BIONIC_ARM_BASIC_RIGHT" } },
+            { "u_has_items": { "item": "RobofacCoin", "count": 20 } }
+          ]
+        },
+        "effect": [
+          { "u_add_effect": "narcosis", "duration": "6 hours" },
+          { "u_add_effect": "sleep", "duration": "6 hours" },
+          { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "6 hours" },
+          { "u_lose_bionic": "bio_robofac_xmarm" },
+          { "u_lose_bionic": "bio_armor_arms" },
+          { "u_add_trait": "BIONIC_ARM_BASIC_LEFT" },
+          { "u_consume_item": "RobofacCoin", "count": 20, "popup": true }
+        ]
+      },
+      {
+        "text": "[20 HGC] I've already got one bionic arm.  Install the other.",
+        "topic": "TALK_DONE",
+        "condition": {
+          "and": [
+            { "or": [ { "u_has_trait": "BIONIC_ARM_BASIC_LEFT" }, { "u_has_trait": "BIONIC_ARM_BASIC_RIGHT" } ] },
+            { "not": { "u_has_trait": "BIONIC_ARM_BASIC_BOTH" } },
+            { "u_has_items": { "item": "RobofacCoin", "count": 20 } }
+          ]
+        },
+        "effect": [
+          { "u_add_effect": "narcosis", "duration": "6 hours" },
+          { "u_add_effect": "sleep", "duration": "6 hours" },
+          { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "6 hours" },
+          { "u_lose_trait": "BIONIC_ARM_BASIC_LEFT" },
+          { "u_lose_trait": "BIONIC_ARM_BASIC_RIGHT" },
+          { "u_add_trait": "BIONIC_ARM_BASIC_BOTH" },
+          { "u_consume_item": "RobofacCoin", "count": 20, "popup": true }
+        ]
+      },
+      {
+        "text": "[20 HGC] Give me a right bionic leg.",
+        "topic": "TALK_DONE",
+        "condition": {
+          "and": [
+            { "not": { "u_has_trait": "BIONIC_LEG_BASIC_RIGHT" } },
+            { "not": { "u_has_trait": "BIONIC_LEG_BASIC_BOTH" } },
+            { "not": { "u_has_trait": "BIONIC_LEG_BASIC_LEFT" } },
+            { "u_has_items": { "item": "RobofacCoin", "count": 20 } }
+          ]
+        },
+        "effect": [
+          { "u_add_effect": "narcosis", "duration": "6 hours" },
+          { "u_add_effect": "sleep", "duration": "6 hours" },
+          { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "6 hours" },
+          { "u_lose_bionic": "bio_robofac_xmleg" },
+          { "u_lose_bionic": "bio_armor_legs" },
+          { "u_add_trait": "BIONIC_LEG_BASIC_RIGHT" },
+          { "u_consume_item": "RobofacCoin", "count": 20, "popup": true }
+        ]
+      },
+      {
+        "text": "[20 HGC] Give me a left bionic leg.",
+        "topic": "TALK_DONE",
+        "condition": {
+          "and": [
+            { "not": { "u_has_trait": "BIONIC_LEG_BASIC_LEFT" } },
+            { "not": { "u_has_trait": "BIONIC_LEG_BASIC_BOTH" } },
+            { "not": { "u_has_trait": "BIONIC_LEG_BASIC_RIGHT" } },
+            { "u_has_items": { "item": "RobofacCoin", "count": 20 } }
+          ]
+        },
+        "effect": [
+          { "u_add_effect": "narcosis", "duration": "6 hours" },
+          { "u_add_effect": "sleep", "duration": "6 hours" },
+          { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "6 hours" },
+          { "u_lose_bionic": "bio_robofac_xmleg" },
+          { "u_lose_bionic": "bio_armor_legs" },
+          { "u_add_trait": "BIONIC_LEG_BASIC_LEFT" },
+          { "u_consume_item": "RobofacCoin", "count": 20, "popup": true }
+        ]
+      },
+      {
+        "text": "[20 HGC] I've already got one bionic leg.  Install the other.",
+        "topic": "TALK_DONE",
+        "condition": {
+          "and": [
+            { "or": [ { "u_has_trait": "BIONIC_LEG_BASIC_LEFT" }, { "u_has_trait": "BIONIC_LEG_BASIC_RIGHT" } ] },
+            { "not": { "u_has_trait": "BIONIC_LEG_BASIC_BOTH" } },
+            { "u_has_items": { "item": "RobofacCoin", "count": 20 } }
+          ]
+        },
+        "effect": [
+          { "u_add_effect": "narcosis", "duration": "6 hours" },
+          { "u_add_effect": "sleep", "duration": "6 hours" },
+          { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "6 hours" },
+          { "u_lose_trait": "BIONIC_LEG_BASIC_LEFT" },
+          { "u_lose_trait": "BIONIC_LEG_BASIC_RIGHT" },
+          { "u_add_trait": "BIONIC_LEG_BASIC_BOTH" },
+          { "u_consume_item": "RobofacCoin", "count": 20, "popup": true }
+        ]
+      },
+      { "text": "Actually, maybe another time.", "topic": "TALK_DONE" }
+    ]
+  }
+]

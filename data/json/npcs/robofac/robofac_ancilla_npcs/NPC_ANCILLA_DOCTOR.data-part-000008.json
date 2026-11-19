@@ -1,0 +1,30 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ANCILLA_DOCTOR_BOTCHED_EXODII_SURGERY_3",
+    "dynamic_line": "&Doc Stevens ties down your limbs, and gives you a firm nod.  Then he wipes his brow, again.  And then again with the other sleeve.  The bone saw quickens until it is spinning with a deafening sound.  Its biting teeth cut the air with a harsh whistle.  \"Hoowee, it's hot today.  Alright, give me just a second to boot up the twilight juice, yeah?  Stay still!\".\n\n<color_red>You have a VERY bad feeling about this.</color>",
+    "responses": [
+      {
+        "text": "<color_red>[Against your better judgment, give Doc Stevens permission to put you to sleep, here, strapped down beneath a spinning bone saw]</color>",
+        "topic": "TALK_ANCILLA_DOCTOR_BOTCHED_EXODII_SURGERY_4",
+        "effect": { "give_achievement": "achievement_exodii_hub_autodoc_death" }
+      },
+      {
+        "text": "Actually, hold on, Doc.  Can you take these things off me?  I'm not ready.",
+        "topic": "TALK_ANCILLA_DOCTOR_BOTCHED_EXODII_SURGERY_GOOD_CALL"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_ANCILLA_DOCTOR_BOTCHED_EXODII_SURGERY_4",
+    "dynamic_line": "&It all goes black.",
+    "responses": [
+      {
+        "text": "…",
+        "effect": [ { "u_add_effect": "a_turncoat_to_the_end", "duration": "PERMANENT" }, "u_die" ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]
