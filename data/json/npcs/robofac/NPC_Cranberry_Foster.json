@@ -268,15 +268,5 @@
       },
       { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "TALK_ROBOFAC_MERC_1_GENDER",
-    "type": "talk_topic",
-    "dynamic_line": "Yes.",
-    "speaker_effect": {
-      "effect": { "u_add_var": "dialogue_robofac_merc_1_asked_gender", "value": "yes" },
-      "sentinel": "robofac_merc_1_asked_gender"
-    },
-    "responses": [ { "text": "I don't know what I was expecting.", "topic": "TALK_ROBOFAC_MERC_1_MAIN" } ]
   }
 ]

@@ -1,0 +1,21 @@
+[
+  {
+    "id": [ "TALK_ROBOFAC_MERC_1_GOLD_MISSION_QUERY", "TALK_ROBOFAC_MERC_1_GOLD_MISSION_TRADE" ],
+    "type": "talk_topic",
+    "dynamic_line": "Got some gold for me?",
+    "responses": [
+      {
+        "text": "[200 gold] Here's a batch for you.",
+        "condition": { "u_has_items": { "item": "gold_small", "count": 200 } },
+        "effect": [
+          { "u_consume_item": "gold_small", "count": 200 },
+          { "u_spawn_item": "RobofacCoin", "count": 8 },
+          { "math": [ "n_npc_trust()++" ] },
+          { "math": [ "n_npc_value()++" ] }
+        ],
+        "topic": "TALK_ROBOFAC_MERC_1_GOLD_MISSION_TRADE"
+      },
+      { "text": "I don't have 200 gold for you right now.", "topic": "TALK_ROBOFAC_MERC_1_MAIN" }
+    ]
+  }
+]
