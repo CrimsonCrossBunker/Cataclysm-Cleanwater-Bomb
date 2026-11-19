@@ -92,24 +92,5 @@
     "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "thread": 1000 } } ],
     "tool_ammo": [ "thread" ],
     "charge_info": { "recharge_type": "periodic", "time": "1 h", "regenerate_ammo": true }
-  },
-  {
-    "id": "borealmosin_clip",
-    "looks_like": "762R_clip",
-    "type": "ITEM",
-    "subtypes": [ "MAGAZINE" ],
-    "name": { "str": "91/30 Boreal clip" },
-    "description": "A tiny piece of grooved metal designed to allow a shooter to quickly load a bolt-action rifle.",
-    "weight": "40 g",
-    "volume": "50ml",
-    "price": "10 USD",
-    "price_postapoc": "50 cent",
-    "material": [ "steel" ],
-    "symbol": "#",
-    "color": "light_gray",
-    "ammo_type": [ "308" ],
-    "capacity": 5,
-    "flags": [ "SPEEDLOADER" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "308": 5 } } ]
   }
 ]
