@@ -1,0 +1,91 @@
+[
+  {
+    "id": "pants_army",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str_sp": "army pants" },
+    "description": "A tough pair of pants lined with pockets.  Favored by the military.",
+    "weight": "720 g",
+    "volume": "2500 ml",
+    "price": "35 USD",
+    "price_postapoc": "2 USD 50 cent",
+    "material": [ "nylon" ],
+    "symbol": "[",
+    "looks_like": "pants_cargo",
+    "color": "green",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1250 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "19 cm",
+        "moves": 80
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1250 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "19 cm",
+        "moves": 80
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1250 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "19 cm",
+        "moves": 80
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1250 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "19 cm",
+        "moves": 80
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1080 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "165 mm",
+        "moves": 100
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1080 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "165 mm",
+        "moves": 100
+      }
+    ],
+    "snippet_category": [
+      {
+        "id": "apants_UCP",
+        "text": "A tough pair of pants.  Favored by the military.  This pair sports the US Army's gray, green and tan Universal Camouflage Pattern.  The pattern is notable for its lack of black."
+      },
+      {
+        "id": "apants_desert",
+        "text": "A tough pair of military pants patterned in desert camouflage.  They are lined with deep pockets."
+      },
+      {
+        "id": "apants_MARPAT",
+        "text": "A tough pair of military pants with a black, green and tan pixel camouflage pattern.  Commonly seen worn by US Marines."
+      },
+      {
+        "id": "apants_BDU",
+        "text": "A tough pair of military pants with the black, brown, green and tan Battle Dress camouflage pattern.  They look old."
+      },
+      {
+        "id": "apants_OCP",
+        "text": "A tough and breathable pair of military pants in Operational Camouflage Pattern."
+      },
+      {
+        "id": "mil_pants_navy",
+        "text": "A tough pair of military pants with a predominantly dark blue camouflage.  Favored by the US Navy."
+      }
+    ],
+    "warmth": 20,
+    "material_thickness": 0.25,
+    "flags": [ "VARSIZE", "POCKETS", "SOFT" ],
+    "armor": [ { "encumbrance": 3, "coverage": 100, "covers": [ "leg_l", "leg_r" ], "volume_encumber_modifier": 0.6 } ]
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "shorts_denim",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str_sp": "jorts" },
+    "description": "A pair of denim shorts.",
+    "weight": "260 g",
+    "volume": "1250 ml",
+    "price": "20 USD",
+    "price_postapoc": "50 cent",
+    "material": [ "denim" ],
+    "symbol": "[",
+    "looks_like": "shorts",
+    "color": "light_blue",
+    "faults": [ { "fault_group": "fabric_denim" } ],
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1250 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "19 cm",
+        "moves": 80
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1250 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "19 cm",
+        "moves": 80
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1080 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "165 mm",
+        "moves": 100
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1080 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "165 mm",
+        "moves": 100
+      }
+    ],
+    "snippet_category": [
+      { "id": "denim_shorts1", "text": "A pair of stone wash denim shorts." },
+      { "id": "denim_shorts2", "text": "An old pair of denim jeans that have been cut down into shorts." },
+      { "id": "denim_shorts3", "text": "A pair of brand-name black denim shorts." }
+    ],
+    "warmth": 5,
+    "material_thickness": 0.65,
+    "//": "Lightweight 10 oz denim jean shorts.",
+    "flags": [ "VARSIZE" ],
+    "armor": [
+      {
+        "encumbrance": 1,
+        "coverage": 100,
+        "covers": [ "leg_l", "leg_r" ],
+        "specifically_covers": [ "leg_hip_l", "leg_hip_r" ],
+        "volume_encumber_modifier": 0.5
+      },
+      {
+        "coverage": 90,
+        "covers": [ "leg_l", "leg_r" ],
+        "specifically_covers": [ "leg_upper_l", "leg_upper_r" ],
+        "volume_encumber_modifier": 0.0
+      }
+    ]
+  }
+]
