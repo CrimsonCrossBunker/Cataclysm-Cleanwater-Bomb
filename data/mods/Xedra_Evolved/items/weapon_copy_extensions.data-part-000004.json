@@ -1,0 +1,23 @@
+[
+  {
+    "type": "ITEM",
+    "id": "naginata",
+    "copy-from": "naginata",
+    "name": { "str_sp": "naginata" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  },
+  {
+    "type": "ITEM",
+    "id": "pike",
+    "copy-from": "pike",
+    "name": { "ctxt": "weapon", "str": "pike" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  },
+  {
+    "type": "ITEM",
+    "id": "q_staff",
+    "copy-from": "q_staff",
+    "name": { "str": "quarterstaff", "str_pl": "quarterstaves" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  }
+]

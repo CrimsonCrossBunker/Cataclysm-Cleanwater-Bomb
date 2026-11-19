@@ -1,0 +1,9 @@
+[
+  {
+    "type": "ITEM",
+    "id": "pike_wood",
+    "copy-from": "pike_wood",
+    "name": { "ctxt": "weapon", "str": "wooden pike" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  }
+]

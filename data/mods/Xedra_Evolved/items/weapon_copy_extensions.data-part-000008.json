@@ -1,0 +1,9 @@
+[
+  {
+    "type": "ITEM",
+    "id": "club_wooden",
+    "copy-from": "club_wooden",
+    "name": { "str": "wooden club" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  }
+]

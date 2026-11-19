@@ -1,0 +1,30 @@
+[
+  {
+    "type": "ITEM",
+    "id": "cudgel",
+    "copy-from": "cudgel",
+    "name": { "str": "cudgel" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  },
+  {
+    "type": "ITEM",
+    "id": "spear_wood",
+    "copy-from": "spear_wood",
+    "name": { "str": "fire-hardened wooden spear" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  },
+  {
+    "type": "ITEM",
+    "id": "spear_homemade_halfpike",
+    "copy-from": "spear_homemade_halfpike",
+    "name": { "str": "homemade halfpike" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  },
+  {
+    "type": "ITEM",
+    "id": "i_staff",
+    "copy-from": "i_staff",
+    "name": { "str": "ironshod quarterstaff", "str_pl": "ironshod quarterstaves" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  }
+]

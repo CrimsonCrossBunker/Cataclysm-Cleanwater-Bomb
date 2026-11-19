@@ -1,0 +1,22 @@
+[
+  {
+    "type": "ITEM",
+    "id": "spear_knife",
+    "copy-from": "spear_knife",
+    "name": { "str": "simple knife spear" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  },
+  {
+    "type": "ITEM",
+    "id": "spear_spike",
+    "copy-from": "spear_spike",
+    "name": { "str": "spike on a stick", "str_pl": "spikes on sticks" },
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  },
+  {
+    "type": "ITEM",
+    "id": "stick",
+    "copy-from": "stick",
+    "extend": { "flags": [ "WOODEN_WEAPON" ] }
+  }
+]
