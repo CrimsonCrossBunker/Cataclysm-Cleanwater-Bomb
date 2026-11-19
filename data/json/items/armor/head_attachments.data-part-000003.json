@@ -1,0 +1,47 @@
+[
+  {
+    "id": "advanced_gpnvg",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "category": "armor",
+    "name": { "str_sp": "panoramic night vision goggles" },
+    "description": "Advanced GPNVG with four image intensifier tubes, allowing for a large field of view at night, designed to be mounted on a compatible helmet.  Currently raised up and out of the way.",
+    "weight": "765 g",
+    "volume": "1600 ml",
+    "price": "47000 USD",
+    "price_postapoc": "30 USD",
+    "material": [ "plastic", "steel", "glass" ],
+    "symbol": "[",
+    "color": "dark_gray",
+    "charges_per_use": 1,
+    "use_action": {
+      "type": "transform",
+      "msg": "You activate your %s.",
+      "target": "advanced_gpnvg_on",
+      "need_charges": 1,
+      "need_charges_msg": "The batteries are dead."
+    },
+    "material_thickness": 1,
+    "pocket_data": [
+      {
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "flag_restriction": [ "BATTERY_MEDIUM" ],
+        "default_magazine": "medium_battery_cell"
+      }
+    ],
+    "flags": [ "HELMET_FRONT_ATTACHMENT", "CANT_WEAR", "OUTER", "ELECTRONIC", "MUNDANE" ],
+    "faults": [ { "fault_group": "electronic_general" } ],
+    "armor": [
+      { "covers": [ "eyes" ], "coverage": 10, "encumbrance": 0, "rigid_layer_only": true },
+      {
+        "covers": [ "head" ],
+        "encumbrance": 12,
+        "coverage": 80,
+        "specifically_covers": [ "head_forehead", "head_crown" ]
+      }
+    ],
+    "tool_ammo": "battery",
+    "passive_effects": [ { "id": "nvg_good" } ]
+  }
+]
