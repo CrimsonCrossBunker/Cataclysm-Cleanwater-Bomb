@@ -28,40 +28,5 @@
       },
       { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_NPC_HOMELESS_GROUP_SURVIVOR_INTRO",
-    "dynamic_line": "So, what's up?",
-    "responses": [
-      { "text": "What are you doing here?", "topic": "TALK_NPC_HOMELESS_BROKER_STORY" },
-      {
-        "text": "I'd like to ask you a few questions.",
-        "topic": "TALK_FRIEND_CONVERSATION",
-        "condition": { "compare_string": [ "yes", { "npc_val": "dialogue_first_meeting_talked_to_homeless" } ] }
-      },
-      {
-        "text": "Where might your friends be?",
-        "topic": "TALK_NPC_HOMELESS_GROUP_SURVIVOR_FRIENDS",
-        "condition": { "compare_string": [ "yes", { "npc_val": "dialogue_first_meeting_told_about_buddies" } ] }
-      },
-      {
-        "text": "Can I stay here?",
-        "topic": "TALK_NPC_HOMELESS_BROKER_STAY",
-        "condition": { "compare_string": [ "yes", { "npc_val": "dialogue_first_meeting_told_about_buddies" } ] }
-      },
-      {
-        "text": "What's with that guy in the tent?",
-        "topic": "TALK_NPC_HOMELESS_GROUP_SURVIVOR_BROKER",
-        "condition": { "compare_string": [ "yes", { "npc_val": "dialogue_first_meeting_told_about_buddies" } ] }
-      },
-      { "text": "Want to trade?", "topic": "TALK_NPC_HOMELESS_GROUP_SURVIVOR_NOTRADE" },
-      {
-        "text": "Any jobs you need done?",
-        "condition": { "and": [ { "not": "has_assigned_mission" }, { "not": "has_many_assigned_missions" } ] },
-        "topic": "TALK_MISSION_LIST"
-      },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
