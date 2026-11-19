@@ -1,0 +1,40 @@
+[
+  {
+    "id": "denim_shirt",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "denim shirt" },
+    "description": "A long sleeved button-down shirt made from denim.",
+    "//": "This is for 12 oz denim shirt, which I found to be average",
+    "weight": "680 g",
+    "volume": "1 L",
+    "price": "50 USD",
+    "price_postapoc": "50 cent",
+    "material": [ "denim" ],
+    "looks_like": "dress_shirt",
+    "symbol": "[",
+    "color": "light_blue",
+    "faults": [ { "fault_group": "fabric_denim" } ],
+    "flags": [ "VARSIZE" ],
+    "armor": [
+      { "covers": [ "torso" ], "coverage": 95, "encumbrance": [ 4, 5 ] },
+      { "covers": [ "arm_l", "arm_r" ], "coverage": 95, "encumbrance": [ 4, 4 ] }
+    ],
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "400 ml",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "10 cm",
+        "moves": 75
+      }
+    ],
+    "warmth": 10,
+    "material_thickness": 0.8,
+    "snippet_category": [
+      { "id": "denim_shirt1", "text": "A long sleeved button-down blue shirt made from denim." },
+      { "id": "denim_shirt2", "text": "A long sleeved button-down shirt made from denim, dyed black." },
+      { "id": "denim_shirt3", "text": "A long sleeved button-down cowboy wash shirt made from denim." }
+    ]
+  }
+]

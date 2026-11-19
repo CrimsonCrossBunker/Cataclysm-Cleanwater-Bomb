@@ -1,0 +1,49 @@
+[
+  {
+    "id": "technician_shirt_gray",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "work t-shirt" },
+    "description": "A gray work t-shirt with a small front pocket.",
+    "weight": "200 g",
+    "volume": "250 ml",
+    "price": "10 USD",
+    "price_postapoc": "50 cent",
+    "material": [ "canvas" ],
+    "symbol": "[",
+    "looks_like": "polo_shirt",
+    "color": "light_gray",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "650 ml",
+        "max_contains_weight": "1 kg",
+        "max_item_length": "15 cm",
+        "moves": 80
+      }
+    ],
+    "warmth": 8,
+    "material_thickness": 0.2,
+    "snippet_category": [
+      { "id": "technician_shirt_blue", "text": "A blue work t-shirt with a small front pocket." },
+      { "id": "technician_shirt_gray", "text": "A gray work t-shirt with a small front pocket." },
+      { "id": "technician_shirt_lightblue", "text": "A light-blue work t-shirt with a small front pocket." }
+    ],
+    "flags": [ "VARSIZE" ],
+    "armor": [
+      { "encumbrance": [ 4, 5 ], "coverage": 90, "covers": [ "torso" ] },
+      {
+        "encumbrance": [ 0, 0 ],
+        "coverage": 100,
+        "covers": [ "arm_l", "arm_r" ],
+        "specifically_covers": [ "arm_shoulder_l", "arm_shoulder_r" ]
+      },
+      {
+        "encumbrance": [ 0, 0 ],
+        "coverage": 50,
+        "covers": [ "arm_l", "arm_r" ],
+        "specifically_covers": [ "arm_upper_l", "arm_upper_r" ]
+      }
+    ]
+  }
+]
