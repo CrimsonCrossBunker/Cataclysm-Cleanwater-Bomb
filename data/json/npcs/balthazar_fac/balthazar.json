@@ -181,11 +181,5 @@
       ]
     },
     "responses": [ { "text": "Thanks.", "topic": "TALK_BALTHAZAR_INTERCOM_MAIN" } ]
-  },
-  {
-    "id": "TALK_BALTHAZAR_NO_TRADE_YET",
-    "type": "talk_topic",
-    "dynamic_line": "I'll first need to gather up some supplies before I can even consider trading.",
-    "responses": [ { "text": "Alright then.", "topic": "TALK_BALTHAZAR_INTERCOM_MAIN" } ]
   }
 ]
