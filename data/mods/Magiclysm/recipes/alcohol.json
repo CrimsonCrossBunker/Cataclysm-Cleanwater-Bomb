@@ -92,23 +92,5 @@
     "vitamins": [  ],
     "brew_time": "7 days",
     "brew_results": [ "wash_goldbrew", "yeast" ]
-  },
-  {
-    "id": "wash_dragonfire",
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "copy-from": "wash_vodka",
-    "name": { "str_sp": "dragonfire wash" },
-    "description": "Fermented, but not distilled dragonfire.  Basically undrinkable until properly distilled.",
-    "fun": -8
-  },
-  {
-    "id": "wash_goldbrew",
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "copy-from": "wash_whiskey",
-    "name": { "str_sp": "goldbrew wash" },
-    "description": "Fermented, but not distilled goldbrew.  Even unrefined, this is a nice, aromatic drink.",
-    "fun": 4
   }
 ]
