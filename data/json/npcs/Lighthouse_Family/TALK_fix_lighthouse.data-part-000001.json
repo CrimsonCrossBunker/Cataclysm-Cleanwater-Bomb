@@ -1,22 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": [ "TALK_FRIEND", "TALK_GIVE_ITEM", "TALK_USE_ITEM", "TALK_RADIO" ],
-    "responses": [
-      {
-        "text": "You said that you have experience in electrical engineering…",
-        "topic": "TALK_ENG_LIGHTHOUSE",
-        "condition": {
-          "and": [
-            { "npc_has_any_trait": [ "Exp_Eng_Electrical2", "Exp_Eng_Electrical1Fake2", "Exp_Eng_Electrical0Fake2" ] },
-            { "u_has_mission": "MISSION_lighthouse_man_5" }
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_ENG_LIGHTHOUSE",
     "dynamic_line": "I did, actually.  Why are you asking?",
     "responses": [
