@@ -1,0 +1,32 @@
+[
+  {
+    "id": [ "TALK_KILL_ARMORED_CENTIPEDE_OFFER" ],
+    "type": "talk_topic",
+    "dynamic_line": "A knight must know how to triumph despite their foe's armor.  Kill an armored centipede and I'll grant you an insignia, so you might be recognized as one of my knights.",
+    "responses": [
+      {
+        "text": "I'll do it.  Where's the centipede?",
+        "condition": { "not": { "u_has_mission": "MISSION_KILL_ARMORED_CENTIPEDE_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_KILL_ARMORED_CENTIPEDE_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_KILL_ARMORED_CENTIPEDE_ACCEPTED"
+      },
+      { "text": "Do you have any advice?", "topic": "TALK_KILL_ARMORED_CENTIPEDE_ADVICE" },
+      { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_KILL_ARMORED_CENTIPEDE_ADVICE",
+    "type": "talk_topic",
+    "dynamic_line": "Study the weak spots of weaker centipedes, it'll give you an advantage.  Its armor isn't as effective against blunt and piercing weapon than it is against slashing weapons and bullets.",
+    "responses": [
+      {
+        "text": "I'll do it.  Where's the centipede?",
+        "condition": { "not": { "u_has_mission": "MISSION_KILL_ARMORED_CENTIPEDE_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_KILL_ARMORED_CENTIPEDE_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_KILL_ARMORED_CENTIPEDE_ACCEPTED"
+      },
+      { "text": "Can I see the other quests first?", "topic": "TALK_QUEST_LIST" },
+      { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
+    ]
+  }
+]
