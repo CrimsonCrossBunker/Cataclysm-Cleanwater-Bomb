@@ -89,47 +89,5 @@
         "effect": [ { "u_spawn_item": "commune_prospectus" }, { "u_add_effect": "has_prospectus", "duration": "PERMANENT" } ]
       }
     ]
-  },
-  {
-    "id": "TALK_RANCH_FOREMAN_ANESTHETIC_FOR_DOCTOR",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "mission_tacoma_ranch_doctor_anesthetic_scavengers_helped" } ],
-      "no": {
-        "compare_string": [ "yes", { "u_val": "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped" } ],
-        "no": "I don't have anything to offer, but you could talk to the scavenger boss and the scrappers; They might be able to help.",
-        "yes": "I don't have anything to offer, but maybe the scavenger boss could help find some materials."
-      },
-      "yes": {
-        "compare_string": [ "yes", { "u_val": "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped" } ],
-        "no": "I don't have anything to offer, but maybe the scrappers could help find some materials.",
-        "yes": "I'm afraid I don't have anything to offer."
-      }
-    },
-    "responses": [
-      {
-        "text": "Thanks.",
-        "topic": "TALK_RANCH_FOREMAN",
-        "condition": {
-          "or": [
-            { "not": { "compare_string": [ "yes", { "u_val": "mission_tacoma_ranch_doctor_anesthetic_scavengers_helped" } ] } },
-            {
-              "not": { "compare_string": [ "yes", { "u_val": "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped" } ] }
-            }
-          ]
-        }
-      },
-      {
-        "text": "Thanks anyway.",
-        "topic": "TALK_RANCH_FOREMAN",
-        "condition": {
-          "and": [
-            { "compare_string": [ "yes", { "u_val": "mission_tacoma_ranch_doctor_anesthetic_scavengers_helped" } ] },
-            { "compare_string": [ "yes", { "u_val": "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped" } ] }
-          ]
-        }
-      },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]

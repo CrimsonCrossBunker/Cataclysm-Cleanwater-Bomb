@@ -1,24 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_RANCH_FOREMAN_reward",
-    "dynamic_line": "You've done a lot for the ranch, by generally helping the community with both wellness and trade.  As the project lead, I want to make sure these efforts don't go unnoticed.",
-    "responses": [
-      {
-        "text": "You mean setting up the doctor's office?",
-        "topic": "TALK_RANCH_FOREMAN_Doctor_done",
-        "condition": { "compare_string": [ "no", { "u_val": "mission_flag_Doctor_rewarded" } ] }
-      },
-      {
-        "text": "Is this about bootstrapping the trade relating to the bar?",
-        "topic": "TALK_RANCH_FOREMAN_Bartender_done",
-        "condition": { "compare_string": [ "no", { "u_val": "mission_flag_Bartender_rewarded" } ] }
-      },
-      { "text": "Understood.  Back to business.", "topic": "TALK_RANCH_FOREMAN" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_RANCH_FOREMAN_Bartender_done",
     "dynamic_line": "Ever since you got the bartender set up, our liquor business has been running so much better!  As thanks for your efforts, I wanted to reward you with a portion of recent profits.",
     "speaker_effect": { "effect": [ { "u_spawn_item": "FMCNote", "count": 75 }, { "u_lose_var": "mission_flag_Bartender_rewarded" } ] },
