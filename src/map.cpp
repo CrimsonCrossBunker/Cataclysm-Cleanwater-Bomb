@@ -16,6 +16,7 @@
 #include <ostream>
 #include <queue>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -3052,9 +3053,78 @@ void map::clear_terrain_growth( const tripoint_bub_ms &p )
     }
 }
 
+bool map::has_wall_surface( const tripoint_bub_ms &p ) const
+{
+    const ter_id id = ter( p );
+    if( !id ) {
+        return false;
+    }
+    const ter_t &t = id.obj();
+    if( t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
+        t.has_flag( "TREE" ) || t.has_flag( "SHRUB" ) ) {
+        return false;
+    }
+    const auto door_or_window = [&t] {
+        if( t.has_flag( ter_furn_flag::TFLAG_DOOR ) ||
+            t.has_flag( ter_furn_flag::TFLAG_WINDOW ) || !t.open.is_null() ||
+            t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR ) ||
+            t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR_DAMAGED ) ||
+            t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR_REINFORCED ) ||
+            ( t.has_flag( ter_furn_flag::TFLAG_LOCKED ) &&
+              !t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) ) ) {
+            return true;
+        }
+        static const std::string broken_reinforced( "BARRICADABLE_DOOR_REINFORCED_DAMAGED" );
+        return t.has_flag( broken_reinforced );
+    };
+    static const int wall_group = get_connect_group( "WALL" ).index;
+    const bool joins_wall_line = t.connect_to_groups.test( wall_group );
+    const auto wall_opening = [&] {
+        if( t.has_flag( ter_furn_flag::TFLAG_WINDOW ) ||
+            t.has_flag( ter_furn_flag::TFLAG_DOOR ) || t.movecost <= 0 ||
+            t.has_flag( ter_furn_flag::TFLAG_WALL ) ||
+            t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) || !joins_wall_line ) {
+            return false;
+        }
+        return !t.close.is_null() ||
+               ( t.has_flag( ter_furn_flag::TFLAG_FLAT ) &&
+                 t.has_flag( ter_furn_flag::TFLAG_SUPPORTS_ROOF ) );
+    };
+    const bool panel = door_or_window() || wall_opening();
+    if( panel ) {
+        return true;
+    }
+    if( t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) ) {
+        static constexpr std::array<std::string_view, 7> ground_ids = {{
+                "t_sewage_pipe", "t_nl_sewage_pipe", "t_nl_sewage_pipe_border",
+                "t_LIXA_tube", "t_LIXA_unfolded_tube", "t_LIXA_unfolded_tube_broken",
+                "t_gutter"
+            }
+        };
+        static constexpr std::array<std::string_view, 4> roof_ids = {{
+                "t_gutter_drop", "t_gutter_downspout",
+                "t_vitrified_gutter_drop", "t_vitrified_downspout"
+            }
+        };
+        const std::string_view terrain_id( t.id.str() );
+        const bool flat = std::find( ground_ids.begin(), ground_ids.end(), terrain_id ) != ground_ids.end() ||
+                          ( p.z() > 0 && std::find( roof_ids.begin(), roof_ids.end(),
+                                                  terrain_id ) != roof_ids.end() );
+        return !flat;
+    }
+    static constexpr std::array<std::string_view, 2> upright_equipment = {{
+            "t_monkey_bars", "t_slide"
+        }
+    };
+    const std::string_view terrain_id( t.id.str() );
+    return std::find( upright_equipment.begin(), upright_equipment.end(),
+                      terrain_id ) == upright_equipment.end() && t.movecost == 0;
+}
+
 uint8_t map::get_known_connections( const tripoint_bub_ms &p,
                                     const std::bitset<NUM_TERCONN> &connect_group,
-                                    const std::map<tripoint_bub_ms, ter_id> &override ) const
+                                    const std::map<tripoint_bub_ms, ter_id> &override,
+                                    const bool include_wall_surfaces ) const
 {
     if( connect_group.none() ) {
         return 0;
@@ -3095,6 +3165,9 @@ uint8_t map::get_known_connections( const tripoint_bub_ms &p,
         const bool may_connect = neighbour_overridden ||
                                  get_visibility( ch.visibility_cache[neighbour.x()][neighbour.y()],
                                          get_visibility_variables_cache() ) == visibility_type::CLEAR ||
+                                 ( include_wall_surfaces &&
+                                   ch.floor_blocked_seen_cache[neighbour.x()][neighbour.y()] > 0.0f &&
+                                   has_wall_surface( neighbour ) ) ||
                                  // or if an actual center tile is transparent or next to a memorized tile
                                  ( !overridden && ( is_transparent || is_memorized( neighbour ) ) );
         if( may_connect ) {
@@ -3437,10 +3510,12 @@ int map::get_rotation_unconnected( const char rot_to )
 void map::get_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
                               const std::bitset<NUM_TERCONN> &connect_group,
                               const std::bitset<NUM_TERCONN> &rotate_to_group,
-                              const std::map<tripoint_bub_ms, ter_id> &ter_override )
+                              const std::map<tripoint_bub_ms, ter_id> &ter_override,
+                              const bool include_wall_surfaces )
 {
     map &here = get_map();
-    uint8_t connections = here.get_known_connections( p, connect_group, ter_override );
+    uint8_t connections = here.get_known_connections( p, connect_group, ter_override,
+                          include_wall_surfaces );
     uint8_t rotation_targets = here.get_known_rotates_to( p, rotate_to_group, ter_override );
     get_rotation_and_subtile( connections, rotation_targets, rotation, subtile );
 }

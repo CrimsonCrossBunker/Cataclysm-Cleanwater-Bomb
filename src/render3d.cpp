@@ -2391,7 +2391,7 @@ region_cull_mask build_region_cull_mask( map &here, const avatar &you,
     const int cz = center.z();
     const int dz = zlev - cz;
     const float wz = dz * LEVEL_HEIGHT;
-    const int radius = dz == 0 ? VIEW_RADIUS : REGION_RADIUS;
+    const int radius = dz >= 0 ? VIEW_RADIUS : REGION_RADIUS;
     const int min_x = std::max( 0, center.x() - radius );
     const int max_x = std::min( MAPSIZE_X - 1, center.x() + radius );
     const int min_y = std::max( 0, center.y() - radius );
@@ -2439,7 +2439,8 @@ region_cull_mask build_region_cull_mask( map &here, const avatar &you,
                         for( int x = x0; x <= x1; ++x ) {
                             if( dz > 0 ) {
                                 potentially_visible = cache.seen_cache[x][y] > 0.0f ||
-                                                      cache.camera_cache[x][y] > 0.0f;
+                                                      cache.camera_cache[x][y] > 0.0f ||
+                                                      cache.floor_blocked_seen_cache[x][y] > 0.0f;
                             } else {
                                 potentially_visible = clear_light( cache.visibility_cache[x][y] );
                             }
@@ -2581,10 +2582,12 @@ void terrain_rota_subtile_cached( cata_tiles *tiles, map &here, const avatar &yo
 
 uint8_t terrain_connections_cached( map &here, const avatar &you,
                                     const tripoint_bub_ms &p,
-                                    const std::bitset<NUM_TERCONN> &connect_groups )
+                                    const std::bitset<NUM_TERCONN> &connect_groups,
+                                    const bool include_wall_surfaces )
 {
-    return cached_orientation( here, you, p, 1, [&]( orientation_cache_entry & out ) {
-        out.connections = here.get_known_connections( p, connect_groups, {} );
+    return cached_orientation( here, you, p, include_wall_surfaces ? 2 : 1,
+    [&]( orientation_cache_entry & out ) {
+        out.connections = here.get_known_connections( p, connect_groups, {}, include_wall_surfaces );
     } ).connections;
 }
 
@@ -2696,9 +2699,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // tile light tone from its lit level, the same model 2D's smooth lighting
     // uses (smooth_lighting::classify_light_cell + data/shaders/lit.frag)
     const auto tone_for = [&]( const level_cache & c, const tripoint_bub_ms & q,
-    const lit_level ll ) {
+    const lit_level ll, const bool wall_surface = false ) {
         const float apparent = smooth_lighting::needs_apparent_light( ll )
-                               ? map::apparent_light_helper( c, q ).apparent_light : 0.0f;
+                               ? map::apparent_light_helper( c, q, wall_surface ).apparent_light : 0.0f;
         return tone_from_light( smooth_lighting::classify_light_cell(
                                     ll, apparent, vis_vars.vision_threshold ).light );
     };
@@ -3414,14 +3417,22 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( dz == 0 && dx * dx + dy * dy > VIEW_RADIUS * VIEW_RADIUS ) {
                     continue;
                 }
-                // two-tier gather: only the near region (±REGION_RADIUS) renders
-                // other z-levels; the separate far pass owns distant structures
-                if( dz != 0 &&
-                    ( std::abs( dx ) > REGION_RADIUS || std::abs( dy ) > REGION_RADIUS ) ) {
+                // Other levels keep their original detailed region. Above the
+                // view level, only wall faces may extend into the 60-tile ring.
+                const bool outside_region = dz != 0 &&
+                                            ( std::abs( dx ) > REGION_RADIUS || std::abs( dy ) > REGION_RADIUS );
+                if( ( dz < 0 && outside_region ) ||
+                    ( dz > 0 && outside_region && dx * dx + dy * dy > VIEW_RADIUS * VIEW_RADIUS ) ) {
                     continue;
                 }
                 const tripoint_bub_ms p = center + tripoint( dx, dy, dz );
                 if( !here.inbounds( p ) ) {
+                    continue;
+                }
+                const bool wall_extension = dz > 0 && outside_region;
+                const bool wall_candidate = dz > 0 &&
+                                            cache.floor_blocked_seen_cache[p.x()][p.y()] > 0.0f;
+                if( wall_extension && !wall_candidate ) {
                     continue;
                 }
                 const uint8_t cull_state = cull_mask.state[p.x() / SEEX + p.y() / SEEY * MAPSIZE];
@@ -3463,13 +3474,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // z-levels. the view level keeps a featureless near-black
                 // ground slab (fog of war) where nothing was ever seen; other
                 // levels draw memory only, nothing where there is none.
-                if( !visible ) {
+                if( !visible && !wall_candidate ) {
                     if( dz == 0 ) {
                         if( !gather_memory_tile( p, point( dx, dy ), wz, true ) &&
                             std::max( std::abs( dx ), std::abs( dy ) ) <= REGION_RADIUS ) {
                             push_fog_slab( point( dx, dy ), wz );
                         }
-                    } else if( !( dz > 0 &&
+                    } else if( !( dz > 0 && !wall_extension &&
                                   dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )] ) ) {
                         // the dollhouse cutout stays clear: remembered walls on
                         // the floors above an interior must not block it.
@@ -3482,16 +3493,39 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // levels above an indoor column the player can see into are drawn
                 // translucent (ghost) instead of being cut out entirely, so the
                 // roof stays perceptible from inside
-                const bool ghost = dz > 0 &&
-                                   dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )];
+                bool ghost = dz > 0 && !wall_extension &&
+                             dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )];
                 // roof mode: an upper tile made visible by a camera or
                 // clairvoyance but not by direct line of sight draws only its
                 // floor + walls (the building outline), no furniture/items
-                const bool roof_unseen = dz > 0 && !seen;
+                const bool roof_unseen = dz > 0 && ( !seen || wall_extension );
                 const maptile mt = here.maptile_at( p );
                 const ter_id t = mt.get_ter();
                 const furn_id f = mt.get_furn();
                 if( t == t_null ) {
+                    continue;
+                }
+                // A floor-blocked cell exposes only its wall face. The shared
+                // classifier and wall-specific light query must both pass;
+                // nothing else in this cell becomes visible through this path.
+                bool wall_only = wall_candidate && ( !visible || wall_extension ) &&
+                                 here.has_wall_surface( p );
+                if( wall_only ) {
+                    ll = here.apparent_light_on_wall_at( p, vis_vars );
+                    wall_only = ll == lit_level::LOW || ll == lit_level::LIT ||
+                                ll == lit_level::BRIGHT;
+                    if( wall_only ) {
+                        ghost = false;
+                    }
+                }
+                if( wall_extension && !wall_only ) {
+                    continue;
+                }
+                if( !visible && !wall_only ) {
+                    if( !( dz > 0 && !wall_extension &&
+                           dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )] ) ) {
+                        gather_memory_tile( p, point( dx, dy ), wz, dz < 0 );
+                    }
                     continue;
                 }
                 // Open air / holes have no terrain surface (water is
@@ -3506,10 +3540,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // the whole tile shares one light tone, from the same light
                 // level classification 2D uses: bright tiles stay full color,
                 // dim ones darken and drain toward grayscale
-                const tile_tone tone = tone_for( cache, p, ll );
+                const tile_tone tone = tone_for( cache, p, ll, wall_only );
 
                 const snow_cover snow = get_weather_const().get_surface_snow_cover( here, p );
-                if( snow != snow_cover::none && tiles->get_snow_texture() ) {
+                if( !wall_only && snow != snow_cover::none && tiles->get_snow_texture() ) {
                     const SDL_Rect rect = cata_tiles::snow_sprite( snow, here.get_abs( p ).xy() );
                     sprite_info sprite;
                     sprite.atlas = tiles->get_snow_texture().get();
@@ -3541,7 +3575,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // wall-line connections orient door/window panels and fence slabs
                 // (bit order S=1, E=2, W=4, N=8)
                 const uint8_t wall_conn = ( is_panel || ( is_fence && !is_flat_utility ) )
-                                          ? terrain_connections_cached( here, you, p, t->connect_to_groups ) : 0;
+                                          ? terrain_connections_cached( here, you, p, t->connect_to_groups, dz > 0 ) : 0;
                 const bool ew_line = ( wall_conn & 0x06 ) != 0; // true: the line runs E-W
 
                 // terrain sprite: one faithful call mirrors 2D's selection for
@@ -3684,7 +3718,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // canopies are spriteless terrain) — skip instead of painting a
                 // hash-colored floor in the sky. Horizontal utilities likewise
                 // get no hash-colored base when their tile has no real bg.
-                if( !open_air && !is_empty_frame &&
+                if( !wall_only && !open_air && !is_empty_frame &&
                     ( ( dz <= 0 && !is_flat_utility ) || ground_tex ) &&
                     ( ground_tex || !skip_untextured_terrain_surface( *t ) ) ) {
                     // the base-id / wood-floor fallbacks have no connection
@@ -3720,7 +3754,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // (translucent) floor slab: drawing the walls/furniture up there
                 // too would read as seeing the upper story from inside. Horizontal
                 // utilities are part of that roof surface and must not be cut out.
-                if( ghost ) {
+                if( ghost && !wall_only ) {
                     if( is_flat_utility ) {
                         std::vector<float> &top = bucket_for( MODE_FLATQUAD, ftex ? fspr.atlas : nullptr );
                         std::vector<float> &sides = bucket_for( MODE_LINEQUAD, ftex ? fspr.atlas : nullptr );
@@ -3958,6 +3992,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                    1.0f, 1.0f, WALL_HEIGHT, fspr, or_, og, ob,
                                    false, 0, false, -1.0f, ghost, tone.sat );
                     ++count;
+                }
+
+                if( wall_only ) {
+                    continue;
                 }
 
                 // fields (blood, bile, smoke, fire, web...): 2D draws every
