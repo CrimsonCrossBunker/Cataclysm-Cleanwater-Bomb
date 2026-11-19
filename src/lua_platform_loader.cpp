@@ -5876,6 +5876,7 @@ void write_static_technique( JsonOut &json, const sol::table &options )
     write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
     write_placement_member<std::string>( json, options, "when", "//ccb_lua_combat_predicate" );
     write_static_native_text( json, options, "condition_description", "condition_desc" );
+    write_placement_member<std::string>( json, options, "on_apply", "//ccb_lua_technique_on_apply" );
     if( const auto messages = options.get<sol::optional<sol::table>>( "messages" ) ) {
         json.member( "messages" );
         write_static_values<sol::object>( json, *messages, "technique messages",

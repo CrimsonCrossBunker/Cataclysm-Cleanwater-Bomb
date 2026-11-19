@@ -411,6 +411,19 @@ void ma_technique::load( const JsonObject &jo, std::string_view src )
         eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }
 
+    if( const auto on_apply = jo.get_member_opt( "//ccb_lua_technique_on_apply" ) ) {
+        if( on_apply->has_source_file() ) {
+            on_apply->throw_error( "technique callback metadata is reserved for ordered Lua definitions" );
+        }
+        const std::string handler = on_apply->get_string();
+        if( handler.empty() || handler.find( '\0' ) != std::string::npos ||
+            handler.find( '#' ) != std::string::npos ) {
+            on_apply->throw_error( "technique callback requires a named Lua handler" );
+        }
+        lua_platform_apply_mod = std::string( src );
+        lua_platform_apply_handler = handler;
+    }
+
     if( load_combat_predicate( jo, src, condition ) ) {
         optional( jo, was_loaded, "condition_desc", condition_desc );
         has_condition = true;

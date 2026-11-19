@@ -7340,6 +7340,7 @@ void character_content_transaction::impl::apply_technique()
         native.lua_platform_mod = this->owner;
         native.lua_platform_condition_handler = source.condition_handler;
         native.lua_platform_charge_damage_handler = source.charge_damage_handler;
+        native.lua_platform_apply_mod = this->owner;
         native.lua_platform_apply_handler = source.apply_handler;
         if( !source.position_handler.empty() ) {
             native.flags.insert( "LUA_POSITION_TECHNIQUE" );

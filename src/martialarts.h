@@ -279,10 +279,11 @@ class ma_technique
 
         std::vector<tech_effect_data> tech_effects;
 
-        // Lua-first post-application callback owned by the defining mod.
         std::string lua_platform_mod;
         std::string lua_platform_condition_handler;
         std::string lua_platform_charge_damage_handler;
+        // An ordered definition may inherit its post-application callback from another mod.
+        std::string lua_platform_apply_mod;
         std::string lua_platform_apply_handler;
         std::string lua_platform_grapple_handler;
 

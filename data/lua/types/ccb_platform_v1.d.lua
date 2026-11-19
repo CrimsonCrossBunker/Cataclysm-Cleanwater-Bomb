@@ -4023,7 +4023,7 @@ function TechniqueDefinition:cooldown_duration(handler_id) end
 ---@param handler_id string Named handler receiving CcbMountedChargeDamagePayload and returning one finite number. Invoked before the native mounted-charge melee attack, only after movement with positive mount speed. Other attacks do not invoke it.
 ---@return TechniqueDefinition self
 function TechniqueDefinition:charge_damage(handler_id) end
----@param handler_id string
+---@param handler_id string Named handler receiving CcbTechniqueApplicationContext.
 ---@return TechniqueDefinition self
 function TechniqueDefinition:on_apply(handler_id) end
 
@@ -15636,6 +15636,11 @@ function CcbNpcsApi.rename(handle, name) end
 ---@param attitude string
 ---@return CcbResult
 function CcbNpcsApi.set_attitude(handle, attitude) end
+---Recruit an NPC through the native follower operation, including roster, faction, goals and cash transfer.
+---@param follower GameHandle Exact live NPC.
+---@param leader GameHandle Exact live Character leading the NPC.
+---@return CcbResult
+function CcbNpcsApi.follow(follower, leader) end
 ---@param handle GameHandle Exact NPC handle.
 ---@param deltas CcbNpcOpinion
 ---@return CcbResult
@@ -17762,6 +17767,16 @@ function CcbMonstersApi.seeing_position(position, radius) end
 ---@return CcbResult result
 function CcbMonstersApi.set_friendly(monster, friendly) end
 
+---@class CcbMonsterDispositionOptions
+---@field anger? integer Native anger value.
+---@field morale? integer Native morale value.
+---@field friendly? integer Native friendliness counter; zero is unfriendly, negative is permanent.
+
+---@param monster GameHandle Exact live monster.
+---@param values CcbMonsterDispositionOptions
+---@return CcbResult
+function CcbMonstersApi.set_disposition(monster, values) end
+
 ---@class CcbMonsterDefinitionDeathPayload
 ---@field monster_type_id string Native id of the dying monster.
 ---@field monster GameHandle Identity of the dying monster. Live-creature services still reject it.
@@ -17930,6 +17945,15 @@ function CcbPlatformContent.define_spell(options) end
 ---@field attacker_strength integer Current attacker's strength.
 ---@field target_grab_strength integer Monster grab strength, or zero for a Character.
 
+---@class CcbTechniqueApplicationContext
+---@field technique_id string
+---@field attacker GameHandle Attacking Character.
+---@field target GameHandle Target Creature.
+---@field repeat_index integer One-based repetition currently being applied.
+---@field repeat_count integer Total repetitions.
+---@field total_damage? number Adjusted damage before applying it to the target.
+---@field weapon_id? string Current weapon type if present.
+
 ---@class StaticTechniqueEffect
 ---@field id string Native effect ID.
 ---@field duration_turns? integer Duration in game turns.
@@ -17949,6 +17973,7 @@ function CcbPlatformContent.define_spell(options) end
 ---@field messages? (string|LocalizedText)[] Avatar and NPC messages in that order.
 ---@field when? string Named handler receiving CcbTechniqueCombatContext and returning a boolean when this technique is evaluated against a target.
 ---@field condition_description? string|LocalizedText Singular description of the technique condition.
+---@field on_apply? string Named handler receiving CcbTechniqueApplicationContext after each repetition's native effects.
 ---@field crit_tec? boolean
 ---@field crit_ok? boolean
 ---@field wall_adjacent? boolean
