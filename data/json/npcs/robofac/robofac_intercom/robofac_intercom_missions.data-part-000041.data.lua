@@ -1,28 +1,26 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_WHAT_ELSE",
-    line = ccb.content.text("All I can tell you is that they were conducting cutting-edge research related to-\" The intercom abruptly cuts off for several seconds before coming back on, the voice sounding apologetic, \"Sorry, but as it turns out I'm not at liberty to divulge that information.  What I can do however is recommend you bring an NRE recorder with you if you still have one."),
+    id = "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_What",
+    line = ccb.content.text("Killer robots that invaded earth during the portal storm.  They have a large fortress somewhere - some sort of metal castle - and thus show signs of dangerous intelligence.  We do not fully understand their directives or functions, and thus need a salvaged robot to deconstruct and reverse engineer."),
 }
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_LIXA_ACRONYM",
-    line = ccb.content.text("It's an acronym that stands for Laser Interferometer eXodimensional resonance Array."),
-}
-
--- I feel like this could be phrased better.
-ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_OFFER_ADVICE_Replacement",
-    line = ccb.content.text("Well, the ID card wouldn't strictly speaking be necessary if you were to find some way of breaching the facility's security doors.\" The voice pauses for a moment, \"But that said we only have the one ID card, so unless you're confident you can get in without it, please don't lose it.  As for the memory stick I would highly recommend you not lose that as portable drives with the required hardware security modules to interface with secure terminals are in short supply these days.  However there may very well be some on-site for you to scavenge if you're lucky."),
+    id = "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_How",
+    line = ccb.content.text("We understand these Exodii can be quite dangerous, hence why we are assigning you a HOUND unit.  You can disable the robot by any violent means you deem necessary, as long as it does not seriously damage its frame."),
 }
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_OFFER_ADVICE_HEW",
-    line = ccb.content.text("&You hear a click as the microphone shuts off.  After several seconds it clicks back on, someone taps the microphone twice to test it - thud thud - and then speaks: \"All I can tell you is that you may encounter extradimensional anomalies, but we cannot be certain which.  I strongly recommend you take an NRE recorder.\""),
+    id = "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_Which",
+    line = ccb.content.text("Yes, a good question.  Our recon teams have identified several units that appear to be mindless \"worker\" drones.  These worker units can be found at some of their field sites, which may look like large shipping containers, metal boxes, or strange barns.  We also know that there are infected robots roaming near some of their facilities, which we have taken to calling \"zomborgs\".  But, we have other contractors working with these zomborgs, and these efforts have not yet yielded results, so please do not bring us any of those."),
 }
 
--- Is it a semi-colon or colon that goes here? Man, idk.
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_ACCEPTED",
-    line = ccb.content.text("Transferring the items now.\"  The intercom tray slides open, revealing an ID card for the facility and what looks like a USB thumb drive.  \"Again: please take care not to lose either of these since we can't exactly make more of them."),
+    id = "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_Prototype",
+    line = ccb.content.text("We refer to it as the Hostile Overstimulation and Unmanned Neutralization Drone, or HOUND.  It is a custom-build robot that will engage hostiles with a noisemaker and taser unit.  It should keep hostile Exodii, and other threats, distracted so that you can engage them safely.  We strongly suggest you bring hearing protection."),
+}
+
+ccb.content.define_dialogue_topic {
+    id = "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ACCEPTED",
+    line = ccb.content.text("&The intercom's tray slides open, revealing an inactive robot and a pair of earplugs.  \"Happy hunting.\""),
 }

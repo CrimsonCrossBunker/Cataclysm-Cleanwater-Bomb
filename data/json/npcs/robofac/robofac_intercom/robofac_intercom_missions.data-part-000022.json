@@ -1,32 +1,71 @@
 [
   {
+    "id": "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1",
+    "type": "mission_definition",
+    "name": { "str": "Hazard Meteorology" },
+    "//": "This mission is completed when you first sell any piece of portal storm data.",
+    "goal": "MGOAL_NULL",
+    "description": "Use the NRE recorder to collect information during a portal storm event.  You'll need to <color_yellow>stay outside and carry the recorder for around 6 minutes until you hear a sharp beep</color> to collect sufficient data.  Generate a printout by activating the NRE recorder and offer it to Hub 01 to finish the mission.",
+    "difficulty": 5,
+    "value": 0,
+    "end": {
+      "update_mapgen": [
+        {
+          "om_terrain": "robofachq_surface_entrance",
+          "place_nested": [ { "chunks": [ "robofac_hq_surface_merc_2" ], "x": 1, "y": 9 } ]
+        }
+      ],
+      "effect": [
+        { "u_add_var": "dialogue_intercom_completed_robofac_intercom_portal_sm_1", "value": "yes" },
+        { "math": [ "u_hub01_completed_missions++" ] }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "…",
+      "offer": "…",
+      "accepted": "…",
+      "rejected": "…",
+      "advice": "…",
+      "inquire": "…",
+      "success": "…",
+      "success_lie": "…",
+      "failure": "…"
+    }
+  },
+  {
     "id": [
-      "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER",
-      "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_MWS",
-      "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Reality_Bubble",
-      "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Recording_Length",
-      "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Replacement"
+      "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER",
+      "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Recorder",
+      "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Outside",
+      "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Hold",
+      "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Replacement"
     ],
     "type": "talk_topic",
-    "dynamic_line": "Your field NRE recordings are of continued interest of us.  Since you have proved yourself capable, we would like to expand your assignment.  We are willing to provide you with a mobile weather station.  We'd like you to set it up and deploy it near a portal storm.  A standard recording takes 1 hour.  We realize the anomalies may not last that long, so as long as the portal storm passes near the unit while recording, we can make use of the data.  As payment we will let you keep the weather system and pay you our standard subcontracting rate.",
+    "dynamic_line": "As we mentioned before, our research into the portal storm phenomena requires that we obtain additional data to verify our own local measurements.  Recording this data will require you to carry a scientific instrument called an NRE recorder on your person while outside in the storm for around six minutes.  The recording instrument will be provided at no cost if you choose to accept.\"\n\n\"We are willing to offer 1 HGC for each standard-length recording.  Higher-quality data may be obtained by collecting more data before printing a report, and as a result, we are willing to provide higher pay for better recordings.",
     "responses": [
       {
-        "text": "More science?  I'm in.",
-        "effect": [ { "assign_mission": "MISSION_ROBOFAC_INTERCOM_MWS_1" }, { "u_spawn_item": "mobile_weather_station", "count": 1 } ],
-        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_1_ACCEPTED"
+        "text": "Sure, why not?  Let's do some science.",
+        "effect": [
+          { "assign_mission": "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1" },
+          { "u_spawn_item": "nre_recorder", "count": 1 },
+          { "u_spawn_item": "medium_battery_cell", "count": 1 }
+        ],
+        "topic": "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_ACCEPTED"
       },
-      { "text": "How does the weather station work?", "topic": "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_MWS" },
+      { "text": "How does the recorder work?", "topic": "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Recorder" },
       {
-        "text": "Do I need to stay near the station while it records?",
-        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Reality_Bubble"
+        "text": "How will I know when I've been outside long enough?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Outside"
       },
       {
-        "text": "How close do I need to get and do I need to record for the full hour?",
-        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Recording_Length"
+        "text": "Do I need to physically hold the recorder in my hand?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Hold"
       },
       {
-        "text": "If I lose the station or break it, what should I do?",
-        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Replacement"
+        "text": "If I lose the recorder or break it, what should I do?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Replacement"
       },
       { "text": "What else do you have available?", "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS" }
     ]

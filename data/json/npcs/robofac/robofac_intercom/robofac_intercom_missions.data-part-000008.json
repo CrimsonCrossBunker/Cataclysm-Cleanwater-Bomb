@@ -38,27 +38,5 @@
       "success_lie": "…",
       "failure": "…"
     }
-  },
-  {
-    "id": [
-      "MISSION_ROBOFAC_INTERCOM_2_OFFER",
-      "MISSION_ROBOFAC_INTERCOM_2_ADVICE_Convoy",
-      "MISSION_ROBOFAC_INTERCOM_2_ADVICE_DARPA"
-    ],
-    "type": "talk_topic",
-    "dynamic_line": "When the portal storms started, the government issued an evacuation order for critical personnel and sent convoys to retrieve them, with our head of AI research among the recalled.  We recently discovered that he died when the convoy transferring him was ambushed in the initial chaos, but his corpse and belongings might remain intact enough to benefit from his research.\"\n\n\"We want you to travel to the convoy and locate the body, if possible.  His evacuation protocol included retrieving and storing as much of the data from his facility as possible, to be stored in a code-locked hard case.  If this hard case is present, retrieve it, and bring it back here.\"\n\n\"We offer the standard hazard pay of 4 HGC for this contract.",
-    "responses": [
-      {
-        "text": "I'll take it.  Where's the convoy?",
-        "effect": { "assign_mission": "MISSION_ROBOFAC_INTERCOM_2" },
-        "topic": "MISSION_ROBOFAC_INTERCOM_2_ACCEPTED"
-      },
-      { "text": "What should I expect to go up against?", "topic": "MISSION_ROBOFAC_INTERCOM_2_ADVICE_Convoy" },
-      {
-        "text": "Who was this person, and what do they look like?",
-        "topic": "MISSION_ROBOFAC_INTERCOM_2_ADVICE_DARPA"
-      },
-      { "text": "What else do you have available?", "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS" }
-    ]
   }
 ]

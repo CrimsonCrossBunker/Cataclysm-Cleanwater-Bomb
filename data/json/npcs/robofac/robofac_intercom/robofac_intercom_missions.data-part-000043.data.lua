@@ -1,88 +1,28 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_Explainer",
-    line = ccb.content.text("&Over the course of several minutes, you calmly detail the events at the facility: the unexpected zombie presence underground, the anomalous nature of the experiment floor, and the encounter with the warped and hostile research staff trapped in the corridor.  Throughout, the voice interjects with questions, the sounds of typing filling the pauses.\n\n\"We appreciate your thorough report,\" the voice finally responds.  \"Your handling of the circumstances was commendable considering the anomalous and unpredictable nature of the facility.  If you seek further contract work, rest assured, we'll take into account the potential for anomalous circumstances in future assignments and relay them accordingly.\""),
-    replies = {
-        {
-            text = ccb.content.text("It's fine.  At least now we know for the future."),
-            next_topic = "TALK_DONE",
-        },
-        { text = ccb.content.text("Yeah, yeah.  You're welcome."), next_topic = "TALK_DONE" },
-        { text = ccb.content.text("Let's never do that again."), next_topic = "TALK_DONE" },
-    },
+    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_WHAT_ELSE",
+    line = ccb.content.text("All I can tell you is that they were conducting cutting-edge research related to-\" The intercom abruptly cuts off for several seconds before coming back on, the voice sounding apologetic, \"Sorry, but as it turns out I'm not at liberty to divulge that information.  What I can do however is recommend you bring an NRE recorder with you if you still have one."),
 }
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut",
-    line = ccb.content.text("&The intercom waits patiently."),
-    replies = {
-        {
-            text = ccb.content.text("Hoo boy, where do I even begin with this one?  Let's start with the fact that your intel was about as useful as a screen door on a submarine!  \"Sparsely-populated,\" my ass!  How did you lot miss the goddamn zombie mosh pit down the open elevator shaft!?"),
-            next_topic = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_1",
-        },
-    },
+    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_LIXA_ACRONYM",
+    line = ccb.content.text("It's an acronym that stands for Laser Interferometer eXodimensional resonance Array."),
+}
+
+-- I feel like this could be phrased better.
+ccb.content.define_dialogue_topic {
+    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_OFFER_ADVICE_Replacement",
+    line = ccb.content.text("Well, the ID card wouldn't strictly speaking be necessary if you were to find some way of breaching the facility's security doors.\" The voice pauses for a moment, \"But that said we only have the one ID card, so unless you're confident you can get in without it, please don't lose it.  As for the memory stick I would highly recommend you not lose that as portable drives with the required hardware security modules to interface with secure terminals are in short supply these days.  However there may very well be some on-site for you to scavenge if you're lucky."),
 }
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_1",
-    line = ccb.content.text("We're sorry but-"),
-    replies = {
-        {
-            text = ccb.content.text("Oh, ho ho ho ho ho no friend you do not get to talk right now.  When I FINALLY got down to the experiment floor, you know what I found?  The entire corridor was turned into a two-dimensional image!  What were they even DOING that turned an entire section of the building INTO A HAUNTED VIDEO GAME PORTAL PAINTING!?"),
-            next_topic = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_2",
-        },
-        {
-            text = ccb.content.text("[Stop talking.]"),
-            next_topic = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_5",
-        },
-    },
+    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_OFFER_ADVICE_HEW",
+    line = ccb.content.text("&You hear a click as the microphone shuts off.  After several seconds it clicks back on, someone taps the microphone twice to test it - thud thud - and then speaks: \"All I can tell you is that you may encounter extradimensional anomalies, but we cannot be certain which.  I strongly recommend you take an NRE recorder.\""),
 }
 
--- I realize I'm assuming the player has encountered congealed light by accidentally breaking open the terrain features, but eh.
+-- Is it a semi-colon or colon that goes here? Man, idk.
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_2",
-    line = ccb.content.text("What do you mean by-"),
-    replies = {
-        {
-            text = ccb.content.text("I SAID SHUT UP!  It teleported me to an infinitely looping corridor!  INFINITELY!  LOOPING!  CORRIDOR!  I mean, fuck, you ever see one of those Escher paintings?  It's like that, only you don't just see the surface of what you're looking at, you see EV-ER-Y-THING, and friend let me tell you getting a first-hand look at the inside of my digestive system was *not* pretty.  Oh, and did I mention the light?  Yeah, when some of the laser tubes got broken, they spat out light THAT HURT!  A LOT!"),
-            next_topic = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_3",
-        },
-        {
-            text = ccb.content.text("[Stop talking.]"),
-            next_topic = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_4",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_3",
-    line = ccb.content.text("Please slow down-"),
-    replies = {
-        {
-            text = ccb.content.text("You know why they got broken?  I was fighting the insane remnants of the research staff!  They were climbing the walls, spitting light!  And then there was the corridor itself somehow!  I fought the goddamn building!  I've had nightmares that made more sense than fighting that thing!"),
-            next_topic = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_4",
-        },
-        {
-            text = ccb.content.text("[Stop talking.]"),
-            next_topic = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_4",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_4",
-    line = ccb.content.text("&The voice on the other side of the intercom is silent with disbelief."),
-    replies = {
-        {
-            text = ccb.content.text("[Wait.]"),
-            next_topic = "MISSION_ROBOFAC_INTERCOM_3_COMPLETE_ChewingOut_5",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_COMPLETE_ChewingOut_5",
-    line = ccb.content.text("Uh… Yeah, sorry.  I'll, um… I'll make a note to try and see if we can't get any better information for your future contracts."),
-    replies = { { text = ccb.content.text("Good."), next_topic = "TALK_DONE" } },
+    id = "MISSION_ROBOFAC_INTERCOM_LIXA_SM_1_ACCEPTED",
+    line = ccb.content.text("Transferring the items now.\"  The intercom tray slides open, revealing an ID card for the facility and what looks like a USB thumb drive.  \"Again: please take care not to lose either of these since we can't exactly make more of them."),
 }

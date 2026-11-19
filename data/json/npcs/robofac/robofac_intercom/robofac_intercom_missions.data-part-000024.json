@@ -1,22 +1,32 @@
 [
   {
     "id": [
-      "MISSION_ROBOFAC_INTERCOM_MWS_2_OFFER",
-      "MISSION_ROBOFAC_INTERCOM_MWS_2_OFFER_ADVICE_MWS",
-      "MISSION_ROBOFAC_INTERCOM_MWS_2_OFFER_ADVICE_Dangers"
+      "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER",
+      "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_MWS",
+      "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Reality_Bubble",
+      "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Recording_Length",
+      "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Replacement"
     ],
     "type": "talk_topic",
-    "dynamic_line": "Unsurprisingly, the consumer-grade weather station malfunctioned during the storm recording.  Nevertheless, you've proved yourself a capable contractor.  Therefore, we'd like you to retrieve more advanced recording equipment.  Some time ago we lost contact with a DARPA-affiliated limnological test station, and we have reason to believe they kept sensitive recording equipment on hand.  We'd like you to retrieve it - for your standard contracting fee, of course.",
+    "dynamic_line": "Your field NRE recordings are of continued interest of us.  Since you have proved yourself capable, we would like to expand your assignment.  We are willing to provide you with a mobile weather station.  We'd like you to set it up and deploy it near a portal storm.  A standard recording takes 1 hour.  We realize the anomalies may not last that long, so as long as the portal storm passes near the unit while recording, we can make use of the data.  As payment we will let you keep the weather system and pay you our standard subcontracting rate.",
     "responses": [
       {
-        "text": "Alright, I'll find the advanced weather recording equipment.",
-        "effect": [ { "assign_mission": "MISSION_ROBOFAC_INTERCOM_MWS_2" } ],
-        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_2_ACCEPTED"
+        "text": "More science?  I'm in.",
+        "effect": [ { "assign_mission": "MISSION_ROBOFAC_INTERCOM_MWS_1" }, { "u_spawn_item": "mobile_weather_station", "count": 1 } ],
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_1_ACCEPTED"
       },
-      { "text": "What does the equipment look like?", "topic": "MISSION_ROBOFAC_INTERCOM_MWS_2_OFFER_ADVICE_MWS" },
+      { "text": "How does the weather station work?", "topic": "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_MWS" },
       {
-        "text": "Based on our previous work together, I'm guessing there may be some resistance?",
-        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_2_OFFER_ADVICE_Dangers"
+        "text": "Do I need to stay near the station while it records?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Reality_Bubble"
+      },
+      {
+        "text": "How close do I need to get and do I need to record for the full hour?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Recording_Length"
+      },
+      {
+        "text": "If I lose the station or break it, what should I do?",
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_1_OFFER_ADVICE_Replacement"
       },
       { "text": "What else do you have available?", "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS" }
     ]

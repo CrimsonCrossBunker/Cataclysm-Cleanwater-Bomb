@@ -1,20 +1,16 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_COMPLETE_Prototype",
-    line = ccb.content.text("We believe so; it underwent intensive internal tests on existing and theoretical models before giving it to you.  UGVs, autonomous CROWS units, manhacks, and other robots should all be possible to neutralize by using the weapon, although we advise great caution; the weapon is short-ranged, and was not designed to target distant enemies."),
+    id = "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_OFFER_ADVICE_Gun",
+    line = ccb.content.text("If you'll give me a moment…\"  You hear the sounds of typing.  \"Its working name is the hm12.  It functions similarly to a laser, but is specifically designed to incapacitate robots without harming their internals.  Once a subject is stunned, it can be manually deactivated.\"\n\n\"A shot will only stun the robot if you manage to hit its main sensory array, which will rely on your aim.  After a stunning shot, you might proceed to the deactivation attempts by examining the robot from up close."),
 }
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_COMPLETE_Binder",
-    line = ccb.content.text("Pardon me.\"  The voice briefly turns away from the microphone and asks something.  \"Very well.  I am cleared to tell you that it appeared near the beginning of the portal storms, and during this time, it was logged and documented.  No attempt was ever made to retrieve it before the government collapsed.  That is all I am able to share with you at this time."),
+    id = "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_OFFER_ADVICE_Trifacet",
+    line = ccb.content.text("We are as of yet uncertain of its origin and purpose.  Its body most closely resembles a pyramid on what we believe are three sets of legs for mobility.  It is lightly armed, and has attacked our cam-spy drones using high-voltage electric discharge.  We theorize that this is most likely for deterrence, and not to cause direct harm.  Nonetheless, we need to emphasize that its full capabilities are unknown, and we do not know how it will react when confronted with a living threat."),
 }
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_FAILED",
-    line = ccb.content.text("&The intercom tray quickly slides shut.  After a pause, the voice on the other end sighs.\n\n\"…we requested that the subject remain intact.  This outcome is… unfortunate.  We will process the specimen, but it is unlikely that it will yield usable information as to its purpose.\"\n\n\"You may keep the prototype.  You are dismissed.\""),
-    replies = {
-        { text = ccb.content.text("I'm sorry."), next_topic = "TALK_DONE" },
-        { text = ccb.content.text("Alright, alright."), next_topic = "TALK_DONE" },
-    },
+    id = "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_ACCEPTED",
+    line = ccb.content.text("Lovely.  Just a moment; we will transfer the prototype and handling procedures, which includes information of its last recorded location.\"\n\nThe intercom tray thumps several times as objects are placed into it.  After about a minute, it slides open, revealing a slender weapon that looks a bit like a radar gun, a tool battery, a sheaf of papers in a binder, and a UPS.  \"The hm12 draws power from a connected UPS.  Please remember to bring the specimen back *intact* - battered salvage is of no use to us.  To safely perform the task of deactivation, <color_yellow>please review the provided documentation</color>, and pay special attention to the procedures detailed in subsections IV and VII."),
 }

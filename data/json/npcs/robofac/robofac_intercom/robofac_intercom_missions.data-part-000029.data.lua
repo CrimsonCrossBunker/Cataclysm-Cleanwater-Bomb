@@ -1,16 +1,22 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_MWS_4_OFFER_ADVICE",
-    line = ccb.content.text("Anywhere there is portal activity, or where you think portal activity occurred in the recent past.  If you happen to find yourself transported to… exotic places… that would also be a good time to make recordings."),
+    id = "MISSION_ROBOFAC_INTERCOM_MWS_3_OFFER_ADVICE_HEW",
+    line = ccb.content.text("The station is a self-contained meteorology unit like the one you've previously used.  The case is black, and will be marked as a \"Hazardous Environment\" unit.  It will have been kept behind a locked door, but this is likely non-functional without power.  The station is situated in a lake and was actively researching the effects of… weather… on the sediment, so there may be other access points."),
 }
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_MWS_4_OFFER_ADVICE_FRAME",
-    line = ccb.content.text("It is a 3D-printed pack frame, much like those used to move equipment for more… traditional field work.  We've designed an ergonomic frame to accommodate your HEW unit, a small tent, a rollmat, as well as waterproof compartments for essential electronics: one UPS, one folding solar panel, and one standard laptop.  It is cumbersome, and you won't be able to store anything in it other than the specific equipment, but it is lightweight and efficient.  We will provide only frame and some solar panels for field charging your HEW unit."),
+    id = "MISSION_ROBOFAC_INTERCOM_MWS_3_ACCEPTED",
+    line = ccb.content.text("Excellent.  See you soon."),
 }
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_MWS_4_OFFER_ADVICE_NRE",
-    line = ccb.content.text("We believe we can integrate the units, which may make it easier for you to make complex recordings on the move."),
+    id = "MISSION_ROBOFAC_INTERCOM_MWS_3_COMPLETE",
+    line = ccb.content.text("Fantastic.\"  The intercom's tray slides open, you deposit the datasheet, and it quickly closes.  There is a brief silence, and then it opens again, this time with your payment.  \"You have our thanks and your payment, once again.  If you are interested in an open-ended contract as a research, we are prepared to offer you one."),
+    replies = {
+        {
+            text = ccb.content.text("Thank you.  I'll consider it."),
+            next_topic = "TALK_ROBOFAC_INTERCOM_SERVICES",
+        },
+    },
 }

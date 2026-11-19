@@ -1,0 +1,42 @@
+[
+  {
+    "id": "MISSION_HUB01_PAY_BACK_RIOT_GEAR",
+    "type": "mission_definition",
+    "name": { "str": "Pay Back The Riot Gear to Hub 01" },
+    "goal": "MGOAL_NULL",
+    "difficulty": 1,
+    "value": 0,
+    "fail": { "effect": { "math": [ "faction_trust('robofac') -= 20" ] } },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "deadline": [ "20 days", "20 days" ],
+    "//": "Dialogue for this mission is handled externally.",
+    "dialogue": {
+      "describe": ".",
+      "offer": ".",
+      "accepted": ".",
+      "rejected": ".",
+      "advice": ".",
+      "inquire": ".",
+      "success": ".",
+      "success_lie": ".",
+      "failure": "."
+    }
+  },
+  {
+    "id": "TALK_ROBOFAC_INTERCOM_PAY_BACK_RIOT_GEAR",
+    "type": "talk_topic",
+    "dynamic_line": { "gendered_line": "Good thing you came back with the money.  Your mission work out?", "relevant_genders": [ "u" ] },
+    "responses": [
+      {
+        "text": "I appreciate the credit.  I've got your payment now.",
+        "effect": [
+          { "u_consume_item": "RobofacCoin", "count": 8, "popup": true },
+          { "finish_mission": "MISSION_HUB01_PAY_BACK_RIOT_GEAR", "success": true }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES"
+      },
+      { "text": "I'll have to give it some thought.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES" }
+    ]
+  }
+]

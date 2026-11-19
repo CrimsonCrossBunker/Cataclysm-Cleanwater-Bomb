@@ -1,17 +1,30 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_2_ADVICE_Convoy",
-    line = ccb.content.text("The convoy was composed of vehicles and personnel from the US Army, and it was heavily armed.  Our surveillance of the area has shown that the majority of the slain military personnel have revived, including one wearing a light combat exoskeleton.  Resistance will be heavy, but if possible, you may be able to locate and retrieve the hard case, then exfiltrate without direct combat as long as you can outpace the undead there.  Otherwise, bring a rifle and plenty of ammo."),
-}
-
--- This is a lie.  The researcher was XEDRA; DARPA is just the organization being used as a front.
-ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_2_ADVICE_DARPA",
-    line = ccb.content.text("Officially speaking, they were a senior DARPA researcher.  Their corpse should stick out; it's likely the only one not wearing camouflage.  That's all you need to know."),
-}
-
-ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_2_ACCEPTED",
-    line = ccb.content.text("It was ambushed on the road.\"  The intercom recites a series of coordinates.  \"Report back with the hard case.  If the researcher brought it with him, it will be intact; have no doubt about that."),
+    id = {
+        "MISSION_ROBOFAC_INTERCOM_2_OFFER", "MISSION_ROBOFAC_INTERCOM_2_ADVICE_Convoy",
+        "MISSION_ROBOFAC_INTERCOM_2_ADVICE_DARPA",
+    },
+    line = ccb.content.text("When the portal storms started, the government issued an evacuation order for critical personnel and sent convoys to retrieve them, with our head of AI research among the recalled.  We recently discovered that he died when the convoy transferring him was ambushed in the initial chaos, but his corpse and belongings might remain intact enough to benefit from his research.\"\n\n\"We want you to travel to the convoy and locate the body, if possible.  His evacuation protocol included retrieving and storing as much of the data from his facility as possible, to be stored in a code-locked hard case.  If this hard case is present, retrieve it, and bring it back here.\"\n\n\"We offer the standard hazard pay of 4 HGC for this contract."),
+    replies = {
+        {
+            text = ccb.content.text("I'll take it.  Where's the convoy?"),
+            actions = { actions.assign_mission("MISSION_ROBOFAC_INTERCOM_2") },
+            next_topic = "MISSION_ROBOFAC_INTERCOM_2_ACCEPTED",
+        },
+        {
+            text = ccb.content.text("What should I expect to go up against?"),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_2_ADVICE_Convoy",
+        },
+        {
+            text = ccb.content.text("Who was this person, and what do they look like?"),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_2_ADVICE_DARPA",
+        },
+        {
+            text = ccb.content.text("What else do you have available?"),
+            next_topic = "TALK_ROBOFAC_INTERCOM_CONTRACTS",
+        },
+    },
 }

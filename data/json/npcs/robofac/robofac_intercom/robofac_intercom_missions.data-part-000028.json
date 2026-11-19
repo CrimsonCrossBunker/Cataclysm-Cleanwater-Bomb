@@ -1,32 +1,18 @@
 [
   {
-    "id": [
-      "MISSION_ROBOFAC_INTERCOM_MWS_4_OFFER",
-      "MISSION_ROBOFAC_INTERCOM_MWS_4_OFFER_ADVICE",
-      "MISSION_ROBOFAC_INTERCOM_MWS_4_OFFER_ADVICE_FRAME",
-      "MISSION_ROBOFAC_INTERCOM_MWS_4_OFFER_ADVICE_NRE"
-    ],
+    "id": [ "MISSION_ROBOFAC_INTERCOM_MWS_3_OFFER", "MISSION_ROBOFAC_INTERCOM_MWS_3_OFFER_ADVICE_HEW" ],
     "type": "talk_topic",
-    "dynamic_line": "We believe your HEW unit can produce scientifically useful recordings near many types of of anomalous, extra-dimensional activity - not just portal storms.  In fact, we now know that it is equipped with a small, and relatively simple DARPA AI program trained on extensive data collected before… recent events.  It is capable of producing reports for anomalies and relating them to previously studied laboratory phenomena - anomalies it can assign unique codes to, which we can then interpret using our supercomputers.  If you can bring us these reports, we will pay you for them.  We will also pay for more portal storm recordings.  To facilitate your work, we can offer you two things.  First, we are prepared to give you a custom-printed pack frame, which will allow you to carry your HEW station and some essential supplies.  Secondly, if you are willing to pay, we would be willing to put R&D time into integrating your NRE recorder with your HEW unit.",
+    "dynamic_line": "We've confirmed that the Hazardous Environment unit that you've recovered is in working condition.  We are willing to pay you a standard contracting fee to repeat your previous storm recordings.",
     "responses": [
       {
-        "text": "Well, I guess you can call me the weatherperson.  I'm in.",
+        "text": "Alright, let's get a real recording this time.",
         "effect": [
-          { "u_spawn_item": "hub_meteorology_pack", "count": 1 },
-          { "u_spawn_item": "folding_solar_panel", "count": 1 },
-          { "assign_mission": "MISSION_ROBOFAC_INTERCOM_MWS_4" }
+          { "u_spawn_item": "xedra_mobile_weather_station", "count": 1 },
+          { "assign_mission": "MISSION_ROBOFAC_INTERCOM_MWS_3" }
         ],
-        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_4_ACCEPTED"
+        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_3_ACCEPTED"
       },
-      {
-        "text": "What sorts of places should I be looking for?",
-        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_4_OFFER_ADVICE"
-      },
-      {
-        "text": "Tell me more about this custom frame.",
-        "topic": "MISSION_ROBOFAC_INTERCOM_MWS_4_OFFER_ADVICE_FRAME"
-      },
-      { "text": "Tell me more about the HEW-NRE unit.", "topic": "MISSION_ROBOFAC_INTERCOM_MWS_4_OFFER_ADVICE_NRE" },
+      { "text": "Anything different from last time?", "topic": "MISSION_ROBOFAC_INTERCOM_MWS_3_OFFER_ADVICE_HEW" },
       { "text": "What else do you have available?", "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS" }
     ]
   }

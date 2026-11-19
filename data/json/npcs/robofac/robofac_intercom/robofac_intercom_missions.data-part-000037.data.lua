@@ -1,23 +1,17 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_CHOP_SHOP_ADVICE_Resistance",
-    line = ccb.content.text("The doctor has hired a mercenary team well known to us, all of which are former law enforcement.  Proceed with caution."),
-}
-
--- The Hub in fact sactioned these experiments, but Melchior has determined that the experiments are endangering the Hub, and must be stopped.  The real justification is that they no longer expect the research to produce practical results, yet Dr. Harlow has refused to bend the knee and stop.
-ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_CHOP_SHOP_ADVICE_Experiments",
-    line = ccb.content.text("Dr. Harlow discovered some sort of alien robotics, and has been performing unsanctioned medical procedures in an attempt to implant them in living humans.  The experiments are unethical and a failure to boot, and thus must be stopped."),
+    id = "MISSION_ROBOFAC_INTERCOM_IVAS_ADVICE_ANDURIL",
+    line = ccb.content.text("They are, or were, a defense contractor.  They are headquartered elsewhere, but maintained software engineering offices here, and we believe this one was testing the MVAS system."),
 }
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_CHOP_SHOP_ACCEPTED",
-    line = ccb.content.text("A makeshift laboratory and medical facility has been set up in a nearby dentist's office, where the alien structure was found.  We will transfer the coordinates.  We suggest you don't speak with Dr. Harlow, or anyone else.  Just execute your orders as quickly as possible."),
+    id = "MISSION_ROBOFAC_INTERCOM_IVAS_ACCEPTED",
+    line = ccb.content.text("Use this ID card to access the facility.\"  The slot opens, revealing a small ID badge.  \"Report back with the system.  Naturally, you may keep anything else you find."),
 }
 
 ccb.content.define_dialogue_topic {
-    id = "MISSION_ROBOFAC_INTERCOM_CHOP_SHOP_COMPLETE",
-    line = ccb.content.text("The intercom's tray slides open, filled with your payment.  \"The IRB thanks you for your service to ethics, and has asked us to remind you that the details of this assignment are to remain classified."),
-    replies = { { text = ccb.content.text("Right."), next_topic = "TALK_ROBOFAC_INTERCOM_SERVICES" } },
+    id = "MISSION_ROBOFAC_INTERCOM_IVAS_COMPLETE",
+    line = ccb.content.text("The intercom's tray slides open and you deposit the headset.  There is a brief silence, and then it opens with your payment.  \"You have our thanks and your payment.  Return in approximately five days and R&D may have a prototype visual augmentation system ready for testing."),
+    replies = { { text = ccb.content.text("Thank you."), next_topic = "TALK_ROBOFAC_INTERCOM_SERVICES" } },
 }
