@@ -1,0 +1,73 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_zombie_electric",
+    name = ccb.content.plural_text("shocker zombie", "shocker zombies"),
+    description = ccb.content.text("A human body with pale blue flesh, crackling with electrical energy."),
+    copy_from = "mon_zombie_base",
+    difficulty_adjustment = 10,
+    hp = 85,
+    speed = 105,
+    color = "light_cyan",
+    melee_dice = 1,
+    melee_damage = { { type = "electric", amount = 8 } },
+    dodge = 2,
+    bleed_rate = 50,
+    luminance = 8,
+    harvest = "zombie_humanoid_electric",
+    attacks = {
+        { reference = "PARROT", cooldown = 8 },
+        { id = "grab", cooldown = 2 },
+        { id = "bite_humanoid", cooldown = 5 },
+        { id = "scratch_humanoid" },
+        { id = "mon_shocker_chargeup" },
+        { id = "mon_shocker_chargeup_attack" },
+        { id = "mon_shocker_chargeup_attack_grab" },
+    },
+    defense = { id = "ZAPBACK", chance = 100 },
+    upgrade = { half_life = 168, monster_group = "GROUP_ZOMBIE_ELECTRIC_UPGRADE" },
+    inheritance = { add = { flags = { "ELECTRIC", "CLUMSY_ATTACKS" } } },
+}
+
+-- slow walk speed - intimidating!
+-- melee damage is quite weak since the shockfield around it is its most dangerous function
+ccb.content.define_monster {
+    id = "mon_zombie_nullfield",
+    name = ccb.content.plural_text("incandescent husk", "incandescent husks"),
+    description = ccb.content.text("This zombie is visible only as a glowing white silhouette that you have to squint to see, cloaked in a crackling field of lightning that pulses like a beating heart.  It walks slowly and deliberately, the thunderstorm surrounding it eagerly jumping to anything conductive within its grasp."),
+    copy_from = "mon_zombie_base",
+    difficulty_adjustment = 20,
+    hp = 200,
+    speed = 50,
+    color = "i_cyan",
+    melee_skill = 5,
+    melee_dice = 1,
+    melee_sides = 2,
+    bleed_rate = 0,
+    melee_damage = { { type = "electric", amount = 6 } },
+    luminance = 16,
+    harvest = "zombie_humanoid_electric",
+    attacks = { { reference = "PARROT", cooldown = 5 } },
+    emissions = { { id = "emit_shock_cloud", delay = "1 s" } },
+    defense = { id = "ZAPBACK", chance = 75 },
+    upgrade = false,
+    inheritance = { add = { flags = { "ELECTRIC", "ELECTRIC_FIELD" } } },
+}
+
+ccb.content.define_monster {
+    id = "mon_zombie_static",
+    name = ccb.content.plural_text("zapper zombie", "zapper zombies"),
+    description = ccb.content.text("A very pale dead body with the worst case of static hair you have ever seen.  Sparks of electricity frequently jump off it, lighting it up in the dark.  You might not want to touch it with your bare hands, or anything conductive."),
+    copy_from = "mon_zombie_base",
+    hp = 60,
+    speed = 75,
+    color = "white",
+    melee_dice = 1,
+    melee_sides = 2,
+    melee_damage = { { type = "electric", amount = 4 } },
+    luminance = 4,
+    harvest = "zombie_humanoid_electric",
+    defense = { id = "ZAPBACK", chance = 100 },
+    upgrade = { half_life = 112, monster = "mon_zombie_electric" },
+    inheritance = { add = { flags = { "ELECTRIC", "CLUMSY_ATTACKS" } } },
+}
