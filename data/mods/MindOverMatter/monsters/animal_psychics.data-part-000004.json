@@ -1,0 +1,139 @@
+[
+  {
+    "id": "mon_psi_gremlin",
+    "copy-from": "mon_fox_red",
+    "type": "MONSTER",
+    "looks_like": "mon_fox_red",
+    "name": { "str": "gremlin" },
+    "//": "A Nether-affected fox",
+    "description": "The red fox, an omnivorous canine and largest of the true foxes, it is a wily hunter with a combative, suspicious temperament.  Sparks occasionally crackle over its fur and its body distorts oddly as it moves, covering more ground with each stride than the length of its legs would indicate.",
+    "relative": { "dodge": 1 },
+    "special_attacks": [
+      {
+        "id": "psi_gremlin_power_draining_spell",
+        "type": "spell",
+        "spell_data": { "id": "electrokinetic_power_draining" },
+        "cooldown": { "math": [ "5 + rand(45)" ] },
+        "allow_no_target": true,
+        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
+        "monster_message": "Sparks flicker over %1$s's fur."
+      },
+      {
+        "id": "psi_gremlin_neuro_acceleration",
+        "type": "spell",
+        "spell_data": { "id": "electrokinetic_neuro_acceleration_monster" },
+        "cooldown": 1,
+        "condition": {
+          "and": [ { "not": { "u_has_flag": "NO_PSIONICS" } }, { "not": { "u_has_effect": "effect_monster_neuro_acceleration" } } ]
+        },
+        "monster_message": "%1$s begins moving more quickly."
+      }
+    ],
+    "armor": { "electric": 40 },
+    "special_when_hit": [ "ZAPBACK", 75 ]
+  },
+  {
+    "id": "mon_dire_hound",
+    "type": "MONSTER",
+    "name": { "str": "direhound" },
+    "description": "This large canid has grown to terrifying proportions, roughly three times the size of some of its brethren.  Its teeth give steak knives a run for their money, and it looks to be the social center of any surrounding dogs.",
+    "//": "I've considered having this be an evolution point for several canid species outside of dogs, such as wolves or coyotes.",
+    "default_faction": "dog",
+    "bodytype": "dog",
+    "categories": [ "WILDLIFE" ],
+    "species": [ "MAMMAL" ],
+    "volume": "90000 ml",
+    "weight": "90 kg",
+    "hp": 100,
+    "speed": 150,
+    "material": [ "flesh" ],
+    "symbol": "W",
+    "color": "light_gray",
+    "looks_like": "mon_dog",
+    "aggression": 0,
+    "morale": 70,
+    "melee_skill": 8,
+    "melee_dice": 3,
+    "melee_dice_sides": 12,
+    "melee_damage": [ { "damage_type": "cut", "amount": 12 } ],
+    "dodge": 3,
+    "bleed_rate": 60,
+    "vision_day": 50,
+    "vision_night": 5,
+    "harvest": "mutant_mammal_large_fur",
+    "dissect": "dissect_lupine_sample_large",
+    "reproduction": { "baby_type": { "baby_monster": "mon_dog_pup" }, "baby_count": 4, "baby_timer": 270 },
+    "baby_flags": [ "SPRING", "SUMMER", "AUTUMN", "WINTER" ],
+    "biosignature": { "biosig_item": "feces_dog", "biosig_timer": 6 },
+    "families": [ "prof_intro_biology", "prof_physiology" ],
+    "path_settings": { "max_dist": 10 },
+    "special_attacks": [
+      {
+        "id": "psi_direhound_telepathic_network",
+        "type": "spell",
+        "spell_data": { "id": "telepathic_network_monster", "min_level": 5 },
+        "cooldown": 50,
+        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
+        "monster_message": "The direhound gazes upon its allies, and lets out a howl!"
+      },
+      {
+        "type": "bite",
+        "cooldown": 5,
+        "damage_max_instance": [ { "damage_type": "stab", "amount": 15, "armor_penetration": 10 } ]
+      },
+      [ "EAT_FOOD", 100 ]
+    ],
+    "petfood": {
+      "food": [ "DOGFOOD" ],
+      "feed": "The %s seems to like you!  It lets you pat its head and seems friendly.",
+      "pet": "The %s happily wags its tail while you pat its head."
+    },
+    "anger_triggers": [ "HURT", "FRIEND_ATTACKED", "FRIEND_DIED" ],
+    "zombify_into": "mon_dog_zombie_brute",
+    "flags": [
+      "ANIMAL",
+      "DOGFOOD",
+      "CANPLAY",
+      "CAN_BE_CULLED",
+      "GROUP_MORALE",
+      "HEARS",
+      "PET_MOUNTABLE",
+      "HIT_AND_RUN",
+      "KEENNOSE",
+      "PATH_AVOID_DANGER",
+      "SEES",
+      "SMELLS",
+      "SWARMS",
+      "WARM",
+      "EATS"
+    ],
+    "armor": { "bash": 8, "cut": 10, "electric": 1 }
+  },
+  {
+    "id": "mon_hellhound",
+    "copy-from": "mon_dog",
+    "type": "MONSTER",
+    "looks_like": "mon_dog",
+    "name": { "str": "hellhound" },
+    "description": "This once-average Labrador mixed-breed dog has clearly gone feral.  Though it likely still instinctively trusts humans, it's probably far from domestic by now.  The air around it wavers like the haze over summer asphalt.",
+    "melee_damage": [ { "damage_type": "cut", "amount": 3 }, { "damage_type": "heat", "amount": 5 } ],
+    "aggression": 4,
+    "morale": 40,
+    "emit_fields": [ { "emit_id": "emit_hot_air2_blast", "delay": "4 s" } ],
+    "reproduction": { "baby_type": { "baby_monster_group": "GROUP_REPRODUCTION_DOG_HELLHOUND_BABIES" }, "baby_count": 4, "baby_timer": 270 },
+    "//": "FIXME: For some reason, extending special attacks does not work",
+    "special_attacks": [
+      [ "EAT_FOOD", 100 ],
+      [ "PARROT_AT_DANGER", 0 ],
+      {
+        "id": "psi_hellhound_breathe_fire",
+        "type": "spell",
+        "spell_data": { "id": "pyrokin_flamethrower_hellhound_monster", "min_level": 5 },
+        "cooldown": { "math": [ "9 + rand(18)" ] },
+        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
+        "monster_message": "%1$s barks out a stream of flame!"
+      }
+    ],
+    "extend": { "flags": [ "FIREPROOF" ], "armor": { "heat": 999 } }
+  }
+]

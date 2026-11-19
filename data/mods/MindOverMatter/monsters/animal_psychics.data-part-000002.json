@@ -1,0 +1,37 @@
+[
+  {
+    "id": "mon_pigeon_passenger",
+    "copy-from": "mon_bird_flying_base",
+    "type": "MONSTER",
+    "//": "Intentionally unable to be culled when friendly.",
+    "name": { "str": "pigeon passenger" },
+    "description": "A gentle, plump, small-billed bird with a third eye, between its bill and forehead.  On the ground, it struts about with a characteristic bobbing of the head.  It is a strong, swift flier thanks to its long wings and powerful flight muscles.  Is it following you?",
+    "volume": "1 L",
+    "weight": "360 g",
+    "hp": 4,
+    "speed": 150,
+    "symbol": "v",
+    "color": "dark_gray",
+    "fear_triggers": [ "SOUND", "FRIEND_ATTACKED", "FRIEND_DIED", "FIRE", "HURT" ],
+    "biosignature": { "biosig_item": "feces_bird", "biosig_timer": 4 },
+    "special_attacks": [
+      {
+        "id": "psi_pigeon_telepathic_blast",
+        "type": "spell",
+        "spell_data": { "id": "telepathic_fear_blast_monster", "min_level": 2 },
+        "cooldown": { "math": [ "9 + rand(18)" ] },
+        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
+        "monster_message": "%s's third eye opens and it coos!"
+      },
+      { "id": "pigeon_aura", "type": "spell", "spell_data": { "id": "pigeon_aura", "min_level": 4 }, "cooldown": 200 }
+    ],
+    "reproduction": { "baby_type": { "baby_egg": "egg_pigeon_passenger" }, "baby_count": 3, "baby_timer": 32 },
+    "petfood": {
+      "food": [ "BIRDFOOD" ],
+      "feed": "The %s seems to like you!  It runs around your legs and seems friendly.",
+      "pet": "The %s runs around your leg."
+    },
+    "extend": { "flags": [ "KEEP_DISTANCE", "HARDTOSHOOT" ] },
+    "delete": { "flags": [ "CAN_BE_CULLED" ] }
+  }
+]
