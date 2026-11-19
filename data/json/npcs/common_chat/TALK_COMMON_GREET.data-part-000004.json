@@ -70,18 +70,5 @@
         "effect": "start_mugging"
       }
     ]
-  },
-  {
-    "id": "TALK_WEAPON_DROPPED",
-    "type": "talk_topic",
-    "dynamic_line": { "npc_male": "*drops his weapon.", "no": "*drops her weapon." },
-    "responses": [
-      {
-        "text": "Now get out of here.",
-        "topic": "TALK_DONE",
-        "effect": "flee",
-        "opinion": { "trust": -1, "fear": -2, "anger": -2 }
-      }
-    ]
   }
 ]
