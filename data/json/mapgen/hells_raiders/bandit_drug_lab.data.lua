@@ -1,0 +1,48 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "bandit_drug_lab",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "              ___       ",
+            "             _c___      ",
+            "             ___c_      ",
+            "             _a___      ",
+            "            _____       ",
+            "           ________     ",
+            "           |++|++|____  ",
+            "           |ddddd|_____ ",
+            "           |ddOdd|_____ ",
+            "           |ddOdd|   _  ",
+            "           |tdddt|      ",
+            "           |tbdbt|      ",
+            "           |ttttt|      ",
+            "           |||||||      ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "moonshine_palette" },
+        predecessor_mapgen = "forest",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        npc_placements = { { id = "bandit", x = 14, y = 12 }, { id = "thug", x = 16, y = 10 } },
+        item_groups = {
+            [" "] = { { group = "SUS_trash_floor", chance = 1 }, { group = "clutter_yard", chance = 1 } },
+            t = {
+                { group = "hazmat_suits", chance = 70 },
+                { group = "hazmat_masks", chance = 70 },
+                { group = "mobile_meth_lab", chance = 70 },
+                { group = "supplies_reagents_lab", chance = 20 },
+                { group = "methlab", chance = 90 },
+            },
+        },
+    },
+}
