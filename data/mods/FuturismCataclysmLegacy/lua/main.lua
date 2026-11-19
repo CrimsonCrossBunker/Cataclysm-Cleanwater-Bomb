@@ -41,3 +41,5 @@ require("inherited_items")
 require("active_items")
 
 require("lua.effect_types")
+
+require("monster_groups")
