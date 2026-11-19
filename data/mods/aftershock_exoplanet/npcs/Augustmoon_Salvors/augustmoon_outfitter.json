@@ -33,15 +33,5 @@
       { "group": "afs_augustmoon_outfitter", "fixed_adj": 0 },
       { "group": "afs_augustmoon_outfitter_military", "fixed_adj": 0 }
     ]
-  },
-  {
-    "type": "npc",
-    "id": "augustmoon_outfitter",
-    "name_suffix": "outfitter clerk",
-    "class": "NC_AUGUSTMOON_OUTFITTER",
-    "attitude": 0,
-    "mission": "SHOPKEEP",
-    "chat": "TALK_AUGUSTMOON_OUTFITTER",
-    "faction": "UICA"
   }
 ]

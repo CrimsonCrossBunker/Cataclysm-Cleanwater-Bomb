@@ -35,15 +35,5 @@
       }
     ],
     "shopkeeper_price_rules": [ { "group": "afs_general_armory", "fixed_adj": 0 } ]
-  },
-  {
-    "type": "npc",
-    "id": "augustmoon_gun_trader",
-    "name_suffix": "gun trader",
-    "class": "NC_AUGUSTMOON_GUNTRADER",
-    "attitude": 0,
-    "mission": "SHOPKEEP",
-    "chat": "TALK_AUGUSTMOON_GUNTRADER",
-    "faction": "UICA"
   }
 ]

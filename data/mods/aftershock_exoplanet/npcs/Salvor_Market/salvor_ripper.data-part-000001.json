@@ -1,0 +1,22 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_SALVOR_RIPPER",
+    "dynamic_line": "&The stall is uncharacteristically colorful, plastered with advertisements for computers and lit by the contrasting glow of blue and green neon.  Its owner lies slumped in a chair, lazily tapping away at a wrist computer.  They don't bother to look at you until its clear you are here to trade.",
+    "responses": [
+      {
+        "//": "Skips the introduction if it has already happened,",
+        "text": "[Approach the counter]",
+        "topic": "TALK_SALVOR_RIPPER_MAIN",
+        "condition": { "compare_string": [ "yes", { "npc_val": "player_has_met" } ] }
+      },
+      {
+        "text": "[Approach the counter]",
+        "trial": { "type": "CONDITION", "condition": { "math": [ "u_skill('computer') > 2" ] } },
+        "success": { "topic": "TALK_SALVOR_RIPPER_MAIN" },
+        "failure": { "topic": "TALK_SALVOR_RIPPER_INTRO_UNSKILLED" },
+        "condition": { "not": { "compare_string": [ "yes", { "npc_val": "player_has_met" } ] } }
+      }
+    ]
+  }
+]

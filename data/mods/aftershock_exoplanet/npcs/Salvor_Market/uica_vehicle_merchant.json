@@ -32,17 +32,5 @@
       { "group": "afs_vehicle_merchant_fuel", "markup": 2.5, "condition": { "not": { "u_has_trait": "BKGR_EARTH" } } },
       { "group": "afs_vehicle_merchant_fuel", "markup": 1.75, "condition": { "u_has_trait": "BKGR_EARTH" } }
     ]
-  },
-  {
-    "type": "npc",
-    "id": "uica_vehicle_merchant",
-    "name_unique": "Artemis Burton",
-    "name_suffix": "garage clerk",
-    "gender": "male",
-    "class": "NC_UICA_VEHICLE_MERCHANT",
-    "attitude": 0,
-    "mission": "SHOPKEEP",
-    "chat": "TALK_UICA_VEHICLE_MERCHANT",
-    "faction": "UICA"
   }
 ]
