@@ -38,33 +38,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmg_2_1_roof_construction",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "rows": [
-        "rrrrrr ",
-        "rrrrrr ",
-        "rrrrrr ",
-        "rrrrrr ",
-        "rrrrrr ",
-        "rrrrrr ",
-        "rr     "
-      ],
-      "palettes": [ "fbmg_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmg_2_1_construction",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmg_2_1_construction" ], "x": 0, "y": 16, "z": 0 },
-        { "chunks": [ "fbmg_2_1_roof_construction" ], "x": 0, "y": 16, "z": 1 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmg_2_2_construction",
     "object": {
       "parameters": {
@@ -102,33 +75,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmg_2_2_roof_construction",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "rows": [
-        "rrrrrr ",
-        "rrrrrr ",
-        "rrrrrr ",
-        "rrrrrr ",
-        "rrrrrr ",
-        "rrrrrr ",
-        "    rr "
-      ],
-      "palettes": [ "fbmg_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmg_2_2_construction",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmg_2_2_construction" ], "x": 14, "y": 16, "z": 0 },
-        { "chunks": [ "fbmg_2_2_roof_construction" ], "x": 14, "y": 16, "z": 1 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmg_2_wall_1_construction",
     "object": {
       "parameters": {
@@ -160,21 +106,6 @@
       ],
       "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "palettes": [ { "param": "fbmg_2_construction_palette" } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmg_2_wall_1_3_roof_construction",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rows": [
-        "     ",
-        "     ",
-        "     ",
-        "     ",
-        "rrrrr"
-      ],
-      "palettes": [ "fbmg_2_common_palette" ]
     }
   },
   {
@@ -215,22 +146,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmg_2_wall_2_roof_construction",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        "      ",
-        "      ",
-        "      ",
-        "      ",
-        "      ",
-        "rrrrrr"
-      ],
-      "palettes": [ "fbmg_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmg_2_wall_3_construction",
     "object": {
       "parameters": {
@@ -262,20 +177,6 @@
       ],
       "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "palettes": [ { "param": "fbmg_2_construction_palette" } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmg_2_wall_construction",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmg_2_wall_1_construction" ], "x": 2, "y": 18, "z": 0 },
-        { "chunks": [ "fbmg_2_wall_1_3_roof_construction" ], "x": 2, "y": 18, "z": 1 },
-        { "chunks": [ "fbmg_2_wall_2_construction" ], "x": 7, "y": 17, "z": 0 },
-        { "chunks": [ "fbmg_2_wall_2_roof_construction" ], "x": 7, "y": 17, "z": 1 },
-        { "chunks": [ "fbmg_2_wall_3_construction" ], "x": 13, "y": 18, "z": 0 },
-        { "chunks": [ "fbmg_2_wall_1_3_roof_construction" ], "x": 13, "y": 18, "z": 1 }
-      ]
     }
   },
   {
@@ -316,32 +217,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmg_2_4_roof_construction",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        "r     ",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr"
-      ],
-      "palettes": [ "fbmg_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmg_2_4_construction",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmg_2_4_construction" ], "x": 0, "y": 10, "z": 0 },
-        { "chunks": [ "fbmg_2_4_roof_construction" ], "x": 0, "y": 10, "z": 1 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmg_2_5_construction",
     "object": {
       "parameters": {
@@ -374,32 +249,6 @@
       ],
       "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "palettes": [ { "param": "fbmg_2_construction_palette" } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmg_2_5_roof_construction",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        "     r",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr"
-      ],
-      "palettes": [ "fbmg_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmg_2_5_construction",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmg_2_5_construction" ], "x": 14, "y": 10, "z": 0 },
-        { "chunks": [ "fbmg_2_5_roof_construction" ], "x": 14, "y": 10, "z": 1 }
-      ]
     }
   },
   {
@@ -440,32 +289,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmg_2_7_roof_construction",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        "r     ",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr",
-        " rrrrr"
-      ],
-      "palettes": [ "fbmg_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmg_2_7_construction",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmg_2_7_construction" ], "x": 0, "y": 5, "z": 0 },
-        { "chunks": [ "fbmg_2_7_roof_construction" ], "x": 0, "y": 5, "z": 1 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmg_2_8_construction",
     "object": {
       "parameters": {
@@ -498,32 +321,6 @@
       ],
       "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "palettes": [ { "param": "fbmg_2_construction_palette" } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmg_2_8_roof_construction",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        "     r",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrr "
-      ],
-      "palettes": [ "fbmg_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmg_2_8_construction",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmg_2_8_construction" ], "x": 14, "y": 5, "z": 0 },
-        { "chunks": [ "fbmg_2_8_roof_construction" ], "x": 14, "y": 5, "z": 1 }
-      ]
     }
   },
   {
@@ -564,32 +361,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmg_2_10_roof_construction",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        "r     ",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr",
-        " rrrrr",
-        "      "
-      ],
-      "palettes": [ "fbmg_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmg_2_10_construction",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmg_2_10_construction" ], "x": 0, "y": 1, "z": 0 },
-        { "chunks": [ "fbmg_2_10_roof_construction" ], "x": 0, "y": 1, "z": 1 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmg_2_11_construction",
     "object": {
       "parameters": {
@@ -622,32 +393,6 @@
       ],
       "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "palettes": [ { "param": "fbmg_2_construction_palette" } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmg_2_11_roof_construction",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        "     r",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrrr",
-        "rrrrr ",
-        "      "
-      ],
-      "palettes": [ "fbmg_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmg_2_11_construction",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmg_2_11_construction" ], "x": 14, "y": 1, "z": 0 },
-        { "chunks": [ "fbmg_2_11_roof_construction" ], "x": 14, "y": 1, "z": 1 }
-      ]
     }
   }
 ]
