@@ -1,17 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_PERK_MENU_CONFIG",
-    "dynamic_line": "What settings would you like to modify?",
-    "responses": [
-      { "text": "Notifications", "topic": "TALK_PERK_MENU_CONFIG_NOTIFICATIONS" },
-      { "text": "Exp to level", "topic": "TALK_PERK_MENU_CONFIG_EXP_TO_LEVEL" },
-      { "text": "Requirements", "topic": "TALK_PERK_MENU_REQUIREMENTS" },
-      { "text": "Back", "topic": "TALK_PERK_MENU_MAIN" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_PERK_MENU_CONFIG_NOTIFICATIONS",
     "dynamic_line": "Should the perk menu pop up on level up?",
     "responses": [
