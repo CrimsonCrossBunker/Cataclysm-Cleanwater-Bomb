@@ -419,3 +419,88 @@ ccb.content.define_mapgen {
         palettes = { "microlab" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "concrete_wall_ew",
+    layout = {
+        size = { width = 24, height = 24 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_concrete_wall",
+                x = 0,
+                y = 0,
+                end_x = 23,
+                end_y = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "concrete_wall_hole_ew",
+    layout = {
+        size = { width = 24, height = 24 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_strconc_floor",
+                x = 11,
+                y = 0,
+                end_x = 12,
+                end_y = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "concrete_corner",
+    layout = {
+        size = { width = 1, height = 1 },
+        tile_edits = { { shape = "point", operation = "terrain", id = "t_concrete_wall", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "concrete_wall_ns",
+    layout = {
+        size = { width = 24, height = 24 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_concrete_wall",
+                x = 0,
+                y = 0,
+                end_x = 0,
+                end_y = 23,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "concrete_wall_hole_ns",
+    layout = {
+        size = { width = 24, height = 24 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_strconc_floor",
+                x = 0,
+                y = 11,
+                end_x = 0,
+                end_y = 12,
+            },
+        },
+    },
+}

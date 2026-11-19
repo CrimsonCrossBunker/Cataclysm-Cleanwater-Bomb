@@ -1,43 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "concrete_wall_ew",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "set": [ { "line": "terrain", "id": "t_concrete_wall", "x": 0, "y": 0, "x2": 23, "y2": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "concrete_wall_hole_ew",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "set": [ { "line": "terrain", "id": "t_strconc_floor", "x": 11, "y": 0, "x2": 12, "y2": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "concrete_corner",
-    "object": { "mapgensize": [ 1, 1 ], "set": [ { "point": "terrain", "id": "t_concrete_wall", "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "concrete_wall_ns",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "set": [ { "line": "terrain", "id": "t_concrete_wall", "x": 0, "y": 0, "x2": 0, "y2": 23 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "concrete_wall_hole_ns",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "set": [ { "line": "terrain", "id": "t_strconc_floor", "x": 0, "y": 11, "x2": 0, "y2": 12 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "microlab_generic_edge" ],
     "object": {
       "fill_ter": "t_strconc_floor",
