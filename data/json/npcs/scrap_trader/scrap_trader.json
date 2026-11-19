@@ -240,35 +240,5 @@
         ]
       }
     ]
-  },
-  {
-    "id": "TALK_SCRAP_TRADER_BULK_SELL",
-    "//": "this is all the dialogue related to buying bulk metal or scrap.",
-    "type": "talk_topic",
-    "dynamic_line": [ "Sure thing.  I've got a few things on hand.  What'll ya have?" ],
-    "responses": [
-      { "text": "<end_talking_nevermind>", "topic": "TALK_NONE" },
-      {
-        "text": "Let's take a look at your stock.",
-        "topic": "TALK_SCRAP_TRADER_BULK_SELL_END",
-        "effect": "start_trade"
-      }
-    ]
-  },
-  {
-    "id": "TALK_SCRAP_TRADER_BULK_SELL_END",
-    "type": "talk_topic",
-    "dynamic_line": [ "Anything else you need?" ],
-    "responses": [
-      { "text": "No, that's all.", "topic": "TALK_DONE" },
-      { "text": "Find anything good?", "topic": "TALK_SCRAP_TRADER_ASK_INTERVAL" },
-      { "text": "Can I have another look?", "topic": "TALK_SCRAP_TRADER_BULK_SELL_END", "effect": "start_trade" }
-    ]
-  },
-  {
-    "id": "TALK_SCRAP_TRADER_ASK_INTERVAL",
-    "type": "talk_topic",
-    "dynamic_line": "Nope, although I have a really good claim by the river.  Gonna go fetch them soon, be right back after <restock_time_point>.",
-    "responses": [ { "text": "Well, good luck.", "topic": "TALK_NPC_SCRAP_TRADER" } ]
   }
 ]
