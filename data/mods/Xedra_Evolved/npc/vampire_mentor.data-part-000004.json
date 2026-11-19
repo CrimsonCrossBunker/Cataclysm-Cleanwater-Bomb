@@ -1,0 +1,67 @@
+[
+  {
+    "id": [ "TALK_VAMPIRE_MENTOR_TRUEVAMP" ],
+    "type": "talk_topic",
+    "dynamic_line": {
+      "str": "I am overjoyed that a new person decided to take their place as a new ruler of the night!  Soon, you'll be ready for the final step, the one that will allow you to fully walk the path!"
+    },
+    "responses": [
+      { "text": "I want to talk.", "topic": "TALK_VAMPIRE_MENTOR_TALK" },
+      {
+        "text": "Before, you said there was more that I needed to learn?",
+        "condition": { "not": { "u_know_recipe": "xe_vampire_blood_gift_research" } },
+        "topic": "TALK_VAMPIRE_MENTOR_BLOOD_GIFT_RESEARCH"
+      },
+      { "text": "Can you help me walk that path?", "topic": "TALK_VAMPIRE_MENTOR_BECOME_MORE_STRONGER" },
+      { "text": "I just wanted to share the news.  See you.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": [ "TALK_VAMPIRE_MENTOR_BLOOD_GIFT_RESEARCH" ],
+    "type": "talk_topic",
+    "dynamic_line": {
+      "str": "Yes.  The gifts of the blood are somewhat random, as are its curses.  But now that you have come into your true power, there are ways to expand your talents and to modify your weaknesses.  It will require a great deal of blood and time, but I can show you the way."
+    },
+    "responses": [
+      {
+        "text": "Yes.  I want more power.",
+        "effect": [
+          { "u_learn_recipe": "xe_vampire_blood_gift_research" },
+          { "u_learn_recipe": "xe_vampire_blood_gift_refinement_research" },
+          { "u_learn_recipe": "xe_vampire_blood_weaknesses_reshuffle" }
+        ],
+        "topic": "TALK_VAMPIRE_MENTOR_BLOOD_GIFT_RESEARCH_LEARNED"
+      },
+      { "text": "Maybe later, but not now.", "topic": "TALK_VAMPIRE_MENTOR_TALK" }
+    ]
+  },
+  {
+    "id": [ "TALK_VAMPIRE_MENTOR_BLOOD_GIFT_RESEARCH_LEARNED" ],
+    "type": "talk_topic",
+    "dynamic_line": { "str": "Concentrate on the blood and watch closely." },
+    "responses": [
+      {
+        "text": "…",
+        "effect": [
+          { "u_message": "You learn how to expand your blood gifts and how to change your vampiric weaknesses.", "type": "good" }
+        ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "id": [ "TALK_VAMPIRE_MENTOR_BECOME_VAMPIRE" ],
+    "type": "talk_topic",
+    "dynamic_line": {
+      "str": "I can do it, if you truly want it.  I've seen that those who willingly become vampires are more likely to fully walk the path so I won't attempt to force you."
+    },
+    "responses": [
+      {
+        "text": "I am sure.  Grant me vampirism.",
+        "effect": [ { "u_add_effect": "vampire_virus", "intensity": 1, "duration": "PERMANENT" } ],
+        "topic": "TALK_VAMPIRE_MENTOR_NEWVAMPIRE"
+      },
+      { "text": "Maybe later, but not now.", "topic": "TALK_DONE" }
+    ]
+  }
+]

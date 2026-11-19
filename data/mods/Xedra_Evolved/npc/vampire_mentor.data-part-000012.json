@@ -1,0 +1,20 @@
+[
+  {
+    "id": [ "TALK_VAMPIRE_MENTOR_CURE" ],
+    "type": "talk_topic",
+    "dynamic_line": { "str": "No.  I've long passed the point of no return.  Either your cure won't do anything, or it'll kill me." },
+    "responses": [
+      {
+        "text": "Then you must die.",
+        "topic": "TALK_DONE",
+        "effect": [
+          "hostile",
+          { "npc_die": { "remove_corpse": true, "supress_message": true } },
+          { "u_message": "The mentor vanishes in a fine mist." }
+        ]
+      },
+      { "text": "I understand.  Can we talk?", "topic": "TALK_VAMPIRE_MENTOR_TALK" },
+      { "text": "I just wanted to look around.  See you.", "topic": "TALK_DONE" }
+    ]
+  }
+]
