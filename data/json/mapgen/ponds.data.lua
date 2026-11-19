@@ -1,0 +1,71 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "hot_springs" },
+    layout = {
+        rows = {
+            "                        ",
+            "           ..           ",
+            "       ....??....       ",
+            "    ...??????????...    ",
+            "   .????????????????.   ",
+            "   .????]]]]]]]]????.   ",
+            "   .??]]]]]]]]]]]]??.   ",
+            "  .???]]]]]]]]]]]]???.  ",
+            "  .??]]]]]****]]]]]??.  ",
+            "  .??]]]]******]]]]??.  ",
+            "  .??]]]********]]]??.  ",
+            " .???]]]********]]]???. ",
+            " .???]]]********]]]???. ",
+            "  .??]]]********]]]??.  ",
+            "  .??]]]]******]]]]??.  ",
+            "  .??]]]]]****]]]]]??.  ",
+            "  .???]]]]]]]]]]]]???.  ",
+            "   .??]]]]]]]]]]]]??.   ",
+            "   .????]]]]]]]]????.   ",
+            "   .????????????????.   ",
+            "    ...??????????...    ",
+            "       ....??....       ",
+            "           ..           ",
+            "                        ",
+        },
+        terrain = {
+            ["*"] = "t_water_hot",
+            ["]"] = {
+                { id = "t_water_hot", copies = 12 },
+                { id = "t_railroad_rubble" },
+                { id = "t_rock_floor_no_roof" },
+            },
+            ["?"] = {
+                { id = "t_water_hot", copies = 2 },
+                { id = "t_railroad_rubble", copies = 10 },
+                { id = "t_rock_floor_no_roof", copies = 10 },
+            },
+            ["."] = {
+                { id = "t_railroad_rubble" },
+                { id = "t_rock_floor_no_roof" },
+                { id = "t_region_groundcover", copies = 5 },
+            },
+        },
+        furniture = {
+            ["]"] = {
+                { id = "f_null", copies = 60 },
+                { id = "f_rubble_volc", copies = 5 },
+                { id = "f_boulder_small_volc", copies = 2 },
+                { id = "f_boulder_medium_volc", copies = 1 },
+                { id = "f_boulder_large_volc", copies = 1 },
+            },
+            ["?"] = {
+                { id = "f_null", copies = 30 },
+                { id = "f_rubble_volc", copies = 5 },
+                { id = "f_boulder_small_volc", copies = 2 },
+                { id = "f_boulder_medium_volc", copies = 1 },
+                { id = "f_boulder_large_volc", copies = 1 },
+            },
+        },
+        rotation = { 0, 3 },
+        predecessor_mapgen = "forest",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
