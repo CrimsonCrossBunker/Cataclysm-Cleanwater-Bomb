@@ -1,47 +1,60 @@
 local ccb = require("ccb")
-local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_CARAVAN_MERCHANT_Story",
-    line = ccb.content.text("We're with a larger group of survivors, working out of one of the old FEMA bunkers.  Folks have taken to calling us Free Merchants, although that sounds kinda on the nose to me.  We know about a few survivor groups and we make regular trips around, sharing supplies back and forth and bringing them home.  We're on the way back now."),
+    id = "TALK_CARAVAN_MERCHANT_2",
+    line = ccb.content.text("What can I do for you?"),
     replies = {
         {
-            text = ccb.content.text("That's interesting.  Well, let's trade."),
+            text = ccb.content.text("Do you have anything to trade?"),
             next_topic = "TALK_CARAVAN_MERCHANT_Trade",
             native_actions = { "start_trade" },
         },
         {
-            text = ccb.content.text("Can you give me directions to any of these other survivor groups?"),
-            next_topic = "TALK_CARAVAN_MERCHANT_Others",
+            text = ccb.content.text("What's your story?"),
+            next_topic = "TALK_CARAVAN_MERCHANT_Story",
         },
         {
-            text = ccb.content.text("Where is 'home'?"),
-            next_topic = "TALK_CARAVAN_MERCHANT_Home",
-            when = predicates.all({ predicates.negate(predicates.has_mission("MISSION_REACH_REFUGEE_CENTER")), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "found_refugee_center" } })) }),
-        },
-        {
-            text = ccb.content.text("Thanks for chatting.  <end_talking_leave>"),
+            text = ccb.content.text("Nothing much.  Just passing through."),
             next_topic = "TALK_DONE",
         },
     },
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_CARAVAN_MERCHANT_Others",
-    line = ccb.content.gendered_line("No offense, but my clients definitely would not like me giving strangers directions to their hideouts.  You'll have to find them on their own terms.", { "speaker" }),
+    id = "TALK_CARAVAN_MERCHANT_Threatening",
+    line = ccb.content.text("No, not at all.  Just being cautious.  You know how it gets out here.  We're not looking for trouble.  In fact, if you've got anything worthwhile, maybe we could do a little trading."),
     replies = {
         {
-            text = ccb.content.text("I can understand that.  Well, let's trade."),
+            text = ccb.content.text("Sure, let's trade."),
             next_topic = "TALK_CARAVAN_MERCHANT_Trade",
             native_actions = { "start_trade" },
         },
         {
-            text = ccb.content.text("Where is 'home'?"),
-            next_topic = "TALK_CARAVAN_MERCHANT_Home",
-            when = predicates.all({ predicates.negate(predicates.has_mission("MISSION_REACH_REFUGEE_CENTER")), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "found_refugee_center" } })) }),
+            text = ccb.content.text("What's your deal here?"),
+            next_topic = "TALK_CARAVAN_MERCHANT_Job",
         },
         {
-            text = ccb.content.text("Thanks for chatting.  <end_talking_leave>"),
+            text = ccb.content.text("That suits me fine.  <end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_CARAVAN_MERCHANT_Job",
+    line = ccb.content.text("We're just travelers, making a pit stop.  Might be willing to trade a bit, if you've got anything to share.  We're not looking for trouble, there's plenty of that on the roads already."),
+    replies = {
+        {
+            text = ccb.content.text("Sure, let's trade."),
+            next_topic = "TALK_CARAVAN_MERCHANT_Trade",
+            native_actions = { "start_trade" },
+        },
+        {
+            text = ccb.content.text("That's it?  What's your story?"),
+            next_topic = "TALK_CARAVAN_MERCHANT_Story",
+        },
+        {
+            text = ccb.content.text("That suits me fine.  <end_talking_leave>"),
             next_topic = "TALK_DONE",
         },
     },
