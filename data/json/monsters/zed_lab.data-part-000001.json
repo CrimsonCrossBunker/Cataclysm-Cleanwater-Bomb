@@ -1,18 +1,5 @@
 [
   {
-    "id": "mon_zombie_scientist",
-    "type": "MONSTER",
-    "name": { "str": "zombie scientist" },
-    "description": "The remaining protective gear, laboratory equipment, and long, formerly white labcoat tell you that this zombie was some kind of researcher before turning.",
-    "copy-from": "mon_zombie_base",
-    "default_faction": "science",
-    "//": "zombie scientists are recognised as friendly by the lab's defense system",
-    "categories": [ "CLASSIC" ],
-    "color": "white_cyan",
-    "death_drops": "mon_zombie_scientist_death_drops",
-    "delete": { "flags": [ "GROUP_BASH" ] }
-  },
-  {
     "id": "mon_zombie_labsecurity",
     "type": "MONSTER",
     "name": { "str": "zombie security guard" },
