@@ -2,30 +2,6 @@
   {
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
-    "id": "goblin_fruit_abstract",
-    "name": { "str": "Abstract Goblin Fruit", "//~": "NO_I18N" },
-    "description": {
-      "str": "Somehow you got a hold of the platonic goblin fruit, the one fruit to rule them all.  It's a bug if you have this, but the lords of the Bright Lands will surely pay a high price for it.",
-      "//~": "NO_I18N"
-    },
-    "weight": "182 g",
-    "volume": "232 ml",
-    "color": "magenta",
-    "spoils_in": "3 days",
-    "comestible_type": "FOOD",
-    "symbol": "%",
-    "quench": 3,
-    "calories": 75,
-    "price": "40 cent",
-    "price_postapoc": "1 USD",
-    "material": [ "fruit" ],
-    "fun": 1,
-    "flags": [ "FREEZERBURN", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "vitC", 10 ], [ "calcium", 10 ], [ "iron", 10 ], [ "fruit_allergen", 1 ] ]
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
     "id": "goblin_fruit_gacha",
     "name": { "str": "mysterious fruit" },
     "description": "Some sort of fruit sealed in a thick shell.  The shell is rigid but seems surprisingly brittle; you could easily peel it open to see what's inside with your bare hands.",
