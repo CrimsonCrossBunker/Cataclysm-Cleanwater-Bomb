@@ -1,0 +1,57 @@
+[
+  {
+    "id": "mon_eigenspectre_2",
+    "type": "MONSTER",
+    "name": { "str": "photonic eigenspectre" },
+    "description": "The endless details of this figure are mercifully obscured by the viscous light coursing 'through' it.  It cannot contain anything, but the smears of light follow the shapes of stomach and intestines, and are splattered across what must be the lips and chin.",
+    "default_faction": "nether_player_hate",
+    "species": [ "NETHER_EMANATION" ],
+    "bodytype": "human",
+    "looks_like": "mon_memory",
+    "volume": "62500 ml",
+    "weight": "2 kg",
+    "hp": 130,
+    "speed": 70,
+    "material": [ "flesh" ],
+    "symbol": "E",
+    "color": "light_gray",
+    "aggression": 100,
+    "morale": 100,
+    "melee_skill": 4,
+    "melee_dice": 2,
+    "melee_dice_sides": 8,
+    "melee_damage": [ { "damage_type": "pure", "amount": 0, "armor_penetration": 1 } ],
+    "special_attacks": [
+      {
+        "type": "spell",
+        "spell_data": { "id": "LIXA_spread_light", "min_level": 1 },
+        "cooldown": 28,
+        "monster_message": "The %s emits a torrent of congealed light!"
+      },
+      {
+        "type": "gun",
+        "cooldown": 5,
+        "move_cost": 50,
+        "gun_type": "LIXA_spit_light",
+        "fake_skills": [ [ "gun", 8 ], [ "rifle", 8 ] ],
+        "fake_dex": 8,
+        "fake_per": 8,
+        "require_targeting_player": false,
+        "target_moving_vehicles": true,
+        "description": "The %s flings a gobbet of congealed light!",
+        "ranges": [ [ 2, 10, "DEFAULT" ] ]
+      }
+    ],
+    "dodge": 4,
+    "vision_day": 50,
+    "vision_night": 3,
+    "harvest": "exempt",
+    "death_function": {
+      "corpse_type": "NO_CORPSE",
+      "message": "The %s becomes part of the endless chamber, and congealed light splashes away from the spot it occupied.",
+      "effect": { "id": "LIXA_photonic_death", "hit_self": true }
+    },
+    "flags": [ "SEES", "HEARS", "WARM", "RANGED_ATTACKER", "NO_BREATHE", "PUSH_MON", "HARDTOSHOOT" ],
+    "armor": { "electric": 1 }
+  }
+]

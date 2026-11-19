@@ -1,0 +1,45 @@
+[
+  {
+    "id": "mon_living_vector",
+    "type": "MONSTER",
+    "name": { "str": "unfolded impossibility", "str_pl": "unfolded impossibilities" },
+    "description": "This is the entirety of the infinite chamber you are in, which perfectly contains itself.  If you look very closely, you might see yourself looking back.  You are sure that at any other time, seeing this would crack your brain like an eggshell.  But you understand it just fine right now.  And you can see it breathing.",
+    "default_faction": "nether_player_hate",
+    "species": [ "NETHER_EMANATION" ],
+    "looks_like": "mon_impossible_shape",
+    "volume": "62500 ml",
+    "weight": "0 g",
+    "speed": 120,
+    "hp": 200,
+    "symbol": "X",
+    "color": "white",
+    "aggression": 100,
+    "morale": 100,
+    "dodge": 8,
+    "special_attacks": [
+      {
+        "type": "gun",
+        "cooldown": 7,
+        "move_cost": 50,
+        "gun_type": "LIXA_vector_volley",
+        "fake_skills": [ [ "gun", 8 ], [ "rifle", 8 ] ],
+        "fake_dex": 8,
+        "fake_per": 8,
+        "require_targeting_player": false,
+        "target_moving_vehicles": true,
+        "description": "The %s rapidly rearranges the coordinates of the infinite chamber.",
+        "ranges": [ [ 2, 20, "DEFAULT" ] ]
+      },
+      {
+        "type": "spell",
+        "id": "LIXA_reshuffle_cone",
+        "spell_data": { "id": "LIXA_reshuffle_cone", "min_level": 1 },
+        "monster_message": "The %s rearranges the parts of itself you occupy, dilating them around you.",
+        "cooldown": 20
+      }
+    ],
+    "death_function": { "corpse_type": "NO_CORPSE", "effect": { "id": "mon_LIXA_vector_death", "hit_self": true } },
+    "flags": [ "FLIES", "NO_BREATHE", "SEES", "RANGED_ATTACKER", "HARDTOSHOOT", "HIT_AND_RUN" ],
+    "armor": { "bash": 6, "cut": 12, "bullet": 10 }
+  }
+]

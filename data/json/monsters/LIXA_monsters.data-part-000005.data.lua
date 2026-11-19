@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_eigenspectre_1",
+    name = ccb.content.plural_text("eigenspectre", "eigenspectres"),
+    description = ccb.content.text("This is the opposite of a human silhouette; every facet of every detail on display, with no shape to make sense of them.  You can see both sides of an ID badge on a white labcoat.  You can see every muscle and nerve in eyes blown wide with horror."),
+    default_faction = "nether_player_hate",
+    species = { "NETHER_EMANATION" },
+    body_type = "human",
+    looks_like = "mon_memory",
+    volume = "62500 ml",
+    mass = "2 kg",
+    hp = 120,
+    speed = 130,
+    materials = { "flesh" },
+    symbol = "E",
+    color = "light_gray",
+    aggression = 100,
+    morale = 100,
+    melee_skill = 4,
+    melee_dice = 2,
+    melee_sides = 8,
+    melee_damage = { { type = "pure", amount = 0, penetration = 1 } },
+    dodge = 7,
+    vision_day = 50,
+    vision_night = 3,
+    harvest = "exempt",
+    flags = { "SEES", "HEARS", "WARM", "NO_BREATHE", "PUSH_MON", "HIT_AND_RUN", "HARDTOSHOOT" },
+    armor = { electric = 1 },
+    death = {
+        outcome = {
+            corpse = "NO_CORPSE",
+            message = ccb.content.text("The %s becomes part of the endless chamber."),
+        },
+    },
+}
