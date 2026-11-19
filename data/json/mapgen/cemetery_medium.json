@@ -77,39 +77,5 @@
       ],
       "place_monsters": [ { "chance": 2, "density": 0.5, "monster": "GROUP_ZOMBIE", "x": [ 0, 18 ], "y": [ 0, 6 ] } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "Cemetery_1a_roof",
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                --------",
-        "                -......-",
-        "                -......-",
-        "                -----5--",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
-    }
   }
 ]
