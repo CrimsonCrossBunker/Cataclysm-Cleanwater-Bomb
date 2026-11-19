@@ -1,0 +1,45 @@
+[
+  {
+    "id": "iso_old_sword",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "copy-from": "mc_longsword",
+    "name": { "str": "ancient sword" },
+    "description": "A longsword worn down by countless battles.  It was once finely engraved.",
+    "flags": [ "UNBREAKABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ]
+  },
+  {
+    "id": "iso_old_armor",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR" ],
+    "copy-from": "armor_lc_plate",
+    "name": { "str": "envoy's armor" },
+    "description": "A suit of armor worn down by an endless journey.  Only its sturdiest parts remain now.",
+    "material": [ "qt_steel", "qt_steel_chain", "leather", "wool" ],
+    "armor": [
+      {
+        "material": [
+          { "type": "qt_steel", "covered_by_mat": 95, "thickness": 0.55 },
+          { "type": "wool", "covered_by_mat": 100, "thickness": 2.8 },
+          { "type": "leather", "covered_by_mat": 5, "thickness": 1.5 }
+        ],
+        "covers": [ "leg_l", "leg_r", "arm_l", "arm_r" ],
+        "layers": [ "NORMAL", "OUTER" ],
+        "coverage": 100,
+        "encumbrance": 2
+      },
+      {
+        "material": [
+          { "type": "qt_steel", "covered_by_mat": 95, "thickness": 2.8 },
+          { "type": "wool", "covered_by_mat": 100, "thickness": 2.8 },
+          { "type": "leather", "covered_by_mat": 5, "thickness": 1.5 }
+        ],
+        "covers": [ "torso" ],
+        "coverage": 100,
+        "cover_vitals": 60,
+        "layers": [ "NORMAL", "OUTER" ],
+        "encumbrance": 10
+      }
+    ]
+  }
+]
