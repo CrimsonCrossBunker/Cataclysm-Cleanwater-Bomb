@@ -108,32 +108,5 @@
       },
       { "text": "Not at the moment, thanks.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_RC_John_Bailey_2",
-    "dynamic_line": {
-      "concatenate": [
-        {
-          "compare_string": [ "seen", { "u_val": "RC_John_Bailey_2_John_Bailey_Convo" } ],
-          "yes": "Like I said,\" John shrugs.  \"I'm just checking ",
-          "no": "Same as you, I imagine,\" John shrugs.  \"Checking "
-        },
-        "the place out, doing a little shopping.  Then I'll be on my way again.  Might see if they have any work that needs done first, if the price is right."
-      ]
-    },
-    "speaker_effect": { "effect": { "u_add_var": "RC_John_Bailey_2_John_Bailey_Convo", "value": "seen" } },
-    "responses": [
-      { "text": "What are you shopping for?", "topic": "TALK_RC_John_Bailey_Shopping" },
-      { "text": "What do you know about this place?", "topic": "TALK_RC_John_Bailey_RefCenter" },
-      { "text": "On your way\" where?", "topic": "TALK_RC_John_Bailey_OnMyWay" },
-      { "text": "What kind of work are you looking for?", "topic": "TALK_RC_John_Bailey_Work" },
-      {
-        "text": "Got time to teach me anything?",
-        "topic": "TALK_RC_John_Bailey_Teach",
-        "condition": { "compare_string": [ "yes", { "u_val": "John_Bailey_teach" } ] }
-      },
-      { "text": "Sounds about the same as me, yep.  I'd better get back to it.", "topic": "TALK_DONE" }
-    ]
   }
 ]
