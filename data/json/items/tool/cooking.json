@@ -72,27 +72,5 @@
     "name": { "str": "multi-cooker - cooking", "str_pl": "multi-cookers - cooking" },
     "description": "A professional-grade multi-cooker, with a battery slot for camping trips or tailgating.  There is a dish cooking inside it.",
     "delete": { "qualities": [ "CONTAIN" ] }
-  },
-  {
-    "id": "pressure_cooker",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "pressure cooker" },
-    "//": "roughy a 6-quart pot, these usually hold about 15-16 psi safely",
-    "weight": "6 kg",
-    "volume": "7500 ml",
-    "description": "A sealable pot, designed to cook food at higher pressures and temperatures.  Useful for all kinds of cooking, and it can also be used for pressure-sensitive chemical reactions.",
-    "price": "65 USD",
-    "price_postapoc": "50 cent",
-    "to_hit": { "grip": "bad", "length": "short", "surface": "any", "balance": "clumsy" },
-    "material": [ "steel" ],
-    "symbol": ")",
-    "color": "light_gray",
-    "looks_like": "pot_canning",
-    "pocket_data": [ { "max_contains_volume": "6 L", "max_contains_weight": "100 kg", "watertight": true, "rigid": true } ],
-    "qualities": [ [ "COOK", 3 ], [ "BOIL", 2 ], [ "CONTAIN", 1 ], [ "CHEM", 1 ] ],
-    "use_action": [ "HEAT_ALL_ITEMS" ],
-    "flags": [ "ALLOWS_REMOTE_USE" ],
-    "melee_damage": { "bash": 6 }
   }
 ]
