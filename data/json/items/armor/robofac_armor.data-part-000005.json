@@ -1,0 +1,21 @@
+[
+  {
+    "abstract": "robofac_helmet",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "name": { "str": "abstract helmet", "//~": "NO_I18N" },
+    "weight": "1176 g",
+    "volume": "1750 ml",
+    "price": "600 USD",
+    "price_postapoc": "50 USD",
+    "material": [ "ceramic" ],
+    "symbol": ",",
+    "color": "dark_gray",
+    "material_thickness": 7,
+    "environmental_protection": 5,
+    "warmth": 15,
+    "flags": [ "ABLATIVE_HELMET", "CANT_WEAR", "OUTER" ],
+    "armor": [ { "coverage": 85, "cover_vitals": 95, "covers": [ "head" ] } ]
+  }
+]

@@ -1,0 +1,81 @@
+[
+  {
+    "abstract": "robofac_mantle",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "name": { "str": "abstract mantle", "//~": "NO_I18N" },
+    "weight": "6853 g",
+    "volume": "6600 ml",
+    "price": "600 USD",
+    "price_postapoc": "50 USD",
+    "material": [ "ceramic" ],
+    "symbol": ",",
+    "color": "dark_gray",
+    "material_thickness": 7,
+    "environmental_protection": 5,
+    "warmth": 15,
+    "flags": [ "ABLATIVE_MANTLE", "CANT_WEAR", "OUTER" ],
+    "armor": [
+      { "encumbrance": 5, "coverage": 95, "covers": [ "torso" ], "specifically_covers": [ "torso_upper" ] },
+      {
+        "//": "skip encumbrance for additional parts of same body part",
+        "encumbrance": 0,
+        "coverage": 60,
+        "cover_vitals": 90,
+        "covers": [ "torso" ],
+        "specifically_covers": [ "torso_lower" ]
+      },
+      {
+        "encumbrance": 2,
+        "coverage": 95,
+        "cover_vitals": 90,
+        "covers": [ "arm_l", "arm_r" ],
+        "specifically_covers": [ "arm_shoulder_l", "arm_shoulder_r" ]
+      },
+      {
+        "//": "skip encumbrance for additional parts of same body part",
+        "encumbrance": 0,
+        "coverage": 85,
+        "cover_vitals": 90,
+        "covers": [ "arm_l", "arm_r" ],
+        "specifically_covers": [ "arm_upper_l", "arm_upper_r" ]
+      }
+    ]
+  },
+  {
+    "abstract": "robofac_skirt",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "name": { "str": "abstract armored skirt", "//~": "NO_I18N" },
+    "weight": "2454 g",
+    "volume": "3500 ml",
+    "price": "600 USD",
+    "price_postapoc": "50 USD",
+    "material": [ "ceramic" ],
+    "symbol": ",",
+    "color": "dark_gray",
+    "material_thickness": 7,
+    "environmental_protection": 5,
+    "warmth": 15,
+    "flags": [ "ABLATIVE_SKIRT", "CANT_WEAR", "OUTER" ],
+    "armor": [
+      {
+        "encumbrance": 2,
+        "coverage": 100,
+        "cover_vitals": 90,
+        "covers": [ "leg_l", "leg_r" ],
+        "specifically_covers": [ "leg_hip_l", "leg_hip_r" ]
+      },
+      {
+        "//": "skip encumbrance for additional parts of same body part",
+        "encumbrance": 0,
+        "coverage": 85,
+        "cover_vitals": 90,
+        "covers": [ "leg_l", "leg_r" ],
+        "specifically_covers": [ "leg_upper_l", "leg_upper_r" ]
+      }
+    ]
+  }
+]
