@@ -114,3 +114,37 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "strip_mall_sign",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            ".",
+        },
+        terrain = { ["."] = "t_sidewalk" },
+        furniture = { ["."] = "f_sign" },
+        rotation = { 0, 3 },
+        sign_placements = {
+            { text = ccb.content.text("<city> Crossing"), x = 0, y = 0 },
+            { text = ccb.content.text("Kevin's Crossing"), x = 0, y = 0 },
+            { text = ccb.content.text("Meghan's Megamart"), x = 0, y = 0 },
+            { text = ccb.content.text("<city> Bazaar"), x = 0, y = 0 },
+            { text = ccb.content.text("<family_name> Bazaar"), x = 0, y = 0 },
+            { text = ccb.content.text("<city> Marketplace"), x = 0, y = 0 },
+            { text = ccb.content.text("<family_name> Marketplace"), x = 0, y = 0 },
+            { text = ccb.content.text("<family_name> Plaza"), x = 0, y = 0 },
+            { text = ccb.content.text("<city> Plaza"), x = 0, y = 0 },
+            { text = ccb.content.text("<city> Shopping Center"), x = 0, y = 0 },
+            { text = ccb.content.text("<city> Business Village"), x = 0, y = 0 },
+            { text = ccb.content.text("<city> Business Mall"), x = 0, y = 0 },
+            { text = ccb.content.text("Ye Olde <city> Shoppes"), x = 0, y = 0 },
+            { text = ccb.content.text("Slappin' Jimmy's <city> Strip Mall"), x = 0, y = 0 },
+            { text = ccb.content.text("<city> Discount Shops"), x = 0, y = 0 },
+            { text = ccb.content.text("<family_name>'s Discount Shops"), x = 0, y = 0 },
+            { text = ccb.content.text("The <family_name> Strip"), x = 0, y = 0 },
+            { text = ccb.content.text("The <city> Strip"), x = 0, y = 0 },
+        },
+    },
+}

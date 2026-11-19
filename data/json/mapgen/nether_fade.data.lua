@@ -63,3 +63,20 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "nether_glass_impassable_corner",
+    layout = {
+        size = { width = 2, height = 2 },
+        tile_edits = {
+            {
+                shape = "point",
+                operation = "terrain",
+                id = "t_nether_glass_wall",
+                x = { 0, 1 },
+                y = { 0, 1 },
+            },
+        },
+    },
+}

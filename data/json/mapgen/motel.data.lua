@@ -726,3 +726,176 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "corpse_crossbow_1x1",
+    layout = {
+        size = { width = 1, height = 1 },
+        item_placements = { { id = "compcrossbow", x = 0, y = 0, chance = 100 } },
+        item_group_placements = {
+            { group = "corpses", x = 0, y = 0, chance = 100 },
+            {
+                group = "crossbow_bolts_makeshift",
+                x = 0,
+                y = 0,
+                repetitions = { 1, 3 },
+                chance = 66,
+            },
+        },
+        field_placements = { { id = "fd_blood", x = 0, y = 0, intensity = { 1, 3 }, age_turns = 10 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_motel_twd_1_overrun",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "........................",
+            "...m...V......a.........",
+            "      #########dd..|||||",
+            " x xxW  .t..............",
+            "W x  +  .D.......dd....D",
+            "     w  ................",
+            "     w  ................",
+            "   =    ................",
+            "        .....tsss.......",
+            "           ......e......",
+            "              ..........",
+            "                        ",
+            "   =                    ",
+            " x   w   t              ",
+            "W    +                  ",
+            "    xw                  ",
+            "                        ",
+            "                        ",
+            "        w+w    w+w    w+",
+            "   xx                   ",
+            "           =      =     ",
+            "                        ",
+            "                        ",
+            "         W      o      W",
+        },
+        palettes = { "motel_twd_overrun_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_placements = {
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 6, 23 },
+                y = { 3, 10 },
+                chance = 66,
+                repetitions = { 2, 3 },
+            },
+        },
+        item_placements = { { id = "survivormap", x = 3, y = 4, chance = 70 } },
+        sign_placements = { { text = ccb.content.text("Travelier MOTEL"), x = 23, y = 1 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_motel_twd_2_overrun",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "........................",
+            "........................",
+            "||||||||||% %%%  |      ",
+            "...............  gw     ",
+            "D......BB......dd +    W",
+            "................  w     ",
+            "................lD  =   ",
+            "...............T        ",
+            "................        ",
+            ".............           ",
+            "..........        w     ",
+            "                  +    W",
+            "           V      w   x ",
+            "                    =   ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "w    w+w             r  ",
+            "     x       r  r   r   ",
+            " =      =               ",
+            "                        ",
+            "     x x                ",
+            "      W                 ",
+        },
+        palettes = { "motel_twd_overrun_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_placements = {
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 0, 16 },
+                y = { 3, 10 },
+                chance = 66,
+                repetitions = { 2, 3 },
+            },
+        },
+        graffiti_placements = {
+            { text = ccb.content.text("A large pink smudged X is drawn in chalk"), x = 20, y = 2 },
+            { text = ccb.content.text("A hopscotch court is drawn in chalk"), x = 6, y = 6 },
+            {
+                text = ccb.content.text("An orange sun and a yellow flower are drawn in chalk"),
+                x = 16,
+                y = 5,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_motel_twd_1_f1_overrun",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_fence_barbed",
+                x = 10,
+                y = 2,
+                end_x = 14,
+                end_y = 2,
+            },
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_fence_barbed",
+                x = 19,
+                y = 2,
+                end_x = 23,
+                end_y = 2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_motel_twd_2_f1_overrun",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_fence_barbed",
+                x = 0,
+                y = 2,
+                end_x = 9,
+                end_y = 2,
+            },
+            { shape = "point", operation = "terrain", id = "t_fence_barbed", x = 17, y = 2 },
+        },
+    },
+}

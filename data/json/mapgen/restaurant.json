@@ -74,15 +74,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "foodperson_break_room",
-    "object": {
-      "mapgensize": [ 9, 9 ],
-      "place_nested": [ { "chunks": [ [ "foodperson_barred_bathroom", 20 ], [ "null", 80 ] ], "x": 3, "y": 1 } ],
-      "place_npcs": [ { "class": "true_foodperson", "x": 4, "y": 8 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "24x24_chef_survivor",
     "object": {
       "mapgensize": [ 24, 24 ],
@@ -137,33 +128,6 @@
         { "group": "cannedfood_commercial", "x": [ 16, 18 ], "y": 18, "chance": 50, "repeat": [ 2, 4 ] }
       ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "foodperson_break_room",
-    "object": {
-      "mapgensize": [ 9, 9 ],
-      "place_nested": [ { "chunks": [ [ "foodperson_barred_bathroom", 1 ], [ "null", 1 ] ], "x": 3, "y": 1 } ],
-      "place_npcs": [ { "class": "true_foodperson", "x": 4, "y": 8 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "foodperson_barred_bathroom",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        " FF   ",
-        " F    ",
-        "      ",
-        "      ",
-        "      ",
-        "   X  "
-      ],
-      "terrain": { "X": "t_rdoor_boarded" },
-      "items": { "F": { "item": "dead_foodperson", "chance": 100 } },
-      "place_zones": [ { "type": "NPC_NO_INVESTIGATE", "faction": "no_faction", "x": [ 0, 5 ], "y": [ 0, 5 ] } ]
     }
   },
   {

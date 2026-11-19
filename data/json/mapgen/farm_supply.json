@@ -751,13 +751,5 @@
       },
       "place_nested": [ { "chunks": [ "farm_supply_fence_destruction" ], "x": 24, "y": 24 } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "farm_supply_fence_destruction",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "set": [ { "point": "bash", "x": 22, "y": [ 0, 20 ] }, { "point": "bash", "x": 22, "y": [ 0, 20 ], "repeat": [ 0, 1 ] } ]
-    }
   }
 ]

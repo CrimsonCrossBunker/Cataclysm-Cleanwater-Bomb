@@ -314,3 +314,52 @@ ccb.content.define_mapgen {
         loot_placements = { { id = "binoculars", x = 1, y = 0 }, { id = "survivormap", x = 1, y = 0 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "radio_tower_2x2_holdout",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = { { id = "f_camp_chair", x = 1, y = 0 }, { id = "f_makeshift_bed", x = 1, y = 1 } },
+        loot_placements = {
+            { group = "camping", x = 1, y = { 0, 1 }, chance = 50, repetitions = { 2, 3 } },
+            { id = "blanket", x = 1, y = { 0, 1 }, chance = 50, repetitions = { 1, 2 } },
+            { id = "can_drink", x = 1, y = { 0, 1 }, chance = 30, repetitions = { 2, 3 } },
+            { id = "can_food", x = 1, y = { 0, 1 }, chance = 40, repetitions = { 2, 3 } },
+            { id = "can_food", x = 1, y = { 0, 1 }, chance = 40, repetitions = { 2, 3 } },
+            { id = "sleeping_bag", x = 1, y = 1, chance = 40 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "radio_tower_2x2_sniper",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = { { id = "f_camp_chair", x = 1, y = 0 } },
+        loot_placements = {
+            { id = "corpse", x = 1, y = 0 },
+            { group = "mon_zombie_soldier_death_drops", x = 1, y = 0 },
+            { id = "survivor_scope", x = 1, y = 0, chance = 70 },
+            { id = "can_drink", x = 1, y = { 0, 1 }, chance = 70, repetitions = { 2, 3 } },
+            { id = "3006", x = 1, y = 0, chance = 40 },
+            { id = "remington_700", x = 1, y = 0, chance = 80, ammo = 100 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "radio_tower_wasp",
+    layout = {
+        size = { width = 5, height = 5 },
+        nested = { { id = "wasp_gibs", x = { 0, 2 }, y = { 0, 2 }, repetitions = { 5, 7 } } },
+        furniture_placements = { { id = "f_camp_chair", x = 1, y = 0 }, { id = "f_makeshift_bed", x = 1, y = 1 } },
+        loot_placements = {
+            { group = "wasp_lair", x = 1, y = 1, repetitions = { 0, 2 } },
+            { group = "human_parts", x = 1, y = 1 },
+        },
+        monster_placements = { { group = "GROUP_WASP_QUEEN", x = { 0, 5 }, y = { 0, 5 } } },
+    },
+}

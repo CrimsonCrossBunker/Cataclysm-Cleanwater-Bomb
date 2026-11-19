@@ -107,3 +107,69 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "void_spider_webs",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "W ",
+            " W",
+        },
+        traps = { W = "tr_void_spider_entry" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        field_glyphs = { W = { id = "fd_void_web", intensity = 2, age_turns = 1 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "void_spider_lair" },
+    layout = {
+        rows = {
+            "|||      ||||||......|||",
+            "||        ||||  ....  ||",
+            "|          ||    ..    |",
+            ".    ||          ||    .",
+            "..  ||||        ||||  ..",
+            "...||||||      ||||||...",
+            "...||||||      ||||||...",
+            "..  ||||        ||||  ..",
+            ".    ||          ||    .",
+            "|    ..    ||          |",
+            "||  ....  ||||        ||",
+            "|||......||||||      |||",
+            "|||......||||||      |||",
+            "||  ....  ||||        ||",
+            "|    ..    ||          |",
+            "     ||          ||     ",
+            "    ||||        ||||    ",
+            "   ||||||      ||||||   ",
+            "   ||||||      ||||||   ",
+            "    ||||        ||||    ",
+            "     ||          ||     ",
+            "|          ||    ..    |",
+            "||        ||||  ....  ||",
+            "|||      ||||||......|||",
+        },
+        terrain = { ["."] = "t_nether_glass_floor_basalt", ["|"] = "t_nether_basalt" },
+        fill_terrain = "t_nether_glass_floor",
+        field_placements = {
+            {
+                id = "fd_void_web",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                intensity = { 2, 3 },
+                repetitions = { 140, 184 },
+            },
+            {
+                id = "fd_void_web",
+                x = { 24, 47 },
+                y = { 0, 23 },
+                intensity = { 2, 3 },
+                repetitions = { 140, 184 },
+            },
+        },
+    },
+}

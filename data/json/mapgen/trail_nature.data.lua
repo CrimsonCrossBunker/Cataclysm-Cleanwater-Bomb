@@ -1,0 +1,42 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "NatureTrail_1a", "NatureTrail_1b" } },
+    layout = {
+        rows = {
+            "|||||| ___ |||||||||||||||||||||||||||||||||||||",
+            "|      ___                                     |",
+            "|      ___        bbb                          |",
+            "|       ___      _____                 ___     |",
+            "|       ___     _______               _____    |",
+            "|        __ Y   __   __              ___Y___   |",
+            "|        ___   __    ___             __   __   |",
+            "|        _________________          __    __   |",
+            "|         ___________________       __    __   |",
+            "|        ____            ______    ___   ___   |",
+            "|      ____                 ____   __    __    |",
+            "|     _____                    __  __    __b   |",
+            "|    ___   Y                   ______    __b   |",
+            "|   ___                     ________     __b   |",
+            "|   __                   __________     ___    |",
+            "|  b__          _____________  Y __     __     |",
+            "|  b__        ____________       __     __     |",
+            "|  b___     _____   bbb          __     __Y    |",
+            "|   ___________                  ___    __     |",
+            "|     ________                   _________     |",
+            "|        Y                         ______      |",
+            "|                                              |",
+            "|                                              |",
+            "||||||||||||||||||||||||||||||||||||||||||||||||",
+        },
+        palettes = { "park_nature_palette" },
+        predecessor_mapgen = "forest_thick",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = {
+            { chance = 75, group = "SUS_trash_trashcan_public", x = { 1, 23 }, y = { 1, 22 } },
+            { chance = 25, group = "creepy", x = { 1, 23 }, y = { 1, 22 } },
+        },
+        sign_placements = { { text = ccb.content.text("Please don't litter, keep the trail nice!"), x = 7, y = 2 } },
+    },
+}

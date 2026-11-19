@@ -222,3 +222,23 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "billboard_sign_nest",
+    weight = 300,
+    layout = {
+        size = { width = 1, height = 1 },
+        graffiti_placements = { { snippet = "billboard_ad_snippets", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "billboard_sign_nest",
+    weight = 100,
+    layout = {
+        size = { width = 1, height = 1 },
+        graffiti_placements = { { snippet = "general_graffiti_snippets", x = 0, y = 0 } },
+    },
+}

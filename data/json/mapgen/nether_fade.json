@@ -1,7 +1,0 @@
-[
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "nether_glass_impassable_corner",
-    "object": { "mapgensize": [ 2, 2 ], "set": [ { "point": "terrain", "id": "t_nether_glass_wall", "x": [ 0, 1 ], "y": [ 0, 1 ] } ] }
-  }
-]

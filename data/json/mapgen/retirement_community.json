@@ -445,42 +445,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ "retirement_community_road" ],
-    "object": {
-      "fill_ter": "t_pavement",
-      "rows": [
-        "ss.........yy.........ss",
-        "sss........yy........sss",
-        "ssIs.......yy.......sIss",
-        "ssss................ssss",
-        "ssss.......yy.......ssss",
-        "ssss.......yy.......ssss",
-        "ssss.......yy.......ssss",
-        "....................ssss",
-        "...........yy.......ssss",
-        "...........yy.......ssss",
-        "...........yy.......ssss",
-        "............?.......ssss",
-        "...........yy.......ssss",
-        "...........yy.......ssss",
-        "...........yy.......ssss",
-        "....................ssss",
-        "...........yy.......ssss",
-        "sssI.▤.▤.▤.▤.▤.▤.▤.▤Isss",
-        "ssss.▤.▤.▤.▤.▤.▤.▤.▤ssss",
-        "ssss................ssss",
-        "ssss.......yy.......ssss",
-        "ssss.......yy.......ssss",
-        "ssss.......yy.......ssss",
-        "ssss................ssss"
-      ],
-      "palettes": [ "retirement_community_palette" ],
-      "place_monster": [ { "group": "GROUP_ZOMBIE", "x": [ 6, 20 ], "y": [ 4, 9 ], "repeat": [ 4, 6 ] } ],
-      "place_signs": [ { "signage": "Shady Hills of <city>, Retirement Community\n\n ~Make Life Better~", "x": 20, "y": 3 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "ret_comm_office",
     "object": {
       "mapgensize": [ 1, 1 ],

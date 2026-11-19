@@ -248,3 +248,12 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "headshop_graffiti_snippet",
+    layout = {
+        size = { width = 1, height = 1 },
+        graffiti_placements = { { snippet = "headshop_graffiti", x = 0, y = 0 } },
+    },
+}

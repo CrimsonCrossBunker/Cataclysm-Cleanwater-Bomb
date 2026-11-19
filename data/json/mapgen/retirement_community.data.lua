@@ -1702,3 +1702,46 @@ ccb.content.define_mapgen {
         monster_placements = { { id = "mon_bat", x = { 13, 19 }, y = { 18, 21 }, chance = 100, repetitions = { 3, 5 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "retirement_community_road" },
+    layout = {
+        rows = {
+            "ss.........yy.........ss",
+            "sss........yy........sss",
+            "ssIs.......yy.......sIss",
+            "ssss................ssss",
+            "ssss.......yy.......ssss",
+            "ssss.......yy.......ssss",
+            "ssss.......yy.......ssss",
+            "....................ssss",
+            "...........yy.......ssss",
+            "...........yy.......ssss",
+            "...........yy.......ssss",
+            "............?.......ssss",
+            "...........yy.......ssss",
+            "...........yy.......ssss",
+            "...........yy.......ssss",
+            "....................ssss",
+            "...........yy.......ssss",
+            "sssI.▤.▤.▤.▤.▤.▤.▤.▤Isss",
+            "ssss.▤.▤.▤.▤.▤.▤.▤.▤ssss",
+            "ssss................ssss",
+            "ssss.......yy.......ssss",
+            "ssss.......yy.......ssss",
+            "ssss.......yy.......ssss",
+            "ssss................ssss",
+        },
+        palettes = { "retirement_community_palette" },
+        fill_terrain = "t_pavement",
+        monster_placements = { { group = "GROUP_ZOMBIE", x = { 6, 20 }, y = { 4, 9 }, repetitions = { 4, 6 } } },
+        sign_placements = {
+            {
+                text = ccb.content.text("Shady Hills of <city>, Retirement Community\n\n ~Make Life Better~"),
+                x = 20,
+                y = 3,
+            },
+        },
+    },
+}

@@ -600,3 +600,54 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "foodperson_break_room",
+    layout = {
+        size = { width = 9, height = 9 },
+        nested = {
+            {
+                choices = { { id = "foodperson_barred_bathroom", weight = 20 }, { id = "null", weight = 80 } },
+                x = 3,
+                y = 1,
+            },
+        },
+        npc_placements = { { id = "true_foodperson", x = 4, y = 8 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "foodperson_break_room",
+    layout = {
+        size = { width = 9, height = 9 },
+        nested = {
+            {
+                choices = { { id = "foodperson_barred_bathroom", weight = 1 }, { id = "null", weight = 1 } },
+                x = 3,
+                y = 1,
+            },
+        },
+        npc_placements = { { id = "true_foodperson", x = 4, y = 8 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "foodperson_barred_bathroom",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            " FF   ",
+            " F    ",
+            "      ",
+            "      ",
+            "      ",
+            "   X  ",
+        },
+        terrain = { X = "t_rdoor_boarded" },
+        item_groups = { F = { group = "dead_foodperson", chance = 100 } },
+        zone_placements = { { id = "NPC_NO_INVESTIGATE", faction = "no_faction", x = { 0, 5 }, y = { 0, 5 } } },
+    },
+}

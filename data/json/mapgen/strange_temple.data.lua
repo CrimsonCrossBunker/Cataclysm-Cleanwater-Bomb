@@ -236,3 +236,90 @@ ccb.content.define_mapgen {
         item_groups = { D = { group = "strange_temple_artifacts", chance = 100 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fire_vent",
+    layout = {
+        size = { width = 1, height = 1 },
+        field_placements = { { id = "fd_fire_vent", x = 0, y = 0, intensity = 1 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fire_vent",
+    layout = {
+        size = { width = 1, height = 1 },
+        field_placements = { { id = "fd_fire_vent", x = 0, y = 0, intensity = 2 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fire_vent",
+    layout = {
+        size = { width = 1, height = 1 },
+        field_placements = { { id = "fd_fire_vent", x = 0, y = 0, intensity = 3 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "color_wall",
+    layout = {
+        size = { width = 1, height = 1 },
+        terrain_placements = { { id = "t_rock_red", x = 0, y = 0 } },
+        trap_placements = { { id = "tr_temple_toggle", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "color_wall",
+    layout = {
+        size = { width = 1, height = 1 },
+        terrain_placements = { { id = "t_rock_green", x = 0, y = 0 } },
+        trap_placements = { { id = "tr_temple_toggle", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "color_wall",
+    layout = {
+        size = { width = 1, height = 1 },
+        terrain_placements = { { id = "t_rock_blue", x = 0, y = 0 } },
+        trap_placements = { { id = "tr_temple_toggle", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "color_floor",
+    layout = {
+        size = { width = 1, height = 1 },
+        terrain_placements = { { id = "t_floor_red", x = 0, y = 0 } },
+        trap_placements = { { id = "tr_temple_toggle", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "color_floor",
+    layout = {
+        size = { width = 1, height = 1 },
+        terrain_placements = { { id = "t_floor_green", x = 0, y = 0 } },
+        trap_placements = { { id = "tr_temple_toggle", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "color_floor",
+    layout = {
+        size = { width = 1, height = 1 },
+        terrain_placements = { { id = "t_floor_blue", x = 0, y = 0 } },
+        trap_placements = { { id = "tr_temple_toggle", x = 0, y = 0 } },
+    },
+}

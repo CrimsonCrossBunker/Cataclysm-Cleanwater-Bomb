@@ -438,44 +438,6 @@
     }
   },
   {
-    "om_terrain": "cabin_lapin",
-    "type": "mapgen",
-    "object": {
-      "fill_ter": "t_floor",
-      "rows": [
-        "........................",
-        "........................",
-        ".........._____.........",
-        "........_________.......",
-        "........_#w#+#w#_.......",
-        "........_wb   cw_.......",
-        ".....____#b  ct#____....",
-        "....._##w###=###w##_....",
-        "...___#15SFR &# BB#_....",
-        "...___w2     R# BBw_....",
-        "..____w3 CC   +  D#_....",
-        "..____#y ll  x#####%....",
-        "..____+    ϟ  +  D#_....",
-        "...___#cttc#+## BBw_....",
-        "...___#cttc# T# BB#_....",
-        "....._##ww######w##_....",
-        "....._______________....",
-        ".............._.........",
-        "..#####IIIIIIIHIIII.....",
-        "..#___#___________I.....",
-        "..#_______________I.....",
-        "..#___#___________I.....",
-        "..#####IIIIIIIIIIII.....",
-        "........................"
-      ],
-      "palettes": [ "cabin_palette" ],
-      "terrain": { ".": "t_region_groundcover", "_": "t_region_soil", "x": "t_floor" },
-      "furniture": { "x": "f_firefly_terrarium", "ϟ": "f_bulletin" },
-      "place_monster": [ { "monster": "mon_rabbit", "x": 8, "y": 21, "repeat": [ 3, 6 ] } ],
-      "place_npcs": [ { "class": "warrener", "x": 9, "y": 17 } ]
-    }
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "cabin_prepper" ],
     "object": {
@@ -525,52 +487,6 @@
           "spawn_data": { "patrol": [ { "x": [ 4, 20 ], "y": [ 3, 15 ] } ] }
         }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "cabin_prepper_shelter" ],
-    "//": "A lmoe shelter replica refitted for the cabin's dug-out basement.",
-    "//2": "This particular 4-bed shelter is definitely homemade, mostly carved out of bare rock, and seems to be incomplete.",
-    "object": {
-      "fill_ter": "t_dirt_underground",
-      "rows": [
-        "########################",
-        "########################",
-        "#########^^#############",
-        "########^..^############",
-        "########..^^############",
-        "########Y..^^###########",
-        "##G.R###<.|||####||||||#",
-        "##a.l###A.|UUVVvv|{{{{|#",
-        "##=*=###..|U.....:....|#",
-        "##c..ll-..|Uuuu.u||||||#",
-        "##c....+..|||||+||Dh..d#",
-        "##c.h..-r.+......+...BB#",
-        "##c.TTT-r.-r..h..------#",
-        "#######--+-r.hLh.+...BB#",
-        "#######-F.Sr..h..-Dh..d#",
-        "#######-é.......-------#",
-        "#######-CCKC.uu.+...hD-#",
-        "#######-----.--+-}....-#",
-        "#########W.~.-s.-}.BBS-#",
-        "#########H...-&.-w.BBr-#",
-        "#########l..A-Kt-------#",
-        "#########--------#######",
-        "########################",
-        "########################"
-      ],
-      "palettes": [ "bunker", "empty_bunker_items" ],
-      "place_monster": [
-        {
-          "group": "GROUP_PREPPER_HOUSE",
-          "x": [ 4, 22 ],
-          "y": [ 10, 19 ],
-          "pack_size": [ 1, 2 ],
-          "spawn_data": { "patrol": [ { "x": [ 4, 22 ], "y": [ 10, 19 ] } ] }
-        }
-      ],
-      "set": [ { "point": "trap", "id": "tr_beartrap", "x": 3, "y": 7 }, { "point": "trap", "id": "tr_shotgun_1", "x": 18, "y": 8 } ]
     }
   }
 ]

@@ -96,3 +96,15 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "farm_supply_fence_destruction",
+    layout = {
+        size = { width = 24, height = 24 },
+        tile_edits = {
+            { shape = "point", operation = "bash", x = 22, y = { 0, 20 } },
+            { shape = "point", operation = "bash", x = 22, y = { 0, 20 }, repetitions = { 0, 1 } },
+        },
+    },
+}
