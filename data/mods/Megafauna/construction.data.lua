@@ -1,0 +1,12 @@
+local ccb = require("ccb")
+
+ccb.content.define_construction {
+    id = "constr_glypto_shelter",
+    group = "build_improvised_shelter",
+    category = "CONSTRUCT",
+    required_skills = { { "survival", 1 } },
+    duration = "30 s",
+    components = { { { "glypto_shell", 1 } } },
+    pre_terrain = "t_pit_shallow",
+    post_terrain = "t_glypto_shelter",
+}
