@@ -1,21 +1,5 @@
 [
   {
-    "id": "demon_possession_aura",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR", "ARTIFACT" ],
-    "name": "Ixythyug the Destroyer's soul",
-    "description": "RIP AND TEAR",
-    "weight": "1 g",
-    "volume": "1 ml",
-    "symbol": "o",
-    "color": "white",
-    "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE" ],
-    "max_worn": 1,
-    "passive_effects": [
-      { "id": "ITEM_ENCH_Magiclysm_demon_possession_aura_0" }
-    ]
-  },
-  {
     "id": "demonic_possession",
     "type": "SPELL",
     "name": "Demonic Possession",
