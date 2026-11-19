@@ -1,0 +1,18 @@
+[
+  {
+    "id": "BGSS_RELIGIOUS_1_FAITH2",
+    "type": "talk_topic",
+    "dynamic_line": "I will keep the faith, and keep praying, and strike down the agents of Hell where I see them.  That's all we few can do, isn't it?  I suppose perhaps we're the meek that shall inherit the Earth.  Although I don't love our odds.",
+    "responses": [
+      {
+        "text": "What if you're wrong?",
+        "topic": "BGSS_RELIGIOUS_1_FAITH1",
+        "condition": { "not": { "npc_has_effect": "player_rude_BGSS_RELIGIOUS_1_FAITH1" } },
+        "effect": { "npc_add_effect": "player_rude_BGSS_RELIGIOUS_1_FAITH1", "duration": "PERMANENT" },
+        "opinion": { "value": -1 }
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_FRIEND_CONVERSATION" },
+      { "text": "<end_talking>", "topic": "TALK_DONE" }
+    ]
+  }
+]
