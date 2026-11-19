@@ -1,0 +1,160 @@
+local ccb = require("ccb")
+
+-- NO_I18N
+-- This is .270 FMJ.  270 win is so exclusively used for hunting that FMJ ammo basically doesn't exist. This is just here for the BBTI data.
+-- .270 Win. (CIP) .277 100gr Nosler AccuBond 57845, 54.0 gr Alliant Reloder-15 *C
+ccb.content.define_item {
+    id = "270win_fmj",
+    abstract = true,
+    name = ccb.content.text_without_extraction(".270 Winchester abstract", ".270 Winchester abstract"),
+    description = ccb.content.text(".270 Winchester ammunition with a 130gr full metal jacket bullet.  It is a powerful round capable of taking down large targets with ease."),
+    ascii_picture = "270win_jsp",
+    length = "85 mm",
+    price = "1 USD 70 cent",
+    survival_price = "6 USD",
+    mass = "20 g",
+    volume = "189 ml",
+    flags = { "IRREPLACEABLE_CONSUMABLE" },
+    materials = { "brass", "lead", "powder" },
+    symbol = "=",
+    color = "yellow",
+    stack_size = 20,
+    ammunition = {
+        count = 20,
+        type = "270win",
+        casing = "270win_casing",
+        range = 65,
+        damage = {
+            type = "bullet",
+            amount = 55,
+            penetration = 8,
+            barrels = {
+                { length = "27 mm", amount = 14 },
+                { length = "30 mm", amount = 15 },
+                { length = "32 mm", amount = 16 },
+                { length = "37 mm", amount = 17 },
+                { length = "40 mm", amount = 18 },
+                { length = "44 mm", amount = 19 },
+                { length = "47 mm", amount = 20 },
+                { length = "50 mm", amount = 21 },
+                { length = "55 mm", amount = 22 },
+                { length = "59 mm", amount = 23 },
+                { length = "63 mm", amount = 24 },
+                { length = "67 mm", amount = 25 },
+                { length = "71 mm", amount = 26 },
+                { length = "75 mm", amount = 27 },
+                { length = "83 mm", amount = 28 },
+                { length = "88 mm", amount = 29 },
+                { length = "93 mm", amount = 30 },
+                { length = "98 mm", amount = 31 },
+                { length = "104 mm", amount = 32 },
+                { length = "110 mm", amount = 33 },
+                { length = "117 mm", amount = 34 },
+                { length = "124 mm", amount = 35 },
+                { length = "131 mm", amount = 36 },
+                { length = "138 mm", amount = 37 },
+                { length = "146 mm", amount = 38 },
+                { length = "155 mm", amount = 39 },
+                { length = "168 mm", amount = 40 },
+                { length = "178 mm", amount = 41 },
+                { length = "188 mm", amount = 42 },
+                { length = "199 mm", amount = 43 },
+                { length = "211 mm", amount = 44 },
+                { length = "223 mm", amount = 45 },
+                { length = "237 mm", amount = 46 },
+                { length = "251 mm", amount = 47 },
+                { length = "266 mm", amount = 48 },
+                { length = "282 mm", amount = 49 },
+                { length = "300 mm", amount = 50 },
+                { length = "329 mm", amount = 51 },
+                { length = "350 mm", amount = 52 },
+                { length = "372 mm", amount = 53 },
+                { length = "397 mm", amount = 54 },
+                { length = "423 mm", amount = 55 },
+                { length = "452 mm", amount = 56 },
+                { length = "483 mm", amount = 57 },
+                { length = "518 mm", amount = 58 },
+                { length = "555 mm", amount = 59 },
+                { length = "596 mm", amount = 60 },
+                { length = "641 mm", amount = 61 },
+                { length = "691 mm", amount = 62 },
+                { length = "775 mm", amount = 63 },
+                { length = "839 mm", amount = 64 },
+                { length = "906 mm", amount = 65 },
+                { length = "1003 mm", amount = 66 },
+                { length = "1076 mm", amount = 67 },
+                { length = "1197 mm", amount = 68 },
+                { length = "1212 mm", amount = 69 },
+            },
+        },
+        dispersion = 10,
+        recoil = 3800,
+        effects = { "COOKOFF" },
+    },
+}
+
+ccb.content.define_item {
+    id = "270win_jsp",
+    copy_from = "270win_fmj",
+    name = ccb.content.plural_text(".270 Winchester JSP", ".270 Winchester JSP"),
+    description = ccb.content.text(".270 Winchester ammunition with a 130gr soft point bullet.  The .270 round was not initially successful, but over a few decades it became one of the most popular rifle cartridges for hunting and silhouette shooting.  It is a powerful round capable of taking down large targets with ease."),
+    inheritance = { offset = { damage = { type = "bullet", amount = 4, penetration = -4 } } },
+    ammunition = {},
+}
+
+ccb.content.define_item {
+    id = "bp_270win_jsp",
+    copy_from = "270win_jsp",
+    name = ccb.content.plural_text(".270 Winchester JSP, black powder", ".270 Winchester JSP, black powder"),
+    inheritance = {
+        add = { projectile_effects = { "RECYCLED", "BLACKPOWDER", "MUZZLE_SMOKE" } },
+        remove = { flags = { "IRREPLACEABLE_CONSUMABLE" } },
+        scale = {
+            price = 0.3,
+            recoil = 0.7,
+            dispersion = 1.2,
+            damage = { type = "bullet", amount = 0.7, penetration = 0.5 },
+        },
+    },
+    ammunition = {},
+}
+
+ccb.content.define_item {
+    id = "reloaded_270win_jsp",
+    copy_from = "270win_jsp",
+    name = ccb.content.plural_text(".270 Winchester JSP, reloaded", ".270 Winchester JSP, reloaded"),
+    inheritance = {
+        add = { projectile_effects = { "RECYCLED" } },
+        remove = { flags = { "IRREPLACEABLE_CONSUMABLE" } },
+        scale = { price = 0.7, dispersion = 1.1, damage = { type = "bullet", amount = 0.9 } },
+    },
+    ammunition = {},
+}
+
+ccb.content.define_item {
+    id = "reloaded_270win_fmj",
+    copy_from = "270win_fmj",
+    name = ccb.content.plural_text(".270 Winchester FMJ, reloaded", ".270 Winchester FMJ, reloaded"),
+    inheritance = {
+        add = { projectile_effects = { "RECYCLED" } },
+        remove = { flags = { "IRREPLACEABLE_CONSUMABLE" } },
+        scale = { price = 0.7, dispersion = 1.1, damage = { type = "bullet", amount = 0.9 } },
+    },
+    ammunition = {},
+}
+
+ccb.content.define_item {
+    id = "bp_270win_fmj",
+    copy_from = "reloaded_270win_fmj",
+    name = ccb.content.plural_text(".270 Winchester FMJ, black powder", ".270 Winchester FMJ, black powder"),
+    inheritance = {
+        add = { projectile_effects = { "RECYCLED", "BLACKPOWDER", "MUZZLE_SMOKE" } },
+        scale = {
+            price = 0.3,
+            recoil = 0.76,
+            dispersion = 1.2,
+            damage = { type = "bullet", amount = 0.76, penetration = 0.5 },
+        },
+    },
+    ammunition = {},
+}
