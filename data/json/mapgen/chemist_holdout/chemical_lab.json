@@ -39,40 +39,5 @@
         { "type": "LOOT_CURRENCY", "faction": "wasteland_scavengers", "x": [ 17, 17 ], "y": [ 8, 8 ] }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "chemical_lab_roof_ocu" ],
-    "object": {
-      "fill_ter": "t_floor",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
-    }
   }
 ]
