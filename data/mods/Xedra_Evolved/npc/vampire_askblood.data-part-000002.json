@@ -1,0 +1,27 @@
+[
+  {
+    "id": [ "TALK_FRIEND", "TALK_FRIEND_Liam", "TALK_FRIEND_Luo" ],
+    "type": "talk_topic",
+    "insert_before_standard_exits": true,
+    "responses": [
+      {
+        "text": "Can I drink some of your blood?  I really need some of it.",
+        "topic": "TALK_FRIEND_FOLLOWER_BLOODFEED_NOPE",
+        "condition": {
+          "and": [
+            { "or": [ { "math": [ "n_npc_trust() <= 0" ] }, { "math": [ "n_npc_value() <= 0" ] } ] },
+            { "not": { "npc_has_flag": "BLEED_IMMUNE" } },
+            { "not": { "npc_has_trait": "ACIDBLOOD" } },
+            { "not": { "npc_has_trait": "THRESH_CRUSTACEAN" } },
+            { "not": { "npc_has_trait": "THRESH_INSECT" } },
+            { "not": { "npc_has_trait": "THRESH_CEPHALOPOD" } },
+            { "not": { "npc_has_trait": "THRESH_GASTROPOD" } },
+            { "not": { "npc_has_trait": "BLOOD_OF_SAINTS" } },
+            { "not": { "npc_has_trait": "VAMPIRE" } },
+            { "u_has_any_trait": [ "VAMPIRE", "DHAMPIR_FANGS" ] }
+          ]
+        }
+      }
+    ]
+  }
+]
