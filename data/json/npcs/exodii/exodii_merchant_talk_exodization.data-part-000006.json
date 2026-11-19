@@ -1,0 +1,59 @@
+[
+  {
+    "id": "TALK_EXODII_MERCHANT_Exodize_Cyberframe_back_out",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "Yes, of course.  I'll go back to the shop.  Find me if you reconsider.",
+      "str": "&Rubik lets out a mechanical chuckle.  \"Aye, 'course.  Escolt this'n out if ya' reconsider.\"\n\nWith that, Rubik gets up and leaves, offering a backward wave on his way out."
+    },
+    "responses": [ { "text": "…", "effect": { "u_add_var": "Rubik_promised_cyberframe", "value": "yes" }, "topic": "TALK_DONE" } ]
+  },
+  {
+    "id": "TALK_EXODII_MERCHANT_Exodize_Cyberframe_1a_yes",
+    "type": "talk_topic",
+    "dynamic_line": "&Rubik stares at Venn, and after a long silence, they offer each other a stiff bow.  Rubik places a hand upon your shoulder.  It's a familiar, warm gesture.  A stark juxtaposition to the chill of their metal hand.  You lay back upon the table, and you hear a mechanical whirr as the spider-like surgical robot starts to greedily tap away at your extremities.  You barely have a moment to consider your actions before it all goes black…",
+    "responses": [
+      {
+        "text": "…",
+        "effect": [
+          { "u_add_effect": "narcosis", "duration": "12 hours" },
+          { "u_add_effect": "sleep", "duration": "12 hours" },
+          { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "12 hours" },
+          { "u_add_trait": "EXODII_CYBERFRAME_GENERIC" },
+          { "u_add_bionic": "bio_exodii_cyberframe_1a" },
+          { "u_add_bionic": "bio_exodii_leg_bionic_basic_armored_left" },
+          { "u_add_bionic": "bio_exodii_leg_bionic_basic_armored_right" },
+          { "u_add_bionic": "bio_exodii_arm_bionic_basic_armored_left" },
+          { "u_add_bionic": "bio_exodii_arm_bionic_basic_armored_right" },
+          { "run_eocs": "EOC_EXODII_MERCHANT_Exodize_Cyberframe_done", "time_in_future": "12 hours" },
+          { "run_eocs": "EOC_ROBOFAC_HATES_EXODII_CYBORGS" }
+        ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "id": "TALK_EXODII_MERCHANT_Exodize_Cyberframe_1b_yes",
+    "type": "talk_topic",
+    "dynamic_line": "&Rubik stares at Venn, and after a long silence, they offer each other a stiff bow.  Rubik places a hand upon your shoulder.  It's a familiar, warm gesture.  A stark juxtaposition to the chill of their metal hand.  You lay back upon the table, and you hear a mechanical whirr as the spider-like surgical robot starts to greedily tap away at your extremities.  You barely have a moment to consider your actions before it all goes black…",
+    "responses": [
+      {
+        "text": "…",
+        "effect": [
+          { "u_add_effect": "narcosis", "duration": "12 hours" },
+          { "u_add_effect": "sleep", "duration": "12 hours" },
+          { "u_assign_activity": "ACT_CBM_SURGERY", "duration": "12 hours" },
+          { "u_add_trait": "EXODII_CYBERFRAME_GENERIC" },
+          { "u_add_bionic": "bio_exodii_cyberframe_1b" },
+          { "u_add_bionic": "bio_exodii_leg_bionic_basic_left" },
+          { "u_add_bionic": "bio_exodii_leg_bionic_basic_right" },
+          { "u_add_bionic": "bio_exodii_arm_bionic_basic_left" },
+          { "u_add_bionic": "bio_exodii_arm_bionic_basic_right" },
+          { "run_eocs": "EOC_EXODII_MERCHANT_Exodize_Cyberframe_done", "time_in_future": "12 hours" },
+          { "run_eocs": "EOC_ROBOFAC_HATES_EXODII_CYBORGS" }
+        ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]
