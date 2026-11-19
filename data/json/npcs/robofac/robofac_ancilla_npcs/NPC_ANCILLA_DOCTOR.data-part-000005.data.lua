@@ -1,28 +1,21 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ANCILLA_DOCTOR_BIONICS_BIONIC_LIMB_PROPOSE_SWAP",
-    line = ccb.content.text("&The Doc stares at you confusedly.  \"Give me a second.\"\n\nThe Doc pulls out a two-way radio and steps out of the room and down the hall.  They're gone for several minutes before they return, setting the radio down on the table.\n\n\"Well, I talked to the bosses, and yup, we're a go.  In fact, I've been authorized to give you a discount.  You'll be the first of the new Cybernetic Limb Enhancement Program, yeah?"),
+    id = "TALK_ANCILLA_DOCTOR_BIONICS_BIONIC_LIMB_INTRO",
+    line = ccb.content.text("That's right.\"  The doctor pulls out a vacuum-sealed package containing what is clearly a high-tech prosthetic arm, not too unlike those you saw before the Cataclysm.\n\n\"That annoying prick across the street has made some progress on those killer robots, I guess, and we figured out a way to improve standard prosthetics.  Missing limbs seems to be increasingly common.  Anyway, it's not superhuman stuff like some of these bionics, but it'll function like a normal limb, as long as you can keep it powered.  The benefit over the old-school stuff is the power, and that you control them with your neurobionic interface, and thus your brain, yeah?  So you may not be stronger or faster, but hey, at least your muscles won't get tired as easy.  Because you don't have'em!  Hah!"),
     replies = {
         {
-            text = ccb.content.text("Alright, let's talk about limb replacement."),
-            next_topic = "TALK_ANCILLA_DOCTOR_BIONICS_BIONIC_LIMB_REPLACEMENT_1",
-        },
-        {
-            text = ccb.content.text("I'll keep that in mind.  See you around."),
+            text = ccb.content.text("I'll keep that in mind in case I lose a limb.  See you around."),
             next_topic = "TALK_DONE",
         },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ANCILLA_DOCTOR_BIONICS_BIONIC_LIMB_REPLACEMENT_1",
-    line = ccb.content.text("Let's get you checked out.  Climb up onto the automated surgical suite here, yeah?"),
-    replies = {
         {
-            text = ccb.content.text("[Climb onto the bed by the surgical robot]"),
-            next_topic = "TALK_ANCILLA_DOCTOR_BIONICS_BIONIC_LIMB_REPLACEMENT_2",
+            text = ccb.content.text("Actually… could you just cut off one of my limbs and install one of those instead?"),
+            next_topic = "TALK_ANCILLA_DOCTOR_BIONICS_BIONIC_LIMB_PROPOSE_SWAP",
+            actions = {
+                actions.set_actor_value("speaker", "dialogue_ancilla_doctor_u_asked_about_swapping_limbs", "yes"),
+            },
         },
-        { text = ccb.content.text("Actually, maybe another time."), next_topic = "TALK_DONE" },
     },
 }

@@ -117,29 +117,5 @@
       },
       { "text": "<end_talking_nevermind>", "topic": "TALK_ANCILLA_DOCTOR" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ANCILLA_DOCTOR_BIONICS_REPAIR",
-    "dynamic_line": "What do you need?  Repairing cybernetics isn't cheap, but I guess it's cheaper than replacing them.  Make sure you unload anything or remove any mods you want to keep.\"  The Doc then gently pats the automated surgical suite.  \"Doc Junior here will tear up anything you leave in during the repair.",
-    "responses": [
-      {
-        "text": "Can you repair damage to my bionic limbs?",
-        "effect": "repair_bionic_limbs",
-        "condition": {
-          "or": [
-            { "u_has_trait": "EXODII_CYBERFRAME_GENERIC" },
-            { "u_has_trait": "BIONIC_ARM_BASIC_BOTH" },
-            { "u_has_trait": "BIONIC_LEG_BASIC_BOTH" },
-            { "u_has_trait": "BIONIC_ARM_BASIC_LEFT" },
-            { "u_has_trait": "BIONIC_ARM_BASIC_RIGHT" },
-            { "u_has_trait": "BIONIC_LEG_BASIC_LEFT" },
-            { "u_has_trait": "BIONIC_LEG_BASIC_RIGHT" }
-          ]
-        },
-        "topic": "TALK_DONE"
-      },
-      { "text": "Actually, can you help me with something else?", "topic": "TALK_ANCILLA_DOCTOR_BIONICS" }
-    ]
   }
 ]
