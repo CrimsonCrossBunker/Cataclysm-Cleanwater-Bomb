@@ -58,39 +58,5 @@
         "condition": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyn" } ] }
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_COWBOYN_BACKGROUND",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "dialogue_cowboyn_cowboynmota" } ],
-      "no": {
-        "gendered_line": "Lived in a nearby town.  Normal life.  9 to 5 job.  When it all happened, we ran away to find some safety.  But there's no safety anymore, is there?",
-        "relevant_genders": [ "npc" ]
-      },
-      "yes": { "gendered_line": "I already told you.  Don't want to go through it again.", "relevant_genders": [ "npc" ] }
-    },
-    "responses": [
-      {
-        "text": "Wait, 'we'?",
-        "topic": "TALK_COWBOYN_PARTNER",
-        "condition": {
-          "or": [
-            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_cowboynmota" } ] } },
-            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_cowboynmots" } ] } }
-          ]
-        }
-      },
-      {
-        "text": "Right.  Okay.",
-        "topic": "TALK_COWBOYN_MAIN",
-        "condition": {
-          "or": [
-            { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_cowboynmota" } ] },
-            { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_cowboynmots" } ] }
-          ]
-        }
-      }
-    ]
   }
 ]

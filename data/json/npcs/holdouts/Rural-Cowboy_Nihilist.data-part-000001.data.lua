@@ -1,28 +1,23 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_COWBOYN_PARTNER",
-    line = ccb.content.gendered_line("I didn't leave the town alone.  I arrived here alone.", { "interlocutor" }),
+    id = "TALK_COWBOYN_BACKGROUND",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_cowboyn_cowboynmota" } }),
+        yes = ccb.content.gendered_line("I already told you.  Don't want to go through it again.", { "interlocutor" }),
+        no = ccb.content.gendered_line("Lived in a nearby town.  Normal life.  9 to 5 job.  When it all happened, we ran away to find some safety.  But there's no safety anymore, is there?", { "interlocutor" }),
+    },
     replies = {
         {
-            text = ccb.content.text("I'm sorry for your loss.  But you still can't give up.  You have a lot to live for!"),
-            next_topic = "TALK_COWBOYN_MOTIVATEF",
+            text = ccb.content.text("Wait, 'we'?"),
+            next_topic = "TALK_COWBOYN_PARTNER",
+            when = predicates.any({ predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_cowboynmota" } })), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_cowboynmots" } })) }),
         },
         {
-            text = ccb.content.text("We all lost someone.  No reason to sit down and die."),
-            next_topic = "TALK_COWBOYN_MOTIVATEF",
-        },
-        {
-            text = ccb.content.text("You can't let yourself be consumed by grief.  It will get better."),
-            next_topic = "TALK_COWBOYN_MOTIVATEF",
-        },
-        {
-            text = ccb.content.text("No one gets out alive.  Always been that way.  So we keep going."),
-            next_topic = "TALK_COWBOYN_MOTIVATES",
-        },
-        {
-            text = ccb.content.text("I'm sure your loved one would want you to live on for them."),
-            next_topic = "TALK_COWBOYN_MOTIVATEF",
+            text = ccb.content.text("Right.  Okay."),
+            next_topic = "TALK_COWBOYN_MAIN",
+            when = predicates.any({ predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_cowboynmota" } }), predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_cowboynmots" } }) }),
         },
     },
 }
