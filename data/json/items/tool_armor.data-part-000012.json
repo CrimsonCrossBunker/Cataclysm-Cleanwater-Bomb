@@ -1,0 +1,41 @@
+[
+  {
+    "id": "goggles_ir",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "category": "clothing",
+    "symbol": "[",
+    "color": "dark_gray",
+    "name": { "str_sp": "infrared goggles" },
+    "description": "A pair of battery-powered goggles that grant infrared vision, allowing you to see warm-blooded creatures in the dark.  Use it to turn them on.",
+    "flags": [ "FRAGILE", "OUTER", "ELECTRONIC", "MUNDANE" ],
+    "faults": [ { "fault_group": "electronic_general" } ],
+    "price": "920 USD",
+    "price_postapoc": "25 USD",
+    "material": [ "plastic", "steel" ],
+    "weight": "1240 g",
+    "volume": "1 L",
+    "charges_per_use": 1,
+    "use_action": {
+      "type": "transform",
+      "msg": "You activate your %s.",
+      "target": "goggles_ir_on",
+      "need_charges": 1,
+      "need_charges_msg": "The batteries are dead."
+    },
+    "warmth": 10,
+    "environmental_protection": 3,
+    "material_thickness": 2,
+    "pocket_data": [
+      {
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "flag_restriction": [ "BATTERY_LIGHT", "BATTERY_ULTRA_LIGHT" ],
+        "default_magazine": "light_battery_cell"
+      }
+    ],
+    "armor": [ { "encumbrance": 40, "coverage": 100, "covers": [ "eyes" ], "rigid_layer_only": true } ],
+    "tool_ammo": "battery",
+    "passive_effects": [ { "id": "THERMAL_VISION_GOOD" } ]
+  }
+]
