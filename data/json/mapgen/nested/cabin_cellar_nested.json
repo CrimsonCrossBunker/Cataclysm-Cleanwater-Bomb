@@ -1,64 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "cabin_cellar_stairs",
-    "object": {
-      "mapgensize": [ 10, 10 ],
-      "rotation": [ 0, 0 ],
-      "rows": [
-        "          ",
-        "          ",
-        "          ",
-        "          ",
-        "          ",
-        "          ",
-        "          ",
-        "          ",
-        "       >  ",
-        "          "
-      ],
-      "palettes": [ "cabin_cellar" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "place_nested": [ { "chunks": [ "cabin_cellar" ], "x": 0, "y": 0, "z": -1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "cabin_cellar",
-    "object": {
-      "mapgensize": [ 10, 10 ],
-      "rotation": [ 0, 0 ],
-      "rows": [
-        "#--------#",
-        "#-......-#",
-        "#-......-#",
-        "#-......-#",
-        "#-......-#",
-        "#-......-#",
-        "#-......-#",
-        "#------.-#",
-        "######-<-#",
-        "######---#"
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "palettes": [ "cabin_cellar" ],
-      "place_nested": [
-        { "chunks": [ "cabin_6x6_cellar_nested" ], "x": 2, "y": 1 },
-        {
-          "chunks": [
-            [ "null", 90 ],
-            [ "cabin_6x6_cellar_nested_zombies", 15 ],
-            [ "cabin_6x6_cellar_nested_spiders", 5 ],
-            [ "cabin_6x6_cellar_nested_mycus", 1 ]
-          ],
-          "x": 2,
-          "y": 1
-        }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "cabin_6x6_cellar_nested",
     "//": "A cellar filled with various bits of hobby equipment for hiking, hunting, or camping",
     "object": {
@@ -188,19 +130,6 @@
         { "item": "box_large_wood", "x": 1, "y": 5, "chance": 50 }
       ],
       "place_fields": [ { "field": "fd_dust", "x": [ 0, 5 ], "y": [ 0, 5 ], "repeat": [ 10, 20 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "cabin_cellar_2x2_moonshine_still",
-    "object": {
-      "mapgensize": [ 2, 2 ],
-      "rotation": [ 0, 0 ],
-      "rows": [
-        "SV",
-        "  "
-      ],
-      "furniture": { "S": "f_still", "V": "f_fvat_empty" }
     }
   },
   {
