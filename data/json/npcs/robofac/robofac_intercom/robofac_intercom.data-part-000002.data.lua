@@ -1,70 +1,82 @@
 local ccb = require("ccb")
-local predicates = ccb.content.dialogue_predicates
-local actions = ccb.content.dialogue_actions
 
-ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_INTERCOM_INTRO",
-    line = {
-        when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_u_met_robofac_intercom" } }),
-        yes = ccb.content.text("&The intercom is silent."),
-        no = ccb.content.text("&The intercom crackles with static as it turns on.  The LED next to the button lights up a bright red, and the camera lens whirs as it focuses on you.  There is no immediate response."),
+ccb.content.define_npc_class {
+    id = "NC_ROBOFAC_INTERCOM_DAY",
+    copy_from = "NC_ROBOFAC_INTERCOM_BASE",
+    name = ccb.content.text("intercom (day)"),
+    job_description = ccb.content.text("."),
+    work_hours = { 6, 18 },
+    worn = "NC_ROBOFAC_SCIENTIST_worn",
+    traits = {
+        { group = "NPC_starting_traits" },
+        { group = "Appearance_demographics" },
+        { trait = "RETURN_TO_START_POS" },
+        { trait = "INTERCOM_OPERATOR" },
+        { trait = "IGNORE_SOUND" },
     },
-    on_enter = {
-        {
-            actions = {
-                actions.set_actor_value("speaker", "dialogue_intercom_u_met_robofac_intercom", "yes"),
-            },
-            once = "met_intercom",
-        },
+}
+
+ccb.content.define_npc_class {
+    id = "NC_ROBOFAC_INTERCOM_NIGHT",
+    copy_from = "NC_ROBOFAC_INTERCOM_BASE",
+    name = ccb.content.text("intercom (night)"),
+    job_description = ccb.content.text("."),
+    work_hours = { 18, 6 },
+    worn = "NC_ROBOFAC_SCIENTIST_worn",
+    traits = {
+        { group = "NPC_starting_traits" },
+        { group = "Appearance_demographics" },
+        { trait = "RETURN_TO_START_POS" },
+        { trait = "INTERCOM_OPERATOR" },
+        { trait = "IGNORE_SOUND" },
     },
-    replies = {
-        {
-            text = ccb.content.text("…Hello?"),
-            when = predicates.negate(predicates.has_trait("speaker", "EXODII_CYBERFRAME_GENERIC")),
-            next_topic = "TALK_ROBOFAC_INTERCOM_INTRO",
-        },
-        {
-            text = ccb.content.text("Um, can anyone hear me?"),
-            when = predicates.negate(predicates.has_trait("speaker", "EXODII_CYBERFRAME_GENERIC")),
-            next_topic = "TALK_ROBOFAC_INTERCOM_INTRO",
-        },
-        {
-            text = ccb.content.text("[Tap the camera lens.]  Look, I know someone's listening.  What is this place?"),
-            when = predicates.negate(predicates.has_trait("speaker", "EXODII_CYBERFRAME_GENERIC")),
-            next_topic = "TALK_ROBOFAC_INTERCOM_INTRO_1",
-        },
-        {
-            text = ccb.content.text("The merchant at the refugee center sent me.  You were looking for a hard drive from them?"),
-            when = predicates.all({ predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_completed_robofac_intercom_1" } })), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_completed_free_merchants_hub_delivery_1" } })), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_u_started_robofac_hdd_trade" } })), predicates.has_mission("MISSION_FREE_MERCHANTS_HUB_DELIVERY_1"), predicates.negate(predicates.has_trait("speaker", "EXODII_CYBERFRAME_GENERIC")) }),
-            next_topic = "TALK_ROBOFAC_INTERCOM_FREE_MERCHANT_DELIVERY_1",
-        },
-        {
-            text = ccb.content.text("About that hard drive…"),
-            when = predicates.all({ predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_completed_robofac_intercom_1" } })), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_completed_free_merchants_hub_delivery_1" } })), predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_u_started_robofac_hdd_trade" } }), predicates.has_mission("MISSION_FREE_MERCHANTS_HUB_DELIVERY_1"), predicates.negate(predicates.has_trait("speaker", "EXODII_CYBERFRAME_GENERIC")) }),
-            next_topic = "TALK_ROBOFAC_INTERCOM_FREE_MERCHANT_DELIVERY_1",
-        },
-        {
-            text = ccb.content.text("The traders mentioned you were looking for help."),
-            when = predicates.all({ predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_completed_robofac_intercom_1" } })), predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_completed_free_merchants_hub_delivery_1" } }), predicates.negate(predicates.has_trait("speaker", "EXODII_CYBERFRAME_GENERIC")) }),
-            trial = { kind = "lie", difficulty = 1 },
-            success = { next_topic = "TALK_ROBOFAC_INTERCOM_INTRO_2" },
-            failure = { next_topic = "TALK_ROBOFAC_INTERCOM_INTRO_2" },
-        },
-        {
-            text = ccb.content.text("…Hello?"),
-            when = predicates.has_trait("speaker", "EXODII_CYBERFRAME_GENERIC"),
-            next_topic = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_1",
-        },
-        {
-            text = ccb.content.text("Um, can anyone hear me?"),
-            when = predicates.has_trait("speaker", "EXODII_CYBERFRAME_GENERIC"),
-            next_topic = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_1",
-        },
-        {
-            text = ccb.content.text("[Tap the camera lens.]  Look, I know someone's listening.  What is this place?"),
-            when = predicates.has_trait("speaker", "EXODII_CYBERFRAME_GENERIC"),
-            next_topic = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_1",
-        },
-        { text = ccb.content.text("[Leave.]"), next_topic = "TALK_DONE" },
+}
+
+-- Day shift operator for Hub 01 intercom. Placed at z=-1 ops room.
+ccb.content.define_npc {
+    id = "robofac_intercom_day",
+    suffix = ccb.content.text("Intercom Operator"),
+    class = "NC_ROBOFAC_INTERCOM_DAY",
+    attitude = 0,
+    mission = "SHOPKEEP",
+    chat = "TALK_ROBOFAC_INTERCOM",
+    faction = "robofac",
+}
+
+-- Night shift operator for Hub 01 intercom. Placed at z=-1 ops room.
+ccb.content.define_npc {
+    id = "robofac_intercom_night",
+    suffix = ccb.content.text("Intercom Operator"),
+    class = "NC_ROBOFAC_INTERCOM_NIGHT",
+    attitude = 0,
+    mission = "SHOPKEEP",
+    chat = "TALK_ROBOFAC_INTERCOM",
+    faction = "robofac",
+}
+
+ccb.content.define_npc_class {
+    id = "NC_ROBOFAC_INTERCOM_SUPPLY",
+    copy_from = "NC_ROBOFAC_INTERCOM",
+    name = ccb.content.text("Hub 01 representative"),
+    job_description = ccb.content.text("."),
+    worn = "NC_ROBOFAC_SCIENTIST_worn",
+    traits = {
+        { group = "NPC_starting_traits" },
+        { group = "Appearance_demographics" },
+        { trait = "RETURN_TO_START_POS" },
+        { trait = "IGNORE_SOUND" },
+        { trait = "NO_BASH" },
+        { trait = "TRADE_BACKEND" },
     },
+}
+
+-- Backend trade actor for Hub 01 intercom. Holds shared shop inventory.
+ccb.content.define_npc {
+    id = "robofac_intercom_supply",
+    suffix = ccb.content.text("Hub 01 Representative"),
+    class = "NC_ROBOFAC_INTERCOM_SUPPLY",
+    attitude = 0,
+    mission = "SHOPKEEP",
+    chat = "TALK_ROBOFAC_INTERCOM",
+    faction = "robofac",
 }

@@ -1,82 +1,73 @@
 local ccb = require("ccb")
 
 ccb.content.define_npc_class {
-    id = "NC_ROBOFAC_INTERCOM_DAY",
+    id = "NC_ROBOFAC_INTERCOM",
     copy_from = "NC_ROBOFAC_INTERCOM_BASE",
-    name = ccb.content.text("intercom (day)"),
+    name = ccb.content.text("intercom"),
     job_description = ccb.content.text("."),
-    work_hours = { 6, 18 },
-    worn = "NC_ROBOFAC_SCIENTIST_worn",
-    traits = {
-        { group = "NPC_starting_traits" },
-        { group = "Appearance_demographics" },
-        { trait = "RETURN_TO_START_POS" },
-        { trait = "INTERCOM_OPERATOR" },
-        { trait = "IGNORE_SOUND" },
+    shop_groups = {
+        { id = "NC_ROBOFAC_INTERCOM_trade", rigid = true },
+        {
+            id = "NC_ROBOFAC_INTERCOM_trade_armor",
+            rigid = true,
+            refusal = ccb.content.text("You're not yet qualified to buy this"),
+            condition_handler = "hub_armor_stock_unlocked",
+        },
+        {
+            id = "NC_ROBOFAC_INTERCOM_trade_military",
+            rigid = true,
+            strict = true,
+            condition_handler = "hub_military_stock_unlocked",
+        },
+        {
+            id = "robofac_robots",
+            rigid = true,
+            strict = true,
+            condition_handler = "hub_portal_robots_unlocked",
+        },
+        {
+            id = "robofac_gun_mags",
+            rigid = true,
+            refusal = ccb.content.text("You need to earn an HWP first"),
+            condition_handler = "hub_gun_stock_unlocked",
+        },
+        { id = "robofac_gun_kit", rigid = true, strict = true, condition_handler = "hub_gun_stock_unlocked" },
+        {
+            id = "robofac_gun_exodii",
+            rigid = true,
+            strict = true,
+            condition_handler = "hub_exodii_gun_stock_unlocked",
+        },
+        {
+            id = "NC_ROBOFAC_INTERCOM_trade_hm12",
+            rigid = true,
+            strict = true,
+            condition_handler = "hub_hm12_stock_unlocked",
+        },
+        {
+            id = "NC_ROBOFAC_INTERCOM_trade_envirosuit",
+            rigid = true,
+            refusal = ccb.content.text("You're not yet qualified to buy this"),
+            condition_handler = "hub_envirosuit_stock_unlocked",
+        },
+        {
+            id = "NC_ROBOFAC_INTERCOM_XM_EXOSKELETONS",
+            rigid = true,
+            strict = true,
+            condition_handler = "hub_autodoc_exoskeletons_unlocked",
+        },
+        {
+            id = "NC_ROBOFAC_INTERCOM_LENS",
+            rigid = true,
+            strict = true,
+            condition_handler = "hub_autodoc_lenses_unlocked",
+        },
+        {
+            id = "NC_ROBOFAC_INTERCOM_MVAS",
+            rigid = true,
+            strict = true,
+            condition_handler = "hub_mvas_stock_unlocked",
+        },
     },
-}
-
-ccb.content.define_npc_class {
-    id = "NC_ROBOFAC_INTERCOM_NIGHT",
-    copy_from = "NC_ROBOFAC_INTERCOM_BASE",
-    name = ccb.content.text("intercom (night)"),
-    job_description = ccb.content.text("."),
-    work_hours = { 18, 6 },
-    worn = "NC_ROBOFAC_SCIENTIST_worn",
-    traits = {
-        { group = "NPC_starting_traits" },
-        { group = "Appearance_demographics" },
-        { trait = "RETURN_TO_START_POS" },
-        { trait = "INTERCOM_OPERATOR" },
-        { trait = "IGNORE_SOUND" },
-    },
-}
-
--- Day shift operator for Hub 01 intercom. Placed at z=-1 ops room.
-ccb.content.define_npc {
-    id = "robofac_intercom_day",
-    suffix = ccb.content.text("Intercom Operator"),
-    class = "NC_ROBOFAC_INTERCOM_DAY",
-    attitude = 0,
-    mission = "SHOPKEEP",
-    chat = "TALK_ROBOFAC_INTERCOM",
-    faction = "robofac",
-}
-
--- Night shift operator for Hub 01 intercom. Placed at z=-1 ops room.
-ccb.content.define_npc {
-    id = "robofac_intercom_night",
-    suffix = ccb.content.text("Intercom Operator"),
-    class = "NC_ROBOFAC_INTERCOM_NIGHT",
-    attitude = 0,
-    mission = "SHOPKEEP",
-    chat = "TALK_ROBOFAC_INTERCOM",
-    faction = "robofac",
-}
-
-ccb.content.define_npc_class {
-    id = "NC_ROBOFAC_INTERCOM_SUPPLY",
-    copy_from = "NC_ROBOFAC_INTERCOM",
-    name = ccb.content.text("Hub 01 representative"),
-    job_description = ccb.content.text("."),
-    worn = "NC_ROBOFAC_SCIENTIST_worn",
-    traits = {
-        { group = "NPC_starting_traits" },
-        { group = "Appearance_demographics" },
-        { trait = "RETURN_TO_START_POS" },
-        { trait = "IGNORE_SOUND" },
-        { trait = "NO_BASH" },
-        { trait = "TRADE_BACKEND" },
-    },
-}
-
--- Backend trade actor for Hub 01 intercom. Holds shared shop inventory.
-ccb.content.define_npc {
-    id = "robofac_intercom_supply",
-    suffix = ccb.content.text("Hub 01 Representative"),
-    class = "NC_ROBOFAC_INTERCOM_SUPPLY",
-    attitude = 0,
-    mission = "SHOPKEEP",
-    chat = "TALK_ROBOFAC_INTERCOM",
-    faction = "robofac",
+    blacklist = "robofac_blacklist",
 }

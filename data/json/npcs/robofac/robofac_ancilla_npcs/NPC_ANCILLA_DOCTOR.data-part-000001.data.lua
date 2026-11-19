@@ -1,18 +1,46 @@
 local ccb = require("ccb")
 
-ccb.content.define_dialogue_topic {
-    id = "TALK_ANCILLA_DOCTOR_SWAPPED_INTERFACE_AGAIN",
-    line = ccb.content.text("&Everything after that moment is a blur in your memory.  You wake up.  For a moment, you're back in your bed.  Was the cataclysm all a dream?  Then you look around, and see Doc Stevens.  You come to your senses."),
-    replies = {
+ccb.content.define_npc_class {
+    id = "NC_ANCILLA_DOCTOR",
+    name = ccb.content.text("Ancilla Doctor"),
+    job_description = ccb.content.text("I try to keep this gang in one piece.  It's a full time job."),
+    traits = {
+        { group = "NPC_starting_traits" },
+        { group = "Appearance_demographics" },
+        { trait = "RETURN_TO_START_POS" },
+    },
+    common = false,
+    intelligence = { rng = { 3, 5 } },
+    worn = "NC_ANCILLA_DOCTOR_worn",
+    carry = "NC_ANCILLA_BARKEEP_carry",
+    weapon = "NC_ANCILLA_BARKEEP_wield",
+    shop_groups = {
+        { id = "NC_ANCILLA_DOCTOR_stock", rigid = true },
         {
-            text = ccb.content.text("Well, I feel pretty much the same.  Seems like there weren't any complications!"),
-            next_topic = "TALK_ANCILLA_DOCTOR_SWAPPED_INTERFACE_AGAIN_2",
+            id = "NC_ANCILLA_DOCTOR_bionics",
+            rigid = true,
+            strict = true,
+            condition_handler = "ancilla_bionics_unlocked",
+        },
+        {
+            id = "NC_ANCILLA_DOCTOR_bionics_LENS",
+            rigid = true,
+            strict = true,
+            condition_handler = "ancilla_bionics_lenses_unlocked",
         },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ANCILLA_DOCTOR_SWAPPED_INTERFACE_AGAIN_2",
-    line = ccb.content.text("&Doc Stevens stares at you confusedly.  Then he squints at you.  Then he just shrugs his shoulders.  \"Yeah, what you said… same for me.  I think.\"  Then the doctor's eyes go wide and he raises his eyebrows.  He takes a sharp breath.  Then he turns and walks away."),
-    replies = { { text = ccb.content.text("…What?"), next_topic = "TALK_DONE" } },
+    price_rules = {
+        { group = "NC_ANCILLA_DOCTOR_stock", premium = 2.0 },
+        { group = "NC_ANCILLA_DOCTOR_EXPENSIVE_ITEMS", premium = 6.0 },
+        { item = "RobofacCoin", price = 5000, fixed_adjustment = 0 },
+    },
+    skills = {
+        {
+            skill = "ALL",
+            level = {
+                mul = { { one_in = 3 }, { sum = { { dice = { 2, 2 } }, { constant = -2 }, { one_in = 4 } } } },
+            },
+        },
+        { skill = "firstaid", bonus = 7 },
+    },
 }
