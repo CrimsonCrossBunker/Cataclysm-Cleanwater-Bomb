@@ -281,3 +281,14 @@ ccb.content.define_mapgen {
         monster_glyphs = { ["."] = { id = "mon_linelander_yellow", chance = 1 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "string_dimension_plane_tindalos_tear",
+    layout = {
+        size = { width = 24, height = 24 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        trap_placements = { { id = "tr_portal", x = 11, y = 11 } },
+        monster_placements = { { group = "GROUP_TINDALOS", x = 12, y = 12, chance = 90 } },
+    },
+}
