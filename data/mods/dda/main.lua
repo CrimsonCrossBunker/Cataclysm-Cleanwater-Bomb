@@ -512,3 +512,5 @@ require("terrain_transforms")
 require("monster_groups")
 
 require("tile_interactions")
+
+require("labyrinth_tile_interactions")

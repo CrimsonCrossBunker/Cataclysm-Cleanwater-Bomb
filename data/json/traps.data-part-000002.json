@@ -1,0 +1,206 @@
+[
+  {
+    "type": "trap",
+    "id": "tr_nl_stairs_1_to_2",
+    "name": "mysterious staircase",
+    "symbol": "#",
+    "color": "white",
+    "action": "eocs",
+    "eocs": [ "EOC_LS_stairs_1_to_2" ],
+    "visibility": 1000,
+    "avoidance": 99,
+    "difficulty": 99,
+    "trap_radius": 2,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "always_invisible": true
+  },
+  {
+    "type": "trap",
+    "id": "tr_nl_stairs_2_to_1",
+    "name": "mysterious staircase",
+    "symbol": "#",
+    "color": "white",
+    "action": "eocs",
+    "eocs": [ "EOC_LS_stairs_2_to_1" ],
+    "visibility": 1000,
+    "avoidance": 99,
+    "difficulty": 99,
+    "trap_radius": 2,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "always_invisible": true
+  },
+  {
+    "type": "trap",
+    "id": "tr_lixa_fall_down",
+    "symbol": "#",
+    "name": "open air",
+    "color": "dark_gray",
+    "action": "eocs",
+    "eocs": [ "EOC_FALL_DOWN" ],
+    "visibility": 1000,
+    "avoidance": 99,
+    "difficulty": 99,
+    "trap_radius": 2,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "always_invisible": true
+  },
+  {
+    "type": "trap",
+    "id": "tr_lixa_climbing_fall_down",
+    "symbol": "#",
+    "name": "open air",
+    "color": "dark_gray",
+    "action": "eocs",
+    "eocs": [ "EOC_CLIMBING_FALL_DOWN" ],
+    "visibility": 1000,
+    "avoidance": 99,
+    "difficulty": 99,
+    "trap_radius": 2,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "always_invisible": true
+  },
+  {
+    "type": "trap",
+    "id": "tr_alien_tree_trap_roots",
+    "name": "alien roots",
+    "color": "dark_gray",
+    "symbol": "/",
+    "visibility": 12,
+    "avoidance": 10,
+    "difficulty": 99,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "//": "Needs to be AVATAR_ONLY, otherwise the summoned monsters trigger the trap again.",
+    "action": "eocs",
+    "eocs": [ "EOC_ALIEN_TRAP_TREE_FIND_TREE" ],
+    "trigger_weight": "50000 g",
+    "trigger_message_u": "As you step on the roots, they twitch slightly.",
+    "trigger_message_npc": "As <npcname> steps on the roots, they twitch slightly."
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_ALIEN_TRAP_TREE_FIND_TREE",
+    "effect": [
+      {
+        "u_location_variable": { "context_val": "local_alien_tree" },
+        "target_max_radius": 12,
+        "terrain": "t_alien_meadow_tree_trap",
+        "true_eocs": [
+          {
+            "id": "EOC_ALIEN_TRAP_TREE_FIND_TREE_2",
+            "effect": [
+              {
+                "u_spawn_monster": "GROUP_ALIEN_TRAP_TREE",
+                "target_var": { "context_val": "local_alien_tree" },
+                "real_count": [ 2, 5 ],
+                "outdoor_only": true,
+                "group": true,
+                "min_radius": 1,
+                "max_radius": 3
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "trap",
+    "id": "tr_inner_cabins_void",
+    "name": "fluid void",
+    "color": "black",
+    "memorial_male": { "ctxt": "memorial_male", "str": "Lost to a pool of darkness." },
+    "memorial_female": { "ctxt": "memorial_female", "str": "Lost to a pool of darkness." },
+    "symbol": "~",
+    "visibility": 1000,
+    "avoidance": 99,
+    "difficulty": 99,
+    "vehicle_data": { "damage": 5000 },
+    "flags": [ "UNDODGEABLE" ],
+    "action": "eocs",
+    "eocs": [ "EOC_TR_INNER_CABINS_VOID" ],
+    "always_invisible": true
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TR_INNER_CABINS_VOID",
+    "effect": [
+      { "u_add_effect": "bleed", "intensity": 21, "duration": 600 },
+      { "u_message": "You feel your blood start to boil and seep from your pores!" }
+    ]
+  },
+  {
+    "type": "trap",
+    "id": "tr_inner_cabins_exit_portal",
+    "name": "swirling vortex",
+    "symbol": "O",
+    "color": "magenta",
+    "action": "eocs",
+    "eocs": [ "EOC_INNER_CABINS_PORTAL_EXIT_TO_SMEAR" ],
+    "visibility": 1000,
+    "avoidance": 99,
+    "difficulty": 99,
+    "trap_radius": 2,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "always_invisible": true
+  },
+  {
+    "type": "trap",
+    "id": "tr_string_dimension_ka_moonpool",
+    "name": "strange moonpool",
+    "symbol": "~",
+    "color": "blue",
+    "action": "eocs",
+    "eocs": [ "EOC_STRING_DIMENSION_PORTAL_TO_KA_STRUCTURE" ],
+    "visibility": 1000,
+    "avoidance": 99,
+    "difficulty": 99,
+    "trap_radius": 2,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "always_invisible": true
+  },
+  {
+    "type": "trap",
+    "id": "tr_string_dimension_ka_moonpool_exit",
+    "name": "1D plane",
+    "symbol": ".",
+    "color": "blue",
+    "action": "eocs",
+    "eocs": [ "EOC_STRING_DIMENSION_PORTAL_FROM_KA_STRUCTURE" ],
+    "visibility": 1000,
+    "avoidance": 99,
+    "difficulty": 99,
+    "trap_radius": 2,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "always_invisible": true
+  },
+  {
+    "type": "trap",
+    "id": "tr_ls_sd_tunnel_portal",
+    "name": " ",
+    "symbol": "#",
+    "color": "white",
+    "action": "eocs",
+    "eocs": [ "EOC_LS_SD_tunnel_portal" ],
+    "visibility": 1000,
+    "avoidance": 99,
+    "difficulty": 99,
+    "trap_radius": 2,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "always_invisible": true
+  },
+  {
+    "type": "trap",
+    "id": "tr_ls_scarlet_tunnel_portal",
+    "name": " ",
+    "symbol": "#",
+    "color": "white",
+    "action": "eocs",
+    "eocs": [ "EOC_LS_to_scarlet_portal" ],
+    "visibility": 1000,
+    "avoidance": 99,
+    "difficulty": 99,
+    "trap_radius": 2,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "always_invisible": true
+  }
+]
