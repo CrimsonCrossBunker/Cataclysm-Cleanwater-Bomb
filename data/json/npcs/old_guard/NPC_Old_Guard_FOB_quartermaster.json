@@ -37,18 +37,5 @@
       { "skill": "electronics", "bonus": { "rng": [ 0, 2 ] } },
       { "skill": "speech", "bonus": { "rng": [ 3, 5 ] } }
     ]
-  },
-  {
-    "id": "TALK_SOLDIER_QMASTER",
-    "type": "talk_topic",
-    "dynamic_line": [
-      "Welcome to camp Arabella, What will it be?",
-      "I'm the camp quartermaster.  Come and see me if you have anything valuable to trade.",
-      "If you're looking to trade you've come to the right place."
-    ],
-    "responses": [
-      { "text": "Let's trade then.", "effect": "start_trade", "topic": "TALK_SOLDIER_QMASTER" },
-      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
-    ]
   }
 ]
