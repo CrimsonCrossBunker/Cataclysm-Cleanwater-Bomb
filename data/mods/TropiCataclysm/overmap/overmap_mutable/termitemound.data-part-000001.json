@@ -1,12 +1,6 @@
 [
   {
     "type": "overmap_special",
-    "id": "Termitemound",
-    "occurrences": [ 0, 0 ],
-    "overmaps": [  ]
-  },
-  {
-    "type": "overmap_special",
     "id": "termitemound",
     "subtype": "mutable",
     "locations": [ "subterranean_empty" ],
