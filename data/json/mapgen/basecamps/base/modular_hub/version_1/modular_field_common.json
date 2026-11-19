@@ -80,26 +80,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_cooking_shack_northeast",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmh_0_cooking_shack_northeast" ], "x": 19, "y": 6, "z": 0 },
-        { "chunks": [ "fbmh_0_cooking_shack_roof_northeast" ], "x": 19, "y": 6, "z": 1 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_cooking_tent_northeast",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmh_0_cooking_tent_northeast" ], "x": 19, "y": 6, "z": 0 },
-        { "chunks": [ "fbmh_0_cooking_tent_roof_northeast" ], "x": 19, "y": 6, "z": 1 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmh_0_bedset_east",
     "object": {
       "parameters": {
@@ -140,79 +120,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_bed1_northeast",
-    "object": { "place_nested": [ { "chunks": [ "fbmh_0_bedset_east" ], "x": 17, "y": 5 } ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_bed2_northeast",
-    "object": { "place_nested": [ { "chunks": [ "fbmh_0_bedset_east" ], "x": 17, "y": 7 } ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_tent_bed3_east",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_0_bedset_east" ], "x": 17, "y": 11 }, { "chunks": [ "fbmh_0_bedset_east" ], "x": 17, "y": 13 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_room_bed3_east",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_0_bedset_east" ], "x": 17, "y": 10 }, { "chunks": [ "fbmh_0_bedset_east" ], "x": 17, "y": 13 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_tent_bed3_southeast",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_0_bedset_east" ], "x": 17, "y": 17 }, { "chunks": [ "fbmh_0_bedset_east" ], "x": 17, "y": 19 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_room_bed3_southeast",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_0_bedset_east" ], "x": 17, "y": 16 }, { "chunks": [ "fbmh_0_bedset_east" ], "x": 17, "y": 19 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_bed3_northwest",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_0_bedset_west" ], "x": 4, "y": 5 }, { "chunks": [ "fbmh_0_bedset_west" ], "x": 4, "y": 7 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_tent_bed3_west",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_0_bedset_west" ], "x": 4, "y": 11 }, { "chunks": [ "fbmh_0_bedset_west" ], "x": 4, "y": 13 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_room_bed3_west",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_0_bedset_west" ], "x": 4, "y": 10 }, { "chunks": [ "fbmh_0_bedset_west" ], "x": 4, "y": 13 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_tent_bed3_southwest",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_0_bedset_west" ], "x": 4, "y": 17 }, { "chunks": [ "fbmh_0_bedset_west" ], "x": 4, "y": 19 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_0_room_bed3_southwest",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_0_bedset_west" ], "x": 4, "y": 16 }, { "chunks": [ "fbmh_0_bedset_west" ], "x": 4, "y": 19 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmh_core_kitchen_fireplace_center",
     "object": {
       "set": [
@@ -242,20 +149,6 @@
         { "point": "furniture", "id": "f_table", "x": 1, "y": 1 },
         { "point": "furniture", "id": "f_chair", "x": 2, "y": 1 }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_core_kitchen_table_center",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_core_tableset" ], "x": 11, "y": 12 }, { "chunks": [ "fbmh_core_tableset" ], "x": 11, "y": 13 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmh_core_kitchen_table_south",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmh_core_tableset" ], "x": 11, "y": 16 }, { "chunks": [ "fbmh_core_tableset" ], "x": 11, "y": 15 } ]
     }
   },
   {
