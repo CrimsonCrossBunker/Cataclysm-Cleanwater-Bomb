@@ -1,32 +1,25 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_JENNY_1a",
-    line = {
-        choices = {
-            ccb.content.text("*looks up from her computer and gives you a quick, thin smile.  \"Hello again.\""),
-            ccb.content.text("*tips the lid of her laptop closed and looks up.  \"Nice to see you again.\""),
+    id = "TALK_REFUGEE_JENNY_1",
+    line = ccb.content.text("*is a thin woman in her early thirties, with the sort of pale, freckled skin that looks like it would burn if she thought too hard about the sun.  Her clothes and bearing suggest she might once have been carefully put-together, but she now has the harried look of someone with too many worries and too little sleep.  She looks up from a laptop and smiles as you approach.  \"Hi there.  Haven't see you around here before.  I'm Jenny, Jenny Forcette.\""),
+    on_enter = {
+        {
+            actions = {
+                actions.set_actor_value("speaker", "general_meeting_u_met_Jenny_Forcette", "yes"),
+                actions.set_first_topic("TALK_REFUGEE_JENNY_1a"),
+            },
         },
     },
     replies = {
         {
-            text = ccb.content.text("Hi, Jenny.  What are you up to these days?"),
+            text = ccb.content.text("Nice meeting you.  What are you doing on that computer?"),
             next_topic = "TALK_REFUGEE_JENNY_2",
         },
-        { text = ccb.content.text("Sorry Jenny.  <end_talking_leave>"), next_topic = "TALK_DONE" },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_JENNY_2",
-    line = ccb.content.text("I'm puttering around, I always have stuff on the go.\"  Jenny rubs the bridge of her nose briefly, blinking fatigue from her eyes.  \"Gotta keep busy, keep my mind off stuff, you know?"),
-    replies = {
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
-        },
-        {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            text = ccb.content.text("Nice meeting you.  I'd best get going, though."),
             next_topic = "TALK_DONE",
         },
     },
