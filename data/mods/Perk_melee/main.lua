@@ -22,4 +22,6 @@ require("technique_predicates")
 
 require("technique_actions")
 
+require("combat_events")
+
 require("technique_movement")
