@@ -95,24 +95,5 @@
         "topic": "TALK_DONE"
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_GODCO_Maria_2",
-    "dynamic_line": "What can I do for you?",
-    "responses": [
-      { "text": "Is there anything I can do for you?", "topic": "TALK_MISSION_LIST" },
-      {
-        "text": "Could you sew something for me?",
-        "condition": { "compare_string": [ "yes", { "npc_val": "general_trade_can_sew_for_u" } ] },
-        "topic": "TALK_GODCO_Maria_Tailor_Something"
-      },
-      {
-        "text": "How's my order going?",
-        "condition": { "compare_string": [ "yes", { "npc_val": "general_trade_can_sew_for_u" } ] },
-        "topic": "TALK_GODCO_Maria_Retrieve_Order"
-      },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
