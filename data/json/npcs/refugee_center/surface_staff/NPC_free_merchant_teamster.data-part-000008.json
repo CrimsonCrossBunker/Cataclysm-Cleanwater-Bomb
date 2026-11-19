@@ -1,0 +1,224 @@
+[
+  {
+    "id": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Pricegouge",
+    "type": "talk_topic",
+    "dynamic_line": "Is that so?  What makes you think that?  My accounting reports have come back clean, just like everybody else.",
+    "responses": [
+      {
+        "text": "Everything they sell I can buy for twice as less here, even a box of crackers is an arm and a leg.",
+        "topic": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Investigation_Mission"
+      },
+      {
+        "text": "I guess you guys are a bunch of thieves if you charge that much.",
+        "opinion": { "anger": 2, "like": -2 },
+        "topic": "TALK_DONE"
+      },
+      { "text": "<end_talking_nevermind>  <done_conversation_section>", "topic": "TALK_FREE_MERCHANT_TEAMSTER_CHAT" },
+      { "text": "<end_talking_nevermind>  <end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Investigation_Mission",
+    "type": "talk_topic",
+    "dynamic_line": "Tell you what, if you can find some sort of evidence that proves they're shafting customers and bring it to me, I'll send someone to look in to it.",
+    "responses": [
+      {
+        "text": "Alright, you have yourself a deal.",
+        "effect": { "assign_mission": "MISSION_INVESTIGATE_TRADER" },
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "What sort of \"evidence\" did you have in mind?",
+        "topic": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Evidence_Type"
+      },
+      { "text": "Why do you want me to do it?", "topic": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_DoItYourself" },
+      { "text": "<end_talking_nevermind>  <done_conversation_section>", "topic": "TALK_FREE_MERCHANT_TEAMSTER_CHAT" },
+      { "text": "<end_talking_nevermind>  <end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_DoItYourself",
+    "type": "talk_topic",
+    "dynamic_line": "Look, I have limited manpower these days, and not everyone can go off of a strangers word with no supporting evidence.",
+    "responses": [
+      {
+        "text": "Makes sense, I'll find you some evidence.",
+        "effect": { "assign_mission": "MISSION_INVESTIGATE_TRADER" },
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "What sort of \"evidence\" did you have in mind?",
+        "topic": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Evidence_Type"
+      },
+      { "text": "<end_talking_nevermind>  <done_conversation_section>", "topic": "TALK_FREE_MERCHANT_TEAMSTER_CHAT" },
+      { "text": "Forget it, since you're not interested in taking this seriously.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Evidence_Type",
+    "type": "talk_topic",
+    "dynamic_line": "I guess sales records could work, or stock lists of inventory that give a discrepancy between what's sold and what money comes in.",
+    "responses": [
+      {
+        "text": "I'll get right to it, see you later.",
+        "effect": { "assign_mission": "MISSION_INVESTIGATE_TRADER" },
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "Who would have these sorts of things?",
+        "topic": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Evidence_Who"
+      },
+      { "text": "Why do you want me to do it?", "topic": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_DoItYourself" },
+      { "text": "<end_talking_nevermind>  <done_conversation_section>", "topic": "TALK_FREE_MERCHANT_TEAMSTER_CHAT" },
+      { "text": "<end_talking_later>  <end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Evidence_Who",
+    "type": "talk_topic",
+    "dynamic_line": "Well, there's somebody else who works there, handles all of the money management.  I'd look into them first, should be in the same spot the other guy is.",
+    "responses": [
+      {
+        "text": "Makes sense, I'll get right to it.",
+        "effect": { "assign_mission": "MISSION_INVESTIGATE_TRADER" },
+        "topic": "TALK_DONE"
+      },
+      { "text": "Why do you want me to do it?", "topic": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_DoItYourself" },
+      { "text": "<end_talking_nevermind>  <done_conversation_section>", "topic": "TALK_FREE_MERCHANT_TEAMSTER_CHAT" },
+      { "text": "I'm not doing any of this legwork for you, figure it out on your own.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Mission_Success",
+    "type": "talk_topic",
+    "dynamic_line": "*looks over the papers for a moment, before pocketing them.  \"I'd say this is sufficient, here's some money for your trouble.  I'll get somebody on this.\"",
+    "responses": [
+      {
+        "text": "Glad to help.",
+        "effect": [
+          { "math": [ "freemerch_godco_trader_investigated = 1" ] },
+          { "u_lose_var": "general_trade_u_think_suspicious_price" },
+          { "u_spawn_item": "FMCNote", "count": 20 },
+          { "u_sell_item": "godcotrader_accounting_records_dirty" }
+        ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "id": "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Mission_Fail",
+    "type": "talk_topic",
+    "dynamic_line": "*looks over the papers for a moment, before pocketing them.  \"This seems perfectly alright to me.  I don't know what you have against them, but give it up and quit wasting our time.\"",
+    "responses": [
+      {
+        "text": "Alright then, <name_b>.  I guess that's what I get for my troubles.",
+        "effect": [
+          { "u_lose_var": "general_trade_u_think_suspicious_price" },
+          { "finish_mission": "MISSION_INVESTIGATE_TRADER", "success": false },
+          { "u_sell_item": "godcotrader_accounting_records_clean" }
+        ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "id": "directions_isherwood",
+    "type": "mission_definition",
+    "name": { "str": "Check out that farm" },
+    "description": "Ran into a bunch of farmers.  They don't want much to do with our caravans, but someone like you they might be OK with.",
+    "goal": "MGOAL_GO_TO",
+    "difficulty": 2,
+    "value": 0,
+    "start": {
+      "assign_mission_target": { "om_special": "Isherwood Farm Mutable", "om_terrain": "farm_isherwood_1", "reveal_radius": 5 },
+      "effect": { "u_add_var": "teamster_mission_directions", "value": "isherwood" }
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "Ran into a bunch of farmers.  They don't want much to do with our caravans, but someone like you they might be OK with.",
+      "offer": "Ran into a bunch of farmers.  They don't want much to do with our caravans, but someone like you they might be OK with.",
+      "accepted": "Nice.",
+      "rejected": "Seems reasonable.",
+      "advice": "Be careful.  It's rough out there.",
+      "inquire": "How is the search going?",
+      "success": "Huh, go figure.",
+      "success_lie": "Huh, go figure.",
+      "failure": "It is what it is."
+    }
+  },
+  {
+    "id": "directions_hub01",
+    "type": "mission_definition",
+    "name": { "str": "Check out that lab" },
+    "description": "There's been rumors.  Folks talkin' about some kind of secret lab, out in the wilds, with survivors in it.",
+    "goal": "MGOAL_GO_TO",
+    "difficulty": 2,
+    "value": 0,
+    "start": {
+      "assign_mission_target": { "om_special": "hub_01", "om_terrain": "robofachq_surface_entrance", "reveal_radius": 5 },
+      "effect": { "u_add_var": "teamster_mission_directions", "value": "hub01" }
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "There's been rumors.  Folks talkin' about some kind of secret lab, out in the wilds, with survivors in it.",
+      "offer": "There's been rumors.  Folks talkin' about some kind of secret lab, out in the wilds, with survivors in it.",
+      "accepted": "Nice.",
+      "rejected": "Seems reasonable.",
+      "advice": "Be careful.  It's rough out there.",
+      "inquire": "How is the search going?",
+      "success": "Huh, go figure.",
+      "success_lie": "Huh, go figure.",
+      "failure": "It is what it is."
+    }
+  },
+  {
+    "id": "directions_exodii",
+    "type": "mission_definition",
+    "name": { "str": "Check out that scrap metal castle" },
+    "description": "A few of my caravans have come back now talkin' about this giant metal castle on top of a rock, in the middle of nowhere.  They ain't been crazy enough to check it out, but you could if you want.",
+    "goal": "MGOAL_GO_TO",
+    "difficulty": 2,
+    "value": 0,
+    "start": {
+      "assign_mission_target": { "om_terrain": "exodii_base_x0y3z0", "om_special": "exodii_base", "reveal_radius": 5 },
+      "effect": { "u_add_var": "teamster_mission_directions", "value": "exodii" }
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "A few of my caravans have come back now talkin' about this giant metal castle on top of a rock, in the middle of nowhere.  They ain't been crazy enough to check it out, but you could if you want.",
+      "offer": "A few of my caravans have come back now talkin' about this giant metal castle on top of a rock, in the middle of nowhere.  They ain't been crazy enough to check it out, but you could if you want.",
+      "accepted": "Your funeral.",
+      "rejected": "Seems reasonable.",
+      "advice": "Be careful.  Seems like a rough place to me.",
+      "inquire": "How is the search going?",
+      "success": "Huh, go figure.",
+      "success_lie": "Huh, go figure.",
+      "failure": "Seems reasonable."
+    }
+  },
+  {
+    "id": "directions_artisans",
+    "type": "mission_definition",
+    "name": { "str": "Check out that bullet bank" },
+    "description": "A few of my people have come back now talkin' about some yuppie trying to start a bank that uses bullets for money.  Silly idea, but the lad lives on a homestead with a woman who wouldn't let my guys leave without a full belly.",
+    "goal": "MGOAL_GO_TO",
+    "difficulty": 2,
+    "value": 0,
+    "start": {
+      "assign_mission_target": { "om_special": "isolated_road", "om_terrain": "isolated_house_farm_gunsmith", "reveal_radius": 2 },
+      "effect": { "u_add_var": "teamster_mission_directions", "value": "artisans" }
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "A few of my people have come back now talkin' about some yuppie trying to start a bank that uses bullets for money.  Silly idea, but the lad lives on a homestead with a woman who wouldn't let my guys leave without a full belly.",
+      "offer": "A few of my people have come back now talkin' about some yuppie trying to start a bank that uses bullets for money.  Silly idea, but the lad lives on a homestead with a woman who wouldn't let my guys leave without a full belly.",
+      "accepted": "Hopefully they are still around.",
+      "rejected": "Seems reasonable.",
+      "advice": "Don't worry about the turrets they seem friendly to people.",
+      "inquire": "How is the search going?",
+      "success": "Huh, go figure.",
+      "success_lie": "Huh, go figure.",
+      "failure": "Seems reasonable."
+    }
+  }
+]
