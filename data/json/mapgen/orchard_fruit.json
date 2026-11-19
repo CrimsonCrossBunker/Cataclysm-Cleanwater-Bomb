@@ -56,41 +56,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ "orchard_roof" ],
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "        --------        ",
-        "        -......-        ",
-        "        -......-        ",
-        "        -......-        ",
-        "        5......-        ",
-        "        -......-        ",
-        "        --------        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "orchard_1" ],
     "object": {
       "fill_ter": "t_region_groundcover_urban",
@@ -147,41 +112,6 @@
         { "monster": "GROUP_PARK_SCENIC", "x": 12, "y": 14, "chance": 3 },
         { "monster": "GROUP_PARK_ANIMAL", "x": [ 3, 20 ], "y": [ 16, 20 ], "chance": 3 }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "orchard_roof_1" ],
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "  ------                ",
-        "  -....-                ",
-        "  -....-                ",
-        "  -....-                ",
-        "  -....-                ",
-        "  -....-                ",
-        "  -5----                ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
     }
   }
 ]
