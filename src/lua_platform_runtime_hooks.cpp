@@ -3174,41 +3174,29 @@ void invoke_plant_lifecycle_handlers(
 }
 
 void invoke_martial_art_handler( const std::string_view martial_art_id,
-                                 const std::string_view phase,
-                                 Character &character )
+                                 const std::string_view phase, const std::string_view mod_id,
+                                 const std::string &handler_id, Character &character )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin();
-         iterator != detail::active_runtime_values().rend(); ++iterator ) {
-        const std::shared_ptr<runtime> &owner = *iterator;
-        if( !owner ) {
-            continue;
-        }
-        std::string handler_id;
-        if( !owner->content.find_martial_art_handler(
-                martial_art_id, phase, handler_id ) ) {
-            continue;
-        }
-        if( handler_id.empty() || !owner->world_is_ready ) {
-            return;
-        }
-        const auto handler = owner->handlers.find( handler_id );
-        if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
-            DebugLog( D_ERROR, D_MAIN )
-                    << "Lua-first martial-art handler unavailable for '"
-                    << owner->mod_id << ':' << handler_id << "'";
-            return;
-        }
-        sol::table payload = owner->lua->create_table();
-        payload["martial_art_id"] = std::string( martial_art_id );
-        payload["phase"] = std::string( phase );
-        payload["character"] = platform_creature_handle( *owner, character );
-        sol::protected_function callback = handler->second.callback;
-        callback_scope scope( *owner, &character );
-        const sol::protected_function_result result = callback( payload );
-        if( !result.valid() ) {
-            report_callback_error( *owner, handler_id, result );
-        }
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
         return;
+    }
+    const auto handler = owner->handlers.find( handler_id );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN )
+                << "Lua-first martial-art handler unavailable for '"
+                << owner->mod_id << ':' << handler_id << "'";
+        return;
+    }
+    sol::table payload = owner->lua->create_table();
+    payload["martial_art_id"] = std::string( martial_art_id );
+    payload["phase"] = std::string( phase );
+    payload["character"] = platform_creature_handle( *owner, character );
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner, &character );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
     }
 }
 

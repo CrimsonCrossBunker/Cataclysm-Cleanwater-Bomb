@@ -4068,9 +4068,19 @@ function MartialArtDefinition:weapon(item_id) end
 ---@param category_id string Native weapon-category id usable with the style.
 ---@return MartialArtDefinition self
 function MartialArtDefinition:weapon_category(category_id) end
----@param handler_id string
+---@param phase CcbMartialArtPhase
+---@param handler_id string Named handler receiving CcbMartialArtPhaseContext.
 ---@return MartialArtDefinition self
-function MartialArtDefinition:on(handler_id) end
+function MartialArtDefinition:on(phase, handler_id) end
+
+---@alias CcbMartialArtPhase
+---| "static" | "move" | "pause" | "hit" | "attack" | "dodge"
+---| "block" | "gethit" | "miss" | "crit" | "kill"
+
+---@class CcbMartialArtPhaseContext
+---@field martial_art_id string Stable style ID.
+---@field phase CcbMartialArtPhase
+---@field character GameHandle Character performing the action.
 
 ---@class TrapDefinitionOptions
 ---@field id string Stable trap id.
@@ -18034,6 +18044,13 @@ function CcbPlatformContent.define_spell(options) end
 ---Load a martial technique with native rules at this definition's position in Mod data order.
 ---@param options StaticTechniqueOptions
 function CcbPlatformContent.define_technique(options) end
+
+---Set one lifecycle callback on an already loaded style from an ordered data file.
+---After native effects for the phase, invoke the named handler from this Mod's runtime.
+---@param id string Stable style ID.
+---@param phase CcbMartialArtPhase
+---@param handler_id string Named handler receiving CcbMartialArtPhaseContext.
+function CcbPlatformContent.set_martial_art_handler(id, phase, handler_id) end
 
 ---@class StaticOrderedTool
 ---@field max_charges? integer

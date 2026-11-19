@@ -145,11 +145,6 @@ class content_transaction
                                            std::string_view phase,
                                            std::string &handler_id ) const;
 
-        /** Find one lifecycle handler owned by a Lua-first martial art. */
-        bool find_martial_art_handler( std::string_view martial_art_id,
-                                       std::string_view phase,
-                                       std::string &handler_id ) const;
-
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
         void install_lua_api( sol::state &lua, sol::table &ccb,
                               const std::shared_ptr<runtime> &owner_runtime );
@@ -351,8 +346,8 @@ void invoke_plant_lifecycle_handlers(
 
 /** Dispatch one Lua-first martial-art lifecycle phase. */
 void invoke_martial_art_handler( std::string_view martial_art_id,
-                                 std::string_view phase,
-                                 Character &character );
+                                 std::string_view phase, std::string_view mod_id,
+                                 const std::string &handler_id, Character &character );
 
 /** Dispatch a Lua-first technique callback after one application repeat. */
 void invoke_technique_application_handler(

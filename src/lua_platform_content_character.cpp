@@ -2061,11 +2061,7 @@ struct martial_art_definition_handle {
     martial_art_definition_handle &on( const std::string &phase,
                                        const std::string &handler_id ) {
         require_building_handle( token, *definition, "martial art" );
-        static const std::set < std::string > phases = {
-            "static", "move", "pause", "hit", "attack", "dodge",
-            "block", "gethit", "miss", "crit", "kill"
-        };
-        if( phases.count( phase ) == 0 ) {
+        if( !martialart::is_lifecycle_phase( phase ) ) {
             throw std::runtime_error( "unknown martial-art phase '" + phase + "'" );
         }
         if( handler_id.empty() ) {
@@ -7404,6 +7400,9 @@ void character_content_transaction::impl::apply_martial_art()
         for( const std::string &category : source.weapon_categories ) {
             native.weapon_category.insert( weapon_category_id( category ) );
         }
+        for( const auto &[phase, handler] : source.handlers ) {
+            native.set_lua_phase_handler( phase, this->owner, handler );
+        }
         native.was_loaded = true;
         detail::martialart_registry().insert( native );
     }
@@ -8570,25 +8569,6 @@ bool character_content_transaction::find_magic_type_handler(
     return true;
 }
 
-bool character_content_transaction::find_martial_art_handler(
-    const std::string_view martial_art_id, const std::string_view phase,
-    std::string &handler_id ) const
-{
-    const auto found = std::find_if( pimpl_->martial_arts.rbegin(),
-                                     pimpl_->martial_arts.rend(),
-    [martial_art_id]( const martial_art_registration & entry ) {
-        return entry.definition->id == martial_art_id;
-    } );
-    if( found == pimpl_->martial_arts.rend() ) {
-        handler_id.clear();
-        return false;
-    }
-    const auto handler = found->definition->handlers.find( std::string( phase ) );
-    handler_id = handler == found->definition->handlers.end() ?
-                 std::string() : handler->second;
-    return true;
-}
-
 } // namespace cata::lua_platform
 
 #else
@@ -8654,13 +8634,6 @@ CATA_CHARACTER_FALSE_QUERY( defines_movement_mode )
 #undef CATA_CHARACTER_FALSE_QUERY
 
 bool character_content_transaction::find_magic_type_handler(
-    std::string_view, std::string_view, std::string &handler_id ) const
-{
-    handler_id.clear();
-    return false;
-}
-
-bool character_content_transaction::find_martial_art_handler(
     std::string_view, std::string_view, std::string &handler_id ) const
 {
     handler_id.clear();

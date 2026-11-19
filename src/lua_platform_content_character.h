@@ -153,9 +153,6 @@ class character_content_transaction
         bool find_magic_type_handler( std::string_view magic_type_id,
                                       std::string_view phase,
                                       std::string &handler_id ) const;
-        bool find_martial_art_handler( std::string_view martial_art_id,
-                                       std::string_view phase,
-                                       std::string &handler_id ) const;
 
     private:
         struct impl;

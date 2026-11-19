@@ -6217,6 +6217,10 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "SPELL", write_static_spell, spell_type::load_spell ) );
     content.set_function( "define_technique", static_catalog_definition(
                               resolved.id, "technique", write_static_technique, load_technique ) );
+    content.set_function( "set_martial_art_handler",
+    [&resolved]( const std::string & id, const std::string & phase, const std::string & handler ) {
+        set_ordered_martial_art_handler( matype_id( id ), phase, resolved.id, handler );
+    } );
     content.set_function( "define_npc", static_catalog_definition(
                               resolved.id, "npc", write_static_npc, npc_template::load ) );
     content.set_function( "define_npc_class", static_catalog_definition(

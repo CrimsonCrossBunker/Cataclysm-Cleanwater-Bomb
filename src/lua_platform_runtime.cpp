@@ -12737,14 +12737,6 @@ bool content_transaction::find_vehicle_part_handler(
 }
 
 
-bool content_transaction::find_martial_art_handler(
-    const std::string_view martial_art_id, const std::string_view phase,
-    std::string &handler_id ) const
-{
-    return pimpl_->character.find_martial_art_handler(
-               martial_art_id, phase, handler_id );
-}
-
 std::shared_ptr<runtime> make_runtime( const std::string &mod_id,
                                        std::size_t generation,
                                        sol::state &lua,
@@ -13091,13 +13083,6 @@ bool content_transaction::find_plant_lifecycle_handler(
     handler_id.clear();
     return false;
 }
-bool content_transaction::find_martial_art_handler(
-    std::string_view, std::string_view, std::string &handler_id ) const
-{
-    handler_id.clear();
-    return false;
-}
-
 void invoke_damage_type_handler( std::string_view, std::string_view,
                                  Creature *, Creature *, std::string_view,
                                  double, double )
@@ -13182,7 +13167,7 @@ void invoke_plant_lifecycle_handlers(
 }
 
 void invoke_martial_art_handler( std::string_view, std::string_view,
-                                 Character & )
+                                 std::string_view, const std::string &, Character & )
 {
 }
 

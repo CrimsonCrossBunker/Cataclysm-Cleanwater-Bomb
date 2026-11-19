@@ -7,12 +7,14 @@
 #include <translation.h>
 #include <type_id.h>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -521,6 +523,39 @@ bool string_id<ma_buff>::is_valid() const
 void load_martial_art( const JsonObject &jo, const std::string &src )
 {
     martialarts.load( jo, src );
+}
+
+void set_ordered_martial_art_handler( const matype_id &id, const std::string &phase,
+                                     std::string_view owner, const std::string &handler )
+{
+    if( !id.is_valid() ) {
+        throw std::invalid_argument( "set_martial_art_handler requires an already loaded style: " +
+                                     id.str() );
+    }
+    martialart style = id.obj();
+    style.set_lua_phase_handler( phase, owner, handler );
+    martialarts.restore( style );
+}
+
+bool martialart::is_lifecycle_phase( const std::string_view phase )
+{
+    static constexpr std::array<std::string_view, 11> phases = {
+        "static", "move", "pause", "hit", "attack", "dodge", "block", "gethit", "miss", "crit", "kill"
+    };
+    return std::find( phases.begin(), phases.end(), phase ) != phases.end();
+}
+
+void martialart::set_lua_phase_handler( const std::string &phase, std::string_view owner,
+                                       const std::string &handler )
+{
+    if( !is_lifecycle_phase( phase ) ) {
+        throw std::invalid_argument( "unknown martial-art phase '" + phase + "'" );
+    }
+    if( handler.empty() || handler.find( '#' ) != std::string::npos ||
+        handler.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument( "martial-art phase requires a named Lua handler" );
+    }
+    lua_phase_handlers.insert_or_assign( phase, lua_phase_handler{ std::string( owner ), handler } );
 }
 
 void martialart::finalize_all()
@@ -1532,70 +1567,79 @@ void martialart::activate_eocs( Character &u,
     }
 }
 
+void martialart::activate_lua_phase( const std::string_view phase, Character &u ) const
+{
+    const auto handler = lua_phase_handlers.find( phase );
+    if( handler != lua_phase_handlers.end() ) {
+        cata::lua_platform::invoke_martial_art_handler( id.str(), phase, handler->second.owner,
+                handler->second.name, u );
+    }
+}
+
 void martialart::apply_static_eocs( Character &u ) const
 {
     activate_eocs( u, static_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "static", u );
+    activate_lua_phase( "static", u );
 }
 
 void martialart::apply_onmove_eocs( Character &u ) const
 {
     activate_eocs( u, onmove_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "move", u );
+    activate_lua_phase( "move", u );
 }
 
 void martialart::apply_onpause_eocs( Character &u ) const
 {
     activate_eocs( u, onpause_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "pause", u );
+    activate_lua_phase( "pause", u );
 }
 
 void martialart::apply_onhit_eocs( Character &u ) const
 {
     activate_eocs( u, onhit_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "hit", u );
+    activate_lua_phase( "hit", u );
 }
 
 void martialart::apply_onattack_eocs( Character &u ) const
 {
     activate_eocs( u, onattack_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "attack", u );
+    activate_lua_phase( "attack", u );
 }
 
 void martialart::apply_ondodge_eocs( Character &u ) const
 {
     activate_eocs( u, ondodge_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "dodge", u );
+    activate_lua_phase( "dodge", u );
 }
 
 void martialart::apply_onblock_eocs( Character &u ) const
 {
     activate_eocs( u, onblock_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "block", u );
+    activate_lua_phase( "block", u );
 }
 
 void martialart::apply_ongethit_eocs( Character &u ) const
 {
     activate_eocs( u, ongethit_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "gethit", u );
+    activate_lua_phase( "gethit", u );
 }
 
 void martialart::apply_onmiss_eocs( Character &u ) const
 {
     activate_eocs( u, onmiss_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "miss", u );
+    activate_lua_phase( "miss", u );
 }
 
 void martialart::apply_oncrit_eocs( Character &u ) const
 {
     activate_eocs( u, oncrit_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "crit", u );
+    activate_lua_phase( "crit", u );
 }
 
 void martialart::apply_onkill_eocs( Character &u ) const
 {
     activate_eocs( u, onkill_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "kill", u );
+    activate_lua_phase( "kill", u );
 }
 
 bool martialart::has_technique( const Character &u, const matec_id &tec_id ) const

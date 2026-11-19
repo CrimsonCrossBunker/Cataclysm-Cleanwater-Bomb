@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <map>
 #include <set>
 #include <string>
 #include <string_view>
@@ -416,6 +417,10 @@ class martialart
 
         void activate_eocs( Character &u, const std::vector<effect_on_condition_id> &eocs ) const;
 
+        void set_lua_phase_handler( const std::string &phase, std::string_view owner,
+                                    const std::string &handler );
+        static bool is_lifecycle_phase( std::string_view phase );
+
         // activates eocs when conditions are met
         void apply_static_eocs( Character &u ) const;
 
@@ -496,6 +501,14 @@ class martialart
         std::vector<effect_on_condition_id> onmiss_eocs;
         std::vector<effect_on_condition_id> oncrit_eocs;
         std::vector<effect_on_condition_id> onkill_eocs;
+
+    private:
+        void activate_lua_phase( std::string_view phase, Character &u ) const;
+        struct lua_phase_handler {
+            std::string owner;
+            std::string name;
+        };
+        std::map<std::string, lua_phase_handler, std::less<>> lua_phase_handlers;
 };
 
 class ma_style_callback : public uilist_callback
@@ -516,6 +529,8 @@ class ma_style_callback : public uilist_callback
 
 void load_technique( const JsonObject &jo, const std::string &src );
 void load_martial_art( const JsonObject &jo, const std::string &src );
+void set_ordered_martial_art_handler( const matype_id &id, const std::string &phase,
+                                     std::string_view owner, const std::string &handler );
 void check_martialarts();
 void clear_techniques_and_martial_arts();
 void finalize_martial_arts();
