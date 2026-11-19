@@ -1,0 +1,112 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "beam_scatterer",
+    name = ccb.content.plural_text("beam scatterer", "beam scatterers"),
+    description = ccb.content.text("A set of optics made to fit on laser weapons, which will diffract the laser beam into several lower powered beams.  This increases point-blank damage, but greatly reduces range."),
+    mass = "380 g",
+    volume = "250 ml",
+    price = "840 USD",
+    survival_price = "10 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "light_gray",
+    gunmod = {
+        install_time = "15 m",
+        location = ccb.content.text("lens"),
+        targets = { ccb.content.text("rifle", "gun_type_type"), ccb.content.text("pistol", "gun_type_type") },
+        range_multiplier = 0.5,
+        damage_modifier = { type = "heat", amount = 10 },
+        effects = { "SHOT" },
+    },
+    minimum_skills = { { id = "weapon", count = 4 } },
+}
+
+ccb.content.define_item {
+    id = "focusing_lens",
+    name = ccb.content.plural_text("focusing lens", "focusing lenses"),
+    description = ccb.content.text("A set of optics to concentrate the laser beam on a smaller focus point.  This increases range and damage output, but complicates targeting."),
+    mass = "380 g",
+    volume = "250 ml",
+    price = "840 USD",
+    survival_price = "10 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "light_gray",
+    gunmod = {
+        install_time = "15 m",
+        location = ccb.content.text("lens"),
+        targets = { ccb.content.text("rifle", "gun_type_type"), ccb.content.text("pistol", "gun_type_type") },
+        range_modifier = 15,
+        damage_modifier = { type = "heat", amount = 5 },
+        dispersion_modifier = 15,
+    },
+    minimum_skills = { { id = "weapon", count = 4 } },
+}
+
+ccb.content.define_item {
+    id = "electrolaser_conversion",
+    name = ccb.content.plural_text("electrolaser conversion", "electrolaser conversions"),
+    description = ccb.content.text("A set of high-tech electronics and optics.  Converts a laser pistol into a less-lethal electrolaser capable of stunning targets, at the cost of a decreased damage output and increased power consumption."),
+    mass = "380 g",
+    volume = "1 L",
+    price = "840 USD",
+    survival_price = "10 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "light_gray",
+    gunmod = {
+        install_time = "20 m",
+        location = ccb.content.text("lens"),
+        targets = { ccb.content.text("pistol", "gun_type_type") },
+        range_multiplier = 0.5,
+        damage_modifier = { type = "heat", amount = -8 },
+        energy_drain_multiplier = 1.2,
+        effects = { "BEANBAG" },
+    },
+    minimum_skills = { { id = "weapon", count = 4 }, { id = "electronics", count = 5 } },
+}
+
+ccb.content.define_item {
+    id = "effective_emitter",
+    name = ccb.content.plural_text("effective emitter", "effective emitters"),
+    description = ccb.content.text("A set of electronics to optimize emitter workcycle and increase overall energy efficiency.  Decreases power consumption."),
+    mass = "380 g",
+    volume = "250 ml",
+    integral_volume = "0 ml",
+    price = "840 USD",
+    survival_price = "10 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "light_gray",
+    gunmod = {
+        install_time = "20 m",
+        location = ccb.content.text("emitter"),
+        targets = { ccb.content.text("pistol", "gun_type_type"), ccb.content.text("rifle", "gun_type_type") },
+        energy_drain_multiplier = 0.9,
+    },
+    minimum_skills = { { id = "weapon", count = 4 }, { id = "electronics", count = 5 } },
+}
+
+ccb.content.define_item {
+    id = "high_density_capacitor",
+    name = ccb.content.plural_text("high density capacitor", "high density capacitors"),
+    description = ccb.content.text("A capacitor with a higher energy density.  Increases range and damage at the cost of markedly increased power consumption."),
+    mass = "380 g",
+    volume = "250 ml",
+    integral_volume = "0 ml",
+    price = "840 USD",
+    survival_price = "10 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "light_gray",
+    gunmod = {
+        install_time = "20 m",
+        location = ccb.content.text("emitter"),
+        targets = { ccb.content.text("pistol", "gun_type_type"), ccb.content.text("rifle", "gun_type_type") },
+        range_modifier = 5,
+        damage_modifier = { type = "heat", amount = 10 },
+        energy_drain_multiplier = 2.0,
+    },
+    minimum_skills = { { id = "weapon", count = 4 }, { id = "electronics", count = 5 } },
+}
