@@ -1,0 +1,34 @@
+[
+  {
+    "id": "mon_skeleton_hulk",
+    "type": "MONSTER",
+    "name": { "str": "skeletal juggernaut" },
+    "description": "This hideous golem of plated bones and misshapen flesh drags its heavy, pointed limbs behind it like an unwanted burden.  Formerly soft and vulnerable, bones grew around its form to protect it - only, they kept growing.  And growing.  And growing.",
+    "copy-from": "mon_zombie_hulk",
+    "species": [ "ZOMBIE" ],
+    "speed": 60,
+    "material": [ "bone" ],
+    "color": "white",
+    "melee_dice": 3,
+    "melee_dice_sides": 6,
+    "melee_damage": [ { "damage_type": "cut", "amount": 15 } ],
+    "vision_day": 50,
+    "harvest": "big_mr_bones",
+    "special_attacks": [
+      { "id": "grab" },
+      { "id": "bite_humanoid" },
+      { "id": "smash", "throw_strength": 54, "condition": { "math": [ "n_val('size') <= 4" ] } },
+      { "id": "smash_equal", "throw_strength": 27, "condition": { "math": [ "n_val('size') == 5" ] } },
+      { "id": "stretch_attack" },
+      { "id": "longswipe" },
+      { "id": "cut_throat" },
+      {
+        "id": "scratch_humanoid",
+        "damage_max_instance": [ { "damage_type": "cut", "amount": 23, "armor_multiplier": 0.8 } ]
+      }
+    ],
+    "fungalize_into": "mon_skeleton_hulk_dusted",
+    "armor": { "bash": 20, "cut": 45, "bullet": 36, "electric": 8 },
+    "extend": { "weakpoint_sets": [ "wps_bone_armor" ], "families": [ "prof_wp_skeleton" ], "flags": [ "PULP_PRYING" ] }
+  }
+]

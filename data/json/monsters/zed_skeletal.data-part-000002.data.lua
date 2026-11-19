@@ -1,0 +1,40 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_skeleton_electric",
+    name = ccb.content.plural_text("skeletal shocker", "skeletal shockers"),
+    description = ccb.content.text("Heavy, jagged bone plates have grown out of the surface of this zombie's skin.  Underneath, its flesh glows and crackles with the occasional jolt of electricity."),
+    copy_from = "mon_zombie_base",
+    species = { "ZOMBIE" },
+    difficulty_adjustment = 15,
+    hp = 105,
+    speed = 60,
+    materials = { "bone" },
+    color = "blue_white",
+    melee_damage = { { type = "electric", amount = 12 }, { type = "cut", amount = 3 } },
+    vision_day = 30,
+    luminance = 8,
+    bleed_rate = 0,
+    harvest = "mr_bones",
+    attacks = {
+        { id = "grab", cooldown = 21 },
+        { id = "scratch_humanoid" },
+        { id = "bite_humanoid", cooldown = 5 },
+        { reference = "PARROT", cooldown = 8 },
+        { id = "mon_shocker_chargeup", cooldown = 7 },
+        { id = "mon_shocker_chargeup_attack", damage = { { type = "electric", amount = 80 } } },
+        { id = "mon_shocker_chargeup_attack_grab", damage = { { type = "electric", amount = 80 } } },
+    },
+    defense = { id = "ZAPBACK", chance = 100 },
+    fungalize_into = "mon_skeleton_dusted",
+    upgrade = false,
+    armor = { cut = 15, stab = 30, acid = 3, bullet = 30 },
+    inheritance = {
+        add = {
+            weakpoint_sets = { "wps_bone_armor" },
+            families = { "prof_wp_skeleton" },
+            flags = { "ELECTRIC", "PULP_PRYING" },
+        },
+        remove = { flags = { "STUMBLES" } },
+    },
+}
