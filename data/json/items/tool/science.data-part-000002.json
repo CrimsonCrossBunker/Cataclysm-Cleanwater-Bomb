@@ -1,0 +1,85 @@
+[
+  {
+    "id": "migo_bio_tech",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "//": [
+      "intentionally do not spawn anywhere, until migo interest would be implemented",
+      "for now, works only as reference for eoc-item-variable interaction"
+    ],
+    "name": { "str_sp": "Mi-go Biotech" },
+    "conditional_names": [
+      { "type": "VAR", "condition": "mbt_f_function", "value": "morale", "name": { "str_sp": "%s (happy)" } },
+      { "type": "VAR", "condition": "mbt_f_function", "value": "focus", "name": { "str_sp": "%s (focus)" } },
+      { "type": "VAR", "condition": "mbt_f_function", "value": "pain", "name": { "str_sp": "%s (pain relief)" } },
+      { "type": "VAR", "condition": "mbt_f_function", "value": "sleepiness", "name": { "str_sp": "%s (wake up)" } }
+    ],
+    "description": "A piece of mi-go biotechnology.",
+    "material": [ "alien_resin" ],
+    "weight": "250 g",
+    "volume": "250 ml",
+    "price": "30 USD",
+    "price_postapoc": "100 USD",
+    "symbol": "!",
+    "color": "light_red",
+    "use_action": {
+      "type": "effect_on_conditions",
+      "description": "Touch the opening.",
+      "effect_on_conditions": [
+        {
+          "id": "EOC_MIGO_BIO_TECH_INTEREST_SLIGHT",
+          "condition": { "not": { "one_in_chance": 3 } },
+          "effect": [
+            { "u_message": "You have a slight feeling of being watched." },
+            { "math": [ "u_migo_interest_interest_migo_interest++" ] }
+          ]
+        },
+        {
+          "id": "EOC_MIGO_BIO_TECH_INTEREST_INTENSE",
+          "condition": { "not": { "one_in_chance": 100 } },
+          "effect": [
+            { "u_message": "You have an intense feeling of being watched." },
+            { "math": [ "u_migo_interest_interest_migo_interest += 10" ] }
+          ]
+        },
+        {
+          "id": "EOC_MIGO_BIO_TECH_SETUP",
+          "condition": { "not": { "compare_string": [ "yes", { "npc_val": "mbt_f_function_set" } ] } },
+          "effect": [
+            { "npc_add_var": "mbt_f_function_set", "value": "yes" },
+            { "npc_add_var": "mbt_f_function", "possible_values": [ "morale", "focus", "pain", "sleepiness" ] }
+          ]
+        },
+        {
+          "id": "EOC_MIGO_BIO_TECH_MORALE",
+          "condition": { "compare_string": [ "morale", { "npc_val": "mbt_f_function" } ] },
+          "effect": [
+            { "u_message": "You feel amazing!" },
+            {
+              "u_add_morale": "morale_migo_bio_tech",
+              "bonus": 30,
+              "max_bonus": 50,
+              "duration": "12 hours",
+              "decay_start": "10 hours"
+            }
+          ]
+        },
+        {
+          "id": "EOC_MIGO_BIO_TECH_FOCUS",
+          "condition": { "compare_string": [ "focus", { "npc_val": "mbt_f_function" } ] },
+          "effect": [ { "u_message": "You feel incredibly focused!" }, { "math": [ "u_val('focus') += min( u_val('focus') + 30, 130)" ] } ]
+        },
+        {
+          "id": "EOC_MIGO_BIO_TECH_PAIN",
+          "condition": { "compare_string": [ "pain", { "npc_val": "mbt_f_function" } ] },
+          "effect": [ { "u_message": "You feel your aches and pains fade away!" }, { "math": [ "u_pain() -= 30" ] } ]
+        },
+        {
+          "id": "EOC_MIGO_BIO_TECH_SLEEPINESS",
+          "condition": { "compare_string": [ "sleepiness", { "npc_val": "mbt_f_function" } ] },
+          "effect": [ { "u_message": "You instantly feel more awake!" }, { "math": [ "u_val('sleepiness') -= 30" ] } ]
+        }
+      ]
+    }
+  }
+]
