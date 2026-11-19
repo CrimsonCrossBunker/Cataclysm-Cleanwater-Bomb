@@ -124,3 +124,45 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "glass_and_crystal_chunk_center",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "X",
+        },
+        terrain = { X = "t_nether_stone" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = { X = { group = "dist_matrix_crystals", chance = 100 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "glass_and_crystal_chunk_center",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "X",
+        },
+        terrain = { X = "t_nether_stone" },
+        furniture = { X = "f_nether_crystal_structure" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "glass_and_crystal_chunk_center",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "X",
+        },
+        terrain = { X = "t_nether_stone" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        field_placements = { { id = "fd_fatigue", x = 0, y = 0, intensity = 3 } },
+    },
+}
