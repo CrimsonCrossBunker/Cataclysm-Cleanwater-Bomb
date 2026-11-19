@@ -1,0 +1,33 @@
+[
+  {
+    "id": "petpack",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "petpack" },
+    "description": "Before the Cataclysm this would allow your four-legged friend to see the world, now it's used to shield them from the world.",
+    "weight": "900 g",
+    "volume": "36750 ml",
+    "price": "79 USD",
+    "price_postapoc": "2 USD 50 cent",
+    "material": [ "nylon", "plastic" ],
+    "symbol": "[",
+    "looks_like": "backpack",
+    "color": "blue",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "rigid": true,
+        "max_contains_volume": "35 L",
+        "max_contains_weight": "16 kg",
+        "max_item_length": "45 cm",
+        "moves": 300
+      }
+    ],
+    "warmth": 8,
+    "material_thickness": 2,
+    "properties": { "creature_size_capacity": "SMALL" },
+    "use_action": [ "CAPTURE_MONSTER_ACT" ],
+    "flags": [ "BELTED", "WATERPROOF" ],
+    "armor": [ { "encumbrance": 35, "coverage": 100, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_front" ] } ]
+  }
+]

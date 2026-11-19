@@ -1,0 +1,75 @@
+[
+  {
+    "id": "daypack",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "daypack" },
+    "description": "An ultralight nylon backpack intended for one-day hiking trips.  Waterproof, slim, and spacious.",
+    "symbol": "[",
+    "looks_like": "backpack",
+    "color": "red",
+    "weight": "411 g",
+    "volume": "2100 ml",
+    "//": "REI Co-op 22-liter daypack costs $54.95, so ballpark to $55",
+    "price": "55 USD",
+    "price_postapoc": "5 USD",
+    "material": [ "nylon", "plastic" ],
+    "material_thickness": 1,
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "24 L",
+        "max_contains_weight": "32 kg",
+        "max_item_length": "60 cm",
+        "magazine_well": "2 L",
+        "moves": 300
+      },
+      {
+        "//": "tucked against back",
+        "pocket_type": "CONTAINER",
+        "holster": true,
+        "max_contains_volume": "5 L",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "150 cm",
+        "min_item_length": "60 cm",
+        "moves": 200,
+        "extra_encumbrance": 10,
+        "description": "Tucked between your back and the backpack.",
+        "ripoff": 3,
+        "transparent": true
+      },
+      {
+        "//": "water bottle pocket",
+        "pocket_type": "CONTAINER",
+        "holster": true,
+        "max_contains_volume": "510 ml",
+        "max_contains_weight": "1 kg",
+        "max_item_length": "24 cm",
+        "min_item_length": "18 cm",
+        "moves": 80,
+        "description": "Small pocket for a water bottle.",
+        "ripoff": 2
+      },
+      {
+        "//": "carabiner pocket",
+        "pocket_type": "CONTAINER",
+        "holster": true,
+        "max_contains_volume": "5 L",
+        "max_contains_weight": "6 kg",
+        "max_item_length": "120 cm",
+        "min_item_length": "20 cm",
+        "moves": 150,
+        "extra_encumbrance": 3,
+        "ripoff": 2,
+        "description": "Attached with a carabiner or strap.",
+        "activity_noise": { "volume": 8, "chance": 10 },
+        "transparent": true
+      }
+    ],
+    "warmth": 5,
+    "flags": [ "BELTED", "OVERSIZE", "STURDY" ],
+    "armor": [
+      { "encumbrance": [ 2, 18 ], "coverage": 100, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] }
+    ]
+  }
+]

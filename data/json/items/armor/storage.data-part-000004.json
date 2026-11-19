@@ -1,0 +1,61 @@
+[
+  {
+    "id": "boxpack",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "box backpack" },
+    "description": "A makeshift backpack comprised of a wooden box and a pair of ropes.",
+    "weight": "8 kg",
+    "to_hit": { "grip": "bad", "length": "short", "surface": "any", "balance": "clumsy" },
+    "color": "brown",
+    "symbol": "]",
+    "looks_like": "jerrypack",
+    "material": [ "wood", "cotton" ],
+    "volume": "15750 ml",
+    "price_postapoc": "50 cent",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "rigid": true,
+        "max_contains_volume": "15 L",
+        "max_contains_weight": "60 kg",
+        "max_item_length": "50 cm",
+        "moves": 300
+      },
+      {
+        "//": "tucked against back",
+        "pocket_type": "CONTAINER",
+        "holster": true,
+        "max_contains_volume": "5 L",
+        "max_contains_weight": "4 kg",
+        "max_item_length": "150 cm",
+        "min_item_length": "60 cm",
+        "moves": 200,
+        "extra_encumbrance": 10,
+        "description": "Tucked between your back and the backpack.",
+        "ripoff": 3,
+        "transparent": true
+      },
+      {
+        "//": "carabiner pocket",
+        "pocket_type": "CONTAINER",
+        "holster": true,
+        "max_contains_volume": "5 L",
+        "max_contains_weight": "6 kg",
+        "max_item_length": "120 cm",
+        "min_item_length": "20 cm",
+        "moves": 150,
+        "extra_encumbrance": 3,
+        "ripoff": 2,
+        "description": "Attached with a carabiner or strap.",
+        "activity_noise": { "volume": 8, "chance": 10 },
+        "transparent": true
+      }
+    ],
+    "warmth": 5,
+    "price": "35 USD",
+    "flags": [ "BELTED", "OVERSIZE", "NO_REPAIR" ],
+    "armor": [ { "encumbrance": 20, "coverage": 80, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ],
+    "melee_damage": { "bash": 10 }
+  }
+]

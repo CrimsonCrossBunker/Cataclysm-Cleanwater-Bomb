@@ -1,0 +1,108 @@
+[
+  {
+    "id": "golf_bag",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "golf bag" },
+    "description": "A tall canvas and plastic bag with fold-out legs used for golfing.  It even has straps to be worn on the back and a slot for an umbrella.",
+    "weight": "1900 g",
+    "volume": "45 L",
+    "price": "8 USD",
+    "price_postapoc": "7 USD 50 cent",
+    "material": [ "nylon", "plastic" ],
+    "symbol": "[",
+    "looks_like": "quiver_large",
+    "color": "green",
+    "//": "The main section of the golf bag actually assumes things will stick out of it, but specifically contains them, so some extra wiggle room was added.",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "40 L",
+        "max_contains_weight": "200 kg",
+        "moves": 300,
+        "rigid": true,
+        "max_item_length": "150 cm"
+      },
+      { "max_contains_volume": "90 ml", "max_contains_weight": "750 g", "max_item_length": "10 cm", "moves": 200 },
+      { "max_contains_volume": "90 ml", "max_contains_weight": "750 g", "max_item_length": "10 cm", "moves": 200 },
+      { "max_contains_volume": "1350 ml", "max_contains_weight": "4 kg", "max_item_length": "25 cm", "moves": 300 },
+      { "max_contains_volume": "675 ml", "max_contains_weight": "2 kg", "max_item_length": "20 cm", "moves": 300 },
+      { "max_contains_volume": "675 ml", "max_contains_weight": "2 kg", "max_item_length": "20 cm", "moves": 300 },
+      { "max_contains_volume": "500 ml", "max_contains_weight": "300 g", "max_item_length": "15 cm", "moves": 100 }
+    ],
+    "warmth": 5,
+    "material_thickness": 3,
+    "flags": [ "BELTED", "OVERSIZE" ],
+    "use_action": { "type": "holster", "holster_prompt": "Sheath golf club", "holster_msg": "You awkwardly sheath your %s" },
+    "armor": [
+      { "encumbrance": [ 30, 35 ], "coverage": 70, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] }
+    ]
+  },
+  {
+    "id": "hide_bag",
+    "copy-from": "raw_leather",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE", "ARMOR" ],
+    "category": "clothing",
+    "name": { "str": "hide bag" },
+    "description": "The raw skin of an animal, quickly turned into a makeshift bag for storage.  It will still rot, and needs to be cured and tanned.",
+    "symbol": "[",
+    "looks_like": "plastic_shopping_bag",
+    "color": "pink",
+    "proportional": { "weight": 6.0, "volume": 6.0, "price": 6.0, "quench": 6.0, "calories": 6.0, "healthy": 6.0, "fun": 6.0 },
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "15 L",
+        "max_contains_weight": "30 kg",
+        "max_item_length": "50 cm",
+        "moves": 300
+      }
+    ],
+    "flags": [ "OVERSIZE", "BELTED", "RESTRICT_HANDS", "WATER_FRIENDLY" ],
+    "sided": true,
+    "armor": [
+      {
+        "material": [ { "type": "leather", "covered_by_mat": 100, "thickness": 0.1 } ],
+        "encumbrance": 10,
+        "volume_encumber_modifier": 0.5,
+        "coverage": 5,
+        "covers": [ "arm_l", "arm_r", "hand_l", "hand_r" ]
+      }
+    ]
+  },
+  {
+    "id": "hide_tainted_bag",
+    "copy-from": "raw_tainted_leather",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE", "ARMOR" ],
+    "category": "clothing",
+    "name": { "str": "tainted hide bag" },
+    "description": "The raw skin of a monster, quickly turned into a makeshift bag for storage.  It will still rot, and needs to be cured and tanned.",
+    "symbol": "[",
+    "looks_like": "hide_bag",
+    "color": "pink",
+    "price_postapoc": "10 cent",
+    "proportional": { "weight": 6.0, "volume": 6.0, "price": 6.0, "quench": 6.0, "calories": 6.0, "healthy": 6.0, "fun": 6.0 },
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "15 L",
+        "max_contains_weight": "30 kg",
+        "max_item_length": "50 cm",
+        "moves": 300
+      }
+    ],
+    "flags": [ "OVERSIZE", "BELTED", "RESTRICT_HANDS", "WATER_FRIENDLY" ],
+    "sided": true,
+    "armor": [
+      {
+        "material": [ { "type": "leather", "covered_by_mat": 100, "thickness": 0.1 } ],
+        "encumbrance": 10,
+        "volume_encumber_modifier": 0.5,
+        "coverage": 5,
+        "covers": [ "arm_l", "arm_r", "hand_l", "hand_r" ]
+      }
+    ]
+  }
+]
