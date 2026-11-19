@@ -1,7 +1,30 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_RANCH_WOODCUTTER_JOB",
-    line = ccb.content.gendered_line("I'm one of the migrants that got diverted to this outpost when I arrived at the refugee center.  They said I was big enough to swing an axe, so my profession became lumberjack… didn't have any say in it.  If I want to eat, then I'll be cutting wood from now till kingdom come.", { "interlocutor" }),
-    replies = { { text = ccb.content.text("Oh."), next_topic = "TALK_RANCH_WOODCUTTER" } },
+    id = "TALK_RANCH_WOODCUTTER",
+    line = ccb.content.text("You need something?"),
+    replies = {
+        {
+            text = ccb.content.text("The doctor needs some help building an anesthetic machine.  Do you have anything that could help?"),
+            next_topic = "TALK_RANCH_GENERIC_ANESTHETIC_FOR_DOCTOR",
+            when = predicates.all({ predicates.has_mission("MISSION_RANCH_DOCTOR_MEDICAL_ANESTHETIC"), predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "mission_tacoma_ranch_doctor_anesthetic_asked" } })) }),
+            actions = {
+                actions.set_actor_value("interlocutor", "mission_tacoma_ranch_doctor_anesthetic_asked", "yes"),
+            },
+        },
+        {
+            text = ccb.content.text("What are you doing here?"),
+            next_topic = "TALK_RANCH_WOODCUTTER_JOB",
+        },
+        {
+            text = ccb.content.text("I'd like to hire your services."),
+            next_topic = "TALK_RANCH_WOODCUTTER_HIRE",
+        },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
 }
