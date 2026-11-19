@@ -1,0 +1,20 @@
+[
+  {
+    "id": "grenade_emp_act",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "copy-from": "grenade_emp",
+    "description": "This EMP grenade is active and will shortly detonate, creating a large EMP field that damages robots and drains bionic energy, as well as a mild electric shock cloud.  You may not want to be holding it much longer.",
+    "use_action": { "type": "message", "message": "You've already pulled the pin, try throwing it instead.", "name": "Pull pin" },
+    "countdown_interval": "3 seconds",
+    "countdown_action": {
+      "type": "explosion",
+      "fields_type": "fd_electricity",
+      "fields_radius": 1,
+      "fields_min_intensity": 2,
+      "fields_max_intensity": 10,
+      "emp_blast_radius": 4
+    },
+    "flags": [ "DANGEROUS", "WATER_BREAK", "SPAWN_ACTIVE" ]
+  }
+]

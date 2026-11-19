@@ -1,0 +1,20 @@
+[
+  {
+    "id": "mininuke_act",
+    "copy-from": "mininuke",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR" ],
+    "description": "The nuclear bomb looks no different from the outside, yet you know that the device is armed and counting down.  You should probably get far, far away from it.",
+    "use_action": { "type": "message", "message": "You've already activated the %s.  Get rid of it and clear out!" },
+    "countdown_interval": "60 seconds",
+    "countdown_action": {
+      "type": "explosion",
+      "fields_type": "fd_nuke_gas",
+      "fields_radius": 18,
+      "fields_min_intensity": 3,
+      "fields_max_intensity": 3,
+      "explosion": { "power": 9000000 }
+    },
+    "flags": [ "STURDY", "LEAK_DAM", "BELTED", "RADIOACTIVE", "DANGEROUS", "SPAWN_ACTIVE" ]
+  }
+]
