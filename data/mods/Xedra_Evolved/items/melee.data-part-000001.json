@@ -1,15 +1,78 @@
 [
   {
-    "id": "pooka_gladius",
+    "id": "spring_lord_estoc",
+    "looks_like": "winter_lord_estoc",
     "type": "ITEM",
     "subtypes": [ "ARTIFACT" ],
-    "name": { "str": "pooka gladius", "str_pl": "pooka gladii" },
-    "copy-from": "wakizashi",
-    "description": "A gladius covered in the whorls of Celtic knots.  Sparks seems to pop off the edge of the blade.",
-    "flags": [ "DURABLE_MELEE", "SHEATH_SWORD" ],
-    "longest_side": "60 cm",
-    "material": [ "moon_tears" ],
-    "weapon_category": [ "SHORT_SWORDS" ],
-    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_pooka_gladius_0" } ]
+    "name": { "str": "greengrowth estoc" },
+    "copy-from": "mirror_march_estoc",
+    "description": "Green shoots entwine around this sword and it seems to move of its own volition in your hands.",
+    "extend": { "flags": [ "RELIC_PINK" ] },
+    "relative": { "melee_damage": { "biological": 9 } },
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_spring_lord_estoc_0" } ]
+  },
+  {
+    "id": "summer_lord_estoc",
+    "looks_like": "winter_lord_estoc",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "name": { "str": "heathaze estoc" },
+    "copy-from": "mirror_march_estoc",
+    "description": "The air around this sword shimmers like the space over asphalt in summer and it seems to move of its own volition in your hands.",
+    "extend": { "flags": [ "RELIC_PINK" ] },
+    "relative": { "melee_damage": { "heat": 9 } },
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_summer_lord_estoc_0" } ]
+  },
+  {
+    "id": "autumn_lord_estoc",
+    "looks_like": "winter_lord_estoc",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "name": { "str": "leaf-fall estoc" },
+    "copy-from": "mirror_march_estoc",
+    "description": "This sword is surrounded by falling brown leaves and seems to move of its own volition in your hands.",
+    "extend": { "flags": [ "RELIC_PINK" ] },
+    "relative": { "melee_damage": { "withering_damage": 9 } },
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_autumn_lord_estoc_0" } ]
+  },
+  {
+    "id": "winter_lord_estoc",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "name": { "str": "frostrimed estoc" },
+    "copy-from": "mirror_march_estoc",
+    "description": "This sword is covered in shifting frost and seems to move of its own volition in your hands.",
+    "extend": { "flags": [ "RELIC_PINK" ] },
+    "relative": { "melee_damage": { "cold": 9 } },
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_winter_lord_estoc_0" } ]
+  },
+  {
+    "id": "wild_huntsman_hunting_blade",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "name": { "str": "witchwood sword" },
+    "copy-from": "ch_arming_sword",
+    "looks_like": "bokken",
+    "description": "This sword is made all of a single piece of wood and so black any details are lost.  Some kind of shimmering leather is wrapped around the grip.",
+    "material": [ { "type": "wood", "portion": 1 } ],
+    "price": "1 kUSD 350 USD",
+    "price_postapoc": "500 USD",
+    "proportional": { "melee_damage": { "stab": 0.9 } },
+    "extend": { "flags": [ "WOODEN_WEAPON", "NO_REPAIR", "RELIC_PINK" ] },
+    "delete": { "flags": "CONDUCTIVE" },
+    "relative": { "melee_damage": { "biological": 5 } },
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Xedra_Evolved_wild_huntsman_hunting_blade_0" }
+    ]
+  },
+  {
+    "id": "redcap_club",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "name": { "str": "redcap club" },
+    "copy-from": "mace",
+    "description": "A giant bloodstained club, barely human wieldable with two hands.  You see shadowy tendrils of blood whenever it connects with an enemy, sticking to whatever it hits and burning like acid.",
+    "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE", "BELT_CLIP", "ALWAYS_TWOHAND" ],
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_redcap_club_0" } ]
   }
 ]
