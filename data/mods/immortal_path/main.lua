@@ -6,6 +6,10 @@ require("inline_enchantment_values")
 
 require("sidebar_extensions")
 
+require("cultivation")
+
+require("meditation")
+
 require("craft_recipes")
 
 require("item_group_changes")
