@@ -1,0 +1,48 @@
+local ccb = require("ccb")
+
+ccb.content.define_fixed_overmap_special {
+    id = "goblin_encampment",
+    tiles = {
+        { point = { 0, 0, 0 }, terrain = "goblin_1A_north" },
+        { point = { 0, 0, 1 }, terrain = "goblin_1A_roof_north" },
+        { point = { 1, 0, 0 }, terrain = "goblin_2A_north" },
+        { point = { 1, 0, 1 }, terrain = "goblin_2A_roof_north" },
+        { point = { 2, 0, 0 }, terrain = "goblin_3A_north" },
+        { point = { 2, 0, 1 }, terrain = "goblin_3A_roof_north" },
+        { point = { 3, 0, 0 }, terrain = "goblin_4A_north" },
+        { point = { 3, 0, 1 }, terrain = "goblin_4A_roof_north" },
+        { point = { 4, 0, 0 }, terrain = "goblin_5A_north" },
+        { point = { 4, 0, 1 }, terrain = "goblin_5A_roof_north" },
+        { point = { 0, 1, 0 }, terrain = "goblin_1B_north" },
+        { point = { 0, 1, 1 }, terrain = "goblin_1B_roof_north" },
+        { point = { 1, 1, 0 }, terrain = "goblin_2B_north" },
+        { point = { 1, 1, 1 }, terrain = "goblin_2B_roof_north" },
+        { point = { 2, 1, 0 }, terrain = "goblin_3B_north" },
+        { point = { 2, 1, 1 }, terrain = "goblin_3B_roof_north" },
+        { point = { 3, 1, 0 }, terrain = "goblin_4B_north" },
+        { point = { 3, 1, 1 }, terrain = "goblin_4B_roof_north" },
+        { point = { 4, 1, 0 }, terrain = "goblin_5B_north" },
+        { point = { 4, 1, 1 }, terrain = "goblin_5B_roof_north" },
+        { point = { 0, 2, 0 }, terrain = "goblin_1C_north" },
+        { point = { 0, 2, 1 }, terrain = "goblin_1C_roof_north" },
+        { point = { 1, 2, 0 }, terrain = "goblin_2C_north" },
+        { point = { 1, 2, 1 }, terrain = "goblin_2C_roof_north" },
+        { point = { 2, 2, 0 }, terrain = "goblin_3C_north" },
+        { point = { 2, 2, 1 }, terrain = "goblin_3C_roof_north" },
+        { point = { 3, 2, 0 }, terrain = "goblin_4C_north" },
+        { point = { 3, 2, 1 }, terrain = "goblin_4C_roof_north" },
+        { point = { 4, 2, 0 }, terrain = "goblin_5C_north" },
+        { point = { 4, 2, 1 }, terrain = "goblin_5C_roof_north" },
+    },
+    locations = { "forest_center" },
+    occurrences = { 50, 100 },
+    flags = { "OVERMAP_UNIQUE" },
+}
+
+ccb.content.define_fixed_overmap_special {
+    id = "orc_village",
+    tiles = { { point = { 0, 0, 0 }, terrain = "orc_village_north" } },
+    locations = { "forest_without_trail" },
+    occurrences = { 0, 1 },
+    spawns = { group = "GROUP_ALL_GOBLINS", population = { 10, 30 }, radius = { 1, 10 } },
+}
