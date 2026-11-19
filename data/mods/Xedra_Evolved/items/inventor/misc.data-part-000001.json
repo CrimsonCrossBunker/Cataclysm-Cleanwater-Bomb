@@ -93,31 +93,5 @@
     "flags": [ "ELECTRONIC", "INVENTOR_CRAFTED" ],
     "faults": [ { "fault_group": "electronic_general" } ],
     "tool_ammo": "battery"
-  },
-  {
-    "id": "inventor_gaming_rig",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARTIFACT" ],
-    "name": { "str": "Oneiromantic gaming rig" },
-    "description": "One of the harsh realities of being an inventor is needing to devote a third of your time to sleep and then devote some time to do non-inventor fun things.  This little wonder alleviates this issue by turning your sleep time in entertainment time through application of your deductive power!  Have it on your person while you sleep and your dreams will become anything you want!  No nightmare will disturb you, for you decide if they happen at all!",
-    "material": [ "steel" ],
-    "symbol": "n",
-    "volume": "750 ml",
-    "weight": "1 kg",
-    "use_action": [
-      { "target": "inventor_gaming_rig_on", "need_charges": 1, "msg": "The gaming rig is activated.", "type": "transform" }
-    ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM", "BATTERY_HEAVY" ],
-        "default_magazine": "inventor_heavy_cell"
-      }
-    ],
-    "flags": [ "ELECTRONIC", "INVENTOR_CRAFTED" ],
-    "faults": [ { "fault_group": "electronic_general" } ],
-    "passive_effects": [ { "id": "ench_inventor_gaming_rig" } ],
-    "tool_ammo": "battery"
   }
 ]
