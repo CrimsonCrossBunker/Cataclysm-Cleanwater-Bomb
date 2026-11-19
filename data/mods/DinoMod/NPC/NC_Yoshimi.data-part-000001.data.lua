@@ -1,54 +1,52 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_yoshimi_firstmeet",
-    line = ccb.content.text("You have seen through my ruse.  In retrospect I should have prepared a costume of some kind.  Unimportant!  You haven't attacked me or tried to seduce me so you aren't like the others.  Had any bad headaches recently, strange mood swings, strong urges, desire for human flesh?"),
+    id = "TALK_Yoshimi_1",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "general_meeting_u_met_yoshimi" } }),
+        yes = {
+            choices = {
+                ccb.content.text("How can I help you, survivor?"),
+                ccb.content.text("Seen any interesting specimens?  I mean dinosaurs."),
+                ccb.content.text("I was just imagining you transforming into a tyrannosaurus rex.  Of course that's impossible.  Unless…"),
+                ccb.content.text("Let's do some science."),
+            },
+        },
+        no = ccb.content.text("Please leave me be, I am but a humble muck farmer in this humble muck."),
+    },
     replies = {
         {
-            text = ccb.content.text("Only the usual.  What are you really?"),
-            next_topic = "TALK_yoshimi_what",
+            text = ccb.content.text("You are dressed like a scientist.  Are you a scientist?  You look like a dinosaur.  Are you a dinosaur?  Are you a scientist dinosaur?"),
+            actions = { actions.set_actor_value("speaker", "general_meeting_u_met_yoshimi", "yes") },
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "general_meeting_u_met_yoshimi" } })),
+            next_topic = "TALK_yoshimi_firstmeet",
         },
         {
-            text = ccb.content.text("You are aware of the Cataclysm then?"),
-            next_topic = "TALK_yoshimi_cataclysm",
+            text = ccb.content.text("Die demon mutant!"),
+            actions = {
+                actions.set_actor_value("speaker", "general_meeting_u_met_yoshimi", "yes"),
+                "insult_combat",
+            },
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "general_meeting_u_met_yoshimi" } })),
+            next_topic = "TALK_DONE",
         },
         {
-            text = ccb.content.text("I'd rather not say at this point."),
-            next_topic = "TALK_Yoshimi_1",
+            text = ccb.content.text("How did you get here?"),
+            when = predicates.all({ predicates.any_equal({ "yes", { scope = "speaker", key = "mission_flag_Yos_chemistry" } }) }),
+            next_topic = "TALK_yoshimi_ask_past",
         },
+        {
+            text = ccb.content.text("How are things here?"),
+            when = predicates.all({ predicates.any_equal({ "yes", { scope = "speaker", key = "general_meeting_u_met_yoshimi" } }) }),
+            next_topic = "TALK_yoshimi_ask_mood",
+        },
+        {
+            text = ccb.content.text("You look like you need help.  Can I do something for you?"),
+            when = predicates.all({ predicates.any_equal({ "yes", { scope = "speaker", key = "general_meeting_u_met_yoshimi" } }) }),
+            next_topic = "TALK_MISSION_LIST",
+        },
+        { text = ccb.content.text("Goodbye."), next_topic = "TALK_DONE" },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_yoshimi_what",
-    line = ccb.content.text("I am a hard working professional in a challenging field adjusting to a recent change in circumstances.  That is all you need to know."),
-    replies = { { text = ccb.content.text("Fair enough."), next_topic = "TALK_Yoshimi_1" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_yoshimi_ask_past",
-    line = ccb.content.text("My manager Dr. Tingle made some important mistakes and I have had to make some quick decisions I would rather not go into detail on.  In retrospect our faculties may have been influenced by external factors.  Suffice to say Dr. Tingle is no longer with us but died happy.  And I escaped alive."),
-    replies = {
-        {
-            text = ccb.content.text("Let's talk about something else."),
-            next_topic = "TALK_Yoshimi_1",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_yoshimi_cataclysm",
-    line = ccb.content.text("Look at me.  Yes, I am aware.  The question is what happens next."),
-    replies = {
-        {
-            text = ccb.content.text("Yes.  Let's talk about something else."),
-            next_topic = "TALK_Yoshimi_1",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_yoshimi_ask_mood",
-    line = ccb.content.text("I just got here, actually; I've recently found it wise to move a lot.  There may be some interesting specimens nearby.  I mean dinosaurs."),
-    replies = { { text = ccb.content.text("Interesting."), next_topic = "TALK_Yoshimi_1" } },
 }

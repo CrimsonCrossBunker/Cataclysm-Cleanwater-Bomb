@@ -35,49 +35,5 @@
       { "skill": "ALL", "level": { "mul": [ { "one_in": 3 }, { "sum": [ { "dice": [ 2, 2 ] }, { "constant": -4 } ] } ] } },
       { "skill": "firstaid", "bonus": { "rng": [ 4, 8 ] } }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_Yoshimi_1",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "general_meeting_u_met_yoshimi" } ],
-      "yes": [
-        "How can I help you, survivor?",
-        "Seen any interesting specimens?  I mean dinosaurs.",
-        "I was just imagining you transforming into a tyrannosaurus rex.  Of course that's impossible.  Unless…",
-        "Let's do some science."
-      ],
-      "no": "Please leave me be, I am but a humble muck farmer in this humble muck."
-    },
-    "responses": [
-      {
-        "text": "You are dressed like a scientist.  Are you a scientist?  You look like a dinosaur.  Are you a dinosaur?  Are you a scientist dinosaur?",
-        "effect": { "u_add_var": "general_meeting_u_met_yoshimi", "value": "yes" },
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_yoshimi" } ] } },
-        "topic": "TALK_yoshimi_firstmeet"
-      },
-      {
-        "text": "Die demon mutant!",
-        "effect": [ { "u_add_var": "general_meeting_u_met_yoshimi", "value": "yes" }, "insult_combat" ],
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_yoshimi" } ] } },
-        "topic": "TALK_DONE"
-      },
-      {
-        "text": "How did you get here?",
-        "condition": { "and": [ { "compare_string": [ "yes", { "u_val": "mission_flag_Yos_chemistry" } ] } ] },
-        "topic": "TALK_yoshimi_ask_past"
-      },
-      {
-        "text": "How are things here?",
-        "condition": { "and": [ { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_yoshimi" } ] } ] },
-        "topic": "TALK_yoshimi_ask_mood"
-      },
-      {
-        "text": "You look like you need help.  Can I do something for you?",
-        "condition": { "and": [ { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_yoshimi" } ] } ] },
-        "topic": "TALK_MISSION_LIST"
-      },
-      { "text": "Goodbye.", "topic": "TALK_DONE" }
-    ]
   }
 ]
