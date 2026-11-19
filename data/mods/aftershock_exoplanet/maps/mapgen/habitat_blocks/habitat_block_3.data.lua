@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "afs_habblock_3_roof" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "          [[[[          ",
+            "          [££[          ",
+            "         [[££[[         ",
+            "         [££££[         ",
+            "         [££££[         ",
+            "         [[[[[[         ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "afs_habitat_structure", "afs_habitat_exterior" },
+        terrain = { [" "] = "t_open_air" },
+        fill_terrain = "t_metal_floor",
+    },
+}
