@@ -1,0 +1,30 @@
+[
+  {
+    "id": "mon_feral_human_crowbar",
+    "type": "MONSTER",
+    "name": { "str": "party rocker" },
+    "copy-from": "mon_feral_human_crowbar",
+    "description": "After the event on March 2nd, seemingly ordinary people started coming down with some odd, mass hysteria like dancing.  While some people may have scoffed it off as a silly dance craze, those in the know knew, it was the Party Rock Outbreak.  This one has a drink in hand.",
+    "starting_ammo": { "party_rock": 30 },
+    "special_attacks": [
+      {
+        "type": "gun",
+        "cooldown": 5,
+        "move_cost": 150,
+        "gun_type": "feral_human_thrown_rock",
+        "ammo_type": "party_rock",
+        "no_ammo_sound": "",
+        "fake_skills": [ [ "throw", 3 ] ],
+        "fake_str": 8,
+        "condition": { "not": { "u_has_effect": "maimed_arm" } },
+        "require_targeting_player": false,
+        "ranges": [ [ 2, 5, "DEFAULT" ] ],
+        "description": "The party rocker party rocks!"
+      },
+      { "id": "party_rocker_bottle" },
+      [ "BROWSE", 100 ],
+      [ "EAT_FOOD", 100 ]
+    ],
+    "death_drops": "party_rocker_death_drop_bottle"
+  }
+]
