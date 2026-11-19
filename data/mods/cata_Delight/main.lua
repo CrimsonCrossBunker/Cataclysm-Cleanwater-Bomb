@@ -10,3 +10,5 @@ require("craft_recipes")
 require("effect_types")
 
 require("food_buffs")
+
+require("first_taste")
