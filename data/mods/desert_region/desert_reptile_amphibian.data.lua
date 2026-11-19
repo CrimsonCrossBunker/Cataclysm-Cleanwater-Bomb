@@ -1,0 +1,28 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_gilamon",
+    name = ccb.content.plural_text("Gila monster", "Gila monsters"),
+    description = ccb.content.text("A reptile with aposematic coloration of black and orange that is renowned for an extremely painful venom when it bites."),
+    default_faction = "small_animal",
+    body_type = "lizard",
+    species = { "REPTILE" },
+    volume = "4000 ml",
+    mass = "1814 g",
+    hp = 16,
+    speed = 85,
+    materials = { "iflesh" },
+    symbol = "s",
+    color = "brown",
+    aggression = -50,
+    morale = 60,
+    melee_skill = 5,
+    melee_dice = 1,
+    melee_sides = 4,
+    melee_damage = { { type = "cut", amount = 4 } },
+    harvest = "mammal_tiny",
+    anger_triggers = { "HURT", "PLAYER_CLOSE" },
+    fear_triggers = { "PLAYER_CLOSE" },
+    placate_triggers = { "PLAYER_WEAK" },
+    flags = { "ANIMAL", "CLIMBS", "KEENNOSE", "SEES", "HEARS", "SMELLS", "BADVENOM" },
+}
