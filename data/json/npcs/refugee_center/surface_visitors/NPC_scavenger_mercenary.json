@@ -46,20 +46,5 @@
       { "skill": "survival", "bonus": { "rng": [ 0, 3 ] } },
       { "skill": "speech", "bonus": -4 }
     ]
-  },
-  {
-    "id": "TALK_SCAVENGER_MERC",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "u_is_wearing": "badge_marshal",
-      "yes": { "gendered_line": "I haven't done anything wrong…", "relevant_genders": [ "npc" ] },
-      "no": "…"
-    },
-    "responses": [
-      { "text": "Who are you?", "topic": "TALK_SCAVENGER_MERC_NEW" },
-      { "text": "Any tips for surviving?", "topic": "TALK_SCAVENGER_MERC_TIPS" },
-      { "text": "What would it cost to hire you?", "topic": "TALK_SCAVENGER_MERC_HIRE" },
-      { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
-    ]
   }
 ]
