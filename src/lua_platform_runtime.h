@@ -294,7 +294,7 @@ std::optional<bool> invoke_shop_condition_handler(
     std::string_view mod_id, std::string_view owner_id,
     std::string_view policy_kind, std::string_view selector_kind,
     std::string_view selector_id, std::string_view handler_id,
-    const item *candidate, const npc &shopkeeper );
+    const item *candidate, const npc &shopkeeper, const Character &customer );
 
 /** Dispatch a Lua-authored overmap terrain entry or exit policy. */
 void invoke_overmap_terrain_handler(

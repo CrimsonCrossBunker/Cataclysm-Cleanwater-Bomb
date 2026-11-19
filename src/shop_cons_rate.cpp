@@ -45,7 +45,7 @@ bool icg_entry::matches( item const &it, npc const &beta,
     const_dialogue temp( get_const_talker_for( counterparty ),
                          get_const_talker_for( beta ) );
     return ( !condition || condition( temp ) ) &&
-           ( !platform_condition || platform_condition( it, beta ) ) &&
+           ( !platform_condition || platform_condition( &it, beta, counterparty ) ) &&
            ( itype.is_empty() || it.typeId() == itype ) &&
            ( category.is_empty() || it.get_category_shallow().id == category ) &&
            ( item_group.is_empty() ||
@@ -177,6 +177,28 @@ void shopkeeper_cons_rates::check_all()
     shop_cons_rate_factory.check();
 }
 
+cata::lua_platform::shop_condition_predicate
+cata::lua_platform::detail::read_ordered_shop_condition( const JsonObject &jo,
+        const std::string_view policy, const std::string_view selector_kind,
+        const std::string_view selector_id )
+{
+    const auto marker = jo.get_member_opt( "//ccb_lua_shop_condition" );
+    if( !marker ) {
+        return {};
+    }
+    if( marker->has_source_file() ) {
+        marker->throw_error( "shop condition metadata is reserved for ordered Lua definitions" );
+    }
+    const JsonObject binding = marker->get_object();
+    return [mod = binding.get_string( "mod" ), owner = binding.get_string( "owner" ),
+           handler = binding.get_string( "handler" ), policy = std::string( policy ),
+           kind = std::string( selector_kind ), selector = std::string( selector_id )](
+               const item *candidate, const npc &shopkeeper, const Character &customer ) {
+        return invoke_shop_condition_handler( mod, owner, policy, kind, selector,
+                                              handler, candidate, shopkeeper, customer ).value_or( false );
+    };
+}
+
 icg_entry icg_entry_reader::_part_get_next( JsonObject const &jo )
 {
     icg_entry ret;
@@ -187,6 +209,13 @@ icg_entry icg_entry_reader::_part_get_next( JsonObject const &jo )
     if( jo.has_member( "condition" ) ) {
         read_condition( jo, "condition", ret.condition, false );
     }
+    const char *kind = !ret.itype.is_empty() ? "item" :
+                       !ret.item_group.is_empty() ? "group" :
+                       !ret.category.is_empty() ? "category" : "all";
+    const std::string &selector = !ret.itype.is_empty() ? ret.itype.str() :
+                                  !ret.item_group.is_empty() ? ret.item_group.str() : ret.category.str();
+    ret.platform_condition = cata::lua_platform::detail::read_ordered_shop_condition(
+                                 jo, "npc_class_price_rule", kind, selector );
     return ret;
 }
 icg_entry icg_entry_reader::get_next( JsonValue &jv )

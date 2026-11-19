@@ -213,7 +213,7 @@ bool shopkeeper_item_group::can_sell( npc const &guy, const Character *buyer ) c
 
     return ( fac == nullptr || trust <= guy.get_faction()->trusts_u ) &&
            ( !condition || condition( temp ) ) &&
-           ( !platform_condition || platform_condition( guy ) );
+           ( !platform_condition || platform_condition( nullptr, guy, customer ) );
 }
 
 bool shopkeeper_item_group::can_restock( npc const &guy ) const
@@ -240,6 +240,8 @@ void shopkeeper_item_group::deserialize( const JsonObject &jo )
     if( jo.has_member( "condition" ) ) {
         read_condition( jo, "condition", condition, false );
     }
+    platform_condition = cata::lua_platform::detail::read_ordered_shop_condition(
+                             jo, "npc_class_shop_group", "group", id.str() );
 }
 
 void npc_class::load( const JsonObject &jo, std::string_view )

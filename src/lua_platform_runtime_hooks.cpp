@@ -2688,7 +2688,7 @@ std::optional<bool> invoke_shop_condition_handler(
     const std::string_view mod_id, const std::string_view owner_id,
     const std::string_view policy_kind, const std::string_view selector_kind,
     const std::string_view selector_id, const std::string_view handler_id,
-    const item *candidate, const npc &shopkeeper )
+    const item *candidate, const npc &shopkeeper, const Character &customer )
 {
     const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
     if( !owner || !owner->world_is_ready ) {
@@ -2703,6 +2703,7 @@ std::optional<bool> invoke_shop_condition_handler(
 
     sol::table payload = platform_callback_payload( *owner, {
         { "avatar", static_cast<const Character *>( &get_avatar() ) },
+        { "customer", &customer },
         { "shopkeeper", static_cast<const Character *>( &shopkeeper ) },
         { "item", candidate },
         { "owner_id", std::string( owner_id ) },

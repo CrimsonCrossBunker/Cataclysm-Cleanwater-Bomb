@@ -5276,17 +5276,36 @@ void write_static_npc_distribution_field( JsonOut &json, const sol::table &optio
     }
 }
 
-void write_static_npc_shop_group( JsonOut &json, const sol::table &group )
+void write_static_shop_condition( JsonOut &json, const sol::table &options,
+                                  const std::string &mod, const std::string &class_id )
+{
+    if( const auto handler = options.get<sol::optional<std::string>>( "condition_handler" ) ) {
+        if( handler->empty() || handler->find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument( "shop condition requires a registered Lua handler name" );
+        }
+        json.member( "//ccb_lua_shop_condition" );
+        json.start_object();
+        json.member( "mod", mod );
+        json.member( "owner", class_id );
+        json.member( "handler", *handler );
+        json.end_object();
+    }
+}
+
+void write_static_npc_shop_group( JsonOut &json, const sol::table &group,
+                                 const std::string &mod, const std::string &class_id )
 {
     json.start_object();
     json.member( "group", group.get<std::string>( "id" ) );
     write_placement_member<int>( json, group, "trust", "trust" );
     write_item_fields<bool>( json, group, { { "strict", "strict" }, { "rigid", "rigid" } } );
     write_item_text( json, "refusal", group.raw_get<sol::object>( "refusal" ), false );
+    write_static_shop_condition( json, group, mod, class_id );
     json.end_object();
 }
 
-void write_static_npc_price_rule( JsonOut &json, const sol::table &rule )
+void write_static_npc_price_rule( JsonOut &json, const sol::table &rule,
+                                 const std::string &mod, const std::string &class_id )
 {
     json.start_object();
     write_item_fields<std::string>( json, rule, {
@@ -5296,10 +5315,11 @@ void write_static_npc_price_rule( JsonOut &json, const sol::table &rule )
         { "markup", "markup" }, { "premium", "premium" }, { "fixed_adjustment", "fixed_adj" }
     } );
     write_placement_member<int>( json, rule, "price", "price" );
+    write_static_shop_condition( json, rule, mod, class_id );
     json.end_object();
 }
 
-void write_static_npc_class( JsonOut &json, const sol::table &options )
+void write_static_npc_class( JsonOut &json, const sol::table &options, const std::string &mod )
 {
     write_static_named_definition( json, options );
     write_item_text( json, "job_description", options.raw_get<sol::object>( "job_description" ), false );
@@ -5322,15 +5342,20 @@ void write_static_npc_class( JsonOut &json, const sol::table &options )
     } );
     write_mapgen_range( json, "work_hours", options.raw_get<sol::object>( "work_hours" ) );
     write_item_ids( json, options, { { "proficiencies", "proficiencies" } } );
+    const std::string class_id = options.get<std::string>( "id" );
     const sol::object shop_groups = options.raw_get<sol::object>( "shop_groups" );
     if( shop_groups.get_type() == sol::type::string ) {
         json.member( "shopkeeper_item_group", shop_groups.as<std::string>() );
     } else {
         write_static_catalog_array( json, options, "shop_groups", "shopkeeper_item_group",
-                                    write_static_npc_shop_group );
+        [&mod, &class_id]( JsonOut & out, const sol::table & group ) {
+            write_static_npc_shop_group( out, group, mod, class_id );
+        } );
     }
     write_static_catalog_array( json, options, "price_rules", "shopkeeper_price_rules",
-                                write_static_npc_price_rule );
+    [&mod, &class_id]( JsonOut & out, const sol::table & rule ) {
+        write_static_npc_price_rule( out, rule, mod, class_id );
+    } );
     const sol::object traits = options.raw_get<sol::object>( "traits" );
     if( traits.get_type() == sol::type::string ) {
         json.member( "traits", traits.as<std::string>() );
@@ -5368,11 +5393,9 @@ void write_static_npc_class( JsonOut &json, const sol::table &options )
     } );
 }
 
-using static_catalog_writer = void ( * )( JsonOut &, const sol::table & );
-
-template<typename Loader>
+template<typename Writer, typename Loader>
 auto static_catalog_definition( const std::string &source, const char *type,
-                                static_catalog_writer write_fields, Loader load )
+                                Writer write_fields, Loader load )
 {
     return [&source, type, write_fields, load]( const sol::table & options ) {
         std::ostringstream serialized;
@@ -5534,7 +5557,9 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_npc", static_catalog_definition(
                               resolved.id, "npc", write_static_npc, npc_template::load ) );
     content.set_function( "define_npc_class", static_catalog_definition(
-                              resolved.id, "npc_class", write_static_npc_class, npc_class::load_npc_class ) );
+    resolved.id, "npc_class", [&resolved]( JsonOut & json, const sol::table & options ) {
+        write_static_npc_class( json, options, resolved.id );
+    }, npc_class::load_npc_class ) );
     install_static_dialogue_predicates( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );

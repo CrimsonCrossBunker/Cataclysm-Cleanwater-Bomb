@@ -22,6 +22,14 @@ struct const_dialogue;
 namespace cata::lua_platform
 {
 class content_transaction;
+
+using shop_condition_predicate = std::function<bool( const item *, const npc &, const Character & )>;
+
+namespace detail
+{
+shop_condition_predicate read_ordered_shop_condition( const JsonObject &jo,
+        std::string_view policy, std::string_view selector_kind, std::string_view selector_id );
+} // namespace detail
 } // namespace cata::lua_platform
 
 
@@ -36,7 +44,7 @@ struct icg_entry {
     translation message;
 
     std::function<bool( const_dialogue const & )> condition;
-    std::function<bool( item const &, npc const & )> platform_condition;
+    cata::lua_platform::shop_condition_predicate platform_condition;
 
     bool operator==( icg_entry const &rhs ) const;
     bool matches( item const &it, npc const &beta ) const;

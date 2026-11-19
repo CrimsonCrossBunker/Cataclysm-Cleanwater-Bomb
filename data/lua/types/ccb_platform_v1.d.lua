@@ -6113,7 +6113,7 @@ local FactionDefinition = {}
 ---@field strict? boolean Native strict matching flag.
 ---@field rigid? boolean Native rigid restock flag.
 ---@field refusal? string|LocalizedText Refusal message; plural text is rejected.
----@field condition_handler? string Optional Platform handler used to evaluate this group.
+---@field condition_handler? string Registered predicate receiving CcbNpcShopConditionContext.
 
 ---@class NpcPriceRuleOptions
 ---@field item? string Item id matched by this rule.
@@ -6124,7 +6124,7 @@ local FactionDefinition = {}
 ---@field fixed_adjustment? number Optional fixed adjustment.
 ---@field price? integer Optional fixed price in cents.
 ---@field message? string|LocalizedText Player-facing price-rule message; plural text is rejected.
----@field condition_handler? string Optional Platform handler used to evaluate this rule.
+---@field condition_handler? string Registered predicate receiving CcbNpcShopConditionContext.
 
 ---@class NpcClassDefinitionOptions
 ---@field id string Stable NPC-class id.
@@ -8034,6 +8034,7 @@ function CcbPlatformContent.define_npc(options) end
 ---@field strict? boolean
 ---@field rigid? boolean
 ---@field refusal? string|LocalizedText
+---@field condition_handler? string Registered predicate receiving CcbNpcShopConditionContext.
 
 ---@class StaticNpcPriceRule
 ---@field item? string
@@ -8043,6 +8044,17 @@ function CcbPlatformContent.define_npc(options) end
 ---@field premium? number
 ---@field fixed_adjustment? number
 ---@field price? integer
+---@field condition_handler? string Registered predicate receiving CcbNpcShopConditionContext.
+
+---@class CcbNpcShopConditionContext
+---@field avatar GameHandle The world's avatar.
+---@field customer GameHandle The actual trade counterparty. Restocking uses the avatar.
+---@field shopkeeper GameHandle The NPC whose policy is being evaluated.
+---@field item? GameHandle Candidate item for a price rule.
+---@field owner_id string NPC class or faction ID.
+---@field policy_kind "npc_class_shop_group"|"npc_class_price_rule"|"faction_price_rule"
+---@field selector_kind "item"|"group"|"category"|"all"
+---@field selector_id string
 
 ---@class StaticNpcClassOptions
 ---@field id string Stable NPC-class ID.

@@ -13123,7 +13123,7 @@ std::optional<double> invoke_character_modifier_handler(
 
 std::optional<bool> invoke_shop_condition_handler(
     std::string_view, std::string_view, std::string_view, std::string_view,
-    std::string_view, std::string_view, const item *, const npc & )
+    std::string_view, std::string_view, const item *, const npc &, const Character & )
 {
     return std::nullopt;
 }

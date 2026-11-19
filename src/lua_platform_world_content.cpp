@@ -3664,11 +3664,11 @@ void world_content_transaction::impl::apply_faction()
                                                 !rule.group.empty() ? rule.group : rule.category;
                 const std::string handler = rule.condition_handler;
                 base.platform_condition = [mod, owner_id, selector_kind, selector_id,
-                                                handler]( const item & candidate,
-                const npc & shopkeeper ) {
+                                                handler]( const item * candidate,
+                const npc & shopkeeper, const Character & customer ) {
                     return invoke_shop_condition_handler(
                                mod, owner_id, "faction_price_rule", selector_kind,
-                               selector_id, handler, &candidate, shopkeeper ).value_or( false );
+                               selector_id, handler, candidate, shopkeeper, customer ).value_or( false );
                 };
             }
             faction_price_rule native_rule( base );
@@ -3778,10 +3778,10 @@ void world_content_transaction::impl::apply_npc_class()
                 const std::string group_id = group.id;
                 const std::string handler = group.condition_handler;
                 native_group.platform_condition = [mod, owner_id, group_id, handler](
-                const npc & shopkeeper ) {
+                const item *, const npc & shopkeeper, const Character & customer ) {
                     return invoke_shop_condition_handler(
                                mod, owner_id, "npc_class_shop_group", "group", group_id,
-                               handler, nullptr, shopkeeper ).value_or( false );
+                               handler, nullptr, shopkeeper, customer ).value_or( false );
                 };
             }
             native.shop_item_groups.push_back( std::move( native_group ) );
@@ -3799,11 +3799,11 @@ void world_content_transaction::impl::apply_npc_class()
                                                 !rule.group.empty() ? rule.group : rule.category;
                 const std::string handler = rule.condition_handler;
                 base.platform_condition = [mod, owner_id, selector_kind, selector_id,
-                                                handler]( const item & candidate,
-                const npc & shopkeeper ) {
+                                                handler]( const item * candidate,
+                const npc & shopkeeper, const Character & customer ) {
                     return invoke_shop_condition_handler(
                                mod, owner_id, "npc_class_price_rule", selector_kind,
-                               selector_id, handler, &candidate, shopkeeper ).value_or( false );
+                               selector_id, handler, candidate, shopkeeper, customer ).value_or( false );
                 };
             }
             faction_price_rule native_rule( base );
