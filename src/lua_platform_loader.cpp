@@ -1918,6 +1918,26 @@ void write_item_rot_spawn( JsonOut &json, const sol::table &values )
 
 void write_item_comestible( JsonOut &json, const sol::table &food )
 {
+    if( const auto addictions = food.get<sol::optional<sol::table>>( "addictions" ) ) {
+        if( food.raw_get<sol::object>( "addiction" ).get_type() != sol::type::nil ) {
+            throw std::invalid_argument( "comestible requires either addiction or addictions" );
+        }
+        json.member( "addiction_type" );
+        json.start_array();
+        for( std::size_t i = 1, count = addictions->size(); i <= count; ++i ) {
+            const sol::object entry = addictions->raw_get<sol::object>( i );
+            if( entry.get_type() == sol::type::string ) {
+                json.write( entry.as<std::string>() );
+            } else {
+                const sol::table addiction = entry.as<sol::table>();
+                json.start_object();
+                json.member( "addiction", addiction.get<std::string>( "id" ) );
+                json.member( "potential", addiction.get<int>( "potential" ) );
+                json.end_object();
+            }
+        }
+        json.end_array();
+    }
     write_item_fields<std::string>( json, food, {
         { "kind", "comestible_type" }, { "tool", "tool" }, { "cooks_like", "cooks_like" },
         { "eats_like", "eats_like" }, { "smoking_result", "smoking_result" },

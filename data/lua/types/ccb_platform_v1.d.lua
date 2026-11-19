@@ -8245,6 +8245,10 @@ function CcbPlatformContent.Item(options) end
 ---@field chance? integer
 ---@field amount? [integer, integer]
 
+---@class StaticItemAddiction
+---@field id string Native addiction type.
+---@field potential integer Exposure strength for this addiction.
+
 ---@class StaticItemComestible
 ---@field kind? 'FOOD'|'DRINK'|'MED'|'INVALID' Omit to inherit the native type.
 ---@field tool? string
@@ -8254,6 +8258,7 @@ function CcbPlatformContent.Item(options) end
 ---@field cooked_item? string
 ---@field cooking_energy? string Energy with a native unit.
 ---@field addiction? string
+---@field addictions? (string|StaticItemAddiction)[] Ordered addictions. String entries use addiction_potential. Mutually exclusive with addiction.
 ---@field servings? integer
 ---@field calories? integer
 ---@field fun? integer
@@ -12771,6 +12776,22 @@ function CcbCharactersApi.damage(character, damage_type, amount, options) end
 function CcbCharactersApi.heal(character, body_part, amount) end
 
 ---@param character GameHandle Exact live Character.
+---@param amount integer Native healing amount applied to all body parts.
+---@return CcbResult
+function CcbCharactersApi.heal_all(character, amount) end
+
+---@param character GameHandle Exact live Character.
+---@param amount integer Native damage amount applied to all body parts without an attacker.
+---@return CcbResult
+function CcbCharactersApi.hurt_all(character, amount) end
+
+---@param character GameHandle Exact live Character.
+---@param male string Translated text for a male avatar.
+---@param female string Translated text for a female avatar.
+---@return CcbResult result value is false for a non-avatar Character.
+function CcbCharactersApi.add_memorial(character, male, female) end
+
+---@param character GameHandle Exact live Character.
 ---@param body_part GameId Registered GameId<body_part>; current anatomy membership is not required.
 ---@return CcbResult result value is the native current HP, including the native null-body-part result when this Character lacks the registered part.
 function CcbCharactersApi.hp(character, body_part) end
@@ -14552,6 +14573,21 @@ function CcbNeedsApi.modify_health(character, deltas) end
 ---@param ignore_weariness? boolean Skip the weariness adjustment when true.
 ---@return CcbResult result `value` contains before and after needs snapshots and the applied delta.
 function CcbNeedsApi.modify_calories(character, delta, ignore_weariness) end
+
+---@param character GameHandle Exact live Character.
+---@param capacity_fraction number Target fraction of native stomach capacity.
+---@param calories_per_ml number Kilocalories added per additional milliliter.
+---@return CcbResult result value is the added volume in milliliters, or zero when already full enough.
+function CcbNeedsApi.fill_stomach(character, capacity_fraction, calories_per_ml) end
+
+---@param character GameHandle Exact live Character.
+---@return CcbResult
+function CcbNeedsApi.vomit(character) end
+
+---@param character GameHandle Exact live Character.
+---@param duration TimeDuration Native requested sleep duration.
+---@return CcbResult
+function CcbNeedsApi.fall_asleep(character, duration) end
 
 ---@class CcbFactionsApi
 local CcbFactionsApi = {}
@@ -17135,6 +17171,14 @@ function CcbPlatformEnvironmentQueries.is_night() end
 ---@param position TripointCoord Absolute map-square coordinate; out-of-bounds positions return true, matching map::is_outside.
 ---@return boolean
 function CcbPlatformEnvironmentQueries.is_outside(position) end
+
+---@param position TripointCoord Absolute map-square coordinate.
+---@return boolean Native map passability, including furniture.
+function CcbPlatformEnvironmentQueries.is_passable(position) end
+
+---@param position TripointCoord Absolute map-square coordinate.
+---Apply native Marloss fungal spread at this tile, including its game RNG draws.
+function CcbPlatformEnvironmentQueries.marlossify(position) end
 
 ---@param from TripointCoord Absolute map-square coordinate; the source may be outside the active map.
 ---@param to TripointCoord Absolute map-square coordinate; map::sees returns false when the target is outside the active map.

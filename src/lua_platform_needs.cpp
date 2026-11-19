@@ -8,6 +8,7 @@ extern "C" {
 #include <stomach.h>
 #include <type_id.h>
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -1269,6 +1270,68 @@ void install_need_api(
                    ignore_weariness.value_or( false ),
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    needs.set_function(
+        "fill_stomach",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle, const double capacity_fraction,
+    const double calories_per_ml ) {
+        require_write();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character(
+                                   handle, current_runtime_generation(), current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const double volume = units::to_milliliter( character->stomach.capacity( *character ) ) *
+                              capacity_fraction;
+        if( !std::isfinite( volume ) || volume < 0 ||
+            volume > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument( "services.needs.fill_stomach target volume is outside its native range" );
+        }
+        const int amount_ml = std::max( static_cast<int>( volume ) -
+                                        units::to_milliliter( character->stomach.contains() ), 0 );
+        const double calories = amount_ml * calories_per_ml;
+        if( !std::isfinite( calories ) || calories < 0 ||
+            calories > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument( "services.needs.fill_stomach calories are outside the native range" );
+        }
+        if( amount_ml > 0 ) {
+            character->stomach.mod_calories( static_cast<int>( calories ) );
+            character->stomach.mod_contents( units::from_milliliter( amount_ml ) );
+        }
+        return make_game_value_result( state, sol::make_object( state, amount_ml ) );
+    } );
+    needs.set_function(
+        "vomit",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_write();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character(
+                                   handle, current_runtime_generation(), current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        character->vomit();
+        return make_game_value_result( state, sol::make_object( state, true ) );
+    } );
+    needs.set_function(
+        "fall_asleep",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle, const script_time_duration &duration ) {
+        require_write();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character(
+                                   handle, current_runtime_generation(), current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        character->fall_asleep( duration.to_native() );
+        return make_game_value_result( state, sol::make_object( state, true ) );
     } );
     needs.set_function(
         "get_gut_calories",

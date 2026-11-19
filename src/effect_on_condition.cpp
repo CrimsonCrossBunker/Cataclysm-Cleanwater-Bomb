@@ -239,7 +239,15 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 316> migrated_character_tasks = {{
+const std::array<character_task_migration, 320> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_MARLOSS_VOMIT_AFTER_CONSUMPTION" ),
+          "marloss_vomit_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_MARLOSS_REJECTION_AFTER_CONSUMPTION" ),
+          "marloss_rejection_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_MARLOSS_THRESHOLD_SLEEP" ),
+          "marloss_gateway_sleep_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_MYCUS_THRESHOLD_SLEEP" ),
+          "mycus_assimilation_sleep_due", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_ARVORE_SPELL_EXPERIENCE_INCREASER" ),
           "arvore_practice_due", "arvore_practice_timer" },
         { effect_on_condition_id( "EOC_HOMULLUS_SPELL_EXPERIENCE_INCREASER" ),

@@ -66,6 +66,7 @@ extern "C" {
 #include "event.h"
 #include "event_bus.h"
 #include "field.h"
+#include "fungal_effects.h"
 #include "game.h"
 #include "global_vars.h"
 #include "item.h"
@@ -4138,6 +4139,22 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             return true;
         }
         return here.is_outside( here.get_bub( absolute ) );
+    } );
+    environment.set_function( "is_passable", [require_read, require_environment_absolute_position](
+    const cata::lua_platform::script_tripoint_coord & position ) {
+        require_read();
+        map &here = get_map();
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.is_passable" );
+        return !here.impassable( here.get_bub( absolute ) );
+    } );
+    environment.set_function( "marlossify", [require_write, require_environment_absolute_position](
+    const cata::lua_platform::script_tripoint_coord & position ) {
+        require_write();
+        map &here = get_map();
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.marlossify" );
+        fungal_effects().marlossify( here.get_bub( absolute ) );
     } );
     environment.set_function( "line_of_sight",
                               [require_read, require_environment_absolute_position](

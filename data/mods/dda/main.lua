@@ -518,3 +518,5 @@ require("monster_groups")
 require("tile_interactions")
 
 require("labyrinth_tile_interactions")
+
+require("marloss_consumption")

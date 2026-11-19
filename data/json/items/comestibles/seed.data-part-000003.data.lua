@@ -1,5 +1,43 @@
 local ccb = require("ccb")
 
+-- dummy entry, results are hardcoded
+ccb.content.define_item {
+    id = "marloss_seed",
+    category = "seeds",
+    name = ccb.content.plural_text("Marloss seed", "Marloss seeds"),
+    mass = "177 g",
+    color = "cyan",
+    symbol = ".",
+    description = ccb.content.text("This looks like a sunflower seed the size of your palm.  It has a strong but delicious aroma, but is clearly either mutated or of alien origin.  You could probably plant it."),
+    price = "1 cent",
+    materials = { { id = "dried_vegetable", portions = 10 }, { id = "fruit", portions = 1 } },
+    volume = "175 ml",
+    flags = { "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "MARLOSS" },
+    subtype_order = { "seed", "comestible" },
+    seed = {
+        fruit = "null",
+        plant_name = ccb.content.text("Marloss berry"),
+        growth_stages = {
+            { stage = "GROWTH_SEED", duration = "23 days" },
+            { stage = "GROWTH_SEEDLING", duration = "23 days" },
+            { stage = "GROWTH_MATURE", duration = "23 days" },
+            { stage = "GROWTH_HARVEST", duration = "22 days" },
+            { stage = "GROWTH_OVERGROWN", duration = "1 hour" },
+        },
+    },
+    comestible = {
+        addiction = "marloss_b",
+        kind = "FOOD",
+        quench = 5,
+        healthy = -10,
+        addiction_potential = 5,
+        calories = 174,
+        fun = 30,
+        vitamins = { { id = "fruit_allergen", amount = 1 } },
+        on_consume = "eat_marloss_seed",
+    },
+}
+
 ccb.content.define_item {
     id = "seed_beans",
     copy_from = "dry_beans",

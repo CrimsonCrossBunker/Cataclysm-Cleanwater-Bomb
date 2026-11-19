@@ -61,6 +61,7 @@ extern "C" {
 #include "magic_enchantment.h"
 #include "martialarts.h"
 #include "map.h"
+#include "memorial_logger.h"
 #include "memory_fast.h"
 #include "mongroup.h"
 #include "monster.h"
@@ -5187,6 +5188,55 @@ void install_creature_api(
                    lua_state, handle, body_part, amount,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    characters.set_function(
+        "heal_all",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle, const int amount ) {
+        require_write();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character(
+                                   handle, current_runtime_generation(), current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        character->healall( amount );
+        return make_game_value_result( state, sol::make_object( state, true ) );
+    } );
+    characters.set_function(
+        "hurt_all",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle, const int amount ) {
+        require_write();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character(
+                                   handle, current_runtime_generation(), current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        character->hurtall( amount, nullptr );
+        return make_game_value_result( state, sol::make_object( state, true ) );
+    } );
+    characters.set_function(
+        "add_memorial",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle, const std::string &male,
+    const std::string &female ) {
+        require_write();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Character *character = resolve_exact_character(
+                                         handle, current_runtime_generation(), current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const bool is_avatar = character->is_avatar();
+        if( is_avatar ) {
+            get_memorial().add( male, female );
+        }
+        return make_game_value_result( state, sol::make_object( state, is_avatar ) );
     } );
     characters.set_function(
         "hp",

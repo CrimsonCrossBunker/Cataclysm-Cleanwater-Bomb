@@ -1,6 +1,5 @@
 #include "radio_car_control.h"
 #include "talker.h"
-#include "effect_on_condition.h"
 #include "dialogue.h"
 #include "iuse.h"
 #include "vehicle_heating.h"
@@ -93,6 +92,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "line.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -501,38 +501,37 @@ std::optional<std::string> iuse::can_smoke( const Character &you )
 }
 
 static std::optional<int> activate_legacy_marloss( Character *person, item *food,
-        const effect_on_condition_id &effect )
+        const std::string_view handler )
 {
     if( person == nullptr || food == nullptr ) {
         return std::nullopt;
     }
-    dialogue d( get_talker_for( *person ), std::make_unique<talker>() );
-    effect->activate( d );
-    return food->type->charges_to_use();
+    const int charges = food->type->charges_to_use();
+    cata::lua_platform::invoke_item_consumption_handler( food->typeId().str(), "ccb",
+            handler, *person, *food );
+    return charges;
 }
 
 std::optional<int> iuse::marloss( Character *person, item *food, const tripoint_bub_ms & )
 {
-    const effect_on_condition_id effect( food != nullptr &&
-                                         food->typeId() == itype_id( "wine_marloss" ) ?
-                                         "EOC_MARLOSS_WINE_CONSUME" : "EOC_MARLOSS_BERRY_CONSUME" );
-    return activate_legacy_marloss( person, food, effect );
+    const std::string_view handler = food != nullptr && food->typeId() == itype_id( "wine_marloss" ) ?
+                                     "use_wine_marloss" : "use_marloss_berry";
+    return activate_legacy_marloss( person, food, handler );
 }
 
 std::optional<int> iuse::marloss_seed( Character *person, item *food, const tripoint_bub_ms & )
 {
-    return activate_legacy_marloss( person, food,
-                                    effect_on_condition_id( "EOC_MARLOSS_SEED_CONSUME" ) );
+    return activate_legacy_marloss( person, food, "use_marloss_seed" );
 }
 
 std::optional<int> iuse::marloss_gel( Character *person, item *food, const tripoint_bub_ms & )
 {
-    return activate_legacy_marloss( person, food, effect_on_condition_id( "EOC_MARLOSS_GEL_CONSUME" ) );
+    return activate_legacy_marloss( person, food, "use_marloss_gel" );
 }
 
 std::optional<int> iuse::mycus( Character *person, item *food, const tripoint_bub_ms & )
 {
-    return activate_legacy_marloss( person, food, effect_on_condition_id( "EOC_MYCUS_CONSUME" ) );
+    return activate_legacy_marloss( person, food, "eat_mycus" );
 }
 
 std::optional<int> iuse::sewage( Character *p, item *, const tripoint_bub_ms & )
