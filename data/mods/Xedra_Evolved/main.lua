@@ -258,3 +258,5 @@ require("changeling_tree")
 require("paraclesian_training")
 
 require("technique_predicates")
+
+require("technique_actions")
