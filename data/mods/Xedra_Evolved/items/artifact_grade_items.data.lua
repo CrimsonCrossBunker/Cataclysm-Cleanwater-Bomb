@@ -1,0 +1,98 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "dream_attuning_necklace",
+    name = ccb.content.plural_text("dream-attuning necklace", "dream-attuning necklaces"),
+    description = ccb.content.text("A nice silver necklace.  Wearing it, you feel your aptitude in dream magic increase."),
+    mass = "30 g",
+    volume = "25 ml",
+    price = "120 USD",
+    survival_price = "25 cent",
+    materials = { "silver" },
+    symbol = "[",
+    color = "light_gray",
+    subtype_order = { "armor", "artifact" },
+    armor = {},
+    artifact = { enchantments = { "ITEM_ENCH_Xedra_Evolved_dream_attuning_necklace_0" } },
+}
+
+ccb.content.define_item {
+    id = "mana_recharge_sphere",
+    category = "tools",
+    name = ccb.content.plural_text("sparking sphere", "sparking spheres"),
+    description = ccb.content.text("A small brown sphere, humming with power.  Activate it to recharge your mana."),
+    mass = "55 g",
+    volume = "300 ml",
+    length = "7 cm",
+    price = "55 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "monolith" },
+    symbol = "o",
+    color = "brown",
+    flags = { "NO_UNLOAD", "NO_RELOAD" },
+    pockets = { { kind = "MAGAZINE", ammunition = { glamour_charge = 1 }, airtight = true } },
+    subtype_order = { "tool", "artifact" },
+    tool = { charges_per_use = 1 },
+    artifact = { charge = { recharge_type = "periodic", interval = "24 h", regenerate_ammo = true } },
+    use_actions = { { kind = "cast_spell", spell = "potion_recover_mana_xe", no_fail = true, level = 15 } },
+}
+
+ccb.content.define_item {
+    id = "boann_insignia",
+    category = "tools",
+    name = ccb.content.plural_text("Boann's insignia", "Boann's insignias"),
+    description = ccb.content.text("A small silver disk featuring a cow standing next to a river on one of its sides."),
+    mass = "310 g",
+    volume = "400 ml",
+    price = "23 USD",
+    survival_price = "3 USD 10 cent",
+    materials = { "silver" },
+    symbol = "o",
+    color = "light_gray",
+    flags = { "NO_UNLOAD", "NO_RELOAD" },
+    pockets = { { kind = "MAGAZINE", ammunition = { glamour_charge = 1 }, airtight = true } },
+    subtype_order = { "tool", "artifact" },
+    tool = { charges_per_use = 1 },
+    artifact = { charge = { recharge_type = "periodic", interval = "24 h", regenerate_ammo = true } },
+    use_actions = { { kind = "cast_spell", spell = "spawn_milk_and_hazelnuts", no_fail = true, level = 0 } },
+}
+
+ccb.content.define_item {
+    id = "boann_banner",
+    name = ccb.content.plural_text("Boann's banner", "Boann's banners"),
+    description = ccb.content.text("A back mounted flag identifying the loyalties of troops.  The heraldry on this banner is of white cow standing next to a river."),
+    mass = "633 g",
+    volume = "2 L",
+    price = "39 USD",
+    survival_price = "5 USD",
+    materials = { "fae_cotton" },
+    symbol = "[",
+    looks_like = "state_flag",
+    color = "white",
+    flags = { "BELTED", "NO_UNLOAD", "NO_RELOAD" },
+    pockets = { { kind = "MAGAZINE", ammunition = { glamour_charge = 1 }, airtight = true } },
+    subtype_order = { "tool", "armor", "artifact" },
+    tool = { charges_per_use = 1 },
+    armor = {
+        warmth = 6,
+        thickness = 2,
+        portions = {
+            {
+                encumbrance = { 2, 25 },
+                coverage = 60,
+                covers = { "torso" },
+                subparts = { "torso_hanging_back" },
+            },
+        },
+    },
+    artifact = { charge = { recharge_type = "periodic", interval = "24 h", regenerate_ammo = true } },
+    use_actions = {
+        {
+            kind = "cast_spell",
+            spell = "nine_second_time_stop",
+            no_fail = true,
+            level = 0,
+            need_worn = true,
+        },
+    },
+}
