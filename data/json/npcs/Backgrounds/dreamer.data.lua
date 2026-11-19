@@ -1,0 +1,135 @@
+local ccb = require("ccb")
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_DREAMER_STORY1",
+    line = ccb.content.gendered_line("OK, this is gonna sound crazy but I, like, I knew this was going to happen.  Like, before it did.  You can even ask my psychic except, like, I think she's dead now.  I told her about my dreams a week before the world ended.  Serious!", { "interlocutor" }),
+    replies = {
+        { text = ccb.content.text("What were your dreams?"), next_topic = "BGSS_DREAMER_STORY2" },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_NONE",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_DREAMER_STORY2",
+    line = ccb.content.text("OK, so, the first dream I had every night for three weeks.  I dreamed that I was running through the woods with a stick, fighting giant spiders.  For reals!  Every night."),
+    replies = {
+        {
+            text = ccb.content.text("OK, that doesn't seem that unusual though."),
+            next_topic = "BGSS_DREAMER_STORY3a",
+        },
+        {
+            text = ccb.content.text("Wow, crazy, I can't believe you really dreamed <the_cataclysm>."),
+            next_topic = "BGSS_DREAMER_STORY3b",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_DREAMER_STORY3a",
+    line = ccb.content.text("OK, that's just, like, the beginning though.  So, a week before it happened, after the spider dream, I would get up and go pee and then go back to bed 'cause I was kinda freaked out, right?  And then I'd have this other dream, like, where my boss died and came back from the dead!  And then, at work a few days later, my boss' husband was visiting and he had a heart attack and I heard the next day that he'd come back from the dead!  Just like in my dream, only it was a different person!"),
+    replies = {
+        { text = ccb.content.text("That is kinda strange."), next_topic = "BGSS_DREAMER_STORY4" },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_DREAMER_STORY3b",
+    line = ccb.content.text("RIGHT?!  And there's more!  So, a week before it happened, after the spider dream, I would get up and go pee and then go back to bed 'cause I was kinda freaked out, right?  And then I'd have this other dream, like, where my boss died and came back from the dead!  And then, at work a few days later, my boss' husband was visiting and he had a heart attack and I heard the next day that he'd come back from the dead!  Just like in my dream, only it was a different person!"),
+    replies = {
+        { text = ccb.content.text("That is kinda strange."), next_topic = "BGSS_DREAMER_STORY4" },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_DREAMER_STORY4",
+    line = ccb.content.text("RIGHT?!  Anyway, I still get weird dreams, but not of the future anymore.  Like, I get a lot of creepy dreams since the world ended.  Like, every couple nights, I dream about a field of black stars all around the Earth, and for just a second they all stare at the Earth all at once like a billion tiny black eyeballs.  And then they blink and look away, and then in my dream the Earth is a black star like all the other ones, and I'm stuck on it still, all alone and freakin' out.  That's the worst one.  There are a few others."),
+    replies = {
+        {
+            text = ccb.content.text("Tell me some more of your weird dreams."),
+            next_topic = "BGSS_DREAMER_STORY5",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_DREAMER_STORY5",
+    line = ccb.content.gendered_line("OK, so, sometimes I dream that I am a zombie.  I just don't realize it.  And I just act normal to myself and I see zombies as normal people and normal people as zombies.  When I wake up I know it's fake though because if it were real, there would be way more normal people.  Because they'd actually be zombies.  And everyone is a zombie now.", { "interlocutor" }),
+    replies = {
+        {
+            text = ccb.content.text("I think we all have dreams like that now."),
+            next_topic = "BGSS_DREAMER_STORY6",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_DREAMER_STORY6",
+    line = ccb.content.text("Yeah, probably.  Sometimes I also dream that I am just like, a mote of dust, floating in a vast, uncaring galaxy.  That one makes me wish that my pot dealer, Filthy Dan, hadn't been eaten by a giant crab monster."),
+    replies = {
+        {
+            text = ccb.content.text("Poor Filthy Dan.  <done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        {
+            text = ccb.content.text("Thanks for telling me that stuff.  <end_talking>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "CWH_DREAMER_IDEAS1",
+    line = ccb.content.gendered_line("So, like, there were some really bad riots, okay?  Everyone got really violent and nasty, and to be honest, I was on a bit of a spirit journey for a lot of it and I don't really remember too well.  But the weirdest part is, nobody even *cared* about each other.  It's like all our caring got sucked away.  I think it was some kind of negative energy thing.  And also that made the dead, like, come back to life and stuff.  Plus, like, there were some monsters?  I'm not really sure how they fit in.", { "interlocutor" }),
+    replies = {
+        {
+            text = ccb.content.text("You seem to know a lot, what do you think caused it all?"),
+            next_topic = "CWH_DREAMER_IDEAS2",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_NONE",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "CWH_DREAMER_IDEAS2",
+    line = ccb.content.text("That's a tough one, but I keep thinking back to this dream I had like, a year before it all started.  I dreamed there was this big ball of evil energy that was just waiting to suck up all the good thoughts on the earth and turn us into monsters and things?  So I guess that's what I think happened.  Everything else just seems too far-fetched, you know?"),
+    replies = {
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
