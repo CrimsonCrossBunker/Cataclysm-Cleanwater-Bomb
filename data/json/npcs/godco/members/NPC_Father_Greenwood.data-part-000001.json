@@ -1,18 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": [ "TALK_GODCO_Greenwood_1", "TALK_GODCO_Greenwood_2", "TALK_GODCO_Greenwood_Firstmeet" ],
-    "responses": [
-      {
-        "text": "I'm seeking forgiveness, Father.  I've made mistakes in my life that I can never take back.",
-        "effect": [ "morale_chat_activity", { "u_add_effect": "godco_confessed", "duration": "24 h" } ],
-        "condition": { "and": [ { "not": { "u_has_effect": "godco_confessed" } }, { "not": { "u_has_flag": "PSYCHOPATH" } } ] },
-        "topic": "TALK_GODCO_Greenwood_Confessed"
-      }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_GODCO_Greenwood_1",
     "dynamic_line": {
       "math": [ "n_npc_anger() >= 8" ],
