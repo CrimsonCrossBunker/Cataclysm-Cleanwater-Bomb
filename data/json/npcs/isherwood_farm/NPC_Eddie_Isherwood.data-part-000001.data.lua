@@ -1,16 +1,29 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ISHERWOOD_EDDIE_Marshal",
-    line = ccb.content.text("*spits on the ground.  \"Didn't much care for the government and the cops before everything happened, care for them quite a bit less now.  We've had a run-in or two with the folks calling themselves the 'Old Guard'.  That's all I care to say about it.  They'll never be welcome on my land and I don't believe for a second that they didn't cause all this in the first place.\""),
+    id = "TALK_ISHERWOOD_EDDIE_ConvincedMarshal",
+    line = {
+        joined = {
+            ccb.content.text("*looks up warily as you approach"),
+            {
+                when = predicates.wears("speaker", "badge_marshal"),
+                yes = ccb.content.text(", looking at your marshal badge immediately.  \"Nope.  Agreement or not, I'm not talking to you while you're wearing their sign, and I don't appreciate the disrespect.\""),
+                no = ccb.content.text(", his eyes darting to the spot where your marshal badge would be.  \"What now?\""),
+            },
+        },
+    },
     replies = {
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_ISHERWOOD_EDDIE_TOPICS",
+            text = ccb.content.text("…[Leave.]"),
+            next_topic = "TALK_DONE",
+            opinion = { trust = -10, value = -10 },
+            when = predicates.wears("speaker", "badge_marshal"),
         },
         {
-            text = ccb.content.text("Thanks for telling me.  <end_talking_bye>"),
-            next_topic = "TALK_DONE",
+            text = ccb.content.text("What's the deal with you and the Old Guard, anyway?"),
+            next_topic = "TALK_ISHERWOOD_EDDIE_Marshal",
+            when = predicates.negate(predicates.wears("speaker", "badge_marshal")),
         },
     },
 }

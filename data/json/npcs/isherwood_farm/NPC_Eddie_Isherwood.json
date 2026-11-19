@@ -147,32 +147,5 @@
       },
       { "text": "Fine, I'm gone.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ISHERWOOD_EDDIE_ConvincedMarshal",
-    "dynamic_line": {
-      "concatenate": [
-        "*looks up warily as you approach",
-        {
-          "u_is_wearing": "badge_marshal",
-          "yes": ", looking at your marshal badge immediately.  \"Nope.  Agreement or not, I'm not talking to you while you're wearing their sign, and I don't appreciate the disrespect.\"",
-          "no": ", his eyes darting to the spot where your marshal badge would be.  \"What now?\""
-        }
-      ]
-    },
-    "responses": [
-      {
-        "text": "…[Leave.]",
-        "topic": "TALK_DONE",
-        "opinion": { "trust": -10, "value": -10 },
-        "condition": { "u_is_wearing": "badge_marshal" }
-      },
-      {
-        "text": "What's the deal with you and the Old Guard, anyway?",
-        "topic": "TALK_ISHERWOOD_EDDIE_Marshal",
-        "condition": { "not": { "u_is_wearing": "badge_marshal" } }
-      }
-    ]
   }
 ]
