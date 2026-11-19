@@ -1,0 +1,45 @@
+[
+  {
+    "id": "horn_bicycle",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "veh_parts",
+    "name": { "str": "bicycle horn" },
+    "description": "A simple bulb horn found on many bicycles.  Activate it to honk.  Honk honk.",
+    "weight": "170 g",
+    "volume": "500 ml",
+    "price": "4 USD",
+    "price_postapoc": "10 cent",
+    "material": [ "plastic", "aluminum" ],
+    "symbol": ";",
+    "color": "light_gray",
+    "use_action": {
+      "type": "manualnoise",
+      "moves": 100,
+      "noise": 15,
+      "noise_message": "honk.",
+      "noise_id": "misc",
+      "noise_variant": "horn_bicycle",
+      "use_message": "You honk the bicycle horn.",
+      "//": "Use of %s not currently supported."
+    }
+  },
+  {
+    "id": "permanent_marker",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "permanent marker" },
+    "description": "A King Size™ industrial-strength permanent marker, about halfway between a typical marker and a can of spray paint in size.  Activate it to write something down.  However, writing \"Elbereth\" probably won't help you.",
+    "weight": "28 g",
+    "volume": "50 ml",
+    "price": "5 USD",
+    "price_postapoc": "10 cent",
+    "material": [ "plastic" ],
+    "symbol": ",",
+    "color": "dark_gray",
+    "charges_per_use": 1,
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "permanent_ink": 500 }, "watertight": true, "rigid": true } ],
+    "use_action": { "type": "inscribe", "verb": "Write", "gerund": "Written", "on_terrain": true, "material_restricted": false },
+    "flags": [ "WRITE_MESSAGE", "NO_RELOAD", "NO_UNLOAD" ]
+  }
+]
