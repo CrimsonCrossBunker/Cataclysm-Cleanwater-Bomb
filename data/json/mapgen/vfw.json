@@ -89,52 +89,5 @@
       "vehicles": { "Á": { "vehicle": "parking_garage", "chance": 20, "rotation": 90 }, "É": { "vehicle": "wheelchair", "chance": 50 } },
       "nested": { "§": { "chunks": [ "fire_extinguisher" ] } }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "s_vfw_roof",
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        " --------------         ",
-        " -............-         ",
-        " -............-         ",
-        " -............-         ",
-        " -............-         ",
-        " -............-         ",
-        " -............-         ",
-        " -............-------   ",
-        " -..................-   ",
-        " -...............=..-   ",
-        " -..&...............-   ",
-        " -..................-   ",
-        " -----------5--------   ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "place_nested": [
-        {
-          "chunks": [
-            [ "null", 20 ],
-            [ "roof_2x2_utilities_b", 15 ],
-            [ "roof_2x2_utilities_c", 5 ],
-            [ "roof_2x2_utilities_d", 40 ],
-            [ "roof_2x2_utilities", 50 ]
-          ],
-          "x": [ 4, 10 ],
-          "y": [ 11, 14 ]
-        }
-      ]
-    }
   }
 ]
