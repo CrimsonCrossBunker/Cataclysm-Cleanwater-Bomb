@@ -36,31 +36,5 @@
       [ "LIGHTFUR", 100 ],
       [ "HOOVES", 100 ]
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_WARRENER",
-    "dynamic_line": { "u_is_wearing": "badge_marshal", "yes": "Are you here to protect us?", "no": "Pleased to meet you." },
-    "responses": [
-      { "text": "I'm just trying to get by.", "topic": "TALK_WARRENER_TRYING" },
-      { "text": "What are you doing here?", "topic": "TALK_WARRENER_DOING" },
-      { "text": "Heard anything about the outside world?", "topic": "TALK_WARRENER_WORLD" },
-      { "text": "You look different?", "topic": "TALK_WARRENER_MUTATION" },
-      { "text": "Anything I can help with?", "topic": "TALK_MISSION_LIST" },
-      { "text": "About that work…", "topic": "TALK_MISSION_INQUIRE", "condition": "has_assigned_mission" },
-      {
-        "text": "About that work…",
-        "topic": "TALK_MISSION_LIST_ASSIGNED",
-        "condition": "has_many_assigned_missions"
-      },
-      {
-        "text": "Any jobs you need done?",
-        "condition": { "and": [ { "not": "has_assigned_mission" }, { "not": "has_many_assigned_missions" } ] },
-        "topic": "TALK_MISSION_LIST"
-      },
-      { "text": "Do you need any resources?", "topic": "TALK_LAPIN_RESOURCES" },
-      { "text": "Where did you get that giant firefly terrarium?", "topic": "TALK_LAPIN_FIREFLY" },
-      { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
-    ]
   }
 ]

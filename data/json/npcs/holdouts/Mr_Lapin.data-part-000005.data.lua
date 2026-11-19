@@ -1,26 +1,37 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_LAPIN_RESOURCES",
-    line = ccb.content.text("The bunnies and I love adding some diversity to the menu and I always need materials for patching fences."),
-    repeat_replies = {
+    id = "TALK_WARRENER_MUTATION",
+    line = {
+        when = predicates.has_any_trait("speaker", { "CANINE_EARS", "LUPINE_EARS", "FELINE_EARS", "URSINE_EARS", "ELFA_EARS", "LIGHTFUR" }),
+        yes = ccb.content.text("Same way you got yours, I bet."),
+        no = ccb.content.text("CRISPR?  Radiation?  Something in the water?  Maybe it was bunnies."),
+    },
+    replies = {
+        { text = ccb.content.text("So it goes."), next_topic = "TALK_WARRENER" },
         {
-            items = {
-                "log", "2x4", "wood_panel", "wood_sheet", "material_sand", "clay_lump", "nail",
-                "lc_wire", "apple", "banana", "orange", "blueberries", "strawberries", "raspberries",
-                "huckleberries", "mulberries", "plums", "carrot", "cabbage", "lettuce", "onion",
-            },
-            reply = { text = ccb.content.text("Delivering <topic_item>."), next_topic = "TALK_DELIVER_ASK" },
+            text = ccb.content.text("You're disgusting."),
+            next_topic = "TALK_WARRENER_MUTATION_INSULT",
         },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_WARRENER_MUTATION_INSULT",
+    line = {
+        when = predicates.has_any_trait("speaker", { "CANINE_EARS", "LUPINE_EARS", "FELINE_EARS", "URSINE_EARS", "ELFA_EARS", "LIGHTFUR" }),
+        yes = ccb.content.text("I'm very sorry to tell you this, but you should look in a mirror."),
+        no = ccb.content.text("Insulting people who could help you is unlikely to aid survival."),
     },
     replies = {
         {
-            text = ccb.content.text("That's all for now.  <done_conversation_section>"),
-            next_topic = "TALK_WARRENER",
-        },
-        {
-            text = ccb.content.text("That's all for now.  <end_talking_leave>"),
-            next_topic = "TALK_DONE",
+            text = ccb.content.text("…"),
+            success = {
+                native_actions = { "end_conversation" },
+                opinion = { trust = -1, fear = -2, value = -1, anger = 1 },
+                next_topic = "TALK_DONE",
+            },
         },
     },
 }
