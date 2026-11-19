@@ -34,36 +34,5 @@
       "success_lie": "…",
       "failure": "…"
     }
-  },
-  {
-    "id": "BEM_JABBERWOCK_1",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "u_has_mission": "BEM_jabberwock_mission",
-      "yes": "&You see one more traumatized face, all too many and too frequent for any help to be worthwhile.",
-      "no": {
-        "compare_string": [ "yes", { "u_val": "dialogue_bem_completed_bem_jabberwock" } ],
-        "yes": "&You see one more traumatized face, all too many and too frequent for any help to be worthwhile.",
-        "no": {
-          "gendered_line": "&The mercenary stares intently at a stain in the ceiling, firmly clutching a now cold cup of soup.  No one else seems to be very concerned about this.",
-          "relevant_genders": [ "npc" ]
-        }
-      }
-    },
-    "responses": [
-      {
-        "text": "Attempt a friendly approach.",
-        "topic": "BEM_JABBERWOCK_2",
-        "condition": {
-          "not": {
-            "or": [
-              { "u_has_mission": "BEM_jabberwock_mission" },
-              { "compare_string": [ "yes", { "u_val": "dialogue_bem_completed_bem_jabberwock" } ] }
-            ]
-          }
-        }
-      },
-      { "text": "Leave the traveler to their trauma.", "topic": "TALK_DONE" }
-    ]
   }
 ]
