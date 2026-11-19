@@ -61,26 +61,5 @@
     ],
     "tick_action": [ "MP3_ON" ],
     "extend": { "flags": [ "TRADER_AVOID", "SPAWN_ACTIVE" ] }
-  },
-  {
-    "id": "fcl_atomic_smartphone_flashlight",
-    "copy-from": "fcl_atomic_smartphone",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "atomic smartphone - Flashlight", "str_pl": "atomic smartphones - Flashlight" },
-    "revert_to": "fcl_atomic_smartphone",
-    "use_action": [
-      "PORTABLE_GAME",
-      "E_FILE_DEVICE",
-      "EBOOKSAVE",
-      {
-        "target": "fcl_atomic_smartphone",
-        "msg": "You deactivate the flashlight app.",
-        "menu_text": "Turn off flashlight",
-        "type": "transform"
-      }
-    ],
-    "light": 25,
-    "extend": { "flags": [ "TRADER_AVOID", "SPAWN_ACTIVE" ] }
   }
 ]
