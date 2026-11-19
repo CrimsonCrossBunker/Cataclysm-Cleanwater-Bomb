@@ -36,6 +36,7 @@ require("morale_types")
 
 require("flags")
 require("monster_flags")
+require("terrain_transforms")
 
 require("speech")
 

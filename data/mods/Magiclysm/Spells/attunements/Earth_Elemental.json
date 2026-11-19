@@ -1,10 +1,5 @@
 [
   {
-    "type": "ter_furn_transform",
-    "id": "quake_transform",
-    "furniture": [ { "result": "f_rubble", "valid_furniture": [ "f_null" ], "message": "The earth is upheaved!" } ]
-  },
-  {
     "id": "quake",
     "type": "SPELL",
     "name": "Quake",
