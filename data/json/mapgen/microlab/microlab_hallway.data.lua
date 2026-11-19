@@ -279,3 +279,278 @@ ccb.content.define_mapgen {
         palettes = { "microlab" },
     },
 }
+
+-- These chunks spawn theme-specific monsters.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "microlab_generic_hallway_straight",
+    layout = {
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                choices = {
+                    { id = "microlab_generic_hallway_straight_tile", weight = 98 },
+                    { id = "microlab_generic_hallway_straight_isolated_tile", weight = 2 },
+                },
+            },
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "micolab_meat_pools",
+                        microlab_serum = "null",
+                        microlab_generic = "null",
+                    },
+                },
+            },
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "microlab_meat_unique_foe",
+                        microlab_serum = "microlab_serum_unique_foe",
+                        microlab_generic = "microlab_unique_foe",
+                    },
+                },
+            },
+            {
+                x = 0,
+                y = 0,
+                neighbors = { north_west = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 23,
+                y = 0,
+                neighbors = { north_east = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 23,
+                y = 23,
+                neighbors = { south_east = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 0,
+                y = 23,
+                neighbors = { south_west = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+        },
+        monster_placements = {
+            {
+                group = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "GROUP_MEATLAB",
+                        microlab_serum = "GROUP_SERUM_LAB",
+                        microlab_generic = "GROUP_LAB",
+                    },
+                },
+                chance = 80,
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 0, 1 },
+            },
+        },
+        fill_terrain = "t_strconc_floor",
+    },
+}
+
+-- These chunks spawn theme-specific monsters.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "microlab_generic_hallway_curved",
+    layout = {
+        nested = {
+            { x = 0, y = 0, id = "microlab_generic_hallway_curved_tile" },
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "microlab_meat_unique_foe",
+                        microlab_serum = "microlab_serum_unique_foe",
+                        microlab_generic = "microlab_unique_foe",
+                    },
+                },
+            },
+            {
+                x = 0,
+                y = 0,
+                neighbors = { north_west = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 23,
+                y = 0,
+                neighbors = { north_east = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 23,
+                y = 23,
+                neighbors = { south_east = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 0,
+                y = 23,
+                neighbors = { south_west = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+        },
+        monster_placements = {
+            {
+                group = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "GROUP_MEATLAB",
+                        microlab_serum = "GROUP_SERUM_LAB",
+                        microlab_generic = "GROUP_LAB",
+                    },
+                },
+                chance = 80,
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 2, 5 },
+            },
+        },
+        fill_terrain = "t_strconc_floor",
+    },
+}
+
+-- These chunks spawn theme-specific monsters.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "microlab_generic_hallway_tee",
+    layout = {
+        nested = {
+            { x = 0, y = 0, id = "microlab_generic_hallway_tee_tile" },
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "microlab_meat_unique_foe",
+                        microlab_serum = "microlab_serum_unique_foe",
+                        microlab_generic = "microlab_unique_foe",
+                    },
+                },
+            },
+            {
+                x = 0,
+                y = 0,
+                neighbors = { north_west = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 23,
+                y = 0,
+                neighbors = { north_east = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 23,
+                y = 23,
+                neighbors = { south_east = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 0,
+                y = 23,
+                neighbors = { south_west = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+        },
+        monster_placements = {
+            {
+                group = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "GROUP_MEATLAB",
+                        microlab_serum = "GROUP_SERUM_LAB",
+                        microlab_generic = "GROUP_LAB",
+                    },
+                },
+                chance = 80,
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 2, 5 },
+            },
+        },
+        fill_terrain = "t_strconc_floor",
+    },
+}
+
+-- These chunks spawn theme-specific monsters.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "microlab_generic_hallway_four_way",
+    layout = {
+        nested = {
+            { x = 0, y = 0, id = "microlab_generic_hallway_four_way_tile" },
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "microlab_meat_unique_foe",
+                        microlab_serum = "microlab_serum_unique_foe",
+                        microlab_generic = "microlab_unique_foe",
+                    },
+                },
+            },
+            {
+                x = 0,
+                y = 0,
+                neighbors = { north_west = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 23,
+                y = 0,
+                neighbors = { north_east = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 23,
+                y = 23,
+                neighbors = { south_east = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 0,
+                y = 23,
+                neighbors = { south_west = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+        },
+        monster_placements = {
+            {
+                group = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "GROUP_MEATLAB",
+                        microlab_serum = "GROUP_SERUM_LAB",
+                        microlab_generic = "GROUP_LAB",
+                    },
+                },
+                chance = 80,
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 2, 5 },
+            },
+        },
+        fill_terrain = "t_strconc_floor",
+    },
+}

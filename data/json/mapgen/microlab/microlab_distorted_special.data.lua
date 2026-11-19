@@ -153,3 +153,79 @@ ccb.content.define_mapgen {
         monster_placements = { { id = "mon_mech_lifter", x = 17, y = 13, chance = 75 } },
     },
 }
+
+-- These chunks spawn theme-specific monsters.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "microlab_generic_special_room" },
+    layout = {
+        nested = {
+            { x = 0, y = 0, id = "microlab_final_special_tile" },
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "micolab_meat_pools",
+                        microlab_serum = "null",
+                        microlab_generic = "null",
+                    },
+                },
+            },
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "microlab_meat_unique_foe",
+                        microlab_serum = "microlab_serum_unique_foe",
+                        microlab_generic = "microlab_unique_foe",
+                    },
+                },
+            },
+            {
+                x = 0,
+                y = 0,
+                neighbors = { north_west = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 23,
+                y = 0,
+                neighbors = { north_east = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 23,
+                y = 23,
+                neighbors = { south_east = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+            {
+                x = 0,
+                y = 23,
+                neighbors = { south_west = "microlab" },
+                otherwise = { "concrete_corner" },
+            },
+        },
+        monster_placements = {
+            {
+                group = {
+                    select = { parameter = "labtype", fallback = "microlab_generic" },
+                    cases = {
+                        microlab_meat = "GROUP_MEATLAB",
+                        microlab_serum = "GROUP_SERUM_LAB",
+                        microlab_generic = "GROUP_MICROLAB",
+                    },
+                },
+                chance = 80,
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 2, 7 },
+            },
+        },
+        fill_terrain = "t_strconc_floor",
+    },
+}

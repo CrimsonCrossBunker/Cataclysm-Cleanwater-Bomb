@@ -283,3 +283,96 @@ ccb.content.define_mapgen {
         monster_placements = { { group = "GROUP_TRIFFID", x = { 0, 23 }, y = { 0, 23 }, repetitions = { 6, 12 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "microlab_unique_foe",
+    layout = {
+        size = { width = 24, height = 24 },
+        nested = { { x = 0, y = 0, id = { parameter = "unique_foe", fallback = "mnm_more_density" } } },
+        parameters = {
+            unique_foe = {
+                value_type = "nested_mapgen",
+                default = {
+                    weighted = {
+                        { id = "mnm_more_density", weight = 10 },
+                        { id = "mnm_acid_zombies", weight = 10 },
+                        { id = "mnm_hunter_zombies", weight = 10 },
+                        { id = "mnm_rust_zombies", weight = 10 },
+                        { id = "mnm_phase_zombies", weight = 10 },
+                        { id = "mnm_raptor_zombies", weight = 10 },
+                        { id = "mnm_robots", weight = 10 },
+                        { id = "mnm_mutants", weight = 10 },
+                        { id = "mnm_wasps", weight = 10 },
+                        { id = "mnm_leech_plants", weight = 10 },
+                        { id = "mnm_slimes", weight = 10 },
+                        { id = "mnm_shadows", weight = 10 },
+                        { id = "mnm_vampire", weight = 10 },
+                        { id = "mnm_triffids", weight = 5 },
+                        { id = "mnm_fungaloids", weight = 10 },
+                        { id = "mnm_migo", weight = 10 },
+                        { id = "mnm_tindalos", weight = 2 },
+                        { id = "mnm_yrax", weight = 2 },
+                    },
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "microlab_serum_unique_foe",
+    layout = {
+        size = { width = 24, height = 24 },
+        nested = { { x = 0, y = 0, id = { parameter = "unique_foe_serum", fallback = "mnm_more_density" } } },
+        parameters = {
+            unique_foe_serum = {
+                value_type = "nested_mapgen",
+                default = {
+                    weighted = {
+                        { id = "mnm_more_density", weight = 10 },
+                        { id = "mnm_acid_zombies", weight = 10 },
+                        { id = "mnm_hunter_zombies", weight = 10 },
+                        { id = "mnm_rust_zombies", weight = 10 },
+                        { id = "mnm_raptor_zombies", weight = 10 },
+                        { id = "mnm_medical_zombies", weight = 20 },
+                        { id = "mnm_robots", weight = 10 },
+                        { id = "mnm_wasps", weight = 10 },
+                        { id = "mnm_slimes", weight = 5 },
+                        { id = "mnm_triffids", weight = 5 },
+                        { id = "mnm_migo", weight = 25 },
+                        { id = "mnm_yrax", weight = 3 },
+                    },
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "microlab_meat_unique_foe",
+    layout = {
+        size = { width = 24, height = 24 },
+        nested = { { x = 0, y = 0, id = { parameter = "unique_foe_meat", fallback = "mnm_more_density" } } },
+        parameters = {
+            unique_foe_meat = {
+                value_type = "nested_mapgen",
+                default = {
+                    weighted = {
+                        { id = "mnm_acid_zombies", weight = 10 },
+                        { id = "mnm_rust_zombies", weight = 10 },
+                        { id = "mnm_robots", weight = 10 },
+                        { id = "mnm_leech_plants", weight = 10 },
+                        { id = "mnm_slimes", weight = 10 },
+                        { id = "mnm_shadows", weight = 10 },
+                        { id = "mnm_triffids", weight = 5 },
+                        { id = "mnm_migo", weight = 10 },
+                        { id = "mnm_yrax", weight = 2 },
+                    },
+                },
+            },
+        },
+    },
+}
