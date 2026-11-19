@@ -1,0 +1,27 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "dhampir_horse_blood_hungry_polymorph_spell",
+    name = ccb.content.text("Hungry for your blood"),
+    description = ccb.content.text("Transforms your dhampir horse to a blood-hungry monster."),
+    valid_targets = { "ally" },
+    flags = { "TRANSFORMATION_SPELL", "NO_LEGS", "NO_PROJECTILE" },
+    effect = "targeted_polymorph",
+    effect_data = "mon_negative_polymorph_arion",
+    targeted_monsters = { "mon_beneficial_polymorph_arion" },
+    shape = "blast",
+    skill = "deduction",
+    spell_class = "VAMPIRE_BLOOD_ARTS",
+    magic_type = "xe_vampire_blood_powers",
+    base_casting_time = 150,
+    base_energy_cost = 150,
+    difficulty = 5,
+    max_level = 20,
+    min_damage = 20,
+    max_damage = 40,
+    damage_increment = 2,
+    damage_type = "pure",
+    min_range = 60,
+    max_range = 60,
+    range_increment = 1.5,
+}

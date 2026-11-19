@@ -1,0 +1,21 @@
+[
+  {
+    "id": "hedge_clairvoyance_cone",
+    "type": "SPELL",
+    "name": "To See Beyond the Barriers",
+    "description": "Gain a brief vision of what lies beyond a wall or a doorway.",
+    "message": "You close your eyes and place the shards of glass over them and press, just slightly.  As the pain blooms and the blood trickles, you see beyond.",
+    "flags": [ "VERBAL", "SOMATIC", "NO_FAIL" ],
+    "magic_type": "xe_hedge_magick",
+    "valid_targets": [ "self" ],
+    "difficulty": 40,
+    "spell_class": "HEDGE_MAGIC",
+    "skill": "survival",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_HEDGE_CLAIRVOYANCE_CONE",
+    "shape": "blast",
+    "components": "spell_components_hedge_clairvoyance_cone",
+    "max_level": 1,
+    "base_casting_time": 1000
+  }
+]

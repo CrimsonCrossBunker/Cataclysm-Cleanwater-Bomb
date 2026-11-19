@@ -1,0 +1,26 @@
+[
+  {
+    "id": "dream_drainer_maker",
+    "type": "SPELL",
+    "name": { "str": "Create the dream-drainer", "//~": "NO_I18N" },
+    "description": {
+      "str": "This spell is used by the catalyst to summon the dream-drainer.  It's not intended to be known by the player.",
+      "//~": "NO_I18N"
+    },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "hostile", "ally" ],
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_SUMMON_DREAM_DRAINER",
+    "shape": "blast",
+    "base_casting_time": 5,
+    "flags": [ "NO_HANDS", "SILENT", "NO_FAIL" ],
+    "skill": "deduction",
+    "spell_class": "NONE",
+    "difficulty": 0,
+    "min_range": 5,
+    "max_range": 5,
+    "//": "this list is intended to contain all monsters that can be described as a mosquito.",
+    "targeted_monster_ids": [ "mon_mosquito_small", "mon_mosquito_giant", "mon_mosquito_mega", "mon_mosquito_larva" ]
+  }
+]

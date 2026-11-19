@@ -1,0 +1,17 @@
+[
+  {
+    "id": "XAEA_mod_moves",
+    "type": "SPELL",
+    "name": { "str": "Artifact Add Moves", "//~": "NO_I18N" },
+    "description": { "str": "Gives roughly 15-25 seconds of free actions.  Inverse to current speed compared to 100.", "//~": "NO_I18N" },
+    "valid_targets": [ "self" ],
+    "flags": [ "SILENT", "RANDOM_DAMAGE", "IGNORE_WALLS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "effect": "mod_moves",
+    "shape": "blast",
+    "damage_type": "bash",
+    "min_damage": { "math": [ "1500 / u_speed() * 100" ] },
+    "max_damage": { "math": [ "2500 / u_speed() * 100" ] },
+    "message": "The world around you silently stops.",
+    "sound_description": ""
+  }
+]

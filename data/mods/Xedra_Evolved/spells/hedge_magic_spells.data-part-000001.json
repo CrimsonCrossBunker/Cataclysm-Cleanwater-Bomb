@@ -1,0 +1,25 @@
+[
+  {
+    "id": "hedge_make_plants_grow",
+    "type": "SPELL",
+    "name": "To Bring Health to the Soil and Life to the Crops",
+    "description": "While standing on soil or turned earth, perform a ritual to increase the bounty of the crops.  The casting of this charm must end within one hour of noon.",
+    "message": "You dance slowly over the living earth, letting the seeds fall at the appropriate time, and as the sun climbs to its zenith you recite the last words of the charm.",
+    "flags": [ "VERBAL", "SOMATIC", "NO_FAIL" ],
+    "magic_type": "xe_hedge_magick",
+    "valid_targets": [ "self" ],
+    "caster_condition": { "or": [ { "u_is_on_terrain": "t_dirt" }, { "u_is_on_terrain": "t_dirtmound" } ] },
+    "caster_condition_fail_message": "You must be standing on dirt to use this charm.",
+    "difficulty": 70,
+    "spell_class": "HEDGE_MAGIC",
+    "skill": "survival",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_HEDGE_MAKE_PLANTS_GROW",
+    "shape": "blast",
+    "min_aoe": 2,
+    "max_aoe": 2,
+    "components": "spell_components_hedge_make_plants_grow",
+    "max_level": 1,
+    "base_casting_time": 720000
+  }
+]

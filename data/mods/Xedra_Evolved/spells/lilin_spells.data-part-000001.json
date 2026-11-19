@@ -1,0 +1,22 @@
+[
+  {
+    "type": "SPELL",
+    "id": "lilin_instant_heal_spell",
+    "name": "The Moon to Rule the Night",
+    "description": "At night under the moon, you can greatly speed your healing, knitting together grievous wounds in moments.  This requires direct moonlight; clouds, rain, or being indoors will prevent this power from working.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "flags": [ "SILENT", "NO_PROJECTILE", "NO_FAIL", "SOMATIC" ],
+    "spell_class": "LILIN_TRAITS",
+    "magic_type": "xedra_magic_generic",
+    "max_level": 1,
+    "skill": "deduction",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_LILIN_INSTANT_HEAL",
+    "shape": "blast",
+    "energy_source": { "type": "VITAMIN", "vitamin": "lilin_ruach_vitamin" },
+    "base_energy_cost": { "math": [ "1200 * lilin_has_ruach_efficiency()" ] },
+    "base_casting_time": 125
+  }
+]

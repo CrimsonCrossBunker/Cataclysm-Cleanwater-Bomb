@@ -1,0 +1,25 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "dhampir_horse_familiar_spell",
+    name = ccb.content.text("Blacken the soul of Arion"),
+    description = ccb.content.text("Transform your horse into a steed worthy of the mightiest hunter.  Unfortunately it will require blood weekly or else it will either die or become a monster.  Theoretically a vampire could do this, but it never seems to be a priority for them."),
+    valid_targets = { "ally" },
+    flags = { "TRANSFORMATION_SPELL", "NO_LEGS", "NO_PROJECTILE" },
+    effect = "targeted_polymorph",
+    effect_data = "mon_beneficial_polymorph_arion",
+    targeted_monsters = { "mon_horse" },
+    shape = "blast",
+    skill = "deduction",
+    spell_class = "VAMPIRE_BLOOD_ARTS",
+    magic_type = "xe_vampire_blood_powers",
+    base_casting_time = 150,
+    base_energy_cost = 150,
+    difficulty = 5,
+    max_level = 1,
+    min_damage = 20,
+    max_damage = 20,
+    damage_type = "pure",
+    min_range = 6,
+    max_range = 6,
+}
