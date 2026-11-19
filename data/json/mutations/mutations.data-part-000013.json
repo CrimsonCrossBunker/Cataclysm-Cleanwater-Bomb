@@ -1,0 +1,10 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "PAINREC2_EOC",
+    "recurrence": "1 m",
+    "condition": { "and": [ { "math": [ "u_pain() > 0" ] }, { "u_has_trait": "PAINREC2" } ] },
+    "deactivate_condition": { "not": { "u_has_trait": "PAINREC2" } },
+    "effect": [ { "math": [ "u_pain() -= 4" ] } ]
+  }
+]

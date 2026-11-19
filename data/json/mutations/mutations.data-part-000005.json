@@ -1,0 +1,19 @@
+[
+  {
+    "type": "mutation",
+    "id": "BIOLUM3",
+    "name": { "str": "Bioluminescent Flare" },
+    "description": "You can spit a wad of bioluminescent goo several meters away.  There it will light up its surroundings until it dissipates.",
+    "category": [ "INSECT" ],
+    "types": [ "BIOLUM" ],
+    "prereqs": [ "BIOLUM2" ],
+    "threshreq": [ "THRESH_INSECT" ],
+    "points": 6,
+    "active": true,
+    "cost": 400,
+    "vitamin_cost": 210,
+    "kcal": true,
+    "encumbrance_covered": [ [ "head", 5 ] ],
+    "activated_eocs": [ "EOC_BIOLUM3_activated" ]
+  }
+]

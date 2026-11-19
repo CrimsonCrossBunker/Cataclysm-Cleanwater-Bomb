@@ -1,0 +1,19 @@
+[
+  {
+    "type": "mutation",
+    "id": "SLIME_SPRAY",
+    "name": { "str": "Slime Spray" },
+    "description": "You exude slime from your pores.  You can spread that slime on an opponent in melee range.",
+    "category": [ "GASTROPOD" ],
+    "prereqs": [ "VISCOUS", "AMORPHOUS" ],
+    "points": 1,
+    "active": true,
+    "cost": 700,
+    "vitamin_cost": 60,
+    "kcal": true,
+    "visibility": 1,
+    "ugliness": 2,
+    "activated_is_setup": false,
+    "activated_eocs": [ "EOC_SLIME_SPRAY" ]
+  }
+]
