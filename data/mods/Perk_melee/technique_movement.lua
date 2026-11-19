@@ -192,3 +192,38 @@ ccb.runtime.handler("perk_style_kill_tempo", function(style)
         checked(effects.remove(character, id("effect", "mabuff:buff_perk_tempo")))
     end
 end)
+
+ccb.runtime.handler("perk_tempo_assault", function(event)
+    local attacker = event.actors.speaker
+    local victim = event.participants.interlocutor
+    if not attacker or not victim or not attacker:is_valid() then return end
+    if event.type == "character_melee_attacks_character" and (not event.data.hits or not victim.dead) then
+        return
+    end
+    if not has_flag(attacker, "MELEE_PERK_TEMPO_ASSAULT")
+        or position(attacker):game_distance(victim.position) > 1 then
+        return
+    end
+
+    attacker = teleport(attacker, victim.position)
+    after_automatic_movement(attacker)
+    local mark = "assault_attacked"
+    for _, monster in ipairs(services.monsters.seeing_position(position(attacker), 1)) do
+        if monster:is_valid() and number(monster, mark) ~= 1 then
+            -- The follow-up is an Avatar attack, even when another character triggered the event.
+            local avatar = services.characters.avatar()
+            if avatar:is_valid() then
+                local choice = checked(services.characters.choose_technique(avatar, monster))
+                checked(services.characters.attack(avatar, monster, choice.technique.value))
+            end
+            if monster:is_valid() then
+                set_number(monster, mark, 1)
+            end
+        end
+    end
+    if attacker:is_valid() then
+        set_number(attacker, mark, 0)
+    end
+end)
+ccb.runtime.on("game:character_kills_monster", "perk_tempo_assault")
+ccb.runtime.on("game:character_melee_attacks_character", "perk_tempo_assault")

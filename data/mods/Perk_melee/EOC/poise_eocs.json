@@ -16,28 +16,5 @@
       { "if": { "math": [ "u_poise < 4" ] }, "then": [ { "u_cast_spell": { "id": "perk_poise_spell" }, "targeted": true } ] }
     ],
     "false_effect": [ { "if": { "not": { "u_using_martial_art": "style_none" } }, "then": [ { "u_lose_effect": "effect_poise" } ] } ]
-  },
-  {
-    "id": "EOC_PERK_POISE_MOUNTAIN_MOVE",
-    "type": "effect_on_condition",
-    "condition": { "u_has_flag": "MELEE_PERK_POISE_MOUNTAIN" },
-    "effect": [ { "run_eocs": "EOC_POISE_LOSE" } ]
-  },
-  {
-    "id": "EOC_PERK_POISE_FOOTWORK",
-    "type": "effect_on_condition",
-    "condition": { "u_has_flag": "MELEE_PERK_POISE_FOOTWORK" },
-    "effect": [ { "run_eocs": "EOC_POISE_GAIN" } ]
-  },
-  {
-    "id": "EOC_POISE_GAIN",
-    "type": "effect_on_condition",
-    "condition": { "u_has_flag": "MELEE_PERK_POISE" },
-    "effect": [ { "if": { "math": [ "u_poise < 4" ] }, "then": [ { "math": [ "u_poise++" ] } ] } ]
-  },
-  {
-    "id": "EOC_POISE_LOSE",
-    "type": "effect_on_condition",
-    "effect": [ { "if": { "math": [ "u_poise > 0" ] }, "then": [ { "math": [ "u_poise--" ] } ] } ]
   }
 ]

@@ -54,46 +54,9 @@
     "effect": [ { "npc_add_effect": "perk_hit_marker", "duration": "2 seconds" } ]
   },
   {
-    "id": "EOC_PERK_ON_MOVEMENT",
-    "//": "These are all the EOCs that trigger on movement.",
-    "type": "effect_on_condition",
-    "effect": [ { "run_eocs": [ "EOC_PERK_MOMENTUM_UPDATE", "EOC_PERK_POISE_MOUNTAIN_MOVE" ] } ]
-  },
-  {
-    "id": "EOC_PERK_ON_MOVEMENT_AUTOMATIC",
-    "//": "These are aditionally triggered only automatic movements, ex: Flowing dodge's retreat.",
-    "type": "effect_on_condition",
-    "effect": [ { "run_eocs": [ "EOC_PERK_POISE_FOOTWORK" ] } ]
-  },
-  {
-    "id": "EOC_PERK_MOVEMENT_ATTACK",
-    "type": "effect_on_condition",
-    "effect": [
-      { "set_string_var": { "mutator": "valid_technique" }, "target_var": { "context_val": "random_attack" } },
-      { "u_attack": { "context_val": "random_attack" } }
-    ]
-  },
-  {
     "id": "EOC_PERK_TEMPO_MANUAL",
     "type": "effect_on_condition",
     "condition": { "u_has_trait": "MELEE_PERK_TEMPO" },
     "effect": { "u_add_effect": "mabuff:buff_perk_tempo", "duration": "2 seconds" }
-  },
-  {
-    "id": "EOC_PERK_MOMENTUM_UPDATE",
-    "type": "effect_on_condition",
-    "effect": [ { "run_eocs": [ "EOC_PERK_MOMENTUM_MANUAL", "EOC_PERK_MOMENTUM_2", "EOC_PERK_duelist_insert_reach" ] } ]
-  },
-  {
-    "id": "EOC_PERK_MOMENTUM_MANUAL",
-    "type": "effect_on_condition",
-    "condition": { "u_has_trait": "MELEE_PERK_MOMENTUM" },
-    "effect": { "u_add_effect": "mabuff:buff_perk_momentum", "duration": "2 seconds" }
-  },
-  {
-    "id": "EOC_PERK_MOMENTUM_2",
-    "type": "effect_on_condition",
-    "condition": { "u_has_trait": "MELEE_PERK_MOMENTUM_2" },
-    "effect": { "u_add_effect": "perk_dex_bonus", "duration": "2 seconds" }
   }
 ]
