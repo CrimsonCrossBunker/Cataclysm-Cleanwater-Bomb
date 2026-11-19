@@ -1,5 +1,45 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "microlab_distorted_chunk",
+    layout = {
+        toilets = { ";" },
+        clear_glyphs = {
+            ["!"] = {},
+            ["2"] = {},
+            [":"] = {},
+            X = {},
+            ["3"] = {},
+            ["4"] = {},
+            ["ó"] = {},
+            R = {},
+            [">"] = {},
+            ["<"] = {},
+            [";"] = {},
+        },
+        item_groups = { [";"] = { group = "SUS_toilet", chance = 50 } },
+        terrain = {
+            ["."] = { { id = "t_strconc_floor" }, { id = "t_nether_glass_floor" } },
+            [","] = { { id = "t_nether_glass_floor" }, { id = "t_strconc_floor_glimmer" } },
+            ["!"] = "t_door_locked_interior",
+            ["-"] = "t_wall_metal",
+            ["|"] = "t_concrete_wall",
+            ["2"] = "t_door_glass_frosted_lab_c",
+            [":"] = "t_door_glass_c",
+            ["="] = "t_wall_glass",
+            ["("] = "t_reinforced_glass",
+            X = "t_door_metal_locked",
+            ["3"] = "t_door_metal_c",
+            ["4"] = "t_door_metal_pickable",
+            ["ó"] = "t_metal_ventilation_shutter",
+            R = "t_railing",
+            [">"] = "t_stairs_down",
+            ["<"] = "t_stairs_up",
+        },
+        furniture = { ["?"] = "f_null" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "microlab_distorted_chunk",
