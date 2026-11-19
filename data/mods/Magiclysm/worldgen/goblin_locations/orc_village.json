@@ -87,15 +87,5 @@
     "city_sizes": [ 0, -1 ],
     "occurrences": [ 0, 2 ],
     "spawns": { "group": "GROUP_ALL_GOBLINS", "population": [ 10, 30 ], "radius": [ 1, 10 ] }
-  },
-  {
-    "type": "overmap_terrain",
-    "id": [ "orc_village" ],
-    "name": "goblin outpost",
-    "sym": "G",
-    "color": "green",
-    "see_cost": "high",
-    "flags": [ "RISK_HIGH" ],
-    "vision_levels": "blends_till_details"
   }
 ]

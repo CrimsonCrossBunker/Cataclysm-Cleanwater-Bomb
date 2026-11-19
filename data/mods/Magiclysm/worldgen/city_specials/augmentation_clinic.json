@@ -11,16 +11,6 @@
     "city_sizes": [ 12, -1 ]
   },
   {
-    "type": "overmap_terrain",
-    "id": [ "magiclysm_augmentation_clinic_ground", "magiclysm_augmentation_clinic_top", "magiclysm_augmentation_clinic_roof" ],
-    "vision_levels": "city_building",
-    "copy-from": "generic_city_building",
-    "name": "augmentation clinic",
-    "sym": "A",
-    "color": "cyan",
-    "extend": { "flags": [ "RISK_EXTREME", "SOURCE_MEDICINE", "SOURCE_CHEMISTRY" ] }
-  },
-  {
     "type": "palette",
     "id": "magiclysm_augmentation_clinic",
     "terrain": {
