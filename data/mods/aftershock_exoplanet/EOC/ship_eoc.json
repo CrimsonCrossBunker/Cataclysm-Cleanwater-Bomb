@@ -58,64 +58,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_SHIP_STAIRS",
-    "effect": [
-      {
-        "if": { "not": { "u_at_om_location": "high_orbit_salus_4tp" } },
-        "then": [
-          {
-            "if": { "math": [ "your_ship_stairs_up == 1" ] },
-            "then": [
-              { "u_location_variable": { "context_val": "stairs" } },
-              {
-                "u_transform_radius": 20,
-                "ter_furn_transform": "your_ship_stairs_down",
-                "target_var": { "context_val": "stairs" }
-              },
-              { "location_variable_adjust": { "context_val": "stairs" }, "z_adjust": -1 },
-              { "mapgen_update": "your_ship_stairs_deployed", "target_var": { "context_val": "stairs" } },
-              { "u_message": "The boarding stairs descend" },
-              { "math": [ "your_ship_stairs_up = 0" ] }
-            ],
-            "else": [
-              { "u_location_variable": { "context_val": "stairs" } },
-              {
-                "u_transform_radius": 20,
-                "ter_furn_transform": "your_ship_stairs_up",
-                "target_var": { "context_val": "stairs" }
-              },
-              { "location_variable_adjust": { "context_val": "stairs" }, "z_adjust": -1 },
-              { "mapgen_update": "your_ship_stairs_retract", "target_var": { "context_val": "stairs" } },
-              { "u_message": "The boarding stairs retract upward." },
-              { "math": [ "your_ship_stairs_up = 1" ] }
-            ]
-          }
-        ],
-        "else": [ { "u_message": "You cant deploy the stairs while in space." } ]
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_SHIP_LIGHTS",
-    "effect": [
-      {
-        "if": { "math": [ "your_ship_lights_dim == 1" ] },
-        "then": [
-          { "u_transform_radius": 40, "ter_furn_transform": "your_ship_lights_on" },
-          { "u_message": "The ship's lights brighten." },
-          { "math": [ "your_ship_lights_dim = 0" ] }
-        ],
-        "else": [
-          { "u_transform_radius": 40, "ter_furn_transform": "your_ship_dim_lights" },
-          { "u_message": "The ship's lights dim to a low glow." },
-          { "math": [ "your_ship_lights_dim = 1" ] }
-        ]
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_SHIP_AUTO_CONTROL",
     "effect": [
       { "turn_cost": "4 s" },
