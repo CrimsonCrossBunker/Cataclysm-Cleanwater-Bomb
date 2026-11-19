@@ -53,41 +53,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "afs_exosuit_garage_2_a1_roof",
-    "object": {
-      "fill_ter": "t_metal_floor",
-      "rows": [
-        "  [[[[                  ",
-        "  [££[[[[[[      [[[[[  ",
-        "  [£££££££[      [£££[  ",
-        "  [£££££££[      [£££[  ",
-        "  [£££££££[      [£££[  ",
-        "  [£££££££[      [£££[  ",
-        "  [£££££££[      [£££[  ",
-        "  [£££££££[      [£££[  ",
-        "  [£££££££[      [£££[  ",
-        "  [£££££££[      [£££[  ",
-        "  [£££££££[      [£££[  ",
-        "  [£££££££[   [[[[£££[  ",
-        "  [£££££££[   [££££££[  ",
-        "  [£££££££[[[[[££££££[  ",
-        "  [££££££££££££££££££[  ",
-        "  [££££££££££££££££££[  ",
-        "  [££££££££££££££££££[  ",
-        "  [[[[[[[[[[[[[[[[[[[[  ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "afs_habitat_structure", "afs_habitat_exterior" ],
-      "terrain": { " ": "t_open_air" }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "afs_exosuit_garage_2_unlooted",
     "object": {
       "mapgensize": [ 24, 24 ],
@@ -128,43 +93,6 @@
       },
       "monster": { "†": { "monster": "mon_afs_commercial_laser_turret" } },
       "place_monster": [ { "group": "AFS_GROUP_ROBOT_LOW_RISK", "x": [ 17, 20 ], "y": [ 2, 10 ], "pack_size": [ 1, 3 ], "chance": 80 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "afs_exosuit_garage_2_looted",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "                        ",
-        "                        ",
-        "     32221       ê      ",
-        "      á221              ",
-        "      â 21              ",
-        "                  äää   ",
-        "     3  21              ",
-        "      á 21        äää   ",
-        "      â221              ",
-        "                        ",
-        "     3 221       ê      ",
-        "      á 21              ",
-        "      â221              ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "       íííí             ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "//": "Open and looted. Spawn no loot or turret",
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
-      "terrain": { "1": "t_afs_security_door_frame", "2": "t_region_groundcover_urban", "3": "t_door_o" },
-      "furniture": { "á": "f_exo_gantry", "â": "f_rack", "ä": "f_rack", "ê": "f_rack", "í": "f_locker" }
     }
   }
 ]
