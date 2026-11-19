@@ -1,40 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ [ "stadium_0_0", "stadium_1_0", "stadium_2_0", "stadium_3_0" ] ],
-    "object": {
-      "fill_ter": "t_pavement",
-      "rows": [
-        "sssss       sssssssssssssssssssss       ssssssssssssssss       sssssssssssssssssssss       sssss",
-        "s!sss       sssssssssssssssssssss       ssssssssssssssss       sssssssssssssssssssss       sss!s",
-        "ss          ~    ~    ~    ~    ~                              ~    ~    ~    ~    ~          ss",
-        "ss          ~    ~    ~    ~    ~                              ~    ~    ~    ~    ~          ss",
-        "ss          ~ 4  ~ 4  ~    ~ 4  ~                              ~ 4  ~    ~ 4  ~ 4  ~          ss",
-        "ss          ~    ~    ~    ~    ~                              ~    ~    ~    ~    ~          ss",
-        "ss          ~    ~    ~    ~    ~                              ~    ~    ~    ~    ~          ss",
-        "ss          ~    ~    ~    ~    ~                              ~    ~    ~    ~    ~          ss",
-        "ss                                                                                            ss",
-        "ss                                                                                            ss",
-        "ss                                                                                            ss",
-        "ss                                                                                            ss",
-        "ss                                                                                            ss",
-        "ss                                                                                            ss",
-        "ss                                                                                            ss",
-        "ss                                                                                            ss",
-        "ss                                      /ssossossossoss/                                      ss",
-        "ss~    ~    ~    ~    ~    ~    ~    ~~~ssssssssssssssss~~~    ~    ~    ~    ~    ~    ~     ss",
-        "ss~    ~    ~    ~    ~    ~    ~    ~ ~sBssssssssssssBs~ ~    ~    ~    ~    ~    ~    ~     ss",
-        "ss~    ~    ~    ~    ~    ~    ~    ~~ sBssssssssssssBs ~~    ~    ~    ~    ~    ~    ~    ~ss",
-        "ss~  5 ~  5 ~  5 ~  5 ~    ~  5 ~  5 ~ ~sBssssssssssssBs~ ~  5 ~  5 ~    ~  5 ~  5 ~  5 ~  5 ~ss",
-        "ss~    ~    ~    ~    ~    ~    ~    ~~ s&ssssssssssss&s ~~    ~    ~    ~    ~    ~    ~    ~ss",
-        "ss~    ~    ~    ~    ~    ~    ~    ~ ~ssssssssssssssss~ ~    ~    ~    ~    ~    ~    ~    ~ss",
-        "s!ssssssssssssssssssssssssssssssssssssss!ssssssssssssss!ssssssssssssssssssssssssssssssssssssss!s"
-      ],
-      "palettes": [ "stadium_palette", "stadium_parking_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [
       [ "stadium_0_1", "stadium_1_1", "stadium_2_1", "stadium_3_1" ],
       [ "stadium_0_2", "stadium_1_2", "stadium_2_2", "stadium_3_2" ],
@@ -476,76 +442,6 @@
         { "monster": "GROUP_HOUSE", "x": [ 82, 95 ], "y": [ 48, 71 ], "density": 0.066 },
         { "monster": "GROUP_HOUSE", "x": [ 72, 95 ], "y": [ 72, 95 ], "density": 0.066 }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ [ "stadium_1_1_3", "stadium_2_1_3" ] ],
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "    ----------------------------------------    ",
-        "    -......................................-    ",
-        "    -.:.:...........................X.X....-    ",
-        "    5......................................5    ",
-        "    -......................................-    ",
-        "    -......................................-    ",
-        "    -......................................-    ",
-        "    -...A.........A.........A..........A...-    ",
-        "    -......................................-    ",
-        "    -......................................-    ",
-        "    -......................................-    ",
-        "    ----------------------------------------    ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "stadium_0_3_3" ],
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "-5---                   ",
-        "-...-                   ",
-        "-.&.-                   ",
-        "-...-                   ",
-        "-.A.-                   ",
-        "-...-                   ",
-        "-----                   ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
     }
   }
 ]

@@ -785,40 +785,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ [ "stadium_football_2_3_1", "stadium_football_6_3_1" ] ],
-    "object": {
-      "fill_ter": "t_thconc_floor",
-      "rows": [
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "        |                               |       ",
-        "        .                               .       ",
-        "        .                               .       ",
-        "        .                               .       ",
-        "     ....                               ....    ",
-        "        .                               .       ",
-        "        .                               .       ",
-        "        .                               .       ",
-        "        |                               |       ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                "
-      ],
-      "terrain": { " ": "t_open_air", ".": "t_metal_floor_no_roof", "|": "t_wall_metal" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [
       [
         "stadium_football_1_1_2",

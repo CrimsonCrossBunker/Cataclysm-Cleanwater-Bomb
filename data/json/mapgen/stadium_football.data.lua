@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "stadium_football_2_3_1", "stadium_football_6_3_1" } },
+    layout = {
+        rows = {
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "        |                               |       ",
+            "        .                               .       ",
+            "        .                               .       ",
+            "        .                               .       ",
+            "     ....                               ....    ",
+            "        .                               .       ",
+            "        .                               .       ",
+            "        .                               .       ",
+            "        |                               |       ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+        },
+        terrain = { [" "] = "t_open_air", ["."] = "t_metal_floor_no_roof", ["|"] = "t_wall_metal" },
+        fill_terrain = "t_thconc_floor",
+    },
+}
