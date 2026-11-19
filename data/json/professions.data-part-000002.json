@@ -1,0 +1,40 @@
+[
+  {
+    "type": "profession",
+    "id": "convict_assassin",
+    "name": "Undercover Assassin Convict",
+    "description": "You were given a target, a mission, but killing your mark seems to have become much more difficult now.  Your employer cut contact with you and now you have to make do with what you have.",
+    "npc_background": "BG_survival_story_PRISONER",
+    "points": 2,
+    "skills": [
+      { "level": 4, "name": "melee" },
+      { "level": 4, "name": "stabbing" },
+      { "level": 3, "name": "unarmed" },
+      { "level": 3, "name": "dodge" }
+    ],
+    "proficiencies": [
+      "prof_knives_familiar",
+      "prof_knives_pro",
+      "prof_unarmed_familiar",
+      "prof_unarmed_pro",
+      "prof_shivs_familiar",
+      "prof_gross_anatomy"
+    ],
+    "effect_on_conditions": [ "scenario_assassin_conv" ],
+    "items": {
+      "both": {
+        "entries": [
+          { "item": "jumpsuit_pocketless", "variant": "orange" },
+          { "item": "sneakers" },
+          { "item": "socks" },
+          { "item": "knife_rm42", "container-item": "gartersheath1" },
+          { "item": "polaroid_photo", "container-item": "ankle_wallet_pouch" }
+        ]
+      },
+      "male": { "entries": [ { "item": "briefs" } ] },
+      "female": { "entries": [ { "item": "bra" }, { "item": "panties" } ] }
+    },
+    "flags": [ "SCEN_ONLY" ],
+    "age_lower": 25
+  }
+]
