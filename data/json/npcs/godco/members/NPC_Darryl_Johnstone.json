@@ -150,25 +150,5 @@
         "topic": "TALK_DONE"
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_GODCO_Darryl_2",
-    "dynamic_line": "I guess I can spare a few minutes.  What is it?",
-    "responses": [
-      { "text": "Can I buy anything?", "topic": "TALK_GODCO_Darryl_Trade" },
-      {
-        "text": "How are the chickens?",
-        "condition": {
-          "and": [
-            { "compare_string": [ "yes", { "u_val": "general_trade_darryl_built_coop" } ] },
-            { "compare_string": [ "yes", { "npc_val": "general_meeting_u_met_godco_darryl" } ] }
-          ]
-        },
-        "topic": "TALK_GODCO_Darryl_Trade_Eggs"
-      },
-      { "text": "Do you have any family?", "topic": "TALK_GODCO_Darryl_Wife" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
