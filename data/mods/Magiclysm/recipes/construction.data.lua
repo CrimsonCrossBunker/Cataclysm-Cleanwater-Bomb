@@ -1,0 +1,196 @@
+local ccb = require("ccb")
+
+ccb.content.define_construction {
+    id = "constr_magiclysm_translocator_gate",
+    group = "build_translocator_gate",
+    category = "FURN",
+    required_skills = { { "fabrication", 6 }, { "spellcraft", 6 } },
+    duration = "360 m",
+    qualities = {
+        { { id = "HAMMER", level = 2 } },
+        { { id = "SAW_W", level = 2 } },
+        { { id = "CHISEL", level = 2 } },
+    },
+    tools = { { { "textbook_mithril", -1 } } },
+    components = {
+        { { "wood_sheet", 2 }, { "wood_panel", 4 } },
+        { { "2x4", 4 } },
+        { { "nails", 24, "LIST" } },
+        { { "mithril_ingot", 4 } },
+        { { "crystallized_mana", 100 } },
+        { { "mana_dust", 50 } },
+        { { "flask_teleport", 1 } },
+    },
+    pre_checks = "check_empty",
+    post_terrain = "f_magiclysm_translocator_gate",
+}
+
+ccb.content.define_construction {
+    id = "constr_magiclysm_greater_translocator_gate",
+    group = "build_greater_translocator_gate",
+    category = "FURN",
+    required_skills = { { "fabrication", 8 }, { "spellcraft", 8 } },
+    duration = "360 m",
+    qualities = {
+        { { id = "HAMMER", level = 2 } },
+        { { id = "SAW_W", level = 2 } },
+        { { id = "CHISEL", level = 2 } },
+    },
+    tools = { { { "textbook_mithril", -1 } } },
+    components = {
+        { { "wood_sheet", 4 }, { "wood_panel", 8 } },
+        { { "2x4", 8 } },
+        { { "nails", 48, "LIST" } },
+        { { "mithril_ingot", 8 } },
+        { { "mana_pearl", 2 } },
+        { { "crystallized_mana", 250 } },
+        { { "mana_dust", 100 } },
+        { { "flask_teleport", 2 } },
+    },
+    pre_checks = "check_empty",
+    post_terrain = "f_magiclysm_greater_translocator_gate",
+}
+
+ccb.content.define_construction {
+    id = "constr_magiclysm_magic_circle",
+    group = "build_magiclysm_magic_circle",
+    category = "FURN",
+    required_skills = { { "spellcraft", 5 } },
+    duration = "240 m",
+    qualities = {
+        { { id = "CHISEL", level = 1 } },
+        { { id = "CUT", level = 2 } },
+        { { id = "MOP", level = 1 } },
+        { { id = "GRIND", level = 2 } },
+    },
+    components = {
+        { { "candle", 8 } },
+        {
+            { "skull_human", 1 },
+            { "skull_goat", 1 },
+            { "skull_cougar", 1 },
+            { "skull_pig", 1 },
+            { "skull_canis", 1 },
+            { "skull_bear", 1 },
+            { "skull_bovine", 1 },
+            { "skull_cervine", 1 },
+            { "skull_cervine_spideer", 1 },
+            { "skull_sheep", 1 },
+            { "skull_moose", 1 },
+            { "skull_moose_tusked", 1 },
+            { "skull_equine", 1 },
+            { "skull_rodent", 10 },
+            { "skull_raccoon", 4 },
+            { "skull_beaver", 4 },
+            { "skull_canis_small", 4 },
+            { "skull_canis_medium", 2 },
+            { "skull_canis", 1 },
+            { "skull_feline_small", 4 },
+            { "skull_feline_medium", 2 },
+        },
+        { { "copper", 30 } },
+        { { "crystallized_mana", 5 } },
+    },
+    pre_checks = "check_empty",
+    post_terrain = "f_magic_circle",
+    activity_level = "BRISK_EXERCISE",
+}
+
+ccb.content.define_construction {
+    id = "constr_magiclysm_magic_circle_2",
+    group = "build_magiclysm_magic_circle_2",
+    category = "FURN",
+    required_skills = { { "spellcraft", 7 } },
+    duration = "360 m",
+    qualities = {
+        { { id = "CHISEL", level = 1 } },
+        { { id = "MOP", level = 1 } },
+        { { id = "GRIND", level = 2 } },
+    },
+    components = { { { "silver_small", 30 } }, { { "crystallized_mana", 5 } } },
+    pre_terrain = "f_magic_circle",
+    post_terrain = "f_magic_circle_2",
+    activity_level = "MODERATE_EXERCISE",
+}
+
+ccb.content.define_construction {
+    id = "constr_magiclysm_everburning_torch_candelabra",
+    group = "build_everburning_torch_candelabra",
+    category = "FURN",
+    required_skills = { { "fabrication", 1 } },
+    duration = "5 m",
+    qualities = {},
+    components = { { { "everburning_torch_candelabra", 1 } } },
+    pre_checks = "check_empty",
+    post_terrain = "f_everburning_torch_candelabra",
+}
+
+ccb.content.define_construction {
+    id = "constr_magiclysm_standing_alembic",
+    group = "build_standing_alembic",
+    category = "FURN",
+    required_skills = { { "chemistry", 2 } },
+    duration = "15 m",
+    qualities = {},
+    components = {
+        { { "pot_copper", 1 } },
+        { { "pipe_glass", 4 } },
+        { { "glass_tube_small", 10 } },
+        { { "stopcock", 5 } },
+        { { "flask_glass", 3 } },
+    },
+    pre_checks = "check_empty",
+    post_terrain = "f_alembic",
+    activity_level = "LIGHT_EXERCISE",
+}
+
+ccb.content.define_construction {
+    id = "constr_magiclysm_orrery",
+    group = "build_orrery",
+    category = "FURN",
+    required_skills = { { "fabrication", 1 } },
+    duration = "1 m",
+    qualities = {},
+    components = { { { "orrery_item", 1 } } },
+    pre_checks = "check_empty",
+    post_terrain = "f_orrery",
+}
+
+ccb.content.define_construction {
+    id = "ap_everburning_sconce",
+    group = "place_everburning_sconce",
+    category = "APPLIANCE",
+    required_skills = { { "fabrication", 1 } },
+    duration = "2 m",
+    qualities = { { { id = "HAMMER", level = 2 } } },
+    components = { { { "everburning_sconce", 1 } } },
+    pre_flags = "WALL",
+    completion_actions = "done_appliance",
+    activity_level = "LIGHT_EXERCISE",
+}
+
+ccb.content.define_construction {
+    id = "constr_druid_chair",
+    group = "build_druid_chair",
+    category = "FURN",
+    duration = "15 s",
+    components = { { { "druid_chair_item", 1 } } },
+    pre_checks = "check_empty",
+    post_terrain = "f_druid_chair",
+    activity_level = "LIGHT_EXERCISE",
+    required_skills = { { "fabrication", 0 } },
+}
+
+ccb.content.define_construction {
+    id = "constr_magiclysm_weaver",
+    group = "build_weaver",
+    category = "APPLIANCE",
+    required_skills = { { "spellcraft", 4 } },
+    duration = "10 m",
+    components = { { { "mag_awoken_weaver", 1 } } },
+    using_requirements = { { "mag_wildwood_construction", 2 } },
+    dark_craftable = true,
+    pre_checks = "check_empty",
+    completion_actions = "done_appliance",
+    activity_level = "NO_EXERCISE",
+}
