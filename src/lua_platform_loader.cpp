@@ -5236,6 +5236,12 @@ void write_static_npc( JsonOut &json, const sol::table &options )
         { "strength", "str" }, { "dexterity", "dex" }, { "intelligence", "int" }, { "perception", "per" }
     } );
     write_static_string_or_ids( json, options, "missions_offered", "mission_offered" );
+    if( const auto handler = options.get<sol::optional<std::string>>( "on_death" ) ) {
+        if( handler->empty() || handler->find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument( "NPC death requires a registered Lua handler name" );
+        }
+        json.member( "//ccb_lua_npc_death_handler", *handler );
+    }
     write_static_tile_object( json, options, "personality", "personality",
     []( JsonOut & out, const sol::table & value ) {
         out.start_object();

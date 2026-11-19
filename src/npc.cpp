@@ -20,6 +20,7 @@
 
 #define MP_ENABLED
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <climits>
 #include <cmath>
@@ -583,8 +584,50 @@ void npc_template::load( const JsonObject &jsobj, std::string_view src )
     for( JsonValue jv : jsobj.get_array( "death_eocs" ) ) {
         guy.death_eocs.emplace_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }
+    if( const auto handler = jsobj.get_member_opt( "//ccb_lua_npc_death_handler" ) ) {
+        if( handler->has_source_file() ) {
+            handler->throw_error( "NPC death handler metadata is reserved for ordered Lua definitions" );
+        }
+        guy.lua_platform_death_mod = std::string( src );
+        guy.lua_platform_death_handler = handler->get_string();
+    }
 
     npc_templates.emplace( guy.idz, std::move( tem ) );
+}
+
+void npc::migrate_death_effects()
+{
+    if( death_eocs.empty() || !lua_platform_death_handler.empty() ) {
+        return;
+    }
+    const auto definition = npc_templates.find( idz );
+    if( definition == npc_templates.end() ||
+        definition->second.guy.lua_platform_death_handler.empty() ) {
+        return;
+    }
+    const npc &current = definition->second.guy;
+    // Only translate IDs retired by the current template. A Mod that still
+    // defines an old effect retains that effect on its saved NPCs.
+    static constexpr std::array<std::pair<std::string_view, std::string_view>, 3> migrated = {{
+        { "ROBOFAC_PAT_DEATH", "record_hub_pat_death" },
+        { "EOC_event_NPC_DEATH_test", "prevent_debug_npc_death" },
+        { "EOC_DEATH_FORGE_LORD", "trigger_forge_lockdown_on_death" },
+    }};
+    for( const auto &[legacy_id, handler] : migrated ) {
+        if( current.lua_platform_death_handler != handler ) {
+            continue;
+        }
+        const auto obsolete = std::remove_if( death_eocs.begin(), death_eocs.end(),
+        [legacy_id]( const effect_on_condition_id &effect ) {
+            return effect.str() == legacy_id && !effect.is_valid();
+        } );
+        if( obsolete != death_eocs.end() ) {
+            death_eocs.erase( obsolete, death_eocs.end() );
+            lua_platform_death_mod = current.lua_platform_death_mod;
+            lua_platform_death_handler = current.lua_platform_death_handler;
+        }
+        return;
+    }
 }
 
 void npc_template::reset()

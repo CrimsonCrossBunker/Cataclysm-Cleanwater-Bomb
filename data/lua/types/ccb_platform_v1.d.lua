@@ -6167,7 +6167,7 @@ local NpcClassDefinition = {}
 ---@field personality? {aggression: integer, bravery: integer, collector: integer, altruism: integer} Generated personality overrides.
 ---@field age? integer Fixed generated age.
 ---@field height? integer Fixed generated height in centimeters.
----@field on_death? string Platform handler invoked when the NPC dies.
+---@field on_death? string Registered handler receiving CcbNpcDeathContext.
 
 ---@class NpcDefinition
 ---@field id string
@@ -8006,6 +8006,15 @@ function CcbPlatformContent.define_vehicle(options) end
 ---@field intelligence? integer
 ---@field perception? integer
 ---@field personality? StaticNpcPersonality
+---@field on_death? string Registered handler receiving CcbNpcDeathContext.
+
+---@class CcbNpcDeathContext
+---@field npc_template_id string
+---@field npc GameHandle
+---@field killer? GameHandle
+---@field position {coordinate_space:"abs_ms",x:integer,y:integer,z:integer}
+---@field prevent_death fun() Restore vital HP through the native NPC death-prevention path.
+---@field cast_spell fun(spell:GameId) Cast a level-zero fake spell at the dying NPC's position. Pass a GameId<spell>.
 
 ---Define an NPC template at its ordered position during native content loading.
 ---@param options StaticNpcOptions

@@ -2867,6 +2867,7 @@ void npc::load( const JsonObject &data )
     } else {
         idz = string_id<npc_template>( myclass.str() );
     }
+    migrate_death_effects();
     data.read( "known_to_u", known_to_u );
     data.read( "personality", personality );
 

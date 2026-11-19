@@ -1788,6 +1788,8 @@ class npc : public Character
 
         void on_move( const tripoint_abs_ms &old_pos ) override;
     private:
+        void migrate_death_effects();
+
         // the weapon we're actually holding when using bionic fake guns
         item real_weapon;
         character_id legacy_opinion_owner;

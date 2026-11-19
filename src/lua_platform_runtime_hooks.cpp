@@ -47,6 +47,7 @@
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_creatures.h"
 #include "lua_platform_missions.h"
+#include "magic.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "mapdata.h"
@@ -4011,6 +4012,33 @@ std::optional<bool> invoke_npc_death_handler(
     point["y"] = position.y();
     point["z"] = position.z();
     payload["position"] = std::move( point );
+    // The death callback can act on its dying NPC without making the general
+    // Creature handle live or leaving a callable native reference behind.
+    const auto target = std::make_shared<safe_reference<Creature>>( subject.get_safe_reference() );
+    const auto require_subject = [weak = std::weak_ptr<safe_reference<Creature>>( target )]() -> npc & {
+        const auto reference = weak.lock();
+        Creature *dying = reference ? reference->get() : nullptr;
+        if( dying == nullptr ) {
+            throw std::runtime_error( "NPC death actions require an active death callback" );
+        }
+        return static_cast<npc &>( *dying );
+    };
+    payload.set_function( "prevent_death", [require_subject]() {
+        require_subject().prevent_death();
+    } );
+    payload.set_function( "cast_spell", [require_subject]( const script_game_id &requested ) {
+        npc &caster = require_subject();
+        if( requested.kind() != "spell" || !requested.is_valid() ) {
+            throw std::invalid_argument( "NPC death cast_spell requires a valid spell ID" );
+        }
+        const fake_spell cast( spell_id( requested.value() ), false, std::nullopt );
+        const safe_reference<Creature> caster_ref = caster.get_safe_reference();
+        cast.get_spell( caster, 0 ).cast_all_effects( caster, caster.pos_bub() );
+        if( const Creature *remaining = caster_ref.get() ) {
+            remaining->add_msg_player_or_npc( cast.trigger_message.translated(),
+                                             cast.npc_trigger_message.translated() );
+        }
+    } );
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( *owner );
     const sol::protected_function_result result = callback( payload );
