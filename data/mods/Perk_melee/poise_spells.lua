@@ -27,6 +27,13 @@ ccb.runtime.handler("martial_perks_lose_poise", function(impact)
     if value > 0 then set_poise(caster, value - 1) end
 end)
 
+ccb.runtime.handler("martial_perks_start_poise", function(event)
+    if event.data.trait ~= "MELEE_PERK_POISE" then return end
+    local actor = event.actors.character or ccb.services.characters.avatar()
+    if actor:is_valid() then set_poise(actor, 4) end
+end)
+ccb.runtime.on("game:gains_mutation", "martial_perks_start_poise")
+
 content.add(content.Spell {
     id = "perk_poise_spell",
     name = ccb.content.text("Insight"),
