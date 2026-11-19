@@ -1,0 +1,66 @@
+local ccb = require("ccb")
+
+-- This is a special based on the mx_mass_grave_dino so Red spawns are unique
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "mass_grave_red",
+    weight = 250,
+    layout = {
+        rows = {
+            "                        ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##  X",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ## X ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##  X",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ## X ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##  X",
+            "   ##  ##  ##  ##  ##   ",
+            "   ##  ##  ##  ##  ##   ",
+            "                        ",
+        },
+        terrain = { ["#"] = { { id = "t_dirt", copies = 24 }, { id = "t_pit_shallow", copies = 1 } } },
+        furniture = { X = { { id = "f_null", copies = 19 }, { id = "f_battlefield_cross", copies = 1 } } },
+        fill_terrain = "t_region_groundcover",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            { id = "NC_Red_spawn", x = { 3 }, y = { 1 } },
+            { id = "old_guard_red_soldier_spawn", x = { 1 }, y = { 1 } },
+            { id = "old_guard_red_soldier_spawn", x = { 5 }, y = { 1 } },
+            { id = "old_guard_red_soldier_spawn", x = { 1 }, y = { 6 } },
+            { id = "old_guard_red_soldier_spawn", x = { 5 }, y = { 6 } },
+        },
+        loot_placements = {
+            { group = "mass_grave_casings", repetitions = { 20, 30 }, x = { 1, 23 }, y = { 1, 17 } },
+            {
+                group = "mass_grave_casings",
+                repetitions = { 10, 15 },
+                x = { 1, 23 },
+                y = { 18, 23 },
+            },
+            { group = "SUS_trash_floor", repetitions = { 1, 3 }, x = { 1, 23 }, y = { 18, 23 } },
+        },
+        monster_group_placements = {
+            {
+                group = "GROUP_DINOSAUR_ZOMBIE_SCORCHED",
+                density = 0.1,
+                x = { 1, 22 },
+                y = { 1, 22 },
+            },
+        },
+        monster_glyphs = { ["#"] = { id = "mon_zaspletosaurus_scorched", chance = 1 } },
+    },
+}

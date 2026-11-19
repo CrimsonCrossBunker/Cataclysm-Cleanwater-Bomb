@@ -86,43 +86,5 @@
       "X": [ { "item": "hardware", "chance": 30, "repeat": [ 1, 2 ] }, { "item": "mischw", "chance": 30, "repeat": [ 1, 4 ] } ],
       "x": [ { "item": "cleaning", "chance": 30 }, { "item": "hardware_plumbing", "chance": 30 } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "hunter_shack" ],
-    "object": {
-      "predecessor_mapgen": "forest_water",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "       -----------      ",
-        "       -CSn.....D-      ",
-        "       -....--+---      ",
-        "       -B..d-@..L-      ",
-        "       -B...-@..L-      ",
-        "       -bbTc-s.ss-      ",
-        "       ---o---+---      ",
-        "       ;=V;;^;;;=       ",
-        "       ;;;;;;;;X=       ",
-        "       ;=&&;xxXX=       ",
-        "        =========       ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "palettes": [ "swampshack_palette" ],
-      "place_loot": [ { "item": "net", "x": 11, "y": 14, "chance": 100 }, { "item": "stepladder", "x": 11, "y": 16, "chance": 50 } ],
-      "terrain": { "V": "t_region_soil", "x": "t_region_soil", "X": "t_region_soil" },
-      "place_nested": [ { "chunks": [ "NC_Yoshimi_spawn" ], "x": [ 10 ], "y": [ 9 ] } ]
-    }
   }
 ]
