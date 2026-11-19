@@ -7305,8 +7305,20 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field y StaticMapgenRange Y offset in map squares.
 ---@field z? StaticMapgenRange Z offset.
 
+---@class StaticMapgenInlineItemGroupEntry
+---@field item? string Item ID. Supply one of item and group.
+---@field group? string Existing item group ID.
+---@field probability? integer Collection percentage or distribution weight.
+---@field count? integer|[integer, integer] Fixed native count or its minimum and maximum.
+---@field charges? integer|[integer, integer] Fixed native charges or their minimum and maximum.
+---@field damage? integer|[integer, integer] Fixed native damage level or its minimum and maximum.
+
+---@class StaticMapgenInlineItemGroup
+---@field kind? 'collection'|'distribution' Defaults to collection.
+---@field entries StaticMapgenInlineItemGroupEntry[] Entries in native roll order.
+
 ---@class StaticOvermapMapgenItemGroup: StaticMapgenPlacementOptions
----@field group string Item group ID.
+---@field group string|StaticMapgenInlineItemGroup Item group ID or local inline group.
 ---@field chance? StaticMapgenRange Native placement chance.
 ---@field faction? string Owning faction ID.
 
@@ -7376,6 +7388,61 @@ function CcbPlatformContent.OvermapTerrain(options) end
 
 ---@class StaticMapgenVehiclePlacement: StaticMapgenVehicle, StaticMapgenPosition
 
+---@class StaticMapgenField: StaticMapgenPlacementOptions
+---@field id string Native field type ID.
+---@field intensity? integer|integer[] Fixed intensity or equally likely choices.
+---@field age_turns? integer Initial age in game turns.
+---@field chance? integer Native success percentage.
+---@field remove? boolean Remove the selected field instead of adding it.
+
+---@class StaticMapgenFieldPlacement: StaticMapgenField, StaticMapgenPosition
+
+---@class StaticMapgenNpc: StaticMapgenPlacementOptions
+---@field id string Native NPC template ID.
+---@field target? boolean Make the spawned NPC the active mapgen mission target.
+---@field unique_id? string Only place this NPC once for the given world ID.
+---@field traits? string|string[] Trait IDs applied to the new NPC in order.
+
+---@class StaticMapgenNpcPlacement: StaticMapgenNpc, StaticMapgenPosition
+
+---@class StaticMapgenInscription: StaticMapgenPlacementOptions
+---@field text? string|LocalizedText Text with native tag substitution.
+---@field snippet? string Choose text from this native snippet category if provided.
+
+---@class StaticMapgenSign: StaticMapgenInscription
+---@field furniture? string Furniture ID with the native SIGN flag. Defaults to f_sign.
+
+---@class StaticMapgenSignPlacement: StaticMapgenSign, StaticMapgenPosition
+
+---@class StaticMapgenGraffitiPlacement: StaticMapgenInscription, StaticMapgenPosition
+
+---@class StaticMapgenZone: StaticMapgenPlacementOptions
+---@field id string Native zone type ID.
+---@field faction string Faction owning the zone.
+---@field name? string Custom zone name.
+---@field filter? string Native item filter for zones that support one.
+
+---@class StaticMapgenZonePlacement: StaticMapgenZone, StaticMapgenPosition
+
+---@class StaticMapgenToilet: StaticMapgenPlacementOptions
+---@field water_charges? StaticMapgenRange Initial dirty-water charges. Zero uses the native default.
+
+---@class StaticMapgenToiletPlacement: StaticMapgenToilet, StaticMapgenPosition
+
+---@class StaticMapgenIdPlacement: StaticMapgenPlacementOptions, StaticMapgenPosition
+---@field id string Native ID of the object or faction being placed.
+
+---@alias StaticMapgenTileOperation 'terrain'|'furniture'|'trap'|'remove_trap'|'remove_creatures'|'kill_creatures'|'remove_items'|'remove_fields'|'radiation'|'bash'|'burn'|'remember_position'
+
+---@class StaticMapgenTileEdit: StaticMapgenPlacementOptions, StaticMapgenPosition
+---@field shape 'point'|'line'|'rectangle'
+---@field operation StaticMapgenTileOperation Bash, burn and remember_position apply to a point.
+---@field end_x? StaticMapgenRange Required for line and rectangle.
+---@field end_y? StaticMapgenRange Required for line and rectangle.
+---@field id? string Terrain, furniture, trap or mapgen variable ID, as required by the operation.
+---@field amount? StaticMapgenRange Radiation amount for the radiation operation.
+---@field one_in? integer Native one-in-N probability. Defaults to one.
+
 ---@class StaticMapgenNestedChoice
 ---@field id string Nested mapgen ID.
 ---@field weight number Native selection weight.
@@ -7431,7 +7498,23 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field monster_placements? StaticMapgenMonsterPlacement[] Monster placements by position.
 ---@field monster_group_placements? StaticMapgenMonsterGroupPlacement[] Monster-group placements by position.
 ---@field vehicle_placements? StaticMapgenVehiclePlacement[] Vehicle placements by position.
----@field toilets? string[] Glyphs where native default toilets are placed.
+---@field field_placements? StaticMapgenFieldPlacement[] Field additions and removals by position.
+---@field field_glyphs? table<string, StaticMapgenField|StaticMapgenField[]> Fields by glyph.
+---@field npc_placements? StaticMapgenNpcPlacement[] NPC spawns by position.
+---@field npc_glyphs? table<string, StaticMapgenNpc|StaticMapgenNpc[]> NPC spawns by glyph.
+---@field sign_placements? StaticMapgenSignPlacement[] Signs by position.
+---@field sign_glyphs? table<string, StaticMapgenSign|StaticMapgenSign[]> Signs by glyph.
+---@field graffiti_placements? StaticMapgenGraffitiPlacement[] Graffiti by position.
+---@field graffiti_glyphs? table<string, StaticMapgenInscription|StaticMapgenInscription[]> Graffiti by glyph.
+---@field zone_placements? StaticMapgenZonePlacement[] Zones using x and y ranges as area bounds.
+---@field zone_glyphs? table<string, StaticMapgenZone|StaticMapgenZone[]> Zones by glyph.
+---@field faction_areas? StaticMapgenIdPlacement[] Item ownership by faction ID using x and y ranges as area bounds.
+---@field terrain_placements? StaticMapgenIdPlacement[] Terrain placements by position.
+---@field furniture_placements? StaticMapgenIdPlacement[] Furniture placements by position.
+---@field trap_placements? StaticMapgenIdPlacement[] Trap placements by position.
+---@field tile_edits? StaticMapgenTileEdit[] Tile edits submitted in order for the native mapgen phases.
+---@field toilets? string[]|table<string, StaticMapgenToilet|StaticMapgenToilet[]> Default toilet glyphs or explicit placements by glyph.
+---@field toilet_placements? StaticMapgenToiletPlacement[] Toilet placements by position.
 ---@field nested? StaticMapgenNestedPlacement[] Nested layouts in placement order.
 ---@field nested_glyphs? table<string, StaticMapgenNestedOptions|StaticMapgenNestedOptions[]> Ordered nested placements keyed by map glyph.
 
