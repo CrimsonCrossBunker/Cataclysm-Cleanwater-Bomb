@@ -1,0 +1,43 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "afs_vehicle_bay_a1_roof", "afs_vehicle_bay_a2_roof" } },
+    layout = {
+        rows = {
+            "                                                ",
+            "                                     .....      ",
+            "                                     .....      ",
+            "                                     .A...      ",
+            "                                     .A...      ",
+            "                                     .A........ ",
+            "                                     .A..s.s.s. ",
+            "                                     .A..s.s.s. ",
+            "                                     ..X....... ",
+            "                                     ........   ",
+            "                                          ...   ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+        },
+        terrain = {
+            [" "] = "t_open_air",
+            ["."] = "t_metal_floor",
+            A = "t_glass_roof",
+            s = "t_metal_floor",
+            X = "t_metal_floor",
+        },
+        furniture = { X = "f_small_satellite_dish", s = "f_solar_unit" },
+        fill_terrain = "t_metal_floor",
+    },
+}
