@@ -1,0 +1,11 @@
+[
+  {
+    "type": "mutation_category",
+    "id": "STEGO",
+    "name": "Stego",
+    "threshold_mut": "THRESH_STEGO",
+    "mutagen_message": "You feel your skin toughen.  You are the armor.",
+    "memorial_message": "The end of an era.",
+    "vitamin": "mutagen_stego"
+  }
+]

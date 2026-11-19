@@ -1,0 +1,11 @@
+[
+  {
+    "type": "mutation_category",
+    "id": "TYRANT",
+    "name": "Tyrant",
+    "threshold_mut": "THRESH_TYRANT",
+    "mutagen_message": "You feel additional teeth working their way into your mouth.",
+    "memorial_message": "Struck by a rogue asteroid.",
+    "vitamin": "mutagen_tyrant"
+  }
+]
