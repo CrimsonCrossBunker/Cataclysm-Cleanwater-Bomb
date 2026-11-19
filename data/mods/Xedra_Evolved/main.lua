@@ -248,3 +248,5 @@ require("spell_traps")
 require("terrain_transforms")
 
 require("monster_groups")
+
+require("tile_interactions")
