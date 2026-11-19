@@ -183,18 +183,5 @@
       },
       [ "PLAY_GAME" ]
     ]
-  },
-  {
-    "type": "ITEM",
-    "id": "mag_brokeweaver",
-    "subtypes": [ "ARTIFACT" ],
-    "symbol": ";",
-    "color": "green",
-    "name": { "str": "small damaged weaver" },
-    "description": "A tiny broken weaver.  Its legs bent and broken, it can no longer be used to repair clothing or create a shelter.",
-    "material": [ "wood", "veggy" ],
-    "weight": "50 g",
-    "volume": "125 ml",
-    "flags": [ "TRADER_AVOID" ]
   }
 ]
