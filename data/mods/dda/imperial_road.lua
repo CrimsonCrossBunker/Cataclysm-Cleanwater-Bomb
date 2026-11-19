@@ -66,7 +66,7 @@ local function use_gateway(character, trap_position)
         local travel = state.checked(services.relocation.travel_to_dimension("imperial_road",
             { npc_travel_radius = 0, npc_travel_filter = "none", item_travel_radius = -1 }))
         if not travel.accepted then
-            state.message(character, services.translate(
+            state.message(character, ccb.services.translate(
                 "You feel like the weight of the air around you has shifted, but nothing else happens."))
         end
         gate_message(character, "<imperial_road_early>", trap_position)
