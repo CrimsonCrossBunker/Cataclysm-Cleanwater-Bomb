@@ -9,28 +9,5 @@
     "mission": "GUARD",
     "chat": "TALK_RANCH_SCRAPPER",
     "faction": "tacoma_commune"
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_RANCH_SCRAPPER",
-    "dynamic_line": "Don't mind me.",
-    "responses": [
-      {
-        "text": "The doctor needs some help building an anesthetic machine.  Do you have anything that could help?",
-        "topic": "TALK_RANCH_SCRAPPER_ANESTHETIC_FOR_DOCTOR",
-        "condition": {
-          "and": [
-            { "u_has_mission": "MISSION_RANCH_DOCTOR_MEDICAL_ANESTHETIC" },
-            { "not": { "u_has_mission": "MISSION_RANCH_SCRAPPER_TOOLS_FOR_SCRAP" } },
-            {
-              "not": { "compare_string": [ "yes", { "u_val": "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped" } ] }
-            }
-          ]
-        }
-      },
-      { "text": "What is your job here?", "topic": "TALK_RANCH_SCRAPPER_JOB" },
-      { "text": "Do you need any help?", "topic": "TALK_RANCH_SCRAPPER_HIRE" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]

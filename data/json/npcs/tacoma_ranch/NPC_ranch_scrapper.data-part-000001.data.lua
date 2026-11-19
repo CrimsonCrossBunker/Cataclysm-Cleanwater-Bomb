@@ -1,13 +1,26 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_RANCH_SCRAPPER_JOB",
-    line = ccb.content.text("I chop up useless vehicles for spare parts and raw materials.  If we can't use a vehicle immediately, we haul it into the ring we are building to surround the outpost.  It provides a measure of defense in the event that we get attacked."),
-    replies = { { text = ccb.content.text("Interesting."), next_topic = "TALK_RANCH_SCRAPPER" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_RANCH_SCRAPPER_HIRE",
-    line = ccb.content.text("I don't personally, the teams we send out to recover the vehicles usually need a hand, but can be hard to catch since they spend most of their time outside the outpost."),
-    replies = { { text = ccb.content.text("OK."), next_topic = "TALK_RANCH_SCRAPPER" } },
+    id = "TALK_RANCH_SCRAPPER",
+    line = ccb.content.text("Don't mind me."),
+    replies = {
+        {
+            text = ccb.content.text("The doctor needs some help building an anesthetic machine.  Do you have anything that could help?"),
+            next_topic = "TALK_RANCH_SCRAPPER_ANESTHETIC_FOR_DOCTOR",
+            when = predicates.all({ predicates.has_mission("MISSION_RANCH_DOCTOR_MEDICAL_ANESTHETIC"), predicates.negate(predicates.has_mission("MISSION_RANCH_SCRAPPER_TOOLS_FOR_SCRAP")), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped" } })) }),
+        },
+        {
+            text = ccb.content.text("What is your job here?"),
+            next_topic = "TALK_RANCH_SCRAPPER_JOB",
+        },
+        {
+            text = ccb.content.text("Do you need any help?"),
+            next_topic = "TALK_RANCH_SCRAPPER_HIRE",
+        },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
 }
