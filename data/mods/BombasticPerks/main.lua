@@ -42,3 +42,5 @@ require("mutation_abilities")
 require("metamagic_casting")
 
 require("terrain_transforms")
+
+require("consumable_effects")
