@@ -66,14 +66,6 @@
     "effect": [ { "run_eocs": [ "EOC_PERK_POISE_FOOTWORK" ] } ]
   },
   {
-    "id": "EOC_PERK_STEP_CLOSER",
-    "type": "effect_on_condition",
-    "effect": [
-      { "run_eocs": "EOC_PERK_TRY_STEP_CLOSER", "condition": { "math": [ "u_done_step_closer != 1" ] }, "iterations": 20 },
-      { "math": [ "u_done_step_closer = 0" ] }
-    ]
-  },
-  {
     "id": "EOC_PERK_DODGE_RETREAT",
     "type": "effect_on_condition",
     "condition": { "and": [ { "u_has_flag": "MELEE_PERK_MOVING_DODGE" } ] },
@@ -115,28 +107,6 @@
     "type": "effect_on_condition",
     "condition": { "u_has_trait": "MELEE_PERK_MOMENTUM_2" },
     "effect": { "u_add_effect": "perk_dex_bonus", "duration": "2 seconds" }
-  },
-  {
-    "id": "EOC_PERK_TRY_STEP_CLOSER",
-    "type": "effect_on_condition",
-    "effect": [
-      { "u_location_variable": { "context_val": "original_pos" } },
-      { "npc_location_variable": { "context_val": "attempt" }, "min_radius": 1, "max_radius": 1 },
-      { "u_teleport": { "context_val": "attempt" } },
-      {
-        "run_eocs": [
-          {
-            "id": "_VALID_STEP_CLOSER",
-            "condition": { "math": [ "distance(_original_pos, _attempt ) > 1" ] },
-            "effect": [ { "u_teleport": { "context_val": "original_pos" } } ],
-            "false_effect": [
-              { "run_eocs": [ "EOC_PERK_ON_MOVEMENT", "EOC_PERK_ON_MOVEMENT_AUTOMATIC" ] },
-              { "math": [ "u_done_step_closer = 1" ] }
-            ]
-          }
-        ]
-      }
-    ]
   },
   {
     "id": "EOC_PERK_TRY_RETREAT",
