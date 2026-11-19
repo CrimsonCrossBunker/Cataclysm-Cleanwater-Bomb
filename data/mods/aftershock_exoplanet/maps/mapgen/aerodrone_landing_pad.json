@@ -60,41 +60,5 @@
       "place_monster": [ { "group": "AFS_GROUP_RUIN_MOXIE", "x": [ 5, 22 ], "y": [ 5, 22 ], "pack_size": [ 1, 2 ], "chance": 25 } ],
       "place_nested": [ { "chunks": [ { "param": "lightstatus", "fallback": "null" } ], "x": 0, "y": 0 } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "afs_aerodrone_landing_pad_a1_floor_2",
-    "object": {
-      "fill_ter": "t_metal_floor",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                  [[[[[ ",
-        "                  [1.2[ ",
-        "                  [1.2[ ",
-        "                  [...[ ",
-        "                  [3.4[ ",
-        "                  [[[[[ ",
-        "                        ",
-        "                        ",
-        "                  [[[[[ ",
-        "                  [...[ ",
-        "                  [...[ ",
-        "                  [...[ ",
-        "                  [...[ ",
-        "                  [[[[[ ",
-        "                        ",
-        " [[[[[[[[[[[[[[[[[      ",
-        " [...............[      ",
-        " [...............[      ",
-        " [[[[[[[[[[[[[[[[[      ",
-        "                        "
-      ],
-      "palettes": [ "afs_habitat_structure" ],
-      "terrain": { " ": "t_open_air" },
-      "furniture": { "1": "f_small_satellite_dish", "2": "f_solar_unit", "3": "f_TV_antenna", "4": "f_roof_turbine_vent" }
-    }
   }
 ]

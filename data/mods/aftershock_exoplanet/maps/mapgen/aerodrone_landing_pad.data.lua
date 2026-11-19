@@ -1,0 +1,43 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_aerodrone_landing_pad_a1_floor_2",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                  [[[[[ ",
+            "                  [1.2[ ",
+            "                  [1.2[ ",
+            "                  [...[ ",
+            "                  [3.4[ ",
+            "                  [[[[[ ",
+            "                        ",
+            "                        ",
+            "                  [[[[[ ",
+            "                  [...[ ",
+            "                  [...[ ",
+            "                  [...[ ",
+            "                  [...[ ",
+            "                  [[[[[ ",
+            "                        ",
+            " [[[[[[[[[[[[[[[[[      ",
+            " [...............[      ",
+            " [...............[      ",
+            " [[[[[[[[[[[[[[[[[      ",
+            "                        ",
+        },
+        palettes = { "afs_habitat_structure" },
+        terrain = { [" "] = "t_open_air" },
+        furniture = {
+            ["1"] = "f_small_satellite_dish",
+            ["2"] = "f_solar_unit",
+            ["3"] = "f_TV_antenna",
+            ["4"] = "f_roof_turbine_vent",
+        },
+        fill_terrain = "t_metal_floor",
+    },
+}
