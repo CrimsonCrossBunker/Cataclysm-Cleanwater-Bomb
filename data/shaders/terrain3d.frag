@@ -22,6 +22,8 @@ layout(set = 3, binding = 0) uniform FragUBO {
     vec4 memory_light;  // rgb = custom light color
     vec4 nv_params;     // x = 1 in a night vision frame (v_color.a then carries
                         // the tile light), y = night floor, z = overexpose start
+    vec4 cursor_params; // xy = cursor in top-left screen UV, z = mask enabled
+    vec4 effect_params; // xy = cursor ellipse radii, z = inverse full wall height
 };
 
 layout(location = 0) in vec4 v_color;
@@ -29,20 +31,35 @@ layout(location = 1) in vec2 v_uv;
 layout(location = 2) in float v_flags;
 layout(location = 3) in float v_shade;
 layout(location = 4) in vec3 v_world;
+layout(location = 5) in vec2 v_screen;
 
 layout(location = 0) out vec4 out_color;
 
 void main()
 {
     int flags = int( v_flags + 0.5 );
-    const bool mask_candidate = mask_params.w > 0.5 &&
+    const bool same_level_wall = ( flags & 1024 ) != 0;
+    const bool mask_candidate = mask_params.w > 0.5 && !same_level_wall &&
                                 v_world.z > mask_params.z + 0.15;
     // Most fragments do not use screen-door transparency. Avoid evaluating a
     // sine hash unless this fragment can actually enter a dithered branch.
     float hash = 0.0;
-    if( mask_candidate || ( flags & ( 32 | 128 ) ) != 0 ) {
+    if( same_level_wall || mask_candidate || ( flags & ( 32 | 128 ) ) != 0 ) {
         hash = fract( sin( dot( gl_FragCoord.xy,
                                 vec2( 12.9898, 78.233 ) ) ) * 43758.5453 );
+    }
+
+    // Same-level walls keep their full geometry, but only the lower third is
+    // solid. A stable dither fades the next sixth; the entire upper half is gone.
+    if( same_level_wall ) {
+        float wall_h = clamp( v_world.z * effect_params.z, 0.0, 1.0 );
+        if( wall_h >= 0.5 ) {
+            discard;
+        }
+        float hide = smoothstep( 1.0 / 3.0, 0.5, wall_h );
+        if( hash < hide ) {
+            discard;
+        }
     }
 
     // camera->player occlusion mask: hide geometry near the eye-to-player
@@ -66,6 +83,16 @@ void main()
         // FACING (beyond them from the camera) must stay readable
         float hide = ( 1.0 - smoothstep( 1.0, 1.5, de ) ) *
                      ( 1.0 - smoothstep( 0.9, 1.1, t_raw ) );
+        if( hash < hide ) {
+            discard;
+        }
+    }
+
+    // cursor-centered occlusion hole: independent of the eye->player mask,
+    // with the same screen-door edge and the same eligible geometry/height gate
+    if( cursor_params.z > 0.5 && mask_candidate ) {
+        vec2 cursor_delta = ( v_screen - cursor_params.xy ) / effect_params.xy;
+        float hide = 1.0 - smoothstep( 1.0, 1.5, length( cursor_delta ) );
         if( hash < hide ) {
             discard;
         }

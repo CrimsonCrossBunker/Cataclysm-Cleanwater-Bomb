@@ -624,6 +624,8 @@ float g_yaw = 0.78539816f;   // radians, 0 = +x (east)
 float g_pitch = -0.96f;      // radians, negative = looking down
 float g_cam_dist = 14.0f;    // orbit distance in meters
 bool g_mouse_captured = false;
+bool g_same_level_only = false;
+bool g_cursor_dither_enabled = true;
 
 // cached frame state for screen_to_tile + the hover preselection box
 SDL_FRect g_dest = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -2124,6 +2126,7 @@ void push_instance( instance_sink out, const float dx, const float dy,
     // while sampling a fixed sprite-u edge column (independent of world rotation)
     // bit9: distant structural LOD — terrain3d stores a composite-only mask in
     // the offscreen alpha channel so tilt-shift never blurs detailed terrain
+    // bit10: same-level wall — solid lower third, dithered fade, transparent top
     // pad: side-strip v, or the run direction for MODE_LINEQUAD (0 = E-W)
     out.data[14] = ( spr.atlas ? 1.0f : 0.0f ) + ( no_discard ? 2.0f : 0.0f ) +
                    static_cast<float>( ( rota4 & 3 ) << 2 ) + ( side_strip ? 16.0f : 0.0f ) +
@@ -2131,6 +2134,17 @@ void push_instance( instance_sink out, const float dx, const float dy,
                    ( soft_alpha ? 128.0f : 0.0f ) + ( edge_skirt ? 256.0f : 0.0f );
     out.data[15] = pad_value >= 0.0f ? pad_value
                    : ( side_strip ? spr.v1 - 0.02f * ( spr.v1 - spr.v0 ) : 0.0f );
+}
+
+void mark_same_level_wall( std::vector<float> &out, const bool current_level )
+{
+    constexpr size_t stride = INSTANCE_STRIDE / sizeof( float );
+    if( !g_same_level_only || !current_level || out.size() < stride ) {
+        return;
+    }
+    // Keep full-height geometry. The fragment shader fades the wall assembly
+    // from a solid lower third to a fully transparent upper half.
+    out[out.size() - stride + 14] += 1024.0f;
 }
 
 void push_lod_instance( instance_sink out, const float dx, const float dy,
@@ -2799,6 +2813,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             push_lod_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ), wz,
                                1.0f, 1.0f, WALL_HEIGHT, traits.object_sprite,
                                color[0], color[1], color[2], true );
+            mark_same_level_wall( v, wz == 0.0f );
             ++count;
             drew = true;
         }
@@ -2898,7 +2913,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // render every z-level: per-level rules (seen-only below, roof mode above,
     // open air skipped) keep the cost proportional to what actually exists
     const int zmin = here.min_z();
-    const int zmax = here.max_z();
+    const int zmax = g_same_level_only ? cz : here.max_z();
 
     // dollhouse cutout: a column whose view-level tile is seen, indoors and
     // walkable gets a translucent roof, so interiors show from inside. limited
@@ -3247,6 +3262,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( !is_empty_frame ) {
                     push_instance( v, px, py, wz + SILL_H, psx, psy, SILL_H, facespr,
                                    pr, pg, pb, false, 0, false, -1.0f, false, 1.0f, true );
+                    mark_same_level_wall( v, wz == 0.0f );
                     ++count;
                 }
                 if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
@@ -3263,6 +3279,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     push_instance( vo, opx, opy, wz + SILL_H, osx, osy, SILL_H, fspr,
                                    1.0f, 1.0f, 1.0f,
                                    false, 0, false, -1.0f, false, 1.0f, true );
+                    mark_same_level_wall( vo, wz == 0.0f );
                     ++count;
                 }
                 if( wok && count + 2 <= MAX_DRAW_INSTANCES ) {
@@ -3275,16 +3292,19 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                    wz, 1.0f, 1.0f, SILL_H, sill,
                                    1.0f, 1.0f, 1.0f,
                                    false, 0, false, -1.0f, false, 1.0f, true );
+                    mark_same_level_wall( vb, wz == 0.0f );
                     push_instance( vb, static_cast<float>( dx ), static_cast<float>( dy ),
                                    wz + SILL_H * 2.0f, 1.0f, 1.0f, WALL_HEIGHT - SILL_H * 2.0f,
                                    lintel, 1.0f, 1.0f, 1.0f,
                                    false, 0, false, -1.0f, false, 1.0f, true );
+                    mark_same_level_wall( vb, wz == 0.0f );
                     count += 2;
                 }
             } else {
                 if( !is_empty_frame ) {
                     push_instance( v, px, py, wz, psx, psy, PANEL_HEIGHT, facespr,
                                    pr, pg, pb, false, 0, false, -1.0f, false, 1.0f, true );
+                    mark_same_level_wall( v, wz == 0.0f );
                     ++count;
                 }
                 if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
@@ -3301,6 +3321,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     const float opy = ew_line ? py - grow * 0.5f : py;
                     push_instance( vo, opx, opy, wz, osx, osy, PANEL_HEIGHT, fspr,
                                    1.0f, 1.0f, 1.0f, false, 0, false, -1.0f, false, 1.0f, true );
+                    mark_same_level_wall( vo, wz == 0.0f );
                     ++count;
                 }
                 if( wok && count + 1 <= MAX_DRAW_INSTANCES ) {
@@ -3310,6 +3331,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                    wz + PANEL_HEIGHT, 1.0f, 1.0f, WALL_HEIGHT - PANEL_HEIGHT,
                                    lintel, 1.0f, 1.0f, 1.0f,
                                    false, 0, false, -1.0f, false, 1.0f, true );
+                    mark_same_level_wall( vb, wz == 0.0f );
                     ++count;
                 }
             }
@@ -3345,6 +3367,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 push_instance( v, dx + 0.5f, dy + 0.5f, wz, 1.0f, fh, 1.0f,
                                fspr, or_, og, ob, false, 0, false, run_ns ? 1.0f : 0.0f,
                                false, 1.0f, true );
+                mark_same_level_wall( v, wz == 0.0f );
                 ++count;
             } else {
                 sprite_info hspr = fspr;
@@ -3354,21 +3377,25 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( cn ) {
                     push_instance( v, fcx, fcy - 0.25f, wz, 0.5f, fh, 1.0f, hspr,
                                    or_, og, ob, false, 0, false, 1.0f, false, 1.0f, true );
+                    mark_same_level_wall( v, wz == 0.0f );
                     ++count;
                 }
                 if( cs ) {
                     push_instance( v, fcx, fcy + 0.25f, wz, 0.5f, fh, 1.0f, hspr,
                                    or_, og, ob, false, 0, false, 1.0f, false, 1.0f, true );
+                    mark_same_level_wall( v, wz == 0.0f );
                     ++count;
                 }
                 if( ce ) {
                     push_instance( v, fcx + 0.25f, fcy, wz, 0.5f, fh, 1.0f, hspr,
                                    or_, og, ob, false, 0, false, 0.0f, false, 1.0f, true );
+                    mark_same_level_wall( v, wz == 0.0f );
                     ++count;
                 }
                 if( cw ) {
                     push_instance( v, fcx - 0.25f, fcy, wz, 0.5f, fh, 1.0f, hspr,
                                    or_, og, ob, false, 0, false, 0.0f, false, 1.0f, true );
+                    mark_same_level_wall( v, wz == 0.0f );
                     ++count;
                 }
             }
@@ -3378,6 +3405,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ), wz,
                            1.0f, 1.0f, WALL_HEIGHT, fspr, or_, og, ob,
                            false, 0, false, -1.0f, false, 1.0f, true );
+            mark_same_level_wall( v, wz == 0.0f );
             ++count;
         }
 
@@ -3856,6 +3884,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         if( !is_empty_frame ) {
                             push_instance( v, px, py, wz + SILL_H, psx, psy, SILL_H, facespr,
                                            pr, pg, pb, false, 0, false, -1.0f, ghost, tone.sat );
+                            mark_same_level_wall( v, dz == 0 );
                             ++count;
                         }
                         if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
@@ -3873,6 +3902,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             push_instance( vo, opx, opy, wz + SILL_H, osx, osy, SILL_H, fspr,
                                            tone.shade, tone.shade, tone.shade,
                                            false, 0, false, -1.0f, ghost, tone.sat );
+                            mark_same_level_wall( vo, dz == 0 );
                             ++count;
                         }
                         if( wok && count + 2 <= MAX_DRAW_INSTANCES ) {
@@ -3883,10 +3913,12 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                            wz, 1.0f, 1.0f, SILL_H, sill,
                                            tone.shade, tone.shade, tone.shade,
                                            false, 0, false, -1.0f, ghost, tone.sat );
+                            mark_same_level_wall( vb, dz == 0 );
                             push_instance( vb, static_cast<float>( dx ), static_cast<float>( dy ),
                                            wz + SILL_H * 2.0f, 1.0f, 1.0f, WALL_HEIGHT - SILL_H * 2.0f,
                                            lintel, tone.shade, tone.shade, tone.shade,
                                            false, 0, false, -1.0f, ghost, tone.sat );
+                            mark_same_level_wall( vb, dz == 0 );
                             count += 2;
                         }
                     } else {
@@ -3894,6 +3926,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         if( !is_empty_frame ) {
                             push_instance( v, px, py, wz, psx, psy, PANEL_HEIGHT, facespr,
                                            pr, pg, pb, false, 0, false, -1.0f, ghost, tone.sat );
+                            mark_same_level_wall( v, dz == 0 );
                             ++count;
                         }
                         if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
@@ -3911,6 +3944,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             push_instance( vo, opx, opy, wz, osx, osy, PANEL_HEIGHT, fspr,
                                            tone.shade, tone.shade, tone.shade,
                                            false, 0, false, -1.0f, ghost, tone.sat );
+                            mark_same_level_wall( vo, dz == 0 );
                             ++count;
                         }
                         if( wok && count + 1 <= MAX_DRAW_INSTANCES ) {
@@ -3920,6 +3954,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                            wz + PANEL_HEIGHT, 1.0f, 1.0f, WALL_HEIGHT - PANEL_HEIGHT,
                                            lintel, tone.shade, tone.shade, tone.shade,
                                            false, 0, false, -1.0f, ghost, tone.sat );
+                            mark_same_level_wall( vb, dz == 0 );
                             ++count;
                         }
                     }
@@ -3956,6 +3991,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         push_instance( v, dx + 0.5f, dy + 0.5f, wz, 1.0f, fh, 1.0f,
                                        fspr, or_, og, ob, false, 0, false, ew_line ? 0.0f : 1.0f,
                                        ghost, tone.sat );
+                        mark_same_level_wall( v, dz == 0 );
                         ++count;
                     } else {
                         // half quads sample half the sprite width so the texel
@@ -3967,21 +4003,25 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         if( cn ) {
                             push_instance( v, fcx, fcy - 0.25f, wz, 0.5f, fh, 1.0f, hspr,
                                            or_, og, ob, false, 0, false, 1.0f, ghost, tone.sat );
+                            mark_same_level_wall( v, dz == 0 );
                             ++count;
                         }
                         if( cs ) {
                             push_instance( v, fcx, fcy + 0.25f, wz, 0.5f, fh, 1.0f, hspr,
                                            or_, og, ob, false, 0, false, 1.0f, ghost, tone.sat );
+                            mark_same_level_wall( v, dz == 0 );
                             ++count;
                         }
                         if( ce ) {
                             push_instance( v, fcx + 0.25f, fcy, wz, 0.5f, fh, 1.0f, hspr,
                                            or_, og, ob, false, 0, false, 0.0f, ghost, tone.sat );
+                            mark_same_level_wall( v, dz == 0 );
                             ++count;
                         }
                         if( cw ) {
                             push_instance( v, fcx - 0.25f, fcy, wz, 0.5f, fh, 1.0f, hspr,
                                            or_, og, ob, false, 0, false, 0.0f, ghost, tone.sat );
+                            mark_same_level_wall( v, dz == 0 );
                             ++count;
                         }
                     }
@@ -3991,6 +4031,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ), wz,
                                    1.0f, 1.0f, WALL_HEIGHT, fspr, or_, og, ob,
                                    false, 0, false, -1.0f, ghost, tone.sat );
+                    mark_same_level_wall( v, dz == 0 );
                     ++count;
                 }
 
@@ -5276,7 +5317,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         // keeps the original single-level far pass. These are absolute Z levels:
         // distant ground must not move with the loaded map's vertical origin.
         const int far_z_min = upos.z() >= 0 ? 0 : std::min( cz, 0 );
-        const int far_z_max = upos.z() >= 0 ? OVERMAP_HEIGHT : far_z_min;
+        const int far_z_max = g_same_level_only ? cz :
+                              ( upos.z() >= 0 ? OVERMAP_HEIGHT : far_z_min );
         const tripoint_abs_ms center_abs = here.get_abs( center );
         const tripoint_abs_sm center_sm = project_to<coords::sm>( center_abs );
         static std::unordered_set<tripoint_abs_sm> far_missing;
@@ -5556,6 +5598,21 @@ void note_mouse_look( const float dx, const float dy )
 void note_mouse_wheel( const float ticks )
 {
     g_cam_dist = std::clamp( g_cam_dist - ticks * 1.5f, 6.0f, 30.0f );
+}
+
+void toggle_same_level_only()
+{
+    g_same_level_only = !g_same_level_only;
+}
+
+void toggle_cursor_dither()
+{
+    g_cursor_dither_enabled = !g_cursor_dither_enabled;
+}
+
+void note_mouse_position( const point &logical_pixel )
+{
+    g_last_mouse = logical_pixel;
 }
 
 bool mouse_captured()
@@ -5992,6 +6049,8 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         // night vision look: x = 1 in an NV frame (v_color.a then carries the
         // tile light), y = night floor brightness, z = overexpose start
         std::array<float, 4> nv_params;
+        std::array<float, 4> cursor_params;
+        std::array<float, 4> effect_params;
     };
     frag_uniforms frag_ub{};
     const tripoint_bub_ms upos = get_avatar().pos_bub();
@@ -6023,6 +6082,13 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     frag_ub.nv_params = { nv_tint ? 1.0f : 0.0f, smooth_lighting::night_floor,
                           smooth_lighting::overexpose_start, 0.0f
                         };
+    const float cursor_x = g_dest.w > 0.0f ? ( g_last_mouse.x - g_dest.x ) / g_dest.w : -1.0f;
+    const float cursor_y = g_dest.h > 0.0f ? ( g_last_mouse.y - g_dest.y ) / g_dest.h : -1.0f;
+    const bool cursor_active = g_cursor_dither_enabled && g_cam_valid && !g_mouse_captured &&
+                               cursor_x >= 0.0f && cursor_x <= 1.0f &&
+                               cursor_y >= 0.0f && cursor_y <= 1.0f;
+    frag_ub.cursor_params = { cursor_x, cursor_y, cursor_active ? 1.0f : 0.0f, 0.0f };
+    frag_ub.effect_params = { 0.075f, 0.10f, 1.0f / WALL_HEIGHT, 0.0f };
 
     // fallback clear color when the sky pass is unavailable
     const SDL_FColor sky{ 0.02f + 0.35f * daylight, 0.02f + 0.45f * daylight,
@@ -6252,8 +6318,8 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     slot.state = frame_slot_state::in_flight;
     g_recording_slot = nullptr;
 
-    // Camera drags stay asynchronous. A non-captured frame (notably the middle
-    // button release) is a final presentation: wait for its own submission so
+    // Camera motion stays asynchronous. A non-captured frame (notably leaving
+    // mouse look) is a final presentation: wait for its own submission so
     // the view cannot stop one completed frame behind the requested angle.
     poll_frame_slots();
     if( g_ctx.latest_ready < 0 || !g_mouse_captured ) {
