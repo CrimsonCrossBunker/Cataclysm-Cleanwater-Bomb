@@ -1,0 +1,22 @@
+[
+  {
+    "id": "banner_thunderous_rush",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": { "str": "banner of thunderous rush", "str_pl": "banners of thunderous rush" },
+    "description": "A back mounted flag identifying the loyalties of troops.  The heraldry on this banner is of lightning striking a tower that is falling.",
+    "weight": "633 g",
+    "volume": "2 L",
+    "price": "39 USD",
+    "price_postapoc": "5 USD",
+    "material": [ "fae_cotton" ],
+    "symbol": "[",
+    "looks_like": "state_flag",
+    "color": "green",
+    "warmth": 6,
+    "material_thickness": 2,
+    "flags": [ "BELTED" ],
+    "armor": [ { "encumbrance": [ 2, 25 ], "coverage": 60, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ],
+    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "id": "thunder_rush" } ]
+  }
+]
