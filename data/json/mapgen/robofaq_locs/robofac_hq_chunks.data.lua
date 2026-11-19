@@ -98,3 +98,338 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "robofac_hq_surface_freemerchant_camp_roof",
+    layout = {
+        size = { width = 15, height = 15 },
+        rows = {
+            "               ",
+            " rrrrrr        ",
+            " rrrrrr        ",
+            " rrrrrr        ",
+            " rrrrrr        ",
+            " rrrrrr        ",
+            " rrrrr         ",
+            " rrrrr         ",
+            "       rrr rrr ",
+            "       rrr rrr ",
+            "       rrr rrr ",
+            "               ",
+            "               ",
+            "               ",
+            "               ",
+        },
+        terrain = { r = "t_canvas_roof" },
+        faction_areas = { { id = "free_merchants", x = { 0, 14 }, y = { 0, 14 } } },
+    },
+}
+
+-- migration from older saved games - remove older shop stocks
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "robofac_hq_surface_freemerchant_camp",
+    layout = {
+        size = { width = 15, height = 15 },
+        rows = {
+            "        ...... ",
+            " ###### ...... ",
+            " #x.rrrr.......",
+            " #t.rrrr.......",
+            " #x.rrrr...F...",
+            " #+++##..h.....",
+            " #c.t#v........",
+            " #####v........",
+            "       #+# #+# ",
+            "       #c# #c# ",
+            "       ### ### ",
+            "               ",
+            "               ",
+            "               ",
+            "               ",
+        },
+        terrain = {
+            ["."] = "t_dirt",
+            r = "t_carpet_concrete_yellow",
+            M = "t_pavement",
+            ["#"] = "t_dirt",
+            x = "t_dirt",
+            c = "t_dirt",
+            F = "t_pit_shallow",
+        },
+        furniture = {
+            ["#"] = "f_skin_wall",
+            ["+"] = "f_skin_door",
+            x = "f_crate_o",
+            t = "f_table",
+            h = "f_chair",
+            F = "f_firering",
+        },
+        traps = { c = "tr_fur_rollmat", v = "tr_funnel" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "robofac_hq_surface_freemerchant_camp_roof", x = 0, y = 0, z = 1 } },
+        faction_areas = { { id = "free_merchants", x = { 0, 14 }, y = { 0, 14 } } },
+        npc_placements = {
+            { id = "roabofac_free_merchant", x = 5, y = 3 },
+            { id = "guard", x = 7, y = 7 },
+            { id = "guard", x = 10, y = 4 },
+        },
+        item_groups = { c = { group = "bed", chance = 100 } },
+        item_spawns = {
+            r = { id = "pillow", chance = 33 },
+            F = { id = "pot", chance = 100 },
+            v = { id = "jug_plastic", chance = 100 },
+        },
+        zone_placements = {
+            { id = "LOOT_UNSORTED", faction = "free_merchants", x = 2, y = { 2, 4 } },
+            {
+                id = "LOOT_ITEM_GROUP",
+                filter = "NC_ROBOFAC_FREE_MERCHANT_misc",
+                faction = "free_merchants",
+                x = 2,
+                y = 2,
+            },
+            {
+                id = "LOOT_ITEM_GROUP",
+                filter = "NC_ROBOFAC_FREE_MERCHANT_misc",
+                faction = "free_merchants",
+                x = 2,
+                y = 4,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "robofac_hq_surface_merc_1",
+    layout = {
+        size = { width = 2, height = 2 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 4 }, y = { 0, 4 } } },
+        npc_placements = { { id = "robofac_merc_1", x = 1, y = 1 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "robofac_hq_surface_merc_2",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = { { id = "chief_meteorologist_pat", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "robofachqy_window_sand_wall",
+    layout = {
+        size = { width = 8, height = 8 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "furniture",
+                id = "f_sandbag_wall",
+                x = 0,
+                y = 0,
+                end_x = 7,
+                end_y = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "robofachq_window_sand_wall_l",
+    layout = {
+        size = { width = 11, height = 11 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "furniture",
+                id = "f_sandbag_wall",
+                x = 0,
+                y = 0,
+                end_x = 10,
+                end_y = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "BEM_hireable",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = { { id = "BEM_hireable", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "BEM_human_sample",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = { { id = "BEM_human_sample", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "BEM_anchor_seller",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = { { id = "BEM_anchor_seller", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "BEM_keycard_seller",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = { { id = "BEM_keycard_seller", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "BEM_template_seller",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = { { id = "BEM_template_seller", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "BEM_gunrunner",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = { { id = "BEM_gunrunner", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "BEM_exodii_hunter",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = { { id = "BEM_exodii_hunter", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "BEM_chatting_veterans",
+    layout = {
+        size = { width = 3, height = 3 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = {
+            { id = "BEM_silent_veteran", x = 0, y = 0 },
+            { id = "BEM_chatting_veteran", x = 2, y = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "BEM_drugrunner",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = { { id = "BEM_drugrunner", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "BEM_jabberwock",
+    layout = {
+        size = { width = 1, height = 1 },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 0 }, y = { 0, 0 } } },
+        npc_placements = { { id = "BEM_jabberwock", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "robofachq_ancilla_bionic_garage",
+    layout = {
+        rows = {
+            "|||||||||||%%%%%%%%___||",
+            "^ hY ||||||_______%___||",
+            " ddd |SSSSy___________||",
+            "     |    y___________||",
+            "(((([|    y____$$____D||",
+            "          y____WW____D||",
+            "          y____WW____D||",
+            "    Y Y   y__________S||",
+            "yyyyyyyyyyy__________w||",
+            "y    y   R|__________S||",
+            "yRRRRyRRRR|55555555555||",
+            "|||||||||||MMMMMMMMMMM||",
+            "|||||||||||mmmmmmmmmmm||",
+            ",,,,,,,,||||||||||||||||",
+            ",,,,,,,,||||||||||||||||",
+            ",,,,,,,,||||||||||||||||",
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+            "||||||||||||||||||||||||",
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+        },
+        palettes = { "robofachq" },
+        terrain = {
+            M = "t_ramp_down_high",
+            m = "t_ramp_down_low",
+            ["%"] = "t_pavement",
+            S = "t_pavement",
+            w = "t_pavement",
+            W = "t_pavement",
+            R = "t_pavement",
+            D = "t_pavement",
+            Y = "t_strconc_floor_olight",
+            ["$"] = "t_strconc_floor_olight",
+        },
+        furniture = {
+            R = "f_warehouse_shelf",
+            W = "f_workbench",
+            ["$"] = "f_workbench",
+            S = "f_utility_shelf",
+            w = "f_mitresaw",
+            ["%"] = "f_sandbag_wall",
+            D = "f_standing_tank",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        faction_areas = { { id = "robofac_auxiliaries", x = { 0, 23 }, y = { 0, 23 } } },
+        vehicle_placements = {
+            { chance = 100, fuel = 0, rotation = 0, status = 0, id = "engine_crane", x = 12, y = 3 },
+            { chance = 100, fuel = 0, rotation = 0, status = 0, id = "welding_cart", x = 16, y = 8 },
+        },
+        item_groups = {
+            R = {
+                { group = "SUS_exodii_storage_lowvalue", chance = 80 },
+                { group = "SUS_exodii_botrack", chance = 80 },
+            },
+            S = {
+                { group = "mechanics", chance = 100, repetitions = { 1, 6 } },
+                { group = "SUS_welding_gear", chance = 80, repetitions = { 1, 2 } },
+            },
+        },
+        npc_placements = { { id = "robofac_garage_scientist_1", x = 2, y = 1 } },
+    },
+}
