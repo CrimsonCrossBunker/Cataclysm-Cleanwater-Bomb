@@ -1,21 +1,5 @@
 [
   {
-    "id": [ "TALK_LUO_SOCIAL" ],
-    "type": "talk_topic",
-    "dynamic_line": "Sure.  Here we are, talking.",
-    "responses": [
-      { "text": "What's your story, anyway?", "topic": "BGSS_Luo1" },
-      { "text": "What did you do before <the_cataclysm>?", "topic": "BGSS_Luo_Expertise" },
-      {
-        "text": "I just wanted to chat, you know.  To relax.",
-        "topic": "TALK_FRIEND_LUO_CHAT",
-        "condition": { "not": { "npc_has_effect": "asked_to_socialize" } }
-      },
-      { "text": "I changed my mind, wanted to ask you something else.", "topic": "TALK_NONE" },
-      { "text": "<lets_go>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_FRIEND_LUO_CHAT",
     "dynamic_line": { "gendered_line": "Seen any good movies lately?", "relevant_genders": [ "u" ] },
