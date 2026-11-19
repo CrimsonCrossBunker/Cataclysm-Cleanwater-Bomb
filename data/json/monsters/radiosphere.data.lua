@@ -1,0 +1,30 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_flailer_radiosphere",
+    name = ccb.content.plural_text("flailer", "flailer"),
+    description = ccb.content.text("A cloth facsimile of a bird, flailing around in the air.  It seems deliberate with its movement."),
+    body_type = "bird",
+    default_faction = "bird_small_flying",
+    categories = { "WILDLIFE" },
+    species = { "BIRD" },
+    volume = "150 ml",
+    mass = "120 g",
+    hp = 1,
+    speed = 200,
+    materials = { "cotton" },
+    symbol = "v",
+    color = "white",
+    aggression = -99,
+    morale = 5,
+    dodge = 4,
+    mating_seasons = { "SPRING", "SUMMER" },
+    fear_triggers = { "SOUND", "PLAYER_CLOSE", "FRIEND_ATTACKED", "FRIEND_DIED", "FIRE", "HURT" },
+    flags = {
+        "HEARS", "ANIMAL", "PATH_AVOID_DANGER", "FLIES", "SWARMS", "CANPLAY", "CAN_BE_CULLED",
+        "PET_WONT_FOLLOW", "SMALL_HIDER",
+    },
+    biosignature = {},
+    copy_from = "mon_bird_flying_base",
+    death = { outcome = { corpse = "BROKEN" } },
+}
