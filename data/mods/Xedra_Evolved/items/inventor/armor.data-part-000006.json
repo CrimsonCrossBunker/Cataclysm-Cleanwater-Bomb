@@ -1,29 +1,45 @@
 [
   {
-    "id": "wolf_mask",
+    "id": "vision_halo",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
-    "category": "clothing",
-    "name": { "str": "wolf's mask" },
-    "description": "A huge, respirator-like mask covering the whole head except for the right eye.  Upon activation it protects you lungs from toxic gases as well as improving your breathing and stamina.",
-    "weight": "405 g",
-    "volume": "1479 ml",
-    "material": [ "aluminum" ],
+    "category": "armor",
+    "name": { "str": "electronic halo" },
+    "description": "A compact crown boasting a built-in processor and several tiny projectors that beam information directly onto your eye.  It's equipped with enough internal storage and RAM to support a basic AI.  Along with multiple cameras providing 360-degree coverage, this setup enables you to tackle tasks far more efficiently than before.  Plus, there's a battle mode that activates an energy-intensive radiation detector.",
+    "weight": "155 g",
+    "volume": "490 ml",
+    "material": [ "aluminum", "copper" ],
     "symbol": "[",
-    "looks_like": "mask_gas",
-    "color": "dark_gray",
-    "material_thickness": 0.4,
-    "environmental_protection": 4,
-    "flags": [ "MORPHIC", "MUNDANE", "INVENTOR_CRAFTED" ],
-    "armor": [
-      { "covers": [ "eyes" ], "rigid_layer_only": true, "coverage": 100, "encumbrance": 3 },
+    "looks_like": "glasses_safety",
+    "color": "light_gray",
+    "use_action": [
+      "CAMERA",
+      "CALORIES_INTAKE_TRACKER",
+      "PORTABLE_GAME",
+      "E_FILE_DEVICE",
+      "EBOOKSAVE",
       {
-        "covers": [ "mouth", "muzzle", "beak", "insect_proboscis" ],
-        "rigid_layer_only": true,
-        "coverage": 100,
-        "encumbrance": 7
+        "target": "vision_halo_on",
+        "msg": "You turn on the %s.",
+        "menu_text": "Turn on a battle mode",
+        "need_charges": 1,
+        "need_charges_msg": "The batteries are dead.",
+        "type": "transform"
       }
     ],
+    "material_thickness": 0.1,
+    "flags": [
+      "MORPHIC",
+      "WATCH",
+      "ALARMCLOCK",
+      "SKINTIGHT",
+      "WATER_BREAK",
+      "CALORIES_INTAKE",
+      "ELECTRONIC",
+      "MUNDANE",
+      "INVENTOR_CRAFTED"
+    ],
+    "faults": [ { "fault_group": "electronic_general" } ],
     "pocket_data": [
       {
         "pocket_type": "MAGAZINE_WELL",
@@ -34,18 +50,20 @@
         "max_contains_volume": "20 L",
         "max_contains_weight": "20 kg",
         "default_magazine": "light_minus_disposable_cell"
-      }
-    ],
-    "use_action": [
+      },
       {
-        "target": "wolf_mask_act",
-        "msg": "You turn on the %s.",
-        "need_charges": 1,
-        "need_charges_msg": "The batteries are dead.",
-        "type": "transform"
+        "pocket_type": "E_FILE_STORAGE",
+        "rigid": true,
+        "max_contains_volume": "1 ml",
+        "max_contains_weight": "1 g",
+        "weight_multiplier": 0.0,
+        "ememory_max": "2 TB"
       }
     ],
+    "armor": [ { "coverage": 10, "encumbrance": 1, "covers": [ "head" ], "specifically_covers": [ "head_crown" ] } ],
     "tool_ammo": [ "battery" ],
-    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_wolf_mask_0" } ]
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Xedra_Evolved_vision_halo_0" }
+    ]
   }
 ]

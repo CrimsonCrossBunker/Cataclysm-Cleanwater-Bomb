@@ -1,52 +1,20 @@
 [
   {
-    "id": "xedra_inventor_damage_reversal_device",
     "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "category": "armor",
-    "name": { "str": "Injury Reset Device" },
-    "description": "A bulky wristwatch that attaches to your arm.  Using it will revert the last injury that you have suffered.  Also tells the time.",
-    "weight": "100 g",
-    "volume": "50 ml",
-    "looks_like": "wristwatch",
-    "material": [ "kevlar", "mc_steel" ],
-    "symbol": "[",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "id": "inventor_fists_plus",
+    "copy-from": "inventor_fists",
+    "symbol": "3",
     "color": "light_gray",
-    "sided": true,
-    "charges_per_use": 300,
+    "name": { "str": "advanced heavy CQC system" },
+    "description": "An advanced version of the heavy CQC system.  It contain a self-recharging pneumatic tank that slowly builds pressure that you can use in a fight.",
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "oxygen": 3 }, "airtight": true } ],
+    "techniques": [ "WBLOCK_3", "BRUTAL", "SWEEP", "CQB_BRUTAL" ],
     "use_action": {
       "type": "effect_on_conditions",
-      "description": "Reverse your last injury.",
-      "effect_on_conditions": [ "EOC_XEDRA_DAMAGE_REVERSAL" ],
-      "need_worn": true
+      "description": "Activate to read the file.",
+      "effect_on_conditions": [ { "id": "EOC_CQC_ATTACK", "effect": [ { "u_attack": "CQB_BRUTAL" } ] } ]
     },
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "airtight": true,
-        "watertight": true,
-        "flag_restriction": [ "BATTERY_MEDIUM", "BATTERY_HEAVY" ],
-        "max_contains_volume": "20 L",
-        "max_contains_weight": "20 kg",
-        "default_magazine": "medium_battery_cell"
-      }
-    ],
-    "flags": [
-      "MORPHIC",
-      "WATCH",
-      "ALARMCLOCK",
-      "BELTED",
-      "ALLOWS_NATURAL_ATTACKS",
-      "WATER_FRIENDLY",
-      "OVERSIZE",
-      "ELECTRONIC",
-      "INVENTOR_CRAFTED",
-      "STURDY",
-      "PADDED"
-    ],
-    "faults": [ { "fault_group": "electronic_general" } ],
-    "armor": [ { "coverage": 50, "covers": [ "hand_l", "hand_r" ], "specifically_covers": [ "hand_wrist_l", "hand_wrist_r" ] } ],
-    "tool_ammo": [ "battery" ]
+    "charge_info": { "recharge_type": "periodic", "time": "1 m", "regenerate_ammo": true }
   }
 ]
