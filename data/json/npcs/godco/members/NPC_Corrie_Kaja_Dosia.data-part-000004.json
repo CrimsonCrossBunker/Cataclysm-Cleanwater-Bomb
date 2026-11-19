@@ -1,0 +1,12 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Corrie_Result_rewardIcon1",
+    "dynamic_line": "Oh, I completely forget.  Here you are.",
+    "speaker_effect": { "effect": [ { "u_spawn_item": "jerky", "count": 5 } ] },
+    "responses": [
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
