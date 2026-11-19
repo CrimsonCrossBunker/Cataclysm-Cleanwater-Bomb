@@ -1,0 +1,49 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN2",
+    "dynamic_line": "Can you think of anything else we might need, or should we put this into action?",
+    "responses": [
+      {
+        "text": "Let's go get your uncle back.",
+        "effect": [
+          { "math": [ "isherwood_family_coming = 1" ] },
+          { "run_eocs": "isherwood_mission_initialization_eoc" },
+          { "math": [ "npc_isherwood_barry_rescue_attempts++" ] }
+        ],
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "I've changed my mind.  I think it's better we take my vehicle, and just leave them out of it.",
+        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN_Cancel"
+      },
+      {
+        "text": "I'm a bit worried about defenses.  Do you folks have any armor or equipment to help keep yourselves safe?",
+        "condition": { "math": [ "isherwood_gear_status < 1" ] },
+        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN_Gear"
+      },
+      {
+        "text": "I think we need some kind of secure fallback point for the family, maybe a defensive wall?",
+        "condition": {
+          "and": [
+            { "not": { "u_has_mission": "MISSION_ISHERWOOD_CHRIS_1_GET_WALL_BAGS" } },
+            { "math": [ "isherwood_wall_status < 1" ] }
+          ]
+        },
+        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN_Wall"
+      },
+      {
+        "text": "We're going to need some way to breach the tower itself, possibly some form of explosives.  Do you know anyone who could help us with that?",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "u_been_to_migos" } ] },
+            { "not": { "compare_string": [ "yes", { "u_val": "chris_planned_for_bomb" } ] } }
+          ]
+        },
+        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN_Bomb"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_ISHERWOOD_CHRIS_TOPICS" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]

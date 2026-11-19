@@ -1,23 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN_Bomb_Luke",
-    "dynamic_line": "Well, I trust you on this.  If you need a good hand with chemistry, go see Luke about it.  He knows a lot, you'd be surprised.  \" He pauses for a moment, and thinks as if trying to recall something.  \"Luke should be over in the old outbuilding near the dairy, that's on the other end of the property.",
-    "responses": [
-      {
-        "text": "That sounds great, I'll go talk to him about it.  Let's talk about something else first, though.",
-        "effect": { "u_add_var": "chris_planned_for_bomb", "value": "yes" },
-        "topic": "TALK_ISHERWOOD_CHRIS_TOPICS"
-      },
-      {
-        "text": "That sounds great, I'll go talk to him about it.",
-        "effect": { "u_add_var": "chris_planned_for_bomb", "value": "yes" },
-        "topic": "TALK_DONE"
-      }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_CHRIS_TRY_AGAIN",
     "dynamic_line": "If you think we're ready, I think we can try another go.  Even… even if it's too late for Uncle Barry, I think we've got to try to take that damn tower out of commission.",
     "responses": [
