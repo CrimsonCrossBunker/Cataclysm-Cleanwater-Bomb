@@ -1,31 +1,23 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = { "TALK_UICA_VEHICLE_MERCHANT_BUY_VEHICLE_FAIL" },
-    line = ccb.content.text("I'd report you if this sort of behavior wasn't already so laughably predictable.  Just go away."),
-    replies = { { text = ccb.content.text("Your loss."), next_topic = "TALK_DONE" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = { "TALK_UICA_VEHICLE_MERCHANT_BUY_VEHICLE_PASS" },
-    line = ccb.content.text("Alright, alright.  Just not so loud.  Here's the thing: A while back one of our patrol vehicles got totalled when some junior officers took it for a joy ride.  We are in queue to get a replacement issued to us and High Command just wants the old one broken down for parts.  Well the chief and I agree that's a little wasteful.  So I patched the damn thing back together with the parts we had on hand.  And now we're looking for a way to make it, disappear."),
+    id = { "TALK_UICA_VEHICLE_MERCHANT_BUY_VEHICLE" },
+    line = ccb.content.text("As I've SAID before: I'm only authorized to trade vehicle parts and scraps.  Our patrol vehicles are not up for auction.  Now if you don't mind, I have work to do."),
     replies = {
         {
-            text = ccb.content.text("How much do want for it?"),
-            next_topic = "TALK_UICA_VEHICLE_MERCHANT_BUY_VEHICLE_PASS_2",
+            text = ccb.content.text("Surely you can arrange for a patrol car to be 'lost'.  I can make it worth your while."),
+            trial = { kind = "persuade", difficulty = 60 },
+            success = {
+                next_topic = "TALK_UICA_VEHICLE_MERCHANT_BUY_VEHICLE_PASS",
+                actions = { actions.set_actor_value("interlocutor", "player_has_pursuaded", "yes") },
+            },
+            failure = {
+                next_topic = "TALK_UICA_VEHICLE_MERCHANT_BUY_VEHICLE_FAIL",
+                actions = { actions.add_effect("interlocutor", "afs_tried_to_buy_car", { turns = 86400 }) },
+            },
         },
-        { text = ccb.content.text("Maybe later."), next_topic = "TALK_DONE" },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = { "TALK_UICA_VEHICLE_MERCHANT_BUY_VEHICLE_PASS_ALT" },
-    line = ccb.content.text("*sighs.  \"Yes it is, are you interested?\""),
-    replies = {
-        {
-            text = ccb.content.text("How much do want for it again?"),
-            next_topic = "TALK_UICA_VEHICLE_MERCHANT_BUY_VEHICLE_PASS_2",
-        },
-        { text = ccb.content.text("Maybe later."), next_topic = "TALK_DONE" },
+        { text = ccb.content.text("Nevermind then."), next_topic = "TALK_DONE" },
     },
 }
