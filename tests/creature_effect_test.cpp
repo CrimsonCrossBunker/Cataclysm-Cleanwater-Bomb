@@ -450,8 +450,8 @@ TEST_CASE( "monster_is_immune_effect", "[creature][monster][effect][immune]" )
             CHECK( feye.is_immune_effect( effect_venom_weaken ) );
         }
 
-        THEN( "they can't be downed" ) {
-            CHECK( feye.is_immune_effect( effect_downed ) );
+        THEN( "flight alone does not grant immunity to being downed" ) {
+            CHECK_FALSE( feye.is_immune_effect( effect_downed ) );
         }
     }
 

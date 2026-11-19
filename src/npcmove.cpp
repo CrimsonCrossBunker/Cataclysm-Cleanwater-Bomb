@@ -2908,7 +2908,8 @@ npc_action npc::method_of_fleeing()
 npc_action npc::autonomous_needs_action()
 {
     if( !is_player_ally() || attitude != NPCATT_FOLLOW || activity || in_sleep_state() ||
-        in_vehicle || !is_safe() || is_hallucination() ||
+        in_vehicle || goto_to_this_pos || !ai_cache.committed_goal.empty() ||
+        !is_safe() || is_hallucination() ||
         sees_dangerous_field( pos_bub() ) || !ai_cache.dangerous_explosives.empty() ) {
         return npc_undecided;
     }
@@ -2953,15 +2954,6 @@ npc_action npc::autonomous_needs_action()
                 autonomy.reason = _( "Using carried supplies before rejoining the team." );
                 return npc_noop;
             }
-        }
-        if( leader && !rules.has_flag( ally_rule::hold_the_line ) &&
-            rules.engagement != combat_engagement::NO_MOVE &&
-            rules.engagement != combat_engagement::FREE_FIRE ) {
-            autonomy.reason = _( "Rejoining the team before searching for more supplies." );
-            if( !sees( get_map(), *leader ) ) {
-                return npc_look_for_player;
-            }
-            return leader->in_vehicle ? npc_follow_embarked : npc_follow_player;
         }
         return npc_undecided;
     }
@@ -8369,6 +8361,11 @@ npc::need_result npc::execute_go_to_sleep()
     const tripoint_bub_ms target_bub = here.get_bub( plan.target );
     const Character &player_character = get_player_character();
 
+    if( !low_danger ) {
+        plan.last_result = need_result::deferred;
+        return need_result::deferred;
+    }
+
     // At target: perform the sleep action.
     if( pos_bub() == target_bub ) {
         autonomous_announce( "sleep", _( "I need to rest here for a while." ) );
@@ -8400,10 +8397,6 @@ npc::need_result npc::execute_go_to_sleep()
     }
 
     // Not at target: move toward it.
-    if( !low_danger && square_dist( pos_bub(), target_bub ) > 1 ) {
-        plan.last_result = need_result::deferred;
-        return need_result::deferred;
-    }
     if( move_to_and_verify( target_bub, true ) ) {
         plan.last_result = need_result::progressed;
         plan.no_progress_turns = 0;

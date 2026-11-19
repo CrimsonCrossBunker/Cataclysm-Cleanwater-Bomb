@@ -514,9 +514,14 @@ TEST_CASE( "room_heat_survives_weather_save_load", "[weather][save]" )
     weather_manager::unserialize_all( json_loader::from_string( input ) );
     const std::string saved = saved_weather_state();
     const JsonObject snapshot = json_loader::from_string( saved );
+    snapshot.allow_omitted_members();
     REQUIRE( snapshot.has_object( "room_heat" ) );
-    const JsonObject layer = snapshot.get_object( "room_heat" ).get_array( "layers" ).get_object( 0 );
+    const JsonObject heat = snapshot.get_object( "room_heat" );
+    heat.allow_omitted_members();
+    const JsonObject layer = heat.get_array( "layers" ).get_object( 0 );
+    layer.allow_omitted_members();
     const JsonObject room = layer.get_array( "rooms" ).get_object( 0 );
+    room.allow_omitted_members();
     CHECK( room.get_float( "excess" ) == Approx( 12.5 ) );
 
     SECTION( "saved heat is restored after clearing runtime state" ) {
@@ -532,8 +537,11 @@ TEST_CASE( "room_heat_survives_weather_save_load", "[weather][save]" )
         REQUIRE( offset != std::string::npos );
         invalid.replace( offset, assignment.size(), "\"(10,20,0)\": " + index );
         const JsonObject invalid_state = json_loader::from_string( invalid );
-        const JsonObject parsed_assignments = invalid_state.get_object( "room_heat" )
-                                              .get_array( "layers" ).get_object( 0 ).get_object( "assignments" );
+        const JsonObject invalid_heat = invalid_state.get_object( "room_heat" );
+        invalid_heat.allow_omitted_members();
+        const JsonObject invalid_layer = invalid_heat.get_array( "layers" ).get_object( 0 );
+        invalid_layer.allow_omitted_members();
+        const JsonObject parsed_assignments = invalid_layer.get_object( "assignments" );
         REQUIRE( parsed_assignments.get_member( "(10,20,0)" ).get_uint64() == std::stoull( index ) );
         CHECK_THROWS_AS( weather_manager::unserialize_all( invalid_state ), JsonError );
     }
@@ -541,11 +549,13 @@ TEST_CASE( "room_heat_survives_weather_save_load", "[weather][save]" )
         weather_manager::unserialize_all( json_loader::from_string(
                                               R"({"temperature":50,"winddirection":0,"windspeed":0})" ) );
         const JsonObject legacy = json_loader::from_string( saved_weather_state() );
+        legacy.allow_omitted_members();
         CHECK_FALSE( legacy.has_object( "room_heat" ) );
     }
     SECTION( "new games clear the room heat state" ) {
         weather.reset_room_heat();
         const JsonObject fresh = json_loader::from_string( saved_weather_state() );
+        fresh.allow_omitted_members();
         CHECK_FALSE( fresh.has_object( "room_heat" ) );
     }
 }

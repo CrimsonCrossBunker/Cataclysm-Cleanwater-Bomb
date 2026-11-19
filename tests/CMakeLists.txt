@@ -40,6 +40,13 @@ if (BUILD_TESTING)
         list(APPEND CATACLYSM_DDA_TEST_SOURCES "${CMAKE_SOURCE_DIR}/src/messages.cpp")
     endif ()
 
+    if (MSVC)
+        set_source_files_properties(
+            ${CMAKE_CURRENT_SOURCE_DIR}/mp_inventory_activity_test.cpp
+            PROPERTIES COMPILE_OPTIONS "/bigobj"
+        )
+    endif ()
+
     # Enabling benchmarks
     add_definitions(-DCATCH_CONFIG_ENABLE_BENCHMARKING)
 

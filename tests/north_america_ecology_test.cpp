@@ -33,7 +33,9 @@
 #include "rng.h"
 #include "type_id.h"
 
+static const oter_type_str_id oter_type_atlas_raised_bridge_deck( "atlas_raised_bridge_deck" );
 static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
+static const oter_type_str_id oter_type_bridge( "bridge" );
 static const oter_type_str_id oter_type_road( "road" );
 static const oter_type_str_id oter_type_shelter( "shelter" );
 static const oter_type_str_id oter_type_shelter_roof( "shelter_roof" );
@@ -149,6 +151,23 @@ TEST_CASE( "atlas_george_washington_bridge_crosses_the_water_overmap_seam", "[no
     CHECK( crosses );
 }
 
+TEST_CASE( "atlas_curved_bridge_deck_is_generated_above_water", "[north_america][worldgen]" )
+{
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    g->north_america_world = true;
+    const point_abs_omt crossing( -9361, 7361 );
+    const std::unique_ptr<overmap> om = std::make_unique<overmap>(
+                                            project_to<coords::om>( crossing ) );
+    REQUIRE( overmap_test_helper::generate_atlas_streets_and_buildings( *om ) );
+
+    const tripoint_om_omt local( project_remain<coords::om>( crossing ).remainder, 0 );
+    const std::size_t links = om_lines::set_segment(
+                                  om_lines::set_segment( 0, om_direction::type::north ), om_direction::type::east );
+    CHECK( om->ter( local )->get_type_id() == oter_type_bridge );
+    CHECK( om->ter( local + tripoint::above ) ==
+           oter_type_atlas_raised_bridge_deck->get_linear( links ) );
+}
+
 TEST_CASE( "north_america_geographic_vegetation_and_population", "[north_america]" )
 {
     const point_abs_omt winnipeg( -75949, -46747 );
@@ -191,7 +210,7 @@ TEST_CASE( "north_america_zones_all_large_atlas_cities", "[north_america][worldg
     using north_america::urban_zone;
     const auto &places = north_america::cities();
     for( std::size_t index = 0; index < places.size(); ++index ) {
-        const auto &place = places[index];
+        const north_america::place &place = places[index];
         if( place.population < north_america::minimum_zoned_population ) {
             continue;
         }
@@ -205,7 +224,7 @@ TEST_CASE( "north_america_zones_all_large_atlas_cities", "[north_america][worldg
         CHECK( zones[1].zone == urban_zone::commercial );
         CHECK( zones[2].zone == urban_zone::institutional );
         CHECK( zones[3].zone == urban_zone::industrial );
-        for( const auto &zone : zones ) {
+        for( const north_america::city_zone_center &zone : zones ) {
             CHECK( zone.radius > 0 );
             CHECK( north_america::in_urban_footprint( zone.center ) );
             const auto &districts = north_america::urban_districts_in(
@@ -434,7 +453,7 @@ TEST_CASE( "atlas_highways_reserve_multiple_overmap_columns", "[north_america][w
         const auto om = std::make_unique<overmap>( point_abs_om::zero );
         std::vector<north_america::road_cell> roads( OMAPX * OMAPY );
         for( int y = 20; y < 36; ++y ) {
-            auto &cell = roads[y * OMAPX + 40];
+            north_america::road_cell &cell = roads[y * OMAPX + 40];
             cell.lanes = lanes;
             cell.connections = cell.mapped_connections = links;
         }

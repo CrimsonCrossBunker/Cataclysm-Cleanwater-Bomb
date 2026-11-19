@@ -36,7 +36,7 @@ TEST_CASE( "projectiles_stop_at_the_loaded_map_boundary", "[projectile][bounds]"
     const tripoint_bub_ms source( direction.x < 0 ? 1 : direction.x > 0 ? MAPSIZE_X - 2 : 60,
                                   direction.y < 0 ? 1 : direction.y > 0 ? MAPSIZE_Y - 2 : 60, 0 );
     const tripoint_bub_ms target = source + tripoint_rel_ms( direction.x, direction.y, 0 );
-    you.setpos( here, source );
+    you.setpos( here, source, false );
     REQUIRE( g->place_critter_at( mon_zombie, target ) != nullptr );
     projectile shot;
     shot.speed = 1000;
@@ -64,7 +64,7 @@ TEST_CASE( "vertical_projectiles_stop_at_the_loaded_map_boundary", "[projectile]
     const tripoint_bub_ms target( 60, 60, boundary_z );
     here.ter_set( source, ter_t_open_air );
     here.ter_set( target, ter_t_open_air );
-    you.setpos( here, source );
+    you.setpos( here, source, false );
     REQUIRE( g->place_critter_at( mon_bee, target ) != nullptr );
     projectile shot;
     shot.speed = 1000;

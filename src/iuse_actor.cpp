@@ -1,21 +1,22 @@
 #include "iuse_actor.h"
 
-#include <cstdint>
-
-#include "item_activation.h"
-#include "item_source.h"
-#include "inventory_ui.h"
-
+#include <cached_options.h>
+#include <cata_scope_helpers.h>
 #include <color.h>
+#include <craft_command.h>
 #include <imgui/imgui.h>
+#include <item_uid.h>
 #include <iuse.h>
 #include <ret_val.h>
+#include <tool_activity_target.h>
 #include <translation.h>
 #include <units.h>
+#include <vehicle_power_connection.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -31,21 +32,16 @@
 #include "avatar.h" // IWYU pragma: keep
 #include "bionics.h"
 #include "bodypart.h"
-#include "cached_options.h"
 #include "calendar.h"
 #include "cata_imgui.h"
-#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
-#include "charcoal_kiln.h"
-#include "smoking_rack.h"
-#include "repair_activity.h"
 #include "character_id.h"
+#include "charcoal_kiln.h"
 #include "clothing_mod.h"
 #include "clzones.h"
 #include "condition.h"
 #include "coordinates.h"
-#include "craft_command.h"
 #include "crafting.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -68,20 +64,21 @@
 #include "generic_factory.h"
 #include "hsv_color.h"
 #include "input_popup.h"
+#include "inventory_ui.h"
 #include "item.h"
-#include "item_healing.h"
+#include "item_activation.h"
 #include "item_components.h"
 #include "item_contents.h"
+#include "item_healing.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_source.h"
 #include "item_transformation.h"
-#include "item_uid.h"
 #include "itype.h"
 #include "localized_comparator.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
-#include "mp_client_conn.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "map_selector.h"
@@ -90,6 +87,7 @@
 #include "memory_fast.h"
 #include "messages.h"
 #include "monster.h"
+#include "mp_client_conn.h"
 #include "mtype.h"
 #include "music.h"
 #include "mutation.h"
@@ -107,14 +105,15 @@
 #include "projectile.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
+#include "repair_activity.h"
 #include "requirements.h"
 #include "rng.h"
 #include "safe_reference.h"
+#include "smoking_rack.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "talker.h"
 #include "temp_crafting_inventory.h"
-#include "tool_activity_target.h"
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
@@ -124,7 +123,6 @@
 #include "veh_appliance.h"
 #include "veh_type.h"
 #include "vehicle.h"
-#include "vehicle_power_connection.h"
 #include "vehicle_selector.h"
 #include "vfx_emit.h"
 #include "visitable.h"
@@ -2192,11 +2190,11 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
     }
 
     // Multi-turn activity.
-    item_location tool_loc( who, &tool );
+    item_location tool_loc = form_loc_recursive( who, tool );
     who.assign_activity( fire_start_activity_actor(
                              here.get_abs( fire_pos ), tool_loc,
                              potential_skill_gain, moves, tinder_consumed ) );
-    return true;
+    return static_cast<bool>( who.activity );
 }
 
 void salvage_actor::load( const JsonObject &obj, const std::string & )
@@ -4114,11 +4112,12 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
 
     if( roll == SUCCESS && ( action == RT_REPAIR || action == RT_REFIT ||
                              action == RT_DOWNSIZING || action == RT_UPSIZING ) ) {
-        if( !handle_components( pl, *fix, false, false, true, material ) || !lifetime || !fix ) {
+        if( !handle_components( pl, *fix, false, true, true, material ) || !lifetime || !fix ) {
             return AS_CANT;
         }
     }
 
+    // Consuming components can spill and relocate the workpiece, so apply the repair first.
     if( action == RT_REPAIR ) {
         if( roll == SUCCESS ) {
             const std::string startdurability = fix->durability_indicator( true );
@@ -4133,7 +4132,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                 pl.add_msg_if_player( m_good, _( "You repair your %s completely!  ( %s-> %s)" ),
                                       fix->tname( 1, false ), startdurability, resultdurability );
             }
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
 
         return AS_RETRY;
@@ -4148,7 +4147,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
 
                 pl.calc_encumbrance();
             }
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
 
         return AS_RETRY;
@@ -4161,7 +4160,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->set_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
         return AS_RETRY;
     }
@@ -4173,7 +4172,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->unset_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
         return AS_RETRY;
     }

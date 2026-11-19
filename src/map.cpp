@@ -1543,9 +1543,11 @@ bool map::vehproceed( std::vector<safe_reference<vehicle>> &vehicle_list,
         return false;
     }
 
-    if( north_america::elevation_active() && ( *cur_veh )->is_flying_in_air() ) {
+    const bool flying = ( *cur_veh )->is_flying_in_air();
+    if( ( flying || ( *cur_veh )->is_falling ) && north_america::elevation_active() ) {
         const tripoint_bub_ms current = ( *cur_veh )->pos_bub( *this );
-        const int ahead = current.z() >= max_z() - 1 ? 2 : current.z() <= min_z() + 1 ? -2 : 0;
+        const int ahead = current.z() <= min_z() + 1 ? -2 :
+                          flying && current.z() >= max_z() - 1 ? 2 : 0;
         if( ahead != 0 ) {
             ensure_z_in_window( current + tripoint( 0, 0, ahead ) );
             if( !*cur_veh ) {
@@ -1597,12 +1599,15 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
             return nullptr;
         }
 
+        const bool falling = dp.z() < 0 && new_pointer->vertical_velocity < 0;
         vehicle *const result = move_vehicle( *new_pointer, tripoint_rel_ms( 0, 0, dp.z() ), facing );
         if( !result ) {
             return nullptr;
         }
 
-        result->is_falling = false;
+        if( !falling ) {
+            result->is_falling = false;
+        }
         return result;
     }
     const bool vertical = dp.z() != 0;
@@ -1704,10 +1709,20 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
              sgn( coll_velocity ) == sgn( velocity_before ) &&
              !collisions.empty() && !veh_veh_coll_flag );
 
+    const bool falling_step = dp.z() < 0 && velocity_before < 0 && !cleared_flight_path;
     const int velocity_after = coll_velocity;
     bool can_move = velocity_after != 0 && sgn( velocity_after ) == sgn( velocity_before );
-    if( cleared_flight_path || ( dp.z() != 0 && veh.is_aircraft( *this ) ) ) {
+    if( cleared_flight_path || ( vertical && !falling_step && veh.is_aircraft( *this ) ) ) {
         can_move = true;
+    }
+    if( falling_step && !collisions.empty() && !veh_veh_coll_flag ) {
+        // Damage can remove the blocker. Only advance if the entire downwards
+        // move is now clear, including the floor directly underneath the craft.
+        std::vector<veh_collision> remaining;
+        if( !can_move || veh.collision( *this, remaining, dp1, true ) ) {
+            can_move = false;
+            veh.vertical_velocity = 0;
+        }
     }
     if( vertical ) {
         veh.check_falling_or_floating(); // fix for vehicle falling into floor
@@ -1758,7 +1773,7 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
     Character &player_character = get_player_character();
     const bool seen = sees_veh( player_character, veh, false );
 
-    if( can_move || ( vertical && veh.is_falling ) ) {
+    if( can_move || ( vertical && veh.is_falling && !falling_step ) ) {
         // Accept new direction
         if( veh.skidding ) {
             veh.face.init( veh.turn_dir );
@@ -1807,10 +1822,19 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         const float vehicle_grounded_wheel_area = static_cast<int>( vehicle_wheel_traction( veh, true ) );
         const float weight_to_damage_factor = 0.05f; // Nobody likes a magic number.
         const float vehicle_mass_kg = to_kilogram( veh.total_mass( *this ) );
+        const bool can_bump_on_rails = !veh.is_flying_in_air() && !veh.can_use_rails( *this );
+        bool bumped_on_rails = false;
 
         for( const int vp_wheel_idx : wheel_indices ) {
             vehicle_part &vp_wheel = veh.part( vp_wheel_idx );
             const tripoint_bub_ms wheel_p = veh.bub_part_pos( *this, vp_wheel );
+            const ter_t &wheel_terrain = ter( wheel_p ).obj();
+            if( can_bump_on_rails && wheel_terrain.has_flag( ter_furn_flag::TFLAG_RAIL ) &&
+                !wheel_terrain.has_flag( ter_furn_flag::TFLAG_NOCOLLIDE ) &&
+                !wheel_terrain.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) &&
+                !wheel_terrain.has_flag( ter_furn_flag::TFLAG_DEEP_WATER ) ) {
+                bumped_on_rails = true;
+            }
             if( one_in( 2 ) && displace_water( wheel_p ) ) {
                 sounds::sound( wheel_p, 4, sounds::sound_t::movement, _( "splash!" ), false,
                                "environment", "splash" );
@@ -1831,6 +1855,10 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
                 smash_items( wheel_p, wheel_damage, string_format( _( "weight of %1$s" ), veh.disp_name() ),
                              &vp_wheel, &veh );
             }
+        }
+        if( bumped_on_rails ) {
+            sounds::sound( veh.pos_bub( *this ), std::clamp( std::abs( veh.velocity ) / 400, 2, 12 ),
+                           sounds::sound_t::movement, _( "thump-thump!" ) );
         }
     }
     if( veh.is_towing() ) {
@@ -2522,23 +2550,17 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
         src_submap->vehicles.erase( src_submap_veh_it );
         invalidate_max_populated_zlev( dst.z() );
     }
-    if( need_update ) {
-        g->update_map( player_character );
-    }
     cache_vehicle_parts( veh );
+    if( need_update ) {
+        if( z_change ) {
+            // update_map uses the bubble's z when repositioning the avatar.
+            // Set it to the new seat level before refreshing the map.
+            g->vertical_shift( player_character.posz() );
+        }
+        g->update_map( player_character, z_change != 0 );
+    }
 
     if( z_change || src.z() != dst.z() ) {
-        if( z_change ) {
-            if( in_flight ) {
-                // The rider is already at the destination. Reload the view
-                // for that layer without applying a second descent or climb.
-                g->vertical_shift( player_character.posz() );
-            } else {
-                g->vertical_move( z_change, true );
-            }
-            // vertical moves can flush the caches, so make sure we're still in the cache
-            cache_vehicle_parts( veh );
-        }
         update_vehicle_list( dst_submap, dst.z() );
         // delete the vehicle from the source z-level vehicle cache set if it is no longer on
         // that z-level

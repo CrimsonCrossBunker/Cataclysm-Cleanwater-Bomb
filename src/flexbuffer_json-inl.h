@@ -132,19 +132,6 @@ inline JsonValue::operator int64_t() const
     throw_error( "Expected an int64_t, got " + flexbuffer_type_to_string( json_.GetType() ) );
 }
 
-inline JsonValue::operator uint64_t() const
-{
-    if( json_.IsIntOrUint() ) {
-        // These are always stored as signed ints.
-        int64_t signed_value = json_.AsInt64();
-        if( signed_value >= 0 ) {
-            return static_cast<uint64_t>( signed_value );
-        }
-        throw_error( "uint64_t value out of range" );
-    }
-    throw_error( "Expected a uint64_t, got " + flexbuffer_type_to_string( json_.GetType() ) );
-}
-
 inline JsonValue::operator unsigned() const
 {
     if( json_.IsIntOrUint() ) {
