@@ -107,34 +107,5 @@
       { "text": "Let's talk about the camp.", "topic": "TALK_CAMP" },
       { "text": "<lets_go>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "TALK_TRAIN_PERSUADE_Liam",
-    "type": "talk_topic",
-    "dynamic_line": "I mean, I'm not sure what I can teach you about, but okay.",
-    "responses": [
-      {
-        "text": "Don't sell yourself short, Liam.  I just wanted to know about…",
-        "topic": "TALK_TRAIN",
-        "effect": { "npc_add_effect": "asked_to_train", "duration": 21600 }
-      },
-      { "text": "<end_talking_nevermind>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_later_follower>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_TRAIN_SEMINAR_PERSUADE_Liam",
-    "type": "talk_topic",
-    "dynamic_line": "A… seminar?  About what, how not to burn yourself on the frier at Foodplace?",
-    "responses": [
-      {
-        "text": "Y'know, you have more useful skills than you think.",
-        "trial": { "type": "PERSUADE", "difficulty": 0, "mod": [ [ "TRUST", 6 ], [ "VALUE", 2 ], [ "ANGER", -6 ] ] },
-        "success": { "topic": "TALK_TRAIN_SEMINAR" },
-        "failure": { "topic": "TALK_DENY_PERSONAL", "effect": { "npc_add_effect": "asked_to_train", "duration": 21600 } }
-      },
-      { "text": "<end_talking_nevermind>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_later_follower>", "topic": "TALK_DONE" }
-    ]
   }
 ]
