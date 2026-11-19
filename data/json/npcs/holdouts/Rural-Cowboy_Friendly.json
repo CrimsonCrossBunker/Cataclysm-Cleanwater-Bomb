@@ -9,42 +9,5 @@
     "mission": "GUARD",
     "chat": "TALK_COWBOYFR_MAIN",
     "faction": "no_faction"
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_COWBOYFR_MAIN",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyfr" } ],
-      "yes": "Hello again.",
-      "no": "Ayuh, I was thinkin' it's just another monstah skulkin' about.  Who are you?"
-    },
-    "speaker_effect": { "effect": { "u_add_var": "dialogue_first_meeting_talked_to_cowboyfr", "value": "yes" } },
-    "responses": [
-      {
-        "text": "Just a survivor, looking around.  What are you doing here?",
-        "topic": "TALK_COWBOYFR_INTRODUCTION",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyfr" } ] } }
-      },
-      {
-        "text": "What did you before all this?",
-        "topic": "TALK_COWBOYFR_BACKGROUND",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyfr" } ] }
-      },
-      {
-        "text": "Is there something I can do for you?",
-        "topic": "TALK_COWBOYFR_HELP",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyfr" } ] }
-      },
-      {
-        "text": "How about we travel together?",
-        "topic": "TALK_COWBOYFR_FOLLOW",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyfr" } ] }
-      },
-      {
-        "text": "What's with the accent?",
-        "topic": "TALK_COWBOYFR_ACCENT",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyfr" } ] }
-      }
-    ]
   }
 ]
