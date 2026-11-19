@@ -1,0 +1,95 @@
+local ccb = require("ccb")
+
+-- Forward ejection port would require a different brass catcher design
+ccb.content.define_item {
+    id = "robofac_gun",
+    copy_from = "gun_base_rifle_semi",
+    looks_like = "fn_p90",
+    name = ccb.content.text("Hub 01 HWP"),
+    description = ccb.content.text("The Hub 01 Hybrid Weapons Platform, or just the HWP.  With its combination of black-finished steel, blue polymer furniture, and a number of proprietary bolts and fasteners to hold the pieces in place, this weapon looks like it belongs in a science fiction movie.  The body has \"MULTI CALIBER\" inlaid in the steel, near a quick release used both to exchange the installed barrel and to change the magazine well's adapter."),
+    mass = "2500 g",
+    volume = "4000 ml",
+    length = "50 cm",
+    price = "1 kUSD 250 USD",
+    survival_price = "20 USD",
+    materials = { "steel", "plastic" },
+    symbol = "(",
+    color = "blue",
+    flags = { "NO_TURRET" },
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            allowed_items = {
+                "robofac40", "robofac20", "robofac50", "robofac100", "robofac10", "robofac60",
+                "robofacmultimag", "robofac30", "robofac60_123ln",
+            },
+        },
+    },
+    gun = {
+        ammunition = { "NULL" },
+        damage = { type = "bullet", amount = -2 },
+        modes = {},
+        dispersion = 150,
+        durability = 9,
+        min_cycle_recoil = 1350,
+        default_mods = {
+            "robofac_handguard",
+            "hybrid_sight_4x",
+            "holo_sight",
+            "robofac_laser_sight",
+            "robofac_stock",
+        },
+        mod_locations = {
+            { id = "underbarrel", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "bore", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "stock", count = 1 },
+            { id = "stock accessory", count = 1 },
+        },
+    },
+}
+
+-- Forward ejection port would require a different brass catcher design
+ccb.content.define_item {
+    id = "xedra_gun",
+    copy_from = "gun_base_rifle_semi",
+    looks_like = "modular_ar15",
+    name = ccb.content.text("prototype gun"),
+    description = ccb.content.text("A weapons platform you don't recognize.  With its combination of black-finished steel, brown polymer furniture, and a number of proprietary bolts and fasteners to hold the pieces in place, this weapon looks like it belongs in a science fiction movie.  The body has \"XE\" inlaid in the steel."),
+    mass = "2500 g",
+    volume = "4000 ml",
+    length = "50 cm",
+    price = "1 kUSD 250 USD",
+    survival_price = "20 USD",
+    materials = { "steel", "plastic" },
+    symbol = "(",
+    color = "blue",
+    flags = { "NO_TURRET" },
+    pockets = { { kind = "MAGAZINE_WELL", allowed_items = { "xedra40", "xedra10" } } },
+    gun = {
+        ammunition = { "NULL" },
+        damage = { type = "bullet", amount = -2 },
+        modes = {},
+        dispersion = 150,
+        durability = 9,
+        min_cycle_recoil = 1350,
+        default_mods = {
+            "robofac_handguard",
+            "hybrid_sight_4x",
+            "holo_sight",
+            "robofac_laser_sight",
+            "robofac_stock",
+        },
+        mod_locations = {
+            { id = "underbarrel", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "bore", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "stock", count = 1 },
+            { id = "stock accessory", count = 1 },
+        },
+    },
+}

@@ -1,0 +1,60 @@
+[
+  {
+    "id": "robofac_gun_exodii",
+    "looks_like": "retool_ar15_300blk",
+    "//0": "based off attributes of the EXODII BR",
+    "weight": "2400 g",
+    "volume": "1200 ml",
+    "integral_volume": "950 ml",
+    "integral_weight": "2400 g",
+    "integral_longest_side": "30 cm",
+    "longest_side": "55 cm",
+    "barrel_length": "508 mm",
+    "price": "500 USD",
+    "price_postapoc": "30 USD",
+    "type": "ITEM",
+    "subtypes": [ "GUNMOD" ],
+    "material": [ "steel" ],
+    "symbol": ":",
+    "color": "green",
+    "location": "bore",
+    "mod_targets": [ "robofac_gun" ],
+    "name": { "str_sp": "HWP EXOTIC configuration" },
+    "mode_modifier": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1500" ] ],
+    "install_time": "1 m",
+    "ammo_modifier": [ "123ln" ],
+    "min_skills": [ [ "weapon", 1 ] ],
+    "add_mod": [ [ "muzzle", 1 ] ],
+    "handling_modifier": 18,
+    "//1": "this makes damage the same as pamd68",
+    "damage_modifier": { "damage_type": "bullet", "amount": 2 },
+    "overwrite_min_cycle_recoil": 3500,
+    "flags": [ "BIPOD", "SLOW_WIELD" ],
+    "description": "A Hub 01 Hybrid Weapons Platform quick swap conversion kit.  This version has a heavy barrel with an integrated bipod, threaded muzzle and \"EXODIC\" stamped into the metal.  The typo appears to be intentional."
+  },
+  {
+    "id": "robofac_laser_sight",
+    "copy-from": "rail_laser_sight",
+    "type": "ITEM",
+    "subtypes": [ "GUNMOD" ],
+    "name": { "str": "integral laser designator" },
+    "flags": [ "LASER_SIGHT", "IRREMOVABLE" ]
+  },
+  {
+    "id": "robofac_handguard",
+    "type": "ITEM",
+    "subtypes": [ "GUNMOD" ],
+    "copy-from": "grip",
+    "name": { "str": "integrated front grip" },
+    "blacklist_mod": [ "offset_grip" ],
+    "flags": [ "PUMP_RAIL_COMPATIBLE", "IRREMOVABLE" ]
+  },
+  {
+    "id": "robofac_stock",
+    "type": "ITEM",
+    "subtypes": [ "GUNMOD" ],
+    "copy-from": "adjustable_stock",
+    "name": { "str": "bullpup adjustable stock" },
+    "flags": [ "IRREMOVABLE" ]
+  }
+]
