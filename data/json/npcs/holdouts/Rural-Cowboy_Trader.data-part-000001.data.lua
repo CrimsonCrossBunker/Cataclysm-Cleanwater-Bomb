@@ -1,47 +1,56 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_COWBOYT_BACKGROUND",
-    line = ccb.content.text("Worked as a salesman - high end farming equipment.  Now I know, it may not sound that fancy, but you'd be shocked at how pricy those machines can get.  I was lucky enough to be on a fairly remote farm when everything went to shit.  In a way, being a salesman saved me and the experience from the job might allow me to make a living in the apocalypse, bartering for gear and trinkets, so I got that going for me, I suppose."),
-    replies = {
-        {
-            text = ccb.content.text("Speaking of which, I'd like to see your wares."),
-            next_topic = "TALK_NONE",
-            native_actions = { "start_trade" },
-        },
-        { text = ccb.content.text("Not a bad way to live."), next_topic = "TALK_NONE" },
+    id = "TALK_COWBOYT_MAIN",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_cowboyt" } }),
+        yes = ccb.content.text("Hey there."),
+        no = ccb.content.text("Hey!  Who goes there?"),
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_COWBOYT_JOKE",
-    line = ccb.content.text("Hah, real cute.  Seem the End times didn't take your sense of humor, eh, stranger?"),
+    on_enter = {
+        {
+            actions = {
+                actions.set_actor_value("speaker", "dialogue_first_meeting_talked_to_cowboyt", "yes"),
+            },
+        },
+    },
     replies = {
         {
-            text = ccb.content.text("I have my moments.  So what are you doing here?"),
+            text = ccb.content.text("Just another survivor.  What are you doing here?"),
             next_topic = "TALK_COWBOYT_INTRODUCTION",
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_cowboyt" } })),
         },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_COWBOYT_INTRODUCTION",
-    line = ccb.content.text("Ah, not much really.  Passing through, trying to make a living by trading with folk.  If you're interested, I got a lot of good things on sale, stranger."),
-    replies = {
         {
-            text = ccb.content.text("You do?  Let me take a look."),
-            next_topic = "TALK_DONE",
-            native_actions = { "start_trade" },
+            text = ccb.content.text("I'm you, from the future.  I've come to warn you."),
+            next_topic = "TALK_COWBOYT_JOKE",
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_cowboyt" } })),
         },
-        { text = ccb.content.text("I see."), next_topic = "TALK_COWBOYT_MAIN" },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_COWBOYT_FOLLOW",
-    line = ccb.content.text("You seem like a decent sort, but I'm not really looking for company right now.  Think I'm better off on my own."),
-    replies = {
-        { text = ccb.content.text("If you think so."), next_topic = "TALK_NONE" },
-        { text = ccb.content.text("Fair enough.  <end_talking_bye>"), next_topic = "TALK_DONE" },
+        {
+            text = ccb.content.text("I am a ghost.  I died here 37 years ago, yet I cannot depart this mortal realm."),
+            next_topic = "TALK_COWBOYT_JOKE",
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_cowboyt" } })),
+        },
+        {
+            text = ccb.content.text("What did you before all this?"),
+            next_topic = "TALK_COWBOYT_BACKGROUND",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_cowboyt" } }),
+        },
+        {
+            text = ccb.content.text("Is there something I can help you with?"),
+            next_topic = "TALK_MISSION_LIST",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_cowboyt" } }),
+        },
+        {
+            text = ccb.content.text("How about we travel together?"),
+            next_topic = "TALK_COWBOYT_FOLLOW",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_cowboyt" } }),
+        },
+        {
+            text = ccb.content.text("See you around."),
+            next_topic = "TALK_DONE",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_cowboyt" } }),
+        },
     },
 }
