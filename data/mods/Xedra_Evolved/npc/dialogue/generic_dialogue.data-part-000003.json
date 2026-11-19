@@ -1,26 +1,5 @@
 [
   {
-    "id": [ "TALK_HYPNOTIC_GAZE_USED" ],
-    "type": "talk_topic",
-    "dynamic_line": {
-      "u_has_any_trait": [ "VAMPIRE4", "PSYCHOPATH" ],
-      "yes": "*stares stupidly as you meet <mypossesivepronoun> gaze and overwhelm <mypossesivepronoun> pitiful mind.  Pathetic.  Like a lamb awaiting the slaughter.",
-      "no": "*stares blankly as you meet <mypossesivepronoun> gaze and overwhelm <mypossesivepronoun> mind.  As <mypossesivepronoun> hands fall listlessly to <mypossesivepronoun> sides, <mypossesivepronoun> gaze becomes unfocused and <mypossesivepronoun> mouth drops half-open."
-    },
-    "responses": [
-      {
-        "text": "Ha.  Mortals are nothing but cattle.",
-        "topic": "TALK_DONE",
-        "condition": { "u_has_any_trait": [ "VAMPIRE4", "PSYCHOPATH" ] }
-      },
-      {
-        "text": "Well, that's one problem solved.",
-        "topic": "TALK_DONE",
-        "condition": { "not": { "u_has_any_trait": [ "VAMPIRE4", "PSYCHOPATH" ] } }
-      }
-    ]
-  },
-  {
     "id": "TALK_STOLE_ITEM",
     "type": "talk_topic",
     "responses": [
