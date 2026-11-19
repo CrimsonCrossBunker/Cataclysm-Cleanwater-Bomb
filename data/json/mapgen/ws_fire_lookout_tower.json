@@ -1,30 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "11x11_forest_trail_intersection_south_fire_lookout",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "...........",
-        "...........",
-        "...........",
-        "...........",
-        "...........",
-        "....?.//...",
-        "....?/////.",
-        "...?/////?/",
-        "..?/////?/.",
-        ".?/////?/??",
-        "?/////?/??."
-      ],
-      "palettes": [ "farm_lots" ],
-      "terrain": { "?": [ [ "t_region_grass", 6 ], [ "t_region_soil", 6 ], [ "t_grass_dead", 3 ] ] },
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "ws_fire_lookout_tower_base" ],
     "object": {
       "fill_ter": "t_thconc_floor",
@@ -95,127 +71,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ "ws_fire_lookout_tower_f1" ],
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                  ___   ",
-        "                  ___   ",
-        "                  ___   ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "              #.....#   ",
-        "              .     .   ",
-        "_______       .   ---   ",
-        "_______       .   ->-   ",
-        "_______       .   -.-   ",
-        "__________    .   -<-   ",
-        "__________    #...--#   ",
-        "__________              ",
-        "__________              ",
-        "__________              "
-      ],
-      "terrain": {
-        "#": "t_wall_wood",
-        " ": "t_open_air",
-        ".": "t_floor",
-        "_": "t_shingle_flat_roof",
-        "-": "t_railing",
-        "<": "t_wood_stairs_up",
-        ">": "t_wood_stairs_down"
-      }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "ws_fire_lookout_tower_f2" ],
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "              #.....#   ",
-        "              .     .   ",
-        "              .   ---   ",
-        "              .   -<-   ",
-        "              .   -.-   ",
-        "              .   ->-   ",
-        "              #...--#   ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": {
-        "#": "t_wall_wood",
-        " ": "t_open_air",
-        ".": "t_floor",
-        "-": "t_railing",
-        "<": "t_wood_stairs_up",
-        ">": "t_wood_stairs_down"
-      }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "ws_fire_lookout_tower_f3" ],
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "              #.....#   ",
-        "              .     .   ",
-        "              .   ----- ",
-        "              .   ->.<- ",
-        "              .   ----- ",
-        "              .     .   ",
-        "              #.....#   ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": {
-        "#": "t_wall_wood",
-        " ": "t_open_air",
-        ".": "t_floor",
-        "-": "t_railing",
-        "<": "t_wood_stairs_up",
-        ">": "t_wood_stairs_down"
-      }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "ws_fire_lookout_tower_f4" ],
     "object": {
       "fill_ter": "t_floor",
@@ -265,41 +120,6 @@
           { "item": "gear_survival", "chance": 80, "repeat": [ 1, 6 ] }
         ]
       }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "ws_fire_lookout_tower_f5" ],
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "             .........  ",
-        "             .........  ",
-        "             ......:..  ",
-        "             .........  ",
-        "             ....=....  ",
-        "             .........  ",
-        "             ......~..  ",
-        "             .........  ",
-        "             .........  ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
     }
   }
 ]

@@ -59,39 +59,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ "ws_regional_dump_3_0_roof" ],
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "  -------               ",
-        "  -.....-               ",
-        "  -.....-               ",
-        "  -.....-               ",
-        "  -.....-               ",
-        "  -.....-               ",
-        "  -------               ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ [ "ws_regional_dump_0_1", "ws_regional_dump_1_1", "ws_regional_dump_2_1", "ws_regional_dump_3_1" ] ],
     "object": {
       "fill_ter": "t_region_soil",

@@ -1,0 +1,41 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "ws_survivor_bunker_f0" },
+    layout = {
+        rows = {
+            "                        ",
+            "         ppppppp        ",
+            "         ppppppp        ",
+            "         pp...pp        ",
+            "         pp.>.pp        ",
+            "         pp...pp        ",
+            "         ppppppp        ",
+            "         ppppppp        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        terrain = {
+            ["."] = "t_region_groundcover",
+            [">"] = "t_ladder_down",
+            p = { { id = "t_pit_spiked", copies = 5 }, { id = "t_region_groundcover" } },
+        },
+        predecessor_mapgen = "forest",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}

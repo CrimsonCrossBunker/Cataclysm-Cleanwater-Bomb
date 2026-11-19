@@ -1,0 +1,35 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "ws_biker_dump_3_0_roof" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "  -------               ",
+            "  -.....-               ",
+            "  -.....-               ",
+            "  -.....-               ",
+            "  -.....-               ",
+            "  -.....-               ",
+            "  -------               ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+    },
+}

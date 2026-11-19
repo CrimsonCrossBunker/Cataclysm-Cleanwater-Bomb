@@ -1,41 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ "ws_survivor_bunker_f0" ],
-    "object": {
-      "predecessor_mapgen": "forest",
-      "rows": [
-        "                        ",
-        "         ppppppp        ",
-        "         ppppppp        ",
-        "         pp...pp        ",
-        "         pp.>.pp        ",
-        "         pp...pp        ",
-        "         ppppppp        ",
-        "         ppppppp        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "terrain": { ".": "t_region_groundcover", ">": "t_ladder_down", "p": [ [ "t_pit_spiked", 5 ], "t_region_groundcover" ] }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "ws_survivor_bunker_f-1" ],
     "object": {
       "fill_ter": "t_dirt_underground",
