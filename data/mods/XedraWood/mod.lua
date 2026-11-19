@@ -1,6 +1,7 @@
 local ccb = require("ccb")
 
 return ccb.ModDefinition {
+    ordered_data_files = true,
     world_options = {
         -- Sets the latitude used for sunrise/sunset times.  Set to Raleigh.
         LATITUDE = 35.787743,
