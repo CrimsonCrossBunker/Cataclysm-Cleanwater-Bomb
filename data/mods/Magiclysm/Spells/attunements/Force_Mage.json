@@ -24,31 +24,5 @@
     "min_range": 5,
     "max_range": 15,
     "range_increment": 1
-  },
-  {
-    "id": "force_magical_armor",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR", "ARTIFACT" ],
-    "name": { "str_sp": "Force Shield" },
-    "description": "A shield of pure force that protects you from most types of physical damage.",
-    "weight": "500 mg",
-    "volume": "1 ml",
-    "to_hit": -10,
-    "symbol": "[",
-    "color": "brown",
-    "material": [ "magical_material" ],
-    "environmental_protection": 2,
-    "flags": [ "WATERPROOF", "TRADER_AVOID", "SEMITANGIBLE", "OVERSIZE", "AURA", "UNBREAKABLE", "ALLOWS_NATURAL_ATTACKS" ],
-    "max_worn": 1,
-    "armor": [
-      {
-        "encumbrance": 0,
-        "coverage": 100,
-        "covers": [ "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "mouth", "eyes" ]
-      }
-    ],
-    "passive_effects": [
-      { "id": "ITEM_ENCH_Magiclysm_force_magical_armor_0" }
-    ]
   }
 ]
