@@ -1,0 +1,41 @@
+[
+  {
+    "type": "mutation",
+    "id": "PAWS_LITTLE",
+    "name": { "str": "Little Paws" },
+    "description": "Your hands have elongated and look a bit more like paws.  It makes fine manipulation a little more difficult, and you'll have a harder time with firearms, but you can still probably manage.  Plus, they allow you to move on all fours when crouching and unarmed.",
+    "category": [ "RABBIT" ],
+    "types": [ "HANDS" ],
+    "prereqs": [ "NAILS" ],
+    "prereqs2": [ "LONGER_FINGERS" ],
+    "cancels": [ "TALONS" ],
+    "mixed_effect": true,
+    "points": 0,
+    "vitamin_cost": 160,
+    "visibility": 2,
+    "ugliness": 1,
+    "flags": [ "QUADRUPED_CROUCH" ],
+    "craft_skill_bonus": [ [ "electronics", -1 ], [ "tailor", -1 ], [ "mechanics", -1 ] ],
+    "enchantments": [
+      "ench_quadruped_movement_half",
+      "ench_dextrous_paws_need_practice",
+      "INLINE_ENCH_PAWS_LITTLE_2"
+    ],
+    "triggers": [
+      [
+        {
+          "condition": {
+            "and": [
+              { "u_has_move_mode": "crouch" },
+              { "u_has_any_trait": [ "THRESH_BEAST", "THRESH_LUPINE", "THRESH_RABBIT", "THRESH_FELINE" ] },
+              { "not": "u_can_drop_weapon" },
+              { "not": { "u_has_flag": "QUADRUPED_RUN" } }
+            ]
+          },
+          "msg_on": { "text": "You drop down on all fours." },
+          "msg_off": { "text": "You come out of your quadrupedal posture." }
+        }
+      ]
+    ]
+  }
+]
