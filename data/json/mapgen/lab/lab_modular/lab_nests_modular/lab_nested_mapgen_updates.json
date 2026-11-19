@@ -45,15 +45,6 @@
     }
   },
   {
-    "//": "Spawns a special monster fight and ID badge spwan if you have the yellow security badge.",
-    "type": "mapgen",
-    "update_mapgen_id": "magenta_security_card_spawn",
-    "object": {
-      "place_loot": [ { "item": "id_science_security_magenta", "x": 21, "y": 14, "chance": 20 } ],
-      "place_monster": [ { "monster": [ "mon_zombie_brute" ], "x": 21, "y": 14, "chance": 100 } ]
-    }
-  },
-  {
     "//": "Opens bot release if you lack a yellow security ID card.",
     "type": "mapgen",
     "update_mapgen_id": "release_bots_3",

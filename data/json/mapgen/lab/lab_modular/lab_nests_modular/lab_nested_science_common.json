@@ -6,112 +6,6 @@
   },
   {
     "type": "mapgen",
-    "//": "A nested map for lab common research areas.  Rats in cages.",
-    "nested_mapgen_id": "lab_black_rats_1x1_caged",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rotation": [ 0, 3 ],
-      "place_monster": [ { "monster": "mon_black_rat", "x": 0, "y": 0, "chance": 100 } ],
-      "place_loot": [ { "item": "pet_carrier", "x": 0, "y": 0, "chance": 100 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for lab common research areas. Lab rats in cages.",
-    "nested_mapgen_id": "lab_rats_1x1_caged",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rotation": [ 0, 3 ],
-      "place_monster": [ { "monster": "mon_lab_rat", "x": 0, "y": 0, "chance": 100 } ],
-      "place_loot": [ { "item": "pet_carrier", "x": 0, "y": 0, "chance": 100 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for general science areas.",
-    "nested_mapgen_id": "lab_common_3x3_EW_open",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "LLL",
-        "   ",
-        "jjj"
-      ],
-      "palettes": [ "lab_common_palette" ],
-      "items": {
-        "L": [
-          { "item": "lab_shoes", "chance": 70, "repeat": 2 },
-          { "item": "lab_pants", "chance": 70, "repeat": 2 },
-          { "item": "lab_torso", "chance": 70, "repeat": 2 }
-        ]
-      }
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for general science areas.",
-    "nested_mapgen_id": "lab_common_3x3_EW_open",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "VVV",
-        "   ",
-        "VVV"
-      ],
-      "palettes": [ "lab_common_palette" ],
-      "items": { "V": [ { "item": "hospital_medical_items", "chance": 70, "repeat": [ 1, 3 ] } ] }
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for general science areas.",
-    "nested_mapgen_id": "lab_common_3x3_EW_open",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "LLL",
-        "   ",
-        "jjj"
-      ],
-      "palettes": [ "lab_common_palette" ],
-      "items": { "L": [ { "item": "hazmat_masks", "chance": 70 }, { "item": "hazmat_suits", "chance": 70 } ] }
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for general science areas.",
-    "nested_mapgen_id": "lab_common_3x3_EW_open",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "UUU",
-        "   ",
-        "UUU"
-      ],
-      "palettes": [ "lab_common_palette" ],
-      "items": { "U": [ { "item": "supplies_reagents_lab", "chance": 70, "repeat": [ 1, 3 ] } ] }
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for general science areas.",
-    "nested_mapgen_id": "lab_common_3x3_EW_open",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "qqq",
-        "   ",
-        "QQQ"
-      ],
-      "palettes": [ "lab_common_palette" ],
-      "items": {
-        "q": [ { "item": "tools_science", "chance": 30, "repeat": [ 1, 3 ] } ],
-        "Q": [ { "item": "tools_electronics", "chance": 30, "repeat": [ 1, 3 ] } ]
-      }
-    }
-  },
-  {
-    "type": "mapgen",
     "//": "A nested map for walls variety.",
     "nested_mapgen_id": "lab_wall_glass_5x5",
     "object": {
@@ -180,54 +74,6 @@
   {
     "type": "mapgen",
     "//": "A nested map for lab common research areas.  Includes cold fields.",
-    "nested_mapgen_id": "lab_common_5x5",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "mm.mm",
-        "f...f",
-        "..^..",
-        "f...f",
-        "aa.aa"
-      ],
-      "palettes": [ "lab_common_palette" ],
-      "terrain": {  },
-      "furniture": { "^": [ [ "f_vent_cold_air2_stream", 10 ], [ "f_vent_cold_air2_blast", 10 ] ] },
-      "items": {
-        "f": { "item": "science", "chance": 30, "repeat": [ 1, 10 ] },
-        "a": { "item": "snacks", "chance": 20 },
-        "m": [ { "item": "chem_lab", "chance": 25 }, { "item": "cloning_vat", "chance": 25 } ]
-      }
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for lab common research areas.  Includes hot fields.",
-    "nested_mapgen_id": "lab_common_5x5",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "mm.mm",
-        "f...f",
-        "..^..",
-        "f...f",
-        "aa.aa"
-      ],
-      "palettes": [ "lab_common_palette" ],
-      "terrain": {  },
-      "furniture": { "^": [ [ "f_vent_hot_air2_blast", 10 ], [ "f_vent_hot_air2_stream", 10 ] ] },
-      "items": {
-        "f": { "item": "science", "chance": 20, "repeat": [ 1, 10 ] },
-        "a": { "item": "science", "chance": 5 },
-        "m": [ { "item": "chem_lab", "chance": 25 }, { "item": "cloning_vat", "chance": 25 } ]
-      }
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for lab common research areas.  Includes cold fields.",
     "nested_mapgen_id": "lab_common_6x6",
     "object": {
       "mapgensize": [ 6, 6 ],
@@ -243,21 +89,6 @@
       "palettes": [ "lab_common_palette" ],
       "furniture": { "^": [ [ "f_vent_cold_air2_stream", 70 ], [ "f_null", 30 ] ] },
       "items": { "q": [ { "item": "supplies_reagents_lab", "chance": 50 } ] }
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for general science areas.",
-    "nested_mapgen_id": "lab_generic_3x3_EW_open",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "VVV",
-        "   ",
-        "VVV"
-      ],
-      "palettes": [ "lab_common_palette" ],
-      "items": { "V": [ { "item": "hospital_medical_items", "chance": 70, "repeat": [ 1, 3 ] } ] }
     }
   },
   {
