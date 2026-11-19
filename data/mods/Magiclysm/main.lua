@@ -151,3 +151,5 @@ require("monster_groups")
 require("consumable_effects")
 
 require("technique_predicates")
+
+require("technique_actions")
