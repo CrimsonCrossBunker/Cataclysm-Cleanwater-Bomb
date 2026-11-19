@@ -1,0 +1,498 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "afs_sentinel_stunner",
+    copy_from = "v29",
+    name = ccb.content.text("wrist-stunner"),
+    description = ccb.content.text("A severed robotic hand from a Wraitheon Sentinel.  The powerful electro-laser stun gun embed on its wrist is still functional, and can be used when connected to an UPS."),
+    price = "7 kUSD 200 USD",
+    materials = { "superalloy", "plastic" },
+    color = "cyan",
+    flags = { "NEVER_JAMS", "NO_UNLOAD", "NON_FOULING", "NEEDS_NO_LUBE", "USE_UPS", "NO_TURRET" },
+    melee_damage = { bash = 10 },
+    gun = {
+        range = 10,
+        damage = { type = "afs_laser", amount = 5, penetration = 15 },
+        dispersion = 500,
+        energy_drain = "25 kJ",
+        effects = { "LASER", "BEANBAG" },
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_sentinel_laser",
+    copy_from = "afs_sentinel_stunner",
+    name = ccb.content.text("wrist-trilaser"),
+    description = ccb.content.text("A powerful tri-barreled laser weapon, still mounted to the robotic hand of the Wraitheon drone it originally belonged to.  Can still be fired when connected to an UPS."),
+    color = "red",
+    flags = { "NEVER_JAMS", "NO_UNLOAD", "NON_FOULING", "NEEDS_NO_LUBE", "USE_UPS", "NO_TURRET" },
+    gun = {
+        range = 10,
+        damage = { type = "afs_laser", amount = 25, penetration = 4 },
+        energy_drain = "30 kJ",
+        modes = { { id = "MULTI", label = ccb.content.text("trilaser"), quantity = 3 } },
+        effects = { "LASER" },
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_sentinel_laser_mon",
+    copy_from = "afs_sentinel_laser",
+    name = ccb.content.text("wrist-trilaser"),
+    flags = { "NEVER_JAMS", "NO_UNLOAD", "NON_FOULING", "NEEDS_NO_LUBE", "NO_TURRET" },
+    gun = { energy_drain = "0 kJ" },
+}
+
+ccb.content.define_item {
+    id = "afs_light_cannon_mon",
+    copy_from = "afs_av22",
+    name = ccb.content.text("light cannon"),
+    flags = { "NEVER_JAMS", "NO_UNLOAD", "NON_FOULING", "NEEDS_NO_LUBE", "NO_TURRET" },
+    gun = { damage = { type = "afs_laser", amount = 15 }, energy_drain = "0 kJ" },
+}
+
+ccb.content.define_item {
+    id = "laser_cannon_xray",
+    looks_like = "modular_ar15",
+    name = ccb.content.text("handheld x-ray cannon"),
+    description = ccb.content.text("This is an x-ray laser stripped from a TX-5LR Cerberus laser turret that has been modified to use UPS power for firing.  Single shot then requires reloading.  Nicknamed the 'Tin Can Killer' for its ability to destroy power armor."),
+    mass = "5140 g",
+    volume = "1500 ml",
+    price = "4 kUSD",
+    survival_price = "80 USD",
+    accuracy = -1,
+    materials = { "steel", "plastic" },
+    symbol = "(",
+    color = "magenta",
+    flags = { "NO_UNLOAD", "NON_FOULING", "NEEDS_NO_LUBE", "USE_UPS", "NO_TURRET" },
+    melee_damage = { bash = 4 },
+    gun = {
+        reload_noise_volume = 10,
+        skill = "rifle",
+        range = 30,
+        damage = { type = "afs_laser", amount = 40, penetration = 30 },
+        dispersion = 90,
+        durability = 7,
+        loudness = 8,
+        energy_drain = "25 kJ",
+        reload_time = 200,
+        mod_locations = {
+            { id = "emitter", count = 1 },
+            { id = "lens", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "grip mount", count = 1 },
+            { id = "rail mount", count = 1 },
+            { id = "sights mount", count = 1 },
+            { id = "stock mount", count = 1 },
+            { id = "underbarrel mount", count = 1 },
+        },
+        effects = { "LASER", "IGNITE" },
+    },
+}
+
+ccb.content.define_item {
+    id = "laser_cannon_xray_mon",
+    copy_from = "laser_cannon_xray",
+    name = ccb.content.text("mounted x-ray cannon"),
+    flags = { "NEVER_JAMS", "NO_UNLOAD", "NON_FOULING", "NEEDS_NO_LUBE", "NO_TURRET", "NO_TURRET" },
+    gun = { energy_drain = "0 kJ" },
+}
+
+ccb.content.define_item {
+    id = "laser_rifle_cheap",
+    name = ccb.content.text("shoddy laser rifle"),
+    description = ccb.content.text("This is a cheap laser rifle made from common components.  Weak, but can be powered with rechargeable batteries."),
+    mass = "8 kg",
+    volume = "2500 ml",
+    price = "75 USD",
+    accuracy = -1,
+    materials = { "plastic", "copper" },
+    symbol = "(",
+    looks_like = "american_180",
+    color = "magenta",
+    flags = { "NEVER_JAMS", "NON_FOULING", "NEEDS_NO_LUBE", "NO_TURRET" },
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            magazine_well = "75 ml",
+            allowed_items = { "afs_cartridge", "afs_bootleg_cartridge", "afs_archeotech_cartridge" },
+        },
+    },
+    melee_damage = { bash = 8 },
+    gun = {
+        ammunition = { "battery" },
+        skill = "rifle",
+        range = 10,
+        damage = { type = "afs_laser", amount = 6 },
+        dispersion = 150,
+        durability = 10,
+        loudness = 8,
+        reload_time = 500,
+        mod_locations = {
+            { id = "sights", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "stock", count = 1 },
+            { id = "underbarrel", count = 1 },
+        },
+        effects = { "LASER" },
+        ammo_per_shot = 0,
+        energy_drain = "20 kJ",
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_av22",
+    name = ccb.content.text("av-22"),
+    copy_from = "v29",
+    description = ccb.content.text("A common pulse-laser pistol cleared for civilian use.  Recoilless, energy-efficient, and easy to use, the av-22 is often carried as a defense weapon by those who lack the practice required to effectively use ballistic weaponry.  Due to its low power, it must be fired in sequence mode to stand a chance against hardened foes."),
+    price = "500 USD",
+    survival_price = "500 USD",
+    volume = "750 ml",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            magazine_well = "75 ml",
+            allowed_items = {
+                "afs_cartridge",
+                "afs_compact_cartridge",
+                "afs_bootleg_cartridge",
+                "afs_archeotech_cartridge",
+            },
+        },
+    },
+    weapon_categories = { "AUTOMATIC_PISTOLS" },
+    inheritance = { add = { flags = { "NO_TURRET" } }, remove = { flags = { "NO_UNLOAD", "USE_UPS" } } },
+    gun = {
+        ammunition = { "battery" },
+        damage = { type = "afs_laser", amount = 5 },
+        overheat_threshold = 150,
+        range = 15,
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("pulse"), quantity = 1 },
+            { id = "BURST", label = ccb.content.text("2s sequence"), quantity = 2 },
+            { id = "AUTO", label = ccb.content.text("3s sequence"), quantity = 3 },
+        },
+        ammo_per_shot = 0,
+        energy_drain = "10 kJ",
+        mod_locations = {
+            { id = "emitter", count = 1 },
+            { id = "grip", count = 1 },
+            { id = "lens", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "stock", count = 1 },
+            { id = "underbarrel", count = 1 },
+        },
+        default_mods = { "red_dot_sight" },
+        effects = { "LASER" },
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_graf337",
+    name = ccb.content.text("Graf 335L"),
+    copy_from = "afs_av22",
+    description = ccb.content.text("A laser pistol of tremendous power, equally as likely to melt its targets as it is to melt itself.  Powerful enough to punch through heavy military armor, it'll win most shootouts so long as you can end them in three shots or less."),
+    price = "1250 USD",
+    survival_price = "1250 USD",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            magazine_well = "75 ml",
+            allowed_items = {
+                "afs_cartridge",
+                "afs_compact_cartridge",
+                "afs_bootleg_cartridge",
+                "afs_archeotech_cartridge",
+            },
+        },
+    },
+    weapon_categories = { "AUTOMATIC_PISTOLS" },
+    gun = {
+        dispersion = 480,
+        damage = { type = "afs_laser", amount = 50 },
+        overheat_threshold = 100,
+        cooling = 15,
+        heat_per_shot = 50,
+        range = 15,
+        modes = { { id = "DEFAULT", label = ccb.content.text("pulse"), quantity = 1 } },
+        energy_drain = "75 kJ",
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_archeotech_laspistol",
+    name = ccb.content.text("E-150b"),
+    copy_from = "v29",
+    description = ccb.content.text("A silver, elegantly-wrought laser pistol that fires armor-piercing bolts of golden light.  A now-irreplaceable historical artifact built by the engineering AIs of the late Hyperspace Era, it is as precious as it is deadly."),
+    price = "500 kUSD",
+    survival_price = "500 kUSD",
+    mass = "380 g",
+    volume = "750 ml",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            magazine_well = "75 ml",
+            allowed_items = { "afs_archeotech_cartridge" },
+        },
+    },
+    weapon_categories = { "AUTOMATIC_PISTOLS" },
+    inheritance = { add = { flags = { "NO_TURRET" } }, remove = { flags = { "NO_UNLOAD", "USE_UPS" } } },
+    gun = {
+        ammunition = { "battery" },
+        damage = { { type = "pure", amount = 5 }, { type = "afs_laser", amount = 20, penetration = 20 } },
+        range = 20,
+        overheat_threshold = 150,
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("pulse"), quantity = 1 },
+            { id = "BURST", label = ccb.content.text("2s sequence"), quantity = 2 },
+        },
+        ammo_per_shot = 0,
+        effects = { "IGNITE", "DAZZLE_BEAM", "PLASMA_BUBBLE" },
+        energy_drain = "30 kJ",
+        built_in_mods = { "afs_holo_aim_assist" },
+        mod_locations = {
+            { id = "emitter", count = 1 },
+            { id = "grip", count = 1 },
+            { id = "lens", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "stock", count = 1 },
+            { id = "underbarrel", count = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_explosive_pumped_laser",
+    looks_like = "m79",
+    symbol = "(",
+    color = "green",
+    name = ccb.content.text("Izhevsk PLC-75"),
+    description = ccb.content.text("Straight from the bureaus of the old Soviet Union the PLC-75 is the crude and brutal answer to the constraints posed by the design of heavy laser ordnance.  Its use of antiquated flashtube pumped laser technology makes it unwieldy and wholly incompatible with modern equipment, whether this offers any advantage to downrange targets remains a matter of contentious dispute."),
+    materials = { "steel" },
+    flags = { "RELOAD_ONE", "BACKBLAST", "NEVER_JAMS" },
+    price = "500 USD",
+    survival_price = "500 USD",
+    mass = "10 kg",
+    length = "1065 mm",
+    volume = "6730 ml",
+    accuracy = -3,
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { afs_82mm_flashbulb = 1 } } },
+    melee_damage = { bash = 8 },
+    gun = {
+        reload_noise_volume = 10,
+        range = 55,
+        skill = "launcher",
+        ammunition = { "afs_82mm_flashbulb" },
+        dispersion = 10,
+        durability = 8,
+        clip_size = 1,
+        reload_time = 300,
+        loudness = 200,
+        mod_locations = { { id = "grip", count = 1 }, { id = "sling", count = 1 }, { id = "sights", count = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_heavy_tactical_laser",
+    name = ccb.content.text("Shikishma A-82 tactical laser"),
+    copy_from = "afs_a7",
+    description = ccb.content.text("Crown jewel of Shikishma armories, and possible product of unsanctioned data scavenging, the A-82 is the undisputed market leader when it comes to man portable laser weaponry.  Sustained fire is likely to cause secondary explosions as target layers are vaporized."),
+    price = "2 kUSD",
+    survival_price = "2 kUSD",
+    volume = "8 L",
+    length = "1065 mm",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            magazine_well = "75 ml",
+            allowed_items = { "afs_cartridge", "afs_archeotech_cartridge" },
+        },
+    },
+    inheritance = { add = { firing_effects = { "TACTICAL_LASER_EXPLOSION" } } },
+    gun = {
+        ammunition = { "battery" },
+        damage = { type = "afs_laser", amount = 45, penetration = 50 },
+        overheat_threshold = 100,
+        cooling = 1,
+        heat_per_shot = 20,
+        range = 37,
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("pulse"), quantity = 1 },
+            { id = "BURST", label = ccb.content.text("2s sequence"), quantity = 2 },
+            { id = "AUTO", label = ccb.content.text("3s sequence"), quantity = 3 },
+        },
+        ammo_per_shot = 0,
+        energy_drain = "150 kJ",
+        mod_locations = {
+            { id = "emitter", count = 1 },
+            { id = "grip", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "lens", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "stock", count = 1 },
+        },
+        default_mods = { "red_dot_sight" },
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_v29",
+    name = ccb.content.text("V14 laser pistol"),
+    copy_from = "v29",
+    description = ccb.content.text("An incredibly ancient and outdated laser pistol design with origins traceable to Earth's early Space Age.  One of the few 'open-hardware' guns, its leaked and widely-circulated design specifications allow this weapon to retain some popularity within backwater worlds."),
+    price = "150 USD",
+    survival_price = "150 USD",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            magazine_well = "75 ml",
+            allowed_items = {
+                "afs_cartridge",
+                "afs_compact_cartridge",
+                "afs_bootleg_cartridge",
+                "afs_archeotech_cartridge",
+            },
+        },
+    },
+    weapon_categories = { "AUTOMATIC_PISTOLS" },
+    inheritance = { add = { flags = { "NO_TURRET" } }, remove = { flags = { "NO_UNLOAD", "USE_UPS" } } },
+    gun = {
+        ammunition = { "battery" },
+        damage = { type = "afs_laser", amount = 10 },
+        range = 15,
+        ammo_per_shot = 0,
+        effects = { "LASER" },
+        energy_drain = "5 kJ",
+        mod_locations = {
+            { id = "emitter", count = 1 },
+            { id = "grip", count = 1 },
+            { id = "lens", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "stock", count = 1 },
+            { id = "underbarrel", count = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_a7",
+    copy_from = "laser_rifle",
+    name = ccb.content.text("A7 laser rifle"),
+    price = "1 kUSD",
+    survival_price = "1 kUSD",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            magazine_well = "75 ml",
+            allowed_items = {
+                "afs_cartridge",
+                "afs_compact_cartridge",
+                "afs_bootleg_cartridge",
+                "afs_archeotech_cartridge",
+            },
+        },
+    },
+    inheritance = { add = { flags = { "NO_TURRET" } }, remove = { flags = { "NO_UNLOAD", "USE_UPS" } } },
+    gun = {
+        ammunition = { "battery" },
+        ammo_per_shot = 0,
+        effects = { "LASER" },
+        energy_drain = "120 kJ",
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("pulse"), quantity = 1 },
+            { id = "BURST", label = ccb.content.text("2s sequence"), quantity = 2 },
+        },
+        damage = { type = "afs_laser", amount = 25, penetration = 4 },
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_a7_mon",
+    copy_from = "afs_a7",
+    name = ccb.content.text("mounted a7 laser rifle"),
+    flags = { "NEVER_JAMS", "NO_UNLOAD", "NON_FOULING", "NEEDS_NO_LUBE", "NO_TURRET" },
+    gun = { energy_drain = "0 kJ" },
+}
+
+ccb.content.define_item {
+    id = "makeshift_scrambler",
+    copy_from = "hm12",
+    name = ccb.content.text("Makeshift Scrambler Rifle"),
+    description = ccb.content.text("This 'energy weapon' appears to be haphazardly jury-rigged from commercially available electronics.  It has a radar dish placed where a barrel would be, and the frame of a weapon is covered in a mesh of wiring.  Despite its appearance, this weapon can temporarily stun robots if you manage to hit their sensors."),
+    mass = "4050 g",
+    volume = "4500 ml",
+    survival_price = "20 USD",
+    flags = { "NEVER_JAMS", "NON_FOULING", "NEEDS_NO_LUBE", "FRAGILE", "NO_TURRET" },
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            magazine_well = "75 ml",
+            allowed_items = {
+                "afs_cartridge",
+                "afs_compact_cartridge",
+                "afs_bootleg_cartridge",
+                "afs_archeotech_cartridge",
+            },
+        },
+    },
+    gun = {
+        range = 20,
+        ammunition = { "battery" },
+        ammo_per_shot = 0,
+        energy_drain = "30 kJ",
+        effects = { "LASER", "ROBOT_DAZZLE" },
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_xm34",
+    copy_from = "emp_gun",
+    name = ccb.content.text("xm34 EMP projector"),
+    price = "1500 USD",
+    survival_price = "1500 USD",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            magazine_well = "75 ml",
+            allowed_items = {
+                "afs_cartridge",
+                "afs_compact_cartridge",
+                "afs_bootleg_cartridge",
+                "afs_archeotech_cartridge",
+            },
+        },
+    },
+    inheritance = { add = { flags = { "NO_TURRET" } }, remove = { flags = { "NO_UNLOAD", "USE_UPS" } } },
+    gun = { ammunition = { "battery" }, ammo_per_shot = 0, energy_drain = "75 kJ" },
+}
