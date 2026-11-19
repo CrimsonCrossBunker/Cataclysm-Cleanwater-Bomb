@@ -22,27 +22,5 @@
       { "text": "<done_conversation_section>", "topic": "TALK_FRIEND_CONVERSATION" },
       { "text": "<end_talking>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "BGSS_EVACUEE_3_STORY2",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "gendered_line": "Sheer luck I guess.  I went the absolute wrong way, into town, and wound up stuck in the subway system.  I spent a few days living off vending machine food.  Not the best eating, but I pulled through.  At least there weren't so many zombies down there.",
-      "relevant_genders": [ "npc" ]
-    },
-    "responses": [
-      {
-        "text": "What got you out of the subway?",
-        "condition": { "not": { "npc_has_effect": "BGSS_EVACUEE_3_earlymeeting" } },
-        "topic": "BGSS_EVACUEE_3_STORY3_LATE"
-      },
-      {
-        "text": "What got you out of the subway?",
-        "condition": { "npc_has_effect": "BGSS_EVACUEE_3_earlymeeting" },
-        "topic": "BGSS_EVACUEE_3_STORY3_EARLY"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_FRIEND_CONVERSATION" },
-      { "text": "<end_talking>", "topic": "TALK_DONE" }
-    ]
   }
 ]
