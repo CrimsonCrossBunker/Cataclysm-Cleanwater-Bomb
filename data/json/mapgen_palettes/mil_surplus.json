@@ -1,20 +1,5 @@
 [
   {
-    "type": "mapgen",
-    "nested_mapgen_id": "indoor_tent_3x3_N",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "#+#",
-        "#x#",
-        "###"
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "furniture": { "#": "f_canvas_wall", "x": "f_groundsheet", "+": "f_canvas_door" }
-    }
-  },
-  {
     "type": "palette",
     "id": "mil_surplus",
     "parameters": {
