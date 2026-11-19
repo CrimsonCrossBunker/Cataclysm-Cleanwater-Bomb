@@ -1,0 +1,41 @@
+[
+  {
+    "id": "mon_void_spider_maw",
+    "type": "MONSTER",
+    "name": { "str": "hanging maw" },
+    "description": "An explosion of glistening fangs, itself a small fragment of a greater horror.",
+    "default_faction": "nether",
+    "copy-from": "mon_void_spider",
+    "symbol": "w",
+    "hp": 15,
+    "proportional": { "speed": 1.2, "dodge": 0.25, "vision_day": 2 },
+    "melee_dice": 5,
+    "melee_dice_sides": 5,
+    "melee_skill": 3,
+    "melee_damage": [ { "damage_type": "bash", "amount": 5, "armor_penetration": 28 } ],
+    "armor": { "bash": 10, "cut": 12, "bullet": 15, "electric": 3, "stab": 18, "acid": 15 },
+    "special_attacks": [ [ "void_spider_bite", 1 ] ],
+    "death_function": { "eoc": "EOC_HURT_WEAVER", "corpse_type": "NO_CORPSE", "message": "" },
+    "delete": { "flags": [ "ALWAYS_SEES_YOU" ] },
+    "extend": { "flags": [ "QUIETDEATH" ] }
+  },
+  {
+    "id": "mon_void_spider_limb",
+    "type": "MONSTER",
+    "name": { "str": "hanging limb" },
+    "description": "Strands of shadow snap from their ordained positions, briefly reaching out before recoiling back into the darkness.",
+    "default_faction": "nether",
+    "copy-from": "mon_void_spider",
+    "symbol": "/",
+    "hp": 15,
+    "proportional": { "speed": 1.2, "dodge": 0.25, "vision_day": 2 },
+    "melee_dice": 3,
+    "melee_dice_sides": 2,
+    "melee_skill": 3,
+    "special_attacks": [  ],
+    "death_function": { "eoc": "EOC_HURT_WEAVER", "corpse_type": "NO_CORPSE", "message": "" },
+    "armor": { "bash": 5, "cut": 6, "bullet": 6, "electric": 3, "stab": 7, "acid": 15 },
+    "delete": { "flags": [ "ALWAYS_SEES_YOU" ] },
+    "extend": { "flags": [ "QUIETDEATH" ] }
+  }
+]
