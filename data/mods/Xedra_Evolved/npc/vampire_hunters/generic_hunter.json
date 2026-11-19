@@ -33,27 +33,5 @@
       { "skill": "stabbing", "bonus": { "rng": [ 2, 5 ] } },
       { "skill": "dodge", "bonus": { "rng": [ 2, 5 ] } }
     ]
-  },
-  {
-    "id": "TALK_HUNTER_GENERIC_GUARD",
-    "type": "talk_topic",
-    "dynamic_line": [
-      {
-        "u_has_trait": "VAMPIRE",
-        "yes": "If you're looking for a cure, you'll find that inside.  If you're not, go away now.",
-        "no": [
-          "I'm not in charge here, you're looking for someone else…",
-          "Keep civil or I'll bring the pain.",
-          "Just on watch, move along.",
-          "Don't distract me.  I'm on watch.",
-          { "is_day": [ "Hello.  Welcome to our safe zone." ], "no": [ "Good evening.  Welcome to our safe zone." ] },
-          {
-            "u_male": [ "Sir.", "Rough out there, isn't it?" ],
-            "no": [ "Ma'am", "Ma'am, you really shouldn't be traveling out there." ]
-          }
-        ]
-      }
-    ],
-    "responses": [ { "text": "Don't mind me…", "topic": "TALK_DONE" } ]
   }
 ]
