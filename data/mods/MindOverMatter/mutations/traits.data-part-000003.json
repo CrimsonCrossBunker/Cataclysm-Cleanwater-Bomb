@@ -1,0 +1,15 @@
+[
+  {
+    "type": "mutation",
+    "id": "PSI_TORRENTIAL_CHANNELING",
+    "name": { "str": "Torrential Channeling" },
+    "points": 0,
+    "description": "You can draw deeply on the Nether, increasing the strength of your powers but making making them harder to initiate and control.",
+    "active": true,
+    "activated_is_setup": true,
+    "valid": false,
+    "purifiable": false,
+    "activated_eocs": [ "EOC_PSI_TORRENTIAL_CHANNELING_ON" ],
+    "deactivated_eocs": [ "EOC_PSI_TORRENTIAL_CHANNELING_OFF" ]
+  }
+]
