@@ -51,6 +51,9 @@ extern "C" {
 #include "generic_factory.h"
 #include "item_factory.h"
 #include "itype.h"
+#include "json.h"
+#include "json_loader.h"
+#include "omdata.h"
 #include "recipe_dictionary.h"
 #include <functional>
 
@@ -176,39 +179,35 @@ void set_optional_field( const sol::table &values, const char *key, T &field, bo
 }
 
 std::vector<std::string> bounded_string_array( const sol::table &values,
-        const std::string_view field )
+        const std::string_view field, const std::size_t maximum_entries = 256,
+        const std::string_view context = "ModDefinition" )
 {
-    constexpr std::size_t maximum_entries = 256;
+    const std::string label = std::string( context ) + " " + std::string( field );
     const std::size_t count = values.size();
     if( count > maximum_entries ) {
-        throw std::runtime_error( "ModDefinition " + std::string( field ) +
-                                  " exceed 256 entries" );
+        throw std::runtime_error( label + " exceed " + std::to_string( maximum_entries ) + " entries" );
     }
     std::size_t observed = 0;
     for( const auto &entry : values ) {
         const sol::object key = entry.first;
         if( !key.is<lua_Integer>() ) {
-            throw std::runtime_error(
-                "ModDefinition " + std::string( field ) + " must be a dense array" );
+            throw std::runtime_error( label + " must be a dense array" );
         }
         const lua_Integer index = key.as<lua_Integer>();
         if( index < 1 || static_cast<std::uint64_t>( index ) > count ) {
-            throw std::runtime_error(
-                "ModDefinition " + std::string( field ) + " must be a dense array" );
+            throw std::runtime_error( label + " must be a dense array" );
         }
         ++observed;
     }
     if( observed != count ) {
-        throw std::runtime_error(
-            "ModDefinition " + std::string( field ) + " must be a dense array" );
+        throw std::runtime_error( label + " must be a dense array" );
     }
     std::vector<std::string> result;
     result.reserve( count );
     for( std::size_t index = 1; index <= count; ++index ) {
         const sol::object entry = values.raw_get<sol::object>( index );
         if( entry.get_type() != sol::type::string ) {
-            throw std::runtime_error(
-                "ModDefinition " + std::string( field ) + " may only contain strings" );
+            throw std::runtime_error( label + " may only contain strings" );
         }
         result.push_back( entry.as<std::string>() );
     }
@@ -319,6 +318,7 @@ mod_definition make_mod_definition( const sol::table &values )
                   result.description, result.localized_description, result.description_set );
     set_optional_field( values, "category", result.category, result.category_set );
     set_optional_field( values, "core", result.core, result.core_set );
+    result.load_with_data = values.get_or( "load_with_data", false );
     const sol::object world_options = values.raw_get<sol::object>( "world_options" );
     if( world_options.valid() && world_options.get_type() != sol::type::nil ) {
         if( world_options.get_type() != sol::type::table ) {
@@ -466,6 +466,7 @@ void install_mod_definition( sol::table &ccb )
     []( mod_definition & definition, bool value ) {
         definition.obsolete = value;
     } ),
+    "load_with_data", &mod_definition::load_with_data,
     "world_options", sol::property(
     []( const mod_definition & definition, sol::this_state state ) {
         return write_world_options( sol::state_view( state ), definition.world_options );
@@ -693,6 +694,63 @@ void load_core_content( const fs::path &root )
     // Core definitions are available while the main menu and loading UI run.
     // The static entry has no runtime callbacks and never becomes a world Mod.
     commit_runtime( core.platform );
+}
+
+void load_mod_content_with_data( const mod_source &source,
+                                const std::set<std::string> &selected_mod_ids )
+{
+    const mod_source resolved = resolve_source( source );
+    sol::state lua;
+    initialize_state( lua, resolved.root );
+    const sol::table package = lua["package"];
+    const sol::table loaded = package["loaded"];
+    const sol::table ccb = loaded["ccb"];
+    sol::table content = ccb["content"];
+    content.set_function( "is_mod_active", [&selected_mod_ids]( const std::string &id ) {
+        return selected_mod_ids.count( id ) != 0;
+    } );
+    content.set_function( "patch_overmap_terrain", [&resolved]( const sol::table &options ) {
+        const std::vector<std::string> ids = bounded_string_array(
+                options.get<sol::table>( "ids" ), "ids", 4096, "overmap terrain patch" );
+        const std::string parent = options.get<std::string>( "copy_from" );
+        if( ids.empty() || parent.empty() ) {
+            throw std::runtime_error( "overmap terrain patch requires ids and a parent" );
+        }
+        std::ostringstream serialized;
+        JsonOut json( serialized );
+        json.start_object();
+        json.member( "type", "overmap_terrain" );
+        json.member( "id", ids );
+        json.member( "copy-from", parent );
+        const sol::object name = options.raw_get<sol::object>( "name" );
+        if( name.valid() && name.get_type() != sol::type::nil ) {
+            const detail::authored_text text = detail::read_singular_text( name, {}, "overmap terrain name" );
+            if( text.translated && text.translated->context ) {
+                json.member( "name" );
+                json.start_object();
+                json.member( "str", text.raw );
+                json.member( "ctxt", *text.translated->context );
+                json.end_object();
+            } else {
+                json.member( "name", text.raw );
+            }
+        }
+        for( const auto &[key, native_key] : {
+                 std::pair{ "symbol", "sym" }, std::pair{ "color", "color" },
+                 std::pair{ "see_cost", "see_cost" }, std::pair{ "vision_levels", "vision_levels" },
+                 std::pair{ "uniform_terrain", "uniform_terrain" }
+             } ) {
+            if( const auto value = options.get<sol::optional<std::string>>( key ) ) {
+                json.member( native_key, *value );
+            }
+        }
+        json.end_object();
+        // Use the native loader for inheritance, deferred parents and mapgen registration.
+        const JsonObject patch = json_loader::from_string( serialized.str() ).get_object();
+        static_cast<void>( patch.get_string( "type" ) );
+        overmap_terrains::load( patch, resolved.id );
+    } );
+    execute_file( lua, resolved.entry, "Lua-first data entry for '" + resolved.id + "'" );
 }
 
 bool read_mod_definition( const fs::path &root, mod_definition &result, std::string &error )
@@ -1176,6 +1234,11 @@ constexpr const char *disabled_error = "Lua-first Platform is not enabled in thi
 
 void load_core_content( const std::filesystem::path & )
 {
+}
+
+void load_mod_content_with_data( const mod_source &, const std::set<std::string> & )
+{
+    throw std::runtime_error( "Lua-first Platform support is disabled" );
 }
 
 bool read_mod_definition( const std::filesystem::path &, mod_definition &, std::string &error )

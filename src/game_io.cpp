@@ -130,6 +130,9 @@ static std::vector<cata::lua_platform::mod_source> lua_platform_sources(
             throw std::runtime_error( "Lua-first Mod '" + mod.ident.str() +
                                       "' is unavailable: " + mod.lua_platform_error );
         }
+        if( mod.lua_load_with_data ) {
+            continue;
+        }
         if( !mod.lua_platform_entry.empty() ) {
             result.push_back( {
                 mod.ident.str(), mod.mod_root_path.get_unrelative_path(),
@@ -702,6 +705,12 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
     ammunition_type::set_mod_load_order( canonical_packs );
     requirement_data::set_mod_load_order( canonical_packs );
     DynamicDataLoader::get_instance().set_mod_load_order( canonical_packs );
+    std::set<std::string> selected_mod_ids;
+    for( const mod_id &mod : canonical_packs ) {
+        if( mod.is_valid() ) {
+            selected_mod_ids.insert( mod.str() );
+        }
+    }
     for( const auto &mod : canonical_packs ) {
         // Suppress missing mods the player chose to leave in the modlist
         if( !mod.is_valid() ) {
@@ -714,6 +723,12 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
         }
         cata_timer pack_timer( string_format( "%s pack load time:", mod->name() ) );
         load_mod_data_from_dir( mod->path, mod.str() );
+        if( mod->lua_load_with_data && !mod->lua_platform_entry.empty() ) {
+            cata::lua_platform::load_mod_content_with_data( {
+                mod.str(), mod->mod_root_path.get_unrelative_path(),
+                mod->lua_platform_entry.get_unrelative_path()
+            }, selected_mod_ids );
+        }
         get_options().apply_mod_world_options( mod.str(), mod->lua_world_options );
     }
     cata_timer::print_stats();
@@ -723,8 +738,17 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
             continue;
         }
         loading_ui::show( msg, mod->name() );
+        std::function<void( const std::string &, const cata_path & )> load_lua;
+        if( mod->lua_load_with_data ) {
+            load_lua = [&mod, &selected_mod_ids]( const std::string & source, const cata_path & entry ) {
+                cata::lua_platform::load_mod_content_with_data( {
+                    source, mod->mod_root_path.get_unrelative_path(), entry.get_unrelative_path(),
+                    cata::lua_platform::mod_source_type::interaction_content
+                }, selected_mod_ids );
+            };
+        }
         DynamicDataLoader::get_instance().load_mod_interaction_files_from_path(
-            mod->path / "mod_interactions", mod.str(), mod->lua_interaction_world_options );
+            mod->path / "mod_interactions", mod.str(), mod->lua_interaction_world_options, load_lua );
     }
 }
 

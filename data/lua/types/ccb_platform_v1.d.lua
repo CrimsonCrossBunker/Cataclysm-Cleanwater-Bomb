@@ -653,6 +653,7 @@ function CcbHandlesApi.avatar() end
 ---@field name? string|LocalizedText 1-512-byte display name; defaults to the resolved Mod id.
 ---@field version? string 1-128-byte author-defined Mod version.
 ---@field entry? string Root-relative entry path of at most 4096 bytes; defaults to main.lua. A Mod declaring world or interaction options can omit main.lua.
+---@field load_with_data? boolean Execute static overmap patches in native Mod and companion order during world loading. This entry supports content.patch_overmap_terrain and localized text.
 ---@field dependencies? string[] Dense one-based array of at most 256 unique stable Mod ids loaded before this Mod.
 ---@field authors? string[] Dense one-based array of unique author names.
 ---@field description? string|LocalizedText Player-facing Mod description of at most 4096 bytes.
@@ -667,6 +668,7 @@ function CcbHandlesApi.avatar() end
 ---@field interaction_world_options? table<string, table<string, boolean|number|string>> Options keyed by active companion Mod id; applied after the JSON for that companion in native interaction order.
 
 ---@class ModDefinition
+---@field load_with_data boolean
 ---@field id string
 ---@field name string
 ---@field version string
@@ -7272,6 +7274,20 @@ function CcbPlatformContent.Npc(options) end
 ---@param options OvermapTerrainDefinitionOptions
 ---@return OvermapTerrainDefinition
 function CcbPlatformContent.OvermapTerrain(options) end
+
+---@class OvermapTerrainPatchOptions
+---@field ids string[] Terrain type IDs to patch in array order.
+---@field copy_from string Base terrain type inherited through native loading.
+---@field name? string|LocalizedText Translatable source name.
+---@field symbol? string Native overmap symbol.
+---@field color? string Native overmap color.
+---@field see_cost? string Native overmap see-cost enum name.
+---@field vision_levels? string Native overmap-vision ID.
+---@field uniform_terrain? string Fill terrain ID. An omitted field follows native overmap inheritance and clears the fill.
+
+---Apply an inherited terrain patch at the Mod's native data load position.
+---@param options OvermapTerrainPatchOptions
+function CcbPlatformContent.patch_overmap_terrain(options) end
 
 ---@param options OvermapSpecialDefinitionOptions
 ---@return OvermapSpecialDefinition

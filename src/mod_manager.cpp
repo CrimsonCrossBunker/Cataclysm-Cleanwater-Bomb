@@ -431,6 +431,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
             // Keep a legacy hybrid usable when its optional Platform entry is
             // malformed, while retaining the rejected-entry diagnostic.
             hybrid.lua_platform_version = 0;
+            hybrid.lua_load_with_data = false;
             hybrid.lua_platform_error = reason;
             hybrid.lua_platform_entry = cata_path();
             hybrid.lua_world_options.clear();
@@ -707,6 +708,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
             hybrid.category = *category;
         }
         hybrid.lua_platform_entry = std::move( entry );
+        hybrid.lua_load_with_data = definition.load_with_data;
         hybrid.lua_world_options = std::move( definition.world_options );
         hybrid.lua_interaction_world_options = std::move( definition.interaction_world_options );
         hybrid.mod_root_path = root;
@@ -731,6 +733,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     mod.path = root;
     mod.mod_root_path = root;
     mod.lua_platform_entry = std::move( entry );
+    mod.lua_load_with_data = definition.load_with_data;
     mod.lua_world_options = std::move( definition.world_options );
     mod.lua_interaction_world_options = std::move( definition.interaction_world_options );
     mod.lua_platform_version = cata::lua_platform::platform_version;

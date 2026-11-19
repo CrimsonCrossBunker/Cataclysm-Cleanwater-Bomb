@@ -54,6 +54,7 @@ struct MOD_INFORMATION {
 
         /** Non-zero when this Mod has a Lua-first Platform entry. */
         int lua_platform_version = 0;
+        bool lua_load_with_data = false;
 
         /** Discovery-time reason the Platform entry cannot run in this build. */
         std::string lua_platform_error;

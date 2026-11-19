@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <functional>
 #include <iosfwd>
+#include <functional>
 #include <list>
 #include <map>
 #include <memory>
@@ -167,7 +168,8 @@ class DynamicDataLoader
          */
         /*@{*/
         void load_mod_interaction_files_from_path( const cata_path &path, const std::string &src,
-                const mod_interaction_world_options &options = {} );
+                const mod_interaction_world_options &options = {},
+                const std::function<void( const std::string &, const cata_path & )> &load_lua = {} );
         /*@}*/
         /**
          * Deletes and unloads all the data previously loaded with

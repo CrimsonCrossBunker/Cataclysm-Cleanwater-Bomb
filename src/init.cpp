@@ -612,13 +612,17 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
 }
 
 void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &path,
-        const std::string &src, const mod_interaction_world_options &options )
+        const std::string &src, const mod_interaction_world_options &options,
+        const std::function<void( const std::string &, const cata_path & )> &load_lua )
 {
     cata_assert( !finalized &&
                  "Can't load additional data after finalization.  Must be unloaded first." );
 
     std::vector<mod_id> &loaded_mods = world_generator->active_world->active_mod_order;
-    std::multimap<mod_id, std::variant<cata_path, const mod_world_options *, std::monostate>> entries;
+    struct interaction_lua_entry {
+        cata_path path;
+    };
+    std::multimap<mod_id, std::variant<cata_path, const mod_world_options *, interaction_lua_entry>> entries;
 
     if( dir_exist( path.get_unrelative_path() ) ) {
 
@@ -636,8 +640,9 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
                 for( const cata_path &path : interaction_files ) {
                     entries.emplace( associated_mod, path );
                 }
-                if( file_exist( ( f / "main.lua" ).get_unrelative_path() ) ) {
-                    entries.emplace( associated_mod, std::monostate{} );
+                const cata_path lua_entry = f / "main.lua";
+                if( file_exist( lua_entry.get_unrelative_path() ) ) {
+                    entries.emplace( associated_mod, interaction_lua_entry{ lua_entry } );
                 }
             }
         }
@@ -659,6 +664,8 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
                 load_all_from_json( jsin, interaction_src, path, *file );
             } else if( const auto *overrides = std::get_if<const mod_world_options *>( &entry ) ) {
                 get_options().apply_mod_world_options( interaction_src, **overrides );
+            } else if( load_lua ) {
+                load_lua( interaction_src, std::get<interaction_lua_entry>( entry ).path );
             }
         } catch( const JsonError &err ) {
             throw std::runtime_error( add_debug_error_source( err.what() ) );

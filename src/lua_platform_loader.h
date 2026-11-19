@@ -52,6 +52,7 @@ struct mod_definition {
     mod_world_options world_options;
     mod_interaction_world_options interaction_world_options;
     bool core = false;
+    bool load_with_data = false;
 
     bool id_set = false;
     bool name_set = false;
@@ -82,6 +83,9 @@ struct mod_source {
  * The entry exposes ccb.content and keeps its definitions alive in the native registries.
  */
 void load_core_content( const std::filesystem::path &root );
+
+/** Execute a Mod's static entry at the native data load position. */
+void load_mod_content_with_data( const mod_source &source, const std::set<std::string> &selected_mod_ids );
 
 /** Execute root/mod.lua and require exactly one native ccb.ModDefinition result.
  * This executes trusted code, including external/native modules. User-facing
