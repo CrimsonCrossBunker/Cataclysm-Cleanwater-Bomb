@@ -1,0 +1,77 @@
+[
+  {
+    "id": "mon_debug_dragger",
+    "type": "MONSTER",
+    "copy-from": "mon_debug_grabber",
+    "weight": "100 kg",
+    "name": { "str": "debug dragger", "//~": "NO_I18N" },
+    "description": { "str": "This monster exists to drag you behind it briefly.", "//~": "NO_I18N" },
+    "special_attacks": [
+      {
+        "id": "grab_drag",
+        "cooldown": 0,
+        "move_cost": 0,
+        "grab_data": { "drag_grab_break_distance": 999, "drag_movecost_mod": 0.001 }
+      },
+      {
+        "id": "drag_followup",
+        "move_cost": 0,
+        "cooldown": 0,
+        "grab_data": { "drag_grab_break_distance": 999 },
+        "condition": { "and": [ { "u_has_flag": "GRAB_FILTER" }, { "npc_has_flag": "GRAB" } ] }
+      }
+    ]
+  },
+  {
+    "id": "pseudo_weakpoint_mon",
+    "type": "MONSTER",
+    "name": { "str": "weakpoint monster", "//~": "NO_I18N" },
+    "description": { "str": "This monster exists only for weakpoint testing purposes.", "//~": "NO_I18N" },
+    "default_faction": "",
+    "species": [ "ZOMBIE" ],
+    "volume": "62500 ml",
+    "weight": "81500 g",
+    "hp": 10000,
+    "speed": 100,
+    "material": [ "flesh" ],
+    "symbol": "X",
+    "color": "white",
+    "aggression": 100,
+    "morale": 100,
+    "melee_damage": [ { "damage_type": "cut", "amount": 0 } ],
+    "vision_day": 1,
+    "families": [ "prof_debug_weakpoint", { "proficiency": "prof_debug_weakpoint_expert", "bonus": 100 } ],
+    "weakpoints": [
+      {
+        "name": "the belly",
+        "armor_mult": { "bullet": 0.5 },
+        "armor_penalty": { "bullet": 25 },
+        "coverage": 50,
+        "coverage_mult": { "all": 0.5 },
+        "condition": { "npc_has_any_effect": [ "stunned" ] }
+      },
+      { "name": "impossible to hit", "coverage": 100, "difficulty": { "all": 100.0 } },
+      {
+        "name": "the knee",
+        "armor_mult": { "bullet": 0.0 },
+        "armor_penalty": { "bullet": 0 },
+        "damage_mult": { "all": 2.0 },
+        "coverage": 25,
+        "effects": [
+          {
+            "effect": "stunned",
+            "duration": [ "1 seconds", "3 seconds" ],
+            "permanent": false,
+            "intensity": [ 0, 0 ],
+            "damage_required": [ 0, 100 ],
+            "chance": 50,
+            "message": "The %s is disorientated."
+          }
+        ]
+      }
+    ],
+    "harvest": "zombie_humanoid",
+    "flags": [ "IMMOBILE", "NOT_HALLUCINATION", "FILTHY" ],
+    "armor": { "bullet": 100 }
+  }
+]
