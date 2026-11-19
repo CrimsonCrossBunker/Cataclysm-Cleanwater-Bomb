@@ -1,29 +1,29 @@
 [
   {
-    "id": [ "TALK_KILL_STAR_CROWN_HOUND_OFFER" ],
+    "id": [ "TALK_GET_SHADOW_SINGULARITY_PIECE_OFFER" ],
     "type": "talk_topic",
-    "dynamic_line": "Knight, I ask you to kill a star-crowned hound.  This will be a difficult challenge but I trust that you will prevail against this mighty foe.  Kill it and a necklace that will amplify your magical abilities will be yours.",
+    "dynamic_line": "There is a shadow that haunts the night.  Bring me proof that you killed it and I'll grant you the right to bear my banner.",
     "responses": [
       {
-        "text": "I'll do it.  Where's the hound?",
-        "condition": { "not": { "u_has_mission": "MISSION_KILL_STAR_CROWN_HOUND_FOR_BOANN" } },
-        "effect": [ { "assign_mission": "MISSION_KILL_STAR_CROWN_HOUND_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_KILL_STAR_CROWN_HOUND_ACCEPTED"
+        "text": "I'll do it.",
+        "condition": { "not": { "u_has_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ACCEPTED"
       },
-      { "text": "Do you have any advice?", "topic": "TALK_KILL_STAR_CROWN_HOUND_ADVICE" },
+      { "text": "Do you have any advice?", "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ADVICE" },
       { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
     ]
   },
   {
-    "id": "TALK_KILL_STAR_CROWN_HOUND_ADVICE",
+    "id": "TALK_GET_SHADOW_SINGULARITY_PIECE_ADVICE",
     "type": "talk_topic",
-    "dynamic_line": "It is strong but slow, so disengaging is possible.  It will summon hounds, but they quickly fade away so they aren't that much of an issue compared to it.  Stand away from corners in walls as it can teleport to them.  It has no armor against fire, electricity and blunt weapons but it quickly heals all its wounds so continuous heavy damage is the key to kill it.  If you cannot manage to injure it, do not hesitate to withdraw and try another way to kill it.",
+    "dynamic_line": "To encounter it, stand alone or accompanied by at most two allies in a field or a forest at night.  It might take multiple nights for it to show itself so prepare something to do while you wait.  Light massively weaken it so ensure the battlefield is well lit.  Separate it from its minions, as it can create more than you'll manage to kill and heal its wounds over time.  It is also particularly resilient against bullets so engage in melee if you manage to get close enough.",
     "responses": [
       {
-        "text": "I'll do it.  Where's the hound?",
-        "condition": { "not": { "u_has_mission": "MISSION_KILL_STAR_CROWN_HOUND_FOR_BOANN" } },
-        "effect": [ { "assign_mission": "MISSION_KILL_STAR_CROWN_HOUND_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_KILL_STAR_CROWN_HOUND_ACCEPTED"
+        "text": "I'll do it.",
+        "condition": { "not": { "u_has_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ACCEPTED"
       },
       { "text": "Can I see the other quests first?", "topic": "TALK_QUEST_LIST" },
       { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }

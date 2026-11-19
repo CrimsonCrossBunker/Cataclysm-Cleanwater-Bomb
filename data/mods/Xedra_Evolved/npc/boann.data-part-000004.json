@@ -1,29 +1,29 @@
 [
   {
-    "id": [ "TALK_KILL_DOGTHING_OFFER" ],
+    "id": [ "TALK_KILL_TWO_MARCH_LORDS_OFFER" ],
     "type": "talk_topic",
-    "dynamic_line": "A dog-like being has been found nearby.  Whatever it is, it's not a dog.  Kill it, and I will teach you how to see beyond barriers.",
+    "dynamic_line": "Prove your allegiance to me.  Kill two March Lords so all will see your defense of this world.",
     "responses": [
       {
-        "text": "I'll do it.  Where's the dog?",
-        "condition": { "not": { "u_has_mission": "MISSION_KILL_DOGTHING_FOR_BOANN" } },
-        "effect": [ { "assign_mission": "MISSION_KILL_DOGTHING_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_KILL_DOGTHING_ACCEPTED"
+        "text": "I'll do it.",
+        "condition": { "not": { "u_has_mission": "MISSION_KILL_TWO_MARCH_LORDS_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_KILL_TWO_MARCH_LORDS_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_KILL_TWO_MARCH_LORDS_ACCEPTED"
       },
-      { "text": "Do you have any advice?", "topic": "TALK_KILL_DOGTHING_ADVICE" },
+      { "text": "Do you have any advice?", "topic": "TALK_KILL_TWO_MARCH_LORDS_ADVICE" },
       { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
     ]
   },
   {
-    "id": "TALK_KILL_DOGTHING_ADVICE",
+    "id": "TALK_KILL_TWO_MARCH_LORDS_ADVICE",
     "type": "talk_topic",
-    "dynamic_line": "Do not be deceived by its looks.  It is not a regular dog.  Be very careful as we do not know what it can do.",
+    "dynamic_line": "They are fearsome opponents and have warriors at their command but lack long-range attacks.  You can find them in the border patrol offices or during one of their rare hunts amidst the mists.",
     "responses": [
       {
-        "text": "I'll do it.  Where's the dog?",
-        "condition": { "not": { "u_has_mission": "MISSION_KILL_DOGTHING_FOR_BOANN" } },
-        "effect": [ { "assign_mission": "MISSION_KILL_DOGTHING_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_KILL_DOGTHING_ACCEPTED"
+        "text": "I'll do it.",
+        "condition": { "not": { "u_has_mission": "MISSION_KILL_TWO_MARCH_LORDS_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_KILL_TWO_MARCH_LORDS_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_KILL_TWO_MARCH_LORDS_ACCEPTED"
       },
       { "text": "Can I see the other quests first?", "topic": "TALK_QUEST_LIST" },
       { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }

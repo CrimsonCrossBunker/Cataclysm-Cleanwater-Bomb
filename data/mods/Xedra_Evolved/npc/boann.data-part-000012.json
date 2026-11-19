@@ -1,29 +1,29 @@
 [
   {
-    "id": [ "TALK_GET_TRIFFID_HEART_OFFER" ],
+    "id": [ "TALK_KILL_DREAMFORGED_AUTOMATON_OFFER" ],
     "type": "talk_topic",
-    "dynamic_line": "I want you to brave the harshest environments.  Bring me a chunk of a triffid heart and I'll grant you a powerful set of armor.",
+    "dynamic_line": "A rampaging automaton has been spotted.  Destroy it, and you'll be granted a great weapon.",
     "responses": [
       {
-        "text": "I'll do it.  Where's the triffids?",
-        "condition": { "not": { "u_has_mission": "MISSION_GET_TRIFFID_HEART_FOR_BOANN" } },
-        "effect": [ { "assign_mission": "MISSION_GET_TRIFFID_HEART_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_GET_TRIFFID_HEART_ACCEPTED"
+        "text": "I'll do it.  Where's the automaton?",
+        "condition": { "not": { "u_has_mission": "MISSION_KILL_DREAMFORGED_AUTOMATON_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_KILL_DREAMFORGED_AUTOMATON_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_KILL_DREAMFORGED_AUTOMATON_ACCEPTED"
       },
-      { "text": "Do you have any advice?", "topic": "TALK_GET_TRIFFID_HEART_ADVICE" },
+      { "text": "Do you have any advice?", "topic": "TALK_KILL_DREAMFORGED_AUTOMATON_ADVICE" },
       { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
     ]
   },
   {
-    "id": "TALK_GET_TRIFFID_HEART_ADVICE",
+    "id": "TALK_KILL_DREAMFORGED_AUTOMATON_ADVICE",
     "type": "talk_topic",
-    "dynamic_line": "Tear gas is deadly to them.  In addition, they don't get along with anything that isn't a triffid.",
+    "dynamic_line": "My scouts mentioned that it relies on electricity to attack.  Find a way to shield yourself against that, and it'll be much easier to kill.  They also mentioned how damaged the automaton's exposed insides are, so I wouldn't attempt to use weapons that only damage the insides if I were you.",
     "responses": [
       {
-        "text": "I'll do it.  Where's the triffids?",
-        "condition": { "not": { "u_has_mission": "MISSION_GET_TRIFFID_HEART_FOR_BOANN" } },
-        "effect": [ { "assign_mission": "MISSION_GET_TRIFFID_HEART_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_GET_TRIFFID_HEART_ACCEPTED"
+        "text": "I'll do it.  Where's the automaton?",
+        "condition": { "not": { "u_has_mission": "MISSION_KILL_DREAMFORGED_AUTOMATON_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_KILL_DREAMFORGED_AUTOMATON_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_KILL_DREAMFORGED_AUTOMATON_ACCEPTED"
       },
       { "text": "Can I see the other quests first?", "topic": "TALK_QUEST_LIST" },
       { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }

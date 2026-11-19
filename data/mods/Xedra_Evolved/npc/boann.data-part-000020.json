@@ -1,33 +1,32 @@
 [
   {
-    "id": [ "TALK_OUTWORLD_CONFIRM" ],
+    "id": [ "TALK_KILL_STAR_CROWN_HOUND_OFFER" ],
     "type": "talk_topic",
-    "dynamic_line": "Are you certain?  Leaving this world is a one-way trip.  There is still a very long time before it becomes urgent to do so and many things to gain from staying here a little longer.",
+    "dynamic_line": "Knight, I ask you to kill a star-crowned hound.  This will be a difficult challenge but I trust that you will prevail against this mighty foe.  Kill it and a necklace that will amplify your magical abilities will be yours.",
     "responses": [
-      { "text": "I changed my mind.  I'll stay for now.", "topic": "TALK_DONE" },
-      { "text": "I am sure.  Bring me out of here.  (This will end the game)", "topic": "TALK_LEAVE_THIS_WORLD" },
       {
-        "text": "I am sure.  Bring me and my followers out of here.  (This will end the game)",
-        "topic": "TALK_LEAVE_THIS_WORLD",
-        "condition": { "npc_allies_global": 1 },
-        "effect": [ { "u_add_var": "u_has_followers", "value": "yes" } ]
-      }
+        "text": "I'll do it.  Where's the hound?",
+        "condition": { "not": { "u_has_mission": "MISSION_KILL_STAR_CROWN_HOUND_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_KILL_STAR_CROWN_HOUND_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_KILL_STAR_CROWN_HOUND_ACCEPTED"
+      },
+      { "text": "Do you have any advice?", "topic": "TALK_KILL_STAR_CROWN_HOUND_ADVICE" },
+      { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
     ]
   },
   {
+    "id": "TALK_KILL_STAR_CROWN_HOUND_ADVICE",
     "type": "talk_topic",
-    "id": "TALK_LEAVE_THIS_WORLD",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "u_has_followers" } ],
-      "yes": "(Boann leads you and your followers to a hidden ritual circle) This is the exit point.  After the ritual, you will all go through the decontamination process before you are allowed to claim your own barony, as fit for a member of my court.  Your followers will then claim a small part of it for their homes.",
-      "no": "(Boann leads you to a hidden ritual circle) This is the exit point.  After the ritual, you'll go through the decontamination process before being allowed to claim your own barony, as fit for a member of my court."
-    },
+    "dynamic_line": "It is strong but slow, so disengaging is possible.  It will summon hounds, but they quickly fade away so they aren't that much of an issue compared to it.  Stand away from corners in walls as it can teleport to them.  It has no armor against fire, electricity and blunt weapons but it quickly heals all its wounds so continuous heavy damage is the key to kill it.  If you cannot manage to injure it, do not hesitate to withdraw and try another way to kill it.",
     "responses": [
       {
-        "text": "A whole new world, filled with possibilities.  A place where the Cataclysm isn't.  What you do now is another story.",
-        "topic": "TALK_DONE",
-        "effect": [ "u_die", { "u_add_effect": "a_winner_is_u", "duration": "PERMANENT" } ]
-      }
+        "text": "I'll do it.  Where's the hound?",
+        "condition": { "not": { "u_has_mission": "MISSION_KILL_STAR_CROWN_HOUND_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_KILL_STAR_CROWN_HOUND_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_KILL_STAR_CROWN_HOUND_ACCEPTED"
+      },
+      { "text": "Can I see the other quests first?", "topic": "TALK_QUEST_LIST" },
+      { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
     ]
   }
 ]

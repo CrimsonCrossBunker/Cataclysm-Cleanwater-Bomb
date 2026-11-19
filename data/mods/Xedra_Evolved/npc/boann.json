@@ -490,52 +490,5 @@
       },
       { "text": "I'm going to head on now.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_QUEST_KNIGHT_OUTWORLD",
-    "dynamic_line": "You won't be a member of my court yet.  After another few quests, you will, and you along with all those that follow you will be brought out of this world whenever you wish so.",
-    "responses": [
-      {
-        "text": "Can I see the quest list again?",
-        "topic": "TALK_QUEST_LIST",
-        "effect": [ { "u_add_var": "told_about_knight_not_coming", "value": "yes" } ]
-      },
-      {
-        "text": "I'm going to head on now.",
-        "topic": "TALK_DONE",
-        "effect": [ { "u_add_var": "told_about_knight_not_coming", "value": "yes" } ]
-      }
-    ]
-  },
-  {
-    "id": [ "TALK_BRING_BOANN_JABBERWOCK_HEART_OFFER" ],
-    "type": "talk_topic",
-    "dynamic_line": "Prove to me that you have the heart of a knight.  Bring me the putrid heart of a Jabberwock.",
-    "responses": [
-      {
-        "text": "I'll do it.  Where's the Jabberwock?",
-        "condition": { "not": { "u_has_mission": "MISSION_BRING_BOANN_JABBERWOCK_HEART" } },
-        "effect": [ { "assign_mission": "MISSION_BRING_BOANN_JABBERWOCK_HEART" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_BRING_BOANN_JABBERWOCK_HEART_ACCEPTED"
-      },
-      { "text": "Do you have any advice?", "topic": "TALK_BRING_BOANN_JABBERWOCK_HEART_ADVICE" },
-      { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_BRING_BOANN_JABBERWOCK_HEART_ADVICE",
-    "type": "talk_topic",
-    "dynamic_line": "You will need incredible melee skills to handle this or an impressive gun.  Otherwise it does not have hidden tricks or notable intelligence so it'll be a straightforward fight.",
-    "responses": [
-      {
-        "text": "I'll do it.  Where's the Jabberwock?",
-        "condition": { "not": { "u_has_mission": "MISSION_BRING_BOANN_JABBERWOCK_HEART" } },
-        "effect": [ { "assign_mission": "MISSION_BRING_BOANN_JABBERWOCK_HEART" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_BRING_BOANN_JABBERWOCK_HEART_ACCEPTED"
-      },
-      { "text": "Can I see the other quests first?", "topic": "TALK_QUEST_LIST" },
-      { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
-    ]
   }
 ]

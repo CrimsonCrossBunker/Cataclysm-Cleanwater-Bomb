@@ -1,29 +1,29 @@
 [
   {
-    "id": [ "TALK_GET_SHADOW_SINGULARITY_PIECE_OFFER" ],
+    "id": [ "TALK_KILL_TITAN_BEETLE_OFFER" ],
     "type": "talk_topic",
-    "dynamic_line": "There is a shadow that haunts the night.  Bring me proof that you killed it and I'll grant you the right to bear my banner.",
+    "dynamic_line": "A knight must be able to triumph over all beasts.  Kill a titan stag beetle and you'll receive a magical musical instrument.",
     "responses": [
       {
-        "text": "I'll do it.",
-        "condition": { "not": { "u_has_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" } },
-        "effect": [ { "assign_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ACCEPTED"
+        "text": "I'll do it.  Where's the beetle?",
+        "condition": { "not": { "u_has_mission": "MISSION_KILL_TITAN_BEETLE_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_KILL_TITAN_BEETLE_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_KILL_TITAN_BEETLE_ACCEPTED"
       },
-      { "text": "Do you have any advice?", "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ADVICE" },
+      { "text": "Do you have any advice?", "topic": "TALK_KILL_TITAN_BEETLE_ADVICE" },
       { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
     ]
   },
   {
-    "id": "TALK_GET_SHADOW_SINGULARITY_PIECE_ADVICE",
+    "id": "TALK_KILL_TITAN_BEETLE_ADVICE",
     "type": "talk_topic",
-    "dynamic_line": "To encounter it, stand alone or accompanied by at most two allies in a field or a forest at night.  It might take multiple nights for it to show itself so prepare something to do while you wait.  Light massively weaken it so ensure the battlefield is well lit.  Separate it from its minions, as it can create more than you'll manage to kill and heal its wounds over time.  It is also particularly resilient against bullets so engage in melee if you manage to get close enough.",
+    "dynamic_line": "Mundane weapons won't do much so try to find something that bypasses its armor.  It's also very slow so keeping your distance is easy.  Learning the weak points of smaller beetles and using high-power ammunitions can work too but expect its shell to block most shots.",
     "responses": [
       {
-        "text": "I'll do it.",
-        "condition": { "not": { "u_has_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" } },
-        "effect": [ { "assign_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ACCEPTED"
+        "text": "I'll do it.  Where's the beetle?",
+        "condition": { "not": { "u_has_mission": "MISSION_KILL_TITAN_BEETLE_FOR_BOANN" } },
+        "effect": [ { "assign_mission": "MISSION_KILL_TITAN_BEETLE_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
+        "topic": "TALK_KILL_TITAN_BEETLE_ACCEPTED"
       },
       { "text": "Can I see the other quests first?", "topic": "TALK_QUEST_LIST" },
       { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
