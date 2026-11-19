@@ -1,0 +1,20 @@
+[
+  {
+    "id": [
+      "TALK_FREE_MERCHANTS_MERCHANT_AskJoin",
+      "TALK_FREE_MERCHANTS_MERCHANT_AskJoin1",
+      "TALK_FREE_MERCHANTS_MERCHANT_AskJoin2"
+    ],
+    "type": "talk_topic",
+    "dynamic_line": "I'm sorry, but the last thing we need is another mouth to feed.  Most of us lack any real survival skills, so keeping our group small enough to survive on the food we trade for is the main thing keeping us alive.",
+    "responses": [
+      { "text": "Another time, then.", "topic": "TALK_FREE_MERCHANTS_MERCHANT_Talk" },
+      { "text": "I can pull my own weight!", "topic": "TALK_FREE_MERCHANTS_MERCHANT_AskJoin1" },
+      {
+        "text": "Maybe I could change your mind…?~",
+        "topic": "TALK_FREE_MERCHANTS_MERCHANT_AskJoin2",
+        "condition": { "u_has_item": "condom" }
+      }
+    ]
+  }
+]
