@@ -31,27 +31,5 @@
     "flags": [ "EOC_ACTIVATION" ],
     "activatable_eoc": "EOC_PERAMBULATE_VEHICLE",
     "variants": [ { "symbols": "#", "symbols_broken": "X" } ]
-  },
-  {
-    "id": "dimensional_bathyscape",
-    "//": "Test vehicle for dimensional travel",
-    "type": "vehicle",
-    "name": "Sir Pemberton Smythe's Dimensional Bathyscape",
-    "blueprint": [
-      [ "---" ],
-      [ "+#|" ],
-      [ "---" ]
-    ],
-    "parts": [
-      { "x": -1, "y": -1, "parts": [ "hdframe", "board", "roof" ] },
-      { "x": -1, "y": 0, "parts": [ "hdframe", { "part": "tank", "fuel": "gasoline" }, "roof" ] },
-      { "x": -1, "y": 1, "parts": [ "hdframe", "engine_v6", "alternator_car", "roof" ] },
-      { "x": 0, "y": -1, "parts": [ "hdframe", "door", "roof", "battery_car" ] },
-      { "x": 0, "y": 0, "parts": [ "hdframe", "seat", "controls" ] },
-      { "x": 0, "y": 1, "parts": [ "hdframe", "roof", "dimensional_perambulator" ] },
-      { "x": 1, "y": -1, "parts": [ "hdframe", "board", "roof" ] },
-      { "x": 1, "y": 0, "parts": [ "hdframe", "board", "roof" ] },
-      { "x": 1, "y": 1, "parts": [ "hdframe", "board", "roof" ] }
-    ]
   }
 ]
