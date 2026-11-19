@@ -207,3 +207,107 @@ ccb.content.define_mapgen {
         item_groups = { V = { { group = "hospital_medical_items", chance = 70, repetitions = { 1, 3 } } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_safety_graffiti",
+    layout = {
+        size = { width = 1, height = 1 },
+        graffiti_placements = { { snippet = "lab_safety_snippet", x = 0, y = 0 } },
+    },
+}
+
+-- A nested map for walls variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_wall_glass_5x5",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "XX-XX",
+            "     ",
+            "     ",
+            "     ",
+            "     ",
+        },
+        palettes = { "lab_common_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        sign_placements = {
+            { snippet = "lab_safety_snippet", x = { 0, 1 }, y = 0 },
+            { snippet = "lab_safety_snippet", x = { 3, 4 }, y = 0 },
+        },
+    },
+}
+
+-- A nested map for door variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_wall_door_5x5",
+    layout = {
+        size = { width = 5, height = 5 },
+        rotation = { 0, 3 },
+        nested = {
+            {
+                choices = { { id = "null", weight = 50 }, { id = "lab_safety_graffiti", weight = 50 } },
+                x = { 0, 1 },
+                y = 0,
+            },
+            {
+                choices = { { id = "null", weight = 50 }, { id = "lab_safety_graffiti", weight = 50 } },
+                x = { 3, 4 },
+                y = 0,
+            },
+        },
+        terrain_placements = { { id = "t_door_lab_c", x = 2, y = 0 } },
+    },
+}
+
+-- A nested map for door variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_wall_glassdoor_5x5",
+    layout = {
+        size = { width = 5, height = 5 },
+        rotation = { 0, 3 },
+        nested = {
+            {
+                choices = { { id = "null", weight = 50 }, { id = "lab_safety_graffiti", weight = 50 } },
+                x = { 0, 1 },
+                y = 0,
+            },
+            {
+                choices = { { id = "null", weight = 50 }, { id = "lab_safety_graffiti", weight = 50 } },
+                x = { 3, 4 },
+                y = 0,
+            },
+        },
+        terrain_placements = { { id = "t_door_glass_lab_c", x = 2, y = 0 } },
+    },
+}
+
+-- A nested map for door variety, includes slime spawns for rooms that use this wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_wall_glassdoor_5x5",
+    weight = 10,
+    layout = {
+        size = { width = 5, height = 5 },
+        rotation = { 0, 3 },
+        nested = {
+            {
+                choices = { { id = "null", weight = 50 }, { id = "lab_safety_graffiti", weight = 50 } },
+                x = { 0, 1 },
+                y = 0,
+            },
+            {
+                choices = { { id = "null", weight = 50 }, { id = "lab_safety_graffiti", weight = 50 } },
+                x = { 3, 4 },
+                y = 0,
+            },
+        },
+        terrain_placements = { { id = "t_door_glass_lab_c", x = 2, y = 0 } },
+        monster_group_placements = { { group = "GROUP_SLIME", x = { 0, 4 }, y = { 1, 4 }, density = 0.1 } },
+        loot_placements = { { id = "canister_empty", x = 3, y = 2, chance = 100 } },
+    },
+}

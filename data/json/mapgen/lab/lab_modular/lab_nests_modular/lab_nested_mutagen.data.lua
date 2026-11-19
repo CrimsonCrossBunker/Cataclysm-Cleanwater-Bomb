@@ -723,3 +723,249 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- 撤销 PR #86581 — 恢复僵尸尸体的实用性
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_east",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "X     ] ",
+            "X     ) ",
+            "X     ] ",
+            "-     ]|",
+            "-     ] ",
+            "X     ) ",
+            "X     ] ",
+            "X     ] ",
+        },
+        palettes = { "lab_mutagen_palette" },
+        rotation = { 0, 3 },
+        nested = {
+            {
+                choices = { { id = "lab_mutagen_5x5_open", weight = 100 }, { id = "null", weight = 0 } },
+                x = 1,
+                y = 1,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 7,
+                y = 1,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 7,
+                y = 2,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 7,
+                y = 4,
+            },
+        },
+        sign_placements = {
+            { snippet = "lab_safety_snippet", x = 6, y = { 2, 4 } },
+            { snippet = "lab_safety_snippet", x = 0, y = { 0, 2 } },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_west",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            " ]     X",
+            " )     X",
+            " ]     X",
+            "|]     -",
+            " ]     -",
+            " )     X",
+            " ]     X",
+            " ]     X",
+        },
+        palettes = { "lab_mutagen_palette" },
+        rotation = { 0, 3 },
+        nested = {
+            {
+                choices = { { id = "lab_mutagen_5x5_open", weight = 100 }, { id = "null", weight = 0 } },
+                x = 2,
+                y = 1,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 0,
+                y = 1,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 0,
+                y = 2,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 0,
+                y = 4,
+            },
+        },
+        sign_placements = {
+            { snippet = "lab_safety_snippet", x = 1, y = 2 },
+            { snippet = "lab_safety_snippet", x = 1, y = 4 },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design for the 8x6 rooms.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_east_B",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "X     ] ",
+            "X     ) ",
+            "X     ] ",
+            "-     ]|",
+            "-     ] ",
+            "X     ) ",
+            "        ",
+            "        ",
+        },
+        palettes = { "lab_mutagen_palette" },
+        rotation = { 0, 3 },
+        nested = {
+            {
+                choices = { { id = "lab_mutagen_5x5_open", weight = 100 }, { id = "null", weight = 0 } },
+                x = 1,
+                y = 1,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 7,
+                y = 1,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 7,
+                y = 2,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 7,
+                y = 4,
+            },
+        },
+        sign_placements = {
+            { snippet = "lab_safety_snippet", x = 6, y = { 2, 4 } },
+            { snippet = "lab_safety_snippet", x = 0, y = { 0, 2 } },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.  Center of room design for the 8x6 rooms.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_west_B",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            " ]     X",
+            " )     X",
+            " ]     X",
+            "|]     -",
+            " ]     -",
+            " )     X",
+            "        ",
+            "        ",
+        },
+        palettes = { "lab_mutagen_palette" },
+        rotation = { 0, 3 },
+        nested = {
+            {
+                choices = { { id = "lab_mutagen_5x5_open", weight = 100 }, { id = "null", weight = 0 } },
+                x = 2,
+                y = 1,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 0,
+                y = 1,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 0,
+                y = 2,
+            },
+            {
+                choices = { { id = "lab_small_animal_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 0,
+                y = 4,
+            },
+        },
+        sign_placements = {
+            { snippet = "lab_safety_snippet", x = 1, y = 2 },
+            { snippet = "lab_safety_snippet", x = 1, y = 4 },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_west",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            " ]     X",
+            " )     X",
+            " ]     X",
+            "|]     -",
+            " ]     -",
+            " )     X",
+            " ]     X",
+            " ]     X",
+        },
+        palettes = { "lab_mutagen_palette" },
+        rotation = { 0, 3 },
+        nested = {
+            {
+                choices = { { id = "lab_mutagen_5x5_open", weight = 100 }, { id = "null", weight = 0 } },
+                x = 2,
+                y = 1,
+            },
+            {
+                choices = { { id = "lab_alpha_rat_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 0,
+                y = 1,
+            },
+            {
+                choices = { { id = "lab_alpha_rat_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 0,
+                y = 2,
+            },
+            {
+                choices = { { id = "lab_alpha_rat_1x1", weight = 100 }, { id = "null", weight = 0 } },
+                x = 0,
+                y = 4,
+            },
+        },
+        sign_placements = {
+            { snippet = "lab_safety_alpha_snippet", x = 1, y = 2 },
+            { snippet = "lab_safety_alpha_snippet", x = 1, y = 4 },
+        },
+    },
+}
+
+-- A nested map bash damage..
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_16x1_bash",
+    layout = {
+        size = { width = 16, height = 16 },
+        tile_edits = { { shape = "point", operation = "bash", x = { 1, 15 }, y = 1 } },
+    },
+}

@@ -13,11 +13,6 @@
     "benign": false
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "concrete_wall_o_lab_res_8_NW",
-    "object": { "place_terrain": [ { "ter": "t_thconc_r", "x": 11, "y": 15 }, { "ter": "t_thconc_r", "x": 11, "y": 16 } ] }
-  },
-  {
     "type": "trap",
     "id": "tr_concrete_wall_door_lab_res_8_NE",
     "name": "door",
@@ -29,11 +24,6 @@
     "action": "map_regen",
     "map_regen": "concrete_wall_o_lab_res_8_NE",
     "benign": false
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "concrete_wall_o_lab_res_8_NE",
-    "object": { "place_terrain": [ { "ter": "t_thconc_r", "x": 12, "y": 15 }, { "ter": "t_thconc_r", "x": 12, "y": 16 } ] }
   },
   {
     "type": "trap",
@@ -49,18 +39,6 @@
     "benign": false
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "light_on_res_8_NW",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_thconc_floor_olight", "x": 9, "y": 3 },
-        { "ter": "t_thconc_floor_olight", "x": 9, "y": 11 },
-        { "ter": "t_thconc_floor_olight", "x": 9, "y": 19 }
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
-  },
-  {
     "type": "trap",
     "id": "tr_light_on_res_8_NE",
     "name": "overhead light",
@@ -72,18 +50,6 @@
     "action": "map_regen",
     "map_regen": "light_on_res_8_NE",
     "benign": false
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "light_on_res_8_NE",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_thconc_floor_olight", "x": 14, "y": 3 },
-        { "ter": "t_thconc_floor_olight", "x": 14, "y": 11 },
-        { "ter": "t_thconc_floor_olight", "x": 14, "y": 19 }
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
   },
   {
     "type": "trap",
@@ -99,18 +65,6 @@
     "benign": false
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "light_on_res_8_SW",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_thconc_floor_olight", "x": 9, "y": 3 },
-        { "ter": "t_thconc_floor_olight", "x": 9, "y": 11 },
-        { "ter": "t_thconc_floor_olight", "x": 20, "y": 11 }
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
-  },
-  {
     "type": "trap",
     "id": "tr_light_on_res_8_SE",
     "name": "overhead light",
@@ -122,18 +76,6 @@
     "action": "map_regen",
     "map_regen": "light_on_res_8_SE",
     "benign": false
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "light_on_res_8_SE",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_thconc_floor_olight", "x": 14, "y": 3 },
-        { "ter": "t_thconc_floor_olight", "x": 14, "y": 11 },
-        { "ter": "t_thconc_floor_olight", "x": 3, "y": 11 }
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
   },
   {
     "type": "trap",
@@ -149,18 +91,6 @@
     "benign": false
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "light_on_lab_security_z0N_A",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_thconc_floor_olight", "x": 4, "y": 3 },
-        { "ter": "t_thconc_floor_olight", "x": 11, "y": 15 },
-        { "ter": "t_thconc_floor_olight", "x": 18, "y": 3 }
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
-  },
-  {
     "type": "trap",
     "id": "tr_light_on_lab_security_z0N_B",
     "name": "overhead light",
@@ -172,18 +102,6 @@
     "action": "map_regen",
     "map_regen": "light_on_lab_security_z0N_B",
     "benign": false
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "light_on_lab_security_z0N_B",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_thconc_floor_olight", "x": 4, "y": 15 },
-        { "ter": "t_thconc_floor_olight", "x": 11, "y": 3 },
-        { "ter": "t_thconc_floor_olight", "x": 18, "y": 15 }
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
   },
   {
     "type": "trap",
@@ -199,18 +117,6 @@
     "benign": false
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "light_on_lab_security_z0S_A",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_thconc_floor_olight", "x": 4, "y": 8 },
-        { "ter": "t_thconc_floor_olight", "x": 11, "y": 20 },
-        { "ter": "t_thconc_floor_olight", "x": 18, "y": 8 }
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
-  },
-  {
     "type": "trap",
     "id": "tr_light_on_lab_security_z0S_B",
     "name": "overhead light",
@@ -222,17 +128,5 @@
     "action": "map_regen",
     "map_regen": "light_on_lab_security_z0S_B",
     "benign": false
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "light_on_lab_security_z0S_B",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_thconc_floor_olight", "x": 4, "y": 20 },
-        { "ter": "t_thconc_floor_olight", "x": 11, "y": 8 },
-        { "ter": "t_thconc_floor_olight", "x": 18, "y": 20 }
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
   }
 ]

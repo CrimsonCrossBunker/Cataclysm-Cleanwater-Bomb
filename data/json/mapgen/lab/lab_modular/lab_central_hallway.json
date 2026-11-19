@@ -43,50 +43,6 @@
     }
   },
   {
-    "type": "mapgen",
-    "om_terrain": [ "underground_lab_central_-5W" ],
-    "//": "level -5",
-    "object": {
-      "fill_ter": "t_thconc_floor",
-      "rows": [
-        "|`````||||||||||||`````|",
-        "|````ɜ||;£;;;;£;||ɜ````|",
-        "|````|||;£;;;;£;|||````|",
-        "|``````|;£;;;;£;|``````|",
-        "|``````|;£;;;;£;|``````|",
-        "|`î````|;££££££;|````î`|",
-        "|``````|;£♣♣♣♣£;|``````|",
-        "|``````|;£♦♦♦♦£;|``````|",
-        "|``````|;£;;;;£;|``````|",
-        "|``````|;£;;;;£;|``````|",
-        "|``````|;£;;;;£;|``````|",
-        "|``````|;£;;;;£;|``````|",
-        "|``````|;£;;;;£;|``````|",
-        "|`î````|;£;;;;£;|````î`|",
-        "|``````|;£♥♥♥♥£;|``````|",
-        "|``````|;£♠♠♠♠£;|``````|",
-        "|````|||;£;;;;£;|||````|",
-        "|ßßßß|||;£;;;;£;|||ßßßß|",
-        "|ɜ```|||;£;;;;£;|||```ɜ|",
-        "|````|||;£;;;;£;|||````|",
-        "|````|||;££££££;|||````|",
-        "||=¥||||||||||||||||=¥||",
-        "|``````````````````````|",
-        "|``````````````````````|"
-      ],
-      "palettes": [ "lab_common_palette", "lab_security_palette" ],
-      "terrain": { "ɜ": "t_metal_floor", "¥": "t_card_science_security_black", "ƶ": "t_card_science_security_magenta" },
-      "place_traps": [
-        { "trap": "tr_lab_security_corridor_a", "x": [ 19, 22 ], "y": [ 3, 21 ], "repeat": [ 2, 5 ] },
-        { "trap": "tr_lab_security_corridor_b", "x": [ 1, 4 ], "y": [ 3, 21 ], "repeat": [ 2, 5 ] }
-      ],
-      "place_nested": [
-        { "chunks": [ [ "lab_security_14x14_corridor_1", 100 ] ], "x": 17, "y": 3 },
-        { "chunks": [ [ "lab_security_14x14_corridor_2", 100 ] ], "x": 1, "y": 3 }
-      ]
-    }
-  },
-  {
     "type": "trap",
     "id": "tr_lab_security_corridor_a",
     "name": "door",
@@ -100,19 +56,6 @@
     "benign": false
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "lab_security_corridor_a",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_metal_floor", "x": 18, "y": 3 },
-        { "ter": "t_metal_floor", "x": 18, "y": 6 },
-        { "ter": "t_metal_floor", "x": 18, "y": 9 },
-        { "ter": "t_metal_floor", "x": 18, "y": 12 },
-        { "ter": "t_metal_floor", "x": 18, "y": 15 }
-      ]
-    }
-  },
-  {
     "type": "trap",
     "id": "tr_lab_security_corridor_b",
     "name": "door",
@@ -124,19 +67,6 @@
     "action": "map_regen",
     "map_regen": "lab_security_corridor_b",
     "benign": false
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "lab_security_corridor_b",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_metal_floor", "x": 5, "y": 3 },
-        { "ter": "t_metal_floor", "x": 5, "y": 6 },
-        { "ter": "t_metal_floor", "x": 5, "y": 9 },
-        { "ter": "t_metal_floor", "x": 5, "y": 12 },
-        { "ter": "t_metal_floor", "x": 5, "y": 15 }
-      ]
-    }
   },
   {
     "type": "mapgen",

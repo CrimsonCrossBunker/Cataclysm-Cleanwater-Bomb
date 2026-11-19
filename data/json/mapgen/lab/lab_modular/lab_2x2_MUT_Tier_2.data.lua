@@ -1,0 +1,357 @@
+local ccb = require("ccb")
+
+-- variant for a 6 floor lab (removed stairs down)
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "lab_2x2_MUT_tier_2_NW_final_flr" },
+    layout = {
+        rows = {
+            "||||||||||||||||||||||¥=",
+            "|.....|;;;;;;;;;;;;;||£;",
+            "|.....X;;;;;;;;;;;;;-££;",
+            "|.....X;;;;;;;;;;;;;-£;;",
+            "|.....|;;;;;;;;;;;;||£;;",
+            "|.....-;;;;|||||||||;£;;",
+            "|.....|;;;;|........;£;;",
+            "|.....X;;;;|........;£;;",
+            "|.....X;;;;|........;£;;",
+            "|.....|;;;;|........;£;;",
+            "|||+||||;;;|........;£;;",
+            "|......|;;;|........;£;;",
+            "|......X;;;|........;£;;",
+            "|......-;;;|........;£;;",
+            "|......-;;;|||¢ȣ¢|||;£;;",
+            "|......X;;;|;|...|U|;£;;",
+            "|......|;;;|;|...|^#;£;;",
+            "||||||||;;;|||¢ȣ¢|||;£;;",
+            "|......|;;;|.......X;£;;",
+            "|......X;;;|.......X;£;;",
+            "|......-;;;|.......X;£;;",
+            "|......-;;;|.......-;£;;",
+            "|......X;;;|.......-;£;;",
+            "|......|;;;|.......X;£;;",
+        },
+        palettes = { "lab_mutagen_palette" },
+        terrain = { ["¥"] = "t_card_science_mutagen_cyan" },
+        fill_terrain = "t_linoleum_white",
+        nested = {
+            {
+                choices = {
+                    { id = "lab_common_9x9_E", weight = 30 },
+                    { id = "lab_mutagen_9x9_E", weight = 70 },
+                },
+                x = 1,
+                y = 1,
+            },
+            { choices = { { id = "lab_medium_animal_1x1_MUTANT", weight = 30 } }, x = 15, y = 15 },
+            { choices = { { id = "lab_medium_animal_1x1_MUTANT", weight = 30 } }, x = 15, y = 16 },
+            { choices = { { id = "lab_mutagen_8x8_vault_west", weight = 100 } }, x = 12, y = 6 },
+            { choices = { { id = "lab_mutagen_8x8_west_B", weight = 100 } }, x = 12, y = 18 },
+            { choices = { { id = "lab_common_6x6", weight = 100 } }, x = 1, y = 11 },
+            { choices = { { id = "lab_common_6x6", weight = 100 } }, x = 1, y = 18 },
+            {
+                choices = {
+                    { id = "lab_wall_glass_5x5", weight = 25 },
+                    { id = "lab_wall_glassdoor_5x5", weight = 25 },
+                    { id = "lab_wall_door_5x5", weight = 25 },
+                    { id = "null", weight = 25 },
+                },
+                x = 1,
+                y = 10,
+            },
+            {
+                choices = {
+                    { id = "lab_wall_glass_5x5", weight = 25 },
+                    { id = "lab_wall_glassdoor_5x5", weight = 25 },
+                    { id = "lab_wall_door_5x5", weight = 25 },
+                    { id = "null", weight = 25 },
+                },
+                x = 1,
+                y = 17,
+            },
+        },
+        monster_group_placements = {
+            { group = "GROUP_LAB_RESEARCHERS", x = { 13, 22 }, y = { 7, 22 }, density = 0.1 },
+            { group = "GROUP_LAB_RESEARCHERS", x = { 1, 4 }, y = { 2, 22 }, density = 0.1 },
+        },
+        trap_placements = { { id = "tr_light_on_res_8_NW", x = { 8, 10 }, y = { 1, 23 }, repetitions = { 1, 2 } } },
+        monster_placements = {
+            { id = "mon_skitterbot", x = 12, y = 15, chance = 100 },
+            { id = "mon_skitterbot", x = 12, y = 16, chance = 100 },
+            { id = "mon_skitterbot", x = 18, y = 15, chance = 100 },
+            { id = "mon_skitterbot", x = 18, y = 16, chance = 100 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "lab_2x2_MUT_tier_2_NE" },
+    layout = {
+        rows = {
+            "=|||||||||||||||||||||||",
+            ";£||;;;;;;;;;;;;;|.....|",
+            ";££-;;;;;;;;;;;;;X.....|",
+            ";;£-;;;;;;;;;;;;;X.....|",
+            ";;£||;;;;;;;;;;;;|.....|",
+            ";;£;|||||||||;;;;-.....|",
+            ";;£;........|;;;;|.....|",
+            ";;£;........|;;;;X.....|",
+            ";;£;........|;;;;X.....|",
+            ";;£;........|;;;;|.....|",
+            ";;£;........|;;;||||||||",
+            ";;£;........|;;;|......|",
+            ";;£;........|;;;X......|",
+            ";;£;........|;;;-......|",
+            ";;£;|||¢ȣ¢|||;;;-......|",
+            ";;£;-<|...|;|;;;X......|",
+            ";;£;|<|...|;|;;;|......|",
+            ";;£;|||¢ȣ¢|||;;;||||||||",
+            ";;£;X.......|;;;|......|",
+            ";;£;X.......|;;;|......|",
+            ";;£;X.......|;;;X......|",
+            ";;£;-.......|;;;-......|",
+            ";;£;-.......|;;;X......|",
+            ";;£;X.......|;;;|......|",
+        },
+        palettes = { "lab_mutagen_palette" },
+        fill_terrain = "t_linoleum_white",
+        nested = {
+            {
+                choices = {
+                    { id = "lab_common_9x9_W", weight = 30 },
+                    { id = "lab_mutagen_9x9_W", weight = 70 },
+                },
+                x = 14,
+                y = 1,
+            },
+            { choices = { { id = "lab_medium_animal_1x1_MUTANT", weight = 30 } }, x = 8, y = 15 },
+            { choices = { { id = "lab_medium_animal_1x1_MUTANT", weight = 30 } }, x = 9, y = 16 },
+            {
+                choices = {
+                    { id = "lab_mutagen_8x8_east", weight = 95 },
+                    { id = "lab_mutagen_8x8_vault_east", weight = 5 },
+                },
+                x = 4,
+                y = 6,
+            },
+            { choices = { { id = "lab_mutagen_8x8_east_B", weight = 100 } }, x = 4, y = 18 },
+            { choices = { { id = "lab_common_6x6", weight = 100 } }, x = 17, y = 11 },
+            { choices = { { id = "lab_common_6x6", weight = 100 } }, x = 17, y = 18 },
+            {
+                choices = {
+                    { id = "lab_wall_glass_5x5", weight = 25 },
+                    { id = "lab_wall_glassdoor_5x5", weight = 25 },
+                    { id = "lab_wall_door_5x5", weight = 25 },
+                    { id = "null", weight = 25 },
+                },
+                x = 18,
+                y = 10,
+            },
+            {
+                choices = {
+                    { id = "lab_wall_glass_5x5", weight = 25 },
+                    { id = "lab_wall_glassdoor_5x5", weight = 25 },
+                    { id = "lab_wall_door_5x5", weight = 25 },
+                    { id = "null", weight = 25 },
+                },
+                x = 18,
+                y = 17,
+            },
+        },
+        trap_placements = { { id = "tr_light_on_res_8_NE", x = { 13, 15 }, y = { 1, 23 }, repetitions = { 2, 3 } } },
+        vehicle_placements = {
+            {
+                id = "cart_animal_compartment",
+                x = 0,
+                y = 10,
+                chance = 30,
+                status = 0,
+                rotation = 270,
+            },
+            { id = "cart_livestock_stall", x = 0, y = 5, chance = 30, status = 0, rotation = 270 },
+        },
+        monster_group_placements = {
+            { group = "GROUP_LAB_RESEARCHERS", x = { 1, 8 }, y = { 7, 22 }, density = 0.1 },
+            { group = "GROUP_LAB_RESEARCHERS", x = { 19, 21 }, y = { 2, 22 }, density = 0.1 },
+        },
+        monster_placements = {
+            { id = "mon_skitterbot", x = 11, y = 15, chance = 100 },
+            { id = "mon_skitterbot", x = 11, y = 16, chance = 100 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "lab_2x2_MUT_tier_2_SW" },
+    layout = {
+        rows = {
+            "||||||||;;;|.].....X;£;;",
+            "|.....|;;;;|.].....X;£;;",
+            "|.....X;;;;||||||||||£;;",
+            "|.....-;;;;|;|...|...£;;",
+            "|.....X;;;;|;|...+...£;;",
+            "|.....|;;;;|;|...|...£;;",
+            "|||||||;;;;|||||||...£;;",
+            "|<-;;;;;;;;;;;;;;-...£;;",
+            "|~~~~~~~~~~~~~~~~|...£;;",
+            "|~~~~~~~~~~~~~~~~X...£;;",
+            "|~~~~~~~~~~~~~~~~X...£;;",
+            "|~~~~~~~~~~~~~~~~X...£;;",
+            "|~~~~~~~~~~~~~~~~XXXX|--",
+            "|~~~~~~~~~~~~~~~~|;;;;;;",
+            "|~~~~~~~~~~~~~~~~X;;;;;;",
+            "|~~~~~~~~~~~~~~~~X;;;;;;",
+            "|~~~~~~~~~~~~~~~~|&;;;;;",
+            "|~~~~~~~~~~~~~~~~||===||",
+            "|~~~~~~~~~~~~~~~~|&;;;;|",
+            "|~~~~~~~~~~~~~~~~=;;;;;|",
+            "|~~~~~~~~~~~~~~~~=;;;;;|",
+            "|~~~~~~~~~~~~~~~~=;;;;;|",
+            "|~~~~~~~~~~~~~~~&|;;;;;|",
+            "||||||||||||||||||||||||",
+        },
+        palettes = { "lab_mutagen_palette" },
+        terrain = { ["~"] = "t_region_groundcover_urban" },
+        fill_terrain = "t_linoleum_white",
+        nested = {
+            { choices = { { id = "lab_mutagen_16x16_animal_pen", weight = 100 } }, x = 1, y = 7 },
+            {
+                choices = {
+                    { id = "lab_common_3x3_EW_open", weight = 20 },
+                    { id = "lab_generic_3x3_EW_open", weight = 20 },
+                    { id = "lab_mutagen_3x3_EW_open", weight = 60 },
+                },
+                x = 14,
+                y = 3,
+            },
+            {
+                choices = {
+                    { id = "lab_surface_office_5x5", weight = 25 },
+                    { id = "lab_surface_2partworkspace_front_5x5", weight = 25 },
+                    { id = "lab_surface_2partworkspace_back_5x5", weight = 25 },
+                    { id = "lab_surface_meeting_5x5", weight = 25 },
+                },
+                x = 1,
+                y = 1,
+            },
+            {
+                choices = {
+                    { id = "lab_wall_glass_5x5", weight = 25 },
+                    { id = "lab_wall_glassdoor_5x5", weight = 25 },
+                    { id = "lab_wall_door_5x5", weight = 25 },
+                    { id = "null", weight = 25 },
+                },
+                x = 1,
+                y = 0,
+            },
+        },
+        trap_placements = { { id = "tr_light_on_res_8_SW_2", x = { 7, 10 }, y = { 1, 5 }, repetitions = { 1, 2 } } },
+        monster_group_placements = {
+            { group = "GROUP_LAB_RESEARCHERS", x = { 1, 4 }, y = { 1, 3 }, density = 0.05 },
+            { group = "GROUP_LAB_RESEARCHERS", x = { 14, 22 }, y = { 0, 10 }, density = 0.1 },
+        },
+        monster_placements = {
+            { id = "mon_skitterbot", x = 12, y = 3, chance = 100 },
+            { id = "mon_skitterbot", x = 12, y = 4, chance = 100 },
+            { id = "mon_skitterbot", x = 12, y = 5, chance = 100 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "light_on_res_8_SW_2",
+    layout = {
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain_placements = { { id = "t_strconc_floor_olight", x = 9, y = 3 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "lab_2x2_MUT_tier_2_SE" },
+    layout = {
+        rows = {
+            ";;£;X.....].|;;;||||||||",
+            ";;£;X.....].|;;;;|.....|",
+            ";;£||||||||||;;;;X.....|",
+            ";;£...|...|;|;;;;-.....|",
+            ";;£...+...|;|;;;;X.....|",
+            ";;£...|...|;|;;;;|.....|",
+            ";;£...|||||||;;;;|||||||",
+            ";;£...-;;;;;;;;;;;;;;-<|",
+            ";;£...|~~~~~~~~~~~~~~~~|",
+            ";;£...X~~~~~~~~~~~~~~~~|",
+            ";;£...X~~~~~~~~~~~~~~~~|",
+            ";;£...X~~~~~~~~~~~~~~~~|",
+            "--|XXXX~~~~~~~~~~~~~~~~|",
+            ";;;;;;|~~~~~~~~~~~~~~~~|",
+            ";;;;;;X~~~~~~~~~~~~~~~~|",
+            ";;;;;;X~~~~~~~~~~~~~~~~|",
+            ";;;;;&|~~~~~~~~~~~~~~~~|",
+            "||===||~~~~~~~~~~~~~~~~|",
+            "|;;;;&|~~~~~~~~~~~~~~~~|",
+            "|;;;;;=~~~~~~~~~~~~~~~~|",
+            "|;;;;;=~~~~~~~~~~~~~~~~|",
+            "|;;;;;=~~~~~~~~~~~~~~~~|",
+            "|;;;;;|&~~~~~~~~~~~~~~~|",
+            "||||||||||||||||||||||||",
+        },
+        palettes = { "lab_mutagen_palette" },
+        terrain = { ["~"] = "t_region_groundcover_urban" },
+        fill_terrain = "t_linoleum_white",
+        nested = {
+            {
+                choices = {
+                    { id = "lab_surface_office_5x5", weight = 25 },
+                    { id = "lab_surface_2partworkspace_front_5x5", weight = 25 },
+                    { id = "lab_surface_2partworkspace_back_5x5", weight = 25 },
+                    { id = "lab_surface_meeting_5x5", weight = 25 },
+                },
+                x = 18,
+                y = 1,
+            },
+            {
+                choices = {
+                    { id = "lab_common_3x3_EW_open", weight = 20 },
+                    { id = "lab_generic_3x3_EW_open", weight = 20 },
+                    { id = "lab_mutagen_3x3_EW_open", weight = 60 },
+                },
+                x = 7,
+                y = 3,
+            },
+            { choices = { { id = "lab_mutagen_16x16_animal_pen", weight = 100 } }, x = 7, y = 7 },
+            {
+                choices = {
+                    { id = "lab_wall_glass_5x5", weight = 25 },
+                    { id = "lab_wall_glassdoor_5x5", weight = 25 },
+                    { id = "lab_wall_door_5x5", weight = 25 },
+                    { id = "null", weight = 25 },
+                },
+                x = 18,
+                y = 0,
+            },
+        },
+        trap_placements = { { id = "tr_light_on_MUT_SE_2", x = { 13, 16 }, y = { 1, 5 }, repetitions = { 1, 2 } } },
+        monster_group_placements = {
+            { group = "GROUP_LAB_RESEARCHERS", x = { 19, 21 }, y = { 1, 3 }, density = 0.05 },
+            { group = "GROUP_LAB_RESEARCHERS", x = { 0, 8 }, y = { 0, 10 }, density = 0.1 },
+        },
+        monster_placements = {
+            { id = "mon_skitterbot", x = 11, y = 3, chance = 100 },
+            { id = "mon_skitterbot", x = 11, y = 4, chance = 100 },
+            { id = "mon_skitterbot", x = 11, y = 5, chance = 100 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "light_on_MUT_SE_2",
+    layout = {
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain_placements = { { id = "t_strconc_floor_olight", x = 14, y = 3 } },
+    },
+}

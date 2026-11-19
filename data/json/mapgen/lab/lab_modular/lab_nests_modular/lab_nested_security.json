@@ -1,18 +1,6 @@
 [
   {
     "type": "mapgen",
-    "//": "A nested map bash damage, vertical line.",
-    "nested_mapgen_id": "1x6_bash_v",
-    "object": { "mapgensize": [ 6, 6 ], "set": [ { "point": "bash", "x": 0, "y": [ 1, 4 ] } ] }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map bash damage, a single point.",
-    "nested_mapgen_id": "1x6_bash",
-    "object": { "mapgensize": [ 1, 1 ], "set": [ { "point": "bash", "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
     "//": "A nested map for lab security.",
     "nested_mapgen_id": "lab_security_3x3_EW",
     "object": {
@@ -531,46 +519,6 @@
         "U  #     |"
       ],
       "palettes": [ "lab_common_palette", "lab_security_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for military lab security areas, 2x2 sandbag configuration. ",
-    "nested_mapgen_id": "lab_security_sandbag_NS_1",
-    "object": {
-      "mapgensize": [ 2, 2 ],
-      "rotation": [ 0, 3 ],
-      "place_furniture": [ { "furn": "f_sandbag_half", "x": 0, "y": 0 }, { "furn": "f_sandbag_half", "x": 0, "y": 1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for military lab security areas, 2x2 sandbag configuration. ",
-    "nested_mapgen_id": "lab_security_sandbag_NS_2",
-    "object": {
-      "mapgensize": [ 2, 2 ],
-      "rotation": [ 0, 3 ],
-      "place_furniture": [ { "furn": "f_sandbag_half", "x": 1, "y": 0 }, { "furn": "f_sandbag_half", "x": 1, "y": 1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for military lab security areas, 2x2 sandbag configuration. ",
-    "nested_mapgen_id": "lab_security_sandbag_EW_1",
-    "object": {
-      "mapgensize": [ 2, 2 ],
-      "rotation": [ 0, 3 ],
-      "place_furniture": [ { "furn": "f_sandbag_half", "x": 0, "y": 0 }, { "furn": "f_sandbag_half", "x": 1, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for military lab security areas, 2x2 sandbag configuration. ",
-    "nested_mapgen_id": "lab_security_sandbag_EW_2",
-    "object": {
-      "mapgensize": [ 2, 2 ],
-      "rotation": [ 0, 3 ],
-      "place_furniture": [ { "furn": "f_sandbag_half", "x": 0, "y": 1 }, { "furn": "f_sandbag_half", "x": 1, "y": 1 } ]
     }
   }
 ]

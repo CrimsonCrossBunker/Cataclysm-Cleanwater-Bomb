@@ -441,3 +441,90 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- level -5
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "underground_lab_central_-5W" },
+    layout = {
+        rows = {
+            "|`````||||||||||||`````|",
+            "|````ɜ||;£;;;;£;||ɜ````|",
+            "|````|||;£;;;;£;|||````|",
+            "|``````|;£;;;;£;|``````|",
+            "|``````|;£;;;;£;|``````|",
+            "|`î````|;££££££;|````î`|",
+            "|``````|;£♣♣♣♣£;|``````|",
+            "|``````|;£♦♦♦♦£;|``````|",
+            "|``````|;£;;;;£;|``````|",
+            "|``````|;£;;;;£;|``````|",
+            "|``````|;£;;;;£;|``````|",
+            "|``````|;£;;;;£;|``````|",
+            "|``````|;£;;;;£;|``````|",
+            "|`î````|;£;;;;£;|````î`|",
+            "|``````|;£♥♥♥♥£;|``````|",
+            "|``````|;£♠♠♠♠£;|``````|",
+            "|````|||;£;;;;£;|||````|",
+            "|ßßßß|||;£;;;;£;|||ßßßß|",
+            "|ɜ```|||;£;;;;£;|||```ɜ|",
+            "|````|||;£;;;;£;|||````|",
+            "|````|||;££££££;|||````|",
+            "||=¥||||||||||||||||=¥||",
+            "|``````````````````````|",
+            "|``````````````````````|",
+        },
+        palettes = { "lab_common_palette", "lab_security_palette" },
+        terrain = {
+            ["ɜ"] = "t_metal_floor",
+            ["¥"] = "t_card_science_security_black",
+            ["ƶ"] = "t_card_science_security_magenta",
+        },
+        fill_terrain = "t_thconc_floor",
+        nested = {
+            { choices = { { id = "lab_security_14x14_corridor_1", weight = 100 } }, x = 17, y = 3 },
+            { choices = { { id = "lab_security_14x14_corridor_2", weight = 100 } }, x = 1, y = 3 },
+        },
+        trap_placements = {
+            {
+                id = "tr_lab_security_corridor_a",
+                x = { 19, 22 },
+                y = { 3, 21 },
+                repetitions = { 2, 5 },
+            },
+            {
+                id = "tr_lab_security_corridor_b",
+                x = { 1, 4 },
+                y = { 3, 21 },
+                repetitions = { 2, 5 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "lab_security_corridor_a",
+    layout = {
+        terrain_placements = {
+            { id = "t_metal_floor", x = 18, y = 3 },
+            { id = "t_metal_floor", x = 18, y = 6 },
+            { id = "t_metal_floor", x = 18, y = 9 },
+            { id = "t_metal_floor", x = 18, y = 12 },
+            { id = "t_metal_floor", x = 18, y = 15 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "lab_security_corridor_b",
+    layout = {
+        terrain_placements = {
+            { id = "t_metal_floor", x = 5, y = 3 },
+            { id = "t_metal_floor", x = 5, y = 6 },
+            { id = "t_metal_floor", x = 5, y = 9 },
+            { id = "t_metal_floor", x = 5, y = 12 },
+            { id = "t_metal_floor", x = 5, y = 15 },
+        },
+    },
+}

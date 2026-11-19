@@ -1,11 +1,5 @@
 [
   {
-    "//": "Shock vent which spews electricity every ~10th turn.",
-    "type": "mapgen",
-    "nested_mapgen_id": "sub_fd_shock_vent",
-    "object": { "mapgensize": [ 1, 1 ], "place_fields": [ { "field": "fd_shock_vent", "x": 0, "y": 0 } ] }
-  },
-  {
     "type": "palette",
     "id": "lab_palette",
     "furniture": {

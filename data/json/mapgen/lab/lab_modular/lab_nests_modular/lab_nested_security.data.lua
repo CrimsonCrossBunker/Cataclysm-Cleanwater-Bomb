@@ -633,3 +633,67 @@ ccb.content.define_mapgen {
         monster_placements = { { id = "mon_zombie_armored", x = 0, y = 0 } },
     },
 }
+
+-- A nested map bash damage, vertical line.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x6_bash_v",
+    layout = {
+        size = { width = 6, height = 6 },
+        tile_edits = { { shape = "point", operation = "bash", x = 0, y = { 1, 4 } } },
+    },
+}
+
+-- A nested map bash damage, a single point.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x6_bash",
+    layout = {
+        size = { width = 1, height = 1 },
+        tile_edits = { { shape = "point", operation = "bash", x = 0, y = 0 } },
+    },
+}
+
+-- A nested map for military lab security areas, 2x2 sandbag configuration.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_security_sandbag_NS_1",
+    layout = {
+        size = { width = 2, height = 2 },
+        rotation = { 0, 3 },
+        furniture_placements = { { id = "f_sandbag_half", x = 0, y = 0 }, { id = "f_sandbag_half", x = 0, y = 1 } },
+    },
+}
+
+-- A nested map for military lab security areas, 2x2 sandbag configuration.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_security_sandbag_NS_2",
+    layout = {
+        size = { width = 2, height = 2 },
+        rotation = { 0, 3 },
+        furniture_placements = { { id = "f_sandbag_half", x = 1, y = 0 }, { id = "f_sandbag_half", x = 1, y = 1 } },
+    },
+}
+
+-- A nested map for military lab security areas, 2x2 sandbag configuration.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_security_sandbag_EW_1",
+    layout = {
+        size = { width = 2, height = 2 },
+        rotation = { 0, 3 },
+        furniture_placements = { { id = "f_sandbag_half", x = 0, y = 0 }, { id = "f_sandbag_half", x = 1, y = 0 } },
+    },
+}
+
+-- A nested map for military lab security areas, 2x2 sandbag configuration.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_security_sandbag_EW_2",
+    layout = {
+        size = { width = 2, height = 2 },
+        rotation = { 0, 3 },
+        furniture_placements = { { id = "f_sandbag_half", x = 0, y = 1 }, { id = "f_sandbag_half", x = 1, y = 1 } },
+    },
+}
