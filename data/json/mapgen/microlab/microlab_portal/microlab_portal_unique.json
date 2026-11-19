@@ -1,11 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "microlab_portal_elevator_physics_shift",
-    "object": { "place_nested": [ { "chunks": [ "microlab_portal_elevator_physics_shift" ], "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "microlab_portal_dressroom",
     "object": {
       "fill_ter": "t_strconc_floor",
@@ -43,41 +38,6 @@
         "r": [ { "item": "guns_milspec", "chance": 10 }, { "item": "ammo_milspec", "chance": 70 } ]
       },
       "signs": { "S": { "signage": "\nWarning:\nActive anchors beyond this point." } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ [ "microlab_portal_elevator" ] ],
-    "object": {
-      "fill_ter": "t_strconc_floor",
-      "rows": [
-        "#####|            |#####",
-        "#####|====    ====|#####",
-        "#####|XXX=    =XXX|#####",
-        "#####||||||22||||||#####",
-        "#####|XXX|    |XXX|#####",
-        "##||||===|    |===||||##",
-        "##|XX=  YYPPPPYY  =XX|##",
-        "##|XX=    PPPP    =XX|##",
-        "##|XX=    PPPP    =XX|##",
-        "##||||^ YYPPPPYY ^||||##",
-        "####|N            N|####",
-        "####||||  ||||  ||||####",
-        "#####|--22-``-22--|#####",
-        "#####|-Eee-``-eeE-|#####",
-        "#####|-eee-``-eee-|#####",
-        "#####|-----``-----|#####",
-        "#####||||||||||||||#####",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################"
-      ],
-      "palettes": [ "microlab_generic" ],
-      "terrain": { "`": "t_open_air" }
     }
   },
   {
@@ -152,41 +112,6 @@
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "set": [ { "square": "trap_remove", "id": "tr_null", "x": 0, "y": 0, "x2": 23, "y2": 23 } ],
       "terrain": { ".": "t_nether_glass_floor", "2": "t_door_glass_frosted_lab_o" }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ [ "microlab_portal_elevator_nether_glass" ] ],
-    "object": {
-      "fill_ter": "t_strconc_floor",
-      "rows": [
-        ",,,,,,,,,,,,,,,,,,,,,,,,",
-        ",,,,,,,,,,,,,,,,,,,,,,,,",
-        ",,,,,,,,,,,,,,,,,,,,,,,,",
-        ",,,,,,,,,,  ,,,,,,,,,,,,",
-        ",,,,,,,,,,,,,, ,,,,,,,,,",
-        ",,,,,|===|     ,,,,,,,,,",
-        ",,,,,,,,,,,,, ,   ,,,|,,",
-        ",,,,,=  , P,,, ,, =,,,,,",
-        ",,,,,=   ,,,PP    ,,,,,,",
-        ",,,,||  YYPPPPYY    ,##,",
-        ",,,#|N             ###,,",
-        ",,,,||||  ||||  ||||##,,",
-        ",,,,#|--22-##-22--|##,,,",
-        ",,###|-Eee-##-eeE-|##,,,",
-        ",,###|-eee-##-eee-|###,,",
-        ",,,##|-----##-----|##,,,",
-        ",,###||||||||||||||###,,",
-        ",,,##################,,,",
-        ",,,,######,,,######,,,,,",
-        ",,,,,,,,,,,,,####,,,,,,,",
-        ",,,,,,,,,,,###,,,,,,,,,,",
-        ",,,,,,,,,,,,,,,,,,,,,,,,",
-        ",,,,,,,,,,,,,,,,,,,,,,,,",
-        ",,,,,,,,,,,,,,,,,,,,,,,,"
-      ],
-      "palettes": [ "microlab_generic" ],
-      "terrain": { ",": "t_nether_glass_floor" }
     }
   }
 ]
