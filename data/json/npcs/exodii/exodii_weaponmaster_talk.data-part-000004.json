@@ -1,17 +1,5 @@
 [
   {
-    "id": "TALK_WEAPONMASTER_INTRO_6",
-    "type": "talk_topic",
-    "dynamic_line": "&They clearly do not understand you.  It seems they do not hear you either.",
-    "responses": [
-      {
-        "text": "[You pull off your backpack, and start to pull out items you deem worthy of trading.  The weaponmaster finally looks interested.]",
-        "topic": "TALK_DONE",
-        "effect": [ { "npc_first_topic": "TALK_EXODII_WEAPONMASTER" }, "start_trade" ]
-      }
-    ]
-  },
-  {
     "id": "TALK_EXODII_WEAPONMASTER",
     "type": "talk_topic",
     "dynamic_line": {
