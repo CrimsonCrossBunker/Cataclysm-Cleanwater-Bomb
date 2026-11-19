@@ -1,0 +1,107 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "afs_seyfert_84K",
+    copy_from = "gun_base_handgun_semi",
+    looks_like = "glock_17",
+    name = ccb.content.text("10mm Pistol"),
+    description = ccb.content.text("Commonly carried by shipping crews that can afford it, Seyfert Armistice's 84K pistol doesn't particularly shine or show anything special but it keeps you safe on long journeys in the vast dark of Orion's Arm."),
+    variants = {
+        {
+            id = "vatforged",
+            name = ccb.content.text("vatforged pistol"),
+            description = ccb.content.text("Across the Orion Arm, there exist pistols that possess subtle elegance, unmatched precision, or even just straightforward lethality.  This one simply shoots bullets."),
+            weight = 3,
+        },
+        {
+            id = "branded",
+            name = ccb.content.text("Seyfert 84K"),
+            description = ccb.content.text("Commonly carried by shipping crews that can afford it, Seyfert Armistice's 84K pistol doesn't particularly shine or show anything special but it keeps you safe on long journeys in the vast dark of Orion's Arm."),
+            weight = 3,
+        },
+    },
+    mass = "780 g",
+    volume = "480 ml",
+    length = "205 mm",
+    price = "450 USD",
+    materials = { "plastic", "superalloy" },
+    pockets = {
+        {
+            magazine_well = "103 ml",
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            allowed_items = { "afs_84k_20mag" },
+        },
+    },
+    gun = {
+        ammunition = { "afs_10mm" },
+        damage = { type = "bullet", amount = -5 },
+        dispersion = 480,
+        blackpowder_tolerance = 48,
+        min_cycle_recoil = 570,
+        mod_locations = {
+            { id = "barrel", count = 1 },
+            { id = "brass catcher", count = 1 },
+            { id = "grip", count = 1 },
+            { id = "mechanism", count = 2 },
+            { id = "muzzle", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "stock", count = 1 },
+            { id = "ETCfirmware", count = 1 },
+            { id = "underbarrel", count = 1 },
+        },
+    },
+}
+
+-- not a period after 'MarSec'
+ccb.content.define_item {
+    id = "afs_marsec_4",
+    copy_from = "gun_base_handgun_semi",
+    looks_like = "glock_17",
+    name = ccb.content.text("MarSec. 4"),
+    description = ccb.content.text("Dependable, reliable, classic.  The MarSec. 4 is the combat pistol made for those who can differentiate real quality from glued-on tech."),
+    mass = "780 g",
+    volume = "480 ml",
+    length = "205 mm",
+    price = "1750 USD",
+    materials = { "steel", "superalloy" },
+    pockets = {
+        {
+            magazine_well = "103 ml",
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            allowed_items = { "afs_marsec_14mag" },
+        },
+    },
+    gun = {
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("semi-auto"), quantity = 1 },
+            { id = "DOUBLE", label = ccb.content.text("2 rd."), quantity = 2 },
+        },
+        ammunition = { "afs_10mm" },
+        damage = { type = "bullet", amount = 4 },
+        dispersion = 320,
+        blackpowder_tolerance = 48,
+        min_cycle_recoil = 570,
+        built_in_mods = { "barrel_ported" },
+        mod_locations = {
+            { id = "barrel", count = 1 },
+            { id = "brass catcher", count = 1 },
+            { id = "grip", count = 1 },
+            { id = "mechanism", count = 2 },
+            { id = "muzzle", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "stock", count = 1 },
+            { id = "ETCfirmware", count = 1 },
+            { id = "underbarrel", count = 1 },
+        },
+    },
+}
