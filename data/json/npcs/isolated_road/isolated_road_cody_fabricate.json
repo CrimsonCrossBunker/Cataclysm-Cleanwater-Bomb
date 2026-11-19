@@ -221,13 +221,5 @@
       },
       { "text": "Not right now.", "topic": "TALK_BLACKSMITH_SERVICES" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_BLACKSMITH_PROTOTYPE_EXODII_ITEMS_READY",
-    "dynamic_line": {
-      "gendered_line": "Thanks, sugar!  If you ever have me make some armor, just let me know if you want me to use these in it.",
-      "relevant_genders": [ "u" ]
-    }
   }
 ]
