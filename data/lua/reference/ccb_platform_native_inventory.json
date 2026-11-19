@@ -1091,7 +1091,7 @@
         "namespace": "global",
         "source": {
           "path": "src/lua_platform_overmap.cpp",
-          "line": 2455
+          "line": 2459
         },
         "direct_roots": [
           "OvermapTileToken"
@@ -18975,7 +18975,7 @@
       "registration_name": "OvermapTileToken",
       "registration": {
         "path": "src/lua_platform_overmap.cpp",
-        "line": 2464,
+        "line": 2468,
         "installer": "shared.install_overmap_api",
         "namespace": "global"
       },
@@ -19013,7 +19013,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_overmap.cpp",
-                "line": 2489
+                "line": 2493
               }
             ]
           },
@@ -19030,7 +19030,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_overmap.cpp",
-                "line": 2487
+                "line": 2491
               }
             ]
           },
@@ -19045,7 +19045,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_overmap.cpp",
-                "line": 2479
+                "line": 2483
               }
             ]
           },
@@ -19062,7 +19062,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_overmap.cpp",
-                "line": 2477
+                "line": 2481
               }
             ]
           },
@@ -19077,7 +19077,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_overmap.cpp",
-                "line": 2466
+                "line": 2470
               }
             ]
           },
@@ -19094,7 +19094,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_overmap.cpp",
-                "line": 2473
+                "line": 2477
               }
             ]
           },
@@ -19111,7 +19111,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_overmap.cpp",
-                "line": 2475
+                "line": 2479
               }
             ]
           }

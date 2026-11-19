@@ -2558,6 +2558,7 @@ content.add(content.JsonFlag { id = "MARLOSS" })
 content.add(content.JsonFlag { id = "SONAR_DETECTABLE" })
 content.add(content.JsonFlag { id = "CONVECTS_TEMPERATURE" })
 content.add(content.JsonFlag { id = "UNDODGEABLE" })
+content.add(content.JsonFlag { id = "CONSUME_ON_TRIGGER" })
 
 -- Omit the widget's label from being rendered in the sidebar
 content.add(content.JsonFlag { id = "W_LABEL_NONE" })

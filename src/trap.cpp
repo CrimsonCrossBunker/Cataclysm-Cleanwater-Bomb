@@ -31,6 +31,7 @@
 #include "string_formatter.h"
 #include "translations.h"
 
+static const flag_id json_flag_CONSUME_ON_TRIGGER( "CONSUME_ON_TRIGGER" );
 static const flag_id json_flag_ECHOLOCATION_DETECTABLE( "ECHOLOCATION_DETECTABLE" );
 static const flag_id json_flag_SONAR_DETECTABLE( "SONAR_DETECTABLE" );
 
@@ -352,14 +353,19 @@ void trap::trigger( const tripoint_bub_ms &pos, Creature *creature,
     if( creature != nullptr && !is_real_creature ) {
         return;
     }
+    map &here = get_map();
+    const bool consume_on_trigger = has_flag( json_flag_CONSUME_ON_TRIGGER );
     const std::optional<bool> continue_native =
         cata::lua_platform::invoke_trap_trigger_handler(
             id.str(), lua_platform_mod, lua_platform_trigger_handler,
-            get_map().get_abs( pos ), creature, triggering_item );
+            here.get_abs( pos ), creature, triggering_item );
     const bool triggered = continue_native && !*continue_native ?
                            true : act( pos, creature, triggering_item );
     if( !triggered ) {
         return;
+    }
+    if( consume_on_trigger ) {
+        here.remove_trap( pos );
     }
     if( is_real_creature ) {
         if( Character *ch = creature->as_character() ) {

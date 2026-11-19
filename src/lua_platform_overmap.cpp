@@ -211,6 +211,7 @@ struct terrain_selector {
 
 struct overmap_target_options {
     bool random = false;
+    bool unseen_only = false;
     bool fallback_to_origin = true;
     int search_range = OMAPX * 3;
     int min_distance = 0;
@@ -608,6 +609,8 @@ overmap_target_options read_overmap_target_options(
         if( key == "random" ) {
             result.random = require_boolean(
                                 entry.second, api_name, key );
+        } else if( key == "unseen_only" ) {
+            result.unseen_only = require_boolean( entry.second, api_name, key );
         } else if( key == "fallback_to_origin" ) {
             result.fallback_to_origin = require_boolean( entry.second, api_name, key );
         } else if( key == "special" ) {
@@ -1326,6 +1329,7 @@ std::optional<script_tripoint_coord> overmap_find_target(
         params.types.emplace_back( selector.terrain, selector.match );
         params.search_range = options.search_range;
         params.min_distance = options.min_distance;
+        params.cant_see = options.unseen_only;
         params.existing_only = true;
         params.om_special = options.special;
 

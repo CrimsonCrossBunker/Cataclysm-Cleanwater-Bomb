@@ -585,6 +585,7 @@ function CcbOvermapApi.edit(token, expected_revision, changes) end
 ---@field special? GameId Restrict matches to a registered GameId<overmap_special>; an already placed globally unique special uses the native global lookup.
 ---@field create_special? boolean Attempt native special placement when a search misses; defaults to false and requires special. Each attempt requires an active writable runtime callback; successful placement is followed by a closest-match search.
 ---@field random? boolean Use native random selection instead of closest selection; defaults to false.
+---@field unseen_only? boolean Exclude locations already seen on the overmap. Defaults to false.
 ---@field fallback_to_origin? boolean Use the search origin on a miss. When false, a miss returns nil before applying an offset. Defaults to true.
 ---@field search_range? number Raw native search range; defaults to three OMAPX. Values truncate toward zero. Zero uses the native mode-specific default.
 ---@field min_distance? number Native minimum distance; defaults to zero. Values truncate toward zero.
