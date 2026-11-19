@@ -107,34 +107,5 @@
       { "text": "Let's talk about the camp.", "topic": "TALK_CAMP" },
       { "text": "<lets_go>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "TALK_TRAIN_PERSUADE_BONE_SEER",
-    "type": "talk_topic",
-    "dynamic_line": "I have taught you much.  A little more won't hurt.",
-    "responses": [
-      {
-        "text": "And I listen, as you have taught me to.",
-        "topic": "TALK_TRAIN",
-        "effect": { "npc_add_effect": "asked_to_train", "duration": 21600 }
-      },
-      { "text": "<end_talking_nevermind>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_later_follower>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_TRAIN_SEMINAR_PERSUADE_BONE_SEER",
-    "type": "talk_topic",
-    "dynamic_line": "I haven't taught so many people before, I'll try my best.",
-    "responses": [
-      {
-        "text": "I know you'll do well.",
-        "trial": { "type": "PERSUADE", "difficulty": 0, "mod": [ [ "TRUST", 6 ], [ "VALUE", 2 ], [ "ANGER", -6 ] ] },
-        "success": { "topic": "TALK_TRAIN_SEMINAR" },
-        "failure": { "topic": "TALK_DENY_PERSONAL", "effect": { "npc_add_effect": "asked_to_train", "duration": 21600 } }
-      },
-      { "text": "<end_talking_nevermind>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_later_follower>", "topic": "TALK_DONE" }
-    ]
   }
 ]
