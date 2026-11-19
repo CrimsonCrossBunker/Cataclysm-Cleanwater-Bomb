@@ -167,10 +167,5 @@
       "ter_set": "t_searth",
       "items": [ { "item": "withered", "prob": 50, "count": [ 1, 2 ] } ]
     }
-  },
-  {
-    "id": "cactus_harv",
-    "type": "harvest",
-    "entries": [ { "drop": "cholla_bud", "base_num": [ 2, 5 ] } ]
   }
 ]
