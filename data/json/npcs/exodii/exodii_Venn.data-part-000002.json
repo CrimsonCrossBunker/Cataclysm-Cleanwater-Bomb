@@ -1,0 +1,11 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_EXODII_VENN_repair",
+    "dynamic_line": "&You sit on the surgical table and Venn pulls an aging CRT into view.  The spider-like surgical robot starts to greedily poke and prod you.  The monitor highlights your needs on a low resolution blueprint of your Cyberframe.",
+    "responses": [
+      { "text": "[Offer to trade for the repairs]", "effect": "repair_bionic_limbs", "topic": "TALK_DONE" },
+      { "text": "Actually, nevermind.", "topic": "TALK_DONE" }
+    ]
+  }
+]
