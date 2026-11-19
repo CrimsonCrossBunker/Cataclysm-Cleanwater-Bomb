@@ -1,42 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ [ "xedra_rural_church_steeple" ] ],
-    "object": {
-      "fill_ter": "t_floor",
-      "rows": [
-        "                        ",
-        "                        ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "|||||||||||||||||||     ",
-        "GGOOGG|||||||||||||     ",
-        "O...0G|||||||||||||     ",
-        "O>...G|||||||||||||     ",
-        "GGOOGG|||||||||||||     ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "     ||||||||||||||     ",
-        "      ||||||||||        ",
-        "      ||||||||||        ",
-        "      ||||||||||        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { "|": "t_shingle_flat_roof", "G": "t_wood_wall_w", "O": "t_window", " ": "t_open_air", ".": "t_floor" },
-      "computers": { "0": { "name": "Church Bells 1.0", "options": [ { "name": "Toll Bells", "action": "toll" } ] } }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ [ "xedra_rural_church_basement" ] ],
     "object": {
       "fill_ter": { "param": "linoleum_color", "fallback": "t_linoleum_gray" },

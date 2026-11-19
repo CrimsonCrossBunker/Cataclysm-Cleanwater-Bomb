@@ -740,3 +740,50 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- Pavilion
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "park_7",
+    layout = {
+        rows = {
+            "         Nssss          ",
+            "          ssss          ",
+            "   t   t  ssss  t   t   ",
+            "          ssssB         ",
+            "         !ssssB         ",
+            " [   ,,,,,ssss&BB    [  ",
+            " [   ,    sssssss    [  ",
+            " [   ,   &sssssss    [  ",
+            " [111,111Q::::Qss!   [  ",
+            " [   ,   ::::::ss    [  ",
+            " [ gg,   :B::B:ss    [  ",
+            " [ gg,,,,:B::B:ssR   [  ",
+            " [    !, ::::::ssR   [  ",
+            " [ m,,,, Q::::QssR   [  ",
+            " [ m,  , ::::::ssR   [  ",
+            " [ m,h , ::::::ssR   [  ",
+            " [ m,h , QBBvXQRRR   [  ",
+            " [  ,h , QQQQQQ      [  ",
+            " [     , 1           [  ",
+            " [    !, 1           [  ",
+            " [ t   , 1         t [  ",
+            " [     , 1           [  ",
+            " [[[[[[-[[[[[[[[[[[[[[  ",
+            "       ,                ",
+        },
+        palettes = { "park_scenic_palette" },
+        fill_terrain = "t_region_groundcover_urban",
+        item_groups = { N = { group = "bulletin_public", chance = 50, repetitions = { 1, 3 } } },
+        vending_glyphs = { v = { group = "vending_drink", lootable = true } },
+        monster_placements = {
+            {
+                group = "GROUP_PARK_SCENIC",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                repetitions = { 1, 10 },
+                chance = 50,
+            },
+        },
+    },
+}

@@ -2179,52 +2179,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ "mansion_c5d" ],
-    "object": {
-      "fill_ter": "t_thconc_floor",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "          ##############",
-        "          #<<#000000%%%#",
-        "          #..#........%#",
-        "      #####..#..hh.hh.%#",
-        "      #FFF#..#..&&.&&.%#",
-        "      #.../..+..hh.hh.%#",
-        "      #??Y#..#T.......%#",
-        "      #####..####.....%#",
-        "      #U.......q#000000#",
-        "      #UUU.....q########",
-        "      #6....6...#......+",
-        "      #6....6...+......+",
-        "      #6..666..6#..##/##",
-        "      #6..6....6#..#q.]#",
-        "      #6..6....6#..#..]#",
-        "      #6..6..666#..#]])#",
-        "      ###########++#####"
-      ],
-      "palettes": [ "standard_domestic_palette" ],
-      "terrain": { " ": "t_soil", ".": "t_thconc_floor", "]": "t_sewage_pipe", ")": "t_sewage_pump", "/": "t_door_locked_interior" },
-      "furniture": { "%": "f_rack_wood", "!": "f_wood_keg", "&": "f_table", "?": "f_glass_fridge", "=": "f_machinery_old" },
-      "liquids": { "!": { "liquid": "wine_chardonnay", "amount": [ 100, 500 ] } },
-      "place_loot": [ { "item": "deck_of_cards", "x": 16, "y": 11, "chance": 100 } ],
-      "items": {
-        "%": { "item": "wines_worthy", "chance": 70, "repeat": [ 1, 2 ] },
-        "m": { "item": "chilled_wine", "chance": 40, "repeat": [ 1, 4 ] },
-        "0": { "item": "keg_wine", "chance": 100 },
-        "&": { "item": "table_wine", "chance": 100, "repeat": [ 1, 4 ] },
-        ".": { "item": "clutter_basement", "chance": 1 }
-      },
-      "place_monsters": [ { "monster": "GROUP_VANILLA_ONLY_HUMANS", "x": [ 11, 21 ], "y": [ 8, 21 ], "density": 0.1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "mansion_c5" ],
     "//": "updated",
     "object": {

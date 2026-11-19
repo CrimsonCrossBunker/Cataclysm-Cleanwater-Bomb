@@ -86,3 +86,51 @@ ccb.content.define_mapgen {
         vehicle_glyphs = { ["Á"] = { id = "parking_garage", chance = 50, rotation = 0 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "rural_church_steeple" } },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "|||||||||||||||||||     ",
+            "GGOOGG|||||||||||||     ",
+            "O...0G|||||||||||||     ",
+            "O>...G|||||||||||||     ",
+            "GGOOGG|||||||||||||     ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "     ||||||||||||||     ",
+            "      ||||||||||        ",
+            "      ||||||||||        ",
+            "      ||||||||||        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        terrain = {
+            ["|"] = "t_shingle_flat_roof",
+            G = "t_wood_wall_w",
+            O = "t_window",
+            [" "] = "t_open_air",
+            ["."] = "t_floor",
+        },
+        fill_terrain = "t_floor",
+        computer_glyphs = {
+            ["0"] = {
+                name = ccb.content.text("Church Bells 1.0"),
+                menu = { { label = ccb.content.text("Toll Bells"), action = "toll" } },
+            },
+        },
+    },
+}

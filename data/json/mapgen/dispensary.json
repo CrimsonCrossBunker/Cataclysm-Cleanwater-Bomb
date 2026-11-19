@@ -55,54 +55,5 @@
     },
     "toilets": { "t": {  } },
     "vendingmachines": { "D": { "item_group": "vending_drink", "lootable": true }, "F": { "item_group": "vending_food", "lootable": true } }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "dispensary_1",
-    "object": {
-      "fill_ter": "t_floor",
-      "rows": [
-        ".........sss............",
-        ".........sss............",
-        ".........sssss......[...",
-        ".........sssFD..........",
-        "....#---#sss#---#.......",
-        "....#^ §#sss#  ^#.......",
-        "....-b  #-:-#  b-.......",
-        "....-b         b-...[...",
-        "....-b         b-.......",
-        "....-      ~~~~ #.......",
-        "....-   bb ~~~~ #4......",
-        "....#  ||||###M|#####...",
-        "....#  |&   h  |1111#...",
-        "....#  |      §|''''#...",
-        "....#  = h     +'''1#...",
-        "....#&§|III0000|11'1#...",
-        "....##############+##...",
-        "..../___________f__</...",
-        "..../___________g___/...",
-        "..../QQQQQQQQQ__ffff/...",
-        "..../QQQQQQQQQ______/...",
-        "..../QQQQQQQQQ__3322/...",
-        "..../////////////////...",
-        "........................"
-      ],
-      "palettes": [ "dispensary_palette" ],
-      "sealed_item": { "Q": { "item": { "item": "seed_weed" }, "furniture": "f_planter_mature" } },
-      "terrain": {
-        "_": "t_region_groundcover_barren",
-        "Q": "t_region_groundcover_barren",
-        "2": "t_region_groundcover_barren",
-        "3": "t_region_groundcover_barren",
-        "F": "t_sidewalk",
-        "D": "t_sidewalk",
-        "f": "t_chainfence",
-        "g": "t_chaingate_c",
-        "/": "t_brick_wall",
-        "0": "t_floor"
-      },
-      "place_loot": [ { "group": "cash_register_random", "x": [ 11, 14 ], "y": 11 } ],
-      "nested": { "§": { "chunks": [ "fire_extinguisher" ] } }
-    }
   }
 ]
