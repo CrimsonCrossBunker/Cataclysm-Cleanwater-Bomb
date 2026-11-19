@@ -1,9 +1,5 @@
 [
   {
-    "type": "mutation_type",
-    "id": "perk"
-  },
-  {
     "type": "mutation",
     "id": "perk_ma_perk_menu",
     "name": { "str": "Practice Martial Arts" },
