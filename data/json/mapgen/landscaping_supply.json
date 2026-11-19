@@ -112,40 +112,5 @@
       ],
       "nested": { "§": { "chunks": [ "fire_extinguisher" ] } }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "landscapingsupplyco_1b_roof",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "        -------------   ",
-        "        -...........-   ",
-        "        -.......&...-   ",
-        "        -...........-   ",
-        "        -...........-   ",
-        "        -...........-   ",
-        "        5.=.........-   ",
-        "        -------------   ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
-    }
   }
 ]

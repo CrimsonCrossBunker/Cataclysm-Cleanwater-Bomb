@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "landscapingsupplyco_1b_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "        -------------   ",
+            "        -...........-   ",
+            "        -.......&...-   ",
+            "        -...........-   ",
+            "        -...........-   ",
+            "        -...........-   ",
+            "        5.=.........-   ",
+            "        -------------   ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        terrain = { ["."] = "t_tar_flat_roof" },
+        fill_terrain = "t_tar_flat_roof",
+    },
+}
