@@ -117,14 +117,5 @@
       { "text": "[Offer to trade for the repairs]", "effect": "repair_bionic_limbs", "topic": "TALK_DONE" },
       { "text": "Actually, nevermind.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "TALK_EXODII_VENN_Bionic_Install",
-    "type": "talk_topic",
-    "dynamic_line": "&You sit on the surgical table and Venn pulls an aging CRT into view.  The spider-like surgical robot starts to greedily poke and prod you.  The monitor highlights your current bionics, and available upgrades, all accompanied by text you don't understand.",
-    "responses": [
-      { "text": "[Point to a CBM on the screen to install]", "topic": "TALK_DONE", "effect": "bionic_install" },
-      { "text": "[Point to a CBM on the screen to remove]", "topic": "TALK_DONE", "effect": "bionic_remove" }
-    ]
   }
 ]
