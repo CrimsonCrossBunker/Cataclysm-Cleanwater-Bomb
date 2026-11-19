@@ -1,0 +1,42 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "afs_hardlight_longbow",
+    symbol = "(",
+    looks_like = "recurbow",
+    color = "white",
+    name = ccb.content.text("Alien lune"),
+    description = ccb.content.text("A delicate strand of light links the antipodes of this crescent-shaped device.  If the strand is interrupted, the device clanks and shudders before violently emitting a bolt of plasma from its apex."),
+    price = "10 kUSD",
+    survival_price = "200 USD",
+    materials = { "superalloy", "qt_steel" },
+    flags = { "FIRE_TWOHAND", "STR_DRAW", "SLOW_WIELD", "WATERPROOF_GUN", "NEVER_JAMS" },
+    min_strength = 4,
+    mass = "500 g",
+    volume = "2700 ml",
+    length = "90 cm",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            holster = true,
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            allowed_items = { "alien_battery" },
+        },
+    },
+    melee_damage = { bash = 8 },
+    gun = {
+        skill = "archery",
+        reload_noise_volume = 0,
+        loudness = 0,
+        damage = { type = "heat", amount = 50, penetration = 15 },
+        ammunition = { "battery" },
+        ammo_per_shot = 0,
+        energy_drain = "900 kJ",
+        effects = { "LOW_RANGE_VAPORIZATION" },
+        range = 30,
+        dispersion = 80,
+        durability = 6,
+        reload_time = 50,
+    },
+}
