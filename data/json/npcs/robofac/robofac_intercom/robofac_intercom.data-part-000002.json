@@ -125,42 +125,5 @@
         "topic": "TALK_ROBOFAC_EXODII_EXISTENCE"
       }
     ]
-  },
-  {
-    "id": "TALK_ROBOFAC_EXODII_EXISTENCE",
-    "type": "talk_topic",
-    "dynamic_line": "Not without significantly advanced surveillance tech most of which were either decommissioned or destroyed post cataclysm.",
-    "responses": [
-      {
-        "text": "Actually a bunch of high tech dudes HAVE scouted out this place and wanted me to check it out.",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "knowledge_exodii_transdimensional_u_knows_exodiilore" } ] } },
-        "topic": "TALK_ROBOFAC_ABOUT_EXODII_1"
-      },
-      {
-        "text": "I am in tight with a bunch of inter-dimensional travellers who observed this base and sent me out to investigate this place.",
-        "condition": { "compare_string": [ "yes", { "u_val": "knowledge_exodii_transdimensional_u_knows_exodiilore" } ] },
-        "topic": "TALK_ROBOFAC_ABOUT_EXODII_2"
-      }
-    ]
-  },
-  {
-    "id": "TALK_ROBOFAC_ABOUT_EXODII_1",
-    "type": "talk_topic",
-    "dynamic_line": "I see and do you have more information regarding these interested parties?",
-    "speaker_effect": {
-      "effect": [
-        { "u_add_var": "u_informed_robofac_of_exodii", "value": "yes" },
-        { "math": [ "hub01_knows_exodii = 1" ] },
-        { "u_add_effect": "robofac_surveillance", "duration": "30 days" },
-        { "u_add_faction_trust": 1 }
-      ]
-    },
-    "responses": [
-      { "text": "Not really.", "topic": "TALK_ROBOFAC_EXODII_MORE_INFO" },
-      {
-        "text": "Not much actually but I do know they have pretty sweet looking technology as I saw them having advanced machinery everywhere.  Nothing like I've ever seen.",
-        "topic": "TALK_ROBOFAC_EXODII_MORE_INFO"
-      }
-    ]
   }
 ]
