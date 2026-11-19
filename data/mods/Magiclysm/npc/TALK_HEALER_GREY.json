@@ -24,25 +24,5 @@
       },
       { "text": "Goodbye.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_HEALER_GREY_INTRO",
-    "dynamic_line": "Blessed be.  May you purge that which opposes the calm.",
-    "responses": [
-      { "text": "Why don't you go somewhere else?", "topic": "TALK_HEALER_GREY_LEAVE" },
-      { "text": "Let's trade then.", "effect": "start_trade", "topic": "TALK_HEALER_GREY" },
-      { "text": "I'm sorry, I gotta go.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_HEALER_GREY_LEAVE",
-    "dynamic_line": "I must purge this place before I can move on.",
-    "responses": [
-      { "text": "Wanna get outta here?", "topic": "TALK_SUGGEST_FOLLOW" },
-      { "text": "What can you sell me?", "topic": "TALK_HEALER_GREY", "effect": "start_trade" },
-      { "text": "I'm sorry, I gotta go.", "topic": "TALK_DONE" }
-    ]
   }
 ]
