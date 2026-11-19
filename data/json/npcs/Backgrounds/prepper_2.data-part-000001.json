@@ -1,0 +1,76 @@
+[
+  {
+    "id": "BGSS_PREPPER_2_MAPS",
+    "type": "talk_topic",
+    "dynamic_line": "Yeah, I do.  I'd be willing to part with them for, say, $1000.  Straight from your ATM account, no cash cards.",
+    "responses": [
+      {
+        "text": "[$1000] You have a deal.",
+        "topic": "BGSS_PREPPER_2_SOLD",
+        "condition": { "u_has_cash": 100000 },
+        "effect": { "u_spend_cash": 100000 }
+      },
+      {
+        "text": "Whatever's in that map benefits both of us.",
+        "condition": { "not": { "npc_has_effect": "player_BGSS_SAIDNO" } },
+        "trial": { "type": "PERSUADE", "difficulty": 40, "mod": [ [ "VALUE", 3 ], [ "TRUST", 1 ] ] },
+        "success": { "topic": "BGSS_PREPPER_2_SOLD" },
+        "failure": { "topic": "BGSS_PREPPER_2_NOSALE" }
+      },
+      {
+        "text": "How 'bout you fucking hand it over and I don't get pissed off?",
+        "condition": { "not": { "npc_has_effect": "player_BGSS_SAIDNO" } },
+        "trial": { "type": "INTIMIDATE", "difficulty": 30, "mod": [ [ "BRAVERY", -1 ], [ "FEAR", 3 ] ] },
+        "success": { "topic": "BGSS_PREPPER_2_SOLD" },
+        "failure": { "topic": "BGSS_PREPPER_2_NOSALE" }
+      },
+      { "text": "Sorry for changing the subject.  What was it you were saying?", "topic": "TALK_NONE" },
+      { "text": "<done_conversation_section>", "topic": "TALK_FRIEND_CONVERSATION" },
+      { "text": "<end_talking>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "BGSS_PREPPER_2_SOLD",
+    "type": "talk_topic",
+    "dynamic_line": "All right.  Here they are.",
+    "responses": [
+      {
+        "text": "Thanks!  <done_conversation_section>",
+        "effect": [ { "npc_add_effect": "player_BGSS_SAIDYES", "duration": "PERMANENT" }, { "u_spawn_item": "survivormap" } ],
+        "topic": "TALK_NONE"
+      },
+      {
+        "text": "Thanks!  <done_conversation_section>",
+        "effect": [ { "npc_add_effect": "player_BGSS_SAIDYES", "duration": "PERMANENT" }, { "u_spawn_item": "survivormap" } ],
+        "topic": "TALK_FRIEND_CONVERSATION"
+      },
+      {
+        "text": "Thanks!  <end_talking>",
+        "effect": [ { "npc_add_effect": "player_BGSS_SAIDYES", "duration": "PERMANENT" }, { "u_spawn_item": "survivormap" } ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "id": "BGSS_PREPPER_2_NOSALE",
+    "type": "talk_topic",
+    "dynamic_line": "Nice try.  You want the maps, you pay up.",
+    "responses": [
+      {
+        "text": "Fine.  <done_conversation_section>",
+        "effect": { "npc_add_effect": "player_BGSS_SAIDNO", "duration": "PERMANENT" },
+        "topic": "TALK_NONE"
+      },
+      {
+        "text": "<done_conversation_section>",
+        "effect": { "npc_add_effect": "player_BGSS_SAIDNO", "duration": "PERMANENT" },
+        "topic": "TALK_FRIEND_CONVERSATION"
+      },
+      {
+        "text": "<end_talking>",
+        "effect": { "npc_add_effect": "player_BGSS_SAIDNO", "duration": "PERMANENT" },
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]
