@@ -242,3 +242,5 @@ require("quest_maps")
 require("dream_bezoar")
 
 require("spell_traps")
+
+require("terrain_transforms")

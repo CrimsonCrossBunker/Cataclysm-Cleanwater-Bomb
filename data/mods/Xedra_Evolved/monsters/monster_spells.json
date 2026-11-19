@@ -240,18 +240,6 @@
     "effect_str": "ter_shadowman_close_wound"
   },
   {
-    "type": "ter_furn_transform",
-    "id": "ter_shadowman_close_wound",
-    "field": [
-      {
-        "result": "fd_null",
-        "valid_field": [ "fd_dream_wound_shadow" ],
-        "message": "The shadowy rift pulls closed!",
-        "message_good": true
-      }
-    ]
-  },
-  {
     "type": "SPELL",
     "id": "shadowman_teleport",
     "name": { "str": "Shadowman Teleport", "//~": "NO_I18N" },

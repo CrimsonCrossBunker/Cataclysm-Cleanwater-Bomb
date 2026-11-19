@@ -1,10 +1,5 @@
 [
   {
-    "type": "ter_furn_transform",
-    "id": "XE_quake_transform",
-    "furniture": [ { "result": "f_rubble", "valid_furniture": [ "f_null" ], "message": "The earth is upheaved!" } ]
-  },
-  {
     "id": "XAEA_quake",
     "type": "SPELL",
     "name": { "str": "Artifact Earthquake", "//~": "NO_I18N" },

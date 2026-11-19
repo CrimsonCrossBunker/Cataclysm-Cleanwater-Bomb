@@ -495,12 +495,6 @@
     "flags": [ "NO_FAIL", "NO_HANDS", "NO_LEGS", "NON_MAGICAL", "IGNORE_WALLS" ]
   },
   {
-    "type": "ter_furn_transform",
-    "id": "inventor_portal_closer_spell_furn_transform",
-    "field": [ { "result": [ "fd_null" ], "valid_field": [ "fd_fatigue" ], "message": "The tear in reality smoothes out." } ],
-    "trap": [ { "result": [ "tr_glass" ], "valid_trap": [ "tr_portal" ], "message": "The portal shatters into shards of glass!" } ]
-  },
-  {
     "id": "xedra_inventor_time_pierce",
     "type": "SPELL",
     "name": { "str": "Inventor Time Pierce", "//~": "NO_I18N" },
@@ -542,11 +536,6 @@
     "final_energy_cost": 0,
     "energy_increment": 0,
     "base_casting_time": 100
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "xedra_inventor_time_pierce_furn_transform",
-    "field": [ { "result": [ "fd_null" ], "valid_field": [ "fd_frozen_time" ], "message": "You unfreeze a zone of frozen time." } ]
   },
   {
     "id": "xedra_dreamsmith_time_trap_freeze",
