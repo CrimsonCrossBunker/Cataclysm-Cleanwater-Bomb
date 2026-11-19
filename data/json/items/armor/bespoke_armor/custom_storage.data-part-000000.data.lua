@@ -1,0 +1,163 @@
+local ccb = require("ccb")
+
+-- Slightly lower encumbrance per volume as the base item is much more encumbering.  At max storage it still is more encumbering than the original item, but the difference is smaller than when empty.
+-- dedicated tool loops. either a daisy chain, hooking to compression straps, or ice axe loop
+-- dedicated tool loops. either a daisy chain, hooking to compression straps, or ice axe loop
+-- items slipped under the top of a duffelbag not well secured
+ccb.content.define_item {
+    id = "survivor_duffel_bag",
+    name = ccb.content.text("armored duffel bag"),
+    description = ccb.content.text("A standard duffel bag with added armor so that it won't get torn up by zombies.  While even bulkier, it is sturdier."),
+    mass = "1000 g",
+    volume = "7875 ml",
+    price = "240 USD",
+    survival_price = "32 USD 50 cent",
+    materials = { "leather", "canvas" },
+    symbol = "[",
+    looks_like = "duffelbag",
+    color = "dark_gray",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "66 L",
+            mass_limit = "60 kg",
+            max_item_length = "60 cm",
+            magazine_well = "7500 ml",
+            moves = 300,
+        },
+        {
+            kind = "CONTAINER",
+            holster = true,
+            capacity = "4 L",
+            mass_limit = "6 kg",
+            max_item_length = "100 cm",
+            min_item_length = "40 cm",
+            moves = 300,
+            extra_encumbrance = 1,
+            description = ccb.content.text("Secured under compression straps or with a tool loop."),
+            ripoff = 5,
+            transparent = true,
+        },
+        {
+            kind = "CONTAINER",
+            holster = true,
+            capacity = "4 L",
+            mass_limit = "6 kg",
+            max_item_length = "100 cm",
+            min_item_length = "40 cm",
+            moves = 300,
+            extra_encumbrance = 1,
+            description = ccb.content.text("Secured under compression straps or with a tool loop."),
+            ripoff = 5,
+            transparent = true,
+        },
+        {
+            kind = "CONTAINER",
+            holster = true,
+            capacity = "4 L",
+            mass_limit = "6 kg",
+            max_item_length = "100 cm",
+            min_item_length = "40 cm",
+            moves = 80,
+            extra_encumbrance = 5,
+            description = ccb.content.text("Tucked under the carry handles."),
+            ripoff = 1,
+            transparent = true,
+        },
+    },
+    flags = { "WATER_FRIENDLY", "STURDY", "BELTED", "OVERSIZE" },
+    armor = {
+        warmth = 10,
+        thickness = 2,
+        portions = {
+            {
+                encumbrance = { 8, 30 },
+                coverage = 80,
+                covers = { "torso" },
+                subparts = { "torso_hanging_back" },
+            },
+        },
+    },
+}
+
+-- Slightly lower encumbrance per volume as the base item is much more encumbering.  At max storage it still is more encumbering than the original item, but the difference is smaller than when empty.
+-- dedicated tool loops. either a daisy chain, hooking to compression straps, or ice axe loop
+-- dedicated tool loops. either a daisy chain, hooking to compression straps, or ice axe loop
+-- items slipped under the top of a duffelbag not well secured
+ccb.content.define_item {
+    id = "survivor_dry_duffelbag",
+    name = ccb.content.text("armored dry duffel bag"),
+    description = ccb.content.text("A modified large watertight duffel bag with added armor so that zombies don't tear it up.  Capable of floating.  Provides plenty of storage, but is severely encumbering."),
+    mass = "1400 g",
+    volume = "10800 ml",
+    price = "300 USD",
+    survival_price = "35 USD",
+    materials = { "plastic" },
+    symbol = "[",
+    looks_like = "duffelbag",
+    color = "blue",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "65 L",
+            mass_limit = "90 kg",
+            max_item_length = "65 cm",
+            watertight = true,
+            magazine_well = "5 L",
+            moves = 450,
+        },
+        {
+            kind = "CONTAINER",
+            holster = true,
+            capacity = "4 L",
+            mass_limit = "6 kg",
+            max_item_length = "100 cm",
+            min_item_length = "40 cm",
+            moves = 300,
+            extra_encumbrance = 1,
+            description = ccb.content.text("Secured under compression straps or with a tool loop."),
+            ripoff = 5,
+            transparent = true,
+        },
+        {
+            kind = "CONTAINER",
+            holster = true,
+            capacity = "4 L",
+            mass_limit = "6 kg",
+            max_item_length = "100 cm",
+            min_item_length = "40 cm",
+            moves = 300,
+            extra_encumbrance = 1,
+            description = ccb.content.text("Secured under compression straps or with a tool loop."),
+            ripoff = 5,
+            transparent = true,
+        },
+        {
+            kind = "CONTAINER",
+            holster = true,
+            capacity = "4 L",
+            mass_limit = "6 kg",
+            max_item_length = "100 cm",
+            min_item_length = "40 cm",
+            moves = 80,
+            extra_encumbrance = 5,
+            description = ccb.content.text("Tucked under the carry handles."),
+            ripoff = 1,
+            transparent = true,
+        },
+    },
+    flags = { "FLOTATION", "BELTED", "WATER_FRIENDLY", "OVERSIZE", "STURDY" },
+    armor = {
+        warmth = 10,
+        thickness = 2,
+        portions = {
+            {
+                encumbrance = 10,
+                volume_encumbrance = 0.25,
+                coverage = 100,
+                covers = { "torso" },
+                subparts = { "torso_hanging_back" },
+            },
+        },
+    },
+}
