@@ -1,13 +1,12 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_BEGGAR_2_GIVECARDBOARD",
-    "dynamic_line": "Kind of a question's that?  Yeah man, you got cardboard, I got a whole… a whole shopping list.  Got it here.",
-    "speaker_effect": { "effect": { "npc_add_var": "mission_dinodave_cardboard_donor", "value": "yes" } },
+    "id": "TALK_REFUGEE_BEGGAR_2_GAVE_FOOD",
+    "dynamic_line": "I can tell when it has stuff in it, it's got a sandy texture.  But this doesn't.  Thanks again.",
+    "speaker_effect": [ { "effect": { "u_bulk_donate": 1 } }, { "effect": { "run_eocs": [ "EOC_BEGGAR_TEST_IF_FOOD_CANNIBAL" ] } } ],
     "responses": [
-      { "text": "What's next on the list?", "topic": "TALK_MISSION_LIST" },
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+      { "text": "What are you doing here?", "topic": "TALK_REFUGEE_BEGGAR_2" },
+      { "text": "No problem.  <end_talking_bye>", "topic": "TALK_DONE" }
     ]
   }
 ]
