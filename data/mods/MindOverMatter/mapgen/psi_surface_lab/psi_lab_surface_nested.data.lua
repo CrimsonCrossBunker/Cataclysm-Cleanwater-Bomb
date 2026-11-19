@@ -2528,3 +2528,139 @@ ccb.content.define_mapgen {
         field_placements = { { id = "fd_fatigue", x = 0, y = 0, intensity = 3 } },
     },
 }
+
+-- 11x11 room with water and air filters
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_utility_room_11x11",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "AACtttUc   ",
+            "t          ",
+            "AACtttU   U",
+            "t         U",
+            "AACtttU   U",
+            "#########m#",
+            "WWW UUUU   ",
+            "WWW        ",
+            "PP         ",
+            "SSmSSmSSm  ",
+            "SSPSSPSSm  ",
+        },
+        terrain = {
+            [" "] = "t_strconc_floor",
+            A = "t_strconc_floor",
+            c = "t_strconc_floor",
+            C = "t_strconc_floor",
+            m = "t_strconc_floor",
+            P = "t_sewage_pipe",
+            t = "t_strconc_floor",
+            S = "t_strconc_floor",
+            U = "t_strconc_floor",
+            W = "t_strconc_floor",
+        },
+        furniture = {
+            A = "f_air_filter",
+            C = "f_air_compressor",
+            m = "f_machinery_heavy",
+            t = "f_standing_tank",
+            S = "f_standing_tank",
+            U = "f_utility_shelf",
+            W = "f_water_purifier",
+        },
+        palettes = { "lab_surface_palette" },
+        rotation = { 0, 3 },
+        liquid_placements = {
+            { id = "water_clean", repetitions = { 200, 600 }, x = { 0, 1 }, y = { 9, 10 } },
+            { id = "water_clean", repetitions = { 200, 600 }, x = { 3, 4 }, y = { 9, 10 } },
+            { id = "water_clean", repetitions = { 200, 600 }, x = { 6, 7 }, y = { 9, 10 } },
+        },
+        glyph_mappings = {
+            U = {
+                item_groups = {
+                    { group = "tools_lighting_industrial", chance = 40, repetitions = { 1, 2 } },
+                    { group = "hardware_plumbing", chance = 40, repetitions = { 1, 2 } },
+                    { group = "hardware", chance = 60, repetitions = { 1, 2 } },
+                    { group = "tools_common", chance = 60, repetitions = { 1, 3 } },
+                },
+            },
+        },
+    },
+}
+
+-- 11x11 room with furnaces and maintenance
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_furnace_room_11x11",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "FFAFFAFF   ",
+            "FF FF FF   ",
+            "          U",
+            "###########",
+            "CCBCD uuuuu",
+            "C     u u u",
+            "T     u u u",
+            "C     u u u",
+            "R          ",
+            "C          ",
+            "CCLCUUUUU  ",
+        },
+        terrain = {
+            [" "] = "t_strconc_floor",
+            ["#"] = "t_brick_wall",
+            A = "t_strconc_floor",
+            B = "t_strconc_floor",
+            C = "t_strconc_floor",
+            D = "t_strconc_floor",
+            F = "t_strconc_floor",
+            L = "t_strconc_floor",
+            m = "t_strconc_floor",
+            R = "t_strconc_floor",
+            T = "t_strconc_floor",
+            u = "t_strconc_floor",
+            U = "t_strconc_floor",
+        },
+        furniture = {
+            A = "f_air_filter",
+            B = "f_bandsaw",
+            C = "f_counter",
+            D = "f_drill_press",
+            F = "f_home_furnace",
+            L = "f_heavy_lathe",
+            m = "f_machinery_heavy",
+            R = "f_router",
+            T = "f_tablesaw",
+            u = "f_utility_shelf",
+            U = "f_utility_shelf",
+        },
+        rotation = { 0, 3 },
+        glyph_mappings = {
+            U = {
+                item_groups = {
+                    { group = "tools_lighting_industrial", chance = 30, repetitions = { 1, 2 } },
+                    { group = "tools_electronics", chance = 20 },
+                    { group = "tools_carpentry", chance = 30, repetitions = { 1, 3 } },
+                    { group = "tools_earthworking", chance = 30, repetitions = { 1, 2 } },
+                    { group = "tools_construction", chance = 10 },
+                },
+            },
+            u = {
+                item_groups = {
+                    { group = "hardware", chance = 40, repetitions = { 1, 2 } },
+                    { group = "electronics", chance = 40 },
+                    { group = "hardware_bulk", chance = 70 },
+                },
+            },
+            C = {
+                item_groups = {
+                    { group = "tools_carpentry", chance = 5 },
+                    { group = "tools_earthworking", chance = 4 },
+                    { group = "tools_common", chance = 4 },
+                },
+            },
+        },
+    },
+}
