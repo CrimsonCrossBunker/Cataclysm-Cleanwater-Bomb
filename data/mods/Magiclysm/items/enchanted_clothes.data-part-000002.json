@@ -1,0 +1,24 @@
+[
+  {
+    "id": "coat_lab_plus_one",
+    "copy-from": "coat_lab",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": { "str_sp": "enchanted lab coat" },
+    "looks_like": "coat_lab",
+    "description": "A long white coat with several large pockets, with a pentagram on the lapel and a few orichalcum threads sewn into the seams.  Perfect for the stylish-but-effective academic mage.",
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_coat_lab_plus_one_0" } ]
+  },
+  {
+    "id": "coat_lab_plus_two",
+    "copy-from": "coat_lab",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": { "str_sp": "enspelled lab coat" },
+    "looks_like": "coat_lab",
+    "description": "A long white coat with several large pockets, with a pentagram on the lapel and orichalcum and mithril threads sewn into the seams.  A director of thaumaturgical research would have worn this or something like this before the Cataclysm.",
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Magiclysm_coat_lab_plus_two_0" }
+    ]
+  }
+]
