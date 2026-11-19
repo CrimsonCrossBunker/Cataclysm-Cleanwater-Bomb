@@ -519,15 +519,5 @@
       "success_lie": "This ain't it.",
       "failure": "I am not sure if I'm gonna make it through the Cataclysm without my special jar of goop."
     }
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "id": "Dana_sourdough_bread",
-    "name": { "str_sp": "Dana's sourdough bread" },
-    "copy-from": "sourdough_bread",
-    "looks_like": "sourdough_bread",
-    "description": "This round loaf of bread has a thick, dark crust, and smells very enticing.",
-    "proportional": { "fun": 2, "price": 2 }
   }
 ]
