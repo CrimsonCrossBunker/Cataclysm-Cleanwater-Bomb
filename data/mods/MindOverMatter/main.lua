@@ -220,3 +220,5 @@ require("active_items")
 require("fifth_sun_note")
 
 require("zener_cards")
+
+require("terrain_transforms")
