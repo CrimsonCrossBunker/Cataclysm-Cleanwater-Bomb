@@ -1,0 +1,18 @@
+[
+  {
+    "type": "mutation",
+    "id": "SYLPH_JUMP_HIGH",
+    "name": { "str": "Updraft Leap" },
+    "points": 5,
+    "visibility": 0,
+    "ugliness": 0,
+    "description": "Upon gaining this ability the Sylph can leap straight into the air, riding the wind currents for a few seconds before descending to the earth.",
+    "prereqs": [ "SYLPH_GLIDING" ],
+    "prereqs2": [ "SYLPH_SKIN_2", "SYLPH_SKIN_3" ],
+    "category": [ "SYLPH" ],
+    "purifiable": false,
+    "active": true,
+    "activated_is_setup": false,
+    "activated_eocs": [ "EOC_SYLPH_JUMP_HIGH_ON" ]
+  }
+]
