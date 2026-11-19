@@ -170,36 +170,5 @@
         ]
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_NPC_CAMPER_VAN_TRAVELER_DESTINATION",
-    "dynamic_line": {
-      "compare_string": [ "north", { "npc_val": "dialogue_travel_direction_travel_direction" } ],
-      "yes": {
-        "gendered_line": "I'm going north, up towards the border and the big wide wilderness.  I heard that there's some sort of safe spot up there, where people didn't go crazy and try to kill each other.  I don't know whether or not that's true, but at the very least, the colder climate might help keep the <zombies> down.",
-        "relevant_genders": [ "npc" ]
-      },
-      "no": {
-        "compare_string": [ "south", { "npc_val": "dialogue_travel_direction_travel_direction" } ],
-        "yes": "I'm going south.  Hopefully somebody down there fared better than the people I knew up here.  Besides, I won't have to worry about freezing my <freaking> butt off when winter comes.",
-        "no": {
-          "compare_string": [ "east", { "npc_val": "dialogue_travel_direction_travel_direction" } ],
-          "yes": {
-            "gendered_line": "I'm going east, towards the coastline.  I heard some rumors that Rhode Island was still holding itself together, so I'm going to go and check that out.  Heck, I might just go out to sea myself, live on an old oil rig or something like that.",
-            "relevant_genders": [ "npc" ]
-          },
-          "no": {
-            "compare_string": [ "west", { "npc_val": "dialogue_travel_direction_travel_direction" } ],
-            "yes": "I'm going west, see how things are out there in tumbleweed territory.  You see, the Midwest didn't have a whole lot of people in it compared the East Coast, so there logically shouldn't be as many <zombies> as there are here.  I just hope that everything hasn't collapsed, that someone's still holding on.",
-            "no": "ERROR: DIRECTION PARAMETERS EITHER NOT PICKED OR OUT OF BOUNDS"
-          }
-        }
-      }
-    },
-    "responses": [
-      { "text": "When will you be leaving?", "topic": "TALK_NPC_CAMPER_VAN_TRAVELER_LEAVING_WHEN" },
-      { "text": "<end_talking>", "topic": "TALK_DONE" }
-    ]
   }
 ]
