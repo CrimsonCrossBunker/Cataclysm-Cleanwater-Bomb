@@ -16,15 +16,5 @@
       { "text": "Not really interested.", "topic": "TALK_DONE" },
       { "text": "I'll think about it.", "topic": "TALK_GUNSMITH_SERVICES" }
     ]
-  },
-  {
-    "id": "TALK_GUNSMITH_Q1_DETAILS",
-    "type": "talk_topic",
-    "dynamic_line": "Alright, so Cody has talked about some cutting-edge tech she's seen displayed.  This thing is called a nano-fabricator.  It's like a complicated, robotic 3D printer.  Cody used to run with some hackers that steal IP, schematics, that sort of thing.  I guess a problem they were running into was the newest tech stuff is all encrypted as templates for these printers.  Well, I know of a colleague who went home with debug software for the system.  You get that for her, and we're in business.",
-    "speaker_effect": { "effect": [ { "u_add_var": "dialogue_artisans_gunsmith_mentioned_quest", "value": "yes" } ] },
-    "responses": [
-      { "text": "I'll see if I can find it.", "topic": "TALK_DONE" },
-      { "text": "Alright.", "topic": "TALK_GUNSMITH_SERVICES" }
-    ]
   }
 ]
