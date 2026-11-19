@@ -73,3 +73,51 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "UM_LS_Unlock",
+    layout = {
+        transform_placements = { { id = "nl_unlock_door", x = { 0, 23 }, y = { 0, 23 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "UM_LS_Lock",
+    layout = {
+        transform_placements = { { id = "nl_lock_door", x = { 0, 23 }, y = { 0, 23 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "UM_LS_ReallyUnlock",
+    layout = {
+        transform_placements = { { id = "nl_door_to_floor", x = { 0, 23 }, y = { 0, 23 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "UM_LS_Passcode_Generator_1",
+    layout = {
+        transform_placements = { { id = "nl_obelisk_0_to_1", x = { 0, 23 }, y = { 0, 23 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "UM_LS_Passcode_Generator_2",
+    layout = {
+        transform_placements = { { id = "nl_obelisk_0_to_2", x = { 0, 23 }, y = { 0, 23 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "UM_LS_Passcode_Generator_3",
+    layout = {
+        transform_placements = { { id = "nl_obelisk_0_to_3", x = { 0, 23 }, y = { 0, 23 } } },
+    },
+}
