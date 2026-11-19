@@ -1,37 +1,17 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_Vanessa_Background",
-    "dynamic_line": "I don't really want to talk about my life before this shit-show, if that's what you mean.\"  She shrugs.  \"I don't need a shoulder to cry on.  I'm a hairdresser, is that enough personal information for you?",
-    "responses": [
-      {
-        "text": "Could you give me a haircut?",
-        "topic": "TALK_REFUGEE_Vanessa_Haircut_no",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "mission_flag_Vanessa_Mission1" } ] } }
-      }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_Vanessa_Situation",
-    "dynamic_line": {
-      "concatenate": [
-        {
-          "math": [ "u_counter_refugee_center_refugee_happiness >= 5" ],
-          "yes": "Well, I'm stuck in a dank shitty brick building with two dozen strangers, the world's dead",
-          "no": "You want the sarcastic version, or the really sarcastic version?  I'm stuck in a dank shitty brick building with two dozen strangers, the world's dead"
-        },
-        {
-          "compare_string": [ "yes", { "u_val": "knowledge_flag_tacoma_started" } ],
-          "yes": ", and all anyone will talk about is this new ranch they're building, as though it'll solve all our food problems",
-          "no": ", and there's not enough food to go around"
-        },
-        {
-          "compare_string": [ "yes", { "u_val": "mission_flag_Vanessa_Mission1" } ],
-          "no": ".  Why don't you fuckin' figure it out?",
-          "yes": ".  At least I can do some work to keep me busy though, and the extra merch does go a long way to keeping my belly full.  People like getting a good haircut."
-        }
+    "id": "TALK_REFUGEE_Vanessa_1",
+    "dynamic_line": "*looks you up and down for several seconds before speaking.  \"Oh, great.\"  Her voice is husky with years of smoking, and her glare suggests it's a habit she's recently given up.  \"Another new mouth to feed?  Just what we need.  Well, I'm Vanessa.\"",
+    "speaker_effect": {
+      "effect": [
+        { "u_add_var": "general_meeting_u_met_Vanessa_Toby", "value": "yes" },
+        { "npc_first_topic": "TALK_REFUGEE_Vanessa_1a" }
       ]
-    }
+    },
+    "responses": [
+      { "text": "I'm not a new mouth to feed, but nice to meet you too.", "topic": "TALK_REFUGEE_Vanessa_1_firstmeet" },
+      { "text": "Yeah, no.  I'm going.", "topic": "TALK_DONE" }
+    ]
   }
 ]

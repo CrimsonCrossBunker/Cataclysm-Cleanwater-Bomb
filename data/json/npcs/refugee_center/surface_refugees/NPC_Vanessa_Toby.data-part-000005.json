@@ -1,0 +1,25 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_Vanessa_Situation",
+    "dynamic_line": {
+      "concatenate": [
+        {
+          "math": [ "u_counter_refugee_center_refugee_happiness >= 5" ],
+          "yes": "Well, I'm stuck in a dank shitty brick building with two dozen strangers, the world's dead",
+          "no": "You want the sarcastic version, or the really sarcastic version?  I'm stuck in a dank shitty brick building with two dozen strangers, the world's dead"
+        },
+        {
+          "compare_string": [ "yes", { "u_val": "knowledge_flag_tacoma_started" } ],
+          "yes": ", and all anyone will talk about is this new ranch they're building, as though it'll solve all our food problems",
+          "no": ", and there's not enough food to go around"
+        },
+        {
+          "compare_string": [ "yes", { "u_val": "mission_flag_Vanessa_Mission1" } ],
+          "no": ".  Why don't you fuckin' figure it out?",
+          "yes": ".  At least I can do some work to keep me busy though, and the extra merch does go a long way to keeping my belly full.  People like getting a good haircut."
+        }
+      ]
+    }
+  }
+]

@@ -1,20 +1,26 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_Vanessa_Haircut_no",
-    line = ccb.content.text("I can see you need one, but last time I used these shears it was to stab a zombie in the face.  I don't think you'd want them in your hair.  Maybe you could help me get set up properly?"),
+    id = "TALK_REFUGEE_Vanessa_1a",
+    line = ccb.content.gendered_line("*peers at you for a while before speaking.  \"Oh, you're back.\"", { "speaker" }),
     replies = {
         {
-            text = ccb.content.text("What can I do to help you out?"),
-            next_topic = "TALK_MISSION_LIST",
+            text = ccb.content.text("Hi, Vanessa.  What's up?"),
+            next_topic = "TALK_REFUGEE_Vanessa_2",
         },
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
-        },
-        {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            text = ccb.content.text("<end_talking_nevermind>  <end_talking_leave>"),
             next_topic = "TALK_DONE",
         },
     },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_Vanessa_1_firstmeet",
+    line = ccb.content.text("Well that's good.\"  She purses her lips and gives you another judgmental stare.  \"If you're going to pull your own weight I guess that's an improvement."),
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_Vanessa_2",
+    line = ccb.content.text("Not much is up.  Not enough, in fact.  Here we are stuck in this slum pit with a bunch of strangers, and all we can do is sit around staring at our hands."),
 }
