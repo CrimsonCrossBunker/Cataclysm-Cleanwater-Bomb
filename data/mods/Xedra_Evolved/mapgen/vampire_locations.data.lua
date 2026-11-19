@@ -203,3 +203,51 @@ ccb.content.define_mapgen {
         monster_group_placements = { { group = "GROUP_STRIGOI", x = 7, y = 4 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "lodgev_ground1", "lodgev_ground2" } },
+    layout = {
+        rows = {
+            ".%##W###W###W###W###+##W#################%......",
+            ".*#c B#c B#B c#B c#  #h s#a            >#*......",
+            ".*Wd B#d B#B d#B d#  #h T#^   a ZZZ OC  W*......",
+            ".*##=###=###=###=##  ##=##a   a ZZZ OC  #*......",
+            ".*#                           a ZZZ OC  #*......",
+            ".*W                                     W*......",
+            ".*#    YY   YY  AAAAAAAA  ata ^        >#*......",
+            ".%########+########################   ###*......",
+            "ooooooooooGGGGGGG~~~~~~~~~~~~~~~~~#   #%**......",
+            "ooooooooooooooooG~~~~~%############   #*........",
+            "ooooooooooooooooG~~~~~*w              #*........",
+            "ooooooooooooooooG~~~~~*#Y   c c c     w*........",
+            "ooooooooooooooooGGGGGGG+    ttttt    bw*........",
+            "ooooooooooooooooGGGGGGG+    ttttt    bw*........",
+            "oooooooooooooooo~~~~~G*#Y   c c c     w*........",
+            "oooooooooooooooo~~~~~G*w              w*........",
+            "oooooooooooooooo~~~~~G*#####   ########*........",
+            "oooooooooooooooo~~~~~G***#<#   #********........",
+            "oooooooooooooooo%~~~~GGGG+ #   #%****...........",
+            "......*###-###-###-#########   #####*...........",
+            ".....0*#UU URU URU URU #12C     5 é#*...........",
+            ".....0*#R              z      C   uW*...........",
+            ".....0*#UU URU URU URU #3CC&  4CVuF#*...........",
+            "......%###-###-###-##########+######%...........",
+        },
+        palettes = { "lodge_palette" },
+        fill_terrain = "t_floor",
+        nested = {
+            {
+                choices = {
+                    { id = "lodge_pantry_15x15", weight = 80 },
+                    { id = "lodge_cannibal_15x15", weight = 20 },
+                    { id = "lodge_hunting_15x15", weight = 50 },
+                },
+                x = 8,
+                y = 9,
+            },
+        },
+        monster_group_placements = { { group = "GROUP_VAMPIRES_MIXED", x = { 0, 23 }, y = { 0, 23 }, density = 0.3 } },
+        zone_placements = { { id = "ZONE_START_POINT", faction = "your_followers", x = { 16, 17 }, y = { 2, 3 } } },
+    },
+}
