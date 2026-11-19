@@ -1,0 +1,92 @@
+local ccb = require("ccb")
+
+ccb.content.define_overmap_terrain {
+    id = "glacial_field",
+    copy_from = "generic_open_land",
+    name = ccb.content.text("Ice Fields"),
+    symbol = ".",
+    travel_cost = "field",
+    color = "light_gray",
+    see_cost = "none",
+    flags = { "NO_ROTATE" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "solid_glacier",
+    name = ccb.content.text("glacier"),
+    symbol = "#",
+    color = "cyan",
+    see_cost = "full_high",
+    flags = { "NO_ROTATE" },
+    uniform_terrain = "t_ice_wall",
+}
+
+-- These make use of the region setting controlled hardcoded forest
+ccb.content.define_overmap_terrain {
+    id = "forest",
+    copy_from = "generic_forest",
+    name = ccb.content.text("hydrothermal flats"),
+    symbol = "%",
+    color = "light_red",
+    see_cost = "medium",
+    extras = "forest",
+    spawns = { group = "GROUP_FOREST", population = { 0, 3 }, chance = 13 },
+    flags = { "NO_ROTATE", "SOURCE_FORAGE" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "forest_thick",
+    copy_from = "generic_forest",
+    name = ccb.content.text("hydrothermal flats"),
+    symbol = "%",
+    color = "light_red",
+    see_cost = "spaced_high",
+    extras = "forest_thick",
+    spawns = { group = "GROUP_FOREST", population = { 0, 6 }, chance = 15 },
+    mapgen = { { builtin = "forest" } },
+    flags = { "NO_ROTATE", "SOURCE_FORAGE" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "forest_water",
+    copy_from = "generic_wetland_forest",
+    name = ccb.content.text("hydrothermal flats"),
+    symbol = "%",
+    color = "cyan",
+    see_cost = "spaced_high",
+    extras = "forest_water",
+    spawns = { group = "GROUP_SWAMP", population = { 1, 4 }, chance = 16 },
+    mapgen = { { builtin = "forest" } },
+    flags = { "NO_ROTATE", "SOURCE_FORAGE", "RISK_HIGH" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = { "afs_aeolian_plain" },
+    copy_from = "generic_open_land",
+    name = ccb.content.text("Aeolian flats"),
+    symbol = ".",
+    travel_cost = "field",
+    color = "light_red",
+    see_cost = "none",
+    extras = "field",
+    looks_like = "t_lichen",
+    flags = { "NO_ROTATE" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = {
+        "mesa_1_aaa", "mesa_1_baa", "mesa_1_caa", "mesa_1_daa", "mesa_1_aba", "mesa_1_bba", "mesa_1_cba",
+        "mesa_1_dba", "mesa_1_aca", "mesa_1_bca", "mesa_1_cca", "mesa_1_dca", "mesa_1_ada", "mesa_1_bda",
+        "mesa_1_cda", "mesa_1_dda", "mesa_1_aab", "mesa_1_bab", "mesa_1_cab", "mesa_1_dab", "mesa_1_abb",
+        "mesa_1_bbb", "mesa_1_cbb", "mesa_1_dbb", "mesa_1_acb", "mesa_1_bcb", "mesa_1_ccb", "mesa_1_dcb",
+        "mesa_1_adb", "mesa_1_bdb", "mesa_1_cdb", "mesa_1_ddb", "mesa_1_aac", "mesa_1_bac", "mesa_1_cac",
+        "mesa_1_dac", "mesa_1_abc", "mesa_1_bbc", "mesa_1_cbc", "mesa_1_dbc", "mesa_1_acc", "mesa_1_bcc",
+        "mesa_1_ccc", "mesa_1_dcc", "mesa_1_adc", "mesa_1_bdc", "mesa_1_cdc", "mesa_1_ddc",
+    },
+    copy_from = "generic_open_land",
+    name = ccb.content.text("Mesa"),
+    symbol = "n",
+    color = "light_red",
+    see_cost = "none",
+    flags = { "NO_ROTATE" },
+}
