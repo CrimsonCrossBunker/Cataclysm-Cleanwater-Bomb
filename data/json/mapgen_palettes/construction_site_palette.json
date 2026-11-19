@@ -1,7 +1,0 @@
-[
-  {
-    "id": "small_utility_vehicles",
-    "type": "vehicle_group",
-    "vehicles": [ [ "excavator", 20 ], [ "trencher", 20 ], [ "welding_cart", 40 ], [ "engine_crane", 60 ], [ "oa_work_light", 80 ] ]
-  }
-]

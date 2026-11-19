@@ -1,7 +1,0 @@
-[
-  {
-    "id": "football_vehicles",
-    "type": "vehicle_group",
-    "vehicles": [ [ "water_cart", 100 ] ]
-  }
-]
