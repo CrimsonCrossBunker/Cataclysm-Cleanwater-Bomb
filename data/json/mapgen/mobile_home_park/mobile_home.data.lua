@@ -1,5 +1,44 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "prefab_home",
+    layout = {
+        nested_glyphs = {
+            ["{"] = { choices = { { id = "6x8_concrete", weight = 1 }, { id = "null", weight = 7 } } },
+            ["}"] = {
+                choices = {
+                    { id = "7x15_mobile_home_0", weight = 1 },
+                    { id = "7x15_mobile_home_1", weight = 1 },
+                    { id = "7x15_mobile_home_2", weight = 1 },
+                    { id = "7x15_mobile_home_3", weight = 1 },
+                    { id = "7x15_mobile_home_4", weight = 1 },
+                },
+            },
+            ["["] = {
+                choices = {
+                    { id = "trailer_fence_1", weight = 4 },
+                    { id = "trailer_fence_2", weight = 6 },
+                    { id = "null", weight = 55 },
+                },
+            },
+            ["]"] = {
+                choices = {
+                    { id = "shed_6x6_woodworker", weight = 5 },
+                    { id = "shed_6x6_junk", weight = 60 },
+                    { id = "greenhouse_6x6_herbal", weight = 2 },
+                    { id = "greenhouse_6x6_vegetable", weight = 2 },
+                },
+            },
+        },
+        terrain = {
+            [" "] = "t_floor",
+            ["."] = "t_region_groundcover",
+            _ = { { id = "t_region_soil", copies = 2 }, { id = "t_region_groundcover" } },
+            ["="] = { { id = "t_railroad_rubble", copies = 2 }, { id = "t_region_soil" } },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { "prefab_roof" },

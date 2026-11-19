@@ -1,5 +1,45 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "trailer_road",
+    layout = {
+        item_groups = {
+            D = { group = "SUS_trash_dumpster", chance = 75, repetitions = { 1, 2 } },
+            R = { group = "SUS_trash_dumpster", chance = 50 },
+            a = { group = "SUS_trash_trashcan", chance = 50 },
+        },
+        terrain = {
+            [" "] = "t_region_groundcover",
+            ["@"] = "t_region_groundcover",
+            ["/"] = "t_region_groundcover",
+            T = "t_region_tree",
+            ["|"] = "t_privacy_fence",
+            ["~"] = "t_privacy_fencegate_c",
+            I = "t_chainfence",
+            i = { { id = "t_chaingate_c", copies = 1 }, { id = "t_chaingate_l", copies = 5 } },
+            ["#"] = "t_concrete",
+            _ = "t_pavement",
+            ["="] = "t_zebra",
+            ["`"] = "t_pavement_y",
+            D = "t_region_soil",
+            R = "t_region_soil",
+            [","] = { { id = "t_railroad_rubble", copies = 2 }, { id = "t_region_soil" } },
+            ["."] = { { id = "t_region_soil", copies = 5 }, { id = "t_region_groundcover", copies = 2 } },
+        },
+        furniture = {
+            ["É"] = "f_street_light",
+            ["Á"] = "f_utility_pole",
+            p = "f_mailbox",
+            a = "f_trashcan",
+            ["@"] = "f_hedge_short",
+            D = "f_dumpster",
+            R = "f_recycle_bin",
+            b = "f_metal_bench",
+            ["/"] = "f_flagpole",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { "trailer_hub_10_roof" },
