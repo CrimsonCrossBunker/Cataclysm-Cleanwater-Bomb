@@ -36,3 +36,52 @@ ccb.content.define_mapgen {
         rotation = { 0, 3 },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "cabin_book_lies" },
+    layout = {
+        rows = {
+            "...........~~...........",
+            "...........~~...........",
+            "...%.......~~...........",
+            "**######w##++#########**",
+            "**#R  d#sT#  #A DBBD #**",
+            "**#R  c#  #  #A  BB  w**",
+            "**wR   #  =  =       w**",
+            "**wR   #  #  #########**",
+            "**#R   ####  =  DBBD #**",
+            "**#R   L##A  #A  BB  w**",
+            "**####=####  #A      w**",
+            "**#ttb  uu#  #########**",
+            "**wttb   u#  #a OOO  w**",
+            "**wbb     =  =    rrrw**",
+            "**#      u#  #    rSr#**",
+            "**#1F5V234#  #a   rrr#**",
+            "**###ww####++####ww###**",
+            "..o bbbb             o..",
+            "..-                  -..",
+            "..-                  -..",
+            "..o-------o  o-------o..",
+            "...........~~...........",
+            "...........~~...........",
+            "...........~~...........",
+        },
+        rotation = { 0, 3 },
+        loot_placements = { { group = "book_lies_dead_body", x = 12, y = 12, chance = 100 } },
+        field_placements = {
+            { id = "fd_blood", x = { 11, 13 }, y = { 11, 13 }, repetitions = { 7, 10 } },
+            { id = "fd_gibs_flesh", x = { 11, 13 }, y = { 11, 13 }, repetitions = { 3, 5 } },
+        },
+        fill_terrain = "t_floor",
+        palettes = {
+            {
+                weighted = {
+                    { id = "cabin_palette", weight = 1 },
+                    { id = "cabin_palette_abandoned", weight = 1 },
+                },
+            },
+        },
+        terrain = { ["-"] = "t_railing" },
+    },
+}
