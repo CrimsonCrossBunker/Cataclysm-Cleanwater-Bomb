@@ -1,20 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_GODCO_Maria_Godco",
-    "dynamic_line": "Yeah, they are.  I just wish my work was more appreciated.",
-    "responses": [
-      {
-        "text": "Could you sew something for me?",
-        "effect": [ { "npc_add_var": "general_trade_can_sew_for_u", "value": "yes" } ],
-        "topic": "TALK_GODCO_Maria_Tailor_What"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_GODCO_Maria_2" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_GODCO_Maria_Tailor_Something",
     "dynamic_line": "What'll ya have?",
     "responses": [
