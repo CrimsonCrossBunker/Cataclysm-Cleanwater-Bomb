@@ -1,9 +1,12 @@
 #include "overmap_ui.h"
 
 #include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <monster.h>
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
@@ -32,11 +35,13 @@
 #include "city.h"
 #include "color.h"
 #include "coordinates.h"
+#include "creature_tracker.h"
 #include "cuboid_rectangle.h"
 #include "cursesdef.h"
 #include "debug.h"
 #include "debug_menu.h"
 #include "display.h"
+#include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
@@ -56,18 +61,17 @@
 #include "mapdata.h"
 #include "mapgen_parameter.h"
 #include "mapgendata.h"
-#include "messages.h"
 #include "mission.h"
 #include "mongroup.h"
 #include "mp_gamestate.h"
 #include "mtype.h"
+#include "north_america.h"
+#include "north_america_elevation.h"
+#include "north_america_transport.h"
 #include "npc.h"
 #include "omdata.h"
 #include "options.h"
 #include "output.h"
-#include "north_america.h"
-#include "north_america_elevation.h"
-#include "north_america_transport.h"
 #include "overmap.h"
 #include "overmap_debug.h"
 #include "overmap_types.h"
@@ -1285,6 +1289,10 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
     for( om_vehicle &v : overmap_buffer.get_vehicle( cursor_pos ) ) {
         corner_text.emplace_back( c_white, v.name );
     }
+    for( const overmap_tracked_pet &pet : overmap_buffer.get_tracked_pets( cursor_pos ) ) {
+        corner_text.emplace_back( c_light_green, string_format( _( "%s (last known position)" ),
+                                  pet.name ) );
+    }
 
     if( !corner_text.empty() ) {
         int maxlen = 0;
@@ -2083,12 +2091,12 @@ static void show_north_america_chart( point_abs_omt center, bool reveal_all )
                 !known( north_america::jurisdiction_at( project_to<coords::ms>( city.position ) ) ) ) {
                 continue;
             }
-            mvwputch( chart, screen + point( 0, 1 ), c_white, 'o' );
+            mvwputch( chart, screen + point::south, c_white, 'o' );
             if( screen == cursor ) {
                 city_name = city.name;
             }
         }
-        mvwputch( chart, cursor + point( 0, 1 ), c_white, '+' );
+        mvwputch( chart, cursor + point::south, c_white, '+' );
         const std::string_view code = north_america::jurisdiction_at( project_to<coords::ms>( center ) );
         const std::string location = city_name.empty() ? std::string( code ) : city_name;
         mvwprintz( chart, point( 0, height + 1 ), c_light_gray, _( "%.1f km/cell  %s" ),
@@ -2213,6 +2221,12 @@ static bool overmap_tiles_animated()
 
 static tripoint_abs_omt display()
 {
+    for( const shared_ptr_fast<monster> &pet : get_creature_tracker().get_monsters_list() ) {
+        if( pet->has_flag( mon_flag_PET_MOUNTABLE ) &&
+            ( get_avatar().sees( get_map(), *pet ) || pet->mounted_player == &get_avatar() ) ) {
+            overmap_buffer.update_tracked_pet( *pet, get_avatar() );
+        }
+    }
     // HACK: Remove saved land use code uistate for people who might have accidentally turned it on previously, before it was debug-only
     // Remove after 0.J.
     if( uistate.overmap_show_land_use_codes && !debug_mode ) {
@@ -2821,6 +2835,9 @@ std::pair<std::string, nc_color> oter_symbol_and_color( const tripoint_abs_omt &
             ret.second = c_red;
             ret.first = "Z";
         }
+    } else if( blink && overmap_buffer.has_tracked_pet( omp ) ) {
+        ret.second = c_light_green;
+        ret.first = "h";
     } else if( blink && overmap_buffer.has_vehicle( omp ) ) {
         ret.second = c_cyan;
         ret.first = overmap_buffer.get_vehicle_ter_sym( omp );

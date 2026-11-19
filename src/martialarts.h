@@ -38,6 +38,7 @@ class items_content_transaction;
 const matec_id tec_none( "tec_none" );
 /** Special weapon-provided active technique handled by the mounted charge action. */
 const matec_id tec_mounted_charge( "MOUNTED_CHARGE" );
+const matec_id tec_wild_charge( "WILD_CHARGE" );
 
 bool martial_grapple_blocks_movement( Creature &target );
 

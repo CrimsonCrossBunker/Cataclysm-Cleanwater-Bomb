@@ -82,7 +82,6 @@ class effect;
 class enchant_cache;
 class faction;
 class gun_mode;
-struct firearm_sweep;
 class inventory;
 class known_magic;
 class ma_technique;
@@ -2886,7 +2885,7 @@ class Character : public Creature, public visitable
             bool did_smash = false;
             bool success = false;
         };
-        smash_result smash( map &here, tripoint_bub_ms &target,
+        smash_result smash( map &here, tripoint_bub_ms &smashp,
                             std::optional<bool> vehicle_theft = std::nullopt );
 
         // checks if your character is immune to an effect or field based on field_immunity_data

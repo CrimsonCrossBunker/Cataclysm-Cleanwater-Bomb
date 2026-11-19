@@ -479,7 +479,8 @@ class Creature : public viewer
         virtual void deal_melee_hit( Creature *source, int hit_spread, bool critical_hit,
                                      damage_instance dam, dealt_damage_instance &dealt_dam,
                                      const weakpoint_attack &attack = weakpoint_attack(),
-                                     const bodypart_id *bp = nullptr );
+                                     const bodypart_id *bp = nullptr, Creature *damage_source = nullptr,
+                                     safe_reference<Creature> *hit_target = nullptr );
 
         // Makes a ranged projectile attack against the creature
         // Sets relevant values in `attack`.

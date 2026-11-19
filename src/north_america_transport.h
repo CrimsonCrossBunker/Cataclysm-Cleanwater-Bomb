@@ -16,6 +16,7 @@ namespace north_america
 enum class urban_road { none, local, collector, arterial };
 
 inline constexpr int min_wide_road_run = 4;
+inline constexpr int min_wide_highway_run = 2;
 inline constexpr int max_road_flanks = 3;
 
 struct road_cell {

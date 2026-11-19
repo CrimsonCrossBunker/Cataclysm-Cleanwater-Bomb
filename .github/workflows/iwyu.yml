@@ -69,12 +69,15 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        sudo sed -i '1ihttps://archive.ubuntu.com/ubuntu/\tpriority:0' /etc/apt/apt-mirrors.txt
+        printf '%s\tpriority:%d\n' \
+          'https://archive.ubuntu.com/ubuntu/' 1 \
+          'https://security.ubuntu.com/ubuntu/' 2 \
+          | sudo tee /etc/apt/apt-mirrors.txt
         apt_options=(
           -o DPkg::Lock::Timeout=120
-          -o Acquire::Retries=1
-          -o Acquire::http::Timeout=15
-          -o Acquire::https::Timeout=15
+          -o Acquire::Retries=3
+          -o Acquire::http::Timeout=30
+          -o Acquire::https::Timeout=30
         )
         sudo -E apt-get "${apt_options[@]}" update
         sudo -E apt-get "${apt_options[@]}" install -y \

@@ -1,7 +1,5 @@
 #include "pathfinding.h"
 
-#include <mdarray.h>
-#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <bitset>
@@ -30,11 +28,13 @@
 #include "map_scale_constants.h"
 #include "mapdata.h"
 #include "maptile_fwd.h"
+#include "mdarray.h"
 #include "messages.h"
 #include "point.h"
 #include "profiling.h"
 #include "submap.h"
 #include "trap.h"
+#include "type_id.h"
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_position.h"

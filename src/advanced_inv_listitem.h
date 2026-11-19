@@ -72,6 +72,8 @@ class advanced_inv_listitem
          * Is the item stored in a vehicle?
          */
         bool from_vehicle = false;
+        double sort_value = 0.0;
+        std::string sort_ammo_name;
         /**
          * Create an item entry.
          * @param an_item The item pointer. Must not be null.

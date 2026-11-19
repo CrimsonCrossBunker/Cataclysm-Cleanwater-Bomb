@@ -392,6 +392,13 @@ void monster::on_move( const tripoint_abs_ms &old_pos )
         return;
     }
     g->update_zombie_pos( *this, old_pos, pos_abs() );
+    if( has_flag( mon_flag_PET_MOUNTABLE ) ) {
+        if( mounted_player != nullptr ) {
+            overmap_buffer.update_tracked_pet( *this, *mounted_player );
+        } else if( get_avatar().sees( get_map(), *this ) ) {
+            overmap_buffer.update_tracked_pet( *this, get_avatar() );
+        }
+    }
     if( has_effect( effect_onfire ) ||
         calculate_by_enchantment( type->luminance, enchant_vals::mod::LUMINATION, true ) > 0 ) {
         map &here = get_map();
@@ -3510,6 +3517,7 @@ void monster::die( map *here, Creature *nkiller )
         mounted_player->forced_dismount();
     }
     g->set_critter_died();
+    overmap_buffer.remove_tracked_pet( uid().get_value() );
     dead = true;
     set_killer( nkiller );
     if( get_killer() != nullptr ) {
@@ -4273,6 +4281,7 @@ void monster::make_pet()
 void monster::make_pet( Character &actor )
 {
     make_pet();
+    overmap_buffer.update_tracked_pet( *this, actor, true );
     const cata::lua_platform::native_callback_arguments payload = {
         { "character", static_cast<const Character *>( &actor ) },
         { "monster", static_cast<const Creature *>( this ) }
@@ -4345,7 +4354,7 @@ units::mass monster::get_weight() const
 
 units::mass monster::weight_capacity() const
 {
-    return type->weight * type->mountable_weight_ratio;
+    return get_weight() * type->mountable_weight_ratio;
 }
 
 units::volume monster::get_volume() const
@@ -4396,6 +4405,14 @@ units::mass monster::get_carried_weight() const
         total_weight += it.weight();
     }
     return total_weight;
+}
+
+units::mass monster::get_load_weight( const Character *rider ) const
+{
+    if( rider == nullptr && has_effect( effect_ridden ) ) {
+        rider = mounted_player;
+    }
+    return get_carried_weight() + ( rider != nullptr ? rider->get_weight() : 0_gram );
 }
 
 units::volume monster::get_carried_volume() const

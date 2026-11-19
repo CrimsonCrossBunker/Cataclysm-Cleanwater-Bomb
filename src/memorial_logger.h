@@ -68,6 +68,9 @@ class memorial_logger : public event_subscriber
         void write_json_memorial( std::ostream &memorial_file ) const;
 
         using event_subscriber::notify;
+        bool needs_talker() const override {
+            return false;
+        }
         void notify( const cata::event & ) override;
     private:
         std::vector<memorial_log_entry> log;

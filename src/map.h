@@ -8,50 +8,46 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <iosfwd>
 #include <list>
 #include <map>
 #include <memory>
-#include <new>
 #include <optional>
 #include <set>
+#include <string>
 #include <tuple>
 #include <unordered_set>
 #include <utility>
-#include <variant>
 #include <vector>
 
-#include "map_viewpoint.h"
 #include "active_item_cache.h"
-#include "ai_reachability_fwd.h"
+#include "ai_reachability_fwd.h" // IWYU pragma: keep
+#include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "cata_assert.h"
-#include "cata_small_literal_vector.h"
 #include "cata_type_traits.h"
 #include "cata_utility.h"
 #include "colony.h"
-#include "coords_fwd.h"
+#include "coordinates.h"
 #include "creature.h"
+#include "effect_source.h"
 #include "enums.h"
-#include "game_constants.h"
 #include "item.h"
 #include "item_stack.h"
 #include "level_cache.h"
 #include "lightmap.h"
-#include "line.h"
 #include "lru_cache.h"
 #include "map_iterator.h"
+#include "map_scale_constants.h"
 #include "map_selector.h"
+#include "map_viewpoint.h"
 #include "mapdata.h"
 #include "maptile_fwd.h"
-#include "options.h"
+#include "mdarray.h"
 #include "point.h"
-#include "rng.h"
 #include "safe_reference.h"
+#include "shadowcasting.h"
 #include "type_id.h"
 #include "units.h"
-#include "value_ptr.h"
 #include "vpart_position.h"
 
 struct scent_block;
@@ -71,7 +67,6 @@ namespace cata::lua_platform
 class script_mapgen_context;
 } // namespace cata::lua_platform
 class Character;
-class Creature;
 class avatar;
 class basecamp;
 class character_id;
@@ -79,25 +74,26 @@ class computer;
 class field;
 class field_entry;
 class item_location;
+class map;
 class mapgendata;
 class map_simulation_regions;
 class monster;
-class relic_procgen_data;
 class scent_map;
 class submap;
 class vehicle;
 class zone_data;
+struct field_effect;
+struct field_type;
 struct fragment_cloud;
 struct partial_con;
+struct rl_vec2d;
 struct spawn_data;
 struct trap;
-template<typename Tripoint>
-class tripoint_range;
+struct vehicle_part;
 
-enum class special_item_type : int;
+enum class direction : unsigned int;
 class npc_template;
 class tileray;
-class vpart_reference;
 struct MonsterGroupResult;
 struct mongroup;
 struct projectile;
@@ -110,9 +106,7 @@ struct wrapped_vehicle {
 
 using VehicleList = std::vector<wrapped_vehicle>;
 
-class weather_generator;
 
-enum class ter_furn_flag : int;
 struct pathfinding_cache;
 struct pathfinding_settings;
 struct pathfinding_target;
@@ -2475,6 +2469,7 @@ class map
 
         // The observer belongs to this map's seen cache, not to the process.
         std::optional < std::pair < tripoint_abs_ms, int>> previous_visibility_observer;
+        std::vector<std::pair<const vehicle *, std::uint64_t>> vehicle_overlay_versions_; // NOLINT(cata-serialize)
         friend class scoped_map_viewpoint;
         std::optional < map_viewpoint > viewpoint_;
         const map_viewpoint *viewpoint_for( const Creature &observer ) const;

@@ -32,6 +32,14 @@
     "can_resume": false
   },
   {
+    "id": "ACT_PET_TRANSFER",
+    "type": "activity_type",
+    "activity_level": "LIGHT_EXERCISE",
+    "verb": "transferring animal cargo",
+    "based_on": "neither",
+    "can_resume": false
+  },
+  {
     "id": "ACT_READ",
     "type": "activity_type",
     "activity_level": "NO_EXERCISE",

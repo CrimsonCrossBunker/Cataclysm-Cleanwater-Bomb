@@ -4,6 +4,7 @@
 
 #include <array>
 #include <bitset>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -18,6 +19,7 @@
 #include <vector>
 
 #include "cata_path.h"
+#include "character_id.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "horde_map.h"
@@ -30,11 +32,11 @@
 #include "simple_pathfinding.h"
 #include "type_id.h"
 
+class Character;
 class JsonObject;
 class JsonOut;
 class JsonValue;
 class basecamp;
-class character_id;
 class monster;
 class npc;
 class overmap_special;
@@ -183,6 +185,16 @@ struct unique_special_deck_state {
     void deserialize( const JsonObject &json );
 };
 
+struct overmap_tracked_pet {
+    int64_t uid = 0;
+    character_id owner;
+    tripoint_abs_omt position;
+    std::string name;
+
+    void serialize( JsonOut &json ) const;
+    void deserialize( const JsonObject &json );
+};
+
 /**
 * Helper struct for dynamic data about the world's overmaps (not including overmap objects themselves).
 * For example: unique overmap special counts, highway intersection locations.
@@ -204,6 +216,7 @@ struct overmap_global_state {
     highway_intersection_grid highway_intersections;
     // placed regions by overmap
     std::unordered_map<tripoint_abs_om, region_settings_id> placed_regions;
+    std::vector<overmap_tracked_pet> tracked_pets;
 
     void clear();
     void reset();
@@ -287,6 +300,10 @@ class overmapbuffer
         void set_seen( const tripoint_abs_omt &p, om_vision_level seen );
         bool has_camp( const tripoint_abs_omt &p );
         bool has_vehicle( const tripoint_abs_omt &p );
+        void update_tracked_pet( monster &pet, const Character &observer, bool claim_ownership = false );
+        void remove_tracked_pet( int64_t uid );
+        bool has_tracked_pet( const tripoint_abs_omt &p ) const;
+        std::vector<overmap_tracked_pet> get_tracked_pets( const tripoint_abs_omt &p ) const;
         bool has_horde( const tripoint_abs_omt &p );
         int get_horde_size( const tripoint_abs_omt &p, int filter = horde_map_flavors::active |
                             horde_map_flavors::idle | horde_map_flavors::dormant | horde_map_flavors::immobile );

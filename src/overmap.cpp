@@ -22,6 +22,7 @@
 #include <cmath>
 #include <exception>
 #include <filesystem>
+#include <initializer_list>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -103,7 +104,11 @@ static const oter_str_id oter_subway_end_north( "subway_end_north" );
 static const oter_str_id oter_subway_isolated( "subway_isolated" );
 static const oter_str_id oter_underground_sub_station( "underground_sub_station" );
 
+static const oter_type_str_id oter_type_atlas_raised_bridge_deck( "atlas_raised_bridge_deck" );
 static const oter_type_str_id oter_type_bridge( "bridge" );
+static const oter_type_str_id oter_type_bridge_road( "bridge_road" );
+static const oter_type_str_id oter_type_bridgehead_ground( "bridgehead_ground" );
+static const oter_type_str_id oter_type_bridgehead_ramp( "bridgehead_ramp" );
 static const oter_type_str_id oter_type_microlab_sub_connector( "microlab_sub_connector" );
 static const oter_type_str_id oter_type_railroad_bridge( "railroad_bridge" );
 static const oter_type_str_id oter_type_road( "road" );
@@ -1208,6 +1213,20 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
         requires_over = generate_over( z );
     } while( requires_over && ( ++z <= OVERMAP_HEIGHT ) );
 
+    if( atlas ) {
+        const point_abs_omt origin = global_base_point();
+        for( int y = 0; y < OMAPY; ++y ) {
+            for( int x = 0; x < OMAPX; ++x ) {
+                const tripoint_om_omt p( x, y, 0 );
+                const oter_id original = ter( p );
+                const oter_id habitat = north_america::wilderness_terrain( origin + p.xy().raw(), original );
+                if( habitat != original ) {
+                    ter_set( p, habitat );
+                }
+            }
+        }
+    }
+
     // Place the monsters, now that the terrain is laid out
     place_mongroups();
     place_radios();
@@ -1333,8 +1352,8 @@ bool overmap::generate_over( const int z )
 
                 if( oter_ground->get_type_id() == oter_type_bridge ) {
                     if( north_america::active() &&
-                        ( ter( p )->get_type_id() == oter_type_str_id( "bridge_road" ) ||
-                          ter( p )->get_type_id() == oter_type_str_id( "atlas_raised_bridge_deck" ) ) ) {
+                        ( ter( p )->get_type_id() == oter_type_bridge_road ||
+                          ter( p )->get_type_id() == oter_type_atlas_raised_bridge_deck ) ) {
                         continue;
                     }
                     ter_set( p, oter_id( "bridge_road" + oter_get_rotation_string( oter_ground ) ) );
@@ -2415,10 +2434,6 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
     auto &out = connections_out[connection];
     const bool generate_city_streets = settings->city_spec &&
                                        settings->get_settings_city().city_size > 0;
-    static const oter_type_str_id raised_deck( "bridge_road" );
-    static const oter_type_str_id curved_deck( "atlas_raised_bridge_deck" );
-    static const oter_type_str_id bridgehead( "bridgehead_ground" );
-    static const oter_type_str_id ramp( "bridgehead_ramp" );
     const auto atlas_water_at = [&]( const tripoint_om_omt & p ) {
         const int index = ( p.y() + 1 ) * ( OMAPX + 2 ) + p.x() + 1;
         return coast[index] != north_america::terrain::land;
@@ -2441,17 +2456,17 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                                     om_lines::set_segment( 0, om_direction::type::north ), om_direction::type::south );
                 const bool ew = links == om_lines::set_segment(
                                     om_lines::set_segment( 0, om_direction::type::east ), om_direction::type::west );
-                const auto axis = om_lines::has_segment( links, om_direction::type::north ) ||
-                                  om_lines::has_segment( links, om_direction::type::south ) ?
-                                  om_direction::type::north : om_direction::type::east;
+                const om_direction::type axis = om_lines::has_segment( links, om_direction::type::north ) ||
+                                                om_lines::has_segment( links, om_direction::type::south ) ?
+                                                om_direction::type::north : om_direction::type::east;
                 const oter_id support = oter_type_bridge->get_rotated( axis );
                 ter_set( p, support );
                 for( tripoint_om_omt below = p + tripoint::below;
                      inbounds( below ) && ter( below )->is_water(); below += tripoint::below ) {
                     ter_set( below, support );
                 }
-                ter_set( p + tripoint::above, ns || ew ? raised_deck->get_rotated( axis ) :
-                         curved_deck->get_linear( links ) );
+                ter_set( p + tripoint::above, ns || ew ? oter_type_bridge_road->get_rotated( axis ) :
+                         oter_type_atlas_raised_bridge_deck->get_linear( links ) );
             } else if( links || can_build_street( p ) ) {
                 std::optional<om_direction::type> bridge_direction;
                 for( const auto direction : om_direction::all ) {
@@ -2462,11 +2477,11 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                     }
                 }
                 if( bridge_direction ) {
-                    const auto facing = om_direction::opposite( *bridge_direction );
+                    const om_direction::type facing = om_direction::opposite( *bridge_direction );
                     const bool connects_to_road = !atlas_water_at( p + om_direction::displace( facing ) );
                     if( connects_to_road ) {
-                        ter_set( p, bridgehead->get_rotated( facing ) );
-                        ter_set( p + tripoint::above, ramp->get_rotated( facing ) );
+                        ter_set( p, oter_type_bridgehead_ground->get_rotated( facing ) );
+                        ter_set( p + tripoint::above, oter_type_bridgehead_ramp->get_rotated( facing ) );
                         continue;
                     }
                 }
@@ -2523,7 +2538,9 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 return 1;
             }
             const auto &tile = network[p.y() * OMAPX + p.x()];
-            const int width = tile.lanes >= 6 ? static_cast<int>( tile.lanes / 2 ) :
+            const bool mapped_highway = tile.mapped_connections != 0 && tile.lanes >= 4 &&
+                                        ( settings->place_roads || settings->overmap_highway );
+            const int width = mapped_highway ? static_cast<int>( tile.lanes / 2 ) :
                               generate_city_streets && tile.street == north_america::urban_road::arterial ? 2 : 1;
             const int first = -( width - 1 ) / 2;
             for( int offset = first; offset < first + width; ++offset ) {
@@ -2533,7 +2550,7 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 const tripoint_om_omt side = at( across + offset, along );
                 if( !inbounds( side ) || network[side.y() * OMAPX + side.x()].connections ||
                     north_america::is_avenue_flank( ter( side ) ) || !can_build_street( side ) ||
-                    ( width == 2 && !north_america::in_urban_footprint( origin + side.xy().raw() ) ) ) {
+                    ( !mapped_highway && !north_america::in_urban_footprint( origin + side.xy().raw() ) ) ) {
                     return 1;
                 }
             }
@@ -2552,7 +2569,9 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 while( end < length && width_at( across, end ) == width ) {
                     ++end;
                 }
-                if( end - begin >= north_america::min_wide_road_run ) {
+                const int minimum = width >= 3 ? north_america::min_wide_highway_run :
+                                    north_america::min_wide_road_run;
+                if( end - begin >= minimum || ( width >= 3 && ( begin == 0 || end == length ) ) ) {
                     const int first = -( width - 1 ) / 2;
                     for( int along = begin; along < end; ++along ) {
                         for( int offset = first; offset < first + width; ++offset ) {

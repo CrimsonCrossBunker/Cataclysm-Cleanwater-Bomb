@@ -38,6 +38,8 @@
 #include "units.h"
 #include "vehicle_group.h"
 
+static const furn_str_id furn_f_street_light( "f_street_light" );
+
 static const nested_mapgen_id
 nested_mapgen_24x24_road_four_way_crossroad_vehicles_city( "24x24_road_four_way_crossroad_vehicles_city" );
 static const nested_mapgen_id
@@ -50,23 +52,23 @@ static const oter_str_id oter_atlas_avenue_flank_ns( "atlas_avenue_flank_ns" );
 static const oter_str_id oter_road_ew( "road_ew" );
 static const oter_str_id oter_road_ns( "road_ns" );
 
-static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
 static const oter_type_str_id oter_type_atlas_raised_bridge_deck( "atlas_raised_bridge_deck" );
+static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
 static const oter_type_str_id oter_type_bridge( "bridge" );
-static const ter_str_id ter_t_pavement_hw_air( "t_pavement_hw_air" );
-static const ter_str_id ter_t_pavement_y_hw_air( "t_pavement_y_hw_air" );
-static const ter_str_id ter_t_sidewalk_hw_air( "t_sidewalk_hw_air" );
-static const ter_str_id ter_t_guardrail_hw_air( "t_guardrail_hw_air" );
-static const ter_str_id ter_t_open_air( "t_open_air" );
 static const oter_type_str_id oter_type_road( "road" );
 
 static const ter_str_id ter_t_atlas_pavement_white( "t_atlas_pavement_white" );
 static const ter_str_id ter_t_concrete_wall( "t_concrete_wall" );
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_guardrail( "t_guardrail" );
+static const ter_str_id ter_t_guardrail_hw_air( "t_guardrail_hw_air" );
+static const ter_str_id ter_t_open_air( "t_open_air" );
 static const ter_str_id ter_t_pavement( "t_pavement" );
+static const ter_str_id ter_t_pavement_hw_air( "t_pavement_hw_air" );
 static const ter_str_id ter_t_pavement_y( "t_pavement_y" );
+static const ter_str_id ter_t_pavement_y_hw_air( "t_pavement_y_hw_air" );
 static const ter_str_id ter_t_sidewalk( "t_sidewalk" );
+static const ter_str_id ter_t_sidewalk_hw_air( "t_sidewalk_hw_air" );
 static const ter_str_id ter_t_water_moving_dp( "t_water_moving_dp" );
 
 static const vgroup_id VehicleGroup_highway( "highway" );
@@ -528,9 +530,10 @@ static bool draw_wide_avenue( mapgendata &dat )
         return cross_section( base + along_step * along ) == limits;
     };
     const int columns = limits[1] - limits[0] + 1;
+    const bool highway = columns >= 3;
     int length = 1;
     // Older saves may already contain short widening strips.
-    if( columns > 1 ) {
+    if( columns == 2 ) {
         for( const int direction : {
                  -1, 1
                  } ) {
@@ -539,7 +542,7 @@ static bool draw_wide_avenue( mapgendata &dat )
             }
         }
     }
-    if( columns == 1 || length < min_wide_road_run ) {
+    if( columns == 1 || ( !highway && length < min_wide_road_run ) ) {
         if( flank ) {
             dat.m.draw_fill_background( ter_t_grass.id() );
         }
@@ -549,10 +552,10 @@ static bool draw_wide_avenue( mapgendata &dat )
     const bool continues_after = same_width( 1 );
     constexpr int span = SEEX * 2;
     constexpr int taper = span / 2 - 1;
-    const bool highway = columns >= 3;
     const int full_middle = ( limits[0] + limits[1] + 1 ) * span / 2;
     const int full_half_width = highway ? columns * span / 2 - 2 : 17;
     const int lanes_per_direction = highway ? columns : 2;
+    const bool alternating = ( vertical ? base.y() : base.x() ) % 2 == 0;
     for( int along = 0; along < span; ++along ) {
         const int before = continues_before ? taper : along;
         const int after = continues_after ? taper : span - 1 - along;
@@ -583,6 +586,14 @@ static bool draw_wide_avenue( mapgendata &dat )
             }
             dat.m.ter_set( vertical ? point_bub_ms( across, along ) : point_bub_ms( along, across ),
                            ground );
+        }
+        if( expansion == taper && along == ( alternating ? 11 : 12 ) ) {
+            const int curb = ( alternating ? pavement_start - 1 : pavement_end ) - offset * span;
+            if( curb >= 0 && curb < span ) {
+                const point_bub_ms lamp = vertical ? point_bub_ms( curb, along ) :
+                                          point_bub_ms( along, curb );
+                dat.m.furn_set( lamp, furn_f_street_light.id() );
+            }
         }
     }
     // The second tile shares the carriageway but generates separately.
@@ -643,8 +654,8 @@ static void draw_curve_support( mapgendata &dat, const oter_id &deck )
     const auto curve = deck_centerline( deck->get_line() );
     if( !curve.empty() ) {
         const point pier = curve[curve.size() / 2];
-        dat.m.draw_square_ter( ter_t_concrete_wall.id(), point_bub_ms( pier - point( 1, 1 ) ),
-                               point_bub_ms( pier + point( 1, 1 ) ), dat.zlevel() );
+        dat.m.draw_square_ter( ter_t_concrete_wall.id(), point_bub_ms( pier - point::south_east ),
+                               point_bub_ms( pier + point::south_east ), dat.zlevel() );
     }
 }
 
@@ -792,6 +803,31 @@ bool draw_mapped_road( mapgendata &dat )
                                       has_sidewalk ? ter_t_sidewalk.id() : has_rail ? ter_t_guardrail.id() : ter_t_grass.id();
                 dat.m.ter_set( point_bub_ms( x, y ), ground );
             }
+        }
+    }
+    if( !on_bridge && ( boulevard || collector || cell.lanes >= 4 ) ) {
+        const auto place_lamp = [&]( int across, int along, bool vertical ) {
+            if( across < 0 || across >= 2 * center ) {
+                return;
+            }
+            const point_bub_ms lamp = vertical ? point_bub_ms( across, along ) :
+                                      point_bub_ms( along, across );
+            const ter_id ground = dat.m.ter( lamp );
+            if( ground == ter_t_sidewalk || ground == ter_t_grass ) {
+                dat.m.furn_set( lamp, furn_f_street_light.id() );
+            }
+        };
+        if( north ) {
+            place_lamp( center - vertical_width[3] - 1, 3, true );
+        }
+        if( east ) {
+            place_lamp( center - horizontal_width[2 * center - 4] - 1, 2 * center - 4, false );
+        }
+        if( south ) {
+            place_lamp( center + vertical_width[2 * center - 4], 2 * center - 4, true );
+        }
+        if( west ) {
+            place_lamp( center + horizontal_width[3], 3, false );
         }
     }
     if( !on_bridge && ( boulevard || collector ) ) {

@@ -2349,6 +2349,24 @@ void unique_special_deck_state::deserialize( const JsonObject &json )
     json.read( "to_place", to_place );
 }
 
+void overmap_tracked_pet::serialize( JsonOut &json ) const
+{
+    json.start_object();
+    json.member( "uid", uid );
+    json.member( "owner", owner );
+    json.member( "position", position );
+    json.member( "name", name );
+    json.end_object();
+}
+
+void overmap_tracked_pet::deserialize( const JsonObject &json )
+{
+    json.read( "uid", uid );
+    json.read( "owner", owner );
+    json.read( "position", position );
+    json.read( "name", name );
+}
+
 void overmap_global_state::serialize( JsonOut &json ) const
 {
     json.start_object();
@@ -2360,12 +2378,15 @@ void overmap_global_state::serialize( JsonOut &json ) const
     json.member( "major_river_count", major_river_count );
     json.member( "unique_special_decks", unique_special_decks );
     json.member( "placed_regions", placed_regions );
+    json.member( "tracked_pets", tracked_pets );
 
     json.end_object();
 }
 
 void overmap_global_state::deserialize( const JsonObject &json )
 {
+    tracked_pets.clear();
+    json.read( "tracked_pets", tracked_pets );
     placed_unique_specials.clear();
     JsonArray ja = json.get_array( "placed_unique_specials" );
     for( const JsonValue &special : ja ) {

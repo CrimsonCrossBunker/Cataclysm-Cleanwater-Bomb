@@ -1,9 +1,3 @@
-#include <city.h>
-#include <common_types.h>
-#include <omdata.h>
-#include <overmap_location.h>
-#include <point.h>
-#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -16,6 +10,8 @@
 
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "city.h"
+#include "common_types.h"
 #include "coordinates.h"
 #include "game.h"
 #include "line.h"
@@ -26,12 +22,16 @@
 #include "north_america.h"
 #include "north_america_ecology.h"
 #include "north_america_elevation.h"
-#include "regional_climate.h"
 #include "north_america_transport.h"
+#include "omdata.h"
 #include "overmap.h"
+#include "overmap_location.h"
 #include "overmap_test_helpers.h"
 #include "overmapbuffer.h"
+#include "point.h"
+#include "regional_climate.h"
 #include "rng.h"
+#include "type_id.h"
 
 static const oter_type_str_id oter_type_atlas_raised_bridge_deck( "atlas_raised_bridge_deck" );
 static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
@@ -260,20 +260,20 @@ TEST_CASE( "north_america_plans_connected_street_classes", "[north_america]" )
     int turns = 0;
     for( int y = 0; y < width - 1; ++y ) {
         for( int x = 0; x < width - 1; ++x ) {
-            const std::size_t links = at( point( x, y ) ).connections;
-            if( at( point( x, y ) ).street == urban_road::local && om_lines::all[links].mapgen == 1 ) {
+            const point cell( x, y );
+            const std::size_t links = at( cell ).connections;
+            if( at( cell ).street == urban_road::local && om_lines::all[links].mapgen == 1 ) {
                 ++turns;
             }
             CHECK( om_lines::has_segment( links, om_direction::type::east ) ==
-                   om_lines::has_segment( at( point( x + 1, y ) ).connections, om_direction::type::west ) );
+                   om_lines::has_segment( at( cell + point::east ).connections, om_direction::type::west ) );
             CHECK( om_lines::has_segment( links, om_direction::type::south ) ==
-                   om_lines::has_segment( at( point( x, y + 1 ) ).connections, om_direction::type::north ) );
+                   om_lines::has_segment( at( cell + point::south ).connections, om_direction::type::north ) );
         }
     }
     CHECK( turns > 15 );
     for( int offset = 0; offset < width; ++offset ) {
-        const north_america::road_cell single = north_america::road_network( origin + point( 20, offset ),
-                                                1, 1 ).front();
+        const auto single = north_america::road_network( origin + point( 20, offset ), 1, 1 ).front();
         CHECK( single.connections == at( point( 20, offset ) ).connections );
         CHECK( single.street == at( point( 20, offset ) ).street );
     }
@@ -349,19 +349,17 @@ TEST_CASE( "atlas_curving_bridge_has_one_continuous_deck", "[north_america][worl
     clear_map();
     map &here = get_map();
     const mapgendata base( here, mapgendata::dummy_settings );
-    const oter_type_str_id &bridge = oter_type_atlas_road_bridge;
     const std::size_t links = om_lines::set_segment(
                                   om_lines::set_segment( 0, om_direction::type::north ), om_direction::type::east );
-    mapgendata corner( base, bridge->get_linear( links ) );
+    mapgendata corner( base, oter_type_atlas_road_bridge->get_linear( links ) );
     REQUIRE( north_america::draw_mapped_road( corner ) );
 
-    const ter_str_id &water = ter_t_water_moving_dp;
     for( int i = 0; i < SEEX; ++i ) {
-        CHECK( here.ter( tripoint_bub_ms( SEEX, i, 0 ) ) != water.id() );
-        CHECK( here.ter( tripoint_bub_ms( SEEX + i, SEEY, 0 ) ) != water.id() );
+        CHECK( here.ter( tripoint_bub_ms( SEEX, i, 0 ) ) != ter_t_water_moving_dp.id() );
+        CHECK( here.ter( tripoint_bub_ms( SEEX + i, SEEY, 0 ) ) != ter_t_water_moving_dp.id() );
     }
-    CHECK( here.ter( tripoint_bub_ms( SEEX, 2 * SEEY - 1, 0 ) ) == water.id() );
-    CHECK( here.ter( tripoint_bub_ms( 0, SEEY, 0 ) ) == water.id() );
+    CHECK( here.ter( tripoint_bub_ms( SEEX, 2 * SEEY - 1, 0 ) ) == ter_t_water_moving_dp.id() );
+    CHECK( here.ter( tripoint_bub_ms( 0, SEEY, 0 ) ) == ter_t_water_moving_dp.id() );
 }
 
 TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][worldgen]" )
@@ -377,9 +375,7 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
 
     const auto &districts = north_america::urban_districts_in( location );
     const int radius = north_america::urban_district_size() / 2;
-    const overmap_location_id &land = overmap_location_land;
     const point_abs_omt origin = project_to<coords::omt>( location );
-    const oter_type_str_id &road = oter_type_road;
     const oter_id flank_ns = north_america::avenue_flank( true );
     const oter_id flank_ew = north_america::avenue_flank( false );
     REQUIRE( flank_ns );
@@ -415,7 +411,7 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
                     CHECK( ( om->ter( p + step ) == terrain || om->ter( p - step ) == terrain ) );
                     continue;
                 }
-                if( terrain->is_water() || terrain->type_is( road ) ) {
+                if( terrain->is_water() || terrain->type_is( oter_type_road ) ) {
                     continue;
                 }
                 const point_abs_omt absolute = origin + p.xy().raw();
@@ -428,7 +424,7 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
                 if( district == districts.end() || north_america::urban_density( *district, absolute ) < 75 ) {
                     continue;
                 }
-                if( land->test( terrain ) ) {
+                if( overmap_location_land->test( terrain ) ) {
                     ++vacant;
                 } else {
                     ++developed;
@@ -535,10 +531,9 @@ TEST_CASE( "atlas_special_placement_does_not_generate_neighbor_overmaps",
         }
     }
 
-    const overmap_special_id &motel = overmap_special_Motel;
-    REQUIRE( motel.is_valid() );
-    REQUIRE( motel->get_constraints().occurrences.min > 0 );
-    overmap_special_batch specials( origin, { &motel.obj() } );
+    REQUIRE( overmap_special_Motel.is_valid() );
+    REQUIRE( overmap_special_Motel->get_constraints().occurrences.min > 0 );
+    overmap_special_batch specials( origin, { &overmap_special_Motel.obj() } );
     const int count_before = overmap_buffer.global_state.overmap_count;
     overmap_test_helper::place_specials( *om, specials );
     CHECK( overmap_buffer.global_state.overmap_count == count_before );

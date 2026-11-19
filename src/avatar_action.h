@@ -43,8 +43,8 @@ bool confirm_non_hostile_melee_attack( avatar &you, const monster &critter );
 void autoattack( avatar &you, map &m );
 void active_technique( avatar &you, map &m );
 /** Whether the currently wielded weapon offers a usable mounted charge. */
-bool mounted_charge_available( const avatar &you );
-void mounted_charge( avatar &you );
+bool mounted_charge_available( const avatar &you, bool body_charge = false );
+void mounted_charge( avatar &you, bool body_charge = false );
 
 void mend( avatar &you, item_location loc );
 

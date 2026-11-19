@@ -7,8 +7,8 @@
 #include <optional>
 
 #include "coords_fwd.h"
-#include "point.h"
 
+struct point;
 struct SDL_Renderer;
 struct SDL_FRect;
 class cata_tiles;
