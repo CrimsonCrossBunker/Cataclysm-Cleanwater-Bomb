@@ -60,39 +60,5 @@
         "topic": "TALK_DONE"
       }
     ]
-  },
-  {
-    "id": "BGSS_HOSPITAL_2_STORY3",
-    "type": "talk_topic",
-    "dynamic_line": "Somehow, I don't know how, I managed to fall asleep.  I think it might have started with me hyperventilating and passing out.  When I woke up it was night, I was starving and parched, and… and the screaming had died down.  At first I tried to go out the way I came in, but I peaked around a corner and saw one of the nurses stumbling around, spitting that black shit up.  Her name was Becky.  She wasn't Becky anymore.  So, I went back up and somehow made it up a hill nearby.  I drank water from some nasty old puddle and I camped out there for a while, watching it all burn.",
-    "responses": [
-      { "text": "What finally brought you down?", "topic": "BGSS_HOSPITAL_2_STORY4" },
-      { "text": "<done_conversation_section>", "topic": "TALK_FRIEND" },
-      { "text": "<end_talking>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "BGSS_HOSPITAL_2_STORY4",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "mission_BGSS_hospital_2_started_quest" } ],
-      "no": "Well, I still didn't have any food.  Eventually I had to climb down… so I did, as quietly as I could.  It was night, and I have pretty good nightvision.  Apparently the giant bugs don't, because I was able to slip right past them and get away.  I'd kind of scouted out my route from above…  I avoided the major spiked blockades, and headed out towards a friend's place.  I had to fight off a couple of the <zombies>, but I managed to avoid any big fuss, by some miracle.  I never made it to the where I was going, but that's not important now.",
-      "yes": "Well, I still didn't have any food.  Eventually I had to climb down… so I did, as quietly as I could.  It was night, and I have pretty good nightvision.  Apparently the giant bugs don't, because I was able to slip right past them and get away.  I'd kind of scouted out my route from above…  I avoided the major spiked blockades, and headed out towards a friend's place.  I had to fight off a couple of the <zombies>, but I managed to avoid any big fuss, by some miracle."
-    },
-    "responses": [
-      { "text": "What did you see, up there?", "topic": "BGSS_HOSPITAL_2_ROOF" },
-      { "text": "Thanks for telling me all that.  <done_conversation_section>", "topic": "TALK_FRIEND" },
-      { "text": "<end_talking>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "BGSS_HOSPITAL_2_ROOF",
-    "type": "talk_topic",
-    "dynamic_line": "I was up pretty high on that hill, so I saw quite a bit.  The men with spears set up blockades, and there was quite a lightshow going on out there when I started up.  I think it was mostly fires, I didn't hear much shouting.  I saw a few people try to run the barricade and get stabbed to pieces.  There were swarms of <zombies>, traveling in packs towards sounds and noises.  I watched them rip a few people to shreds, screaming and trying to get away.  You know.  The usual stuff.  I was pretty numb by that point.",
-    "responses": [
-      { "text": "How did you get down?", "topic": "BGSS_HOSPITAL_2_STORY4" },
-      { "text": "<done_conversation_section>", "topic": "TALK_FRIEND" },
-      { "text": "<end_talking>", "topic": "TALK_DONE" }
-    ]
   }
 ]
