@@ -1,0 +1,48 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_modular_habitat_dorm1",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "........................",
+            "...=======-..-=======...",
+            "...=S    S=..-W    W=...",
+            "...=W    W=$$-S    S=...",
+            "..---n   --$$--   n---..",
+            "..-❶: ,, W=..-W ,, :❺-..",
+            "..---    S=..-S    ---..",
+            "...=p    ------    p=...",
+            "...=S              S=...",
+            "...=W n-WS----SW-  W=...",
+            "..---#-----66----::---..",
+            "..-kh   ]      ]    s-..",
+            "..-k ,hc=  ,,  ]   ys-..",
+            "..--/#////    //n  /--..",
+            "...=*  /p     =s   s=...",
+            "...=*,,:   ,, =y   s=...",
+            "...=*  /p     =sss y=...",
+            "..--/  ///    /////#--..",
+            "..-~:  :~#    /jjUF o-..",
+            "..--/  ///    ]     --..",
+            ".../~  ~/6 ,, ] hyh =...",
+            ".../~,,~/%    / hyh =...",
+            ".../~  ~|/=]]=/|hyh /...",
+            "..//|||||      |||||//..",
+        },
+        palettes = {
+            "afs_habitat_structure",
+            "afs_habitat_residential_furnishing",
+            "afs_habitat_life_support",
+        },
+        terrain = { ["."] = "t_open_air", [" "] = "t_metal_floor" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "afs_modular_habitat_greenhouse_roof_full", x = 0, y = 0, z = 1 } },
+        vending_glyphs = {
+            ["6"] = { group = "afs_vending_medicine", reinforced = true, powered = true, networked = true },
+        },
+        item_groups = { s = { group = "afs_messy_sofa", repetitions = { 2, 5 }, chance = 5 } },
+        monster_group_glyphs = { [","] = { group = "AFS_GROUP_MOXIE_LOW_RISK", chance = 15, density = 0.1 } },
+    },
+}

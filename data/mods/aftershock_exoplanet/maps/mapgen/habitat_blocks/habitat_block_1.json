@@ -157,47 +157,5 @@
         "default": { "distribution": [ "afs_habblock_1_slot1_cafe_a1", "afs_habblock_1_slot1_diner_a1" ] }
       }
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "afs_habblock_1_roof_garden",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "  ℗℗℗℗℗℗ ℗℗ 222222222   ",
-        "  ℗℗℗℗℗℗ ℗℗ 222232222   ",
-        "                        ",
-        "  ℗℗℗℗℗℗ ℗℗ 222222222   ",
-        "  ℗℗℗℗℗℗ ℗℗ 222232222   ",
-        "                        ",
-        "                        ",
-        "          22 22 22 ℗℗   ",
-        "          22 22 22 ℗℗   ",
-        "        1 22 22 22 ℗℗   ",
-        "        1 32 32 32 ℗℗   ",
-        "          22 22 22 ℗℗   ",
-        "        á 22 22 22 ℗℗   ",
-        "        á 22 22 22 ℗℗   ",
-        "        á               ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "afs_habitat_exterior" ],
-      "furniture": {
-        "1": "f_standing_tank",
-        "2": "f_planter",
-        "3": [ [ "f_micro_terraforming_mill_active", 1 ], [ "f_micro_terraforming_mill_broken", 9 ] ],
-        "á": "f_rack"
-      },
-      "items": { "á": { "item": "tools_earthworking", "chance": 40, "repeat": [ 1, 2 ] } },
-      "liquids": { "1": { "liquid": "water", "amount": [ 0, 100 ] } }
-    }
   }
 ]

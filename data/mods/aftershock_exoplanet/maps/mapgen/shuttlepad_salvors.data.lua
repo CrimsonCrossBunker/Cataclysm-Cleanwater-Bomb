@@ -624,3 +624,21 @@ ccb.content.define_mapgen {
         zone_placements = { { id = "ZONE_START_POINT", faction = "your_followers", x = 3, y = 10 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "afs_shuttlepad_salvors_garage_open_and_remove_lynx",
+    layout = {
+        vehicle_removals = { { prototypes = { "uica_lynx_ex" }, x = { 3, 8 }, y = { 4, 7 } } },
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_grate", x = 1, y = 3 },
+            { shape = "point", operation = "terrain", id = "t_grate", x = 1, y = 4 },
+            { shape = "point", operation = "terrain", id = "t_grate", x = 1, y = 5 },
+            { shape = "point", operation = "terrain", id = "t_grate", x = 1, y = 6 },
+            { shape = "point", operation = "terrain", id = "t_grate", x = 1, y = 7 },
+            { shape = "point", operation = "terrain", id = "t_grate", x = 1, y = 8 },
+            { shape = "point", operation = "terrain", id = "t_door_metal_c", x = 10, y = 8 },
+            { shape = "point", operation = "terrain", id = "t_door_metal_c", x = 9, y = 10 },
+        },
+    },
+}

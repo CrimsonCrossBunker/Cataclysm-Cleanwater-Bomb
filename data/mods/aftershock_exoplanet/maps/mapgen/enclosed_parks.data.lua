@@ -419,3 +419,12 @@ ccb.content.define_mapgen {
         item_groups = { ["7"] = { group = "afs_old_food_storage", chance = 60, repetitions = { 1, 2 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_dead_plants",
+    layout = {
+        size = { width = 24, height = 24 },
+        transform_placements = { { id = "afs_deadify_plants", x = { 0, 23 }, y = { 0, 23 } } },
+    },
+}

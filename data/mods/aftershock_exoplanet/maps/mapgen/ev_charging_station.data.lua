@@ -36,3 +36,56 @@ ccb.content.define_mapgen {
         fill_terrain = "t_metal_floor",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_ev_station_a1_floor_1",
+    layout = {
+        rows = {
+            "© ¢ ¢   ¢¢ ¢¢  ¢¢  ¢ ¢¢©",
+            "©¢ ¢¢¢¢   ¢    ¢¢¢  ¢¢¢ ",
+            " ¢  ¢¢¢¢ ¢¢¢¢¢  ¢¢  ¢  ©",
+            "     ¢¢¢¢¢¢¢¢¢¢¢¢¢¢   ¢ ",
+            "©¢    ¢¢¢¢¢11¢¢¢¢¢¢¢¢  ©",
+            " ¢¢   ¢¢¢¢¢//¢¢¢¢¢¢¢¢ ¢©",
+            "   ¢¢ ¢¢¢¢¢22¢¢¢¢¢¢ ¢  ©",
+            "©  ¢¢¢¢¢¢¢¢33¢¢¢¢¢¢  ¢ ©",
+            " ¢   ¢¢¢¢¢¢22¢¢¢¢¢¢¢  ¢©",
+            " ¢ ¢ ¢¢¢¢¢¢//¢¢¢¢¢¢¢ ¢¢©",
+            "©¢  ¢¢¢¢¢¢¢11¢¢¢¢¢¢¢¢¢¢©",
+            "©   ¢¢¢¢¢¢¢44¢¢¢¢¢¢¢¢¢¢ ",
+            "     ¢¢¢¢¢¢11¢¢¢¢¢¢¢¢   ",
+            "©¢    ¢¢¢¢¢//¢¢¢¢¢¢   ¢©",
+            " ¢¢¢¢¢¢¢¢¢¢22¢¢¢¢¢¢¢  ¢©",
+            "©    ¢¢¢¢¢¢33¢¢¢¢¢¢¢¢¢¢©",
+            "  ¢ ¢¢¢¢¢¢¢22¢¢¢¢¢¢¢¢  ©",
+            "©  ¢¢¢¢¢¢¢¢//¢¢¢¢¢¢¢¢¢  ",
+            "©    ¢¢¢¢¢¢11¢¢¢¢¢¢¢ ¢¢©",
+            "©¢  ¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢   ©",
+            "©¢ ¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢  ¢©",
+            " ¢¢¢¢¢ ¢¢¢¢¢¢¢¢¢¢  ¢¢¢¢©",
+            "   ¢ ¢      ¢¢¢¢   ¢¢  ©",
+            "     ©©    ©©  ©©  ©©©  ",
+        },
+        palettes = { "afs_habitat_structure", "afs_habitat_exterior" },
+        terrain = { ["1"] = "t_sidewalk", ["2"] = "t_sidewalk", ["3"] = "t_sidewalk" },
+        furniture = { ["1"] = "f_screenmirror", ["2"] = "f_capacitor", ["3"] = "f_ev_charger" },
+        fill_terrain = "t_metal_floor",
+        vending_glyphs = {
+            ["4"] = { group = "plut_cell_vending", reinforced = true, powered = true, networked = true },
+        },
+        vehicle_placements = {
+            { id = "atomic_city_cars", x = 8, y = 16, rotation = 90, chance = 5, status = 1 },
+            { id = "atomic_city_cars", x = 15, y = 6, rotation = 270, chance = 5, status = 1 },
+        },
+        monster_placements = {
+            {
+                group = "AFS_GROUP_RUIN_MOXIE",
+                x = { 5, 22 },
+                y = { 5, 22 },
+                pack_size = { 1, 2 },
+                chance = 25,
+            },
+        },
+    },
+}
