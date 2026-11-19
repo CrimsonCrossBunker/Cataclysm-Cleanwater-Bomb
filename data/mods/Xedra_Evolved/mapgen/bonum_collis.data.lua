@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "boann_sidhe_z1",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "          ....          ",
+            "         ......         ",
+            "        ........        ",
+            "       ..........       ",
+            "    ..............      ",
+            "    ..............      ",
+            "    ..............      ",
+            "      ............      ",
+            "       ..........       ",
+            "        ........        ",
+            "         ......         ",
+            "          ....          ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        terrain = { ["."] = "t_flat_roof" },
+        fill_terrain = "t_open_air",
+    },
+}

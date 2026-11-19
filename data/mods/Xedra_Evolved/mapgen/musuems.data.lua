@@ -1,0 +1,55 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "museum_roof",
+    layout = {
+        rows = {
+            " R   R    R  R    R   R ",
+            " ---------------------- ",
+            " -....................- ",
+            " -........U........M..- ",
+            " -....................- ",
+            " -....ooo..oo..ooo....- ",
+            " -....ooo..oo..ooo....- ",
+            " -....ooo..oo..ooo....- ",
+            " -.Z..................- ",
+            " -....................- ",
+            " -....ooo..oo..ooo....- ",
+            " -....ooo..oo..ooo....- ",
+            " -....ooo..oo..ooo....- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................5 ",
+            " ---------------------- ",
+        },
+        palettes = { "roof_palette" },
+        terrain = { R = "t_column" },
+        fill_terrain = "t_flat_roof",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities_c", weight = 5 },
+                    { id = "roof_2x2_utilities_d", weight = 40 },
+                    { id = "roof_2x2_utilities", weight = 50 },
+                },
+                x = { 4, 17 },
+                y = { 14, 19 },
+            },
+        },
+        nested_glyphs = {
+            U = { id = "roof_2x2_infrastructure" },
+            M = { id = "roof_2x2_infrastructure_1" },
+            Z = { id = "roof_2x2_infrastructure_2" },
+        },
+    },
+}
