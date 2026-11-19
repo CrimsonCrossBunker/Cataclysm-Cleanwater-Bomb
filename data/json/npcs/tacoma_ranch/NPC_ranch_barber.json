@@ -54,23 +54,5 @@
       },
       { "text": "Maybe another time…", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_RANCH_BARBER_JOB",
-    "dynamic_line": "What?  I'm a barber… I cut hair.  There's demand for cheap cuts and a shave out here.",
-    "responses": [ { "text": "Sorry.", "topic": "TALK_RANCH_BARBER" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_RANCH_BARBER_HIRE",
-    "dynamic_line": "I can't imagine what I'd need your assistance with.",
-    "responses": [ { "text": "Fine.", "topic": "TALK_RANCH_BARBER" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_RANCH_BARBER_CUT",
-    "dynamic_line": "Stand still while I get my clippers…",
-    "responses": [ { "text": "Thanks…", "topic": "TALK_DONE" } ]
   }
 ]
