@@ -208,41 +208,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "lake_cabin_boathouse_roof",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "         ..........     ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                 .....  ",
-        "                 .....  ",
-        "                 .....  ",
-        "                 .....  ",
-        "                 .....  ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "lake_cabin_water",
     "object": {
       "rows": [
