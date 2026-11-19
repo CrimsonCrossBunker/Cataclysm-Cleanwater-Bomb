@@ -88,10 +88,5 @@
       "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "palettes": [ { "param": "fbmc_construction_palette" } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_living_area",
-    "object": { "place_nested": [ { "chunks": [ "fbmc_firestation1_living_quarters" ], "x": 10, "y": 9 } ] }
   }
 ]

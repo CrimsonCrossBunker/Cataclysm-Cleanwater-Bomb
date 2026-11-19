@@ -32,22 +32,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmc_firestation1_kitchen1",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        "      ",
-        "      ",
-        "---   ",
-        "---   ",
-        "t--   ",
-        "t    t"
-      ],
-      "palettes": [ "fbmc_firestation1_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmc_firestation1_kitchen1_cleared",
     "object": {
       "place_nested": [ { "chunks": [ "fbmc_firestation1_kitchen1" ], "x": 1, "y": 9 } ],
@@ -96,22 +80,6 @@
         { "point": "terrain", "id": "t_radio_tower", "x": 5, "y": 1 },
         { "point": "terrain", "id": "t_radio_controls", "x": 3, "y": 2 }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmc_firestation1_kitchen2",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        "      ",
-        "u     ",
-        "c     ",
-        "   r  ",
-        "   r  ",
-        "  cc  "
-      ],
-      "palettes": [ "fbmc_firestation1_palette" ]
     }
   },
   {
@@ -264,23 +232,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmc_firestation1_farm_land",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "rows": [
-        "       ",
-        "       ",
-        "^^.^.^^",
-        "^^.^.^^",
-        "^^.^.^^",
-        "^^.^.^^",
-        "^^.^.^^"
-      ],
-      "palettes": [ "fbmc_firestation1_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmc_firestation1_farm",
     "object": {
       "place_nested": [ { "chunks": [ "fbmc_firestation1_farm_land" ], "x": 7, "y": 0 } ],
@@ -309,11 +260,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_bedroom_sw",
-    "object": { "place_nested": [ { "chunks": [ "fbmc_firestation1_living_quarters_SW" ], "x": 14, "y": 19 } ] }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmc_firestation1_living_quarters_NW",
     "object": {
       "parameters": {
@@ -331,11 +277,6 @@
       ],
       "palettes": [ { "param": "fbmc_bed_palette" }, "fbmc_firestation1_palette" ]
     }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_bedroom_nw",
-    "object": { "place_nested": [ { "chunks": [ "fbmc_firestation1_living_quarters_NW" ], "x": 14, "y": 15 } ] }
   },
   {
     "type": "mapgen",
@@ -359,11 +300,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_bedroom_ne",
-    "object": { "place_nested": [ { "chunks": [ "fbmc_firestation1_living_quarters_NE" ], "x": 20, "y": 15 } ] }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmc_firestation1_living_quarters_SE",
     "object": {
       "parameters": {
@@ -381,57 +317,5 @@
       ],
       "palettes": [ { "param": "fbmc_bed_palette" }, "fbmc_firestation1_palette" ]
     }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_bedroom_se",
-    "object": { "place_nested": [ { "chunks": [ "fbmc_firestation1_living_quarters_SE" ], "x": 20, "y": 19 } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmc_firestation1_garden_fence",
-    "object": {
-      "mapgensize": [ 10, 10 ],
-      "rows": [
-        "####G#####",
-        "         #",
-        "         #",
-        "         #",
-        "         #",
-        "         G",
-        "         #",
-        "          ",
-        "          ",
-        "          "
-      ],
-      "palettes": [ "fbmc_firestation1_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_garden_fence1",
-    "object": { "place_nested": [ { "chunks": [ "fbmc_firestation1_garden_fence" ], "x": 5, "y": 1 } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmc_firestation1_quarters_common_room",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "rows": [
-        "       ",
-        "hhh C s",
-        "ttt   s",
-        "hhh C s",
-        "    BBB",
-        "       ",
-        "       "
-      ],
-      "palettes": [ "fbmc_firestation1_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_quarters_common",
-    "object": { "place_nested": [ { "chunks": [ "fbmc_firestation1_quarters_common_room" ], "x": 16, "y": 9 } ] }
   }
 ]
