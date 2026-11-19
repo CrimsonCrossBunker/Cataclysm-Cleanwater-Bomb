@@ -4059,6 +4059,146 @@ static void run_item_eocs( const dialogue &d, bool is_npc,
         }
     }
 }
+talk_effect_fun_t::func dialogue_action::clear_actor_value( bool is_npc, std::string var_name )
+{
+    return [is_npc, var_name]( dialogue const & d ) {
+        d.actor( is_npc )->remove_value( var_name );
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::assign_mission( str_or_var mission_name,
+        dbl_or_var deadline )
+{
+    return [mission_name, deadline]( dialogue & d ) {
+        Character *player_character = mission_dialogue::resolve_dialogue_character( d, false );
+        if( player_character == nullptr ) {
+            return;
+        }
+        const character_action_guard player_guard( *player_character );
+        if( !player_guard ) {
+            return;
+        }
+        const mission_type_id mission_type( mission_name.evaluate( d ) );
+        if( !mission_type.is_valid() ) {
+            return;
+        }
+        mission *new_mission = mission::reserve_new( mission_type, character_id() );
+        if( new_mission == nullptr ) {
+            return;
+        }
+        const mission_dialogue::mission_selection_identity identity =
+            mission_dialogue::identify_mission( new_mission );
+        new_mission->assign( *player_character );
+        if( !player_guard ) {
+            return;
+        }
+        mission *live_mission = mission_dialogue::resolve_live_mission( identity );
+        if( live_mission == nullptr ||
+            live_mission->get_assigned_player_id() != player_character->getID() ) {
+            return;
+        }
+        // mission::assign assigns the type's deadline (which is often 0!), so if we want our specific
+        // deadline to be kept, it must always be done after assignment
+        const double deadline_dbl = deadline.evaluate( d );
+        if( deadline_dbl ) {
+            live_mission->set_deadline( calendar::turn_zero + time_duration::from_turns( deadline_dbl ) );
+        }
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::finish_mission( str_or_var mission_name, bool success,
+        std::optional<int> step )
+{
+    return [mission_name, success, step]( dialogue & d ) {
+        mission_dialogue::finish_mission_by_type_for_dialogue(
+            d, mission_type_id( mission_name.evaluate( d ) ),
+            success, step.value_or( -1 ) );
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::set_first_topic( str_or_var chat_topic )
+{
+    return [chat_topic]( dialogue const & d ) {
+        d.actor( true )->set_first_topic( chat_topic.evaluate( d ) );
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::adjust_faction_trust( dbl_or_var dov )
+{
+    return [dov]( dialogue & d ) {
+        d.actor( true )->get_faction()->trusts_u += dov.evaluate( d );
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::add_effect( bool is_npc, str_or_var new_effect,
+        duration_or_var dov_duration,
+        str_or_var target, bool permanent, bool force, dbl_or_var dov_intensity )
+{
+    return [is_npc, new_effect, dov_duration, target, permanent, force,
+    dov_intensity]( dialogue & d ) {
+        d.actor( is_npc )->add_effect( efftype_id( new_effect.evaluate( d ) ),
+                                       dov_duration.evaluate( d ),
+                                       target.evaluate( d ), permanent, force,
+                                       dov_intensity.evaluate( d ) );
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::set_actor_value( bool is_npc, std::string key,
+        std::vector<std::string> choices )
+{
+    return [is_npc, key = std::move( key ), choices = std::move( choices )]( dialogue & d ) {
+        const std::string &value = choices[rng( 0, choices.size() - 1 )];
+        d.actor( is_npc )->set_value( key, value );
+        get_event_bus().send<event_type::u_var_changed>( key, value );
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::record_turn( bool is_npc, std::string key )
+{
+    return [is_npc, key = std::move( key )]( dialogue & d ) {
+        d.actor( is_npc )->set_value( key, string_format( "%d", to_turn<int>( calendar::turn ) ) );
+    };
+}
+
+static void expand_dialogue_variable_tags( std::string &text, const dialogue &d )
+{
+    std::unique_ptr<talker> default_talker = get_talker_for( get_player_character() );
+    talker &alpha = d.has_alpha ? *d.actor( false ) : *default_talker;
+    talker &beta = d.has_beta ? *d.actor( true ) : *default_talker;
+    parse_tags( text, alpha, beta, d );
+}
+
+template<typename Value>
+static talk_effect_fun_t::func set_dialogue_string( var_info target, std::vector<Value> values,
+        bool expand_tags )
+{
+    return [target = std::move( target ), values = std::move( values ), expand_tags]( dialogue & d ) {
+        const auto chosen = values[rng( 0, values.size() - 1 )].evaluate( d );
+        std::string value;
+        if constexpr( std::is_same_v<Value, translation_or_var> ) {
+            value = chosen.translated();
+        } else {
+            value = chosen;
+        }
+        if( expand_tags ) {
+            expand_dialogue_variable_tags( value, d );
+        }
+        write_var_value( target.type, target.name, &d, value );
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::set_string( var_info target,
+        std::vector<str_or_var> values, bool expand_tags )
+{
+    return set_dialogue_string( std::move( target ), std::move( values ), expand_tags );
+}
+
+talk_effect_fun_t::func dialogue_action::set_translated_string( var_info target,
+        std::vector<translation_or_var> values, bool expand_tags )
+{
+    return set_dialogue_string( std::move( target ), std::move( values ), expand_tags );
+}
+
 namespace talk_effect_fun
 {
 namespace
@@ -4096,13 +4236,8 @@ talk_effect_fun_t::func f_add_effect( const JsonObject &jo, std::string_view mem
     str_or_var target;
     optional( jo, false, "target_part", target, "bp_null" );
 
-    return [is_npc, new_effect, dov_duration, target, permanent, force,
-            dov_intensity]( dialogue & d ) {
-        d.actor( is_npc )->add_effect( efftype_id( new_effect.evaluate( d ) ),
-                                       dov_duration.evaluate( d ),
-                                       target.evaluate( d ), permanent, force,
-                                       dov_intensity.evaluate( d ) );
-    };
+    return dialogue_action::add_effect( is_npc, std::move( new_effect ), std::move( dov_duration ),
+                                        std::move( target ), permanent, force, std::move( dov_intensity ) );
 }
 
 talk_effect_fun_t::func f_remove_effect( const JsonObject &jo, std::string_view member,
@@ -4533,34 +4668,23 @@ talk_effect_fun_t::func f_remove_wound( const JsonObject &jo, std::string_view m
 talk_effect_fun_t::func f_add_var( const JsonObject &jo, std::string_view member,
                                    std::string_view, bool is_npc )
 {
-    dbl_or_var empty;
     const std::string var_name = get_talk_varname( jo, member );
-    const std::string var_base_name = get_talk_var_basename( jo, member, false );
     const bool time_check = jo.has_member( "time" ) && jo.get_bool( "time" );
-    std::vector < std::string > possible_values = jo.get_string_array( "possible_values" );
-    if( possible_values.empty() ) {
-        const std::string value = time_check ? "" : jo.get_string( "value" );
-        possible_values.push_back( value );
+    std::vector<std::string> choices = jo.get_string_array( "possible_values" );
+    if( time_check ) {
+        return dialogue_action::record_turn( is_npc, var_name );
     }
-    return [is_npc, var_name, possible_values, time_check, var_base_name]( dialogue const & d ) {
-        talker *actor = d.actor( is_npc );
-        if( time_check ) {
-            actor->set_value( var_name, string_format( "%d", to_turn < int > ( calendar::turn ) ) );
-        } else {
-            int index = rng( 0, possible_values.size() - 1 );
-            actor->set_value( var_name, possible_values[index] );
-            get_event_bus().send < event_type::u_var_changed > ( var_base_name, possible_values[index] );
-        }
-    };
+    if( choices.empty() ) {
+        choices.push_back( jo.get_string( "value" ) );
+    }
+    return dialogue_action::set_actor_value( is_npc, var_name, std::move( choices ) );
 }
 
 talk_effect_fun_t::func f_remove_var( const JsonObject &jo, std::string_view member,
                                       std::string_view, bool is_npc )
 {
     const std::string var_name = get_talk_varname( jo, member );
-    return [is_npc, var_name]( dialogue const & d ) {
-        d.actor( is_npc )->remove_value( var_name );
-    };
+    return dialogue_action::clear_actor_value( is_npc, var_name );
 }
 
 void map_add_item( item &it, tripoint_abs_ms target_pos )
@@ -6270,9 +6394,7 @@ talk_effect_fun_t::func f_npc_first_topic( const JsonObject &jo, std::string_vie
         std::string_view )
 {
     str_or_var chat_topic = get_str_or_var( jo.get_member( member ), member, true );
-    return [chat_topic]( dialogue const & d ) {
-        d.actor( true )->set_first_topic( chat_topic.evaluate( d ) );
-    };
+    return dialogue_action::set_first_topic( std::move( chat_topic ) );
 }
 
 talk_effect_fun_t::func f_message( const JsonObject &jo, std::string_view member,
@@ -6818,6 +6940,12 @@ talk_effect_fun_t::func f_set_string_var( const JsonObject &jo, std::string_view
     }
     bool parse = jo.get_bool( "parse_tags", false );
     var_info var = read_var_info( jo.get_member( "target_var" ) );
+    if( !i18n && !input_params && !str_vals.empty() ) {
+        return dialogue_action::set_string( std::move( var ), std::move( str_vals ), parse );
+    }
+    if( i18n && !input_params && !i18n_vals.empty() ) {
+        return dialogue_action::set_translated_string( std::move( var ), std::move( i18n_vals ), parse );
+    }
     return [i18n, input_params, str_vals, i18n_vals, var, parse]( dialogue & d ) {
         int index = rng( 0, ( i18n ? i18n_vals.size() : str_vals.size() ) - 1 );
         std::string str =
@@ -6843,10 +6971,7 @@ talk_effect_fun_t::func f_set_string_var( const JsonObject &jo, std::string_view
         }
 
         if( parse ) {
-            std::unique_ptr < talker > default_talker = get_talker_for( get_player_character() );
-            talker &alpha = d.has_alpha ? *d.actor( false ) : *default_talker;
-            talker &beta = d.has_beta ? *d.actor( true ) : *default_talker;
-            parse_tags( str, alpha, beta, d );
+            expand_dialogue_variable_tags( str, d );
         }
         write_var_value( var.type, var.name, &d, str );
     };
@@ -6963,41 +7088,7 @@ talk_effect_fun_t::func f_assign_mission( const JsonObject &jo, std::string_view
 {
     str_or_var mission_name = get_str_or_var( jo.get_member( member ), member, true );
     dbl_or_var deadline = get_dbl_or_var( jo, "deadline", false );
-    return [mission_name, deadline]( dialogue & d ) {
-        Character *player_character = mission_dialogue::resolve_dialogue_character( d, false );
-        if( player_character == nullptr ) {
-            return;
-        }
-        const character_action_guard player_guard( *player_character );
-        if( !player_guard ) {
-            return;
-        }
-        const mission_type_id mission_type( mission_name.evaluate( d ) );
-        if( !mission_type.is_valid() ) {
-            return;
-        }
-        mission *new_mission = mission::reserve_new( mission_type, character_id() );
-        if( new_mission == nullptr ) {
-            return;
-        }
-        const mission_dialogue::mission_selection_identity identity =
-            mission_dialogue::identify_mission( new_mission );
-        new_mission->assign( *player_character );
-        if( !player_guard ) {
-            return;
-        }
-        mission *live_mission = mission_dialogue::resolve_live_mission( identity );
-        if( live_mission == nullptr ||
-            live_mission->get_assigned_player_id() != player_character->getID() ) {
-            return;
-        }
-        // mission::assign assigns the type's deadline (which is often 0!), so if we want our specific
-        // deadline to be kept, it must always be done after assignment
-        const double deadline_dbl = deadline.evaluate( d );
-        if( deadline_dbl ) {
-            live_mission->set_deadline( calendar::turn_zero + time_duration::from_turns( deadline_dbl ) );
-        }
-    };
+    return dialogue_action::assign_mission( std::move( mission_name ), std::move( deadline ) );
 }
 
 talk_effect_fun_t::func f_finish_mission( const JsonObject &jo, std::string_view member,
@@ -7011,11 +7102,7 @@ talk_effect_fun_t::func f_finish_mission( const JsonObject &jo, std::string_view
     } else {
         success = jo.get_bool( "success" );
     }
-    return [mission_name, success, step]( dialogue & d ) {
-        mission_dialogue::finish_mission_by_type_for_dialogue(
-            d, mission_type_id( mission_name.evaluate( d ) ),
-            success, step.value_or( -1 ) );
-    };
+    return dialogue_action::finish_mission( std::move( mission_name ), success, step );
 }
 
 talk_effect_fun_t::func f_remove_active_mission( const JsonObject &jo,
@@ -8425,9 +8512,7 @@ talk_effect_fun_t::func f_add_faction_trust( const JsonObject &jo, std::string_v
         std::string_view )
 {
     dbl_or_var dov = get_dbl_or_var( jo, member );
-    return [dov]( dialogue & d ) {
-        d.actor( true )->get_faction()->trusts_u += dov.evaluate( d );
-    };
+    return dialogue_action::adjust_faction_trust( std::move( dov ) );
 }
 
 talk_effect_fun_t::func f_custom_light_level( const JsonObject &jo,
@@ -9356,6 +9441,12 @@ void talk_effect_t::set_effect( const talk_effect_fun_t &fun )
     guaranteed_consequence = std::max( guaranteed_consequence, dialogue_consequence::none );
 }
 
+void talk_effect_t::append_actions( const talk_effect_t &actions )
+{
+    effects.insert( effects.end(), actions.effects.begin(), actions.effects.end() );
+    guaranteed_consequence = std::max( guaranteed_consequence, actions.guaranteed_consequence );
+}
+
 void talk_effect_t::set_effect( talkfunction_ptr ptr )
 {
     if( ptr == &talk_function::assign_mission ) {
@@ -10166,6 +10257,13 @@ void json_talk_response::set_rules( const talk_response_rules &rules )
     if( rules.show_condition ) {
         actual_response.show_condition = rules.show_condition;
     }
+    if( rules.success_actions ) {
+        actual_response.success.append_actions( *rules.success_actions );
+        actual_response.debug_info.try_emplace( "effect", "Lua dialogue actions" );
+    }
+    if( rules.failure_actions ) {
+        actual_response.failure.append_actions( *rules.failure_actions );
+    }
 }
 
 void json_talk_response::load_condition( const JsonObject &jo, std::string_view )
@@ -10459,27 +10557,48 @@ dynamic_line_t::dynamic_line_t( const JsonArray &ja )
 json_dynamic_line_effect::json_dynamic_line_effect( const JsonObject &jo,
         const std::string &id, std::string_view src )
 {
-    std::function < bool( const_dialogue const & ) > tmp_condition;
-    read_condition( jo, "condition", tmp_condition, true );
-    talk_effect_t tmp_effect = talk_effect_t( jo, "effect", src );
+    talk_predicate test;
+    read_condition( jo, "condition", test, true );
+    effect = talk_effect_t( jo, "effect", src );
     get_raw_debug_fields( jo, debug_info );
+    const std::optional<std::string> sentinel = jo.has_string( "sentinel" ) ?
+        std::optional<std::string>( jo.get_string( "sentinel" ) ) : std::nullopt;
+    configure( std::move( test ), id, sentinel );
+}
+
+json_dynamic_line_effect::json_dynamic_line_effect( const talk_entry_rules &rules,
+        const std::string &id )
+    : effect( rules.actions )
+{
+    if( rules.condition || rules.once ) {
+        debug_info.emplace( "condition", "Lua dialogue predicate" );
+    }
+    debug_info.emplace( "effect", "Lua dialogue actions" );
+    configure( rules.condition, id, rules.once );
+}
+
+void json_dynamic_line_effect::configure( talk_predicate test, const std::string &id,
+        const std::optional<std::string> &sentinel )
+{
+    if( !test ) {
+        test = []( const const_dialogue & ) {
+            return true;
+        };
+    }
     // if the topic has a sentinel, it means implicitly add a check for the sentinel value
     // and do not run the effects if it is set.  if it is not set, run the effects and
     // set the sentinel
-    if( jo.has_string( "sentinel" ) ) {
-        const std::string sentinel = jo.get_string( "sentinel" );
-        const std::string varname = "sentinel_" + id + "_" + sentinel;
-        condition = [varname, tmp_condition]( dialogue & d ) {
-            return d.actor( false )->get_value( varname ).str() != "yes" && tmp_condition( d );
+    if( sentinel ) {
+        const std::string varname = "sentinel_" + id + "_" + *sentinel;
+        condition = [varname, test = std::move( test )]( dialogue & d ) {
+            return d.actor( false )->get_value( varname ).str() != "yes" && test( d );
         };
-        std::function < void( const dialogue &d ) > function = [varname]( const dialogue & d ) {
+        effect.effects.emplace_back( talk_effect_fun_t::func( [varname]( dialogue & d ) {
             d.actor( false )->set_value( varname, "yes" );
-        };
-        tmp_effect.effects.emplace_back( function );
+        } ) );
     } else {
-        condition = tmp_condition;
+        condition = std::move( test );
     }
-    effect = tmp_effect;
 }
 
 bool json_dynamic_line_effect::test_condition( dialogue &d ) const
@@ -10500,7 +10619,7 @@ void json_talk_topic::load( const JsonObject &jo, std::string_view src,
     } else if( jo.has_member( "dynamic_line" ) ) {
         dynamic_line = dynamic_line_t::from_member( jo, "dynamic_line" );
     }
-    if( jo.has_member( "speaker_effect" ) ) {
+    if( jo.has_member( "speaker_effect" ) || ( rules && !rules->on_enter.empty() ) ) {
         std::string id = "no_id";
         if( jo.has_string( "id" ) ) {
             id = jo.get_string( "id" );
@@ -10513,6 +10632,11 @@ void json_talk_topic::load( const JsonObject &jo, std::string_view src,
         } else if( jo.has_array( "speaker_effect" ) ) {
             for( JsonObject speaker_effect : jo.get_array( "speaker_effect" ) ) {
                 speaker_effects.emplace_back( speaker_effect, id, src );
+            }
+        }
+        if( rules ) {
+            for( const talk_entry_rules &entry : rules->on_enter ) {
+                speaker_effects.emplace_back( entry, id );
             }
         }
     }

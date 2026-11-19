@@ -143,6 +143,7 @@ struct talk_effect_t {
           */
         void set_effect( talkfunction_ptr );
         void set_effect( const talk_effect_fun_t & );
+        void append_actions( const talk_effect_t &actions );
         /**
           * Sets an effect to a function object and consequence to explicitly given one.
           */
@@ -165,6 +166,24 @@ struct talk_effect_t {
     private:
         dialogue_consequence guaranteed_consequence = dialogue_consequence::none;
 };
+
+namespace dialogue_action
+{
+talk_effect_fun_t::func set_actor_value( bool is_npc, std::string key,
+        std::vector<std::string> choices );
+talk_effect_fun_t::func record_turn( bool is_npc, std::string key );
+talk_effect_fun_t::func clear_actor_value( bool is_npc, std::string key );
+talk_effect_fun_t::func set_string( var_info target, std::vector<str_or_var> values,
+                                    bool expand_tags );
+talk_effect_fun_t::func set_translated_string( var_info target,
+        std::vector<translation_or_var> values, bool expand_tags );
+talk_effect_fun_t::func assign_mission( str_or_var mission, dbl_or_var deadline );
+talk_effect_fun_t::func finish_mission( str_or_var mission, bool success, std::optional<int> step );
+talk_effect_fun_t::func set_first_topic( str_or_var topic );
+talk_effect_fun_t::func adjust_faction_trust( dbl_or_var amount );
+talk_effect_fun_t::func add_effect( bool is_npc, str_or_var effect, duration_or_var duration,
+                                    str_or_var part, bool permanent, bool force, dbl_or_var intensity );
+} // namespace dialogue_action
 
 /**
  * Represents a response for a talk_topic.
@@ -536,12 +555,21 @@ struct dynamic_line_t {
 struct talk_response_rules {
     talk_predicate condition;
     talk_predicate show_condition;
+    std::optional<talk_effect_t> success_actions;
+    std::optional<talk_effect_t> failure_actions;
+};
+
+struct talk_entry_rules {
+    talk_predicate condition;
+    talk_effect_t actions;
+    std::optional<std::string> once;
 };
 
 struct talk_topic_rules {
     std::optional<dynamic_line_t> line;
     std::vector<talk_response_rules> responses;
     std::vector<talk_response_rules> repeats;
+    std::vector<talk_entry_rules> on_enter;
 };
 
 /**
@@ -602,8 +630,11 @@ class json_dynamic_line_effect
     private:
         std::function < bool( dialogue & ) > condition;
         talk_effect_t effect;
+        void configure( talk_predicate test, const std::string &id,
+                        const std::optional<std::string> &sentinel );
     public:
         json_dynamic_line_effect( const JsonObject &jo, const std::string &id, std::string_view src );
+        json_dynamic_line_effect( const talk_entry_rules &rules, const std::string &id );
         bool test_condition( dialogue &d ) const;
         void apply( dialogue &d ) const;
         // debug: conditional / effect

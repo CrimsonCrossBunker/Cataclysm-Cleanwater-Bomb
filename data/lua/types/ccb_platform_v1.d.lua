@@ -7246,6 +7246,7 @@ function CcbPlatformTilesetApi.limits() end
 function CcbPlatformTilesetApi.register(descriptor) end
 ---@class CcbPlatformContent
 ---@field dialogue_predicates StaticDialoguePredicates Only available while loading ordered data.
+---@field dialogue_actions StaticDialogueActions Only available while loading ordered data.
 local CcbPlatformContent = {}
 
 ---Check a selected Mod by its stable ID, including data-only Mods. Available during entry loading.
@@ -7627,10 +7628,15 @@ function CcbPlatformContent.define_item(options) end
 ---A native predicate usable in ordered dialogue definitions.
 ---@class StaticDialoguePredicate
 
----@class StaticDialogueStringVariable
+---@class StaticDialogueVariable
 ---@field scope 'speaker'|'interlocutor'|'global'|'conversation'|'indirect'
 ---@field key string Existing variable key, including when it was set by older content.
+
+---@class StaticDialogueStringVariable : StaticDialogueVariable
 ---@field fallback? string String used when the variable is missing, defaulting to an empty string.
+
+---@class StaticDialogueLocalizedVariable : StaticDialogueVariable
+---@field fallback? string|LocalizedText Text to translate when the variable is missing.
 
 ---@alias StaticDialogueStringValue string|StaticDialogueStringVariable
 
@@ -7768,6 +7774,82 @@ function CcbPlatformContent.gendered_line(text, participants) end
 ---| 'player_leaving'|'drop_weapon'|'drop_stolen_item'|'remove_stolen_status'
 ---| 'player_weapon_away'|'player_weapon_drop'|'lead_to_safety'|'start_training'
 ---| 'start_training_npc'|'start_training_seminar'|'npc_rules_menu'|'clear_overrides'|'npc_thankful'|'nothing'
+---| 'dismount'|'find_mount'|'morale_chat_activity'|'drop_items_in_place'|'start_camp'|'basecamp_mission'
+---| 'return_to_camp_duties'|'repair_bionic_limbs'|'bionic_install_allies'|'bionic_remove_allies'
+
+---A native effect usable in an ordered dialogue definition.
+---@class StaticDialogueAction
+
+---@class StaticDialogueEffectOptions
+---@field turns? integer Duration in turns. Required if the effect is temporary.
+---@field permanent? boolean Apply a permanent effect.
+---@field body_part? StaticDialogueStringValue Defaults to the whole body.
+---@field force? boolean Apply despite ordinary immunity rules.
+---@field intensity? number Defaults to the native initial intensity.
+
+---@class StaticDialogueMissionResult
+---@field success? boolean Conclude the mission.
+---@field step? integer Advance the mission to this step. Supply either step or success.
+
+---@class StaticDialogueActions
+local StaticDialogueActions = {}
+
+---Set an actor variable and emit the native variable-change event. An array selects a value at random.
+---@param role StaticDialogueParticipant
+---@param key string
+---@param value string|string[]
+---@return StaticDialogueAction
+function StaticDialogueActions.set_actor_value(role, key, value) end
+
+---Write the current turn as a string in the actor variable.
+---@param role StaticDialogueParticipant
+---@param key string
+---@return StaticDialogueAction
+function StaticDialogueActions.record_turn(role, key) end
+
+---@param role StaticDialogueParticipant
+---@param key string
+---@return StaticDialogueAction
+function StaticDialogueActions.clear_actor_value(role, key) end
+
+---Choose a value, resolve it at the time of the action, and write to the target variable.
+---@param target StaticDialogueVariable
+---@param values StaticDialogueStringValue[]
+---@param expand_tags? boolean
+---@return StaticDialogueAction
+function StaticDialogueActions.set_string(target, values, expand_tags) end
+
+---@param target StaticDialogueVariable
+---@param values (string|LocalizedText|StaticDialogueLocalizedVariable)[]
+---@param expand_tags? boolean
+---@return StaticDialogueAction
+function StaticDialogueActions.set_translated_string(target, values, expand_tags) end
+
+---Assign a new mission of the specified type to the speaker.
+---@param id StaticDialogueStringValue
+---@param deadline? number Absolute turn measured from turn zero. Zero uses the mission's own deadline.
+---@return StaticDialogueAction
+function StaticDialogueActions.assign_mission(id, deadline) end
+
+---@param id StaticDialogueStringValue
+---@param result StaticDialogueMissionResult
+---@return StaticDialogueAction
+function StaticDialogueActions.finish_mission(id, result) end
+
+---Change the interlocutor's opening topic for later conversations.
+---@param topic StaticDialogueStringValue
+---@return StaticDialogueAction
+function StaticDialogueActions.set_first_topic(topic) end
+
+---@param amount number
+---@return StaticDialogueAction
+function StaticDialogueActions.adjust_faction_trust(amount) end
+
+---@param role StaticDialogueParticipant
+---@param id StaticDialogueStringValue
+---@param options StaticDialogueEffectOptions
+---@return StaticDialogueAction
+function StaticDialogueActions.add_effect(role, id, options) end
 
 ---@class StaticDialogueOpinion
 ---@field trust? integer
@@ -7780,6 +7862,7 @@ function CcbPlatformContent.gendered_line(text, participants) end
 ---@class StaticDialogueOutcome
 ---@field next_topic? string Native topic id.
 ---@field native_actions? StaticDialogueNativeAction[] Built-in conversation operations in execution order.
+---@field actions? (StaticDialogueNativeAction|StaticDialogueAction)[] Ordered actions. Supply either actions or native_actions.
 ---@field opinion? StaticDialogueOpinion
 ---@field mission_opinion? StaticDialogueOpinion
 
@@ -7814,11 +7897,17 @@ function CcbPlatformContent.gendered_line(text, participants) end
 ---@field interlocutor_inventory? boolean Use the interlocutor's inventory.
 ---@field include_containers? boolean Compare category against a container's contents.
 
+---@class StaticDialogueEntryRule
+---@field when? StaticDialoguePredicate Checked after reply generation.
+---@field once? string Persist a once-per-speaker marker under the primary topic id.
+---@field actions (StaticDialogueNativeAction|StaticDialogueAction)[] Executed in order when the rule applies.
+
 ---@class StaticDialogueTopicOptions
 ---@field id string|string[] Topic id or aliases.
 ---@field line? StaticDialogueLine
 ---@field replies? StaticDialogueReply[]
 ---@field repeat_replies? StaticDialogueRepeatReply[]
+---@field on_enter? StaticDialogueEntryRule[] Topic entry rules executed in registration order.
 ---@field insert_before_standard_exits? boolean
 ---@field replace_native_replies? boolean
 

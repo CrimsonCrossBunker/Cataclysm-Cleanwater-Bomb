@@ -565,6 +565,10 @@ struct static_dialogue_predicate {
     talk_predicate test;
 };
 
+struct static_dialogue_action {
+    talk_effect_fun_t effect;
+};
+
 void initialize_state( sol::state &lua, const fs::path &requested_root,
                        const std::shared_ptr<runtime> &platform = nullptr,
                        const std::shared_ptr<const std::set<std::string>> &selected_mod_ids = nullptr,
@@ -584,6 +588,7 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     ccb["platform_version"] = platform_version;
     install_mod_definition( ccb );
     ccb.new_usertype<static_dialogue_predicate>( "StaticDialoguePredicate", sol::no_constructor );
+    ccb.new_usertype<static_dialogue_action>( "StaticDialogueAction", sol::no_constructor );
     if( platform ) {
         if( type != mod_source_type::mod ) {
             platform->content.install_lua_api( lua, ccb, platform );
@@ -2383,12 +2388,8 @@ bool dialogue_participant_is_interlocutor( std::string_view role )
     throw std::invalid_argument( "dialogue participant must be speaker or interlocutor" );
 }
 
-str_or_var read_dialogue_string_value( const sol::object &value )
+var_info read_dialogue_variable( const sol::table &variable )
 {
-    if( value.get_type() == sol::type::string ) {
-        return str_or_var( value.as<std::string>() );
-    }
-    const sol::table variable = value.as<sol::table>();
     static const std::map<std::string_view, var_type> scopes = {
         { "speaker", var_type::u }, { "interlocutor", var_type::npc },
         { "global", var_type::global }, { "conversation", var_type::context },
@@ -2399,10 +2400,35 @@ str_or_var read_dialogue_string_value( const sol::object &value )
     if( type == scopes.end() ) {
         throw std::invalid_argument( "unsupported dialogue variable scope: " + scope );
     }
+    return var_info( type->second, variable.get<std::string>( "key" ) );
+}
+
+str_or_var read_dialogue_string_value( const sol::object &value )
+{
+    if( value.get_type() == sol::type::string ) {
+        return str_or_var( value.as<std::string>() );
+    }
+    const sol::table variable = value.as<sol::table>();
     str_or_var result;
-    result.val = var_info( type->second, variable.get<std::string>( "key" ) );
+    result.val = read_dialogue_variable( variable );
     if( const auto fallback = variable.get<sol::optional<std::string>>( "fallback" ) ) {
         result.default_val = *fallback;
+    }
+    return result;
+}
+
+translation_or_var read_dialogue_translation_value( const sol::object &value )
+{
+    if( value.get_type() != sol::type::table ) {
+        const detail::authored_text text = detail::read_singular_text( value, {}, "dialogue action" );
+        return translation_or_var( text.translated ? text.native() : to_translation( text.raw ) );
+    }
+    const sol::table variable = value.as<sol::table>();
+    translation_or_var result;
+    result.val = read_dialogue_variable( variable );
+    if( const auto fallback = variable.get<sol::optional<sol::object>>( "fallback" ) ) {
+        const detail::authored_text text = detail::read_singular_text( *fallback, {}, "dialogue fallback" );
+        result.default_val = text.translated ? text.native() : to_translation( text.raw );
     }
     return result;
 }
@@ -2578,7 +2604,163 @@ dynamic_line_t read_static_dialogue_line( const sol::object &line )
     return dynamic_line_t::gendered( *gendered, std::move( participants ) );
 }
 
-talk_response_rules read_static_dialogue_rules( const sol::table &reply )
+void validate_builtin_dialogue_action( const std::string &name )
+{
+    static const std::set<std::string_view> available = {
+        "assign_mission", "mission_success", "mission_failure", "clear_mission", "mission_reward",
+        "start_trade", "assign_guard", "stop_guard", "wake_up", "reveal_stats", "end_conversation",
+        "insult_combat", "give_equipment", "give_aid", "give_all_aid", "bionic_install",
+        "bionic_remove", "follow", "follow_only", "deny_follow", "deny_lead", "deny_equipment",
+        "deny_train", "deny_personal_info", "hostile", "flee", "leave", "stop_following",
+        "goto_location", "stranger_neutral", "start_mugging", "player_leaving", "drop_weapon",
+        "drop_stolen_item", "remove_stolen_status", "player_weapon_away", "player_weapon_drop",
+        "lead_to_safety", "start_training", "start_training_npc", "start_training_seminar",
+        "npc_rules_menu", "clear_overrides", "npc_thankful", "nothing",
+        "dismount", "find_mount", "morale_chat_activity", "drop_items_in_place",
+        "start_camp", "basecamp_mission", "return_to_camp_duties", "repair_bionic_limbs",
+        "bionic_install_allies", "bionic_remove_allies",
+    };
+    if( available.count( name ) == 0 ) {
+        throw std::invalid_argument( "unsupported native dialogue action: " + name );
+    }
+}
+
+void install_static_dialogue_actions( sol::state &lua, sol::table &content )
+{
+    sol::table actions = lua.create_table();
+    actions.set_function( "set_actor_value", []( const std::string & role, const std::string & key,
+    const sol::object & value ) {
+        std::vector<std::string> choices = value.get_type() == sol::type::string ?
+                                           std::vector<std::string> { value.as<std::string>() } :
+                                           bounded_string_array( value.as<sol::table>(), "values",
+                                                   std::numeric_limits<std::size_t>::max(), "dialogue action" );
+        if( choices.empty() ) {
+            throw std::invalid_argument( "dialogue variable assignment needs at least one value" );
+        }
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::set_actor_value(
+                    dialogue_participant_is_interlocutor( role ), key, std::move( choices ) ) ) };
+    } );
+    actions.set_function( "record_turn", []( const std::string & role, const std::string & key ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::record_turn(
+                    dialogue_participant_is_interlocutor( role ), key ) ) };
+    } );
+    actions.set_function( "clear_actor_value", []( const std::string & role, const std::string & key ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::clear_actor_value(
+                    dialogue_participant_is_interlocutor( role ), key ) ) };
+    } );
+    actions.set_function( "set_string", []( const sol::table & target, const sol::table & values,
+    sol::optional<bool> expand_tags ) {
+        const std::size_t count = checked_dense_array_size( values, "dialogue string values",
+            std::numeric_limits<std::size_t>::max() );
+        if( count == 0 ) {
+            throw std::invalid_argument( "dialogue variable assignment needs at least one value" );
+        }
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::set_string(
+                    read_dialogue_variable( target ), read_dialogue_string_values( values ),
+                    expand_tags.value_or( false ) ) ) };
+    } );
+    actions.set_function( "set_translated_string", []( const sol::table & target,
+            const sol::table & values,
+    sol::optional<bool> expand_tags ) {
+        const std::size_t count = checked_dense_array_size( values, "dialogue translation values",
+            std::numeric_limits<std::size_t>::max() );
+        if( count == 0 ) {
+            throw std::invalid_argument( "dialogue variable assignment needs at least one translation" );
+        }
+        std::vector<translation_or_var> choices;
+        choices.reserve( count );
+        for( std::size_t i = 1; i <= count; ++i ) {
+            choices.push_back( read_dialogue_translation_value( values.raw_get<sol::object>( i ) ) );
+        }
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::set_translated_string(
+                    read_dialogue_variable( target ), std::move( choices ), expand_tags.value_or( false ) ) ) };
+    } );
+    actions.set_function( "assign_mission", []( const sol::object & id,
+    sol::optional<double> deadline ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::assign_mission(
+                    read_dialogue_string_value( id ), dbl_or_var( deadline.value_or( 0.0 ) ) ) ) };
+    } );
+    actions.set_function( "finish_mission", []( const sol::object & id, const sol::table & result ) {
+        const auto success = result.get<sol::optional<bool>>( "success" );
+        const auto step = result.get<sol::optional<int>>( "step" );
+        if( success.has_value() == step.has_value() ) {
+            throw std::invalid_argument( "dialogue mission completion requires one of success or step" );
+        }
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::finish_mission(
+                    read_dialogue_string_value( id ), success.value_or( false ),
+                    step ? std::optional<int>( *step ) : std::nullopt ) ) };
+    } );
+    actions.set_function( "set_first_topic", []( const sol::object & topic ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::set_first_topic(
+                    read_dialogue_string_value( topic ) ) ) };
+    } );
+    actions.set_function( "adjust_faction_trust", []( double amount ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::adjust_faction_trust(
+                    dbl_or_var( amount ) ) ) };
+    } );
+    actions.set_function( "add_effect", []( const std::string & role, const sol::object & id,
+    const sol::table & options ) {
+        const bool permanent = options.get_or( "permanent", false );
+        const auto turns = options.get<sol::optional<int>>( "turns" );
+        if( permanent == turns.has_value() ) {
+            throw std::invalid_argument( "dialogue effect needs a turn duration or permanent flag" );
+        }
+        const auto body_part = options.get<sol::optional<sol::object>>( "body_part" );
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::add_effect(
+                    dialogue_participant_is_interlocutor( role ), read_dialogue_string_value( id ),
+                    duration_or_var( time_duration::from_turns( turns.value_or( 1 ) ) ),
+                    body_part ? read_dialogue_string_value( *body_part ) : str_or_var( "bp_null" ),
+                    permanent, options.get_or( "force", false ),
+                    dbl_or_var( options.get_or( "intensity", 0.0 ) ) ) ) };
+    } );
+    content["dialogue_actions"] = actions;
+}
+
+std::optional<talk_effect_t> read_static_dialogue_actions( const sol::table &outcome,
+        const std::string &source )
+{
+    const auto actions = outcome.get<sol::optional<sol::table>>( "actions" );
+    if( !actions ) {
+        return std::nullopt;
+    }
+    if( outcome.get<sol::optional<sol::table>>( "native_actions" ) ) {
+        throw std::invalid_argument( "dialogue outcome cannot specify both actions and native_actions" );
+    }
+    const std::size_t count = checked_dense_array_size( *actions, "dialogue actions",
+        std::numeric_limits<std::size_t>::max() );
+    const JsonObject empty = json_loader::from_string( "{}" ).get_object();
+    talk_effect_t result;
+    for( std::size_t i = 1; i <= count; ++i ) {
+        const sol::object action = actions->raw_get<sol::object>( i );
+        if( action.get_type() == sol::type::string ) {
+            const std::string name = action.as<std::string>();
+            validate_builtin_dialogue_action( name );
+            result.parse_string_effect( name, empty, source );
+        } else {
+            result.set_effect( action.as<const static_dialogue_action &>().effect );
+        }
+    }
+    return result;
+}
+
+talk_entry_rules read_static_dialogue_entry( const sol::table &entry, const std::string &source )
+{
+    talk_entry_rules rules;
+    if( const auto predicate = entry.get<sol::optional<static_dialogue_predicate>>( "when" ) ) {
+        rules.condition = predicate->test;
+    }
+    if( const auto once = entry.get<sol::optional<std::string>>( "once" ) ) {
+        rules.once = *once;
+    }
+    auto actions = read_static_dialogue_actions( entry, source );
+    if( !actions ) {
+        throw std::invalid_argument( "dialogue entry rule requires actions" );
+    }
+    rules.actions = std::move( *actions );
+    return rules;
+}
+
+talk_response_rules read_static_dialogue_rules( const sol::table &reply, const std::string &source )
 {
     talk_response_rules rules;
     if( const auto predicate = reply.get<sol::optional<static_dialogue_predicate>>( "when" ) ) {
@@ -2590,6 +2772,18 @@ talk_response_rules read_static_dialogue_rules( const sol::table &reply )
         }
         rules.show_condition = predicate->test;
     }
+    rules.success_actions = read_static_dialogue_actions( reply, source );
+    if( const auto success = reply.get<sol::optional<sol::table>>( "success" ) ) {
+        if( rules.success_actions ) {
+            throw std::invalid_argument( "dialogue reply actions belong inside its success outcome" );
+        }
+        rules.success_actions = read_static_dialogue_actions( *success, source );
+    } else if( rules.success_actions && !reply.get<sol::optional<std::string>>( "next_topic" ) ) {
+        throw std::invalid_argument( "dialogue reply actions require a next topic" );
+    }
+    if( const auto failure = reply.get<sol::optional<sol::table>>( "failure" ) ) {
+        rules.failure_actions = read_static_dialogue_actions( *failure, source );
+    }
     return rules;
 }
 
@@ -2597,23 +2791,10 @@ void write_static_dialogue_outcome( JsonOut &json, const sol::table &outcome )
 {
     write_placement_member<std::string>( json, outcome, "next_topic", "topic" );
     if( const auto actions = outcome.get<sol::optional<sol::table>>( "native_actions" ) ) {
-        static const std::set<std::string_view> available = {
-            "assign_mission", "mission_success", "mission_failure", "clear_mission", "mission_reward",
-            "start_trade", "assign_guard", "stop_guard", "wake_up", "reveal_stats", "end_conversation",
-            "insult_combat", "give_equipment", "give_aid", "give_all_aid", "bionic_install",
-            "bionic_remove", "follow", "follow_only", "deny_follow", "deny_lead", "deny_equipment",
-            "deny_train", "deny_personal_info", "hostile", "flee", "leave", "stop_following",
-            "goto_location", "stranger_neutral", "start_mugging", "player_leaving", "drop_weapon",
-            "drop_stolen_item", "remove_stolen_status", "player_weapon_away", "player_weapon_drop",
-            "lead_to_safety", "start_training", "start_training_npc", "start_training_seminar",
-            "npc_rules_menu", "clear_overrides", "npc_thankful", "nothing",
-        };
         const auto names = bounded_string_array( *actions, "native_actions",
                            std::numeric_limits<std::size_t>::max(), "dialogue reply" );
         for( const std::string &name : names ) {
-            if( available.count( name ) == 0 ) {
-                throw std::invalid_argument( "unsupported native dialogue action: " + name );
-            }
+            validate_builtin_dialogue_action( name );
         }
         json.member( "effect", names );
     }
@@ -2719,7 +2900,7 @@ void load_static_dialogue_topic( const sol::table &options, const std::string &s
         json.start_array();
         for( std::size_t i = 1, count = replies->size(); i <= count; ++i ) {
             const sol::table reply = replies->raw_get<sol::table>( i );
-            rules.responses.push_back( read_static_dialogue_rules( reply ) );
+            rules.responses.push_back( read_static_dialogue_rules( reply, source ) );
             write_static_dialogue_reply( json, reply );
         }
         json.end_array();
@@ -2739,11 +2920,16 @@ void load_static_dialogue_topic( const sol::table &options, const std::string &s
             }
             json.member( "response" );
             const sol::table reply = repeat.get<sol::table>( "reply" );
-            rules.repeats.push_back( read_static_dialogue_rules( reply ) );
+            rules.repeats.push_back( read_static_dialogue_rules( reply, source ) );
             write_static_dialogue_reply( json, reply );
             json.end_object();
         }
         json.end_array();
+    }
+    if( const auto entries = options.get<sol::optional<sol::table>>( "on_enter" ) ) {
+        for( std::size_t i = 1, count = entries->size(); i <= count; ++i ) {
+            rules.on_enter.push_back( read_static_dialogue_entry( entries->raw_get<sol::table>( i ), source ) );
+        }
     }
     json.end_object();
 
@@ -3747,6 +3933,7 @@ void load_mod_content_with_data( const mod_source &source,
     } );
     content.set_function( "define_mapgen", load_static_mapgen );
     install_static_dialogue_predicates( lua, content );
+    install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );
     content.set_function( "define_dialogue_topic", [&resolved]( const sol::table &options ) {
         load_static_dialogue_topic( options, resolved.id );
