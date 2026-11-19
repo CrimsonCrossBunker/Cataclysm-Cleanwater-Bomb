@@ -345,6 +345,8 @@ static sol::table event_to_lua( runtime &owner, const cata::event &event,
         snapshot["kind"] = creature->is_avatar() ? "avatar" :
                            creature->is_npc() ? "npc" : mon != nullptr ? "monster" : "creature";
         snapshot["dead"] = creature->is_dead_state();
+        snapshot["position"] = script_tripoint_coord::from_native(
+                                   coords::origin::abs, coords::scale::map_square, creature->pos_abs().raw() );
         sol::table species = owner.lua->create_table();
         if( mon != nullptr ) {
             for( const species_id &id : mon->type->species ) {

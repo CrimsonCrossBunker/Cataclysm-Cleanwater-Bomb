@@ -10873,6 +10873,13 @@ function CcbPlatformContent.edit_forest_biome_mapgen(id) end
 ---and detached snapshots are exposed; no positional/avatar fallback or
 ---compatibility aliases are added.
 ---@field actors table<string, CcbDialogueParticipant|CcbDetachedDialogueParticipant>
+---@field participants { speaker?: CcbNativeEventCreature, interlocutor?: CcbNativeEventCreature }
+
+---@class CcbNativeEventCreature
+---@field kind 'avatar'|'npc'|'monster'|'creature'
+---@field dead boolean Native death state captured for this event.
+---@field position TripointCoord Absolute map-square position, including for a dead participant.
+---@field species string[] Species IDs for a monster participant.
 
 ---@class CcbDetachedDialogueParticipant
 ---@field kind 'computer'|'zone'|'topic'|'talker'|'item' Detached participant kind.
