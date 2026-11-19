@@ -1,0 +1,8 @@
+[
+  {
+    "id": "TALK_DELIVER_CONFIRM",
+    "type": "talk_topic",
+    "dynamic_line": "Pleasure doing business!",
+    "responses": [ { "text": "You might be seeing more of me…", "topic": "TALK_DONE", "effect": "u_bulk_trade_accept" } ]
+  }
+]
