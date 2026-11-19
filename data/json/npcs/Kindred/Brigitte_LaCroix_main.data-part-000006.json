@@ -1,0 +1,37 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_BONE_SEER_OTHERS_FRIEND",
+    "dynamic_line": "There are others who know the power the bones hold, but not all of them are my kin.  Not anymore, at least.",
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_kindred_knows_kindred", "value": "yes" } },
+    "responses": [
+      { "text": "What do you mean 'not anymore'?", "topic": "TALK_BONE_SEER_COOPER_FRIEND" },
+      { "text": "Why do we gather these bones again?", "topic": "TALK_BONE_SEER_BONES_FRIEND" },
+      { "text": "Thank you for the recap, but I have to go now.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_BONE_SEER_COOPER_FRIEND",
+    "dynamic_line": "Some time ago, a man named Cooper joined me and my kin.  He showed great promise and devotion to our cause, but in his effort to weave songs, he justified increasingly grim actions.  We tried to stop him when we learned of this, but he managed to get away.  If you ever come across him, be sure to thread carefully, and if you can, stop him.",
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_kindred_cooper_knows_cooper", "value": "yes" } },
+    "responses": [
+      { "text": "What exactly did he do again?", "topic": "TALK_BONE_SEER_COOPER2_FRIEND" },
+      { "text": "What do we do with the bones?", "topic": "TALK_BONE_SEER_BONES_FRIEND" },
+      { "text": "I see.  <done_conversation_section>", "topic": "TALK_FRIEND_BONE_SEER" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_BONE_SEER_COOPER2_FRIEND",
+    "dynamic_line": "He began killing others to get their bones as fresh as possible.  Later, he… he started carving the bones of the living.  Thought the anguish alone would empower the song.  The goal of the Kindred is to banish the shadow of the Cataclysm, not to cast it.  Such heinous acts will likely twist the song of the world, but I don't think Cooper realizes it.  To him, the end justifies any means.",
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_kindred_cooper_knows_cooper_kill", "value": "yes" } },
+    "responses": [
+      { "text": "Well… shit.  <done_conversation_section>", "topic": "TALK_FRIEND_BONE_SEER" },
+      {
+        "text": "What if he is right?  Maybe what you do isn't enough and he's the only one to do what it takes.",
+        "topic": "TALK_BONE_SEER_COOPER3_FRIEND"
+      }
+    ]
+  }
+]
