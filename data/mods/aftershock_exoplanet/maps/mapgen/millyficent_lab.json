@@ -296,54 +296,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "mortuary_2story_roof",
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "         ------         ",
-        "  --------....--------  ",
-        "  -..................-  ",
-        "---..................-  ",
-        "-....................-  ",
-        "-.U..................-  ",
-        "-....................-  ",
-        "--5..................-  ",
-        "  -..................-  ",
-        "  -..................-  ",
-        "  -..................-  ",
-        "  --------------------  ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "nested": { "U": { "chunks": [ "roof_2x2_infrastructure" ] } },
-      "place_nested": [
-        {
-          "chunks": [
-            [ "null", 20 ],
-            [ "roof_2x2_utilities_b", 15 ],
-            [ "roof_2x2_utilities_c", 5 ],
-            [ "roof_2x2_utilities_d", 40 ],
-            [ "roof_2x2_utilities", 50 ]
-          ],
-          "x": [ 4, 17 ],
-          "y": [ 14, 19 ]
-        }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "whately_cousin_update",
     "object": { "mapgensize": [ 1, 1 ], "place_npcs": [ { "class": "whately_cousin", "x": 0, "y": 0 } ] }
   },
