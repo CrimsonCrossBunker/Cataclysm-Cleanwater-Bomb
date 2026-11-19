@@ -1,40 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "afs_crashed_escape_pod_roof",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "          RRR           ",
-        "          RRR           ",
-        "          RRR           ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { "R": "t_metal_flat_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "afs_crashed_escape_pod" ],
     "object": {
       "predecessor_mapgen": "glacial_field",
