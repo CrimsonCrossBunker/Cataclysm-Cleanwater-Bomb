@@ -34,3 +34,67 @@ ccb.content.define_mapgen {
         fill_terrain = "t_open_air",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "mom_texopapalotl_crew_shed",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "       ||w|||||         ",
+            "       |______|         ",
+            "       |______+         ",
+            "       |R_____+         ",
+            "       |RR____|         ",
+            "       |_RRR__w         ",
+            "       |__RRR_w         ",
+            "       ||w|||||         ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "desolatebarn_palette" },
+        terrain = {
+            [" "] = "t_region_groundcover",
+            ["+"] = {
+                { id = "t_door_c", copies = 6 },
+                { id = "t_door_boarded" },
+                { id = "t_door_boarded_damaged" },
+            },
+            _ = "t_dirt",
+            ["|"] = { { id = "t_wall_wood", copies = 20 }, { id = "t_wall_wood_chipped" } },
+        },
+        furniture = { _ = { { id = "f_null", copies = 30 }, { id = "f_rubble" }, { id = "f_rubble_rock" } } },
+        traps = { R = "tr_mom_find_dead_fifth_sun_ocelopilli_trooper" },
+        fill_terrain = "t_region_groundcover",
+        item_groups = {
+            _ = { group = "wood_workshop", chance = 1 },
+            R = { { group = "wood_workshop", chance = 3 }, { group = "mischw", chance = 2 } },
+        },
+        item_group_placements = {
+            { chance = 100, group = "mom_texopapalotl_crew_shed_weapon", x = 8, y = 10 },
+            { chance = 100, group = "mom_texopapalotl_crew_shed_gear", x = 8, y = 11 },
+        },
+        field_placements = {
+            { id = "fd_blood", x = 8, y = 11, intensity = 2, age_turns = 0 },
+            { id = "fd_blood", x = 8, y = 10, intensity = 2, age_turns = 0 },
+            { id = "fd_blood", x = 8, y = 11, intensity = 2, age_turns = 0 },
+        },
+        item_placements = {
+            { id = "skull_human", x = 8, y = 11 },
+            { id = "bone_human", amount = { 5, 13 }, x = 8, y = 11 },
+        },
+    },
+}
