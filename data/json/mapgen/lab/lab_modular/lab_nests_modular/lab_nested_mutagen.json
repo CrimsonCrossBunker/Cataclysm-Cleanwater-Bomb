@@ -585,84 +585,6 @@
   },
   {
     "type": "mapgen",
-    "//": "A nested map for lab mutagen research areas. Center of room design.",
-    "nested_mapgen_id": "lab_mutagen_5x5_open",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "q J  ",
-        "  JA ",
-        "     ",
-        "  J  ",
-        " AJ  "
-      ],
-      "palettes": [ "lab_mutagen_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for lab mutagen research areas. Center of room design.",
-    "nested_mapgen_id": "lab_mutagen_5x5_open",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "q N  ",
-        "  NA ",
-        "     ",
-        "  N  ",
-        " AN  "
-      ],
-      "palettes": [ "lab_mutagen_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for lab mutagen research areas. Center of room design.",
-    "nested_mapgen_id": "lab_mutagen_5x5_open",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "q c Y",
-        "  ch ",
-        "    o",
-        "  l  ",
-        "ɱhcP "
-      ],
-      "palettes": [ "lab_mutagen_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for lab mutagen research areas. Center of room design.",
-    "nested_mapgen_id": "lab_mutagen_5x5_open",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        " Ph  ",
-        " ccc ",
-        " ccc ",
-        "  h  ",
-        " k   "
-      ],
-      "palettes": [ "lab_mutagen_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for mutagen research areas.  Science crate loot.",
-    "nested_mapgen_id": "lab_small_animals_1x1",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rotation": [ 0, 3 ],
-      "place_nested": [ { "chunks": [ [ "null", 50 ], [ "surface_sub_f_crate", 50 ] ], "x": [ 0, 4 ], "y": [ 0, 4 ], "repeat": [ 2, 10 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "//": "A nested map for mutagen research areas.  Rats for cages.",
     "nested_mapgen_id": "lab_black_rats_1x1",
     "object": {
@@ -791,50 +713,6 @@
       "mapgensize": [ 1, 1 ],
       "rotation": [ 0, 3 ],
       "place_monster": [ { "monster": "mon_raccoon", "x": 0, "y": 0, "chance": 100 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for mutagen research areas.  Small animals for cages.",
-    "nested_mapgen_id": "lab_small_animal_1x1",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rotation": [ 0, 3 ],
-      "place_nested": [
-        {
-          "chunks": [
-            [ "lab_rats_1x1", 50 ],
-            [ "lab_hares_1x1", 50 ],
-            [ "lab_rabbits_1x1", 50 ],
-            [ "lab_black_rats_1x1", 50 ],
-            [ "lab_foxes_1x1", 50 ],
-            [ "lab_racoons_1x1", 50 ],
-            [ "lab_pigeon_1x1", 50 ]
-          ],
-          "x": 0,
-          "y": 0
-        }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for mutagen research areas.  mid size animals.",
-    "nested_mapgen_id": "lab_medium_animal_1x1",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rotation": [ 0, 3 ],
-      "place_nested": [ { "chunks": [ [ "lab_cats_1x1", 50 ], [ "lab_dog_1x1", 50 ] ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "A nested map for mutagen research areas.  mid size animals.",
-    "nested_mapgen_id": "lab_medium_animal_1x1_MUTANT",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rotation": [ 0, 3 ],
-      "place_nested": [ { "chunks": [ [ "lab_cats_1x1_MUTANT", 50 ], [ "lab_dog_1x1_MUTANT", 50 ] ], "x": 0, "y": 0 } ]
     }
   },
   {

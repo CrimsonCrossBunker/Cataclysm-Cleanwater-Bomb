@@ -179,24 +179,6 @@
   },
   {
     "type": "mapgen",
-    "//": "A nested map for walls variety.",
-    "nested_mapgen_id": "lab_wall_chain_5x5",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "XX-XX",
-        "     ",
-        "     ",
-        "     ",
-        "     "
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "terrain": { "-": "t_chaingate_c", "X": "t_chainfence" }
-    }
-  },
-  {
-    "type": "mapgen",
     "//": "A nested map for lab common research areas.  Includes cold fields.",
     "nested_mapgen_id": "lab_common_5x5",
     "object": {
