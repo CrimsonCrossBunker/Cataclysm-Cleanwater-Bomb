@@ -1,0 +1,191 @@
+[
+  {
+    "id": "phase_immersion_helmet",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "category": "clothing",
+    "symbol": "[",
+    "color": "light_gray",
+    "name": { "str": "phase immersion helmet" },
+    "description": "This advanced headpiece resembles an astronaut's helmet.  Designed to protect its wearer during extradimensional excursions, it offers unparalleled environmental protection, both in this Earth and beyond.  It has tubes to connect to a powered air-purifying respirator (PAPR), and a regulator to connect to an external air source (such as a SCUBA tank).",
+    "price": "1 kUSD 500 USD",
+    "price_postapoc": "150 USD",
+    "material": [ "aluminum", "qt_steel", "lvl4ballisticglass" ],
+    "weight": "950 g",
+    "volume": "450 ml",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "volume_encumber_modifier": 0,
+        "max_contains_volume": "1600 ml",
+        "max_contains_weight": "800 g",
+        "max_item_length": "14 cm",
+        "moves": 200,
+        "description": "Attachment points for a floating Communications Carrier Assembly (CCA).",
+        "inherits_flags": true,
+        "item_restriction": [ "phase_immersion_cca", "phase_immersion_cca_on" ]
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "volume_encumber_modifier": 0,
+        "max_contains_volume": "300 ml",
+        "max_contains_weight": "500 g",
+        "max_item_length": "14 cm",
+        "moves": 100,
+        "description": "External clips for a flashlight.",
+        "flag_restriction": [ "HELMET_HEAD_ATTACHMENT" ],
+        "transparent": true
+      }
+    ],
+    "use_action": [
+      "PAPR_MASK_ACTIVATE",
+      "SCBA_MASK_ACTIVATE",
+      {
+        "type": "transform",
+        "msg": "You raise your face shield.",
+        "menu_text": "Raise face shield",
+        "target": "phase_immersion_helmet_raised"
+      }
+    ],
+    "tick_action": [ "PAPR_MASK" ],
+    "warmth": 30,
+    "environmental_protection": 10,
+    "environmental_protection_with_filter": 80,
+    "material_thickness": 3,
+    "flags": [
+      "RAD_PROOF",
+      "STURDY",
+      "WATERPROOF",
+      "RAINPROOF",
+      "SWIM_GOGGLES",
+      "SUN_GLASSES",
+      "PADDED",
+      "UNBREAKABLE_MELEE",
+      "PSYSHIELD_PARTIAL",
+      "SCBA"
+    ],
+    "armor": [
+      {
+        "material": [ { "type": "lvl4ballisticglass", "covered_by_mat": 100, "thickness": 1.0 } ],
+        "encumbrance": 5,
+        "coverage": 100,
+        "covers": [ "mouth", "eyes" ],
+        "layers": [ "OUTER" ],
+        "volume_encumber_modifier": 0
+      },
+      {
+        "material": [
+          { "type": "aluminum", "covered_by_mat": 60, "thickness": 1.0 },
+          { "type": "qt_steel", "covered_by_mat": 30, "thickness": 1.0 },
+          { "type": "lvl4ballisticglass", "covered_by_mat": 100, "thickness": 1.0 }
+        ],
+        "encumbrance": 10,
+        "coverage": 100,
+        "covers": [ "head" ],
+        "layers": [ "OUTER" ],
+        "volume_encumber_modifier": 0
+      }
+    ]
+  },
+  {
+    "id": "phase_immersion_helmet_raised",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "category": "clothing",
+    "symbol": "[",
+    "color": "light_gray",
+    "name": { "str": "phase immersion helmet (raised)", "str_pl": "phase immersion helmets (raised)" },
+    "description": "This advanced headpiece resembles an astronaut's helmet.  Designed to protect its wearer during extradimensional excursions, it offers unparalleled environmental protection, both in this Earth and beyond.  The face shield is raised.  Activate it to lower the face shield.",
+    "price": "1 kUSD 500 USD",
+    "price_postapoc": "150 USD",
+    "material": [ "aluminum", "qt_steel", "lvl4ballisticglass" ],
+    "weight": "950 g",
+    "volume": "450 ml",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "volume_encumber_modifier": 0,
+        "max_contains_volume": "1600 ml",
+        "max_contains_weight": "800 g",
+        "max_item_length": "14 cm",
+        "ablative": true,
+        "moves": 200,
+        "description": "Attachment points for a floating Communications Carrier Assembly (CCA).",
+        "inherits_flags": true,
+        "item_restriction": [ "phase_immersion_cca", "phase_immersion_cca_on" ]
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "volume_encumber_modifier": 0,
+        "max_contains_volume": "300 ml",
+        "max_contains_weight": "500 g",
+        "max_item_length": "14 cm",
+        "moves": 100,
+        "description": "External clips for a flashlight.",
+        "flag_restriction": [ "HELMET_HEAD_ATTACHMENT" ],
+        "transparent": true
+      }
+    ],
+    "use_action": [
+      {
+        "type": "transform",
+        "msg": "You lower your face shield.",
+        "menu_text": "Lower face shield",
+        "target": "phase_immersion_helmet"
+      }
+    ],
+    "warmth": 15,
+    "material_thickness": 3,
+    "flags": [ "RAD_PROOF", "STURDY", "WATERPROOF", "RAINPROOF", "PADDED", "PSYSHIELD_PARTIAL" ],
+    "environmental_protection": 4,
+    "armor": [
+      {
+        "material": [
+          { "type": "aluminum", "covered_by_mat": 60, "thickness": 1.0 },
+          { "type": "qt_steel", "covered_by_mat": 30, "thickness": 1.0 },
+          { "type": "lvl4ballisticglass", "covered_by_mat": 100, "thickness": 2.0 }
+        ],
+        "encumbrance": 10,
+        "coverage": 100,
+        "covers": [ "head" ],
+        "layers": [ "OUTER" ],
+        "volume_encumber_modifier": 0
+      }
+    ]
+  },
+  {
+    "id": "phase_immersion_helmet_scba_on",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "category": "clothing",
+    "symbol": "[",
+    "color": "light_gray",
+    "name": { "str": "phase immersion helmet (SCBA)", "str_pl": "phase immersion helmets (SCBA)" },
+    "description": "This advanced headpiece resembles an astronaut's helmet.  Designed to protect its wearer during extradimensional excursions, it offers unparalleled environmental protection, both in this Earth and beyond.  Its SCBA system is currently engaged.  Activate it to turn it off.",
+    "copy-from": "phase_immersion_helmet",
+    "use_action": [
+      {
+        "type": "transform",
+        "msg": "You turn off the SCBA system.",
+        "menu_text": "Turn off the SCBA system",
+        "target": "phase_immersion_helmet"
+      }
+    ],
+    "tick_action": [ "SCBA_MASK" ],
+    "environmental_protection": 80,
+    "revert_to": "phase_immersion_helmet",
+    "flags": [
+      "RAD_PROOF",
+      "STURDY",
+      "WATERPROOF",
+      "RAINPROOF",
+      "SWIM_GOGGLES",
+      "SUN_GLASSES",
+      "PADDED",
+      "UNBREAKABLE_MELEE",
+      "PSYSHIELD_PARTIAL",
+      "SPAWN_ACTIVE",
+      "SCBA_ON"
+    ]
+  }
+]
