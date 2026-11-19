@@ -1,0 +1,70 @@
+[
+  {
+    "id": "bandana",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR" ],
+    "category": "clothing",
+    "name": { "str": "bandana" },
+    "description": "A cotton bandana, worn over the mouth for warmth and minor protection from dust and other contaminants.",
+    "weight": "35 g",
+    "volume": "250 ml",
+    "price": "6 USD",
+    "price_postapoc": "10 cent",
+    "use_action": {
+      "type": "transform",
+      "msg": "You adjust the bandana to cover your head.",
+      "target": "bandana_head",
+      "menu_text": "Cover head"
+    },
+    "material": [ "cotton" ],
+    "symbol": "[",
+    "looks_like": "scarf",
+    "color": "blue",
+    "warmth": 5,
+    "material_thickness": 0.1,
+    "environmental_protection": 2,
+    "armor": [ { "encumbrance": 1, "coverage": 95, "covers": [ "mouth" ] } ]
+  },
+  {
+    "id": "bondage_mask",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "bondage mask" },
+    "description": "A tight mask made of black leather.  The eyes and mouth can be closed using zippers.",
+    "weight": "210 g",
+    "volume": "1 L",
+    "price": "40 USD",
+    "price_postapoc": "50 cent",
+    "material": [ "leather" ],
+    "symbol": "[",
+    "looks_like": "balclava",
+    "color": "dark_gray",
+    "warmth": 10,
+    "material_thickness": 0.5,
+    "environmental_protection": 1,
+    "flags": [ "VARSIZE", "SKINTIGHT" ],
+    "use_action": {
+      "menu_text": "Zip up",
+      "type": "transform",
+      "target": "bondage_mask_zipped",
+      "msg": "You zip the eyes and mouth of the bondage mask closed."
+    },
+    "armor": [ { "encumbrance": 30, "coverage": 100, "covers": [ "head", "eyes", "mouth" ] } ]
+  },
+  {
+    "id": "bondage_mask_zipped",
+    "copy-from": "bondage_mask",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "bondage mask (zipped)", "str_pl": "bondage masks (zipped)" },
+    "description": "A tight mask made of black leather.  The eyes and mouth have been zipped closed.",
+    "looks_like": "bondage_mask",
+    "flags": [ "VARSIZE", "SKINTIGHT", "BLIND" ],
+    "use_action": {
+      "menu_text": "Unzip",
+      "type": "transform",
+      "target": "bondage_mask",
+      "msg": "You unzip the eyes and mouth of the bondage mask."
+    }
+  }
+]
