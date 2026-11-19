@@ -1,13 +1,22 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
--- In the future this should start a quest line or allow free merchant caravans to sometimes show up near the Exodii base.
 ccb.content.define_dialogue_topic {
-    id = "TALK_FREE_MERCHANT_TEAMSTER_EXODII_1",
-    line = ccb.content.text("Well now, that's a hell of a story.  Some day, I'll see if we can get out there an' look into it.  Sounds like there'd be some real interestin' trade."),
+    id = "TALK_FREE_MERCHANT_TEAMSTER_FACTION_INTRO",
+    line = ccb.content.text("Always lookin' for new places to trade.  What you got for me?"),
     replies = {
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_FREE_MERCHANT_TEAMSTER_CHAT",
+            text = ccb.content.text("[Tell them about Rubik and the Exodii.]"),
+            next_topic = "TALK_FREE_MERCHANT_TEAMSTER_EXODII_1",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "general_meeting_u_met_Rubik" } }),
+        },
+        {
+            text = ccb.content.text("Hold on, what were you saying before?"),
+            next_topic = "TALK_NONE",
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>  <end_talking_later>"),
+            next_topic = "TALK_DONE",
         },
     },
 }
