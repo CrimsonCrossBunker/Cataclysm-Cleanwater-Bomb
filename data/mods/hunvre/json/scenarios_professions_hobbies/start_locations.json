@@ -1,9 +1,0 @@
-[
-  {
-    "type": "start_location",
-    "id": "sloc_depths",
-    "name": "Depths",
-    "terrain": [ "hab_unit" ],
-    "flags": [ "ALLOW_OUTSIDE" ]
-  }
-]

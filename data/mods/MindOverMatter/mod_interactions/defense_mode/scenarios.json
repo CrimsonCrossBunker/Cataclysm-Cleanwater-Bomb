@@ -4,11 +4,5 @@
     "type": "scenario",
     "extend": { "allowed_locs": [ "sloc_phavian_office" ] },
     "id": "defense_mode_fortified"
-  },
-  {
-    "type": "start_location",
-    "id": "sloc_phavian_office",
-    "name": "Office?",
-    "terrain": [ "office_cubical_phavian" ]
   }
 ]
