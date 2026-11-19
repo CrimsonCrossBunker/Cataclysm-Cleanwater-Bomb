@@ -1,0 +1,127 @@
+[
+  {
+    "id": "quiver_takedown_bow",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "//": "Based on: https://www.amazon.com/XTACER-Multi-Function-4-Tubes-Training-Takedown/dp/B072K4537K",
+    "name": { "str": "multi-function quiver" },
+    "description": "A large cotton quiver capable of easily storing 16 arrows.  It includes a bag and straps to store a takedown bow, as well as a small pouch for archery accessories.  Use insert to store arrows or bolts and activate to holster/draw your bow.",
+    "weight": "720 g",
+    "volume": "1500 ml",
+    "price": "88 USD",
+    "price_postapoc": "15 USD",
+    "material": [ "cotton" ],
+    "symbol": "[",
+    "looks_like": "quiver",
+    "color": "dark_gray",
+    "material_thickness": 1,
+    "pocket_data": [
+      { "ammo_restriction": { "arrow": 16, "bolt": 16 }, "moves": 20 },
+      {
+        "pocket_type": "CONTAINER",
+        "holster": true,
+        "min_item_volume": "500 ml",
+        "max_contains_volume": "4 L",
+        "max_contains_weight": "5 kg",
+        "max_item_length": "75 cm",
+        "moves": 80,
+        "item_restriction": [ "takedown_recurbow_folded" ]
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "2500 ml",
+        "max_contains_weight": "2 kg",
+        "max_item_length": "35 cm",
+        "moves": 250
+      }
+    ],
+    "flags": [ "BELTED", "OVERSIZE", "WATER_FRIENDLY" ],
+    "use_action": { "type": "holster" },
+    "armor": [
+      {
+        "encumbrance": 3,
+        "volume_encumber_modifier": 0.2,
+        "coverage": 30,
+        "covers": [ "torso" ],
+        "specifically_covers": [ "torso_hanging_back" ]
+      }
+    ],
+    "melee_damage": { "bash": 4 }
+  },
+  {
+    "id": "tacvest",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "tac vest" },
+    "description": "This light vest is meant to carry your magazines, shells and pistols.  They are popular among law enforcement, but less so than combination tactical vests incorporating Kevlar.",
+    "weight": "1750 g",
+    "volume": "1250 ml",
+    "looks_like": "vest",
+    "price": "74 USD",
+    "price_postapoc": "20 USD",
+    "material": [ "nylon" ],
+    "symbol": "[",
+    "color": "dark_gray",
+    "material_thickness": 2,
+    "use_action": { "type": "holster", "holster_prompt": "Stash item", "holster_msg": "You stash your %s." },
+    "pocket_data": [
+      {
+        "magazine_well": "350 ml",
+        "pocket_type": "CONTAINER",
+        "holster": true,
+        "max_contains_volume": "1000 ml",
+        "max_contains_weight": "2 kg",
+        "max_item_length": "30 cm",
+        "moves": 50,
+        "volume_encumber_modifier": 0.3
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_item_length": "300 mm",
+        "max_contains_volume": "1 L",
+        "max_contains_weight": "2 kg",
+        "moves": 100,
+        "volume_encumber_modifier": 0.25
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_item_length": "300 mm",
+        "max_contains_volume": "1 L",
+        "max_contains_weight": "2 kg",
+        "moves": 100,
+        "volume_encumber_modifier": 0.25
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_item_length": "250 mm",
+        "max_contains_volume": "800 ml",
+        "max_contains_weight": "1600 g",
+        "moves": 100,
+        "volume_encumber_modifier": 0.25
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_item_length": "250 mm",
+        "max_contains_volume": "800 ml",
+        "max_contains_weight": "1600 g",
+        "moves": 100,
+        "volume_encumber_modifier": 0.25
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_item_length": "250 mm",
+        "max_contains_volume": "800 ml",
+        "max_contains_weight": "1600 g",
+        "moves": 100,
+        "volume_encumber_modifier": 0.25
+      },
+      {
+        "ammo_restriction": { "410shot": 6, "shot": 6, "signal_flare": 6 },
+        "moves": 25,
+        "volume_encumber_modifier": 0.2
+      }
+    ],
+    "flags": [ "WATER_FRIENDLY", "BELTED" ],
+    "armor": [ { "encumbrance": 2, "coverage": 85, "covers": [ "torso" ], "specifically_covers": [ "torso_upper" ] } ]
+  }
+]
