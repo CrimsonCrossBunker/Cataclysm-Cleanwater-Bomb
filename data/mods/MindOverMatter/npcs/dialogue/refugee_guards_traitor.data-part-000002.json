@@ -17,17 +17,5 @@
         }
       }
     ]
-  },
-  {
-    "id": [ "TALK_EVAC_GUARD3_deep_scan" ],
-    "type": "talk_topic",
-    "dynamic_line": "&It's only a moment, but that's enough.  You are looking from behind a tree onto a road where a crude roadblock has been set up.  There's a refugee bus, one of the same ones parked outside the refugee center, stopped at the roadblock, and as the driver gets out to look at the roadblock, there's a loud crack and two spots of red appear on his chest and leg.  As he begins to fall and the people in the bus start screaming, the raiders emerge from the trees, already running with guns raised.",
-    "responses": [
-      {
-        "text": "*Withdraw from <npc_name>'s mind*.",
-        "effect": { "u_add_var": "dialogue_refugee_center_traitor_deep_scanned_evac_guard_3", "value": "yes" },
-        "topic": "TALK_EVAC_GUARD3_post_scan"
-      }
-    ]
   }
 ]
