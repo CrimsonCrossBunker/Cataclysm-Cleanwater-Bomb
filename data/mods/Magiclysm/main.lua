@@ -147,3 +147,5 @@ require("druid_spells")
 require("druid_forms")
 
 require("monster_groups")
+
+require("consumable_effects")
