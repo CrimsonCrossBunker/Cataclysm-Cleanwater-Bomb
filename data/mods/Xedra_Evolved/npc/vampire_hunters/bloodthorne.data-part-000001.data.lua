@@ -1,43 +1,41 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
+-- Due to her heartvines, she notices vampirism before it has visible symptoms.
 ccb.content.define_dialogue_topic {
-    id = "TALK_VAMPIRE_HUNTER_BLOODTHORNE_PERFORM_CURE",
+    id = "TALK_HUNTER_BLOODTHORNE",
     line = {
         choices = {
-            ccb.content.text("\"And done\" Phyliss says.  \"You're now free from vampirism for the time being.  Take some time to recover, and ask Blaine if you ever want to buy a less painful cure from him.\""),
-        },
-    },
-    replies = { { text = ccb.content.text("thanks.  <end_talking_bye>"), next_topic = "TALK_DONE" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_VAMPIRE_HUNTER_BLOODTHORNE_INTRO",
-    line = {
-        choices = {
-            ccb.content.text("I can use my heartvines to cure people from vampirism.  I let the heartvines enter their veins where the curse will be destroyed by the heartvines and their intense desire to kill all vampires.  It's painful for them, but it's better than staying a vampire."),
+            {
+                when = predicates.has_effect("speaker", "vampire_virus"),
+                yes = ccb.content.text("You seem unwell.  Are you looking for a cure to your condition?"),
+                no = {
+                    choices = {
+                        {
+                            when = predicates.has_item("speaker", "arvore_sample"),
+                            yes = ccb.content.text("I see you brought some arvore samples.  Can I have them?  I'll tell Elsa and Blaine to reward you if you do."),
+                            no = ccb.content.text("You do not need my help right now, so I'll return to my work."),
+                        },
+                    },
+                },
+            },
         },
     },
     replies = {
         {
-            text = ccb.content.text("What's a heartvine?"),
-            next_topic = "TALK_VAMPIRE_HUNTER_BLOODTHORNE_INNER_PLANT",
+            text = ccb.content.text("I am.  Free me from this curse."),
+            next_topic = "TALK_VAMPIRE_HUNTER_BLOODTHORNE_OFFER_CURE",
+            when = predicates.has_effect("speaker", "vampire_virus"),
         },
-        { text = ccb.content.text("Cool.  <end_talking_bye>"), next_topic = "TALK_DONE" },
-    },
-}
-
--- Maybe she'll offer the player to become a Bloodthorne druid someday, but not for now.
-ccb.content.define_dialogue_topic {
-    id = "TALK_VAMPIRE_HUNTER_BLOODTHORNE_INNER_PLANT",
-    line = {
-        choices = {
-            ccb.content.text("That's how Bloodthorne druids call the plant inside them.  It empowers us through the essence of nature spirits so we may kill the blood-drinkers.  Before you ask, I can't help you become one.  I wasn't taught how to do this before I lost contact with other Bloodthorne druids."),
-        },
-    },
-    replies = {
         {
-            text = ccb.content.text("What do you mean by \"essence\"?"),
-            next_topic = "TALK_VAMPIRE_HUNTER_BLOODTHORNE_NEED_SAMPLES",
+            text = ccb.content.text("How can you help me?"),
+            next_topic = "TALK_VAMPIRE_HUNTER_BLOODTHORNE_INTRO",
+            when = predicates.negate(predicates.has_effect("speaker", "vampire_virus")),
+        },
+        {
+            text = ccb.content.text("Sure!  How many do you want?"),
+            next_topic = "TALK_VAMPIRE_HUNTER_BLOODTHORNE_SELL_SAMPLES",
+            when = predicates.has_item("speaker", "arvore_sample"),
         },
         {
             text = ccb.content.text_without_extraction("<end_talking_bye>"),
