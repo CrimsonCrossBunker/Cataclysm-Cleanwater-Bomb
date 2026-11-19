@@ -141,3 +141,4 @@ require("denarius")
 require("spell_traps")
 
 require("spell_proficiencies")
+require("druid_spells")

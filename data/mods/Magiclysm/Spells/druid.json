@@ -1,55 +1,5 @@
 [
   {
-    "id": "druid_veggrasp",
-    "type": "SPELL",
-    "name": "Vegetative Grasp",
-    "description": "This spell causes roots and vines to burst forth from the ground and grab your foes, slowing them and doing a small amount of damage as they dig in.\n\nLarger targets will be <color_yellow>less affected</color> by the spell, and it has <color_red>no effect</color> on targets not on natural ground.",
-    "valid_targets": [ "hostile", "ground" ],
-    "flags": [ "EVOCATION_SPELL", "LOUD", "SOMATIC", "VERBAL", "RANDOM_DAMAGE", "NO_LEGS", "NO_PROJECTILE", "SPLIT_DAMAGE" ],
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_DRUID_VEGGRASP_ENTANGLED",
-    "shape": "blast",
-    "spell_class": "DRUID",
-    "base_casting_time": 100,
-    "base_energy_cost": 175,
-    "magic_type": "magiclysm_evocation_magic",
-    "difficulty": 2,
-    "max_level": 20,
-    "min_damage": { "math": [ "(u_spell_level('druid_veggrasp') * 0.1) + 1" ] },
-    "max_damage": { "math": [ "(u_spell_level('druid_veggrasp') * 0.4) + 2" ] },
-    "min_aoe": 2,
-    "max_aoe": 8,
-    "aoe_increment": 0.5,
-    "min_range": 3,
-    "max_range": 10,
-    "range_increment": 1.0,
-    "min_duration": 1000,
-    "max_duration": 10000,
-    "duration_increment": 500,
-    "min_pierce": 1,
-    "max_pierce": 5,
-    "pierce_increment": 0.25,
-    "min_dot": 0.1,
-    "max_dot": 0.3,
-    "dot_increment": 0.01,
-    "extra_effects": [ { "id": "eoc_evocation_setup", "hit_self": true } ],
-    "damage_type": "stab"
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_DRUID_VEGGRASP_ENTANGLED",
-    "condition": "has_alpha",
-    "effect": [
-      { "math": [ "u_vegetative_grasp_affected_level = n_spell_level('druid_veggrasp')" ] },
-      {
-        "math": [
-          "u_evocation_spell_affected_proficiency = (1 + (n_has_proficiency('prof_magic_evocation_beginner') * 0.1 ) + (n_has_proficiency('prof_magic_evocation_apprentice') * 0.1 ) + (n_has_proficiency('prof_magic_evocation_master') * 0.1 ) )"
-        ]
-      },
-      { "u_add_effect": "entangled", "duration": { "math": [ "10 + (u_vegetative_grasp_affected_level * 5)" ] } }
-    ]
-  },
-  {
     "id": "druid_rootstrike",
     "type": "SPELL",
     "name": "Root Strike",
@@ -560,63 +510,6 @@
     "effect_str": "mon_wolf"
   },
   {
-    "id": "druid_natures_commune",
-    "type": "SPELL",
-    "name": "Communion with Nature",
-    "description": "You focus on the bounty of nature around you and commune with it, improving your health and mood and calming nearby wildlife.  This spell may only be cast outdoors away from civilization.",
-    "valid_targets": [ "self" ],
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_NATURE_COMMUNE",
-    "shape": "blast",
-    "flags": [ "CHANNELING_SPELL", "CONCENTRATE", "SOMATIC", "VERBAL", "NO_LEGS", "NO_HANDS" ],
-    "magic_type": "magiclysm_channeling_magic",
-    "spell_class": "DRUID",
-    "caster_condition": {
-      "and": [
-        "u_is_outside",
-        {
-          "or": [
-            { "u_is_on_terrain_with_flag": "SHRUB" },
-            { "u_is_on_terrain_with_flag": "DIGGABLE" },
-            { "u_is_on_terrain_with_flag": "YOUNG" }
-          ]
-        },
-        { "not": { "u_near_om_location": "road", "range": 1 } }
-      ]
-    },
-    "caster_condition_fail_message": "You must be surrounded by nature to commune with nature.",
-    "difficulty": 4,
-    "base_casting_time": 12000,
-    "base_energy_cost": 250,
-    "final_energy_cost": 400,
-    "energy_increment": 10,
-    "extra_effects": [ { "id": "eoc_channeling_setup", "hit_self": true } ],
-    "max_level": 20,
-    "min_duration": 30000,
-    "max_duration": 360000,
-    "duration_increment": 16500
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_NATURE_COMMUNE",
-    "effect": [
-      {
-        "u_add_effect": "natures_commune",
-        "duration": { "math": [ "( 300 + (u_spell_level('druid_natures_commune') * 165)) * ( channeling_proficiency_modifier() )" ] }
-      },
-      { "u_lose_morale": "morale_forest_unity" },
-      {
-        "u_add_morale": "morale_forest_unity",
-        "bonus": { "math": [ "5 + (u_spell_level('druid_natures_commune') * 3)  * ( channeling_proficiency_modifier() )" ] },
-        "max_bonus": 50,
-        "duration": { "math": [ "( 300 + (u_spell_level('druid_natures_commune') * 165) )  * ( channeling_proficiency_modifier() )" ] },
-        "decay_start": {
-          "math": [ "(( 300 + (u_spell_level('druid_natures_commune') * 165) ) / 2)  * ( channeling_proficiency_modifier() )" ]
-        }
-      }
-    ]
-  },
-  {
     "id": "druid_growth",
     "type": "SPELL",
     "spell_class": "DRUID",
@@ -778,51 +671,6 @@
     "max_level": 15,
     "spell_class": "DRUID",
     "magic_type": "magiclysm_transformation_magic"
-  },
-  {
-    "id": "druid_whisper_leaves",
-    "type": "SPELL",
-    "name": "Whisper of the Leaves",
-    "description": "This spell allows you to hear the trees' wisdom in the rustle of the leaves and the creaking of their roots, discerning the layout of the forest.",
-    "valid_targets": [ "self" ],
-    "flags": [ "CHANNELING_SPELL", "CONCENTRATE", "VERBAL", "SOMATIC" ],
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_GAIN_WHISPER_LEAVES",
-    "shape": "blast",
-    "magic_type": "magiclysm_channeling_magic",
-    "spell_class": "DRUID",
-    "difficulty": 6,
-    "max_level": 15,
-    "base_casting_time": 6000,
-    "final_casting_time": 1000,
-    "casting_time_increment": -350,
-    "base_energy_cost": 800,
-    "final_energy_cost": 500,
-    "energy_increment": -40,
-    "extra_effects": [ { "id": "eoc_channeling_setup", "hit_self": true } ],
-    "min_duration": 6000,
-    "max_duration": 6000
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_GAIN_WHISPER_LEAVES",
-    "condition": { "not": { "u_has_trait": "TREE_COMMUNION" } },
-    "effect": [
-      { "u_add_trait": "TREE_COMMUNION" },
-      { "u_activate_trait": "TREE_COMMUNION" },
-      { "run_eocs": "EOC_LOSE_WHISPER_LEAVES", "time_in_future": [ "1 seconds", "1 seconds" ] }
-    ],
-    "false_effect": [
-      {
-        "u_message": "You are already in tune with the rhythms of the forest.  Further magic cannot deepen your bond.",
-        "type": "good"
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_LOSE_WHISPER_LEAVES",
-    "effect": [ { "u_lose_trait": "TREE_COMMUNION" } ]
   },
   {
     "id": "druid_harvest_hunter",
@@ -1350,33 +1198,6 @@
     "max_duration": 1440000,
     "duration_increment": 96000,
     "extra_effects": [ { "id": "eoc_transformation_setup", "hit_self": true } ]
-  },
-  {
-    "id": "druid_goodberry",
-    "type": "SPELL",
-    "name": "Goodberry",
-    "description": "Enchant a set of berries, transforming them into magical fruit that will provide a hearty meal's worth of nutrition and a small amount of healing when eaten.  The goodberries will rot away within 24 hours if not eaten.",
-    "valid_targets": [ "self" ],
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_DRUID_GOODBERRY",
-    "shape": "blast",
-    "flags": [ "TRANSFORMATION_SPELL", "SOMATIC", "VERBAL" ],
-    "components": "spell_components_goodberry",
-    "spell_class": "DRUID",
-    "magic_type": "magiclysm_transformation_magic",
-    "difficulty": 3,
-    "base_casting_time": 30000,
-    "base_energy_cost": 350,
-    "max_level": 15,
-    "min_duration": 8640000,
-    "max_duration": 8640000,
-    "extra_effects": [ { "id": "eoc_transformation_setup", "hit_self": true } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "//": "EoC to summon because summoned comestibles don't have timers",
-    "id": "EOC_DRUID_GOODBERRY",
-    "effect": [ { "u_spawn_item": "item_druid_goodberry", "count": 1, "suppress_message": true } ]
   },
   {
     "id": "druid_create_temporary_spring",

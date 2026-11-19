@@ -153,6 +153,13 @@ require("portal_storm_interactions")
 
 require("portal_storm_timers")
 
+-- Magiclysm and XedraWood both used the same saved task ID for this temporary trait.
+ccb.runtime.handler("restore_whisper_leaves_cleanup", function(payload)
+    local mutation = ccb.services.types.id("mutation", "TREE_COMMUNION")
+    local result = ccb.services.mutations.erase(payload.character, mutation)
+    if not result.ok then error(result.error.message) end
+end, 1)
+
 require("portal_storm_cycle")
 
 require("labyrinth_returns")

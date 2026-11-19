@@ -90,16 +90,19 @@ end, 1)
 
 ccb.runtime.handler("whisper_leaves_impact", function(impact)
     local actor = impact.target_creature
-    if not is_character(actor) then return end
-    if checked(services.mutations.has_id_text(actor, "TREE_COMMUNION")) then
+    local character = is_character(actor)
+    if character and checked(services.mutations.has_id_text(actor, "TREE_COMMUNION")) then
         if actor.subtype == "avatar" then
             services.messages.add(ccb.services.translate("You are already in tune with the rhythms of the forest.  Further magic cannot deepen your bond."), "good")
         end
         return
     end
-    checked(services.mutations.replace(actor, tree_communion))
-    checked(services.mutations.invoke_activation(actor, tree_communion, true))
-    ccb.tasks.after_character_turn(actor, services.random.native_int(1, 1), lose_whisper_due)
+    if character then
+        checked(services.mutations.replace(actor, tree_communion))
+        checked(services.mutations.invoke_activation(actor, tree_communion, true))
+    end
+    local delay = services.random.native_int(1, 1)
+    if character then ccb.tasks.after_character_turn(actor, delay, lose_whisper_due) end
 end)
 
 content.add(content.Spell {
