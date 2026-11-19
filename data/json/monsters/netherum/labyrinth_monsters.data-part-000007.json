@@ -1,0 +1,51 @@
+[
+  {
+    "id": "mon_overgrown_labyrinth_turret_2_1",
+    "type": "MONSTER",
+    "name": { "str": "vine turret" },
+    "description": "A massive tangle of vines hanging from the ceiling, dripping with blood and acrid ichor.  A metal gun dangles from its vines, tangled in a mix of copper tubes, shielded wires, woody tendrils, and fleshy sinew.  The amalgamation of flesh and metal slowly rotates, scanning the area.",
+    "default_faction": "nether_hate_humans",
+    "species": [ "ROBOT", "CYBORG", "PLANT" ],
+    "weight": "206 kg",
+    "volume": "108500 ml",
+    "hp": 60,
+    "speed": 100,
+    "material": [ "steel", "flesh", "veggy" ],
+    "symbol": "2",
+    "color": "green",
+    "aggression": 100,
+    "morale": 100,
+    "vision_day": 50,
+    "luminance": 5,
+    "vision_night": 5,
+    "weakpoint_sets": [ "wps_turret" ],
+    "families": [ "prof_wp_netherium_abomination" ],
+    "anger_triggers": [ "FRIEND_ATTACKED", "FRIEND_DIED", "HURT" ],
+    "bleed_rate": 25,
+    "special_attacks": [
+      {
+        "type": "gun",
+        "cooldown": 2,
+        "move_cost": 400,
+        "gun_type": "nl_turret_chem_thrower",
+        "fake_skills": [ [ "gun", 0 ] ],
+        "fake_dex": 2,
+        "ranges": [ [ 0, 25, "DEFAULT" ] ],
+        "require_targeting_npc": true,
+        "require_targeting_monster": true,
+        "target_moving_vehicles": true,
+        "laser_lock": false,
+        "targeting_sound": "a rapid electronic beep.",
+        "targeting_volume": 50,
+        "targeting_cost": 800,
+        "targeting_timeout_extend": -10
+      }
+    ],
+    "special_when_hit": [ "RETURN_FIRE", 100 ],
+    "death_drops": { "subtype": "collection", "groups": [ [ "mon_labyrinth_buoy_turret_1_1_drops", 90 ] ] },
+    "harvest": "mon_zomborg",
+    "dissect": "dissect_mon_labyrinth_buoy_turret_1_1",
+    "flags": [ "SEES", "HEARS", "GOODHEARING", "NOHEAD", "IMMOBILE", "NO_BREATHE", "PRIORITIZE_TARGETS" ],
+    "armor": { "bash": 10, "bullet": 2, "cut": 14, "stab": 20 }
+  }
+]
