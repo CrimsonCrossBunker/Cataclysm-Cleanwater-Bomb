@@ -1,0 +1,90 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "MILLING", "COMESTIBLE" ],
+    "id": "wild_rice",
+    "name": { "str": "wild rice", "str_pl": "handfuls of wild rice" },
+    "copy-from": "oats",
+    "material": [ "veggy" ],
+    "calories": 120,
+    "description": "Raw wild rice, still in its fibrous shell.  It'll need to be milled before it's edible for humans.",
+    "fun": -20,
+    "petfood": [ "CATTLEFOOD", "BIRDFOOD" ],
+    "flags": [ "EDIBLE_FROZEN", "RAW", "INEDIBLE", "CATTLE", "PLANTABLE_SEED", "CUT_HARVEST", "BIRD", "RAT", "MOUSE" ],
+    "plant_name": "wild rice",
+    "fruit": "wild_rice_stalks",
+    "seeds": false,
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ],
+    "into": "dry_wild_rice",
+    "recipe": "dry_wild_rice_mill_1_5",
+    "crop_climate": {
+      "base_c": 10,
+      "optimum_c": 26,
+      "min_c": 0,
+      "max_c": 37,
+      "degree_days": 1000,
+      "water_mm": 880,
+      "growing_days": 110,
+      "water_peak": 0.6
+    }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "MILLING", "COMESTIBLE" ],
+    "id": "buckwheat",
+    "name": { "str": "buckwheat", "str_pl": "handfuls of buckwheat" },
+    "weight": "180 g",
+    "color": "brown",
+    "comestible_type": "FOOD",
+    "symbol": ",",
+    "quench": -8,
+    "calories": 616,
+    "description": "Dry seeds from a wild buckwheat plant.  Inedible in their present state, they are commonly cooked or ground into flour.",
+    "price": "45 cent",
+    "price_postapoc": "2 USD",
+    "material": [ "veggy" ],
+    "volume": "250 ml",
+    "vitamins": [ [ "calcium", 3 ], [ "iron", 22 ], [ "veggy_allergen", 1 ] ],
+    "petfood": [ "CATTLEFOOD", "BIRDFOOD" ],
+    "flags": [
+      "EDIBLE_FROZEN",
+      "RAW",
+      "INEDIBLE",
+      "CATTLE",
+      "PLANTABLE_SEED",
+      "CUT_HARVEST",
+      "BIRD",
+      "RAT",
+      "MOUSE",
+      "NUTRIENT_OVERRIDE"
+    ],
+    "plant_name": "buckwheat",
+    "fruit": "buckwheat_stalks",
+    "seeds": false,
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ],
+    "into": "flour_wheat_free",
+    "recipe": "flour_wheat_free_mill_1_15",
+    "crop_climate": {
+      "base_c": 7,
+      "optimum_c": 24,
+      "min_c": -1,
+      "max_c": 36,
+      "degree_days": 635,
+      "water_mm": 300,
+      "growing_days": 75,
+      "water_peak": 0.63
+    }
+  }
+]

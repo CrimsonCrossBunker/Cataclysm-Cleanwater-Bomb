@@ -1,0 +1,55 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "MILLING", "COMESTIBLE" ],
+    "id": "barley",
+    "name": { "str": "barley", "str_pl": "handfuls of barley" },
+    "weight": "211 g",
+    "color": "brown",
+    "comestible_type": "FOOD",
+    "symbol": ",",
+    "quench": -10,
+    "calories": 743,
+    "description": "A pile of dried barleycorn, a staple of brewing everywhere.  It can be planted, boiled, or ground into flour.",
+    "price": "5 cent",
+    "price_postapoc": "62 cent",
+    "material": [ "veggy" ],
+    "volume": "250 ml",
+    "vitamins": [ [ "calcium", 6 ], [ "iron", 29 ], [ "veggy_allergen", 1 ] ],
+    "petfood": [ "CATTLEFOOD", "BIRDFOOD" ],
+    "flags": [
+      "EDIBLE_FROZEN",
+      "RAW",
+      "INEDIBLE",
+      "CATTLE",
+      "PLANTABLE_SEED",
+      "CUT_HARVEST",
+      "BIRD",
+      "RAT",
+      "MOUSE",
+      "NUTRIENT_OVERRIDE"
+    ],
+    "plant_name": "barley",
+    "fruit": "barley_stalks",
+    "seeds": false,
+    "growth_stages": [
+      { "GROWTH_SEED": "18 days" },
+      { "GROWTH_SEEDLING": "18 days" },
+      { "GROWTH_MATURE": "17 days" },
+      { "GROWTH_HARVEST": "17 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ],
+    "into": "flour",
+    "recipe": "flour_mill_1_15",
+    "crop_climate": {
+      "base_c": 4,
+      "optimum_c": 21,
+      "min_c": -5,
+      "max_c": 32,
+      "degree_days": 870,
+      "water_mm": 460,
+      "growing_days": 90,
+      "water_peak": 0.65
+    }
+  }
+]

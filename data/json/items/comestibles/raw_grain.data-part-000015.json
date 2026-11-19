@@ -1,0 +1,45 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "dry_lentils",
+    "name": { "str": "dried lentils", "str_pl": "handfuls of dried lentils" },
+    "weight": "132 g",
+    "color": "light_gray",
+    "container": "bag_plastic_small",
+    "comestible_type": "FOOD",
+    "symbol": ",",
+    "quench": -10,
+    "calories": 230,
+    "description": "A humble but nutrient-rich legume.  They should be cooked prior to consumption, unless you're planning to plant them.",
+    "display_type": "BY_WEIGHT",
+    "price": "10 cent",
+    "price_postapoc": "75 cent",
+    "material": [ "veggy" ],
+    "volume": "125 ml",
+    "vitamins": [ [ "calcium", 4 ], [ "iron", 47 ], [ "vitC", 7 ], [ "veggy_allergen", 1 ] ],
+    "petfood": [ "CATTLEFOOD", "BIRDFOOD" ],
+    "flags": [ "EDIBLE_FROZEN", "RAW", "INEDIBLE", "NUTRIENT_OVERRIDE", "CATTLE", "PLANTABLE_SEED", "BIRD", "RAT", "MOUSE" ],
+    "plant_name": "lentils",
+    "fruit": "dry_lentil_stalks",
+    "seeds": false,
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ],
+    "stackable": true,
+    "crop_climate": {
+      "base_c": 5,
+      "optimum_c": 23,
+      "min_c": -3,
+      "max_c": 33,
+      "degree_days": 930,
+      "water_mm": 365,
+      "growing_days": 104,
+      "water_peak": 0.68
+    }
+  }
+]

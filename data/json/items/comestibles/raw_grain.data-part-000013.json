@@ -1,0 +1,57 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "MILLING", "COMESTIBLE" ],
+    "id": "seed_canola",
+    "name": { "str": "canola seeds", "str_pl": "handfuls of canola seeds" },
+    "weight": "132 g",
+    "color": "light_gray",
+    "comestible_type": "FOOD",
+    "symbol": ",",
+    "category": "seeds",
+    "quench": -10,
+    "calories": 230,
+    "description": "A heap of round black seeds, typically milled and pressed for their oil.",
+    "price": "20 cent",
+    "price_postapoc": "1 USD 50 cent",
+    "material": [ "veggy" ],
+    "volume": "250 ml",
+    "vitamins": [ [ "calcium", 4 ], [ "iron", 47 ], [ "vitC", 7 ], [ "veggy_allergen", 1 ] ],
+    "petfood": [ "CATTLEFOOD", "BIRDFOOD" ],
+    "flags": [
+      "EDIBLE_FROZEN",
+      "RAW",
+      "INEDIBLE",
+      "NUTRIENT_OVERRIDE",
+      "CATTLE",
+      "PLANTABLE_SEED",
+      "CUT_HARVEST",
+      "BIRD",
+      "RAT",
+      "MOUSE"
+    ],
+    "plant_name": "canola",
+    "fruit": "canola_stalks",
+    "seeds": false,
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ],
+    "into": "paste_seed",
+    "recipe": "paste_seed_mill_1_1",
+    "stackable": true,
+    "crop_climate": {
+      "base_c": 5,
+      "optimum_c": 22,
+      "min_c": -5,
+      "max_c": 34,
+      "degree_days": 1200,
+      "water_mm": 420,
+      "growing_days": 102,
+      "water_peak": 0.68
+    }
+  }
+]

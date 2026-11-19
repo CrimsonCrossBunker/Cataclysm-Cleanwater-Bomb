@@ -1,0 +1,57 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "MILLING", "COMESTIBLE" ],
+    "id": "oats",
+    "name": { "str": "oats", "str_pl": "handfuls of oats" },
+    "display_type": "BY_WEIGHT",
+    "weight": "203 g",
+    "color": "brown",
+    "comestible_type": "FOOD",
+    "symbol": ",",
+    "quench": -5,
+    "//": "the calories of 4 units (140 g) of oatmeal",
+    "calories": 524,
+    "description": "A pile of raw oats.",
+    "price": "1 USD 20 cent",
+    "price_postapoc": "1 USD",
+    "material": [ "wheat" ],
+    "volume": "250 ml",
+    "vitamins": [ [ "calcium", 3 ], [ "iron", 20 ], [ "wheat_allergen", 1 ] ],
+    "petfood": [ "CATTLEFOOD", "BIRDFOOD" ],
+    "flags": [
+      "EDIBLE_FROZEN",
+      "RAW",
+      "INEDIBLE",
+      "CATTLE",
+      "NUTRIENT_OVERRIDE",
+      "PLANTABLE_SEED",
+      "CUT_HARVEST",
+      "BIRD",
+      "RAT",
+      "MOUSE"
+    ],
+    "plant_name": "oats",
+    "fruit": "oat_stalks",
+    "seeds": false,
+    "growth_stages": [
+      { "GROWTH_SEED": "17 days" },
+      { "GROWTH_SEEDLING": "16 days" },
+      { "GROWTH_MATURE": "16 days" },
+      { "GROWTH_HARVEST": "16 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ],
+    "into": "flour_wheat_free",
+    "recipe": "flour_wheat_free_mill_4_15",
+    "crop_climate": {
+      "base_c": 4.4,
+      "optimum_c": 21,
+      "min_c": -4,
+      "max_c": 32,
+      "degree_days": 840,
+      "water_mm": 480,
+      "growing_days": 91,
+      "water_peak": 0.62
+    }
+  }
+]
