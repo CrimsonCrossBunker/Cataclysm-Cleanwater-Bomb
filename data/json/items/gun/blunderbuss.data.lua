@@ -1,0 +1,40 @@
+local ccb = require("ccb")
+
+-- Similar reload process to a musket, which sources place at up to 4 / minute for elite professionals. Nominal 30s will be cut down to 15s at skill 10.
+ccb.content.define_item {
+    id = "blunderbuss",
+    looks_like = "remington_870",
+    name = ccb.content.plural_text("blunderbuss", "blunderbusses"),
+    description = ccb.content.text("A homemade version of a crude precursor to the shotgun."),
+    ascii_picture = "blunderbuss",
+    mass = "8267 g",
+    volume = "3 L",
+    length = "90 cm",
+    price = "150 USD",
+    survival_price = "10 USD",
+    accuracy = -1,
+    materials = { "steel", "wood" },
+    symbol = "(",
+    color = "brown",
+    flags = { "EASY_CLEAN" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { blunderbuss = 1 } } },
+    melee_damage = { bash = 12 },
+    gun = {
+        reload_noise_volume = 10,
+        ammunition = { "blunderbuss" },
+        skill = "shotgun",
+        dispersion = 855,
+        durability = 3,
+        loudness = 200,
+        clip_size = 1,
+        reload_time = 3000,
+        mod_locations = {
+            { id = "sling", count = 1 },
+            { id = "stock mount", count = 1 },
+            { id = "stock accessory", count = 1 },
+            { id = "rail mount", count = 1 },
+            { id = "sights mount", count = 1 },
+            { id = "underbarrel mount", count = 1 },
+        },
+    },
+}
