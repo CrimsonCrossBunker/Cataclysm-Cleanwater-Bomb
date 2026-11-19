@@ -8365,7 +8365,7 @@ function CcbPlatformContent.Item(options) end
 ---@field flags? string[]
 
 ---@class StaticItemGunModLocation
----@field id string Native gun modification location.
+---@field id string|LocalizedText Native gun modification location.
 ---@field count integer Number of available slots there.
 
 ---@class StaticItemFiringRequirement
@@ -8373,7 +8373,7 @@ function CcbPlatformContent.Item(options) end
 ---@field count integer Charges consumed from this pocket.
 
 ---@class StaticItemGun
----@field skill? string
+---@field skill? string|LocalizedText Native skill ID. Localized text uses the gun_type_type context.
 ---@field ammunition? string[]
 ---@field range? integer
 ---@field damage? StaticItemDamage
@@ -8497,6 +8497,9 @@ function CcbPlatformContent.Item(options) end
 ---@field length? string Length with a native unit.
 ---@field price? string Currency with a native unit.
 ---@field survival_price? string Post-Cataclysm currency with a native unit.
+---@field integral_mass? string Installed mass with a native unit.
+---@field integral_volume? string Installed volume with a native unit.
+---@field integral_length? string Installed length with a native unit.
 ---@field snippet_category? string
 ---@field revert_to? string
 ---@field stackable? boolean
@@ -8524,12 +8527,16 @@ function CcbPlatformContent.Item(options) end
 ---@field conditional_names? ItemConditionalName[]
 ---@field faults? StaticItemFault[]
 ---@field qualities? StaticItemQuality[]
+---@field minimum_skills? StaticOrderedCountedId[]
 ---@field inheritance? StaticItemInheritance
 ---@field armor? StaticItemArmor
 ---@field comestible? StaticItemComestible
 ---@field ammunition? StaticItemAmmunition
 ---@field magazine? StaticItemMagazine
 ---@field gun? StaticItemGun
+---@field gunmod? StaticOrderedGunmod
+---@field toolmod? StaticOrderedAttachment
+---@field artifact? StaticOrderedArtifact
 ---@field tool? StaticOrderedTool
 ---@field pet_armor? StaticOrderedPetArmor
 ---@field seed? StaticOrderedSeed
@@ -17962,3 +17969,75 @@ function CcbPlatformContent.define_spell(options) end
 ---@field mundane? boolean
 
 ---@alias StaticOrderedItemAction string|StaticOrderedNamedAction|StaticOrderedTransformAction|StaticOrderedDrugAction|StaticOrderedHolsterAction|StaticOrderedMessageAction|StaticOrderedMolleAttachAction|StaticOrderedMolleDetachAction|StaticOrderedCastSpellAction
+
+---@class StaticOrderedCountedId
+---@field id string
+---@field count integer
+
+---@class StaticOrderedMagazineAdapter
+---@field ammo_type string Native ammunition type used by the host item.
+---@field magazines string[] Compatible magazine item IDs.
+
+---@class StaticOrderedAttachment
+---@field ammo_types? string[] Replaces the host's ammunition types.
+---@field compatible_ammo? string[] Restricts which ammunition types the host may accept before modification.
+---@field capacity_multiplier? number
+---@field magazine_adapters? StaticOrderedMagazineAdapter[]
+---@field added_pockets? StaticItemPocket[]
+
+---@class StaticOrderedGunmod: StaticOrderedAttachment
+---@field install_time? string Duration with a native unit.
+---@field location? string|LocalizedText Native installation location.
+---@field targets? (string|LocalizedText)[] Native firearm types. Localized text uses the gun_type_type context.
+---@field barrel_length? string Length with a native unit. Shared with the gun subtype.
+---@field energy_drain_modifier? string Energy with a native unit.
+---@field loudness_modifier? integer
+---@field loudness_multiplier? number
+---@field to_hit_modifier? integer
+---@field dispersion_modifier? integer
+---@field field_of_view? integer
+---@field sight_dispersion? integer
+---@field aim_speed? integer
+---@field aim_speed_modifier? number
+---@field handling_modifier? integer
+---@field range_modifier? integer
+---@field range_multiplier? number
+---@field consume_chance? integer
+---@field consume_divisor? integer
+---@field ammo_per_shot_modifier? integer
+---@field ammo_per_shot_multiplier? number
+---@field min_cycle_recoil? integer
+---@field reload_modifier? integer
+---@field strength_modifier? integer
+---@field prone_strength_modifier? integer
+---@field shot_spread_modifier? number
+---@field energy_drain_multiplier? number
+---@field weight_multiplier? number
+---@field overheat_threshold_modifier? number
+---@field overheat_threshold_multiplier? number
+---@field cooling_modifier? number
+---@field cooling_multiplier? number
+---@field heat_per_shot_modifier? number
+---@field heat_per_shot_multiplier? number
+---@field bayonet? boolean
+---@field visible_when_installed? boolean
+---@field effects? string[] Ammunition effects shared with the gun subtype.
+---@field hidden_modes? string[]
+---@field incompatible_mods? string[]
+---@field incompatible_slots? string[]
+---@field added_slots? StaticOrderedCountedId[]
+---@field damage_modifier? StaticItemDamage
+---@field modes? StaticItemGunMode[]
+
+---@class StaticOrderedArtifactCharge
+---@field charges? integer
+---@field charges_per_use? integer
+---@field max_charges? integer
+---@field regenerate_ammo? boolean
+---@field recharge_type? string Native recharge rule.
+---@field recharge_condition? string Native condition for accumulating charges.
+---@field interval? string Duration with a native unit.
+
+---@class StaticOrderedArtifact
+---@field enchantments? string[] Native enchantment IDs resolved during item finalization.
+---@field charge? StaticOrderedArtifactCharge
