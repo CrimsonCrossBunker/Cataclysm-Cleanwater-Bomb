@@ -7,17 +7,6 @@
     "flags": [ "LIGHTHOUSE" ]
   },
   {
-    "type": "overmap_terrain",
-    "id": "store_unit",
-    "name": "store unit",
-    "sym": "^",
-    "color": "light_green",
-    "vision_levels": "city_building",
-    "travel_cost_type": "structure",
-    "see_cost": "high",
-    "flags": [ "RISK_HIGH", "GENERIC_LOOT", "SIDEWALK", "SOURCE_FUEL" ]
-  },
-  {
     "om_terrain": [ "store_unit" ],
     "type": "mapgen",
     "object": {
