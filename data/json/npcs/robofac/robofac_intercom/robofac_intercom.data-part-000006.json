@@ -1,0 +1,38 @@
+[
+  {
+    "id": "TALK_ROBOFAC_INTERCOM_INTRO_3",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "u_has_trait": "EXODII_CYBERFRAME_GENERIC",
+      "no": "Ah, it's you.  Mind giving your fellow American information regarding possible terrorist cyborgs?",
+      "yes": "Ah, yes, our cybernetic visitor.  Would you be willing to tell us more about the cyborgs that did this to you?"
+    },
+    "responses": [
+      {
+        "text": "You know what?  I've changed my mind.  I'll do your dirty work.  Give me some time to chat up these folks.",
+        "topic": "TALK_DONE",
+        "condition": {
+          "and": [
+            { "not": { "compare_string": [ "yes", { "u_val": "knowledge_exodii_transdimensional_u_knows_exodiilore" } ] } },
+            { "not": { "compare_string": [ "yes", { "u_val": "u_give_robofac_exodii_info" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "Please… I stopped being an American the moment the government left us to fend for ourselves.",
+        "condition": { "not": { "u_has_trait": "EXODII_CYBERFRAME_GENERIC" } },
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "Maybe some other time…",
+        "condition": { "u_has_trait": "EXODII_CYBERFRAME_GENERIC" },
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "Fine.  I'll tell you about these inter-dimensional beings.",
+        "topic": "TALK_ROBOFAC_ABOUT_EXODII_2",
+        "condition": { "compare_string": [ "yes", { "u_val": "knowledge_exodii_transdimensional_u_knows_exodiilore" } ] }
+      }
+    ]
+  }
+]

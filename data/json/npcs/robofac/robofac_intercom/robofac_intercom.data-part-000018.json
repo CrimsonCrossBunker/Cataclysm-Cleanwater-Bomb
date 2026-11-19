@@ -1,0 +1,38 @@
+[
+  {
+    "id": "TALK_ROBOFAC_INTERCOM_ARMOR_POSITIVE",
+    "type": "talk_topic",
+    "dynamic_line": "We've solved that issue with our more recent prototypes.\"  There is a brief pause.  \"You seem like a good candidate.  We will transfer over the additional pieces to complete that prototype set, with the goal of collecting additional field data.  The core armor platform is solid, and we have been iterating on supplementary pieces we would be willing to trade to you.  Any feedback on their performance would be appreciated.",
+    "speaker_effect": { "effect": { "math": [ "u_hub01_good_candidate = 1" ] } },
+    "responses": [
+      {
+        "text": "Thank you.",
+        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES",
+        "effect": [ { "u_spawn_item": "robofac_basic_vambraces" }, { "u_spawn_item": "robofac_basic_greaves" } ]
+      },
+      {
+        "text": "Hopefully it serves me better than the good doctor.",
+        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES",
+        "effect": [ { "u_spawn_item": "robofac_basic_vambraces" }, { "u_spawn_item": "robofac_basic_greaves" } ]
+      },
+      {
+        "text": "We'll see what happens.",
+        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES",
+        "effect": [ { "u_spawn_item": "robofac_basic_vambraces" }, { "u_spawn_item": "robofac_basic_greaves" } ]
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_ASK",
+    "type": "talk_topic",
+    "dynamic_line": "It was a modified Wraitheon chassis, with a custom AI.  We'd hoped that it would interact with the outside world for us, but you know how well that went.  That particular line of study is now on hiatus, given that the project lead… well, you know.",
+    "speaker_effect": {
+      "effect": [
+        { "npc_add_var": "dialogue_intercom_told_about_prototype", "value": "yes" },
+        { "set_string_var": "yes", "target_var": { "global_val": "hub01_intercom_told_prototype" } }
+      ],
+      "sentinel": "told_about_prototype"
+    },
+    "responses": [ { "text": "Right.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES" } ]
+  }
+]

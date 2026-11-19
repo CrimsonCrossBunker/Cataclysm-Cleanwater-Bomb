@@ -1,0 +1,223 @@
+[
+  {
+    "id": "TALK_ROBOFAC_ABOUT_EXODII_2",
+    "type": "talk_topic",
+    "dynamic_line": "Inter-dimensional travellers you say?  What kind of tech do these beings operate?  And how were you able to communicate with them?",
+    "speaker_effect": {
+      "effect": [
+        { "u_add_var": "u_informed_robofac_of_exodii", "value": "yes" },
+        { "math": [ "hub01_knows_exodii = 1" ] },
+        { "u_add_effect": "robofac_surveillance", "duration": "30 days" },
+        { "u_add_faction_trust": 1 }
+      ]
+    },
+    "responses": [
+      { "text": "Alright listen up.", "topic": "TALK_GIVE_ROBOFAC_EXODII_INFO" },
+      { "text": "Information doesn't come cheap my friend.", "topic": "TALK_ROBOFAC_EXODII_INFO_REWARD" },
+      {
+        "text": "I've said more than I ought to have.  I'm leaving.",
+        "topic": "TALK_DONE",
+        "effect": { "u_add_faction_trust": -1 }
+      }
+    ]
+  },
+  {
+    "id": "TALK_GIVE_ROBOFAC_EXODII_INFO",
+    "type": "talk_topic",
+    "dynamic_line": "Well?",
+    "speaker_effect": { "effect": [ { "u_add_var": "u_give_robofac_exodii_info", "value": "yes" } ] },
+    "responses": [
+      {
+        "text": "They are a race of inter-dimensional beings who call themselves the Exodii.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.",
+        "topic": "TALK_FINISH_ROBOFAC_EXODII_DISCUSSION",
+        "effect": [ { "u_add_faction_trust": 1 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      },
+      {
+        "text": "They are a race of inter-dimensional beings who call themselves the Exodii and they use a mix of futuristic and ancient technology the latter being mostly due to their last landing place being an ancient battlefield of some sort.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  While their choice for personal defense was more along the lines of ancient gear like spears and swords.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.",
+        "topic": "TALK_FINISH_ROBOFAC_EXODII_DISCUSSION",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_talk_exodii_about_medieval_stock" } ] },
+        "effect": [ { "u_add_faction_trust": 2 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      },
+      {
+        "text": "They are a race of inter-dimensional beings who call themselves the Exodii.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.  They are here to mine this place of any useful metal, gather any tech they deem worth saving and maybe even grab a couple of survivors to join their ranks before they move out.",
+        "topic": "TALK_FINISH_ROBOFAC_EXODII_DISCUSSION",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_know_exodii_purpose2" } ] },
+        "effect": [ { "u_add_faction_trust": 2 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      },
+      {
+        "text": "They are a race of inter-dimensional beings who call themselves the Exodii and they use a mix of futuristic and ancient technology the latter being mostly due to their last landing place being an ancient battlefield of some sort.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  However their choice for personal defense was more along the lines of ancient gear like spears and swords.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.  They are here to mine this place of any useful metal, gather any tech they deem worth saving and maybe even grab a couple of survivors to join their ranks before they move out.",
+        "topic": "TALK_FINISH_ROBOFAC_EXODII_DISCUSSION",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "u_know_exodii_purpose2" } ] },
+            { "compare_string": [ "yes", { "u_val": "u_talk_exodii_about_medieval_stock" } ] }
+          ]
+        },
+        "effect": [ { "u_add_faction_trust": 3 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      }
+    ]
+  },
+  {
+    "id": "TALK_FINISH_ROBOFAC_EXODII_DISCUSSION",
+    "type": "talk_topic",
+    "dynamic_line": "Thank you for bringing this information to us…",
+    "responses": [
+      { "text": "Let's talk reward.", "topic": "TALK_ROBOFAC_EXODII_INFO_REWARD" },
+      {
+        "text": "No problem, if you ask me to choose between us and cyborg tyrants, you best believe I ain't betraying my race.  It's unnatural you know?  Please let me know if there is anything else I can do for you guys.",
+        "topic": "TALK_ROBOFAC_INTERCOM_INTRO_4",
+        "effect": [ { "u_add_faction_trust": 2 } ]
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_EXODII_INFO_REWARD",
+    "type": "talk_topic",
+    "dynamic_line": "For your services rendered we can either offer you some riot gear armor or the USP 9x19mm pistol with compatible magazines.",
+    "responses": [
+      {
+        "text": "Sounds equitable to me.  Be back with that information in a jiff.",
+        "topic": "TALK_DONE",
+        "condition": {
+          "and": [
+            { "not": { "compare_string": [ "yes", { "u_val": "knowledge_exodii_transdimensional_u_knows_exodiilore" } ] } },
+            { "not": { "compare_string": [ "yes", { "u_val": "u_give_robofac_exodii_info" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "That's too little for a whole lot of risk.  I'll pass on this.",
+        "topic": "TALK_DONE",
+        "condition": {
+          "and": [
+            { "not": { "compare_string": [ "yes", { "u_val": "knowledge_exodii_transdimensional_u_knows_exodiilore" } ] } },
+            { "not": { "compare_string": [ "yes", { "u_val": "u_give_robofac_exodii_info" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "Deal!  Now listen close.",
+        "topic": "TALK_GIVE_ROBOFAC_EXODII_INFO",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "knowledge_exodii_transdimensional_u_knows_exodiilore" } ] },
+            { "not": { "compare_string": [ "yes", { "u_val": "u_give_robofac_exodii_info" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "I'll take the riot armor.",
+        "topic": "TALK_ROBOFAC_INTERCOM_INTRO_4",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_give_robofac_exodii_info" } ] },
+        "effect": [ { "u_spawn_item": "armor_riot" } ]
+      },
+      {
+        "text": "I'll take the USP.",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_give_robofac_exodii_info" } ] },
+        "topic": "TALK_ROBOFAC_INTERCOM_INTRO_4",
+        "effect": [ { "u_spawn_item": "usp_9mm" }, { "u_spawn_item": "usp9mag", "count": 2 } ]
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "math": [ "hub01_knows_exodii == 1" ],
+      "yes": "&The intercom flicks on slower than usual.  \"You sound like <u_name>.  But you look like an Exodii.  What's happened, exactly?\"",
+      "no": "&The intercom flicks on slower than usual.  \"You sound like <u_name>.  But you look like some sort of cyborg.  What's happened, exactly?\""
+    },
+    "responses": [
+      {
+        "text": "I volunteered for this.  A group of cyborgs called the Exodii sold me everything I needed to get these cool mechanical bits.",
+        "condition": { "math": [ "hub01_knows_exodii != 1" ] },
+        "effect": { "u_add_effect": "robofac_surveillance", "duration": "30 days" },
+        "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_EXODII_INFO"
+      },
+      {
+        "text": "I volunteered for the Exodii to give me these implants.  Gotta do what you gotta do to survive, no?",
+        "condition": { "math": [ "hub01_knows_exodii == 1" ] },
+        "effect": { "u_add_effect": "robofac_surveillance", "duration": "14 days" },
+        "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2"
+      },
+      {
+        "text": "I volunteered for the Exodii to give me these implants, but don't worry, there's still a red white and blue American in this shell, ready to serve science and humanity.",
+        "condition": { "math": [ "hub01_knows_exodii == 1" ] },
+        "effect": { "u_add_effect": "robofac_surveillance", "duration": "14 days" },
+        "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2"
+      },
+      {
+        "text": "Those crazed cyborgs did this against my will!  But I managed to escape, and it's still me, in here.",
+        "condition": { "math": [ "hub01_knows_exodii == 1" ] },
+        "trial": { "type": "LIE", "difficulty": 30 },
+        "success": {
+          "effect": { "u_add_effect": "robofac_surveillance", "duration": "14 days" },
+          "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2"
+        },
+        "failure": {
+          "effect": [ { "u_add_faction_trust": -10 }, { "u_add_effect": "robofac_surveillance", "duration": "30 days" } ],
+          "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2"
+        }
+      },
+      {
+        "text": "Not much to say, because I'm not sure.  I just woke up like this.  Crazy stuff, isn't it?",
+        "trial": { "type": "LIE", "difficulty": 15 },
+        "success": {
+          "effect": { "u_add_effect": "robofac_surveillance", "duration": "14 days" },
+          "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2"
+        },
+        "failure": {
+          "effect": [ { "u_add_faction_trust": -10 }, { "u_add_effect": "robofac_surveillance", "duration": "30 days" } ],
+          "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2"
+        }
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_EXODII_INFO",
+    "type": "talk_topic",
+    "dynamic_line": "Exodii?  What can you tell us about them?",
+    "speaker_effect": {
+      "effect": [
+        { "u_add_var": "u_give_robofac_exodii_info", "value": "yes" },
+        { "u_add_var": "u_informed_robofac_of_exodii", "value": "yes" },
+        { "math": [ "hub01_knows_exodii = 1" ] }
+      ]
+    },
+    "responses": [
+      {
+        "text": "I mean, just look at me!  They're cyborgs from another dimension, or dimensions, really.  They turn humans and maybe other beings into cyborgs, and jump from here to there, dodging cataclysms like ours.",
+        "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2",
+        "effect": [ { "u_add_faction_trust": 1 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      },
+      {
+        "text": "They are a race of inter-dimensional beings.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.",
+        "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2",
+        "effect": [ { "u_add_faction_trust": 2 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      },
+      {
+        "text": "They are a race of inter-dimensional beings that use a mix of futuristic and ancient technology, the latter being mostly due to their last landing place being an ancient battlefield of some sort.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  While their choice for personal defense was more along the lines of ancient gear like spears and swords.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.",
+        "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_talk_exodii_about_medieval_stock" } ] },
+        "effect": [ { "u_add_faction_trust": 3 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      },
+      {
+        "text": "They are a race of inter-dimensional beings.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.  They are here to mine this place of any useful metal, gather any tech they deem worth saving and maybe even grab a couple of survivors to join their ranks before they move out.",
+        "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_know_exodii_purpose2" } ] },
+        "effect": [ { "u_add_faction_trust": 4 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      },
+      {
+        "text": "They are a race of inter-dimensional beings that use a mix of futuristic and ancient technology the latter being mostly due to their last landing place being an ancient battlefield of some sort.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  However their choice for personal defense was more along the lines of ancient gear like spears and swords.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.  They are here to mine this place of any useful metal, gather any tech they deem worth saving and maybe even grab a couple of survivors to join their ranks before they move out.",
+        "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG_2",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "u_know_exodii_purpose2" } ] },
+            { "compare_string": [ "yes", { "u_val": "u_talk_exodii_about_medieval_stock" } ] }
+          ]
+        },
+        "effect": [ { "u_add_faction_trust": 5 }, { "math": [ "robofac_exodii_cbm_knowledge += 1" ] } ]
+      }
+    ]
+  }
+]

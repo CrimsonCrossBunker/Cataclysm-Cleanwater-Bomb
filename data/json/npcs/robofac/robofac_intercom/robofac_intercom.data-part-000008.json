@@ -1,0 +1,17 @@
+[
+  {
+    "id": "TALK_ROBOFAC_INTERCOM_1_JOBS_2",
+    "type": "talk_topic",
+    "dynamic_line": "Certainly.  I've just finished speaking with a certain individual, who has authorized you limited access to a selection of our internal stores.  We will provide you with pay for contracts in the form of tokens to be used as an exchange currency, which you can then trade for goods.  We are also amenable to bartering in exchange for supplies that are currently difficult for us to obtain from outside the facility.",
+    "speaker_effect": {
+      "effect": [
+        { "npc_add_var": "dialogue_intercom_npc_intercom_trade", "value": "yes" },
+        { "set_string_var": "yes", "target_var": { "global_val": "hub01_intercom_trade_unlocked" } },
+        { "u_add_var": "dialogue_intercom_completed_robofac_intercom_1", "value": "yes" },
+        { "finish_mission": "MISSION_ROBOFAC_INTERCOM_1", "success": true }
+      ],
+      "sentinel": "unlocked_trade"
+    },
+    "responses": [ { "text": "I'll keep that in mind.  Let's get down to business.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES_FIRST" } ]
+  }
+]

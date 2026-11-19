@@ -1,0 +1,23 @@
+[
+  {
+    "//": "This exchange is used when the player is already a mercenary for Hub 01, so the intercom is much more informal about it",
+    "id": "TALK_ROBOFAC_INTERCOM_FREE_MERCHANT_DELIVERY_MERCENARY",
+    "type": "talk_topic",
+    "dynamic_line": "Oh!  Good.  We had written that off as a non-starter.  Just drop it into the tray and we'll bring it in.",
+    "responses": [
+      {
+        "text": "[Hand over the FEMA data.]",
+        "condition": { "u_has_items": { "item": "fema_data", "count": 1 } },
+        "effect": [
+          { "u_consume_item": "fema_data", "count": 1, "popup": true },
+          { "u_add_var": "dialogue_intercom_completed_free_merchants_hub_delivery_1", "value": "yes" }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_FREE_MERCHANT_DELIVERY_MERCENARY_END"
+      },
+      {
+        "text": "I don't have the drive with me right now; I'll give it to you when I have it.",
+        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES"
+      }
+    ]
+  }
+]
