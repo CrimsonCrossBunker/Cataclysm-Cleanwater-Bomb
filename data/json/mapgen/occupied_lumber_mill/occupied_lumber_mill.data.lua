@@ -61,3 +61,22 @@ ccb.content.define_mapgen {
         fill_terrain = "t_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "ocu_lumbermill_opens_a_gate",
+    layout = {
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_thconc_floor",
+                x = 10,
+                y = 23,
+                end_x = 13,
+                end_y = 23,
+            },
+        },
+    },
+}

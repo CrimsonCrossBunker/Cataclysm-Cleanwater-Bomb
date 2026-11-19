@@ -101,13 +101,5 @@
         { "vehicle": "car", "x": [ 29, 31 ], "y": [ 27, 30 ], "chance": 30, "fuel": 15, "status": 0, "rotation": 90 }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "ocu_lumbermill_opens_a_gate",
-    "object": {
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "set": [ { "square": "terrain", "id": "t_thconc_floor", "x": 10, "y": 23, "x2": 13, "y2": 23 } ]
-    }
   }
 ]
