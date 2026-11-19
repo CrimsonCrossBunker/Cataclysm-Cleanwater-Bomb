@@ -1,0 +1,14 @@
+[
+  {
+    "id": "cooked_elderberries",
+    "copy-from": "elderberries",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "comestible_type": "FOOD",
+    "name": { "str_sp": "cooked elderberries" },
+    "description": "A serving of elderberries, cooked just enough to remove the toxins.",
+    "display_type": "BY_WEIGHT",
+    "use_action": [  ],
+    "flags": [  ]
+  }
+]
