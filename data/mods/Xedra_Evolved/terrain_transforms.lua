@@ -803,3 +803,27 @@ content.add(content.TerrainTransform { id = "ter_werewolf_close_reality_tear" }
         results = { "fd_null" },
         message = ccb.content.text("The rent in reality slowly collapses on itself and fades away."),
     })
+
+content.add(content.TerrainTransform { id = "ter_arvore_summoned_brambles" }
+    :furniture {
+        inputs = {
+            "f_null", "f_cattails", "t_grass_tall", "t_grass_long", "f_burdock", "f_lotus",
+            "f_japanese_knotweed", "f_lilypad", "f_bluebell", "f_lily", "f_salsify", "f_wild_sarsaparilla",
+        },
+        results = { "f_magic_brambles" },
+        message = ccb.content.text("The ground churns as thick, tangled brambles burst forth and grow in moments."),
+        optional_ids = { "t_grass_tall", "t_grass_long" },
+    })
+
+content.add(content.TerrainTransform { id = "ter_arvore_fungicide" }
+    :terrain {
+        flags = { "FUNGUS" },
+        results = { "t_dirt_barren" },
+        message = ccb.content.text("The fungus withers and dies!"),
+        optional_ids = { "t_dirt_barren" },
+    }
+    :furniture {
+        flags = { "FUNGUS" },
+        results = { "f_null" },
+        message = ccb.content.text("The fungus withers and dies!"),
+    })

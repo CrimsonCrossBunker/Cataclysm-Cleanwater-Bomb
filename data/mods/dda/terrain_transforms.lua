@@ -562,3 +562,18 @@ content.add(content.TerrainTransform { id = "ter_local_sd_distress_beacon_3" }
         inputs = { "f_console" },
         results = { "f_string_dimension_distress_beacon_3" },
     })
+
+-- The legacy vitrified farm rules pass furniture names through terrain lookups.
+content.add(content.TerrainTransform { id = "imperfect_doll_to_couch" }
+    :terrain {
+        inputs = { "f_vitrified_doll" },
+        results = { "f_vitrified_sofa" },
+        optional_ids = { "f_vitrified_doll", "f_vitrified_sofa" },
+    })
+
+content.add(content.TerrainTransform { id = "glass_book_on_shelf" }
+    :terrain {
+        inputs = { "f_vitrified_bookcase_talker" },
+        results = { "f_vitrified_bookcase" },
+        optional_ids = { "f_vitrified_bookcase_talker", "f_vitrified_bookcase" },
+    })

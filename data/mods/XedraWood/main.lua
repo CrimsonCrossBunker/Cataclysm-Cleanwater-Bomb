@@ -104,3 +104,5 @@ require("generic_items")
 require("inherited_items")
 
 require("effect_types")
+
+require("terrain_transforms")

@@ -84,15 +84,5 @@
     "id": "vitrified_soil_add_apple",
     "dynamic_line": "The soil yields easily, as if welcoming your contribution.  The rotten shell of the apple crumbles away, and the seeds sparkle as the dirt covers them.",
     "responses": [ { "text": "You find something new in your inventory.", "topic": "TALK_DONE" } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "imperfect_doll_to_couch",
-    "terrain": [ { "result": "f_vitrified_sofa", "valid_terrain": [ "f_vitrified_doll" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "glass_book_on_shelf",
-    "terrain": [ { "result": "f_vitrified_bookcase", "valid_terrain": [ "f_vitrified_bookcase_talker" ] } ]
   }
 ]

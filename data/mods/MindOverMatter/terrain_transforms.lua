@@ -100,3 +100,12 @@ content.add(content.TerrainTransform { id = "telekinetic_earthshaker_transform" 
         inputs = { "f_null" },
         results = { { "f_null", 15 }, "f_rubble_rock" },
     })
+
+content.add(content.TerrainTransform { id = "ter_teleport_location_attune" }
+    :furniture {
+        inputs = { "f_null" },
+        results = { "f_teleporter_attuned_ground" },
+        message = ccb.content.text("You spend some time memorizing your location."),
+        message_good = true,
+        optional_ids = { "f_teleporter_attuned_ground" },
+    })
