@@ -1,0 +1,113 @@
+[
+  {
+    "id": "AO_BOOK_BLAST_ATTACK",
+    "type": "SPELL",
+    "name": { "str": "Book blast Attack", "//~": "NO_I18N" },
+    "description": { "str": "A cone AOE cut damage attack.", "//~": "NO_I18N" },
+    "message": "Razor sharp pages shoot out from the book when you open it.",
+    "valid_targets": [ "hostile", "ground", "ally" ],
+    "min_damage": { "math": [ "(u_artifact_resonance() / 60) + 5" ] },
+    "max_damage": { "math": [ "(u_artifact_resonance() / 40) + 15" ] },
+    "effect": "attack",
+    "shape": "cone",
+    "damage_type": "cut",
+    "flags": [ "SILENT", "RANDOM_TARGET", "RANDOM_CRITTER", "RANDOM_DAMAGE", "NO_PROJECTILE" ],
+    "base_casting_time": 100,
+    "min_aoe": 15,
+    "max_aoe": 15,
+    "min_range": 10,
+    "max_range": 10
+  },
+  {
+    "id": "AO_BOOK_COMBUSTION",
+    "type": "SPELL",
+    "name": { "str": "Book combustion", "//~": "NO_I18N" },
+    "description": { "str": "Causes other nearby books to explode.", "//~": "NO_I18N" },
+    "message": "The pages glint slightly as you flip through them.",
+    "valid_targets": [ "self" ],
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_BOOK_COMBUSTION",
+    "shape": "blast",
+    "flags": [ "NO_EXPLOSION_SFX" ],
+    "base_casting_time": 100
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_BOOK_COMBUSTION",
+    "effect": [
+      {
+        "u_map_run_item_eocs": "all",
+        "min_radius": 0,
+        "max_radius": 24,
+        "search_data": [ { "category": "books" } ],
+        "true_eocs": [
+          {
+            "id": "_BOOK_COMBUSTION_EXPLODE",
+            "effect": [
+              { "npc_location_variable": { "context_val": "explode_loc" } },
+              {
+                "run_eocs": "EOC_BOOK_COMBUSTION_EXPLODE",
+                "variables": { "explode_loc": { "context_val": "explode_loc" } },
+                "alpha_talker": "avatar"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "u_map_run_item_eocs": "all",
+        "min_radius": 0,
+        "max_radius": 24,
+        "search_data": [ { "category": "manuals" } ],
+        "true_eocs": [
+          {
+            "id": "_MANUALS_COMBUSTION_EXPLODE",
+            "effect": [
+              { "npc_location_variable": { "context_val": "explode_loc" } },
+              {
+                "run_eocs": "EOC_BOOK_COMBUSTION_EXPLODE",
+                "variables": { "explode_loc": { "context_val": "explode_loc" } },
+                "alpha_talker": "avatar"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_BOOK_COMBUSTION_EXPLODE",
+    "condition": { "expects_vars": [ "explode_loc" ] },
+    "effect": [
+      {
+        "u_explosion": { "power": 50000, "max_noise": 35, "distance_factor": 0.1 },
+        "target_var": { "context_val": "explode_loc" }
+      }
+    ]
+  },
+  {
+    "id": "AO_MAGIC_CASCADE_START",
+    "type": "SPELL",
+    "name": { "str": "Artifact magic cascade", "//~": "NO_I18N" },
+    "description": { "str": "Fires bursts of low damage ranged attacks.", "//~": "NO_I18N" },
+    "message": "Burning ash whirls around you.",
+    "valid_targets": [ "self" ],
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_MAGIC_CASCADE",
+    "shape": "blast",
+    "flags": [ "NO_EXPLOSION_SFX" ],
+    "base_casting_time": 100
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_MAGIC_CASCADE",
+    "effect": [
+      {
+        "if": { "one_in_chance": 4 },
+        "then": [ { "u_cast_spell": { "id": "MAGIC_CASCADE" } } ],
+        "else": [ { "u_cast_spell": { "id": "MAGIC_CASCADE" } }, { "run_eocs": "EOC_MAGIC_CASCADE", "time_in_future": "1s" } ]
+      }
+    ]
+  }
+]

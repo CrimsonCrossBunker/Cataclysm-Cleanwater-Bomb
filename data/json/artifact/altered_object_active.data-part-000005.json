@@ -1,0 +1,23 @@
+[
+  {
+    "type": "SPELL",
+    "id": "MAGIC_CASCADE_MISSILE",
+    "name": { "str": "Magic cascade Missile", "//~": "NO_I18N" },
+    "description": { "str": "A single attack from magic cascade.", "//~": "NO_I18N" },
+    "valid_targets": [ "hostile", "ally" ],
+    "effect": "attack",
+    "shape": "blast",
+    "message": "",
+    "damage_type": "bash",
+    "min_damage": { "math": [ "(u_artifact_resonance() / 200) + 2" ] },
+    "max_damage": { "math": [ "(u_artifact_resonance() / 100) + 8" ] },
+    "flags": [ "LOUD", "RANDOM_TARGET", "RANDOM_CRITTER", "RANDOM_DAMAGE" ],
+    "base_casting_time": 100,
+    "min_range": 40,
+    "max_range": 6,
+    "field_id": "fd_plasma",
+    "field_chance": 2,
+    "min_field_intensity": 3,
+    "max_field_intensity": 3
+  }
+]
