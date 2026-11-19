@@ -1,0 +1,13 @@
+local ccb = require("ccb")
+
+ccb.content.define_overmap_terrain {
+    id = {
+        "dls_small_roof", "dls_small_surface", "dls_small_-1", "dls_small_-2", "dls_small_-3",
+        "dls_small_-4", "dls_small_-5",
+    },
+    vision_levels = "large_structure",
+    name = ccb.content.text("limnological station"),
+    symbol = "~",
+    color = "red",
+    see_cost = "none",
+}
