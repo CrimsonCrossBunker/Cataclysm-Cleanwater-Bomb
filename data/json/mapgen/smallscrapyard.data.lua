@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "smallscrapyard_2_roof",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "   ------               ",
+            "   -....-               ",
+            "   -....-               ",
+            "   -....-               ",
+            "   -....-               ",
+            "   -....-               ",
+            "   -....-               ",
+            "   ------               ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+    },
+}
