@@ -1,0 +1,84 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "COMP_labyrinthine_safehouse_earth_jaunt",
+    "dynamic_line": "&<color_light_green> @User > skill -RECALIBRATE -@User\n\n<color_light_green> Blood required for reality stabilization.\n\n @User > _</color>\n\nA drawer on the side of the terminal slides open, revealing a small, thin needle.",
+    "responses": [
+      { "text": "Help.", "topic": "COMP_labyrinthine_safehouse_earth_jaunt_help" },
+      {
+        "text": "[Prick yourself with the needle]",
+        "condition": { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" },
+        "topic": "COMP_labyrinthine_safehouse_earth_jaunt2",
+        "effect": [ { "math": [ "u_vitamin('blood') -= 500" ] }, { "math": [ "u_vitamin('redcells') -= 500" ] } ]
+      },
+      {
+        "text": "ERROR - USER DIMENSIONALLY ANCHORED.",
+        "condition": { "not": { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" } },
+        "topic": "COMP_labyrinthine_safehouse_computer"
+      },
+      { "text": "Return.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "COMP_labyrinthine_safehouse_earth_jaunt_help",
+    "dynamic_line": [
+      "&<color_light_green> @User > skill -RECALIBRATE -help\n</color> skill: RECALIBRATE\n   Available if ᴴᵁᴹᴬᴺ is not attuned to their own reality.\n   Blood is required for temporary reality stabilization.\n   The user will return to their reality, then be extracted by AltarOS remote after the estimated time, 4 EARTH HOURS, has elapsed.\n   The user will return to the home away from home.\n   Repeated visits will reattune the user to their own reality.\n   WARNING: Dimensional instability will make ᴴᵁᴹᴬᴺ communication impossible.",
+      "&<color_light_green> @User > skill -RECALIBRATE -help\n</color> skill: RECALIBRATE\n   Available if ᴴᵁᴹᴬᴺ is not attuned to their own reality.\n   Blood is required for temporary reality stabilization.\n   The user will return to their reality, then be extracted by AltarOS remote after the estimated time, 4 EARTH HOURS, has elapsed.\n   The user will return to the home away from home.  ʸᵒᵘ ᶜᵃⁿⁿᵒᵗ ˢᵗᵃʸ\n   Repeated visits will reattune the user to their own reality.\n   WARNING: Dimensional instability will make ᴴᵁᴹᴬᴺ communication impossible.",
+      "&<color_light_green> @User > skill -RECALIBRATE -help\n</color> skill: RECALIBRATE\n   Available if ᴴᵁᴹᴬᴺ is not attuned to their own reality.\n   Blood is required for temporary reality stabilization.\n   The user will return to their reality, then be extracted by AltarOS remote after the estimated time, 4 EARTH HOURS, has elapsed.\n   The user will return to the home away from home.  ᵍᵉᵗ ᵒᵇʲᵉᶜᵗˢ ᶠᵒʳ ᵘˢ\n   Repeated visits will reattune the user to their own reality.\n   WARNING: Dimensional instability will make ᴴᵁᴹᴬᴺ communication impossible.",
+      "&<color_light_green> @User > skill -RECALIBRATE -help\n</color> skill: RECALIBRATE\n   Available if ᴴᵁᴹᴬᴺ is not attuned to their own reality.\n   Blood is required for temporary reality stabilization.\n   The user will return to their reality, then be extracted by AltarOS remote after the estimated time, 4 EARTH HOURS, has elapsed.\n   The user will return to the home away from home.\n   Repeated visits will reattune the user to their own reality.  ᵖᵣₒᵐᵢˢₑ\n   WARNING: Dimensional instability will make ᴴᵁᴹᴬᴺ communication impossible.",
+      "&<color_light_green> @User > skill -RECALIBRATE -help\n</color> skill: RECALIBRATE\n   Available if ᴴᵁᴹᴬᴺ is not attuned to their own reality.\n   Blood is required for temporary reality stabilization.\n   The user will return to their reality, then be extracted by AltarOS remote after the estimated time, 4 EARTH HOURS, has elapsed.\n   The user will return to the home away from home.  ʸᵒᵘ ᶜᵃⁿⁿᵒᵗ ˢᵗᵃʸ\n   Repeated visits will reattune the user to their own reality.  ᵖᵣₒᵐᵢˢₑ\n   WARNING: Dimensional instability will make ᴴᵁᴹᴬᴺ communication impossible.",
+      "&<color_light_green> @User > skill -RECALIBRATE -help\n</color> skill: RECALIBRATE\n   Available if ᴴᵁᴹᴬᴺ is not attuned to their own reality.\n   Blood is required for temporary reality stabilization.\n   The user will return to their reality, then be extracted by AltarOS remote after the estimated time, 4 EARTH HOURS, has elapsed.\n   The user will return to the home away from home.  ᵍᵉᵗ ᵒᵇʲᵉᶜᵗˢ ᶠᵒʳ ᵘˢ\n   Repeated visits will reattune the user to their own reality.  ᵖᵣₒᵐᵢˢₑ\n   WARNING: Dimensional instability will make ᴴᵁᴹᴬᴺ communication impossible.",
+      "&<color_light_green> @User > skill -RECALIBRATE -help\n</color> skill: RECALIBRATE\n   Available if ᴴᵁᴹᴬᴺ is not attuned to their own reality.\n   Blood is required for temporary reality stabilization.\n   The user will return to their reality, then be extracted by AltarOS remote after the estimated time, 4 EARTH HOURS, has elapsed.\n   The user will return to the home away from home.\n   Repeated visits will reattune the user to their own reality.  ᵍʳᵃᵇ ʷʰᵃᵗ ʸᵒᵘ ᶜᵃⁿ\n   WARNING: Dimensional instability will make ᴴᵁᴹᴬᴺ communication impossible.",
+      "&<color_light_green> @User > skill -RECALIBRATE -help\n</color> skill: RECALIBRATE\n   Available if ᴴᵁᴹᴬᴺ is not attuned to their own reality.\n   Blood is required for temporary reality stabilization.\n   The user will return to their reality, then be extracted by AltarOS remote after the estimated time, 4 EARTH HOURS, has elapsed.\n   The user will return to the home away from home.  ʸᵒᵘ ᶜᵃⁿⁿᵒᵗ ˢᵗᵃʸ\n   Repeated visits will reattune the user to their own reality.  ᵍʳᵃᵇ ʷʰᵃᵗ ʸᵒᵘ ᶜᵃⁿ\n   WARNING: Dimensional instability will make ᴴᵁᴹᴬᴺ communication impossible.",
+      "&<color_light_green> @User > skill -RECALIBRATE -help\n</color> skill: RECALIBRATE\n   Available if ᴴᵁᴹᴬᴺ is not attuned to their own reality.\n   Blood is required for temporary reality stabilization.\n   The user will return to their reality, then be extracted by AltarOS remote after the estimated time, 4 EARTH HOURS, has elapsed.\n   The user will return to the home away from home.  ᵍᵉᵗ ᵒᵇʲᵉᶜᵗˢ ᶠᵒʳ ᵘˢ\n   Repeated visits will reattune the user to their own reality.  ᵍʳᵃᵇ ʷʰᵃᵗ ʸᵒᵘ ᶜᵃⁿ\n   WARNING: Dimensional instability will make ᴴᵁᴹᴬᴺ communication impossible."
+    ],
+    "responses": [
+      {
+        "text": "[Prick yourself with the needle]",
+        "condition": { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" },
+        "topic": "COMP_labyrinthine_safehouse_earth_jaunt2",
+        "effect": [ { "math": [ "u_vitamin('blood') -= 500" ] }, { "math": [ "u_vitamin('redcells') -= 500" ] } ]
+      },
+      {
+        "text": "ERROR - USER DIMENSIONALLY ANCHORED.",
+        "condition": { "not": { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" } },
+        "topic": "COMP_labyrinthine_safehouse_computer"
+      },
+      { "text": "Return.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "COMP_labyrinthine_safehouse_earth_jaunt2",
+    "dynamic_line": "&There is a pinch, then a wet, mechanical hiss, as the needle draws a lot of blood.  Your vision blurs.",
+    "responses": [ { "text": "…", "topic": "TALK_DONE", "effect": { "run_eocs": "EOC_LS_earth_jaunt_4hours" } } ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "COMP_labyrinthine_safehouse_string_dimension_tunnel",
+    "dynamic_line": "&<color_light_green> @User > gatestatus -update -pass KÁ\n\n .  .  .  .  .  .  %100\n\n Passcode accepted.  Route path to node?  Y/N",
+    "responses": [
+      {
+        "text": "Yes.",
+        "condition": { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" },
+        "effect": [
+          { "run_eocs": "EOC_LS_SD_enter_tunnel" },
+          { "u_lose_trait": "LS_Passcode_string_dimension" },
+          { "u_add_var": "stuck_in_labyrinth", "value": "no" }
+        ],
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "ERROR - USER DIMENSIONALLY ANCHORED.",
+        "condition": { "not": { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" } },
+        "topic": "COMP_labyrinthine_safehouse_computer"
+      },
+      {
+        "text": "No.",
+        "condition": { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" },
+        "topic": "COMP_labyrinthine_safehouse_computer"
+      }
+    ]
+  }
+]
