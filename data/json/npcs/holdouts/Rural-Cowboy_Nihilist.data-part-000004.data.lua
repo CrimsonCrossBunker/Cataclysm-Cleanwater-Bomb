@@ -1,44 +1,23 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_COWBOYN_INTRODUCTION1",
-    line = ccb.content.text("I dunno.  Waiting.  Seeing if something happens I guess."),
+    id = "TALK_COWBOYN_MOTIVATES",
+    line = ccb.content.text("I… I mean… huh.  I guess."),
+    on_enter = { { actions = { actions.set_actor_value("speaker", "dialogue_cowboyn_cowboynmots", "yes") } } },
     replies = {
-        {
-            text = ccb.content.text("You do realize there is an apocalypse going on, right?"),
-            next_topic = "TALK_COWBOYN_INTRODUCTION2",
-        },
+        { text = ccb.content.text("Good.  Take care."), next_topic = "TALK_DONE" },
+        { text = ccb.content.text("That's a start."), next_topic = "TALK_COWBOYN_MAIN" },
     },
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_COWBOYN_INTRODUCTION2",
-    line = ccb.content.text("Yeah.  I do."),
+    id = "TALK_COWBOYN_MOTIVATEF",
+    line = ccb.content.text("Just leave me alone."),
+    on_enter = { { actions = { actions.set_actor_value("speaker", "dialogue_cowboyn_cowboynmota", "yes") } } },
     replies = {
-        {
-            text = ccb.content.text("So shouldn't you be more concerned?  Trying to survive?"),
-            next_topic = "TALK_COWBOYN_NIHILIST",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_COWBOYN_NIHILIST",
-    line = ccb.content.text("For how long?  You've seen what's out there.  If we survive today, we'll die the day after.  Or the day after that.  And if we live beyond that, we'll just see everyone we care about die.  All of them.  Might as well get it over with."),
-    replies = {
-        { text = ccb.content.text("What happened to you?"), next_topic = "TALK_COWBOYN_BACKGROUND" },
-        {
-            text = ccb.content.text("So you're just going to give up?"),
-            next_topic = "TALK_COWBOYN_NIHILIST2",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_COWBOYN_NIHILIST2",
-    line = ccb.content.text("Yeah.  I think I will."),
-    replies = {
-        { text = ccb.content.text("What happened to you?"), next_topic = "TALK_COWBOYN_BACKGROUND" },
-        { text = ccb.content.text("Fair enough."), next_topic = "TALK_DONE" },
+        { text = ccb.content.text("Alright.  Take care."), next_topic = "TALK_DONE" },
+        { text = ccb.content.text("Fine."), next_topic = "TALK_DONE" },
     },
 }

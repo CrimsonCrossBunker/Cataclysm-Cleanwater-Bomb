@@ -9,54 +9,5 @@
     "mission": "GUARD",
     "chat": "TALK_COWBOYN_MAIN",
     "faction": "no_faction"
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_COWBOYN_MAIN",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyn" } ],
-      "yes": "Yeah?",
-      "no": "Oh.  Hey there."
-    },
-    "speaker_effect": { "effect": { "u_add_var": "dialogue_first_meeting_talked_to_cowboyn", "value": "yes" } },
-    "responses": [
-      {
-        "text": "Thought I heard someone.  What are you doing here?",
-        "topic": "TALK_COWBOYN_INTRODUCTION1",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyn" } ] } }
-      },
-      {
-        "text": "How did you get here?",
-        "topic": "TALK_COWBOYN_BACKGROUND",
-        "condition": {
-          "and": [
-            { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyn" } ] },
-            {
-              "not": {
-                "or": [
-                  { "compare_string": [ "yes", { "u_val": "dialogue_cowboyn_cowboynmota" } ] },
-                  { "compare_string": [ "yes", { "u_val": "dialogue_cowboyn_cowboynmots" } ] }
-                ]
-              }
-            }
-          ]
-        }
-      },
-      {
-        "text": "Would you like to come with me?",
-        "topic": "TALK_COWBOYN_FOLLOW",
-        "condition": {
-          "or": [
-            { "compare_string": [ "yes", { "u_val": "dialogue_cowboyn_cowboynmota" } ] },
-            { "compare_string": [ "yes", { "u_val": "dialogue_cowboyn_cowboynmots" } ] }
-          ]
-        }
-      },
-      {
-        "text": "See you around.",
-        "topic": "TALK_DONE",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_cowboyn" } ] }
-      }
-    ]
   }
 ]
