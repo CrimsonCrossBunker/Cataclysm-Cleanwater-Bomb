@@ -1,64 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "void_spider_lair_corpses",
-    "object": { "place_nested": [ { "chunks": [ "void_spider_lair_corpses" ], "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "void_spider_lair_corpses",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "     ,,,,,,,,,       ,  ",
-        "         ,,,,,,    ,,,  ",
-        "          ,,,,,,,,,,,   ",
-        ",    ,,   ,,,,  ,o,,,   ",
-        ",  ,,,,,,,ooo    ,bo    ",
-        ",    ,,,ooo,    ,,o     ",
-        ",  ,,,,,b,,o  ,,,,,,, ,,",
-        ",,,  ,,,,,o,,,,o#,,,#o,,",
-        ", ,,,,,,,,,,,  ##,,,##,,",
-        ",,, ,,bo,, ,,,,,,,A,,,,,",
-        ", ,,,,o,,   oo ##,,,##,,",
-        " ,, ,,,,     ooo#,,,#o,,",
-        ",,,,,,,,,    # ,,,,    ,",
-        ",  ,,,o,,,  ,  ,,,     ,",
-        ",  ,bo,,   ,,,,,      ,,",
-        " ,  ,     ,,bo,,      , ",
-        "          ,oo,#      ,,,",
-        "         ,o,,      ,,,,,",
-        "   ,,  ,,b,o,     ,,,,,,",
-        "       , , ,,,  ,,,,, ,,",
-        "    ,,  ,,,,,,,,,,,,o,, ",
-        "     ,,,,,,,,,,,,,,,,,  ",
-        "          ,,,,o,,,,,,   ",
-        "  ,,,,,,,,,,,,,,,,,     "
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "terrain": {
-        "#": "t_rock",
-        "o": "t_nether_glass_floor",
-        "|": "t_nether_basalt",
-        ",": "t_nether_glass_floor",
-        "B": "t_nether_glass_wall",
-        "A": "t_nether_glass_floor_clairvoyance",
-        "b": "t_nether_glass_floor_clairvoyance"
-      },
-      "items": {
-        "o": { "item": "void_spider_nest", "chance": 100 },
-        "A": { "item": "void_spider_corpse_mayor_loot", "chance": 100 },
-        "b": { "item": "void_spider_corpse_minor_loot", "chance": 100 }
-      }
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "void_spider_lair_eggs",
-    "object": { "place_nested": [ { "chunks": [ "void_spider_lair_eggs" ], "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "void_spider_webs",
     "object": {
       "mapgensize": [ 2, 2 ],
@@ -69,42 +11,6 @@
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "fields": { "W": { "field": "fd_void_web", "intensity": 2, "age": 1 } },
       "traps": { "W": "tr_void_spider_entry" }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "void_spider_lair_eggs",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "       ##,,,,,,,        ",
-        "      ,,,,,,,,,,,       ",
-        "      ,,,,o,oo,,,,,     ",
-        "     ##,,ooo,,,,,,,,    ",
-        "    ##,,oo,,, ww,ooo    ",
-        "    ,,,,o,,,,www,,ooo   ",
-        "    o,,,o o,www##,,oo   ",
-        "    o ,,, o,o,,w##,,    ",
-        "    oo,,,,,,o ,,,,oo    ",
-        "     ##,,,,,,,,,,,o,    ",
-        "     # o,,,,,,,,,,,     ",
-        "       ooo,,,,,,,,      ",
-        "         ooo,,###       ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "terrain": { "#": "t_rock", "|": "t_nether_basalt", ",": "t_nether_glass_floor", "w": "t_water_sh", "o": "t_nether_glass_floor" },
-      "items": { "o": { "item": "void_spider_nest", "chance": 100 } }
     }
   },
   {
