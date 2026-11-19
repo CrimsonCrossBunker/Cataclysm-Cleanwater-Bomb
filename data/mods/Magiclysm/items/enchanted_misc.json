@@ -75,22 +75,5 @@
     ],
     "flags": [ "ALLOWS_REMOTE_USE", "NO_UNLOAD" ],
     "charge_info": { "recharge_type": "periodic", "time": "1 h", "regenerate_ammo": true }
-  },
-  {
-    "id": "mspider_box",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARTIFACT" ],
-    "name": { "str": "spider box", "str_pl": "spider boxes" },
-    "description": "This is a small glass box that contains a spider that diligently works day and night to produce silk thread that it stores in a reservoir you can open and retrieve it from.",
-    "weight": "100 g",
-    "volume": "100 ml",
-    "price": "1 kUSD",
-    "price_postapoc": "1150 USD",
-    "material": [ "glass" ],
-    "symbol": ";",
-    "color": "red",
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "thread": 1000 } } ],
-    "tool_ammo": [ "thread" ],
-    "charge_info": { "recharge_type": "periodic", "time": "1 h", "regenerate_ammo": true }
   }
 ]
