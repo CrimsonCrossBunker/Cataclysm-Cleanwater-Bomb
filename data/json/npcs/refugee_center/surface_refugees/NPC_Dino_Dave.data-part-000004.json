@@ -1,0 +1,14 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_DINODAVE_Gift_Given",
+    "dynamic_line": "Indeed, my knight.  I was hesitant to grant you this power, but you have proven your worth and fealty many times over.  Make sure it does not fall into the wrong hands.  May it help you on your journey.",
+    "responses": [
+      {
+        "text": "[Take the gift.]",
+        "topic": "TALK_DINODAVE_Gift_Bye",
+        "effect": [ { "u_spawn_item": "recipe_dave_manual" }, { "u_spawn_item": "badge_cardboard" } ]
+      }
+    ]
+  }
+]
