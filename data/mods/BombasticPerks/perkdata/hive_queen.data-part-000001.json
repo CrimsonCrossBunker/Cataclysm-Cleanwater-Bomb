@@ -1,16 +1,5 @@
 [
   {
-    "type": "mutation",
-    "id": "TRAIT_HIVE_QUEEN",
-    "name": { "str": "Insect Ignoring", "//~": "NO_I18N" },
-    "points": 0,
-    "description": { "str": "Need this trait for anger relations.", "//~": "NO_I18N" },
-    "valid": false,
-    "purifiable": false,
-    "player_display": false,
-    "ignored_by": [ "INSECT", "INSECT_FLYING" ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_HIVE_QUEEN_ATTACK_INSECT_SUPPRESSOR",
     "eoc_type": "EVENT",
