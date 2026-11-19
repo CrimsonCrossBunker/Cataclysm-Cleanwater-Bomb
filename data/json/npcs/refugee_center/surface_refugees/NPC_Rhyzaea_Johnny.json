@@ -35,50 +35,5 @@
       { "skill": "ALL", "level": { "mul": [ { "one_in": 3 }, { "sum": [ { "dice": [ 2, 2 ] }, { "rng": [ -2, 1 ] } ] } ] } },
       { "skill": "speech", "bonus": { "rng": [ 3, 7 ] } }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "//": "common talk responses",
-    "id": [
-      "TALK_REFUGEE_Rhyzaea_1_firstmeet",
-      "TALK_REFUGEE_Rhyzaea_2",
-      "TALK_REFUGEE_Rhyzaea_Background",
-      "TALK_REFUGEE_Rhyzaea_Situation"
-    ],
-    "dynamic_line": "What brings you around here?  We don't see a lot of new faces.",
-    "responses": [
-      {
-        "text": "I'm trying to put a cleanup crew together to tidy up the back room.  Can you help?",
-        "condition": {
-          "and": [
-            { "u_has_mission": "MISSION_REFUGEE_Boris_CLEANUP" },
-            { "not": { "compare_string": [ "yes", { "npc_val": "mission_Boris_mission_1_cleanup_asked" } ] } }
-          ]
-        },
-        "trial": { "type": "PERSUADE", "difficulty": 15 },
-        "success": { "topic": "TALK_REFUGEE_Accept_Boris_Mission_1" },
-        "failure": { "topic": "TALK_REFUGEE_Refuse_Boris_Mission_1" }
-      },
-      { "text": "What's your story?", "topic": "TALK_REFUGEE_Rhyzaea_Background" },
-      { "text": "How are things here?", "topic": "TALK_REFUGEE_Rhyzaea_Situation" },
-      { "text": "Is there anything I can do to help you out?", "topic": "TALK_MISSION_LIST" },
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_Rhyzaea_1",
-    "dynamic_line": "Hi there.  I don't think we've met before.  I'm Rhyzaea, people call me Rhy.",
-    "speaker_effect": {
-      "effect": [
-        { "u_add_var": "general_meeting_u_met_Rhyzaea_Johnny", "value": "yes" },
-        { "npc_first_topic": "TALK_REFUGEE_Rhyzaea_1a" }
-      ]
-    },
-    "responses": [
-      { "text": "Nice to meet you, Rhy.", "topic": "TALK_REFUGEE_Rhyzaea_1_firstmeet" },
-      { "text": "Nice to meet you, Rhy.  <end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
