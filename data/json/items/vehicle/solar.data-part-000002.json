@@ -1,0 +1,20 @@
+[
+  {
+    "type": "ITEM",
+    "copy-from": "folding_solar_panel",
+    "id": "folding_solar_panel_v2",
+    "name": { "str": "solar suitcase" },
+    "description": "A large, ready-to-deploy set of solar panels, designed for portable off-the-grid use.",
+    "//": [
+      "Based on https://www.renogy.com/200-watt-12-volt-monocrystalline-foldable-solar-suitcase",
+      "26.4 in x 32.5 in x 2.8 in is 39.4 L, 38.6 lbs = 17.5 kg",
+      "Surface area 0.554 m^2, listed 200 W. Half of solar_panel_v2 for half surface area"
+    ],
+    "weight": "17500 g",
+    "volume": "39400 ml",
+    "longest_side": "83 cm",
+    "use_action": { "type": "deploy_appliance", "base": "folding_solar_panel_v2_deployed" },
+    "price": "320 USD",
+    "price_postapoc": "20 USD"
+  }
+]
