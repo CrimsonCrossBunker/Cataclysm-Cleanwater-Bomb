@@ -7432,6 +7432,81 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@class StaticMapgenIdPlacement: StaticMapgenPlacementOptions, StaticMapgenPosition
 ---@field id string Native ID of the object or faction being placed.
 
+---@class StaticMapgenComputerMenuOption
+---@field label string|LocalizedText Menu label.
+---@field action string Native computer action ID.
+---@field security? integer Hacking difficulty for this menu option. Defaults to zero.
+
+---@class StaticMapgenComputer: StaticMapgenPlacementOptions
+---@field name? string|LocalizedText Name displayed on the console.
+---@field access_denied? string|LocalizedText Override the default denial message.
+---@field security? integer Hacking difficulty to enter the console.
+---@field mission_target? boolean Associate the console with the mapgen mission.
+---@field chat_topics? string[] Native dialogue topic IDs in menu order.
+---@field menu? StaticMapgenComputerMenuOption[] Menu options in display order.
+---@field failures? string[] Native computer failure action IDs in selection order.
+
+---@class StaticMapgenComputerPlacement: StaticMapgenComputer, StaticMapgenPosition
+
+---@class StaticMapgenVendingMachine: StaticMapgenPlacementOptions
+---@field group? string Item group ID. Defaults to default_vending_machine.
+---@field reinforced? boolean
+---@field lootable? boolean
+---@field powered? boolean
+---@field networked? boolean
+
+---@class StaticMapgenVendingPlacement: StaticMapgenVendingMachine, StaticMapgenPosition
+
+---@class StaticMapgenLiquid: StaticMapgenPlacementOptions
+---@field id string Liquid item ID.
+---@field amount? StaticMapgenRange Quantity in the liquid's native units. Omitted or -1 uses the item's default.
+---@field one_in? StaticMapgenRange Native one-in-N probability.
+
+---@class StaticMapgenLiquidPlacement: StaticMapgenLiquid, StaticMapgenPosition
+
+---@class StaticMapgenFuelPump: StaticMapgenPlacementOptions
+---@field fuel? string Fuel item ID.
+---@field amount? StaticMapgenRange Quantity in hundreds of charges. Zero uses a random native fill amount.
+
+---@class StaticMapgenFuelPumpPlacement: StaticMapgenFuelPump, StaticMapgenPosition
+
+---@class StaticMapgenSealedItem: StaticMapgenPlacementOptions
+---@field furniture string Furniture enclosing the item or planted seed.
+---@field chance? StaticMapgenRange Native placement percentage scaled by item spawn rate.
+---@field item? StaticMapgenItemSpawn Item placed inside the furniture.
+---@field item_group? StaticOvermapMapgenItemGroup Item group placed inside the furniture. Specify at least one of item and item_group.
+
+---@class StaticMapgenCorpse: StaticMapgenPlacementOptions
+---@field group string Monster group from which to select a corpse.
+---@field age_days? integer Corpse age in days.
+
+---@class StaticMapgenCorpsePlacement: StaticMapgenCorpse, StaticMapgenPosition
+
+---@class StaticMapgenRubble: StaticMapgenPlacementOptions
+---@field furniture? string Rubble furniture ID.
+---@field floor? string Terrain left under the rubble.
+---@field with_debris? boolean Generate debris items.
+---@field overwrite? boolean Overwrite the existing tile instead of bashing it.
+
+---@class StaticMapgenRubblePlacement: StaticMapgenRubble, StaticMapgenPosition
+
+---@class StaticMapgenTransform: StaticMapgenPlacementOptions
+---@field id string Native terrain and furniture transform ID.
+
+---@class StaticMapgenTransformPlacement: StaticMapgenTransform, StaticMapgenPosition
+
+---@class StaticMapgenAreaPlacement: StaticMapgenPlacementOptions, StaticMapgenPosition
+
+---@class StaticMapgenVehicleRemoval: StaticMapgenAreaPlacement
+---@field prototypes? string[] Restrict removal to these prototype IDs. Omit or leave empty to remove all vehicles in the area.
+
+---@class StaticMapgenNpcRemoval: StaticMapgenAreaPlacement
+---@field id? string NPC template ID to match in the current overmap tile.
+---@field unique_id? string Unique NPC ID to match in the current overmap tile.
+
+---@class StaticMapgenPositionMarker: StaticMapgenAreaPlacement
+---@field name string Save the absolute map square under this native mapgen variable name.
+
 ---@alias StaticMapgenTileOperation 'terrain'|'furniture'|'trap'|'remove_trap'|'remove_creatures'|'kill_creatures'|'remove_items'|'remove_fields'|'radiation'|'bash'|'burn'|'remember_position'
 
 ---@class StaticMapgenTileEdit: StaticMapgenPlacementOptions, StaticMapgenPosition
@@ -7474,6 +7549,16 @@ function CcbPlatformContent.OvermapTerrain(options) end
 
 ---@alias StaticMapgenGlyph string|StaticMapgenGlyphChoice[]
 
+---@class StaticMapgenGlyphMapping
+---@field terrain? StaticMapgenGlyph
+---@field furniture? StaticMapgenGlyph
+---@field traps? StaticMapgenGlyph
+---@field item_spawns? StaticMapgenItemSpawn|StaticMapgenItemSpawn[]
+---@field item_groups? StaticOvermapMapgenItemGroup|StaticOvermapMapgenItemGroup[]
+---@field liquids? StaticMapgenLiquid|StaticMapgenLiquid[]
+---@field fields? StaticMapgenField|StaticMapgenField[]
+---@field npcs? StaticMapgenNpc|StaticMapgenNpc[]
+
 ---@class StaticOvermapMapgenLayout
 ---@field fill_terrain? string Terrain ID used as the base fill.
 ---@field rows? string[] Terrain layout rows in map order.
@@ -7487,6 +7572,7 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field terrain? table<string, StaticMapgenGlyph> Glyph to terrain ID or native choices.
 ---@field furniture? table<string, StaticMapgenGlyph> Glyph to furniture ID or native choices.
 ---@field traps? table<string, StaticMapgenGlyph> Glyph to trap ID or native choices.
+---@field glyph_mappings? table<string, StaticMapgenGlyphMapping> Group related pieces by glyph. These pieces precede individual glyph tables of the same kind.
 ---@field item_groups? table<string, StaticOvermapMapgenItemGroup|StaticOvermapMapgenItemGroup[]> Item-group placements by glyph.
 ---@field item_spawns? table<string, StaticMapgenItemSpawn|StaticMapgenItemSpawn[]> Item placements by glyph.
 ---@field monster_glyphs? table<string, StaticMapgenMonster|StaticMapgenMonster[]> Monster placements by glyph.
@@ -7515,6 +7601,26 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field tile_edits? StaticMapgenTileEdit[] Tile edits submitted in order for the native mapgen phases.
 ---@field toilets? string[]|table<string, StaticMapgenToilet|StaticMapgenToilet[]> Default toilet glyphs or explicit placements by glyph.
 ---@field toilet_placements? StaticMapgenToiletPlacement[] Toilet placements by position.
+---@field computer_placements? StaticMapgenComputerPlacement[] Computer placements by position.
+---@field computer_glyphs? table<string, StaticMapgenComputer|StaticMapgenComputer[]> Computers by glyph.
+---@field vending_placements? StaticMapgenVendingPlacement[] Vending machine placements by position.
+---@field vending_glyphs? table<string, StaticMapgenVendingMachine|StaticMapgenVendingMachine[]> Vending machines by glyph.
+---@field liquid_placements? StaticMapgenLiquidPlacement[] Liquid placements by position.
+---@field liquid_glyphs? table<string, StaticMapgenLiquid|StaticMapgenLiquid[]> Liquids by glyph.
+---@field fuel_pump_placements? StaticMapgenFuelPumpPlacement[] Fuel pump placements by position.
+---@field fuel_pump_glyphs? table<string, StaticMapgenFuelPump|StaticMapgenFuelPump[]> Fuel pumps by glyph.
+---@field sealed_item_glyphs? table<string, StaticMapgenSealedItem|StaticMapgenSealedItem[]> Sealed furniture and its contents by glyph.
+---@field corpse_placements? StaticMapgenCorpsePlacement[] Corpses by position.
+---@field corpse_glyphs? table<string, StaticMapgenCorpse|StaticMapgenCorpse[]> Corpses by glyph.
+---@field rubble_placements? StaticMapgenRubblePlacement[] Rubble placements by position.
+---@field rubble_glyphs? table<string, StaticMapgenRubble|StaticMapgenRubble[]> Rubble by glyph.
+---@field transform_placements? StaticMapgenTransformPlacement[] Apply terrain and furniture transforms in areas.
+---@field transform_glyphs? table<string, StaticMapgenTransform|StaticMapgenTransform[]> Terrain and furniture transforms by glyph.
+---@field vehicle_removals? StaticMapgenVehicleRemoval[] Remove vehicles in areas.
+---@field npc_removals? StaticMapgenNpcRemoval[] Remove matching NPCs in the current overmap tile.
+---@field clear_areas? StaticMapgenAreaPlacement[] Clear furniture, traps, vehicles, items, fields and graffiti from areas.
+---@field clear_glyphs? table<string, StaticMapgenPlacementOptions|StaticMapgenPlacementOptions[]> Clear furniture, traps, vehicles, items, fields and graffiti from glyphs.
+---@field position_markers? StaticMapgenPositionMarker[] Record absolute map positions.
 ---@field nested? StaticMapgenNestedPlacement[] Nested layouts in placement order.
 ---@field nested_glyphs? table<string, StaticMapgenNestedOptions|StaticMapgenNestedOptions[]> Ordered nested placements keyed by map glyph.
 

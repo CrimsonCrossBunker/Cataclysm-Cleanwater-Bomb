@@ -933,6 +933,87 @@ void write_placement_toilet( JsonOut &json, const sol::table &options )
     write_mapgen_range( json, "amount", options.raw_get<sol::object>( "water_charges" ) );
 }
 
+void write_mapgen_string_array( JsonOut &json, const sol::table &options, const char *field,
+                                const char *native_field )
+{
+    if( const auto values = options.get<sol::optional<sol::table>>( field ) ) {
+        json.member( native_field, bounded_string_array( *values, field,
+                     std::numeric_limits<std::size_t>::max(), "mapgen placement" ) );
+    }
+}
+
+void write_placement_computer( JsonOut &json, const sol::table &options )
+{
+    write_static_singular_text( json, "name", options.raw_get<sol::object>( "name" ),
+                                "mapgen computer name" );
+    write_static_singular_text( json, "access_denied", options.raw_get<sol::object>( "access_denied" ),
+                                "mapgen computer denial text" );
+    write_placement_member<int>( json, options, "security", "security" );
+    write_placement_member<bool>( json, options, "mission_target", "target" );
+    write_mapgen_string_array( json, options, "chat_topics", "chat_topics" );
+    if( const auto menu = options.get<sol::optional<sol::table>>( "menu" ) ) {
+        json.member( "options" );
+        json.start_array();
+        const std::size_t count = menu->size();
+        for( std::size_t i = 1; i <= count; ++i ) {
+            const sol::table choice = menu->raw_get<sol::table>( i );
+            json.start_object();
+            write_static_singular_text( json, "name", choice.raw_get<sol::object>( "label" ),
+                                        "mapgen computer option label" );
+            json.member( "action", choice.get<std::string>( "action" ) );
+            write_placement_member<int>( json, choice, "security", "security" );
+            json.end_object();
+        }
+        json.end_array();
+    }
+    if( const auto failures = options.get<sol::optional<sol::table>>( "failures" ) ) {
+        json.member( "failures" );
+        json.start_array();
+        for( const std::string &action : bounded_string_array( *failures, "failures",
+                std::numeric_limits<std::size_t>::max(), "mapgen computer placement" ) ) {
+            json.start_object();
+            json.member( "action", action );
+            json.end_object();
+        }
+        json.end_array();
+    }
+}
+
+void write_placement_vending_machine( JsonOut &json, const sol::table &options )
+{
+    write_placement_member<std::string>( json, options, "group", "item_group" );
+    for( const char *field : { "reinforced", "lootable", "powered", "networked" } ) {
+        write_placement_member<bool>( json, options, field, field );
+    }
+}
+
+void write_placement_liquid( JsonOut &json, const sol::table &options )
+{
+    json.member( "liquid", options.get<std::string>( "id" ) );
+    write_mapgen_range( json, "amount", options.raw_get<sol::object>( "amount" ) );
+    write_mapgen_range( json, "chance", options.raw_get<sol::object>( "one_in" ) );
+}
+
+void write_placement_fuel_pump( JsonOut &json, const sol::table &options )
+{
+    write_mapgen_range( json, "amount", options.raw_get<sol::object>( "amount" ) );
+    write_placement_member<std::string>( json, options, "fuel", "fuel" );
+}
+
+void write_placement_corpse( JsonOut &json, const sol::table &options )
+{
+    json.member( "group", options.get<std::string>( "group" ) );
+    write_placement_member<int>( json, options, "age_days", "age" );
+}
+
+void write_placement_rubble( JsonOut &json, const sol::table &options )
+{
+    write_placement_member<std::string>( json, options, "furniture", "rubble_type" );
+    write_placement_member<std::string>( json, options, "floor", "floor_type" );
+    write_placement_member<bool>( json, options, "with_debris", "items" );
+    write_placement_member<bool>( json, options, "overwrite", "overwrite" );
+}
+
 using placement_writer = void ( * )( JsonOut &, const sol::table & );
 
 void write_static_mapgen_placement( JsonOut &json, const sol::table &options,
@@ -949,8 +1030,36 @@ void write_static_mapgen_placement( JsonOut &json, const sol::table &options,
     json.end_object();
 }
 
-void write_mapgen_glyph_placements( JsonOut &json, const char *field, const sol::table &glyphs,
-                                    placement_writer writer )
+void write_placement_sealed_item( JsonOut &json, const sol::table &options )
+{
+    json.member( "furniture", options.get<std::string>( "furniture" ) );
+    write_mapgen_range( json, "chance", options.raw_get<sol::object>( "chance" ) );
+    if( const auto item = options.get<sol::optional<sol::table>>( "item" ) ) {
+        json.member( "item" );
+        write_static_mapgen_placement( json, *item, write_placement_item, false );
+    }
+    if( const auto group = options.get<sol::optional<sol::table>>( "item_group" ) ) {
+        json.member( "items" );
+        write_static_mapgen_placement( json, *group, write_placement_item_group, false );
+    }
+}
+
+void write_mapgen_glyph_placement( JsonOut &json, const sol::table &placements,
+                                   placement_writer writer )
+{
+    const std::size_t count = placements.size();
+    if( count == 0 ) {
+        write_static_mapgen_placement( json, placements, writer, false );
+        return;
+    }
+    json.start_array();
+    for( std::size_t i = 1; i <= count; ++i ) {
+        write_static_mapgen_placement( json, placements.raw_get<sol::table>( i ), writer, false );
+    }
+    json.end_array();
+}
+
+std::vector<std::string> sorted_mapgen_glyphs( const sol::table &glyphs )
 {
     // Some native placements consume RNG or allocate an anonymous item group during loading.
     std::vector<std::string> keys;
@@ -958,21 +1067,17 @@ void write_mapgen_glyph_placements( JsonOut &json, const char *field, const sol:
         keys.push_back( entry.first.as<std::string>() );
     }
     std::sort( keys.begin(), keys.end() );
+    return keys;
+}
+
+void write_mapgen_glyph_placements( JsonOut &json, const char *field, const sol::table &glyphs,
+                                    placement_writer writer )
+{
     json.member( field );
     json.start_object();
-    for( const std::string &glyph : keys ) {
+    for( const std::string &glyph : sorted_mapgen_glyphs( glyphs ) ) {
         json.member( glyph );
-        const sol::table placements = glyphs.raw_get<sol::table>( glyph );
-        const std::size_t count = placements.size();
-        if( count == 0 ) {
-            write_static_mapgen_placement( json, placements, writer, false );
-        } else {
-            json.start_array();
-            for( std::size_t i = 1; i <= count; ++i ) {
-                write_static_mapgen_placement( json, placements.raw_get<sol::table>( i ), writer, false );
-            }
-            json.end_array();
-        }
+        write_mapgen_glyph_placement( json, glyphs.raw_get<sol::table>( glyph ), writer );
     }
     json.end_object();
 }
@@ -1000,6 +1105,38 @@ void write_static_mapgen_placements( JsonOut &json, const sol::table &layout )
         { "graffiti_placements", "place_graffiti", "graffiti_glyphs", "graffiti", write_placement_graffiti },
         { "zone_placements", "place_zones", "zone_glyphs", "zones", write_placement_zone },
         { "toilet_placements", "place_toilets", nullptr, nullptr, write_placement_toilet },
+        { "computer_placements", "place_computers", "computer_glyphs", "computers", write_placement_computer },
+        { "vending_placements", "place_vendingmachines", "vending_glyphs", "vendingmachines",
+            write_placement_vending_machine },
+        { "liquid_placements", "place_liquids", "liquid_glyphs", "liquids", write_placement_liquid },
+        { "fuel_pump_placements", "place_gaspumps", "fuel_pump_glyphs", "gaspumps", write_placement_fuel_pump },
+        { nullptr, nullptr, "sealed_item_glyphs", "sealed_item", write_placement_sealed_item },
+        { "corpse_placements", "place_corpses", "corpse_glyphs", "corpses", write_placement_corpse },
+        { "rubble_placements", "place_rubble", "rubble_glyphs", "rubble", write_placement_rubble },
+        { "transform_placements", "place_ter_furn_transforms", "transform_glyphs", "ter_furn_transforms",
+            []( JsonOut & out, const sol::table & options ) {
+                out.member( "transform", options.get<std::string>( "id" ) );
+            }
+        },
+        { "vehicle_removals", "remove_vehicles", nullptr, nullptr,
+            []( JsonOut & out, const sol::table & options ) {
+                write_mapgen_string_array( out, options, "prototypes", "vehicles" );
+            }
+        },
+        { "npc_removals", "remove_npcs", nullptr, nullptr,
+            []( JsonOut & out, const sol::table & options ) {
+                write_placement_member<std::string>( out, options, "id", "class" );
+                write_placement_member<std::string>( out, options, "unique_id", "unique_id" );
+            }
+        },
+        { "clear_areas", "place_remove_all", "clear_glyphs", "remove_all",
+            []( JsonOut &, const sol::table & ) {}
+        },
+        { "position_markers", "place_variables", nullptr, nullptr,
+            []( JsonOut & out, const sol::table & options ) {
+                out.member( "name", options.get<std::string>( "name" ) );
+            }
+        },
         { "faction_areas", "faction_owner", nullptr, nullptr,
             []( JsonOut & out, const sol::table & options ) {
                 out.member( "id", options.get<std::string>( "id" ) );
@@ -1022,15 +1159,17 @@ void write_static_mapgen_placements( JsonOut &json, const sol::table &layout )
         },
     };
     for( const placement_fields &field : fields ) {
-        if( const auto positions = layout.get<sol::optional<sol::table>>( field.positions ) ) {
-            json.member( field.native_positions );
-            json.start_array();
-            const std::size_t count = positions->size();
-            for( std::size_t index = 1; index <= count; ++index ) {
-                write_static_mapgen_placement( json, positions->raw_get<sol::table>( index ),
-                                               field.writer, true );
+        if( field.positions ) {
+            if( const auto positions = layout.get<sol::optional<sol::table>>( field.positions ) ) {
+                json.member( field.native_positions );
+                json.start_array();
+                const std::size_t count = positions->size();
+                for( std::size_t index = 1; index <= count; ++index ) {
+                    write_static_mapgen_placement( json, positions->raw_get<sol::table>( index ),
+                                                   field.writer, true );
+                }
+                json.end_array();
             }
-            json.end_array();
         }
         if( !field.glyphs ) {
             continue;
@@ -1039,6 +1178,69 @@ void write_static_mapgen_placements( JsonOut &json, const sol::table &layout )
             write_mapgen_glyph_placements( json, field.native_glyphs, *glyphs, field.writer );
         }
     }
+}
+
+void write_mapgen_glyph_alternatives( JsonOut &json, std::string_view member,
+                                      const sol::object &value )
+{
+    if( value.get_type() == sol::type::string ) {
+        json.member( member, value.as<std::string>() );
+        return;
+    }
+    const sol::table choices = value.as<sol::table>();
+    json.member( member );
+    json.start_array();
+    const std::size_t count = choices.size();
+    for( std::size_t i = 1; i <= count; ++i ) {
+        const sol::table choice = choices.raw_get<sol::table>( i );
+        const std::string id = choice.get<std::string>( "id" );
+        if( const auto copies = choice.get<sol::optional<int>>( "copies" ) ) {
+            json.start_array();
+            json.write( id );
+            json.write( *copies );
+            json.end_array();
+        } else {
+            json.write( id );
+        }
+    }
+    json.end_array();
+}
+
+void write_mapgen_glyph_mappings( JsonOut &json, const sol::table &mappings )
+{
+    struct mapping_field {
+        const char *field;
+        const char *native_field;
+        placement_writer writer;
+    };
+    static constexpr mapping_field placements[] = {
+        { "item_spawns", "item", write_placement_item },
+        { "item_groups", "items", write_placement_item_group },
+        { "liquids", "liquids", write_placement_liquid },
+        { "fields", "fields", write_placement_field },
+        { "npcs", "npcs", write_placement_npc },
+    };
+    json.member( "mapping" );
+    json.start_object();
+    for( const std::string &glyph : sorted_mapgen_glyphs( mappings ) ) {
+        const sol::table mapping = mappings.raw_get<sol::table>( glyph );
+        json.member( glyph );
+        json.start_object();
+        for( const char *field : { "terrain", "furniture", "traps" } ) {
+            const sol::object mapped = mapping.raw_get<sol::object>( field );
+            if( mapped.get_type() != sol::type::nil ) {
+                write_mapgen_glyph_alternatives( json, field, mapped );
+            }
+        }
+        for( const mapping_field &placement : placements ) {
+            if( const auto entry = mapping.get<sol::optional<sol::table>>( placement.field ) ) {
+                json.member( placement.native_field );
+                write_mapgen_glyph_placement( json, *entry, placement.writer );
+            }
+        }
+        json.end_object();
+    }
+    json.end_object();
 }
 
 void write_mapgen_tile_edits( JsonOut &json, const sol::table &edits )
@@ -1221,31 +1423,13 @@ void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
             json.member( field );
             json.start_object();
             for( const auto &[glyph, value] : *glyphs ) {
-                const std::string name = glyph.as<std::string>();
-                if( value.get_type() == sol::type::string ) {
-                    json.member( name, value.as<std::string>() );
-                } else {
-                    const sol::table choices = value.as<sol::table>();
-                    const std::size_t count = choices.size();
-                    json.member( name );
-                    json.start_array();
-                    for( std::size_t i = 1; i <= count; ++i ) {
-                        const sol::table choice = choices.get<sol::table>( i );
-                        const std::string id = choice.get<std::string>( "id" );
-                        if( const auto copies = choice.get<sol::optional<int>>( "copies" ) ) {
-                            json.start_array();
-                            json.write( id );
-                            json.write( *copies );
-                            json.end_array();
-                        } else {
-                            json.write( id );
-                        }
-                    }
-                    json.end_array();
-                }
+                write_mapgen_glyph_alternatives( json, glyph.as<std::string>(), value );
             }
             json.end_object();
         }
+    }
+    if( const auto mappings = layout.get<sol::optional<sol::table>>( "glyph_mappings" ) ) {
+        write_mapgen_glyph_mappings( json, *mappings );
     }
     write_static_mapgen_placements( json, layout );
     if( const auto edits = layout.get<sol::optional<sol::table>>( "tile_edits" ) ) {
