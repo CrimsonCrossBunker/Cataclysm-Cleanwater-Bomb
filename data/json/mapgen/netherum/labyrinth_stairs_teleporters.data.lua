@@ -83,3 +83,68 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth_stairs_1_to_2_teleporter",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssss###sssssssssss",
+            "ssssssssss#<+sssssssssss",
+            "ssssssssss###sssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+            "ssssssssssssssssssssssss",
+        },
+        terrain = {
+            ["<"] = "t_nl_stairs_up",
+            ["#"] = "t_nl_metal_wall",
+            s = "t_nl_mist",
+            ["+"] = "t_nl_door_c",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        trap_placements = { { id = "tr_nl_stairs_1_to_2", x = 12, y = 10 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth_stairs_2_to_1_teleporter",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "sssss",
+            "s###s",
+            "s#>+s",
+            "s###s",
+            "sssss",
+        },
+        terrain = {
+            [">"] = "t_nl_stairs_down",
+            ["#"] = "t_nl_metal_wall",
+            s = "t_nl_mist",
+            ["+"] = "t_nl_door_c",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        trap_placements = { { id = "tr_nl_stairs_2_to_1", x = 3, y = 2 } },
+    },
+}

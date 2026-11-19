@@ -55,3 +55,21 @@ ccb.content.define_mapgen {
         monster_placements = { { id = "mon_fleshborg_2_3_string_dimension", x = 11, y = 11, chance = 100 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "UM_Bridge_control_deadend_1_extend",
+    layout = {
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_nl_catwalk",
+                x = 11,
+                end_x = 12,
+                y = 7,
+                end_y = 8,
+            },
+        },
+    },
+}
