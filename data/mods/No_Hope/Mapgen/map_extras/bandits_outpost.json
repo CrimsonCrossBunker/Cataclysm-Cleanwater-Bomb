@@ -1,12 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "bandits_outpost",
-    "//": "TODO: Add more variations",
-    "object": { "place_nested": [ { "chunks": [ "bandits_outpost" ], "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "bandits_outpost",
     "//": "TODO: Remove autoroofs once alternative exists",
     "object": {

@@ -1,11 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "bandits_ambush",
-    "object": { "place_nested": [ { "chunks": [ "bandits_ambush" ], "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "bandits_ambush",
     "object": {
       "mapgensize": [ 24, 24 ],
