@@ -1,0 +1,52 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "bike_shop",
+    layout = {
+        toilets = { "T" },
+        vending_glyphs = {
+            D = { group = "vending_drink", lootable = true },
+            F = { group = "vending_food", lootable = true },
+        },
+        item_groups = {
+            ["%"] = { group = "cash_register_random", chance = 100 },
+            ["&"] = { group = "SUS_trash_trashcan_public", chance = 70 },
+            ["@"] = { group = "SUS_trash_dumpster", chance = 90 },
+            T = { group = "SUS_toilet", chance = 50 },
+            c = { group = "bikeshop_for_sale", chance = 60, repetitions = { 1, 4 } },
+            f = { group = "SUS_fridge_breakroom", chance = 70 },
+            l = { group = "jackets", chance = 60 },
+            r = { group = "bikeshop_tools", chance = 80, repetitions = { 1, 4 } },
+        },
+        palettes = { "parametrized_walls_palette" },
+        terrain = {
+            [" "] = "t_region_groundcover_urban",
+            ["*"] = "t_region_tree_shade",
+            _ = "t_concrete",
+            ["@"] = "t_concrete",
+            ["."] = "t_thconc_floor",
+            [":"] = "t_door_glass_c",
+            ["+"] = "t_door_c",
+            [";"] = "t_door_locked",
+            ["-"] = "t_wall_glass",
+            ["<"] = "t_ladder_up",
+            ["4"] = "t_gutter_downspout",
+        },
+        furniture = {
+            c = "f_counter",
+            S = "f_sink",
+            h = "f_chair",
+            d = "f_desk",
+            f = "f_fridge",
+            l = "f_locker",
+            r = "f_rack",
+            t = "f_table",
+            q = "f_stool",
+            B = "f_bench",
+            ["%"] = "f_counter",
+            ["&"] = "f_trashcan",
+            ["@"] = "f_dumpster",
+            ["^"] = "f_indoor_plant",
+        },
+    },
+}

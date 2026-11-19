@@ -1,0 +1,157 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "clothes_store_palette",
+    layout = {
+        item_groups = {
+            ["$"] = { group = "SUS_office_filing_cabinet", chance = 100 },
+            ["&"] = { group = "SUS_mannequin_general", chance = 70 },
+            ["("] = { group = "SUS_mannequin_outdoor", chance = 30 },
+            B = { group = "bags", chance = 50, repetitions = 3 },
+            D = { group = "SUS_trash_trashcan_public", chance = 30 },
+            I = { group = "underwear_womens", chance = 40, repetitions = 3 },
+            J = {
+                { group = "shoes_unisex", chance = 60, repetitions = 3 },
+                { group = "shoes_womens", chance = 20, repetitions = 3 },
+            },
+            K = { group = "coats_unisex", chance = 30, repetitions = 3 },
+            L = { group = "SUS_janitors_closet", chance = 100 },
+            M = {
+                { group = "pants_unisex", chance = 50, repetitions = 3 },
+                { group = "pants_womens", chance = 5, repetitions = 3 },
+                { group = "pants_mens", chance = 5, repetitions = 3 },
+            },
+            O = {
+                { group = "clothing_outdoor_torso", chance = 50, repetitions = 3 },
+                { group = "clothing_outdoor_pants", chance = 50, repetitions = 3 },
+            },
+            T = {
+                { group = "gloves_unisex", chance = 45, repetitions = 3 },
+                { group = "scarfs_unisex", chance = 30, repetitions = 3 },
+            },
+            U = { group = "underwear_mens", chance = 40, repetitions = 3 },
+            W = {
+                { group = "shirts_unisex", chance = 50, repetitions = 3 },
+                { group = "shirts_womens", chance = 10, repetitions = 3 },
+            },
+            d = { group = "SUS_office_desk", chance = 100 },
+        },
+        terrain = { p = "t_region_groundcover_urban" },
+        furniture = {
+            ["%"] = "f_console_broken",
+            c = "f_counter",
+            C = "f_armchair",
+            s = "f_stool",
+            M = "f_clothing_rail",
+            K = "f_clothing_rail",
+            J = "f_clothing_rail",
+            W = "f_clothing_rail",
+            U = "f_clothing_rail",
+            T = "f_clothing_rail",
+            O = "f_clothing_rail",
+            B = "f_clothing_rail",
+            I = "f_clothing_rail",
+            d = "f_desk",
+            ["["] = "f_table",
+            h = "f_chair",
+            ["$"] = "f_filing_cabinet",
+            L = "f_locker",
+            l = "f_locker",
+            b = "f_bigmirror",
+            y = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            p = "f_region_flower",
+            D = "f_trashcan",
+            ["&"] = "f_mannequin",
+            ["("] = "f_mannequin",
+            n = "f_bulletin",
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "tailor_palette",
+    layout = {
+        item_groups = {
+            ["&"] = { group = "SUS_mannequin_formal_mens", chance = 50 },
+            ["@"] = { group = "SUS_mannequin_dresses", chance = 50 },
+            L = { group = "SUS_janitors_closet", chance = 85 },
+            R = {
+                { group = "dresses_womens", chance = 70 },
+                { group = "shirts_summer_womens", chance = 70 },
+                { group = "pants_summer_womens", chance = 70 },
+            },
+            ["]"] = { group = "SUS_tailoring_bookcase", chance = 100 },
+            d = { group = "SUS_tailoring_tool_drawer", chance = 80 },
+            f = {
+                { group = "SUS_tailoring_materials", chance = 85 },
+                { group = "SUS_tailoring_fasteners", chance = 85 },
+            },
+        },
+        terrain = {
+            [";"] = { { id = "t_door_locked" }, { id = "t_door_elocked_alarm" } },
+            ["0"] = "t_window_alarm",
+            z = "t_region_shrub_decorative",
+            p = "t_region_groundcover_urban",
+        },
+        furniture = {
+            ["%"] = "f_console_broken",
+            c = "f_counter",
+            R = "f_clothing_rail",
+            s = "f_stool",
+            d = "f_desk",
+            ["["] = "f_table",
+            b = "f_bigmirror",
+            y = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            ["&"] = "f_mannequin",
+            ["@"] = "f_mannequin",
+            h = "f_chair",
+            p = "f_region_flower",
+            ["]"] = "f_bookcase",
+            f = "f_cupboard",
+            L = "f_locker",
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "furs_palette",
+    layout = {
+        item_groups = {
+            ["&"] = { group = "SUS_mannequin_fur", chance = 50 },
+            J = { group = "SUS_janitors_closet", chance = 60 },
+            L = {
+                { group = "SUS_fur_tailoring_materials", chance = 50 },
+                { group = "SUS_tailoring_fasteners", chance = 50 },
+            },
+            ["["] = { group = "SUS_tailoring_tool_drawer", chance = 30 },
+            c = {
+                { group = "fur_hats_unisex", chance = 50 },
+                { group = "fur_gloves_unisex", chance = 50 },
+                { group = "fur_shoes_unisex", chance = 50 },
+            },
+            d = { group = "SUS_office_desk", chance = 60 },
+        },
+        terrain = {
+            [";"] = { { id = "t_door_locked" }, { id = "t_door_elocked_alarm" } },
+            i = "t_door_locked_interior",
+            ["0"] = "t_window_alarm",
+            z = "t_region_shrub_decorative",
+            p = "t_region_groundcover_urban",
+        },
+        furniture = {
+            ["%"] = "f_console_broken",
+            c = "f_displaycase",
+            s = "f_stool",
+            d = "f_desk",
+            ["["] = "f_table",
+            b = "f_bigmirror",
+            y = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            ["&"] = "f_mannequin",
+            h = "f_chair",
+            p = "f_region_flower",
+            A = "f_statue",
+            L = "f_locker",
+            J = "f_locker",
+        },
+    },
+}

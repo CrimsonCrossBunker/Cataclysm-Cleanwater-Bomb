@@ -1,0 +1,72 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "orchard_buildings",
+    layout = {
+        terrain = {
+            [" "] = "t_region_groundcover_urban",
+            d = "t_region_soil",
+            ["$"] = "t_region_shrub_decorative",
+            ["*"] = "t_region_soil",
+            ["+"] = "t_door_c",
+            ["="] = "t_door_metal_locked",
+            ["&"] = "t_door_metal_corrugated_c",
+            ["."] = "t_pavement",
+            [","] = "t_floor",
+            ["^"] = "t_gutter_downspout",
+            ["7"] = "t_region_tree_shade",
+            b = "t_region_soil",
+            M = "t_wall_metal_corrugated",
+            m = "t_metal_floor",
+            C = "t_floor",
+            ["]"] = "t_sidewalk",
+            k = "t_floor",
+            o = "t_window_empty",
+            x = "t_window",
+            G = "t_gates_control_metal",
+            g = "t_barndoor",
+            W = "t_wall_wood",
+            z = "t_ladder_up",
+            t = "t_region_soil",
+            q = "t_fence",
+            y = "t_pavement_y",
+        },
+        furniture = {
+            C = "f_chair",
+            E = "f_crate_o",
+            O = "f_crate_o",
+            X = "f_crate_c",
+            Y = "f_crate_c",
+            c = "f_counter",
+            f = "f_rack",
+            k = "f_desk",
+            D = "f_trashcan",
+            F = "f_fridge",
+            P = "f_sign",
+            S = "f_smoking_rack",
+            T = "f_table",
+            b = "f_bench",
+            d = "f_dumpster",
+            a = "f_wood_keg",
+            s = "f_safe_o",
+            t = "f_table",
+            v = "f_oven",
+            ["{"] = "f_sink",
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "orchard_tree_apple",
+    layout = {
+        terrain = {
+            [" "] = "t_region_groundcover_forest",
+            ["*"] = "t_region_soil",
+            ["7"] = {
+                { id = "t_tree_apple", copies = 7 },
+                { id = "t_tree_young", copies = 2 },
+                { id = "t_tree_dead" },
+            },
+        },
+    },
+}

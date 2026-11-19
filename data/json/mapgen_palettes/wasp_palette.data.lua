@@ -1,5 +1,29 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "wasp_palette",
+    layout = {
+        nested_glyphs = { O = { id = "wasp_brood" } },
+        monster_glyphs = { ["8"] = { group = "GROUP_WASP_QUEEN" } },
+        terrain = {
+            x = "t_paper_brood",
+            X = "t_paper_hard",
+            _ = "t_floor_paper_hard",
+            ["*"] = "t_roof_paper_hard",
+            ["."] = "t_floor_paper_noroof",
+            ["8"] = "t_floor_paper_noroof",
+            R = "t_radio_tower",
+            a = "t_railing",
+            [","] = "t_metal_floor_no_roof",
+            ["<"] = "t_stairs_up",
+            [">"] = "t_stairs_down",
+            [":"] = "t_null",
+            ["#"] = "t_metal_floor_no_roof",
+        },
+        furniture = { [":"] = "f_cellphone_booster", ["#"] = "f_small_satellite_dish" },
+    },
+}
+
 -- Empty cell
 ccb.content.define_mapgen {
     kind = "nested",

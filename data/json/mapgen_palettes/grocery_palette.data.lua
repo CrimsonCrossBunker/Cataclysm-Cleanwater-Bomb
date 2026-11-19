@@ -1,0 +1,51 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "grocery_store_palette",
+    layout = {
+        toilets = { "T" },
+        item_groups = { T = { group = "SUS_toilet", chance = 50 } },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "parametrized_carpets_palette",
+            "parametrized_walls_palette",
+        },
+        terrain = {
+            ["*"] = "t_thconc_floor",
+            ["+"] = {
+                { id = "t_door_b", copies = 2 },
+                { id = "t_door_o", copies = 7 },
+                { id = "t_door_c", copies = 5 },
+                { id = "t_door_locked_interior", copies = 3 },
+            },
+            g = "t_wall_glass",
+            C = "t_thconc_floor",
+            I = "t_door_locked_interior",
+            L = "t_door_locked",
+            W = "t_chainfence",
+            ["["] = "t_door_glass_c",
+            ["]"] = "t_thconc_floor",
+            _ = "t_region_groundcover_urban",
+            s = "t_concrete",
+            w = "t_chainfence",
+            ["4"] = "t_gutter_downspout",
+            [":"] = "t_window",
+            ["Ю"] = "t_concrete",
+        },
+        furniture = {
+            A = "f_atm_off",
+            ["-"] = "f_counter",
+            ["7"] = "f_bookcase",
+            C = { { id = "f_crate_c", copies = 30 }, { id = "f_crate_o", copies = 70 } },
+            S = "f_sink",
+            ["]"] = "f_rack",
+            ["^"] = "f_indoor_plant",
+            b = "f_stool",
+            f = "f_glass_fridge",
+            r = "f_rack",
+            t = "f_table",
+            ["Ю"] = "f_sandbag_half",
+            q = "f_locker",
+        },
+    },
+}

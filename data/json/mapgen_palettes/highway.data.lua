@@ -1,0 +1,24 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "highway_palette",
+    layout = {
+        terrain = {
+            ["'"] = "t_open_air",
+            [";"] = "t_sidewalk",
+            ["."] = "t_pavement",
+            ["*"] = "t_pavement_y",
+            ["|"] = "t_guardrail",
+            g = {
+                { id = "t_region_groundcover_urban", copies = 2 },
+                { id = "t_region_grass", copies = 1 },
+                { id = "t_region_groundcover", copies = 1 },
+            },
+            _ = "t_ramp_up_low",
+            ["<"] = "t_ramp_up_high",
+            [">"] = "t_ramp_down_low",
+            ["‾"] = "t_ramp_down_high",
+            ["#"] = "t_strconc_wall",
+        },
+    },
+}

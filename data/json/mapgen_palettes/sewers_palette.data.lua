@@ -1,0 +1,78 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "sewers",
+    layout = {
+        nested_glyphs = {
+            ["6"] = { choices = { { id = "null", weight = 2 }, { id = "1x1_sewermap", weight = 1 } } },
+        },
+        item_groups = {
+            ["-"] = { { group = "SUS_trash_floor", chance = 1 } },
+            ["."] = { { group = "SUS_trash_floor", chance = 3, repetitions = { 1, 2 } } },
+            ["^"] = { { group = "vending_food_items", chance = 75, repetitions = { 1, 2 } } },
+            _ = {
+                { group = "SUS_trash_floor", chance = 30, repetitions = { 1, 4 } },
+                { group = "sewer", chance = 5 },
+                { group = "sewage_plant", chance = 1 },
+            },
+            r = {
+                { group = "sewage_plant", chance = 15 },
+                { group = "os_items", chance = 45, repetitions = { 1, 3 } },
+            },
+        },
+        vehicle_glyphs = { ["Ł"] = { id = "hand_truck", chance = 35 } },
+        monster_glyphs = {
+            ["~"] = { group = "GROUP_SEWER", chance = 2 },
+            z = { group = "GROUP_ZOMBIE", chance = 25 },
+            Z = { group = "GROUP_ZOMBIE", chance = 100 },
+        },
+        terrain = {
+            [" "] = "t_soil",
+            ["|"] = "t_concrete_wall",
+            I = "t_wall_metal",
+            ["="] = "t_metal_railing",
+            L = {
+                { id = "t_door_bar_locked", copies = 2 },
+                { id = "t_door_bar_c", copies = 2 },
+                { id = "t_door_bar_o" },
+            },
+            D = "t_door_metal_c",
+            ["+"] = "t_bars",
+            ["."] = "t_metal_floor",
+            r = "t_metal_floor",
+            ["^"] = "t_metal_floor",
+            z = "t_metal_floor",
+            Z = "t_metal_floor",
+            ["6"] = "t_metal_floor",
+            ["Ł"] = "t_metal_floor",
+            ["~"] = "t_sewage",
+            _ = {
+                { id = "t_moss", copies = 2 },
+                { id = "t_dirtmound", copies = 4 },
+                { id = "t_sewage", copies = 4 },
+            },
+            ["-"] = "t_bridge",
+            ["#"] = "t_grate",
+            ["<"] = "t_ladder_up",
+            o = "t_sewage_pipe",
+            p = "t_sewage_pump",
+        },
+        traps = { ["?"] = { { id = "tr_cot" } } },
+        furniture = {
+            r = "f_utility_shelf",
+            ["/"] = "f_rubble",
+            O = "f_55gal_firebarrel",
+            B = "f_cardboard_box",
+            f = "f_canvas_wall",
+            F = "f_canvas_door_o",
+            d = "f_desk",
+            h = "f_chair",
+            H = "f_sofa",
+            s = "f_sink",
+            t = "f_toilet",
+            J = "f_counter",
+            R = "f_bookcase",
+            ["∞"] = { { id = "f_foot_locker" }, { id = "f_foot_locker_aluminum" } },
+        },
+    },
+}

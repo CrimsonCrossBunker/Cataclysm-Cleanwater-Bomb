@@ -1,0 +1,39 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "field_football",
+    layout = {
+        toilets = { ";" },
+        item_groups = {
+            [";"] = { group = "SUS_toilet", chance = 50 },
+            h = { group = "football_items", chance = 5 },
+        },
+        vending_glyphs = { V = { group = "vending_drink", lootable = true } },
+        furniture = {
+            h = "f_bench",
+            H = "f_bench",
+            R = "f_trashcan",
+            C = "f_counter",
+            F = "f_heavy_duty_fridge",
+            I = "f_sink",
+        },
+        terrain = {
+            ["4"] = "t_gutter_downspout",
+            ["%"] = "t_grass_white",
+            [" "] = "t_region_groundcover_urban",
+            _ = "t_grass",
+            [","] = "t_region_groundcover_barren",
+            H = "t_region_groundcover_barren",
+            V = "t_region_groundcover_barren",
+            h = "t_region_groundcover_barren",
+            R = "t_region_groundcover_barren",
+            ["."] = "t_pavement_y",
+            p = "t_pavement",
+            o = "t_column",
+            ["+"] = "t_door_c",
+            ["!"] = "t_floor",
+            W = "t_window_open",
+            ["|"] = "t_wall_w",
+        },
+    },
+}

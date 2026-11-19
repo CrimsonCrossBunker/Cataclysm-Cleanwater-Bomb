@@ -1,0 +1,85 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "bandit_camp",
+    layout = {
+        nested_glyphs = {
+            ["Á"] = { id = "tent_5x5_N" },
+            ["É"] = { id = "tent_5x5_S" },
+            ["é"] = { id = "tent_3x3_S" },
+        },
+        item_groups = {
+            [" "] = { group = "SUS_trash_floor", chance = 2 },
+            ["."] = { group = "SUS_trash_floor", chance = 5 },
+            ["1"] = { group = "stash_drugs", chance = 66, repetitions = { 1, 3 } },
+            ["2"] = {
+                { group = "SUS_pantry", chance = 33 },
+                { group = "cannedfood", chance = 80, repetitions = { 1, 4 } },
+            },
+            ["3"] = { group = "cash_register_full", chance = 80, repetitions = { 1, 3 } },
+            ["4"] = {
+                { group = "home_hw", chance = 50, repetitions = { 1, 2 } },
+                { group = "cleaning", chance = 5, repetitions = { 1, 2 } },
+                { group = "camping", chance = 33, repetitions = { 1, 2 } },
+            },
+            ["@"] = { group = "army_bed", chance = 50 },
+            A = { group = "stash_wood", chance = 80, repetitions = { 1, 10 } },
+            K = { { group = "keg_beer", chance = 50 }, { group = "keg_wine_intact", chance = 33 } },
+            R = {
+                { group = "mechanics", chance = 66, repetitions = { 1, 4 } },
+                { group = "tools_mechanic", chance = 20 },
+            },
+            d = {
+                { group = "SUS_dresser_mens", chance = 50 },
+                { group = "SUS_dresser_womens", chance = 50 },
+            },
+            o = { group = "homebooks", chance = 75, repetitions = { 1, 5 } },
+            z = {
+                { group = "SUS_trash_dumpster", chance = 50 },
+                { group = "antique", chance = 5 },
+                { group = "antique", chance = 5 },
+                { group = "art", chance = 5 },
+            },
+        },
+        furniture = {
+            [","] = {
+                { id = "f_null", copies = 200 },
+                { id = "f_region_weed", copies = 2 },
+                { id = "f_boulder_small" },
+            },
+            ["@"] = "f_bed",
+            A = "f_fireplace",
+            b = "f_bench",
+            d = "f_dresser",
+            h = "f_chair",
+            n = "f_table",
+            o = "f_bookcase",
+            ["1"] = { { id = "f_rack" }, { id = "f_utility_shelf" }, { id = "f_warehouse_shelf" } },
+            ["2"] = { { id = "f_rack" }, { id = "f_utility_shelf" }, { id = "f_warehouse_shelf" } },
+            ["3"] = { { id = "f_rack" }, { id = "f_utility_shelf" }, { id = "f_warehouse_shelf" } },
+            ["4"] = { { id = "f_rack" }, { id = "f_utility_shelf" }, { id = "f_warehouse_shelf" } },
+            R = { { id = "f_rack" }, { id = "f_utility_shelf" }, { id = "f_warehouse_shelf" } },
+            z = { { id = "f_crate_c" }, { id = "f_crate_o" }, { id = "f_cardboard_box" } },
+        },
+        terrain = {
+            ["#"] = "t_wall_log",
+            ["%"] = "t_region_shrub",
+            ["$"] = {
+                { id = "t_region_groundcover_forest", copies = 2 },
+                { id = "t_region_shrub" },
+                { id = "t_region_tree" },
+            },
+            ["+"] = "t_door_c",
+            [","] = { { id = "t_region_groundcover_forest" }, { id = "t_region_groundcover" } },
+            [" "] = "t_region_groundcover_barren",
+            P = "t_palisade",
+            p = "t_palisade_gate",
+            x = "t_palisade_pulley",
+            ["/"] = "t_region_groundcover_barren",
+            z = "t_region_groundcover_barren",
+            ["Á"] = "t_region_groundcover_barren",
+            ["É"] = "t_region_groundcover_barren",
+            ["é"] = "t_region_groundcover_barren",
+        },
+    },
+}

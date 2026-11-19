@@ -1,0 +1,73 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen_palette {
+    id = "stripclub_palette",
+    layout = {
+        toilets = { "T" },
+        item_groups = {
+            D = {
+                { group = "SUS_trash_dumpster", chance = 75 },
+                { group = "stripclub_dirty", chance = 5 },
+            },
+            L = { group = "SUS_janitors_closet", chance = 100 },
+            T = { group = "SUS_toilet", chance = 35 },
+            Y = {
+                { group = "SUS_trash_trashcan", chance = 30 },
+                { group = "stripclub_dirty", chance = 5 },
+            },
+        },
+        item_spawns = {
+            ["."] = {
+                { id = "bottle_glass", chance = 4 },
+                { id = "can_drink", chance = 2 },
+                { id = "glass_shard", chance = 7 },
+            },
+            c = { { id = "makeup_kit", chance = 65 }, { id = "mirror", chance = 80 } },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "parametrized_carpets_palette",
+            "parametrized_walls_palette",
+        },
+        terrain = {
+            o = "t_window_no_curtains_open",
+            ["+"] = "t_door_c",
+            ["-"] = "t_railing",
+            ["*"] = "t_door_metal_locked",
+            ["."] = "t_region_groundcover_urban",
+            _ = "t_concrete",
+            [","] = "t_thconc_floor",
+            ["^"] = "t_gutter_downspout",
+            D = "t_concrete",
+            ["%"] = "t_region_shrub_decorative",
+            ["á"] = "t_thconc_floor",
+            l = "t_thconc_floor",
+            S = "t_thconc_floor",
+            B = "t_thconc_floor",
+        },
+        furniture = {
+            D = "f_dumpster",
+            L = "f_locker",
+            I = "f_dancing_pole",
+            e = "f_beaded_door",
+            E = "f_beaded_door",
+            B = "f_bigmirror",
+            C = "f_chair",
+            H = "f_sofa",
+            ["á"] = "f_stool",
+            ["Á"] = "f_barstool",
+            h = "f_armchair",
+            S = "f_sofa",
+            y = { { id = "f_indoor_plant_y" }, { id = "f_indoor_plant" } },
+            c = "f_counter",
+            ["("] = "f_counter",
+            F = "f_glass_fridge",
+            t = "f_table",
+            ["3"] = "f_table",
+            Y = "f_trashcan",
+            l = "f_locker",
+            b = "f_metal_bench",
+            ["&"] = "f_sink",
+        },
+    },
+}
