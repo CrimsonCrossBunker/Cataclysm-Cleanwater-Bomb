@@ -13,20 +13,5 @@
     "color": "light_blue",
     "use_action": { "type": "cast_spell", "spell_id": "prim_warp", "no_fail": true, "level": 25 },
     "flags": [ "ALLOWS_REMOTE_USE" ]
-  },
-  {
-    "id": "prim_warp",
-    "type": "SPELL",
-    "name": "Red Room Recall",
-    "description": "Transports the user to a viable landing pad via strange forces.",
-    "valid_targets": [ "self", "ally", "hostile" ],
-    "effect": "translocate",
-    "shape": "blast",
-    "difficulty": 0,
-    "max_level": 25,
-    "base_casting_time": 9000,
-    "base_energy_cost": 0,
-    "energy_source": "STAMINA",
-    "spell_class": "NONE"
   }
 ]
