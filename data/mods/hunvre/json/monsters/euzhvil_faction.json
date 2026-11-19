@@ -1,7 +1,0 @@
-[
-  {
-    "type": "MONSTER_FACTION",
-    "name": "euzhvil_faction",
-    "hate": [ "player", "human" ]
-  }
-]
