@@ -1,0 +1,33 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_HOSPITAL_2_MAKE_MISSION",
+    "//": "Assigns the mission through an EOC to avoid having to bring the NPC along with the player.",
+    "effect": [ { "assign_mission": "directions_hospital_2_CABIN" } ]
+  },
+  {
+    "id": "directions_hospital_2_CABIN",
+    "type": "mission_definition",
+    "name": { "str": "Check out that cabin" },
+    "description": "Maybe there's something left in that cabin you heard about.",
+    "goal": "MGOAL_GO_TO",
+    "difficulty": 2,
+    "value": 0,
+    "start": {
+      "assign_mission_target": { "om_special": "Cabin_2", "om_terrain": "cabin_2", "reveal_radius": 3 },
+      "effect": { "u_add_var": "mission_BGSS_hospital_2_started_quest", "value": "yes" }
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "…",
+      "offer": "…",
+      "accepted": "…",
+      "rejected": "…",
+      "advice": "…",
+      "inquire": "Any luck finding the cabin?",
+      "success": "Thanks so much for coming back here with me!  I'm not sure I would have ever gotten here alive.",
+      "success_lie": "Great!",
+      "failure": "Not that surprising."
+    }
+  }
+]
