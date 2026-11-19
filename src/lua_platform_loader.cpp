@@ -1147,7 +1147,8 @@ void write_mapgen_glyph_placements( JsonOut &json, const char *field, const sol:
     json.end_object();
 }
 
-void write_static_mapgen_placements( JsonOut &json, const sol::table &layout )
+void write_static_mapgen_placements( JsonOut &json, const sol::table &layout,
+                                     bool include_positions )
 {
     struct placement_fields {
         const char *positions;
@@ -1180,7 +1181,7 @@ void write_static_mapgen_placements( JsonOut &json, const sol::table &layout )
         { "rubble_placements", "place_rubble", "rubble_glyphs", "rubble", write_placement_rubble },
         { "transform_placements", "place_ter_furn_transforms", "transform_glyphs", "ter_furn_transforms",
             []( JsonOut & out, const sol::table & options ) {
-                out.member( "transform", options.get<std::string>( "id" ) );
+                write_mapgen_value_member( out, "transform", options.raw_get<sol::object>( "id" ) );
             }
         },
         { "vehicle_removals", "remove_vehicles", nullptr, nullptr,
@@ -1224,7 +1225,7 @@ void write_static_mapgen_placements( JsonOut &json, const sol::table &layout )
         },
     };
     for( const placement_fields &field : fields ) {
-        if( field.positions ) {
+        if( include_positions && field.positions ) {
             if( const auto positions = layout.get<sol::optional<sol::table>>( field.positions ) ) {
                 json.member( field.native_positions );
                 json.start_array();
@@ -1289,6 +1290,7 @@ void write_mapgen_glyph_mappings( JsonOut &json, const sol::table &mappings )
         { "liquids", "liquids", write_placement_liquid },
         { "fields", "fields", write_placement_field },
         { "npcs", "npcs", write_placement_npc },
+        { "toilets", "toilets", write_placement_toilet },
     };
     json.member( "mapping" );
     json.start_object();
@@ -1459,7 +1461,8 @@ void write_mapgen_nested_placement( JsonOut &json, const sol::table &placement )
 void write_mapgen_parameters( JsonOut &json, const sol::table &parameters )
 {
     static constexpr std::pair<std::string_view, std::string_view> value_types[] = {
-        { "palette", "palette_id" }, { "terrain", "ter_str_id" }, { "string", "string" },
+        { "palette", "palette_id" }, { "terrain", "ter_str_id" }, { "furniture", "furn_str_id" },
+        { "string", "string" },
         { "nested_mapgen", "nested_mapgen_id" }, { "monster_group", "mongroup_id" }, { "boolean", "bool" },
     };
     static constexpr std::pair<std::string_view, std::string_view> scopes[] = {
@@ -1490,6 +1493,72 @@ void write_mapgen_parameters( JsonOut &json, const sol::table &parameters )
         json.end_object();
     }
     json.end_object();
+}
+
+void write_mapgen_palette_fields( JsonOut &json, const sol::table &layout,
+                                  bool include_positions )
+{
+    if( const auto parameters = layout.get<sol::optional<sol::table>>( "parameters" ) ) {
+        write_mapgen_parameters( json, *parameters );
+    }
+    if( const auto palettes = layout.get<sol::optional<sol::table>>( "palettes" ) ) {
+        const std::size_t count = checked_dense_array_size( *palettes, "mapgen layout palettes",
+                                  std::numeric_limits<std::size_t>::max() );
+        json.member( "palettes" );
+        json.start_array();
+        for( std::size_t i = 1; i <= count; ++i ) {
+            write_mapgen_value( json, palettes->raw_get<sol::object>( i ) );
+        }
+        json.end_array();
+    }
+    for( const char *field : { "terrain", "furniture", "traps" } ) {
+        if( const auto glyphs = layout.get<sol::optional<sol::table>>( field ) ) {
+            json.member( field );
+            json.start_object();
+            for( const auto &[glyph, value] : *glyphs ) {
+                write_mapgen_glyph_alternatives( json, glyph.as<std::string>(), value );
+            }
+            json.end_object();
+        }
+    }
+    if( const auto mappings = layout.get<sol::optional<sol::table>>( "glyph_mappings" ) ) {
+        write_mapgen_glyph_mappings( json, *mappings );
+    }
+    write_static_mapgen_placements( json, layout, include_positions );
+    if( const auto glyphs = layout.get<sol::optional<sol::table>>( "nested_glyphs" ) ) {
+        json.member( "nested" );
+        json.start_object();
+        for( const auto &[glyph, value] : *glyphs ) {
+            json.member( glyph.as<std::string>() );
+            const sol::table placements = value.as<sol::table>();
+            const std::size_t count = placements.size();
+            if( count == 0 ) {
+                write_mapgen_nested_placement( json, placements );
+            } else {
+                json.start_array();
+                for( std::size_t i = 1; i <= count; ++i ) {
+                    write_mapgen_nested_placement( json, placements.raw_get<sol::table>( i ) );
+                }
+                json.end_array();
+            }
+        }
+        json.end_object();
+    }
+    if( const auto toilets = layout.get<sol::optional<sol::table>>( "toilets" ) ) {
+        if( toilets->size() == 0 ) {
+            write_mapgen_glyph_placements( json, "toilets", *toilets, write_placement_toilet );
+        } else {
+            json.member( "toilets" );
+            json.start_object();
+            for( const std::string &glyph : bounded_string_array( *toilets, "toilets", 256,
+                    "overmap mapgen layout" ) ) {
+                json.member( glyph );
+                json.start_object();
+                json.end_object();
+            }
+            json.end_object();
+        }
+    }
 }
 
 void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
@@ -1525,33 +1594,7 @@ void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
             json.member( field, *predecessor );
         }
     }
-    if( const auto parameters = layout.get<sol::optional<sol::table>>( "parameters" ) ) {
-        write_mapgen_parameters( json, *parameters );
-    }
-    if( const auto palettes = layout.get<sol::optional<sol::table>>( "palettes" ) ) {
-        const std::size_t count = checked_dense_array_size( *palettes, "mapgen layout palettes",
-                                  std::numeric_limits<std::size_t>::max() );
-        json.member( "palettes" );
-        json.start_array();
-        for( std::size_t i = 1; i <= count; ++i ) {
-            write_mapgen_value( json, palettes->raw_get<sol::object>( i ) );
-        }
-        json.end_array();
-    }
-    for( const char *field : { "terrain", "furniture", "traps" } ) {
-        if( const auto glyphs = layout.get<sol::optional<sol::table>>( field ) ) {
-            json.member( field );
-            json.start_object();
-            for( const auto &[glyph, value] : *glyphs ) {
-                write_mapgen_glyph_alternatives( json, glyph.as<std::string>(), value );
-            }
-            json.end_object();
-        }
-    }
-    if( const auto mappings = layout.get<sol::optional<sol::table>>( "glyph_mappings" ) ) {
-        write_mapgen_glyph_mappings( json, *mappings );
-    }
-    write_static_mapgen_placements( json, layout );
+    write_mapgen_palette_fields( json, layout, true );
     if( const auto edits = layout.get<sol::optional<sol::table>>( "tile_edits" ) ) {
         write_mapgen_tile_edits( json, *edits );
     }
@@ -1563,40 +1606,6 @@ void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
             write_mapgen_nested_placement( json, placements->raw_get<sol::table>( i ) );
         }
         json.end_array();
-    }
-    if( const auto glyphs = layout.get<sol::optional<sol::table>>( "nested_glyphs" ) ) {
-        json.member( "nested" );
-        json.start_object();
-        for( const auto &[glyph, value] : *glyphs ) {
-            json.member( glyph.as<std::string>() );
-            const sol::table placements = value.as<sol::table>();
-            const std::size_t count = placements.size();
-            if( count == 0 ) {
-                write_mapgen_nested_placement( json, placements );
-            } else {
-                json.start_array();
-                for( std::size_t i = 1; i <= count; ++i ) {
-                    write_mapgen_nested_placement( json, placements.raw_get<sol::table>( i ) );
-                }
-                json.end_array();
-            }
-        }
-        json.end_object();
-    }
-    if( const auto toilets = layout.get<sol::optional<sol::table>>( "toilets" ) ) {
-        if( toilets->size() == 0 ) {
-            write_mapgen_glyph_placements( json, "toilets", *toilets, write_placement_toilet );
-        } else {
-            json.member( "toilets" );
-            json.start_object();
-            for( const std::string &glyph : bounded_string_array( *toilets, "toilets", 256,
-                    "overmap mapgen layout" ) ) {
-                json.member( glyph );
-                json.start_object();
-                json.end_object();
-            }
-            json.end_object();
-        }
     }
     json.end_object();
 }
@@ -1671,6 +1680,18 @@ void load_static_mapgen( const sol::table &options )
                                 std::numeric_limits<std::size_t>::max() );
     json.end_object();
     load_mapgen( json_loader::from_string( serialized.str() ).get_object() );
+}
+
+void load_static_mapgen_palette( const sol::table &options, const std::string &source )
+{
+    std::ostringstream serialized;
+    JsonOut json( serialized );
+    json.start_object();
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_placement_member<bool>( json, options, "extend", "extending" );
+    write_mapgen_palette_fields( json, options.get<sol::table>( "layout" ), false );
+    json.end_object();
+    mapgen_palette::load( json_loader::from_string( serialized.str() ).get_object(), source );
 }
 
 void load_static_overmap_terrain( const sol::table &options, const std::string &source,
@@ -1847,6 +1868,9 @@ void load_mod_content_with_data( const mod_source &source,
         return selected_mod_ids.count( id ) != 0;
     } );
     content.set_function( "define_mapgen", load_static_mapgen );
+    content.set_function( "define_mapgen_palette", [&resolved]( const sol::table &options ) {
+        load_static_mapgen_palette( options, resolved.id );
+    } );
     content.set_function( "define_overmap_terrain", [&resolved]( const sol::table &options ) {
         load_static_overmap_terrain( options, resolved.id, false );
     } );

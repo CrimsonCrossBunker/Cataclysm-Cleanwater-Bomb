@@ -7316,7 +7316,7 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@alias StaticMapgenValue string|StaticMapgenValueSource
 
 ---@class StaticMapgenParameter
----@field value_type 'palette'|'terrain'|'string'|'nested_mapgen'|'monster_group'|'boolean'
+---@field value_type 'palette'|'terrain'|'furniture'|'string'|'nested_mapgen'|'monster_group'|'boolean'
 ---@field scope? 'overmap_special'|'map_stack'|'map_tile'|'nested' Controls when the engine resolves and reuses the parameter. Defaults to overmap_special.
 ---@field default StaticMapgenValue Literal result or selector. Boolean literals use "true" and "false".
 
@@ -7514,7 +7514,7 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@class StaticMapgenRubblePlacement: StaticMapgenRubble, StaticMapgenPosition
 
 ---@class StaticMapgenTransform: StaticMapgenPlacementOptions
----@field id string Native terrain and furniture transform ID.
+---@field id StaticMapgenValue Terrain and furniture transform ID or selector.
 
 ---@class StaticMapgenTransformPlacement: StaticMapgenTransform, StaticMapgenPosition
 
@@ -7581,16 +7581,9 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field liquids? StaticMapgenLiquid|StaticMapgenLiquid[]
 ---@field fields? StaticMapgenField|StaticMapgenField[]
 ---@field npcs? StaticMapgenNpc|StaticMapgenNpc[]
+---@field toilets? StaticMapgenToilet|StaticMapgenToilet[]
 
----@class StaticOvermapMapgenLayout
----@field fill_terrain? StaticMapgenValue Terrain ID or selector used for the base fill.
----@field rows? string[] Terrain layout rows in map order.
----@field size? {width: integer, height: integer} Native dimensions for a nested layout.
----@field erase_before_terrain? boolean Use native erase-before-terrain placement.
----@field flags? string[] Native mapgen placement flags.
----@field rotation? StaticMapgenRange Native quarter-turn rotations.
----@field predecessor_mapgen? string Fixed underlay terrain's mapgen ID.
----@field fallback_predecessor_mapgen? string Underlay terrain ID when the predecessor list is empty.
+---@class StaticMapgenPaletteLayout
 ---@field parameters? table<string, StaticMapgenParameter> Named native parameters selected at their configured scope.
 ---@field palettes? StaticMapgenValue[] Palette IDs or selectors, in palette application order.
 ---@field terrain? table<string, StaticMapgenGlyph> Glyph to terrain ID or native choices.
@@ -7602,6 +7595,32 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field monster_glyphs? table<string, StaticMapgenMonster|StaticMapgenMonster[]> Monster placements by glyph.
 ---@field monster_group_glyphs? table<string, StaticMapgenMonsterGroup|StaticMapgenMonsterGroup[]> Monster-group placements by glyph.
 ---@field vehicle_glyphs? table<string, StaticMapgenVehicle|StaticMapgenVehicle[]> Vehicle placements by glyph.
+---@field field_glyphs? table<string, StaticMapgenField|StaticMapgenField[]> Fields by glyph.
+---@field npc_glyphs? table<string, StaticMapgenNpc|StaticMapgenNpc[]> NPC spawns by glyph.
+---@field sign_glyphs? table<string, StaticMapgenSign|StaticMapgenSign[]> Signs by glyph.
+---@field graffiti_glyphs? table<string, StaticMapgenInscription|StaticMapgenInscription[]> Graffiti by glyph.
+---@field zone_glyphs? table<string, StaticMapgenZone|StaticMapgenZone[]> Zones by glyph.
+---@field toilets? string[]|table<string, StaticMapgenToilet|StaticMapgenToilet[]> Default toilet glyphs or explicit placements by glyph.
+---@field computer_glyphs? table<string, StaticMapgenComputer|StaticMapgenComputer[]> Computers by glyph.
+---@field vending_glyphs? table<string, StaticMapgenVendingMachine|StaticMapgenVendingMachine[]> Vending machines by glyph.
+---@field liquid_glyphs? table<string, StaticMapgenLiquid|StaticMapgenLiquid[]> Liquids by glyph.
+---@field fuel_pump_glyphs? table<string, StaticMapgenFuelPump|StaticMapgenFuelPump[]> Fuel pumps by glyph.
+---@field sealed_item_glyphs? table<string, StaticMapgenSealedItem|StaticMapgenSealedItem[]> Sealed furniture and its contents by glyph.
+---@field corpse_glyphs? table<string, StaticMapgenCorpse|StaticMapgenCorpse[]> Corpses by glyph.
+---@field rubble_glyphs? table<string, StaticMapgenRubble|StaticMapgenRubble[]> Rubble by glyph.
+---@field transform_glyphs? table<string, StaticMapgenTransform|StaticMapgenTransform[]> Terrain and furniture transforms by glyph.
+---@field clear_glyphs? table<string, StaticMapgenPlacementOptions|StaticMapgenPlacementOptions[]> Clear furniture, traps, vehicles, items, fields and graffiti from glyphs.
+---@field nested_glyphs? table<string, StaticMapgenNestedOptions|StaticMapgenNestedOptions[]> Ordered nested placements keyed by map glyph.
+
+---@class StaticOvermapMapgenLayout: StaticMapgenPaletteLayout
+---@field fill_terrain? StaticMapgenValue Terrain ID or selector used for the base fill.
+---@field rows? string[] Terrain layout rows in map order.
+---@field size? {width: integer, height: integer} Native dimensions for a nested layout.
+---@field erase_before_terrain? boolean Use native erase-before-terrain placement.
+---@field flags? string[] Native mapgen placement flags.
+---@field rotation? StaticMapgenRange Native quarter-turn rotations.
+---@field predecessor_mapgen? string Fixed underlay terrain's mapgen ID.
+---@field fallback_predecessor_mapgen? string Underlay terrain ID when the predecessor list is empty.
 ---@field item_placements? StaticMapgenItemPlacement[] Item placements by position.
 ---@field item_group_placements? StaticMapgenItemGroupPlacement[] Item-group placements by position.
 ---@field loot_placements? StaticMapgenLootPlacement[] Loot placements by position.
@@ -7609,44 +7628,37 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field monster_group_placements? StaticMapgenMonsterGroupPlacement[] Monster-group placements by position.
 ---@field vehicle_placements? StaticMapgenVehiclePlacement[] Vehicle placements by position.
 ---@field field_placements? StaticMapgenFieldPlacement[] Field additions and removals by position.
----@field field_glyphs? table<string, StaticMapgenField|StaticMapgenField[]> Fields by glyph.
 ---@field npc_placements? StaticMapgenNpcPlacement[] NPC spawns by position.
----@field npc_glyphs? table<string, StaticMapgenNpc|StaticMapgenNpc[]> NPC spawns by glyph.
 ---@field sign_placements? StaticMapgenSignPlacement[] Signs by position.
----@field sign_glyphs? table<string, StaticMapgenSign|StaticMapgenSign[]> Signs by glyph.
 ---@field graffiti_placements? StaticMapgenGraffitiPlacement[] Graffiti by position.
----@field graffiti_glyphs? table<string, StaticMapgenInscription|StaticMapgenInscription[]> Graffiti by glyph.
 ---@field zone_placements? StaticMapgenZonePlacement[] Zones using x and y ranges as area bounds.
----@field zone_glyphs? table<string, StaticMapgenZone|StaticMapgenZone[]> Zones by glyph.
 ---@field faction_areas? StaticMapgenIdPlacement[] Item ownership by faction ID using x and y ranges as area bounds.
 ---@field terrain_placements? StaticMapgenIdPlacement[] Terrain placements by position.
 ---@field furniture_placements? StaticMapgenIdPlacement[] Furniture placements by position.
 ---@field trap_placements? StaticMapgenIdPlacement[] Trap placements by position.
 ---@field tile_edits? StaticMapgenTileEdit[] Tile edits submitted in order for the native mapgen phases.
----@field toilets? string[]|table<string, StaticMapgenToilet|StaticMapgenToilet[]> Default toilet glyphs or explicit placements by glyph.
 ---@field toilet_placements? StaticMapgenToiletPlacement[] Toilet placements by position.
 ---@field computer_placements? StaticMapgenComputerPlacement[] Computer placements by position.
----@field computer_glyphs? table<string, StaticMapgenComputer|StaticMapgenComputer[]> Computers by glyph.
 ---@field vending_placements? StaticMapgenVendingPlacement[] Vending machine placements by position.
----@field vending_glyphs? table<string, StaticMapgenVendingMachine|StaticMapgenVendingMachine[]> Vending machines by glyph.
 ---@field liquid_placements? StaticMapgenLiquidPlacement[] Liquid placements by position.
----@field liquid_glyphs? table<string, StaticMapgenLiquid|StaticMapgenLiquid[]> Liquids by glyph.
 ---@field fuel_pump_placements? StaticMapgenFuelPumpPlacement[] Fuel pump placements by position.
----@field fuel_pump_glyphs? table<string, StaticMapgenFuelPump|StaticMapgenFuelPump[]> Fuel pumps by glyph.
----@field sealed_item_glyphs? table<string, StaticMapgenSealedItem|StaticMapgenSealedItem[]> Sealed furniture and its contents by glyph.
 ---@field corpse_placements? StaticMapgenCorpsePlacement[] Corpses by position.
----@field corpse_glyphs? table<string, StaticMapgenCorpse|StaticMapgenCorpse[]> Corpses by glyph.
 ---@field rubble_placements? StaticMapgenRubblePlacement[] Rubble placements by position.
----@field rubble_glyphs? table<string, StaticMapgenRubble|StaticMapgenRubble[]> Rubble by glyph.
 ---@field transform_placements? StaticMapgenTransformPlacement[] Apply terrain and furniture transforms in areas.
----@field transform_glyphs? table<string, StaticMapgenTransform|StaticMapgenTransform[]> Terrain and furniture transforms by glyph.
 ---@field vehicle_removals? StaticMapgenVehicleRemoval[] Remove vehicles in areas.
 ---@field npc_removals? StaticMapgenNpcRemoval[] Remove matching NPCs in the current overmap tile.
 ---@field clear_areas? StaticMapgenAreaPlacement[] Clear furniture, traps, vehicles, items, fields and graffiti from areas.
----@field clear_glyphs? table<string, StaticMapgenPlacementOptions|StaticMapgenPlacementOptions[]> Clear furniture, traps, vehicles, items, fields and graffiti from glyphs.
 ---@field position_markers? StaticMapgenPositionMarker[] Record absolute map positions.
 ---@field nested? StaticMapgenNestedPlacement[] Nested layouts in placement order.
----@field nested_glyphs? table<string, StaticMapgenNestedOptions|StaticMapgenNestedOptions[]> Ordered nested placements keyed by map glyph.
+
+---@class StaticMapgenPaletteOptions
+---@field id string Stable native palette ID.
+---@field layout StaticMapgenPaletteLayout Reusable palette entries keyed by glyph.
+---@field extend? boolean Extend the existing palette in a Mod. Uses the native palette extension order.
+
+---Register a palette during the Mod's ordered data load.
+---@param options StaticMapgenPaletteOptions
+function CcbPlatformContent.define_mapgen_palette(options) end
 
 ---@class StaticMapgenDefinitionOptions
 ---@field kind 'overmap'|'nested'|'update' Selects the native mapgen registry.
