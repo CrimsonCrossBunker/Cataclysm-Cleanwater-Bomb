@@ -1,0 +1,43 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "hickory_nut_shelled",
+    "name": { "str": "Handful of shelled hickory nuts", "str_pl": "of shelled hickory nuts" },
+    "display_type": "BY_WEIGHT",
+    "weight": "30 g",
+    "color": "brown",
+    "spoils_in": "180 days",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "quench": -5,
+    "calories": 194,
+    "description": "A handful of raw, hard nuts from a hickory tree, with the shells removed.",
+    "price": "1 cent",
+    "price_postapoc": "50 cent",
+    "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE", "RAW" ],
+    "material": [ "nut" ],
+    "volume": "62 ml",
+    "smoking_result": "hickory_nut_roasted",
+    "vitamins": [ [ "calcium", 2 ], [ "iron", 8 ], [ "nut_allergen", 1 ] ],
+    "fun": -10,
+    "into": "paste_nut",
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "hickory_nut_roasted",
+    "name": { "str": "Handful of roasted hickory nuts", "str_pl": "of roasted hickory nuts" },
+    "display_type": "BY_WEIGHT",
+    "copy-from": "hickory_nut_shelled",
+    "description": "A handful of roasted nuts from a hickory tree.",
+    "price": "90 cent",
+    "price_postapoc": "5 USD",
+    "flags": [ "EATEN_HOT", "EDIBLE_FROZEN" ],
+    "fun": 1,
+    "into": "null",
+    "recipe": ""
+  }
+]

@@ -1,0 +1,21 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "acorns_cooked",
+    "name": { "str": "Handful of cooked acorns", "str_pl": "of cooked acorns" },
+    "display_type": "BY_WEIGHT",
+    "copy-from": "acorns",
+    "weight": "22 g",
+    "volume": "46 ml",
+    "spoils_in": "30 days",
+    "description": "A serving of acorns that have been hulled, chopped, and boiled in water before being thoroughly toasted until dry.  Filling and nutritious.",
+    "price": "22 cent",
+    "price_postapoc": "75 cent",
+    "flags": [ "EDIBLE_FROZEN" ],
+    "smoking_result": "acorn_roasted",
+    "fun": 0,
+    "into": "flour_wheat_free",
+    "recipe": "flour_wheat_free_mill_2_3"
+  }
+]

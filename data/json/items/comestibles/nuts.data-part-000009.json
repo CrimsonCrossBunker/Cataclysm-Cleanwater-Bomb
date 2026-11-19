@@ -1,0 +1,16 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "hazelnut_roasted",
+    "name": { "str": "Handful of roasted hazelnuts", "str_pl": "of roasted hazelnuts" },
+    "display_type": "BY_WEIGHT",
+    "copy-from": "hazelnut_shelled",
+    "description": "A handful of roasted nuts from a hazelnut tree.",
+    "price": "90 cent",
+    "flags": [ "EATEN_HOT", "EDIBLE_FROZEN" ],
+    "fun": 1,
+    "into": "null",
+    "recipe": ""
+  }
+]

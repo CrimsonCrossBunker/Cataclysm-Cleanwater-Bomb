@@ -1,0 +1,16 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "walnut_roasted",
+    "name": { "str": "Handful of roasted walnuts", "str_pl": "of roasted walnuts" },
+    "display_type": "BY_WEIGHT",
+    "copy-from": "walnut_shelled",
+    "description": "A handful of roasted nuts from a walnut tree.",
+    "price": "90 cent",
+    "flags": [ "EATEN_HOT", "EDIBLE_FROZEN" ],
+    "fun": 1,
+    "into": "null",
+    "recipe": ""
+  }
+]
