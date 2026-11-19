@@ -361,3 +361,52 @@ ccb.content.define_mapgen {
         vehicle_placements = { { id = "highway", x = 10, y = 10, fuel = -1, status = 1, chance = 10, rotation = 270 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_highway_underpass_road",
+    layout = {
+        size = { width = 24, height = 24 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_sidewalk",
+                x = 0,
+                y = 0,
+                end_x = 23,
+                end_y = 2,
+            },
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_sidewalk",
+                x = 0,
+                y = 21,
+                end_x = 23,
+                end_y = 23,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_highway_underpass",
+    layout = {
+        size = { width = 24, height = 24 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_sidewalk",
+                x = 0,
+                y = 0,
+                end_x = 23,
+                end_y = 23,
+            },
+        },
+    },
+}

@@ -466,3 +466,43 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_railings_full",
+    layout = {
+        size = { width = 24, height = 24 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_guardrail",
+                x = 0,
+                y = 0,
+                end_x = 23,
+                end_y = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_railings_short",
+    layout = {
+        size = { width = 6, height = 6 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_guardrail",
+                x = 0,
+                y = 0,
+                end_x = 5,
+                end_y = 0,
+            },
+        },
+    },
+}
