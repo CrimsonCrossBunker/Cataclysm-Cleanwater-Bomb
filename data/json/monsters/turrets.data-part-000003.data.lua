@@ -1,0 +1,30 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_turret_speaker",
+    name = ccb.content.plural_text("loudspeaker", "loudspeakers"),
+    description = ccb.content.text("A high-powered loudspeaker set to loudly repeat messages on a loop."),
+    default_faction = "military",
+    species = { "ROBOT" },
+    difficulty_adjustment = 2,
+    volume = "50500 ml",
+    mass = "100 kg",
+    hp = 30,
+    speed = 100,
+    materials = { "steel" },
+    symbol = "2",
+    color = "light_green",
+    aggression = 100,
+    morale = 100,
+    melee_damage = { { type = "cut", amount = 0 } },
+    vision_day = 50,
+    vision_night = 50,
+    revert_item = "bot_turret_speaker",
+    attacks = { { reference = "SPEAKER", cooldown = 10 } },
+    flags = { "SEES", "NOHEAD", "BIOLOGICALPROOF", "ELECTRONIC", "IMMOBILE", "NO_BREATHE" },
+    armor = { bash = 14, cut = 16, bullet = 14, stab = 16 },
+    death = {
+        drops = { groups = { { id = "turret_speaker", weight = 1 } } },
+        outcome = { corpse = "BROKEN" },
+    },
+}

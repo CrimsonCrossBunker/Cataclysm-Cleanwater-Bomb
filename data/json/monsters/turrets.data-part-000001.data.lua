@@ -1,0 +1,30 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_turret_searchlight",
+    name = ccb.content.plural_text("milspec searchlight", "milspec searchlights"),
+    description = ccb.content.text("A pylon boasting three high-powered searchlights with automated search AI, continually seeking targets."),
+    default_faction = "passive_machine",
+    species = { "ROBOT" },
+    difficulty_adjustment = 2,
+    volume = "108500 ml",
+    mass = "117 kg",
+    hp = 30,
+    speed = 100,
+    materials = { "steel" },
+    symbol = "2",
+    color = "light_green",
+    aggression = 100,
+    morale = 100,
+    weakpoint_sets = { "wps_searchlight" },
+    melee_damage = { { type = "cut", amount = 0 } },
+    luminance = 4,
+    revert_item = "bot_turret_searchlight",
+    attacks = { { reference = "SEARCHLIGHT", cooldown = 1 } },
+    flags = {
+        "SEES", "NOHEAD", "ELECTRONIC", "COLDPROOF", "BIOLOGICALPROOF", "IMMOBILE", "NO_BREATHE",
+        "PRIORITIZE_TARGETS",
+    },
+    armor = { bash = 14, cut = 16, bullet = 13, stab = 16 },
+    death = { drops = {}, outcome = { corpse = "BROKEN" } },
+}
