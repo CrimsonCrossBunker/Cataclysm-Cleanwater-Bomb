@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "s_bike_shop_roof_1_shack_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "        -----           ",
+            "        -...-           ",
+            "        -...-           ",
+            "        -----           ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+    },
+}
