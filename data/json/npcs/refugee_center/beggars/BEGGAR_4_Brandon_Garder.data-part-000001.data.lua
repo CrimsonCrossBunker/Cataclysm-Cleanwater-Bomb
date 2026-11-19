@@ -1,16 +1,57 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_BEGGAR_4_TALK2",
-    line = ccb.content.text("You name it!  Asthma, diabetes, arthritis.  Diabetes hasn't been so bad since I stopped, y'know, eating regularly.  Well, I assume it hasn't.  Not like I can check that ol' whatchamacallit, the blood test the docs used to bug me about every couple months."),
+    id = "TALK_REFUGEE_BEGGAR_4",
+    line = {
+        when = predicates.has_effect("interlocutor", "beggar_has_eaten"),
+        yes = ccb.content.gendered_line("Thanks again for the grub, my friend.", { "speaker" }),
+        no = ccb.content.text("Hey, are you a big fan of survival of the fittest?"),
+    },
     replies = {
         {
-            text = ccb.content.text("What did you do before <the_cataclysm>?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_LIFEBEFORE1",
+            when = predicates.negate(predicates.has_effect("interlocutor", "beggar_has_eaten")),
+            text = ccb.content.text("Why do you ask?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_4_TALK1",
         },
         {
-            text = ccb.content.text("You seem awfully happy considering the situation."),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_HAPPY",
+            when = predicates.negate(predicates.has_effect("interlocutor", "beggar_has_eaten")),
+            text = ccb.content.text("Sorry, not interested."),
+            next_topic = "TALK_DONE",
+        },
+        {
+            when = predicates.has_effect("interlocutor", "beggar_has_eaten"),
+            text = ccb.content.text("Nice to see you too, what's up?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_4_TALK1",
+        },
+        {
+            when = predicates.has_effect("interlocutor", "beggar_has_eaten"),
+            text = ccb.content.text("Nice to see you.  I gotta be going though."),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_BEGGAR_4_TALK1",
+    line = {
+        when = predicates.has_effect("interlocutor", "beggar_has_eaten"),
+        yes = ccb.content.text("Oh you know, the usual: sittin' out here until I starve to death, playin' cards with Dave, that kinda thing."),
+        no = ccb.content.text("Because I sure ain't fit, so I'm sittin' out here until I starve to death.  Help a poor sickly soul out?"),
+    },
+    replies = {
+        {
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "general_recruit_beggars_recruited" } }),
+            text = ccb.content.text("I've talked to the others, and they're all willing to come.  So, you joining us?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_4_RECRUITED",
+        },
+        {
+            text = ccb.content.text("I could maybe help you out… want something to eat?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_4_GIVE_FOOD",
+        },
+        {
+            text = ccb.content.text("What's wrong with you?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_4_TALK2",
         },
         {
             text = ccb.content.text("They won't let you in because you're sick?"),
@@ -32,90 +73,29 @@ ccb.content.define_dialogue_topic {
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_BEGGAR_4_SICKLY",
-    line = ccb.content.text("They got enough mouths to feed that can pull their own weight.  I got a lot of weight and I'm too weak to pull it, so I'm out here."),
+    id = "TALK_REFUGEE_BEGGAR_4_GIVE_FOOD",
+    line = {
+        when = predicates.has_effect("interlocutor", "beggar_has_eaten"),
+        yes = ccb.content.text("That's awful kind of you, you really are a wonderful person."),
+        no = ccb.content.gendered_line("Oh, wow!  You're a real gem, you know that?  Thanks for even thinking of it.", { "speaker" }),
+    },
     replies = {
-        {
-            text = ccb.content.text("What did you do before <the_cataclysm>?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_LIFEBEFORE1",
-        },
-        {
-            text = ccb.content.text("You seem awfully happy considering the situation."),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_HAPPY",
-        },
-        {
-            text = ccb.content.text("How did you even get here if you're so sick?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_ARRIVAL",
-        },
-        {
-            text = ccb.content.text("Why are you camped out here if they won't let you in?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_CAMPOUT",
-        },
         {
             text = ccb.content.text_without_extraction("<done_conversation_section>"),
             next_topic = "TALK_NONE",
         },
         {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            text = ccb.content.text("I'm sorry, I was wrong.  I can't help you."),
             next_topic = "TALK_DONE",
         },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_BEGGAR_4_ARRIVAL",
-    line = ccb.content.text("Came with a small group quite a while ago.  The others were young and fit, they got in.  They were some of the last ones to get in actually.  I didn't make the cutoff."),
-    replies = {
+    repeat_replies = {
         {
-            text = ccb.content.text("What did you do before <the_cataclysm>?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_LIFEBEFORE1",
-        },
-        {
-            text = ccb.content.text("You seem awfully happy considering the situation."),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_HAPPY",
-        },
-        {
-            text = ccb.content.text("They won't let you in because you're sick?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_SICKLY",
-        },
-        {
-            text = ccb.content.text("Why are you camped out here if they won't let you in?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_CAMPOUT",
-        },
-        {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
-        },
-        {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
-            next_topic = "TALK_DONE",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_BEGGAR_4_CAMPOUT",
-    line = ccb.content.text("This is a mercy.  I get shelter, light, and heat, and those guards will help us if any zombies show up.  It ain't so bad.  If I was out on my own I'd have none of this and still have to look for food… in other words, I'd be dead as a doornail.  Or I guess undead."),
-    replies = {
-        {
-            text = ccb.content.text("What did you do before <the_cataclysm>?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_LIFEBEFORE1",
-        },
-        {
-            text = ccb.content.text("They won't let you in because you're sick?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_SICKLY",
-        },
-        {
-            text = ccb.content.text("How did you even get here if you're so sick?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_4_ARRIVAL",
-        },
-        {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
-        },
-        {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
-            next_topic = "TALK_DONE",
+            categories = { "food" },
+            reply = {
+                text = ccb.content.text("Here, you can have this <topic_item>."),
+                next_topic = "TALK_REFUGEE_BEGGAR_4_GAVE_FOOD",
+            },
         },
     },
 }

@@ -1,0 +1,15 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_BEGGAR_4_RECRUIT2",
+    "dynamic_line": {
+      "gendered_line": "Well… I'll be honest, I didn't even think Dave could be sorted out, and you've gone and called my bluff!  It's a darn fine thing you've done for that poor soul.  Listen, I wasn't… entirely serious about wanting to come with you, but if you can convince the others to go, then I guess I'll come along.",
+      "relevant_genders": [ "u" ]
+    },
+    "speaker_effect": [ { "effect": { "u_add_var": "general_recruit_brendan_recruited", "value": "yes" } } ],
+    "responses": [
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
