@@ -238,36 +238,6 @@
     ]
   },
   {
-    "type": "mapgen",
-    "//": "z0",
-    "om_terrain": "ravine_straight_ground",
-    "object": {
-      "fallback_predecessor_mapgen": "forest",
-      "palettes": [ "ravine_straight_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_straight_v1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "z-1",
-    "om_terrain": "ravine_straight",
-    "object": {
-      "predecessor_mapgen": "open_air",
-      "palettes": [ "ravine_straight_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_straight_v1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "//": "z-2",
-    "om_terrain": "ravine_straight_bottom",
-    "object": {
-      "predecessor_mapgen": "forest",
-      "palettes": [ "ravine_straight_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_straight_v1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
     "type": "palette",
     "id": "ravine_corner_parameters",
     "parameters": {
@@ -276,33 +246,6 @@
         "scope": "omt_stack",
         "default": { "distribution": [ "24x24_ravine_corner_v1", "24x24_ravine_corner_v2" ] }
       }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "ravine_corner_ground",
-    "object": {
-      "fallback_predecessor_mapgen": "forest",
-      "palettes": [ "ravine_corner_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_corner_v1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "ravine_corner",
-    "object": {
-      "predecessor_mapgen": "open_air",
-      "palettes": [ "ravine_corner_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_corner_v1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "ravine_corner_bottom",
-    "object": {
-      "predecessor_mapgen": "forest",
-      "palettes": [ "ravine_corner_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_corner_v1" } ], "x": 0, "y": 0 } ]
     }
   },
   {
@@ -317,33 +260,6 @@
     }
   },
   {
-    "type": "mapgen",
-    "om_terrain": "ravine_2way_ground",
-    "object": {
-      "fallback_predecessor_mapgen": "forest",
-      "palettes": [ "ravine_2way_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_2way_v1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "ravine_2way",
-    "object": {
-      "predecessor_mapgen": "open_air",
-      "palettes": [ "ravine_2way_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_2way_v1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "ravine_2way_bottom",
-    "object": {
-      "predecessor_mapgen": "forest",
-      "palettes": [ "ravine_2way_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_2way_v1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
     "type": "palette",
     "id": "ravine_3way_parameters",
     "parameters": {
@@ -352,33 +268,6 @@
         "scope": "omt_stack",
         "default": { "distribution": [ "24x24_ravine_3way_v1", "24x24_ravine_3way_v2" ] }
       }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "ravine_3way_ground",
-    "object": {
-      "fallback_predecessor_mapgen": "forest",
-      "palettes": [ "ravine_3way_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_3way_v1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "ravine_3way",
-    "object": {
-      "predecessor_mapgen": "open_air",
-      "palettes": [ "ravine_3way_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_3way_v1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "ravine_3way_bottom",
-    "object": {
-      "predecessor_mapgen": "forest",
-      "palettes": [ "ravine_3way_parameters" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "24x24_ravine_3way_v1" } ], "x": 0, "y": 0 } ]
     }
   }
 ]

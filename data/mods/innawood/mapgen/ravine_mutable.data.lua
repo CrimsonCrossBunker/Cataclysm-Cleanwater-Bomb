@@ -397,3 +397,126 @@ ccb.content.define_mapgen {
         predecessor_mapgen = "forest_thick",
     },
 }
+
+-- z0
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_straight_ground",
+    layout = {
+        fallback_predecessor_mapgen = "forest",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_straight_v1" } } },
+        palettes = { "ravine_straight_parameters" },
+    },
+}
+
+-- z-1
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_straight",
+    layout = {
+        predecessor_mapgen = "open_air",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_straight_v1" } } },
+        palettes = { "ravine_straight_parameters" },
+    },
+}
+
+-- z-2
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_straight_bottom",
+    layout = {
+        predecessor_mapgen = "forest",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_straight_v1" } } },
+        palettes = { "ravine_straight_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_corner_ground",
+    layout = {
+        fallback_predecessor_mapgen = "forest",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_corner_v1" } } },
+        palettes = { "ravine_corner_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_corner",
+    layout = {
+        predecessor_mapgen = "open_air",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_corner_v1" } } },
+        palettes = { "ravine_corner_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_corner_bottom",
+    layout = {
+        predecessor_mapgen = "forest",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_corner_v1" } } },
+        palettes = { "ravine_corner_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_2way_ground",
+    layout = {
+        fallback_predecessor_mapgen = "forest",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_2way_v1" } } },
+        palettes = { "ravine_2way_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_2way",
+    layout = {
+        predecessor_mapgen = "open_air",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_2way_v1" } } },
+        palettes = { "ravine_2way_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_2way_bottom",
+    layout = {
+        predecessor_mapgen = "forest",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_2way_v1" } } },
+        palettes = { "ravine_2way_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_3way_ground",
+    layout = {
+        fallback_predecessor_mapgen = "forest",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_3way_v1" } } },
+        palettes = { "ravine_3way_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_3way",
+    layout = {
+        predecessor_mapgen = "open_air",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_3way_v1" } } },
+        palettes = { "ravine_3way_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "ravine_3way_bottom",
+    layout = {
+        predecessor_mapgen = "forest",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_ravine_3way_v1" } } },
+        palettes = { "ravine_3way_parameters" },
+    },
+}
