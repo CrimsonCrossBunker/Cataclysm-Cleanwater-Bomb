@@ -1,0 +1,102 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Corrie_Mood",
+    "dynamic_line": "I'm just here, really.  I'm the local mechanic around here, I just fiddle with the machinery.  Just about all of it is a <freaking> <name_b>, older than dirt and nearly unfixable.  They're running a wood-fire generator for power, the <freaking> thing is the noisiest clunker I've ever heard.",
+    "responses": [
+      {
+        "text": "How have things changed after that deal with Helena?",
+        "topic": "TALK_GODCO_Corrie_Result_rewardIcon",
+        "condition": {
+          "and": [
+            { "compare_string": [ "icon", { "u_val": "mission_reward_godco_machine_reward" } ] },
+            { "compare_string": [ "yes", { "u_val": "mission_reward_unclaimed_machine_reward" } ] }
+          ]
+        }
+      },
+      {
+        "text": "How have things changed after that deal with Helena?",
+        "topic": "TALK_GODCO_Corrie_Result_rewardRation",
+        "condition": {
+          "and": [
+            { "compare_string": [ "ration", { "u_val": "mission_reward_godco_machine_reward" } ] },
+            { "compare_string": [ "yes", { "u_val": "mission_reward_unclaimed_machine_reward" } ] }
+          ]
+        }
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "No rest for the weary…", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Corrie_Result_rewardIcon",
+    "dynamic_line": "Not much.  I told you not to go for the icons.",
+    "responses": [
+      {
+        "text": "Sorry to hear that.  <done_conversation_section>",
+        "effect": [
+          { "npc_add_var": "mission_completed_godco_corrie_machine", "value": "yes" },
+          { "u_add_var": "mission_completed_godco_corrie_machine", "value": "yes" },
+          { "u_lose_var": "mission_reward_unclaimed_machine_reward" }
+        ],
+        "topic": "TALK_NONE"
+      },
+      {
+        "text": "No rest for the weary…",
+        "effect": [
+          { "npc_add_var": "mission_completed_godco_corrie_machine", "value": "yes" },
+          { "u_add_var": "mission_completed_godco_corrie_machine", "value": "yes" },
+          { "u_lose_var": "mission_reward_unclaimed_machine_reward" }
+        ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Corrie_Result_rewardRation",
+    "dynamic_line": "Yeah, yeah they have.  I've noticed a change in attitude towards us, the new guys.  Positive ones.  Things might be looking up, a little bit.",
+    "responses": [
+      {
+        "text": "How about some food as payment?",
+        "topic": "TALK_GODCO_Corrie_Result_rewardIcon1",
+        "effect": [
+          { "npc_add_var": "mission_completed_godco_corrie_machine", "value": "yes" },
+          { "u_add_var": "mission_completed_godco_corrie_machine", "value": "yes" },
+          { "u_lose_var": "mission_reward_unclaimed_machine_reward" }
+        ]
+      },
+      {
+        "text": "Maybe you can teach me something as payment?",
+        "topic": "TALK_TRAIN",
+        "condition": "npc_train_skills",
+        "effect": [
+          { "npc_add_var": "mission_completed_godco_corrie_machine", "value": "yes" },
+          { "u_add_var": "mission_completed_godco_corrie_machine", "value": "yes" },
+          { "u_lose_var": "mission_reward_unclaimed_machine_reward" }
+        ]
+      },
+      {
+        "text": "Glad to help.  <done_conversation_section>",
+        "topic": "TALK_NONE",
+        "effect": [ { "u_add_var": "mission_completed_godco_corrie_machine", "value": "yes" } ]
+      },
+      {
+        "text": "Glad to help.  See you around, Corrie.",
+        "topic": "TALK_DONE",
+        "effect": [ { "u_add_var": "mission_completed_godco_corrie_machine", "value": "yes" } ]
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Corrie_Result_rewardIcon1",
+    "dynamic_line": "Oh, I completely forget.  Here you are.",
+    "speaker_effect": { "effect": [ { "u_spawn_item": "jerky", "count": 5 } ] },
+    "responses": [
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
