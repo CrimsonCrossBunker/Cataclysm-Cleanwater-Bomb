@@ -65,3 +65,5 @@ require("item_group_changes")
 
 require("contagion.effect_types")
 require("effect_types")
+
+require("monster_groups")
