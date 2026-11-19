@@ -31,37 +31,5 @@
       { "skill": "electronics", "bonus": { "rng": [ 0, 2 ] } },
       { "skill": "speech", "bonus": { "rng": [ 3, 5 ] } }
     ]
-  },
-  {
-    "id": "TALK_EXODII_FREE_MERCHANT",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "u_is_wearing": "badge_marshal",
-      "yes": {
-        "u_has_trait": "EXODII_CYBERFRAME_GENERIC",
-        "yes": "Well, an Exodii… and a U.S marshal.  That's not something you see every day.",
-        "no": [
-          "Still plenty of outlaws in the roads, perhaps you should tend to your job, marshal…",
-          "You see anything you want, marshal?",
-          "Oh, a U.S. marshal."
-        ]
-      },
-      "no": {
-        "u_has_trait": "EXODII_CYBERFRAME_GENERIC",
-        "yes": [ "Ah, an Exodii?  Welcome…", "An Exodii?  Here to trade, I hope?", "Safe travels, Exodii." ],
-        "no": [ "Welcome…", "Here to trade, I hope?", "Safe travels, scavenger." ]
-      }
-    },
-    "responses": [
-      { "text": "Let's trade.", "effect": "start_trade", "topic": "TALK_EXODII_FREE_MERCHANT" },
-      { "text": "When is the next shipment?", "topic": "TALK_EXODII_FREE_MERCHANT_INTERVAL" },
-      { "text": "What are you doing here?", "topic": "TALK_EXODII_FREE_MERCHANT_DOING" },
-      {
-        "text": "I'm not an Exodii, I'm just a cyborg.",
-        "condition": { "u_has_trait": "EXODII_CYBERFRAME_GENERIC" },
-        "topic": "TALK_EXODII_FREE_MERCHANT_EXODII"
-      },
-      { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
-    ]
   }
 ]
