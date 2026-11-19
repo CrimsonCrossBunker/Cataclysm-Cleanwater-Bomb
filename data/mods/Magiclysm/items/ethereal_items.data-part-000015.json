@@ -1,0 +1,223 @@
+[
+  {
+    "id": "technomancer_summoned_ups",
+    "type": "ITEM",
+    "subtypes": [ "MAGAZINE", "ARTIFACT" ],
+    "category": "tool_magazine",
+    "name": { "str": "technomantic power supply", "str_pl": "technomantic power supplies" },
+    "description": "A smoothly-curved conglomeration of mana, humming softly as it provides power.",
+    "weight": "125 g",
+    "volume": "65 ml",
+    "material": [ "concentrated_mana" ],
+    "symbol": "=",
+    "color": "yellow",
+    "ammo_type": [ "battery" ],
+    "capacity": 1,
+    "looks_like": "spiral_stone",
+    "flags": [ "TRADER_AVOID", "NO_DROP", "NO_SALVAGE", "NO_UNLOAD", "NO_RELOAD" ],
+    "max_worn": 1,
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 1 } } ],
+    "//": "Recharge time is 2 seconds due to bug #48019, making it actually 1 second. Reduce to 1 second if that ever gets fixed.",
+    "charge_info": { "recharge_type": "periodic", "time": "2 s", "regenerate_ammo": true }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "id": "druid_bramble_spear_item",
+    "name": { "str": "spear of brambles", "str_pl": "spears of brambles" },
+    "looks_like": "spear_wood",
+    "description": "A twisted wooden spear whose branches twine together into a vicious point sticky with sap.",
+    "weight": "1200 g",
+    "price_postapoc": "1 cent",
+    "color": "green",
+    "symbol": "/",
+    "material": [ "wood" ],
+    "techniques": [ "WBLOCK_1", "IMPALE" ],
+    "volume": "1750 ml",
+    "longest_side": "180 cm",
+    "melee_damage": { "bash": 5, "stab": 26 },
+    "to_hit": { "grip": "weapon", "length": "long", "surface": "point", "balance": "good" },
+    "flags": [ "SPEAR", "REACH_ATTACK", "NONCONDUCTIVE", "SHEATH_SPEAR", "UNBREAKABLE_MELEE", "NO_REPAIR", "NO_SALVAGE" ],
+    "weapon_category": [ "POLEARMS", "SPEARS" ],
+    "price": "1 cent",
+    "qualities": [ [ "COOK", 1 ] ],
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_druid_bramble_spear_item_0" } ]
+  },
+  {
+    "id": "druid_thorn_skin_item",
+    "//": " 'Tornskin' but working right.  Values copied from the Bark mutation.",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": "Thornskin",
+    "description": "Your skin is bark-like and covered in thorns.",
+    "weight": "6 kg",
+    "volume": "7500 ml",
+    "price": "0 cent",
+    "material": [ "wood" ],
+    "symbol": "x",
+    "color": "brown",
+    "flags": [
+      "PERSONAL",
+      "OVERSIZE",
+      "PADDED",
+      "INTEGRATED",
+      "ALLOWS_NATURAL_ATTACKS",
+      "TRADER_AVOID",
+      "NO_REPAIR",
+      "NO_TAKEOFF",
+      "NONCONDUCTIVE"
+    ],
+    "max_worn": 1,
+    "armor": [
+      {
+        "encumbrance": 8,
+        "coverage": 100,
+        "material": [ { "type": "wood", "covered_by_mat": 100, "thickness": 4 }, { "type": "wood", "covered_by_mat": 75, "thickness": 6 } ],
+        "covers": [ "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "mouth", "eyes" ]
+      }
+    ],
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Magiclysm_druid_thorn_skin_item_0" }
+    ]
+  },
+  {
+    "id": "item_biomancer_scalpel_fingers",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "category": "armor",
+    "name": { "str_sp": "flensing fingers" },
+    "description": "Your fingers are a series of knives made of bone and flesh.  Enemies beware.",
+    "weight": "0 g",
+    "volume": "0 ml",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "material": [ "flesh" ],
+    "symbol": ",",
+    "color": "magenta",
+    "flags": [ "INTEGRATED", "ALLOWS_NATURAL_ATTACKS", "ZERO_WEIGHT", "UNBREAKABLE", "PERSONAL", "PADDED" ],
+    "qualities": [ [ "CUT", 2 ], [ "CUT_FINE", 5 ], [ "BUTCHER", 14 ] ],
+    "melee_damage": { "stab": 12 },
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Magiclysm_item_biomancer_scalpel_fingers_0" }
+    ]
+  },
+  {
+    "id": "aura_druid_breathing_water",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": "Aquatic Mantle",
+    "description": "Covered in magical seaweed, you can travel and breathe underwater as long as this spell is in effect.",
+    "weight": "0 g",
+    "volume": "0 ml",
+    "price": "0 cent",
+    "material": [ "veggy" ],
+    "symbol": "O",
+    "color": "blue",
+    "flags": [
+      "AURA",
+      "OVERSIZE",
+      "PADDED",
+      "INTEGRATED",
+      "ALLOWS_NATURAL_ATTACKS",
+      "TRADER_AVOID",
+      "REBREATHER",
+      "WATER_FRIENDLY",
+      "NO_REPAIR",
+      "NO_TAKEOFF",
+      "ZERO_WEIGHT",
+      "NONCONDUCTIVE",
+      "WATERPROOF",
+      "SWIM_GOGGLES"
+    ],
+    "max_worn": 1,
+    "armor": [
+      {
+        "encumbrance": 0,
+        "coverage": 100,
+        "covers": [ "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "mouth", "eyes" ]
+      }
+    ],
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Magiclysm_aura_druid_breathing_water_0" }
+    ]
+  },
+  {
+    "id": "aura_bearmantle",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "name": "bearmantle",
+    "description": "Think as the bear.  Move as the bear.  Sleep as the bear.",
+    "weight": "0 g",
+    "volume": "0 ml",
+    "price": "36 USD 46 cent",
+    "symbol": "o",
+    "color": "white",
+    "material": [ "magical_material" ],
+    "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "ZERO_WEIGHT", "NO_TAKEOFF", "INTEGRATED", "NONCONDUCTIVE" ],
+    "max_worn": 1,
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Magiclysm_aura_bearmantle_0" }
+    ]
+  },
+  {
+    "id": "item_animist_luck_bone",
+    "copy-from": "bone",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "name": { "str": "luck-bone" },
+    "description": "A bone from some creature or other, inhabited by benevolent spirits.",
+    "color": "white",
+    "price": "0 cent",
+    "weight": "225 g",
+    "symbol": "%",
+    "price_postapoc": "10 cent",
+    "volume": "250 ml",
+    "longest_side": "40 cm",
+    "passive_effects": [ { "id": "ench_luck_bone" } ]
+  },
+  {
+    "id": "technomancer_far_sight_lens",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "copy-from": "lens",
+    "name": { "str": "enchanted lens", "str_pl": "enchanted lenses" },
+    "description": "This lens has been etched with small symbols and infused with mana.  Holding it up to your eye allows you to see further than any mundane binoculars allow.",
+    "flags": [ "ENHANCED_VISION", "TRADER_AVOID" ],
+    "passive_effects": [ { "id": "ench_technomancer_far_sight_lens" } ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "item_druid_goodberry",
+    "name": { "str": "handful of goodberries", "str_pl": "handfuls of goodberries" },
+    "description": "A set of magical berries.  They look absolutely delicious.",
+    "weight": "144 g",
+    "color": "pink",
+    "spoils_in": "24 hours",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "quench": 3,
+    "calories": 1500,
+    "price": "1 USD 78 cent",
+    "price_postapoc": "1 USD",
+    "material": [ "fruit" ],
+    "volume": "250 ml",
+    "fun": 6,
+    "flags": [ "EDIBLE_FROZEN", "TRADER_AVOID", "RELIC_PINK" ],
+    "vitamins": [ [ "vitC", 50 ], [ "iron", 50 ], [ "calcium", 50 ], [ "fruit_allergen", 1 ] ],
+    "consumption_effect_on_conditions": [ "EOC_DRUID_EAT_THE_GOODBERRY" ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_DRUID_EAT_THE_GOODBERRY",
+    "//": "Will not unbreak your limbs, but heals you.",
+    "effect": [
+      { "if": { "math": [ "u_hp('head') > 0" ] }, "then": { "math": [ "u_hp('head') += 3" ] } },
+      { "if": { "math": [ "u_hp('torso') > 0" ] }, "then": { "math": [ "u_hp('torso') += 3" ] } },
+      { "if": { "math": [ "u_hp('arm_l') > 0" ] }, "then": { "math": [ "u_hp('arm_l') += 3" ] } },
+      { "if": { "math": [ "u_hp('arm_r') > 0" ] }, "then": { "math": [ "u_hp('arm_r') += 3" ] } },
+      { "if": { "math": [ "u_hp('leg_l') > 0" ] }, "then": { "math": [ "u_hp('leg_l') += 3" ] } },
+      { "if": { "math": [ "u_hp('leg_r') > 0" ] }, "then": { "math": [ "u_hp('leg_r') += 3" ] } }
+    ]
+  }
+]
