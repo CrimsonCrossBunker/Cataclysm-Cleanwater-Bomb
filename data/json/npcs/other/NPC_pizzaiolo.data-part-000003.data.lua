@@ -1,6 +1,7 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_pizzaiolo_Background",
-    line = ccb.content.gendered_line("I'm just a regular pizzaiolo.  My father was a pizzaiolo, my grandfather was a pizzaiolo and I also became a pizzaiolo.  I was making pizza my whole life, until some American <name_b>s ruined my business!  I couldn't do anything about this, but now, with <the_cataclysm> and <zombies> around, I have a chance to get my revenge!", { "interlocutor" }),
+    id = "TALK_pizzaiolo_celebrate",
+    line = ccb.content.gendered_line("Ah, home sweet home.  It feels like I haven't been here for ages.  Fuck, it looks so horrible now.  I guess it's because of <the_cataclysm>.  Thank you for bringing me here, <name_g>.  Let's eat the cake.", { "interlocutor" }),
+    replies = { { text = ccb.content.text("[*NOM-NOM*]"), next_topic = "TALK_pizzaiolo_celebrate1" } },
 }

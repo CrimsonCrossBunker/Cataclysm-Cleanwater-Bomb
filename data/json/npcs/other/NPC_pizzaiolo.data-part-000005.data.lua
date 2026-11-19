@@ -1,19 +1,6 @@
 local ccb = require("ccb")
-local predicates = ccb.content.dialogue_predicates
 
--- MISSION_PYROMANIAC mission set this topic as starting topic for mission giver.
 ccb.content.define_dialogue_topic {
-    id = "MISSION_PYROMANIAC",
-    line = ccb.content.text("Are we there yet, <name_g>?  I can't wait to burn that building!"),
-    replies = {
-        {
-            text = ccb.content.text("We're here.  Let's do it!"),
-            next_topic = "TALK_MISSION_INQUIRE",
-            when = predicates.all({ predicates.actor_state("interlocutor", "mission_complete"), predicates.has_inventory("speaker", "gasoline", 200) }),
-        },
-        {
-            text = ccb.content.text("Be patient, <name_g>, we're getting there soon."),
-            next_topic = "TALK_DONE",
-        },
-    },
+    id = "TALK_pizzaiolo_Background",
+    line = ccb.content.gendered_line("I'm just a regular pizzaiolo.  My father was a pizzaiolo, my grandfather was a pizzaiolo and I also became a pizzaiolo.  I was making pizza my whole life, until some American <name_b>s ruined my business!  I couldn't do anything about this, but now, with <the_cataclysm> and <zombies> around, I have a chance to get my revenge!", { "interlocutor" }),
 }

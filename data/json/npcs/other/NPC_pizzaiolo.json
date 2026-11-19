@@ -10,49 +10,5 @@
     "chat": "TALK_pizzaiolo_1",
     "faction": "no_faction",
     "mission_offered": "MISSION_pizzaiolo_1"
-  },
-  {
-    "type": "talk_topic",
-    "id": [ "TALK_pizzaiolo_1", "TALK_pizzaiolo_Background" ],
-    "dynamic_line": "<greet>",
-    "responses": [
-      {
-        "text": "I got the cake.  Shall we move, <name_g>?",
-        "condition": { "and": [ { "u_has_item": "cake2" }, { "u_has_mission": "MISSION_pizzaiolo_4" } ] },
-        "topic": "TALK_pizzaiolo_go"
-      },
-      { "text": "About that job…", "condition": "mission_complete", "topic": "TALK_MISSION_INQUIRE" },
-      { "text": "<BGSS_intro_question>", "topic": "TALK_pizzaiolo_Background" },
-      { "text": "Do you need any help?", "topic": "TALK_MISSION_LIST" },
-      {
-        "text": "If you still want to travel with me, let's go.",
-        "topic": "TALK_DONE",
-        "condition": { "compare_string": [ "yes", { "npc_val": "dialogue_pizzaiolo_u_helped_pizzaiolo" } ] },
-        "effect": [ "follow", { "npc_lose_var": "dialogue_pizzaiolo_u_helped_pizzaiolo" } ]
-      },
-      { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_pizzaiolo_go",
-    "dynamic_line": "Lead the way, <name_g>.",
-    "responses": [
-      { "text": "…", "topic": "TALK_DONE", "effect": [ "follow_only", { "npc_first_topic": "TALK_pizzaiolo_following" } ] }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_pizzaiolo_following",
-    "dynamic_line": "Are we there yet, my <name_g>?",
-    "responses": [
-      {
-        "text": "We're here, <name_g>.  Let's celebrate.",
-        "topic": "TALK_pizzaiolo_celebrate",
-        "condition": { "and": [ "mission_complete", { "u_has_item": "cake2" } ] },
-        "effect": [ "mission_success", "clear_mission", { "u_consume_item": "cake2" } ]
-      },
-      { "text": "Be patient.  We'll be there soon, <name_g>", "topic": "TALK_DONE" }
-    ]
   }
 ]
