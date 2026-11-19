@@ -1,0 +1,12 @@
+[
+  {
+    "type": "mutation_category",
+    "id": "SPECIES_GOBLIN",
+    "name": "Goblin",
+    "threshold_mut": "THRESH_SPECIES_GOBLIN",
+    "mutagen_message": "You feel the urge to steal a baby or two.",
+    "vitamin": "mutagen_species_goblin",
+    "memorial_message": "Went full goblin mode.",
+    "base_removal_chance": 0
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "type": "mutation_category",
+    "id": "SPECIES_ELF",
+    "name": "Elf",
+    "threshold_mut": "THRESH_SPECIES_ELF",
+    "mutagen_message": "You hear the songs of nature.",
+    "vitamin": "mutagen_species_elf",
+    "memorial_message": "Passed into the West.",
+    "base_removal_chance": 0
+  }
+]
