@@ -1,0 +1,24 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "comestible_type": "FOOD",
+    "name": { "str": "insect egg", "//~": "NO_I18N" },
+    "abstract": "egg_insect",
+    "//": "5x the weight and 3x the nutrition of real chicken eggs, toxins equal to 296g mutant meat",
+    "color": "white",
+    "symbol": "o",
+    "material": [ "egg" ],
+    "volume": "250 ml",
+    "weight": "275 g",
+    "calories": 240,
+    "quench": 10,
+    "fun": -20,
+    "price": "0 cent",
+    "price_postapoc": "1 USD",
+    "spoils_in": "5 days",
+    "flags": [ "FREEZERBURN", "RAW", "NO_AUTO_CONSUME" ],
+    "vitamins": [ [ "calcium", 7 ], [ "iron", 18 ], [ "mutant_toxin", 25 ], [ "egg_allergen", 1 ] ],
+    "stackable": true
+  }
+]

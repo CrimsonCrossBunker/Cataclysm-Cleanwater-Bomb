@@ -1,0 +1,22 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "egg_foul_bigfrog",
+    "copy-from": "egg_proxy_bigfrog",
+    "name": { "str": "cluster of giant frog's eggs", "str_pl": "clusters of giant frog's eggs" },
+    "description": "Looking like a submerged buoy-line, this long strand of softball-sized, gelatinous eggs floats gently in the still water.",
+    "use_action": [ "POISON" ],
+    "extend": { "rot_spawn": { "monster": "mon_foul_bigtad", "chance": 45 } }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "egg_odd_bigfrog",
+    "copy-from": "egg_proxy_bigfrog",
+    "name": { "str": "cluster of giant frog's eggs", "str_pl": "clusters of giant frog's eggs" },
+    "description": "This is a spiral strand of giant frog eggs.  Its increased weight and size nearly smothers the submerged vegetation it clings to.",
+    "use_action": [ "POISON" ],
+    "extend": { "rot_spawn": { "monster": "mon_odd_bigtad", "chance": 45 } }
+  }
+]

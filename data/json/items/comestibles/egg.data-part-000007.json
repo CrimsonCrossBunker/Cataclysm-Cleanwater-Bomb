@@ -1,0 +1,22 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "egg_fowler_toad",
+    "copy-from": "egg_proxy_frog",
+    "name": { "str": "cluster of frog's eggs", "str_pl": "clusters of frog's eggs" },
+    "description": "These eggs float in long strands, drifting in the still water.",
+    "use_action": [ "POISON" ],
+    "extend": { "rot_spawn": { "monster": "mon_fowler_tadpole", "chance": 20 } }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "egg_freedom_toad",
+    "copy-from": "egg_proxy_frog",
+    "name": { "str": "cluster of frog's eggs", "str_pl": "clusters of frog's eggs" },
+    "description": "A spiral strand of frog eggs adorns a patch of underwater vegetation.",
+    "use_action": [ "POISON" ],
+    "extend": { "rot_spawn": { "monster": "mon_freedom_tadpole", "chance": 20 } }
+  }
+]

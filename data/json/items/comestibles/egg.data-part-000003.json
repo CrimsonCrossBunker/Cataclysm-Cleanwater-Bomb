@@ -1,0 +1,12 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "egg_gar_longnose",
+    "name": { "str_sp": "roe" },
+    "copy-from": "egg_fish",
+    "use_action": [ "POISON" ],
+    "//": "Gar eggs are poisonous - this is not an oversight. This is also why these are omitted from the cooking requirement group.",
+    "extend": { "rot_spawn": { "monster": "mon_fry_gar_longnose", "chance": 20 } }
+  }
+]

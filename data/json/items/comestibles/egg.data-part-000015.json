@@ -1,0 +1,12 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "egg_shift_bigfrog",
+    "copy-from": "egg_proxy_bigfrog",
+    "name": { "str": "cluster of giant frog's eggs", "str_pl": "clusters of giant frog's eggs" },
+    "description": "These golfball-sized frog eggs cling together by their sticky membranes.",
+    "use_action": [ "POISON" ],
+    "extend": { "rot_spawn": { "monster": "mon_shift_bigtad", "chance": 45 } }
+  }
+]

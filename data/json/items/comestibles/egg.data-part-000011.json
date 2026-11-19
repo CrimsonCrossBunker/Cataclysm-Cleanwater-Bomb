@@ -1,0 +1,12 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "egg_spade_frog",
+    "copy-from": "egg_proxy_frog",
+    "name": { "str": "cluster of frog's eggs", "str_pl": "clusters of frog's eggs" },
+    "description": "Several short strands of tightly clustered black eggs connected together by their viscous coverings.",
+    "use_action": [ "POISON" ],
+    "extend": { "rot_spawn": { "monster": "mon_spade_tadpole", "chance": 20 } }
+  }
+]

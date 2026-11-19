@@ -1,0 +1,12 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "egg_pickerel_frog",
+    "copy-from": "egg_proxy_frog",
+    "name": { "str": "cluster of frog's eggs", "str_pl": "clusters of frog's eggs" },
+    "description": "A globular mass of frog's eggs.  The individual eggs are colored a dark brown on top and a yellow-cream on the bottom.",
+    "use_action": [ "POISON" ],
+    "extend": { "rot_spawn": { "monster": "mon_pickerel_tadpole", "chance": 20 } }
+  }
+]
