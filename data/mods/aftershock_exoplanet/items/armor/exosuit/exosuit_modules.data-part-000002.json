@@ -1,0 +1,28 @@
+[
+  {
+    "id": "exo_carry",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "category": "exosuit",
+    "name": { "str": "exosuit load support module (off)", "str_pl": "exosuit load support modules (off)" },
+    "description": "This module significantly increases the exosuit's weight bearing at the cost of increased power consumption.",
+    "weight": "5 kg",
+    "volume": "2500 ml",
+    "material": [ "plastic", "qt_steel" ],
+    "symbol": "=",
+    "looks_like": "storage_battery",
+    "color": "light_gray",
+    "flags": [ "FRAGILE", "CANT_WEAR", "WATERPROOF", "USE_UPS", "EXO_MEDIUM_GADGET" ],
+    "max_worn": 1,
+    "use_action": {
+      "target": "exo_carry_on",
+      "msg": "The %s engages.",
+      "menu_text": "Turn on module",
+      "need_charges": 5,
+      "need_charges_msg": "There is not enough charge to activate the module.",
+      "type": "transform"
+    },
+    "tool_ammo": [ "battery" ],
+    "passive_effects": [ { "id": "afs_ench_exo_big_carry" } ]
+  }
+]
