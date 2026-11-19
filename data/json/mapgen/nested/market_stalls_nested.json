@@ -1,22 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "market_6x6_roof",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rows": [
-        "RRRRRR",
-        "RRRRRR",
-        "RRRRRR",
-        "RRRRRR",
-        "RRRRRR",
-        "RRRRRR"
-      ],
-      "terrain": { "R": "t_canvas_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "market_meat",
     "object": {
       "mapgensize": [ 6, 6 ],
@@ -112,20 +96,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "market_4x4_roof",
-    "object": {
-      "mapgensize": [ 4, 4 ],
-      "rows": [
-        "RRRR",
-        "RRRR",
-        "RRRR",
-        "RRRR"
-      ],
-      "terrain": { "R": "t_canvas_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "market_bees",
     "object": {
       "mapgensize": [ 4, 4 ],
@@ -187,21 +157,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "market_5x5_roof",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rows": [
-        "RRRRR",
-        "RRRRR",
-        "RRRRR",
-        "RRRRR",
-        "RRRRR"
-      ],
-      "terrain": { "R": "t_canvas_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "market_botanical",
     "object": {
       "mapgensize": [ 5, 5 ],
@@ -217,23 +172,6 @@
       "items": { "t": { "item": "cash_register_random", "chance": 100 } },
       "palettes": [ "open_air_stall_palette" ],
       "place_nested": [ { "chunks": [ "market_5x5_roof" ], "x": 0, "y": 0, "z": 1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "market_7x7_roof",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "rows": [
-        "RRRRRRR",
-        "RRRRRRR",
-        "RRRRRRR",
-        "RRRRRRR",
-        "RRRRRRR",
-        "RRRRRRR",
-        "RRRRRRR"
-      ],
-      "terrain": { "R": "t_canvas_roof" }
     }
   },
   {
