@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "xedrawood_scenario_wise_one_hut_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "              .......   ",
+            "             .........  ",
+            "             .........  ",
+            "             .........  ",
+            "             .... ....  ",
+            "             .........  ",
+            "             .........  ",
+            "             .........  ",
+            "              .......   ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        terrain = { ["."] = "t_thatch_roof" },
+        fill_terrain = "t_open_air",
+    },
+}
