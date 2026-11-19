@@ -1,0 +1,21 @@
+[
+  {
+    "abstract": "mre_dessert",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "name": { "str": "MRE dessert", "//~": "NO_I18N" },
+    "weight": "52 g",
+    "color": "brown",
+    "spoils_in": "3 days 8 hours",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "calories": 270,
+    "description": { "str": "A generic MRE dessert, you shouldn't see this.", "//~": "NO_I18N" },
+    "price": "12 USD 50 cent",
+    "price_postapoc": "3 USD",
+    "volume": "125 ml",
+    "flags": [ "RAD_STERILIZED", "DECAY_EXPOSED_ATMOSPHERE" ],
+    "looks_like": "cookies",
+    "fun": 4
+  }
+]
