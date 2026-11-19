@@ -31,80 +31,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "24x24_bandits_block_horizontal_felled_trees",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "        ---             ",
-        " n------                ",
-        "                 -----n ",
-        "           ------     / ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { "-": "t_trunk", "n": "t_stump", "/": "t_improvised_shelter" },
-      "npcs": { "/": { "class": "bandit" } },
-      "place_nested": [ { "chunks": [ "1x1_bandit", "null" ], "x": 1, "y": 2 } ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "24x24_bandits_block_vertical_felled_trees",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "                        ",
-        "  n/                    ",
-        "  |                     ",
-        "  |                     ",
-        "  |                     ",
-        "  |                     ",
-        "  |                     ",
-        "   |                    ",
-        "   |                    ",
-        "   |                    ",
-        "   |                    ",
-        "   |                    ",
-        "   |                    ",
-        "|                       ",
-        "|                       ",
-        "|                       ",
-        " |                      ",
-        " |                      ",
-        " |                      ",
-        " |                      ",
-        " |                      ",
-        " |                      ",
-        " n                      ",
-        "                        "
-      ],
-      "terrain": { "|": "t_trunk", "n": "t_stump", "/": "t_improvised_shelter" },
-      "npcs": { "/": { "class": "bandit" } },
-      "place_nested": [ { "chunks": [ "1x1_bandit", "null" ], "x": 0, "y": 22 } ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "24x24_bandits_block_horizontal_traps",
     "object": {
       "mapgensize": [ 24, 24 ],
@@ -204,29 +130,5 @@
       ],
       "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "1x1_bandit",
-    "object": { "mapgensize": [ 1, 1 ], "place_npcs": [ { "class": "bandit", "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "1x1_bandit_dirt",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "set": [ { "point": "terrain", "id": "t_dirt", "x": 0, "y": 0 } ],
-      "place_npcs": [ { "class": "bandit", "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "1x1_nailboard",
-    "object": { "mapgensize": [ 1, 1 ], "set": [ { "point": "trap", "id": "tr_nailboard", "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "1x1_caltrops",
-    "object": { "mapgensize": [ 1, 1 ], "set": [ { "point": "trap", "id": "tr_caltrops", "x": 0, "y": 0 } ] }
   }
 ]

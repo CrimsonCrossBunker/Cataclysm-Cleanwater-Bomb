@@ -13,3 +13,13 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "nested_beehive_natural",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        terrain_placements = { { id = "t_beehive_natural", x = 0, y = 0 } },
+    },
+}

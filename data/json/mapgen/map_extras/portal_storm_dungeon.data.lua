@@ -67,3 +67,11 @@ ccb.content.define_mapgen {
         monster_placements = { { group = "GROUP_NETHER", x = { 0, 23 }, y = { 0, 23 }, repetitions = { 2, 3 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "mx_portal_cracked_mirror",
+    layout = {
+        field_placements = { { id = "fd_portal_cracked_mirror", x = { 0, 23 }, y = { 0, 23 } } },
+    },
+}

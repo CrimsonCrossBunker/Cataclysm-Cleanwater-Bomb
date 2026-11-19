@@ -58,3 +58,83 @@ ccb.content.define_mapgen {
         monster_group_glyphs = { X = { group = "GROUP_SPIDER", chance = 1, density = 0.5 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "spider_webs",
+    layout = {
+        size = { width = 1, height = 1 },
+        field_placements = { { id = "fd_web", x = 0, y = 0, intensity = { 1, 3 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "spider_webs_weak",
+    layout = {
+        size = { width = 1, height = 1 },
+        field_placements = { { id = "fd_web", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "spider_webs_nostick",
+    layout = {
+        size = { width = 1, height = 1 },
+        field_placements = { { id = "fd_web_nostick", repetitions = { 0, 3 }, x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "mx_basement_spider",
+    layout = {
+        rows = {
+            "                        ",
+            "          !             ",
+            "                   !    ",
+            "                        ",
+            "       !                ",
+            "                        ",
+            "            !           ",
+            "                        ",
+            "       !         !      ",
+            "                        ",
+            "                        ",
+            "             !          ",
+            "                        ",
+            "    !                   ",
+            "                        ",
+            "           !            ",
+            "                   !    ",
+            "                        ",
+            "                        ",
+            "          !             ",
+            "                        ",
+            "                        ",
+            "     !            !     ",
+            "                        ",
+        },
+        nested_glyphs = {
+            [" "] = {
+                choices = {
+                    { id = "spider_webs_nostick", weight = 1 },
+                    { id = "wasp_gibs", weight = 1 },
+                    { id = "damaged_door_nested_no_junk", weight = 3 },
+                    { id = "destroyed_door_nested_no_junk", weight = 3 },
+                },
+            },
+        },
+        monster_glyphs = { ["!"] = { group = "GROUP_SPIDER_BASEMENT", chance = 50, pack_size = { 1, 3 } } },
+        tile_edits = {
+            {
+                shape = "point",
+                operation = "bash",
+                x = { 3, 20 },
+                y = { 3, 20 },
+                repetitions = { 5, 10 },
+            },
+        },
+    },
+}

@@ -45,3 +45,30 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "corpse_blood_gibs_college_3x3",
+    layout = {
+        size = { width = 3, height = 3 },
+        item_group_placements = {
+            {
+                group = {
+                    entries = {
+                        { group = "map_extra_college_camping", probability = 33 },
+                        { group = "map_extra_college_sports", probability = 33 },
+                        { group = "map_extra_college_lake", probability = 33 },
+                    },
+                    kind = "distribution",
+                },
+                x = { 0, 2 },
+                y = { 0, 2 },
+                chance = 100,
+            },
+        },
+        field_placements = {
+            { id = "fd_blood", x = { 0, 2 }, y = { 0, 2 } },
+            { id = "fd_gibs_flesh", x = { 0, 2 }, y = { 0, 2 } },
+        },
+    },
+}

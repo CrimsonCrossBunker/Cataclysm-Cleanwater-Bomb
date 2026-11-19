@@ -1,17 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "toxic_gas_vent",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_fields": [ { "field": "fd_gas_vent", "x": 0, "y": 0, "intensity": 3, "age": 0 } ],
-      "//": "Random chemicals mixed together is bound to create toxic gas, also makes it harder to get to any loot.",
-      "place_loot": [ { "group": "toxic_waste_mx_chems", "x": 0, "y": 0, "repeat": [ 2, 3 ] } ],
-      "set": [ { "point": "terrain", "id": "t_pit", "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "toxic_waste_lab_corpses",
     "//": "Lore. Lab folks may dump their now dead, useless and perhaps incriminating experiments there to get rid of them.",
     "object": {

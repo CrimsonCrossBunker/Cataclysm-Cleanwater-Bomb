@@ -145,3 +145,86 @@ ccb.content.define_mapgen {
         item_group_placements = { { group = "airdrop_trash", x = 0, y = 0, chance = 100 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "supply_humanitarian",
+    layout = {
+        size = { width = 2, height = 2 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = {
+            { id = "parachute_mil", x = { 0, 1 }, y = 1 },
+            { id = "parachute_mil", x = 1, y = { 0, 1 } },
+        },
+        item_group_placements = { { group = "airdrop_humanitarian_full", x = 0, y = 0, chance = 100 } },
+        furniture_placements = { { id = "f_pallet_belted", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "supply_water_bottles_full",
+    layout = {
+        size = { width = 2, height = 2 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = {
+            { id = "parachute_mil", x = { 0, 1 }, y = 1 },
+            { id = "parachute_mil", x = 1, y = { 0, 1 } },
+        },
+        item_group_placements = {
+            { group = "twoliter_water_batch", x = 0, y = 0, chance = 100, repetitions = 15 },
+            { group = "twoliter_water_batch", x = 0, y = 0, chance = 50, repetitions = 15 },
+            { group = "twoliter_water_batch", x = 0, y = 0, chance = 25, repetitions = 15 },
+        },
+        furniture_placements = { { id = "f_pallet_belted", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "supply_generatos",
+    layout = {
+        size = { width = 2, height = 2 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = {
+            { id = "parachute_mil", x = { 0, 1 }, y = 1 },
+            { id = "parachute_mil", x = 1, y = { 0, 1 } },
+        },
+        item_group_placements = { { group = "airdrop_generator", x = 0, y = 0, chance = 100 } },
+        furniture_placements = { { id = "f_pallet_belted", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "supply_humanitarian_used",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = { { group = "airdrop_humanitarian_looted", x = 0, y = 0, chance = 100 } },
+        furniture_placements = { { id = "f_pallet_belted_open", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "supply_water_bottles_open",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = { { group = "twoliter_water_batch", x = 0, y = 0, repetitions = { 0, 11 }, chance = 100 } },
+        furniture_placements = { { id = "f_pallet_belted_open", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "supply_generator_active",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = { { id = "laptop", x = 0, y = 0, repetitions = { 0, 4 } } },
+        item_group_placements = { { group = "civilian_phones", x = 0, y = 0, repetitions = { 2, 7 } } },
+        furniture_placements = { { id = "f_active_backup_generator", x = 0, y = 0 } },
+    },
+}

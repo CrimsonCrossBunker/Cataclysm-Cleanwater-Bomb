@@ -1,7 +1,0 @@
-[
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "mx_portal_cracked_mirror",
-    "object": { "place_fields": [ { "field": "fd_portal_cracked_mirror", "x": [ 0, 23 ], "y": [ 0, 23 ] } ] }
-  }
-]

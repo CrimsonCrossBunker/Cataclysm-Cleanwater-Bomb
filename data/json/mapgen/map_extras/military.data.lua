@@ -45,3 +45,17 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "soldier_guns_3x3",
+    layout = {
+        size = { width = 3, height = 3 },
+        item_group_placements = { { group = "military_squad_guns", x = { 0, 2 }, y = { 0, 2 }, chance = 100 } },
+        field_placements = {
+            { id = "fd_blood", x = { 0, 2 }, y = { 0, 2 } },
+            { id = "fd_gibs_flesh", x = { 0, 2 }, y = { 0, 2 } },
+        },
+        monster_placements = { { group = "GROUP_MIL_EXTRA", x = { 0, 2 }, y = { 0, 2 } } },
+    },
+}
