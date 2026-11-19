@@ -1,0 +1,50 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "s_daycare_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            " --------------------   ",
+            " -..................-   ",
+            " -..................-   ",
+            " -..................-   ",
+            " -..................-   ",
+            " -..................-   ",
+            " -..................-   ",
+            " -..................-   ",
+            " -..................--- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " --5------------------- ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities_c", weight = 5 },
+                    { id = "roof_2x2_utilities_d", weight = 20 },
+                    { id = "roof_2x2_utilities", weight = 20 },
+                    { id = "roof_4x4_utility", weight = 20 },
+                },
+                x = { 3, 15 },
+                y = { 11, 17 },
+            },
+        },
+    },
+}
