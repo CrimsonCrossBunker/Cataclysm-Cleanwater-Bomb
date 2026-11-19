@@ -1,0 +1,64 @@
+[
+  {
+    "id": "mon_lizardfolk_hunter",
+    "type": "MONSTER",
+    "name": "lizardfolk hunter",
+    "description": "The hunter is a smaller lizardfolk than a warrior, but equally as deadly, with their lithe figures and accurate javelin throws.",
+    "copy-from": "mon_lizardfolk_warrior",
+    "symbol": "L",
+    "special_attacks": [
+      {
+        "type": "gun",
+        "cooldown": 5,
+        "move_cost": 150,
+        "gun_type": "lizardfolk_javelin_gun",
+        "fake_skills": [ [ "gun", 8 ], [ "rifle", 8 ] ],
+        "fake_dex": 8,
+        "fake_per": 8,
+        "condition": { "test_eoc": "is_disarmed" },
+        "require_targeting_player": false,
+        "ranges": [ [ 2, 10, "DEFAULT" ] ],
+        "description": "The hunter hurls a barbed javelin at you!"
+      },
+      { "type": "bite", "cooldown": 5 }
+    ],
+    "death_drops": [
+      { "item": "lizardfolk_javelin", "prob": 30 },
+      { "item": "loincloth", "prob": 40 },
+      { "item": "spearsling", "prob": 20 },
+      { "item": "bone_human", "prob": 10 }
+    ]
+  },
+  {
+    "id": "mon_lizardfolk_shaman",
+    "type": "MONSTER",
+    "name": "lizardfolk shaman",
+    "description": "Lizardfolk are very intelligent and cunning, but magical ability is a rare quality.  Shamans are chosen from the tribe during childhood, when magical abilities mark the fate of the young tribesman.  Not much is known about the initiation ritual they must undergo, but few survive the experience.  Shamans are druidic spellcasters that can use the forces of nature to battle enemies, as well as summoning assistance when needed.",
+    "copy-from": "mon_lizardfolk_warrior",
+    "symbol": "L",
+    "hp": 80,
+    "melee_skill": 3,
+    "melee_dice": 2,
+    "melee_dice_sides": 6,
+    "special_attacks": [
+      {
+        "type": "spell",
+        "spell_data": { "id": "spell_shaman_base" },
+        "condition": { "and": [ { "not": { "u_has_flag": "MUTE" } }, { "not": { "u_has_flag": "NO_SPELLCASTING" } } ] },
+        "cooldown": 10
+      },
+      [ "scratch", 5 ]
+    ],
+    "death_drops": {
+      "subtype": "distribution",
+      "items": [
+        { "group": "enchanted_small_items", "prob": 40 },
+        { "group": "enchanted_melee_weapons_plus1", "prob": 20 },
+        { "group": "enchanted_wands_lesser", "prob": 10 },
+        { "item": "robe", "prob": 40 },
+        { "item": "leather_belt", "prob": 20 }
+      ]
+    },
+    "extend": { "flags": [ "MAGIC_USER" ] }
+  }
+]
