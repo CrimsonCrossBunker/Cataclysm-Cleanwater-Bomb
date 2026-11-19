@@ -1,0 +1,51 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "arm_zed",
+    category = "other",
+    name = ccb.content.plural_text("tainted limb", "tainted limbs"),
+    description = ccb.content.text("A rotted and then shredded arm.  Not much use unless you want to scrape the meat from the bones."),
+    snippet_category = "arm_zed_desc",
+    color = "red",
+    symbol = "%",
+    materials = { "flesh" },
+    mass = "3767 g",
+    volume = "4500 ml",
+    price = "0 cent",
+    survival_price = "0 cent",
+    flags = { "TRADER_AVOID", "NUTRIENT_OVERRIDE", "NO_REPAIR" },
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        calories = 278,
+        fun = -20,
+        vitamins = { { id = "meat_allergen", amount = 1 } },
+        shelf_life = "2 days",
+    },
+    use_actions = { "POISON" },
+}
+
+ccb.content.define_item {
+    id = "leg_zed",
+    category = "other",
+    name = ccb.content.plural_text("tainted limb", "tainted limbs"),
+    description = ccb.content.text("What's left of some zombie's limb.  Most likely a leg based on the proportions.  Though it's rotted, there is quite a bit of meat still on it."),
+    snippet_category = "leg_zed_desc",
+    color = "red",
+    symbol = "%",
+    materials = { "flesh" },
+    mass = "11071 g",
+    volume = "12 L",
+    price = "0 cent",
+    survival_price = "0 cent",
+    flags = { "TRADER_AVOID", "NUTRIENT_OVERRIDE", "NO_REPAIR" },
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        calories = 399,
+        fun = -20,
+        vitamins = { { id = "meat_allergen", amount = 1 } },
+        shelf_life = "2 days",
+    },
+    use_actions = { "POISON" },
+}
