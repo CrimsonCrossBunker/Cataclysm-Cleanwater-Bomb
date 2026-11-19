@@ -1,19 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_reach_on",
-    "effect": [ { "u_add_var": "perk_metamagic_reach_deactivated", "value": "no" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_reach_off",
-    "effect": [
-      { "u_message": "You deactivate your reach metamagic" },
-      { "u_add_var": "perk_metamagic_reach_deactivated", "value": "yes" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_metamagic_reach",
     "eoc_type": "EVENT",
     "required_event": "opens_spellbook",

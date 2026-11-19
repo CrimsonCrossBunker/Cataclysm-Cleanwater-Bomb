@@ -1,19 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_careful_on",
-    "effect": [ { "u_add_var": "perk_metamagic_careful_deactivated", "value": "no" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_careful_off",
-    "effect": [
-      { "u_message": "You deactivate your careful metamagic" },
-      { "u_add_var": "perk_metamagic_careful_deactivated", "value": "yes" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_metamagic_careful",
     "eoc_type": "EVENT",
     "required_event": "opens_spellbook",

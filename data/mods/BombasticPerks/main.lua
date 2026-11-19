@@ -38,5 +38,6 @@ require("xp_progression")
 require("craft_recipes")
 
 require("second_wind")
+require("mutation_abilities")
 
 require("terrain_transforms")

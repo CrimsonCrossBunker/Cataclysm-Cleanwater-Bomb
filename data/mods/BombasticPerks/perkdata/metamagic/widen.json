@@ -1,19 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_widen_on",
-    "effect": [ { "u_add_var": "perk_metamagic_widen_deactivated", "value": "no" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_widen_off",
-    "effect": [
-      { "u_message": "You deactivate your widen metamagic" },
-      { "u_add_var": "perk_metamagic_widen_deactivated", "value": "yes" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_metamagic_widen",
     "eoc_type": "EVENT",
     "required_event": "opens_spellbook",

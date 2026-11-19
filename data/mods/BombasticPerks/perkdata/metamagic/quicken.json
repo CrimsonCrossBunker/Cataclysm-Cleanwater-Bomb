@@ -1,19 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_quicken_on",
-    "effect": [ { "u_add_var": "perk_metamagic_quicken_deactivated", "value": "no" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_quicken_off",
-    "effect": [
-      { "u_message": "You deactivate your quicken metamagic" },
-      { "u_add_var": "perk_metamagic_quicken_deactivated", "value": "yes" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_metamagic_quicken",
     "eoc_type": "EVENT",
     "required_event": "opens_spellbook",

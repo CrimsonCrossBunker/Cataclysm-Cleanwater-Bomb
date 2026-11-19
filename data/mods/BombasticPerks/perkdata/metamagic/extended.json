@@ -1,19 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_extended_on",
-    "effect": [ { "u_add_var": "perk_metamagic_extended_deactivated", "value": "no" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_extended_off",
-    "effect": [
-      { "u_message": "You deactivate your extended metamagic" },
-      { "u_add_var": "perk_metamagic_extended_deactivated", "value": "yes" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_metamagic_extended",
     "eoc_type": "EVENT",
     "required_event": "opens_spellbook",

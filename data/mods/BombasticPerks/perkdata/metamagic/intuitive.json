@@ -1,19 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_intuitive_on",
-    "effect": [ { "u_add_var": "perk_metamagic_intuitive_deactivated", "value": "no" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_metamagic_toggle_intuitive_off",
-    "effect": [
-      { "u_message": "You deactivate your intuitive metamagic" },
-      { "u_add_var": "perk_metamagic_intuitive_deactivated", "value": "yes" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_metamagic_intuitive",
     "eoc_type": "EVENT",
     "required_event": "opens_spellbook",
