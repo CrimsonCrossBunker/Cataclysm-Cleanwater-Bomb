@@ -355,6 +355,33 @@ def _effect_memorial_edits(source: str) -> list[tuple[int, int, str]]:
     return edits
 
 
+def _literal_string_field(tokens: list[_LuaToken], table: _LuaTable, field: str) -> _LuaToken | None:
+    values = table.fields.get(field, [])
+    if len(values) != 1 or values[0] + 1 >= len(tokens):
+        return None
+    index = values[0]
+    token = tokens[index]
+    if (token.kind == "string" and "\n" not in token.value and
+            "\r" not in token.value and tokens[index + 1].value in (",", ";", "}")):
+        return token
+    return None
+
+
+def _content_definition_tables(
+    tokens: list[_LuaToken], tables: dict[int, _LuaTable], name: str
+) -> list[_LuaTable]:
+    matches = []
+    for table in tables.values():
+        constructor = table.token_index - 1
+        if constructor >= 0 and tokens[constructor].value == "(":
+            constructor -= 1
+        if constructor >= 4 and [t.value for t in tokens[constructor - 4:constructor + 1]] == [
+            "ccb", ".", "content", ".", name
+        ]:
+            matches.append(table)
+    return matches
+
+
 def _profession_translation_edits(source: str) -> list[tuple[int, int, str]]:
     """Keep the native profession title and description contexts."""
     if "define_profession" not in source:
@@ -363,32 +390,14 @@ def _profession_translation_edits(source: str) -> list[tuple[int, int, str]]:
     tables = _dialogue_tables(tokens)
     edits = []
 
-    def literal(table: _LuaTable, field: str) -> _LuaToken | None:
-        values = table.fields.get(field, [])
-        if len(values) != 1 or values[0] + 1 >= len(tokens):
-            return None
-        index = values[0]
-        token = tokens[index]
-        if (token.kind == "string" and "\n" not in token.value and
-                "\r" not in token.value and tokens[index + 1].value in (",", ";", "}")):
-            return token
-        return None
-
     def add(message: _LuaToken, prefix: str, *genders: str) -> None:
         calls = [f'ccb.content.text({message.value}, "{prefix}_{gender}")' for gender in genders]
         edits.append((message.start, message.end, " .. ".join(calls)))
 
-    for table in tables.values():
-        constructor = table.token_index - 1
-        if constructor >= 0 and tokens[constructor].value == "(":
-            constructor -= 1
-        if constructor < 4 or [t.value for t in tokens[constructor - 4:constructor + 1]] != [
-            "ccb", ".", "content", ".", "define_profession"
-        ]:
-            continue
+    for table in _content_definition_tables(tokens, tables, "define_profession"):
         for field, prefix in (("name", "profession"), ("description", "prof_desc")):
             values = table.fields.get(field, [])
-            message = literal(table, "id" if not values and field == "name" else field)
+            message = _literal_string_field(tokens, table, "id" if not values and field == "name" else field)
             if message is not None:
                 add(message, prefix, "male", "female")
             elif len(values) == 1 and (gendered := tables.get(values[0])) is not None:
@@ -396,8 +405,63 @@ def _profession_translation_edits(source: str) -> list[tuple[int, int, str]]:
                         tokens[gendered.end_token_index + 1].value not in (",", ";", "}")):
                     continue
                 for gender in ("male", "female"):
-                    if (message := literal(gendered, gender)) is not None:
+                    if (message := _literal_string_field(tokens, gendered, gender)) is not None:
                         add(message, prefix, gender)
+    return edits
+
+
+def _literal_table_array_field(
+    tokens: list[_LuaToken], tables: dict[int, _LuaTable], owner: _LuaTable, field: str
+) -> list[_LuaTable]:
+    values = owner.fields.get(field, [])
+    entries = tables.get(values[0]) if len(values) == 1 else None
+    if entries is None or entries.fields or entries.end_token_index is None:
+        return []
+    end = entries.end_token_index
+    if end + 1 >= len(tokens) or tokens[end + 1].value not in (",", ";", "}"):
+        return []
+    index = entries.token_index + 1
+    result = []
+    while index < end:
+        entry = tables.get(index)
+        if entry is None or entry.end_token_index is None or entry.has_non_key_field:
+            return []
+        result.append(entry)
+        index = entry.end_token_index + 1
+        if index < end:
+            if tokens[index].value not in (",", ";"):
+                return []
+            index += 1
+    return result
+
+
+def _vehicle_part_translation_edits(source: str) -> list[tuple[int, int, str]]:
+    """Extract the same variant and derived base labels as ordered native data."""
+    if "define_vehicle_part" not in source:
+        return []
+    tokens = _lua_tokens(source)
+    tables = _dialogue_tables(tokens)
+    edits = []
+    empty = ('""', "''")
+    for part in _content_definition_tables(tokens, tables, "define_vehicle_part"):
+        base_labels = [
+            label.value
+            for entry in _literal_table_array_field(tokens, tables, part, "variant_bases")
+            if (label := _literal_string_field(tokens, entry, "label")) is not None
+        ]
+        for variant in _literal_table_array_field(tokens, tables, part, "variants"):
+            label = _literal_string_field(tokens, variant, "label")
+            if label is None and variant.fields.get("label"):
+                continue
+            message = label or _literal_string_field(tokens, variant, "symbols")
+            if message is None:
+                continue
+            raw = label.value if label else '"Default"'
+            labels = [] if raw in empty else [raw]
+            labels.extend(base if raw in empty else f'{base} .. " " .. {raw}' for base in base_labels)
+            if labels:
+                calls = [f'ccb.content.text({text}, "vpart_variants")' for text in labels]
+                edits.append((message.start, message.end, " .. ".join(calls + [message.value])))
     return edits
 
 
@@ -405,7 +469,8 @@ def _rewrite_translation_markers(source: str) -> str | None:
     """Rewrite marked literals as an xgettext-only keyword call."""
     edits = (
         _dialogue_translation_edits(source) + _gendered_translation_edits(source) +
-        _effect_memorial_edits(source) + _profession_translation_edits(source)
+        _effect_memorial_edits(source) + _profession_translation_edits(source) +
+        _vehicle_part_translation_edits(source)
     )
     if not edits:
         return None

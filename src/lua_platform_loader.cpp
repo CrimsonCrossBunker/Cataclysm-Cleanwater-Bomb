@@ -74,6 +74,7 @@ extern "C" {
 #include "recipe_dictionary.h"
 #include "start_location.h"
 #include "trap.h"
+#include "veh_type.h"
 #include "vehicle_group.h"
 #include "widget.h"
 #include <functional>
@@ -4857,7 +4858,7 @@ void write_static_spawn_entry( JsonOut &json, const sol::object &value )
     write_item_ids( json, entry, { { "custom_flags", "custom-flags" } } );
     write_static_string_or_ids( json, entry, "contents_items", "contents-item" );
     write_static_string_or_ids( json, entry, "contents_groups", "contents-group" );
-    for( const char *field : { "count", "charges" } ) {
+    for( const char *field : { "count", "charges", "damage" } ) {
         write_mapgen_range( json, field, entry.raw_get<sol::object>( field ) );
     }
     json.end_object();
@@ -4964,6 +4965,167 @@ void write_static_profession( JsonOut &json, const sol::table &options )
         json.member( "skills" );
         write_static_values<sol::table>( json, *skills, "extend_skills", write_static_profession_skill );
         json.end_object();
+    }
+}
+
+void write_static_vehicle_part_variant( JsonOut &json, const sol::table &variant )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, variant, {
+        { "id", "id" }, { "label", "label" },
+        { "symbols", "symbols" }, { "broken_symbols", "symbols_broken" }
+    } );
+    json.end_object();
+}
+
+void write_static_vehicle_part_requirement( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_placement_member<std::string>( json, options, "duration", "time" );
+    const sol::object using_requirements = options.raw_get<sol::object>( "using_requirements" );
+    if( using_requirements.get_type() == sol::type::string ) {
+        json.member( "using", using_requirements.as<std::string>() );
+    } else {
+        write_static_catalog_array( json, options, "using_requirements", "using",
+                                    write_static_construction_requirement );
+    }
+    write_static_catalog_array( json, options, "skills", "skills", write_static_construction_requirement );
+    write_static_catalog_array( json, options, "qualities", "qualities", write_static_construction_quality );
+    write_static_catalog_array( json, options, "components", "components",
+    []( JsonOut & out, const sol::table & alternatives ) {
+        write_static_values<sol::table>( out, alternatives, "component choices",
+                                         write_static_construction_requirement );
+    } );
+    json.end_object();
+}
+
+void write_static_vehicle_part_requirements( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    for( const char *operation : { "install", "removal", "repair" } ) {
+        write_static_tile_object( json, options, operation, operation, write_static_vehicle_part_requirement );
+    }
+    json.end_object();
+}
+
+void write_static_vehicle_part_controls( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    for( const char *kind : { "air", "land" } ) {
+        write_static_tile_object( json, options, kind, kind, []( JsonOut & out, const sol::table & controls ) {
+            out.start_object();
+            write_item_ids( out, controls, { { "proficiencies", "proficiencies" } } );
+            write_static_catalog_array( out, controls, "skills", "skills",
+                                         write_static_construction_requirement );
+            out.end_object();
+        } );
+    }
+    json.end_object();
+}
+
+void write_static_vehicle_part( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
+        { "item", "item" }, { "location", "location" }, { "remove_as", "remove_as" },
+        { "color", "color" }, { "broken_color", "broken_color" },
+        { "looks_like", "looks_like" }, { "fuel_type", "fuel_type" }, { "default_ammo", "default_ammo" },
+        { "default_tint_color", "default_tint_color" }, { "size", "size" },
+        { "folded_volume", "folded_volume" }, { "cargo_passable_size", "cargo_passable_size" },
+        { "folding_time", "folding_time" }, { "unfolding_time", "unfolding_time" },
+        { "energy_consumption", "energy_consumption" }, { "power", "power" }, { "epower", "epower" }
+    } );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    write_item_fields<int>( json, options, {
+        { "durability", "durability" }, { "damage_modifier", "damage_modifier" },
+        { "bonus", "bonus" }, { "comfort", "comfort" }, { "backfire_frequency", "backfire_freq" },
+        { "noise_factor", "noise_factor" }, { "m2c", "m2c" }, { "muscle_power_factor", "muscle_power_factor" },
+        { "contact_area", "contact_area" }, { "propeller_diameter", "propeller_diameter" },
+        { "rotor_diameter", "rotor_diameter" }, { "ladder_length", "length" }
+    } );
+    write_item_fields<double>( json, options, {
+        { "balloon_height", "height" }, { "backfire_threshold", "backfire_threshold" },
+        { "damaged_power_factor", "damaged_power_factor" }, { "rolling_resistance", "rolling_resistance" },
+        { "wheel_offroad_rating", "wheel_offroad_rating" }
+    } );
+    write_static_tile_unit( json, options, "floor_bedding_warmth", "floor_bedding_warmth" );
+    write_static_int_triplet( json, options, "light_color" );
+    write_item_ids( json, options, {
+        { "categories", "categories" }, { "flags", "flags" }, { "emissions", "emissions" },
+        { "exhaust", "exhaust" }, { "engine_exclusions", "exclusions" }, { "fuel_options", "fuel_options" },
+        { "folding_tools", "folding_tools" }, { "unfolding_tools", "unfolding_tools" },
+        { "allowed_tools", "allowed_tools" }
+    } );
+    for( const char *field : { "extend", "delete" } ) {
+        write_static_tile_object( json, options, field, field, []( JsonOut & out, const sol::table & edit ) {
+            out.start_object();
+            write_item_ids( out, edit, {
+                { "flags", "flags" }, { "categories", "categories" }, { "allowed_tools", "allowed_tools" }
+            } );
+            out.end_object();
+        } );
+    }
+    write_static_tile_object( json, options, "proportional", "proportional",
+    []( JsonOut & out, const sol::table & scale ) {
+        out.start_object();
+        write_item_fields<double>( out, scale, {
+            { "durability", "durability" }, { "damage_modifier", "damage_modifier" },
+            { "size", "size" }, { "epower", "epower" }
+        } );
+        out.end_object();
+    } );
+    write_static_catalog_array( json, options, "variants", "variants", write_static_vehicle_part_variant );
+    write_static_catalog_array( json, options, "variant_bases", "variants_bases",
+                                write_static_vehicle_part_variant );
+    write_static_catalog_array( json, options, "qualities", "qualities", write_static_construction_requirement );
+    write_static_catalog_array( json, options, "pseudo_tools", "pseudo_tools",
+    []( JsonOut & out, const sol::table & tool ) {
+        out.start_object();
+        out.member( "id", tool.get<std::string>( "id" ) );
+        write_placement_member<std::string>( out, tool, "hotkey", "hotkey" );
+        out.end_object();
+    } );
+    write_static_tile_object( json, options, "requirements", "requirements",
+                              write_static_vehicle_part_requirements );
+    write_static_tile_object( json, options, "control", "control_requirements",
+                              write_static_vehicle_part_controls );
+    write_static_tile_object( json, options, "workbench", "workbench", write_static_tile_workbench );
+    write_static_tile_object( json, options, "transform_terrain", "transform_terrain",
+    []( JsonOut & out, const sol::table & transform ) {
+        out.start_object();
+        write_item_ids( out, transform, { { "pre_flags", "pre_flags" } } );
+        write_item_fields<std::string>( out, transform, {
+            { "post_terrain", "post_terrain" }, { "post_furniture", "post_furniture" }
+        } );
+        out.end_object();
+    } );
+    write_static_tile_object( json, options, "damage_reduction", "damage_reduction",
+    []( JsonOut & out, const sol::table & damage ) {
+        out.start_object();
+        for( const auto &[type, amount] : damage ) {
+            out.member( type.as<std::string>(), amount.as<double>() );
+        }
+        out.end_object();
+    } );
+    write_static_tile_object( json, options, "wheel_terrain_modifiers", "wheel_terrain_modifiers",
+    []( JsonOut & out, const sol::table & modifiers ) {
+        const std::size_t size = checked_dense_array_size( modifiers, "wheel_terrain_modifiers",
+                                 std::numeric_limits<std::size_t>::max() );
+        out.start_object();
+        for( std::size_t i = 1; i <= size; ++i ) {
+            const sol::table modifier = modifiers.raw_get<sol::table>( i );
+            out.member( modifier.get<std::string>( "flag" ),
+                        std::array<int, 2>{ modifier.get<int>( "move_override" ), modifier.get<int>( "move_penalty" ) } );
+        }
+        out.end_object();
+    } );
+    const sol::object drops = options.raw_get<sol::object>( "breaks_into" );
+    if( drops.get_type() == sol::type::string ) {
+        json.member( "breaks_into", drops.as<std::string>() );
+    } else if( drops.get_type() == sol::type::table ) {
+        json.member( "breaks_into" );
+        write_static_values<sol::object>( json, drops.as<sol::table>(), "breaks_into", write_static_spawn_entry );
     }
 }
 
@@ -5126,6 +5288,8 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "start_location", write_static_start_location, start_locations::load ) );
     content.set_function( "define_profession", static_catalog_definition(
                               resolved.id, "profession", write_static_profession, profession::load_profession ) );
+    content.set_function( "define_vehicle_part", static_catalog_definition(
+                              resolved.id, "vehicle_part", write_static_vehicle_part, vehicles::parts::load ) );
     install_static_dialogue_predicates( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );

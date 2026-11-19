@@ -7736,6 +7736,7 @@ function CcbPlatformContent.define_start_location(options) end
 ---@field probability? integer
 ---@field count? integer|[integer, integer]
 ---@field charges? integer|[integer, integer]
+---@field damage? integer|[integer, integer]
 ---@field ammo_item? string
 ---@field container_item? string
 ---@field contents_items? string|string[]
@@ -7813,6 +7814,118 @@ function CcbPlatformContent.define_start_location(options) end
 ---Define a profession or hobby at its ordered position during native content loading.
 ---@param options StaticProfessionOptions
 function CcbPlatformContent.define_profession(options) end
+
+---@class StaticVehiclePartWork
+---@field duration? string Work time with its unit.
+---@field using_requirements? string|[string, integer][] Existing requirements with their multipliers.
+---@field skills? [string, integer][]
+---@field qualities? StaticConstructionQuality[]
+---@field components? StaticConstructionRequirement[][]
+
+---@class StaticVehiclePartRequirements
+---@field install? StaticVehiclePartWork
+---@field removal? StaticVehiclePartWork
+---@field repair? StaticVehiclePartWork
+
+---@class StaticVehiclePartControlMode
+---@field proficiencies? string[]
+---@field skills? [string, integer][]
+
+---@class StaticVehiclePartControls
+---@field air? StaticVehiclePartControlMode
+---@field land? StaticVehiclePartControlMode
+
+---@class StaticVehiclePartCollections
+---@field categories? string[]
+---@field flags? string[]
+---@field allowed_tools? string[]
+
+---@class StaticVehiclePartScale
+---@field durability? number
+---@field damage_modifier? number
+---@field size? number
+---@field epower? number
+
+---@class StaticVehiclePartTool
+---@field id string
+---@field hotkey? string
+
+---@class StaticVehiclePartWheelModifier
+---@field flag string
+---@field move_override integer
+---@field move_penalty integer
+
+---@class StaticVehiclePartTerrainTransform
+---@field pre_flags? string[]
+---@field post_terrain? string
+---@field post_furniture? string
+
+---@class StaticVehiclePartOptions: StaticVehiclePartCollections
+---@field id? string Stable part id. Set either id or abstract.
+---@field abstract? string Part template inherited by other definitions.
+---@field copy_from? string
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field item? string
+---@field location? string
+---@field remove_as? string
+---@field looks_like? string
+---@field color? string
+---@field broken_color? string
+---@field default_tint_color? string
+---@field fuel_type? string
+---@field default_ammo? string
+---@field size? string
+---@field folded_volume? string
+---@field cargo_passable_size? string
+---@field folding_time? string
+---@field unfolding_time? string
+---@field power? string
+---@field epower? string
+---@field energy_consumption? string
+---@field durability? integer
+---@field damage_modifier? integer
+---@field bonus? integer
+---@field comfort? integer
+---@field floor_bedding_warmth? integer|string
+---@field light_color? [integer, integer, integer]
+---@field noise_factor? integer
+---@field backfire_threshold? number
+---@field backfire_frequency? integer
+---@field damaged_power_factor? number
+---@field m2c? integer
+---@field muscle_power_factor? integer
+---@field engine_exclusions? string[]
+---@field fuel_options? string[]
+---@field contact_area? integer
+---@field rolling_resistance? number
+---@field wheel_offroad_rating? number
+---@field wheel_terrain_modifiers? StaticVehiclePartWheelModifier[] Evaluated in declaration order.
+---@field propeller_diameter? integer
+---@field rotor_diameter? integer
+---@field balloon_height? number
+---@field ladder_length? integer
+---@field emissions? string[]
+---@field exhaust? string[]
+---@field folding_tools? string[]
+---@field unfolding_tools? string[]
+---@field pseudo_tools? StaticVehiclePartTool[]
+---@field extend? StaticVehiclePartCollections
+---@field delete? StaticVehiclePartCollections
+---@field proportional? StaticVehiclePartScale
+---@field variants? VehiclePartVariantOptions[]
+---@field variant_bases? VehiclePartVariantOptions[]
+---@field requirements? StaticVehiclePartRequirements
+---@field control? StaticVehiclePartControls
+---@field qualities? [string, integer][]
+---@field workbench? StaticTileWorkbench
+---@field transform_terrain? StaticVehiclePartTerrainTransform
+---@field damage_reduction? table<string, number>
+---@field breaks_into? string|StaticSpawnEntry[]
+
+---Define a vehicle part at its ordered position during native content loading.
+---@param options StaticVehiclePartOptions
+function CcbPlatformContent.define_vehicle_part(options) end
 
 ---@class StaticMapTileOptions
 ---@field id? string Stable identifier. Provide either id or abstract.
