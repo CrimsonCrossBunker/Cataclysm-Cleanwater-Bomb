@@ -1,350 +1,195 @@
 [
   {
-    "id": "basic_papr_belt_off",
-    "//": "Based on 3M TR-300",
+    "id": "military_papr_mask_gasmask",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str": "PAPR blower (off)", "str_pl": "PAPR blowers (off)" },
-    "description": "A blower unit for a powered air purifying respirator system.  It has been attached to a basic rubber and plastic belt.  When active and loaded with a charged battery and a filter canister, it can be paired with a prepared PAPR mask to provide excellent protection against chemical, biological, radiological, and nuclear threats.",
-    "weight": "918 g",
-    "volume": "1000 ml",
-    "price": "300 USD",
-    "price_postapoc": "5 USD",
-    "material": [ { "type": "plastic", "portion": 2 }, { "type": "rubber", "portion": 1 } ],
-    "symbol": "[",
-    "looks_like": "leather_belt",
-    "color": "black",
-    "material_thickness": 1,
-    "pocket_data": [
-      {
-        "id": "papr_blower_filter",
-        "pocket_type": "MAGAZINE_WELL",
-        "flag_restriction": [ "GASFILTER_MED" ],
-        "default_magazine": "gasfilter_med",
-        "rigid": true
-      },
-      {
-        "id": "papr_blower_battery",
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM" ],
-        "default_magazine": "medium_battery_cell"
-      }
-    ],
-    "consumption_per_use": [ { "pocket": "papr_blower_battery", "qty": 1 } ],
-    "use_action": {
-      "type": "transform",
-      "msg": "You activate your %s and the fan starts to audibly whoosh.",
-      "target": "basic_papr_belt_on",
-      "need_charges": 1,
-      "need_charges_msg": "The batteries are dead."
-    },
-    "tool_ammo": [ "battery", "gasfilter_m" ],
-    "flags": [ "BELTED", "OVERSIZE", "ELECTRONIC", "WATER_BREAK_ACTIVE" ],
+    "category": "clothing",
+    "name": { "str": "military respirator mask (filter)", "str_pl": "military respirator masks (filter)" },
+    "looks_like": "mask_gas",
+    "description": "A black, full-face military respirator made from a silicon and butyl rubber blend, providing decent user comfort in addition to a clear field of view and a secure fit thanks to the mask's single-element visor and 6-point head harness.  This mask is configured for two modes: negative-pressure, using standard CBRN gas mask filter canisters; and positive-pressure, with built-in hardware to accommodate either a powered air-purifying respirator (PAPR) or a self-contained breathing apparatus (SCBA).  Once activated it will comfortably protect against chemical, biological, radiological, and nuclear threats.  It is currently in negative-pressure mode, so will only function with an installed and prepared CBRN gas mask canister.",
+    "copy-from": "military_papr_mask",
+    "flags": [ "SLEEP_IGNORE", "VARSIZE", "PADDED" ],
+    "tool_ammo": "gasfilter_m",
     "armor": [
       {
-        "encumbrance": 4,
-        "coverage": 50,
-        "covers": [ "torso" ],
-        "specifically_covers": [ "torso_waist" ],
-        "volume_encumber_modifier": 0.35
+        "material": [ { "type": "cotton", "covered_by_mat": 100, "thickness": 0.2 } ],
+        "covers": [ "head" ],
+        "specifically_covers": [ "head_crown", "head_nape" ],
+        "coverage": 25,
+        "encumbrance": 0,
+        "layers": [ "SKINTIGHT" ],
+        "volume_encumber_modifier": 0
+      },
+      {
+        "material": [ { "type": "butyl_rubber", "covered_by_mat": 100, "thickness": 2 } ],
+        "covers": [ "head" ],
+        "specifically_covers": [ "head_forehead" ],
+        "coverage": 100,
+        "encumbrance": 20,
+        "volume_encumber_modifier": 0,
+        "layers": [ "SKINTIGHT" ]
+      },
+      {
+        "material": [ { "type": "hard_plastic_transp", "covered_by_mat": 100, "thickness": 2 } ],
+        "covers": [ "eyes" ],
+        "coverage": 100,
+        "encumbrance": 10,
+        "layers": [ "SKINTIGHT", "NORMAL" ],
+        "rigid_layer_only": true,
+        "volume_encumber_modifier": 0
+      },
+      {
+        "material": [
+          { "type": "butyl_rubber", "covered_by_mat": 100, "thickness": 2 },
+          { "type": "plastic", "covered_by_mat": 30, "thickness": 1 }
+        ],
+        "covers": [ "mouth" ],
+        "specifically_covers": [ "mouth_lips", "mouth_nose", "mouth_chin" ],
+        "coverage": 100,
+        "encumbrance": [ 20, 40 ],
+        "layers": [ "SKINTIGHT", "NORMAL" ]
+      },
+      {
+        "material": [
+          { "type": "butyl_rubber", "covered_by_mat": 100, "thickness": 2 },
+          { "type": "plastic", "covered_by_mat": 25, "thickness": 1 }
+        ],
+        "covers": [ "mouth" ],
+        "specifically_covers": [ "mouth_cheeks" ],
+        "coverage": 100,
+        "encumbrance": 10,
+        "layers": [ "SKINTIGHT", "NORMAL" ],
+        "volume_encumber_modifier": 0
       }
-    ]
+    ],
+    "use_action": [
+      "GASMASK_ACTIVATE",
+      {
+        "type": "transform",
+        "msg": "You switch airflow to the SCBA regulator.",
+        "target": "military_papr_mask_asr",
+        "menu_text": "Switch to SCBA mode"
+      },
+      {
+        "type": "effect_on_conditions",
+        "menu_text": "Switch to PAPR mode",
+        "effect_on_conditions": [
+          {
+            "id": "EOC_military_filter_mask_to_papr",
+            "effect": [ { "transform_item": "military_papr_mask" }, { "u_message": "You switch airflow to PAPR mode." } ]
+          }
+        ]
+      }
+    ],
+    "tick_action": [ "GASMASK" ]
   },
   {
-    "id": "basic_papr_belt_on",
-    "copy-from": "basic_papr_belt_off",
-    "//": "Based on 3M TR-300",
+    "id": "basic_papr_helmet_xedra_mark",
+    "//": "modified version for xedra field notebook mission.  Really just extra warm and cumbersome PAPR mask, plus a tinfoil hat to protect from THEM.",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str": "PAPR blower (on)", "str_pl": "PAPR blowers (on)" },
-    "description": "An active blower unit for a powered air purifying respirator system.  It has been attached to a basic rubber and plastic belt.  If paired with a prepared PAPR mask, this will provide excellent protection against chemical, biological, radiological, and nuclear threats.  The fan is audibly blowing.",
-    "weight": "918 g",
-    "volume": "1000 ml",
-    "material": [ { "type": "plastic", "portion": 2 }, { "type": "rubber", "portion": 1 } ],
+    "category": "armor",
+    "name": { "str": "shielded PAPR-EEG helmet" },
+    "looks_like": "flight_helmet",
+    "description": "A white plastic helmet fit with a transparent full-face mask.  It has been modified for some unknown purpose.  On the back of the helmet is a long tube which attaches to a powered air purifying respirator system.  Once activated it will comfortably protect against chemical, biological, radiological, and nuclear threats.  Like a standard gas mask it must be prepared before use; unlike a standard gas mask it will only function when paired with an active PAPR blower unit.  A cotton cap covered in electrodes and wires, like those used to make electroencephalogram recordings, has been integrated as an underlayer, with a thick connection cable exiting a grommeted and sealed hole in the back.  A layer of shiny metallized polyethylene terephthalate has been glued to the interior of the helmet itself.  A tinfoil hat for a prepper with class.",
+    "weight": "950 g",
+    "volume": "2250 ml",
+    "price": "700 USD",
+    "price_postapoc": "10 USD",
+    "material": [
+      { "type": "cotton", "portion": 1 },
+      { "type": "plastic", "portion": 4 },
+      { "type": "hard_plastic_transp", "portion": 1 },
+      { "type": "aluminum", "portion": 0.01 }
+    ],
     "symbol": "[",
-    "looks_like": "leather_belt",
-    "color": "black",
-    "material_thickness": 1,
-    "pocket_data": [
-      {
-        "id": "papr_blower_filter",
-        "pocket_type": "MAGAZINE_WELL",
-        "flag_restriction": [ "GASFILTER_MED" ],
-        "default_magazine": "gasfilter_med",
-        "rigid": true
-      },
-      {
-        "id": "papr_blower_battery",
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM" ],
-        "default_magazine": "medium_battery_cell"
-      }
-    ],
-    "consumption_per_use": [ { "pocket": "papr_blower_battery", "qty": 1 } ],
-    "turns_per_charge": 240,
-    "revert_to": "basic_papr_belt_off",
-    "use_action": {
-      "menu_text": "Turn off",
-      "type": "transform",
-      "msg": "You turn off the %s.",
-      "target": "basic_papr_belt_off",
-      "ammo_scale": 0
-    },
-    "tick_action": [
-      "PAPR_BLOWER",
-      {
-        "type": "sound",
-        "sound_type": "movement",
-        "sound_message": "whooooo…",
-        "sound_id": "humming",
-        "sound_variant": "machinery",
-        "sound_volume": 12
-      }
-    ],
-    "tool_ammo": [ "battery", "gasfilter_m" ],
-    "flags": [ "BELTED", "OVERSIZE", "ELECTRONIC", "TRADER_AVOID", "WATER_BREAK", "SPAWN_ACTIVE", "PAPR_BLOWER" ],
+    "color": "white",
+    "warmth": 30,
     "armor": [
       {
-        "encumbrance": 4,
-        "coverage": 50,
-        "covers": [ "torso" ],
-        "specifically_covers": [ "torso_waist" ],
-        "volume_encumber_modifier": 0.35
-      }
-    ]
-  },
-  {
-    "id": "military_papr_blower_off",
-    "//": "Based on the C420",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str": "military PAPR blower (off)", "str_pl": "military PAPR blowers (off)" },
-    "description": "A sturdy blower unit for a powered air purifying respirator system.  Its large triangular body is designed to be worn on the back.  When active and loaded with a charged battery and a filter canister, it can be paired with a prepared PAPR mask to provide excellent protection against chemical, biological, radiological, and nuclear threats.",
-    "weight": "653 g",
-    "volume": "3589 ml",
-    "price": "1400 USD",
-    "price_postapoc": "15 USD",
-    "material": [ { "type": "plastic", "portion": 2 }, { "type": "rubber", "portion": 1 } ],
-    "symbol": "[",
-    "looks_like": "backpack",
-    "color": "black",
-    "material_thickness": 2,
-    "pocket_data": [
-      {
-        "id": "papr_blower_filter",
-        "pocket_type": "MAGAZINE_WELL",
-        "flag_restriction": [ "GASFILTER_MED" ],
-        "default_magazine": "gasfilter_med",
-        "rigid": true
+        "material": [
+          { "type": "plastic", "covered_by_mat": 100, "thickness": 4 },
+          { "type": "aluminum", "covered_by_mat": 100, "thickness": 0.01 },
+          { "type": "cotton", "covered_by_mat": 100, "thickness": 1 }
+        ],
+        "covers": [ "head" ],
+        "specifically_covers": [ "head_crown", "head_forehead" ],
+        "coverage": 100,
+        "encumbrance": 20,
+        "layers": [ "OUTER" ]
       },
       {
-        "id": "papr_blower_battery",
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_HEAVY" ],
-        "default_magazine": "heavy_plus_battery_cell"
-      }
-    ],
-    "consumption_per_use": [ { "pocket": "papr_blower_battery", "qty": 1 } ],
-    "use_action": {
-      "type": "transform",
-      "msg": "You activate your %s and the fan starts to audibly whoosh.",
-      "target": "military_papr_blower_on",
-      "need_charges": 1,
-      "need_charges_msg": "The batteries are dead."
-    },
-    "tool_ammo": [ "battery", "gasfilter_m" ],
-    "flags": [ "BELTED", "OVERSIZE", "ELECTRONIC" ],
-    "armor": [
-      {
-        "encumbrance": 4,
-        "coverage": 40,
-        "covers": [ "torso" ],
-        "specifically_covers": [ "torso_hanging_back" ],
-        "volume_encumber_modifier": 0.35
-      }
-    ]
-  },
-  {
-    "id": "military_papr_blower_on",
-    "copy-from": "military_papr_blower_off",
-    "//": "Based on the Airboss Defense C420",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str": "military PAPR blower (on)", "str_pl": "military PAPR blowers (on)" },
-    "description": "An active, sturdy blower unit for a powered air purifying respirator system.  Its large triangular body is designed to be worn on the back.  When paired with a prepared PAPR mask, this will provide excellent protection against chemical, biological, radiological, and nuclear threats.  The fan is audibly blowing.",
-    "weight": "653 g",
-    "volume": "3589 ml",
-    "material": [ { "type": "plastic", "portion": 2 }, { "type": "rubber", "portion": 1 } ],
-    "symbol": "[",
-    "looks_like": "backpack",
-    "color": "black",
-    "material_thickness": 2,
-    "pocket_data": [
-      {
-        "id": "papr_blower_filter",
-        "pocket_type": "MAGAZINE_WELL",
-        "flag_restriction": [ "GASFILTER_MED" ],
-        "default_magazine": "gasfilter_med",
-        "rigid": true
+        "material": [ { "type": "cotton", "covered_by_mat": 100, "thickness": 1 } ],
+        "covers": [ "head" ],
+        "specifically_covers": [ "head_ear_r", "head_ear_l" ],
+        "coverage": 100,
+        "encumbrance": 0,
+        "layers": [ "SKINTIGHT" ]
       },
       {
-        "id": "papr_blower_battery",
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_HEAVY" ],
-        "default_magazine": "heavy_plus_battery_cell"
-      }
-    ],
-    "consumption_per_use": [ { "pocket": "papr_blower_battery", "qty": 1 } ],
-    "turns_per_charge": 240,
-    "revert_to": "military_papr_blower_off",
-    "use_action": {
-      "menu_text": "Turn off",
-      "type": "transform",
-      "msg": "You turn off the %s.",
-      "target": "military_papr_blower_off",
-      "ammo_scale": 0
-    },
-    "tick_action": [
-      "PAPR_BLOWER",
-      {
-        "type": "sound",
-        "sound_type": "movement",
-        "sound_message": "whooooo…",
-        "sound_id": "humming",
-        "sound_variant": "machinery",
-        "sound_volume": 12
-      }
-    ],
-    "tool_ammo": [ "battery", "gasfilter_m" ],
-    "flags": [ "BELTED", "OVERSIZE", "ELECTRONIC", "TRADER_AVOID", "SPAWN_ACTIVE", "PAPR_BLOWER" ],
-    "armor": [
-      {
-        "encumbrance": 4,
-        "coverage": 40,
-        "covers": [ "torso" ],
-        "specifically_covers": [ "torso_hanging_back" ],
-        "volume_encumber_modifier": 0.35
-      }
-    ]
-  },
-  {
-    "id": "molle_papr_blower_off",
-    "//": "Based on the Avon MP-PAPR",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str": "modular PAPR blower (off)", "str_pl": "modular PAPR blowers (off)" },
-    "description": "A blower unit for a powered air purifying respirator system, built from a flexible silicon and butyl rubber blend.  Its components are arranged linearly in a narrow strip close to the body and is outfitted with straps to wear it about the waist.  If paired with the appropriate straps, it can also attached to any compatible MOLLE system.  When active and loaded with a charged battery and a filter canister, it can be paired with a prepared PAPR mask to provide excellent protection against chemical, biological, radiological, and nuclear threats.",
-    "weight": "920 g",
-    "volume": "3000 ml",
-    "price": "1600 USD",
-    "price_postapoc": "20 USD",
-    "material": [ { "type": "plastic", "portion": 2 }, { "type": "butyl_rubber", "portion": 1 } ],
-    "symbol": "[",
-    "looks_like": "backpack",
-    "color": "dark_gray",
-    "material_thickness": 2,
-    "pocket_data": [
-      {
-        "id": "papr_blower_filter",
-        "pocket_type": "MAGAZINE_WELL",
-        "flag_restriction": [ "GASFILTER_MED" ],
-        "default_magazine": "gasfilter_med",
-        "rigid": true
+        "material": [ { "type": "hard_plastic_transp", "covered_by_mat": 100, "thickness": 1.0 } ],
+        "covers": [ "eyes" ],
+        "rigid_layer_only": true,
+        "coverage": 100,
+        "encumbrance": 5,
+        "layers": [ "OUTER" ]
       },
       {
-        "id": "papr_blower_battery",
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_HEAVY" ],
-        "default_magazine": "heavy_plus_battery_cell"
+        "material": [ { "type": "hard_plastic_transp", "covered_by_mat": 100, "thickness": 1.0 } ],
+        "covers": [ "mouth" ],
+        "rigid_layer_only": true,
+        "coverage": 100,
+        "encumbrance": 5,
+        "layers": [ "OUTER" ]
       }
     ],
-    "consumption_per_use": [ { "pocket": "papr_blower_battery", "qty": 1 } ],
-    "use_action": {
-      "type": "transform",
-      "msg": "You activate your %s and the fan starts to audibly whoosh.",
-      "target": "molle_papr_blower_on",
-      "need_charges": 1,
-      "need_charges_msg": "The batteries are dead."
-    },
-    "tool_ammo": [ "battery", "gasfilter_m" ],
-    "flags": [ "WATER_FRIENDLY", "BELTED", "OVERSIZE", "ELECTRONIC" ],
-    "armor": [
-      {
-        "encumbrance": 2,
-        "coverage": 30,
-        "covers": [ "torso" ],
-        "specifically_covers": [ "torso_waist" ],
-        "volume_encumber_modifier": 0.35
-      }
-    ]
-  },
-  {
-    "id": "molle_papr_blower_on",
-    "copy-from": "molle_papr_blower_off",
-    "//": "Based on the Avon MP-PAPR",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str": "modular PAPR blower (on)", "str_pl": "modular PAPR blowers (on)" },
-    "description": "An active blower unit for a powered air purifying respirator system, built from a flexible silicon and butyl rubber blend.  Its components are arranged linearly in a narrow strip close to the body and is outfitted with straps to wear it about the waist.  If paired with the appropriate straps, it can also attached to any compatible MOLLE system.  When paired with a prepared PAPR mask, this will provide excellent protection against chemical, biological, radiological, and nuclear threats.  The fan is quietly blowing.",
-    "weight": "920 g",
-    "volume": "3000 ml",
-    "material": [ { "type": "plastic", "portion": 2 }, { "type": "butyl_rubber", "portion": 1 } ],
-    "symbol": "[",
-    "looks_like": "backpack",
-    "color": "dark_gray",
-    "material_thickness": 2,
+    "environmental_protection": 4,
+    "environmental_protection_with_filter": 16,
+    "flags": [ "WATERPROOF", "PADDED", "OVERSIZE", "SLEEP_IGNORE", "PAPR_MASK", "PSYSHIELD_PARTIAL" ],
     "pocket_data": [
       {
-        "id": "papr_blower_filter",
-        "pocket_type": "MAGAZINE_WELL",
-        "flag_restriction": [ "GASFILTER_MED" ],
-        "default_magazine": "gasfilter_med",
-        "rigid": true
+        "pocket_type": "CONTAINER",
+        "ablative": true,
+        "volume_encumber_modifier": 0,
+        "max_contains_volume": "500 ml",
+        "max_contains_weight": "400 g",
+        "moves": 250,
+        "description": "Pocket for an ear attachment.",
+        "flag_restriction": [ "HELMET_EAR_ATTACHMENT" ],
+        "inherits_flags": true
       },
       {
-        "id": "papr_blower_battery",
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_HEAVY" ],
-        "default_magazine": "heavy_plus_battery_cell"
+        "pocket_type": "CONTAINER",
+        "ablative": true,
+        "volume_encumber_modifier": 0,
+        "max_contains_volume": "500 ml",
+        "max_contains_weight": "250 g",
+        "moves": 250,
+        "description": "Pocket for a nape protector.",
+        "flag_restriction": [ "HELMET_NAPE_PROTECTOR" ]
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "volume_encumber_modifier": 0,
+        "max_contains_volume": "400 ml",
+        "max_contains_weight": "400 g",
+        "moves": 250,
+        "description": "Pocket for a counterweight pouch.",
+        "flag_restriction": [ "HELMET_BACK_POUCH" ]
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "volume_encumber_modifier": 0,
+        "max_contains_volume": "300 ml",
+        "max_contains_weight": "500 g",
+        "max_item_length": "14 cm",
+        "moves": 100,
+        "description": "Pocket for a flashlight attachment.",
+        "flag_restriction": [ "HELMET_HEAD_ATTACHMENT" ],
+        "transparent": true
       }
     ],
-    "consumption_per_use": [ { "pocket": "papr_blower_battery", "qty": 1 } ],
-    "turns_per_charge": 240,
-    "revert_to": "molle_papr_blower_off",
-    "use_action": {
-      "menu_text": "Turn off",
-      "type": "transform",
-      "msg": "You turn off the %s.",
-      "target": "molle_papr_blower_off",
-      "ammo_scale": 0
-    },
-    "tick_action": [
-      "PAPR_BLOWER",
-      {
-        "type": "sound",
-        "sound_type": "movement",
-        "sound_message": "whooooo…",
-        "sound_id": "humming",
-        "sound_variant": "machinery",
-        "sound_volume": 12
-      }
-    ],
-    "tool_ammo": [ "battery", "gasfilter_m" ],
-    "flags": [ "WATER_FRIENDLY", "BELTED", "OVERSIZE", "ELECTRONIC", "TRADER_AVOID", "SPAWN_ACTIVE", "PAPR_BLOWER" ],
-    "armor": [
-      {
-        "encumbrance": 2,
-        "coverage": 30,
-        "covers": [ "torso" ],
-        "specifically_covers": [ "torso_waist" ],
-        "volume_encumber_modifier": 0.35
-      }
-    ]
+    "use_action": [ "PAPR_MASK_ACTIVATE" ],
+    "tick_action": [ "PAPR_MASK" ]
   }
 ]
