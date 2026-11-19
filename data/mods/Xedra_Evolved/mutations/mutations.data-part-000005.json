@@ -1,0 +1,20 @@
+[
+  {
+    "type": "mutation",
+    "id": "EYEGLEAM",
+    "points": 2,
+    "starting_trait": false,
+    "purifiable": false,
+    "valid": false,
+    "name": { "str": "Gleaming Eyes" },
+    "description": "Your eyes gleam lightly red as the light catches in them and with a few drops of the stolen blood in your veins you are able to see in the dark.\n\n<color_light_red>Initial Blood Cost:</color> 100 ml (<u_val:blood_amount_for_graph> ml current)\n<color_light_red>Periodic Blood Cost:</color> 50 ml",
+    "active": true,
+    "activated_is_setup": true,
+    "activated_eocs": [ "EOC_EYEGLEAM_activated" ],
+    "deactivated_eocs": [ "EOC_EYEGLEAM_deactivated" ],
+    "enchantments": [
+      "INLINE_ENCH_EYEGLEAM_0",
+      "INLINE_ENCH_EYEGLEAM_1"
+    ]
+  }
+]

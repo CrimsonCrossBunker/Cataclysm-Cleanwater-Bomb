@@ -1,0 +1,16 @@
+[
+  {
+    "type": "mutation",
+    "id": "VAMPIRE_MIST_FORM",
+    "name": { "str": "Shape of the Billowing Mists" },
+    "points": 8,
+    "description": "You can transform yourself into a cloud of mist and flee any dangers.",
+    "starting_trait": false,
+    "purifiable": false,
+    "valid": false,
+    "active": true,
+    "activated_is_setup": true,
+    "activated_eocs": [ "EOC_VAMPIRE_MIST_FORM_activated" ],
+    "deactivated_eocs": [ "EOC_VAMPIRE_MIST_FORM_deactivated" ]
+  }
+]

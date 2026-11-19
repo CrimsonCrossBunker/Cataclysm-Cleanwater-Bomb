@@ -1,0 +1,17 @@
+[
+  {
+    "type": "mutation",
+    "id": "BLOODHASTE",
+    "points": 5,
+    "starting_trait": false,
+    "purifiable": false,
+    "valid": false,
+    "name": { "str": "Blood-Driven Speed" },
+    "description": "Your body exceeds normal human reaction limits as blood turns to ash in your veins.\n\n<color_light_red>Initial Blood Cost:</color> 750 ml (<u_val:blood_amount_for_graph> ml current)\n<color_light_red>Periodic Blood Cost:</color> 375 ml",
+    "active": true,
+    "activated_is_setup": true,
+    "activation_msg": "Warmth floods your limbs as you move with inhuman speed.",
+    "activated_eocs": [ "EOC_BLOODHASTE_activated" ],
+    "deactivated_eocs": [ "EOC_BLOODHASTE_deactivated" ]
+  }
+]
