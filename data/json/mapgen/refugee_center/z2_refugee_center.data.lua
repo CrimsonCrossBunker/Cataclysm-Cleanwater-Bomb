@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "evac_center_12_z2", "evac_center_13_z2", "evac_center_14_z2" } },
+    layout = {
+        rows = {
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                       -----               -----                        ",
+            "                       -...-               -...-                        ",
+            "                       -...-               -...-                        ",
+            "                       -----               -----                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+            "                                                                        ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+    },
+}
