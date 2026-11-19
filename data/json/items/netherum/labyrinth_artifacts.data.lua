@@ -1,0 +1,30 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "nl_overgrown_halligan",
+    name = ccb.content.plural_text("petrified prybar", "petrified prybars"),
+    description = ccb.content.text("While this hefty-looking implement looks like a halligan prybar, it appears as if it it were grown rather than fabricated.  It's color is that of metal and natural stone, but it's surprisingly light in the hand, and bares the striations of old, dense wood."),
+    mass = "2500 g",
+    volume = "550 ml",
+    length = "76 cm",
+    price = "75 USD",
+    survival_price = "15 USD",
+    materials = { "cyber_wood" },
+    symbol = ";",
+    color = "white",
+    looks_like = "halligan",
+    accuracy = { grip = "solid", length = "short", surface = "any", balance = "uneven" },
+    techniques = { "WBLOCK_1", "BRUTAL", "SWEEP" },
+    qualities = {
+        { id = "PRY", level = 4 },
+        { id = "HAMMER", level = 2 },
+        { id = "DIG", level = 1 },
+        { id = "PRYING_NAIL", level = 1 },
+    },
+    flags = { "DURABLE_MELEE", "BELT_CLIP", "SHEATH_AXE" },
+    melee_damage = { bash = 42, stab = 5 },
+    subtype_order = { "tool", "artifact" },
+    tool = {},
+    artifact = {},
+    use_actions = { "CROWBAR" },
+}
