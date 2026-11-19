@@ -1,0 +1,161 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "arrowrest",
+    name = ccb.content.plural_text("arrow rest", "arrow rests"),
+    description = ccb.content.text("A small extension above the grip which an arrow rests upon while being aimed.  Improves accuracy with no drawbacks."),
+    mass = "16 g",
+    volume = "250 ml",
+    integral_volume = "0 ml",
+    price = "40 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "plastic", "aluminum" },
+    symbol = ":",
+    color = "dark_gray",
+    gunmod = {
+        install_time = "15 m",
+        location = ccb.content.text("arrow rest"),
+        targets = { ccb.content.text("bow", "gun_type_type") },
+        dispersion_modifier = -20,
+    },
+    minimum_skills = { { id = "gun", count = 1 } },
+}
+
+ccb.content.define_item {
+    id = "arrowrest_wood",
+    name = ccb.content.plural_text("wooden arrow rest", "wooden arrow rests"),
+    description = ccb.content.text("A small extension above the grip which an arrow rests upon while being aimed.  Improves accuracy with no drawbacks."),
+    mass = "100 g",
+    volume = "250 ml",
+    integral_volume = "0 ml",
+    price = "40 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "wood" },
+    symbol = ":",
+    color = "dark_gray",
+    gunmod = {
+        install_time = "15 m",
+        location = ccb.content.text("arrow rest"),
+        targets = { ccb.content.text("bow", "gun_type_type") },
+        dispersion_modifier = -20,
+    },
+    minimum_skills = { { id = "gun", count = 1 } },
+}
+
+ccb.content.define_item {
+    id = "bow_stabilizer",
+    name = ccb.content.plural_text("bow stabilizer", "bow stabilizers"),
+    description = ccb.content.text("A counterweight placed forward of the bow's grip allows for greater accuracy.  Aside from increased weight and size, there are no drawbacks."),
+    mass = "88 g",
+    volume = "500 ml",
+    price = "40 USD",
+    survival_price = "5 USD",
+    materials = { "aluminum", "plastic" },
+    symbol = ":",
+    color = "brown",
+    gunmod = {
+        install_time = "10 s",
+        location = ccb.content.text("stabilizer"),
+        targets = { ccb.content.text("bow", "gun_type_type") },
+        dispersion_modifier = -100,
+        handling_modifier = 3,
+    },
+    minimum_skills = { { id = "archery", count = 1 } },
+}
+
+ccb.content.define_item {
+    id = "bow_stabilizer_set",
+    name = ccb.content.plural_text("bow stabilizer system", "bow stabilizer systems"),
+    description = ccb.content.text("A set of stabilizing rods with dampeners and an adjustable mount.  This system will significantly reduce shaking at full draw."),
+    mass = "300 g",
+    volume = "500 ml",
+    price = "150 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { "aluminum", "plastic" },
+    symbol = ":",
+    color = "brown",
+    gunmod = {
+        install_time = "2 m",
+        location = ccb.content.text("stabilizer"),
+        targets = { ccb.content.text("bow", "gun_type_type") },
+        dispersion_modifier = -200,
+        handling_modifier = 6,
+    },
+    minimum_skills = { { id = "archery", count = 2 } },
+}
+
+ccb.content.define_item {
+    id = "bow_silencer",
+    name = ccb.content.plural_text("bow dampening kit", "bow dampening kits"),
+    description = ccb.content.text("A set of simple pads and rubber with adhesive backing, designed to stick on the limbs and string of a bow to absorb vibrations.  This substantially reduces noise during firing and can help with accuracy."),
+    mass = "50 g",
+    volume = "250 ml",
+    price = "5 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "rubber" },
+    symbol = ":",
+    color = "brown",
+    gunmod = {
+        install_time = "5 m",
+        location = ccb.content.text("dampening"),
+        targets = {
+            ccb.content.text("bow", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("smg", "gun_type_type"),
+            ccb.content.text("pistol", "gun_type_type"),
+        },
+        dispersion_modifier = -2,
+        loudness_modifier = -8,
+        handling_modifier = 1,
+    },
+    minimum_skills = { { id = "weapon", count = 2 } },
+}
+
+ccb.content.define_item {
+    id = "primitive_bow_silencer",
+    name = ccb.content.plural_text("primitive bow dampening kit", "primitive bow dampening kits"),
+    description = ccb.content.text("A set of simple pads and strips of fur with adhesive backing, designed to stick on the limbs and string of a bow to absorb vibrations.  This substantially reduces noise during firing and can help with accuracy."),
+    mass = "50 g",
+    volume = "250 ml",
+    price = "5 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "fur" },
+    symbol = ":",
+    color = "brown",
+    gunmod = {
+        install_time = "5 m",
+        location = ccb.content.text("dampening"),
+        targets = {
+            ccb.content.text("bow", "gun_type_type"),
+            ccb.content.text("crossbow", "gun_type_type"),
+            ccb.content.text("rifle", "gun_type_type"),
+            ccb.content.text("smg", "gun_type_type"),
+            ccb.content.text("pistol", "gun_type_type"),
+        },
+        dispersion_modifier = -2,
+        loudness_modifier = -8,
+        handling_modifier = 1,
+    },
+    minimum_skills = { { id = "weapon", count = 2 } },
+}
+
+ccb.content.define_item {
+    id = "belt_clip",
+    name = ccb.content.plural_text("belt clip", "belt clips"),
+    description = ccb.content.text("A belt clip that attaches to the grip or slide of a pistol to facilitate 'Mexican carry', the practice of carrying without a holster.  It does not offer any protection for the trigger, so users are strongly advised to carry with the chamber empty or select a firearm with a very heavy trigger pull."),
+    mass = "40 g",
+    volume = "250 ml",
+    integral_volume = "0 ml",
+    price = "20 USD",
+    survival_price = "50 cent",
+    materials = { "steel" },
+    symbol = ":",
+    color = "light_gray",
+    flags = { "IS_ARMOR", "SKINTIGHT", "WATER_FRIENDLY" },
+    gunmod = {
+        install_time = "10 s",
+        location = ccb.content.text("belt clip"),
+        targets = { ccb.content.text("rugerlcp", "gun_type_type") },
+    },
+}
