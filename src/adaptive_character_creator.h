@@ -36,6 +36,7 @@ struct adaptive_character_creator_snapshot {
     int age = 0;
     int height = 0;
     std::string blood;
+    bool start_outskirts = true;
     bool preview_available = false;
 };
 

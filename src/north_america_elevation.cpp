@@ -340,15 +340,15 @@ point surface_slope( const map &here, const tripoint_bub_ms &position )
 
 int surface_relief_shade( point slope )
 {
-    const double grade = std::hypot( slope.x, slope.y );
-    if( grade < 7 ) {
+    const int grade_squared = slope.x * slope.x + slope.y * slope.y;
+    if( grade_squared < 49 ) {
         return 0;
     }
     // Oblique light and the reduced vertical component of a sloping surface.
-    const double normal = std::hypot( 100.0, grade );
+    const double normal = std::sqrt( 10000.0 + grade_squared );
     const double light = ( 100.0 + 0.72 * slope.x + 0.36 * slope.y ) / normal - 1.0;
     const int tone = static_cast<int>( std::lround( light * 95 ) );
-    return tone >= 7 ? std::min( tone, 55 ) : std::clamp( tone, -55, -7 );
+    return std::clamp( tone, -55, 55 );
 }
 
 double temperature_delta_at_height( double altitude_m, double reference_m )

@@ -6958,6 +6958,7 @@ void map::draw_map( mapgendata &dat )
     }
 
     resolve_regional_terrain_and_furniture( dat );
+    north_america::place_wide_highway_surface( dat );
     north_america::place_native_vegetation( dat );
     north_america::place_native_soil( dat );
     // End of draw_map

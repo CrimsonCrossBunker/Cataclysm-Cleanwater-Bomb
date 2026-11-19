@@ -170,7 +170,6 @@ namespace
 {
 constexpr int model_days = regional_climate::model_year_days;
 constexpr double charge_mm = 0.25; // A 250 mL water charge spread over a 1 m² tile.
-constexpr time_duration crop_history = 2 * 364_days;
 
 struct crop_day {
     double low;
@@ -238,12 +237,14 @@ const crop_day &sample_day( const tripoint_abs_ms &pos, time_point date )
             result.high = std::max( result.high, c );
         }
         if( c > 1 ) {
+            if( forced == WEATHER_NULL && sample.climate_precipitation_mm_per_hour ) {
+                result.rain[hour] = *sample.climate_precipitation_mm_per_hour;
+                continue;
+            }
             const weather_type_id type = forced == WEATHER_NULL ? generator.get_weather_conditions( sample ) :
                                          forced;
             if( type->rains ) {
-                const auto regional_rate = forced == WEATHER_NULL ?
-                                           regional_precipitation_rate( type, sample ) : std::nullopt;
-                result.rain[hour] = regional_rate.value_or( precip_mm_per_hour( type->precip ) );
+                result.rain[hour] = precip_mm_per_hour( type->precip );
             }
         }
     }
@@ -287,13 +288,14 @@ double crop_heat_fraction( const map &here, const tripoint_bub_ms &p,
                            const crop_climate_profile &climate, const crop_day &day )
 {
     double offset = 0;
-    if( &here == &get_map() ) {
+    const bool sheltered = here.is_roofed( p ) || p.z() < 0;
+    if( sheltered && &here == &get_map() ) {
         weather_manager &weather = get_weather();
         const auto ambient = weather.forced_temperature.value_or( weather.temperature );
         offset = units::to_celsius( weather.get_temperature( p ) ) - units::to_celsius( ambient );
     }
     const double mean = ( day.low + day.high ) / 2;
-    const double restraint = here.is_roofed( p ) || p.z() < 0 ? ( day.high - day.low ) * 0.2 : 0;
+    const double restraint = sheltered ? ( day.high - day.low ) * 0.2 : 0;
     const double low = std::min( mean, day.low + restraint ) + offset;
     const double high = std::max( mean, day.high - restraint ) + offset;
     return climate.heat_units( low, high ) * model_days /
@@ -370,11 +372,18 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     if( start > calendar::turn ) {
         return time_duration::from_turns( effective );
     }
-    start = std::max( start, calendar::turn - crop_history );
     const tripoint_abs_ms position = here.get_abs( p );
     const time_point end = finish_interval ? calendar::turn :
                            calendar::turn - time_past_midnight( calendar::turn ) % 1_hours;
     const double maturity_turns = to_turns<double>( maturity );
+    const double day_fraction = per_model_day / climate.growing_days;
+    double thermal_growth = seed.get_var( "crop_thermal_growth", effective / maturity_turns );
+    double growing_time = seed.get_var( "crop_growing_time", effective / maturity_turns );
+    double sampled_rain = seed.get_var( "crop_sampled_rain_mm", 0.0 );
+    double degree_days = seed.get_var( "crop_degree_days", 0.0 );
+    time_point sampled_date = start - 1_days;
+    double heat_fraction = 0;
+    std::array<double, 24> hourly_rain{};
     while( start < end && effective < final_growth ) {
         while( current_stage >= 0 && current_stage < final_stage &&
                effective >= to_turns<double>( thresholds[current_stage] ) &&
@@ -390,11 +399,20 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
         const time_duration step = std::min( end - start,
                                              1_hours - time_past_midnight( start ) % 1_hours );
         const double days = to_days<double>( step );
-        const crop_day &day = sample_day( position, start );
+        const time_point date = start - time_past_midnight( start );
+        if( date != sampled_date ) {
+            const crop_day &day = sample_day( position, date );
+            heat_fraction = crop_heat_fraction( here, p, climate, day );
+            hourly_rain = day.rain;
+            sampled_date = date;
+        }
         const int hour = to_hours<int>( time_past_midnight( start ) );
+        const double activity = std::clamp( heat_fraction / day_fraction, 0.15, 1.0 );
         const double need = crop_water_need( seed, *stage_furniture, effective / maturity_turns,
-                                             std::max( 0.01f, water_use ) ) * days;
-        const double rain = covered ? 0 : day.rain[hour] * to_hours<double>( step );
+                                             std::max( 0.01f, water_use ) ) * days * activity;
+        const double rain = covered ? 0 : hourly_rain[hour] * to_hours<double>( step );
+        sampled_rain += rain;
+        degree_days += heat_fraction * days * climate.degree_days;
         moisture = std::min( capacity, moisture + rain * soil.infiltration );
         const double consumed = std::min( irrigation, std::max( 0.0, need - moisture ) );
         irrigation -= consumed;
@@ -409,10 +427,13 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
         if( effective >= maturity_turns ) {
             effective += to_turns<double>( step ) * rate;
         } else {
-            const double heat_fraction = crop_heat_fraction( here, p, climate, day );
-            const double day_fraction = per_model_day / climate.growing_days;
-            effective += maturity_turns * std::min( heat_fraction, day_fraction ) * days *
-                         water_ratio * rate * soil.root_growth;
+            const double growth_days = days * std::sqrt( water_ratio ) * rate * soil.root_growth;
+            thermal_growth += heat_fraction * growth_days;
+            if( heat_fraction > 0 ) {
+                growing_time += day_fraction * growth_days;
+            }
+            effective = std::max( effective, maturity_turns *
+                                  std::min( { 1.0, thermal_growth, growing_time } ) );
         }
         start += step;
         if( effective >= final_growth ) {
@@ -430,6 +451,10 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
         seed.set_var( "crop_irrigation_fraction", charges - static_cast<int>( charges ) );
     }
     seed.set_var( "crop_soil_moisture_mm", moisture );
+    seed.set_var( "crop_thermal_growth", thermal_growth );
+    seed.set_var( "crop_growing_time", growing_time );
+    seed.set_var( "crop_sampled_rain_mm", sampled_rain );
+    seed.set_var( "crop_degree_days", degree_days );
     iexamine::set_plant_last_water_check( seed, start );
     iexamine::set_plant_effective_growth_turns( seed, static_cast<int>( effective ) );
     seed.set_var( "crop_growth_fraction", effective - static_cast<int>( effective ) );

@@ -2343,6 +2343,7 @@ void draw_location( avatar &you )
     char_creation::draw_action_button( _( "Starting location:" ), "CHOOSE_LOCATION" );
     ImGui::SameLine();
     ImGui::Checkbox( _( "Start on the far outskirts" ), &you.start_outskirts );
+    char_creation::draw_action_button( _( "Toggle far-outskirts start" ), "TOGGLE_START_OUTSKIRTS" );
 
     if( you.random_start_location ) {
         cataimgui::draw_colored_text( random_start_location_text, c_red );
@@ -2813,6 +2814,7 @@ void character_creator_ui::setup_input_context( input_context &cc_ictxt, bool qu
         cc_ictxt.register_action( "CHOOSE_CITY" );
     }
     cc_ictxt.register_action( "CHOOSE_LOCATION" );
+    cc_ictxt.register_action( "TOGGLE_START_OUTSKIRTS" );
     if( quick_value_change ) {
         cc_ictxt.register_action( "INCREASE_VALUE" );
         cc_ictxt.register_action( "DECREASE_VALUE" );
@@ -3508,6 +3510,7 @@ adaptive_character_creator_snapshot make_adaptive_character_creator_snapshot(
     result.age = you.base_age();
     result.height = you.base_height();
     result.blood = io::enum_to_string( you.my_blood_type ) + ( you.blood_rh_factor ? "+" : "-" );
+    result.start_outskirts = you.start_outskirts;
 #if defined(TILES)
     result.preview_available = character_preview_active();
 #endif
@@ -4497,6 +4500,8 @@ bool character_creator_ui::handle_action( const std::string &action )
                 you.world_origin = c->pos_om;
             }
         }
+    } else if( action == "TOGGLE_START_OUTSKIRTS" ) {
+        you.start_outskirts = !you.start_outskirts;
     } else if( action == "CHOOSE_LOCATION" ) {
         int selected_location_index = -1;
 #if defined(__ANDROID__)

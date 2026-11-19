@@ -94,6 +94,7 @@
 #include "lua_platform_loader.h"
 #include "magic.h"
 #include "map.h"
+#include "mapdata.h"
 #include "map_extras.h"
 #include "map_helpers.h"
 #include "map_iterator.h"
@@ -4672,7 +4673,17 @@ const std::vector<debug_action_entry> &all_actions()
         {
             debug_menu_index::CHANGE_TIME, translate_marker( "Change time" ), "time turn calendar", "Map", []()
             {
-                calendar::turn = calendar_ui::select_time_point( calendar::turn, _( "Select time point" ) );
+                const time_point previous = calendar::turn;
+                calendar::turn = calendar_ui::select_time_point( previous, _( "Select time point" ) );
+                if( calendar::turn > previous ) {
+                    map &here = get_map();
+                    get_weather().set_nextweather( calendar::turn );
+                    for( const tripoint_bub_ms &position : here.points_on_zlevel( get_avatar().pos_bub().z() ) ) {
+                        if( here.furn( position )->has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+                            here.grow_plant( position );
+                        }
+                    }
+                }
             }
         },
         {
