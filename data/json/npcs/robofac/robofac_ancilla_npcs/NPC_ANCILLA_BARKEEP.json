@@ -66,58 +66,5 @@
       { "text": "Any good rumors?", "topic": "TALK_ANCILLA_BARKEEP_INFORMATION" },
       { "text": "I'll be going…", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ANCILLA_BARKEEP_INFORMATION",
-    "dynamic_line": "If what you want are jobs and opportunities, you'll probably be better off asking to my other patrons.  Have regulars from well across the state, I'm sure some can offer what you want.\"\n\n \"Really, I just tend the bar and don't ask many questions.  Things tend work out better that way.",
-    "responses": [ { "text": "I'll ask around, thank you.", "topic": "TALK_ANCILLA_BARKEEP" } ]
-  },
-  {
-    "id": "TALK_ANCILLA_BARKEEP_TAP",
-    "type": "talk_topic",
-    "dynamic_line": "Just the best spirits the whole of New England has to offer.  Well the best we've managed to loot so far at least.\n\n <ANCILLA_barkeep_suggestion>",
-    "responses": [
-      {
-        "//": "It is FREE? well just for regulars",
-        "truefalsetext": { "condition": { "u_has_faction_trust": 20 }, "true": "Just some water.", "false": "[$2] Just some water." },
-        "trial": { "type": "CONDITION", "condition": { "u_has_faction_trust": 20 } },
-        "success": { "effect": { "u_spawn_item": "water_clean", "container": "glass", "count": 2 }, "topic": "TALK_DONE" },
-        "failure": { "effect": { "u_buy_item": "water_clean", "container": "glass", "count": 2, "cost": 200 }, "topic": "TALK_DONE" }
-      },
-      {
-        "text": "[$3] I'll take a beer.",
-        "topic": "TALK_DONE",
-        "effect": { "u_buy_item": "beer", "container": "glass", "count": 2, "cost": 300 }
-      },
-      {
-        "text": "[$3] Get me a cup of red wine.",
-        "topic": "TALK_DONE",
-        "effect": { "u_buy_item": "wine_cabernet", "container": "wine_glass", "cost": 300 }
-      },
-      {
-        "text": "[$3] I'll take a shot of rum.",
-        "topic": "TALK_DONE",
-        "effect": { "u_buy_item": "rum", "container": "glass", "cost": 300 }
-      },
-      {
-        "text": "[$3] I'll take a shot of whiskey.",
-        "topic": "TALK_DONE",
-        "effect": { "u_buy_item": "whiskey", "container": "glass", "cost": 300 }
-      },
-      { "text": "On second thought, don't bother.", "topic": "TALK_ANCILLA_BARKEEP" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ANCILLA_BEM_HUMAN_SAMPLE_REWARD",
-    "dynamic_line": "Oh yes of course, think this should be all, well that's all there is anyhow.",
-    "speaker_effect": {
-      "effect": [
-        { "math": [ "u_counter_BEM_BEM_human_sample_reward_owed--" ] },
-        { "u_add_faction_trust": 1 },
-        { "u_spawn_item": "RobofacCoin", "count": 2 }
-      ]
-    }
   }
 ]

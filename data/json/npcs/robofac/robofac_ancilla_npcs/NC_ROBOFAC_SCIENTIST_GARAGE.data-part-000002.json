@@ -1,0 +1,90 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_SCIENTIST_GARAGE_SELL_EXODII",
+    "dynamic_line": "Is that so?  What do you have?",
+    "responses": [
+      {
+        "text": "[1 HGC] I've brought you one of those workers.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_items_sum": [ { "item": "broken_exodii_worker", "amount": 1 } ] },
+        "effect": [
+          { "u_consume_item_sum": [ { "item": "broken_exodii_worker", "amount": 1 } ] },
+          { "u_spawn_item": "RobofacCoin", "count": 1 },
+          { "math": [ "robofac_exodii_cbm_knowledge += 1" ] }
+        ]
+      },
+      {
+        "text": "[2 HGC] I've brought you one of those quadrupeds.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_items_sum": [ { "item": "broken_exodii_quad", "amount": 1 } ] },
+        "effect": [
+          { "u_consume_item_sum": [ { "item": "broken_exodii_quad", "amount": 1 } ] },
+          { "u_spawn_item": "RobofacCoin", "count": 2 },
+          { "math": [ "robofac_exodii_cbm_knowledge += 1" ] }
+        ]
+      },
+      {
+        "text": "[2 HGC] I've brought you one of those turrets.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_items_sum": [ { "item": "broken_exodii_turret", "amount": 1 } ] },
+        "effect": [
+          { "u_consume_item_sum": [ { "item": "broken_exodii_turret", "amount": 1 } ] },
+          { "u_spawn_item": "RobofacCoin", "count": 2 },
+          { "math": [ "robofac_exodii_cbm_knowledge += 1" ] }
+        ]
+      },
+      {
+        "text": "[4 HGC] I found this strange balloon robot.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_items_sum": [ { "item": "broken_exodii_sniper_drone", "amount": 1 } ] },
+        "effect": [
+          { "u_consume_item_sum": [ { "item": "broken_exodii_sniper_drone", "amount": 1 } ] },
+          { "u_spawn_item": "RobofacCoin", "count": 4 },
+          { "math": [ "robofac_exodii_cbm_knowledge += 1" ] }
+        ]
+      },
+      { "text": "Nevermind.  Let's talk about something else.", "topic": "TALK_ROBOFAC_SCIENTIST_GARAGE" },
+      { "text": "Actually, I'd better be going.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_SCIENTIST_GARAGE_RESEARCH_PROGRESS",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "dialogue_intercom_completed_robofac_intercom_3" } ],
+      "yes": {
+        "compare_string": [ "yes", { "u_val": "dialogue_intercom_completed_robofac_intercom_3" } ],
+        "yes": {
+          "math": [ "robofac_exodii_cbm_knowledge > 50" ],
+          "yes": "R&D is going well.  Maybe we'll have new products ready sometime soon.",
+          "no": "Research is ongoing.  Nothing new to report."
+        },
+        "no": "We've made some progress.  If you're keen to use our newest prototypes, I'd encourage you to see the Doc across the street.  Now we're looking for some cool military tech to synergize with the circuits I'm slapping together.  The intercom will have a relevant open contract, if they don't already."
+      },
+      "no": "Honestly?  I'm able to reverse engineer a lot of this tech, but I can't recreate it.  Our top engineers know what we need to fix the problem, and are looking for mercs to help us solve the problem.  Ask about contracts at the intercom."
+    },
+    "responses": [
+      { "text": "Let's talk about something else.", "topic": "TALK_ROBOFAC_SCIENTIST_GARAGE" },
+      { "text": "I'd better be going.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_ROBOFAC_SCIENTIST_GARAGE_ADVANCE_EXODII_CBM_KNOWLEDGE",
+    "//": "A counter that represents how much Hub 01 knows about CBMs.  It only starts once they have autodoc tech.  +1 if garage is spawned.  +1 if chop shop scientist is still alive.",
+    "recurrence": "48 hours",
+    "global": true,
+    "condition": { "and": [ { "math": [ "ancilla_autodoc_placed == 1" ] }, { "math": [ "robofac_exodii_cbm_knowledge <= 99" ] } ] },
+    "effect": [
+      {
+        "if": { "math": [ "robofac_chop_shop_scientist_1_is_dead != 1" ] },
+        "then": { "math": [ "robofac_exodii_cbm_knowledge += 1" ] }
+      },
+      {
+        "if": { "math": [ "ancilla_bionic_garage_placed == 1" ] },
+        "then": { "math": [ "robofac_exodii_cbm_knowledge += 1" ] }
+      }
+    ]
+  }
+]
