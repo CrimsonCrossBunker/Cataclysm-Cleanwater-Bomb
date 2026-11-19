@@ -9,21 +9,5 @@
     "mission": "GUARD",
     "chat": "TALK_EVAC_HUNTER",
     "faction": "no_faction"
-  },
-  {
-    "id": "TALK_EVAC_HUNTER",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "u_is_wearing": "badge_marshal",
-      "yes": { "gendered_line": "I thought I smelled a pig.  I jest… please don't arrest me.", "relevant_genders": [ "npc" ] },
-      "no": { "gendered_line": "Huh, thought I smelled someone new.  Can I help you?", "relevant_genders": [ "npc" ] }
-    },
-    "responses": [
-      { "text": "You… smelled me?", "topic": "TALK_EVAC_HUNTER_SMELL" },
-      { "text": "What do you do around here?", "topic": "TALK_EVAC_HUNTER_DO" },
-      { "text": "Got anything for sale?", "topic": "TALK_EVAC_HUNTER_SALE" },
-      { "text": "Got any survival advice?", "topic": "TALK_EVAC_HUNTER_ADVICE" },
-      { "text": "<end_talking_bye>", "topic": "TALK_EVAC_HUNTER_BYE" }
-    ]
   }
 ]
