@@ -28,21 +28,5 @@
     "type": "mapgen",
     "update_mapgen_id": "fbmc_radio_tower_water_well",
     "object": { "set": [ { "point": "terrain", "id": "t_water_pump", "x": 19, "y": 10 } ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_radio_tower_0_prepalisade",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmc_radio_tower_0_prepalisade_nested" ], "x": 0, "y": 0 } ],
-      "place_items": [ { "x": 4, "y": 9, "item": "digging_soil_loam_50L", "chance": 99, "repeat": 870 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_radio_tower_1_prepalisade",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmc_radio_tower_1_prepalisade_nested" ], "x": 0, "y": 0 } ],
-      "place_items": [ { "x": 4, "y": 9, "item": "digging_soil_loam_50L", "chance": 99, "repeat": 1080 } ]
-    }
   }
 ]

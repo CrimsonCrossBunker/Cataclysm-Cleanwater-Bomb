@@ -159,3 +159,21 @@ ccb.content.define_mapgen {
         nested = { { id = "fbmc_radio_tower_1_palisade_nested", x = 0, y = 0 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_radio_tower_0_prepalisade",
+    layout = {
+        nested = { { id = "fbmc_radio_tower_0_prepalisade_nested", x = 0, y = 0 } },
+        item_group_placements = { { x = 4, y = 9, group = "digging_soil_loam_50L", chance = 99, repetitions = 870 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_radio_tower_1_prepalisade",
+    layout = {
+        nested = { { id = "fbmc_radio_tower_1_prepalisade_nested", x = 0, y = 0 } },
+        item_group_placements = { { x = 4, y = 9, group = "digging_soil_loam_50L", chance = 99, repetitions = 1080 } },
+    },
+}

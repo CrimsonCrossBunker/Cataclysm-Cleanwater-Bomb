@@ -58,3 +58,20 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmw_room6_construction_north",
+    layout = {
+        nested = {
+            { id = "fbmw_room6_construction", x = 9, y = 3, z = 0 },
+            { id = "fbmw_room6_roof_construction", x = 9, y = 3, z = 1 },
+        },
+        loot_placements = {
+            { id = "tongs", x = 19, y = 5, chance = 100 },
+            { id = "chisel", x = 19, y = 5, chance = 100 },
+            { id = "hammer", x = 19, y = 5, chance = 100 },
+            { id = "swage", x = 19, y = 5, chance = 100 },
+        },
+    },
+}

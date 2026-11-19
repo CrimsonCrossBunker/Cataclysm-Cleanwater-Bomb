@@ -138,3 +138,51 @@ ccb.content.define_mapgen {
         nested = { { id = "fbmc_firestation1_quarters_common_room", x = 16, y = 9 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_firestation1_kitchen1_cleared",
+    layout = {
+        nested = { { id = "fbmc_firestation1_kitchen1", x = 1, y = 9 } },
+        loot_placements = {
+            { id = "2x4", repetitions = 24, x = 2, y = 10, chance = 100 },
+            { id = "nail", repetitions = 36, x = 2, y = 10, chance = 100 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_firestation1_garage_area",
+    layout = {
+        loot_placements = {
+            { id = "wrench", x = 8, y = 21, chance = 100 },
+            { id = "hacksaw", x = 8, y = 21, chance = 100 },
+            { id = "pliers", x = 8, y = 21, chance = 100 },
+            { id = "screwdriver", x = 8, y = 21, chance = 100 },
+            { id = "hammer", x = 8, y = 21, chance = 100 },
+            { id = "manual_mechanics", x = 8, y = 21, chance = 100 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_firestation1_forge4",
+    layout = {
+        loot_placements = {
+            { id = "tongs", x = 8, y = 21, chance = 100 },
+            { id = "chisel", x = 8, y = 21, chance = 100 },
+            { id = "swage", x = 8, y = 21, chance = 100 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_firestation1_farm",
+    layout = {
+        nested = { { id = "fbmc_firestation1_farm_land", x = 7, y = 0 } },
+        loot_placements = { { id = "pickaxe", x = 8, y = 21, chance = 100 } },
+    },
+}

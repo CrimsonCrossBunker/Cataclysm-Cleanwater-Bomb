@@ -32,17 +32,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_kitchen1_cleared",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmc_firestation1_kitchen1" ], "x": 1, "y": 9 } ],
-      "place_loot": [
-        { "item": "2x4", "repeat": 24, "x": 2, "y": 10, "chance": 100 },
-        { "item": "nail", "repeat": 36, "x": 2, "y": 10, "chance": 100 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmc_firestation1_fireplace",
     "object": {
       "set": [
@@ -145,20 +134,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_garage_area",
-    "object": {
-      "place_loot": [
-        { "item": "wrench", "x": 8, "y": 21, "chance": 100 },
-        { "item": "hacksaw", "x": 8, "y": 21, "chance": 100 },
-        { "item": "pliers", "x": 8, "y": 21, "chance": 100 },
-        { "item": "screwdriver", "x": 8, "y": 21, "chance": 100 },
-        { "item": "hammer", "x": 8, "y": 21, "chance": 100 },
-        { "item": "manual_mechanics", "x": 8, "y": 21, "chance": 100 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmc_firestation1_forge",
     "object": {
       "set": [
@@ -191,17 +166,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_forge4",
-    "object": {
-      "place_loot": [
-        { "item": "tongs", "x": 8, "y": 21, "chance": 100 },
-        { "item": "chisel", "x": 8, "y": 21, "chance": 100 },
-        { "item": "swage", "x": 8, "y": 21, "chance": 100 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmc_firestation1_workbench",
     "object": {
       "set": [
@@ -228,14 +192,6 @@
     "object": {
       "set": [ { "point": "furniture", "id": "f_drophammer", "x": 7, "y": 21 } ],
       "place_loot": [ { "item": "wrench", "x": 8, "y": 21, "chance": 100 }, { "item": "pliers", "x": 8, "y": 21, "chance": 100 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_firestation1_farm",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmc_firestation1_farm_land" ], "x": 7, "y": 0 } ],
-      "place_loot": [ { "item": "pickaxe", "x": 8, "y": 21, "chance": 100 } ]
     }
   },
   {
