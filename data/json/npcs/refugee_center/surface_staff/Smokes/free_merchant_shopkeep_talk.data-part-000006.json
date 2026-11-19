@@ -1,0 +1,100 @@
+[
+  {
+    "id": "TALK_FREE_MERCHANTS_MERCHANT_TroubleWithFood",
+    "type": "talk_topic",
+    "dynamic_line": "Yes we are.  The center had a good stock of those awful soy bars, but between all of us, it went fast.  We're making do with what we can skim off the edge of towns, but mostly we rely on trade from people like you.  Speaking of, we'll pay top dollar for anything preserved - canned, salted, dried, whatever.  Just talk to the broker in the back.",
+    "responses": [
+      {
+        "text": "I don't see that many of you around.",
+        "topic": "TALK_FREE_MERCHANTS_MERCHANT_Basement",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_free_merchants_u_knows_about_basement" } ] } },
+        "effect": { "u_add_var": "general_free_merchants_u_knows_about_basement", "value": "yes" }
+      },
+      { "text": "I'll keep that in mind.", "topic": "TALK_FREE_MERCHANTS_MERCHANT_Talk" }
+    ]
+  },
+  {
+    "id": "TALK_FREE_MERCHANTS_MERCHANT_CANNIBAL_GTFO",
+    "type": "talk_topic",
+    "dynamic_line": "Listen, buddy.  We were putting away some of the last food you gave us and noticed it was… off.  Okay I'll cut the shit- It was people.  I don't know how you got it, or what you did, but we aren't taking any chances.  You are not welcome here anymore.  <color_red>I'll give you one minute</color> to fuck off and never come back.",
+    "speaker_effect": [
+      {
+        "effect": [ "end_conversation", { "run_eocs": [ "EOC_GAVE_BEGGAR_CANNIBAL_PROOF" ], "time_in_future": "1 minutes" } ]
+      }
+    ],
+    "responses": [ { "text": "But I-", "topic": "TALK_DONE" } ]
+  },
+  {
+    "id": "TALK_EVAC_MERCHANT_DEAL_NEGOTIATE",
+    "type": "talk_topic",
+    "dynamic_line": "Sure, we could use some around here for repairs and whatnot.  What are the terms?",
+    "responses": [
+      {
+        "text": "Well, how about 250 merch for 100 pounds of…",
+        "effect": { "u_spawn_item": "trade_writ" },
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "id": "TALK_EVAC_MERCHANT_DEAL_NEGOTIATE_CHEM",
+    "type": "talk_topic",
+    "dynamic_line": "Chemicals?  I'm sure we could find some use for them, and we are in need of medical supplies.  What's the offer?",
+    "responses": [
+      {
+        "text": "Well, how about 300 merch for 10 liters of…",
+        "effect": { "u_spawn_item": "trade_writ" },
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "id": "TALK_FREE_MERCHANTS_MERCHANT_Exodii_mission_meet_free_merchants",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "u_has_trait": "EXODII_CYBERFRAME_GENERIC",
+      "yes": "Well, from taking a look at you, I can only guess what these Exodii are all about.  But trade's trade, so tell me more.",
+      "no": "Exodii?  Tell me more."
+    },
+    "responses": [
+      {
+        "text": "[Boot up the Exodii TV-radio] Maybe it's best if their representative does the talking.  We'll call them on this screen.  They sort of speak English, and I can try and translate back and forth.",
+        "topic": "TALK_FREE_MERCHANTS_MERCHANT_Exodii_mission_meet_free_merchants_negotiations"
+      },
+      {
+        "text": "I mean, just look at me!  They're cyborgs from another dimension.  They turn humans and maybe other beings into cyborgs, and jump from here to there, dodging cataclysms like ours.  And they're very interested in trade.",
+        "topic": "TALK_FREE_MERCHANTS_MERCHANT_Exodii_mission_meet_free_merchants_2",
+        "condition": { "u_has_trait": "EXODII_CYBERFRAME_GENERIC" },
+        "effect": { "u_add_faction_trust": 1 }
+      },
+      {
+        "text": "They are a race of inter-dimensional beings.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.",
+        "topic": "TALK_FREE_MERCHANTS_MERCHANT_Exodii_mission_meet_free_merchants_2",
+        "effect": { "u_add_faction_trust": 2 }
+      },
+      {
+        "text": "They are a race of inter-dimensional beings that use a mix of futuristic and ancient technology, the latter being mostly due to their last landing place being an ancient battlefield of some sort.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  While their choice for personal defense was more along the lines of ancient gear like spears and swords.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_talk_exodii_about_medieval_stock" } ] },
+        "topic": "TALK_FREE_MERCHANTS_MERCHANT_Exodii_mission_meet_free_merchants_2",
+        "effect": { "u_add_faction_trust": 3 }
+      },
+      {
+        "text": "They are a race of inter-dimensional beings.  These guys are more metal than man in my opinion - they use automated machinery to do their fighting and heavy lifting.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.  They are here to mine this place of any useful metal, gather any tech they deem worth saving and maybe even grab a couple of survivors to join their ranks before they move out.",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_know_exodii_purpose2" } ] },
+        "topic": "TALK_FREE_MERCHANTS_MERCHANT_Exodii_mission_meet_free_merchants_2",
+        "effect": { "u_add_faction_trust": 4 }
+      },
+      {
+        "text": "They are a race of inter-dimensional beings that use a mix of futuristic and ancient technology, the latter being mostly due to their last landing place being an ancient battlefield of some sort.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  However their choice for personal defense was more along the lines of ancient gear like spears and swords.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.  They are here to mine this place of any useful metal, gather any tech they deem worth saving and maybe even grab a couple of survivors to join their ranks before they move out.",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "u_know_exodii_purpose2" } ] },
+            { "compare_string": [ "yes", { "u_val": "u_talk_exodii_about_medieval_stock" } ] }
+          ]
+        },
+        "topic": "TALK_FREE_MERCHANTS_MERCHANT_Exodii_mission_meet_free_merchants_2",
+        "effect": { "u_add_faction_trust": 5 }
+      }
+    ]
+  }
+]
