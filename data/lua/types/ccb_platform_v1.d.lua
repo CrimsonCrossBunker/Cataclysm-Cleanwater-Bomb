@@ -7270,6 +7270,218 @@ function CcbPlatformContent.plural_text(singular, plural, context) end
 ---@return ItemDefinition
 function CcbPlatformContent.Item(options) end
 
+---@class StaticItemMaterial
+---@field id string Native material ID.
+---@field portions? integer Relative material contribution.
+
+---@class StaticArmorMaterial
+---@field id string Native material ID.
+---@field coverage? integer Percentage covered by this material.
+---@field thickness? number Material thickness in millimeters.
+---@field ignore_sheet_thickness? boolean
+
+---@class StaticItemArmorPortion
+---@field covers? string[] Native body parts.
+---@field covers_all? boolean Cover all body parts.
+---@field covers_except? string[]
+---@field subparts? string[]
+---@field subparts_except? string[]
+---@field layers? string[]
+---@field encumbrance_modifiers? string[]
+---@field encumbrance? integer|[integer, integer]
+---@field coverage? integer
+---@field melee_coverage? integer
+---@field ranged_coverage? integer
+---@field vitals_coverage? integer
+---@field environmental_protection? integer
+---@field filtered_protection? integer
+---@field rigid_only? boolean
+---@field thickness? number
+---@field volume_encumbrance? number
+---@field breathability? string
+---@field materials? (string|StaticArmorMaterial)[]
+
+---@class StaticItemArmor
+---@field portions? StaticItemArmorPortion[] Ordered coverage and material layers.
+---@field thickness? number Default material thickness.
+---@field warmth? integer
+---@field environmental_protection? integer
+---@field filtered_protection? integer
+---@field sided? boolean
+---@field power_armor? boolean
+---@field broken_item? string
+---@field damage_verb? string|LocalizedText
+---@field covers? string[]
+---@field valid_mods? string[]
+
+---@class StaticItemVitamin
+---@field id string Native vitamin or allergen ID.
+---@field amount integer|string Native vitamin units or a mass with a unit.
+
+---@class StaticItemRotSpawn
+---@field monster? string Native monster type to spawn.
+---@field group? string Native monster group to spawn from.
+---@field chance? integer
+---@field amount? [integer, integer]
+
+---@class StaticItemComestible
+---@field kind? 'FOOD'|'DRINK'|'MED'|'INVALID' Omit to inherit the native type.
+---@field tool? string
+---@field cooks_like? string
+---@field eats_like? string
+---@field smoking_result? string
+---@field cooked_item? string
+---@field cooking_energy? string Energy with a native unit.
+---@field addiction? string
+---@field servings? integer
+---@field calories? integer
+---@field fun? integer
+---@field quench? integer
+---@field healthy? integer
+---@field stimulation? integer
+---@field sensitivity? integer
+---@field sleepiness? integer
+---@field parasites? integer
+---@field addiction_potential? integer
+---@field monotony_penalty? integer
+---@field freezing_point? number
+---@field shelf_life? integer|string Duration with a native unit or a legacy turn count.
+---@field pet_food? string[]
+---@field vitamins? StaticItemVitamin[]
+---@field rot_spawn? StaticItemRotSpawn
+
+---@class StaticItemPocket
+---@field kind? string Native pocket type.
+---@field capacity? string Volume with a native unit.
+---@field mass_limit? string Mass with a native unit.
+---@field max_item_length? string
+---@field min_item_length? string
+---@field min_item_volume? string
+---@field max_item_volume? string
+---@field magazine_well? string
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field moves? integer
+---@field ripoff? integer
+---@field extra_encumbrance? integer
+---@field volume_encumbrance? number
+---@field weight_multiplier? number
+---@field volume_multiplier? number
+---@field spoil_multiplier? number
+---@field holster? boolean
+---@field ablative? boolean
+---@field transparent? boolean
+---@field rigid? boolean
+---@field watertight? boolean
+---@field airtight? boolean
+---@field inherits_flags? boolean
+---@field fire_protection? boolean
+---@field allowed_flags? string[]
+---@field allowed_items? string[]
+---@field allowed_materials? string[]
+---@field ammunition? table<string, integer> Capacity by ammunition type.
+
+---@class StaticItemAdditions
+---@field flags? string[]
+---@field pet_food? string[]
+---@field vitamins? StaticItemVitamin[]
+---@field rot_spawn? StaticItemRotSpawn
+---@field variants? ItemVariantDefinitionOptions[]
+
+---@class StaticItemRemovals
+---@field flags? string[]
+
+---@class StaticItemScales
+---@field mass? number
+---@field volume? number
+---@field price? number
+---@field survival_price? number
+---@field warmth? number
+---@field calories? number
+---@field encumbrance? number
+---@field fun? number
+---@field quench? number
+---@field parasites? number
+
+---@class StaticItemOffsets
+---@field mass? string
+---@field volume? string
+---@field warmth? integer
+---@field fun? integer
+---@field quench? integer
+---@field melee_damage? table<string, number>
+
+---@class StaticItemInheritance
+---@field add? StaticItemAdditions
+---@field remove? StaticItemRemovals
+---@field scale? StaticItemScales
+---@field offset? StaticItemOffsets
+
+---@class StaticItemFault
+---@field fault? string Native fault ID. Supply one of fault and group.
+---@field group? string Native fault group ID.
+---@field weight? number Weight for a single fault.
+---@field weight_multiplier? number Scale the members of a fault group.
+---@field weight_override? integer Override weights in a fault group.
+---@field weight_add? integer Adjust weights in a fault group.
+
+---@class StaticItemQuality
+---@field id string Native tool quality ID.
+---@field level integer
+
+---@class StaticItemOptions
+---@field id string Stable item ID or abstract template ID.
+---@field abstract? boolean Register an inheritance template.
+---@field copy_from? string Item or abstract template to inherit.
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field symbol? string
+---@field color? string
+---@field category? string
+---@field looks_like? string
+---@field ascii_picture? string
+---@field variant_kind? 'generic'|'gun'|'drug'
+---@field phase? 'null'|'solid'|'liquid'|'gas'|'plasma'
+---@field display_type? 'DEFAULT'|'BY_WEIGHT'|'BY_VOLUME'|'BY_LENGTH'
+---@field default_container? string
+---@field repair_like? string
+---@field mass? string Mass with a native unit.
+---@field volume? string Volume with a native unit.
+---@field length? string Length with a native unit.
+---@field price? string Currency with a native unit.
+---@field survival_price? string Post-Cataclysm currency with a native unit.
+---@field snippet_category? string
+---@field revert_to? string
+---@field stackable? boolean
+---@field expand_snippets? boolean
+---@field sealed_container? boolean
+---@field explode_in_fire? boolean
+---@field stack_size? integer
+---@field light? integer
+---@field max_worn? integer
+---@field min_strength? integer
+---@field fertilizer_quality? number
+---@field flags? string[]
+---@field techniques? string[]
+---@field repair_materials? string[]
+---@field emissions? string[]
+---@field materials? (string|StaticItemMaterial)[]
+---@field replace_materials? table<string,string>
+---@field melee_damage? table<string,number>
+---@field accuracy? integer|ItemMeleeAccuracyOptions
+---@field pockets? StaticItemPocket[]
+---@field variants? ItemVariantDefinitionOptions[]
+---@field conditional_names? ItemConditionalName[]
+---@field faults? StaticItemFault[]
+---@field qualities? StaticItemQuality[]
+---@field inheritance? StaticItemInheritance
+---@field armor? StaticItemArmor Supply one of armor and comestible.
+---@field comestible? StaticItemComestible Supply one of armor and comestible.
+
+---Register an item in the Mod's ordered data load, preserving native inheritance and finalization.
+---@param options StaticItemOptions
+function CcbPlatformContent.define_item(options) end
+
 ---@param options FactionDefinitionOptions
 ---@return FactionDefinition
 function CcbPlatformContent.Faction(options) end
