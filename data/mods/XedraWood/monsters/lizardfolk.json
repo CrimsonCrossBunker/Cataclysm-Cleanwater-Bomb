@@ -77,23 +77,5 @@
       { "type": "bite", "cooldown": 3, "condition": { "test_eoc": "is_disarmed" } }
     ],
     "death_drops": [ { "item": "spear_stone", "prob": 30 }, { "item": "javelin", "prob": 40 }, { "item": "spearsling", "prob": 20 } ]
-  },
-  {
-    "id": "mon_lizardfolk_warrior_hostile",
-    "copy-from": "mon_lizardfolk_warrior",
-    "type": "MONSTER",
-    "name": "lizardfolk warrior",
-    "description": "A tall, powerful, reptilian humanoid with a muscular tail whose skin is covered in dark gray-green scales.  They are coldblooded and primarily live in swamps.",
-    "default_faction": "lizardfolk_hostile",
-    "aggression": 30
-  },
-  {
-    "id": "mon_lizardfolk_hunter_hostile",
-    "type": "MONSTER",
-    "name": "lizardfolk hunter",
-    "description": "The hunter is smaller than a warrior, but equally as deadly, with their lithe figures and accurate javelin throws.",
-    "copy-from": "mon_lizardfolk_hunter",
-    "default_faction": "lizardfolk_hostile",
-    "aggression": 30
   }
 ]
