@@ -1,0 +1,17 @@
+[
+  {
+    "type": "gate",
+    "id": "t_nl_gates_mech_control",
+    "door": "t_nl_door_l",
+    "floor": "t_nl_metal_floor",
+    "walls": [  ],
+    "messages": {
+      "pull": "You turn the lever…",
+      "open": "The doors open!",
+      "close": "The doors close and thunk!",
+      "fail": "The doors can't be closed!"
+    },
+    "moves": 1800,
+    "bashing_damage": 40
+  }
+]

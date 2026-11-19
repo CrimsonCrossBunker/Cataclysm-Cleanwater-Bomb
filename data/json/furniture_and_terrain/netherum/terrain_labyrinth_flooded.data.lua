@@ -1,0 +1,120 @@
+local ccb = require("ccb")
+
+ccb.content.define_terrain {
+    id = "t_nl_water_pool",
+    name = ccb.content.text("black water"),
+    description = ccb.content.text("A very deep pool full of salty water.  Gentle waves lap against each other in vaguely musical melodies."),
+    symbol = "~",
+    looks_like = "t_water_dp",
+    color = "light_blue",
+    move_cost = 5,
+    flags = {
+        "TRANSPARENT",
+        "LIQUID",
+        "LIQUIDCONT",
+        "NO_SCENT",
+        "SWIMMABLE",
+        "INDOORS",
+        "DEEP_WATER",
+        "EMPTY_SPACE",
+    },
+    connect_groups = { "INDOORFLOOR", "POOLWATER" },
+    connects_to = "WATER",
+    liquid_source = {
+        item = "salt_water",
+        count = { 1600, 1600 },
+        minimum_temperature = 2.2,
+        dries_to = "t_nl_pool_bottom_dry",
+    },
+    builtin_examine = "finite_water_source",
+    phase_targets = { "t_ice_dp_thick", "t_ice_dp_thin", "t_pseudo_phase" },
+    phase_temperatures = { -10, -5 },
+    phase_method = "water_freeze",
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_water_pool_low",
+    name = ccb.content.text("shallow black water"),
+    description = ccb.content.text("Only a shallow layer remains in this pool of salty black water.  Gentle ripples make vaguely musical sounds."),
+    symbol = "~",
+    looks_like = "t_swater_sh",
+    color = "light_blue",
+    move_cost = 5,
+    flags = { "TRANSPARENT", "LIQUID", "LIQUIDCONT", "NO_SCENT", "SWIMMABLE", "INDOORS", "SHALLOW_WATER" },
+    connect_groups = { "INDOORFLOOR", "POOLWATER" },
+    connects_to = "WATER",
+    liquid_source = {
+        item = "salt_water",
+        count = { 1600, 1600 },
+        minimum_temperature = 2.2,
+        dries_to = "t_nl_pool_bottom_dry",
+    },
+    builtin_examine = "finite_water_source",
+    phase_targets = { "t_ice_sh_thick", "t_ice_sh_thin", "t_pseudo_phase" },
+    phase_temperatures = { -10, -5 },
+    phase_method = "water_freeze",
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_bridge",
+    name = ccb.content.text("walkway"),
+    description = ccb.content.text("A metallic bridge commonly used in industrial settings to meet specified safety standards.  The tempered, latticed metal seems to have a different pattern each time you glance at it."),
+    symbol = "#",
+    looks_like = "t_bridge",
+    color = "yellow",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "SWIM_UNDER" },
+    connect_groups = "WATER",
+    bash = {
+        sound = ccb.content.text("thump"),
+        terrain = "t_nl_water_pool",
+        minimum_strength = 100,
+        maximum_strength = 200,
+        minimum_strength_supported = 100,
+        drops = {
+            { item = "steel_lump", count = { 1, 4 } },
+            { item = "steel_chunk", count = { 3, 12 } },
+            { item = "scrap", count = { 9, 36 } },
+        },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_sewage_pipe",
+    name = ccb.content.text("high gauge pipe"),
+    description = ccb.content.text("A section of high gauge pipe, but covered in holes.  It would clearly be useless to carry liquids."),
+    symbol = "1",
+    color = "light_gray",
+    looks_like = "t_sewage_pipe",
+    move_cost = 0,
+    coverage = 50,
+    flags = { "TRANSPARENT", "MOUNTABLE", "PERMEABLE", "THIN_OBSTACLE", "MINEABLE" },
+    bash = {
+        minimum_strength = 30,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_nl_bridge",
+        drops = { { item = "scrap", count = { 4, 8 } }, { item = "steel_plate", count = { 0, 2 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_sewage_pipe_border",
+    name = ccb.content.text("high gauge pipe"),
+    description = ccb.content.text("A massive section of high gauge pipe.  Every few meters the pipe-fittings holding it together rotate in jittery motion."),
+    symbol = "1",
+    color = "light_gray",
+    looks_like = "t_sewage_pipe",
+    move_cost = 0,
+    coverage = 50,
+    flags = { "WALL", "MOUNTABLE", "PERMEABLE", "THIN_OBSTACLE" },
+    bash = {
+        minimum_strength = 30,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_nl_bridge",
+        drops = { { item = "scrap", count = { 4, 8 } }, { item = "steel_plate", count = { 0, 2 } } },
+    },
+}
