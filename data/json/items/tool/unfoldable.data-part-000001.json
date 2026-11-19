@@ -1,19 +1,5 @@
 [
   {
-    "id": "generic_folded_vehicle",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str_sp": "seeing this is a bug", "//~": "NO_I18N" },
-    "description": { "str": "seeing this is a bug", "//~": "NO_I18N" },
-    "volume": "0 ml",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "symbol": "/",
-    "color": "light_gray",
-    "flags": [ "ZERO_WEIGHT" ],
-    "use_action": [ "UNFOLD_GENERIC" ]
-  },
-  {
     "id": "folded_bicycle",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
