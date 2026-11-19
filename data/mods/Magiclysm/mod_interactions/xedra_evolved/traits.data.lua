@@ -1,0 +1,15 @@
+local ccb = require("ccb")
+
+ccb.content.define_mutation {
+    id = "HUMAN_CHRONOMANCER_BUILD",
+    name = ccb.content.text("Human"),
+    mixed_effect = false,
+    points = 1,
+    visibility = 2,
+    description = ccb.content.text("Elves might say you are short-lived, and goblins might say you are strong, but the one thing humans really are is tenacious.  Hopefully that will serve you well after the Cataclysm."),
+    starting_trait = false,
+    purifiable = false,
+    valid = false,
+    empathize_with = { "GOBLIN", "RAVENFOLK", "LIZARDFOLK", "ELF", "DWARF", "HUMAN" },
+    flags = { "HERITAGE" },
+}
