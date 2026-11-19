@@ -1,0 +1,23 @@
+[
+  {
+    "id": "granade_act",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "weapons",
+    "name": { "str": "active Granade" },
+    "description": "Attached to this grenade is a name tag with the name Maya written on it.  Does not seem to work like a grenade, handle with care.  Better throw it!",
+    "weight": "180 g",
+    "volume": "250 ml",
+    "price": "0 cent",
+    "material": [ "steel", "plastic" ],
+    "symbol": "*",
+    "color": "green",
+    "use_action": { "type": "message", "message": "You've already pulled the pin, try throwing it instead.", "name": "Pull pin" },
+    "tick_action": [
+      { "type": "sound", "sound_message": "Merged!", "sound_volume": 0, "sound_id": "speech", "sound_variant": "granade_act" }
+    ],
+    "countdown_action": "GRANADE_ACT",
+    "flags": [ "TRADER_AVOID" ],
+    "melee_damage": { "bash": 6 }
+  }
+]

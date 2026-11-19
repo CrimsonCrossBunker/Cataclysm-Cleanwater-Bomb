@@ -1,0 +1,34 @@
+[
+  {
+    "id": "battletorch_lit",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "weapons",
+    "name": { "str": "Louisville Slaughterer" },
+    "description": "This is a sturdy wood bat, wrapped in gasoline-soaked rags and flame-resistant Nomex fabric.  It is burning brightly, and makes it much easier to see the baselines at night games (It also makes the umpire FAR more likely to call a ball instead of a strike).",
+    "weight": "1485 g",
+    "volume": "2 L",
+    "price": "160 USD",
+    "to_hit": { "grip": "weapon", "length": "long", "surface": "any", "balance": "good" },
+    "material": [ "wood", "nomex" ],
+    "symbol": "/",
+    "color": "red",
+    "initial_charges": 25,
+    "max_charges": 25,
+    "turns_per_charge": 20,
+    "revert_to": "battletorch_done",
+    "techniques": [ "WBLOCK_1" ],
+    "use_action": [
+      { "type": "firestarter", "moves": 30 },
+      {
+        "target": "battletorch",
+        "msg": "The Louisville Slaughterer is extinguished.",
+        "menu_text": "Extinguish",
+        "type": "transform"
+      }
+    ],
+    "light": 310,
+    "flags": [ "FIRE", "CHARGEDIM", "FLAMING", "DURABLE_MELEE", "TRADER_AVOID", "WATER_EXTINGUISH", "SPAWN_ACTIVE" ],
+    "melee_damage": { "bash": 18 }
+  }
+]
