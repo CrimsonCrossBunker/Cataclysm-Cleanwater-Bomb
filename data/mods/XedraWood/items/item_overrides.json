@@ -1,8 +1,0 @@
-[
-  {
-    "id": "water_clean",
-    "type": "ITEM",
-    "copy-from": "water_clean",
-    "container": "waterskin"
-  }
-]
