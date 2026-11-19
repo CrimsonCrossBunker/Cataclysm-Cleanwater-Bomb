@@ -38,57 +38,5 @@
       { "skill": "firstaid", "bonus": { "rng": [ 3, 5 ] } },
       { "skill": "speech", "bonus": { "rng": [ 0, 2 ] } }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "//": "common talk responses",
-    "id": [
-      "TALK_REFUGEE_Uyen_2",
-      "TALK_REFUGEE_Uyen_Background",
-      "TALK_REFUGEE_Uyen_Situation",
-      "TALK_REFUGEE_Uyen_Training",
-      "TALK_REFUGEE_Uyen_World",
-      "TALK_REFUGEE_Uyen_Kaiju"
-    ],
-    "responses": [
-      {
-        "text": "I'm trying to put a cleanup crew together to tidy up the back room.  Can you help?",
-        "condition": {
-          "and": [
-            { "u_has_mission": "MISSION_REFUGEE_Boris_CLEANUP" },
-            { "not": { "compare_string": [ "yes", { "npc_val": "mission_Boris_mission_1_cleanup_asked" } ] } }
-          ]
-        },
-        "trial": { "type": "PERSUADE", "difficulty": 10 },
-        "success": { "topic": "TALK_REFUGEE_Accept_Boris_Mission_1" },
-        "failure": { "topic": "TALK_REFUGEE_Refuse_Boris_Mission_1" }
-      },
-      { "text": "What's your story?", "topic": "TALK_REFUGEE_Uyen_Background" },
-      { "text": "How are things here?", "topic": "TALK_REFUGEE_Uyen_Situation" },
-      {
-        "text": "Could you teach me a bit about first aid?",
-        "condition": { "compare_string": [ "yes", { "u_val": "knowledge_flag_Uyen_teach" } ] },
-        "topic": "TALK_REFUGEE_Uyen_Teach"
-      },
-      { "text": "What do you think happened to the world?", "topic": "TALK_REFUGEE_Uyen_World" },
-      { "text": "Is there anything I can do to help you out?", "topic": "TALK_MISSION_LIST" },
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_Uyen_1",
-    "dynamic_line": {
-      "gendered_line": "*studies you with interest, her eyes lined with fatigue but still alert.  She brushes a lock of hair off her forehead.  \"Hi there.  You look new, nice to meet you.  My name's Uyen.\"",
-      "relevant_genders": [ "npc" ]
-    },
-    "speaker_effect": {
-      "effect": [ { "u_add_var": "general_meeting_u_met_Uyen_Tran", "value": "yes" }, { "npc_first_topic": "TALK_REFUGEE_Uyen_1a" } ]
-    },
-    "responses": [
-      { "text": "Nice to meet you too, Uyen.", "topic": "TALK_REFUGEE_Uyen_1_firstmeet" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
