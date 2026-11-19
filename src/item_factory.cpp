@@ -4058,7 +4058,7 @@ class vitamins_reader : public generic_typed_reader<vitamins_reader>
 };
 } // namespace
 
-void islot_comestible::deserialize( const JsonObject &jo )
+void islot_comestible::deserialize( const JsonObject &jo, std::string_view source )
 {
     std::string src = "ccb";
 
@@ -4096,6 +4096,13 @@ void islot_comestible::deserialize( const JsonObject &jo )
 
     for( JsonValue jv : jo.get_array( "consumption_effect_on_conditions" ) ) {
         consumption_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
+    }
+    if( const auto handler = jo.get_member_opt( "//ccb_lua_consume_handler" ) ) {
+        if( handler->has_source_file() ) {
+            handler->throw_error( "item consumption handler metadata is reserved for ordered Lua definitions" );
+        }
+        lua_platform_mod = std::string( source );
+        lua_platform_consume_handler = handler->get_string();
     }
     optional( jo, was_loaded, "rot_spawn", rot_spawn );
 

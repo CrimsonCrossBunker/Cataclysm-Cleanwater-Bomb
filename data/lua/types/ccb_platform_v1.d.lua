@@ -8270,6 +8270,7 @@ function CcbPlatformContent.Item(options) end
 ---@field pet_food? string[]
 ---@field vitamins? StaticItemVitamin[]
 ---@field rot_spawn? StaticItemRotSpawn
+---@field on_consume? string Named handler registered by this Mod. Receives the consumer and item before the native consumption path decrements charges.
 
 ---@class StaticItemPocket
 ---@field kind? string Native pocket type.

@@ -217,7 +217,7 @@ struct islot_comestible {
         friend item;
 
         bool was_loaded = false;
-        void deserialize( const JsonObject &jo );
+        void deserialize( const JsonObject &jo, std::string_view source );
 
         /** subtype, e.g. FOOD, DRINK, MED */
         std::string comesttype;

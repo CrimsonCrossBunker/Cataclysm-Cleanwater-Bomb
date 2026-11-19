@@ -1941,6 +1941,12 @@ void write_item_comestible( JsonOut &json, const sol::table &food )
     write_item_ids( json, food, { { "pet_food", "petfood" } } );
     write_item_vitamins( json, food, "vitamins" );
     write_item_rot_spawn( json, food );
+    if( const auto handler = food.get<sol::optional<std::string>>( "on_consume" ) ) {
+        if( handler->empty() ) {
+            throw std::invalid_argument( "item consumption handler id cannot be empty" );
+        }
+        json.member( "//ccb_lua_consume_handler", *handler );
+    }
 }
 
 void write_item_damage_unit( JsonOut &json, const sol::table &unit )
