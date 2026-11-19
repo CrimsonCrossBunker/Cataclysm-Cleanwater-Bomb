@@ -1,28 +1,5 @@
 [
   {
-    "id": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_HUB",
-    "type": "talk_topic",
-    "dynamic_line": "I'm listening.",
-    "responses": [
-      {
-        "text": "Tell me about it.",
-        "condition": { "not": { "u_has_mission": "MISSION_FIND_SUNKEN_HELICOPTER" } },
-        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_1"
-      },
-      {
-        "text": "Anything else I should know?",
-        "condition": { "u_has_mission": "MISSION_FIND_SUNKEN_HELICOPTER" },
-        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_DANGER"
-      },
-      {
-        "text": "Tell me about the cargo.",
-        "condition": { "u_has_mission": "MISSION_FIND_SUNKEN_HELICOPTER" },
-        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_CARGO_0"
-      },
-      { "text": "Never mind…", "topic": "TALK_NONE" }
-    ]
-  },
-  {
     "id": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_1",
     "type": "talk_topic",
     "dynamic_line": "A helicopter crashed in the region not long ago, at first I thought it was just a rumor, caravan guards talking about some crash nearby, but then I got a visit from a couple of Old Guard people looking for a lost helicopter, one of them got quite drunk one night and shared some interesting details, turns out it was an Old Guard heli coming back from way out west with quite the cargo, and I know where you can find it.  That's all you're getting for free though, I'd like to see some return on investment on that bottle you understand.",
