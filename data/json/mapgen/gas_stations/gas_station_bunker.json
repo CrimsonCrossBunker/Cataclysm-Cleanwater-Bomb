@@ -1,66 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ [ "s_gas_g0_roof" ], [ "s_gas_g1_roof" ] ],
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "     .............      ",
-        "     .............      ",
-        "     .............      ",
-        "     .............      ",
-        "     .............      ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "      --------------    ",
-        "      -............-    ",
-        "   ----............-    ",
-        "   -.....oo.oo.oo..-    ",
-        "   -.....oo.oo.oo..-    ",
-        "   -.....oo.oo.oo..-    ",
-        "   -...............-    ",
-        "   -...............-    ",
-        "   -...............-    ",
-        "   -...............-    ",
-        "   -5-.XX.......----    ",
-        "     -.XX...:.A.-       ",
-        "     -..........-       ",
-        "     ------------       ",
-        "                        ",
-        "               ,,,,,    ",
-        "               ,,,,,    ",
-        "               ,,,,,    ",
-        "               ,,,,,    ",
-        "               ,,,,,    ",
-        "               ,,,,,    ",
-        "               ,,,,,    ",
-        "               ,,,,,    ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ",": "t_shingle_flat_roof" },
-      "furniture": { "X": "f_satellite" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ [ "s_gas_g0" ], [ "s_gas_g1" ] ],
     "object": {
       "fill_ter": { "param": "linoleum_color", "fallback": "t_linoleum_gray" },
@@ -185,24 +125,6 @@
       "vehicles": { "v": { "vehicle": "parking_garage", "chance": 40, "rotation": 90 } },
       "place_nested": [ { "chunks": [ "s_gas_g1_bunker_below" ], "x": 15, "y": 42, "neighbors": { "below": "s_gas_b11" } } ],
       "nested": { "§": { "chunks": [ "fire_extinguisher" ] } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "s_gas_g1_bunker_below",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rows": [
-        "#AAA#",
-        "##+##",
-        "#---#",
-        "#-B-#",
-        "#####"
-      ],
-      "palettes": [ "parametrized_walls_palette" ],
-      "terrain": { "+": "t_door_metal_pickable", "B": "t_ladder_down", "-": "t_metal_floor", "A": "t_metal_floor" },
-      "furniture": { "A": "f_locker" },
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
     }
   },
   {
