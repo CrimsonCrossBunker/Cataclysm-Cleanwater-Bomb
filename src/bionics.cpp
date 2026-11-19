@@ -36,7 +36,6 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
-#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "color.h"
