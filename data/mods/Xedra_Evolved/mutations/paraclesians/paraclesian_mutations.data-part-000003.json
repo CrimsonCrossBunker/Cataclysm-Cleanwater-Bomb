@@ -1,0 +1,11 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_PARACLESIANS_CANNOT_USE_PURIFIER",
+    "//": "Paraclesians are elemental spirits, not humans, and purifier is human mutagen",
+    "recurrence": "10 m",
+    "condition": { "u_has_any_trait": [ "ARVORE", "HOMULLUS", "IERDE", "SALAMANDER", "SYLPH", "UNDINE" ] },
+    "deactivate_condition": { "not": { "u_has_any_trait": [ "ARVORE", "HOMULLUS", "IERDE", "SALAMANDER", "SYLPH", "UNDINE" ] } },
+    "effect": [ { "math": [ "u_vitamin('mutagen_human') = 0" ] } ]
+  }
+]
