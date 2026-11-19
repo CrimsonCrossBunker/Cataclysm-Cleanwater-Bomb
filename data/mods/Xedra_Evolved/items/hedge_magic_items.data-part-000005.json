@@ -1,31 +1,5 @@
 [
   {
-    "id": "item_hedge_astral_projection_cord",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str_sp": "[Ψ]silver cord" },
-    "description": "A thin silver cord, stretching off into the distance, connecting you to your body.  You could follow it back to return.",
-    "weight": "0 g",
-    "volume": "0 L",
-    "price": "1 cent",
-    "price_postapoc": "1 cent",
-    "symbol": "[",
-    "color": "light_gray",
-    "flags": [
-      "PERSONAL",
-      "UNBREAKABLE",
-      "ZERO_WEIGHT",
-      "ALLOWS_NATURAL_ATTACKS",
-      "INTEGRATED",
-      "PADDED",
-      "SEMITANGIBLE",
-      "WATER_FRIENDLY",
-      "NO_DROP"
-    ],
-    "max_worn": 1,
-    "environmental_protection": 0
-  },
-  {
     "id": "item_hedge_raziel_amulet_protection",
     "copy-from": "copper_necklace",
     "looks_like": "copper_necklace",
