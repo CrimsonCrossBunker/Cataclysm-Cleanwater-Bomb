@@ -4,10 +4,5 @@
     "id": "fbmc_lightindustry_workshop_palette",
     "terrain": { "x": "t_null" },
     "furniture": { "x": "f_clear" }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_lightindustry_workshop_drop_hammer",
-    "object": { "set": [ { "point": "furniture", "id": "f_drophammer", "x": 12, "y": 12 } ] }
   }
 ]

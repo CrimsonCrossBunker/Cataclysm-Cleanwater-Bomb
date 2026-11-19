@@ -177,3 +177,51 @@ ccb.content.define_mapgen {
         item_group_placements = { { x = 4, y = 9, group = "digging_soil_loam_50L", chance = 99, repetitions = 1080 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_radio_tower_0",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_bulletin", x = 9, y = 8 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_radio_tower_1",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_bulletin", x = 9, y = 8 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_radio_tower_fix_controls",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_clear", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "faction_base_radio_tower_fix_tower",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_clear", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_radio_tower_root_cellar",
+    layout = {
+        tile_edits = { { shape = "point", operation = "terrain", id = "t_rootcellar", x = 19, y = 9 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_radio_tower_water_well",
+    layout = {
+        tile_edits = { { shape = "point", operation = "terrain", id = "t_water_pump", x = 19, y = 10 } },
+    },
+}

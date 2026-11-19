@@ -78,3 +78,18 @@ ccb.content.define_mapgen {
         nested = { { id = "fbmc_construction_shack_east", x = 3, y = 16 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_radio_tower_construction_shack_7",
+    layout = {
+        nested = {
+            { id = "fbmc_construction_wall_horizontal", x = 3, y = 10 },
+            { id = "fbmc_construction_shack_east", x = 3, y = 11 },
+        },
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_dirt", x = 9, y = 13 },
+            { shape = "point", operation = "terrain", id = "t_dirt", x = 11, y = 16 },
+        },
+    },
+}

@@ -306,3 +306,205 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_fireplace",
+    layout = {
+        loot_placements = { { id = "pot", x = 10, y = 10 }, { id = "pan", x = 10, y = 10 } },
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_fireplace", x = 11, y = 10, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_chimney", x = 11, y = 10, z = 1 },
+            { shape = "point", operation = "furniture", id = "f_counter", x = 10, y = 10, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_fireplace", x = 13, y = 10, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_chimney", x = 13, y = 10, z = 1 },
+            { shape = "point", operation = "furniture", id = "f_counter", x = 14, y = 10, z = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_stove",
+    layout = {
+        loot_placements = { { id = "pot", x = 10, y = 10 }, { id = "pan", x = 10, y = 10 } },
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_woodstove", x = 11, y = 10, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_vent_pipe", x = 11, y = 10, z = 1 },
+            { shape = "point", operation = "furniture", id = "f_counter", x = 10, y = 10, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_woodstove", x = 13, y = 10, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_vent_pipe", x = 13, y = 10, z = 1 },
+            { shape = "point", operation = "furniture", id = "f_counter", x = 14, y = 10, z = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_well",
+    layout = {
+        tile_edits = { { shape = "point", operation = "terrain", id = "t_water_pump", x = 17, y = 16 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_smoking_kiln",
+    layout = {
+        tile_edits = {
+            {
+                shape = "point",
+                operation = "furniture",
+                id = "f_smoking_rack",
+                x = 19,
+                y = 19,
+                z = 0,
+            },
+            {
+                shape = "point",
+                operation = "furniture",
+                id = "f_smoking_rack",
+                x = 19,
+                y = 20,
+                z = 0,
+            },
+            {
+                shape = "point",
+                operation = "furniture",
+                id = "f_smoking_rack",
+                x = 19,
+                y = 21,
+                z = 0,
+            },
+            { shape = "point", operation = "furniture", id = "f_kiln_empty", x = 17, y = 18, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_chimney", x = 17, y = 18, z = 1 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_root_cellar",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_rootcellar", x = 9, y = 14 },
+            { shape = "point", operation = "terrain", id = "t_rootcellar", x = 11, y = 14 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_pantry",
+    layout = {
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "furniture",
+                id = "f_rack_wood",
+                x = 1,
+                end_x = 9,
+                y = 10,
+                end_y = 10,
+            },
+            {
+                shape = "line",
+                operation = "furniture",
+                id = "f_rack_wood",
+                x = 1,
+                end_x = 7,
+                y = 12,
+                end_y = 12,
+            },
+            {
+                shape = "line",
+                operation = "furniture",
+                id = "f_rack_wood",
+                x = 1,
+                end_x = 8,
+                y = 14,
+                end_y = 14,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_butchery",
+    layout = {
+        loot_placements = { { id = "knife_huge", variant = "knife_butcher", x = 17, y = 22 } },
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_butcher_rack", x = 16, y = 22 },
+            { shape = "point", operation = "furniture", id = "f_table", x = 17, y = 22 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_bench_bath",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_bench", x = 16, y = 13 },
+            { shape = "point", operation = "furniture", id = "f_bench", x = 16, y = 14 },
+            { shape = "point", operation = "furniture", id = "f_bench", x = 16, y = 15 },
+            { shape = "point", operation = "furniture", id = "f_birdbath", x = 19, y = 14 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_tank",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_standing_tank", x = 1, y = 11 },
+            { shape = "point", operation = "furniture", id = "f_standing_tank", x = 1, y = 13 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_display",
+    layout = {
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "furniture",
+                id = "f_rack",
+                x = 2,
+                end_x = 4,
+                y = 16,
+                end_y = 16,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_vat",
+    layout = {
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "furniture",
+                id = "f_fvat_empty",
+                x = 1,
+                end_x = 1,
+                y = 16,
+                end_y = 21,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmk_2_windmill",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_wind_mill", x = 19, y = 16 } },
+    },
+}

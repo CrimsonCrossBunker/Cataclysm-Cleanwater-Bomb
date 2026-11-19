@@ -204,3 +204,82 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmg_2_furniture",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_counter", x = 1, y = 17 },
+            { shape = "point", operation = "furniture", id = "f_counter", x = 1, y = 18 },
+            { shape = "point", operation = "furniture", id = "f_rack", x = 1, y = 20 },
+            { shape = "point", operation = "furniture", id = "f_rack", x = 1, y = 21 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmg_2_gate_2",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_palisade", x = 1, y = 10 },
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_palisade_gate",
+                x = 2,
+                end_x = 17,
+                y = 10,
+                end_y = 10,
+            },
+            { shape = "point", operation = "terrain", id = "t_palisade", x = 18, y = 10 },
+            { shape = "point", operation = "terrain", id = "t_palisade_pulley", x = 18, y = 9 },
+            { shape = "point", operation = "terrain", id = "t_palisade_pulley", x = 18, y = 11 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmg_2_gate_3",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_palisade", x = 1, y = 5 },
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_palisade_gate",
+                x = 2,
+                end_x = 17,
+                y = 5,
+                end_y = 5,
+            },
+            { shape = "point", operation = "terrain", id = "t_palisade", x = 18, y = 5 },
+            { shape = "point", operation = "terrain", id = "t_palisade_pulley", x = 18, y = 4 },
+            { shape = "point", operation = "terrain", id = "t_palisade_pulley", x = 18, y = 6 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmg_2_gate_4",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_palisade", x = 1, y = 1 },
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_palisade_gate",
+                x = 2,
+                end_x = 17,
+                y = 1,
+                end_y = 1,
+            },
+            { shape = "point", operation = "terrain", id = "t_palisade", x = 18, y = 1 },
+            { shape = "point", operation = "terrain", id = "t_palisade_pulley", x = 18, y = 0 },
+            { shape = "point", operation = "terrain", id = "t_palisade_pulley", x = 18, y = 2 },
+        },
+    },
+}

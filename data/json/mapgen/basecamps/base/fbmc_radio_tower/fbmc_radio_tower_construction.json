@@ -33,16 +33,5 @@
       "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
       "palettes": [ { "param": "fbmc_construction_palette" } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_radio_tower_construction_shack_7",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "fbmc_construction_wall_horizontal" ], "x": 3, "y": 10 },
-        { "chunks": [ "fbmc_construction_shack_east" ], "x": 3, "y": 11 }
-      ],
-      "set": [ { "point": "terrain", "id": "t_dirt", "x": 9, "y": 13 }, { "point": "terrain", "id": "t_dirt", "x": 11, "y": 16 } ]
-    }
   }
 ]

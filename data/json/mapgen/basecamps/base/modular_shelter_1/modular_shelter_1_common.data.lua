@@ -94,3 +94,112 @@ ccb.content.define_mapgen {
         palettes = { "fbmc_shelter_1_palette" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_shelter_1_0",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_floor", x = 15, y = 15 },
+            { shape = "point", operation = "furniture", id = "f_bulletin", x = 15, y = 15 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_shelter_1_fireplace",
+    layout = {
+        loot_placements = { { id = "pot", x = 18, y = 15, chance = 100 } },
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_fireplace", x = 18, y = 14, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_chimney", x = 18, y = 14, z = 1 },
+            { shape = "point", operation = "furniture", id = "f_table", x = 18, y = 15, z = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_shelter_1_brazier",
+    layout = {
+        loot_placements = { { id = "pot", x = 18, y = 15, chance = 100 } },
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_brazier", x = 18, y = 14 },
+            { shape = "point", operation = "furniture", id = "f_table", x = 18, y = 15 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_shelter_1_stove",
+    layout = {
+        loot_placements = { { id = "pot", x = 18, y = 15, chance = 100 } },
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_woodstove", x = 18, y = 14, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_vent_pipe", x = 18, y = 14, z = 1 },
+            { shape = "point", operation = "furniture", id = "f_table", x = 18, y = 15, z = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_shelter_1_well",
+    layout = {
+        tile_edits = { { shape = "point", operation = "terrain", id = "t_water_pump", x = 16, y = 18 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_shelter_1_livingroom",
+    layout = {
+        nested = { { id = "fbmc_shelter_1_living_room", x = 8, y = 11 } },
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_bookcase", x = 8, y = 16 },
+            { shape = "point", operation = "furniture", id = "f_bookcase", x = 9, y = 16 },
+            { shape = "point", operation = "furniture", id = "f_bookcase", x = 10, y = 16 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_shelter_1_pantry",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_rack_wood", x = 18, y = 16 },
+            { shape = "point", operation = "furniture", id = "f_rack_wood", x = 18, y = 17 },
+            { shape = "point", operation = "furniture", id = "f_rack_wood", x = 13, y = 15 },
+            { shape = "point", operation = "furniture", id = "f_rack_wood", x = 14, y = 15 },
+            { shape = "point", operation = "furniture", id = "f_rack_wood", x = 18, y = 20 },
+            { shape = "point", operation = "furniture", id = "f_rack_wood", x = 18, y = 21 },
+            { shape = "point", operation = "furniture", id = "f_rack_wood", x = 18, y = 22 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_shelter_1_craftspot",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_workbench", x = 16, y = 15 },
+            { shape = "point", operation = "furniture", id = "f_workbench", x = 16, y = 16 },
+            { shape = "point", operation = "furniture", id = "f_workbench", x = 17, y = 11 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_shelter_1_radio_console",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_radio_tower", x = 18, y = 8 },
+            { shape = "point", operation = "terrain", id = "t_radio_controls", x = 18, y = 9 },
+        },
+    },
+}

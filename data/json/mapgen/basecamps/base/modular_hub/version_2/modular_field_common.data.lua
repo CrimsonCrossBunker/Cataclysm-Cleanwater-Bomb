@@ -195,3 +195,110 @@ ccb.content.define_mapgen {
         palettes = { "fbmh_2_palette_common" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmh_2_brazier_NE",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_brazier", x = 22, y = 2 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmh_2_center_fireplace",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_fireplace", x = 2, y = 12, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_chimney", x = 2, y = 12, z = 1 },
+            { shape = "point", operation = "furniture", id = "f_counter", x = 3, y = 12, z = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmh_2_center_butchery",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_butcher_rack", x = 21, y = 11 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmh_2_center_toolrack",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_bookcase", x = 4, y = 12 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_2_tableset",
+    layout = {
+        size = { width = 3, height = 3 },
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_chair", x = 0, y = 1 },
+            { shape = "point", operation = "furniture", id = "f_table", x = 1, y = 1 },
+            { shape = "point", operation = "furniture", id = "f_chair", x = 2, y = 1 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_2_tableset_large",
+    layout = {
+        size = { width = 4, height = 4 },
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_chair", x = 0, y = 1 },
+            { shape = "point", operation = "furniture", id = "f_table", x = 1, y = 1 },
+            { shape = "point", operation = "furniture", id = "f_table", x = 2, y = 1 },
+            { shape = "point", operation = "furniture", id = "f_chair", x = 3, y = 1 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmh_2_center_stove",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "furniture", id = "f_woodstove", x = 19, y = 11, z = 0 },
+            { shape = "point", operation = "furniture", id = "f_vent_pipe", x = 19, y = 11, z = 1 },
+            { shape = "point", operation = "furniture", id = "f_counter", x = 20, y = 11, z = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmh_2_well",
+    layout = {
+        tile_edits = { { shape = "point", operation = "terrain", id = "t_water_pump", x = 9, y = 8 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmh_2_root_cellar",
+    layout = {
+        tile_edits = { { shape = "point", operation = "terrain", id = "t_rootcellar", x = 13, y = 8 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmh_2_radio_tower",
+    layout = {
+        tile_edits = { { shape = "point", operation = "terrain", id = "t_radio_tower", x = 17, y = 8 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmh_2_radio_console",
+    layout = {
+        tile_edits = { { shape = "point", operation = "terrain", id = "t_radio_controls", x = 16, y = 8 } },
+    },
+}

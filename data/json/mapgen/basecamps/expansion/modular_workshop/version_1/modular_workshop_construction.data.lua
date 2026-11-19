@@ -75,3 +75,21 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmw_room11to12_construction_southeast",
+    layout = {
+        nested = {
+            { id = "fbmw_room11_construction", x = 15, y = 15, z = 0 },
+            { id = "fbmw_room11_roof_construction", x = 15, y = 15, z = 1 },
+            { id = "fbmw_room12_construction", x = 9, y = 15, z = 0 },
+            { id = "fbmw_room12_roof_construction", x = 9, y = 15, z = 1 },
+        },
+        loot_placements = {
+            { id = "wrench", x = 19, y = 7, chance = 100 },
+            { id = "pliers", x = 19, y = 7, chance = 100 },
+        },
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_drophammer", x = 19, y = 12 } },
+    },
+}

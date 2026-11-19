@@ -267,17 +267,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "fbmc_shelter_2_bedroom_E1",
-    "object": {
-      "set": [
-        { "point": "terrain", "id": "t_door_c", "x": 12, "y": 14 },
-        { "point": "terrain", "id": "t_door_c", "x": 12, "y": 17 }
-      ],
-      "place_nested": [ { "chunks": [ "fbmc_shelter_2_bedroom_east1" ], "x": 13, "y": 14 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmc_shelter_2_bedroom_east2",
     "object": {
       "parameters": {

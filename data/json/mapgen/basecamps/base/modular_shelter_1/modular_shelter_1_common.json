@@ -8,56 +8,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "fbmc_shelter_1_0",
-    "object": {
-      "set": [
-        { "point": "terrain", "id": "t_floor", "x": 15, "y": 15 },
-        { "point": "furniture", "id": "f_bulletin", "x": 15, "y": 15 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_shelter_1_fireplace",
-    "object": {
-      "set": [
-        { "point": "furniture", "id": "f_fireplace", "x": 18, "y": 14, "z": 0 },
-        { "point": "furniture", "id": "f_chimney", "x": 18, "y": 14, "z": 1 },
-        { "point": "furniture", "id": "f_table", "x": 18, "y": 15, "z": 0 }
-      ],
-      "place_loot": [ { "item": "pot", "x": 18, "y": 15, "chance": 100 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_shelter_1_brazier",
-    "object": {
-      "set": [
-        { "point": "furniture", "id": "f_brazier", "x": 18, "y": 14 },
-        { "point": "furniture", "id": "f_table", "x": 18, "y": 15 }
-      ],
-      "place_loot": [ { "item": "pot", "x": 18, "y": 15, "chance": 100 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_shelter_1_stove",
-    "object": {
-      "set": [
-        { "point": "furniture", "id": "f_woodstove", "x": 18, "y": 14, "z": 0 },
-        { "point": "furniture", "id": "f_vent_pipe", "x": 18, "y": 14, "z": 1 },
-        { "point": "furniture", "id": "f_table", "x": 18, "y": 15, "z": 0 }
-      ],
-      "place_loot": [ { "item": "pot", "x": 18, "y": 15, "chance": 100 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_shelter_1_well",
-    "object": { "set": [ { "point": "terrain", "id": "t_water_pump", "x": 16, "y": 18 } ] }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "fbmc_shelter_1_bed_nw_wall",
     "object": {
       "parameters": {
@@ -154,54 +104,6 @@
         "  bb"
       ],
       "palettes": [ "fbmc_shelter_1_palette", { "param": "fbmc_bed_palette" } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_shelter_1_livingroom",
-    "object": {
-      "place_nested": [ { "chunks": [ "fbmc_shelter_1_living_room" ], "x": 8, "y": 11 } ],
-      "set": [
-        { "point": "furniture", "id": "f_bookcase", "x": 8, "y": 16 },
-        { "point": "furniture", "id": "f_bookcase", "x": 9, "y": 16 },
-        { "point": "furniture", "id": "f_bookcase", "x": 10, "y": 16 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_shelter_1_pantry",
-    "object": {
-      "set": [
-        { "point": "furniture", "id": "f_rack_wood", "x": 18, "y": 16 },
-        { "point": "furniture", "id": "f_rack_wood", "x": 18, "y": 17 },
-        { "point": "furniture", "id": "f_rack_wood", "x": 13, "y": 15 },
-        { "point": "furniture", "id": "f_rack_wood", "x": 14, "y": 15 },
-        { "point": "furniture", "id": "f_rack_wood", "x": 18, "y": 20 },
-        { "point": "furniture", "id": "f_rack_wood", "x": 18, "y": 21 },
-        { "point": "furniture", "id": "f_rack_wood", "x": 18, "y": 22 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_shelter_1_craftspot",
-    "object": {
-      "set": [
-        { "point": "furniture", "id": "f_workbench", "x": 16, "y": 15 },
-        { "point": "furniture", "id": "f_workbench", "x": 16, "y": 16 },
-        { "point": "furniture", "id": "f_workbench", "x": 17, "y": 11 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmc_shelter_1_radio_console",
-    "object": {
-      "set": [
-        { "point": "terrain", "id": "t_radio_tower", "x": 18, "y": 8 },
-        { "point": "terrain", "id": "t_radio_controls", "x": 18, "y": 9 }
-      ]
     }
   }
 ]

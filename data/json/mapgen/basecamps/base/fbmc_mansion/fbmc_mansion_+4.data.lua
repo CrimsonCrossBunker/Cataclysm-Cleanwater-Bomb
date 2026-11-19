@@ -31,3 +31,22 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_mansion_+4",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_bulletin", x = 9, y = 2 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_mansion_+4_radio",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_radio_tower", x = 9, y = 0 },
+            { shape = "point", operation = "terrain", id = "t_radio_controls", x = 9, y = 1 },
+        },
+    },
+}

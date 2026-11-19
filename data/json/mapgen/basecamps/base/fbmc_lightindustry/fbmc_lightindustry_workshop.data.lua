@@ -32,3 +32,11 @@ ccb.content.define_mapgen {
         nested = { { id = "faction_base_lightindustry_workshop_0", x = 0, y = 0 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_lightindustry_workshop_drop_hammer",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_drophammer", x = 12, y = 12 } },
+    },
+}

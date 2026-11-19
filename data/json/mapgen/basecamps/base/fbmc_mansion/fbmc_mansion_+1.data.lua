@@ -44,3 +44,22 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_mansion_+1",
+    layout = {
+        tile_edits = { { shape = "point", operation = "furniture", id = "f_bulletin", x = 9, y = 9 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_mansion_+1_radio",
+    layout = {
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_radio_tower", x = 8, y = 9 },
+            { shape = "point", operation = "terrain", id = "t_radio_controls", x = 8, y = 10 },
+        },
+    },
+}

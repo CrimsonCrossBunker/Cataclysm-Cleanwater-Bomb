@@ -74,3 +74,15 @@ ccb.content.define_mapgen {
         nested = { { id = "fbmc_shelter_2_bedroom_east4", x = 18, y = 17 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "fbmc_shelter_2_bedroom_E1",
+    layout = {
+        nested = { { id = "fbmc_shelter_2_bedroom_east1", x = 13, y = 14 } },
+        tile_edits = {
+            { shape = "point", operation = "terrain", id = "t_door_c", x = 12, y = 14 },
+            { shape = "point", operation = "terrain", id = "t_door_c", x = 12, y = 17 },
+        },
+    },
+}
