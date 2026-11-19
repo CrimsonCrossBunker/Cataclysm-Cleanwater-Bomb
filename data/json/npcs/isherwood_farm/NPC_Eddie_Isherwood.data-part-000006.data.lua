@@ -1,35 +1,40 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ISHERWOOD_EDDIE2",
-    line = ccb.content.text("*speaks in a quiet monotone, like he's reading off a page.  \"Barry and Carlos went to hunt down something that killed our livestock, they tracked it into the forest.  It grabbed Barry and ran off, you might be able to get Carlos to tell you the story, if he can bring himself to share what happened.\""),
+    id = "TALK_ISHERWOOD_EDDIE_MarshalOff_GoAway",
+    line = ccb.content.text("I feel like maybe you didn't hear me right.  Get.  Off.  My.  Land."),
+    replies = {
+        {
+            text = ccb.content.text("You can't make me."),
+            next_topic = "TALK_LEAVE_NOW_MARSHAL",
+            native_actions = { "hostile" },
+            opinion = { trust = -20, value = -20 },
+        },
+        {
+            text = ccb.content.text("…[Leave.]"),
+            next_topic = "TALK_DONE",
+            opinion = { trust = -20, value = -20 },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ISHERWOOD_EDDIE_Marshal",
+    line = ccb.content.text("*spits on the ground.  \"Didn't much care for the government and the cops before everything happened, care for them quite a bit less now.  We've had a run-in or two with the folks calling themselves the 'Old Guard'.  That's all I care to say about it.  They'll never be welcome on my land and I don't believe for a second that they didn't cause all this in the first place.\""),
     replies = {
         {
             text = ccb.content.text_without_extraction("<done_conversation_section>"),
             next_topic = "TALK_ISHERWOOD_EDDIE_TOPICS",
         },
         {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            text = ccb.content.text("Thanks for telling me.  <end_talking_bye>"),
             next_topic = "TALK_DONE",
         },
     },
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_JACK_CLAIRE",
-    line = ccb.content.text("Yeah, I could use some help getting materials.  I want to outfit that old building across the road with some kilns.  We want to make our own jars and pottery so we aren't dependent on scavenging."),
-    replies = {
-        {
-            text = ccb.content.text("That is a good idea, what do you need?"),
-            next_topic = "TALK_MISSION_LIST",
-        },
-        {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_ISHERWOOD_EDDIE_TOPICS",
-        },
-        {
-            text = ccb.content.text("I'm not interested right now.  <end_talking_leave>"),
-            next_topic = "TALK_DONE",
-        },
-    },
+    id = "TALK_ISHERWOOD_EDDIE_RESTOCK",
+    line = ccb.content.text("If the cows don't get anything nasty it should be around <restock_time_point>."),
+    replies = { { text = ccb.content.text("Cheers, bye."), next_topic = "TALK_DONE" } },
 }

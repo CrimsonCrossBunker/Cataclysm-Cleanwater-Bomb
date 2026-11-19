@@ -1,0 +1,24 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ISHERWOOD_EDDIE_SawMarshal",
+    "dynamic_line": {
+      "u_is_wearing": "badge_marshal",
+      "yes": "*glares at your marshal badge.  \"I said, keep *walking*, G-man.\"",
+      "no": "*spits on the ground, glancing at where your marshal badge would have been, and shaking his head.  \"Nice try.  You can take off the badge, but I know what you are, I'm not some country rube.  Get out.\""
+    },
+    "responses": [
+      {
+        "text": "<color_green>[Social 3]</color> I swear, I'm not here to cause trouble.  I just volunteer with those guys to help travelers, things like that.  I don't speak for them.",
+        "topic": "TALK_ISHERWOOD_EDDIE_MarshalOff_Convince",
+        "condition": { "and": [ { "not": { "u_is_wearing": "badge_marshal" } }, { "math": [ "u_skill('speech') >= 3" ] } ] }
+      },
+      {
+        "text": "<color_yellow>[Social <3]</color> I took it off man, what more do you want from me?",
+        "topic": "TALK_ISHERWOOD_EDDIE_MarshalOff_GoAway",
+        "condition": { "and": [ { "not": { "u_is_wearing": "badge_marshal" } }, { "math": [ "u_skill('speech') < 3" ] } ] }
+      },
+      { "text": "Fine, I'm gone.", "topic": "TALK_DONE" }
+    ]
+  }
+]

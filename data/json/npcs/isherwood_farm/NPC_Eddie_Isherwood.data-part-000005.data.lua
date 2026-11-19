@@ -1,21 +1,18 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ISHERWOOD_EDDIE_TALK1",
-    line = ccb.content.text("I run this dairy with my son, Luke.  It's been a tough job keeping the herd together, hasn't left a lot of time for other projects."),
+    id = "TALK_ISHERWOOD_EDDIE_MarshalOff_Convince",
+    line = ccb.content.text("*grimaces.  \"Fine, I'll give you a chance, but you don't mess with me or my family, you understand?  This is our land, not yours.  Or theirs.\""),
+    on_enter = { { actions = { actions.set_first_topic("TALK_ISHERWOOD_EDDIE_ConvincedMarshal") } } },
     replies = {
         {
-            text = ccb.content.text("I heard about Barry, such a tragedy.  Can you tell me more about what happened?"),
-            next_topic = "TALK_ISHERWOOD_EDDIE2",
-            when = predicates.all({ predicates.negate(predicates.wears("speaker", "badge_marshal")), predicates.any_equal({ "yes", { scope = "speaker", key = "u_learned_barry_missing" } }) }),
-        },
-        {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            text = ccb.content.text("Thanks for hearing me out."),
             next_topic = "TALK_ISHERWOOD_EDDIE_TOPICS",
         },
         {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            text = ccb.content.text("Thanks.  I'll give you space for now."),
             next_topic = "TALK_DONE",
         },
     },
