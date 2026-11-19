@@ -57,27 +57,5 @@
     ],
     "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "aetheric_charge": 4800 }, "airtight": true } ],
     "charge_info": { "recharge_type": "periodic", "time": "30 s", "regenerate_ammo": true }
-  },
-  {
-    "id": "bio_launcher",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str": "bio detonator" },
-    "description": "A long, huge barrel drum mortar with a small device in the very end.  It is collapsible, and you can comfortably wear it using a strap.",
-    "looks_like": "m3_carlgustav",
-    "material": [ "mc_steel" ],
-    "weight": "2560 g",
-    "volume": "5896 ml",
-    "longest_side": "1200 mm",
-    "symbol": "[",
-    "color": "dark_gray",
-    "charges_per_use": 1,
-    "use_action": { "type": "cast_spell", "spell_id": "bio_explosion", "no_fail": true, "level": 0, "need_wielding": true },
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "bio_warhead": 1 } } ],
-    "armor": [
-      { "encumbrance": [ 10, 12 ], "coverage": 70, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] }
-    ],
-    "flags": [ "TRADER_AVOID", "PADDED", "BELTED", "OVERSIZE", "WATER_FRIENDLY", "MUNDANE", "INVENTOR_CRAFTED" ],
-    "tool_ammo": [ "bio_warhead" ]
   }
 ]
