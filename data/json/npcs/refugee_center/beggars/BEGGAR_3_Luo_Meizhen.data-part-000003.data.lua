@@ -1,12 +1,38 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_BEGGAR_3_EVACUATION",
-    line = ccb.content.text("Oh yeah, that was a hell of a shitstorm.  We were waiting back there for 'processing' for hours and hours, with the sick and wounded.  One guy died, we all thought he was sleeping until he got back up.  That started a panic, gunshots in a closed area, that kind of stuff.  In just a few minutes, a bunch more people were dead.  Then the assholes called it an 'outbreak' and tried to barricade us in… took us way too long to convince the panicking guards that we were alive and needed to get out.  I'll give the one guy credit, Sean: when he found out they'd locked living people in with zombies, he came in himself, as some of the newly dead were starting to get back up, and he held them off for us to escape.  That… that was probably the only actual good thing I've seen since before the end of the world: he owned his error and he put himself in harm's way to make up for it.  Massive respect to that guy.  So, of course, he's a zombie now.  Fuck, thanks for reminding me of all that sunny fun."),
+    id = "TALK_REFUGEE_BEGGAR_3_COMPLAIN",
+    line = ccb.content.text("They're 'too full'.  Won't share fuck-all."),
     replies = {
         {
-            text = ccb.content.text("Sorry for bringing it up. What were you saying?"),
-            next_topic = "TALK_NONE",
+            text = ccb.content.text("Why are you living here then?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_3_COMPLAIN2",
+        },
+        {
+            when = predicates.negate(predicates.has_effect("interlocutor", "beggar_has_eaten")),
+            text = ccb.content.text("Well, they might not share, but I can.  Are you hungry?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_3_GIVE_FOOD",
+        },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_BEGGAR_3_COMPLAIN2",
+    line = ccb.content.text("Even without them helping, it's the safest place to squat.  As long as we keep it clean up here and don't cause sanitation problems, they don't mind us sitting around the entryway.  So kind and generous of them, to let us sit here and slowly starve."),
+    replies = {
+        {
+            when = predicates.negate(predicates.has_effect("interlocutor", "beggar_has_eaten")),
+            text = ccb.content.text("Well, they might not share, but I can.  Are you hungry?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_3_GIVE_FOOD",
+        },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
         },
     },
 }
