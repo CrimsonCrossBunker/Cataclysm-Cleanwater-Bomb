@@ -1,0 +1,21 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "corpsefire_cap",
+    "name": { "str": "corpsefire cap" },
+    "description": "The cap of a corpsefire mushroom.  It still has a faint glow about it.",
+    "comestible_type": "FOOD",
+    "weight": "70 g",
+    "volume": "200 ml",
+    "color": "white",
+    "symbol": ",",
+    "material": [ "veggy" ],
+    "flags": [ "RAW" ],
+    "light": 2,
+    "calories": 10,
+    "spoils_in": "8 days 16 hours",
+    "fun": 0,
+    "use_action": [ "BLECH" ]
+  }
+]
