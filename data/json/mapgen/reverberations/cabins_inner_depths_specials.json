@@ -190,42 +190,5 @@
       "furniture": { "{": "f_bench", "}": "f_bench", "Y": "f_trashcan" },
       "vendingmachines": { "(": { "item_group": "vending_drink", "lootable": true }, ")": { "item_group": "vending_food", "lootable": true } }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "inner_cabins_depths_sewer_sub_station" ],
-    "object": {
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "predecessor_mapgen": "inner_cabins_depths_north",
-      "rows": [
-        "                        ",
-        "                        ",
-        "     IIIIIII+IIIIII     ",
-        "     IbbCI....IJbbI     ",
-        "IIIIII............I     ",
-        "INNNNI............I     ",
-        "IN...I............I     ",
-        "IN...I............I     ",
-        "I+II+I............III   ",
-        "  II................II  ",
-        "  I......I+I~~I......I  ",
-        "  I......~....~......+  ",
-        "  IsZzzZsIQc..IsZzzZsI  ",
-        "  +......~QQQ.+......I  ",
-        "  IM.....~~~~~I......I  ",
-        "  IT................TI  ",
-        "  IIAT............TAII  ",
-        "   III............III   ",
-        "     I............I     ",
-        "     I............I     ",
-        "     I...IJbbCI...I     ",
-        "     IIIIIIIIIIII+I     ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { ".": "t_thconc_floor" },
-      "palettes": [ "inner_cabins_depths_subway_underground" ],
-      "vendingmachines": { "J": { "item_group": "vending_drink", "lootable": true }, "C": { "item_group": "vending_food", "lootable": true } }
-    }
   }
 ]
