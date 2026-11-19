@@ -218,17 +218,5 @@
         { "overmap": "tentacle_end_straight", "weight": 10 }
       ]
     ]
-  },
-  {
-    "type": "palette",
-    "id": "cathedral_of_flesh_monster_surface_palette",
-    "nested": {
-      "|": { "chunks": [ "nest_nm_wall_flesh_roof" ] },
-      "#": { "chunks": [ "nest_cathedral_of_flesh_wall_flesh_roof" ] },
-      "=": { "chunks": [ "nest_nm_floor_flesh_roof" ] },
-      "<": { "chunks": [ "nest_nm_slope_down_flesh_roof" ] },
-      "@": { "chunks": [ "nest_nm_wall_bone_roof" ] },
-      "T": { "chunks": [ "nest_nm_wall_teeth_bone_roof" ] }
-    }
   }
 ]

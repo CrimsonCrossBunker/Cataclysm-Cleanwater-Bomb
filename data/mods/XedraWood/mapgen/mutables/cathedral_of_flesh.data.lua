@@ -1,5 +1,19 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "cathedral_of_flesh_monster_surface_palette",
+    layout = {
+        nested_glyphs = {
+            ["|"] = { id = "nest_nm_wall_flesh_roof" },
+            ["#"] = { id = "nest_cathedral_of_flesh_wall_flesh_roof" },
+            ["="] = { id = "nest_nm_floor_flesh_roof" },
+            ["<"] = { id = "nest_nm_slope_down_flesh_roof" },
+            ["@"] = { id = "nest_nm_wall_bone_roof" },
+            T = { id = "nest_nm_wall_teeth_bone_roof" },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "pillar_of_flesh",

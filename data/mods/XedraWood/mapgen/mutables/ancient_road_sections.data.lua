@@ -1,5 +1,17 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "ancient_road",
+    layout = {
+        terrain = {
+            [" "] = { { id = "t_region_groundcover" } },
+            i = { { id = "t_stone_road", copies = 10 }, { id = "t_region_groundcover", copies = 1 } },
+            I = { { id = "t_region_tree", copies = 1 }, { id = "t_region_groundcover", copies = 2 } },
+            ["/"] = { { id = "t_stone_road", copies = 4 }, { id = "t_region_groundcover", copies = 1 } },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "ancient_road_end",
