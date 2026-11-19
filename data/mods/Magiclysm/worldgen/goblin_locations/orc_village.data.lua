@@ -1,5 +1,36 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "orc_palette",
+    layout = {
+        item_groups = {
+            ["="] = { group = "orc_village_storage", chance = 70, repetitions = { 1, 3 } },
+            U = { group = "orc_village_foodstuffs", repetitions = { 1, 3 }, chance = 80 },
+        },
+        terrain = {
+            ["3"] = "t_door_makeshift_c",
+            ["1"] = "t_palisade",
+            ["!"] = "t_pit_spiked",
+            ["-"] = "t_wall_wattle",
+            ["|"] = "t_wall_wattle",
+            ["#"] = "t_dirtfloor_thatchroof",
+            o = "t_dirtfloor_thatchroof",
+            B = "t_dirtfloor_thatchroof",
+            ["="] = "t_dirtfloor_thatchroof",
+            I = "t_wall_log_half",
+            ["."] = "t_dirt",
+        },
+        furniture = {
+            t = "f_logstool",
+            o = "f_firering",
+            O = "f_firering",
+            B = "f_straw_bed",
+            ["="] = "f_rack_wood",
+            H = "f_smoking_rack",
+        },
+    },
+}
+
 -- lore: brutally slaughtered human, only scraps of it remain. the goblins have taken everything they need from it and left the rest there to frighten every human that comes close to their outpost. can be reused for other purposes, such as humans eaten by animals.
 ccb.content.define_mapgen {
     kind = "nested",

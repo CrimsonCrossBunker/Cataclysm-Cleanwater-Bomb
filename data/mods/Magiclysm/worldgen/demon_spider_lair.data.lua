@@ -1,5 +1,61 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "demon_spider_lair",
+    layout = {
+        field_glyphs = {
+            [" "] = { id = "fd_web", intensity = 2 },
+            ["."] = { id = "fd_web", intensity = 3 },
+            s = { id = "fd_web", intensity = 3 },
+            S = { id = "fd_web", intensity = 3 },
+            ["~"] = { id = "fd_web", intensity = 3 },
+        },
+        item_groups = { ["$"] = { group = "demon_spider_lair_treasure", chance = 50, repetitions = { 3, 6 } } },
+        monster_glyphs = {
+            S = { id = "mon_demon_spider_queen", chance = 100 },
+            s = { id = "mon_demon_spider", chance = 100 },
+            ["."] = { id = "mon_demon_spiderling", chance = 8 },
+            [" "] = { id = "mon_demon_spiderling", chance = 1 },
+        },
+        terrain = {
+            ["7"] = {
+                { id = "t_tree_burnt", copies = 60 },
+                { id = "t_tree" },
+                { id = "t_tree_apple" },
+                { id = "t_tree_peach" },
+                { id = "t_tree_pear" },
+                { id = "t_tree_hickory" },
+                { id = "t_tree_beech" },
+                { id = "t_tree_coffee" },
+                { id = "t_tree_pine" },
+                { id = "t_tree_birch" },
+                { id = "t_tree_willow" },
+                { id = "t_tree_maple" },
+                { id = "t_webbed_corpse" },
+            },
+            ["~"] = { { id = "t_lava" } },
+            [" "] = {
+                { id = "t_grass_dead", copies = 2 },
+                { id = "t_dirt", copies = 15 },
+                { id = "t_sand", copies = 10 },
+                { id = "t_dirtmound", copies = 3 },
+                { id = "t_rock_floor_no_roof", copies = 8 },
+            },
+            ["."] = { { id = "t_dirtfloor" } },
+            ["$"] = { { id = "t_dirtfloor" } },
+            S = { { id = "t_lava" } },
+            s = {
+                { id = "t_dirtfloor", copies = 6 },
+                { id = "t_dirt", copies = 15 },
+                { id = "t_sand", copies = 10 },
+                { id = "t_dirtmound", copies = 4 },
+                { id = "t_rock_floor_no_roof", copies = 3 },
+            },
+            ["#"] = { { id = "t_demon_web_wall", copies = 10 }, { id = "t_tree_burnt" } },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { "demon_spider_lair" },

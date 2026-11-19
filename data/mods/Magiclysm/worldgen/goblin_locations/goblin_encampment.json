@@ -1,51 +1,5 @@
 [
   {
-    "type": "palette",
-    "id": "goblin_palette",
-    "terrain": {
-      "3": "t_palisade_gate",
-      "l": "t_ladder_up",
-      "#": "t_wall_rammed_earth",
-      "t": "t_wall_wattle",
-      "W": "t_wall_wattle_half",
-      "w": "t_wall_wattle_broken",
-      " ": "t_region_groundcover",
-      "T": "t_trunk",
-      "&": "t_palisade_pulley",
-      ",": [ [ "t_region_groundcover", 1 ], [ "t_dirt", 1 ] ],
-      "_": "t_dirt",
-      "@": "t_dirt",
-      "O": "t_dirt",
-      "|": "t_palisade",
-      "R": "t_dirtfloor_thatchroof",
-      ".": "t_dirtfloor",
-      "c": "t_dirtfloor",
-      "h": "t_dirtfloor",
-      "!": "t_dirtfloor",
-      "~": "t_dirtfloor",
-      "1": "t_dirtfloor",
-      "+": "t_door_makeshift_c",
-      "=": "t_water_murky"
-    },
-    "furniture": {
-      "h": "f_straw_bed",
-      "b": "f_bench_wooden",
-      "@": "f_logstool",
-      "c": "f_firering",
-      "O": "f_firering",
-      "R": "f_rack_wood",
-      "Y": [ [ "f_boulder_small", 5 ], "f_boulder_medium", "f_boulder_large" ]
-    },
-    "items": {
-      "c": { "item": "goblin_cookpot", "chance": 50 },
-      "h": { "item": "bed", "chance": 40, "repeat": [ 1, 2 ] },
-      "!": { "item": "boss_treasure_items", "chance": 40, "repeat": [ 1, 2 ] },
-      "$": { "item": "boss_treasure_items", "chance": 40, "repeat": [ 1, 2 ] },
-      "%": { "item": "midden_heap", "chance": 40, "repeat": [ 1, 2 ] },
-      "~": { "item": "midden_heap", "chance": 40, "repeat": [ 1, 2 ] }
-    }
-  },
-  {
     "type": "overmap_special",
     "id": "goblin_encampment",
     "overmaps": [

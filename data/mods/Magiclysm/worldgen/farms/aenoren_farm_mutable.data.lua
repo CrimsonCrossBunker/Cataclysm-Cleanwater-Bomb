@@ -1,5 +1,42 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "aenor_paddock",
+    layout = {
+        item_groups = { ["."] = { group = "sometimes_bird_litter", chance = 1 } },
+        monster_group_glyphs = { ["."] = { group = "GROUP_RANCH_AENOR_STABLES", chance = 900, density = 0.02 } },
+        terrain = {
+            [" "] = "t_null",
+            ["."] = { { id = "t_region_groundcover", copies = 45 }, { id = "t_region_shrub", copies = 2 } },
+            [","] = {
+                { id = "t_region_groundcover", copies = 45 },
+                { id = "t_region_shrub", copies = 10 },
+                { id = "t_region_tree_forest", copies = 10 },
+            },
+            _ = {
+                { id = "t_region_grass", copies = 1 },
+                { id = "t_grass_dead", copies = 12 },
+                { id = "t_region_soil", copies = 2 },
+            },
+            ["?"] = {
+                { id = "t_region_grass", copies = 6 },
+                { id = "t_grass_dead", copies = 6 },
+                { id = "t_region_soil", copies = 3 },
+            },
+            [";"] = "t_railroad_rubble",
+            o = "t_splitrail_fencegate_o",
+            c = "t_splitrail_fencegate_c",
+            ["%"] = "t_splitrail_fence",
+            e = "t_null",
+            j = "t_null",
+            s = "t_region_shrub",
+            w = "t_water_sh",
+            ["/"] = { { id = "t_region_soil", copies = 200 }, { id = "t_region_groundcover", copies = 5 } },
+        },
+        furniture = { e = "f_showjump_end", j = "f_showjump" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "farm_aenoren_stable_1_roof",

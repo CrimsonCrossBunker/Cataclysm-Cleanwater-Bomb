@@ -1,5 +1,57 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "goblin_palette",
+    layout = {
+        item_groups = {
+            ["!"] = { group = "boss_treasure_items", chance = 40, repetitions = { 1, 2 } },
+            ["$"] = { group = "boss_treasure_items", chance = 40, repetitions = { 1, 2 } },
+            ["%"] = { group = "midden_heap", chance = 40, repetitions = { 1, 2 } },
+            c = { group = "goblin_cookpot", chance = 50 },
+            h = { group = "bed", chance = 40, repetitions = { 1, 2 } },
+            ["~"] = { group = "midden_heap", chance = 40, repetitions = { 1, 2 } },
+        },
+        terrain = {
+            ["3"] = "t_palisade_gate",
+            l = "t_ladder_up",
+            ["#"] = "t_wall_rammed_earth",
+            t = "t_wall_wattle",
+            W = "t_wall_wattle_half",
+            w = "t_wall_wattle_broken",
+            [" "] = "t_region_groundcover",
+            T = "t_trunk",
+            ["&"] = "t_palisade_pulley",
+            [","] = { { id = "t_region_groundcover", copies = 1 }, { id = "t_dirt", copies = 1 } },
+            _ = "t_dirt",
+            ["@"] = "t_dirt",
+            O = "t_dirt",
+            ["|"] = "t_palisade",
+            R = "t_dirtfloor_thatchroof",
+            ["."] = "t_dirtfloor",
+            c = "t_dirtfloor",
+            h = "t_dirtfloor",
+            ["!"] = "t_dirtfloor",
+            ["~"] = "t_dirtfloor",
+            ["1"] = "t_dirtfloor",
+            ["+"] = "t_door_makeshift_c",
+            ["="] = "t_water_murky",
+        },
+        furniture = {
+            h = "f_straw_bed",
+            b = "f_bench_wooden",
+            ["@"] = "f_logstool",
+            c = "f_firering",
+            O = "f_firering",
+            R = "f_rack_wood",
+            Y = {
+                { id = "f_boulder_small", copies = 5 },
+                { id = "f_boulder_medium" },
+                { id = "f_boulder_large" },
+            },
+        },
+    },
+}
+
 -- ground entrance
 ccb.content.define_mapgen {
     kind = "overmap",
