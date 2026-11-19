@@ -1,40 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "mx_campfire_remnants",
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
-      "place_nested": [ { "chunks": [ "campfire_remnants_chunk" ], "x": [ 2, 8 ], "y": [ 2, 8 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "campfire_remnants_chunk",
     "weight": 1000,
     "object": {
