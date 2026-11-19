@@ -1,0 +1,54 @@
+[
+  {
+    "type": "technique",
+    "id": "tec_bojutsu_kneestrike",
+    "name": "Knee Strike",
+    "messages": [
+      "After blocking %s's attack you quickly strike at their knee",
+      "After blocking %s's attack <npcname> quickly strikes at their knee"
+    ],
+    "skill_requirements": [ { "name": "melee", "level": 2 } ],
+    "melee_allowed": true,
+    "block_counter": true,
+    "crit_ok": true,
+    "//condition": "Humanoids of similar size",
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
+        { "math": [ "n_val('size') != 1" ] },
+        { "not": { "npc_has_effect": "downed" } },
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
+      ]
+    },
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
+    "down_dur": 1,
+    "mult_bonuses": [ { "stat": "movecost", "scale": 0.8 } ],
+    "attack_vectors": [ "vector_null" ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_bojutsu_frontstrike",
+    "name": "Overhead Front Strike",
+    "messages": [
+      "You block %s's attack and counter with a Overhead Front Strike",
+      "<npcname> blocks %s's attack and counter with a Overhead Front Strike"
+    ],
+    "skill_requirements": [ { "name": "melee", "level": 3 } ],
+    "melee_allowed": true,
+    "block_counter": true,
+    "crit_ok": true,
+    "//condition": "Similar size",
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
+        { "math": [ "n_val('size') != 1" ] },
+        { "not": { "npc_has_effect": "stunned" } },
+        { "not": { "npc_bodytype": "blob" } }
+      ]
+    },
+    "condition_desc": "* Only works on a <info>non-stunned</info> target of <info>similar or smaller</info> size",
+    "stun_dur": 1,
+    "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.4 } ],
+    "attack_vectors": [ "vector_null" ]
+  }
+]

@@ -1,0 +1,56 @@
+[
+  {
+    "type": "technique",
+    "id": "BRUTAL",
+    "name": "Brutal Strike",
+    "melee_allowed": true,
+    "crit_tec": true,
+    "skill_requirements": [ { "name": "melee", "level": 2 } ],
+    "stun_dur": 1,
+    "knockback_dist": 1,
+    "//condition": "Basic size filtering, if the target is grabbing you contested roll of strength vs grab strength",
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') >= n_val('size')" ] },
+        { "not": { "npc_has_effect": "stunned" } },
+        {
+          "and": [
+            { "not": { "npc_has_species": "NETHER" } },
+            { "not": { "npc_has_species": "NETHER_EMANATION" } },
+            { "not": { "npc_has_species": "LEECH_PLANT" } },
+            { "not": { "npc_has_species": "MIGO" } },
+            { "not": { "npc_has_species": "SLIME" } },
+            { "not": { "npc_has_species": "FUNGUS" } },
+            { "not": { "npc_has_species": "PLANT" } },
+            { "not": { "npc_has_species": "ROBOT" } },
+            { "not": { "npc_has_species": "CYBORG" } },
+            { "not": { "npc_has_species": "HALLUCINATION" } },
+            { "not": { "npc_has_species": "HORROR" } },
+            { "not": { "npc_has_species": "ABERRATION" } },
+            { "not": { "npc_has_species": "KRAKEN" } }
+          ]
+        },
+        {
+          "or": [
+            {
+              "and": [
+                { "npc_has_flag": "GRAB_FILTER" },
+                { "u_has_flag": "GRAB" },
+                {
+                  "roll_contested": { "math": [ "u_val('strength')" ] },
+                  "die_size": 20,
+                  "difficulty": { "math": [ "n_val('grab_strength')" ] }
+                }
+              ]
+            },
+            { "not": { "and": [ { "npc_has_flag": "GRAB_FILTER" }, { "u_has_flag": "GRAB" } ] } }
+          ]
+        }
+      ]
+    },
+    "condition_desc": "* Only works on a <info>non-stunned mundane</info> target of <info>similar or smaller</info> size, may fail on enemies grabbing you",
+    "messages": [ "You send %s reeling", "<npcname> sends %s reeling" ],
+    "description": "Stun 1 turn, knockback 1 tile, crit only, min 2 melee",
+    "attack_vectors": [ "vector_null" ]
+  }
+]

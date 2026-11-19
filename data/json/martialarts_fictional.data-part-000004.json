@@ -1,0 +1,29 @@
+[
+  {
+    "type": "technique",
+    "id": "tec_venom_snake_tail",
+    "name": "Viper Tail",
+    "messages": [ "You beat %s down with a powerful Viper Tail", "<npcname> beats %s down with a powerful Viper Tail" ],
+    "skill_requirements": [ { "name": "unarmed", "level": 3 } ],
+    "unarmed_allowed": true,
+    "condition": { "npc_has_effect": "stunned" },
+    "condition_desc": "Requires a stunned target",
+    "weighting": 2,
+    "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.5 } ],
+    "attack_vectors": [ "vector_punch" ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_venom_snake_strike",
+    "name": "Viper Strike",
+    "messages": [ "You devastate %s with a spectacular Viper Strike", "<npcname> devastates %s with a spectacular Viper Strike" ],
+    "skill_requirements": [ { "name": "unarmed", "level": 4 } ],
+    "unarmed_allowed": true,
+    "condition": { "npc_has_effect": "stunned" },
+    "condition_desc": "Requires a stunned target",
+    "weighting": 2,
+    "crit_tec": true,
+    "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 2.0 } ],
+    "attack_vectors": [ "vector_punch" ]
+  }
+]

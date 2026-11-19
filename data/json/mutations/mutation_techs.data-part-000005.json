@@ -1,0 +1,19 @@
+[
+  {
+    "type": "technique",
+    "id": "VINE_LIMB_TRIP",
+    "name": "Vine trip",
+    "messages": [ "Your vines snake around %s and knock them down", "<npcname> knocks down %s with their vines" ],
+    "weighting": -2,
+    "unarmed_allowed": true,
+    "reach_ok": false,
+    "attack_vectors": [ "vector_vine_limb" ],
+    "condition": { "and": [ { "math": [ "u_val('size') >= n_val('size')" ] } ] },
+    "tech_effects": [ { "id": "downed", "chance": 100, "duration": 2, "on_damage": true, "message": "%s is knocked to the ground!" } ],
+    "flat_bonuses": [
+      { "stat": "damage", "type": "bash", "scale": -3 },
+      { "stat": "movecost", "scaling-stat": "melee", "scale": -1.25 },
+      { "stat": "movecost", "scaling-stat": "dex", "scale": -0.5 }
+    ]
+  }
+]

@@ -1,0 +1,121 @@
+[
+  {
+    "type": "technique",
+    "id": "tec_ninjutsu_takedown",
+    "name": "Ninjutsu Takedown (unarmed)",
+    "messages": [ "You quickly grab and bring %s to the ground", "<npcname> quickly grabs and brings %s to the ground" ],
+    "skill_requirements": [ { "name": "unarmed", "level": 4 } ],
+    "unarmed_allowed": true,
+    "forbidden_buffs_all": [ "buff_ninjutsu_onattack" ],
+    "crit_tec": true,
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
+        { "not": { "npc_has_effect": "downed" } },
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
+      ]
+    },
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
+    "down_dur": 2,
+    "weighting": 3,
+    "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 2.0 } ],
+    "attack_vectors": [ "vector_grasp" ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_ninjutsu_takedown_melee",
+    "name": "Ninjutsu Takedown (melee)",
+    "messages": [ "You quickly grab and bring %s to the ground", "<npcname> quickly grabs and brings %s to the ground" ],
+    "skill_requirements": [ { "name": "melee", "level": 4 } ],
+    "melee_allowed": true,
+    "forbidden_buffs_all": [ "buff_ninjutsu_onattack" ],
+    "weapon_categories_allowed": [ "KNIVES", "CLAWS" ],
+    "crit_tec": true,
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
+        { "not": { "npc_has_effect": "downed" } },
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
+      ]
+    },
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
+    "down_dur": 2,
+    "weighting": 3,
+    "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 2.0 } ],
+    "attack_vectors": [ "vector_grasp" ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_ninjutsu_staffdown",
+    "name": "Bite the Dust",
+    "messages": [ "You sweep %s to the ground", "<npcname> sweeps %s to the ground" ],
+    "skill_requirements": [ { "name": "melee", "level": 3 } ],
+    "required_buffs_all": [ "buff_ninjutsu_onattack" ],
+    "melee_allowed": true,
+    "weapon_categories_allowed": "QUARTERSTAVES",
+    "crit_ok": true,
+    "//condition": "Humanoids of similar size",
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
+        { "math": [ "n_val('size') != 1" ] },
+        { "not": { "npc_has_effect": "downed" } },
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
+      ]
+    },
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
+    "down_dur": 2,
+    "weighting": 2,
+    "attack_vectors": [ "vector_null" ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_ninjutsu_downkill",
+    "name": "Dirty Kill",
+    "messages": [ "You strike and confine %s to the ground", "<npcname> strikes and confines %s to the ground" ],
+    "skill_requirements": [ { "name": "melee", "level": 4 } ],
+    "melee_allowed": true,
+    "unarmed_allowed": true,
+    "crit_ok": true,
+    "condition": {
+      "and": [
+        { "npc_has_effect": "downed" },
+        { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
+        { "not": { "npc_has_effect": "stunned" } },
+        {
+          "and": [
+            { "not": { "npc_has_species": "ZOMBIE" } },
+            { "not": { "npc_has_species": "NETHER" } },
+            { "not": { "npc_has_species": "NETHER_EMANATION" } },
+            { "not": { "npc_has_species": "LEECH_PLANT" } },
+            { "not": { "npc_has_species": "MIGO" } },
+            { "not": { "npc_has_species": "SLIME" } },
+            { "not": { "npc_has_species": "FUNGUS" } },
+            { "not": { "npc_has_species": "PLANT" } },
+            { "not": { "npc_has_species": "ROBOT" } },
+            { "not": { "npc_has_species": "CYBORG" } },
+            { "not": { "npc_has_species": "HALLUCINATION" } },
+            { "not": { "npc_has_species": "HORROR" } },
+            { "not": { "npc_has_species": "ABERRATION" } },
+            { "not": { "npc_has_species": "KRAKEN" } }
+          ]
+        }
+      ]
+    },
+    "condition_desc": "* Only works on a <info>downed</info> and <info>non-stunned mundane</info> target of <info>similar or smaller</info> size",
+    "weighting": 2,
+    "stun_dur": 2,
+    "disarms": true,
+    "tech_effects": [ { "id": "disarmed", "chance": 100, "duration": 400, "on_damage": true, "message": "The hand of %s is forced open!" } ],
+    "attack_vectors": [
+      "vector_null",
+      "vector_punch",
+      "vector_slime_punch",
+      "vector_paw_rat_punch",
+      "vector_little_paw_punch",
+      "vector_elbow",
+      "vector_foot_heel",
+      "vector_shin"
+    ]
+  }
+]

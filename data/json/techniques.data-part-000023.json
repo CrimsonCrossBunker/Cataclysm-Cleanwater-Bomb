@@ -1,0 +1,71 @@
+[
+  {
+    "type": "technique",
+    "id": "tec_muay_thai_push",
+    "name": "Push Kick",
+    "messages": [ "You shove %s back with a front kick", "<npcname> shoves %s back with a front kick" ],
+    "skill_requirements": [ { "name": "unarmed", "level": 1 } ],
+    "unarmed_allowed": true,
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') >= n_val('size')" ] },
+        {
+          "or": [
+            {
+              "and": [
+                { "npc_has_flag": "GRAB_FILTER" },
+                { "u_has_flag": "GRAB" },
+                {
+                  "roll_contested": { "math": [ "u_val('strength')" ] },
+                  "die_size": 20,
+                  "difficulty": { "math": [ "n_val('grab_strength')" ] }
+                }
+              ]
+            },
+            { "not": { "and": [ { "npc_has_flag": "GRAB_FILTER" }, { "u_has_flag": "GRAB" } ] } }
+          ]
+        }
+      ]
+    },
+    "condition_desc": "* Only works on a target of <info>similar or smaller</info> size, may fail on enemies grabbing you",
+    "knockback_dist": 1,
+    "attack_vectors": [ "vector_foot_sole" ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_muay_thai_knee",
+    "name": "Knee Strike",
+    "messages": [ "You drive your knee into %s", "<npcname> drives their knee into %s" ],
+    "skill_requirements": [ { "name": "unarmed", "level": 5 } ],
+    "unarmed_allowed": true,
+    "crit_tec": true,
+    "stun_dur": 1,
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
+        { "not": { "npc_has_effect": "stunned" } },
+        {
+          "and": [
+            { "not": { "npc_has_species": "ZOMBIE" } },
+            { "not": { "npc_has_species": "NETHER" } },
+            { "not": { "npc_has_species": "NETHER_EMANATION" } },
+            { "not": { "npc_has_species": "LEECH_PLANT" } },
+            { "not": { "npc_has_species": "MIGO" } },
+            { "not": { "npc_has_species": "SLIME" } },
+            { "not": { "npc_has_species": "FUNGUS" } },
+            { "not": { "npc_has_species": "PLANT" } },
+            { "not": { "npc_has_species": "ROBOT" } },
+            { "not": { "npc_has_species": "CYBORG" } },
+            { "not": { "npc_has_species": "HALLUCINATION" } },
+            { "not": { "npc_has_species": "HORROR" } },
+            { "not": { "npc_has_species": "ABERRATION" } },
+            { "not": { "npc_has_species": "KRAKEN" } }
+          ]
+        }
+      ]
+    },
+    "condition_desc": "* Only works on a <info>non-stunned mundane</info> target of <info>similar or smaller</info> size",
+    "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.35 } ],
+    "attack_vectors": [ "vector_knee" ]
+  }
+]

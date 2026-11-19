@@ -1,0 +1,101 @@
+[
+  {
+    "type": "technique",
+    "id": "tec_taekwondo_strong",
+    "name": "Spinning Back Kick",
+    "messages": [
+      "You spin and back-kick %s, right in the center of gravity",
+      "<npcname> spins and back-kicks %s, right in the center of gravity"
+    ],
+    "skill_requirements": [ { "name": "unarmed", "level": 5 } ],
+    "melee_allowed": true,
+    "unarmed_allowed": true,
+    "crit_tec": true,
+    "down_dur": 2,
+    "//condition": "Humanoids of similar size",
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
+        { "not": { "npc_has_effect": "downed" } },
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
+        {
+          "or": [
+            {
+              "and": [
+                { "npc_has_flag": "GRAB_FILTER" },
+                { "u_has_flag": "GRAB" },
+                {
+                  "roll_contested": { "math": [ "u_val('strength')" ] },
+                  "die_size": 20,
+                  "difficulty": { "math": [ "n_val('grab_strength')" ] }
+                }
+              ]
+            },
+            { "not": { "and": [ { "npc_has_flag": "GRAB_FILTER" }, { "u_has_flag": "GRAB" } ] } }
+          ]
+        }
+      ]
+    },
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size, may fail on targets <info>grabbing you</info>",
+    "knockback_dist": 2,
+    "mult_bonuses": [
+      { "stat": "movecost", "scale": 1.5 },
+      { "stat": "damage", "type": "bash", "scale": 1.5 },
+      { "stat": "damage", "type": "cut", "scale": 1.5 },
+      { "stat": "damage", "type": "stab", "scale": 1.5 }
+    ],
+    "attack_vectors": [ "vector_foot_heel" ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_taekwondo_push",
+    "name": "Side Kick",
+    "messages": [ "You turn slightly and side-kick %s", "<npcname> turns slightly and side-kicks %s" ],
+    "melee_allowed": true,
+    "unarmed_allowed": true,
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') >= n_val('size')" ] },
+        {
+          "or": [
+            {
+              "and": [
+                { "npc_has_flag": "GRAB_FILTER" },
+                { "u_has_flag": "GRAB" },
+                {
+                  "roll_contested": { "math": [ "u_val('strength')" ] },
+                  "die_size": 20,
+                  "difficulty": { "math": [ "n_val('grab_strength')" ] }
+                }
+              ]
+            },
+            { "not": { "and": [ { "npc_has_flag": "GRAB_FILTER" }, { "u_has_flag": "GRAB" } ] } }
+          ]
+        }
+      ]
+    },
+    "condition_desc": "* Only works on a target of <info>similar or smaller</info> size, may fail on enemies grabbing you",
+    "knockback_dist": 1,
+    "attack_vectors": [ "vector_foot_sole" ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_taekwondo_sweep",
+    "name": "Sweep Kick",
+    "messages": [ "You crouch low and sweep-kick %s", "<npcname> crouches low and sweep-kicks %s" ],
+    "skill_requirements": [ { "name": "unarmed", "level": 2 } ],
+    "melee_allowed": true,
+    "unarmed_allowed": true,
+    "crit_ok": true,
+    "condition": {
+      "and": [
+        { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
+        { "not": { "npc_has_effect": "downed" } },
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
+      ]
+    },
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
+    "down_dur": 1,
+    "attack_vectors": [ "vector_foot_toes", "vector_avian_talons", "vector_hoof_kick", "vector_digitigrade_paws", "vector_shin" ]
+  }
+]
