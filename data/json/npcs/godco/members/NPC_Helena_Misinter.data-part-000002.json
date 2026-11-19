@@ -1,0 +1,27 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Helena_2",
+    "dynamic_line": "What do you need?",
+    "responses": [
+      { "text": "About that job…", "topic": "TALK_MISSION_INQUIRE", "condition": "has_assigned_mission" },
+      {
+        "text": "Corrie and I have finished that solar cart.",
+        "condition": { "compare_string": [ "in-progress", { "u_val": "mission_completed_godco_corrie_machine" } ] },
+        "topic": "TALK_GODCO_Helena_Negotiate"
+      },
+      {
+        "text": "Olwen's finished the radio transmitter she was working on.",
+        "condition": {
+          "and": [
+            { "not": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Gavin" } ] } },
+            { "not": { "u_has_mission": "MISSION_GODCO_HELENA_VISIT_MERCHANTS" } },
+            { "compare_string": [ "yes", { "u_val": "general_mission_godco_has_radio" } ] }
+          ]
+        },
+        "topic": "TALK_GODCO_Helena_Contact_FreeMerch"
+      },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
