@@ -149,3 +149,5 @@ require("druid_forms")
 require("monster_groups")
 
 require("consumable_effects")
+
+require("technique_predicates")
