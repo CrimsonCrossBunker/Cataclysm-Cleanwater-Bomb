@@ -1,51 +1,56 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_MISSION_OFFER_SWAMPER",
-    line = ccb.content.text("If you are ready to be of service to the great eaters, go and find meat and bring it back.  There is always need for more."),
-    replies = {
-        {
-            text = ccb.content.text("Happy to be of service to the great eaters.  I'm in."),
-            next_topic = "TALK_MISSION_ACCEPTED_SWAMPER",
-            native_actions = { "assign_mission" },
+    id = "TALK_MISSION_LIST_SWAMPER",
+    line = {
+        when = predicates.available_missions("interlocutor", 0, 0),
+        yes = {
+            when = predicates.assigned_missions(0, 0),
+            yes = ccb.content.text("The eaters have fed.  They will be hungry again in time."),
+            no = {
+                when = predicates.assigned_missions(2),
+                yes = ccb.content.text("You know what to do."),
+                no = ccb.content.text("That is all for now."),
+            },
         },
-        { text = ccb.content.text("Not interested."), next_topic = "TALK_MISSION_REJECTED_SWAMPER" },
+        no = {
+            when = predicates.available_missions("interlocutor", 2),
+            yes = {
+                when = predicates.assigned_missions(0, 0),
+                yes = ccb.content.text("The great eaters must be fed.  Are you ready?"),
+                no = {
+                    when = predicates.assigned_missions(2),
+                    yes = ccb.content.text("There is still more work to do.  Are you ready?"),
+                    no = ccb.content.text("There is meat ready for the feeding.  Are you ready to gather it?"),
+                },
+            },
+            no = {
+                when = predicates.assigned_missions(0, 0),
+                yes = ccb.content.text("The eaters are hungry."),
+                no = {
+                    when = predicates.assigned_missions(2),
+                    yes = ccb.content.text("There is more meat needed."),
+                    no = ccb.content.text("I know of eaters ready for meat."),
+                },
+            },
+        },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_MISSION_ACCEPTED_SWAMPER",
-    line = ccb.content.text("Excellent.  Make it happen."),
     replies = {
         {
-            text = ccb.content.text("Consider it done.  But I also wanted to ask…"),
-            next_topic = "TALK_SWAMPER",
-        },
-        {
-            text = ccb.content.text("Where should I start?"),
-            next_topic = "TALK_MISSION_ADVICE_SWAMPER",
-        },
-        {
-            text = ccb.content.text("Can you share some equipment to aid me in this?"),
-            next_topic = "TALK_SHARE_EQUIPMENT_SWAMPER",
-        },
-        { text = ccb.content.text("I'm off then."), next_topic = "TALK_DONE" },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_MISSION_ADVICE_SWAMPER",
-    line = ccb.content.text("The great eaters are not picky, any pure meat will do, but mutant and tainted meat are not good enough."),
-    replies = {
-        {
-            text = ccb.content.text("So, meat from a creature that isn't a zombie, or a giant monster.  Got it."),
+            text = ccb.content.text("I see."),
             next_topic = "TALK_NONE",
+            when = predicates.available_missions("interlocutor", 0, 0),
+        },
+        {
+            text = ccb.content.text("I'm listening."),
+            next_topic = "TALK_MISSION_OFFER_SWAMPER",
+            when = predicates.negate(predicates.available_missions("interlocutor", 0, 0)),
+        },
+        {
+            text = ccb.content.text("Maybe another time CEO Baronyx."),
+            next_topic = "TALK_NONE",
+            when = predicates.negate(predicates.available_missions("interlocutor", 0, 0)),
         },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_SHARE_EQUIPMENT_SWAMPER",
-    line = ccb.content.text("Of course, you should find everything you need here."),
-    replies = { { text = ccb.content.text("That explains the knives then."), next_topic = "TALK_NONE" } },
 }

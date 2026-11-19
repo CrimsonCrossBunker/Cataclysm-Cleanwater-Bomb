@@ -1,28 +1,29 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_MISSION_REJECTED_SWAMPER",
-    line = ccb.content.text("Of course, the company will be ready when you are and the great eaters will feed either way."),
-    replies = {
-        {
-            text = ccb.content.text("Maybe some other time.  Changing the topic…"),
-            next_topic = "TALK_NONE",
-        },
-        { text = ccb.content.text("Alright, but I have to go now."), next_topic = "TALK_DONE" },
+    id = "TALK_SUGGEST_FOLLOW_SWAMPER",
+    line = {
+        when = predicates.has_trait("speaker", "seer_mark"),
+        yes = ccb.content.text("Oh, you know my friend Brigitte.  Well in that case, let's go!"),
+        no = ccb.content.text("No, I must remain here to oversee the company."),
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_SWAMPER_PRETENDER",
-    line = ccb.content.text("It was foretold that as the great eaters returned, so too would the pretenders, who would come to steal the meat.  Very little is asked of us, except that we do all we can to ensure that the true great eaters received as much meat as possible and the pretenders go hungry."),
     replies = {
         {
-            text = ccb.content.text("Yes CEO Baronyx, very good CEO Baronyx."),
+            text = ccb.content.text("Of course CEO Baronyx."),
             next_topic = "TALK_NONE",
+            when = predicates.negate(predicates.has_trait("speaker", "seer_mark")),
         },
         {
-            text = ccb.content.text("This makes no sense and I'm done talking about it."),
+            text = ccb.content.text("Sweet!"),
+            native_actions = { "follow" },
+            when = predicates.has_trait("speaker", "seer_mark"),
             next_topic = "TALK_DONE",
+        },
+        {
+            text = ccb.content.text("Not just now.  You should remain here to oversee the company."),
+            when = predicates.has_trait("speaker", "seer_mark"),
+            next_topic = "TALK_NONE",
         },
     },
 }
