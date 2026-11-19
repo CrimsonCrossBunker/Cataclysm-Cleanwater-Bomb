@@ -2,6 +2,10 @@ local ccb = require("ccb")
 local services = ccb.services
 local variables = services.variables
 
+ccb.runtime.handler("forge_of_wonders_display_stock_is_sellable", function()
+    return false
+end)
+
 local function checked(result)
     if not result.ok then error(result.error.message) end
     return result.value
