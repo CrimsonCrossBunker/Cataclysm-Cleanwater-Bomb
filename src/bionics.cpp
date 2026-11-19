@@ -36,6 +36,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "color.h"
@@ -2976,6 +2977,13 @@ bool Character::can_install_bionics( const itype &type, Character &installer, bo
 {
     if( !type.bionic ) {
         debugmsg( "Tried to install NULL bionic" );
+        return false;
+    }
+    const character_action_guard patient_lifetime( const_cast<Character &>( *this ) );
+    const character_action_guard installer_lifetime( installer );
+    if( !cata::lua_platform::dispatch_befor_installs_cbm(
+            *this, installer, type.bionic->id.str(), autodoc ) ||
+        !patient_lifetime || !installer_lifetime ) {
         return false;
     }
     if( has_trait( trait_DEBUG_BIONICS ) || has_flag( json_flag_MANUAL_CBM_INSTALLATION ) ) {

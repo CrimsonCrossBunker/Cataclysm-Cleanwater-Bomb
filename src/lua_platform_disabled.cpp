@@ -191,6 +191,11 @@ bool dispatch_native_hook(
     return true;
 }
 
+bool dispatch_befor_installs_cbm( const Character &, const Character &, std::string_view, bool )
+{
+    return true;
+}
+
 bool dispatch_avatar_fatal( Character &, const Creature * )
 {
     return true;

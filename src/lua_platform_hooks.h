@@ -198,6 +198,8 @@ native_hook_result dispatch_native_hook_result(
 bool dispatch_native_hook(
     std::string_view name,
     const native_callback_arguments &arguments = {} );
+bool dispatch_befor_installs_cbm( const Character &character, const Character &installer,
+                                  std::string_view bionic, bool autodoc );
 bool dispatch_avatar_fatal( Character &character, const Creature *killer );
 bool dispatch_npc_fatal( Character &character, const Creature *killer );
 bool has_native_hook( std::string_view name );

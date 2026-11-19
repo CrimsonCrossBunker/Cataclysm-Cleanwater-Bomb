@@ -5871,7 +5871,8 @@ void iexamine::autodoc( Character &you, const tripoint_bub_ms &examp )
             const requirement_data req_anesth = *requirement_data_anesthetic *
                                                 surgery_duration * weight;
 
-            if( patient.can_install_bionics( ( *itemtype ), installer, true, has_install_program ? 10 : -1 ) ) {
+            if( patient.can_install_bionics( ( *itemtype ), installer, true,
+                                             has_install_program ? 10 : -1 ) && bionic ) {
                 const time_duration duration = itemtype->bionic->difficulty * 20_minutes;
                 patient.introduce_into_anesthesia( duration, installer, needs_anesthesia );
                 std::optional<item> source_item = *bionic.get_item();

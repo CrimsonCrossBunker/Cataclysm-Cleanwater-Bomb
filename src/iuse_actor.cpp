@@ -5219,7 +5219,8 @@ void molle_detach_actor::load( const JsonObject &jo, const std::string & )
 std::optional<int> install_bionic_actor::use( Character *p, item &it,
         map *, const tripoint_bub_ms & ) const
 {
-    if( p->can_install_bionics( *it.type, *p, false ) ) {
+    const auto source = it.get_safe_reference();
+    if( p->can_install_bionics( *it.type, *p, false ) && source ) {
         if( !p->has_trait( trait_DEBUG_BIONICS ) && !p->has_flag( json_flag_MANUAL_CBM_INSTALLATION ) ) {
             p->consume_installation_requirement( it.type->bionic->id );
             p->consume_anesth_requirement( *it.type, *p );
