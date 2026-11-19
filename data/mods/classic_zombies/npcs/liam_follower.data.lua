@@ -1,0 +1,75 @@
+local ccb = require("ccb")
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_Liam_Meeting1",
+    replies = {
+        {
+            text = ccb.content.text("Not what it looks like?  It looks like you just blew someone's head off, Liam.  Holy shit, is that… Chris?  Did you kill Chris?"),
+            next_topic = "TALK_DDotD_Liam_Meeting2",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_DDotD_Liam_Meeting2",
+    line = ccb.content.text("No!  Dammit, no!\"  Liam looks briefly panicked, then his eyes widen.  \"I have something for this, hold on.\"  He reaches to the sofa behind him, slowly, keeping his hands away from the shotgun on the floor.  \"Look.  Chris left a note.\"  Liam holds up the paper, in Chris' clear handwriting.  You can just make it out: it reads somewhat like a suicide note, and realization starts to dawn.  Liam nods, seeing you start to understand.  \"Chris got bit while we were on our way here.  We tried to treat it, I did everything I could think of, but the infection got worse and worse.  Chris told me to just turn my back, but I couldn't do that.  We had a pact.  You know that.\"  Liam's eyes are red rimmed, and he wipes them with a sleeve.  \"I stayed here until… until the transition.  We wrote this letter and a bunch more, stuff for Chris's family, if we can find them, you know?"),
+    replies = {
+        {
+            text = ccb.content.text("So Chris turned into a zombie right in front of you?"),
+            next_topic = "TALK_DDotD_Liam_Meeting3",
+        },
+        {
+            text = ccb.content.text("Wait.  Zombies?  I knew things were going to shit, but are you telling me it's really zombies?"),
+            next_topic = "TALK_DDotD_Liam_Tut1_zombies",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_DDotD_Liam_Meeting3",
+    line = ccb.content.text("Yeah.\"  Liam wipes his face again, and flops down on the couch.  \"I thought there'd be more time between passing out and getting back up, I was going to do this outside.  God damn, that was the hardest thing I've ever done.\"  He looks up at you, his face drained, across the body of one of your oldest friends.  \"Fucking hell.  You're alive.  You made it here.  I'm sorry for the rough introduction, I should be hugging you right now.  You're not bit or anything?"),
+    replies = {
+        {
+            text = ccb.content.text("No, I'm fine.  Want to get this cleaned up?"),
+            next_topic = "TALK_DDotD_Liam_Meeting4",
+        },
+        {
+            text = ccb.content.text("Bit?  Like, the whole classic 'one bite and you're done' zombie movie stuff?"),
+            next_topic = "TALK_DDotD_Liam_Tut1_bites",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_DDotD_Liam_Tut1_zombies",
+    line = ccb.content.text("Yeah.  You probably heard some wacky shit on the news, hey?  I heard all kinds of garbage, anything from evil mushrooms to interdimensional monsters, but no.  It's zombies, classic fucking zombies.  I'm still struggling with it myself."),
+    replies = {
+        {
+            text = ccb.content.text("So Chris turned into a zombie right in front of you?"),
+            next_topic = "TALK_DDotD_Liam_Meeting3",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_DDotD_Liam_Tut1_bites",
+    line = ccb.content.text("You got it.  I know, it feels really contrived, doesn't it?  It's exactly like the old movies in every way, like someone had designed it to be.  I don't know if it's every bite or what, but Chris just had one that barely broke the skin and you see where that ended up.  Took about three days.  My advice is, we don't let these things teeth anywhere near our skin.  They're pretty clumsy bastards, though.  They definitely can't just nibble you as they go by, they've gotta grab you first.  Unfortunately, seems like they're pretty fuckin' good at that.  Once you get grabbed, best bet is to go full ham on the zombie grabbing you with everything you've got, and try to shake loose, but honestly it's better to not get grabbed."),
+    replies = {
+        {
+            text = ccb.content.text("Well, no bites.  I'm fine.  Want to get this cleaned up?"),
+            next_topic = "TALK_DDotD_Liam_Meeting4",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_DDotD_Liam_Meeting4",
+    line = ccb.content.text("*lets out a long sigh and nods.  \"Let's get poor Chris outside for a proper burial to start.  I can't tell you how glad I am to see you.\""),
+    replies = {
+        {
+            text = ccb.content.text("I'm glad to see you too, Liam.  Wish it was a better situation.  Let's do this."),
+            native_actions = { "follow" },
+            next_topic = "TALK_DONE",
+        },
+    },
+}
