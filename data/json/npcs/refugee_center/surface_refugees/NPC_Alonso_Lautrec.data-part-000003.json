@@ -1,0 +1,24 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_Alonso_CalledOut2",
+    "dynamic_line": "Better'n you'd maybe think, okay?  Can we drop it?",
+    "responses": [
+      {
+        "text": "Just stop talking like that around me, maybe?  It's really obnoxious.",
+        "topic": "TALK_REFUGEE_Alonso_CalledOut3",
+        "effect": { "npc_add_var": "general_none_Alonso_accent", "value": "asked" }
+      },
+      {
+        "text": "You know what?  You do you.  It's all good.",
+        "topic": "TALK_REFUGEE_Alonso_CalledOut3",
+        "effect": [
+          { "npc_add_var": "general_none_Alonso_accent", "value": "accepted" },
+          { "math": [ "u_counter_refugee_center_refugee_happiness++" ] }
+        ]
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "I'll leave you to it then.", "topic": "TALK_DONE" }
+    ]
+  }
+]
