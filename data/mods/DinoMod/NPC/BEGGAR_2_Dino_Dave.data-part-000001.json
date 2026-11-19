@@ -1,17 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_BEGGAR_2_WEARING",
-    "dynamic_line": "You ask me what I can see, but I don't tell you what you see.  Sometimes we have shields up, to protect ourselves.",
-    "responses": [
-      {
-        "text": "Yes.  I ask because I noticed there are dinosaurs around.  Do you know anything about that?",
-        "topic": "TALK_REFUGEE_BEGGAR_2_DINO2"
-      }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_REFUGEE_BEGGAR_2_DINO2",
     "dynamic_line": "I know all kinds of weird useless stuff.  I've seen things at churches, I've seen things on farms, I've seen whole exhibits way out, a whole zoo even.  And there's someone pretending to be me, but it's not me, because I would know.  Or you would know.  One of us would be us.  Those Swampers, they know what's happening.  They're creatures of light come back to save us all.  Or eat us, I forget.  Oh and that Old Guard Repo Man hates them and Red is out there somewhere in the great red yonder.",
     "responses": [
