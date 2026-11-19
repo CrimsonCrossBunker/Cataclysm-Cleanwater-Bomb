@@ -55,23 +55,5 @@
       }
     ],
     "default_clause": { "text": { "str": "]>=---=---=---=---=----=---=---=---=---=<[", "//~": "NO_I18N" }, "color": "dark_gray" }
-  },
-  {
-    "id": "spacebar_separator_2",
-    "type": "widget",
-    "style": "text",
-    "string": { "str": "x", "//~": "NO_I18N" },
-    "width": 2,
-    "height": 1,
-    "colors": [ "c_black" ]
-  },
-  {
-    "id": "spacebar_separator_4",
-    "type": "widget",
-    "style": "text",
-    "string": { "str": "x", "//~": "NO_I18N" },
-    "width": 4,
-    "height": 1,
-    "colors": [ "c_black" ]
   }
 ]

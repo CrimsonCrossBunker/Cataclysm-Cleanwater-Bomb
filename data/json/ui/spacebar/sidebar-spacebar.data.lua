@@ -1,0 +1,30 @@
+local ccb = require("ccb")
+
+ccb.content.define_widget {
+    id = "spacebar",
+    style = "sidebar",
+    label = ccb.content.text("spacebar", "spacebar"),
+    width = 62,
+    separator = ": ",
+    padding = 1,
+    widgets = {
+        "spacebar_separator",
+        "environment_conditions_block",
+        "spacebar_separator",
+        "player_health_and_stasistik_block",
+        "player_health_and_stasistik_block_sa",
+        "spacebar_separator",
+        "player_weariness_mood_block",
+        "spacebar_separator",
+        "player_movement_block",
+        "spacebar_separator",
+        "player_weapon_and_martial_arts_block",
+        "spacebar_separator",
+        "places_compass_block_danger",
+        "spacebar_separator",
+        "sundial_label_layout",
+        "rad_badge_desc",
+        "wind_desc",
+        "oxygen_layout",
+    },
+}
