@@ -2165,6 +2165,7 @@ void write_item_pockets( JsonOut &json, const sol::table &pockets, const char *f
             { "min_item_length", "min_item_length" }, { "min_item_volume", "min_item_volume" },
             { "max_item_volume", "max_item_volume" }, { "magazine_well", "magazine_well" },
             { "default_magazine", "default_magazine" },
+            { "memory_capacity", "ememory_max" },
         } );
         write_item_text( json, "name", pocket.raw_get<sol::object>( "name" ), false );
         write_item_text( json, "description", pocket.raw_get<sol::object>( "description" ), false );
@@ -2400,7 +2401,8 @@ void write_item_inheritance( JsonOut &json, const sol::table &options )
             { "survival_price", "price_postapoc" }, { "warmth", "warmth" },
             { "calories", "calories" }, { "encumbrance", "encumbrance" },
             { "fun", "fun" }, { "quench", "quench" }, { "parasites", "parasites" },
-            { "dispersion", "dispersion" }, { "recoil", "recoil" }, { "range", "range" },
+            { "dispersion", "dispersion" }, { "sight_dispersion", "sight_dispersion" },
+            { "recoil", "recoil" }, { "range", "range" },
             { "shot_spread", "shot_spread" }, { "loudness", "loudness" },
             { "count", "count" }, { "reload_time", "reload" },
         } );
@@ -2775,6 +2777,22 @@ void load_static_item( const sol::table &options, const std::string &source )
         write_item_keyed_values<double>( json, "melee_damage", *damage );
     }
     write_item_damage( json, options, "thrown_damage", "thrown_damage" );
+    const sol::object mounted = options.raw_get<sol::object>( "mounted_charge" );
+    if( mounted.get_type() == sol::type::table ) {
+        const sol::table charge = mounted.as<sol::table>();
+        json.member( "mounted_charge" );
+        json.start_object();
+        json.member( "max_steps", charge.get<int>( "max_steps" ) );
+        json.member( "damage_type", charge.get<std::string>( "damage_type" ) );
+        json.member( "multiplier_per_step", charge.get<double>( "multiplier_per_step" ) );
+        json.member( "max_multiplier", charge.get<double>( "max_multiplier" ) );
+        json.end_object();
+    } else if( mounted.get_type() == sol::type::boolean && !mounted.as<bool>() ) {
+        json.member( "mounted_charge" );
+        json.write_null();
+    } else if( mounted.get_type() != sol::type::nil ) {
+        throw std::invalid_argument( "mounted_charge requires a profile or false" );
+    }
     if( const auto pockets = options.get<sol::optional<sol::table>>( "pockets" ) ) {
         write_item_pockets( json, *pockets );
     }

@@ -8282,6 +8282,7 @@ function CcbPlatformContent.Item(options) end
 ---@field max_item_volume? string
 ---@field magazine_well? string
 ---@field default_magazine? string
+---@field memory_capacity? string Electronic storage capacity with a native unit.
 ---@field name? string|LocalizedText
 ---@field description? string|LocalizedText
 ---@field moves? integer
@@ -8431,6 +8432,7 @@ function CcbPlatformContent.Item(options) end
 ---@field quench? number
 ---@field parasites? number
 ---@field dispersion? number
+---@field sight_dispersion? number
 ---@field recoil? number
 ---@field range? number
 ---@field shot_spread? number
@@ -8520,6 +8522,7 @@ function CcbPlatformContent.Item(options) end
 ---@field replace_materials? table<string,string>
 ---@field melee_damage? table<string,number>
 ---@field thrown_damage? StaticItemDamage
+---@field mounted_charge? StaticOrderedMountedCharge|false False removes an inherited profile.
 ---@field throwing_recovery_chance? integer
 ---@field accuracy? integer|ItemMeleeAccuracyOptions
 ---@field pockets? StaticItemPocket[]
@@ -18041,3 +18044,9 @@ function CcbPlatformContent.define_spell(options) end
 ---@class StaticOrderedArtifact
 ---@field enchantments? string[] Native enchantment IDs resolved during item finalization.
 ---@field charge? StaticOrderedArtifactCharge
+
+---@class StaticOrderedMountedCharge
+---@field max_steps integer
+---@field damage_type string
+---@field multiplier_per_step number
+---@field max_multiplier number
