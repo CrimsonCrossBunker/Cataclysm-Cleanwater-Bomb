@@ -7286,6 +7286,30 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field population? [integer, integer] Minimum and maximum group population.
 ---@field chance? integer Native static spawn chance.
 
+---@class StaticOvermapMapgenItemGroup
+---@field group string Item group placed on the glyph.
+---@field chance? integer Native placement chance.
+
+---@class StaticOvermapMapgenLayout
+---@field fill_terrain? string Terrain ID used as the base fill.
+---@field rows? string[] Terrain layout rows in map order.
+---@field terrain? table<string, string> Glyph to terrain ID.
+---@field furniture? table<string, string> Glyph to furniture ID.
+---@field item_groups? table<string, StaticOvermapMapgenItemGroup> Glyph to item-group placement.
+---@field toilets? string[] Glyphs where native default toilets are placed.
+
+---@class StaticOvermapMapgen
+---@field weight? integer Native selection weight. Defaults to 1000.
+---@field builtin? string Builtin mapgen ID. Supply either builtin or layout.
+---@field layout? StaticOvermapMapgenLayout
+
+---@class StaticDirectionalOvermapMapgen
+---@field straight? StaticOvermapMapgen[]
+---@field curved? StaticOvermapMapgen[]
+---@field end_cap? StaticOvermapMapgen[]
+---@field tee? StaticOvermapMapgen[]
+---@field four_way? StaticOvermapMapgen[]
+
 ---@class StaticOvermapTerrainOptions
 ---@field id? string|string[] Stable terrain type IDs in native loading order. Supply either id or abstract.
 ---@field abstract? string Inheritance template ID.
@@ -7307,6 +7331,8 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field extend? StaticOvermapTerrainListChanges Values to append to inherited lists.
 ---@field delete? StaticOvermapTerrainListChanges Values to remove from inherited lists.
 ---@field spawns? StaticOvermapTerrainSpawns Native static monster-group spawns.
+---@field mapgen? StaticOvermapMapgen[] Variants registered in array order.
+---@field directional_mapgen? StaticDirectionalOvermapMapgen Variant lists for linear terrains.
 
 ---Define an overmap terrain or inheritance template at the Mod's native data load position.
 ---@param options StaticOvermapTerrainOptions

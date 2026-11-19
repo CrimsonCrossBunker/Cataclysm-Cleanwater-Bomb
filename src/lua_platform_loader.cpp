@@ -653,6 +653,80 @@ end
     lua["require"] = bound.get<sol::function>();
 }
 
+void write_overmap_mapgen_layout( JsonOut &json, const sol::table &layout )
+{
+    json.member( "object" );
+    json.start_object();
+    if( const auto fill = layout.get<sol::optional<std::string>>( "fill_terrain" ) ) {
+        json.member( "fill_ter", *fill );
+    }
+    if( const auto rows = layout.get<sol::optional<sol::table>>( "rows" ) ) {
+        json.member( "rows", bounded_string_array( *rows, "rows", 24, "overmap mapgen layout" ) );
+    }
+    for( const char *field : { "terrain", "furniture" } ) {
+        if( const auto glyphs = layout.get<sol::optional<sol::table>>( field ) ) {
+            json.member( field );
+            json.start_object();
+            for( const auto &[glyph, id] : *glyphs ) {
+                json.member( glyph.as<std::string>(), id.as<std::string>() );
+            }
+            json.end_object();
+        }
+    }
+    if( const auto items = layout.get<sol::optional<sol::table>>( "item_groups" ) ) {
+        json.member( "items" );
+        json.start_object();
+        for( const auto &[glyph, options] : *items ) {
+            const sol::table placement = options.as<sol::table>();
+            json.member( glyph.as<std::string>() );
+            json.start_object();
+            json.member( "item", placement.get<std::string>( "group" ) );
+            if( const auto chance = placement.get<sol::optional<int>>( "chance" ) ) {
+                json.member( "chance", *chance );
+            }
+            json.end_object();
+        }
+        json.end_object();
+    }
+    if( const auto toilets = layout.get<sol::optional<sol::table>>( "toilets" ) ) {
+        json.member( "toilets" );
+        json.start_object();
+        for( const std::string &glyph : bounded_string_array( *toilets, "toilets", 256,
+                "overmap mapgen layout" ) ) {
+            json.member( glyph );
+            json.start_object();
+            json.end_object();
+        }
+        json.end_object();
+    }
+    json.end_object();
+}
+
+void write_overmap_mapgens( JsonOut &json, const char *key, const sol::table &variants )
+{
+    json.member( key );
+    json.start_array();
+    for( std::size_t i = 1; i <= variants.size(); ++i ) {
+        const sol::table mapgen = variants.get<sol::table>( i );
+        const auto builtin = mapgen.get<sol::optional<std::string>>( "builtin" );
+        const auto layout = mapgen.get<sol::optional<sol::table>>( "layout" );
+        if( static_cast<bool>( builtin ) == static_cast<bool>( layout ) ) {
+            throw std::runtime_error( "overmap mapgen requires either a builtin or a layout" );
+        }
+        json.start_object();
+        if( const auto weight = mapgen.get<sol::optional<int>>( "weight" ) ) {
+            json.member( "weight", *weight );
+        }
+        if( builtin ) {
+            json.member( "builtin", *builtin );
+        } else {
+            write_overmap_mapgen_layout( json, *layout );
+        }
+        json.end_object();
+    }
+    json.end_array();
+}
+
 void load_static_overmap_terrain( const sol::table &options, const std::string &source,
                                   bool patch )
 {
@@ -754,9 +828,23 @@ void load_static_overmap_terrain( const sol::table &options, const std::string &
         }
         json.end_object();
     }
+    if( const auto mapgen = options.get<sol::optional<sol::table>>( "mapgen" ) ) {
+        write_overmap_mapgens( json, "mapgen", *mapgen );
+    }
+    if( const auto directional = options.get<sol::optional<sol::table>>( "directional_mapgen" ) ) {
+        for( const auto &[shape, native_key] : {
+                 std::pair{ "straight", "mapgen_straight" }, std::pair{ "curved", "mapgen_curved" },
+                 std::pair{ "end_cap", "mapgen_end" }, std::pair{ "tee", "mapgen_tee" },
+                 std::pair{ "four_way", "mapgen_four_way" }
+             } ) {
+            if( const auto mapgen = directional->get<sol::optional<sol::table>>( shape ) ) {
+                write_overmap_mapgens( json, native_key, *mapgen );
+            }
+        }
+    }
     json.end_object();
 
-    // The native loader preserves inheritance, deferred parents and builtin mapgen registration.
+    // The native loader preserves inheritance, deferred parents and mapgen registration order.
     const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
     static_cast<void>( definition.get_string( "type" ) );
     overmap_terrains::load( definition, source );
