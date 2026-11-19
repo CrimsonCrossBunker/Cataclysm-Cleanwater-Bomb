@@ -1,0 +1,12 @@
+[
+  {
+    "id": "TALK_ROBOFAC_MERC_1_BACKGROUND_END",
+    "type": "talk_topic",
+    "dynamic_line": "*smiles at you, genuine and warm.  \"It feels nice to tell it.  You're welcome.\"",
+    "speaker_effect": {
+      "effect": { "u_add_var": "general_robofac_merc_1_heard_backstory", "value": "yes" },
+      "sentinel": "robofac_merc_1_background_shared"
+    },
+    "responses": [ { "text": "[Spend a while in silence.]", "topic": "TALK_DONE" }, { "text": "[Leave.]", "topic": "TALK_DONE" } ]
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "TALK_ROBOFAC_MERC_1_HWP_YES",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "dialogue_hub_merc_promised_u" } ],
+      "no": "I do owe you one.  Tell you what: I'll let the Hub know that you're worth manufacturing some proper gear for.  Let 'em know that I sent you next time you talk with them and I'm sure they'll help you.",
+      "yes": "As promised earlier, I'll let the Hub know that you're worth manufacturing some proper gear for.  Let 'em know that I sent you next time you talk with them and I'm sure they'll help you."
+    },
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_hub_rnd_u_can_research_rifle", "value": "yes" } },
+    "responses": [ { "text": "Thanks.", "topic": "TALK_ROBOFAC_MERC_1_MAIN" } ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_1_HWP_NO",
+    "type": "talk_topic",
+    "dynamic_line": "You'll have to work it out with the intercom.  I don't want to vouch for someone I don't really know.",
+    "responses": [
+      {
+        "text": "Anything I can do to change your mind?",
+        "condition": { "and": [ { "not": "has_many_assigned_mission" }, { "not": "has_assigned_mission" } ] },
+        "topic": "TALK_MISSION_LIST"
+      },
+      {
+        "text": "Anything I can do to change your mind?",
+        "condition": { "not": { "and": [ { "not": "has_many_assigned_mission" }, { "not": "has_assigned_mission" } ] } },
+        "topic": "TALK_ROBOFAC_MERC_1_HWP_IF_I_OWE_YOU"
+      },
+      { "text": "Alright.", "topic": "TALK_ROBOFAC_MERC_1_MAIN" }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_1_HWP_IF_I_OWE_YOU",
+    "type": "talk_topic",
+    "dynamic_line": "Once we finish up this job, I'll vouch for you.  Pinkie promise.",
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_hub_merc_promised_u", "value": "yes" } },
+    "responses": [ { "text": "Alright.", "topic": "TALK_ROBOFAC_MERC_1_MAIN" } ]
+  }
+]
