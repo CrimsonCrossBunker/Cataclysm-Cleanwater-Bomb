@@ -9,6 +9,7 @@
 #include <ostream>
 #include <set>
 #include <tuple>
+#include <utility>
 
 #include "bodypart.h"
 #include "calendar.h"
@@ -35,6 +36,7 @@
 #include "material.h"
 #include "messages.h"
 #include "monster.h"
+#include "north_america_elevation.h"
 #include "options.h"
 #include "point.h"
 #include "rng.h"
@@ -1573,8 +1575,16 @@ void vehicle::selfdrive( map &here, const int trn, const int acceleration )
     }
 }
 
+std::optional<double> vehicle::flight_altitude() const
+{
+    return is_flying ? flight_altitude_m : std::nullopt;
+}
+
 bool vehicle::check_is_heli_landed( map &here )
 {
+    if( flight_altitude() && north_america::elevation_active() ) {
+        return false;
+    }
     if( !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, pos_bub( here ) ) ) {
         is_flying = false;
         return true;
@@ -1587,6 +1597,9 @@ bool vehicle::check_heli_descend( map &here, Character &p ) const
     if( !is_aircraft( here ) ) {
         debugmsg( "A vehicle is somehow flying without being an aircraft" );
         return true;
+    }
+    if( north_america::elevation_active() && here.supports_zlevels() ) {
+        return is_flying;
     }
     int count = 0;
     int air_count = 0;
@@ -1627,7 +1640,7 @@ bool vehicle::check_heli_ascend( map &here, Character &p ) const
         p.add_msg_if_player( m_bad, _( "It would be unsafe to try and take off while you are moving." ) );
         return false;
     }
-    if( sm_pos.z() + 1 >= here.max_z() ) {
+    if( sm_pos.z() + 1 >= here.max_z() && !north_america::elevation_active() ) {
         return false; // don't allow trying to ascend to max zlevel
     }
     creature_tracker &creatures = get_creature_tracker();
@@ -2070,6 +2083,198 @@ bool vehicle::is_wheel_state_correct_to_turn_on_rails( int wheels_on_rail, int w
     // allow turn for vehicles with wheel distance < 4 when moving backwards
 }
 
+bool vehicle::change_speed_on_grade( map &here, const tripoint_bub_ms &from,
+                                     const tripoint_bub_ms &to, float traction )
+{
+    const double grade = north_america::grade_between( here, from, to );
+    if( std::abs( grade ) < 0.02 ) {
+        return true;
+    }
+    const double run_factor = std::hypot( 1.0, grade );
+    const double speed = std::abs( vmiph_to_mps( velocity ) );
+    const double mass = std::max( 1.0, static_cast<double>( to_kilogram( total_mass( here ) ) ) );
+    const vehicle *towed = is_towing() ? tow_data.get_towed() : nullptr;
+    const double train_mass = mass + ( towed ? to_kilogram( towed->total_mass( here ) ) : 0.0 );
+    const bool rail = can_use_rails( here );
+
+    // Grade resistance is mg sin(theta). The stock engine model has no gear
+    // ratios or torque curves: estimate low-speed wheel force by limiting P/v
+    // at a crawl, then cap it by the traction available at the wheels.
+    constexpr double gravity = 9.81;
+    const double opposing = train_mass * gravity * grade / run_factor;
+    const bool paved = here.has_flag_ter( ter_furn_flag::TFLAG_ROAD, from );
+    const double grip = rail ? 0.25 : paved ? 0.75 :
+                        std::clamp( static_cast<double>( average_offroad_rating() ), 0.15, 0.7 );
+    const double adhesion = grip * traction * mass * gravity / run_factor;
+    const double crawl = has_engine_type( fuel_type_battery, true ) ? 1.5 : 2.5;
+    const double power = engine_on && !skidding ? units::to_watt( total_power( here ) ) : 0;
+    const double drive = std::max( 0.0, power ) / std::max( crawl, speed );
+    const double available = std::min( drive, adhesion );
+    const double distance = std::hypot( to.x() - from.x(), to.y() - from.y() );
+    if( grade > 1.0 || grade < -1.0 ||
+        ( grade > 0.0 && opposing > available &&
+          0.5 * train_mass * speed * speed < ( opposing - available ) * distance * run_factor ) ) {
+        return false;
+    }
+
+    // Thrust and rolling resistance are already applied by gain_moves().
+    // Integrate only the extra change in kinetic energy from this grade.
+    const double rise = grade * distance;
+    const double next_squared = speed * speed - 2.0 * gravity * rise;
+    const double at_speed = opposing <= available && drive > 0.0 ?
+                            std::max( next_squared, std::min( speed * speed, crawl * crawl ) ) :
+                            next_squared;
+    velocity = ( velocity < 0 ? -1 : 1 ) * mps_to_vmiph( std::sqrt( std::max( 0.0, at_speed ) ) );
+    return true;
+}
+
+vehicle *vehicle::move_atlas_aircraft( map &here, tripoint_rel_ms dp, const tileray &facing,
+                                       Character *pilot )
+{
+    const tripoint_bub_ms from = pos_bub( here );
+    const int command = dp.z();
+    const double current = flight_altitude_m ? *flight_altitude_m :
+                           north_america::altitude_at( here, from );
+    constexpr double climb_per_command = 2.0;
+    double target = current + command * climb_per_command;
+    const tripoint_bub_ms over = from + dp.xy();
+    const double base = north_america::altitude_at( here, tripoint_bub_ms( over.xy(), 0 ) );
+    if( !here.inbounds( over ) || !north_america::within_altitude_limits( target ) ) {
+        return this;
+    }
+
+    int target_z = static_cast<int>( std::ceil( ( target - base - 0.01 ) /
+                                     north_america::floor_height_m ) );
+    bool landing = false;
+    if( command < 0 ) {
+        for( const int z : {
+                 from.z(), from.z() - 1
+             } ) {
+            const tripoint_bub_ms below( over.xy(), z );
+            if( !here.inbounds( below ) ||
+                here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, below ) ) {
+                continue;
+            }
+            const double height = north_america::altitude_at( here, below );
+            if( target <= height && height <= current ) {
+                target = height;
+                target_z = z;
+                landing = true;
+                break;
+            }
+        }
+    }
+    const tripoint_bub_ms destination( over.xy(), target_z );
+    const auto blocked = [&]() {
+        if( pilot ) {
+            pilot->add_msg_if_player( m_warning, _( "There is no safe clearance for that flight path." ) );
+        }
+        if( command == 0 ) {
+            stop( here );
+        }
+        return this;
+    };
+    // The local collision grid has one layer per four metres. Reproject a
+    // level flight path as the terrain datum changes instead of following it.
+    dp.z() = target_z - from.z();
+    if( !here.inbounds( destination ) || std::abs( dp.z() ) > 1 ||
+        ( !landing && target <= base && from.z() >= 0 ) ||
+        ( landing && velocity != 0 ) ) {
+        return blocked();
+    }
+
+    precalc_mounts( 1, skidding ? turn_dir : facing.dir(), pivot_point( here ) );
+    const tripoint_rel_ms displacement = dp - pivot_displacement();
+    part_project_points( displacement );
+    for( int i = 0; i < part_count(); ++i ) {
+        const vehicle_part &part = parts[i];
+        if( part.removed || !part.is_real_or_active_fake() ||
+            ( part.info().location != vpart_location_structure && !part.info().has_flag( VPFLAG_ROTOR ) ) ) {
+            continue;
+        }
+        const tripoint_bub_ms p = here.get_bub( part.next_pos );
+        if( !here.inbounds( p ) ) {
+            return blocked();
+        }
+        const auto safe_at = [&]( const tripoint_bub_ms & tile ) {
+            if( !here.inbounds( tile ) ) {
+                return false;
+            }
+            const auto other = here.veh_at( tile );
+            const Creature *creature = get_creature_tracker().creature_at( tile );
+            return here.passable_ter_furn( tile ) &&
+                   !here.get_impassable_field_at( tile ) && ( !other || &other->vehicle() == this ) &&
+                   ( !creature || ( other && &other->vehicle() == this ) );
+        };
+        if( !safe_at( p ) ) {
+            return blocked();
+        }
+        if( dp.z() != 0 && dp.xy() != point_rel_ms::zero ) {
+            // Either the old layer or the layer we're entering must admit the
+            // horizontal sweep. The combined move never touches the ground
+            // layer between the two endpoints.
+            if( !safe_at( p - tripoint( 0, 0, dp.z() ) ) &&
+                !safe_at( here.get_bub( part.next_pos - displacement.xy() ) ) ) {
+                return blocked();
+            }
+        }
+        if( part.info().has_flag( VPFLAG_ROTOR ) ) {
+            const int radius = static_cast<int>( std::lround( part.info().rotor_info->rotor_diameter / 2.0 ) );
+            for( const tripoint_bub_ms &tile : here.points_in_radius( p, radius ) ) {
+                if( !safe_at( tile ) ) {
+                    return blocked();
+                }
+            }
+        }
+        if( part.info().location != vpart_location_structure ) {
+            continue;
+        }
+        const double surface = north_america::altitude_at( here, p );
+        const bool has_floor = !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, p );
+        if( landing && part.mount_level == 0 ) {
+            if( !has_floor || here.has_flag_ter( ter_furn_flag::TFLAG_SWIMMABLE, p ) ||
+                std::abs( surface - target ) > 0.5 ) {
+                return blocked();
+            }
+        } else {
+            const double part_height = target + part.mount_level * north_america::floor_height_m;
+            if( has_floor && surface >= part_height ) {
+                return blocked();
+            }
+            const tripoint_bub_ms below = p + tripoint::below;
+            if( here.inbounds( below ) && !here.passable_ter_furn( below ) &&
+                north_america::altitude_at( here, below ) + north_america::floor_height_m > part_height &&
+                !( command > 0 && dp.xy() == point_rel_ms::zero && !is_flying && part.mount_level == 0 ) ) {
+                return blocked();
+            }
+        }
+    }
+
+    const auto previous = flight_altitude_m;
+    flight_altitude_m = target;
+    is_flying = true;
+    if( dp != tripoint_rel_ms::zero ) {
+        vehicle *const moved = here.move_vehicle( *this, dp, facing, true );
+        if( !moved ) {
+            return nullptr;
+        }
+        if( moved->pos_bub( here ).z() != target_z ) {
+            moved->flight_altitude_m = previous;
+            return moved;
+        }
+        if( moved != this ) {
+            return moved;
+        }
+    }
+    if( landing ) {
+        flight_altitude_m.reset();
+        is_flying = false;
+        vertical_velocity = 0;
+        check_falling_or_floating();
+    }
+    return this;
+}
+
 vehicle *vehicle::act_on_map( map &here )
 {
     const tripoint_bub_ms pt = pos_bub( here );
@@ -2134,7 +2339,8 @@ vehicle *vehicle::act_on_map( map &here )
     }
 
     const float wheel_traction_area = here.vehicle_wheel_traction( *this );
-    const float traction = k_traction( here, wheel_traction_area );
+    const float traction = requested_z_change != 0 && north_america::elevation_active() &&
+                           is_aircraft( here ) ? 1.0f : k_traction( here, wheel_traction_area );
     if( traction < 0.001f ) {
         of_turn = 0;
         if( !should_fall ) {
@@ -2248,9 +2454,33 @@ vehicle *vehicle::act_on_map( map &here )
         dp.y() = mdir.dy();
     }
 
+    if( !should_fall && ( is_flying || requested_z_change > 0 ) && here.supports_zlevels() &&
+        north_america::elevation_active() && is_aircraft( here ) ) {
+        of_turn = std::max( 0.0f, of_turn );
+        dp.z() = std::exchange( requested_z_change, 0 );
+        return move_atlas_aircraft( here, dp, mdir, operator_character );
+    }
+
+    if( !should_fall && !is_flying && dp.xy() != point_rel_ms::zero &&
+        north_america::elevation_active() && !is_on_ramp && !is_towed() &&
+        !wheelcache.empty() && !( is_watercraft() && can_float( here ) ) ) {
+        const int before = velocity;
+        if( !change_speed_on_grade( here, pt, pt + dp, traction ) ) {
+            stop( here );
+            if( operator_character ) {
+                operator_character->add_msg_if_player( m_info, _( "The slope is too steep for the %s." ), name );
+            }
+            return this;
+        }
+        if( std::abs( velocity ) < 20 ) {
+            velocity = before < 0 ? -20 : 20;
+        }
+    }
+
     if( should_fall ) {
         dp.z() = -1;
         is_flying = false;
+        flight_altitude_m.reset();
     } else {
         dp.z() = requested_z_change;
         requested_z_change = 0;
@@ -2333,6 +2563,7 @@ void vehicle::check_falling_or_floating()
 
     is_falling = true;
     is_flying = false;
+    flight_altitude_m.reset();
 
     auto has_support = [&here]( const tripoint_bub_ms & position, const bool water_supports ) {
         // water counts as support if we're swimming and checking to see if we're falling, but

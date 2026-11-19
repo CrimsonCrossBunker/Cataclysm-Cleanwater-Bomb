@@ -104,6 +104,7 @@
 #include "mp_actor_binding.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "north_america_elevation.h"
 #include "npc.h"
 #include "options.h"
 #include "overmapbuffer.h"
@@ -5009,6 +5010,13 @@ void vehicle::deserialize( const JsonObject &data )
     }
     data.read( "in_water", in_water );
     data.read( "flying", is_flying );
+    flight_altitude_m.reset();
+    if( is_flying && data.has_member( "flight_altitude_m" ) ) {
+        const double height = data.get_float( "flight_altitude_m" );
+        if( north_america::within_altitude_limits( height ) ) {
+            flight_altitude_m = height;
+        }
+    }
     data.read( "cruise_velocity", cruise_velocity );
     data.read( "vertical_velocity", vertical_velocity );
     data.read( "engine_on", engine_on );
@@ -5134,6 +5142,9 @@ void vehicle::serialize( JsonOut &json ) const
     json.member( "in_water", in_water );
     json.member( "in_deep_water", in_deep_water );
     json.member( "flying", is_flying );
+    if( is_flying && flight_altitude_m ) {
+        json.member( "flight_altitude_m", *flight_altitude_m );
+    }
     json.member( "cruise_velocity", cruise_velocity );
     json.member( "vertical_velocity", vertical_velocity );
     json.member( "engine_on", engine_on );
@@ -7487,6 +7498,20 @@ void submap::store( JsonOut &jsout ) const
     }
     jsout.end_array();
 
+    if( !surface_grades.empty() ) {
+        jsout.member( "surface_grades" );
+        jsout.start_array();
+        for( const auto &[p, grade] : surface_grades ) {
+            jsout.start_array();
+            jsout.write( p.x() );
+            jsout.write( p.y() );
+            jsout.write( grade.centimetres );
+            jsout.write( grade.built_at );
+            jsout.end_array();
+        }
+        jsout.end_array();
+    }
+
     jsout.member( "terrain_growth" );
     jsout.start_array();
     for( const auto &entry : terrain_growth ) {
@@ -7801,6 +7826,15 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                     set_radiation( { rad_cell % SEEX, rad_cell / SEEX }, rad_strength );
                     rad_cell++;
                 }
+            }
+        }
+    } else if( member_name == "surface_grades" ) {
+        const JsonArray grades = jv.get_array();
+        for( const JsonArray entry : grades ) {
+            const int x = entry.get_int( 0 );
+            const int y = entry.get_int( 1 );
+            if( x >= 0 && x < SEEX && y >= 0 && y < SEEY ) {
+                set_grade( point_sm_ms( x, y ), { entry.get_int( 2 ), entry.get_int( 3 ) } );
             }
         }
     } else if( member_name == "terrain_growth" ) {

@@ -1543,6 +1543,16 @@ bool map::vehproceed( std::vector<safe_reference<vehicle>> &vehicle_list,
         return false;
     }
 
+    if( north_america::elevation_active() && ( *cur_veh )->is_flying_in_air() ) {
+        const tripoint_bub_ms current = ( *cur_veh )->pos_bub( *this );
+        const int ahead = current.z() >= max_z() - 1 ? 2 : current.z() <= min_z() + 1 ? -2 : 0;
+        if( ahead != 0 ) {
+            ensure_z_in_window( current + tripoint( 0, 0, ahead ) );
+            if( !*cur_veh ) {
+                return true;
+            }
+        }
+    }
     vehicle *const moved = ( *cur_veh )->act_on_map( *this );
     if( moved ) {
         *cur_veh = moved->get_safe_reference();
@@ -1570,7 +1580,8 @@ static bool sees_veh( const Creature &c, vehicle &veh, bool force_recalc )
     } );
 }
 
-vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tileray &facing )
+vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tileray &facing,
+                            bool cleared_flight_path )
 {
     if( dp == tripoint_rel_ms::zero ) {
         debugmsg( "Empty displacement vector" );
@@ -1580,7 +1591,7 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         return &veh;
     }
     // Split the movement into horizontal and vertical for easier processing
-    if( dp.xy() != point_rel_ms::zero && dp.z() != 0 ) {
+    if( !cleared_flight_path && dp.xy() != point_rel_ms::zero && dp.z() != 0 ) {
         vehicle *const new_pointer = move_vehicle( veh, tripoint_rel_ms( dp.xy(), 0 ), facing );
         if( !new_pointer ) {
             return nullptr;
@@ -1596,7 +1607,7 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
     }
     const bool vertical = dp.z() != 0;
     // Ensured by the splitting above
-    cata_assert( vertical == ( dp.xy() == point_rel_ms::zero ) );
+    cata_assert( cleared_flight_path || vertical == ( dp.xy() == point_rel_ms::zero ) );
 
     const int target_z = dp.z() + veh.sm_pos.z();
     // limit vehicles to at most max_z() - 1; this mitigates getting to zlevel 10 easily
@@ -1630,7 +1641,9 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
     size_t collision_attempts = 10;
     do {
         collisions.clear();
-        veh.collision( *this, collisions, dp1, false );
+        if( !cleared_flight_path ) {
+            veh.collision( *this, collisions, dp1, false );
+        }
 #ifdef MP_ENABLED
         if( cata_mp::is_hosting() && !collisions.empty() ) {
             for( const veh_collision &c : collisions ) {
@@ -1693,7 +1706,7 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
 
     const int velocity_after = coll_velocity;
     bool can_move = velocity_after != 0 && sgn( velocity_after ) == sgn( velocity_before );
-    if( dp.z() != 0 && veh.is_aircraft( *this ) ) {
+    if( cleared_flight_path || ( dp.z() != 0 && veh.is_aircraft( *this ) ) ) {
         can_move = true;
     }
     if( vertical ) {
@@ -1786,7 +1799,7 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         }
     }
     // Now we're gonna handle traps we're standing on (if we're still moving).
-    if( !vertical && can_move ) {
+    if( !vertical && can_move && !cleared_flight_path ) {
         const auto wheel_indices = veh.wheelcache; // Don't use a reference here, it causes a crash.
 
         // Values to deal with crushing items.
@@ -2350,7 +2363,8 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
     const tripoint_bub_ms src = veh.pos_bub( *this );
     // handle vehicle ramps
     int ramp_offset = 0;
-    if( adjust_pos ) {
+    const bool in_flight = veh.flight_altitude() && north_america::elevation_active();
+    if( adjust_pos && !in_flight ) {
         if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp ) ) {
             ramp_offset += 1;
             veh.is_on_ramp = true;
@@ -2468,9 +2482,9 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
             }
             const tripoint_bub_ms chassis_point = src + dp + next_pos -
                                                   tripoint( 0, 0, veh_part.mount_level );
-            if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
+            if( !in_flight && has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
                 psg_offset_z += 1;
-            } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {
+            } else if( !in_flight && has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {
                 psg_offset_z -= 1;
             }
 
@@ -2515,7 +2529,13 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
 
     if( z_change || src.z() != dst.z() ) {
         if( z_change ) {
-            g->vertical_move( z_change, true );
+            if( in_flight ) {
+                // The rider is already at the destination. Reload the view
+                // for that layer without applying a second descent or climb.
+                g->vertical_shift( player_character.posz() );
+            } else {
+                g->vertical_move( z_change, true );
+            }
             // vertical moves can flush the caches, so make sure we're still in the cache
             cache_vehicle_parts( veh );
         }
@@ -2969,6 +2989,27 @@ void map::set_map_damage( const tripoint_bub_ms &p, int dmg )
         return;
     }
     current_submap->set_map_damage( l, dmg );
+}
+
+const graded_surface *map::get_surface_grade( const tripoint_bub_ms &p ) const
+{
+    if( !inbounds( p ) ) {
+        return nullptr;
+    }
+    point_sm_ms offset;
+    const submap *sm = unsafe_get_submap_at( p, offset );
+    return sm ? sm->get_grade( offset ) : nullptr;
+}
+
+void map::set_surface_grade( const tripoint_bub_ms &p, graded_surface grade )
+{
+    if( !inbounds( p ) ) {
+        return;
+    }
+    point_sm_ms offset;
+    if( submap *sm = unsafe_get_submap_at( p, offset ) ) {
+        sm->set_grade( offset, grade );
+    }
 }
 
 const terrain_growth_state *map::get_terrain_growth( const tripoint_bub_ms &p ) const

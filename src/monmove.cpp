@@ -175,6 +175,9 @@ static bool z_is_valid( int z )
 
 bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
 {
+    if( !flies() && !climbs() && north_america::sheer_slope( *here, pos_bub( *here ), p ) ) {
+        return false;
+    }
     const map_movement_query tile( *here, p );
     const field &fields = tile.fields();
     bool has_impassable_fields = false;

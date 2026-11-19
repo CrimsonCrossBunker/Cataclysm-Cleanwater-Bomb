@@ -40,7 +40,9 @@
 #include "map.h"
 #include "line.h"
 #include "npc.h"
+#include "north_america_elevation.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "math_parser_diag_value.h"
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -380,6 +382,15 @@ bool drive_vehicle( Character &who, map &here, const tripoint_rel_ms &input )
         if( !target->is_flyable() ) {
             who.add_msg_if_player( m_info, _( "This vehicle doesn't look very airworthy." ) );
             return false;
+        }
+        if( north_america::elevation_active() && here.supports_zlevels() ) {
+            const tripoint_bub_ms edge = target->pos_bub( here ) + tripoint( 0, 0, 2 * input.z() );
+            const safe_reference<vehicle> lifetime = target->get_safe_reference();
+            if( !here.ensure_z_in_window( edge ) || !lifetime ) {
+                who.add_msg_if_player( m_info, _( "You have reached the limit of your flight range." ) );
+                return false;
+            }
+            target = lifetime.get();
         }
         if( input.z() < 0 ) {
             if( !target->check_heli_descend( here, who ) ) {

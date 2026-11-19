@@ -82,6 +82,7 @@
 #include "map_scale_constants.h"
 #include "mapbuffer.h"
 #include "mapdata.h"
+#include "north_america_elevation.h"
 #include "material.h"
 #include "math_defines.h"
 #include "math_parser_diag_value.h"
@@ -5241,6 +5242,9 @@ bool vehicle::is_flying_in_air() const
 void vehicle::set_flying( bool new_flying_value )
 {
     is_flying = new_flying_value;
+    if( !is_flying ) {
+        flight_altitude_m.reset();
+    }
 }
 
 bool vehicle::is_watercraft() const
@@ -9715,6 +9719,7 @@ std::set < int > vehicle::advance_precalc_mounts( const point_sm_ms &new_pos,
     // can get split across the z-levels and continue moving, enough though large parts of the
     // vehicle are unsupported.  In that case, move the unsupported parts down until they are
     // supported.
+    const bool in_flight = flight_altitude() && north_america::elevation_active();
     int index = -1;
     for( vehicle_part &prt : parts ) {
         index += 1;
@@ -9732,9 +9737,9 @@ std::set < int > vehicle::advance_precalc_mounts( const point_sm_ms &new_pos,
         }
         const tripoint_bub_ms chassis_point = src + dp + prt.precalc[0] -
                                               tripoint( 0, 0, prt.mount_level );
-        if( here->has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
+        if( !in_flight && here->has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
             prt.precalc[0].z() += 1;
-        } else if( here->has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {
+        } else if( !in_flight && here->has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {
             prt.precalc[0].z() -= 1;
         }
         prt.precalc[0].z() -= ramp_offset;

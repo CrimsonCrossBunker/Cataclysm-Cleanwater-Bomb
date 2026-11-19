@@ -28,11 +28,13 @@
 #include "mapgendata.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
+#include "north_america_elevation.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
 #include "path_info.h"
 #include "point.h"
+#include "submap.h"
 #include "regional_settings.h"
 #include "rng.h"
 #include "type_id.h"
@@ -257,7 +259,7 @@ point highway_alignment( const road_segment &route )
 double highway_distance( const highway_stroke &stroke, double east, double south )
 {
     const double along = std::clamp( east * stroke.east + south * stroke.south, 0.0,
-                                    stroke.length );
+                                     stroke.length );
     return std::hypot( east - stroke.east * along, south - stroke.south * along );
 }
 
@@ -332,7 +334,7 @@ void visit_roads( point from, point to, const Visitor &visit )
 
 template<typename Visitor>
 static void visit_wide_routes( point_abs_omt origin, int width, int height, bool mapped,
-                              bool arterials, const Visitor &visit )
+                               bool arterials, const Visitor &visit )
 {
     const point first = origin.raw();
     if( mapped ) {
@@ -349,7 +351,9 @@ static void visit_wide_routes( point_abs_omt origin, int width, int height, bool
     for( int row = 0; row < height; ++row ) {
         for( int column = 0; column < width; ++column ) {
             const road_cell &cell = streets[row * width + column];
-            for( const om_direction::type dir : { om_direction::type::east, om_direction::type::south } ) {
+            for( const om_direction::type dir : {
+                     om_direction::type::east, om_direction::type::south
+                 } ) {
                 if( om_lines::has_segment( cell.arterial_connections, dir ) &&
                     !om_lines::has_segment( cell.mapped_connections, dir ) ) {
                     const point start = first + point( column, row );
@@ -409,16 +413,17 @@ void place_wide_highway_surface( mapgendata &dat )
 {
     const oter_id terrain = dat.terrain_type();
     if( dat.zlevel() != 0 || ( terrain->get_type_id() != oter_type_road &&
-                              terrain != oter_atlas_highway_north_south &&
-                              terrain != oter_atlas_highway_east_west ) || !active() ) {
+                               terrain != oter_atlas_highway_north_south &&
+                               terrain != oter_atlas_highway_east_west ) || !active() ) {
         return;
     }
     struct lane_sample {
         unsigned lanes = 0;
         double distance = 0;
         double along = 0;
+        point_abs_ms center;
     };
-    std::array<lane_sample, road_span * road_span> surface{};
+    std::array<lane_sample, road_span *road_span> surface{};
     const point halo( wide_highway_halo, wide_highway_halo );
     const bool mapped = dat.region.place_roads || dat.region.overmap_highway.has_value();
     const bool arterials = dat.region.city_spec && dat.region.get_settings_city().city_size > 0;
@@ -427,6 +432,10 @@ void place_wide_highway_surface( mapgendata &dat )
     const std::size_t wide_links = ( arterials ? road.arterial_connections : 0 ) |
                                    ( mapped && road.lanes >= 4 ? road.mapped_connections : 0 );
     const bool only_wide_links = wide_links != 0 && ( terrain->get_line() & ~wide_links ) == 0;
+    const bool urban = terrain->has_flag( oter_flags::has_sidewalk ) ||
+                       in_urban_footprint( dat.pos().xy() ) || overmap_buffer.is_in_city( dat.pos() ) ||
+                       road.street != urban_road::none;
+    const bool grade_surface = elevation_active();
     bool found = false;
     visit_wide_routes( dat.pos().xy() - halo, 2 * halo.x + 1, 2 * halo.y + 1, mapped, arterials,
     [&]( const road_segment & route ) {
@@ -447,12 +456,19 @@ void place_wide_highway_surface( mapgendata &dat )
                 const bool paved = distance < stroke.half_width;
                 const bool existing_paved = cell.lanes > 0 && cell.distance < highway_half_width( cell.lanes );
                 if( distance < corridor && ( cell.lanes == 0 || ( paved && !existing_paved ) ||
-                        ( paved == existing_paved && ( route.lanes > cell.lanes ||
-                          ( route.lanes == cell.lanes && distance < cell.distance ) ) ) ) ) {
+                                             ( paved == existing_paved && ( route.lanes > cell.lanes ||
+                                                     ( route.lanes == cell.lanes && distance < cell.distance ) ) ) ) ) {
+                    const double along = std::clamp( east * stroke.east + south * stroke.south,
+                                                     0.0, stroke.length );
+                    const point base = route.begin * road_span + point( SEEX, SEEY ) +
+                                       highway_alignment( route );
+                    const point center = base + point(
+                                             static_cast<int>( std::lround( along * stroke.east ) ),
+                                             static_cast<int>( std::lround( along * stroke.south ) ) );
+                    const double station = east * stroke.east + south * stroke.south;
                     cell = { route.lanes, distance,
-                             east * stroke.east + south * stroke.south +
-                             route.begin.x * road_span * stroke.east +
-                             route.begin.y * road_span * stroke.south };
+                             station + base.x *stroke.east + base.y * stroke.south, point_abs_ms( center )
+                           };
                     found = true;
                 }
             }
@@ -478,10 +494,22 @@ void place_wide_highway_surface( mapgendata &dat )
             }
             const int half_width = highway_half_width( sample.lanes );
             const int stripe = static_cast<int>( sample.distance );
+            const tripoint_bub_ms tile( pos, 0 );
             if( stripe >= half_width ) {
+                const ter_id ground = dat.m.ter( pos );
+                const bool verge = ground == ter_t_grass || ground == ter_t_sidewalk;
+                if( urban && verge ) {
+                    dat.m.ter_set( pos, ter_t_sidewalk.id() );
+                    if( grade_surface ) {
+                        dat.m.set_surface_grade( tile, {
+                            static_cast<int>( std::lround( surface_elevation( sample.center ) * 100.0 ) ), 0
+                        } );
+                    }
+                }
                 const int marker = static_cast<int>( std::floor( sample.along ) );
-                if( stripe == half_width && marker % ( 2 * road_span ) == 0 &&
-                    dat.m.ter( pos ) == ter_t_grass && !dat.m.has_furn( pos ) ) {
+                const int period = urban ? road_span : 2 * road_span;
+                if( stripe == half_width + ( urban ? 1 : 0 ) && marker % period == 0 &&
+                    verge && !dat.m.has_furn( pos ) ) {
                     dat.m.furn_set( pos, furn_f_street_light.id() );
                 }
                 continue;
@@ -496,6 +524,11 @@ void place_wide_highway_surface( mapgendata &dat )
                 dat.m.furn_set( pos, furn_str_id::NULL_ID().id() );
             }
             dat.m.ter_set( pos, pavement );
+            if( grade_surface ) {
+                dat.m.set_surface_grade( tile, {
+                    static_cast<int>( std::lround( surface_elevation( sample.center ) * 100.0 ) ), 0
+                } );
+            }
         }
     }
 }
@@ -746,6 +779,9 @@ static bool draw_wide_avenue( mapgendata &dat )
     };
     const int columns = limits[1] - limits[0] + 1;
     const bool highway = columns >= 3;
+    const bool sidewalks = !highway || in_urban_footprint( dat.pos().xy() );
+    const bool grade_surface = elevation_active();
+    const point_abs_ms origin = project_to<coords::ms>( dat.pos().xy() );
     if( columns == 1 ) {
         if( flank ) {
             dat.m.draw_fill_background( ter_t_grass.id() );
@@ -771,6 +807,10 @@ static bool draw_wide_avenue( mapgendata &dat )
         const int pavement_start = middle - half_width;
         const int pavement_end = middle + half_width;
         const int lane_width = ( full_half_width - ( highway ? 3 : 0 ) ) / lanes_per_direction;
+        const point_abs_ms centerline = origin + across_step * ( middle - offset * span ) +
+                                        along_step * along;
+        const int altitude = grade_surface ?
+                             static_cast<int>( std::lround( surface_elevation( centerline ) * 100.0 ) ) : 0;
         for( int across = 0; across < span; ++across ) {
             const int position = across + offset * span;
             const int from_middle = std::abs( position - middle );
@@ -785,18 +825,24 @@ static bool draw_wide_avenue( mapgendata &dat )
                 } else {
                     ground = ter_t_pavement.id();
                 }
-            } else if( !highway && position >= pavement_start - 3 && position < pavement_end + 3 ) {
+            } else if( sidewalks && position >= pavement_start - 3 && position < pavement_end + 3 ) {
                 ground = ter_t_sidewalk.id();
             }
-            dat.m.ter_set( vertical ? point_bub_ms( across, along ) : point_bub_ms( along, across ),
-                           ground );
+            const point_bub_ms tile = vertical ? point_bub_ms( across, along ) :
+                                      point_bub_ms( along, across );
+            dat.m.ter_set( tile, ground );
+            if( grade_surface && ground != ter_t_grass ) {
+                dat.m.set_surface_grade( tripoint_bub_ms( tile, 0 ), { altitude, 0 } );
+            }
         }
         if( expansion == taper && along == ( alternating ? 11 : 12 ) ) {
             const int curb = ( alternating ? pavement_start - 1 : pavement_end ) - offset * span;
             if( curb >= 0 && curb < span ) {
                 const point_bub_ms lamp = vertical ? point_bub_ms( curb, along ) :
                                           point_bub_ms( along, curb );
-                dat.m.furn_set( lamp, furn_f_street_light.id() );
+                if( !dat.m.has_furn( lamp ) ) {
+                    dat.m.furn_set( lamp, furn_f_street_light.id() );
+                }
             }
         }
     }

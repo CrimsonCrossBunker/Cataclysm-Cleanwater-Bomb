@@ -57,6 +57,7 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "mapdata.h"
+#include "north_america_elevation.h"
 #include "memory_fast.h"
 #include "messages.h"
 #include "mp_client_conn.h"
@@ -1776,7 +1777,14 @@ void build_construction_activity_actor::complete_construction( player_activity &
         if( built.post_is_furniture ) {
             here.furn_set( terp, furn_str_id( built.post_terrain ) );
         } else {
-            here.ter_set( terp, ter_str_id( built.post_terrain ) );
+            if( north_america::elevation_active() ) {
+                const double altitude = north_america::altitude_at( here, terp );
+                if( here.ter_set( terp, ter_str_id( built.post_terrain ) ) ) {
+                    north_america::extend_foundation( here, terp, altitude );
+                }
+            } else {
+                here.ter_set( terp, ter_str_id( built.post_terrain ) );
+            }
         }
     }
 
