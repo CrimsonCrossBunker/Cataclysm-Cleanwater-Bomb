@@ -34,3 +34,53 @@ ccb.content.define_mapgen {
         fill_terrain = "t_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_shelter_1",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "   ++o+++o++o+++ppp.ppp ",
+            "   +@.x.x.@+.@++......p ",
+            "   +D'+.+'D+'D+++++l+++ ",
+            "   ++n+.++n+xn++q+.'.o  ",
+            "   +D.x.'..'.hf+x++l+++ ",
+            "   o@'+.'..'.hfn.77.77+ ",
+            "   +n++++x++++n+...'..o ",
+            "   o.....'.....x......+ ",
+            "   +nx++nx++nx++...++++ ",
+            "   +5't+5't+5't+.'.+    ",
+            "   ++9+++9+++9++...o    ",
+            "   ++++++++++++....+    ",
+            "   +{L.............++++ ",
+            "   oF..........H.....y+ ",
+            "   oV'J...'....H.'2..y+ ",
+            "   oI'J...'....H.'2..y+ ",
+            "   +P.S........H.....y+ ",
+            "   +M^M...E.......Y...+ ",
+            "   +++++R...'...+++++++ ",
+            "       +RRRR.JWZ+       ",
+            "       ++++++ooo+       ",
+            "                        ",
+        },
+        nested = { { x = 0, y = 0, id = { parameter = "lightstatus", fallback = "null" } } },
+        item_placements = {
+            { id = "television", repetitions = 1, x = 21, y = 17 },
+            { id = "toaster", repetitions = 1, x = 6, y = 17 },
+        },
+        monster_group_placements = {
+            {
+                group = "AFS_GROUP_MOXIE_LOW_RISK",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 10,
+                density = 0.1,
+            },
+        },
+        fill_terrain = "t_metal_floor",
+        palettes = { "standard_afsshelter_palette", "afs_light_param_palette" },
+        terrain = { ["'"] = "t_metal_floor_olight_inactive" },
+    },
+}

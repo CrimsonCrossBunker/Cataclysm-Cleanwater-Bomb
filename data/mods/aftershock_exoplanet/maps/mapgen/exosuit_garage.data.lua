@@ -150,3 +150,73 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_exosuit_garage_a1",
+    layout = {
+        rows = {
+            "   -       2-   )!))    ",
+            " ---11111111--- ).c)    ",
+            " -.-.$$..$$2-%-))!)))   ",
+            " -...$$..$$...-nn...))  ",
+            " -...$$''$$...-î..'.b)) ",
+            " -$$$$$..$$$$$-jcj..bb/ ",
+            " -...$$..$$...-.hJ..../ ",
+            " -$$$$$..$$$$$-////:/:/ ",
+            " -...$$..$$...-...../~/ ",
+            " -$$$$$..$$$$$-...../// ",
+            " -...$$''$$...---.'.:b/ ",
+            " -...$$..$$...3.!.../// ",
+            " ---444444--3----//.:b/ ",
+            " -fff5.556.-.c-*'&/./// ",
+            " -f.h......-!--/://...# ",
+            " #%......'h...-y.y///:/ ",
+            " -......fff5..-h.h%'..) ",
+            " #......fff...3.......) ",
+            " -............-ll.UjoF/ ",
+            " ------)))))---//:///// ",
+            "            #❷❺/..'h./  ",
+            "            #❶.:..kck/  ",
+            "            /////)))//  ",
+            "                        ",
+        },
+        nested = {
+            { x = 0, y = 0, id = { parameter = "lightstatus", fallback = "null" } },
+            {
+                x = 0,
+                y = 0,
+                choices = {
+                    { id = "afs_exosuit_garage_unlooted", weight = 60 },
+                    { id = "afs_exosuit_garage_looted", weight = 40 },
+                },
+            },
+        },
+        item_groups = { ["î"] = { group = "magazines", chance = 80, repetitions = { 2, 5 } } },
+        monster_placements = {
+            {
+                group = "AFS_GROUP_RUIN_MOXIE",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                pack_size = { 1, 3 },
+                chance = 20,
+            },
+        },
+        fill_terrain = "t_metal_floor",
+        palettes = {
+            "afs_habitat_structure", "afs_habitat_exterior", "afs_habitat_life_support",
+            "afs_habitat_residential_furnishing", "afs_light_param_palette",
+        },
+        terrain = {
+            ["1"] = "t_afs_security_gate_closed",
+            ["3"] = "t_afs_door_metal_elocked",
+            ["4"] = "t_reinforced_glass_shutter",
+        },
+        furniture = {
+            ["2"] = "f_security_panel",
+            ["5"] = "f_machinery_light",
+            ["6"] = "f_machinery_electronic",
+            ["î"] = "f_rack",
+        },
+    },
+}

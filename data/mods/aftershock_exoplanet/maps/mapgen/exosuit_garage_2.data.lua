@@ -142,3 +142,71 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_exosuit_garage_2_a1",
+    layout = {
+        rows = {
+            "  //// °°    °°°  °°    ",
+            "  /..----// °°°  /////  ",
+            "  #..1.'2    °   .fff/  ",
+            "  /..-$$2   °°°  ..hf/  ",
+            "  /..-..2  °°°°  ...4/  ",
+            "  /..----°°° °°° ..../  ",
+            "  #..1.'2 °    °°..'5/  ",
+            "  /''-$$2°°    °°..../  ",
+            "  /.%-..2  °  °  ...4/  ",
+            "  /..----° °°°   ..hf/  ",
+            "  #..1.'2 °°°°   .fff/  ",
+            "  /..-$$2  °° /!//////  ",
+            "  /..-..2   ° /.c/~/~/  ",
+            "  /!/----///==/!//:/:/  ",
+            "  =......'.:..'..:.'./  ",
+            "  /:/:/..../p.jcj/%..#  ",
+            "  /b/b/..../3.Jh./❻❺❶/  ",
+            "  ///////////===//////  ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        nested = {
+            { x = 0, y = 0, id = { parameter = "lightstatus", fallback = "null" } },
+            {
+                x = 0,
+                y = 0,
+                choices = {
+                    { id = "afs_exosuit_garage_2_unlooted", weight = 60 },
+                    { id = "afs_exosuit_garage_2_looted", weight = 40 },
+                },
+            },
+        },
+        monster_placements = {
+            {
+                group = "AFS_GROUP_RUIN_MOXIE",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                pack_size = { 1, 3 },
+                chance = 20,
+            },
+        },
+        vending_glyphs = {
+            ["3"] = {
+                group = "afs_vending_false_meals",
+                reinforced = true,
+                powered = true,
+                networked = true,
+            },
+        },
+        fill_terrain = "t_metal_floor",
+        palettes = {
+            "afs_habitat_structure", "afs_habitat_exterior", "afs_habitat_life_support",
+            "afs_habitat_residential_furnishing", "afs_light_param_palette",
+        },
+        terrain = { ["2"] = "t_afs_security_gate_closed", ["1"] = "t_afs_door_metal_elocked" },
+        furniture = { ["4"] = "f_machinery_light", ["5"] = "f_machinery_electronic" },
+    },
+}

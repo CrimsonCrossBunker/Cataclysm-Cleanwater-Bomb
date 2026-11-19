@@ -240,3 +240,84 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "afs_enforcer_station_a1" },
+    layout = {
+        rows = {
+            "                        ",
+            " //=///=///////=////#// ",
+            " /h.v/v.h/<</3c.3c=4.4/ ",
+            " /ck./.kc/../..'..=4'4/ ",
+            " /.'./.'./''/ccê..!..4/ ",
+            " //:///://..////:///!// ",
+            " =.....'..........'...= ",
+            " =.....'..........'..%= ",
+            " ////:////--12--..//:// ",
+            " /k....vkc-....-../h.h/ ",
+            " =ch..'..h-....-../.'./ ",
+            " =...h..h.-..'.-''/.kc/ ",
+            " /..%ckvck-...--../v.h/ ",
+            " -12-))))----..-..///// ",
+            " -.-°$..$°°ë-..-../~/~/ ",
+            " -.-°$''$°°-----/!/:/:/ ",
+            " -!-°$..$°°ë-pynn...../ ",
+            " -°°°$..$°°--b...'.jjJ/ ",
+            " -°°°$..$°°ë-b.....ch./ ",
+            " -°°°$''$°°--bb//!//nn/ ",
+            " -°°°$..$°°ë-==/b'l/==/ ",
+            " -°°°$..$°5--℗℗/b.l/℗℗  ",
+            " ---666666---  //!//    ",
+            "                        ",
+        },
+        nested = {
+            { x = 0, y = 0, id = { parameter = "lightstatus", fallback = "null" } },
+            {
+                x = 0,
+                y = 0,
+                id = { parameter = "enemies", fallback = "afs_enforcer_station_a1_floor1_moxies" },
+            },
+            {
+                x = 0,
+                y = 0,
+                choices = {
+                    { id = "afs_enforcer_station_a1_armory_unlooted", weight = 70 },
+                    { id = "afs_enforcer_station_a1_armory_looted", weight = 30 },
+                },
+            },
+            {
+                x = 0,
+                y = 0,
+                choices = {
+                    { id = "afs_enforcer_station_a1_garage_open", weight = 20 },
+                    { id = "afs_enforcer_station_a1_garage_patrol_car", weight = 40 },
+                    { id = "afs_enforcer_station_a1_garage_cycles", weight = 40 },
+                },
+            },
+        },
+        item_groups = {
+            ["ë"] = { group = "afs_police_bot_storage", chance = 15 },
+            ["ê"] = { group = "afs_police_hacker_gear", chance = 75, repetitions = { 1, 3 } },
+        },
+        fill_terrain = "t_metal_floor",
+        palettes = {
+            "afs_habitat_structure", "afs_habitat_exterior", "afs_habitat_residential_furnishing",
+            "afs_enforcer_station_a1_parrameter_palette", "afs_light_param_palette",
+        },
+        terrain = {
+            ["1"] = "t_door_metal_locked",
+            ["2"] = "t_afs_enforcer_card_reader",
+            ["6"] = "t_afs_security_gate_closed",
+            ["ë"] = "t_thconc_floor_no_roof",
+            ["5"] = "t_thconc_floor_no_roof",
+        },
+        furniture = {
+            ["3"] = "f_hacker_chair",
+            ["4"] = "f_server",
+            ["ë"] = "f_drone_recharge_station",
+            ["5"] = "f_security_panel",
+            ["ê"] = "f_locker",
+        },
+    },
+}

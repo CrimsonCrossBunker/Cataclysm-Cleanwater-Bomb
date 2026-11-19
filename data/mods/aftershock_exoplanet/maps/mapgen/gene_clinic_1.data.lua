@@ -245,3 +245,224 @@ ccb.content.define_mapgen {
         item_groups = { ["1"] = { group = "SUS_trash_floor", chance = 10, repetitions = { 1, 4 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_gene_clinic_1_a1",
+    layout = {
+        rows = {
+            "©©1™™©1©©©1©©™1©™©1™©1™™",
+            "™©|©©©|©™™|™©©|™™©|©©|©™",
+            "™©©™™™©©™™™©©™©©©©™™™©©™",
+            "©©™℗℗℗©℗℗℗©℗℗℗℗℗™©©™™©©©",
+            "™™|)))|)))|))))℗™™™©©|1™",
+            "™™|n2n|n2n|n2n)℗©™™©©©™™",
+            "™™|{;{{{;{{{;2)℗©©™©™™™™",
+            "™™||||||:|||{n)℗3©©©℗©™™",
+            "™||{{nn{{nn||||)|!!|)|™™",
+            "™™#hp{{hp{{{hp|2|{{|2|™™",
+            "™||ck{{ck{{{ck|;|;;|;|™™",
+            "™™|hh{{hh{{{hh|:|!!|:|™™",
+            "™||{{{;{{{{{;{{{{{{{{|™™",
+            "™™#{{n2n{{2{{{{{{{{{y|™™",
+            "™||::|||{pkh{{jcj{2{s|™™",
+            "™™|;;|q:{hch{{j;j{;{s|™™",
+            "™™|{{|q|)))))|J{c{n{s|™™",
+            "™™|<<|{|†††††||||:|:||™™",
+            "™™||||#|||||||||{;|;{|™™",
+            "™™™™™|™|™™™™™™™|~n|~n|™™",
+            "™™™™™™™™™™™™™™™|||||||™™",
+            "™™|™™™|™™™|™™™|™™™™™™™™™",
+            "™™|™™™|™™™|™™™|™™™™™™™™™",
+            "™™™™™™™™™™™™™™™™™™™™™™™™",
+        },
+        nested = {
+            { x = 0, y = 0, id = { parameter = "lightstatus", fallback = "null" } },
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "lightstatus", fallback = "null" },
+                    cases = { null = "afs_dead_plants", afs_map_lights_on = "null" },
+                },
+            },
+        },
+        sign_glyphs = {
+            ["3"] = {
+                text = ccb.content.text("Mercurial Gene Clinic: Welcome <city> to the better you.  Genetech: Embrace the next evolution."),
+            },
+        },
+        item_groups = {
+            q = { group = "afs_wintersuit_generic_basic", chance = 60, repetitions = { 1, 2 } },
+            k = { group = "SUS_office_desk", chance = 60 },
+        },
+        monster_placements = {
+            {
+                group = "AFS_GROUP_RUIN_MOXIE",
+                x = { 3, 20 },
+                y = { 8, 16 },
+                pack_size = { 2, 5 },
+                chance = 60,
+            },
+        },
+        fill_terrain = "t_linoleum_white",
+        palettes = {
+            "afs_habitat_structure", "afs_habitat_exterior", "afs_terra",
+            "afs_habitat_residential_furnishing", "afs_light_param_palette",
+        },
+        terrain = { ["1"] = "t_sidewalk", ["3"] = "t_sidewalk" },
+        furniture = { ["1"] = "f_screenmirror", ["2"] = "f_genetech_mannequin" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_gene_clinic_1_a2",
+    layout = {
+        rows = {
+            "  [[[[[[[[[[[[[[[[[[[[  ",
+            "  [..................[  ",
+            "  [..................[  ",
+            "  [..................[  ",
+            "  ||)|||)|||)||))|||||  ",
+            "  |@yn|@yn|@yn|{{{{{{|  ",
+            "  |@;{|@;{|@;{|;;|;;{|  ",
+            "  |{{c|{{c|{{c|<<|{{{|  ",
+            " ||:|||:|||:|||||4!!1|  ",
+            "  #{{{{;{{{;{{{{{{;{{|  ",
+            " ||{{{{;{{{;{{{{{{;{{|  ",
+            "  |;;|:||:||:||{{||:||  ",
+            " ||{{|;{|;{|;{|;;|{;{|  ",
+            "  #{{|bb|bb|~n|{{|{{{|  ",
+            " ||::||||||||||3:|||||  ",
+            "  |;;|❶❷❺|{{{{v{{|nnl|  ",
+            "  |{{|{;{:{;{{{;{:{{{|  ",
+            "  |>>|❸{❹5hyhhyh{|b;{|  ",
+            "  |||||#|||)))||:|b{{|  ",
+            "  [............|~|b{{|  ",
+            "  [..❻.❻.❻....[|||))||  ",
+            "  [...........[         ",
+            "  [[[[[[[[[[[[[         ",
+            "                        ",
+        },
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "looted", fallback = "afs_gene_clinic_1_a2_unlooted" },
+                    cases = {
+                        afs_gene_clinic_1_a2_unlooted = "afs_gene_clinic_1_a2_unlooted",
+                        afs_gene_clinic_1_a2_looted = "afs_gene_clinic_1_a2_looted",
+                    },
+                },
+            },
+            { x = 0, y = 0, id = { parameter = "lightstatus", fallback = "null" } },
+        },
+        monster_placements = {
+            {
+                group = "AFS_GROUP_RUIN_MOXIE",
+                x = { 3, 20 },
+                y = { 5, 17 },
+                pack_size = { 2, 4 },
+                chance = 60,
+            },
+        },
+        graffiti_glyphs = {
+            ["3"] = {
+                text = ccb.content.text("Employee Breakroom: We would like to remind you that all staff break times are extensively monitored by Corp Security.  And remember, the customer is always right!  - Management"),
+            },
+            ["4"] = {
+                text = ccb.content.text("Gene-Editing Lab: The new you is waiting just beyond these doors.  All clients must be accompanied by Mercurial Staff."),
+            },
+            ["5"] = {
+                text = ccb.content.text("Only licensed Mercurial Repair Techs beyond this point: Life Support Room"),
+            },
+        },
+        fill_terrain = "t_linoleum_white",
+        palettes = {
+            "afs_habitat_structure", "afs_habitat_life_support", "afs_habitat_residential_furnishing",
+            "afs_light_param_palette", "afs_gene_clinc_1_params",
+        },
+        terrain = {
+            ["1"] = "t_afs_mercurial_card_reader",
+            ["3"] = "t_concrete_wall",
+            ["4"] = "t_concrete_wall",
+            ["5"] = "t_concrete_wall",
+            [" "] = "t_open_air",
+            ["❻"] = "t_metal_floor",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_gene_clinic_1_a3",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "  |||||||||||||)))))))  ",
+            "  |{{@{{|{{@{{|{{{{{{)  ",
+            "  |{{@{{|{{@{{|;;|{;{)  ",
+            "  |{{;{{|{{;{{|>>|{{{)  ",
+            "  |ch{{{|ch{{{||||{{{)  ",
+            "  |))91!|))91!|ck|{;{)  ",
+            "  |{{{{{;{{{{{{{;{{{{)  ",
+            "  |{{{{{;{{{{{{{;{{{{)  ",
+            "  ||!17||||||{{|||||||  ",
+            "  |4..4|4|{{|{{:{{{ch)  ",
+            "  |4''4|)|{{1{{6{{;{{)  ",
+            "  ||!!||{{;{!;;|p{{{v)  ",
+            "  |.'..|{{{{8{{6||||||  ",
+            "  |....|{|{{|{{:{{{ch)  ",
+            "  |||||||||||))|{{;{{)  ",
+            "               |p{{{v)  ",
+            "               |))))))  ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "looted", fallback = "afs_gene_clinic_1_a3_unlooted" },
+                    cases = {
+                        afs_gene_clinic_1_a2_unlooted = "afs_gene_clinic_1_a3_unlooted",
+                        afs_gene_clinic_1_a2_looted = "afs_gene_clinic_1_a3_looted",
+                    },
+                },
+            },
+            { x = 0, y = 0, id = { parameter = "lightstatus", fallback = "null" } },
+        },
+        graffiti_glyphs = {
+            ["6"] = { text = ccb.content.text("Doctor <given_name>'s Office.") },
+            ["7"] = {
+                text = ccb.content.text("Only licensed Mercurial Repair Techs beyond this point: Drone Storage and Maintenance."),
+            },
+            ["8"] = {
+                text = ccb.content.text("Gene-Vault: All removal of Genetech products must be promptly logged.  - Management."),
+            },
+            ["9"] = { text = ccb.content.text("Operating Theatre") },
+        },
+        fill_terrain = "t_linoleum_white",
+        palettes = {
+            "afs_habitat_structure", "afs_habitat_residential_furnishing", "afs_light_param_palette",
+            "afs_gene_clinc_1_params",
+        },
+        terrain = {
+            ["1"] = "t_afs_mercurial_card_reader",
+            ["4"] = "t_metal_floor",
+            ["6"] = "t_concrete_wall",
+            ["7"] = "t_concrete_wall",
+            ["8"] = "t_concrete_wall",
+            ["9"] = "t_reinforced_glass",
+            [" "] = "t_open_air",
+        },
+        furniture = { ["4"] = "f_drone_recharge_station" },
+    },
+}

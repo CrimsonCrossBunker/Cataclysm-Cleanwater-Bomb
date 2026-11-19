@@ -122,3 +122,82 @@ ccb.content.define_mapgen {
         monster_glyphs = { ["3"] = { id = "mon_afs_commercial_laser_turret" } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_clinic_a1_floor_1",
+    layout = {
+        rows = {
+            "©© ©  © ©© ©©©------©  ©",
+            " ©   ©© ©©   --....-- © ",
+            "   ©©©       -q.qq.6-   ",
+            "   ©  ©      -q,qq,6-   ",
+            "      ©      -q.qq.6-   ",
+            "    ©©       -2.....-   ",
+            "   ©©©       --2..2--   ",
+            "    © ©      ℗---!--    ",
+            "   //!/      ℗1)..)1    ",
+            "   /../℗℗   ℗℗1),,)1℗℗  ",
+            "   /c,/℗℗℗  ℗℗1)..)1℗℗℗ ",
+            "  ///!/===//////!!////℗℗",
+            " //bb...ch/y.3c/../5^//℗",
+            " =b...,.j./@@,k/../...=℗",
+            " =b.....jJ/n...!..!,ck= ",
+            " =..n.....//////,,/.hv= ",
+            " /!//!//!!/y.3c/..///// ",
+            " /,./,./../@@,k/../lll/℗",
+            " /~n/~n/../n...!../..h=℗",
+            " ///////,,//////,,!.,7=℗",
+            " /❶.,..!........../%.h=℗",
+            " //❺.❸❷/........../oU// ",
+            " ℗/###////////////////  ",
+            "  ℗℗℗℗ ℗                ",
+        },
+        nested = {
+            { x = 0, y = 0, id = { parameter = "lightstatus", fallback = "null" } },
+            {
+                x = 0,
+                y = 0,
+                choices = {
+                    { id = "afs_clinic_unlooted", weight = 60 },
+                    { id = "afs_clinic_looted", weight = 40 },
+                },
+            },
+        },
+        item_groups = {
+            j = { group = "SUS_office_filing_cabinet", chance = 40 },
+            k = { group = "SUS_office_desk", chance = 40 },
+            ["7"] = { group = "dinnerware", chance = 60, repetitions = { 1, 3 } },
+            ["%"] = { group = "afs_tools_space_emergency", chance = 40 },
+            ["5"] = {
+                { group = "harddrugs", chance = 20 },
+                { group = "drugs_analgesic", chance = 50 },
+                { group = "gear_medical", chance = 30 },
+            },
+            ["2"] = { group = "afs_crate_medical" },
+        },
+        monster_placements = {
+            {
+                group = "AFS_GROUP_RUIN_MOXIE",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                pack_size = { 1, 3 },
+                chance = 20,
+            },
+        },
+        fill_terrain = "t_metal_floor",
+        palettes = {
+            "afs_habitat_structure", "afs_habitat_exterior", "afs_habitat_life_support",
+            "afs_habitat_residential_furnishing", "afs_light_param_palette",
+        },
+        terrain = { ["1"] = "t_region_groundcover_urban" },
+        furniture = {
+            ["1"] = "f_screenmirror",
+            ["2"] = "f_sealed_intermodal_crate",
+            ["3"] = "f_stool",
+            ["5"] = "f_locker",
+            ["6"] = "f_reinforced_displaycase_locked",
+            ["7"] = "f_metal_table",
+        },
+    },
+}

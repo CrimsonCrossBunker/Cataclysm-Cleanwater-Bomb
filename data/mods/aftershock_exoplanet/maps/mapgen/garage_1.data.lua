@@ -119,3 +119,82 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_garage_a1_floor_1",
+    layout = {
+        rows = {
+            "  © ¢  ¢ ¢  ©  ¢ ¢¢ ¢ © ",
+            " © ¢¢ ¢¢¢¢ © ¢¢ ¢ ¢¢¢©  ",
+            "       ¢¢¢¢© ¢  ¢   ¢©  ",
+            " ©©¢¢ ¢  ¢  ©  ¢  ¢ ¢   ",
+            "   ¢ ¢  ¢¢ ©©¢ ¢ ¢¢  ©  ",
+            "  ©¢ ¢¢¢  ¢©     ¢ ¢  © ",
+            " ©©7  ¢  ¢¢ ©¢¢¢    7©©©",
+            " ||$$$$$$$$||$$$$$$$$||©",
+            " |°°......°45°......°4| ",
+            " |°°.$..$.°°°°.$..$.°5| ",
+            " |°°.$,,$.°33°.$,,$.°°|©",
+            "℗|á°.$..$.°66°.$..$.°á|©",
+            "℗|á°.$..$.°ff°.$..$.°á| ",
+            "℗|á°.$..$.°ff°.$..$.°á|©",
+            " |f°.$..$.°66°.$..$.°f| ",
+            " |f°.$,,$.°33°.$,,$.°f| ",
+            " |%°.$..$.°°°°.$..$.°%|©",
+            " |45......6ff6......°°| ",
+            " ||||||||||||||))))|!||©",
+            " |ââââáá°|~|~|%hyyh°°°|©",
+            " |°°3°°°°|!|!|°°°°3°°°! ",
+            " |ââââáá°1°3°°°°llloUU|2",
+            " ||||####||||||####||||©",
+            "    ℗℗             ℗℗℗℗ ",
+        },
+        nested = {
+            { x = 0, y = 0, id = { parameter = "lightstatus", fallback = "null" } },
+            {
+                x = 0,
+                y = 0,
+                choices = {
+                    { id = "afs_garage_1_open", weight = 70 },
+                    { id = "afs_garage_1_closed", weight = 30 },
+                },
+            },
+        },
+        item_groups = {
+            ["4"] = { group = "afs_tools_vehicle_repair", repetitions = { 1, 2 } },
+            f = { group = "afs_tools_vehicle_repair", repetitions = { 1, 3 }, chance = 15 },
+            ["á"] = { group = "afs_tools_vehicle_repair", repetitions = { 1, 3 }, chance = 30 },
+            ["â"] = { group = "afs_machinery_maintenance_scrapgroup", repetitions = { 3, 10 }, chance = 30 },
+            ["%"] = { group = "afs_tools_space_emergency", chance = 40 },
+        },
+        monster_placements = {
+            {
+                group = "AFS_GROUP_RUIN_MOXIE",
+                x = { 5, 22 },
+                y = { 5, 22 },
+                pack_size = { 1, 2 },
+                chance = 25,
+            },
+        },
+        fill_terrain = "t_thconc_floor_no_roof",
+        palettes = {
+            "afs_habitat_structure", "afs_habitat_exterior", "afs_habitat_residential_furnishing",
+            "afs_light_param_palette",
+        },
+        terrain = {
+            ["1"] = "t_door_metal_elocked",
+            ["2"] = "t_ladder_up",
+            ["3"] = "t_thconc_floor_olight_inactive",
+            ["7"] = "t_region_groundcover_urban",
+        },
+        furniture = {
+            ["4"] = "f_sealed_intermodal_crate",
+            ["5"] = "f_intermodal_crate_open",
+            ["6"] = "f_machinery_light",
+            ["á"] = "f_locker",
+            ["â"] = "f_rack",
+            ["7"] = "f_security_panel_10",
+        },
+    },
+}
