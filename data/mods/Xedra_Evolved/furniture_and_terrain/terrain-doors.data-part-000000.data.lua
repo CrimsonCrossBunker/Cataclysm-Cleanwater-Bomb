@@ -1,0 +1,58 @@
+local ccb = require("ccb")
+
+ccb.content.define_terrain {
+    id = "t_secretdoor_wall_c",
+    name = ccb.content.text("wall"),
+    description = ccb.content.text("A faux wall positioned and joined seamlessly with the wall, this wall looks pretty normal."),
+    symbol = "#",
+    color = "light_gray",
+    looks_like = "t_wall",
+    move_cost = 0,
+    coverage = 100,
+    roof = "t_flat_roof",
+    connect_groups = "WALL",
+    connects_to = "WALL",
+    rotates_to = "INDOORFLOOR",
+    flags = {
+        "FLAMMABLE",
+        "NOITEM",
+        "DOOR",
+        "SUPPORTS_ROOF",
+        "WALL",
+        "NO_SCENT",
+        "AUTO_WALL_SYMBOL",
+        "MINEABLE",
+        "BLOCK_WIND",
+    },
+    open = "t_secretdoor_wall_o",
+    bash = {
+        minimum_strength = 30,
+        maximum_strength = 210,
+        sound = ccb.content.text("crash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_mdoor_frame",
+        drops = "wall_bash_results",
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_secretdoor_wall_o",
+    name = ccb.content.text("open secret door"),
+    looks_like = "t_thconc_floor",
+    description = ccb.content.text("This apparently normal segment of wall has opened to reveal a secret passage."),
+    symbol = "'",
+    color = "light_gray",
+    move_cost = 2,
+    connect_groups = "WALL",
+    connects_to = "WALL",
+    flags = { "TRANSPARENT", "FLAT", "ROAD" },
+    close = "t_secretdoor_wall_c",
+    bash = {
+        minimum_strength = 30,
+        maximum_strength = 210,
+        sound = ccb.content.text("crash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_mdoor_frame",
+        drops = "wall_bash_results",
+    },
+}
