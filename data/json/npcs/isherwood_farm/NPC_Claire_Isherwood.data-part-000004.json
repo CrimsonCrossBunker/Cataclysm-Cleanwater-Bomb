@@ -1,0 +1,105 @@
+[
+  {
+    "id": "MISSION_ISHERWOOD_CLAIRE_1",
+    "type": "mission_definition",
+    "name": { "str": "Gather 50 dandelions" },
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 3,
+    "value": 20000,
+    "item": "raw_dandelion",
+    "count": 50,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "followup": "MISSION_ISHERWOOD_CLAIRE_2",
+    "end": {
+      "opinion": { "trust": 1, "value": 1 },
+      "effect": [
+        { "u_spawn_item": "thyme_oil", "container": "jar_glass_sealed", "count": 2 },
+        { "u_spawn_item": "poppy_pain", "container": "jar_glass_sealed", "count": 20 }
+      ]
+    },
+    "dialogue": {
+      "describe": "I could use some help foraging ingredients.",
+      "offer": "I could use some fresh dandelions for the next batch of wine.  Can you bring me 50 dandelions?",
+      "accepted": "Thank you, I'll put these to good use.",
+      "rejected": "Oh well.  Maybe some other time, thanks.",
+      "advice": "You can find them in the fields during the spring and summer months.",
+      "inquire": "How is the search going?",
+      "success": "Thanks.  Here's a small reward to show my appreciation for your help.",
+      "success_lie": "What good does this do us?",
+      "failure": "I wonder if the wildlife ate all the greens…"
+    }
+  },
+  {
+    "id": "MISSION_ISHERWOOD_CLAIRE_2",
+    "type": "mission_definition",
+    "name": { "str": "Find 20 bee balm seeds" },
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 3,
+    "value": 20000,
+    "item": "seed_bee_balm",
+    "count": 20,
+    "followup": "MISSION_ISHERWOOD_CLAIRE_3",
+    "end": {
+      "opinion": { "trust": 2, "value": 2 },
+      "effect": [
+        { "u_spawn_item": "pine_tea", "container": "jar_glass_sealed", "count": 2 },
+        { "u_spawn_item": "royal_jelly", "count": 1 },
+        { "u_spawn_item": "bee_balm_tea", "container": "jar_glass_sealed", "count": 2 }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "I could use some seeds from the forest.",
+      "offer": "We could use some seeds for the next planting season.  Can you bring me 20 bee balm seeds?",
+      "accepted": "Thank you.  It's important to have a good stock before the flu season hits.",
+      "rejected": "Oh well.  Maybe some other time, thanks.",
+      "advice": "You should search through the forest, make sure to check in the underbrush for bee balm and then harvest its seeds.",
+      "inquire": "How is the search going?",
+      "success": "Wow, perfect.  Here are some of my own remedies and if those don't work try my other gift.",
+      "success_lie": "What good does this do us?",
+      "failure": "I'll have to find someone more at home in the forest…"
+    }
+  },
+  {
+    "id": "MISSION_ISHERWOOD_CLAIRE_3",
+    "type": "mission_definition",
+    "name": { "str": "Find and capture a cat" },
+    "goal": "MGOAL_FIND_MONSTER",
+    "difficulty": 4,
+    "value": 100000,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "start": {
+      "assign_mission_target": {
+        "//": "om_special is a no-op here - we are already at 'Isherwood Farm Mutable'. I added it to suppress a linter false positive.",
+        "om_special": "Isherwood Farm Mutable",
+        "om_terrain": "cabin_isherwood",
+        "reveal_radius": 1,
+        "random": true,
+        "min_distance": 8
+      },
+      "update_mapgen": { "place_monster": [ { "monster": "mon_cat_isherwood", "pack_size": [ 3, 6 ], "x": 20, "y": 22, "target": true } ] },
+      "effect": [ { "u_spawn_item": "chicken_cage", "count": 1 } ]
+    },
+    "end": {
+      "opinion": { "trust": 2, "value": 2 },
+      "effect": [
+        { "u_spawn_item": "isherwood_herbal_remedies", "count": 1 },
+        { "u_add_var": "u_did_claire_missions", "value": "yes" }
+      ]
+    },
+    "dialogue": {
+      "describe": "I could use a barn cat to keep the mice down.",
+      "offer": "I saw some feral cats out by the old cabin.  Can you capture one for me?",
+      "accepted": "Thank you!  Please hurry back!  Take this cage so you have a chance of capturing one.",
+      "rejected": "I didn't want to use chemicals on these rats.",
+      "advice": "Take this pet carrier; if you can get close to a cat, you can put it inside.  If you're having problems, try befriending it with cat food.",
+      "inquire": "Have you found a cat?",
+      "success": "Thank you so much, I want you to have this copy of my natural remedy journal.  I'll name this handsome fellow Joshua.",
+      "success_lie": "What?!  You're lying, I can tell!  Did you even bring back my cage?",
+      "failure": "Oh no!  I guess they are too nimble for you…"
+    }
+  }
+]

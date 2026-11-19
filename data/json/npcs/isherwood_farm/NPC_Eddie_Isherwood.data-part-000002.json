@@ -1,0 +1,12 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ISHERWOOD_EDDIE_MarshalOff_Convince",
+    "dynamic_line": "*grimaces.  \"Fine, I'll give you a chance, but you don't mess with me or my family, you understand?  This is our land, not yours.  Or theirs.\"",
+    "speaker_effect": { "effect": { "npc_first_topic": "TALK_ISHERWOOD_EDDIE_ConvincedMarshal" } },
+    "responses": [
+      { "text": "Thanks for hearing me out.", "topic": "TALK_ISHERWOOD_EDDIE_TOPICS" },
+      { "text": "Thanks.  I'll give you space for now.", "topic": "TALK_DONE" }
+    ]
+  }
+]
