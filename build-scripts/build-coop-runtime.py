@@ -26,7 +26,8 @@ def resolve_cargo(requested):
                     return executable
     raise SystemExit(
         f'Cargo executable not found: {requested}. Install Rust with rustup, '
-        'add its bin directory to PATH, or set CARGO to the full cargo executable path.'
+        'add its bin directory to PATH, or set CARGO to the full cargo '
+        'executable path.'
     )
 
 
