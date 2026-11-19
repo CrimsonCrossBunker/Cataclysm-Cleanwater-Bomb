@@ -1,0 +1,28 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_crawler",
+    name = ccb.content.plural_text("crawler", "crawlers"),
+    description = ccb.content.text("A conglomeration of human parts fused together in a horrible mishmash of function, slowly dragging its eldritch body across the ground."),
+    default_faction = "mutant",
+    species = { "ABERRATION" },
+    volume = "108500 ml",
+    mass = "120 kg",
+    hp = 180,
+    speed = 80,
+    materials = { "flesh" },
+    symbol = "H",
+    color = "red",
+    aggression = 40,
+    morale = 40,
+    melee_skill = 4,
+    melee_dice = 2,
+    melee_sides = 6,
+    melee_damage = { { type = "cut", amount = 0 } },
+    dodge = 1,
+    families = { "prof_gross_anatomy", "prof_intro_biology", "prof_physiology" },
+    harvest = "zombie_humanoid_multiple",
+    fear_triggers = { "HURT", "FIRE" },
+    flags = { "SEES", "HEARS", "WARM", "BASHES", "GROUP_BASH", "POISON", "HUMAN" },
+    armor = { bash = 8, electric = 2 },
+}
