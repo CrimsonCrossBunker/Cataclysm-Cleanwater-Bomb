@@ -1,0 +1,34 @@
+[
+  {
+    "id": "MISSION_ISHERWOOD_BARRY_RETURN_TO_FARM",
+    "type": "mission_definition",
+    "name": { "str": "Return Barry to Isherwood's farm." },
+    "goal": "MGOAL_GO_TO",
+    "difficulty": 3,
+    "value": 20000,
+    "destination": "dairy_farm_isherwood_W",
+    "start": {
+      "assign_mission_target": { "om_terrain": "dairy_farm_isherwood_W", "om_special": "Isherwood Farm Mutable", "reveal_radius": 3 }
+    },
+    "end": {
+      "effect": [
+        "stop_following",
+        { "math": [ "isherwood_barry_rescued = 1" ] },
+        { "u_add_var": "u_saved_barry_isherwood", "value": "yes" }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "//": "Dialogue is handled externally.",
+    "dialogue": {
+      "describe": ".",
+      "offer": ".",
+      "accepted": ".",
+      "rejected": "",
+      "advice": ".",
+      "inquire": ".",
+      "success": ".",
+      "success_lie": ".",
+      "failure": "."
+    }
+  }
+]
