@@ -41,53 +41,5 @@
       { "trait": "PACIFIST" },
       { "group": "Appearance_demographics" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_BEGGAR_2",
-    "dynamic_line": {
-      "has_no_available_mission": {
-        "has_no_assigned_mission": "We've done it!  We've solved the list!",
-        "no": "How's things with you?  My cardboard collection is getting quite impressive."
-      },
-      "no": "Have I told you about cardboard, friend?  Do you have any?"
-    },
-    "responses": [
-      { "condition": "has_assigned_mission", "text": "About that shopping list of yours…", "topic": "TALK_MISSION_INQUIRE" },
-      {
-        "condition": {
-          "and": [
-            { "compare_string": [ "yes", { "npc_val": "mission_dinodave_cardboard_donor" } ] },
-            { "not": "has_no_available_mission" }
-          ]
-        },
-        "text": "Is there anything else I can do for you?",
-        "topic": "TALK_MISSION_OFFER"
-      },
-      {
-        "condition": {
-          "and": [ "has_no_available_mission", "has_no_assigned_mission", { "not": { "u_has_mission": "MISSION_BEGGAR_2_PERMISSION" } } ]
-        },
-        "text": "What are you going to do with all that cardboard now?",
-        "topic": "TALK_REFUGEE_BEGGAR_2_JOBSDONE",
-        "effect": { "u_add_var": "general_recruit_dave_happy", "value": "yes" }
-      },
-      {
-        "condition": {
-          "and": [
-            { "u_has_mission": "MISSION_BEGGAR_2_PERMISSION" },
-            { "compare_string": [ "yes", { "u_val": "mission_Dave_Permission" } ] }
-          ]
-        },
-        "text": "We've done it, Dave!  Smokes says you can build yourself a house up on the roof if you want.  You've got to keep it nice and clean, and help out the people down here by looking out for zombies, but you can still use the washrooms and things downstairs when you need to.  What do you say?",
-        "topic": "TALK_REFUGEE_BEGGAR_2_PERMISSION"
-      },
-      { "text": "Cardboard?", "topic": "TALK_REFUGEE_BEGGAR_2_CARDBOARD" },
-      { "text": "Why are you sitting out here?", "topic": "TALK_REFUGEE_BEGGAR_2_REFUGEE" },
-      { "text": "Are you seriously wearing a dinosaur costume?", "topic": "TALK_REFUGEE_BEGGAR_2_DINOSAUR" },
-      { "text": "Do you need something to eat?", "topic": "TALK_REFUGEE_BEGGAR_2_GIVE_FOOD" },
-      { "text": "Get away from me.", "topic": "TALK_DONE" },
-      { "text": "…", "topic": "TALK_DONE" }
-    ]
   }
 ]

@@ -1,0 +1,16 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_BEGGAR_2_PERMISSION",
+    "dynamic_line": "The roof!  So high!  So lofty!  I can hardly believe it!  This will be a nicer house than I had before everything went funny.  I can watch out, I'm happy to do that.  And it'll be nice to still have a bathroom!  Come see me there, my friend.  I will not disappoint you.",
+    "speaker_effect": {
+      "effect": [
+        { "finish_mission": "MISSION_BEGGAR_2_PERMISSION", "success": true },
+        { "npc_first_topic": "TALK_DINODAVE_1" },
+        { "mapgen_update": "cardboard_castle_1_main", "om_terrain": "evac_center_13_z1" },
+        { "npc_teleport": { "global_val": "dave_castle" } }
+      ]
+    },
+    "responses": [ { "text": "I'll see you on the rooftop.  Good luck, Dave.", "topic": "TALK_DONE" } ]
+  }
+]
