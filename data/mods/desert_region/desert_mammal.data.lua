@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+-- Baby elephants don't actually exist (yet), but Spring is the wet season (their mating season) so baby_flags is defined so that they get angry then
+ccb.content.define_monster {
+    id = "mon_bushelephant",
+    name = ccb.content.plural_text("bush elephant", "bush elephants"),
+    description = ccb.content.text("The African Bush Elephant is a massive terrestrial animal with two long tusks protruding from its mouth.  Elephantry is on the rise since the Cataclysm."),
+    default_faction = "herbivore",
+    body_type = "elephant",
+    categories = { "WILDLIFE" },
+    species = { "MAMMAL" },
+    volume = "5896700 ml",
+    mass = "5896700 g",
+    hp = 360,
+    speed = 200,
+    materials = { "flesh" },
+    symbol = "E",
+    color = "light_gray",
+    aggression = 5,
+    morale = 80,
+    melee_skill = 7,
+    melee_dice = 4,
+    melee_sides = 6,
+    melee_damage = { { type = "cut", amount = 0 } },
+    pathing = { max_distance = 20 },
+    anger_triggers = { "FRIEND_ATTACKED", "FRIEND_DIED", "HURT", "MATING_SEASON" },
+    mating_seasons = { "SPRING" },
+    harvest = "mammal_large_leather",
+    biosignature = { item = "feces_manure", interval = 16 },
+    attacks = { { reference = "EAT_CROP", cooldown = 60 }, { reference = "SMASH", cooldown = 15 } },
+    flags = {
+        "SEES", "HEARS", "SMELLS", "ANIMAL", "PATH_AVOID_DANGER", "WARM", "PUSH_MON", "DESTROYS",
+        "GROUP_MORALE", "GOODHEARING", "SWARMS",
+    },
+    armor = { bash = 6, cut = 3 },
+}
