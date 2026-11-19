@@ -1,32 +1,5 @@
 [
   {
-    "id": "afs_electro_anomaly_rifle",
-    "type": "ITEM",
-    "subtypes": [ "GUN" ],
-    "copy-from": "laser_rifle",
-    "name": { "str": "R-PROTON ENR" },
-    "description": "Within the solid barrel of the Raaz PROTON, an electrical anomaly is carefully duplicated through magnetic stimulation and projected outwards.  Freed from containment, the anomaly will temporarily settle in the physical world and quickly emit its stored electrical charge before dissipating.",
-    "price": "200 kUSD",
-    "price_postapoc": "200 kUSD",
-    "ammo": [ "battery" ],
-    "ammo_to_fire": 0,
-    "energy_drain": "50 kJ",
-    "modes": [ [ "DEFAULT", "pulse", 1 ] ],
-    "ranged_damage": [ { "damage_type": "electric", "amount": 10 }, { "damage_type": "pure", "amount": 25 } ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "holster": true,
-        "max_contains_volume": "20 L",
-        "max_contains_weight": "20 kg",
-        "magazine_well": "75 ml",
-        "item_restriction": [ "afs_voltaic_cartridge" ]
-      }
-    ],
-    "ammo_effects": [ "ELECTRO_ANOMALY" ],
-    "flags": [ "NEVER_JAMS", "NON_FOULING", "NEEDS_NO_LUBE" ]
-  },
-  {
     "id": "afs_archangel_enr",
     "type": "ITEM",
     "subtypes": [ "ARTIFACT", "GUN" ],
@@ -91,29 +64,5 @@
     "ammo_effects": [ "BEANBAG" ],
     "flags": [ "NEVER_JAMS", "NON_FOULING", "NEEDS_NO_LUBE", "MUNDANE", "WONT_TRAIN_MARKSMANSHIP" ],
     "passive_effects": [ { "id": "ench_smart_gun" } ]
-  },
-  {
-    "id": "afs_mine_shocker",
-    "type": "ITEM",
-    "subtypes": [ "GUN" ],
-    "symbol": "%",
-    "color": "blue",
-    "name": { "str": "mine shocker", "//~": "NO_I18N" },
-    "description": { "str": "How shocking!", "//~": "NO_I18N" },
-    "material": [ "qt_steel" ],
-    "flags": [ "PSEUDO", "NEVER_JAMS", "NONCONDUCTIVE", "NO_REPAIR", "WATERPROOF_GUN", "NO_SALVAGE", "NO_UNLOAD", "NO_TURRET" ],
-    "skill": "pistol",
-    "ammo_effects": [ "LIGHTNING" ],
-    "ranged_damage": { "damage_type": "electric", "amount": 4 },
-    "weight": "12 g",
-    "volume": "12 ml",
-    "longest_side": "25 cm",
-    "to_hit": 1,
-    "reload_noise_volume": 2,
-    "loudness": 2,
-    "range": 12,
-    "dispersion": 150,
-    "durability": 8,
-    "melee_damage": { "bash": 2 }
   }
 ]
