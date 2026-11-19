@@ -33,24 +33,5 @@
         }
       }
     ]
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "nest_RandEnc_March_Lord_Hunting_Party",
-    "//": "Adds a random encounter at this field",
-    "object": {
-      "place_monster": [
-        { "group": "GROUP_MARCH_LORDS", "x": [ 0, 23 ], "y": [ 0, 23 ] },
-        { "monster": "mon_wild_hunt_hound", "x": [ 0, 23 ], "y": [ 0, 23 ], "repeat": [ 2, 4 ] },
-        { "monster": "mon_wild_huntsman", "x": [ 0, 23 ], "y": [ 0, 23 ], "repeat": [ 1, 2 ] },
-        { "monster": "mon_changeling_bannerman", "x": [ 0, 23 ], "y": [ 0, 23 ], "repeat": [ 3, 6 ] }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "nest_RandEnc_March_Lord_Hunting_Party_remove",
-    "//": "removes a random encounter at the field",
-    "object": { "set": [ { "square": "creature_remove", "x": 0, "y": 0, "x2": 23, "y2": 23 } ] }
   }
 ]

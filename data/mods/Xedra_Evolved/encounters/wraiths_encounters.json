@@ -97,17 +97,5 @@
         ]
       }
     ]
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "nest_RandEnc_XE_Wraiths_On_Dark_Nights",
-    "//": "Adds a random encounter at this field",
-    "object": { "place_monster": [ { "monster": "mon_darkman", "x": [ 6, 14 ], "y": [ 6, 14 ], "repeat": [ 2, 3 ] } ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "nest_RandEnc_XE_Wraiths_On_Dark_Nights_remove",
-    "//": "removes a random encounter at the field",
-    "object": { "set": [ { "square": "creature_remove", "x": 0, "y": 0, "x2": 23, "y2": 23 } ] }
   }
 ]
