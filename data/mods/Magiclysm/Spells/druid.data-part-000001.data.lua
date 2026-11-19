@@ -1,0 +1,32 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "druid_naturebow1_plus",
+    name = ccb.content.text("Improved Nature's Bow"),
+    description = ccb.content.text("This spell conjures a magical wooden recurve bow, as well as a quiver and a set of arrows to go with it.  Now you know this spell like the back of your hand, and have started to design your own version."),
+    valid_targets = { "none" },
+    flags = { "CONJURATION_SPELL", "SOMATIC", "VERBAL", "NO_LEGS", "NO_FAIL" },
+    extra_spells = {
+        { spell = "druid_naturequiver1_plus" },
+        { spell = "druid_naturearrows1_plus" },
+        { spell = "eoc_summon_setup", self = true },
+    },
+    min_damage = 1,
+    max_damage = 1,
+    effect = "spawn_item",
+    effect_data = "druid_recurve",
+    shape = "blast",
+    base_casting_time = 200,
+    final_casting_time = 100,
+    casting_time_increment = -4,
+    base_energy_cost = 250,
+    final_energy_cost = 100,
+    energy_increment = -6,
+    min_duration = 360000,
+    max_duration = 2160000,
+    duration_increment = 72000,
+    difficulty = 7,
+    max_level = 25,
+    spell_class = "DRUID",
+    magic_type = "magiclysm_conjuration_magic",
+}

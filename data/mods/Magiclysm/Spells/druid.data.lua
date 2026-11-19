@@ -1,0 +1,25 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "druid_bearmantle",
+    name = ccb.content.text("Bearmantle"),
+    description = ccb.content.text("Adopt some of the aspect of the bear, protecting you from cold and preparing you for winter."),
+    valid_targets = { "self" },
+    effect = "spawn_item",
+    effect_data = "aura_bearmantle",
+    shape = "blast",
+    flags = { "TRANSFORMATION_SPELL", "SOMATIC", "VERBAL" },
+    components = "spell_components_feralform",
+    spell_class = "DRUID",
+    magic_type = "magiclysm_transformation_magic",
+    difficulty = 4,
+    base_casting_time = 1500,
+    base_energy_cost = 200,
+    max_level = 15,
+    min_damage = 1,
+    max_damage = 1,
+    min_duration = 96000,
+    max_duration = 1440000,
+    duration_increment = 96000,
+    extra_spells = { { spell = "eoc_transformation_setup", self = true } },
+}

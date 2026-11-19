@@ -1,0 +1,64 @@
+[
+  {
+    "id": "druid_healing",
+    "type": "SPELL",
+    "name": "Restoration",
+    "description": "Slowly heal your wounds by drawing on the power of nature.\n\nYou must be <color_yellow>outdoors and in a natural area</color> away from civilization to cast Restoration.",
+    "valid_targets": [ "self" ],
+    "effect": "attack",
+    "effect_str": "flask_regeneration",
+    "shape": "blast",
+    "flags": [ "RESTORATION_SPELL", "CONCENTRATE", "SOMATIC", "VERBAL", "NO_LEGS" ],
+    "magic_type": "magiclysm_restoration_magic",
+    "spell_class": "DRUID",
+    "caster_condition": {
+      "and": [
+        "u_is_outside",
+        {
+          "or": [
+            { "u_is_on_terrain_with_flag": "SHRUB" },
+            { "u_is_on_terrain_with_flag": "DIGGABLE" },
+            { "u_is_on_terrain_with_flag": "YOUNG" }
+          ]
+        },
+        { "not": { "u_near_om_location": "road", "range": 1 } }
+      ]
+    },
+    "caster_condition_fail_message": "You must be surrounded by nature to use its power to heal.",
+    "difficulty": 8,
+    "base_casting_time": 12000,
+    "final_casting_time": 3000,
+    "casting_time_increment": -360,
+    "base_energy_cost": 800,
+    "final_energy_cost": 500,
+    "energy_increment": -12,
+    "extra_effects": [ { "id": "eoc_restoration_setup", "hit_self": true } ],
+    "max_level": 25,
+    "//": "each 3000 (30 second) heal 1 hp. 5 hp on level 0 (2.5m), 30 hp on level 25 (15 m), ignoring proficiency modifiers",
+    "min_duration": 15000,
+    "max_duration": 90000,
+    "duration_increment": 3000
+  },
+  {
+    "id": "druid_healing_herb",
+    "type": "SPELL",
+    "name": "Floral Healing",
+    "description": "Use some magic herbs to heal yourself.",
+    "components": "spell_components_healing_herb",
+    "valid_targets": [ "self" ],
+    "effect": "attack",
+    "shape": "blast",
+    "flags": [ "RESTORATION_SPELL", "CONCENTRATE", "RANDOM_DAMAGE", "SOMATIC", "VERBAL", "NO_LEGS" ],
+    "magic_type": "magiclysm_restoration_magic",
+    "spell_class": "DRUID",
+    "min_damage": { "math": [ "(u_spell_level('druid_healing_herb') * -0.7) - 2" ] },
+    "max_damage": { "math": [ "(u_spell_level('druid_healing_herb') * -1.5) - 5" ] },
+    "difficulty": 5,
+    "base_casting_time": 800,
+    "base_energy_cost": 400,
+    "final_energy_cost": 150,
+    "energy_increment": -16.7,
+    "extra_effects": [ { "id": "eoc_restoration_setup", "hit_self": true } ],
+    "max_level": 15
+  }
+]
