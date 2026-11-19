@@ -41,40 +41,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "riverside_dwelling_roof",
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "       ...   ...        ",
-        "        .     .         ",
-        "        .               ",
-        "               .        ",
-        "               .        ",
-        "               .        ",
-        "       .   .. ..        ",
-        "       .   .....        ",
-        "       .   ....         ",
-        "       .   .....        ",
-        "       .    ....        ",
-        "       ...   ...        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { ".": "t_shingle_flat_roof", " ": "t_open_air" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "riverside_dwelling1",
     "object": {
       "predecessor_mapgen": "forest",
@@ -130,39 +96,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "riverside_dwelling1_roof",
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "          -------       ",
-        "          -.....-       ",
-        "          -.....-       ",
-        "         --.....----    ",
-        "        ...........     ",
-        "        ...........-    ",
-        "        ...........     ",
-        "        ...........     ",
-        "       -...........     ",
-        "       -..........      ",
-        "       -..........      ",
-        "       -...........     ",
-        "       -..........      ",
-        "       -...........     ",
-        "       -...........-    ",
-        "       -...........-    ",
-        "       ----  -------    ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "riverside_dwelling2",
     "object": {
       "predecessor_mapgen": "forest",
@@ -199,41 +132,6 @@
       "place_nested": [ { "chunks": [ [ "null", 2 ], [ "gone_fishing_3x3", 3 ] ], "x": [ 1, 19 ], "y": [ 1, 3 ] } ],
       "place_monsters": [ { "monster": "GROUP_SAFE", "x": 13, "y": 11 } ],
       "place_vehicles": [ { "chance": 75, "rotation": 270, "status": 1, "vehicle": "canoe", "x": 1, "y": 20 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "riverside_dwelling2_roof",
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "        ---             ",
-        "        -..             ",
-        "        -.... .-        ",
-        "     --5-......-------  ",
-        "     -...............-  ",
-        "     -.X.............-  ",
-        "     -...............-  ",
-        "     -........  .....-  ",
-        "     -........    ...-  ",
-        "     -.........  ....-  ",
-        "     -...............-  ",
-        "     ------------.----  ",
-        "                ---     ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
     }
   },
   {
@@ -279,41 +177,6 @@
       "place_nested": [ { "chunks": [ [ "null", 2 ], [ "gone_fishing_3x3", 3 ] ], "x": [ 0, 20 ], "y": 0 } ],
       "place_monsters": [ { "monster": "GROUP_BEACH", "x": 8, "y": 10 } ],
       "place_vehicles": [ { "chance": 75, "rotation": 180, "status": 1, "vehicle": "canoe", "x": 10, "y": 20 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "riverside_dwelling3_roof",
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "            -------     ",
-        "            -....       ",
-        "            -.:....     ",
-        "            -.....      ",
-        "            -.......-   ",
-        "            -.......5   ",
-        "            -.......-   ",
-        "            -.......-   ",
-        "            -..         ",
-        "            -.          ",
-        "            --          ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_flat_roof" }
     }
   }
 ]
