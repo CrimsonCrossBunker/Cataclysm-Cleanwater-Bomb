@@ -1,0 +1,43 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "construction_site" },
+    weight = 10,
+    layout = {
+        rows = {
+            "    c --      --        ",
+            " XcTT             --  --",
+            "   TTc                X ",
+            "  c                 X  X",
+            " .......                ",
+            " .......         22 22  ",
+            " .......         22 22  ",
+            " .......                ",
+            " |||.||||###||      11  ",
+            " |...........|      11  ",
+            " #...........|{         ",
+            " #...........#{    ss   ",
+            " #...........|    ssss  ",
+            " ............|    ssss  ",
+            " |.....||||||||||  sss  ",
+            " |......|.......|       ",
+            " |...............       ",
+            " |......|.......|    @@ ",
+            " ||#||||||.|....|  @@@@@",
+            "     ...|..|....# @@@@@@",
+            "     ......|....| @@@@@ ",
+            "        |..|....|  @@@  ",
+            "        |||||##||       ",
+            "                        ",
+        },
+        palettes = { "construction_site_palette" },
+        fill_terrain = "t_region_soil",
+        monster_group_placements = { { group = "FCL_GROUP_UTILIBOT_SITE", x = { 0, 23 }, y = { 0, 23 }, chance = 5 } },
+        loot_placements = {
+            { id = "con_mix_foldable", x = { 0, 8 }, y = { 5, 7 } },
+            { id = "diesel_generator", x = { 0, 8 }, y = { 5, 7 }, chance = 70 },
+        },
+        vehicle_placements = { { id = "small_utility_vehicles", x = 12, y = 4, chance = 70, rotation = 180 } },
+    },
+}
