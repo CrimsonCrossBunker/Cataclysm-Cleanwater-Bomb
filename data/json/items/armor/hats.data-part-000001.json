@@ -1,32 +1,5 @@
 [
   {
-    "id": "10gal_hat",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR" ],
-    "name": { "str": "ten-gallon hat" },
-    "description": "These may not be the Great Plains, but you can still be the Boss with this high-crowned, wide-brimmed hat.",
-    "weight": "410 g",
-    "volume": "2500 ml",
-    "price": "179 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "wool" ],
-    "symbol": "[",
-    "looks_like": "cowboy_hat",
-    "color": "brown",
-    "warmth": 8,
-    "material_thickness": 0.3,
-    "environmental_protection": 1,
-    "flags": [ "VARSIZE", "SUN_GLASSES" ],
-    "armor": [
-      {
-        "encumbrance_modifiers": [ "NONE" ],
-        "coverage": 100,
-        "covers": [ "head" ],
-        "specifically_covers": [ "head_crown", "head_forehead" ]
-      }
-    ]
-  },
-  {
     "id": "bandana_head",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
