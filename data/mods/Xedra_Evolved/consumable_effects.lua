@@ -8,8 +8,9 @@ local function checked(result)
 end
 
 local function apply_effect(character, effect, turns, options)
-    checked(services.effects.add(character, id("effect", effect),
-        services.time.duration_from_turns(turns), options))
+    local result = services.effects.add(character, id("effect", effect),
+        services.time.duration_from_turns(turns), options)
+    if not result.ok and result.error.code ~= "rejected" then checked(result) end
 end
 
 ccb.runtime.handler("consume_abyssal_coffee", function(context)
