@@ -30,19 +30,5 @@
     "bonus_int": 4,
     "worn_override": "NC_ROBOFAC_MERC_MONSTER_CORPSE_1_worn",
     "carry_override": "NC_ROBOFAC_MERC_MONSTER_CORPSE_1_carry"
-  },
-  {
-    "id": [ "TALK_ROBOFAC_MERC_MONSTER_CORPSE_1" ],
-    "type": "talk_topic",
-    "dynamic_line": "Ah, the other contractor.  We've got things covered up here… but I guess you're going down into the \"thing.\"  If you've got coins, I've got a bit of spare equipment that might be useful.",
-    "responses": [
-      { "text": "Any idea what's going on down there?", "topic": "TALK_ROBOFAC_MERC_MONSTER_CORPSE_1_RECON" },
-      {
-        "text": "What kind of equipment you looking to trade?",
-        "topic": "TALK_ROBOFAC_MERC_MONSTER_CORPSE_1_EQUIPMENT",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "bought_gear_monster_corpse_merc" } ] } }
-      },
-      { "text": "I'll see you around.", "topic": "TALK_DONE" }
-    ]
   }
 ]
