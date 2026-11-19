@@ -8,13 +8,5 @@
     "looks_like": "book_nonf_soft_psych_cggamers",
     "use_action": [ "CALORIES_INTAKE_TRACKER" ],
     "extend": { "flags": [ "TRADER_AVOID", "CALORIES_INTAKE" ] }
-  },
-  {
-    "id": "super_glue",
-    "type": "ITEM",
-    "subtypes": [ "AMMO" ],
-    "copy-from": "glue_strong",
-    "name": { "str": "glue" },
-    "description": "A thick, goopy glue that cures fast."
   }
 ]
