@@ -1,0 +1,27 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "BREWABLE", "COMESTIBLE" ],
+    "id": "brew_rootbeer",
+    "looks_like": "brew_mead",
+    "name": { "str_sp": "unfermented root beer" },
+    "description": "A mixture of water, sugar, yeast, and sassafras roots that will eventually become root beer, if brewed in a fermenting vat.",
+    "display_type": "BY_VOLUME",
+    "weight": "37 g",
+    "color": "brown",
+    "container": "bottle_glass",
+    "symbol": "~",
+    "calories": 106,
+    "quench": 6,
+    "fun": -4,
+    "price": "0 cent",
+    "volume": "36 ml",
+    "price_postapoc": "2 cent",
+    "charges": 1,
+    "phase": "liquid",
+    "comestible_type": "DRINK",
+    "flags": [ "NUTRIENT_OVERRIDE" ],
+    "brew_time": "1 days",
+    "brew_results": [ "rootbeer_brewed" ]
+  }
+]

@@ -80,31 +80,5 @@
     "flags": [ "NUTRIENT_OVERRIDE" ],
     "brew_time": "3 days",
     "brew_results": { "yeast": 25 }
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE", "TOOL" ],
-    "id": "malting_grain_active",
-    "looks_like": "malted_grain",
-    "name": { "str_sp": "malting grain" },
-    "weight": "336 g",
-    "//": "Malt weight per volume taken from https://www.aqua-calc.com/calculate/volume-to-weight",
-    "color": "brown",
-    "comestible_type": "FOOD",
-    "symbol": ",",
-    "quench": -10,
-    "calories": 743,
-    "description": "Malting grain that can be used for brewing.",
-    "display_type": "BY_WEIGHT",
-    "price": "20 cent",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "veggy" ],
-    "volume": "1 L",
-    "flags": [ "EDIBLE_FROZEN", "RAW", "SPAWN_ACTIVE" ],
-    "vitamins": [ [ "calcium", 6 ], [ "iron", 29 ], [ "veggy_allergen", 1 ] ],
-    "fun": -15,
-    "countdown_interval": "4 days",
-    "revert_to": "malted_grain",
-    "stackable": true
   }
 ]
