@@ -53,7 +53,7 @@ function M.level_up(character)
         end
     end
 
-    state.checked(services.characters.open_topic(character, "TALK_SORCERER_MENU_MAIN"))
+    state.open_menu(character)
     local skill = state.checked(services.skills.level(character, "spellcraft"))
     local target = math.max(skill, state.number(character, "current_sorcerer_level"))
     state.checked(services.skills.set_level(character, services.types.id("skill", "spellcraft"),

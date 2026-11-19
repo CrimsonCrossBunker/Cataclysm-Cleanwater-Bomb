@@ -16,6 +16,10 @@ function M.set(character, key, value)
     M.checked(variables.set(character, key, value, { include_before = false }))
 end
 
+function M.open_menu(character)
+    M.checked(services.characters.open_topic(character, "TALK_SORCERER_MENU_MAIN"))
+end
+
 function M.slot_key(spell)
     return "used_spell_slot_for_" .. spell:gsub("-", "_")
 end
