@@ -504,9 +504,13 @@ struct dialogue:
  * Invoking the function operator with a dialog reference (so the function can access the NPC)
  * returns the actual line.
  */
+using talk_predicate = std::function<bool( const const_dialogue & )>;
+
 struct dynamic_line_t {
     private:
         std::function < std::string( dialogue & ) > function;
+        explicit dynamic_line_t( std::function<std::string( dialogue & )> function )
+            : function( std::move( function ) ) {}
 
     public:
         dynamic_line_t() = default;
@@ -514,6 +518,12 @@ struct dynamic_line_t {
         explicit dynamic_line_t( const JsonObject &jo );
         explicit dynamic_line_t( const JsonArray &ja );
         static dynamic_line_t from_member( const JsonObject &jo, std::string_view member_name );
+        static dynamic_line_t choose( std::vector<dynamic_line_t> lines );
+        static dynamic_line_t join( std::vector<dynamic_line_t> lines );
+        static dynamic_line_t gendered( std::string line, std::vector<std::string> subjects );
+        static dynamic_line_t branch( talk_predicate test, dynamic_line_t yes, dynamic_line_t no );
+        static dynamic_line_t hint();
+        static dynamic_line_t use_reason();
 
         std::string operator()( dialogue &d ) const {
             if( !function ) {
@@ -521,6 +531,17 @@ struct dynamic_line_t {
             }
             return function( d );
         }
+};
+
+struct talk_response_rules {
+    talk_predicate condition;
+    talk_predicate show_condition;
+};
+
+struct talk_topic_rules {
+    std::optional<dynamic_line_t> line;
+    std::vector<talk_response_rules> responses;
+    std::vector<talk_response_rules> repeats;
 };
 
 /**
@@ -547,6 +568,7 @@ class json_talk_response
         json_talk_response() = default;
         explicit json_talk_response( const JsonObject &jo, std::string_view src );
 
+        void set_rules( const talk_response_rules &rules );
         const talk_response &get_actual_response() const;
         bool has_condition() const {
             return has_condition_;
@@ -609,7 +631,7 @@ class json_talk_topic
          * It will override dynamic_line and replace_built_in_responses if those entries
          * exist in the input, otherwise they will not be changed at all.
          */
-        void load( const JsonObject &jo, std::string_view src );
+        void load( const JsonObject &jo, std::string_view src, const talk_topic_rules *rules = nullptr );
 
         std::string get_dynamic_line( dialogue &d ) const;
         std::vector < json_dynamic_line_effect > get_speaker_effects() const;
@@ -631,6 +653,8 @@ class json_talk_topic
 
 void unload_talk_topics();
 void load_talk_topic( const JsonObject &jo, std::string_view src );
+void load_ordered_talk_topic( const JsonObject &jo, std::string_view src,
+                              const talk_topic_rules *rules );
 void get_raw_debug_fields( const JsonObject &jo, std::map < std::string,
                            std::string > &debug_info );
 

@@ -10155,6 +10155,19 @@ json_talk_response::json_talk_response( const JsonObject &jo, std::string_view s
     actual_response.condition = condition;
 }
 
+void json_talk_response::set_rules( const talk_response_rules &rules )
+{
+    if( rules.condition ) {
+        condition = rules.condition;
+        actual_response.condition = condition;
+        actual_response.debug_info["condition"] = "Lua dialogue predicate";
+        has_condition_ = true;
+    }
+    if( rules.show_condition ) {
+        actual_response.show_condition = rules.show_condition;
+    }
+}
+
 void json_talk_response::load_condition( const JsonObject &jo, std::string_view )
 {
     has_condition_ = jo.has_member( "condition" );
@@ -10241,6 +10254,54 @@ static std::string translate_gendered_line(
     return gettext_gendered( gender_map, line );
 }
 
+dynamic_line_t dynamic_line_t::choose( std::vector<dynamic_line_t> lines )
+{
+    return dynamic_line_t( [lines = std::move( lines )]( dialogue & d ) {
+        return random_entry_ref( lines )( d );
+    } );
+}
+
+dynamic_line_t dynamic_line_t::join( std::vector<dynamic_line_t> lines )
+{
+    return dynamic_line_t( [lines = std::move( lines )]( dialogue & d ) {
+        std::string result;
+        for( const dynamic_line_t &line : lines ) {
+            result += line( d );
+        }
+        return result;
+    } );
+}
+
+dynamic_line_t dynamic_line_t::gendered( std::string line, std::vector<std::string> subjects )
+{
+    return dynamic_line_t( [line = std::move( line ),
+    subjects = std::move( subjects )]( dialogue & d ) {
+        return translate_gendered_line( line, subjects, d );
+    } );
+}
+
+dynamic_line_t dynamic_line_t::branch( talk_predicate test, dynamic_line_t yes, dynamic_line_t no )
+{
+    return dynamic_line_t( [test = std::move( test ), yes = std::move( yes ), no = std::move( no )]
+    ( dialogue & d ) {
+        return ( test( d ) ? yes : no )( d );
+    } );
+}
+
+dynamic_line_t dynamic_line_t::hint()
+{
+    return dynamic_line_t( []( dialogue & ) {
+        return get_hint();
+    } );
+}
+
+dynamic_line_t dynamic_line_t::use_reason()
+{
+    return dynamic_line_t( []( dialogue & d ) {
+        return std::exchange( d.reason, {} );
+    } );
+}
+
 dynamic_line_t dynamic_line_t::from_member( const JsonObject &jo,
         std::string_view member_name )
 {
@@ -10297,23 +10358,11 @@ dynamic_line_t::dynamic_line_t( const JsonObject &jo )
                 entry.throw_error( "invalid format: must be string, array or object" );
             }
         }
-        function = [lines]( dialogue & d ) {
-            std::string all_lines;
-            for( const dynamic_line_t &line : lines ) {
-                all_lines += line( d );
-            }
-            return all_lines;
-        };
+        *this = join( std::move( lines ) );
     } else if( jo.get_bool( "give_hint", false ) ) {
-        function = [&]( const dialogue & ) {
-            return get_hint();
-        };
+        *this = hint();
     } else if( jo.get_bool( "use_reason", false ) ) {
-        function = [&]( const dialogue & d ) {
-            std::string tmp = d.reason;
-            d.reason.clear();
-            return tmp;
-        };
+        *this = use_reason();
     } else if( jo.get_bool( "list_faction_camp_sites", false ) ) {
         function = [&]( const dialogue & ) {
             const auto &sites = recipe_group::get_recipes_by_id( "all_faction_base_types" );
@@ -10342,9 +10391,7 @@ dynamic_line_t::dynamic_line_t( const JsonObject &jo )
                 jo.throw_error( "Unexpected subject in relevant_genders; expected 'npc' or 'u'" );
             }
         }
-        function = [line, relevant_genders]( const dialogue & d ) {
-            return translate_gendered_line( line, relevant_genders, d );
-        };
+        *this = gendered( std::move( line ), std::move( relevant_genders ) );
     } else {
         conditional_t dcondition;
         const dynamic_line_t yes = from_member( jo, "yes" );
@@ -10406,10 +10453,7 @@ dynamic_line_t::dynamic_line_t( const JsonArray &ja )
             entry.throw_error( "invalid format: must be string, array or object" );
         }
     }
-    function = [lines]( dialogue & d ) {
-        const dynamic_line_t &line = random_entry_ref( lines );
-        return line( d );
-    };
+    *this = choose( std::move( lines ) );
 }
 
 json_dynamic_line_effect::json_dynamic_line_effect( const JsonObject &jo,
@@ -10448,9 +10492,12 @@ void json_dynamic_line_effect::apply( dialogue &d ) const
     effect.apply( d );
 }
 
-void json_talk_topic::load( const JsonObject &jo, std::string_view src )
+void json_talk_topic::load( const JsonObject &jo, std::string_view src,
+                            const talk_topic_rules *rules )
 {
-    if( jo.has_member( "dynamic_line" ) ) {
+    if( rules && rules->line ) {
+        dynamic_line = *rules->line;
+    } else if( jo.has_member( "dynamic_line" ) ) {
         dynamic_line = dynamic_line_t::from_member( jo, "dynamic_line" );
     }
     if( jo.has_member( "speaker_effect" ) ) {
@@ -10473,29 +10520,35 @@ void json_talk_topic::load( const JsonObject &jo, std::string_view src )
     if( jo.has_bool( "insert_before_standard_exits" ) ) {
         insert_above_bottom = jo.get_bool( "insert_before_standard_exits" );
     }
-    if( !insert_above_bottom || responses.empty() ) {
-        for( JsonObject response : jo.get_array( "responses" ) ) {
-            responses.emplace_back( response, src );
-        }
-    } else {
-        int dec_count = 0;
-        if( !responses.empty() &&
-            responses.back().get_actual_response().success.next_topic.id == "TALK_DONE" ) {
+    int dec_count = 0;
+    if( insert_above_bottom && !responses.empty() ) {
+        if( responses.back().get_actual_response().success.next_topic.id == "TALK_DONE" ) {
             dec_count = 1;
         }
         if( responses.size() >= 2 &&
             responses[ responses.size() - 2].get_actual_response().success.next_topic.id == "TALK_NONE" ) {
             dec_count = 2;
         }
-        for( JsonObject response : jo.get_array( "responses" ) ) {
-            responses.emplace( responses.end() - dec_count, response, src );
+    }
+    std::size_t index = 0;
+    for( JsonObject response : jo.get_array( "responses" ) ) {
+        const auto entry = responses.emplace( responses.end() - dec_count, response, src );
+        if( rules ) {
+            entry->set_rules( rules->responses.at( index++ ) );
         }
     }
+    index = 0;
+    const auto add_repeat = [&]( const JsonObject & repeat ) {
+        repeat_responses.emplace_back( repeat, src );
+        if( rules ) {
+            repeat_responses.back().response.set_rules( rules->repeats.at( index++ ) );
+        }
+    };
     if( jo.has_object( "repeat_responses" ) ) {
-        repeat_responses.emplace_back( jo.get_object( "repeat_responses" ), src );
+        add_repeat( jo.get_object( "repeat_responses" ) );
     } else if( jo.has_array( "repeat_responses" ) ) {
         for( JsonObject elem : jo.get_array( "repeat_responses" ) ) {
-            repeat_responses.emplace_back( elem, src );
+            add_repeat( elem );
         }
     }
     if( responses.empty() ) {
@@ -10590,13 +10643,19 @@ void unload_talk_topics()
 
 void load_talk_topic( const JsonObject &jo, std::string_view src )
 {
+    load_ordered_talk_topic( jo, src, nullptr );
+}
+
+void load_ordered_talk_topic( const JsonObject &jo, std::string_view src,
+                              const talk_topic_rules *rules )
+{
     if( jo.has_array( "id" ) ) {
         for( auto &id : jo.get_string_array( "id" ) ) {
-            json_talk_topics[id].load( jo, src );
+            json_talk_topics[id].load( jo, src, rules );
         }
     } else {
         const std::string id = jo.get_string( "id" );
-        json_talk_topics[id].load( jo, src );
+        json_talk_topics[id].load( jo, src, rules );
     }
 }
 

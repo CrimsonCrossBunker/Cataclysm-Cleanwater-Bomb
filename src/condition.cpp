@@ -10,6 +10,7 @@
 #include <optional>
 #include <queue>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -408,17 +409,8 @@ void finalize_conditions()
     }
 }
 
-namespace conditional_fun
+talk_predicate dialogue_data::has_any_trait( std::vector<str_or_var> traits_to_check, bool is_npc )
 {
-namespace
-{
-
-conditional_t::func f_has_any_trait( const JsonObject &jo, std::string_view member, bool is_npc )
-{
-    std::vector<str_or_var> traits_to_check;
-    for( JsonValue jv : jo.get_array( member ) ) {
-        traits_to_check.emplace_back( get_str_or_var( jv, member ) );
-    }
     return [traits_to_check, is_npc]( const_dialogue const & d ) {
         const_talker const *actor = d.const_actor( is_npc );
         for( const str_or_var &trait : traits_to_check ) {
@@ -430,12 +422,123 @@ conditional_t::func f_has_any_trait( const JsonObject &jo, std::string_view memb
     };
 }
 
-conditional_t::func f_has_trait( const JsonObject &jo, std::string_view member, bool is_npc )
+talk_predicate dialogue_data::has_trait( str_or_var trait_to_check, bool is_npc )
 {
-    str_or_var trait_to_check = get_str_or_var( jo.get_member( member ), member, true );
     return [trait_to_check, is_npc]( const_dialogue const & d ) {
         return d.const_actor( is_npc )->has_trait( trait_id( trait_to_check.evaluate( d ) ) );
     };
+}
+
+talk_predicate dialogue_data::has_flag( str_or_var trait_flag_to_check, bool is_npc )
+{
+    return [trait_flag_to_check, is_npc]( const_dialogue const & d ) {
+        const_talker const *actor = d.const_actor( is_npc );
+        if( json_character_flag( trait_flag_to_check.evaluate( d ) ) == json_flag_MUTATION_THRESHOLD ) {
+            return actor->crossed_threshold();
+        }
+        return actor->has_flag( json_character_flag( trait_flag_to_check.evaluate( d ) ) );
+    };
+}
+
+talk_predicate dialogue_data::has_mission( str_or_var u_mission )
+{
+    return [u_mission]( const_dialogue const & d ) {
+        Character *owner = mission_dialogue::resolve_dialogue_character( d, false );
+        if( owner == nullptr ) {
+            return false;
+        }
+        const mission_type_id target_mission( u_mission.evaluate( d ) );
+        for( mission *miss_it : owner->get_active_missions() ) {
+            if( mission_dialogue::is_live_mission( miss_it ) &&
+                miss_it->get_assigned_player_id() == owner->getID() &&
+                miss_it->mission_id() == target_mission ) {
+                return true;
+            }
+        }
+        return false;
+    };
+}
+
+talk_predicate dialogue_data::wears( str_or_var item_id, bool is_npc )
+{
+    return [item_id, is_npc]( const_dialogue const & d ) {
+        return d.const_actor( is_npc )->is_wearing( itype_id( item_id.evaluate( d ) ) );
+    };
+}
+
+talk_predicate dialogue_data::has_item( str_or_var item_id, bool is_npc )
+{
+    return [item_id, is_npc]( const_dialogue const & d ) {
+        const_talker const *actor = d.const_actor( is_npc );
+        return actor->charges_of( itype_id( item_id.evaluate( d ) ) ) > 0 ||
+               actor->has_amount( itype_id( item_id.evaluate( d ) ), 1 );
+    };
+}
+
+talk_predicate dialogue_data::has_effect( str_or_var effect_id, dbl_or_var intensity, str_or_var bp,
+        bool is_npc )
+{
+    return [effect_id, intensity, bp, is_npc]( const_dialogue const & d ) {
+        bodypart_id bid = bp.evaluate( d ).empty() ? get_bp_from_str( d.reason ) :
+                          bodypart_id( bp.evaluate( d ) );
+        effect target = d.const_actor( is_npc )->get_effect( efftype_id( effect_id.evaluate( d ) ), bid );
+        return !target.is_null() && intensity.evaluate( d ) <= target.get_intensity();
+    };
+}
+
+talk_predicate dialogue_data::any_equal( std::vector<str_or_var> values )
+{
+    return [values]( const_dialogue const & d ) {
+        std::unordered_set<std::string> seen_values;
+        for( const str_or_var &val : values ) {
+            std::string evaluated_value = val.evaluate( d );
+            if( seen_values.count( evaluated_value ) > 0 ) {
+                return true;
+            }
+            seen_values.insert( evaluated_value );
+        }
+        return false;
+    };
+}
+
+talk_predicate dialogue_data::has_items( str_or_var item_id, dbl_or_var count, dbl_or_var charges,
+        bool is_npc )
+{
+    return [item_id, count, charges, is_npc]( const_dialogue const & d ) {
+        const_talker const *actor = d.const_actor( is_npc );
+        itype_id id = itype_id( item_id.evaluate( d ) );
+        if( charges.evaluate( d ) == 0 && item::count_by_charges( id ) ) {
+            return actor->has_charges( id, count.evaluate( d ), true );
+        }
+        if( charges.evaluate( d ) > 0 && count.evaluate( d ) == 0 ) {
+            return actor->has_charges( id, charges.evaluate( d ), true );
+        }
+        bool has_enough_charges = true;
+        if( charges.evaluate( d ) > 0 ) {
+            has_enough_charges = actor->has_charges( id, charges.evaluate( d ), true );
+        }
+        return has_enough_charges && actor->has_amount( id, count.evaluate( d ) );
+    };
+}
+
+namespace conditional_fun
+{
+namespace
+{
+
+conditional_t::func f_has_any_trait( const JsonObject &jo, std::string_view member, bool is_npc )
+{
+    std::vector<str_or_var> traits_to_check;
+    for( JsonValue jv : jo.get_array( member ) ) {
+        traits_to_check.emplace_back( get_str_or_var( jv, member ) );
+    }
+    return dialogue_data::has_any_trait( std::move( traits_to_check ), is_npc );
+}
+
+conditional_t::func f_has_trait( const JsonObject &jo, std::string_view member, bool is_npc )
+{
+    str_or_var trait_to_check = get_str_or_var( jo.get_member( member ), member, true );
+    return dialogue_data::has_trait( std::move( trait_to_check ), is_npc );
 }
 
 conditional_t::func f_is_trait_purifiable( const JsonObject &jo, std::string_view member,
@@ -500,13 +603,7 @@ conditional_t::func f_has_flag( const JsonObject &jo, std::string_view member,
                                 bool is_npc )
 {
     str_or_var trait_flag_to_check = get_str_or_var( jo.get_member( member ), member, true );
-    return [trait_flag_to_check, is_npc]( const_dialogue const & d ) {
-        const_talker const *actor = d.const_actor( is_npc );
-        if( json_character_flag( trait_flag_to_check.evaluate( d ) ) == json_flag_MUTATION_THRESHOLD ) {
-            return actor->crossed_threshold();
-        }
-        return actor->has_flag( json_character_flag( trait_flag_to_check.evaluate( d ) ) );
-    };
+    return dialogue_data::has_flag( std::move( trait_flag_to_check ), is_npc );
 }
 
 conditional_t::func f_has_part_flag( const JsonObject &jo, std::string_view member,
@@ -586,21 +683,7 @@ conditional_t::func f_npc_has_class( const JsonObject &jo, std::string_view memb
 conditional_t::func f_u_has_mission( const JsonObject &jo, std::string_view member )
 {
     str_or_var u_mission = get_str_or_var( jo.get_member( member ), member, true );
-    return [u_mission]( const_dialogue const & d ) {
-        Character *owner = mission_dialogue::resolve_dialogue_character( d, false );
-        if( owner == nullptr ) {
-            return false;
-        }
-        const mission_type_id target_mission( u_mission.evaluate( d ) );
-        for( mission *miss_it : owner->get_active_missions() ) {
-            if( mission_dialogue::is_live_mission( miss_it ) &&
-                miss_it->get_assigned_player_id() == owner->getID() &&
-                miss_it->mission_id() == target_mission ) {
-                return true;
-            }
-        }
-        return false;
-    };
+    return dialogue_data::has_mission( std::move( u_mission ) );
 }
 
 conditional_t::func f_u_monsters_in_direction( const JsonObject &jo,
@@ -680,9 +763,7 @@ conditional_t::func f_is_wearing( const JsonObject &jo, std::string_view member,
                                   bool is_npc )
 {
     str_or_var item_id = get_str_or_var( jo.get_member( member ), member, true );
-    return [item_id, is_npc]( const_dialogue const & d ) {
-        return d.const_actor( is_npc )->is_wearing( itype_id( item_id.evaluate( d ) ) );
-    };
+    return dialogue_data::wears( std::move( item_id ), is_npc );
 }
 
 conditional_t::func current_dimension( const JsonObject &jo, std::string_view member )
@@ -696,11 +777,7 @@ conditional_t::func current_dimension( const JsonObject &jo, std::string_view me
 conditional_t::func f_has_item( const JsonObject &jo, std::string_view member, bool is_npc )
 {
     str_or_var item_id = get_str_or_var( jo.get_member( member ), member, true );
-    return [item_id, is_npc]( const_dialogue const & d ) {
-        const_talker const *actor = d.const_actor( is_npc );
-        return actor->charges_of( itype_id( item_id.evaluate( d ) ) ) > 0 ||
-               actor->has_amount( itype_id( item_id.evaluate( d ) ), 1 );
-    };
+    return dialogue_data::has_item( std::move( item_id ), is_npc );
 }
 
 conditional_t::func f_has_items( const JsonObject &jo, std::string_view member,
@@ -716,21 +793,8 @@ conditional_t::func f_has_items( const JsonObject &jo, std::string_view member,
         str_or_var item_id = get_str_or_var( has_items.get_member( "item" ), "item", true );
         dbl_or_var count = get_dbl_or_var( has_items, "count", false );
         dbl_or_var charges = get_dbl_or_var( has_items, "charges", false );
-        return [item_id, count, charges, is_npc]( const_dialogue const & d ) {
-            const_talker const *actor = d.const_actor( is_npc );
-            itype_id id = itype_id( item_id.evaluate( d ) );
-            if( charges.evaluate( d ) == 0 && item::count_by_charges( id ) ) {
-                return actor->has_charges( id, count.evaluate( d ), true );
-            }
-            if( charges.evaluate( d ) > 0 && count.evaluate( d ) == 0 ) {
-                return actor->has_charges( id, charges.evaluate( d ), true );
-            }
-            bool has_enough_charges = true;
-            if( charges.evaluate( d ) > 0 ) {
-                has_enough_charges = actor->has_charges( id, charges.evaluate( d ), true );
-            }
-            return has_enough_charges && actor->has_amount( id, count.evaluate( d ) );
-        };
+        return dialogue_data::has_items( std::move( item_id ), std::move( count ), std::move( charges ),
+                                         is_npc );
     }
 }
 
@@ -888,12 +952,8 @@ conditional_t::func f_has_effect( const JsonObject &jo, std::string_view member,
     str_or_var bp;
     optional( jo, false, "bodypart", bp );
 
-    return [effect_id, intensity, bp, is_npc]( const_dialogue const & d ) {
-        bodypart_id bid = bp.evaluate( d ).empty() ? get_bp_from_str( d.reason ) :
-                          bodypart_id( bp.evaluate( d ) );
-        effect target = d.const_actor( is_npc )->get_effect( efftype_id( effect_id.evaluate( d ) ), bid );
-        return !target.is_null() && intensity.evaluate( d ) <= target.get_intensity();
-    };
+    return dialogue_data::has_effect( std::move( effect_id ), std::move( intensity ), std::move( bp ),
+                                      is_npc );
 }
 
 conditional_t::func f_need( const JsonObject &jo, std::string_view member, bool is_npc )
@@ -1868,17 +1928,7 @@ conditional_t::func f_compare_string( const JsonObject &jo, std::string_view mem
         values.emplace_back( get_str_or_var( jv, member ) );
     }
 
-    return [values]( const_dialogue const & d ) {
-        std::unordered_set<std::string> seen_values;
-        for( const str_or_var &val : values ) {
-            std::string evaluated_value = val.evaluate( d );
-            if( seen_values.count( evaluated_value ) > 0 ) {
-                return true;
-            }
-            seen_values.insert( evaluated_value );
-        }
-        return false;
-    };
+    return dialogue_data::any_equal( std::move( values ) );
 }
 
 conditional_t::func f_compare_string_match_all( const JsonObject &jo, std::string_view member )
@@ -2196,6 +2246,88 @@ conditional_t::func f_is_rotten()
 
 } // namespace
 } // namespace conditional_fun
+
+talk_predicate dialogue_data::actor_state( std::string_view state, bool is_npc )
+{
+    using factory = talk_predicate( * )( bool );
+    static const std::map<std::string_view, factory> states = {
+        { "male", conditional_fun::f_is_male },
+        { "female", conditional_fun::f_is_female },
+        { "available", conditional_fun::f_npc_available },
+        { "following", conditional_fun::f_npc_following },
+        { "friendly", conditional_fun::f_npc_friend },
+        { "hostile", conditional_fun::f_npc_hostile },
+        { "offers_skill_training", conditional_fun::f_npc_train_skills },
+        { "offers_style_training", conditional_fun::f_npc_train_styles },
+        { "offers_spell_training", conditional_fun::f_npc_train_spells },
+        { "mission_complete", conditional_fun::f_mission_complete },
+        { "mission_incomplete", conditional_fun::f_mission_incomplete },
+        { "mission_failed", conditional_fun::f_mission_failed },
+        { "has_activity", conditional_fun::f_has_activity },
+        { "has_weapon", conditional_fun::f_has_weapon },
+        { "outside", conditional_fun::f_is_outside },
+        { "is_avatar", conditional_fun::f_is_avatar },
+        { "is_npc", conditional_fun::f_is_npc },
+    };
+    const auto operation = states.find( state );
+    if( operation == states.end() ) {
+        throw std::invalid_argument( "unsupported dialogue participant state: " + std::string( state ) );
+    }
+    return operation->second( is_npc );
+}
+
+talk_predicate dialogue_data::conversation_state( std::string_view state )
+{
+    using factory = talk_predicate( * )();
+    static const std::map<std::string_view, factory> states = {
+        { "daylight", conditional_fun::f_is_day },
+        { "radio", conditional_fun::f_is_by_radio },
+        { "has_reason", conditional_fun::f_has_reason },
+        { "mission_offers_generic_rewards", conditional_fun::f_mission_has_generic_rewards },
+    };
+    const auto operation = states.find( state );
+    if( operation == states.end() ) {
+        throw std::invalid_argument( "unsupported conversation state: " + std::string( state ) );
+    }
+    return operation->second();
+}
+
+talk_predicate dialogue_data::minimum_attribute( std::string_view attribute, double minimum,
+        bool is_npc )
+{
+    using reader = int ( const_talker::* )() const;
+    static const std::map<std::string_view, reader> readers = {
+        { "strength", &const_talker::str_cur },
+        { "dexterity", &const_talker::dex_cur },
+        { "intelligence", &const_talker::int_cur },
+        { "perception", &const_talker::per_cur },
+    };
+    const auto operation = readers.find( attribute );
+    if( operation == readers.end() ) {
+        throw std::invalid_argument( "unsupported dialogue attribute: " + std::string( attribute ) );
+    }
+    return [read = operation->second, minimum, is_npc]( const_dialogue const & d ) {
+        return ( d.const_actor( is_npc )->*read )() >= minimum;
+    };
+}
+
+talk_predicate dialogue_data::assigned_missions( std::size_t minimum,
+        std::optional<std::size_t> maximum )
+{
+    return [minimum, maximum]( const_dialogue const & d ) {
+        const std::size_t count = d.missions_assigned.size();
+        return count >= minimum && ( !maximum || count <= *maximum );
+    };
+}
+
+talk_predicate dialogue_data::available_missions( bool is_npc, std::size_t minimum,
+        std::optional<std::size_t> maximum )
+{
+    return [is_npc, minimum, maximum]( const_dialogue const & d ) {
+        const std::size_t count = d.const_actor( is_npc )->available_missions().size();
+        return count >= minimum && ( !maximum || count <= *maximum );
+    };
+}
 
 template<class T>
 static std::function<T( const_dialogue const & )> get_get_str_( const JsonObject &jo,

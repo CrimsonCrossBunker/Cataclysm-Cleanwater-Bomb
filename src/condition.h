@@ -2,10 +2,13 @@
 #ifndef CATA_SRC_CONDITION_H
 #define CATA_SRC_CONDITION_H
 
+#include <cstddef>
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_set>
+#include <vector>
 
 #include "calendar.h"
 #include "coords_fwd.h"
@@ -22,6 +25,22 @@ namespace dialogue_data
 {
 const std::unordered_set<std::string> &simple_string_conds();
 const std::unordered_set<std::string> &complex_conds();
+
+talk_predicate has_any_trait( std::vector<str_or_var> traits_to_check, bool is_npc );
+talk_predicate has_trait( str_or_var trait_to_check, bool is_npc );
+talk_predicate has_flag( str_or_var trait_flag_to_check, bool is_npc );
+talk_predicate has_mission( str_or_var u_mission );
+talk_predicate wears( str_or_var item_id, bool is_npc );
+talk_predicate has_item( str_or_var item_id, bool is_npc );
+talk_predicate has_effect( str_or_var effect_id, dbl_or_var intensity, str_or_var bp, bool is_npc );
+talk_predicate any_equal( std::vector<str_or_var> values );
+talk_predicate has_items( str_or_var item_id, dbl_or_var count, dbl_or_var charges, bool is_npc );
+talk_predicate actor_state( std::string_view state, bool is_npc );
+talk_predicate conversation_state( std::string_view state );
+talk_predicate minimum_attribute( std::string_view attribute, double minimum, bool is_npc );
+talk_predicate assigned_missions( std::size_t minimum, std::optional<std::size_t> maximum );
+talk_predicate available_missions( bool is_npc, std::size_t minimum,
+                                   std::optional<std::size_t> maximum );
 } // namespace dialogue_data
 
 enum class jarg {

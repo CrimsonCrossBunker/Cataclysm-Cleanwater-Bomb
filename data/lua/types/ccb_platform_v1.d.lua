@@ -7245,6 +7245,7 @@ function CcbPlatformTilesetApi.limits() end
 ---@return any
 function CcbPlatformTilesetApi.register(descriptor) end
 ---@class CcbPlatformContent
+---@field dialogue_predicates StaticDialoguePredicates Only available while loading ordered data.
 local CcbPlatformContent = {}
 
 ---Check a selected Mod by its stable ID, including data-only Mods. Available during entry loading.
@@ -7623,6 +7624,115 @@ function CcbPlatformContent.define_item(options) end
 
 ---@alias StaticDialogueParticipant 'speaker'|'interlocutor'
 
+---A native predicate usable in ordered dialogue definitions.
+---@class StaticDialoguePredicate
+
+---@class StaticDialogueStringVariable
+---@field scope 'speaker'|'interlocutor'|'global'|'conversation'|'indirect'
+---@field key string Existing variable key, including when it was set by older content.
+---@field fallback? string String used when the variable is missing, defaulting to an empty string.
+
+---@alias StaticDialogueStringValue string|StaticDialogueStringVariable
+
+---@alias StaticDialogueActorState 'male'|'female'|'available'|'following'|'friendly'|'hostile'
+---| 'offers_skill_training'|'offers_style_training'|'offers_spell_training'
+---| 'mission_complete'|'mission_incomplete'|'mission_failed'|'has_activity'|'has_weapon'|'outside'|'is_avatar'|'is_npc'
+
+---@class StaticDialoguePredicates
+local StaticDialoguePredicates = {}
+
+---Evaluate these predicates in order until one fails.
+---@param conditions StaticDialoguePredicate[]
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.all(conditions) end
+
+---Evaluate these predicates in order until one succeeds.
+---@param conditions StaticDialoguePredicate[]
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.any(conditions) end
+
+---@param condition StaticDialoguePredicate
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.negate(condition) end
+
+---True when at least two evaluated strings match.
+---@param values StaticDialogueStringValue[]
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.any_equal(values) end
+
+---@param role StaticDialogueParticipant
+---@param id StaticDialogueStringValue
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.has_trait(role, id) end
+
+---@param role StaticDialogueParticipant
+---@param ids StaticDialogueStringValue[]
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.has_any_trait(role, ids) end
+
+---@param role StaticDialogueParticipant
+---@param id StaticDialogueStringValue
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.has_flag(role, id) end
+
+---@param role StaticDialogueParticipant
+---@param id StaticDialogueStringValue
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.wears(role, id) end
+
+---True when the participant has at least one item or one charge.
+---@param role StaticDialogueParticipant
+---@param id StaticDialogueStringValue
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.has_item(role, id) end
+
+---Charges and amounts use the native inventory rules for charge-counted items.
+---@param role StaticDialogueParticipant
+---@param id StaticDialogueStringValue
+---@param count? number
+---@param charges? number
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.has_inventory(role, id, count, charges) end
+
+---@param role StaticDialogueParticipant
+---@param id StaticDialogueStringValue
+---@param intensity? number Minimum intensity, if supplied.
+---@param body_part? StaticDialogueStringValue Defaults to the body part supplied by the conversation, if any.
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.has_effect(role, id, intensity, body_part) end
+
+---True when the speaker owns an active mission of this type.
+---@param id StaticDialogueStringValue
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.has_mission(id) end
+
+---@param role StaticDialogueParticipant
+---@param state StaticDialogueActorState
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.actor_state(role, state) end
+
+---@param state 'daylight'|'radio'|'has_reason'|'mission_offers_generic_rewards'
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.conversation_state(state) end
+
+---@param role StaticDialogueParticipant
+---@param attribute 'strength'|'dexterity'|'intelligence'|'perception'
+---@param minimum number
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.minimum_attribute(role, attribute, minimum) end
+
+---Compare the number of assigned missions in the current conversation.
+---@param minimum integer
+---@param maximum? integer
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.assigned_missions(minimum, maximum) end
+
+---@param role StaticDialogueParticipant
+---@param minimum integer
+---@param maximum? integer
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.available_missions(role, minimum, maximum) end
+
 ---@class StaticDialogueGenderedLine
 ---@field gendered string
 ---@field participants StaticDialogueParticipant[]
@@ -7633,7 +7743,15 @@ function CcbPlatformContent.define_item(options) end
 ---@class StaticDialogueJoinedLine
 ---@field joined StaticDialogueLine[] Concatenate each line in order.
 
----@alias StaticDialogueLine string|LocalizedText|StaticDialogueGenderedLine|StaticDialogueRandomLine|StaticDialogueJoinedLine
+---@class StaticDialogueConditionalLine
+---@field when StaticDialoguePredicate
+---@field yes? StaticDialogueLine
+---@field no? StaticDialogueLine
+
+---@class StaticDialogueSpecialLine
+---@field special 'hint'|'consume_reason'
+
+---@alias StaticDialogueLine string|LocalizedText|StaticDialogueGenderedLine|StaticDialogueRandomLine|StaticDialogueJoinedLine|StaticDialogueConditionalLine|StaticDialogueSpecialLine
 
 ---Record literal gendered dialogue text for native translation at display time.
 ---@param text string
@@ -7676,6 +7794,8 @@ function CcbPlatformContent.gendered_line(text, participants) end
 ---@field modifiers? StaticDialogueTrialModifier[]
 
 ---@class StaticDialogueReply : StaticDialogueOutcome
+---@field when? StaticDialoguePredicate Determine whether the reply is available.
+---@field show_when? StaticDialoguePredicate Show the reply even if the availability rule fails.
 ---@field text? string|LocalizedText
 ---@field trial? StaticDialogueTrial
 ---@field success? StaticDialogueOutcome

@@ -49,6 +49,7 @@ extern "C" {
 #include "lua_platform_sol.h"
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
+#include "condition.h"
 #include "dialogue.h"
 #include "native_file_path.h"
 #include "generic_factory.h"
@@ -560,6 +561,10 @@ file_execution_result execute_file( sol::state &lua, const fs::path &path,
     return snapshot;
 }
 
+struct static_dialogue_predicate {
+    talk_predicate test;
+};
+
 void initialize_state( sol::state &lua, const fs::path &requested_root,
                        const std::shared_ptr<runtime> &platform = nullptr,
                        const std::shared_ptr<const std::set<std::string>> &selected_mod_ids = nullptr,
@@ -578,6 +583,7 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     sol::table ccb = lua.create_table();
     ccb["platform_version"] = platform_version;
     install_mod_definition( ccb );
+    ccb.new_usertype<static_dialogue_predicate>( "StaticDialoguePredicate", sol::no_constructor );
     if( platform ) {
         if( type != mod_source_type::mod ) {
             platform->content.install_lua_api( lua, ccb, platform );
@@ -2366,54 +2372,225 @@ sol::table static_gendered_dialogue_line( sol::this_state state, const std::stri
     return line;
 }
 
-void write_static_dialogue_line( JsonOut &json, const sol::object &line )
+bool dialogue_participant_is_interlocutor( std::string_view role )
 {
+    if( role == "interlocutor" ) {
+        return true;
+    }
+    if( role == "speaker" ) {
+        return false;
+    }
+    throw std::invalid_argument( "dialogue participant must be speaker or interlocutor" );
+}
+
+str_or_var read_dialogue_string_value( const sol::object &value )
+{
+    if( value.get_type() == sol::type::string ) {
+        return str_or_var( value.as<std::string>() );
+    }
+    const sol::table variable = value.as<sol::table>();
+    static const std::map<std::string_view, var_type> scopes = {
+        { "speaker", var_type::u }, { "interlocutor", var_type::npc },
+        { "global", var_type::global }, { "conversation", var_type::context },
+        { "indirect", var_type::var },
+    };
+    const std::string scope = variable.get<std::string>( "scope" );
+    const auto type = scopes.find( scope );
+    if( type == scopes.end() ) {
+        throw std::invalid_argument( "unsupported dialogue variable scope: " + scope );
+    }
+    str_or_var result;
+    result.val = var_info( type->second, variable.get<std::string>( "key" ) );
+    if( const auto fallback = variable.get<sol::optional<std::string>>( "fallback" ) ) {
+        result.default_val = *fallback;
+    }
+    return result;
+}
+
+std::vector<str_or_var> read_dialogue_string_values( const sol::table &values )
+{
+    std::vector<str_or_var> result;
+    const std::size_t count = values.size();
+    result.reserve( count );
+    for( std::size_t i = 1; i <= count; ++i ) {
+        result.push_back( read_dialogue_string_value( values.raw_get<sol::object>( i ) ) );
+    }
+    return result;
+}
+
+static_dialogue_predicate combine_dialogue_predicates( const sol::table &values, bool all )
+{
+    std::vector<talk_predicate> rules;
+    const std::size_t count = values.size();
+    rules.reserve( count );
+    for( std::size_t i = 1; i <= count; ++i ) {
+        rules.push_back( values.raw_get<const static_dialogue_predicate &>( i ).test );
+    }
+    return { [rules = std::move( rules ), all]( const const_dialogue & d )
+    {
+        const auto matches = [&]( const talk_predicate & rule ) {
+            return rule( d );
+        };
+        return all ? std::all_of( rules.begin(), rules.end(), matches ) :
+               std::any_of( rules.begin(), rules.end(), matches );
+    } };
+}
+
+void install_static_dialogue_predicates( sol::state &lua, sol::table &content )
+{
+    sol::table predicates = lua.create_table();
+    predicates.set_function( "all", []( const sol::table & values ) {
+        return combine_dialogue_predicates( values, true );
+    } );
+    predicates.set_function( "any", []( const sol::table & values ) {
+        return combine_dialogue_predicates( values, false );
+    } );
+    predicates.set_function( "negate", []( const static_dialogue_predicate & value ) {
+        return static_dialogue_predicate{ [test = value.test]( const const_dialogue & d )
+        {
+            return !test( d );
+        } };
+    } );
+    predicates.set_function( "any_equal", []( const sol::table & values ) {
+        return static_dialogue_predicate{ dialogue_data::any_equal(
+                                              read_dialogue_string_values( values ) ) };
+    } );
+    predicates.set_function( "has_trait", []( const std::string & role, const sol::object & id ) {
+        return static_dialogue_predicate{ dialogue_data::has_trait( read_dialogue_string_value( id ),
+                dialogue_participant_is_interlocutor( role ) ) };
+    } );
+    predicates.set_function( "has_any_trait", []( const std::string & role, const sol::table & ids ) {
+        return static_dialogue_predicate{ dialogue_data::has_any_trait( read_dialogue_string_values( ids ),
+                dialogue_participant_is_interlocutor( role ) ) };
+    } );
+    predicates.set_function( "has_flag", []( const std::string & role, const sol::object & id ) {
+        return static_dialogue_predicate{ dialogue_data::has_flag( read_dialogue_string_value( id ),
+                dialogue_participant_is_interlocutor( role ) ) };
+    } );
+    predicates.set_function( "wears", []( const std::string & role, const sol::object & id ) {
+        return static_dialogue_predicate{ dialogue_data::wears( read_dialogue_string_value( id ),
+                dialogue_participant_is_interlocutor( role ) ) };
+    } );
+    predicates.set_function( "has_item", []( const std::string & role, const sol::object & id ) {
+        return static_dialogue_predicate{ dialogue_data::has_item( read_dialogue_string_value( id ),
+                dialogue_participant_is_interlocutor( role ) ) };
+    } );
+    predicates.set_function( "has_inventory", []( const std::string & role, const sol::object & id,
+    sol::optional<double> count, sol::optional<double> charges ) {
+        if( !count && !charges ) {
+            throw std::invalid_argument( "dialogue inventory check requires a count or charges" );
+        }
+        return static_dialogue_predicate{ dialogue_data::has_items( read_dialogue_string_value( id ),
+                dbl_or_var( count.value_or( 0.0 ) ), dbl_or_var( charges.value_or( 0.0 ) ),
+                dialogue_participant_is_interlocutor( role ) ) };
+    } );
+    predicates.set_function( "has_effect", []( const std::string & role, const sol::object & id,
+    sol::optional<double> intensity, const sol::optional<sol::object> &body_part ) {
+        return static_dialogue_predicate{ dialogue_data::has_effect( read_dialogue_string_value( id ),
+                dbl_or_var( intensity.value_or( -1.0 ) ),
+                body_part ? read_dialogue_string_value( *body_part ) : str_or_var{},
+                dialogue_participant_is_interlocutor( role ) ) };
+    } );
+    predicates.set_function( "has_mission", []( const sol::object & id ) {
+        return static_dialogue_predicate{ dialogue_data::has_mission( read_dialogue_string_value( id ) ) };
+    } );
+    predicates.set_function( "actor_state", []( const std::string & role, const std::string & state ) {
+        return static_dialogue_predicate{ dialogue_data::actor_state( state,
+                dialogue_participant_is_interlocutor( role ) ) };
+    } );
+    predicates.set_function( "conversation_state", []( const std::string & state ) {
+        return static_dialogue_predicate{ dialogue_data::conversation_state( state ) };
+    } );
+    predicates.set_function( "minimum_attribute", []( const std::string & role,
+    const std::string & attribute, double minimum ) {
+        return static_dialogue_predicate{ dialogue_data::minimum_attribute( attribute, minimum,
+                dialogue_participant_is_interlocutor( role ) ) };
+    } );
+    predicates.set_function( "assigned_missions", []( unsigned int minimum,
+    sol::optional<unsigned int> maximum ) {
+        return static_dialogue_predicate{ dialogue_data::assigned_missions( minimum,
+                maximum ? std::optional<std::size_t>( *maximum ) : std::nullopt ) };
+    } );
+    predicates.set_function( "available_missions", []( const std::string & role, unsigned int minimum,
+    sol::optional<unsigned int> maximum ) {
+        return static_dialogue_predicate{ dialogue_data::available_missions(
+                                              dialogue_participant_is_interlocutor( role ), minimum,
+                                              maximum ? std::optional<std::size_t>( *maximum ) : std::nullopt ) };
+    } );
+    content["dialogue_predicates"] = predicates;
+}
+
+dynamic_line_t read_static_dialogue_line( const sol::object &line )
+{
+    if( line.get_type() == sol::type::nil ) {
+        return {};
+    }
+    if( line.get_type() == sol::type::string ) {
+        return dynamic_line_t( to_translation( line.as<std::string>() ) );
+    }
     if( line.get_type() != sol::type::table ) {
-        write_item_text_value( json, "dialogue line", line, false );
-        return;
+        return dynamic_line_t( detail::read_singular_text( line, {}, "dialogue line" ).native() );
     }
     const sol::table options = line.as<sol::table>();
     const auto choices = options.get<sol::optional<sol::table>>( "choices" );
     const auto joined = options.get<sol::optional<sol::table>>( "joined" );
     const auto gendered = options.get<sol::optional<std::string>>( "gendered" );
-    if( choices.has_value() + joined.has_value() + gendered.has_value() != 1 ) {
-        throw std::invalid_argument( "dialogue line requires choices, joined lines, or gendered text" );
+    const auto condition = options.get<sol::optional<static_dialogue_predicate>>( "when" );
+    const auto special = options.get<sol::optional<std::string>>( "special" );
+    if( choices.has_value() + joined.has_value() + gendered.has_value() + condition.has_value() +
+        special.has_value() != 1 ) {
+        throw std::invalid_argument( "dialogue line requires choices, joined lines, gendered text, a predicate, or a native line" );
     }
     if( choices || joined ) {
         const sol::table &lines = choices ? *choices : *joined;
         if( choices && lines.size() == 0 ) {
             throw std::invalid_argument( "random dialogue line requires at least one choice" );
         }
-        if( joined ) {
-            json.start_object();
-            json.member( "concatenate" );
+        std::vector<dynamic_line_t> entries;
+        const std::size_t count = lines.size();
+        entries.reserve( count );
+        for( std::size_t i = 1; i <= count; ++i ) {
+            entries.push_back( read_static_dialogue_line( lines.raw_get<sol::object>( i ) ) );
         }
-        json.start_array();
-        for( std::size_t i = 1, count = lines.size(); i <= count; ++i ) {
-            write_static_dialogue_line( json, lines.raw_get<sol::object>( i ) );
+        return choices ? dynamic_line_t::choose( std::move( entries ) ) :
+               dynamic_line_t::join( std::move( entries ) );
+    }
+    if( condition ) {
+        return dynamic_line_t::branch( condition->test,
+                                       read_static_dialogue_line( options.raw_get<sol::object>( "yes" ) ),
+                                       read_static_dialogue_line( options.raw_get<sol::object>( "no" ) ) );
+    }
+    if( special ) {
+        if( *special == "hint" ) {
+            return dynamic_line_t::hint();
         }
-        json.end_array();
-        if( joined ) {
-            json.end_object();
+        if( *special == "consume_reason" ) {
+            return dynamic_line_t::use_reason();
         }
-        return;
+        throw std::invalid_argument( "unsupported native dialogue line: " + *special );
     }
     const sol::table roles = options.get<sol::table>( "participants" );
     std::vector<std::string> participants = bounded_string_array( roles, "participants", 2,
                                             "gendered dialogue" );
     for( std::string &role : participants ) {
-        if( role == "speaker" ) {
-            role = "u";
-        } else if( role == "interlocutor" ) {
-            role = "npc";
-        } else {
-            throw std::invalid_argument( "gendered dialogue participants must be speaker or interlocutor" );
-        }
+        role = dialogue_participant_is_interlocutor( role ) ? "npc" : "u";
     }
-    json.start_object();
-    json.member( "gendered_line", *gendered );
-    json.member( "relevant_genders", participants );
-    json.end_object();
+    return dynamic_line_t::gendered( *gendered, std::move( participants ) );
+}
+
+talk_response_rules read_static_dialogue_rules( const sol::table &reply )
+{
+    talk_response_rules rules;
+    if( const auto predicate = reply.get<sol::optional<static_dialogue_predicate>>( "when" ) ) {
+        rules.condition = predicate->test;
+    }
+    if( const auto predicate = reply.get<sol::optional<static_dialogue_predicate>>( "show_when" ) ) {
+        if( reply.get_or( "show_always", false ) ) {
+            throw std::invalid_argument( "dialogue reply cannot set both show_always and show_when" );
+        }
+        rules.show_condition = predicate->test;
+    }
+    return rules;
 }
 
 void write_static_dialogue_outcome( JsonOut &json, const sol::table &outcome )
@@ -2528,10 +2705,10 @@ void load_static_dialogue_topic( const sol::table &options, const std::string &s
     } else {
         json.member( "id", id.as<std::string>() );
     }
+    talk_topic_rules rules;
     const sol::object line = options.raw_get<sol::object>( "line" );
     if( line.get_type() != sol::type::nil ) {
-        json.member( "dynamic_line" );
-        write_static_dialogue_line( json, line );
+        rules.line = read_static_dialogue_line( line );
     }
     write_item_fields<bool>( json, options, {
         { "insert_before_standard_exits", "insert_before_standard_exits" },
@@ -2541,7 +2718,9 @@ void load_static_dialogue_topic( const sol::table &options, const std::string &s
         json.member( "responses" );
         json.start_array();
         for( std::size_t i = 1, count = replies->size(); i <= count; ++i ) {
-            write_static_dialogue_reply( json, replies->raw_get<sol::table>( i ) );
+            const sol::table reply = replies->raw_get<sol::table>( i );
+            rules.responses.push_back( read_static_dialogue_rules( reply ) );
+            write_static_dialogue_reply( json, reply );
         }
         json.end_array();
     }
@@ -2559,7 +2738,9 @@ void load_static_dialogue_topic( const sol::table &options, const std::string &s
                 json.member( "include_containers", true );
             }
             json.member( "response" );
-            write_static_dialogue_reply( json, repeat.get<sol::table>( "reply" ) );
+            const sol::table reply = repeat.get<sol::table>( "reply" );
+            rules.repeats.push_back( read_static_dialogue_rules( reply ) );
+            write_static_dialogue_reply( json, reply );
             json.end_object();
         }
         json.end_array();
@@ -2570,7 +2751,7 @@ void load_static_dialogue_topic( const sol::table &options, const std::string &s
     // their JSON/Lua interleaving, including replies inserted above exits.
     const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
     static_cast<void>( definition.get_string( "type" ) );
-    load_talk_topic( definition, source );
+    load_ordered_talk_topic( definition, source, &rules );
 }
 
 void write_static_mutation_links( JsonOut &json, const sol::table &options )
@@ -3559,12 +3740,13 @@ void load_mod_content_with_data( const mod_source &source,
     initialize_state( lua, resolved.root );
     const sol::table package = lua["package"];
     const sol::table loaded = package["loaded"];
-    const sol::table ccb = loaded["ccb"];
+    sol::table ccb = loaded["ccb"];
     sol::table content = ccb["content"];
     content.set_function( "is_mod_active", [&selected_mod_ids]( const std::string &id ) {
         return selected_mod_ids.count( id ) != 0;
     } );
     content.set_function( "define_mapgen", load_static_mapgen );
+    install_static_dialogue_predicates( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );
     content.set_function( "define_dialogue_topic", [&resolved]( const sol::table &options ) {
         load_static_dialogue_topic( options, resolved.id );

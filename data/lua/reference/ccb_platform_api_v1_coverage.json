@@ -915,6 +915,12 @@
       "synchronized": true
     },
     {
+      "declared_class": "StaticDialoguePredicate",
+      "in_public_contract": true,
+      "native_name": "StaticDialoguePredicate",
+      "synchronized": true
+    },
+    {
       "declared_class": "SubBodyPartDefinition",
       "in_public_contract": true,
       "native_name": "SubBodyPartDefinition",
@@ -1097,13 +1103,13 @@
   ],
   "platform_sync": {
     "contract_export_roots_missing_from_inventory": [],
-    "luals_class_count": 1109,
-    "luals_function_count": 1667,
-    "native_export_root_count": 182,
-    "native_export_roots_declared": 182,
-    "native_export_roots_in_public_contract": 182,
+    "luals_class_count": 1114,
+    "luals_function_count": 1684,
+    "native_export_root_count": 183,
+    "native_export_roots_declared": 183,
+    "native_export_roots_in_public_contract": 183,
     "native_registration_file_count": 124,
-    "public_contract_export_root_count": 182,
+    "public_contract_export_root_count": 183,
     "synchronized": true,
     "unmatched_native_export_roots": []
   },
