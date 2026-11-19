@@ -1,8 +1,0 @@
-[
-  {
-    "id": "heels",
-    "copy-from": "heels",
-    "type": "ITEM",
-    "extend": { "flags": [ "HIGH_HEELS" ] }
-  }
-]
