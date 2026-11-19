@@ -1,0 +1,79 @@
+[
+  {
+    "id": "TALK_HUNTER_DOCTOR_INTRO",
+    "type": "talk_topic",
+    "dynamic_line": [
+      "Normally I would tend to the wounded and do medical research, but with our relative safety and limited free time I mostly sell medical supplies these days.  I'm also the cook because nobody else here is good at cooking.  I would be surprised if one of them prepared an edible lung confit, let alone one that tastes good."
+    ],
+    "//": "The first two are relatively easy to produce and will be added to his trading inventory on seeing the notes.",
+    "//2": "The third has a too complex recipe to be plausible to produce, so he'll just note the recipe, increase Owed Help and thanks the player.",
+    "//3": "The fourth has a very rare component, but it will assign a mission to find it.  Once it is brought back, the player will have a big Owed Help reward.",
+    "responses": [
+      {
+        "text": "[Show him your notes on aspirin improvement]",
+        "topic": "TALK_HUNTER_DOCTOR_SHARE_ASPIRIN",
+        "condition": {
+          "and": [
+            { "u_has_item": "alchemy_recipe_extra_str_aspirin" },
+            { "not": { "compare_string": [ "yes", { "u_val": "shared_with_hunter_doctor_aspirin" } ] } }
+          ]
+        },
+        "effect": [
+          { "u_add_var": "shared_with_hunter_doctor_aspirin", "value": "yes" },
+          { "math": [ "vampire_hunters_owed_help += 3" ] }
+        ]
+      },
+      {
+        "text": "[Show him your notes on overcharged energy drinks]",
+        "topic": "TALK_HUNTER_DOCTOR_SHARE_RAGE_DRINK",
+        "condition": {
+          "and": [
+            { "u_has_item": "alchemy_recipe_blackout_rage_drink" },
+            { "not": { "compare_string": [ "yes", { "u_val": "shared_with_hunter_doctor_rage_drink" } ] } }
+          ]
+        },
+        "effect": [
+          { "u_add_var": "shared_with_hunter_doctor_rage_drink", "value": "yes" },
+          { "math": [ "vampire_hunters_owed_help += 3" ] }
+        ]
+      },
+      {
+        "text": "[Show him your notes on precognition-inducing hallucinogens]",
+        "topic": "TALK_HUNTER_DOCTOR_SHARE_LSD",
+        "condition": {
+          "and": [
+            { "u_has_item": "alchemy_recipe_prophets_lsd" },
+            { "not": { "compare_string": [ "yes", { "u_val": "shared_with_hunter_doctor_prophets_lsd" } ] } }
+          ]
+        },
+        "effect": [
+          { "u_add_var": "shared_with_hunter_doctor_prophets_lsd", "value": "yes" },
+          { "math": [ "vampire_hunters_owed_help += 3" ] }
+        ]
+      },
+      {
+        "text": "[Show him your notes on the elixir of life]",
+        "topic": "TALK_HUNTER_DOCTOR_SHARE_LIFE_ELIXIR",
+        "condition": {
+          "and": [
+            { "u_has_item": "alchemy_recipe_life_extension_potion" },
+            { "not": { "compare_string": [ "yes", { "u_val": "shared_with_hunter_doctor_life_extension_potion" } ] } }
+          ]
+        },
+        "effect": [
+          { "u_add_var": "shared_with_hunter_doctor_life_extension_potion", "value": "yes" },
+          { "math": [ "vampire_hunters_owed_help += 3" ] }
+        ]
+      },
+      { "text": "I'll buy some supplies.", "topic": "TALK_HUNTER_DOCTOR", "effect": [ "start_trade" ] },
+      {
+        "text": "Could you give me some supplies?",
+        "topic": "TALK_HUNTER_DOCTOR",
+        "condition": { "math": [ "vampire_hunters_owed_help > 0" ] },
+        "effect": [ "start_trade", { "u_spend_cash": -2000 }, { "math": [ "vampire_hunters_owed_help--" ] } ]
+      },
+      { "text": "Let's talk about something else.", "topic": "TALK_NONE" },
+      { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
+    ]
+  }
+]

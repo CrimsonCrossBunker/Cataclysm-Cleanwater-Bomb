@@ -1,0 +1,17 @@
+[
+  {
+    "id": "TALK_HUNTER_DOCTOR_SHARE_LIFE_ELIXIR",
+    "type": "talk_topic",
+    "dynamic_line": [
+      "[Blaine copies the recipe on a paper sheet]  If it is true, the only ingredient I lack is elder ginseng.  Could you please bring me some?  This would be a favor I won't forget soon."
+    ],
+    "responses": [
+      {
+        "text": "I'll find some.",
+        "topic": "TALK_HUNTER_DOCTOR_FIND_GINSENG_ACCEPT",
+        "effect": [ { "assign_mission": "MISSION_VAMPIRE_HUNTER_DOCTOR_FIND_GINSENG" } ]
+      },
+      { "text": "I'm not interested in doing that.", "topic": "TALK_HUNTER_DOCTOR_FIND_GINSENG_REFUSE" }
+    ]
+  }
+]
