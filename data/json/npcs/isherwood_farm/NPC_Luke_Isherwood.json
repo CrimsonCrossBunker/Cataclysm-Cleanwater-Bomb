@@ -189,15 +189,5 @@
         "condition": { "not": { "u_is_wearing": "badge_marshal" } }
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ISHERWOOD_LUKE_Marshal",
-    "dynamic_line": "I don't see how it's much of your business what our story is.  You can try asking my dad, Eddie, if you really want.  Just don't start acting like some little piece of tin in your pocket means you can come in like you own the place.",
-    "speaker_effect": { "effect": { "u_add_var": "isherwood_luke_marshal_questions", "value": "known" } },
-    "responses": [
-      { "text": "<done_conversation_section>", "topic": "TALK_ISHERWOOD_LUKE_TOPICS" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]

@@ -1,27 +1,22 @@
 local ccb = require("ccb")
-local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ISHERWOOD_LUKE_TOPICS",
-    line = ccb.content.text("Go on…"),
+    id = "TALK_LUKE_CHRIS2",
+    line = ccb.content.text("Well, he doesn't agree that what we're doing here will last.  He thinks things will only get worse.\"  Luke shrugs, as if to say he doesn't have a strong opinion on the matter.  \"It's tough to get the adults to listen though, much less agree with his solution.  You can go talk to him more about it if you want."),
     replies = {
         {
-            text = ccb.content.text("Must be tough having the world fall apart when you had you future to look forward to."),
-            next_topic = "TALK_ISHERWOOD_LUKE3",
-        },
-        {
-            text = ccb.content.text("Tell me about your dad."),
-            next_topic = "TALK_LUKE_EDDIE_NoBarry",
-            when = predicates.all({ predicates.any_equal({ "yes", { scope = "speaker", key = "u_met_Eddie_Isherwood" } }), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "u_saved_barry_isherwood" } })) }),
-        },
-        {
-            text = ccb.content.text("Tell me about your dad."),
-            next_topic = "TALK_LUKE_EDDIE_YesBarry",
-            when = predicates.all({ predicates.any_equal({ "yes", { scope = "speaker", key = "u_met_Eddie_Isherwood" } }), predicates.any_equal({ "yes", { scope = "speaker", key = "u_saved_barry_isherwood" } }) }),
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_ISHERWOOD_LUKE_TOPICS",
         },
         {
             text = ccb.content.text_without_extraction("<end_talking_leave>"),
             next_topic = "TALK_DONE",
         },
     },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_LEAVE_NOW_LUKE",
+    line = ccb.content.text("You won't find any help here."),
+    replies = { { text = ccb.content.text("…"), next_topic = "TALK_DONE" } },
 }
