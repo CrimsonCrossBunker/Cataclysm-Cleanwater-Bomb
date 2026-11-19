@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 
 #include "debug.h"
@@ -47,6 +48,7 @@ extern "C" {
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
+#include "ascii_art.h"
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
 #include "condition.h"
@@ -58,11 +60,13 @@ extern "C" {
 #include "json.h"
 #include "json_loader.h"
 #include "mapgen.h"
+#include "monfaction.h"
 #include "monstergenerator.h"
 #include "mutation.h"
 #include "omdata.h"
 #include "output.h"
 #include "recipe_dictionary.h"
+#include "vehicle_group.h"
 #include <functional>
 
 namespace cata::lua_platform
@@ -3844,6 +3848,193 @@ void load_static_overmap_terrain( const sol::table &options, const std::string &
     overmap_terrains::load( definition, source );
 }
 
+template<typename Writer>
+void write_static_catalog_array( JsonOut &json, const sol::table &options, const char *field,
+                                 const char *native, Writer write_entry )
+{
+    const auto entries = options.get<sol::optional<sol::table>>( field );
+    if( !entries ) {
+        return;
+    }
+    const std::size_t count = checked_dense_array_size( *entries, field,
+        std::numeric_limits<std::size_t>::max() );
+    json.member( native );
+    json.start_array();
+    for( std::size_t i = 1; i <= count; ++i ) {
+        write_entry( json, entries->raw_get<sol::table>( i ) );
+    }
+    json.end_array();
+}
+
+void write_static_trait_group_entry( JsonOut &json, const sol::table &entry )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, entry, {
+        { "trait", "trait" }, { "group", "group" }, { "variant", "variant" }
+    } );
+    write_placement_member<int>( json, entry, "weight", "prob" );
+    for( const char *kind : {
+             "collection", "distribution"
+         } ) {
+        write_static_catalog_array( json, entry, kind, kind, write_static_trait_group_entry );
+    }
+    json.end_object();
+}
+
+void write_static_trait_group( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    const std::string kind = options.get<std::string>( "kind" );
+    if( kind != "collection" && kind != "distribution" ) {
+        throw std::invalid_argument( "trait group kind must be collection or distribution" );
+    }
+    json.member( "subtype", kind );
+    write_static_catalog_array( json, options, "entries", "traits", write_static_trait_group_entry );
+}
+
+void write_static_monster_faction_relations( JsonOut &json, const sol::table &options )
+{
+    for( const char *kind : {
+             "by_mood", "neutral", "friendly", "hate"
+         } ) {
+        const sol::object relation = options.raw_get<sol::object>( kind );
+        if( relation.get_type() == sol::type::string ) {
+            json.member( kind, relation.as<std::string>() );
+        } else {
+            write_item_ids( json, options, { { kind, kind } } );
+        }
+    }
+}
+
+void write_static_monster_faction( JsonOut &json, const sol::table &options )
+{
+    json.member( "name", options.get<std::string>( "id" ) );
+    write_placement_member<std::string>( json, options, "base", "base_faction" );
+    write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
+    write_static_monster_faction_relations( json, options );
+    for( const char *operation : {
+             "extend", "delete"
+         } ) {
+        if( const auto relations = options.get<sol::optional<sol::table>>( operation ) ) {
+            json.member( operation );
+            json.start_object();
+            write_static_monster_faction_relations( json, *relations );
+            json.end_object();
+        }
+    }
+}
+
+void write_static_overmap_point( JsonOut &json, const sol::table &entry, const char *field )
+{
+    if( const auto point = entry.get<sol::optional<sol::table>>( field ) ) {
+        if( checked_dense_array_size( *point, field, 3 ) != 3 ) {
+            throw std::invalid_argument( std::string( field ) + " requires three coordinates" );
+        }
+        json.member( field );
+        json.start_array();
+        for( int i = 1; i <= 3; ++i ) {
+            json.write( point->raw_get<int>( i ) );
+        }
+        json.end_array();
+    }
+}
+
+void write_static_overmap_tile( JsonOut &json, const sol::table &tile )
+{
+    json.start_object();
+    write_static_overmap_point( json, tile, "point" );
+    write_item_fields<std::string>( json, tile, {
+        { "terrain", "overmap" }, { "camp", "camp" }, { "camp_name", "camp_name" }
+    } );
+    write_item_ids( json, tile, { { "locations", "locations" }, { "flags", "flags" } } );
+    json.end_object();
+}
+
+void write_static_overmap_connection( JsonOut &json, const sol::table &connection )
+{
+    json.start_object();
+    write_static_overmap_point( json, connection, "point" );
+    write_static_overmap_point( json, connection, "from" );
+    write_item_fields<std::string>( json, connection, {
+        { "terrain", "terrain" }, { "connection", "connection" }
+    } );
+    write_placement_member<bool>( json, connection, "existing", "existing" );
+    json.end_object();
+}
+
+void write_static_fixed_overmap_layout( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_ids( json, options, { { "locations", "locations" }, { "flags", "flags" } } );
+    write_placement_member<bool>( json, options, "rotate", "rotate" );
+    write_mapgen_range( json, "city_sizes", options.raw_get<sol::object>( "city_sizes" ) );
+    write_static_catalog_array( json, options, "tiles", "overmaps", write_static_overmap_tile );
+    write_static_catalog_array( json, options, "connections", "connections",
+                                write_static_overmap_connection );
+    if( const auto spawns = options.get<sol::optional<sol::table>>( "spawns" ) ) {
+        json.member( "spawns" );
+        json.start_object();
+        json.member( "group", spawns->get<std::string>( "group" ) );
+        write_mapgen_range( json, "population", spawns->raw_get<sol::object>( "population" ) );
+        write_mapgen_range( json, "radius", spawns->raw_get<sol::object>( "radius" ) );
+        json.end_object();
+    }
+}
+
+void write_static_fixed_overmap_special( JsonOut &json, const sol::table &options )
+{
+    write_static_fixed_overmap_layout( json, options );
+    write_mapgen_range( json, "occurrences", options.raw_get<sol::object>( "occurrences" ) );
+    write_mapgen_range( json, "city_distance", options.raw_get<sol::object>( "city_distance" ) );
+    write_placement_member<int>( json, options, "priority", "priority" );
+}
+
+void write_static_ascii_art( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_ids( json, options, { { "lines", "picture" } } );
+}
+
+void write_static_vehicle_group( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_static_catalog_array( json, options, "vehicles", "vehicles",
+    []( JsonOut & out, const sol::table & entry ) {
+        out.start_array();
+        out.write( entry.get<std::string>( "id" ) );
+        out.write( entry.get<int>( "weight" ) );
+        out.end_array();
+    } );
+}
+
+void write_static_mutation_type( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+}
+
+using static_catalog_writer = void ( * )( JsonOut &, const sol::table & );
+
+template<typename Loader>
+auto static_catalog_definition( const std::string &source, const char *type,
+                                static_catalog_writer write_fields, Loader load )
+{
+    return [&source, type, write_fields, load]( const sol::table & options ) {
+        std::ostringstream serialized;
+        JsonOut json( serialized );
+        json.start_object();
+        json.member( "type", type );
+        write_fields( json, options );
+        json.end_object();
+        const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
+        static_cast<void>( definition.get_string( "type" ) );
+        if constexpr( std::is_invocable_v<Loader, const JsonObject &, const std::string &> ) {
+            load( definition, source );
+        } else {
+            load( definition );
+        }
+    };
+}
+
 runtime_state load_source( const mod_source &source,
                            const std::shared_ptr<const std::set<std::string>> &selected_mod_ids )
 {
@@ -3932,6 +4123,27 @@ void load_mod_content_with_data( const mod_source &source,
         return selected_mod_ids.count( id ) != 0;
     } );
     content.set_function( "define_mapgen", load_static_mapgen );
+    content.set_function( "define_ascii_art", static_catalog_definition(
+                              resolved.id, "ascii_art", write_static_ascii_art,
+                              ascii_art::load_ascii_art ) );
+    content.set_function( "define_city_building", static_catalog_definition(
+                              resolved.id, "city_building", write_static_fixed_overmap_layout,
+                              city_buildings::load ) );
+    content.set_function( "define_fixed_overmap_special", static_catalog_definition(
+                              resolved.id, "overmap_special", write_static_fixed_overmap_special,
+                              overmap_specials::load ) );
+    content.set_function( "define_monster_faction", static_catalog_definition(
+                              resolved.id, "MONSTER_FACTION", write_static_monster_faction,
+                              monfactions::load_monster_faction ) );
+    content.set_function( "define_mutation_type", static_catalog_definition(
+                              resolved.id, "mutation_type", write_static_mutation_type,
+                              load_mutation_type ) );
+    content.set_function( "define_trait_group", static_catalog_definition(
+                              resolved.id, "trait_group", write_static_trait_group,
+                              static_cast<void ( * )( const JsonObject & )>( mutation_branch::load_trait_group ) ) );
+    content.set_function( "define_vehicle_group", static_catalog_definition(
+                              resolved.id, "vehicle_group", write_static_vehicle_group,
+                              VehicleGroup::load ) );
     install_static_dialogue_predicates( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );

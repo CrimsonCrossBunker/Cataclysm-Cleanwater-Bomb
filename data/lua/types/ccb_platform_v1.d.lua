@@ -7275,6 +7275,110 @@ function CcbPlatformContent.plural_text(singular, plural, context) end
 ---@return LocalizedText
 function CcbPlatformContent.text_without_extraction(singular, plural, context) end
 
+---@class StaticAsciiArtOptions
+---@field id string
+---@field lines string[] Ordered rows with spacing and color tags preserved.
+
+---Define ASCII art in file order during ordered data loading.
+---@param options StaticAsciiArtOptions
+function CcbPlatformContent.define_ascii_art(options) end
+
+---@class StaticOvermapTile
+---@field point [integer, integer, integer]
+---@field terrain? string Overmap terrain ID.
+---@field camp? string
+---@field camp_name? string
+---@field locations? string[]
+---@field flags? string[]
+
+---@class StaticOvermapConnection
+---@field point [integer, integer, integer]
+---@field from? [integer, integer, integer]
+---@field terrain? string
+---@field connection? string
+---@field existing? boolean
+
+---@class StaticOvermapSpawns
+---@field group string Monster group ID.
+---@field population [integer, integer]
+---@field radius [integer, integer]
+
+---@class StaticCityBuildingOptions
+---@field id string
+---@field tiles StaticOvermapTile[]
+---@field locations? string[]
+---@field flags? string[]
+---@field rotate? boolean
+---@field city_sizes? [integer, integer]
+---@field connections? StaticOvermapConnection[]
+---@field spawns? StaticOvermapSpawns
+
+---@class StaticFixedOvermapSpecialOptions : StaticCityBuildingOptions
+---@field occurrences [integer, integer]
+---@field city_distance? [integer, integer]
+---@field priority? integer
+
+---Define a city building in file order during ordered data loading.
+---@param options StaticCityBuildingOptions
+function CcbPlatformContent.define_city_building(options) end
+
+---Define a fixed-layout overmap special in file order during ordered data loading.
+---@param options StaticFixedOvermapSpecialOptions
+function CcbPlatformContent.define_fixed_overmap_special(options) end
+
+---@class StaticMonsterFactionRelations
+---@field by_mood? string|string[]
+---@field neutral? string|string[]
+---@field friendly? string|string[]
+---@field hate? string|string[]
+
+---@class StaticMonsterFactionOptions : StaticMonsterFactionRelations
+---@field id string
+---@field base? string Faction consulted when a direct attitude is absent.
+---@field copy_from? string Faction whose definition supplies inherited properties.
+---@field extend? StaticMonsterFactionRelations
+---@field delete? StaticMonsterFactionRelations
+
+---Define a monster faction in file order during ordered data loading.
+---@param options StaticMonsterFactionOptions
+function CcbPlatformContent.define_monster_faction(options) end
+
+---@class StaticMutationTypeOptions
+---@field id string
+
+---Define a mutation type in file order during ordered data loading.
+---@param options StaticMutationTypeOptions
+function CcbPlatformContent.define_mutation_type(options) end
+
+---@class StaticTraitGroupEntry
+---@field trait? string
+---@field group? string
+---@field collection? StaticTraitGroupEntry[]
+---@field distribution? StaticTraitGroupEntry[]
+---@field variant? string Variant ID for a trait.
+---@field weight? integer Defaults to 100. Chance in a collection, weight in a distribution.
+
+---@class StaticTraitGroupOptions
+---@field id string
+---@field kind "collection"|"distribution"
+---@field entries StaticTraitGroupEntry[]
+
+---Append a trait group definition in file order during ordered data loading.
+---@param options StaticTraitGroupOptions
+function CcbPlatformContent.define_trait_group(options) end
+
+---@class StaticVehicleGroupEntry
+---@field id string Vehicle prototype ID.
+---@field weight integer Relative spawn weight.
+
+---@class StaticVehicleGroupOptions
+---@field id string
+---@field vehicles StaticVehicleGroupEntry[]
+
+---Append weighted vehicle entries in file order during ordered data loading.
+---@param options StaticVehicleGroupOptions
+function CcbPlatformContent.define_vehicle_group(options) end
+
 ---@param options ItemDefinitionOptions
 ---@return ItemDefinition
 function CcbPlatformContent.Item(options) end
