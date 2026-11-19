@@ -1,0 +1,42 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "elderberries",
+    "name": { "str": "handful of elderberries", "str_pl": "handfuls of elderberries" },
+    "weight": "145 g",
+    "color": "red",
+    "spoils_in": "2 days 12 hours",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "quench": 2,
+    "use_action": [ "POISON" ],
+    "calories": 106,
+    "description": "A handful of elderberries, toxic when eaten raw but great when cooked.",
+    "price": "45 cent",
+    "price_postapoc": "45 cent",
+    "material": [ "fruit" ],
+    "volume": "250 ml",
+    "fun": -2,
+    "flags": [ "RAW", "EDIBLE_FROZEN" ],
+    "smoking_result": "dry_fruit",
+    "vitamins": [ [ "vitC", "52200 μg" ], [ "iron", "2300 μg" ], [ "calcium", "55100 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "nannyberries",
+    "name": { "str": "handful of nannyberries", "str_pl": "handfuls of nannyberries" },
+    "description": "Some dark blue nannyberries, tasting like prunes mixed with banana.",
+    "copy-from": "elderberries",
+    "//": "Nannyberries are described as rather dry, perfectly fine to eat as is but it will not hydrate you.",
+    "use_action": [  ],
+    "quench": 0,
+    "fun": 2,
+    "color": "dark_gray",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
+  }
+]
