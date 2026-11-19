@@ -1,28 +1,34 @@
 local ccb = require("ccb")
 
 ccb.content.define_technique {
-    id = "tec_centipede_break",
-    name = ccb.content.text("Grab Break"),
+    id = "tec_venom_snake_tail",
+    name = ccb.content.text("Viper Tail"),
     messages = {
-        ccb.content.text("You were almost grabbed by %s, but you skitter free"),
-        ccb.content.text("<npcname> was almost grabbed by %s, but they skitter free"),
+        ccb.content.text("You beat %s down with a powerful Viper Tail"),
+        ccb.content.text("<npcname> beats %s down with a powerful Viper Tail"),
     },
     skills = { { id = "unarmed", level = 3 } },
     unarmed_allowed = true,
-    defensive = true,
-    grab_break = true,
+    weighting = 2,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 1.5 } },
+    attack_vectors = { "vector_punch" },
+    when = "allow_tec_venom_snake_tail",
+    condition_description = ccb.content.text("Requires a stunned target"),
 }
 
 ccb.content.define_technique {
-    id = "tec_centipede_rapid",
-    name = ccb.content.text("Centipede Strike"),
-    messages = { ccb.content.text("You swiftly hit %s"), ccb.content.text("<npcname> swiftly hits %s") },
-    unarmed_allowed = true,
-    mult_bonuses = {
-        { stat = "movecost", scale = 0.5 },
-        { stat = "damage", damage_type = "bash", scale = 0.66 },
-        { stat = "damage", damage_type = "cut", scale = 0.66 },
-        { stat = "damage", damage_type = "stab", scale = 0.66 },
+    id = "tec_venom_snake_strike",
+    name = ccb.content.text("Viper Strike"),
+    messages = {
+        ccb.content.text("You devastate %s with a spectacular Viper Strike"),
+        ccb.content.text("<npcname> devastates %s with a spectacular Viper Strike"),
     },
+    skills = { { id = "unarmed", level = 4 } },
+    unarmed_allowed = true,
+    weighting = 2,
+    crit_tec = true,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 2.0 } },
     attack_vectors = { "vector_punch" },
+    when = "allow_tec_venom_snake_tail",
+    condition_description = ccb.content.text("Requires a stunned target"),
 }

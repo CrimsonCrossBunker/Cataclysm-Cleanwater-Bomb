@@ -520,3 +520,5 @@ require("tile_interactions")
 require("labyrinth_tile_interactions")
 
 require("marloss_consumption")
+
+require("technique_predicates")
