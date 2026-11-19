@@ -1,6 +1,7 @@
 require("item_migrations")
 
 require("region_settings")
+require("forge_of_wonders")
 
 local ccb = require("ccb")
 local content = ccb.content

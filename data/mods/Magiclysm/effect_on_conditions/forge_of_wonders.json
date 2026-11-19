@@ -98,25 +98,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_ENTER_FORGE",
-    "effect": { "run_eocs": [ "EOC_FIND_FORGE_GATE", "EOC_PLAYER_IN_FORGE" ] }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FIND_FORGE_GATE",
-    "condition": { "math": [ "searched_forge != 1" ] },
-    "effect": [
-      {
-        "u_location_variable": { "global_val": "loc_forge_of_wonders" },
-        "target_params": { "om_terrain": "forge_x2y2z1", "z": 0 },
-        "furniture": "f_magiclysm_greater_translocator_gate",
-        "target_max_radius": 26
-      },
-      { "math": [ "searched_forge = 1" ] }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_VALIDATE_FORGE",
     "condition": { "math": [ "has_var(loc_forge_of_wonders)" ] },
     "false_effect": [
