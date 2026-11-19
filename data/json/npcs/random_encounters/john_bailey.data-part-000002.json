@@ -1,0 +1,29 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_JOHN_BAILEY_EXODII_MISSION_WAREHOUSE",
+    "dynamic_line": {
+      "concatenate": [
+        "&You describe the warehouse to the best of your ability.  John listens intently",
+        {
+          "compare_string": [ "no", { "npc_val": "exodii_mission_wh_correct" } ],
+          "yes": ", then shakes his head.  \"I don't believe I've heard about anything like that, no.  Sorry.\"",
+          "no": ", looking thoughtful.  \"I can't guarantee it, but I'm pretty sure I've seen something like that.  It was far away, and the weather was bad.  Could've been a church or something, but it didn't look right for that.\""
+        }
+      ]
+    },
+    "speaker_effect": { "effect": { "npc_add_var": "asked_about_exodii_warehouse_mission", "value": "yes" } },
+    "responses": [
+      {
+        "//": "The other responses are stored in common_talk.json in the exodii folder, to avoid repetition.",
+        "text": "Oh well, thanks John.  I'll go ask around.",
+        "topic": "TALK_DONE",
+        "condition": { "compare_string": [ "no", { "npc_val": "exodii_mission_wh_correct" } ] },
+        "effect": [
+          { "math": [ "exodii_mission_wh_chance -= 1" ] },
+          { "math": [ "exodii_mission_wh_chance = max( exodii_mission_wh_chance, 1 )" ] }
+        ]
+      }
+    ]
+  }
+]
