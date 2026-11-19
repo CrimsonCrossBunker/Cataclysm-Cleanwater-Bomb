@@ -1,33 +1,5 @@
 [
   {
-    "id": "helmet_full_carbide",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR" ],
-    "category": "armor",
-    "name": { "str": "raider's breaching helmet" },
-    "description": "This helmet is designed for the individual that is worried about catching heavy weapons fire to the face.  It is unwieldy and heavy, and lacks basic environmental protection features, but it just might stop even the largest of ballistic rounds.",
-    "weight": "3175 g",
-    "volume": "2750 ml",
-    "price": "400 USD",
-    "price_postapoc": "2 kUSD 850 USD",
-    "material": [ "vacuum_carbide_hard" ],
-    "faults": [ { "fault_group": "carbide_armor" } ],
-    "symbol": "[",
-    "looks_like": "helmet_barbute",
-    "color": "light_gray",
-    "armor": [
-      { "covers": [ "head" ], "coverage": 100, "encumbrance": 40 },
-      { "covers": [ "mouth" ], "coverage": 100, "encumbrance": 30 },
-      { "covers": [ "eyes" ], "coverage": 80, "encumbrance": 20 }
-    ],
-    "warmth": 10,
-    "material_thickness": 1,
-    "environmental_protection": 1,
-    "techniques": [ "WBLOCK_1" ],
-    "flags": [ "VARSIZE", "STURDY", "PADDED" ],
-    "melee_damage": { "bash": 10 }
-  },
-  {
     "id": "tac_fullhelmet_uicas",
     "repairs_like": "xlkevlar",
     "type": "ITEM",
