@@ -1,0 +1,75 @@
+[
+  {
+    "id": "combat_wetsuit_cecalia",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "combat wetsuit" },
+    "description": "The combat version of the Cecaelia wetsuit; made of neoprene and Kevlar, it will provide some level of protection for deep dwellers.",
+    "weight": "1720 g",
+    "volume": "4 L",
+    "price": "120 USD",
+    "price_postapoc": "5 USD",
+    "to_hit": -3,
+    "material": [ "neoprene", "afs_kevlar" ],
+    "symbol": "[",
+    "looks_like": "wetsuit",
+    "color": "light_gray",
+    "use_action": { "type": "holster", "holster_prompt": "Stash ammo", "holster_msg": "You stash your %s." },
+    "pocket_data": [
+      { "pocket_type": "CONTAINER", "max_contains_volume": "350 ml", "max_contains_weight": "1 kg", "moves": 80 },
+      { "pocket_type": "CONTAINER", "max_contains_volume": "350 ml", "max_contains_weight": "1 kg", "moves": 80 },
+      { "pocket_type": "CONTAINER", "max_contains_volume": "250 ml", "max_contains_weight": "1 kg", "moves": 100 },
+      { "pocket_type": "CONTAINER", "max_contains_volume": "250 ml", "max_contains_weight": "1 kg", "moves": 100 },
+      {
+        "max_contains_volume": "2 L",
+        "max_contains_weight": "6 kg",
+        "max_item_length": "90 cm",
+        "moves": 40,
+        "flag_restriction": [ "BELT_CLIP" ],
+        "rigid": true,
+        "holster": true,
+        "transparent": true
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "min_item_volume": "2 L",
+        "max_contains_volume": "3 L",
+        "max_contains_weight": "30 kg",
+        "flag_restriction": [ "MAG_BULKY" ],
+        "moves": 60
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "min_item_volume": "2 L",
+        "max_contains_volume": "3 L",
+        "max_contains_weight": "30 kg",
+        "flag_restriction": [ "MAG_BULKY" ],
+        "moves": 60
+      }
+    ],
+    "warmth": 30,
+    "material_thickness": 1,
+    "environmental_protection": 3,
+    "flags": [ "VARSIZE", "WATER_FRIENDLY", "SKINTIGHT" ],
+    "armor": [
+      {
+        "material": [
+          { "type": "neoprene", "covered_by_mat": 100, "thickness": 1.2 },
+          { "type": "kevlar", "covered_by_mat": 100, "thickness": 0.3 }
+        ],
+        "covers": [ "torso" ],
+        "coverage": 100,
+        "encumbrance": 5
+      },
+      {
+        "material": [
+          { "type": "kevlar", "covered_by_mat": 100, "thickness": 0.3 },
+          { "type": "neoprene", "covered_by_mat": 100, "thickness": 0.7 }
+        ],
+        "covers": [ "arm_l", "arm_r" ],
+        "coverage": 100,
+        "encumbrance": 2
+      }
+    ]
+  }
+]
