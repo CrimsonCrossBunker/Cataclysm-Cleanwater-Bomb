@@ -1,57 +1,5 @@
 [
   {
-    "id": "inventor_light_minus_cell",
-    "copy-from": "light_minus_disposable_cell",
-    "type": "ITEM",
-    "subtypes": [ "MAGAZINE" ],
-    "category": "tool_magazine",
-    "name": { "str": "ultra-light modified battery", "str_pl": "ultra-light modified batteries" },
-    "description": "A light battery cell that was modified and replaced with much more effective cells inside.",
-    "count": 125,
-    "capacity": 125,
-    "flags": [ "NO_SALVAGE", "NO_UNLOAD", "NO_RELOAD", "RECHARGE", "BATTERY_ULTRA_LIGHT", "INVENTOR_CRAFTED" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 125 } } ]
-  },
-  {
-    "id": "inventor_light_cell",
-    "copy-from": "light_battery_cell",
-    "type": "ITEM",
-    "subtypes": [ "MAGAZINE" ],
-    "category": "tool_magazine",
-    "name": { "str": "light modified battery", "str_pl": "light modified batteries" },
-    "description": "A light battery cell that was modified and replaced with much more effective cells inside.",
-    "count": 375,
-    "capacity": 375,
-    "flags": [ "NO_SALVAGE", "NO_UNLOAD", "NO_RELOAD", "RECHARGE", "BATTERY_LIGHT", "INVENTOR_CRAFTED" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 375 } } ]
-  },
-  {
-    "id": "inventor_medium_cell",
-    "copy-from": "medium_battery_cell",
-    "type": "ITEM",
-    "subtypes": [ "MAGAZINE" ],
-    "category": "tool_magazine",
-    "name": { "str": "medium modified battery", "str_pl": "medium modified batteries" },
-    "description": "A medium battery cell that was modified and replaced with much more effective cells inside.",
-    "count": 1500,
-    "capacity": 1500,
-    "flags": [ "NO_SALVAGE", "NO_UNLOAD", "NO_RELOAD", "RECHARGE", "BATTERY_MEDIUM", "INVENTOR_CRAFTED" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 1500 } } ]
-  },
-  {
-    "id": "inventor_heavy_cell",
-    "copy-from": "heavy_plus_battery_cell",
-    "type": "ITEM",
-    "subtypes": [ "MAGAZINE" ],
-    "category": "tool_magazine",
-    "name": { "str": "modified tool battery", "str_pl": "modified tool batteries" },
-    "description": "A tool battery cell that was modified and replaced with much more effective cells inside.",
-    "count": 3125,
-    "capacity": 3125,
-    "flags": [ "NO_SALVAGE", "NO_UNLOAD", "NO_RELOAD", "RECHARGE", "BATTERY_HEAVY", "INVENTOR_CRAFTED" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 3125 } } ]
-  },
-  {
     "id": "inventor_welder",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
