@@ -1,0 +1,77 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_zombie_rust",
+    name = ccb.content.plural_text("rust zombie", "rust zombies"),
+    description = ccb.content.text("A zombie impaled with a multitude of metal fragments, each covered with a thick layer of rust that seems to propagate to other parts of its body.  You can't remember the last time you got a tetanus shot, so it would be best not to let this thing touch you."),
+    copy_from = "mon_zombie_base",
+    mass = "90 kg",
+    speed = 65,
+    materials = { "flesh", "steel" },
+    color = "brown",
+    harvest = "zombie_rust",
+    decay = "zombie_decay_bone_human_skull_rust",
+    attack_effects = { { id = "tetanus", duration = 300, chance = 10 } },
+    burn_into = "mon_zombie_scorched_rust",
+    upgrade = { half_life = 120, monster_group = "GROUP_FERROUS_UPGRADE" },
+    armor = { bash = 1, cut = 2, stab = 1 },
+    inheritance = { add = { flags = { "CLUMSY_ATTACKS" } } },
+}
+
+ccb.content.define_monster {
+    id = "mon_zombie_shell",
+    name = ccb.content.plural_text("rust shell zombie", "rust shell zombies"),
+    description = ccb.content.text("Jagged fragments of rust-bitten metal have fused into this zombie's flesh and displaced parts of its spine."),
+    copy_from = "mon_zombie_base",
+    mass = "90 kg",
+    hp = 100,
+    speed = 50,
+    materials = { "flesh", "steel" },
+    color = "brown",
+    scents_tracked = { "sc_human", "sc_fetid" },
+    bleed_rate = 50,
+    harvest = "zombie_rust",
+    decay = "zombie_decay_bone_human_skull_rust",
+    attack_effects = { { id = "tetanus", duration = 300, chance = 10 } },
+    burn_into = "mon_zombie_scorched_rust",
+    upgrade = { half_life = 120, monster = "mon_zombie_plated" },
+    armor = { bash = 14, cut = 14, stab = 14, bullet = 14 },
+    inheritance = {
+        add = {
+            weakpoint_sets = { "wps_metal_shell_armor" },
+            families = { "prof_wp_nat_armored" },
+            flags = { "PULP_PRYING", "CLUMSY_ATTACKS" },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_zombie_plated",
+    name = ccb.content.plural_text("rust plated zombie", "rust plated zombies"),
+    description = ccb.content.text("Ruptures in this zombie's skin expose fragments of metal arranged like armor underneath.  Black sludge can be seen in places where the rust has receded."),
+    copy_from = "mon_zombie_base",
+    volume = "108500 ml",
+    mass = "120 kg",
+    hp = 145,
+    speed = 60,
+    materials = { "flesh", "steel" },
+    color = "brown",
+    scents_tracked = { "sc_human", "sc_fetid" },
+    melee_dice = 3,
+    melee_sides = 4,
+    bleed_rate = 0,
+    harvest = "zombie_rust",
+    decay = "zombie_decay_bone_human_skull_rust",
+    grab_strength = 30,
+    attack_effects = { { id = "tetanus", duration = 300, chance = 10 } },
+    burn_into = "mon_zombie_scorched_rust",
+    upgrade = false,
+    armor = { bash = 18, cut = 18, stab = 18, bullet = 18 },
+    inheritance = {
+        add = {
+            flags = { "SMELLS", "PULP_PRYING", "CLUMSY_ATTACKS" },
+            weakpoint_sets = { "wps_metal_shell_armor" },
+            families = { "prof_wp_nat_armored" },
+        },
+    },
+}

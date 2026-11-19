@@ -1,0 +1,28 @@
+[
+  {
+    "id": "mon_zombie_urchin",
+    "type": "MONSTER",
+    "name": { "str": "rust urchin" },
+    "description": "A spiked horror of a zombie covered in long, rusty spikes.  A walking tetanus infection waiting to happen.",
+    "copy-from": "mon_zombie_base",
+    "species": [ "ZOMBIE" ],
+    "weight": "90 kg",
+    "hp": 100,
+    "speed": 60,
+    "material": [ "flesh", "steel" ],
+    "color": "brown",
+    "scents_tracked": [ "sc_human", "sc_fetid" ],
+    "melee_skill": 3,
+    "melee_dice_sides": 6,
+    "melee_damage": [ { "damage_type": "cut", "amount": 12 } ],
+    "bleed_rate": 0,
+    "harvest": "zombie_rust",
+    "decay": "zombie_decay_bone_human_skull_rust",
+    "grab_strength": 35,
+    "attack_effs": [ { "id": "tetanus", "duration": 300, "chance": 20 } ],
+    "burn_into": "mon_zombie_scorched_rust",
+    "upgrades": false,
+    "armor": { "bash": 5, "cut": 5, "stab": 5, "bullet": 5 },
+    "extend": { "special_attacks": [ { "id": "impale" } ], "extend": { "flags": [ "CLUMSY_ATTACKS" ] } }
+  }
+]
