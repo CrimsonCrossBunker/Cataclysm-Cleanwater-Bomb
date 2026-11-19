@@ -378,3 +378,63 @@ ccb.content.define_mapgen {
         monster_glyphs = { T = { id = "mon_turret_rifle", ammunition = { { id = "556", quantity = { 30, 90 } } } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "microlab_sub_station" },
+    layout = {
+        rows = {
+            "##|                 §|##",
+            "##|^                 |##",
+            "##|^ hhhh  YY   hhhh |##",
+            "##|^                 |##",
+            "##|^ hhhh       hhhh |##",
+            "##|^                 |##",
+            "##|^         §|^^^^^^|##",
+            "##||(((((|    ||||||||##",
+            "###|l h6 ( YY |#########",
+            "###|l    ( YY |#########",
+            "###|l §  (    |#########",
+            "###||2||||    |#########",
+            "###|     |    |#########",
+            "###|   hd|G55||#########",
+            "###|§ ddd|   ^|#########",
+            "###||5(((|   ^|||||||###",
+            "###|B          VV ^^|###",
+            "###|B      YY      ?|###",
+            "###|B dddd YY    t ?|###",
+            "###|B d hd         ?|###",
+            "###|B  §       t?§^^|###",
+            "###||||||||  ||||||||###",
+            "##########|22|##########",
+            "##########|  |##########",
+        },
+        palettes = { "microlab" },
+        terrain = { G = "t_card_science" },
+        fill_terrain = "t_strconc_floor",
+        nested = {
+            { id = "concrete_wall_ns", x = 23, y = 0, neighbors = { east = "microlab" } },
+            { id = "concrete_wall_ns", x = 0, y = 0, neighbors = { west = "microlab" } },
+        },
+        nested_glyphs = { ["§"] = { id = "fire_extinguisher" } },
+        item_groups = {
+            l = { { group = "guns_milspec", chance = 10 }, { group = "ammo_milspec", chance = 70 } },
+            t = { group = "magazines", chance = 90 },
+        },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Metro computer"),
+                access_denied = ccb.content.text("ERROR!  Access denied!  Unauthorized access will be met with lethal force!"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("Check Subway Status"),
+                        security = 5,
+                        action = "map_subway",
+                    },
+                },
+                failures = { "manhacks", "secubots" },
+            },
+        },
+    },
+}
