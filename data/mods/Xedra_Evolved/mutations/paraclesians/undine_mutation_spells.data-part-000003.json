@@ -1,0 +1,348 @@
+[
+  {
+    "id": "undine_cultivate_goblin_fruit",
+    "type": "SPELL",
+    "name": "Cultivate Goblin Fruit",
+    "description": "You may spin a bit of fae magic into the waters, bringing forth a goblin fruit.  Goblin fruit have a variety of effects, never predictable but always at least somewhat beneficial.  This spell may only be cast when standing or water or a near a large body of water.",
+    "valid_targets": [ "self" ],
+    "skill": "deduction",
+    "spell_class": "UNDINE",
+    "teachable": false,
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_UNDINE_GOBLIN_FRUIT",
+    "shape": "blast",
+    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS", "NO_HANDS" ],
+    "max_level": { "math": [ "dex_to_level(1)" ] },
+    "difficulty": 8,
+    "base_casting_time": 180000,
+    "final_casting_time": 100,
+    "casting_time_increment": -6000,
+    "magic_type": "xe_fey_magick",
+    "base_energy_cost": 450
+  },
+  {
+    "id": "undine_bash_and_slow_spell",
+    "type": "SPELL",
+    "name": "Crushing Pressure",
+    "description": "You may bring the force of the ocean's depths onto your enemy, crushing them and slowing them briefly.",
+    "valid_targets": [ "hostile" ],
+    "skill": "deduction",
+    "spell_class": "UNDINE",
+    "teachable": false,
+    "effect": "attack",
+    "effect_str": "effect_undine_spell_slow",
+    "shape": "blast",
+    "flags": [ "SOMATIC", "VERBAL", "RANDOM_DAMAGE", "RANDOM_DURATION" ],
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "difficulty": 3,
+    "min_damage": { "math": [ "( (u_spell_level('undine_bash_and_slow_spell') * 2) + 15) * (scaling_factor(u_val('strength') ) )" ] },
+    "max_damage": { "math": [ "( (u_spell_level('undine_bash_and_slow_spell') * 5) + 55) * (scaling_factor(u_val('strength') ) )" ] },
+    "damage_type": "bash",
+    "min_duration": { "math": [ "( (u_spell_level('undine_bash_and_slow_spell') * 75) + 200) * (scaling_factor(u_val('strength') ) )" ] },
+    "max_duration": { "math": [ "( (u_spell_level('undine_bash_and_slow_spell') * 150) + 800) * (scaling_factor(u_val('strength') ) )" ] },
+    "min_range": { "math": [ "( (u_spell_level('undine_bash_and_slow_spell') * 1.1) + 3) * (scaling_factor(u_val('strength') ) )" ] },
+    "max_range": { "math": [ "( (u_spell_level('undine_bash_and_slow_spell') * 1.1) + 3) * (scaling_factor(u_val('strength') ) )" ] },
+    "magic_type": "xe_fey_magick",
+    "base_energy_cost": 250,
+    "final_energy_cost": 100,
+    "energy_increment": -10,
+    "base_casting_time": 200,
+    "final_casting_time": 75,
+    "casting_time_increment": -7
+  },
+  {
+    "id": "undine_drag_inward_spell",
+    "type": "SPELL",
+    "name": "Whirlpool Catches the Shoal",
+    "description": "Create a whirling field of magickal waters, dragging everything within it toward a central point and slowing them with the force of the current.",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "UNDINE",
+    "skill": "deduction",
+    "flags": [ "VERBAL", "SOMATIC", "NO_EXPLOSION_SFX" ],
+    "difficulty": 6,
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_UNDINE_DRAG_INWARD_SELECTOR",
+    "shape": "blast",
+    "magic_type": "xe_fey_magick",
+    "base_energy_cost": 600,
+    "final_energy_cost": 450,
+    "energy_increment": -3,
+    "base_casting_time": 200,
+    "final_casting_time": 100,
+    "casting_time_increment": -3
+  },
+  {
+    "id": "undine_drag_inward_spell_01",
+    "type": "SPELL",
+    "name": { "str": "Whirlpool Catches the Shoal 01", "//~": "NO_I18N" },
+    "description": { "str": "Version 1 of the Whirlpool Catches the Shoal drag, with 2 pulls in.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ground", "hostile" ],
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "effect": "attack",
+    "extra_effects": [
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_slow", "hit_self": false }
+    ],
+    "shape": "blast",
+    "min_range": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.8) + 5) * (scaling_factor(u_val('strength') ) )), 40)" ]
+    },
+    "max_range": 40,
+    "min_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    },
+    "max_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    }
+  },
+  {
+    "id": "undine_drag_inward_spell_02",
+    "type": "SPELL",
+    "name": { "str": "Whirlpool Catches the Shoal 02", "//~": "NO_I18N" },
+    "description": { "str": "Version 2 of the Whirlpool Catches the Shoal drag, with 3 pulls in.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ground", "hostile" ],
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "effect": "attack",
+    "extra_effects": [
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_slow", "hit_self": false }
+    ],
+    "shape": "blast",
+    "min_range": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.8) + 5) * (scaling_factor(u_val('strength') ) )), 40)" ]
+    },
+    "max_range": 40,
+    "min_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    },
+    "max_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    }
+  },
+  {
+    "id": "undine_drag_inward_spell_03",
+    "type": "SPELL",
+    "name": { "str": "Whirlpool Catches the Shoal 03", "//~": "NO_I18N" },
+    "description": { "str": "Version 3 of the Whirlpool Catches the Shoal drag, with 4 pulls in.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ground", "hostile" ],
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "effect": "attack",
+    "extra_effects": [
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_slow", "hit_self": false }
+    ],
+    "shape": "blast",
+    "min_range": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.8) + 5) * (scaling_factor(u_val('strength') ) )), 40)" ]
+    },
+    "max_range": 40,
+    "min_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    },
+    "max_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    }
+  },
+  {
+    "id": "undine_drag_inward_spell_04",
+    "type": "SPELL",
+    "name": { "str": "Whirlpool Catches the Shoal 04", "//~": "NO_I18N" },
+    "description": { "str": "Version 4 of the Whirlpool Catches the Shoal drag, with 5 pulls in.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ground", "hostile" ],
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "effect": "attack",
+    "extra_effects": [
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_slow", "hit_self": false }
+    ],
+    "shape": "blast",
+    "min_range": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.8) + 5) * (scaling_factor(u_val('strength') ) )), 40)" ]
+    },
+    "max_range": 40,
+    "min_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    },
+    "max_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    }
+  },
+  {
+    "id": "undine_drag_inward_spell_05",
+    "type": "SPELL",
+    "name": { "str": "Whirlpool Catches the Shoal 05", "//~": "NO_I18N" },
+    "description": { "str": "Version 5 of the Whirlpool Catches the Shoal drag, with 6 pulls in.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ground", "hostile" ],
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "effect": "attack",
+    "extra_effects": [
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_slow", "hit_self": false }
+    ],
+    "shape": "blast",
+    "min_range": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.8) + 5) * (scaling_factor(u_val('strength') ) )), 40)" ]
+    },
+    "max_range": 40,
+    "min_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    },
+    "max_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    }
+  },
+  {
+    "id": "undine_drag_inward_spell_06",
+    "type": "SPELL",
+    "name": { "str": "Whirlpool Catches the Shoal 06", "//~": "NO_I18N" },
+    "description": { "str": "Version 6 of the Whirlpool Catches the Shoal drag, with 7 pulls in.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ground", "hostile" ],
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "effect": "attack",
+    "extra_effects": [
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_slow", "hit_self": false }
+    ],
+    "shape": "blast",
+    "min_range": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.8) + 5) * (scaling_factor(u_val('strength') ) )), 40)" ]
+    },
+    "max_range": 40,
+    "min_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    },
+    "max_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    }
+  },
+  {
+    "id": "undine_drag_inward_spell_07",
+    "type": "SPELL",
+    "name": { "str": "Whirlpool Catches the Shoal 07", "//~": "NO_I18N" },
+    "description": { "str": "Version 7 of the Whirlpool Catches the Shoal drag, with 8 pulls in.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ground", "hostile" ],
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "effect": "attack",
+    "extra_effects": [
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_pull", "hit_self": false },
+      { "id": "undine_drag_inward_spell_slow", "hit_self": false }
+    ],
+    "shape": "blast",
+    "min_range": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.8) + 5) * (scaling_factor(u_val('strength') ) )), 40)" ]
+    },
+    "max_range": 40,
+    "min_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    },
+    "max_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    }
+  },
+  {
+    "id": "undine_drag_inward_spell_pull",
+    "type": "SPELL",
+    "name": { "str": "Whirlpool Catches the Shoal Real", "//~": "NO_I18N" },
+    "description": {
+      "str": "The actual Whirlpool Catches the Shoal drag that pulls in monsters.  It's a bug if you have it.",
+      "//~": "NO_I18N"
+    },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ground", "hostile" ],
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "effect": "area_pull",
+    "shape": "blast",
+    "min_range": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.8) + 5) * (scaling_factor(u_val('strength') ) )), 40)" ]
+    },
+    "max_range": 40,
+    "min_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    },
+    "max_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    }
+  },
+  {
+    "id": "undine_drag_inward_spell_slow",
+    "type": "SPELL",
+    "name": { "str": "Whirlpool Catches the Shoal Real Slow", "//~": "NO_I18N" },
+    "description": {
+      "str": "The actual Whirlpool Catches the Shoal drag that slows monsters after they're pulled.  It's a bug if you have it.",
+      "//~": "NO_I18N"
+    },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ground", "hostile" ],
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "max_level": { "math": [ "str_to_level(1)" ] },
+    "effect": "attack",
+    "effect_str": "effect_undine_spell_slow",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('undine_drag_inward_spell') * 100) + 200) * (scaling_factor(u_val('strength') ) )" ] },
+    "max_duration": { "math": [ "( (u_spell_level('undine_drag_inward_spell') * 200) + 800) * (scaling_factor(u_val('strength') ) )" ] },
+    "min_range": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.8) + 5) * (scaling_factor(u_val('strength') ) )), 40)" ]
+    },
+    "max_range": 40,
+    "min_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    },
+    "max_aoe": {
+      "math": [ "min( (( (u_spell_level('undine_drag_inward_spell') * 0.25) + 3) * (scaling_factor(u_val('strength') ) )), 15)" ]
+    }
+  }
+]

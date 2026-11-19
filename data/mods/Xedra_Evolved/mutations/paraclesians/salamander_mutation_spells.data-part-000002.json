@@ -1,0 +1,60 @@
+[
+  {
+    "id": "salamander_flaming_whip_spell",
+    "type": "SPELL",
+    "name": "A Hundred Tongues of Flame",
+    "description": "Summon a flaming whip to scourge your enemies.",
+    "valid_targets": [ "none" ],
+    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS", "RANDOM_DURATION" ],
+    "skill": "deduction",
+    "teachable": false,
+    "spell_class": "SALAMANDER",
+    "effect": "spawn_item",
+    "effect_str": "salamander_flaming_summon_whip",
+    "shape": "blast",
+    "difficulty": 5,
+    "max_level": 15,
+    "min_damage": 1,
+    "max_damage": 1,
+    "min_duration": {
+      "math": [
+        "( 23485 + (u_spell_count('school': 'SALAMANDER') * 9815) + (u_skill('gramarye') * 18553) ) * scaling_factor(u_val('dexterity') )"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( 51398 + (u_spell_count('school': 'SALAMANDER') * 24851) + (u_skill('gramarye') * 39915) ) * scaling_factor(u_val('dexterity') )"
+      ]
+    },
+    "magic_type": "xedra_salamader_magick",
+    "base_energy_cost": { "math": [ "max( (250 + (u_spell_count('school': 'SALAMANDER') * -5.9) + (u_skill('gramarye') * -8.2) ), 100)" ] },
+    "base_casting_time": { "math": [ "max( (1000 + (u_spell_count('school': 'SALAMANDER') * -8.2) + (u_skill('gramarye') * -12.6) ), 750)" ] },
+    "learn_spells": { "salamander_fire_dot_spell": 6 }
+  },
+  {
+    "id": "salamander_smoke_teleport_spell",
+    "type": "SPELL",
+    "name": "In a Cloud of Smoke",
+    "description": "Like fire leaping over a firebreak, you can vanish and reappear somewhere nearby, leaving a thick cloud of smoke in your former location.",
+    "valid_targets": [ "none" ],
+    "skill": "deduction",
+    "teachable": false,
+    "spell_class": "SALAMANDER",
+    "flags": [ "SILENT", "VERBAL", "SOMATIC", "NO_LEGS", "RANDOM_AOE", "EXTRA_EFFECTS_FIRST" ],
+    "effect": "short_range_teleport",
+    "extra_effects": [
+      { "id": "salamander_smoke_immunity_spell", "hit_self": true },
+      { "id": "salamander_smoke_teleport_spell_emit", "hit_self": true }
+    ],
+    "shape": "blast",
+    "difficulty": 3,
+    "max_level": 15,
+    "min_aoe": 1,
+    "max_aoe": 5,
+    "min_range": 10,
+    "max_range": 10,
+    "magic_type": "xedra_salamader_magick",
+    "base_energy_cost": { "math": [ "max( (250 + (u_spell_count('school': 'SALAMANDER') * -4.3) + (u_skill('gramarye') * -6.0) ), 150)" ] },
+    "base_casting_time": 50
+  }
+]

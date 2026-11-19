@@ -1,0 +1,25 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "grant_buoyancy",
+    name = ccb.content.text("Grant buoyancy"),
+    description = ccb.content.text("You become more buoyant."),
+    skill = "deduction",
+    valid_targets = { "self" },
+    spell_class = "UNDINE",
+    teachable = false,
+    min_duration = 6000,
+    max_duration = 360000,
+    duration_increment = 17700,
+    max_level = 20,
+    magic_type = "xe_fey_magick",
+    base_energy_cost = 400,
+    energy_increment = -5.0,
+    final_energy_cost = 300,
+    base_casting_time = 250,
+    difficulty = 5,
+    flags = { "VERBAL", "SOMATIC", "NO_LEGS", "NO_PROJECTILE" },
+    shape = "blast",
+    effect = "attack",
+    effect_data = "buoyant",
+}
