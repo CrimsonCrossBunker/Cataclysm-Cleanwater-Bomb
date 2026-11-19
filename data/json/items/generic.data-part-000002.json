@@ -1,0 +1,73 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "AMMO" ],
+    "id": "paper",
+    "name": { "str_sp": "paper" },
+    "category": "spare_parts",
+    "weight": "3 g",
+    "color": "white",
+    "symbol": "`",
+    "description": "A piece of paper.  Can be used to start fires.",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "material": [ "paper" ],
+    "flags": [ "TINDER", "PAPER_SHAPED" ],
+    "volume": "6 ml",
+    "longest_side": "297 mm",
+    "ammo_type": "paper"
+  },
+  {
+    "type": "ITEM",
+    "id": "lens",
+    "symbol": ".",
+    "color": "light_cyan",
+    "name": { "str": "high-quality lens", "str_pl": "high-quality lenses" },
+    "category": "spare_parts",
+    "description": "A high-quality glass lens, useful for focusing or diffusing light.  Might be useful for starting a fire.",
+    "price": "1 kUSD 200 USD",
+    "price_postapoc": "1 USD",
+    "material": [ "glass" ],
+    "weight": "1 g",
+    "volume": "2 ml",
+    "use_action": { "type": "firestarter", "moves": 1000, "moves_slow": 30000, "need_sunlight": true },
+    "flags": [ "FIRESTARTER" ]
+  },
+  {
+    "type": "ITEM",
+    "id": "standard_template_construct",
+    "symbol": ",",
+    "color": "cyan",
+    "name": { "str": "nanofabricator template" },
+    "category": "spare_parts",
+    "description": "A state-of-the-art optical storage system.  This small slate of transparent glass holds, inscribed as a miniature pattern, the instructions required to create an item through a nanofabricator.",
+    "price": "1 kUSD 500 USD",
+    "price_postapoc": "10 USD",
+    "material": [ "steel", "plastic" ],
+    "nanofab_template_group": "nanofab_recipes",
+    "template_requirements": "nanofabricator",
+    "weight": "317 g",
+    "volume": "250 ml",
+    "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "uneven" },
+    "flags": [ "NANOFAB_TEMPLATE", "TRADER_AVOID" ],
+    "melee_damage": { "bash": 1 }
+  },
+  {
+    "type": "ITEM",
+    "id": "standard_template_construct_combat_exoskeleton",
+    "copy-from": "standard_template_construct",
+    "name": { "str": "nanofabricator exoskeleton template" },
+    "description": "A state-of-the-art optical storage system.  This small slate of transparent glass holds, inscribed as a miniature pattern, the instructions required to create an item through a nanofabricator.  A small text at the bottom indicates that this one is specifically used to create combat exoskeletons.",
+    "nanofab_template_group": "nanofab_recipes_combat_exoskeletons"
+  },
+  {
+    "type": "ITEM",
+    "id": "debug_template",
+    "copy-from": "standard_template_construct",
+    "color": "yellow",
+    "name": { "str": "nanofabricator template" },
+    "description": "A state-of-the-art optical storage system, containing the instruction set to replicate itself.",
+    "nanofab_template_group": "debug_template_item",
+    "template_requirements": "copper_scrap_equivalent"
+  }
+]
