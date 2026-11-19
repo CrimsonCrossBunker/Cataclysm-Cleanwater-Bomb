@@ -1,0 +1,29 @@
+[
+  {
+    "id": "shocking_teleport_damage",
+    "type": "SPELL",
+    "name": { "str": "Shocking Teleport damage", "//~": "NO_I18N" },
+    "description": { "str": "Deal some damage around the teleportation.  You can see it only in debug mode.", "//~": "NO_I18N" },
+    "//": "extra_effects for shocking_teleport, currently doesn't work, because of various issues in dash/teleport and extra_effects incompabilies.",
+    "valid_targets": [ "ally", "hostile", "ground" ],
+    "effect": "attack",
+    "effect_str": "zapped",
+    "shape": "blast",
+    "max_level": 25,
+    "min_damage": { "math": [ "(u_spell_level('shocking_teleport') * 1.2) + 2" ] },
+    "max_damage": { "math": [ "(u_spell_level('shocking_teleport') * 2.2) + 14" ] },
+    "damage_type": "electric",
+    "flags": [ "CONVEYANCE_SPELL", "RANDOM_DAMAGE", "LOUD", "SPLIT_DAMAGE" ],
+    "min_duration": 100,
+    "max_duration": 500,
+    "min_aoe": 1,
+    "max_aoe": 7,
+    "aoe_increment": 0.25,
+    "field_id": "fd_electricity",
+    "field_chance": 1,
+    "min_field_intensity": 1,
+    "max_field_intensity": 10,
+    "field_intensity_increment": 0.4,
+    "field_intensity_variance": 3
+  }
+]
