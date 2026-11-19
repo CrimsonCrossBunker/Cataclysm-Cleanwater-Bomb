@@ -1,0 +1,34 @@
+[
+  {
+    "id": "nomad_papr_blower_273grenade_on",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "TOOL" ],
+    "copy-from": "nomad_papr_blower_273grenade_off",
+    "name": { "str": "nomad utility belt (on)", "str_pl": "nomad utility belts (on)" },
+    "description": "A sturdy leather belt and powered air purifying respirator blower designed for exploring the apocalyptic wasteland.  On one side hangs an archaic dagger sheath.  The other side has a custom open-top pouch lined with 10 cartridge loops fit for 27.3x Diyua grenades.  Mounted to the back is a spartan PAPR blower, shielded in plastic, with connections for a bionic interface.  If loaded with a filter and paired with a PAPR mask this will protect from all manner of post-apocalyptic environmental threats.  The blower is active and draining power.  Activate it to turn it off.",
+    "use_action": [
+      { "type": "holster", "holster_prompt": "Store item", "holster_msg": "You put your %1$s in your %2$s" },
+      {
+        "menu_text": "Turn off",
+        "type": "transform",
+        "msg": "You turn the PAPR blower on the %s off.",
+        "target": "nomad_papr_blower_273grenade_off",
+        "ammo_scale": 0
+      }
+    ],
+    "power_draw": "4000 mW",
+    "revert_to": "nomad_papr_blower_273grenade_off",
+    "tick_action": [
+      "PAPR_BLOWER",
+      {
+        "type": "sound",
+        "sound_type": "movement",
+        "sound_message": "whooooo…",
+        "sound_id": "humming",
+        "sound_variant": "machinery",
+        "sound_volume": 12
+      }
+    ],
+    "extend": { "flags": [ "PAPR_BLOWER", "TRADER_AVOID", "SPAWN_ACTIVE" ] }
+  }
+]
