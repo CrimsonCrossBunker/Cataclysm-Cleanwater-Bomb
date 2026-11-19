@@ -1,5 +1,22 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "afs_enforcer_station_a1_parrameter_palette",
+    layout = {
+        parameters = {
+            enemies = {
+                value_type = "nested_mapgen",
+                default = {
+                    weighted = {
+                        "afs_enforcer_station_a1_floor1_moxies",
+                        "afs_enforcer_station_a1_floor1_robots",
+                    },
+                },
+            },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { "afs_enforcer_station_a1_roof" },

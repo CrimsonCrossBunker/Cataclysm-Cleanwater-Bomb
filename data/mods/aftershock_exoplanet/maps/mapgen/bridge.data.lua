@@ -1,5 +1,24 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "afs_bridge_pallette",
+    layout = {
+        terrain = {
+            [" "] = "t_open_air",
+            [","] = "t_pavement",
+            ["."] = "t_pavement_hw_air",
+            [":"] = "t_pavement_y_hw_air",
+            _ = "t_sidewalk_hw_air",
+            ["-"] = "t_region_groundcover",
+            ["="] = "t_guardrail_hw_air",
+            ["|"] = "t_wall_metal",
+            [">"] = "t_ladder_down",
+            ["<"] = "t_ladder_up",
+            ["#"] = "t_bridge",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { "bridge" },

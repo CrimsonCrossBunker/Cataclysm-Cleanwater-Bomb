@@ -1,5 +1,17 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "afs_habblock_1_paramter_palette",
+    layout = {
+        parameters = {
+            variant = {
+                value_type = "nested_mapgen",
+                default = { weighted = { "afs_habblock_1_slot1_cafe_a1", "afs_habblock_1_slot1_diner_a1" } },
+            },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { { "afs_habblock_1_roof_a1", "afs_hablock_1_roof_a2" } },

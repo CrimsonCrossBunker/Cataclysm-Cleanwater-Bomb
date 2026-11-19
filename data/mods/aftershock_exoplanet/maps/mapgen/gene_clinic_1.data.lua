@@ -1,5 +1,22 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "afs_gene_clinc_1_params",
+    layout = {
+        parameters = {
+            looted = {
+                value_type = "nested_mapgen",
+                default = {
+                    weighted = {
+                        { id = "afs_gene_clinic_1_a2_unlooted", weight = 60 },
+                        { id = "afs_gene_clinic_1_a2_looted", weight = 40 },
+                    },
+                },
+            },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "afs_gene_clinic_1_a4",

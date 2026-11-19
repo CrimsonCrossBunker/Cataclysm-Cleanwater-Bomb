@@ -80,15 +80,5 @@
         }
       }
     }
-  },
-  {
-    "type": "palette",
-    "id": "afs_enforcer_station_a1_parrameter_palette",
-    "parameters": {
-      "enemies": {
-        "type": "nested_mapgen_id",
-        "default": { "distribution": [ "afs_enforcer_station_a1_floor1_moxies", "afs_enforcer_station_a1_floor1_robots" ] }
-      }
-    }
   }
 ]

@@ -1,5 +1,125 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "lab_loot_research",
+    layout = {
+        glyph_mappings = {
+            c = {
+                item_groups = {
+                    { group = "tools_science", chance = 10 },
+                    { group = "dissection", chance = 10 },
+                    { group = "chem_lab", chance = 10 },
+                    { group = "mut_lab", chance = 2 },
+                },
+            },
+            S = {
+                item_groups = {
+                    { group = "drugs_heal_simple", chance = 10 },
+                    { group = "harddrugs", chance = 5 },
+                },
+            },
+            X = {
+                item_groups = {
+                    { group = "chem_lab", chance = 10 },
+                    { group = "mut_lab", chance = 2 },
+                    { group = "robots", chance = 5 },
+                    { group = "science", chance = 5 },
+                    { group = "SUS_science_personal_effects", chance = 1 },
+                    { group = "sewage_plant", chance = 5 },
+                    { group = "harddrugs", chance = 5 },
+                    { group = "softdrugs", chance = 5 },
+                },
+            },
+            d = {
+                item_groups = {
+                    { group = "SUS_office_desk", chance = 20 },
+                    { group = "science", chance = 5 },
+                    { group = "SUS_science_personal_effects", chance = 2 },
+                },
+            },
+            h = { item_spawns = { { id = "coat_lab", chance = 5 } } },
+            ["]"] = {
+                item_groups = { { group = "manuals", chance = 10 }, { group = "textbooks", chance = 10 } },
+            },
+            l = {
+                item_groups = {
+                    { group = "SUS_office_filing_cabinet", chance = 10 },
+                    { group = "science", chance = 10 },
+                    { group = "harddrugs", chance = 3 },
+                    { group = "softdrugs", chance = 3 },
+                    { group = "dresser", chance = 3 },
+                    { group = "lab_torso", chance = 3 },
+                    { group = "lab_pants", chance = 3 },
+                },
+            },
+        },
+    },
+}
+
+-- Office supplies, home, bathroom, and kitchen.
+ccb.content.define_mapgen_palette {
+    id = "lab_loot_home_office",
+    layout = {
+        glyph_mappings = {
+            c = {
+                item_groups = {
+                    { group = "SUS_office_desk", chance = 20 },
+                    { group = "SUS_science_personal_effects", chance = 15 },
+                    { group = "science", chance = 2 },
+                },
+            },
+            d = {
+                item_groups = {
+                    { group = "SUS_office_desk", chance = 50 },
+                    { group = "SUS_science_personal_effects", chance = 10 },
+                    { group = "stash_drugs", chance = 5 },
+                    { group = "science", chance = 3 },
+                },
+            },
+            f = { item_groups = { { group = "SUS_fridge_breakroom", chance = 60 } } },
+            S = {
+                item_groups = {
+                    { group = "drugs_heal_simple", chance = 10 },
+                    { group = "harddrugs", chance = 5 },
+                },
+            },
+            X = {
+                item_groups = {
+                    { group = "chem_lab", chance = 10 },
+                    { group = "robots", chance = 5 },
+                    { group = "science", chance = 5 },
+                    { group = "SUS_science_personal_effects", chance = 1 },
+                    { group = "sewage_plant", chance = 5 },
+                    { group = "harddrugs", chance = 5 },
+                    { group = "softdrugs", chance = 5 },
+                },
+            },
+            h = { item_spawns = { { id = "coat_lab", chance = 2 } } },
+            s = {
+                item_groups = {
+                    { group = "dresser", chance = 30 },
+                    { group = "lab_shoes", chance = 20 },
+                    { group = "lab_torso", chance = 10 },
+                    { group = "lab_pants", chance = 10 },
+                },
+            },
+            b = { item_groups = { { group = "bed", chance = 50 } } },
+            ["]"] = { item_groups = { { group = "lab_bookshelves", chance = 50, repetitions = 3 } } },
+            l = {
+                item_groups = {
+                    { group = "SUS_office_filing_cabinet", chance = 10 },
+                    { group = "stash_drugs", chance = 5 },
+                    { group = "science", chance = 3 },
+                    { group = "SUS_science_personal_effects", chance = 2 },
+                    { group = "dresser", chance = 3 },
+                    { group = "lab_torso", chance = 3 },
+                    { group = "lab_pants", chance = 3 },
+                },
+            },
+        },
+    },
+}
+
 -- Top level 'lab_spawn_XXXXX' templates are for use in floorplans.
 -- Spawn for a room at least 7x7, walls often but not guaranteed.
 ccb.content.define_mapgen {

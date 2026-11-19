@@ -1,5 +1,99 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "lab_palette_aftershock",
+    layout = {
+        toilets = { "T" },
+        item_groups = { T = { group = "SUS_toilet", chance = 50 } },
+        furniture = {
+            ["6"] = "f_console",
+            x = "f_console_broken",
+            b = "f_bed",
+            l = "f_locker",
+            X = { { id = "f_cardboard_box" }, { id = "f_crate_c" } },
+            r = "f_rack",
+            d = "f_desk",
+            s = "f_dresser",
+            h = "f_chair",
+            f = "f_fridge",
+            t = "f_metal_table",
+            i = "f_filing_cabinet",
+            c = "f_counter",
+            S = "f_sink",
+            T = "f_toilet",
+            ["#"] = "f_null",
+            ["]"] = "f_bookcase",
+            ["^"] = "f_rubble_rock",
+        },
+        terrain = {
+            g = "t_reinforced_glass",
+            G = "t_reinforced_door_glass_lab_c",
+            ["."] = "t_thconc_floor",
+            [","] = "t_strconc_floor",
+            ["-"] = "t_concrete_wall",
+            ["|"] = "t_concrete_wall",
+            ["+"] = "t_door_glass_frosted_lab_c",
+            W = "t_door_lab_c",
+            M = "t_door_metal_lab_c",
+            L = "t_door_metal_locked",
+            ["#"] = "t_rock",
+            C = "t_thconc_floor",
+            P = "t_thconc_floor",
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "lab_loot_research",
+    layout = {
+        glyph_mappings = {
+            c = {
+                item_groups = {
+                    { group = "tools_science", chance = 10 },
+                    { group = "dissection", chance = 10 },
+                    { group = "chem_lab", chance = 10 },
+                    { group = "mut_lab", chance = 2 },
+                },
+            },
+            S = {
+                item_groups = {
+                    { group = "drugs_heal_simple", chance = 10 },
+                    { group = "harddrugs", chance = 5 },
+                },
+            },
+            X = {
+                item_groups = {
+                    { group = "chem_lab", chance = 10 },
+                    { group = "mut_lab", chance = 2 },
+                    { group = "robots", chance = 5 },
+                    { group = "science", chance = 5 },
+                    { group = "sewage_plant", chance = 5 },
+                    { group = "harddrugs", chance = 5 },
+                    { group = "softdrugs", chance = 5 },
+                },
+            },
+            d = {
+                item_groups = { { group = "SUS_office_desk", chance = 20 }, { group = "science", chance = 5 } },
+            },
+            h = { item_spawns = { { id = "coat_lab", chance = 5 } } },
+            ["]"] = {
+                item_groups = { { group = "manuals", chance = 10 }, { group = "textbooks", chance = 10 } },
+            },
+            l = {
+                item_groups = {
+                    { group = "SUS_office_desk", chance = 10 },
+                    { group = "science", chance = 10 },
+                    { group = "harddrugs", chance = 3 },
+                    { group = "softdrugs", chance = 3 },
+                    { group = "dresser", chance = 3 },
+                    { group = "lab_torso", chance = 3 },
+                    { group = "lab_pants", chance = 3 },
+                },
+            },
+        },
+    },
+}
+
 -- Aftershock - cryo pod room
 ccb.content.define_mapgen {
     kind = "overmap",
