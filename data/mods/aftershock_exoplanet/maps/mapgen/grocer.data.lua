@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_grocer_a1_floor_3",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            " [[[[[[[                ",
+            " [.....[                ",
+            " [.....[                ",
+            " [.....[                ",
+            " [.....[                ",
+            " [.....[                ",
+            " [.....[                ",
+            " [[[[[[[                ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "afs_habitat_structure" },
+        terrain = { [" "] = "t_open_air" },
+        fill_terrain = "t_metal_floor",
+    },
+}
