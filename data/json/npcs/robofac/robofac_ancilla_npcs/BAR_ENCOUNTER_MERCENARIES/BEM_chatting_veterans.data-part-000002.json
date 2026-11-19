@@ -1,12 +1,5 @@
 [
   {
-    "id": "BEM_CHATTING_VETERANS_HEAR",
-    "type": "talk_topic",
-    "dynamic_line": "&The veterans seem happy to have you, and you listen as the older mercenary narrates <merc_story>.\n\nYou all share some drinks while going over the details and as the conversation winds down.",
-    "speaker_effect": [ { "effect": [ { "u_add_effect": "drunk", "duration": "20 minutes" } ] } ],
-    "responses": [ { "text": "<end_talking_leave>", "effect": "end_conversation", "topic": "TALK_DONE" } ]
-  },
-  {
     "id": "BEM_CHATTING_VETERANS_DRINKING",
     "type": "talk_topic",
     "dynamic_line": "You share increasingly embellished stories about your exploits as you dare each other into downing series of eye-watering drinks.",
@@ -185,68 +178,5 @@
         "topic": "BEM_CHATTING_VETERANS_TELL_STORY_IMPRESSIVE"
       }
     ]
-  },
-  {
-    "id": "BEM_CHATTING_VETERANS_TELL_STORY_BAD",
-    "type": "talk_topic",
-    "dynamic_line": "&While the veterans indulge your storytelling, they clearly seem not too pleased nor impressed by your tale.",
-    "speaker_effect": [ { "effect": [ { "u_add_faction_trust": -5 } ] } ],
-    "responses": [ { "text": "Well, ugh…  I should be going now…", "effect": "end_conversation", "topic": "TALK_DONE" } ]
-  },
-  {
-    "id": "BEM_CHATTING_VETERANS_TELL_STORY_OK",
-    "type": "talk_topic",
-    "dynamic_line": "&You make some small talk and share a pair of drinks after finishing your story.",
-    "speaker_effect": [ { "effect": [ { "u_add_effect": "drunk", "duration": "20 minutes" }, { "u_add_faction_trust": 1 } ] } ],
-    "responses": [ { "text": "<end_talking_leave>", "effect": "end_conversation", "topic": "TALK_DONE" } ]
-  },
-  {
-    "id": "BEM_CHATTING_VETERANS_TELL_STORY_IMPRESSIVE",
-    "type": "talk_topic",
-    "dynamic_line": "&The clearly drunk mercenaries hail you as minor celebrity and invite you to a pair of rounds when your tale is finished.",
-    "speaker_effect": [ { "effect": [ { "u_add_effect": "drunk", "duration": "70 minutes" }, { "u_add_faction_trust": 3 } ] } ],
-    "responses": [ { "text": "Yeah I guess it really did happen just like that.", "effect": "end_conversation", "topic": "TALK_DONE" } ]
-  },
-  {
-    "id": "BEM_CHATTING_VETERANS_TELL_STORY_BUTCHERY",
-    "type": "talk_topic",
-    "dynamic_line": "&The veterans eagerly accept your challenge, and none of you can really stomach the prospect of more drinks after the first pair of tales.",
-    "speaker_effect": [ { "effect": [ { "u_add_effect": "drunk", "duration": "20 minutes" }, { "u_add_faction_trust": 1 } ] } ],
-    "responses": [ { "text": "<end_talking_leave>", "effect": "end_conversation", "topic": "TALK_DONE" } ]
-  },
-  {
-    "id": "BEM_CHATTING_VETERANS_TELL_STORY_LIXA",
-    "type": "talk_topic",
-    "dynamic_line": "&The expressions on both the mercs' faces are a mix of confusion and visceral disgust as you relate your tale.  Finally, the younger mercenary blurts out, \"None of us wanted to touch that contract since the intercom was being so shifty about it.\"  \"You're my kind of free-range lunatic!\"  The older mercenary interjects.  \"I'll drink to that!\".",
-    "speaker_effect": [ { "effect": [ { "u_add_faction_trust": 10 } ] } ],
-    "responses": [
-      {
-        "text": "Yeah, that was certainly an…  interesting experience.",
-        "effect": "end_conversation",
-        "topic": "TALK_DONE"
-      }
-    ]
-  },
-  {
-    "id": "BEM_CHATTING_VETERANS_TELL_STORY_TOWER",
-    "type": "talk_topic",
-    "dynamic_line": "&The veteran's expressions turn to a mixture of awe and fear as your tale nears conclusion, the younger mercenary is finally after a long  \"We heard someone had gone and completed that death trap contract, but I still couldn't believe it.\"  \"You're a damn madman!\"  The older mercenary interjects in agreement.  \"I'll drink to that!\".",
-    "speaker_effect": [ { "effect": [ { "u_add_faction_trust": 10 } ] } ],
-    "responses": [
-      { "text": "Yeah looking back I really don't know why I did it.", "effect": "end_conversation", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_BEM_BEM_CHATTING_VETERANS_DRUNK_TP",
-    "effect": [
-      { "u_location_variable": { "u_val": "subway_floor" }, "z_adjust": -1 },
-      { "u_teleport": { "u_val": "subway_floor" } }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_BEM_BEM_CHATTING_VETERANS_DRUNK_MESSAGE",
-    "effect": [ { "u_message": "<ANCILLA_BAR_HANGOVER>", "popup": true } ]
   }
 ]
