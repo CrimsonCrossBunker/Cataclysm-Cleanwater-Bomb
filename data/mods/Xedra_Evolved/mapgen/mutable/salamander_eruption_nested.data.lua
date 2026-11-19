@@ -1,5 +1,13 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "salamander_eruption_palette",
+    layout = {
+        terrain = { ["#"] = "t_obsidian_wall", [" "] = "t_obsidian_floor", ["$"] = "t_obsidian_roof" },
+        furniture = { ["$"] = "f_boulder_large" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "spiral_cw",

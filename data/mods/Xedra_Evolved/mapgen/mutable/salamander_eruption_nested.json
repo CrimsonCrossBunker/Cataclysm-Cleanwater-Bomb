@@ -1,8 +1,0 @@
-[
-  {
-    "type": "palette",
-    "id": "salamander_eruption_palette",
-    "terrain": { "#": "t_obsidian_wall", " ": "t_obsidian_floor", "$": "t_obsidian_roof" },
-    "furniture": { "$": "f_boulder_large" }
-  }
-]
