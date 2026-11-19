@@ -244,16 +244,5 @@
     "id": "EOC_FORGE_LOCKDOWN",
     "condition": { "not": { "u_has_trait": "VAULT_DEFENDER" } },
     "effect": { "u_add_trait": "MARK_FOR_DEATH_VALZAIN" }
-  },
-  {
-    "type": "mutation",
-    "id": "MARK_FOR_DEATH_VALZAIN",
-    "player_display": false,
-    "name": { "//~": "NO_I18N", "str": "Forge Lord Wrath" },
-    "points": 0,
-    "description": { "//~": "NO_I18N", "str": "Makes sure all the Forge Lord mobs shoot you on sight." },
-    "valid": false,
-    "purifiable": false,
-    "anger_relations": [ [ "FORGE_LORD", 95 ] ]
   }
 ]
