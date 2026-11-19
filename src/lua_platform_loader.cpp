@@ -63,6 +63,7 @@ extern "C" {
 #include "json.h"
 #include "json_loader.h"
 #include "magic.h"
+#include "martialarts.h"
 #include "mapdata.h"
 #include "mapgen.h"
 #include "monfaction.h"
@@ -5864,6 +5865,85 @@ void write_static_npc_class( JsonOut &json, const sol::table &options, const std
     } );
 }
 
+void write_static_technique( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
+        { "cooldown", "cooldown" }, { "aoe", "aoe" },
+        { "grapple_action", "grapple_action" }, { "grapple_cooldown", "grapple_cooldown" }
+    } );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    if( const auto messages = options.get<sol::optional<sol::table>>( "messages" ) ) {
+        json.member( "messages" );
+        write_static_values<sol::object>( json, *messages, "technique messages",
+        []( JsonOut & out, const sol::object & message ) {
+            write_item_text_value( out, "technique message", message, false );
+        } );
+    }
+    write_item_fields<bool>( json, options, {
+        { "crit_tec", "crit_tec" }, { "crit_ok", "crit_ok" }, { "wall_adjacent", "wall_adjacent" },
+        { "reach_tec", "reach_tec" }, { "reach_ok", "reach_ok" },
+        { "manual_activation", "manual_activation" }, { "needs_ammo", "needs_ammo" },
+        { "defensive", "defensive" }, { "disarms", "disarms" }, { "take_weapon", "take_weapon" },
+        { "side_switch", "side_switch" }, { "dummy", "dummy" },
+        { "dodge_counter", "dodge_counter" }, { "block_counter", "block_counter" },
+        { "miss_recovery", "miss_recovery" }, { "grab_break", "grab_break" },
+        { "knockback_follow", "knockback_follow" }, { "unarmed_allowed", "unarmed_allowed" },
+        { "melee_allowed", "melee_allowed" }, { "strictly_unarmed", "strictly_unarmed" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "weighting", "weighting" }, { "repeat_min", "repeat_min" }, { "repeat_max", "repeat_max" },
+        { "down_dur", "down_dur" }, { "stun_dur", "stun_dur" }, { "knockback_dist", "knockback_dist" },
+        { "grapple_power", "grapple_power" }, { "grapple_stamina", "grapple_stamina" }
+    } );
+    write_placement_member<double>( json, options, "knockback_spread", "knockback_spread" );
+    write_item_ids( json, options, {
+        { "attack_vectors", "attack_vectors" }, { "flags", "flags" },
+        { "weapon_categories", "weapon_categories_allowed" },
+        { "required_buffs_all", "required_buffs_all" }, { "required_buffs_any", "required_buffs_any" },
+        { "forbidden_buffs_all", "forbidden_buffs_all" }, { "forbidden_buffs_any", "forbidden_buffs_any" },
+        { "required_weapon_flags", "req_flags" }, { "required_char_flags", "required_char_flags" },
+        { "required_char_flags_all", "required_char_flags_all" },
+        { "forbidden_char_flags", "forbidden_char_flags" }
+    } );
+    write_static_catalog_array( json, options, "skills", "skill_requirements",
+    []( JsonOut & out, const sol::table & requirement ) {
+        out.start_object();
+        out.member( "name", requirement.get<std::string>( "id" ) );
+        out.member( "level", requirement.get<int>( "level" ) );
+        out.end_object();
+    } );
+    write_static_catalog_array( json, options, "weapon_damage", "weapon_damage_requirements",
+    []( JsonOut & out, const sol::table & requirement ) {
+        out.start_object();
+        out.member( "type", requirement.get<std::string>( "type" ) );
+        out.member( "min", requirement.get<int>( "minimum" ) );
+        out.end_object();
+    } );
+    const auto bonus = []( JsonOut & out, const sol::table & entry ) {
+        out.start_object();
+        out.member( "stat", entry.get<std::string>( "stat" ) );
+        out.member( "scale", entry.get<double>( "scale" ) );
+        write_item_fields<std::string>( out, entry, {
+            { "damage_type", "type" }, { "scaling_stat", "scaling-stat" }
+        } );
+        out.end_object();
+    };
+    write_static_catalog_array( json, options, "flat_bonuses", "flat_bonuses", bonus );
+    write_static_catalog_array( json, options, "mult_bonuses", "mult_bonuses", bonus );
+    write_static_catalog_array( json, options, "effects", "tech_effects",
+    []( JsonOut & out, const sol::table & effect ) {
+        out.start_object();
+        out.member( "id", effect.get<std::string>( "id" ) );
+        write_item_fields<int>( out, effect, { { "duration_turns", "duration" }, { "chance", "chance" } } );
+        write_item_fields<bool>( out, effect, { { "permanent", "permanent" }, { "on_damage", "on_damage" } } );
+        write_placement_member<std::string>( out, effect, "required_flag", "req_flag" );
+        write_static_native_text( out, effect, "message", "message" );
+        out.end_object();
+    } );
+}
+
 void write_static_spell( JsonOut &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
@@ -6131,6 +6211,8 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "vehicle", write_static_vehicle, vehicles::load_prototype ) );
     content.set_function( "define_spell", static_catalog_definition(
                               resolved.id, "SPELL", write_static_spell, spell_type::load_spell ) );
+    content.set_function( "define_technique", static_catalog_definition(
+                              resolved.id, "technique", write_static_technique, load_technique ) );
     content.set_function( "define_npc", static_catalog_definition(
                               resolved.id, "npc", write_static_npc, npc_template::load ) );
     content.set_function( "define_npc_class", static_catalog_definition(

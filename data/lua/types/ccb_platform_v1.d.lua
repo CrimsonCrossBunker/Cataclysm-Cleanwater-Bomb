@@ -17891,6 +17891,90 @@ function CcbSpellsApi.adjust_casting(character, property, amount, options) end
 ---@param options StaticSpellOptions
 function CcbPlatformContent.define_spell(options) end
 
+---@class StaticTechniqueSkill
+---@field id string Native skill ID.
+---@field level integer Minimum skill level.
+
+---@class StaticTechniqueWeaponDamage
+---@field type string Native damage type.
+---@field minimum integer Minimum damage of this type on the weapon.
+
+---@class StaticTechniqueBonus
+---@field stat string Native affected stat, such as hit, damage or movecost.
+---@field scale number Native flat or multiplicative scale.
+---@field damage_type? string Damage type when the affected stat is damage.
+---@field scaling_stat? string Native attribute or skill used to scale the bonus.
+
+---@class StaticTechniqueEffect
+---@field id string Native effect ID.
+---@field duration_turns? integer Duration in game turns.
+---@field chance? integer Native percentage chance.
+---@field permanent? boolean
+---@field on_damage? boolean
+---@field required_flag? string Native Character flag for the effect.
+---@field message? string|LocalizedText Singular native effect message without context.
+
+---@class StaticTechniqueOptions
+---@field id? string Stable technique ID.
+---@field abstract? string Abstract definition ID, in place of id.
+---@field copy_from? string Parent technique loaded before this definition.
+---@field name? string|LocalizedText Technique name, required without inheritance.
+---@field description? string|LocalizedText
+---@field messages? (string|LocalizedText)[] Avatar and NPC messages in that order.
+---@field crit_tec? boolean
+---@field crit_ok? boolean
+---@field wall_adjacent? boolean
+---@field reach_tec? boolean
+---@field reach_ok? boolean
+---@field manual_activation? boolean
+---@field needs_ammo? boolean
+---@field defensive? boolean
+---@field disarms? boolean
+---@field take_weapon? boolean
+---@field side_switch? boolean
+---@field dummy? boolean
+---@field dodge_counter? boolean
+---@field block_counter? boolean
+---@field miss_recovery? boolean
+---@field grab_break? boolean
+---@field knockback_follow? boolean
+---@field unarmed_allowed? boolean
+---@field melee_allowed? boolean
+---@field strictly_unarmed? boolean
+---@field weighting? integer Native selection weight, including negative weights.
+---@field repeat_min? integer
+---@field repeat_max? integer
+---@field down_dur? integer
+---@field stun_dur? integer
+---@field knockback_dist? integer
+---@field knockback_spread? number
+---@field aoe? string Native shape ID.
+---@field cooldown? string Duration with a native unit.
+---@field grapple_action? "hold"|"drag"|"throw"
+---@field grapple_power? integer
+---@field grapple_stamina? integer
+---@field grapple_cooldown? string Duration with a native unit.
+---@field attack_vectors? string[]
+---@field flags? string[]
+---@field weapon_categories? string[]
+---@field required_buffs_all? string[]
+---@field required_buffs_any? string[]
+---@field forbidden_buffs_all? string[]
+---@field forbidden_buffs_any? string[]
+---@field required_weapon_flags? string[]
+---@field required_char_flags? string[]
+---@field required_char_flags_all? string[]
+---@field forbidden_char_flags? string[]
+---@field skills? StaticTechniqueSkill[]
+---@field weapon_damage? StaticTechniqueWeaponDamage[]
+---@field flat_bonuses? StaticTechniqueBonus[]
+---@field mult_bonuses? StaticTechniqueBonus[]
+---@field effects? StaticTechniqueEffect[]
+
+---Load a martial technique with native rules at this definition's position in Mod data order.
+---@param options StaticTechniqueOptions
+function CcbPlatformContent.define_technique(options) end
+
 ---@class StaticOrderedTool
 ---@field max_charges? integer
 ---@field initial_charges? integer

@@ -7,7 +7,7 @@
     "root_class": "CcbPlatformV1"
   },
   "lua_luals": {
-    "class_count": 1240,
+    "class_count": 1245,
     "classes": [
       {
         "fields": [
@@ -33345,12 +33345,12 @@
       {
         "fields": [
           {
-            "line": 18116,
+            "line": 18200,
             "name": "charge",
             "type": "StaticOrderedArtifactCharge"
           },
           {
-            "line": 18115,
+            "line": 18199,
             "name": "enchantments",
             "type": "string[]"
           }
@@ -33360,37 +33360,37 @@
       {
         "fields": [
           {
-            "line": 18106,
+            "line": 18190,
             "name": "charges",
             "type": "integer"
           },
           {
-            "line": 18107,
+            "line": 18191,
             "name": "charges_per_use",
             "type": "integer"
           },
           {
-            "line": 18112,
+            "line": 18196,
             "name": "interval",
             "type": "string"
           },
           {
-            "line": 18108,
+            "line": 18192,
             "name": "max_charges",
             "type": "integer"
           },
           {
-            "line": 18111,
+            "line": 18195,
             "name": "recharge_condition",
             "type": "string"
           },
           {
-            "line": 18110,
+            "line": 18194,
             "name": "recharge_type",
             "type": "string"
           },
           {
-            "line": 18109,
+            "line": 18193,
             "name": "regenerate_ammo",
             "type": "boolean"
           }
@@ -33400,27 +33400,27 @@
       {
         "fields": [
           {
-            "line": 18059,
+            "line": 18143,
             "name": "added_pockets",
             "type": "StaticItemPocket[]"
           },
           {
-            "line": 18055,
+            "line": 18139,
             "name": "ammo_types",
             "type": "string[]"
           },
           {
-            "line": 18057,
+            "line": 18141,
             "name": "capacity_multiplier",
             "type": "number"
           },
           {
-            "line": 18056,
+            "line": 18140,
             "name": "compatible_ammo",
             "type": "string[]"
           },
           {
-            "line": 18058,
+            "line": 18142,
             "name": "magazine_adapters",
             "type": "StaticOrderedMagazineAdapter[]"
           }
@@ -33430,17 +33430,17 @@
       {
         "fields": [
           {
-            "line": 17946,
+            "line": 18030,
             "name": "difficulty",
             "type": "integer"
           },
           {
-            "line": 17948,
+            "line": 18032,
             "name": "installation",
             "type": "string"
           },
           {
-            "line": 17947,
+            "line": 18031,
             "name": "upgrade",
             "type": "boolean"
           }
@@ -33450,42 +33450,42 @@
       {
         "fields": [
           {
-            "line": 18036,
+            "line": 18120,
             "name": "ammo_scale",
             "type": "integer"
           },
           {
-            "line": 18035,
+            "line": 18119,
             "name": "kind",
             "type": "'cast_spell'"
           },
           {
-            "line": 18038,
+            "line": 18122,
             "name": "level",
             "type": "integer"
           },
           {
-            "line": 18042,
+            "line": 18126,
             "name": "mundane",
             "type": "boolean"
           },
           {
-            "line": 18041,
+            "line": 18125,
             "name": "need_wielding",
             "type": "boolean"
           },
           {
-            "line": 18040,
+            "line": 18124,
             "name": "need_worn",
             "type": "boolean"
           },
           {
-            "line": 18039,
+            "line": 18123,
             "name": "no_fail",
             "type": "boolean"
           },
           {
-            "line": 18037,
+            "line": 18121,
             "name": "spell",
             "type": "string"
           }
@@ -33495,12 +33495,12 @@
       {
         "fields": [
           {
-            "line": 18048,
+            "line": 18132,
             "name": "count",
             "type": "integer"
           },
           {
-            "line": 18047,
+            "line": 18131,
             "name": "id",
             "type": "string"
           }
@@ -33510,42 +33510,42 @@
       {
         "fields": [
           {
-            "line": 17921,
+            "line": 18005,
             "name": "base_c",
             "type": "number"
           },
           {
-            "line": 17925,
+            "line": 18009,
             "name": "degree_days",
             "type": "number"
           },
           {
-            "line": 17927,
+            "line": 18011,
             "name": "growing_days",
             "type": "integer"
           },
           {
-            "line": 17924,
+            "line": 18008,
             "name": "max_c",
             "type": "number"
           },
           {
-            "line": 17923,
+            "line": 18007,
             "name": "min_c",
             "type": "number"
           },
           {
-            "line": 17922,
+            "line": 18006,
             "name": "optimum_c",
             "type": "number"
           },
           {
-            "line": 17926,
+            "line": 18010,
             "name": "water_mm",
             "type": "number"
           },
           {
-            "line": 17928,
+            "line": 18012,
             "name": "water_peak",
             "type": "number"
           }
@@ -33555,57 +33555,57 @@
       {
         "fields": [
           {
-            "line": 18000,
+            "line": 18084,
             "name": "ammo_scale",
             "type": "integer"
           },
           {
-            "line": 18004,
+            "line": 18088,
             "name": "charges_needed",
             "type": "table<string,"
           },
           {
-            "line": 18009,
+            "line": 18093,
             "name": "effects",
             "type": "StaticOrderedDrugEffect[]"
           },
           {
-            "line": 18006,
+            "line": 18090,
             "name": "fields_produced",
             "type": "table<string,"
           },
           {
-            "line": 17999,
+            "line": 18083,
             "name": "kind",
             "type": "'consume_drug'"
           },
           {
-            "line": 18001,
+            "line": 18085,
             "name": "message",
             "type": "string|LocalizedText"
           },
           {
-            "line": 18002,
+            "line": 18086,
             "name": "moves",
             "type": "integer"
           },
           {
-            "line": 18007,
+            "line": 18091,
             "name": "stat_adjustments",
             "type": "table<string,"
           },
           {
-            "line": 18005,
+            "line": 18089,
             "name": "tools_needed",
             "type": "table<string,"
           },
           {
-            "line": 18003,
+            "line": 18087,
             "name": "used_up_item",
             "type": "string"
           },
           {
-            "line": 18008,
+            "line": 18092,
             "name": "vitamins",
             "type": "StaticOrderedDrugVitamin[]"
           }
@@ -33615,27 +33615,27 @@
       {
         "fields": [
           {
-            "line": 17994,
+            "line": 18078,
             "name": "bodypart",
             "type": "string"
           },
           {
-            "line": 17993,
+            "line": 18077,
             "name": "duration",
             "type": "string|integer"
           },
           {
-            "line": 17992,
+            "line": 18076,
             "name": "id",
             "type": "string"
           },
           {
-            "line": 17996,
+            "line": 18080,
             "name": "intensity",
             "type": "integer"
           },
           {
-            "line": 17995,
+            "line": 18079,
             "name": "permanent",
             "type": "boolean"
           }
@@ -33645,17 +33645,17 @@
       {
         "fields": [
           {
-            "line": 17987,
+            "line": 18071,
             "name": "id",
             "type": "string"
           },
           {
-            "line": 17989,
+            "line": 18073,
             "name": "maximum",
             "type": "integer"
           },
           {
-            "line": 17988,
+            "line": 18072,
             "name": "minimum",
             "type": "integer"
           }
@@ -33665,212 +33665,212 @@
       {
         "fields": [
           {
-            "line": 18101,
+            "line": 18185,
             "name": "added_slots",
             "type": "StaticOrderedCountedId[]"
           },
           {
-            "line": 18073,
+            "line": 18157,
             "name": "aim_speed",
             "type": "integer"
           },
           {
-            "line": 18074,
+            "line": 18158,
             "name": "aim_speed_modifier",
             "type": "number"
           },
           {
-            "line": 18080,
+            "line": 18164,
             "name": "ammo_per_shot_modifier",
             "type": "integer"
           },
           {
-            "line": 18081,
+            "line": 18165,
             "name": "ammo_per_shot_multiplier",
             "type": "number"
           },
           {
-            "line": 18065,
+            "line": 18149,
             "name": "barrel_length",
             "type": "string"
           },
           {
-            "line": 18095,
+            "line": 18179,
             "name": "bayonet",
             "type": "boolean"
           },
           {
-            "line": 18078,
+            "line": 18162,
             "name": "consume_chance",
             "type": "integer"
           },
           {
-            "line": 18079,
+            "line": 18163,
             "name": "consume_divisor",
             "type": "integer"
           },
           {
-            "line": 18091,
+            "line": 18175,
             "name": "cooling_modifier",
             "type": "number"
           },
           {
-            "line": 18092,
+            "line": 18176,
             "name": "cooling_multiplier",
             "type": "number"
           },
           {
-            "line": 18102,
+            "line": 18186,
             "name": "damage_modifier",
             "type": "StaticItemDamage"
           },
           {
-            "line": 18070,
+            "line": 18154,
             "name": "dispersion_modifier",
             "type": "integer"
           },
           {
-            "line": 18097,
+            "line": 18181,
             "name": "effects",
             "type": "string[]"
           },
           {
-            "line": 18066,
+            "line": 18150,
             "name": "energy_drain_modifier",
             "type": "string"
           },
           {
-            "line": 18087,
+            "line": 18171,
             "name": "energy_drain_multiplier",
             "type": "number"
           },
           {
-            "line": 18071,
+            "line": 18155,
             "name": "field_of_view",
             "type": "integer"
           },
           {
-            "line": 18075,
+            "line": 18159,
             "name": "handling_modifier",
             "type": "integer"
           },
           {
-            "line": 18093,
+            "line": 18177,
             "name": "heat_per_shot_modifier",
             "type": "number"
           },
           {
-            "line": 18094,
+            "line": 18178,
             "name": "heat_per_shot_multiplier",
             "type": "number"
           },
           {
-            "line": 18098,
+            "line": 18182,
             "name": "hidden_modes",
             "type": "string[]"
           },
           {
-            "line": 18099,
+            "line": 18183,
             "name": "incompatible_mods",
             "type": "string[]"
           },
           {
-            "line": 18100,
+            "line": 18184,
             "name": "incompatible_slots",
             "type": "string[]"
           },
           {
-            "line": 18062,
+            "line": 18146,
             "name": "install_time",
             "type": "string"
           },
           {
-            "line": 18063,
+            "line": 18147,
             "name": "location",
             "type": "string|LocalizedText"
           },
           {
-            "line": 18067,
+            "line": 18151,
             "name": "loudness_modifier",
             "type": "integer"
           },
           {
-            "line": 18068,
+            "line": 18152,
             "name": "loudness_multiplier",
             "type": "number"
           },
           {
-            "line": 18082,
+            "line": 18166,
             "name": "min_cycle_recoil",
             "type": "integer"
           },
           {
-            "line": 18103,
+            "line": 18187,
             "name": "modes",
             "type": "StaticItemGunMode[]"
           },
           {
-            "line": 18089,
+            "line": 18173,
             "name": "overheat_threshold_modifier",
             "type": "number"
           },
           {
-            "line": 18090,
+            "line": 18174,
             "name": "overheat_threshold_multiplier",
             "type": "number"
           },
           {
-            "line": 18085,
+            "line": 18169,
             "name": "prone_strength_modifier",
             "type": "integer"
           },
           {
-            "line": 18076,
+            "line": 18160,
             "name": "range_modifier",
             "type": "integer"
           },
           {
-            "line": 18077,
+            "line": 18161,
             "name": "range_multiplier",
             "type": "number"
           },
           {
-            "line": 18083,
+            "line": 18167,
             "name": "reload_modifier",
             "type": "integer"
           },
           {
-            "line": 18086,
+            "line": 18170,
             "name": "shot_spread_modifier",
             "type": "number"
           },
           {
-            "line": 18072,
+            "line": 18156,
             "name": "sight_dispersion",
             "type": "integer"
           },
           {
-            "line": 18084,
+            "line": 18168,
             "name": "strength_modifier",
             "type": "integer"
           },
           {
-            "line": 18064,
+            "line": 18148,
             "name": "targets",
             "type": "(string|LocalizedText)[]"
           },
           {
-            "line": 18069,
+            "line": 18153,
             "name": "to_hit_modifier",
             "type": "integer"
           },
           {
-            "line": 18096,
+            "line": 18180,
             "name": "visible_when_installed",
             "type": "boolean"
           },
           {
-            "line": 18088,
+            "line": 18172,
             "name": "weight_multiplier",
             "type": "number"
           }
@@ -33880,22 +33880,22 @@
       {
         "fields": [
           {
-            "line": 18013,
+            "line": 18097,
             "name": "ammo_scale",
             "type": "integer"
           },
           {
-            "line": 18012,
+            "line": 18096,
             "name": "kind",
             "type": "'holster'"
           },
           {
-            "line": 18015,
+            "line": 18099,
             "name": "message",
             "type": "string|LocalizedText"
           },
           {
-            "line": 18014,
+            "line": 18098,
             "name": "prompt",
             "type": "string|LocalizedText"
           }
@@ -33905,12 +33905,12 @@
       {
         "fields": [
           {
-            "line": 18051,
+            "line": 18135,
             "name": "ammo_type",
             "type": "string"
           },
           {
-            "line": 18052,
+            "line": 18136,
             "name": "magazines",
             "type": "string[]"
           }
@@ -33920,22 +33920,22 @@
       {
         "fields": [
           {
-            "line": 18019,
+            "line": 18103,
             "name": "ammo_scale",
             "type": "integer"
           },
           {
-            "line": 18018,
+            "line": 18102,
             "name": "kind",
             "type": "'message'"
           },
           {
-            "line": 18020,
+            "line": 18104,
             "name": "menu_text",
             "type": "string|LocalizedText"
           },
           {
-            "line": 18021,
+            "line": 18105,
             "name": "message",
             "type": "string|LocalizedText"
           }
@@ -33945,12 +33945,12 @@
       {
         "fields": [
           {
-            "line": 17943,
+            "line": 18027,
             "name": "recipe",
             "type": "string"
           },
           {
-            "line": 17942,
+            "line": 18026,
             "name": "result",
             "type": "string"
           }
@@ -33960,22 +33960,22 @@
       {
         "fields": [
           {
-            "line": 18025,
+            "line": 18109,
             "name": "ammo_scale",
             "type": "integer"
           },
           {
-            "line": 18024,
+            "line": 18108,
             "name": "kind",
             "type": "'attach_molle'"
           },
           {
-            "line": 18027,
+            "line": 18111,
             "name": "moves",
             "type": "integer"
           },
           {
-            "line": 18026,
+            "line": 18110,
             "name": "size",
             "type": "integer"
           }
@@ -33985,17 +33985,17 @@
       {
         "fields": [
           {
-            "line": 18031,
+            "line": 18115,
             "name": "ammo_scale",
             "type": "integer"
           },
           {
-            "line": 18030,
+            "line": 18114,
             "name": "kind",
             "type": "'detach_molle'"
           },
           {
-            "line": 18032,
+            "line": 18116,
             "name": "moves",
             "type": "integer"
           }
@@ -34005,22 +34005,22 @@
       {
         "fields": [
           {
-            "line": 18120,
+            "line": 18204,
             "name": "damage_type",
             "type": "string"
           },
           {
-            "line": 18122,
+            "line": 18206,
             "name": "max_multiplier",
             "type": "number"
           },
           {
-            "line": 18119,
+            "line": 18203,
             "name": "max_steps",
             "type": "integer"
           },
           {
-            "line": 18121,
+            "line": 18205,
             "name": "multiplier_per_step",
             "type": "number"
           }
@@ -34030,17 +34030,17 @@
       {
         "fields": [
           {
-            "line": 17957,
+            "line": 18041,
             "name": "ammo_scale",
             "type": "integer"
           },
           {
-            "line": 17956,
+            "line": 18040,
             "name": "id",
             "type": "string"
           },
           {
-            "line": 17955,
+            "line": 18039,
             "name": "kind",
             "type": "'native'"
           }
@@ -34050,37 +34050,37 @@
       {
         "fields": [
           {
-            "line": 17913,
+            "line": 17997,
             "name": "body_type",
             "type": "string"
           },
           {
-            "line": 17909,
+            "line": 17993,
             "name": "environmental_protection",
             "type": "integer"
           },
           {
-            "line": 17911,
+            "line": 17995,
             "name": "max_pet_volume",
             "type": "string"
           },
           {
-            "line": 17912,
+            "line": 17996,
             "name": "min_pet_volume",
             "type": "string"
           },
           {
-            "line": 17914,
+            "line": 17998,
             "name": "power_armor",
             "type": "boolean"
           },
           {
-            "line": 17910,
+            "line": 17994,
             "name": "protection_with_filter",
             "type": "integer"
           },
           {
-            "line": 17908,
+            "line": 17992,
             "name": "thickness",
             "type": "number"
           }
@@ -34090,47 +34090,47 @@
       {
         "fields": [
           {
-            "line": 17937,
+            "line": 18021,
             "name": "byproducts",
             "type": "string[]"
           },
           {
-            "line": 17939,
+            "line": 18023,
             "name": "climate",
             "type": "StaticOrderedCropClimate"
           },
           {
-            "line": 17935,
+            "line": 18019,
             "name": "drop_seeds",
             "type": "boolean"
           },
           {
-            "line": 17932,
+            "line": 18016,
             "name": "fruit",
             "type": "string"
           },
           {
-            "line": 17938,
+            "line": 18022,
             "name": "growth_stages",
             "type": "StaticOrderedSeedStage[]"
           },
           {
-            "line": 17933,
+            "line": 18017,
             "name": "growth_temperature",
             "type": "string"
           },
           {
-            "line": 17931,
+            "line": 18015,
             "name": "plant_name",
             "type": "string|LocalizedText"
           },
           {
-            "line": 17934,
+            "line": 18018,
             "name": "required_terrain_flag",
             "type": "string"
           },
           {
-            "line": 17936,
+            "line": 18020,
             "name": "water_consumption",
             "type": "integer"
           }
@@ -34140,12 +34140,12 @@
       {
         "fields": [
           {
-            "line": 17918,
+            "line": 18002,
             "name": "duration",
             "type": "string"
           },
           {
-            "line": 17917,
+            "line": 18001,
             "name": "stage",
             "type": "string"
           }
@@ -34155,57 +34155,57 @@
       {
         "fields": [
           {
-            "line": 17904,
+            "line": 17988,
             "name": "ammo_types",
             "type": "string|string[]"
           },
           {
-            "line": 17898,
+            "line": 17982,
             "name": "charge_factor",
             "type": "integer"
           },
           {
-            "line": 17897,
+            "line": 17981,
             "name": "charges_per_use",
             "type": "integer"
           },
           {
-            "line": 17902,
+            "line": 17986,
             "name": "crafting_subtype",
             "type": "string"
           },
           {
-            "line": 17900,
+            "line": 17984,
             "name": "fuel_efficiency",
             "type": "number"
           },
           {
-            "line": 17896,
+            "line": 17980,
             "name": "initial_charges",
             "type": "integer"
           },
           {
-            "line": 17895,
+            "line": 17979,
             "name": "max_charges",
             "type": "integer"
           },
           {
-            "line": 17901,
+            "line": 17985,
             "name": "power_draw",
             "type": "string"
           },
           {
-            "line": 17905,
+            "line": 17989,
             "name": "revert_message",
             "type": "string|LocalizedText"
           },
           {
-            "line": 17903,
+            "line": 17987,
             "name": "transfer_rate",
             "type": "string"
           },
           {
-            "line": 17899,
+            "line": 17983,
             "name": "turns_per_charge",
             "type": "integer"
           }
@@ -34215,127 +34215,127 @@
       {
         "fields": [
           {
-            "line": 17961,
+            "line": 18045,
             "name": "ammo_scale",
             "type": "integer"
           },
           {
-            "line": 17971,
+            "line": 18055,
             "name": "chance",
             "type": "integer"
           },
           {
-            "line": 17965,
+            "line": 18049,
             "name": "container",
             "type": "string"
           },
           {
-            "line": 17982,
+            "line": 18066,
             "name": "damage_failure",
             "type": "string|LocalizedText"
           },
           {
-            "line": 17960,
+            "line": 18044,
             "name": "kind",
             "type": "'transform'"
           },
           {
-            "line": 17981,
+            "line": 18065,
             "name": "menu_text",
             "type": "string|LocalizedText"
           },
           {
-            "line": 17980,
+            "line": 18064,
             "name": "message",
             "type": "string|LocalizedText"
           },
           {
-            "line": 17970,
+            "line": 18054,
             "name": "moves",
             "type": "integer"
           },
           {
-            "line": 17973,
+            "line": 18057,
             "name": "need_charges",
             "type": "integer"
           },
           {
-            "line": 17983,
+            "line": 18067,
             "name": "need_charges_message",
             "type": "string|LocalizedText"
           },
           {
-            "line": 17978,
+            "line": 18062,
             "name": "need_empty",
             "type": "boolean"
           },
           {
-            "line": 17972,
+            "line": 18056,
             "name": "need_fire",
             "type": "integer"
           },
           {
-            "line": 17984,
+            "line": 18068,
             "name": "need_fire_message",
             "type": "string|LocalizedText"
           },
           {
-            "line": 17977,
+            "line": 18061,
             "name": "need_wielding",
             "type": "boolean"
           },
           {
-            "line": 17976,
+            "line": 18060,
             "name": "need_worn",
             "type": "boolean"
           },
           {
-            "line": 17979,
+            "line": 18063,
             "name": "qualities",
             "type": "table<string,"
           },
           {
-            "line": 17974,
+            "line": 18058,
             "name": "sealed",
             "type": "boolean"
           },
           {
-            "line": 17975,
+            "line": 18059,
             "name": "set_timer",
             "type": "boolean"
           },
           {
-            "line": 17969,
+            "line": 18053,
             "name": "sound_volume",
             "type": "integer"
           },
           {
-            "line": 17962,
+            "line": 18046,
             "name": "target",
             "type": "string"
           },
           {
-            "line": 17966,
+            "line": 18050,
             "name": "target_ammo",
             "type": "string"
           },
           {
-            "line": 17968,
+            "line": 18052,
             "name": "target_charges",
             "type": "integer"
           },
           {
-            "line": 17963,
+            "line": 18047,
             "name": "target_group",
             "type": "string"
           },
           {
-            "line": 17967,
+            "line": 18051,
             "name": "target_timer",
             "type": "string"
           },
           {
-            "line": 17964,
+            "line": 18048,
             "name": "variant_kind",
             "type": "string"
           }
@@ -34345,12 +34345,12 @@
       {
         "fields": [
           {
-            "line": 17951,
+            "line": 18035,
             "name": "diameter",
             "type": "integer"
           },
           {
-            "line": 17952,
+            "line": 18036,
             "name": "width",
             "type": "integer"
           }
@@ -35861,6 +35861,381 @@
           }
         ],
         "name": "StaticStartLocationTarget"
+      },
+      {
+        "fields": [
+          {
+            "line": 17905,
+            "name": "damage_type",
+            "type": "string"
+          },
+          {
+            "line": 17904,
+            "name": "scale",
+            "type": "number"
+          },
+          {
+            "line": 17906,
+            "name": "scaling_stat",
+            "type": "string"
+          },
+          {
+            "line": 17903,
+            "name": "stat",
+            "type": "string"
+          }
+        ],
+        "name": "StaticTechniqueBonus"
+      },
+      {
+        "fields": [
+          {
+            "line": 17911,
+            "name": "chance",
+            "type": "integer"
+          },
+          {
+            "line": 17910,
+            "name": "duration_turns",
+            "type": "integer"
+          },
+          {
+            "line": 17909,
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "line": 17915,
+            "name": "message",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17913,
+            "name": "on_damage",
+            "type": "boolean"
+          },
+          {
+            "line": 17912,
+            "name": "permanent",
+            "type": "boolean"
+          },
+          {
+            "line": 17914,
+            "name": "required_flag",
+            "type": "string"
+          }
+        ],
+        "name": "StaticTechniqueEffect"
+      },
+      {
+        "fields": [
+          {
+            "line": 17919,
+            "name": "abstract",
+            "type": "string"
+          },
+          {
+            "line": 17951,
+            "name": "aoe",
+            "type": "string"
+          },
+          {
+            "line": 17957,
+            "name": "attack_vectors",
+            "type": "string[]"
+          },
+          {
+            "line": 17937,
+            "name": "block_counter",
+            "type": "boolean"
+          },
+          {
+            "line": 17952,
+            "name": "cooldown",
+            "type": "string"
+          },
+          {
+            "line": 17920,
+            "name": "copy_from",
+            "type": "string"
+          },
+          {
+            "line": 17925,
+            "name": "crit_ok",
+            "type": "boolean"
+          },
+          {
+            "line": 17924,
+            "name": "crit_tec",
+            "type": "boolean"
+          },
+          {
+            "line": 17931,
+            "name": "defensive",
+            "type": "boolean"
+          },
+          {
+            "line": 17922,
+            "name": "description",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17932,
+            "name": "disarms",
+            "type": "boolean"
+          },
+          {
+            "line": 17936,
+            "name": "dodge_counter",
+            "type": "boolean"
+          },
+          {
+            "line": 17947,
+            "name": "down_dur",
+            "type": "integer"
+          },
+          {
+            "line": 17935,
+            "name": "dummy",
+            "type": "boolean"
+          },
+          {
+            "line": 17972,
+            "name": "effects",
+            "type": "StaticTechniqueEffect[]"
+          },
+          {
+            "line": 17958,
+            "name": "flags",
+            "type": "string[]"
+          },
+          {
+            "line": 17970,
+            "name": "flat_bonuses",
+            "type": "StaticTechniqueBonus[]"
+          },
+          {
+            "line": 17962,
+            "name": "forbidden_buffs_all",
+            "type": "string[]"
+          },
+          {
+            "line": 17963,
+            "name": "forbidden_buffs_any",
+            "type": "string[]"
+          },
+          {
+            "line": 17967,
+            "name": "forbidden_char_flags",
+            "type": "string[]"
+          },
+          {
+            "line": 17939,
+            "name": "grab_break",
+            "type": "boolean"
+          },
+          {
+            "line": 17953,
+            "name": "grapple_action",
+            "type": "\"hold\"|\"drag\"|\"throw\""
+          },
+          {
+            "line": 17956,
+            "name": "grapple_cooldown",
+            "type": "string"
+          },
+          {
+            "line": 17954,
+            "name": "grapple_power",
+            "type": "integer"
+          },
+          {
+            "line": 17955,
+            "name": "grapple_stamina",
+            "type": "integer"
+          },
+          {
+            "line": 17918,
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "line": 17949,
+            "name": "knockback_dist",
+            "type": "integer"
+          },
+          {
+            "line": 17940,
+            "name": "knockback_follow",
+            "type": "boolean"
+          },
+          {
+            "line": 17950,
+            "name": "knockback_spread",
+            "type": "number"
+          },
+          {
+            "line": 17929,
+            "name": "manual_activation",
+            "type": "boolean"
+          },
+          {
+            "line": 17942,
+            "name": "melee_allowed",
+            "type": "boolean"
+          },
+          {
+            "line": 17923,
+            "name": "messages",
+            "type": "(string|LocalizedText)[]"
+          },
+          {
+            "line": 17938,
+            "name": "miss_recovery",
+            "type": "boolean"
+          },
+          {
+            "line": 17971,
+            "name": "mult_bonuses",
+            "type": "StaticTechniqueBonus[]"
+          },
+          {
+            "line": 17921,
+            "name": "name",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17930,
+            "name": "needs_ammo",
+            "type": "boolean"
+          },
+          {
+            "line": 17928,
+            "name": "reach_ok",
+            "type": "boolean"
+          },
+          {
+            "line": 17927,
+            "name": "reach_tec",
+            "type": "boolean"
+          },
+          {
+            "line": 17946,
+            "name": "repeat_max",
+            "type": "integer"
+          },
+          {
+            "line": 17945,
+            "name": "repeat_min",
+            "type": "integer"
+          },
+          {
+            "line": 17960,
+            "name": "required_buffs_all",
+            "type": "string[]"
+          },
+          {
+            "line": 17961,
+            "name": "required_buffs_any",
+            "type": "string[]"
+          },
+          {
+            "line": 17965,
+            "name": "required_char_flags",
+            "type": "string[]"
+          },
+          {
+            "line": 17966,
+            "name": "required_char_flags_all",
+            "type": "string[]"
+          },
+          {
+            "line": 17964,
+            "name": "required_weapon_flags",
+            "type": "string[]"
+          },
+          {
+            "line": 17934,
+            "name": "side_switch",
+            "type": "boolean"
+          },
+          {
+            "line": 17968,
+            "name": "skills",
+            "type": "StaticTechniqueSkill[]"
+          },
+          {
+            "line": 17943,
+            "name": "strictly_unarmed",
+            "type": "boolean"
+          },
+          {
+            "line": 17948,
+            "name": "stun_dur",
+            "type": "integer"
+          },
+          {
+            "line": 17933,
+            "name": "take_weapon",
+            "type": "boolean"
+          },
+          {
+            "line": 17941,
+            "name": "unarmed_allowed",
+            "type": "boolean"
+          },
+          {
+            "line": 17926,
+            "name": "wall_adjacent",
+            "type": "boolean"
+          },
+          {
+            "line": 17959,
+            "name": "weapon_categories",
+            "type": "string[]"
+          },
+          {
+            "line": 17969,
+            "name": "weapon_damage",
+            "type": "StaticTechniqueWeaponDamage[]"
+          },
+          {
+            "line": 17944,
+            "name": "weighting",
+            "type": "integer"
+          }
+        ],
+        "name": "StaticTechniqueOptions"
+      },
+      {
+        "fields": [
+          {
+            "line": 17895,
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "line": 17896,
+            "name": "level",
+            "type": "integer"
+          }
+        ],
+        "name": "StaticTechniqueSkill"
+      },
+      {
+        "fields": [
+          {
+            "line": 17900,
+            "name": "minimum",
+            "type": "integer"
+          },
+          {
+            "line": 17899,
+            "name": "type",
+            "type": "string"
+          }
+        ],
+        "name": "StaticTechniqueWeaponDamage"
       },
       {
         "fields": [
@@ -40448,7 +40823,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1732,
+    "function_count": 1733,
     "functions": [
       {
         "line": "4360",
@@ -41009,7 +41384,7 @@
         "parameters": "attacker, target, options"
       },
       {
-        "line": "18135",
+        "line": "18219",
         "name": "consumption_count",
         "owner": "CcbCharactersApi",
         "parameters": "character, item, window"
@@ -42365,7 +42740,7 @@
         "parameters": "character, deltas"
       },
       {
-        "line": "18128",
+        "line": "18212",
         "name": "modify_pain",
         "owner": "CcbNeedsApi",
         "parameters": "character, delta"
@@ -44233,6 +44608,12 @@
       {
         "line": "7726",
         "name": "define_start_location",
+        "owner": "CcbPlatformContent",
+        "parameters": "options"
+      },
+      {
+        "line": "17976",
+        "name": "define_technique",
         "owner": "CcbPlatformContent",
         "parameters": "options"
       },
@@ -51776,7 +52157,7 @@
         "lua_name": "LocalizedText",
         "registration": {
           "installer": "platform_v1.install_mod_definition",
-          "line": 392,
+          "line": 393,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },
@@ -51958,7 +52339,7 @@
         "lua_name": "ModDefinition",
         "registration": {
           "installer": "platform_v1.install_mod_definition",
-          "line": 393,
+          "line": 394,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },
@@ -52980,7 +53361,7 @@
         "lua_name": "StaticDialogueAction",
         "registration": {
           "installer": "platform_v1.initialize_state",
-          "line": 608,
+          "line": 609,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },
@@ -52994,7 +53375,7 @@
         "lua_name": "StaticDialoguePredicate",
         "registration": {
           "installer": "platform_v1.initialize_state",
-          "line": 607,
+          "line": 608,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },
