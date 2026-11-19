@@ -1,18 +1,5 @@
 [
   {
-    "id": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01",
-    "type": "talk_topic",
-    "dynamic_line": "I have, I have.  I hear they're stickin' radios in the skull's of some mercs.  You too, eh?  Crazy shit.  Maybe you can score some kinda fancy implant so we can ditch the ugly-ass AR glasses, yeah?  Lemme know if ya' find one, ya' nut-ckle-head, hah!  Get it?  Nuts n' bolts.",
-    "responses": [
-      {
-        "text": "Actually, I have an implanted AR system.  Think you could use it?",
-        "topic": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01_AR",
-        "condition": { "and": [ { "u_has_items": { "item": "integrated_ar", "count": 1 } }, { "u_has_trait": "Hub01_CBM_Interface" } ] }
-      },
-      { "text": "Yeah, alright.", "topic": "TALK_ROBOFAC_MERC_PAT" }
-    ]
-  },
-  {
     "id": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01_AR",
     "type": "talk_topic",
     "dynamic_line": "No shit?  You also got some kind of internal radio we can use?  If so, I'll plug my computah heah into your USB port, and see what we can do.  Platonically, of course.",
