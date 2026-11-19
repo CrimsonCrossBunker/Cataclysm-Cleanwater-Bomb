@@ -5145,6 +5145,16 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         if( const auto to_hit = options.get<sol::optional<std::int64_t>>( "melee_to_hit" ) ) {
             definition->melee_to_hit = *to_hit;
         }
+        if( const auto profile = options.get<sol::optional<sol::table>>( "melee_accuracy" ) ) {
+            if( definition->melee_to_hit ) {
+                throw std::invalid_argument( "Item melee_accuracy cannot be combined with melee_to_hit" );
+            }
+            definition->melee_to_hit = Item_factory::melee_to_hit_from_profile(
+                profile->get_or( "grip", std::string( "weapon" ) ),
+                profile->get_or( "length", std::string( "hand" ) ),
+                profile->get_or( "surface", std::string( "any" ) ),
+                profile->get_or( "balance", std::string( "neutral" ) ) );
+        }
         if( const auto size = options.get<sol::optional<std::int64_t>>( "electronic_size_kb" ) ) {
             if( *size < 0 || *size > std::numeric_limits<units::ememory::value_type>::max() ) {
                 throw std::runtime_error( "item electronic storage size is outside the native range" );
@@ -8668,6 +8678,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     if( definition.melee_to_hit ) {
                         native->m_to_hit = static_cast<int>( *definition.melee_to_hit );
+                        native->using_legacy_to_hit = false;
                     }
                     apply_item_adjustment( native->weight, definition.measurements.mass );
                     apply_item_adjustment( native->volume, definition.measurements.volume );

@@ -130,6 +130,9 @@ class Item_factory
          */
         void check_definitions() const;
 
+        static int melee_to_hit_from_profile( const std::string &grip, const std::string &length,
+                                             const std::string &surface, const std::string &balance );
+
         /**
          * @name Item groups
          *

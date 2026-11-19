@@ -711,6 +711,12 @@ local ModDefinition = {}
 ---@field level integer Signed native quality level.
 ---@field speed? number Positive native speed multiplier. Defaults to one.
 
+---@class ItemMeleeAccuracyOptions
+---@field grip? 'bad'|'none'|'solid'|'weapon' Defaults to weapon.
+---@field length? 'hand'|'short'|'long' Defaults to hand.
+---@field surface? 'point'|'line'|'any'|'every' Defaults to any.
+---@field balance? 'clumsy'|'uneven'|'neutral'|'good' Defaults to neutral.
+
 ---@class ItemDefinitionOptions
 ---@field id string Stable item type id.
 ---@field abstract? boolean Register an inheritance template without creating an item that can spawn.
@@ -725,6 +731,7 @@ local ModDefinition = {}
 ---@field snippet_category? string Snippet category from which the item draws descriptions.
 ---@field variant_kind? 'generic'|'gun'|'drug' Selects the category of the native item-variant option.
 ---@field melee_to_hit? integer Native melee accuracy modifier.
+---@field melee_accuracy? ItemMeleeAccuracyOptions Compute to-hit from the native melee profile. Supply either melee_accuracy or melee_to_hit.
 ---@field electronic_size_kb? integer Native electronic file size in kilobytes.
 ---@field countdown_turns? integer Native countdown interval for a newly created item. Zero disables an inherited interval.
 ---@field stackable? boolean Whether identical items combine into a stack.

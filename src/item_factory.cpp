@@ -4843,6 +4843,18 @@ void melee_accuracy::deserialize( const JsonObject &jo )
 }
 
 
+int Item_factory::melee_to_hit_from_profile( const std::string &grip, const std::string &length,
+        const std::string &surface, const std::string &balance )
+{
+    const melee_accuracy profile{
+        io::string_to_enum<grip_val>( grip ),
+        io::string_to_enum<length_val>( length ),
+        io::string_to_enum<surface_val>( surface ),
+        io::string_to_enum<balance_val>( balance )
+    };
+    return profile.sum_values();
+}
+
 //TO-DO: remove when legacy int-only JSON is removed
 class melee_accuracy_reader : public generic_typed_reader < melee_accuracy_reader >
 {
