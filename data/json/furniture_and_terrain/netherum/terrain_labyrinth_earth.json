@@ -26,28 +26,5 @@
         }
       ]
     }
-  },
-  {
-    "type": "terrain",
-    "id": "t_nl_obelisk_earth_broken",
-    "copy-from": "t_nl_obelisk_0",
-    "name": "Alien Obelisk",
-    "description": "A dark gray obelisk with a massive crack down the middle.",
-    "symbol": "A",
-    "color": "dark_gray",
-    "examine_action": {
-      "type": "effect_on_condition",
-      "effect_on_conditions": [
-        {
-          "id": "EOC_EARTH_TO_LABYRINTH_SAFEHOUSE_OBELISK_BROKEN",
-          "effect": [
-            {
-              "u_message": "The obelisk has broken in your absence.\nIt stands there.\nStaring at you.\nCrooked and silent.",
-              "popup": true
-            }
-          ]
-        }
-      ]
-    }
   }
 ]
