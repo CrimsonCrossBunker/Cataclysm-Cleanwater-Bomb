@@ -1,0 +1,211 @@
+local ccb = require("ccb")
+
+ccb.content.define_furniture {
+    id = "f_contaminated_dirt_pile_tall",
+    name = ccb.content.text("tall mound of contaminated dirt"),
+    symbol = "#",
+    color = "brown",
+    looks_like = "t_dirtmound",
+    move_cost_mod = -1,
+    builtin_examine = "chainfence",
+    coverage = 100,
+    description = ccb.content.text("An area of contaminated dirt heaped well above your head, difficult to climb over."),
+    required_strength = -1,
+    flags = { "NOITEM", "EASY_DECONSTRUCT", "MINEABLE", "PERMEABLE", "CLIMBABLE" },
+    deconstruct = {
+        drops = { { item = "contaminated_dirt", count = 200 } },
+        furniture = "f_contaminated_dirt_pile",
+    },
+    bash = {
+        minimum_strength = 50,
+        maximum_strength = 100,
+        sound = ccb.content.text("thump!"),
+        failure_sound = ccb.content.text("thud!"),
+        drops = { { item = "contaminated_dirt", count = { 170, 200 } } },
+        furniture = "f_contaminated_dirt_pile",
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_contaminated_dirt_pile",
+    name = ccb.content.text("mound of contaminated dirt"),
+    symbol = "#",
+    color = "brown",
+    looks_like = "t_dirtmound",
+    move_cost_mod = 5,
+    coverage = 60,
+    description = ccb.content.text("An area of contaminated dirt heaped up to your shoulders, not easily traversable."),
+    required_strength = -1,
+    flags = { "TRANSPARENT", "EASY_DECONSTRUCT", "THIN_OBSTACLE", "PERMEABLE" },
+    deconstruct = {
+        drops = { { item = "contaminated_dirt", count = 200 } },
+        furniture = "f_contaminated_dirt_pile_short",
+    },
+    bash = {
+        minimum_strength = 50,
+        maximum_strength = 100,
+        sound = ccb.content.text("thump!"),
+        failure_sound = ccb.content.text("thud!"),
+        drops = { { item = "contaminated_dirt", count = { 170, 200 } } },
+        furniture = "f_contaminated_dirt_pile_short",
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_contaminated_dirt_pile_short",
+    name = ccb.content.text("short mound of contaminated dirt"),
+    symbol = "#",
+    color = "brown",
+    looks_like = "t_dirtmound",
+    move_cost_mod = 3,
+    coverage = 40,
+    description = ccb.content.text("An area of heaped contaminated dirt, not easily traversable."),
+    required_strength = -1,
+    flags = { "TRANSPARENT", "EASY_DECONSTRUCT", "THIN_OBSTACLE", "PERMEABLE" },
+    deconstruct = { drops = { { item = "contaminated_dirt", count = 200 } } },
+    bash = {
+        minimum_strength = 50,
+        maximum_strength = 100,
+        sound = ccb.content.text("thump!"),
+        failure_sound = ccb.content.text("thud!"),
+        drops = { { item = "contaminated_dirt", count = { 170, 200 } } },
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_nurdle_pile_tall",
+    name = ccb.content.text("tall mound of nurdle"),
+    symbol = "#",
+    color = "white",
+    looks_like = "t_dirtmound",
+    move_cost_mod = -1,
+    builtin_examine = "chainfence",
+    coverage = 100,
+    description = ccb.content.text("An area of nurdle heaped well above your head, difficult to climb over."),
+    required_strength = -1,
+    flags = { "NOITEM", "EASY_DECONSTRUCT", "MINEABLE", "PERMEABLE", "CLIMBABLE" },
+    deconstruct = { drops = { { item = "nurdle", count = 200 } }, furniture = "f_nurdle_pile" },
+    bash = {
+        minimum_strength = 50,
+        maximum_strength = 100,
+        sound = ccb.content.text("thump!"),
+        failure_sound = ccb.content.text("thud!"),
+        drops = { { item = "nurdle", count = { 170, 200 } } },
+        furniture = "f_nurdle_pile",
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_nurdle_pile",
+    name = ccb.content.text("mound of nurdle"),
+    symbol = "#",
+    color = "white",
+    looks_like = "t_dirtmound",
+    move_cost_mod = 5,
+    coverage = 60,
+    description = ccb.content.text("An area of nurdle heaped up to your shoulders, not easily traversable."),
+    required_strength = -1,
+    flags = { "TRANSPARENT", "EASY_DECONSTRUCT", "THIN_OBSTACLE", "PERMEABLE" },
+    deconstruct = { drops = { { item = "nurdle", count = 200 } }, furniture = "f_nurdle_pile_short" },
+    bash = {
+        minimum_strength = 50,
+        maximum_strength = 100,
+        sound = ccb.content.text("thump!"),
+        failure_sound = ccb.content.text("thud!"),
+        drops = { { item = "nurdle", count = { 170, 200 } } },
+        furniture = "f_nurdle_pile_short",
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_nurdle_pile_short",
+    name = ccb.content.text("short mound of nurdle"),
+    symbol = "#",
+    color = "white",
+    looks_like = "t_dirtmound",
+    move_cost_mod = 3,
+    coverage = 40,
+    description = ccb.content.text("An area of heaped nurdle, not easily traversable."),
+    required_strength = -1,
+    flags = { "TRANSPARENT", "EASY_DECONSTRUCT", "THIN_OBSTACLE", "PERMEABLE" },
+    deconstruct = { drops = { { item = "nurdle", count = 200 } } },
+    bash = {
+        minimum_strength = 50,
+        maximum_strength = 100,
+        sound = ccb.content.text("thump!"),
+        failure_sound = ccb.content.text("thud!"),
+        drops = { { item = "nurdle", count = { 170, 200 } } },
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_degraded_nurdle_pile_tall",
+    name = ccb.content.text("tall mound of degraded nurdle"),
+    symbol = "#",
+    color = "light_gray",
+    looks_like = "t_dirtmound",
+    move_cost_mod = -1,
+    builtin_examine = "chainfence",
+    coverage = 100,
+    description = ccb.content.text("An area of degraded nurdle heaped well above your head, difficult to climb over."),
+    required_strength = -1,
+    flags = { "NOITEM", "EASY_DECONSTRUCT", "MINEABLE", "PERMEABLE", "CLIMBABLE" },
+    deconstruct = {
+        drops = { { item = "degraded_nurdle", count = 200 } },
+        furniture = "f_degraded_nurdle_pile",
+    },
+    bash = {
+        minimum_strength = 50,
+        maximum_strength = 100,
+        sound = ccb.content.text("thump!"),
+        failure_sound = ccb.content.text("thud!"),
+        drops = { { item = "degraded_nurdle", count = { 170, 200 } } },
+        furniture = "f_degraded_nurdle_pile",
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_degraded_nurdle_pile",
+    name = ccb.content.text("mound of degraded nurdle"),
+    symbol = "#",
+    color = "light_gray",
+    looks_like = "t_dirtmound",
+    move_cost_mod = 5,
+    coverage = 60,
+    description = ccb.content.text("An area of degraded nurdle heaped up to your shoulders, not easily traversable."),
+    required_strength = -1,
+    flags = { "TRANSPARENT", "EASY_DECONSTRUCT", "THIN_OBSTACLE", "PERMEABLE" },
+    deconstruct = {
+        drops = { { item = "degraded_nurdle", count = 200 } },
+        furniture = "f_degraded_nurdle_pile_short",
+    },
+    bash = {
+        minimum_strength = 50,
+        maximum_strength = 100,
+        sound = ccb.content.text("thump!"),
+        failure_sound = ccb.content.text("thud!"),
+        drops = { { item = "degraded_nurdle", count = { 170, 200 } } },
+        furniture = "f_degraded_nurdle_pile_short",
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_degraded_nurdle_pile_short",
+    name = ccb.content.text("short mound of degraded nurdle"),
+    symbol = "#",
+    color = "light_gray",
+    looks_like = "t_dirtmound",
+    move_cost_mod = 3,
+    coverage = 40,
+    description = ccb.content.text("An area of heaped degraded nurdle, not easily traversable."),
+    required_strength = -1,
+    flags = { "TRANSPARENT", "EASY_DECONSTRUCT", "THIN_OBSTACLE", "PERMEABLE" },
+    deconstruct = { drops = { { item = "degraded_nurdle", count = 200 } } },
+    bash = {
+        minimum_strength = 50,
+        maximum_strength = 100,
+        sound = ccb.content.text("thump!"),
+        failure_sound = ccb.content.text("thud!"),
+        drops = { { item = "degraded_nurdle", count = { 170, 200 } } },
+    },
+}
