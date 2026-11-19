@@ -56,18 +56,5 @@
       },
       { "text": "Just leave, this isn't right at all.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "BEM_ANCHOR_SELLER_ASK",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "gendered_line": "The mercenary stares in silence, a flickering of the overhead lighting thankfully cuts the moment short.",
-      "relevant_genders": [ "npc" ]
-    }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_BEM_ANCHOR_SELLER_GONE",
-    "effect": [ { "mapgen_update": "nest_ancilla_bar_remove_BEM_anchor_seller" } ]
   }
 ]

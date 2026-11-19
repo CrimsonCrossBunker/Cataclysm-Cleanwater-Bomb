@@ -1,16 +1,5 @@
 [
   {
-    "id": [ "BEM_CHATTING_VETERANS_1" ],
-    "type": "talk_topic",
-    "dynamic_line": "&A pair of veteran mercenaries share stories between bouts of heavy drinking.  You could probably join them if you wanted to.",
-    "responses": [
-      { "text": "[Join and hear them out for a while.]", "topic": "BEM_CHATTING_VETERANS_HEAR" },
-      { "text": "[Join them in their heavy drinking.]", "topic": "BEM_CHATTING_VETERANS_DRINKING" },
-      { "text": "[Join them with a story of your own.]", "topic": "BEM_CHATTING_VETERANS_TELL_STORY" },
-      { "text": "[Just move along.]", "topic": "TALK_DONE" }
-    ]
-  },
-  {
     "id": "BEM_CHATTING_VETERANS_HEAR",
     "type": "talk_topic",
     "dynamic_line": "&The veterans seem happy to have you, and you listen as the older mercenary narrates <merc_story>.\n\nYou all share some drinks while going over the details and as the conversation winds down.",
