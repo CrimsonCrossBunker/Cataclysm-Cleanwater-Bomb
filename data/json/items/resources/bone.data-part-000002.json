@@ -1,0 +1,38 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "bone_tainted",
+    "name": { "str": "tainted bone" },
+    "description": "A rotten, brittle bone from some unnatural creature or other.  Could be used to make some stuff, like charcoal or glue.  You could eat it, but it will poison you.",
+    "copy-from": "bone",
+    "color": "light_gray",
+    "use_action": [ "POISON" ],
+    "price_postapoc": "5 cent",
+    "fun": -10,
+    "//": "Not for use in edible recipes, and should require ~200% as much as normal for applicable inedible recipes.",
+    "into": "meal_bone_tainted",
+    "recipe": "meal_bone_tainted_mill_1_4"
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "bone_human",
+    "copy-from": "bone",
+    "name": { "str": "human bone" },
+    "description": "A bone from a human being.  Could be used to make some stuff, if you're feeling sufficiently ghoulish.",
+    "//": "No extend support for vitamins, we need to overwrite",
+    "vitamins": [ [ "calcium", "25588 mg" ], [ "meat_allergen", 1 ], [ "human_flesh_vitamin", 1 ] ],
+    "into": "meal_bone",
+    "recipe": "meal_bone_mill_1_4"
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "bone_demihuman",
+    "copy-from": "bone",
+    "name": { "str": "demihuman bone" },
+    "description": "A bone from a demihuman being.  Could be used to make some stuff, if you're feeling sufficiently ghoulish.",
+    "extend": { "flags": [ "STRICT_HUMANITARIANISM" ] }
+  }
+]

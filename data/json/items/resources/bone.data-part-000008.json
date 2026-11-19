@@ -1,0 +1,15 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "skull_llama",
+    "name": { "str": "llama skull" },
+    "description": "The skull of a llama.",
+    "copy-from": "skull_abstract",
+    "vitamins": [ [ "calcium", "4800 mg" ], [ "meat_allergen", 1 ] ],
+    "proportional": { "calories": 0.8 },
+    "weight": "800 g",
+    "volume": "8850 ml",
+    "longest_side": "30 cm"
+  }
+]

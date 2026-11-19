@@ -1,0 +1,28 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "skull_cervine",
+    "name": { "str": "deer skull" },
+    "description": "The skull of a cervine, either a deer or a reindeer, with the antlers still attached.",
+    "copy-from": "skull_abstract",
+    "vitamins": [ [ "calcium", "15000 mg" ], [ "meat_allergen", 1 ] ],
+    "proportional": { "calories": 2.5 },
+    "weight": "2500 g",
+    "volume": "2 L",
+    "longest_side": "50 cm"
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "skull_cervine_spideer",
+    "name": { "str": "spideer skull" },
+    "description": "The skull of a cervine, with the antlers still attached…  But why does it have eight eye sockets?",
+    "copy-from": "skull_abstract",
+    "vitamins": [ [ "calcium", "13500 mg" ], [ "meat_allergen", 1 ] ],
+    "proportional": { "calories": 2.25 },
+    "weight": "2250 g",
+    "volume": "2 L",
+    "longest_side": "40 cm"
+  }
+]
