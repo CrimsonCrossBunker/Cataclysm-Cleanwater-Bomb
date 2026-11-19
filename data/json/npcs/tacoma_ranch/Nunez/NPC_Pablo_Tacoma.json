@@ -48,25 +48,5 @@
       { "skill": "speech", "bonus": 2 },
       { "skill": "swimming", "bonus": 1 }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_TACOMA_Pablo_1",
-    "dynamic_line": "*looks up at you from a ledger, takes a moment to place you, then smiles broadly.  \"Great to see you, my friend.  To what do I owe the pleasure?\"",
-    "responses": [
-      { "text": "Hi, Pablo!  How are things going here?", "topic": "TALK_TACOMA_Pablo_2" },
-      { "text": "Hello, Pablo!  What's with the trailer?", "topic": "TALK_TACOMA_Pablo_Trailer1" },
-      {
-        "text": "Hey, Pablo!  I heard you might be willing to trade for propane?",
-        "topic": "TALK_TACOMA_Pablo_Propane1",
-        "condition": { "compare_string": [ "knows", { "u_val": "knowledge_propane_scavenging" } ] }
-      },
-      {
-        "text": "Hey, Pablo!  Dana said you had some plans to build a bakery?",
-        "topic": "TALK_TACOMA_Pablo_Bakery1",
-        "condition": { "compare_string": [ "knows", { "u_val": "knowledge_tacoma_bakery" } ] }
-      },
-      { "text": "Just popping in to say hi.  Talk to you later!", "topic": "TALK_DONE" }
-    ]
   }
 ]
