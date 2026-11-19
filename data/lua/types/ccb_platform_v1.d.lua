@@ -18051,3 +18051,16 @@ function CcbPlatformContent.define_spell(options) end
 ---@field damage_type string
 ---@field multiplier_per_step number
 ---@field max_multiplier number
+
+---Apply a signed pain change through native Character rules, including pain resistance.
+---@param character GameHandle Exact live Character.
+---@param delta integer Native signed-int pain change.
+---@return CcbResult
+function CcbNeedsApi.modify_pain(character, delta) end
+
+---Count recorded consumption events in the native history window. Item matching includes eats_like aliases.
+---@param character GameHandle Exact live Character.
+---@param item? GameId GameId<item>. Omit to count all items.
+---@param window? TimeDuration Defaults to 48 hours.
+---@return CcbResult result value is the number of matching events.
+function CcbCharactersApi.consumption_count(character, item, window) end

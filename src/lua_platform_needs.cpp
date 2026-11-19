@@ -1482,6 +1482,21 @@ void install_need_api(
                    current_runtime_generation(),
                    current_world_generation() );
     } );
+    needs.set_function(
+        "modify_pain",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle, int delta ) {
+        require_write();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character( handle, current_runtime_generation(),
+                               current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        character->mod_pain( delta );
+        return make_game_value_result( state, sol::make_object( state, true ) );
+    } );
     services["needs"] = std::move( needs );
 }
 

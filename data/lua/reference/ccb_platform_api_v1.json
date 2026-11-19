@@ -40408,7 +40408,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1718,
+    "function_count": 1720,
     "functions": [
       {
         "line": "4360",
@@ -40961,6 +40961,12 @@
         "name": "choose_technique",
         "owner": "CcbCharactersApi",
         "parameters": "attacker, target, options"
+      },
+      {
+        "line": "18066",
+        "name": "consumption_count",
+        "owner": "CcbCharactersApi",
+        "parameters": "character, item, window"
       },
       {
         "line": "12765",
@@ -42269,6 +42275,12 @@
         "name": "modify_health",
         "owner": "CcbNeedsApi",
         "parameters": "character, deltas"
+      },
+      {
+        "line": "18059",
+        "name": "modify_pain",
+        "owner": "CcbNeedsApi",
+        "parameters": "character, delta"
       },
       {
         "line": "14516",
