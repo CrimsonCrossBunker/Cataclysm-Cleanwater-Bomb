@@ -222,3 +222,5 @@ require("fifth_sun_note")
 require("zener_cards")
 
 require("terrain_transforms")
+
+require("monster_groups")
