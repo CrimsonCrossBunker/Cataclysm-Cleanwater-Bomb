@@ -1,0 +1,66 @@
+[
+  {
+    "id": "mon_melian_mantis_mount",
+    "type": "MONSTER",
+    "name": { "str": "Melian mantis stallion" },
+    "description": "An enormous green insect grown to about half the size of a giraffe.  It moves in a weird, dance-like pattern but goes incredibly still as it positions itself to be mounted.  These gargantuan mantis-like monsters are one of the mounts that Seelie aligned knights will ride into combat.  It won't use its attacks while it is ridden but if its rider dismounts or is knocked off, it will stay nearby and protect them.",
+    "default_faction": "mantis",
+    "bodytype": "insect",
+    "species": [ "INSECT" ],
+    "categories": [ "XE_CLASSIC" ],
+    "volume": "650 L",
+    "weight": "650 kg",
+    "hp": 180,
+    "speed": 100,
+    "material": [ "iflesh" ],
+    "symbol": "M",
+    "color": "cyan_green",
+    "aggression": 20,
+    "morale": 30,
+    "melee_skill": 8,
+    "melee_dice": 1,
+    "melee_dice_sides": 6,
+    "melee_damage": [ { "damage_type": "cut", "amount": 10.0, "armor_penetration": 12 } ],
+    "dodge": 3,
+    "weakpoint_sets": [ "wps_arthropod" ],
+    "families": [ "prof_wp_basic_bug" ],
+    "vision_day": 8,
+    "vision_night": 4,
+    "harvest": "arachnid",
+    "dissect": "dissect_insect_sample_large",
+    "anger_triggers": [ "FRIEND_ATTACKED" ],
+    "fear_triggers": [ "FIRE", "HURT" ],
+    "special_attacks": [
+      { "id": "grab_drag" },
+      { "id": "drag_followup" },
+      {
+        "type": "leap",
+        "cooldown": 8,
+        "max_range": 5,
+        "allow_no_target": false,
+        "condition": { "not": { "u_has_effect": "maimed_leg" } }
+      }
+    ],
+    "flags": [
+      "SEES",
+      "HEARS",
+      "CLIMBS",
+      "FAE_CREATURE",
+      "PATH_AVOID_FIRE",
+      "PET_WONT_FOLLOW",
+      "PET_MOUNTABLE",
+      "PATH_AVOID_FALL",
+      "COMBAT_MOUNT",
+      "INSECTICIDEPROOF"
+    ],
+    "armor": {
+      "bash": 10,
+      "cut": 16,
+      "bullet": 13,
+      "electric": 2,
+      "xe_cold_iron_cut_damage": 0,
+      "xe_cold_iron_bash_damage": 0,
+      "xe_cold_iron_stab_damage": 0
+    }
+  }
+]
