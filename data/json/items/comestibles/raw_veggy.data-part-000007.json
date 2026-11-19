@@ -1,0 +1,30 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "wintergreen_leaves",
+    "name": { "str": "pile of wintergreen leaves", "str_pl": "piles of wintergreen leaves" },
+    "weight": "5 g",
+    "color": "green",
+    "sleepiness_mod": 3,
+    "stim": 1,
+    "container": "bag_plastic_small",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "calories": 4,
+    "description": "These leaves smell strongly medicinal.  When chewed, they first taste sweet but the aftertaste is incredibly bitter.  These leaves contain good amounts of methyl salicylate and merely chewing them may have a similar effect to aspirin.",
+    "price": "1 USD 30 cent",
+    "price_postapoc": "1 USD",
+    "use_action": {
+      "type": "consume_drug",
+      "activation_message": "You chew the wintergreen leaves.",
+      "effects": [ { "id": "pkill_wintergreen", "duration": "30 m" } ]
+    },
+    "material": [ { "type": "dried_vegetable", "portion": 10 }, { "type": "veggy", "portion": 1 } ],
+    "volume": "50 ml",
+    "flags": [ "EDIBLE_FROZEN", "RAW" ],
+    "fun": -10,
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
+  }
+]

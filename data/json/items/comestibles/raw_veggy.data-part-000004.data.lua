@@ -1,0 +1,155 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "hops",
+    name = ccb.content.text("hops flower"),
+    mass = "92 g",
+    color = "light_green",
+    symbol = ",",
+    description = ccb.content.text("A cluster of small cone-like flowers, indispensable for brewing beer."),
+    price = "5 cent",
+    survival_price = "12 cent",
+    materials = { "veggy" },
+    volume = "62 ml",
+    flags = { "EDIBLE_FROZEN", "RAW" },
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        quench = -20,
+        calories = 87,
+        fun = -15,
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "horseradish_root",
+    name = ccb.content.text("horseradish root"),
+    mass = "250 g",
+    color = "brown",
+    symbol = "%",
+    description = ccb.content.text("A large white tapered root of a horseradish plant.  Way too spicy to eat in this form, but can be used for making condiments."),
+    price = "107 cent",
+    survival_price = "80 cent",
+    materials = { "veggy" },
+    volume = "400 ml",
+    flags = { "FREEZERBURN", "RAW" },
+    stackable = true,
+    comestible = {
+        shelf_life = "60 days",
+        kind = "FOOD",
+        calories = 120,
+        fun = -12,
+        vitamins = {
+            { id = "vitC", amount = "62300 μg" },
+            { id = "iron", amount = "1100 μg" },
+            { id = "calcium", amount = "140 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "lettuce_head",
+    name = ccb.content.plural_text("lettuce head", "lettuce head"),
+    mass = "504 g",
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("A crisp head of iceberg lettuce.  You should probably prepare it before eating."),
+    price = "264 cent",
+    survival_price = "132 cent",
+    materials = { "veggy" },
+    volume = "1850 ml",
+    flags = { "FREEZERBURN", "INEDIBLE", "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" },
+    comestible = {
+        shelf_life = "10 days",
+        kind = "FOOD",
+        quench = 2,
+        calories = 70,
+        vitamins = {
+            { id = "vitC", amount = "14 mg" },
+            { id = "iron", amount = "2100 μg" },
+            { id = "calcium", amount = "91 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "lettuce",
+    name = ccb.content.plural_text("handful of shredded lettuce", "handfuls of shredded lettuce"),
+    mass = "72 g",
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("A handful of shredded iceberg lettuce."),
+    price = "35 cent",
+    survival_price = "20 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "FREEZERBURN", "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "10 days",
+        kind = "FOOD",
+        quench = 2,
+        calories = 10,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "2 mg" },
+            { id = "iron", amount = "300 μg" },
+            { id = "calcium", amount = "13 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "mugwort",
+    name = ccb.content.plural_text("mugwort", "mugwort"),
+    description = ccb.content.text("A stalk of mugwort.  Smells wonderful."),
+    mass = "40 g",
+    color = "magenta",
+    symbol = ",",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "CATTLE", "RABBIT" },
+    price = "0 cent",
+    survival_price = "10 cent",
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        shelf_life = "10 days",
+        calories = 9,
+        fun = -8,
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+-- Raw onions probably aren't all that tasty to most people.
+ccb.content.define_item {
+    id = "onion",
+    name = ccb.content.text("onion"),
+    mass = "110 g",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("An aromatic onion used in cooking.  Cutting these up can make your eyes sting!"),
+    price = "17 cent",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    volume = "135 ml",
+    flags = { "FREEZERBURN", "RAW" },
+    stackable = true,
+    comestible = {
+        shelf_life = "30 days",
+        kind = "FOOD",
+        calories = 44,
+        fun = -1,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "8100 μg" },
+            { id = "iron", amount = "200 μg" },
+            { id = "calcium", amount = "25300 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}

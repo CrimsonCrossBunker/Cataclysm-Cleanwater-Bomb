@@ -1,0 +1,25 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "plant_sac",
+    "//": "'plant_sac' should probably be migrated to something like 'fungal_sac' at some point, but it's low priority.",
+    "name": { "str": "fungal fluid sac" },
+    "category": "other",
+    "weight": "270 g",
+    "color": "light_green",
+    "spoils_in": "3 days 8 hours",
+    "comestible_type": "FOOD",
+    "use_action": [ "POISON" ],
+    "symbol": "%",
+    "quench": 18,
+    "calories": 35,
+    "description": "A fluid bladder from a fungus-based lifeform.  The membrane is tough and nearly indigestible.  It doesn't seem to contain anything deliberately toxic to you, but the alien biology and sharp, earthy, rotting scent suggests it still wouldn't be wise to ingest regardless of the fluid's purpose to its original owner.",
+    "price": "0 cent",
+    "price_postapoc": "10 cent",
+    "material": [ "veggy" ],
+    "volume": "250 ml",
+    "fun": -10,
+    "flags": [ "FUNGAL_VECTOR" ]
+  }
+]

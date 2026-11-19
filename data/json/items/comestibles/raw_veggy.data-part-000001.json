@@ -1,0 +1,23 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "dogbane",
+    "name": { "str_sp": "dogbane" },
+    "description": "A stalk of dogbane.  It has very fibrous stems and is mildly poisonous.",
+    "comestible_type": "FOOD",
+    "use_action": [ "BLECH" ],
+    "flags": [ "CORROSIVE" ],
+    "calories": 9,
+    "fun": -15,
+    "weight": "40 g",
+    "color": "magenta",
+    "symbol": ",",
+    "material": [ "veggy" ],
+    "volume": "250 ml",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
+  }
+]

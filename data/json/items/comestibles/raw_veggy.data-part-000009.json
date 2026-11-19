@@ -1,0 +1,20 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "veggy_tainted",
+    "//": "Note: Legacy item ID, this is not actually a vegetable at all anymore.",
+    "name": { "str": "alien fungus chunk" },
+    "category": "other",
+    "copy-from": "veggy",
+    "looks_like": "mushroom",
+    "spoils_in": "40 hours",
+    "use_action": [ "POISON" ],
+    "description": "A chunk of fungal matter from some sort of alien mushroom creature.  Eating unfamiliar mushrooms is a bad idea.",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "fun": -10,
+    "smoking_result": "dry_veggy_tainted",
+    "flags": [ "FUNGAL_VECTOR" ]
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "garlic_clove",
+    "name": { "str": "garlic clove" },
+    "weight": "3 g",
+    "color": "white",
+    "spoils_in": "360 days",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "quench": -3,
+    "calories": 4,
+    "description": "Cloves of garlic.  Useful as a seasoning.",
+    "price": "2 cent",
+    "price_postapoc": "8 cent",
+    "material": [ "garlic" ],
+    "volume": "6 ml",
+    "smoking_result": "dry_garlic",
+    "fun": -3,
+    "vitamins": [ [ "vitC", "900 μg" ], [ "iron", "100 μg" ], [ "calcium", "5400 μg" ], [ "veggy_allergen", 1 ] ],
+    "plant_name": "garlic",
+    "fruit": "garlic",
+    "byproducts": [ "withered" ],
+    "growth_stages": [
+      { "GROWTH_SEED": "17 days" },
+      { "GROWTH_SEEDLING": "16 days" },
+      { "GROWTH_MATURE": "16 days" },
+      { "GROWTH_HARVEST": "16 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ],
+    "stackable": true
+  }
+]
