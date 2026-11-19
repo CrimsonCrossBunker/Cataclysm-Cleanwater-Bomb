@@ -78,3 +78,12 @@ ccb.content.define_mapgen {
         size = { width = 1, height = 1 },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "rolling_trash_can_1x1",
+    layout = {
+        size = { width = 1, height = 1 },
+        vehicle_placements = { { id = "rolling_trash_can", x = 0, y = 0, chance = 80, status = 0 } },
+    },
+}

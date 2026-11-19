@@ -87,22 +87,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "isherwood_barry_riot_drop",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "/" ],
-      "items": {
-        "/": [
-          { "item": "armor_riot", "chance": 100, "repeat": 5 },
-          { "item": "helmet_riot", "chance": 100, "repeat": 5 },
-          { "item": "armor_riot_arm", "chance": 100, "repeat": 5 },
-          { "item": "armor_riot_leg", "chance": 100, "repeat": 5 }
-        ]
-      }
-    }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "isherwood_rescue_remove_npcs",
     "object": {
       "remove_npcs": [
@@ -133,11 +117,6 @@
         { "class": "isherwood_lisa_swat_copy", "x": [ 0, 23 ], "y": [ 0, 23 ] }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "truck_bomb_spawn",
-    "object": { "place_item": [ { "item": "fake_dynamite_50lbs", "x": 17, "y": 18, "custom-flags": [ "ACTIVATE_ON_PLACE" ] } ] }
   },
   {
     "type": "mapgen",

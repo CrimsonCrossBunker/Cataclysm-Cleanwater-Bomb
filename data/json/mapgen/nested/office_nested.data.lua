@@ -1251,3 +1251,145 @@ ccb.content.define_mapgen {
         flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "5x5_cabinet_office0_n",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "fff c",
+            "    c",
+            "    c",
+            "ddx c",
+            "     ",
+        },
+        palettes = { "office_palette" },
+        vehicle_placements = { { id = "swivel_chair", x = 2, y = 2 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "5x5_cabinet_sec_n",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "xdddc",
+            "x   c",
+            "x   c",
+            "f  cc",
+            "     ",
+        },
+        palettes = { "office_palette" },
+        vehicle_placements = { { id = "swivel_chair", x = 2, y = 1 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "6x6_cabinet_glass_ne",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "Vdd  f",
+            "Vx   f",
+            "Vcc   ",
+            "||VGV|",
+            "      ",
+            "      ",
+        },
+        palettes = { "office_palette" },
+        vehicle_placements = { { id = "swivel_chair", x = { 3, 4 }, y = { 0, 2 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "6x6_cabinet_office_n",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "d ff d",
+            "d   hd",
+            "xh   x",
+            "cc  cc",
+            "      ",
+            "      ",
+        },
+        palettes = { "office_palette" },
+        vehicle_placements = { { id = "swivel_chair", x = { 1, 4 }, y = { 1, 2 }, repetitions = { 1, 2 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "5x5_corridor_register_ne",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "  fff",
+            "c    ",
+            "c    ",
+            "cxddd",
+            "     ",
+        },
+        palettes = { "office_palette" },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        vehicle_placements = { { id = "swivel_chair", x = { 1, 4 }, y = { 1, 2 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "5x5_corridor_office_ne",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "    x",
+            "d   d",
+            "d   d",
+            "x   d",
+            "     ",
+        },
+        palettes = { "office_palette" },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        vehicle_placements = { { id = "swivel_chair", x = { 1, 3 }, y = { 1, 3 }, repetitions = { 1, 2 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "6x6_room_boss_l",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "V^  c|",
+            "V   c|",
+            "V dxd|",
+            "V hh |",
+            "G    +",
+            "Vffff|",
+        },
+        palettes = { "office_palette" },
+        vehicle_placements = { { id = "swivel_chair", x = { 2, 3 }, y = { 0, 1 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "6x6_room_breakroom_l",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "CSCoe|",
+            "Ciiii|",
+            "iiiii|",
+            "    h|",
+            "     |",
+            "^FaD^|",
+        },
+        palettes = { "office_palette" },
+        loot_placements = { { id = "microwave", x = 2, y = 0 }, { id = "coffeemaker", x = 0, y = 0 } },
+    },
+}

@@ -1992,3 +1992,838 @@ ccb.content.define_mapgen {
         flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
     },
 }
+
+-- compass direction indicates furniture orientation
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "livingroom_4x4_N_1",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "YHHy",
+            "    ",
+            "    ",
+            "    ",
+        },
+        palettes = { "standard_domestic_palette" },
+        rotation = { 0, 3 },
+    },
+}
+
+-- compass direction indicates furniture orientation
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "livingroom_4x4_N_1",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "RRRR",
+            "    ",
+            "    ",
+            "    ",
+        },
+        palettes = { "standard_domestic_palette" },
+        rotation = { 0, 3 },
+    },
+}
+
+-- compass direction indicates furniture orientation
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "livingroom_4x4_N_1",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "EllE",
+            "    ",
+            "    ",
+            "    ",
+        },
+        palettes = { "standard_domestic_palette" },
+        rotation = { 0, 3 },
+    },
+}
+
+-- compass direction indicates furniture orientation
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "livingroom_4x4_N_1",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "hssh",
+            "    ",
+            "    ",
+            "    ",
+        },
+        palettes = { "standard_domestic_palette" },
+        rotation = { 0, 3 },
+        item_groups = {
+            s = {
+                { group = "dishes_dining", chance = 30 },
+                { group = "tea_dishes", chance = 10, repetitions = { 1, 2 } },
+                { group = "baked_goods", chance = 5 },
+                { group = "groce_condiment", chance = 10, repetitions = { 1, 2 } },
+                { group = "dining", chance = 10 },
+            },
+        },
+    },
+}
+
+-- compass direction indicates furniture orientation
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "livingroom_4x4_N_1",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "ybcy",
+            "    ",
+            "    ",
+            "    ",
+        },
+        palettes = { "standard_domestic_palette" },
+        rotation = { 0, 3 },
+    },
+}
+
+-- compass direction indicates furniture orientation
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "livingroom_4x4_N_1",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "EZWE",
+            "    ",
+            "    ",
+            "    ",
+        },
+        palettes = { "standard_domestic_palette" },
+        rotation = { 0, 3 },
+    },
+}
+
+-- compass direction indicates furniture orientation
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "livingroom_4x4_N_1",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "xxxx",
+            "    ",
+            "    ",
+            "    ",
+        },
+        palettes = { "standard_domestic_palette" },
+        rotation = { 0, 3 },
+    },
+}
+
+-- a nested map for lawns
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "greenhouse_6x6_herbal",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "  s   ",
+            "BBCBB ",
+            "D4R4Dc",
+            "B5R2Bc",
+            "D2R3Dc",
+            "BBCBB ",
+        },
+        palettes = { "domestic_garden_nest_palette" },
+        terrain = { s = "t_concrete" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "greenhouse_5x5_roof", x = 0, y = 0, z = 1 } },
+        item_group_placements = {
+            { group = "farming_tools", x = 2, y = { 2, 4 }, chance = 25, repetitions = { 1, 3 } },
+            { group = "farming_seeds", x = 2, y = { 2, 4 }, chance = 25, repetitions = { 1, 3 } },
+            { group = "flower_pots", x = 5, y = { 2, 4 }, chance = 55, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+-- a nested map for lawns
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "greenhouse_6x6_vegetable",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "  s   ",
+            "BBCBB ",
+            "D6R6Dc",
+            "B7R7Bc",
+            "D9R8Dc",
+            "BBCBB ",
+        },
+        palettes = { "domestic_garden_nest_palette" },
+        terrain = { s = "t_concrete" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "greenhouse_5x5_roof", x = 0, y = 0, z = 1 } },
+        item_group_placements = {
+            { group = "farming_tools", x = 2, y = { 2, 4 }, chance = 25, repetitions = { 1, 3 } },
+            { group = "farming_seeds", x = 2, y = { 2, 4 }, chance = 25, repetitions = { 1, 3 } },
+            { group = "flower_pots", x = 5, y = { 2, 4 }, chance = 55, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+-- a nested map for lawns
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "shed_6x6_junk",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "||++||",
+            "|O  Q|",
+            "|z  Q|",
+            "|zzSQ|",
+            "|SzzQ|",
+            "||||||",
+        },
+        palettes = { "standard_domestic_palette" },
+        terrain = {
+            ["|"] = "t_wall_metal_corrugated",
+            ["+"] = "t_door_metal_pickable",
+            [" "] = "t_thconc_floor",
+            S = "t_thconc_floor",
+            z = "t_thconc_floor",
+            Q = "t_thconc_floor",
+            O = "t_thconc_floor",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "shed_6x6_roof", x = 0, y = 0, z = 1 } },
+        item_group_placements = {
+            { group = "home_hw", x = 4, y = { 1, 4 }, chance = 25, repetitions = { 1, 3 } },
+            { group = "allclothes", x = 1, y = 1, chance = 25, repetitions = { 1, 3 } },
+            { group = "livingroom", x = 1, y = { 2, 3 }, chance = 55, repetitions = { 1, 4 } },
+            { group = "bedroom", x = 2, y = { 3, 4 }, chance = 55, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+-- a nested map for lawns
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "shed_6x6_woodworker",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "||++||",
+            "|GF A|",
+            "|G  C|",
+            "|G FD|",
+            "|GEEB|",
+            "||oo||",
+        },
+        terrain = {
+            ["|"] = "t_wall_wood",
+            ["+"] = "t_door_locked",
+            o = "t_curtains",
+            [" "] = "t_thconc_floor",
+            A = "t_thconc_floor",
+            B = "t_thconc_floor",
+            C = "t_thconc_floor",
+            D = "t_thconc_floor",
+            E = "t_thconc_floor",
+            F = "t_thconc_floor",
+            G = "t_thconc_floor",
+        },
+        furniture = {
+            A = { { id = "f_drill_press" }, { id = "f_planer" } },
+            B = { { id = "f_jointer" }, { id = "f_router" }, { id = "f_mitresaw" } },
+            C = "f_tablesaw",
+            D = "f_bandsaw",
+            E = "f_workbench",
+            F = "f_stool",
+            G = "f_rack_wood",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "shed_6x6_roof", x = 0, y = 0, z = 1 } },
+        item_group_placements = {
+            { group = "home_hw", x = { 1, 3 }, y = 4, chance = 50, repetitions = { 1, 3 } },
+            { group = "wood_workshop", x = 1, y = { 1, 4 }, chance = 70, repetitions = { 1, 3 } },
+        },
+    },
+}
+
+-- a nested map for lawns
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "shed_6x6_bike",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "||||||",
+            "|    +",
+            "|   B|",
+            "|   B|",
+            "+   S|",
+            "||||||",
+        },
+        terrain = {
+            ["|"] = "t_scrap_wall",
+            ["+"] = "t_door_metal_pickable",
+            [" "] = "t_thconc_floor",
+            S = "t_thconc_floor",
+            B = "t_thconc_floor",
+        },
+        furniture = { T = "f_trashcan", S = "f_utility_shelf", B = "f_workbench" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "shed_6x6_roof", x = 0, y = 0, z = 1 } },
+        vehicle_placements = { { id = "bikeshop", x = 1, y = 2, rotation = 270, chance = 50 } },
+        item_group_placements = { { group = "bikeshop_tools", x = 4, y = { 2, 4 }, chance = 10, repetitions = { 1, 3 } } },
+    },
+}
+
+-- a nested map for lawns
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "pond_6x6_natural",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "     Z",
+            "  Kk  ",
+            "kKkKK ",
+            " KKK  ",
+            "  K   ",
+            "    Z ",
+        },
+        palettes = { "domestic_garden_nest_palette" },
+        furniture = { k = "f_region_water_plant" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_group_glyphs = {
+            K = { group = "GROUP_POND_FISH", chance = 4, density = 0.01 },
+            k = { group = "GROUP_POND_BIRD", chance = 3, density = 0.01 },
+            [" "] = { group = "GROUP_POND_ANIMAL", chance = 23, density = 0.01 },
+        },
+    },
+}
+
+-- a nested map for lawns
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "firepit_5x5_1",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            " ccc ",
+            "     ",
+            "  i  ",
+            "     ",
+            " ccc ",
+        },
+        palettes = { "domestic_garden_nest_palette" },
+        rotation = { 0, 3 },
+        item_group_placements = { { group = "stash_wood", x = 1, y = 2, chance = 100, repetitions = { 2, 10 } } },
+    },
+}
+
+-- a nested map for lawns
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "firepit_5x5_2",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "     ",
+            "S   S",
+            "S i S",
+            "S    ",
+            "     ",
+        },
+        palettes = { "domestic_garden_nest_palette" },
+        rotation = { 0, 3 },
+        item_group_placements = { { group = "stash_wood", x = 2, y = 1, chance = 100, repetitions = { 2, 10 } } },
+    },
+}
+
+-- a nested map for lawns
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "garden_3x3_2",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "111",
+            "   ",
+            "111",
+        },
+        palettes = { "domestic_garden_nest_palette" },
+        terrain = { ["1"] = "t_dirtfloor_no_roof" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = {
+            {
+                group = "farming_tools",
+                x = { 0, 2 },
+                y = { 0, 2 },
+                chance = 5,
+                repetitions = { 1, 3 },
+            },
+            {
+                group = "farming_seeds",
+                x = { 0, 2 },
+                y = { 0, 2 },
+                chance = 75,
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}
+
+-- Home office. Cardinal direction indicates which wall the desk is on.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "home_office_4x4_N",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "rrrr",
+            "P h ",
+            "    ",
+            " RHH",
+        },
+        palettes = { "standard_domestic_palette" },
+        furniture = { P = "f_filing_cabinet" },
+        rotation = { 0, 3 },
+        item_groups = {
+            H = { group = "bed", chance = 15 },
+            R = {
+                { group = "magazines", chance = 75, repetitions = { 1, 5 } },
+                { group = "SUS_domestic_bookshelf", chance = 75, repetitions = { 1, 3 } },
+            },
+        },
+    },
+}
+
+-- Home office. Cardinal direction indicates which wall the desk is on.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "home_office_4x4_N",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "Prrr",
+            "  hr",
+            "    ",
+            " RR!",
+        },
+        palettes = { "standard_domestic_palette" },
+        furniture = { P = "f_filing_cabinet", ["!"] = "f_shredder" },
+        rotation = { 0, 3 },
+        item_groups = {
+            R = {
+                { group = "magazines", chance = 75, repetitions = { 1, 5 } },
+                { group = "SUS_domestic_bookshelf", chance = 75, repetitions = { 1, 2 } },
+            },
+        },
+    },
+}
+
+-- Home office. Cardinal direction indicates which wall the desk is on.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "home_office_4x4_S",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "HHR ",
+            "    ",
+            " h  ",
+            "rrrP",
+        },
+        palettes = { "standard_domestic_palette" },
+        furniture = { P = "f_filing_cabinet" },
+        rotation = { 0, 3 },
+        item_groups = {
+            H = { group = "bed", chance = 15 },
+            R = {
+                { group = "magazines", chance = 75, repetitions = { 1, 5 } },
+                { group = "SUS_domestic_bookshelf", chance = 75, repetitions = { 1, 2 } },
+            },
+        },
+    },
+}
+
+-- Home office. Cardinal direction indicates which wall the desk is on.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "home_office_4x4_S",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "!RR ",
+            "    ",
+            "  hr",
+            "Prrr",
+        },
+        palettes = { "standard_domestic_palette" },
+        furniture = { P = "f_filing_cabinet", ["!"] = "f_shredder" },
+        rotation = { 0, 3 },
+        item_groups = {
+            R = {
+                { group = "magazines", chance = 75, repetitions = { 1, 5 } },
+                { group = "SUS_domestic_bookshelf", chance = 45, repetitions = { 1, 2 } },
+            },
+        },
+    },
+}
+
+-- Nest for spawning a freezer with items in
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_freezer_nest",
+    layout = {
+        size = { width = 1, height = 1 },
+        furniture = { [" "] = "f_freezer" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = { [" "] = { { group = "SUS_freezer" } } },
+    },
+}
+
+-- Replace bookshelf with table and book instead
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_table_book",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_table" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = { R = { { group = "novels", chance = 100 } } },
+    },
+}
+
+-- Replace bookshelf with armchair and book instead
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_table_book",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_armchair" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = { R = { { group = "novels", chance = 100 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_fiction",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = { R = { { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 3 } } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_fiction_and_nonfiction",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 3 } },
+                { group = "SUS_book_nonf_no_zines", chance = 80, repetitions = { 4, 10 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_literature_enthusiast",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "literature", chance = 80, repetitions = { 4, 10 } },
+                { group = "SUS_book_nonf_no_zines", chance = 80, repetitions = { 4, 10 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_board_games",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100 },
+                { group = "games", chance = 80, repetitions = { 2, 6 } },
+                { group = "SUS_book_nonf_no_zines", chance = 80, repetitions = { 2, 4 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_cookbooks",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "cookbooks", chance = 80, repetitions = { 2, 4 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_tailoring",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "SUS_tailoring_bookcase", chance = 100 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_electronics",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "SUS_book_nonf_no_zines", chance = 80, repetitions = { 2, 6 } },
+                { group = "SUS_electronics_bookcase", chance = 100 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_computers",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "SUS_book_nonf_no_zines", chance = 80, repetitions = { 2, 6 } },
+                { group = "SUS_computers_bookcase", chance = 100 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_eclectic",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100 },
+                { group = "homebooks", chance = 80, repetitions = { 4, 12 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_judaica",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "literature", chance = 80, repetitions = { 2, 4 } },
+                { group = "book_judaica", chance = 80, repetitions = { 3, 6 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_manga",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "book_manga", chance = 80, repetitions = { 4, 12 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_medical",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "doctors_books", chance = 80, repetitions = { 2, 6 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_esoterica",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "esoteric_books", chance = 80, repetitions = { 2, 5 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_martial_arts",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "book_martial", chance = 80 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "domestic_bookcase_nest_european_comics",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "R",
+        },
+        furniture = { R = "f_bookcase" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            R = {
+                { group = "SUS_domestic_bookshelf", chance = 100, repetitions = { 1, 2 } },
+                { group = "european_comics_collection" },
+            },
+        },
+    },
+}

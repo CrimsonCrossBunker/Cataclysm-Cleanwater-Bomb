@@ -24,16 +24,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "cabin_cellar_1x1_junk_box",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rotation": [ 0, 0 ],
-      "rows": [ " " ],
-      "place_items": [ { "item": "cabin_nested_cellar_boxed_junk", "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "cabin_6x6_cellar_nested",
     "//": "A cellar filled with preserved food",
     "weight": 900,
@@ -179,25 +169,6 @@
         { "item": "candle", "x": 4, "y": 4, "chance": 95 }
       ],
       "place_fields": [ { "field": "fd_dust", "x": [ 0, 5 ], "y": [ 0, 5 ], "repeat": [ 10, 20 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "cabin_6x6_cellar_nested_zombies",
-    "//": "A cellar overlay for zombies.  It is the zombie apocalypse, after all.",
-    "object": {
-      "mapgensize": [ 6, 6 ],
-      "rotation": [ 0, 0 ],
-      "rows": [
-        "      ",
-        "      ",
-        "      ",
-        "      ",
-        "      ",
-        "      "
-      ],
-      "palettes": [ "cabin_cellar" ],
-      "place_monster": [ { "group": "GROUP_VANILLA_DORMANT", "x": [ 0, 5 ], "y": [ 0, 5 ], "chance": 100, "repeat": [ 1, 6 ] } ]
     }
   },
   {

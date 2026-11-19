@@ -77,3 +77,30 @@ ccb.content.define_mapgen {
         nested = { { id = "isherwood_barry_firing_wall", x = 10, y = 12 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "isherwood_barry_riot_drop",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "/",
+        },
+        item_groups = {
+            ["/"] = {
+                { group = "armor_riot", chance = 100, repetitions = 5 },
+                { group = "helmet_riot", chance = 100, repetitions = 5 },
+                { group = "armor_riot_arm", chance = 100, repetitions = 5 },
+                { group = "armor_riot_leg", chance = 100, repetitions = 5 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "truck_bomb_spawn",
+    layout = {
+        item_placements = { { id = "fake_dynamite_50lbs", x = 17, y = 18, flags = { "ACTIVATE_ON_PLACE" } } },
+    },
+}

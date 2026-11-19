@@ -1143,3 +1143,144 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "shed_5x5_garden_E",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "|||||",
+            "|BB |",
+            "|   +",
+            "| AA|",
+            "|||||",
+        },
+        terrain = {
+            ["|"] = "t_wall_wood",
+            ["+"] = "t_door_locked",
+            [" "] = "t_thconc_floor",
+            A = "t_thconc_floor",
+            B = "t_thconc_floor",
+        },
+        furniture = { A = "f_table", B = "f_rack_wood" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "shed_5x5_garden_E_roof", x = 0, y = 0, z = 1 } },
+        item_group_placements = {
+            { group = "garden_shed", x = { 1, 2 }, y = 1, chance = 50, repetitions = { 1, 3 } },
+            { group = "farming_seeds", x = { 2, 3 }, y = 3, chance = 70, repetitions = { 1, 4 } },
+            { group = "flower_pots", x = { 2, 3 }, y = 3, chance = 50, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "3x3_shed_trail_supplies_N",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "|+|",
+            "|t|",
+            "|||",
+        },
+        terrain = { ["|"] = "t_wall_wood", ["+"] = "t_door_c", t = "t_floor" },
+        furniture = { t = "f_table" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "3x3_shed_trail_supplies_N_roof", x = 0, y = 0, z = 1 } },
+        item_groups = { t = { group = "soda_in_container", chance = 50, repetitions = { 1, 3 } } },
+        item_spawns = {
+            t = {
+                { id = "pockknife", chance = 50 },
+                { id = "deck_of_cards", chance = 50 },
+                { id = "ref_matches", chance = 50 },
+                { id = "marshmallow", chance = 20 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "2x2_feed",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "@@",
+            "@@",
+        },
+        item_spawns = {
+            ["@"] = {
+                { id = "cattlefodder", chance = 10, repetitions = 5 },
+                { id = "straw_pile", chance = 10, repetitions = 5 },
+                { id = "cattlefodder_medium", chance = 5, repetitions = 3 },
+                { id = "cattlefodder_large", chance = 3, repetitions = 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "7x7_silo_fodder",
+    layout = {
+        size = { width = 7, height = 7 },
+        rows = {
+            "..._...",
+            "._____.",
+            "._____.",
+            "_______",
+            "._____.",
+            "._____.",
+            "..._...",
+        },
+        palettes = { "farm_lots" },
+        terrain = { _ = "t_null" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_spawns = { _ = { id = "cattlefodder_large", chance = 20, repetitions = 10 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "7x7_silo_straw",
+    layout = {
+        size = { width = 7, height = 7 },
+        rows = {
+            "..._...",
+            "._____.",
+            "._____.",
+            "_______",
+            "._____.",
+            "._____.",
+            "..._...",
+        },
+        palettes = { "farm_lots" },
+        terrain = { _ = "t_null" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_spawns = { _ = { id = "straw_pile", chance = 20, repetitions = 10 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_farm_vehicles",
+    layout = {
+        size = { width = 1, height = 1 },
+        rotation = { 0, 3 },
+        vehicle_placements = { { id = "farm_horse_vehicles", x = 2, y = 3, rotation = 270, status = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_farm_house_parking",
+    layout = {
+        size = { width = 1, height = 1 },
+        rotation = { 0, 3 },
+        vehicle_placements = { { id = "cars_only", x = 1, y = 3, rotation = 270, status = 0 } },
+    },
+}

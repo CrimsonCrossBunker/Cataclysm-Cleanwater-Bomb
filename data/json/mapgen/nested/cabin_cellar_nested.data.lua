@@ -73,3 +73,44 @@ ccb.content.define_mapgen {
         rotation = { 0, 0 },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "cabin_cellar_1x1_junk_box",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            " ",
+        },
+        rotation = { 0, 0 },
+        item_group_placements = { { group = "cabin_nested_cellar_boxed_junk", x = 0, y = 0 } },
+    },
+}
+
+-- A cellar overlay for zombies.  It is the zombie apocalypse, after all.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "cabin_6x6_cellar_nested_zombies",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "      ",
+            "      ",
+            "      ",
+            "      ",
+            "      ",
+            "      ",
+        },
+        palettes = { "cabin_cellar" },
+        rotation = { 0, 0 },
+        monster_placements = {
+            {
+                group = "GROUP_VANILLA_DORMANT",
+                x = { 0, 5 },
+                y = { 0, 5 },
+                chance = 100,
+                repetitions = { 1, 6 },
+            },
+        },
+    },
+}

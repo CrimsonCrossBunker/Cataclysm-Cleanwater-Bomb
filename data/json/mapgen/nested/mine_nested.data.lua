@@ -288,3 +288,44 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mine_finale_archaeology",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "!!!###",
+            "#C  D#",
+            "##! c#",
+            "##GG##",
+            "@####@",
+            "@@@@@@",
+        },
+        terrain = {
+            [" "] = "t_rock_floor",
+            ["#"] = "t_rock",
+            ["@"] = { { id = "t_rock", copies = 4 }, { id = "t_rock_floor", copies = 1 } },
+            c = "t_rock_floor",
+            C = "t_rock_floor",
+            D = "t_rock_floor",
+            G = "t_rock_floor",
+        },
+        furniture = {
+            c = "f_crate_c",
+            C = "f_crate_c",
+            D = "f_crate_c",
+            G = { { id = "f_grave_stone_old" }, { id = "f_grave_head" }, { id = "f_grave_monument" } },
+            [" "] = { { id = "f_null" }, { id = "f_rubble_rock" } },
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_spawns = {
+            ["!"] = { id = "material_soil", chance = 40, amount = { 5, 10 } },
+            D = { id = "dynamite", chance = 90, repetitions = 2 },
+        },
+        item_groups = {
+            C = { group = "museum_misc", chance = 90, repetitions = { 1, 2 } },
+            c = { group = "museum_primitive", chance = 90, repetitions = { 1, 2 } },
+        },
+    },
+}
