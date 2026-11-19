@@ -1,0 +1,470 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "stockings",
+    copy_from = "stockings",
+    armor = {},
+    inheritance = {
+        add = {
+            variants = {
+                {
+                    id = "stockings_pride_default",
+                    name = ccb.content.plural_text("pride flag stockings (pair)", "pride flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the pride flag."),
+                    color = "yellow",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_lesbian",
+                    name = ccb.content.plural_text("lesbian flag stockings (pair)", "lesbian flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the lesbian flag."),
+                    color = "red",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_bisexual",
+                    name = ccb.content.plural_text("bisexual flag stockings (pair)", "bisexual flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the bisexual flag."),
+                    color = "magenta",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_transgender",
+                    name = ccb.content.plural_text("transgender flag stockings (pair)", "transgender flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the transgender flag."),
+                    color = "blue",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_asexual",
+                    name = ccb.content.plural_text("asexual flag stockings (pair)", "asexual flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the asexual flag."),
+                    color = "magenta",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_aromantic",
+                    name = ccb.content.plural_text("aromantic flag stockings (pair)", "aromantic flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the aromantic flag."),
+                    color = "green",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_pansexual",
+                    name = ccb.content.plural_text("pansexual flag stockings (pair)", "pansexual flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the pansexual flag."),
+                    color = "blue",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_genderqueer",
+                    name = ccb.content.plural_text("genderqueer flag stockings (pair)", "genderqueer flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the genderqueer flag."),
+                    color = "magenta",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_genderfluid",
+                    name = ccb.content.plural_text("genderfluid flag stockings (pair)", "genderfluid flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the genderfluid flag."),
+                    color = "magenta",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_agender",
+                    name = ccb.content.plural_text("agender flag stockings (pair)", "agender flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the agender flag."),
+                    color = "dark_gray",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_nonbinary",
+                    name = ccb.content.plural_text("non-binary flag stockings (pair)", "non-binary flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the non-binary flag."),
+                    color = "yellow",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_intersex",
+                    name = ccb.content.plural_text("intersex flag stockings (pair)", "intersex flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the intersex flag."),
+                    color = "yellow",
+                    append = true,
+                },
+                {
+                    id = "stockings_pride_polysexual",
+                    name = ccb.content.plural_text("polysexual flag stockings (pair)", "polysexual flag stockings (pair)"),
+                    description = ccb.content.text("This one has patterns akin to the polysexual flag."),
+                    color = "green",
+                    append = true,
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "tshirt",
+    copy_from = "tshirt",
+    armor = {},
+    inheritance = {
+        add = {
+            variants = {
+                {
+                    id = "pride_default",
+                    name = ccb.content.text("pride flag t-shirt"),
+                    description = ccb.content.text("This one has patterns akin to the pride flag."),
+                    color = "yellow",
+                    append = true,
+                },
+                {
+                    id = "pride_lesbian",
+                    name = ccb.content.text("lesbian flag t-shirt"),
+                    color = "red",
+                    description = ccb.content.text("This one has patterns akin to the lesbian flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_bisexual",
+                    name = ccb.content.text("bisexual flag t-shirt"),
+                    color = "red",
+                    description = ccb.content.text("This one has patterns akin to the bisexual flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_transgender",
+                    name = ccb.content.text("transgender flag t-shirt"),
+                    color = "blue",
+                    description = ccb.content.text("This one has patterns akin to the transgender flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_asexual",
+                    name = ccb.content.text("asexual flag t-shirt"),
+                    color = "magenta",
+                    description = ccb.content.text("This one has patterns akin to the asexual flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_aromantic",
+                    name = ccb.content.text("aromantic flag t-shirt"),
+                    color = "green",
+                    description = ccb.content.text("This one has patterns akin to the aromantic flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_pansexual",
+                    name = ccb.content.text("pansexual flag t-shirt"),
+                    color = "blue",
+                    description = ccb.content.text("This one has patterns akin to the pansexual flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_genderqueer",
+                    name = ccb.content.text("genderqueer flag t-shirt"),
+                    color = "magenta",
+                    description = ccb.content.text("This one has patterns akin to the genderqueer flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_genderfluid",
+                    name = ccb.content.text("genderfluid flag t-shirt"),
+                    color = "magenta",
+                    description = ccb.content.text("This one has patterns akin to the genderfluid flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_agender",
+                    name = ccb.content.text("agender flag t-shirt"),
+                    color = "dark_gray",
+                    description = ccb.content.text("This one has patterns akin to the agender flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_nonbinary",
+                    name = ccb.content.text("non-binary flag t-shirt"),
+                    color = "yellow",
+                    description = ccb.content.text("This one has patterns akin to the non-binary flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_intersex",
+                    name = ccb.content.text("intersex flag t-shirt"),
+                    color = "yellow",
+                    description = ccb.content.text("This one has patterns akin to the intersex flag."),
+                    append = true,
+                },
+                {
+                    id = "pride_polysexual",
+                    name = ccb.content.text("polysexual flag t-shirt"),
+                    color = "green",
+                    description = ccb.content.text("This one has patterns akin to the polysexual flag."),
+                    append = true,
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "pin_badge",
+    copy_from = "pin_badge",
+    armor = {},
+    inheritance = {
+        add = {
+            variants = {
+                {
+                    id = "pin_pronoun_nb",
+                    name = ccb.content.plural_text("pronoun pin (they/them)", "pronoun pins (they/them)"),
+                    description = ccb.content.text("This one has the pronouns \"they/them\" on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pronoun_fem",
+                    name = ccb.content.plural_text("pronoun pin (she/her)", "pronoun pins (she/her)"),
+                    description = ccb.content.text("This one has the pronouns \"she/her\" on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pronoun_masc",
+                    name = ccb.content.plural_text("pronoun pin (he/him)", "pronoun pins (he/him)"),
+                    description = ccb.content.text("This one has the pronouns \"he/him\" on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pronoun_it",
+                    name = ccb.content.plural_text("pronoun pin (it/its)", "pronoun pins (it/its)"),
+                    description = ccb.content.text("This one has the pronouns \"it/its\" on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride",
+                    name = ccb.content.text("pride pin"),
+                    description = ccb.content.text("This one has the pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_progress",
+                    name = ccb.content.text("progress pride pin"),
+                    description = ccb.content.text("This one has the progress pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_bi",
+                    name = ccb.content.plural_text("pride pin, bisexual", "pride pins, bisexual"),
+                    description = ccb.content.text("This one has the bisexual pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_pan",
+                    name = ccb.content.plural_text("pride pin, pansexual", "pride pins, pansexual"),
+                    description = ccb.content.text("This one has the pansexual pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_ace",
+                    name = ccb.content.plural_text("pride pin, asexual", "pride pins, asexual"),
+                    description = ccb.content.text("This one has the asexual pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_aro",
+                    name = ccb.content.plural_text("pride pin, aromantic", "pride pins, aromantic"),
+                    description = ccb.content.text("This one has the aromantic pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_wlw",
+                    name = ccb.content.plural_text("pride pin, lesbian", "pride pins, lesbian"),
+                    description = ccb.content.text("This one has the lesbian pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_poly",
+                    name = ccb.content.plural_text("pride pin, polysexual", "pride pins, polysexual"),
+                    description = ccb.content.text("This one has the polysexual pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_trans",
+                    name = ccb.content.plural_text("pride pin, transgender", "pride pins, transgender"),
+                    description = ccb.content.text("This one has the transgender pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_nb",
+                    name = ccb.content.plural_text("pride pin, non-binary", "pride pins, non-binary"),
+                    description = ccb.content.text("This one has the non-binary pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_agender",
+                    name = ccb.content.plural_text("pride pin, agender", "pride pins, agender"),
+                    description = ccb.content.text("This one has the agender pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_gender",
+                    name = ccb.content.plural_text("pride pin, genderqueer", "pride pins, genderqueer"),
+                    description = ccb.content.text("This one has the genderqueer pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_genderfluid",
+                    name = ccb.content.plural_text("pride pin, genderfluid", "pride pins, genderfluid"),
+                    description = ccb.content.text("This one has the genderfluid pride flag on it."),
+                    append = true,
+                },
+                {
+                    id = "pin_pride_intersex",
+                    name = ccb.content.plural_text("pride pin, intersex", "pride pins, intersex"),
+                    description = ccb.content.text("This one has the intersex pride flag on it."),
+                    append = true,
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "binder_top",
+    copy_from = "binder_top",
+    armor = {},
+    inheritance = {
+        add = {
+            variants = {
+                {
+                    id = "binder_top_trans",
+                    name = ccb.content.text("trans flag binder"),
+                    description = ccb.content.text("This one is painted after the trans pride flag."),
+                    weight = 20,
+                    append = true,
+                },
+                {
+                    id = "binder_top_nonbinary",
+                    name = ccb.content.text("non-binary flag binder"),
+                    description = ccb.content.text("This one is painted after the non-binary pride flag."),
+                    weight = 6,
+                    append = true,
+                },
+            },
+        },
+    },
+}
+
+-- inherit name and description from item
+ccb.content.define_item {
+    id = "pride_flag",
+    name = ccb.content.text("pride flag"),
+    description = ccb.content.text("A large rainbow flag, The colors reflect the diversity of the LGBT community and the spectrum of human sexuality and gender."),
+    copy_from = "american_flag",
+    symbol = "]",
+    looks_like = "sheet",
+    color = "pink",
+    variant_kind = "generic",
+    variants = {
+        { id = "rainbow_pride_flag", weight = 10 },
+        {
+            id = "progress_pride_flag",
+            name = ccb.content.text("progress pride flag"),
+            description = ccb.content.text("On the left side you can see a chevron that features black, brown, light blue, pink, and white stripes to bring those communities to the forefront; \"the arrow points to the right to show forward movement, while being along the left edge shows that progress still needs to be made\"."),
+            append = true,
+            weight = 10,
+        },
+        {
+            id = "agender_pride_flag",
+            name = ccb.content.text("agender flag"),
+            description = ccb.content.text("A large green gray and black agender flag.  The black and white stripes represent complete absence of gender, gray represents being semi-genderless, and green represents non-binary gender."),
+            weight = 2,
+        },
+        {
+            id = "bisexual_pride_flag",
+            name = ccb.content.text("bisexual flag"),
+            description = ccb.content.text("A large pink and blue bisexual flag.  The pink stripe represents homosexuality, while the blue stripe represents heterosexuality.  The purple stripe, the \"overlap\" of the blue and pink stripes, purple represents attraction regardless of sex or gender a.k.a bisexuality."),
+            weight = 5,
+        },
+        {
+            id = "pansexual_pride_flag",
+            name = ccb.content.text("pansexual flag"),
+            description = ccb.content.text("A large pink, blue and yellow pansexual flag.  The pan-pride flag uses pink for people on the female-spectrum, blue for people on the male-spectrum, and yellow for non-binary or genderqueer people."),
+            weight = 5,
+        },
+        {
+            id = "labrys_lesbian_pride_flag",
+            name = ccb.content.text("labrys lesbian flag"),
+            description = ccb.content.text("A large black and purple labrys lesbian flag.  On the flag you can see a labrys, a type of double-headed axe, superimposed on a downward-pointing black triangle, set against a violet background."),
+            weight = 2,
+        },
+        {
+            id = "lesbian_pride_flag",
+            name = ccb.content.text("lesbian flag"),
+            description = ccb.content.text("A large pink, white and orange lesbian flag.  The dark orange representing \"gender non-conformity\", orange for \"independence\", light orange for \"community\", white for \"unique relationships to womanhood\", pink for \"serenity and peace\", dusty pink for \"love and sex\", and dark rose for \"femininity\"."),
+            weight = 5,
+        },
+        {
+            id = "asexual_pride_flag",
+            name = ccb.content.text("asexual flag"),
+            description = ccb.content.text("A large purple, white, gray and black asexual flag.  Black for asexuality (feeling no sexual attraction), gray for gray-asexuality and demisexuality (feeling sexual attraction only sometimes), white for non-asexual partners and allies, and purple for community."),
+            weight = 2,
+        },
+        {
+            id = "aromantic_pride_flag",
+            name = ccb.content.text("aromantic flag"),
+            description = ccb.content.text("A large black, gray, white and green aromantic flag.  The green and light green stripes cover everyone under the aromantic spectrum, while represents nonromantic forms of love and attraction, and the gray and black represent all sexualities under the aromantic spectrum."),
+            weight = 2,
+        },
+        {
+            id = "transgender_pride_flag",
+            name = ccb.content.text("transgender flag"),
+            description = ccb.content.text("A large white, pink, and blue transgender flag.  The stripes at the top and bottom are light blue, the traditional color for baby boys.  The stripes next to them are pink, the traditional color for baby girls.  The white stripe is for people that are nonbinary, feel that they don't have a gender.  The pattern is such that no matter which way you fly it, it is always correct, signifying finding correctness in one's life."),
+            weight = 5,
+        },
+        {
+            id = "genderqueer_pride_flag",
+            name = ccb.content.text("genderqueer flag"),
+            description = ccb.content.text("A large green, white, and purple genderqueer flag.  Lavender, a mixture of blue and pink to represent androgynes and androgyny, white to represent agender identity, and green, the inverse of lavender, to represent all those who fall outside of the gender binary."),
+            weight = 2,
+        },
+        {
+            id = "intersex_pride_flag",
+            name = ccb.content.text("intersex flag"),
+            description = ccb.content.text("A large yellow, and purple intersex flag.  It displays a purple circle on a yellow field.  Yellow and purple were chosen as colors as they were viewed as free from gender associations and were historically used to represent intersex people.  The circle is described as \"unbroken and unornamented, symbolizing wholeness and completeness, and our potentialities\"."),
+            weight = 2,
+        },
+        {
+            id = "genderfluid_pride_flag",
+            name = ccb.content.text("genderfluid flag"),
+            description = ccb.content.text("A large blue, black, purple, white and pink genderfluid flag.  The genderfluid flag has a pink stripe for femininity, a blue stripe for masculinity, a purple stripe for both masculinity and femininity, a black stripe for lack of gender, and a white stripe for all genders."),
+            weight = 2,
+        },
+        {
+            id = "agender_pride_flag",
+            name = ccb.content.text("agender flag"),
+            description = ccb.content.text("A large green, white, gray and black agender flag.  The black and white stripes represent complete absence of gender, gray represents being semi-genderless, and green represents non-binary gender.  The symmetry of the pattern makes it so that it's correct no matter how it flies."),
+            weight = 2,
+        },
+        {
+            id = "nonbinary_pride_flag",
+            name = ccb.content.text("non-binary flag"),
+            description = ccb.content.text("A large black, purple, white, and yellow non-binary flag.  Yellow for those whose gender exists outside of and without reference to the binary, white for those who have many or all genders, purple for those who feel their gender is between or a mix of female and male, and black for those who feel they are without gender."),
+            weight = 5,
+        },
+        {
+            id = "polysexual_pride_flag",
+            name = ccb.content.text("polysexual flag"),
+            description = ccb.content.text("A large blue, green, and pink polysexual flag.  Pink for people on the female-spectrum, blue for people on the male-spectrum, and green for non-binary or genderqueer people."),
+            weight = 2,
+        },
+        {
+            id = "leather_pride_flag",
+            name = ccb.content.text("leather flag"),
+            description = ccb.content.text("A horizontally striped black and blue leather flag with a white band in the middle and red heart in a corner.  The black represents leather; the blue represents devotion, loyalty, and community; the white represents purity and innocence; and the red heart represents love for the community."),
+        },
+        {
+            id = "bear_pride_flag",
+            name = ccb.content.text("bear flag"),
+            description = ccb.content.text("A large black and orange international bear brotherhood flag.  The flag displays seven horizontal stripes of colors ranging from black to brown representing the colors of different bear species, you can see a black bear paw in the upper right corner."),
+        },
+    },
+    armor = {},
+}
