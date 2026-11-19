@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "mil_base_3i4" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "    aaaaaa              ",
+            "    a,,,,a              ",
+            "    a,RR,a              ",
+            "    a,RR,a              ",
+            "    av,,,a              ",
+            "    aaaaaa              ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        terrain = { R = "t_radio_tower", a = "t_railing", [","] = "t_metal_floor_no_roof" },
+        fill_terrain = "t_metal_floor_no_roof",
+    },
+}
