@@ -7927,6 +7927,57 @@ function CcbPlatformContent.define_profession(options) end
 ---@param options StaticVehiclePartOptions
 function CcbPlatformContent.define_vehicle_part(options) end
 
+---@class StaticVehiclePartPlacement
+---@field part string Part ID, optionally suffixed with #variant.
+---@field ammo_chance? integer Percent chance of loading ammo.
+---@field ammo_types? string|string[]
+---@field ammo_quantity? [integer, integer]
+---@field fuel? string
+---@field tools? string|string[]
+
+---@class StaticVehicleMount
+---@field x integer
+---@field y integer
+---@field z? integer Deck level.
+---@field parts (string|StaticVehiclePartPlacement)[] In installation order.
+
+---@class StaticVehicleSpawnItem
+---@field id string
+---@field variant? string
+
+---@class StaticVehicleItemSpawn
+---@field x integer
+---@field y integer
+---@field z? integer Deck level.
+---@field chance integer
+---@field ammo_chance? integer
+---@field magazine_chance? integer
+---@field items? string|(string|StaticVehicleSpawnItem)[]
+---@field item_groups? string|string[]
+
+---@class StaticVehicleZone
+---@field type string
+---@field x integer
+---@field y integer
+---@field z? integer Deck level.
+---@field name? string
+---@field filter? string
+
+---@class StaticVehicleOptions
+---@field id? string Stable prototype ID. Set either id or abstract.
+---@field abstract? string Prototype template inherited by other definitions.
+---@field copy_from? string
+---@field name? string|LocalizedText
+---@field blueprint? (string|string[])[] Layout reference for authors.
+---@field color_palette? string
+---@field mounts? StaticVehicleMount[]
+---@field item_spawns? StaticVehicleItemSpawn[]
+---@field zones? StaticVehicleZone[]
+
+---Define a vehicle prototype at its ordered position during native content loading.
+---@param options StaticVehicleOptions
+function CcbPlatformContent.define_vehicle(options) end
+
 ---@class StaticMapTileOptions
 ---@field id? string Stable identifier. Provide either id or abstract.
 ---@field abstract? string Abstract definition available for inheritance.

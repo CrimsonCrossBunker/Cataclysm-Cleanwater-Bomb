@@ -5129,6 +5129,95 @@ void write_static_vehicle_part( JsonOut &json, const sol::table &options )
     }
 }
 
+void write_static_vehicle_part_placement( JsonOut &json, const sol::object &placement )
+{
+    if( placement.get_type() == sol::type::string ) {
+        json.write( placement.as<std::string>() );
+        return;
+    }
+    const sol::table part = placement.as<sol::table>();
+    json.start_object();
+    json.member( "part", part.get<std::string>( "part" ) );
+    write_placement_member<int>( json, part, "ammo_chance", "ammo" );
+    write_placement_member<std::string>( json, part, "fuel", "fuel" );
+    write_static_string_or_ids( json, part, "ammo_types", "ammo_types" );
+    write_static_string_or_ids( json, part, "tools", "tools" );
+    write_mapgen_range( json, "ammo_qty", part.raw_get<sol::object>( "ammo_quantity" ) );
+    json.end_object();
+}
+
+void write_static_vehicle_mount( JsonOut &json, const sol::table &mount )
+{
+    json.start_object();
+    write_item_fields<int>( json, mount, { { "x", "x" }, { "y", "y" }, { "z", "z" } } );
+    json.member( "parts" );
+    write_static_values<sol::object>( json, mount.get<sol::table>( "parts" ), "mounted parts",
+                                     write_static_vehicle_part_placement );
+    json.end_object();
+}
+
+void write_static_vehicle_item_spawn( JsonOut &json, const sol::table &spawn )
+{
+    json.start_object();
+    write_item_fields<int>( json, spawn, {
+        { "x", "x" }, { "y", "y" }, { "z", "z" }, { "chance", "chance" },
+        { "magazine_chance", "magazine" }, { "ammo_chance", "ammo" }
+    } );
+    write_static_string_or_ids( json, spawn, "item_groups", "item_groups" );
+    const sol::object items = spawn.raw_get<sol::object>( "items" );
+    if( items.get_type() == sol::type::string ) {
+        json.member( "items", items.as<std::string>() );
+    } else if( items.get_type() == sol::type::table ) {
+        json.member( "items" );
+        write_static_values<sol::object>( json, items.as<sol::table>(), "vehicle spawn items",
+        []( JsonOut & out, const sol::object & value ) {
+            if( value.get_type() == sol::type::string ) {
+                out.write( value.as<std::string>() );
+                return;
+            }
+            const sol::table item = value.as<sol::table>();
+            out.start_object();
+            out.member( "id", item.get<std::string>( "id" ) );
+            write_placement_member<std::string>( out, item, "variant", "variant" );
+            out.end_object();
+        } );
+    }
+    json.end_object();
+}
+
+void write_static_vehicle_zone( JsonOut &json, const sol::table &zone )
+{
+    json.start_object();
+    json.member( "type", zone.get<std::string>( "type" ) );
+    write_item_fields<int>( json, zone, { { "x", "x" }, { "y", "y" }, { "z", "z" } } );
+    write_item_fields<std::string>( json, zone, { { "name", "name" }, { "filter", "filter" } } );
+    json.end_object();
+}
+
+void write_static_vehicle( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
+        { "color_palette", "color_palette" }
+    } );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    if( const auto blueprint = options.get<sol::optional<sol::table>>( "blueprint" ) ) {
+        json.member( "blueprint" );
+        write_static_values<sol::object>( json, *blueprint, "blueprint",
+        []( JsonOut & out, const sol::object & row ) {
+            if( row.get_type() == sol::type::string ) {
+                out.write( row.as<std::string>() );
+            } else {
+                out.write( bounded_string_array( row.as<sol::table>(), "row",
+                           std::numeric_limits<std::size_t>::max(), "vehicle blueprint" ) );
+            }
+        } );
+    }
+    write_static_catalog_array( json, options, "mounts", "parts", write_static_vehicle_mount );
+    write_static_catalog_array( json, options, "item_spawns", "items", write_static_vehicle_item_spawn );
+    write_static_catalog_array( json, options, "zones", "zones", write_static_vehicle_zone );
+}
+
 using static_catalog_writer = void ( * )( JsonOut &, const sol::table & );
 
 template<typename Loader>
@@ -5290,6 +5379,8 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "profession", write_static_profession, profession::load_profession ) );
     content.set_function( "define_vehicle_part", static_catalog_definition(
                               resolved.id, "vehicle_part", write_static_vehicle_part, vehicles::parts::load ) );
+    content.set_function( "define_vehicle", static_catalog_definition(
+                              resolved.id, "vehicle", write_static_vehicle, vehicles::load_prototype ) );
     install_static_dialogue_predicates( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );
