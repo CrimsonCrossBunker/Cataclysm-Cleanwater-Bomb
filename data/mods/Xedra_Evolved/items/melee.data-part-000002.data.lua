@@ -1,14 +1,10 @@
 local ccb = require("ccb")
 
-ccb.content.define_spell {
-    id = "distant_thunder",
-    name = ccb.content.text("Distant Thunder"),
-    description = ccb.content.text("Sparks zap at your opponent."),
-    valid_targets = { "hostile" },
-    flags = { "NO_HANDS", "NO_LEGS" },
-    damage_type = "electric",
-    min_damage = 8,
-    min_range = 1,
-    shape = "blast",
-    effect = "attack",
+ccb.content.define_item {
+    id = "redcap_club",
+    name = ccb.content.plural_text("redcap club", "redcap clubs"),
+    copy_from = "mace",
+    description = ccb.content.text("A giant bloodstained club, barely human wieldable with two hands.  You see shadowy tendrils of blood whenever it connects with an enemy, sticking to whatever it hits and burning like acid."),
+    flags = { "DURABLE_MELEE", "NONCONDUCTIVE", "BELT_CLIP", "ALWAYS_TWOHAND" },
+    artifact = { enchantments = { "ITEM_ENCH_Xedra_Evolved_redcap_club_0" } },
 }
