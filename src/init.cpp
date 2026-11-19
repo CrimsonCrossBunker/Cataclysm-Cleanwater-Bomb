@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include "achievement.h"
@@ -577,6 +578,7 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
 {
     cata_assert( !finalized &&
                  "Can't load additional data after finalization.  Must be unloaded first." );
+    MonsterGroupManager::RecordPlatformMonsterGroupSource( src );
     // We assume that each folder is consistent in itself,
     // and all the previously loaded folders.
     // E.g. the core might provide a vpart "frame-x"
@@ -616,7 +618,7 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
                  "Can't load additional data after finalization.  Must be unloaded first." );
 
     std::vector<mod_id> &loaded_mods = world_generator->active_world->active_mod_order;
-    std::multimap<mod_id, std::variant<cata_path, const mod_world_options *>> entries;
+    std::multimap<mod_id, std::variant<cata_path, const mod_world_options *, std::monostate>> entries;
 
     if( dir_exist( path.get_unrelative_path() ) ) {
 
@@ -634,6 +636,9 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
                 for( const cata_path &path : interaction_files ) {
                     entries.emplace( associated_mod, path );
                 }
+                if( file_exist( ( f / "main.lua" ).get_unrelative_path() ) ) {
+                    entries.emplace( associated_mod, std::monostate{} );
+                }
             }
         }
     }
@@ -646,14 +651,14 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
     // Lua options follow the JSON for the same companion, before the next one.
     for( const auto &[companion, entry] : entries ) {
         const std::string interaction_src = string_format( "%s#%s", src, companion.str() );
+        MonsterGroupManager::RecordPlatformMonsterGroupSource( interaction_src );
         scoped_debug_error_source error_source( get_mod_error_source( interaction_src ) );
         try {
             if( const cata_path *file = std::get_if<cata_path>( &entry ) ) {
                 JsonValue jsin = json_loader::from_path( *file );
                 load_all_from_json( jsin, interaction_src, path, *file );
-            } else {
-                get_options().apply_mod_world_options( interaction_src,
-                                                       *std::get<const mod_world_options *>( entry ) );
+            } else if( const auto *overrides = std::get_if<const mod_world_options *>( &entry ) ) {
+                get_options().apply_mod_world_options( interaction_src, **overrides );
             }
         } catch( const JsonError &err ) {
             throw std::runtime_error( add_debug_error_source( err.what() ) );

@@ -531,6 +531,13 @@ struct monster_group_layer {
 };
 
 std::map<mongroup_id, std::vector<monster_group_layer>> monster_group_layers;
+std::map<std::string, int> monster_group_evolution_multipliers;
+
+int monster_group_evolution_multiplier()
+{
+    const float factor = get_option<float>( "EVOLUTION_INVERSE_MULTIPLIER" );
+    return factor > 0 ? static_cast<int>( factor ) : 1;
+}
 
 int checked_group_frequency( const mongroup_id &id, const std::int64_t frequency )
 {
@@ -625,7 +632,7 @@ void register_monster_group_layer( std::map<mongroup_id, MonsterGroup> &registry
 
 void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo, const std::string &source )
 {
-    const float mon_upgrade_factor = get_option<float>( "EVOLUTION_INVERSE_MULTIPLIER" );
+    const int upgrade_mult = monster_group_evolution_multiplier();
     monster_group_layer layer;
     layer.source = source;
     layer.replace = jo.get_bool( "override", false );
@@ -674,7 +681,6 @@ void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo, const std::str
                 pack_min = packarr.next_int();
                 pack_max = packarr.next_int();
             }
-            const int upgrade_mult = mon_upgrade_factor > 0 ? mon_upgrade_factor : 1;
             const time_duration starts = mon.has_member( "starts" )
                                          ? read_from_json_string<time_duration>( mon.get_member( "starts" ),
                                                  time_duration::units ) * upgrade_mult
@@ -723,6 +729,12 @@ void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo, const std::str
     register_monster_group_layer( monsterGroupMap, std::move( layer ) );
 }
 
+void MonsterGroupManager::RecordPlatformMonsterGroupSource( const std::string &source )
+{
+    // Lua layers are applied after JSON loading. Keep the value that was active at this source.
+    monster_group_evolution_multipliers.try_emplace( source, monster_group_evolution_multiplier() );
+}
+
 void MonsterGroupManager::AddPlatformMonsterGroup( MonsterGroup group, const std::string &source,
         bool extend, std::optional<mtype_id> default_monster )
 {
@@ -732,9 +744,14 @@ void MonsterGroupManager::AddPlatformMonsterGroup( MonsterGroup group, const std
     layer.replace = !extend;
     layer.default_monster = std::move( default_monster );
     layer.values.new_monster_group = mongroup_id::NULL_ID();
+    const auto recorded = monster_group_evolution_multipliers.find( source );
+    const int upgrade_mult = recorded == monster_group_evolution_multipliers.end() ?
+                             monster_group_evolution_multiplier() : recorded->second;
     int highest_frequency = 0;
-    for( const MonsterGroupEntry &entry : layer.values.monsters ) {
-        if( !entry.is_group() && entry.frequency > highest_frequency ) {
+    for( MonsterGroupEntry &entry : layer.values.monsters ) {
+        entry.starts *= upgrade_mult;
+        entry.ends *= upgrade_mult;
+        if( !entry.is_group() && entry.event == holiday::none && entry.frequency > highest_frequency ) {
             highest_frequency = entry.frequency;
             layer.fallback_monster = entry.mtype;
         }
@@ -762,6 +779,7 @@ void MonsterGroupManager::ClearMonsterGroups()
 {
     monsterGroupMap.clear();
     monster_group_layers.clear();
+    monster_group_evolution_multipliers.clear();
     monster_blacklist.clear();
     monster_whitelist.clear();
     monster_whitelist_is_exclusive = false;

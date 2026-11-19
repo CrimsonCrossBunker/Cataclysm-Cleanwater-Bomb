@@ -83,6 +83,7 @@ extern "C" {
 #include "item.h"
 #include "item_group.h"
 #include "json.h"
+#include "lua_platform_bindings_values.h"
 #include "lua_platform_content.h"
 #include "lua_platform_content_character.h"
 #include "lua_platform_content_creatures.h"
@@ -338,12 +339,20 @@ struct monster_group_entry_definition_data {
     std::int64_t cost = 0;
     std::int64_t pack_minimum = 1;
     std::int64_t pack_maximum = 1;
+    time_duration starts = 0_turns;
+    time_duration ends = 0_turns;
+    holiday event = holiday::none;
+    std::vector<std::string> conditions{};
+    spawn_data data{};
+    bool resolve_after_finalization = false;
 };
 
 struct monster_group_definition_data {
     std::string id;
     std::string default_monster;
     bool is_animal = false;
+    bool is_safe = false;
+    std::optional<bool> replace_layer;
     std::vector<monster_group_entry_definition_data> entries;
     bool registered = false;
 };
@@ -1389,25 +1398,69 @@ struct monster_group_definition_handle {
     std::shared_ptr<monster_group_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
+    void entry( monster_group_entry_definition_data value, const sol::optional<sol::table> &options ) {
+        if( options ) {
+            if( const auto starts = options->get<sol::optional<script_time_duration>>( "starts" ) ) {
+                value.starts = starts->to_native();
+            }
+            if( const auto ends = options->get<sol::optional<script_time_duration>>( "ends" ) ) {
+                value.ends = ends->to_native();
+            }
+            if( const auto event = options->get<sol::optional<std::string>>( "event" ) ) {
+                const auto parsed = io::string_to_enum_optional<holiday>( *event );
+                if( !parsed ) {
+                    throw std::runtime_error( "unknown monster group holiday '" + *event + "'" );
+                }
+                value.event = *parsed;
+            }
+            if( const auto conditions = options->get<sol::optional<sol::table>>( "conditions" ) ) {
+                const std::size_t count = require_dense_array(
+                                              *conditions, "monster group spawn conditions", 0, 1024 );
+                for( std::size_t i = 1; i <= count; ++i ) {
+                    value.conditions.push_back( conditions->raw_get<std::string>( i ) );
+                }
+            }
+            if( const auto ammo = options->get<sol::optional<sol::table>>( "ammo" ) ) {
+                const std::size_t count = require_dense_array( *ammo, "monster group spawn ammo", 0, 1024 );
+                for( std::size_t i = 1; i <= count; ++i ) {
+                    const sol::table item = ammo->raw_get<sol::table>( i );
+                    const std::string id = item.get<std::string>( "id" );
+                    const std::int64_t minimum = item.get<std::int64_t>( "minimum" );
+                    const std::int64_t maximum = item.get_or( "maximum", minimum );
+                    if( id.empty() || minimum < 0 || maximum < minimum ||
+                        maximum > std::numeric_limits<int16_t>::max() ) {
+                        throw std::runtime_error( "invalid monster group spawn ammo range" );
+                    }
+                    value.data.ammo.emplace( itype_id( id ), jmapgen_int( static_cast<int>( minimum ),
+                                             static_cast<int>( maximum ) ) );
+                }
+            }
+            value.resolve_after_finalization = options->get_or( "resolve_after_finalization", false );
+        }
+        definition->entries.push_back( std::move( value ) );
+    }
+
     monster_group_definition_handle &monster( const std::string &id,
             std::int64_t weight, std::int64_t cost,
-            std::int64_t pack_minimum, std::int64_t pack_maximum ) {
+            std::int64_t pack_minimum, std::int64_t pack_maximum,
+            const sol::optional<sol::table> &options ) {
         require_building_handle( token, *definition, "monster group" );
         validate_monster_group_entry( id, weight, cost, pack_minimum, pack_maximum );
-        definition->entries.push_back( monster_group_entry_definition_data{
+        entry( monster_group_entry_definition_data{
             id, std::string(), weight, cost, pack_minimum, pack_maximum
-        } );
+        }, options );
         return *this;
     }
 
     monster_group_definition_handle &group( const std::string &id,
                                             std::int64_t weight, std::int64_t cost,
-                                            std::int64_t pack_minimum, std::int64_t pack_maximum ) {
+                                            std::int64_t pack_minimum, std::int64_t pack_maximum,
+                                            const sol::optional<sol::table> &options ) {
         require_building_handle( token, *definition, "monster group" );
         validate_monster_group_entry( id, weight, cost, pack_minimum, pack_maximum );
-        definition->entries.push_back( monster_group_entry_definition_data{
+        entry( monster_group_entry_definition_data{
             std::string(), id, weight, cost, pack_minimum, pack_maximum
-        } );
+        }, options );
         return *this;
     }
 
@@ -3336,13 +3389,12 @@ void validate_monster_group_entry( const std::string &id,
         throw std::runtime_error( "monster group entry id cannot be empty" );
     }
     const int native_int_max = std::numeric_limits<int>::max();
-    if( weight <= 0 || weight > native_int_max || cost < 0 || cost > native_int_max ||
-        pack_minimum < 1 || pack_maximum < 1 ||
+    if( weight < 0 || weight > native_int_max || cost < 0 || cost > native_int_max ||
+        pack_minimum < 0 || pack_maximum < 0 ||
         pack_minimum > native_int_max || pack_maximum > native_int_max ||
         pack_minimum > pack_maximum ) {
         throw std::runtime_error(
-            "monster group entries require a positive weight, a non-negative "
-            "cost, and 1..pack-maximum bounds" );
+            "monster group entries require non-negative weight, cost, and ordered pack bounds" );
     }
 }
 
@@ -4138,6 +4190,13 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         definition->default_monster = options.get_or( "default_monster", std::string() );
         definition->is_animal = options.get_or( "is_animal", false );
+        definition->is_safe = options.get_or( "is_safe", false );
+        if( const auto mode = options.get<sol::optional<std::string>>( "load_mode" ) ) {
+            if( *mode != "append" && *mode != "replace" ) {
+                throw std::runtime_error( "monster group load_mode must be 'append' or 'replace'" );
+            }
+            definition->replace_layer = *mode == "replace";
+        }
         return monster_group_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -7704,11 +7763,16 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 definition.id, "vehicle color palette" );
         }
 
-        std::set<std::string> monster_group_ids;
+        std::map<std::string, bool> monster_group_ids;
         for( const monster_group_registration &entry : pimpl_->monster_groups ) {
             const monster_group_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "monster group" );
-            if( !monster_group_ids.insert( definition.id ).second ) {
+            const bool layered = definition.replace_layer.has_value();
+            if( layered && entry.operation != definition_operation::add ) {
+                throw std::runtime_error( "monster group load_mode requires content.add" );
+            }
+            const auto [previous, inserted] = monster_group_ids.emplace( definition.id, layered );
+            if( !inserted && !( layered && previous->second ) ) {
                 throw std::runtime_error( "monster group '" + definition.id +
                                           "' needs one registration per transaction" );
             }
@@ -7727,17 +7791,22 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           definition.default_monster + "'" );
             }
             for( const monster_group_entry_definition_data &monster_entry : definition.entries ) {
-                if( !monster_entry.monster.empty() && !monster_exists( monster_entry.monster ) ) {
+                if( !monster_entry.resolve_after_finalization && !monster_entry.monster.empty() &&
+                    !monster_exists( monster_entry.monster ) ) {
                     throw std::runtime_error( "monster group '" + definition.id +
                                               "' references unknown monster '" +
                                               monster_entry.monster + "'" );
                 }
-                if( !monster_entry.group.empty() && monster_group_ids.count( monster_entry.group ) == 0 &&
+                if( !monster_entry.resolve_after_finalization && !monster_entry.group.empty() &&
+                    monster_group_ids.count( monster_entry.group ) == 0 &&
                     !mongroup_id( monster_entry.group ).is_valid() ) {
                     throw std::runtime_error( "monster group '" + definition.id +
                                               "' references unknown group '" +
                                               monster_entry.group + "'" );
                 }
+            }
+            if( definition.replace_layer.has_value() ) {
+                continue;
             }
             const bool exists = MonsterGroupManager::isValidMonsterGroup( mongroup_id( definition.id ) );
             if( entry.operation == definition_operation::extend ) {
@@ -9756,19 +9825,22 @@ bool content_transaction::apply( std::string &error )
             MonsterGroup native;
             native.id = id;
             native.is_animal = source.is_animal;
+            native.is_safe = source.is_safe;
             for( const monster_group_entry_definition_data &monster_entry : source.entries ) {
                 const int weight = static_cast<int>( monster_entry.weight );
                 const int cost = static_cast<int>( monster_entry.cost );
                 const int pack_min = static_cast<int>( monster_entry.pack_minimum );
                 const int pack_max = static_cast<int>( monster_entry.pack_maximum );
-                const spawn_data data;
                 if( !monster_entry.monster.empty() ) {
                     native.monsters.emplace_back( mtype_id( monster_entry.monster ), weight, cost,
-                                                  pack_min, pack_max, data, 0_turns, 0_turns, holiday::none );
+                                                  pack_min, pack_max, monster_entry.data, monster_entry.starts,
+                                                  monster_entry.ends, monster_entry.event );
                 } else {
                     native.monsters.emplace_back( mongroup_id( monster_entry.group ), weight, cost,
-                                                  pack_min, pack_max, data, 0_turns, 0_turns, holiday::none );
+                                                  pack_min, pack_max, monster_entry.data, monster_entry.starts,
+                                                  monster_entry.ends, monster_entry.event );
                 }
+                native.monsters.back().conditions = monster_entry.conditions;
             }
 
             const auto &groups = MonsterGroupManager::Get_all_Groups();
@@ -9776,8 +9848,9 @@ bool content_transaction::apply( std::string &error )
             pimpl_->monster_group_undo.emplace_back(
                 id, previous == groups.end() ? std::nullopt : std::optional<MonsterGroup>( previous->second ) );
             try {
+                const bool replace = source.replace_layer.value_or( entry.operation != definition_operation::extend );
                 MonsterGroupManager::AddPlatformMonsterGroup( std::move( native ), pimpl_->owner,
-                        entry.operation == definition_operation::extend,
+                        !replace,
                         source.default_monster.empty() ? std::nullopt :
                         std::optional<mtype_id>( mtype_id( source.default_monster ) ) );
             } catch( ... ) {
@@ -10202,6 +10275,20 @@ bool content_transaction::validate_finalized( std::string &error ) const
     }
     if( !pimpl_->creatures.validate_finalized( error ) ) {
         return false;
+    }
+    for( const monster_group_registration &entry : pimpl_->monster_groups ) {
+        for( const monster_group_entry_definition_data &spawn : entry.definition->entries ) {
+            if( !spawn.resolve_after_finalization ) {
+                continue;
+            }
+            const bool is_monster = !spawn.monster.empty();
+            const std::string &id = is_monster ? spawn.monster : spawn.group;
+            if( is_monster ? !mtype_id( id ).is_valid() : !mongroup_id( id ).is_valid() ) {
+                error = "monster group '" + entry.definition->id +
+                        "' references id '" + id + "' missing after finalization";
+                return false;
+            }
+        }
     }
     for( const construction_category_registration &entry :
          pimpl_->construction_categories ) {
@@ -11583,6 +11670,12 @@ std::string content_transaction::fingerprint() const
         hash_part( state, value.id );
         hash_part( state, value.default_monster );
         hash_part( state, value.is_animal ? "animal" : "mixed" );
+        if( value.is_safe ) {
+            hash_part( state, "safe" );
+        }
+        if( value.replace_layer.has_value() ) {
+            hash_part( state, *value.replace_layer ? "replace_layer" : "append_layer" );
+        }
         hash_part( state, std::to_string( value.entries.size() ) );
         for( const monster_group_entry_definition_data &spawn : value.entries ) {
             hash_part( state, spawn.monster );
@@ -11591,6 +11684,27 @@ std::string content_transaction::fingerprint() const
             hash_part( state, std::to_string( spawn.cost ) );
             hash_part( state, std::to_string( spawn.pack_minimum ) );
             hash_part( state, std::to_string( spawn.pack_maximum ) );
+            if( spawn.starts != 0_turns || spawn.ends != 0_turns ) {
+                hash_part( state, "spawn_window" );
+                hash_part( state, std::to_string( to_turns<int>( spawn.starts ) ) );
+                hash_part( state, std::to_string( to_turns<int>( spawn.ends ) ) );
+            }
+            if( spawn.event != holiday::none ) {
+                hash_part( state, io::enum_to_string( spawn.event ) );
+            }
+            for( const std::string &condition : spawn.conditions ) {
+                hash_part( state, "spawn_condition" );
+                hash_part( state, condition );
+            }
+            for( const auto &[id, range] : spawn.data.ammo ) {
+                hash_part( state, "spawn_ammo" );
+                hash_part( state, id.str() );
+                hash_part( state, std::to_string( range.val ) );
+                hash_part( state, std::to_string( range.valmax ) );
+            }
+            if( spawn.resolve_after_finalization ) {
+                hash_part( state, "resolve_after_finalization" );
+            }
         }
     }
     for( const trap_registration &entry : pimpl_->traps ) {

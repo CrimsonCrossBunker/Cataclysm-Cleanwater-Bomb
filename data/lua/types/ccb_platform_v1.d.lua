@@ -1868,26 +1868,43 @@ function VehicleColorPaletteDefinition:group(fuzzy_ids, colors) end
 ---@field id string Stable monster-group id.
 ---@field default_monster? string Native monster id used when no entry rolls.
 ---@field is_animal? boolean Marks the group as animal-only for missions.
+---@field is_safe? boolean Sets the native safe-group flag.
+---@field load_mode? 'append'|'replace' Use with content.add to place a group layer at this Mod's load position. Append creates the group if needed. Replace starts with an empty group.
+
+---@class MonsterGroupSpawnAmmo
+---@field id string Native ammo id used by the spawning monster.
+---@field minimum integer Minimum initial quantity.
+---@field maximum? integer Maximum initial quantity. Defaults to minimum.
+
+---@class MonsterGroupSpawnOptions
+---@field starts? TimeDuration Time after the cataclysm when the entry becomes available. The Mod's monster-evolution multiplier applies.
+---@field ends? TimeDuration Time after the cataclysm when the entry stops spawning. Zero keeps it available indefinitely.
+---@field event? 'none'|'new_year'|'easter'|'independence_day'|'halloween'|'thanksgiving'|'christmas'
+---@field conditions? string[] Native season and time-of-day conditions.
+---@field ammo? MonsterGroupSpawnAmmo[] Initial ammo ranges.
+---@field resolve_after_finalization? boolean Validate this entry after native finalization for generated monster IDs.
 
 ---@class MonsterGroupDefinition
 ---@field id string
 local MonsterGroupDefinition = {}
 
 ---@param monster_id string Native monster id for this entry.
----@param weight integer Positive spawn weight.
+---@param weight integer Non-negative spawn weight.
 ---@param cost_multiplier integer Non-negative spawn cost multiplier.
----@param pack_minimum integer Minimum pack size (1..pack_maximum).
+---@param pack_minimum integer Minimum pack size (0..pack_maximum).
 ---@param pack_maximum integer Maximum pack size.
+---@param options? MonsterGroupSpawnOptions
 ---@return MonsterGroupDefinition self
-function MonsterGroupDefinition:monster(monster_id, weight, cost_multiplier, pack_minimum, pack_maximum) end
+function MonsterGroupDefinition:monster(monster_id, weight, cost_multiplier, pack_minimum, pack_maximum, options) end
 
 ---@param group_id string Native monster-group id referenced by this entry.
----@param weight integer Positive spawn weight.
+---@param weight integer Non-negative spawn weight.
 ---@param cost_multiplier integer Non-negative spawn cost multiplier.
----@param pack_minimum integer Minimum pack size (1..pack_maximum).
+---@param pack_minimum integer Minimum pack size (0..pack_maximum).
 ---@param pack_maximum integer Maximum pack size.
+---@param options? MonsterGroupSpawnOptions
 ---@return MonsterGroupDefinition self
-function MonsterGroupDefinition:group(group_id, weight, cost_multiplier, pack_minimum, pack_maximum) end
+function MonsterGroupDefinition:group(group_id, weight, cost_multiplier, pack_minimum, pack_maximum, options) end
 
 ---@class OvermapConnectionDefinitionOptions
 ---@field id string Stable overmap-connection id.
