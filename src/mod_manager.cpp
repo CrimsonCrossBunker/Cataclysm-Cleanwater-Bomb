@@ -432,6 +432,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
             // malformed, while retaining the rejected-entry diagnostic.
             hybrid.lua_platform_version = 0;
             hybrid.lua_load_with_data = false;
+            hybrid.lua_ordered_data_files = false;
             hybrid.lua_platform_error = reason;
             hybrid.lua_platform_entry = cata_path();
             hybrid.lua_world_options.clear();
@@ -664,9 +665,9 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     const std::string entry_string = definition.entry_set ? definition.entry : "main.lua";
     const fs::path relative_entry = fs::u8path( entry_string );
     cata_path entry = root / relative_entry;
-    if( ( !definition.world_options.empty() || !definition.interaction_world_options.empty() ) &&
-        !definition.entry_set && !file_exist( entry ) ) {
-        // An options-only Mod can use its metadata without allocating a world runtime.
+    if( ( definition.ordered_data_files || !definition.world_options.empty() ||
+          !definition.interaction_world_options.empty() ) && !definition.entry_set && !file_exist( entry ) ) {
+        // Static data and world options do not require a persistent world Lua runtime.
         entry = cata_path();
     } else if( platform_error.empty() ) {
         if( entry_string.empty() || entry_string.size() > 4096 ||
@@ -709,6 +710,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
         }
         hybrid.lua_platform_entry = std::move( entry );
         hybrid.lua_load_with_data = definition.load_with_data;
+        hybrid.lua_ordered_data_files = definition.ordered_data_files;
         hybrid.lua_world_options = std::move( definition.world_options );
         hybrid.lua_interaction_world_options = std::move( definition.interaction_world_options );
         hybrid.mod_root_path = root;
@@ -734,6 +736,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     mod.mod_root_path = root;
     mod.lua_platform_entry = std::move( entry );
     mod.lua_load_with_data = definition.load_with_data;
+    mod.lua_ordered_data_files = definition.ordered_data_files;
     mod.lua_world_options = std::move( definition.world_options );
     mod.lua_interaction_world_options = std::move( definition.interaction_world_options );
     mod.lua_platform_version = cata::lua_platform::platform_version;

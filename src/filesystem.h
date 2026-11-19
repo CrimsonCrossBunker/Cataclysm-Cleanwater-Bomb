@@ -92,7 +92,10 @@ std::vector<P> get_files_from_path_with_path_exclusion( const std::string &patte
         const P &root_path = P(), bool recursive_search = false,
         bool match_extension = false );
 
-//--------------------------------------------------------------------------------------------------
+/** Load order for native JSON and Lua data files. A .data.lua file occupies its matching .json slot. */
+std::vector<cata_path> get_ordered_mod_data_files( const cata_path &root_path,
+        bool exclude_interactions );
+
 /**
  * Returns a vector of directories which contain files matching any of @p patterns.
  *

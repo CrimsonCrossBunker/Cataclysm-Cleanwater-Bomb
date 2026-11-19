@@ -149,17 +149,18 @@ class DynamicDataLoader
          */
         /*@{*/
         void load_data_from_path( const cata_path &path, const std::string &src );
+        using lua_data_loader = std::function<void( const std::string &, const cata_path & )>;
+
         /**
-         * Load all data from json files located in
-         * the path (recursive) except for those within the mod_interactions folder.
-         * @param path Either a folder (recursively load all
-         * files with the extension .json), or a file (load only
-         * that file, don't check extension).
+         * Load native data recursively, excluding mod_interactions.
+         * @param path A data directory or a single data file.
          * @param src String identifier for mod this data comes from.
+         * @param load_ordered_lua Optional executor for .data.lua files in native file order.
          * @throws std::exception on all kind of errors.
          */
         /*@{*/
-        void load_mod_data_from_path( const cata_path &path, const std::string &src );
+        void load_mod_data_from_path( const cata_path &path, const std::string &src,
+                                     const lua_data_loader &load_ordered_lua = {} );
         /**
          * Load directories located within the given path if they are named after a currently loaded mod id.
          * @param path a folder.
@@ -169,7 +170,8 @@ class DynamicDataLoader
         /*@{*/
         void load_mod_interaction_files_from_path( const cata_path &path, const std::string &src,
                 const mod_interaction_world_options &options = {},
-                const std::function<void( const std::string &, const cata_path & )> &load_lua = {} );
+                const lua_data_loader &load_lua = {},
+                const lua_data_loader &load_ordered_lua = {} );
         /*@}*/
         /**
          * Deletes and unloads all the data previously loaded with

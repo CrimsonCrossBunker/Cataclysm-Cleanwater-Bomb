@@ -574,7 +574,8 @@ void DynamicDataLoader::load_data_from_path( const cata_path &path, const std::s
     }
 }
 
-void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const std::string &src )
+void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const std::string &src,
+        const lua_data_loader &load_ordered_lua )
 {
     cata_assert( !finalized &&
                  "Can't load additional data after finalization.  Must be unloaded first." );
@@ -588,8 +589,9 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
     std::vector<cata_path> files;
     // if give path is a directory
     if( dir_exist( path.get_unrelative_path() ) ) {
-        const std::vector<cata_path> dir_files = get_files_from_path_with_path_exclusion( ".json",
-            "mod_interactions", path, true, true );
+        const std::vector<cata_path> dir_files = load_ordered_lua
+            ? get_ordered_mod_data_files( path, true )
+            : get_files_from_path_with_path_exclusion( ".json", "mod_interactions", path, true, true );
         files.insert( files.end(), dir_files.begin(), dir_files.end() );
         // if given path is an individual file
     } else if( file_exist( path.get_unrelative_path() ) ) {
@@ -600,9 +602,12 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
     for( const cata_path &file : files ) {
         scoped_debug_error_source error_source( get_mod_error_source( src ) );
         try {
-            // parse it
-            JsonValue jsin = json_loader::from_path( file );
-            load_all_from_json( jsin, src, path, file );
+            if( load_ordered_lua && file.get_relative_path().extension() == ".lua" ) {
+                load_ordered_lua( src, file );
+            } else {
+                JsonValue jsin = json_loader::from_path( file );
+                load_all_from_json( jsin, src, path, file );
+            }
         } catch( const JsonError &err ) {
             throw std::runtime_error( add_debug_error_source( err.what() ) );
         } catch( const std::exception &err ) {
@@ -613,7 +618,8 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
 
 void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &path,
         const std::string &src, const mod_interaction_world_options &options,
-        const std::function<void( const std::string &, const cata_path & )> &load_lua )
+        const lua_data_loader &load_lua,
+        const lua_data_loader &load_ordered_lua )
 {
     cata_assert( !finalized &&
                  "Can't load additional data after finalization.  Must be unloaded first." );
@@ -621,6 +627,7 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
     std::vector<mod_id> &loaded_mods = world_generator->active_world->active_mod_order;
     struct interaction_lua_entry {
         cata_path path;
+        bool ordered;
     };
     std::multimap<mod_id, std::variant<cata_path, const mod_world_options *, interaction_lua_entry>> entries;
 
@@ -636,13 +643,19 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
                                             associated_mod ) != loaded_mods.end();
 
             if( is_mod_loaded ) {
-                const std::vector<cata_path> interaction_files = get_files_from_path( ".json", f, true, true );
-                for( const cata_path &path : interaction_files ) {
-                    entries.emplace( associated_mod, path );
+                const std::vector<cata_path> interaction_files = load_ordered_lua
+                    ? get_ordered_mod_data_files( f, false )
+                    : get_files_from_path( ".json", f, true, true );
+                for( const cata_path &file : interaction_files ) {
+                    if( load_ordered_lua && file.get_relative_path().extension() == ".lua" ) {
+                        entries.emplace( associated_mod, interaction_lua_entry{ file, true } );
+                    } else {
+                        entries.emplace( associated_mod, file );
+                    }
                 }
                 const cata_path lua_entry = f / "main.lua";
                 if( file_exist( lua_entry.get_unrelative_path() ) ) {
-                    entries.emplace( associated_mod, interaction_lua_entry{ lua_entry } );
+                    entries.emplace( associated_mod, interaction_lua_entry{ lua_entry, false } );
                 }
             }
         }
@@ -664,8 +677,12 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
                 load_all_from_json( jsin, interaction_src, path, *file );
             } else if( const auto *overrides = std::get_if<const mod_world_options *>( &entry ) ) {
                 get_options().apply_mod_world_options( interaction_src, **overrides );
-            } else if( load_lua ) {
-                load_lua( interaction_src, std::get<interaction_lua_entry>( entry ).path );
+            } else {
+                const auto &lua = std::get<interaction_lua_entry>( entry );
+                const auto &loader = lua.ordered ? load_ordered_lua : load_lua;
+                if( loader ) {
+                    loader( interaction_src, lua.path );
+                }
             }
         } catch( const JsonError &err ) {
             throw std::runtime_error( add_debug_error_source( err.what() ) );

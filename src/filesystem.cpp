@@ -387,10 +387,9 @@ std::vector<std::string> find_file_if_bfs( const std::string &root_path,
     return results;
 }
 
-template <typename Predicate>
+template <typename Predicate, typename Compare = std::less<>>
 std::vector<cata_path> find_file_if_bfs( const cata_path &root_path,
-        const bool recursive_search,
-        Predicate predicate )
+        const bool recursive_search, Predicate predicate, Compare compare = {} )
 {
     cata_path norm_root_path = root_path.lexically_normal();
     std::deque<std::filesystem::path>  directories{ norm_root_path.get_unrelative_path() };
@@ -432,7 +431,7 @@ std::vector<cata_path> find_file_if_bfs( const cata_path &root_path,
         // NOLINTNEXTLINE(cata-use-localized-sorting)
         std::sort( std::begin( directories ) + n_dirs, std::end( directories ) );
         // NOLINTNEXTLINE(cata-use-localized-sorting)
-        std::sort( std::begin( results ) + n_results, std::end( results ) );
+        std::sort( std::begin( results ) + n_results, std::end( results ), compare );
     }
 
     std::vector<cata_path> cps;
@@ -446,6 +445,30 @@ std::vector<cata_path> find_file_if_bfs( const cata_path &root_path,
 }
 
 } //anonymous namespace
+
+std::vector<cata_path> get_ordered_mod_data_files( const cata_path &root_path,
+        bool exclude_interactions )
+{
+    static const std::string lua_suffix = ".data.lua";
+    const auto slot_name = []( const std::filesystem::path & path ) {
+        std::string name = path.filename().generic_u8string();
+        if( string_ends_with( name, lua_suffix ) ) {
+            name.replace( name.size() - lua_suffix.size(), lua_suffix.size(), ".json" );
+        }
+        return name;
+    };
+    return find_file_if_bfs( root_path, true,
+    [exclude_interactions]( const std::filesystem::directory_entry & entry, bool is_dir ) {
+        return ( name_contains( entry, ".json", true, false ) ||
+                 ( !is_dir && name_contains( entry, lua_suffix, true, false ) ) ) &&
+               !( exclude_interactions && name_contains( entry, "mod_interactions", false, true ) );
+    },
+    [&slot_name]( const std::filesystem::path & lhs, const std::filesystem::path & rhs ) {
+        const std::string left = slot_name( lhs );
+        const std::string right = slot_name( rhs );
+        return left == right ? lhs.extension() == ".json" && rhs.extension() != ".json" : left < right;
+    } );
+}
 
 //--------------------------------------------------------------------------------------------------
 template<typename P>

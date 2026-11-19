@@ -42,7 +42,7 @@ lua_sources=()
 while IFS= read -r -d '' lua_source; do
     lua_sources+=("$lua_source")
 done < <(git ls-files -z -- \
-    'data/core/*.lua' 'data/lua/*.lua' 'data/mods/*.lua' \
+    'data/core/*.lua' 'data/json/*.data.lua' 'data/lua/*.lua' 'data/mods/*.lua' \
     ':!:data/lua/types/*' ':!:data/lua/reference/*' \
     ':!:data/lua/templates/*' ':!:data/mods/TEST_DATA/*' \
     ':!:data/mods/Standard_Combat_Tests/*')

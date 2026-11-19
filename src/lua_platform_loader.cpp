@@ -319,6 +319,7 @@ mod_definition make_mod_definition( const sol::table &values )
     set_optional_field( values, "category", result.category, result.category_set );
     set_optional_field( values, "core", result.core, result.core_set );
     result.load_with_data = values.get_or( "load_with_data", false );
+    result.ordered_data_files = values.get_or( "ordered_data_files", false );
     const sol::object world_options = values.raw_get<sol::object>( "world_options" );
     if( world_options.valid() && world_options.get_type() != sol::type::nil ) {
         if( world_options.get_type() != sol::type::table ) {
@@ -467,6 +468,7 @@ void install_mod_definition( sol::table &ccb )
         definition.obsolete = value;
     } ),
     "load_with_data", &mod_definition::load_with_data,
+    "ordered_data_files", &mod_definition::ordered_data_files,
     "world_options", sol::property(
     []( const mod_definition & definition, sol::this_state state ) {
         return write_world_options( sol::state_view( state ), definition.world_options );
@@ -651,6 +653,115 @@ end
     lua["require"] = bound.get<sol::function>();
 }
 
+void load_static_overmap_terrain( const sol::table &options, const std::string &source,
+                                  bool patch )
+{
+    const std::string_view context = "overmap terrain";
+    const sol::object id = options.raw_get<sol::object>( patch ? "ids" : "id" );
+    const auto abstract = options.get<sol::optional<std::string>>( "abstract" );
+    const auto parent = options.get<sol::optional<std::string>>( "copy_from" );
+    const bool has_id = id.valid() && id.get_type() != sol::type::nil;
+    if( has_id == static_cast<bool>( abstract ) ||
+        ( patch && ( abstract || !parent || parent->empty() ) ) ) {
+        throw std::runtime_error( patch ? "overmap terrain patch requires ids and a parent" :
+                                  "overmap terrain requires exactly one of id or abstract" );
+    }
+
+    std::ostringstream serialized;
+    JsonOut json( serialized );
+    json.start_object();
+    json.member( "type", "overmap_terrain" );
+    if( abstract ) {
+        json.member( "abstract", *abstract );
+    } else if( !patch && id.get_type() == sol::type::string ) {
+        json.member( "id", id.as<std::string>() );
+    } else {
+        const auto ids = bounded_string_array( id.as<sol::table>(), "ids", 4096, context );
+        if( ids.empty() ) {
+            throw std::runtime_error( "overmap terrain ids cannot be empty" );
+        }
+        json.member( "id", ids );
+    }
+    if( parent ) {
+        json.member( "copy-from", *parent );
+    }
+    const sol::object name = options.raw_get<sol::object>( "name" );
+    if( name.valid() && name.get_type() != sol::type::nil ) {
+        const detail::authored_text text = detail::read_singular_text( name, {}, "overmap terrain name" );
+        if( text.translated && text.translated->context ) {
+            json.member( "name" );
+            json.start_object();
+            json.member( "str", text.raw );
+            json.member( "ctxt", *text.translated->context );
+            json.end_object();
+        } else {
+            json.member( "name", text.raw );
+        }
+    }
+    for( const auto &[key, native_key] : {
+             std::pair{ "symbol", "sym" }, std::pair{ "color", "color" },
+             std::pair{ "see_cost", "see_cost" }, std::pair{ "vision_levels", "vision_levels" },
+             std::pair{ "uniform_terrain", "uniform_terrain" }, std::pair{ "extras", "extras" },
+             std::pair{ "travel_cost", "travel_cost_type" }, std::pair{ "land_use_code", "land_use_code" },
+             std::pair{ "connect_group", "connect_group" }
+         } ) {
+        if( const auto value = options.get<sol::optional<std::string>>( key ) ) {
+            json.member( native_key, *value );
+        }
+    }
+    const sol::object looks_like = options.raw_get<sol::object>( "looks_like" );
+    if( looks_like.get_type() == sol::type::table ) {
+        json.member( "looks_like", bounded_string_array( looks_like.as<sol::table>(),
+                     "looks_like", 256, context ) );
+    } else if( looks_like.valid() && looks_like.get_type() != sol::type::nil ) {
+        json.member( "looks_like", looks_like.as<std::string>() );
+    }
+    if( const auto density = options.get<sol::optional<int>>( "monster_density" ) ) {
+        json.member( "mondensity", *density );
+    }
+    for( const char *key : { "flags", "post_process_generators" } ) {
+        if( const auto values = options.get<sol::optional<sol::table>>( key ) ) {
+            json.member( key, bounded_string_array( *values, key, 256, context ) );
+        }
+    }
+    for( const char *operation : { "extend", "delete" } ) {
+        if( const auto changes = options.get<sol::optional<sol::table>>( operation ) ) {
+            json.member( operation );
+            json.start_object();
+            for( const char *key : { "flags", "post_process_generators" } ) {
+                if( const auto values = changes->get<sol::optional<sol::table>>( key ) ) {
+                    json.member( key, bounded_string_array( *values, key, 256, context ) );
+                }
+            }
+            json.end_object();
+        }
+    }
+    if( const auto spawns = options.get<sol::optional<sol::table>>( "spawns" ) ) {
+        json.member( "spawns" );
+        json.start_object();
+        if( const auto group = spawns->get<sol::optional<std::string>>( "group" ) ) {
+            json.member( "group", *group );
+        }
+        if( const auto population = spawns->get<sol::optional<sol::table>>( "population" ) ) {
+            if( population->size() != 2 ) {
+                throw std::runtime_error( "overmap terrain spawn population requires {minimum, maximum}" );
+            }
+            json.member( "population", std::array<int, 2>{ population->get<int>( 1 ),
+                         population->get<int>( 2 ) } );
+        }
+        if( const auto chance = spawns->get<sol::optional<int>>( "chance" ) ) {
+            json.member( "chance", *chance );
+        }
+        json.end_object();
+    }
+    json.end_object();
+
+    // The native loader preserves inheritance, deferred parents and builtin mapgen registration.
+    const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
+    static_cast<void>( definition.get_string( "type" ) );
+    overmap_terrains::load( definition, source );
+}
+
 runtime_state load_source( const mod_source &source,
                            const std::shared_ptr<const std::set<std::string>> &selected_mod_ids )
 {
@@ -709,46 +820,11 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "is_mod_active", [&selected_mod_ids]( const std::string &id ) {
         return selected_mod_ids.count( id ) != 0;
     } );
+    content.set_function( "define_overmap_terrain", [&resolved]( const sol::table &options ) {
+        load_static_overmap_terrain( options, resolved.id, false );
+    } );
     content.set_function( "patch_overmap_terrain", [&resolved]( const sol::table &options ) {
-        const std::vector<std::string> ids = bounded_string_array(
-                options.get<sol::table>( "ids" ), "ids", 4096, "overmap terrain patch" );
-        const std::string parent = options.get<std::string>( "copy_from" );
-        if( ids.empty() || parent.empty() ) {
-            throw std::runtime_error( "overmap terrain patch requires ids and a parent" );
-        }
-        std::ostringstream serialized;
-        JsonOut json( serialized );
-        json.start_object();
-        json.member( "type", "overmap_terrain" );
-        json.member( "id", ids );
-        json.member( "copy-from", parent );
-        const sol::object name = options.raw_get<sol::object>( "name" );
-        if( name.valid() && name.get_type() != sol::type::nil ) {
-            const detail::authored_text text = detail::read_singular_text( name, {}, "overmap terrain name" );
-            if( text.translated && text.translated->context ) {
-                json.member( "name" );
-                json.start_object();
-                json.member( "str", text.raw );
-                json.member( "ctxt", *text.translated->context );
-                json.end_object();
-            } else {
-                json.member( "name", text.raw );
-            }
-        }
-        for( const auto &[key, native_key] : {
-                 std::pair{ "symbol", "sym" }, std::pair{ "color", "color" },
-                 std::pair{ "see_cost", "see_cost" }, std::pair{ "vision_levels", "vision_levels" },
-                 std::pair{ "uniform_terrain", "uniform_terrain" }
-             } ) {
-            if( const auto value = options.get<sol::optional<std::string>>( key ) ) {
-                json.member( native_key, *value );
-            }
-        }
-        json.end_object();
-        // Use the native loader for inheritance, deferred parents and mapgen registration.
-        const JsonObject patch = json_loader::from_string( serialized.str() ).get_object();
-        static_cast<void>( patch.get_string( "type" ) );
-        overmap_terrains::load( patch, resolved.id );
+        load_static_overmap_terrain( options, resolved.id, true );
     } );
     execute_file( lua, resolved.entry, "Lua-first data entry for '" + resolved.id + "'" );
 }

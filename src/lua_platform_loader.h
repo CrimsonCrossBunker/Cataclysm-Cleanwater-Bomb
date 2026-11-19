@@ -53,6 +53,7 @@ struct mod_definition {
     mod_interaction_world_options interaction_world_options;
     bool core = false;
     bool load_with_data = false;
+    bool ordered_data_files = false;
 
     bool id_set = false;
     bool name_set = false;

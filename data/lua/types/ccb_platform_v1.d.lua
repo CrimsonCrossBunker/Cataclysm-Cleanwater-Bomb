@@ -652,8 +652,9 @@ function CcbHandlesApi.avatar() end
 ---@field id? string Stable 1-256-byte Mod id without `#`; defaults to the root directory name when omitted.
 ---@field name? string|LocalizedText 1-512-byte display name; defaults to the resolved Mod id.
 ---@field version? string 1-128-byte author-defined Mod version.
----@field entry? string Root-relative entry path of at most 4096 bytes; defaults to main.lua. A Mod declaring world or interaction options can omit main.lua.
----@field load_with_data? boolean Execute static overmap patches in native Mod and companion order during world loading. This entry supports content.patch_overmap_terrain and localized text.
+---@field entry? string Root-relative entry path of at most 4096 bytes; defaults to main.lua. A Mod declaring static data files or world options can omit main.lua.
+---@field load_with_data? boolean Execute the static entry in native Mod and companion order during world loading.
+---@field ordered_data_files? boolean Load .data.lua static definition files among JSON files under the Mod's data directory and active companion directories. The regular entry keeps its usual phase.
 ---@field dependencies? string[] Dense one-based array of at most 256 unique stable Mod ids loaded before this Mod.
 ---@field authors? string[] Dense one-based array of unique author names.
 ---@field description? string|LocalizedText Player-facing Mod description of at most 4096 bytes.
@@ -669,6 +670,7 @@ function CcbHandlesApi.avatar() end
 
 ---@class ModDefinition
 ---@field load_with_data boolean
+---@field ordered_data_files boolean
 ---@field id string
 ---@field name string
 ---@field version string
@@ -7274,6 +7276,41 @@ function CcbPlatformContent.Npc(options) end
 ---@param options OvermapTerrainDefinitionOptions
 ---@return OvermapTerrainDefinition
 function CcbPlatformContent.OvermapTerrain(options) end
+
+---@class StaticOvermapTerrainListChanges
+---@field flags? string[] Native overmap-terrain flags.
+---@field post_process_generators? string[] Native post-processing generator IDs.
+
+---@class StaticOvermapTerrainSpawns
+---@field group? string Monster group ID.
+---@field population? [integer, integer] Minimum and maximum group population.
+---@field chance? integer Native static spawn chance.
+
+---@class StaticOvermapTerrainOptions
+---@field id? string|string[] Stable terrain type IDs in native loading order. Supply either id or abstract.
+---@field abstract? string Inheritance template ID.
+---@field copy_from? string Base terrain type or template ID.
+---@field name? string|LocalizedText Singular terrain name.
+---@field symbol? string Native overmap symbol.
+---@field color? string Native overmap color.
+---@field see_cost? string Native overmap see-cost enum name.
+---@field vision_levels? string Native overmap-vision ID.
+---@field uniform_terrain? string Fill terrain ID. Omission clears the inherited fill.
+---@field extras? string Region map-extra category ID.
+---@field travel_cost? string Native overmap travel-cost enum name.
+---@field land_use_code? string Native overmap land-use code ID.
+---@field connect_group? string Native river connection group.
+---@field looks_like? string|string[] Terrain types used for appearance fallback.
+---@field monster_density? integer Native monster density.
+---@field flags? string[] Native overmap-terrain flags.
+---@field post_process_generators? string[] Native post-processing generator IDs.
+---@field extend? StaticOvermapTerrainListChanges Values to append to inherited lists.
+---@field delete? StaticOvermapTerrainListChanges Values to remove from inherited lists.
+---@field spawns? StaticOvermapTerrainSpawns Native static monster-group spawns.
+
+---Define an overmap terrain or inheritance template at the Mod's native data load position.
+---@param options StaticOvermapTerrainOptions
+function CcbPlatformContent.define_overmap_terrain(options) end
 
 ---@class OvermapTerrainPatchOptions
 ---@field ids string[] Terrain type IDs to patch in array order.

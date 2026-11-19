@@ -711,6 +711,20 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
             selected_mod_ids.insert( mod.str() );
         }
     }
+    const auto ordered_data_loader = [&selected_mod_ids]( const MOD_INFORMATION & mod ) {
+        DynamicDataLoader::lua_data_loader load;
+        if( mod.lua_ordered_data_files ) {
+            load = [root = mod.path, id = mod.ident.str(), &selected_mod_ids](
+            const std::string & source, const cata_path & entry ) {
+                cata::lua_platform::load_mod_content_with_data( {
+                    source, root.get_unrelative_path(), entry.get_unrelative_path(),
+                    source == id ? cata::lua_platform::mod_source_type::mod :
+                    cata::lua_platform::mod_source_type::interaction_content
+                }, selected_mod_ids );
+            };
+        }
+        return load;
+    };
     for( const auto &mod : canonical_packs ) {
         // Suppress missing mods the player chose to leave in the modlist
         if( !mod.is_valid() ) {
@@ -722,7 +736,8 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
             check_plural = check_plural_t::none;
         }
         cata_timer pack_timer( string_format( "%s pack load time:", mod->name() ) );
-        load_mod_data_from_dir( mod->path, mod.str() );
+        DynamicDataLoader::get_instance().load_mod_data_from_path( mod->path, mod.str(),
+                ordered_data_loader( *mod ) );
         if( mod->lua_load_with_data && !mod->lua_platform_entry.empty() ) {
             cata::lua_platform::load_mod_content_with_data( {
                 mod.str(), mod->mod_root_path.get_unrelative_path(),
@@ -738,7 +753,7 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
             continue;
         }
         loading_ui::show( msg, mod->name() );
-        std::function<void( const std::string &, const cata_path & )> load_lua;
+        DynamicDataLoader::lua_data_loader load_lua;
         if( mod->lua_load_with_data ) {
             load_lua = [&mod, &selected_mod_ids]( const std::string & source, const cata_path & entry ) {
                 cata::lua_platform::load_mod_content_with_data( {
@@ -748,7 +763,8 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
             };
         }
         DynamicDataLoader::get_instance().load_mod_interaction_files_from_path(
-            mod->path / "mod_interactions", mod.str(), mod->lua_interaction_world_options, load_lua );
+            mod->path / "mod_interactions", mod.str(), mod->lua_interaction_world_options, load_lua,
+            ordered_data_loader( *mod ) );
     }
 }
 
