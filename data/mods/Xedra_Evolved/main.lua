@@ -256,3 +256,5 @@ require("alchemy_consumables")
 require("goblin_fruit_consumables")
 require("changeling_tree")
 require("paraclesian_training")
+
+require("technique_predicates")
