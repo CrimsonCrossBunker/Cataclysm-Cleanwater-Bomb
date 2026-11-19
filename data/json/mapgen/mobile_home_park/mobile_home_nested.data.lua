@@ -325,3 +325,105 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "7x15_mobile_home_2",
+    layout = {
+        size = { width = 15, height = 15 },
+        rows = {
+            "      ||ooo||  ",
+            "      |13O4F|  ",
+            "      o2    o  ",
+            "      o5   yo  ",
+            "      |L  fh|  ",
+            "      *   fh|  ",
+            "      |E ||||  ",
+            "      o  +~9|  ",
+            "      |Y |tS|  ",
+            "      ||+||||  ",
+            "      |I   R|  ",
+            "      |@@  x|  ",
+            "      |@@  x|  ",
+            "      |I T y|  ",
+            "      ||ooo||  ",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_bathroom" },
+        terrain = { ["|"] = "t_wall_w" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        nested = {
+            {
+                choices = {
+                    { id = "4x6_porch_0", weight = 1 },
+                    { id = "4x6_porch_1", weight = 2 },
+                    { id = "4x6_porch_2", weight = 1 },
+                    { id = "4x6_porch_3", weight = 1 },
+                },
+                x = 0,
+                y = 2,
+            },
+        },
+        loot_placements = { { id = "television", x = 11, y = { 11, 12 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "7x15_mobile_home_3",
+    layout = {
+        size = { width = 15, height = 15 },
+        rows = {
+            "      ||ooo||  ",
+            "      |xy  H|  ",
+            "      ox  lH|  ",
+            "      |x E H|  ",
+            "      |L ||||  ",
+            "      *  +~9|  ",
+            "      |Y |tS|  ",
+            "      |2 ||||  ",
+            "      oO   6o  ",
+            "      |F 153|  ",
+            "      ||+||||  ",
+            "      |T   I|  ",
+            "      |D  @@|  ",
+            "      |RE  I|  ",
+            "      ||ooo||  ",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_bathroom" },
+        terrain = { ["|"] = "t_wall_w" },
+        rotation = { 0, 3 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        nested = {
+            {
+                choices = {
+                    { id = "4x6_porch_0", weight = 1 },
+                    { id = "4x6_porch_1", weight = 2 },
+                    { id = "4x6_porch_2", weight = 1 },
+                    { id = "4x6_porch_3", weight = 1 },
+                },
+                x = 0,
+                y = 2,
+            },
+        },
+        loot_placements = { { id = "television", x = 7, y = 2 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_clothesdryer",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "u",
+        },
+        furniture = { u = "f_rotary_clothesline" },
+        flags = {
+            "ALLOW_TERRAIN_UNDER_ITEMS",
+            "ERASE_TRAP_BEFORE_PLACING_TERRAIN",
+            "ERASE_FURNITURE_BEFORE_PLACING_TERRAIN",
+        },
+        item_groups = { u = { group = "allclothes", chance = 33, repetitions = { 1, 3 } } },
+    },
+}
