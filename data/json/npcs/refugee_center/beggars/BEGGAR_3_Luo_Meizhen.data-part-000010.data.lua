@@ -2,24 +2,26 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_BEGGAR_3_RECRUIT2",
-    line = ccb.content.text("Like I said, sorry, it's just not happening.  It's not that I don't trust you, it's just that I don't really trust you."),
+    id = "TALK_REFUGEE_BEGGAR_3_APOLOGY",
+    line = ccb.content.text("Thanks for saying it.  So, what brings you around?"),
     replies = {
         {
-            when = predicates.all({ predicates.any_equal({ "yes", { scope = "speaker", key = "general_conversation_luo_doctorate" } }), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "general_recruit_luo_recruited" } })) }),
-            text = ccb.content.text("So, about that doctorate of yours…"),
-            next_topic = "TALK_REFUGEE_BEGGAR_3_DOCTORATE1",
+            when = predicates.negate(predicates.has_effect("interlocutor", "beggar_has_eaten")),
+            text = ccb.content.text("What's up?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_3_COMPLAIN",
         },
         {
-            text = ccb.content.text("What did you do before <the_cataclysm>?"),
-            next_topic = "TALK_REFUGEE_BEGGAR_3_EXPERTISE",
+            when = predicates.has_effect("interlocutor", "beggar_has_eaten"),
+            text = ccb.content.text("What's up?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_3_INTRO",
         },
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
+            when = predicates.negate(predicates.has_effect("interlocutor", "beggar_has_eaten")),
+            text = ccb.content.text("I might have some food for you.  Are you hungry?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_3_GIVE_FOOD",
         },
         {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            text = ccb.content.text("Just wanted to get square.  <end_talking_leave>"),
             next_topic = "TALK_DONE",
         },
     },
