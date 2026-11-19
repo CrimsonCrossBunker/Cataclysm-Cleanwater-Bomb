@@ -135,23 +135,5 @@
       }
     ],
     "tool_ammo": "battery"
-  },
-  {
-    "id": "nomad_rig_on",
-    "copy-from": "nomad_rig",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str": "nomad harness (on)", "str_pl": "nomad harnesses (on)" },
-    "power_draw": "15 W",
-    "revert_to": "nomad_rig",
-    "use_action": {
-      "ammo_scale": 0,
-      "menu_text": "Turn off",
-      "type": "transform",
-      "msg": "You turn the shoulder mounted flashlight off.",
-      "target": "nomad_rig"
-    },
-    "light": 500,
-    "flags": [ "WATER_FRIENDLY", "STURDY", "BELTED", "USES_BIONIC_POWER", "SPAWN_ACTIVE" ]
   }
 ]
