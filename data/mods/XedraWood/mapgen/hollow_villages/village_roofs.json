@@ -66,21 +66,5 @@
       ],
       "terrain": { "T": "t_thatch_roof" }
     }
-  },
-  {
-    "type": "overmap_terrain",
-    "id": [
-      "hollow_village5_roofs",
-      "hollow_village6_roofs",
-      "hollow_village7_roofs",
-      "hollow_village8_roofs",
-      "hollow_village9_roofs"
-    ],
-    "name": "small village",
-    "vision_levels": "roof_or_air",
-    "sym": "v",
-    "color": "red",
-    "see_cost": "low",
-    "flags": [ "RISK_HIGH" ]
   }
 ]
