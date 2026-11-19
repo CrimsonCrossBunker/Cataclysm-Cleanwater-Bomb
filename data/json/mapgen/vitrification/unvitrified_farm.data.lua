@@ -158,3 +158,48 @@ ccb.content.define_mapgen {
         rotation = { 0, 3 },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "unvitrified_orchard" },
+    layout = {
+        rows = {
+            "111111111111111111111111",
+            "!**********************1",
+            "!*    *    **    *    *1",
+            "!* 7  7  7 ** 7  7  7 *1",
+            "!*         **         *1",
+            "!*         **         *1",
+            "!**7     7****7     7**1",
+            "!*         **         *1",
+            "!*         **         *1",
+            "!* 7  7  7 ** 7  7  7 *1",
+            "!*    *    **    *    *1",
+            "@**********************1",
+            "@**********************1",
+            "!*    *    **    *    *1",
+            "!* 7  7  7 ** 7  7  7 *1",
+            "!*         **         *1",
+            "!*         **         *1",
+            "!**7     7****7     7**1",
+            "!*         **         *1",
+            "!*         **         *1",
+            "!* 7  7  7 ** 7  7  7 *1",
+            "!*    *    **    *    *1",
+            "!**********************1",
+            "111111111111111111111111",
+        },
+        palettes = { "orchard_tree_apple" },
+        terrain = { ["1"] = "t_quietfarm_border_fence", ["!"] = "t_fence", ["@"] = "t_fencegate_c" },
+        fill_terrain = "t_dirt",
+        tile_edits = {
+            {
+                shape = "point",
+                operation = "remember_position",
+                id = "unvitrified_orchard_center",
+                x = 12,
+                y = 12,
+            },
+        },
+    },
+}

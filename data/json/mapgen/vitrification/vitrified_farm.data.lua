@@ -484,3 +484,22 @@ ccb.content.define_mapgen {
         item_placements = { { id = "glass_book", x = 4, y = 1, chance = 100 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "vitrified_sky",
+    layout = {
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_vitrified_roof",
+                x = 0,
+                y = 0,
+                end_x = 23,
+                end_y = 23,
+            },
+        },
+    },
+}
