@@ -21,28 +21,5 @@
     "bonus_dex": { "rng": [ 0, 2 ] },
     "worn_override": "NC_SPIRAL_MADMAN_worn",
     "weapon_override": "NC_SPIRAL_MADMAN_wield"
-  },
-  {
-    "id": "TALK_SPIRAL_MADMAN_FIRST_MEETING",
-    "type": "talk_topic",
-    "dynamic_line": "Spirals?",
-    "speaker_effect": { "effect": { "u_add_var": "dialogue_first_meeting_first_meeting", "value": "yes" } },
-    "responses": [
-      {
-        "text": "Hello there!",
-        "topic": "TALK_SPIRAL_MADMAN_GENERIC",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_first_meeting" } ] } }
-      },
-      {
-        "text": "I'm outta here.  Bye.",
-        "topic": "TALK_DONE",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_first_meeting" } ] } }
-      },
-      {
-        "text": "Poor fellow - looks like you're out of your mind.  Can't help you, sorry.  I'm outta here.  Bye.",
-        "topic": "TALK_DONE",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_first_meeting" } ] }
-      }
-    ]
   }
 ]
