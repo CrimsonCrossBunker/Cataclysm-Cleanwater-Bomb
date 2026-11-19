@@ -147,23 +147,5 @@
       [ "DEBUG_SILENT", 100 ],
       [ "DEBUG_LS", 100 ]
     ]
-  },
-  {
-    "type": "mutation",
-    "id": "DEBUG_FLIMSY",
-    "name": { "str": "Debug No HP" },
-    "points": -6,
-    "description": "You will die in one hit, more or less.  Sneezing too hard will kill you.",
-    "debug": true,
-    "enchantments": [ "INLINE_ENCH_DEBUG_FLIMSY_0" ]
-  },
-  {
-    "type": "mutation",
-    "id": "DEBUG_FLIMSY2",
-    "name": { "str": "Debug No HP II" },
-    "points": -6,
-    "description": "You will die in one hit, more or less.  Sneezing too hard will kill you.",
-    "debug": true,
-    "enchantments": [ "INLINE_ENCH_DEBUG_FLIMSY2_0" ]
   }
 ]
