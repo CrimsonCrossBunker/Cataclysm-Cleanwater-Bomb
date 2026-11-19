@@ -1,0 +1,19 @@
+[
+  {
+    "id": "pigeon_aura",
+    "type": "SPELL",
+    "name": { "str": "Pigeon aura", "//~": "NO_I18N" },
+    "description": { "str": "Anyone nearby will get stronger.", "//~": "NO_I18N" },
+    "valid_targets": [ "self" ],
+    "effect": "effect_on_condition",
+    "effect_str": "pigeon_aura",
+    "shape": "blast",
+    "energy_source": "NONE",
+    "base_casting_time": 500,
+    "base_energy_cost": 0,
+    "flags": [ "SILENT", "NO_LEGS", "NO_FAIL" ],
+    "difficulty": 0,
+    "min_range": 30,
+    "max_range": 30
+  }
+]

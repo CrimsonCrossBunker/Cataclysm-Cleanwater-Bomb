@@ -1,0 +1,39 @@
+[
+  {
+    "id": "silent_one_detect_psionic_activity_aggressive",
+    "type": "SPELL",
+    "name": { "str": "[Ψ]Silent One Detect Psi Aggressive", "//~": "NO_I18N" },
+    "description": {
+      "str": "Silent One's detecting of psionic activity when it's already angry.  It's a bug if you have it.",
+      "//~": "NO_I18N"
+    },
+    "valid_targets": [ "ally", "hostile", "self" ],
+    "message": "",
+    "flags": [ "NO_PROJECTILE", "NO_EXPLOSION_SFX", "IGNORE_WALLS" ],
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_SILENT_ONE_DETECT_PSIONIC_ACTIVITY_AGGRESSIVE",
+    "shape": "blast",
+    "min_aoe": 15,
+    "max_aoe": 15
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_SILENT_ONE_DETECT_PSIONIC_ACTIVITY_AGGRESSIVE",
+    "condition": "u_is_character",
+    "effect": [
+      {
+        "if": {
+          "or": [
+            { "math": [ "u_vitamin('vitamin_maintained_powers') >= 1" ] },
+            { "math": [ "u_nether_conduit_repeated_channeling_value >= 1" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "n_val('anger')", "+=", "rand(10) + 2" ] },
+          { "u_message": "A chill aura emanates from the silent one.", "type": "bad" }
+        ],
+        "else": [ { "math": [ "n_val('anger')", "-=", "rand(25) + 25" ] } ]
+      }
+    ]
+  }
+]

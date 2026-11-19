@@ -1,0 +1,142 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_ELECTRONKINETIC_MONSTER_POWER_DRAINING",
+    "//": "x_in_y chance is because the power is an aura, to simulate it only hitting certain people instead of the player and all their followers.  If it becomes targeted, that will not be necessary.",
+    "condition": "u_is_character",
+    "effect": [
+      {
+        "run_eocs": [
+          {
+            "id": "EOC_ELECTRONKINETIC_MONSTER_POWER_DRAINING_CHARACTER_CHECK",
+            "condition": { "x_in_y_chance": { "x": 1, "y": 3 } },
+            "effect": [
+              {
+                "run_eocs": [
+                  {
+                    "id": "EOC_ELECTRONKINETIC_MONSTER_POWER_DRAINING_ELECTROKINETIC_CHECK",
+                    "condition": { "not": { "u_has_effect": "effect_electrokin_personal_battery" } },
+                    "effect": {
+                      "u_run_inv_eocs": "random",
+                      "search_data": [ { "uses_energy": true, "excluded_flags": [ "USES_BIONIC_POWER", "IS_UPS" ] } ],
+                      "true_eocs": [
+                        {
+                          "id": "EOC_ELECTRONKINETIC_MONSTER_POWER_DRAINING_INV_RESULT",
+                          "effect": [ { "math": [ "n_val('power') -= rand(200) + 50" ] } ]
+                        }
+                      ]
+                    },
+                    "false_effect": [ { "math": [ "u_val('stamina') -= rand(350) + 300" ] } ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "false_effect": [
+      {
+        "run_eocs": [
+          {
+            "id": "EOC_ELECTRONKINETIC_MONSTER_POWER_DRAINING_MONSTER_CHECK",
+            "condition": { "and": [ { "x_in_y_chance": { "x": 1, "y": 3 } }, { "u_has_flag": "ELECTRIC" } ] },
+            "effect": { "u_cast_spell": { "id": "electrokinetic_power_draining_electric_monster" } }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "SPELL",
+    "id": "hidebehind_apply_obscurity_power",
+    "name": { "str": "Hidebehind Obscurity enemy check", "//~": "NO_I18N" },
+    "description": { "str": "Preps for using Obscurity when a hostile target is detected.", "//~": "NO_I18N" },
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_PROJECTILE", "NO_EXPLOSION_SFX", "MUST_HAVE_CLASS_TO_LEARN", "HIDDEN_SPELL" ],
+    "valid_targets": [ "hostile" ],
+    "max_level": 1,
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_MONSTER_APPLY_OBSCURITY",
+    "shape": "blast",
+    "min_range": 60,
+    "max_range": 60
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_MONSTER_APPLY_OBSCURITY",
+    "condition": {
+      "and": [
+        { "not": { "u_has_flag": "TEEPSHIELD" } },
+        { "not": { "u_has_flag": "TEEP_IMMUNE" } },
+        { "not": { "u_has_effect": "eff_monster_immune_to_telepathy" } }
+      ]
+    },
+    "effect": [
+      { "math": [ "n_power_obscurity_duration = rng(205,835)" ] },
+      { "u_add_effect": "telepathic_ignorance", "duration": { "math": [ "n_power_obscurity_duration" ] } },
+      { "npc_add_effect": "telepathic_ignorance_self", "duration": { "math": [ "n_power_obscurity_duration" ] } }
+    ]
+  },
+  {
+    "id": "teleporter_breach_lab_devourer",
+    "type": "SPELL",
+    "name": { "str": "[Ψ]Breach Melded Task Force", "//~": "NO_I18N" },
+    "description": {
+      "str": "Open a portal to the Nether and summon monsters, if you're also a monster.  This will not end badly for you because they're all on your side.",
+      "//~": "NO_I18N"
+    },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self", "hostile" ],
+    "spell_class": "TELEPORTER",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "CONCENTRATE", "SILENT", "NO_HANDS", "NO_LEGS" ],
+    "max_level": 30,
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEPORT_SUMMON_LAB_DEVOURER",
+    "shape": "blast",
+    "min_damage": 1,
+    "min_range": 5,
+    "max_range": 80,
+    "range_increment": 1
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TELEPORT_SUMMON_LAB_DEVOURER",
+    "effect": [
+      {
+        "u_spawn_monster": "GROUP_NETHER_LAB_DEVOURER_BREACH",
+        "group": true,
+        "real_count": [ 1, 3 ],
+        "min_radius": 1,
+        "max_radius": 3
+      }
+    ]
+  },
+  {
+    "type": "SPELL",
+    "id": "amalgamation_telekinetic_shielder_shield_other_spell",
+    "name": { "str": "Inertial Barrier Guardian Amalgamation Shield Detector", "//~": "NO_I18N" },
+    "description": { "str": "Preps for using Inertial Barrier when a hostile target is detected.", "//~": "NO_I18N" },
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_PROJECTILE", "MUST_HAVE_CLASS_TO_LEARN" ],
+    "valid_targets": [ "hostile" ],
+    "max_level": 1,
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_AMALGAMATION_TELEKINETIC_SHIELDER_APPLICATION",
+    "shape": "blast",
+    "min_damage": 0,
+    "max_damage": 0,
+    "min_range": 20,
+    "max_range": 20
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_AMALGAMATION_TELEKINETIC_SHIELDER_APPLICATION",
+    "condition": { "math": [ "u_mon_species_nearby('ZOMBIE', 'FERAL', 'radius': 25, 'attitude': 'both') > 0" ] },
+    "//": "Until monsters can actually use spells on allies, the buff has to check from the target's location.",
+    "effect": [
+      { "u_cast_spell": { "id": "amalgamation_telekinetic_shielder_shield_other_spell_self_casting", "hit_self": true } },
+      { "npc_add_effect": "effect_amalgamation_telekinetic_shielder_counter", "duration": 60 }
+    ]
+  }
+]
