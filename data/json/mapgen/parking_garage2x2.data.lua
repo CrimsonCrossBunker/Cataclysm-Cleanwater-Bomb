@@ -1,5 +1,40 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "parking_garage2x2_palette",
+    layout = {
+        monster_glyphs = { ["-"] = { group = "GROUP_ZOMBIE", chance = 2 } },
+        vehicle_glyphs = {
+            N = { id = "parking_garage", chance = 33, rotation = 270 },
+            ["É"] = { id = "parking_garage", chance = 33, rotation = 0 },
+            S = { id = "parking_garage", chance = 33, rotation = 90 },
+            W = { id = "parking_garage", chance = 33, rotation = 180 },
+        },
+        terrain = {
+            [" "] = "t_thconc_floor",
+            ["-"] = "t_thconc_y",
+            ["="] = "t_concrete_railing",
+            ["'"] = "t_strconc_floor",
+            ["+"] = "t_door_metal_c",
+            ["."] = "t_region_groundcover_urban",
+            ["|"] = "t_concrete_wall",
+            [";"] = "t_grate",
+            ["/"] = "t_ladder_up_down",
+            i = "t_stairs_up",
+            j = "t_stairs_down",
+            [">"] = "t_ramp_down_high",
+            O = "t_ramp_down_low",
+            ["<"] = "t_ramp_up_low",
+            o = "t_ramp_up_high",
+            ["#"] = "t_soil",
+            ["*"] = "t_open_air",
+            E = "t_elevator",
+            e = "t_elevator_control_off",
+        },
+        furniture = {},
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = {

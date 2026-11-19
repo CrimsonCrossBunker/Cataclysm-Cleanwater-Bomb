@@ -1,5 +1,189 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "megastore",
+    layout = {
+        toilets = { "&" },
+        vending_glyphs = { ["$"] = { lootable = true } },
+        item_groups = {
+            ["&"] = { group = "SUS_toilet", chance = 50 },
+            D = { group = "SUS_office_desk", chance = 30 },
+            L = { group = "home_hw", chance = 50 },
+            Q = { group = "SUS_office_filing_cabinet", chance = 30 },
+            U = { group = "kitchen", chance = 40 },
+            l = { group = "jackets", chance = 5 },
+            o = { group = "SUS_oven", chance = 70 },
+            t = { group = "SUS_trash_trashcan_public", chance = 60 },
+            ["Á"] = { group = "cash_register_random", chance = 100 },
+        },
+        vehicle_glyphs = { v = { id = "shopping_cart", chance = 30 }, V = { id = "food_cart", chance = 50 } },
+        palettes = { "parametrized_highrise_walls_palette" },
+        terrain = {
+            ["│"] = "t_open_air",
+            [" "] = "t_region_groundcover_urban",
+            _ = "t_pavement",
+            [","] = "t_concrete",
+            H = "t_concrete",
+            m = "t_mdoor_frame",
+            ["+"] = "t_laminated_door_glass_c",
+            g = "t_laminated_glass",
+            ["-"] = "t_door_metal_locked",
+            ["!"] = "t_door_metal_c",
+            ["."] = "t_thconc_floor",
+            ["<"] = "t_stairs_up",
+            [">"] = "t_stairs_down",
+            ["%"] = "t_gates_mech_control",
+            I = "t_support_l",
+            Y = "t_switchgear_s",
+        },
+        furniture = {
+            ["@"] = "f_atm_off",
+            k = "f_rack",
+            K = "f_rack",
+            r = "f_rack",
+            R = "f_rack",
+            C = "f_counter",
+            ["Á"] = "f_counter",
+            u = "f_counter",
+            ["ü"] = "f_counter",
+            e = "f_counter",
+            T = "f_table",
+            ["="] = "f_table",
+            x = "f_crate_o",
+            X = "f_crate_c",
+            D = "f_desk",
+            Q = "f_filing_cabinet",
+            ["["] = "f_room_divider",
+            F = "f_glass_fridge",
+            f = "f_glass_fridge",
+            G = "f_glass_cabinet",
+            o = "f_oven",
+            s = "f_sink",
+            ["6"] = "f_console_broken",
+            M = "f_displaycase",
+            a = "f_armchair",
+            A = "f_sofa",
+            b = "f_bookcase",
+            B = "f_bed",
+            c = "f_chair",
+            d = "f_dresser",
+            H = "f_dumpster",
+            t = "f_trashcan",
+            i = "f_trashcan",
+            j = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            L = "f_locker",
+            l = "f_locker",
+            ["/"] = "f_air_filter",
+            n = "f_bench",
+            S = "f_shower",
+            U = "f_cupboard",
+            [":"] = "f_shredder",
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "mega_goods_a",
+    layout = {
+        item_groups = {
+            F = { group = "SUS_fridge_breakroom", chance = 65, repetitions = { 2, 4 } },
+            K = { group = "shoes", chance = 65, repetitions = { 1, 4 } },
+            R = { group = "jackets", chance = 65, repetitions = { 1, 4 } },
+            X = { group = "construction_worker", chance = 65, repetitions = { 1, 4 } },
+            b = { group = "novels", chance = 65, repetitions = { 4, 12 } },
+            f = { group = "produce", chance = 65, repetitions = { 2, 10 } },
+            k = { group = "shirts", chance = 65, repetitions = { 1, 4 } },
+            r = { group = "pants", chance = 65, repetitions = { 1, 4 } },
+            x = { group = "child_items", chance = 65, repetitions = { 1, 8 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "mega_goods_b",
+    layout = {
+        item_groups = {
+            F = { group = "SUS_fridge", chance = 65, repetitions = { 2, 10 } },
+            K = { group = "cannedfood", chance = 65, repetitions = { 2, 10 } },
+            R = { group = "mischw", chance = 65, repetitions = { 1, 6 } },
+            X = { group = "cannedfood", chance = 65, repetitions = { 2, 10 } },
+            b = { group = "homebooks", chance = 70, repetitions = { 2, 10 } },
+            f = { group = "SUS_fridge_breakroom", chance = 65, repetitions = { 2, 4 } },
+            k = { group = "shoes", chance = 65, repetitions = { 1, 4 } },
+            r = { group = "hardware", chance = 65, repetitions = { 1, 4 } },
+            x = { group = "shelter", chance = 65, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "mega_goods_c",
+    layout = {
+        item_groups = {
+            F = { group = "produce", chance = 65, repetitions = { 1, 4 } },
+            K = { group = "pasta_ingredients", chance = 65, repetitions = { 2, 10 } },
+            R = { group = "cleaning", chance = 65, repetitions = { 1, 4 } },
+            X = { group = "dresser", chance = 65, repetitions = { 1, 4 } },
+            b = { group = "waitingroom", chance = 60, repetitions = { 1, 4 } },
+            f = { group = "SUS_fridge", chance = 65, repetitions = { 2, 10 } },
+            k = { group = "cannedfood", chance = 65, repetitions = { 2, 10 } },
+            r = { group = "hardware", chance = 65, repetitions = { 1, 4 } },
+            x = { group = "shoes", chance = 65, repetitions = { 1, 8 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "mega_goods_d",
+    layout = {
+        item_groups = {
+            F = { group = "kitchen", chance = 65, repetitions = { 1, 4 } },
+            K = { group = "winter", chance = 65, repetitions = { 1, 4 } },
+            R = { group = "camping", chance = 65, repetitions = { 1, 4 } },
+            X = { group = "pasta_ingredients", chance = 65, repetitions = { 2, 10 } },
+            b = { group = "waitingroom", chance = 65, repetitions = { 1, 4 } },
+            f = { group = "vending_food_items", chance = 65, repetitions = { 4, 12 } },
+            k = { group = "pasta_ingredients", chance = 65, repetitions = { 2, 10 } },
+            r = { group = "sports", chance = 65, repetitions = { 1, 4 } },
+            x = { group = "cleaning", chance = 65, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "mega_goods_e",
+    layout = {
+        item_groups = {
+            F = { group = "vending_drink_items", chance = 65, repetitions = { 4, 12 } },
+            K = { group = "camping", chance = 65, repetitions = { 1, 4 } },
+            R = { group = "construction_worker", chance = 65, repetitions = { 1, 4 } },
+            X = { group = "school", chance = 65, repetitions = { 1, 4 } },
+            b = { group = "waitingroom", chance = 65, repetitions = { 1, 4 } },
+            f = { group = "produce", chance = 65, repetitions = { 1, 4 } },
+            k = { group = "cleaning", chance = 65, repetitions = { 1, 4 } },
+            r = { group = "mechanics", chance = 65, repetitions = { 1, 4 } },
+            x = { group = "kitchen", chance = 65, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "mega_goods_f",
+    layout = {
+        item_groups = {
+            F = { group = "vending_drink_items", chance = 65, repetitions = { 4, 12 } },
+            K = { group = "shoes", chance = 65, repetitions = { 1, 4 } },
+            R = { group = "shelter", chance = 65, repetitions = { 1, 4 } },
+            X = { group = "dresser", chance = 65, repetitions = { 1, 4 } },
+            b = { group = "novels", chance = 65, repetitions = { 4, 12 } },
+            f = { group = "SUS_fridge_breakroom", chance = 65, repetitions = { 1, 4 } },
+            k = { group = "shirts", chance = 65, repetitions = { 1, 4 } },
+            r = { group = "cash_register_impulse_buy_general" },
+            x = { group = "textbooks", chance = 65, repetitions = { 1, 4 } },
+        },
+    },
+}
+
 -- ground floor middle area, variant a
 ccb.content.define_mapgen {
     kind = "overmap",

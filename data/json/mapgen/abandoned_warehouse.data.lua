@@ -1,5 +1,80 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "abwarehouse_palette",
+    layout = {
+        nested_glyphs = {
+            ["|"] = {
+                choices = {
+                    { id = "shelter_graffiti", weight = 5 },
+                    { id = "general_graffiti", weight = 20 },
+                    { id = "null", weight = 75 },
+                },
+            },
+        },
+        item_groups = {
+            ["^"] = {
+                { group = "SUS_trash_floor", chance = 25, repetitions = 2 },
+                { group = "road", chance = 1 },
+                { group = "allclothes_damaged", chance = 3 },
+                { group = "stoner", chance = 1 },
+                { group = "wheels", chance = 1 },
+                { group = "creepy", chance = 1 },
+                { group = "misc_smoking", chance = 1 },
+            },
+        },
+        vehicle_glyphs = { ["Ł"] = { id = "hand_truck", chance = 40 } },
+        parameters = {
+            wall_type = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_concrete_wall", weight = 5 },
+                        { id = "t_brick_wall", weight = 3 },
+                        { id = "t_adobe_brick_wall", weight = 1 },
+                        { id = "t_strconc_wall", weight = 1 },
+                    },
+                },
+            },
+            lawn_type = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_region_soil", weight = 1 },
+                        { id = "t_region_groundcover_forest", weight = 1 },
+                        { id = "t_region_groundcover", weight = 1 },
+                        { id = "t_region_groundcover_urban", weight = 1 },
+                    },
+                },
+            },
+        },
+        terrain = {
+            ["6"] = "t_gates_mech_control",
+            ["<"] = "t_ladder_up",
+            a = { { id = "t_concrete", copies = 15 }, { id = "t_region_groundcover_barren" } },
+            ["+"] = {
+                { id = "t_door_metal_c" },
+                { id = "t_door_metal_locked" },
+                { id = "t_door_metal_locked" },
+            },
+            ["-"] = "t_door_metal_locked",
+            ["4"] = "t_gutter_downspout",
+            ["."] = "t_thconc_floor",
+            ["Ł"] = "t_thconc_floor",
+            d = "t_region_groundcover_barren",
+            ["^"] = { { id = "t_thconc_floor", copies = 10 }, { id = "t_region_soil" } },
+            [" "] = { parameter = "lawn_type", fallback = "t_region_groundcover_forest" },
+            ["|"] = { parameter = "wall_type", fallback = "t_concrete_wall" },
+        },
+        furniture = {
+            d = { { id = "f_null", copies = 3 }, { id = "f_rubble" } },
+            ["^"] = { { id = "f_null", copies = 5 }, { id = "f_rubble" } },
+            ["."] = { { id = "f_null", copies = 20 }, { id = "f_rubble" } },
+            ["{"] = "f_locker",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "abandonedwarehouse",

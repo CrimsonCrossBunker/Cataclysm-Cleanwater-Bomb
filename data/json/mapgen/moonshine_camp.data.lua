@@ -1,5 +1,40 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "moonshine_palette",
+    layout = {
+        item_groups = {
+            [" "] = { { group = "SUS_trash_floor", chance = 1 }, { group = "clutter_yard", chance = 1 } },
+            t = { group = "moonshine_brew", chance = 70 },
+        },
+        terrain = {
+            d = "t_dirtfloor",
+            ["^"] = "t_dirtfloor",
+            H = "t_dirtfloor",
+            ["+"] = "t_dirtfloor",
+            O = "t_dirtfloor",
+            a = "t_region_groundcover_barren",
+            c = "t_region_groundcover_barren",
+            _ = "t_region_groundcover_barren",
+            ["|"] = "t_wall_wood",
+            t = "t_dirtfloor",
+            b = "t_dirtfloor",
+            w = "t_region_groundcover_barren",
+        },
+        furniture = {
+            ["+"] = { { id = "f_canvas_door", copies = 3 }, { id = "f_canvas_door_o" } },
+            H = "f_wood_keg",
+            O = "f_fvat_empty",
+            ["^"] = "f_still",
+            a = { { id = "f_ash" }, { id = "f_firering" } },
+            c = "f_camp_chair",
+            b = "f_camp_chair",
+            w = "f_wood_keg",
+            t = "f_tourist_table",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "moonshine_still_roof",

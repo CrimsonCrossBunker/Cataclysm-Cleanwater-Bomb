@@ -1,5 +1,88 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "car_theater_full",
+    layout = {
+        vehicle_glyphs = { ["1"] = { id = "cars_only", chance = 80, rotation = 270 } },
+        monster_glyphs = { _ = { group = "GROUP_MALL", chance = 1 } },
+        palettes = { "car_theater", "commercial" },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "car_theater",
+    layout = {
+        toilets = { "T" },
+        item_spawns = { N = { id = "movie_poster", chance = 100 } },
+        vending_glyphs = {
+            ["$"] = { group = "vending_drink", lootable = true },
+            V = { group = "vending_food", lootable = true },
+        },
+        item_groups = { T = { group = "SUS_toilet", chance = 50 } },
+        parameters = {
+            display_fridge = {
+                value_type = "furniture",
+                default = {
+                    weighted = {
+                        { id = "f_glass_fridge", weight = 1 },
+                        { id = "f_glass_fridge_double", weight = 1 },
+                        { id = "f_display_fridge", weight = 1 },
+                    },
+                },
+            },
+        },
+        terrain = {
+            ["│"] = "t_open_air",
+            ["."] = "t_region_groundcover",
+            V = "t_region_groundcover",
+            ["$"] = "t_region_groundcover",
+            a = "t_region_groundcover",
+            ["!"] = "t_region_groundcover",
+            [" "] = "t_pavement",
+            [":"] = "t_pavement_y",
+            _ = "t_concrete",
+            b = "t_concrete",
+            n = "t_concrete",
+            N = "t_concrete",
+            ["#"] = "t_railroad_rubble",
+            ["1"] = "t_railroad_rubble",
+            D = "t_railroad_rubble",
+            f = "t_chainfence",
+            F = "t_privacy_fence",
+            ["|"] = "t_wall_y",
+            I = "t_concrete_wall",
+            ["+"] = "t_door_c",
+            ["'"] = "t_linoleum_white",
+            o = "t_window",
+            ["0"] = "t_window_no_curtains_open",
+            ["/"] = "t_ladder_up",
+            ["<"] = "t_stairs_up",
+            ["^"] = "t_gutter_downspout",
+            ["-"] = "t_railing",
+        },
+        furniture = {
+            C = "f_counter",
+            S = "f_sink",
+            a = "f_trashcan",
+            ["&"] = "f_trashcan",
+            D = "f_dumpster",
+            ["!"] = "f_street_light",
+            b = "f_bench",
+            n = "f_table",
+            d = "f_desk",
+            h = "f_chair",
+            i = "f_filing_cabinet",
+            r = "f_utility_shelf",
+            N = "f_bulletin",
+            m = { parameter = "display_fridge", fallback = "f_glass_fridge" },
+            M = "f_fridge",
+            O = "f_oven",
+            x = "f_cardboard_box",
+            X = "f_cardboard_box",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { { "car_theater_0_0_1", "car_theater_1_0_1", "car_theater_2_0_1" } },

@@ -1,5 +1,51 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "rural_road2",
+    layout = {
+        parameters = {
+            road_terrain = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_region_soil", weight = 3 },
+                        { id = "t_railroad_rubble", weight = 1 },
+                    },
+                },
+            },
+        },
+        terrain = {
+            ["/"] = {
+                { id = { parameter = "road_terrain", fallback = "t_region_soil" }, copies = 40 },
+                { id = "t_region_groundcover", copies = 1 },
+            },
+            i = {
+                {
+                    id = {
+                        select = { parameter = "road_terrain", fallback = "t_region_soil" },
+                        cases = {
+                            t_region_soil = "t_region_groundcover",
+                            t_railroad_rubble = "t_region_soil",
+                        },
+                    },
+                    copies = 20,
+                },
+                { id = "t_region_groundcover", copies = 1 },
+            },
+            ["."] = {
+                {
+                    id = {
+                        select = { parameter = "road_terrain", fallback = "t_region_soil" },
+                        cases = { t_region_soil = "t_null", t_railroad_rubble = "t_region_soil" },
+                    },
+                    copies = 5,
+                },
+                { id = "t_null", copies = 1 },
+            },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "rural_road_end",

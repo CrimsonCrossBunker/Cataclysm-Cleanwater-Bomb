@@ -1,5 +1,25 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "parking_lot_palette",
+    layout = {
+        vehicle_glyphs = {
+            ["^"] = { id = "parking_garage", chance = 33, rotation = 270 },
+            [">"] = { id = "parking_garage", chance = 33, rotation = 0 },
+            v = { id = "parking_garage", chance = 33, rotation = 90 },
+            ["<"] = { id = "parking_garage", chance = 33, rotation = 180 },
+        },
+        terrain = {
+            ["."] = "t_region_groundcover_urban",
+            [","] = "t_concrete",
+            Y = "t_concrete",
+            _ = "t_pavement",
+            ["-"] = "t_pavement_y",
+        },
+        furniture = { Y = "f_street_light" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { { "parking_2x1_0", "parking_2x1_1" } },

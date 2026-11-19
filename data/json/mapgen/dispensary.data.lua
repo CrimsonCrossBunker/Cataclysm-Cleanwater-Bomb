@@ -1,5 +1,70 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "dispensary_palette",
+    layout = {
+        toilets = { "t" },
+        item_groups = {
+            ["3"] = { group = "tools_earthworking", chance = 50, repetitions = { 1, 3 } },
+            B = { group = "stoner", chance = 15 },
+            I = { group = "SUS_office_desk", chance = 33 },
+            M = { group = "smoke_shop", chance = 50, repetitions = { 1, 2 } },
+            b = { group = "stoner", chance = 15 },
+            c = { group = "misc_smoking", chance = 20 },
+            n = { group = "stoner", chance = 50 },
+            t = { group = "SUS_toilet", chance = 50 },
+        },
+        item_spawns = {
+            ["&"] = { id = "joint_roach", chance = 33, repetitions = { 1, 6 } },
+            ["0"] = { id = "joint", chance = 75, repetitions = { 1, 8 } },
+            ["1"] = { id = "cannabis", chance = 75, repetitions = { 1, 8 } },
+            ["2"] = {
+                { id = "withered", chance = 75, repetitions = { 1, 4 } },
+                { id = "seed_weed", chance = 75, repetitions = { 1, 4 } },
+            },
+        },
+        vending_glyphs = {
+            D = { group = "vending_drink", lootable = true },
+            F = { group = "vending_food", lootable = true },
+        },
+        palettes = { "parametrized_walls_palette" },
+        terrain = {
+            ["."] = "t_region_groundcover",
+            ["["] = "t_region_tree",
+            s = "t_sidewalk",
+            _ = "t_concrete",
+            [":"] = "t_door_glass_c",
+            ["+"] = "t_door_c",
+            ["-"] = "t_wall_glass",
+            [" "] = "t_floor",
+            ["~"] = "t_carpet_green",
+            ["'"] = "t_thconc_floor",
+            ["0"] = "t_thconc_floor",
+            ["1"] = "t_thconc_floor",
+            ["2"] = "t_thconc_floor",
+            ["<"] = "t_ladder_up",
+            ["4"] = "t_gutter_downspout",
+        },
+        furniture = {
+            ["^"] = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            ["="] = "f_beaded_door",
+            M = "f_displaycase",
+            b = "f_bench",
+            B = "f_bench",
+            h = "f_chair",
+            n = "f_table",
+            I = "f_desk",
+            c = "f_counter",
+            S = "f_sink",
+            ["0"] = "f_utility_shelf",
+            ["1"] = "f_utility_shelf",
+            ["2"] = "f_utility_shelf",
+            ["3"] = "f_utility_shelf",
+            ["&"] = "f_trashcan",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "dispensary",

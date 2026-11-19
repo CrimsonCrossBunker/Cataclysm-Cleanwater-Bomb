@@ -1,5 +1,19 @@
 local ccb = require("ccb")
 
+-- nest_rock_wall_roof is defined in the regular cave
+ccb.content.define_mapgen_palette {
+    id = "river_cave_surface_palette",
+    layout = {
+        nested_glyphs = {
+            ["."] = { id = "nest_mud_rock_roof" },
+            ["#"] = { id = "nest_rock_wall_roof" },
+            [">"] = { id = "nest_slope_down_rock_roof" },
+            c = { id = "nest_dirtmound_rock_roof" },
+        },
+        terrain = { [" "] = "t_null", ["-"] = "t_sand", C = "t_dirtmound" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "nest_dirtmound_rock_roof",

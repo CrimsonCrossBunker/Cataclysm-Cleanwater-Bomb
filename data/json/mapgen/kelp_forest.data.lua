@@ -1,5 +1,15 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "kelp_forest_palette",
+    layout = {
+        nested_glyphs = {
+            ["1"] = { choices = { { id = "kelp_forest", weight = 8 }, { id = "null", weight = 1 } } },
+            ["2"] = { choices = { { id = "kelp_forest", weight = 2 }, { id = "null", weight = 1 } } },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "kelp_forest",

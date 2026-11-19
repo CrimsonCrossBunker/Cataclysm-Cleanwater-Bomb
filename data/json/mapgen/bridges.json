@@ -1,43 +1,5 @@
 [
   {
-    "type": "palette",
-    "id": "bridge_ground_palette",
-    "terrain": {
-      ".": "t_pavement",
-      ":": "t_pavement_y",
-      "_": "t_sidewalk",
-      "=": "t_guardrail",
-      "u": "t_ramp_up_low",
-      "U": "t_ramp_up_high",
-      "d": "t_ramp_down_high",
-      "D": "t_ramp_down_low",
-      "W": "t_sidewalk_ramp_down_high",
-      ">": "t_sidewalk_ramp_down_low",
-      "<": "t_sidewalk_ramp_up_high",
-      "w": "t_sidewalk_ramp_up_low",
-      "#": "t_concrete_wall"
-    }
-  },
-  {
-    "type": "palette",
-    "id": "bridge_road_palette",
-    "terrain": {
-      " ": "t_open_air",
-      ".": "t_pavement_hw_air",
-      ":": "t_pavement_y_hw_air",
-      "_": "t_sidewalk_hw_air",
-      "=": "t_guardrail_hw_air",
-      "U": "t_ramp_up_high",
-      "d": "t_ramp_down_high",
-      "D": "t_ramp_down_low",
-      "W": "t_sidewalk_ramp_down_high",
-      ">": "t_sidewalk_ramp_down_low",
-      "<": "t_sidewalk_ramp_up_high",
-      "w": "t_sidewalk_ramp_up_low",
-      "#": "t_concrete_wall"
-    }
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "bridge" ],
     "weight": { "global_val": "vanilla_bridge_weight", "default": 1000 },

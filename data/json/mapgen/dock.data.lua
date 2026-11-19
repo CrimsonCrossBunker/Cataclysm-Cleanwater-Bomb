@@ -1,5 +1,7 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette { id = "dock_small", layout = { terrain = { d = "t_dock" } } }
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { "lake_dock_small" },

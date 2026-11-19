@@ -1,5 +1,89 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "abstorefront_palette",
+    layout = {
+        toilets = { "T" },
+        nested_glyphs = {
+            ["#"] = {
+                choices = {
+                    { id = "shelter_graffiti", weight = 5 },
+                    { id = "general_graffiti", weight = 20 },
+                    { id = "null", weight = 75 },
+                },
+            },
+        },
+        item_groups = {
+            ["."] = { group = "SUS_trash_floor", chance = 5 },
+            B = { group = "SUS_trash_floor", chance = 5 },
+            O = { group = "methchef", chance = 50 },
+            R = { group = "SUS_trash_floor", chance = 33, repetitions = { 1, 5 } },
+        },
+        vehicle_glyphs = { ["."] = { id = "shopping_cart", chance = 1 } },
+        palettes = { "parametrized_walls_palette" },
+        parameters = {
+            window_type = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_window_taped", weight = 2 },
+                        { id = "t_window_no_curtains", weight = 3 },
+                        { id = "t_window_frame", weight = 1 },
+                        { id = "t_window_empty", weight = 1 },
+                        { id = "t_window_boarded", weight = 12 },
+                        { id = "t_window_reinforced", weight = 1 },
+                    },
+                },
+            },
+            rack_type = {
+                value_type = "furniture",
+                default = {
+                    weighted = {
+                        { id = "f_rack", weight = 12 },
+                        { id = "f_bookcase", weight = 2 },
+                        { id = "f_null", weight = 12 },
+                        { id = "f_utility_shelf", weight = 3 },
+                    },
+                },
+            },
+            lawn_type = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_region_groundcover_forest", weight = 4 },
+                        { id = "t_region_groundcover", weight = 1 },
+                        { id = "t_region_groundcover_urban", weight = 1 },
+                    },
+                },
+            },
+        },
+        terrain = {
+            [" "] = { parameter = "lawn_type", fallback = "t_region_groundcover_forest" },
+            s = "t_sidewalk",
+            ["+"] = "t_door_c",
+            ["."] = "t_floor",
+            D = "t_door_locked",
+            x = { parameter = "window_type", fallback = "t_window_boarded" },
+            ["4"] = "t_gutter_downspout",
+            ["<"] = "t_stairs_up",
+            _ = "t_pavement",
+            ["~"] = "t_pavement_y",
+            F = "t_chainfence",
+            G = "t_chaingate_l",
+            R = "t_sidewalk",
+        },
+        furniture = {
+            S = "f_sink",
+            B = { parameter = "rack_type", fallback = "f_null" },
+            c = "f_counter",
+            R = "f_dumpster",
+            O = "f_oven",
+            l = "f_locker",
+            b = "f_bench",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "abstorefront",

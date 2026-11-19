@@ -1,5 +1,49 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "trailhead",
+    layout = {
+        toilets = { "T" },
+        nested_glyphs = {
+            ["6"] = { choices = { { id = "null", weight = 1 }, { id = "1x1_trailmap", weight = 2 } } },
+        },
+        item_groups = { T = { group = "SUS_toilet", chance = 50 } },
+        terrain = {
+            [" "] = "t_region_soil",
+            [","] = { { id = "t_region_groundcover", copies = 2 }, { id = "t_region_soil" } },
+            [";"] = { { id = "t_region_groundcover" }, { id = "t_region_soil" } },
+            ["."] = { { id = "t_region_soil", copies = 5 }, { id = "t_region_groundcover" } },
+            b = "t_region_soil",
+            t = "t_trunk",
+            s = "t_region_soil",
+            ["6"] = "t_region_soil",
+            ["="] = "t_region_soil",
+            ["-"] = "t_wall_wood",
+            ["|"] = "t_wall_wood",
+            ["#"] = "t_floor",
+            B = "t_floor",
+            w = "t_floor",
+            ["+"] = "t_door_c",
+            [":"] = "t_window_bars",
+            c = "t_woodchips",
+            W = "t_water_pump",
+            T = "t_floor",
+            ["7"] = { { id = "t_region_tree" }, { id = "t_region_shrub" } },
+            f = "t_region_soil",
+        },
+        furniture = {
+            b = "f_boulder_small",
+            s = "f_sign",
+            B = "f_bench",
+            ["="] = "f_bench",
+            w = "f_woodstove",
+            [","] = { { id = "f_region_flower", copies = 1 }, { id = "f_null", copies = 100 } },
+            [";"] = { { id = "f_region_flower", copies = 1 }, { id = "f_null", copies = 100 } },
+            ["."] = { { id = "f_region_flower", copies = 1 }, { id = "f_null", copies = 100 } },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "trailhead_outhouse_z1",

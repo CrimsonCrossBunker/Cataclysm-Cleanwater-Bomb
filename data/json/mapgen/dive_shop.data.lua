@@ -1,5 +1,58 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "dive_shop_palette",
+    layout = {
+        toilets = { "t" },
+        vending_glyphs = {
+            W = { group = "vending_drink", lootable = true },
+            F = { group = "vending_food", lootable = true },
+        },
+        vehicle_glyphs = { v = { id = "parking_garage_short", rotation = 90, chance = 33 } },
+        item_groups = {
+            D = { group = "SUS_scuba_gear", chance = 40 },
+            R = { group = "SUS_scuba_gear", chance = 10 },
+            ["]"] = { group = "swimmer_wetsuit", chance = 80, repetitions = { 0, 3 } },
+            t = { group = "SUS_toilet", chance = 50 },
+        },
+        palettes = { "parametrized_walls_palette" },
+        terrain = {
+            ["."] = "t_region_groundcover_urban",
+            _ = "t_pavement",
+            v = "t_pavement",
+            [","] = "t_pavement_y",
+            s = "t_concrete",
+            O = "t_window",
+            [")"] = "t_door_glass_c",
+            ["+"] = "t_door_metal_c",
+            [":"] = "t_wall_glass",
+            ["*"] = "t_thconc_y",
+            ["~"] = "t_pool_water",
+            ["<"] = "t_ladder_up",
+            ["4"] = "t_gutter_downspout",
+        },
+        furniture = {
+            C = "f_counter",
+            ["$"] = "f_counter_gate_c",
+            c = "f_console_broken",
+            D = "f_displaycase",
+            R = "f_rack",
+            ["]"] = "f_glass_cabinet",
+            ["^"] = "f_indoor_plant",
+            L = "f_stool",
+            h = "f_chair",
+            n = "f_table",
+            b = "f_metal_bench",
+            l = "f_locker",
+            G = "f_bulletin",
+            S = "f_sink",
+            ["?"] = "f_shower",
+            B = "f_workbench",
+            ["3"] = "f_air_compressor",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "s_dive_shop_roof",

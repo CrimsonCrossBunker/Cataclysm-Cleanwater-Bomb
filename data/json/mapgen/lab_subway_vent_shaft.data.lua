@@ -1,5 +1,30 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "lab_subway_vent_shaft",
+    layout = {
+        terrain = {
+            ["2"] = "t_door_metal_c",
+            ["%"] = "t_metal_floor_no_roof",
+            ["-"] = "t_wall_metal",
+            ["3"] = "t_chaingate_c",
+            [","] = "t_region_groundcover_urban",
+            ["."] = "t_metal_floor_no_roof",
+            ["="] = "t_metal_ventilation_shutter",
+            ["`"] = "t_open_air",
+            w = "t_bridge",
+            ["~"] = "t_water_pool_shallow",
+            ["<"] = "t_ladder_up",
+            [">"] = "t_ladder_down",
+            u = "t_chainfence",
+            U = "t_chainfence",
+            ["0"] = "t_soil",
+            ["#"] = "t_rock",
+        },
+        furniture = { ["%"] = "f_machinery_heavy" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = { "lab_subway_vent_shaft_roof" },

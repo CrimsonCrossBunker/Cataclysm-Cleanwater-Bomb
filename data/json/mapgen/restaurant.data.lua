@@ -1,5 +1,89 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "restaurant_food_palette",
+    layout = {
+        item_groups = {
+            F = { group = "restaur_fridge", chance = 80, repetitions = { 1, 4 } },
+            T = { group = "restaur_table", chance = 10 },
+            c = { group = "restaur_kitchen", chance = 75, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "restaurant_seafood_palette",
+    layout = {
+        item_groups = {
+            F = { group = "sea_restaur_fridge", chance = 80, repetitions = { 1, 4 } },
+            T = { group = "sea_restaur_table", chance = 10 },
+            c = { group = "sea_restaur_kitchen", chance = 75, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "restaurant_palette",
+    layout = {
+        toilets = { "P" },
+        item_groups = {
+            ["$"] = { group = "cash_register_random", chance = 100 },
+            ["&"] = { group = "SUS_trash_trashcan_public", chance = 65 },
+            P = { group = "SUS_toilet", chance = 50 },
+            S = { group = "restaur_sink", chance = 90 },
+            d = { group = "SUS_trash_dumpster", chance = 50 },
+            ["{"] = { group = "restaur_rack", chance = 75, repetitions = { 1, 3 } },
+            ["~"] = { group = "restaur_bath", chance = 20 },
+        },
+        parameters = {
+            food_type = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        { id = "restaurant_food_palette", weight = 2 },
+                        { id = "restaurant_seafood_palette", weight = 1 },
+                    },
+                },
+            },
+            wall_type = { value_type = "terrain", default = { weighted = { "t_wall_r", "t_wall_p" } } },
+        },
+        palettes = { { parameter = "food_type" }, "parametrized_walls_palette" },
+        terrain = {
+            ["+"] = "t_door_c",
+            [","] = "t_pavement_y",
+            [" "] = "t_floor",
+            B = "t_floor",
+            T = "t_floor",
+            ["$"] = "t_floor",
+            y = "t_floor",
+            C = "t_curtains",
+            D = "t_door_locked",
+            W = "t_window",
+            G = "t_wall_glass",
+            _ = "t_pavement",
+            ["*"] = "t_concrete",
+            d = "t_concrete",
+            ["4"] = "t_gutter_downspout",
+            ["^"] = "t_ladder_up",
+        },
+        furniture = {
+            B = "f_bench",
+            O = "f_oven",
+            R = "f_woodstove",
+            y = "f_indoor_plant",
+            T = "f_table",
+            ["$"] = "f_table",
+            F = "f_heavy_duty_fridge",
+            ["("] = "f_heavy_duty_freezer",
+            S = "f_sink",
+            ["&"] = "f_trashcan",
+            d = "f_dumpster",
+            c = "f_counter",
+            ["{"] = "f_rack",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "3x3_foodplace_stairwell",

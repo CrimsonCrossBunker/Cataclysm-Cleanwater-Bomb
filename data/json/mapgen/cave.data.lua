@@ -1,5 +1,22 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "cave_surface_palette",
+    layout = {
+        nested_glyphs = {
+            ["%"] = { choices = { "nest_rock_wall_roof", "nest_region_groundcover_forest" } },
+            ["|"] = { id = "nest_rock_wall_roof" },
+            [","] = { id = "nest_rock_floor_roof" },
+            [";"] = { id = "nest_region_soil_rock_roof" },
+            ["<"] = { id = "nest_slope_down_rock_roof" },
+            B = { id = "nest_rock_floor_roof" },
+            F = { id = "nest_rock_floor_roof" },
+            W = { id = "nest_rock_floor_roof" },
+        },
+        field_glyphs = { W = { id = "fd_web", intensity = 2, age_turns = 10 } },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "nest_rock_roof",

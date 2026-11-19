@@ -1,5 +1,44 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "shoppingplaza",
+    layout = {
+        palettes = { "parametrized_walls_palette" },
+        terrain = {
+            ["^"] = "t_gutter_downspout",
+            [" "] = "t_floor",
+            ["+"] = "t_door_locked",
+            ["."] = "t_pavement",
+            ["~"] = "t_chainfence",
+            ["1"] = "t_window_boarded",
+            ["4"] = "t_chaingate_l",
+            ["5"] = "t_sidewalk",
+            A = "t_floor",
+            B = "t_floor",
+            C = "t_floor",
+            D = "t_floor",
+            E = "t_dirtfloor",
+            F = "t_floor",
+            G = "t_dirtfloor",
+            H = "t_floor",
+            I = "t_floor",
+            r = "t_pavement",
+            y = "t_pavement_y",
+        },
+        furniture = {
+            A = "f_rack",
+            B = "f_toilet",
+            C = "f_counter",
+            D = "f_sink",
+            E = "f_sink",
+            F = "f_chair",
+            G = "f_locker",
+            H = "f_table",
+            I = "f_sofa",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = {

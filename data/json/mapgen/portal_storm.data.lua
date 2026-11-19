@@ -1,5 +1,12 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "portal_storm_palette",
+    layout = {
+        terrain = { ["0"] = "t_floor_warped", ["1"] = "t_wall_warped", a = "t_grass_alien", G = "t_grass" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "portal_cell",

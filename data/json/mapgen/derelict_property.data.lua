@@ -1,5 +1,188 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "derelict_palette",
+    layout = {
+        toilets = { "T" },
+        nested_glyphs = {
+            ["|"] = {
+                choices = {
+                    { id = "1x1_2z_bash", weight = 7 },
+                    { id = "general_graffiti", weight = 20 },
+                    { id = "null", weight = 90 },
+                },
+            },
+            w = { choices = { { id = "1x1_2z_bash", weight = 1 }, { id = "null", weight = 6 } } },
+            ["."] = { choices = { { id = "1x1_2z_bash", weight = 1 }, { id = "null", weight = 10 } } },
+            ["4"] = { choices = { { id = "1x1_2z_bash", weight = 1 }, { id = "null", weight = 4 } } },
+        },
+        item_groups = {
+            [" "] = { group = "clutter_yard", chance = 1, repetitions = { 1, 2 } },
+            ["."] = { group = "SUS_trash_floor_heavy", chance = 5, repetitions = { 1, 2 } },
+            ["@"] = { group = "gear_homeless", chance = 25 },
+            C = { group = "alcohol", chance = 25 },
+            O = {
+                { group = "tools_carpentry", chance = 20, repetitions = { 1, 2 } },
+                { group = "tools_construction", chance = 20, repetitions = { 1, 2 } },
+                { group = "SUS_trash_floor", chance = 40, repetitions = { 1, 3 } },
+            },
+            R = {
+                { group = "tools_earthworking", chance = 10 },
+                { group = "farming_seeds", chance = 30, repetitions = { 1, 4 } },
+            },
+            c = { group = "SUS_trash_floor", chance = 25, repetitions = { 1, 4 } },
+            p = { group = "fireplace_fill", chance = 60, repetitions = { 1, 2 } },
+            ["{"] = { group = "homebooks", chance = 20, repetitions = { 1, 2 } },
+        },
+        parameters = {
+            broken_wall_type = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_wall_wood_broken", weight = 3 },
+                        { id = "t_wall_log_broken", weight = 3 },
+                        { id = "t_wall_half", weight = 2 },
+                        { id = "t_brick_wall_halfway", weight = 1 },
+                    },
+                },
+            },
+            fence_type = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_fence_wire", weight = 3 },
+                        { id = "t_fence_barbed", weight = 1 },
+                        { id = "t_chainfence", weight = 1 },
+                        { id = "t_fence", weight = 2 },
+                        { id = "t_privacy_fence", weight = 2 },
+                        { id = "t_null", weight = 10 },
+                    },
+                },
+            },
+            trash_type = {
+                value_type = "furniture",
+                default = {
+                    weighted = {
+                        { id = "f_wreckage", weight = 2 },
+                        { id = "f_null", weight = 5 },
+                        { id = "f_rubble_landfill", weight = 3 },
+                        { id = "f_rubble", weight = 1 },
+                    },
+                },
+            },
+        },
+        terrain = {
+            F = {
+                select = { parameter = "fence_type", fallback = "fence_type" },
+                cases = {
+                    t_fence_wire = "t_fence_post",
+                    t_fence_barbed = "t_fence_post",
+                    t_chainfence = "t_chainfence_posts",
+                    t_fence = "t_fence",
+                    t_privacy_fence = "t_privacy_fence",
+                    t_null = "t_null",
+                },
+            },
+            ["$"] = { parameter = "fence_type", fallback = "t_null" },
+            ["."] = "t_floor",
+            d = "t_floor",
+            n = "t_floor",
+            h = "t_floor",
+            H = "t_floor",
+            m = "t_floor",
+            r = "t_floor_noroof",
+            [","] = "t_floor_noroof",
+            ["{"] = "t_floor",
+            B = "t_floor",
+            c = "t_floor",
+            O = "t_floor",
+            ["@"] = "t_floor",
+            t = "t_floor",
+            [":"] = "t_linoleum_gray",
+            b = "t_linoleum_gray",
+            T = "t_linoleum_gray",
+            ["&"] = "t_linoleum_gray",
+            v = "t_linoleum_gray_no_roof",
+            ["="] = "t_thconc_floor",
+            R = "t_thconc_floor",
+            ["0"] = {
+                { id = "t_window_boarded_noglass", copies = 2 },
+                { id = "t_window_boarded", copies = 2 },
+                { id = "t_window_empty" },
+            },
+            ["^"] = "t_region_soil",
+            o = "t_dirtmound",
+            s = "t_concrete",
+            ["+"] = { { id = "t_door_c" }, { id = "t_door_o" }, { id = "t_door_b" } },
+            D = {
+                { id = "t_door_locked_interior" },
+                { id = "t_door_b" },
+                { id = "t_door_boarded", copies = 4 },
+            },
+            w = { parameter = "broken_wall_type", fallback = "t_wall_wood_broken" },
+            ["|"] = {
+                select = { parameter = "broken_wall_type", fallback = "t_wall_wood_broken" },
+                cases = {
+                    t_wall_wood_broken = "t_wall_wood",
+                    t_wall_log_broken = "t_wall_log",
+                    t_wall_half = "t_wall",
+                    t_brick_wall_halfway = "t_brick_wall",
+                },
+            },
+            ["4"] = "t_gutter_downspout",
+        },
+        furniture = {
+            r = "f_rubble",
+            ["^"] = "f_rubble",
+            v = "f_rubble",
+            d = "f_desk",
+            ["@"] = "f_floor_mattress",
+            h = "f_chair",
+            n = "f_table",
+            c = "f_cupboard",
+            H = "f_armchair",
+            ["{"] = "f_bookcase",
+            b = "f_shower",
+            ["&"] = "f_sink",
+            B = "f_bigmirror_b",
+            R = "f_utility_shelf",
+            O = "f_cardboard_box",
+            t = "f_woodstove",
+            W = { parameter = "trash_type", fallback = "f_null" },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "derelict_variant_parameter_palette",
+    layout = {
+        parameters = {
+            variant = {
+                value_type = "nested_mapgen",
+                default = {
+                    weighted = {
+                        "derelict_property_1", "derelict_property_2", "derelict_property_3",
+                        "derelict_property_4", "derelict_property_5", "derelict_property_6",
+                        "derelict_property_7",
+                    },
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "derelict_roof_palette",
+    layout = {
+        nested_glyphs = {
+            ["."] = { choices = { { id = "1x1_2z_bash", weight = 1 }, { id = "null", weight = 9 } } },
+            ["-"] = { choices = { { id = "1x1_2z_bash", weight = 1 }, { id = "null", weight = 4 } } },
+            ["5"] = { choices = { { id = "1x1_2z_bash", weight = 1 }, { id = "null", weight = 4 } } },
+        },
+        palettes = { "roof_palette" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "derelict_property_1",

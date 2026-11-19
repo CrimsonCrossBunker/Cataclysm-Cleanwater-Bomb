@@ -1,5 +1,124 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "homelesscamp_palette",
+    layout = {
+        nested_glyphs = {
+            N = {
+                choices = {
+                    { id = "tent_b_5x5_N", weight = 9 },
+                    { id = "tent_5x5_N", weight = 16 },
+                    { id = "null", weight = 5 },
+                },
+            },
+            S = {
+                choices = {
+                    { id = "tent_b_5x5_S", weight = 9 },
+                    { id = "tent_5x5_S", weight = 16 },
+                    { id = "null", weight = 5 },
+                },
+            },
+            E = {
+                choices = {
+                    { id = "tent_b_5x5_E", weight = 9 },
+                    { id = "tent_5x5_E", weight = 16 },
+                    { id = "null", weight = 5 },
+                },
+            },
+            W = {
+                choices = {
+                    { id = "tent_b_5x5_W", weight = 9 },
+                    { id = "tent_5x5_W", weight = 16 },
+                    { id = "null", weight = 5 },
+                },
+            },
+            n = {
+                choices = {
+                    { id = "tent_b_3x3_N", weight = 9 },
+                    { id = "tent_3x3_N", weight = 16 },
+                    { id = "null", weight = 5 },
+                },
+            },
+            s = {
+                choices = {
+                    { id = "tent_b_3x3_S", weight = 9 },
+                    { id = "tent_3x3_S", weight = 16 },
+                    { id = "null", weight = 5 },
+                },
+            },
+            e = {
+                choices = {
+                    { id = "tent_b_3x3_E", weight = 9 },
+                    { id = "tent_3x3_E", weight = 16 },
+                    { id = "null", weight = 5 },
+                },
+            },
+            w = {
+                choices = {
+                    { id = "tent_b_3x3_W", weight = 9 },
+                    { id = "tent_3x3_W", weight = 16 },
+                    { id = "null", weight = 5 },
+                },
+            },
+        },
+        item_groups = {
+            [" "] = {
+                { group = "clutter_yard", chance = 4, repetitions = { 1, 2 } },
+                { group = "SUS_trash_floor", chance = 2, repetitions = { 1, 2 } },
+                { group = "creepy", chance = 1 },
+                { group = "allclothes_damaged", chance = 1 },
+                { group = "oa_ig_rd_metal_trash", chance = 1 },
+            },
+            ["?"] = {
+                { group = "gear_homeless", chance = 3 },
+                { group = "camping", chance = 3 },
+                { group = "SUS_trash_floor", chance = 2 },
+                { group = "misc_smoking", chance = 2 },
+                { group = "alcohol", chance = 4 },
+                { group = "foodintincan", chance = 3, repetitions = { 1, 3 } },
+                { group = "stash_food", chance = 2 },
+                { group = "allclothes_damaged", chance = 10, repetitions = { 1, 5 } },
+            },
+            o = { group = "fireplace_fill", chance = 66, repetitions = { 1, 3 } },
+        },
+        terrain = {
+            [","] = "t_region_groundcover",
+            ["?"] = "t_region_groundcover",
+            h = "t_region_groundcover",
+            t = "t_region_groundcover",
+            _ = "t_region_soil",
+            o = "t_region_soil",
+            X = "t_region_groundcover_barren",
+            N = "t_region_groundcover",
+            E = "t_region_groundcover",
+            S = "t_region_groundcover",
+            W = "t_region_groundcover",
+            n = "t_region_groundcover",
+            e = "t_region_groundcover",
+            s = "t_region_groundcover",
+            w = "t_region_groundcover",
+        },
+        traps = { ["?"] = { { id = "tr_null", copies = 25 }, { id = "tr_cot" }, { id = "tr_rollmat" } } },
+        furniture = {
+            [" "] = {
+                { id = "f_null", copies = 250 },
+                { id = "f_rubble_landfill", copies = 16 },
+                { id = "f_wreckage", copies = 4 },
+                { id = "f_rubble" },
+                { id = "f_rubble_rock" },
+            },
+            o = {
+                { id = "f_firering", copies = 2 },
+                { id = "f_ash", copies = 2 },
+                { id = "f_30gal_firebarrel" },
+                { id = "f_55gal_firebarrel" },
+            },
+            h = { { id = "f_null", copies = 2 }, { id = "f_camp_chair" } },
+            t = { { id = "f_null", copies = 2 }, { id = "f_tourist_table" } },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "homelesscamp",
