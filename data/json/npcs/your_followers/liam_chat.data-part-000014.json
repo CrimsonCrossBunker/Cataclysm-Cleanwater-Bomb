@@ -1,0 +1,20 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_Liam_Opinions_MISSION_REFUGEE_Boris_CLEANUP",
+    "dynamic_line": "I guess I get why the one Boris guy can't do it but I don't quite see why we have to go around asking everyone for him.  He lives here!  Anyway, you know I'm okay with getting my hands dirty, if you want to go offer to help him out I'll get busy with a scrubby.  I've cleaned worse things out of the Foodplace washroom.  Hell, I've cleaned worse things out of the back of my van when I was running for Amazon.\"  He gets a thousand-yard-stare for a moment.  \"Let's not discuss this any more.",
+    "speaker_effect": {
+      "effect": [
+        { "npc_add_var": "mission_Boris_mission_1_cleanup_asked", "value": "yes" },
+        { "math": [ "u_mission_cleanup_promises_Boris_mission_1 += 1" ] }
+      ]
+    },
+    "responses": [
+      {
+        "//": "It's a bit weird that Liam doesn't leave your party, if you ask four other people and he goes to help, but no big deal I think.  Ideally this should be coded so that he only helps out if you also do, and he shortens the time, but I'm trying to make some quick improvements here, not write a bunch of EoC.",
+        "text": "Thanks Liam, I knew I could count on you.",
+        "topic": "TALK_Liam_Opinions"
+      }
+    ]
+  }
+]

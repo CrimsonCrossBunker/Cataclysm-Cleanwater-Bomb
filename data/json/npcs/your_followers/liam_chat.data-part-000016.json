@@ -1,0 +1,30 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_Liam_Opinions_MISSION_REFUGEE_Jenny_GET_TANK",
+    "dynamic_line": "Kinda wonder why she didn't just get us to get her a compressor, but she probably has her reasons.\"  You notice a bit of an odd tone to his voice.  \"Maybe we could take apart a big compressor for her, the tank would probably be perfect.",
+    "speaker_effect": { "sentinel": "liam_crush1", "effect": { "u_add_var": "u_liam_jenny_feelings", "value": "crush_suspected" } },
+    "responses": [
+      {
+        "text": "Dude.  You have a crush on Jenny.",
+        "topic": "TALK_Liam_Jenny_CrushAccuse",
+        "condition": { "not": { "compare_string": [ "crushing_hard", { "u_val": "u_liam_jenny_feelings" } ] } }
+      },
+      { "text": "Thanks, man.  I'd like your opinion on a different thing though.", "topic": "TALK_Liam_Opinions" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_Liam_Opinions_MISSION_REFUGEE_Jenny_GET_TEXT",
+    "dynamic_line": "*blushes, for some reason.  \"Uh, yeah.  Gun books, hey?  I guess we should look in um, gun stores or libraries?  Or high school lockers, haha.  Oh, that made me sad.\"",
+    "speaker_effect": { "sentinel": "liam_crush1", "effect": { "u_add_var": "u_liam_jenny_feelings", "value": "crush_suspected" } },
+    "responses": [
+      {
+        "text": "Dude.  You have a crush on Jenny.",
+        "topic": "TALK_Liam_Jenny_CrushAccuse",
+        "condition": { "not": { "compare_string": [ "crushing_hard", { "u_val": "u_liam_jenny_feelings" } ] } }
+      },
+      { "text": "Thanks, man.  I'd like your opinion on a different thing though.", "topic": "TALK_Liam_Opinions" }
+    ]
+  }
+]
