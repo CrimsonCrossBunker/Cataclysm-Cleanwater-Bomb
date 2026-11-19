@@ -63,33 +63,6 @@
     }
   },
   {
-    "//": "walls of tentacle wall that can shift from side to side to make the tunnel wind",
-    "type": "mapgen",
-    "nested_mapgen_id": "tentacle_bounds_lite_hleft",
-    "object": {
-      "mapgensize": [ 14, 14 ],
-      "rows": [
-        "####          ",
-        "              ",
-        "              ",
-        "              ",
-        "              ",
-        "              ",
-        "              ",
-        "              ",
-        "              ",
-        "              ",
-        "              ",
-        "              ",
-        "              ",
-        "              "
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "palettes": [ "nether_monster_palette" ],
-      "terrain": {  }
-    }
-  },
-  {
     "type": "mapgen",
     "om_terrain": "corpse_bowels_tentacle_edge",
     "object": {
