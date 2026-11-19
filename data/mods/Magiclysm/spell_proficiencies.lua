@@ -30,11 +30,14 @@ local function cast_adjustment(difficulty, casting_time)
     return difficulty * math.sqrt(casting_time / 100)
 end
 
+local evocation = { spell = "evocation", name = "Evocation", proficiency = "evocation", flag = "EVOCATION_SPELL",
+    adjustments = { { "damage", 1 } } }
 local channeling = { spell = "channeling", name = "Channeling", proficiency = "channel", flag = "CHANNELING_SPELL",
     adjustments = { { "casting_time", -1 }, { "cost", -1 } } }
+local transformation = { spell = "transformation", name = "Transformation", proficiency = "transformation", flag = "TRANSFORMATION_SPELL",
+    adjustments = { { "casting_time", -1 }, { "duration", 1 } } }
 local schools = {
-    { spell = "evocation", name = "Evocation", proficiency = "evocation", flag = "EVOCATION_SPELL",
-        adjustments = { { "damage", 1 } } },
+    evocation,
     channeling,
     { spell = "summon", name = "Conjuration", proficiency = "summon", flag = "CONJURATION_SPELL",
         adjustments = { { "duration", 1 }, { "cost", -1 } } },
@@ -46,8 +49,7 @@ local schools = {
         adjustments = { { "cost", -1 }, { "range", 1 } } },
     { spell = "restoration", name = "Restoration", proficiency = "restoration", flag = "RESTORATION_SPELL",
         adjustments = { { "damage", 1 }, { "casting_time", -1 } } },
-    { spell = "transformation", name = "Transformation", proficiency = "transformation", flag = "TRANSFORMATION_SPELL",
-        adjustments = { { "casting_time", -1 }, { "duration", 1 } } },
+    transformation,
 }
 
 local function progress(actor, proficiency)
@@ -152,7 +154,13 @@ end)
 ccb.runtime.on("game:opens_spellbook", "apply_spell_proficiency_bonuses")
 
 return {
+    evocation_modifier = function(actor)
+        return 1 + proficiency_bonus(actor, evocation)
+    end,
     channeling_modifier = function(actor)
         return 1 + proficiency_bonus(actor, channeling)
+    end,
+    transformation_modifier = function(actor)
+        return 1 + proficiency_bonus(actor, transformation)
     end,
 }

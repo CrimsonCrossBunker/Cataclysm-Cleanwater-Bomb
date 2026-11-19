@@ -209,7 +209,7 @@
     "anger_triggers": [ "FRIEND_DIED", "FRIEND_ATTACKED", "HURT" ],
     "fear_triggers": [ "FIRE" ],
     "flags": [ "SEES", "HEARS", "BASHES", "DESTROYS", "GRABS", "ATTACKMON", "NO_BREATHE", "PUSH_MON", "PUSH_VEH", "PATH_AVOID_FIRE" ],
-    "death_function": { "eoc": "EOC_TREANT_DEATH", "corpse_type": "NO_CORPSE", "message": "The %s returns to immobility." }
+    "death_function": { "corpse_type": "NO_CORPSE", "message": "The %s returns to immobility." }
   },
   {
     "id": "mon_treant_druid",
@@ -217,11 +217,6 @@
     "type": "MONSTER",
     "name": "treant",
     "default_faction": "player"
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_TREANT_DEATH",
-    "effect": [ { "npc_transform_radius": 0, "ter_furn_transform": "ter_druid_tree_guardian_turn_back" } ]
   },
   {
     "id": "mon_keeper_of_the_glades",
