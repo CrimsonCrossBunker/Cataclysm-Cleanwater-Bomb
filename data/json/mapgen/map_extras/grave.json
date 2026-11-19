@@ -122,19 +122,5 @@
       "place_signs": [ { "signage": "Wiggle your big toe.", "x": 0, "y": 0 } ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
     }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "mx_grave",
-    "object": {
-      "place_nested": [
-        {
-          "chunks": [ [ "human_corpse", 95 ], [ "pet_corpse", 95 ], [ "grave_easter_egg", 5 ] ],
-          "x": [ 0, 22 ],
-          "y": [ 0, 22 ]
-        }
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
   }
 ]
