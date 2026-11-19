@@ -361,8 +361,12 @@ void invoke_technique_application_handler(
     int repeat_index, int repeat_count, double total_damage,
     std::string_view weapon_id );
 
-/** Evaluate a Lua-authored active-technique availability policy. */
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+/** Evaluate a combat predicate at the native technique or hit-effect check. */
+bool invoke_technique_combat_predicate(
+    std::string_view mod_id, std::string_view handler_id,
+    const Character &attacker, const Creature &target );
+/** Evaluate a Lua-authored active-technique availability policy. */
 std::optional<double> invoke_technique_cooldown_handler(
     std::string_view technique_id, std::string_view mod_id,
     std::string_view handler_id, const Character &character, double base_cooldown_seconds );
@@ -371,6 +375,11 @@ std::optional<bool> invoke_technique_condition_handler(
     std::string_view handler_id, const Character &character,
     std::string_view phase, const Creature *target = nullptr );
 #else
+inline bool invoke_technique_combat_predicate(
+    std::string_view, std::string_view, const Character &, const Creature & )
+{
+    return false;
+}
 inline std::optional<double> invoke_technique_cooldown_handler(
     std::string_view, std::string_view, std::string_view, const Character &, double )
 {

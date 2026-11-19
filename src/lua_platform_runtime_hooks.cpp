@@ -3344,6 +3344,44 @@ std::optional<double> invoke_mounted_charge_damage_handler(
     return std::clamp( multiplier, 1.0, static_cast<double>( profile.max_multiplier ) );
 }
 
+bool invoke_technique_combat_predicate(
+    const std::string_view mod_id, const std::string_view handler_id,
+    const Character &attacker, const Creature &target )
+{
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return false;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first combat predicate unavailable for '"
+                                    << mod_id << ':' << handler_id << "'";
+        return false;
+    }
+    const monster *const defender = target.as_monster();
+    sol::table payload = owner->lua->create_table();
+    payload["attacker"] = platform_creature_handle( *owner, attacker );
+    payload["target"] = platform_creature_handle( *owner, target );
+    payload["attacker_size"] = static_cast<int>( attacker.get_size() );
+    payload["target_size"] = static_cast<int>( target.get_size() );
+    payload["attacker_strength"] = attacker.get_str();
+    payload["target_grab_strength"] = defender ? defender->get_grab_strength() : 0;
+
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+        return false;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first combat predicate '"
+                                    << mod_id << ':' << handler_id << "' must return exactly one boolean";
+        return false;
+    }
+    return result.get<bool>();
+}
+
 std::optional<bool> invoke_technique_condition_handler(
     const std::string_view technique_id, const std::string_view mod_id,
     const std::string_view handler_id, const Character &character,

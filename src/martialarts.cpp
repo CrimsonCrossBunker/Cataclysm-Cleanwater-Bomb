@@ -267,29 +267,51 @@ class ma_weapon_damage_reader : public generic_typed_reader<ma_weapon_damage_rea
             } );
         }
 };
-} // namespace
+bool load_combat_predicate( const JsonObject &definition, std::string_view source,
+                            std::function<bool( const const_dialogue & )> &condition )
+{
+    const auto field = definition.get_member_opt( "//ccb_lua_combat_predicate" );
+    if( !field ) {
+        if( !definition.has_member( "condition" ) ) {
+            return false;
+        }
+        read_condition( definition, "condition", condition, false );
+        return true;
+    }
+    if( field->has_source_file() || definition.has_member( "condition" ) ) {
+        field->throw_error( "combat predicate metadata is reserved for ordered Lua definitions" );
+    }
+    const std::string handler = field->get_string();
+    if( handler.empty() || handler.find( '\0' ) != std::string::npos ||
+        handler.find( '#' ) != std::string::npos ) {
+        field->throw_error( "combat predicate requires a named Lua handler" );
+    }
+    condition = [owner = std::string( source ), handler]( const const_dialogue & d ) {
+        const Character *const attacker = d.const_actor( false )->get_const_character();
+        const Creature *const target = d.const_actor( true )->get_const_creature();
+        return attacker && target &&
+               cata::lua_platform::invoke_technique_combat_predicate( owner, handler, *attacker, *target );
+    };
+    return true;
+}
 
-tech_effect_data load_tech_effect_data( const JsonObject &e )
+tech_effect_data load_tech_effect_data( const JsonObject &e, std::string_view source )
 {
     tech_effect_data ret( efftype_id( e.get_string( "id" ) ), e.get_int( "duration", 0 ),
                           e.get_bool( "permanent", false ), e.get_bool( "on_damage", true ),
                           e.get_int( "chance", 100 ), e.get_string( "message", "" ),
                           json_character_flag( e.get_string( "req_flag", "NULL" ) ) );
-    if( e.has_member( "condition" ) ) {
-        read_condition( e, "condition", ret.condition, false );
-        ret.has_condition = true;
-    }
+    ret.has_condition = load_combat_predicate( e, source, ret.condition );
     return ret;
 }
 
-namespace
-{
 class tech_effect_reader : public generic_typed_reader<tech_effect_reader>
 {
     public:
+        explicit tech_effect_reader( std::string_view source ) : source( source ) {}
         tech_effect_data get_next( JsonValue &jv ) const {
             JsonObject e = jv.get_object();
-            return load_tech_effect_data( e );
+            return load_tech_effect_data( e, source );
         }
         template<typename C>
         void erase_next( std::string &&eff_str, C &container ) const {
@@ -298,6 +320,8 @@ class tech_effect_reader : public generic_typed_reader<tech_effect_reader>
                 return e.id == id;
             } );
         }
+    private:
+        std::string_view source;
 };
 } // namespace
 
@@ -381,14 +405,13 @@ void ma_technique::load( const JsonObject &jo, std::string_view src )
 
     optional( jo, was_loaded, "aoe", aoe, "" );
     optional( jo, was_loaded, "flags", flags, auto_flags_reader<> {} );
-    optional( jo, was_loaded, "tech_effects", tech_effects, tech_effect_reader{} );
+    optional( jo, was_loaded, "tech_effects", tech_effects, tech_effect_reader{ src } );
 
     for( JsonValue jv : jo.get_array( "eocs" ) ) {
         eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }
 
-    if( jo.has_member( "condition" ) ) {
-        read_condition( jo, "condition", condition, false );
+    if( load_combat_predicate( jo, src, condition ) ) {
         optional( jo, was_loaded, "condition_desc", condition_desc );
         has_condition = true;
     }

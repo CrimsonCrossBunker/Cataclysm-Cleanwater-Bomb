@@ -16556,6 +16556,13 @@ function CcbEffectsApi.add(creature, effect, duration, options) end
 ---@return CcbResult result `value` is boolean.
 function CcbEffectsApi.has(creature, effect, body_part, intensity) end
 
+---Inspect the effect for one exact body part. Omit the part for whole-body effects.
+---@param creature GameHandle Exact live Creature handle.
+---@param effect GameId GameId<effect>. Unknown effect IDs count as absent.
+---@param body_part? GameId GameId<body_part>.
+---@return CcbResult result `value` is native intensity or nil if absent.
+function CcbEffectsApi.exact_intensity(creature, effect, body_part) end
+
 ---Read a detached effect snapshot. Absence returns not_found; other failures must not be treated as absence.
 ---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId GameId<effect>.
@@ -17395,6 +17402,11 @@ function CcbCreaturesApi.avatar() end
 ---@return CcbResult result `value` is a detached CcbCreatureSnapshot; stale or dead handles fail closed.
 function CcbCreaturesApi.snapshot(handle) end
 
+---Use total volume, including carried and wielded items for Characters.
+---@param creature GameHandle Exact live Creature handle.
+---@return CcbResult result `value` is native volume in milliliters.
+function CcbCreaturesApi.volume_ml(creature) end
+
 ---@param position TripointCoord Absolute map-square position.
 ---@param allow_hallucination? boolean Include hallucinations. Defaults to true.
 ---@return CcbResult result `value` is the live creature handle at the given position.
@@ -17416,6 +17428,11 @@ function CcbCreaturesApi.has_flag_text(creature, flag) end
 ---@param species GameId GameId<species>.
 ---@return CcbResult result `value` is the native species membership.
 function CcbCreaturesApi.has_species(creature, species) end
+
+---@param creature GameHandle Exact live Creature handle.
+---@param body_type string Native body type, such as human or blob.
+---@return CcbResult result `value` is the native body type match.
+function CcbCreaturesApi.has_body_type(creature, body_type) end
 
 ---@param observer GameHandle Exact live Character observer handle.
 ---@param options? CcbCreatureNearbyOptions Query limits and filters; results contain generation-safe handles and detached values.
@@ -17905,6 +17922,14 @@ function CcbPlatformContent.define_spell(options) end
 ---@field damage_type? string Damage type when the affected stat is damage.
 ---@field scaling_stat? string Native attribute or skill used to scale the bonus.
 
+---@class CcbTechniqueCombatContext
+---@field attacker GameHandle Attacking Character.
+---@field target GameHandle Target Creature.
+---@field attacker_size integer Native creature size ordinal.
+---@field target_size integer Native creature size ordinal.
+---@field attacker_strength integer Current attacker's strength.
+---@field target_grab_strength integer Monster grab strength, or zero for a Character.
+
 ---@class StaticTechniqueEffect
 ---@field id string Native effect ID.
 ---@field duration_turns? integer Duration in game turns.
@@ -17913,6 +17938,7 @@ function CcbPlatformContent.define_spell(options) end
 ---@field on_damage? boolean
 ---@field required_flag? string Native Character flag for the effect.
 ---@field message? string|LocalizedText Singular native effect message without context.
+---@field when? string Named handler receiving CcbTechniqueCombatContext and returning a boolean after the native chance and damage checks.
 
 ---@class StaticTechniqueOptions
 ---@field id? string Stable technique ID.
@@ -17921,6 +17947,8 @@ function CcbPlatformContent.define_spell(options) end
 ---@field name? string|LocalizedText Technique name, required without inheritance.
 ---@field description? string|LocalizedText
 ---@field messages? (string|LocalizedText)[] Avatar and NPC messages in that order.
+---@field when? string Named handler receiving CcbTechniqueCombatContext and returning a boolean when this technique is evaluated against a target.
+---@field condition_description? string|LocalizedText Singular description of the technique condition.
 ---@field crit_tec? boolean
 ---@field crit_ok? boolean
 ---@field wall_adjacent? boolean

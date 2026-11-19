@@ -5874,6 +5874,8 @@ void write_static_technique( JsonOut &json, const sol::table &options )
     } );
     write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
     write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    write_placement_member<std::string>( json, options, "when", "//ccb_lua_combat_predicate" );
+    write_static_native_text( json, options, "condition_description", "condition_desc" );
     if( const auto messages = options.get<sol::optional<sol::table>>( "messages" ) ) {
         json.member( "messages" );
         write_static_values<sol::object>( json, *messages, "technique messages",
@@ -5939,6 +5941,7 @@ void write_static_technique( JsonOut &json, const sol::table &options )
         write_item_fields<int>( out, effect, { { "duration_turns", "duration" }, { "chance", "chance" } } );
         write_item_fields<bool>( out, effect, { { "permanent", "permanent" }, { "on_damage", "on_damage" } } );
         write_placement_member<std::string>( out, effect, "required_flag", "req_flag" );
+        write_placement_member<std::string>( out, effect, "when", "//ccb_lua_combat_predicate" );
         write_static_native_text( out, effect, "message", "message" );
         out.end_object();
     } );

@@ -730,6 +730,31 @@ void install_effect_api(
                    current_world_generation() );
     } );
     effects.set_function(
+        "exact_intensity",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const std::optional<script_game_id> &body_part ) {
+        require_read();
+        if( id.kind() != "effect" ) {
+            throw std::invalid_argument( "services.effects.exact_intensity requires GameId<effect>" );
+        }
+        const std::optional<bodypart_id> requested = effect_body_part(
+                    body_part, "services.effects.exact_intensity" );
+        const bodypart_id part = requested.value_or( bodypart_str_id::NULL_ID().id() );
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Creature *const creature = resolve_exact_creature(
+                                             handle, current_runtime_generation(), current_world_generation(), error );
+        if( creature == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const effect &entry = creature->get_effect( efftype_id( id.value() ), part );
+        return make_game_value_result( state, entry.is_null() ?
+                                       sol::make_object( state, sol::nil ) :
+                                       sol::make_object( state, entry.get_intensity() ) );
+    } );
+    effects.set_function(
         "get",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,

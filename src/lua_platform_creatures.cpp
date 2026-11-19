@@ -4557,6 +4557,24 @@ void install_creature_api(
                    current_world_generation() );
     } );
     creatures.set_function(
+        "volume_ml",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        sol::state_view state( lua_state );
+        const native_handle_result<Creature> resolved = handle.resolve_creature(
+                    current_runtime_generation(), current_world_generation() );
+        if( !resolved ) {
+            return make_game_error_result( state, *resolved.error );
+        }
+        const Creature &creature = *resolved.value;
+        const Character *const character = creature.as_character();
+        const monster *const mon = creature.as_monster();
+        const units::volume volume = character ? character->get_total_volume() :
+                                     mon ? mon->get_volume() : 0_ml;
+        return make_game_value_result( state, sol::make_object( state, units::to_milliliter( volume ) ) );
+    } );
+    creatures.set_function(
         "nearby",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
