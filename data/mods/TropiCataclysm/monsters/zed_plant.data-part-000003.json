@@ -1,0 +1,68 @@
+[
+  {
+    "id": "mon_swimmer_swampbiter",
+    "type": "MONSTER",
+    "name": { "str": "mangrove lurker" },
+    "description": "This zombie seems to have adapted to hunt in the water.  It uses the aquatic plants on its body to hide before hitting with its teeth.",
+    "default_faction": "triffid",
+    "bodytype": "human",
+    "species": [ "ZOMBIE", "PLANT" ],
+    "volume": "62500 ml",
+    "weight": "81500 g",
+    "hp": 100,
+    "speed": 110,
+    "material": [ "veggy" ],
+    "symbol": "Z",
+    "color": "light_green",
+    "aggression": 100,
+    "morale": 100,
+    "melee_skill": 6,
+    "melee_dice": 4,
+    "melee_dice_sides": 6,
+    "melee_damage": [ { "damage_type": "cut", "amount": 4 } ],
+    "dodge": 3,
+    "weakpoints": [
+      { "name": "the inside of its mouth", "is_head": true, "armor_mult": { "physical": 0 }, "coverage": 2 },
+      { "name": "the eye", "is_head": true, "armor_mult": { "physical": 0 }, "coverage": 1 }
+    ],
+    "bleed_rate": 0,
+    "vision_day": 15,
+    "vision_night": 3,
+    "harvest": "zombie_thorny",
+    "attack_effs": [ { "id": "paralyzepoison", "duration": 33 } ],
+    "grab_strength": 30,
+    "special_attacks": [
+      {
+        "id": "bite_humanoid",
+        "cooldown": 4,
+        "accuracy": 5,
+        "damage_max_instance": [
+          { "damage_type": "stab", "amount": 10, "armor_multiplier": 0.3 },
+          { "damage_type": "bash", "amount": 10, "armor_multiplier": 0.3 }
+        ]
+      },
+      { "id": "grab", "cooldown": 4 }
+    ],
+    "death_drops": "mon_zombie_swimmer_death_drops",
+    "burn_into": "mon_zombie_scorched",
+    "flags": [
+      "SEES",
+      "HEARS",
+      "SMELLS",
+      "STUMBLES",
+      "WARM",
+      "GRABS",
+      "BASHES",
+      "GROUP_BASH",
+      "POISON",
+      "NO_BREATHE",
+      "SWIMS",
+      "REVIVES",
+      "PUSH_MON",
+      "FILTHY",
+      "WATER_CAMOUFLAGE",
+      "PARALYZEVENOM"
+    ],
+    "armor": { "bash": 5, "cut": 2, "bullet": 2 }
+  }
+]
