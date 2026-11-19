@@ -1,0 +1,16 @@
+[
+  {
+    "id": "TALK_OLD_GUARD_REP_MISSION_3_Predone",
+    "type": "talk_topic",
+    "dynamic_line": "Oh, well.  In that case, I would be interested in hearing what you know about them.  I can relay it to command.  Let's see what I have to trade… how about some antibiotics from our stores?  You can never have too many of them out there.",
+    "responses": [
+      {
+        "text": "Yeah, I've met them.  They seem open to trade and things.  Not hostile, at least not to me.",
+        "topic": "TALK_OLD_GUARD_REP_EXODII_2",
+        "effect": [ { "u_spawn_item": "antibiotics" }, "mission_success", "clear_mission" ]
+      },
+      { "text": "I'll have to think about it.  <done_conversation_section>", "topic": "TALK_OLD_GUARD_REP" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]

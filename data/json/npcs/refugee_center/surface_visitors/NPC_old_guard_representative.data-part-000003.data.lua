@@ -1,12 +1,17 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_OLD_GUARD_REP_EXODII_2",
-    line = ccb.content.text("Well, that's interesting.  It's not something I'm in a position to do something about, but you might want to take that information to one of the teamsters for the Free Merchants.  Maybe that's a way we could establish some friendlier relationships."),
+    id = "TALK_OLD_GUARD_REP_EXODII_1",
+    line = ccb.content.gendered_line("If you want to know what our next steps are, I'm not at liberty to tell you.  Truth be told, I don't even know myself.  They don't share that sort of information with me.", { "interlocutor" }),
     replies = {
-        { text = ccb.content.text("Good idea.  I'll go do that."), next_topic = "TALK_DONE" },
         {
-            text = ccb.content.text("Huh, maybe.  <done_conversation_section>"),
+            text = ccb.content.text("Actually, I've met them.  They seem open to trade and things.  Thought you might want to know."),
+            next_topic = "TALK_OLD_GUARD_REP_EXODII_2",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "general_meeting_u_met_Rubik" } }),
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
             next_topic = "TALK_OLD_GUARD_REP",
         },
     },

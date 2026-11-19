@@ -1,25 +1,16 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_HUB",
-    line = ccb.content.text("I'm listening."),
-    replies = {
+    id = "TALK_OLD_GUARD_REP_Refuse_Boris_Mission_1",
+    line = ccb.content.text("I'm sorry, but I can't leave my post here, and I just don't have the human resources even for a project like that."),
+    on_enter = {
         {
-            text = ccb.content.text("Tell me about it."),
-            when = predicates.negate(predicates.has_mission("MISSION_FIND_SUNKEN_HELICOPTER")),
-            next_topic = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_1",
+            actions = {
+                actions.set_actor_value("interlocutor", "mission_Boris_mission_1_cleanup_asked", "yes"),
+            },
         },
-        {
-            text = ccb.content.text("Anything else I should know?"),
-            when = predicates.has_mission("MISSION_FIND_SUNKEN_HELICOPTER"),
-            next_topic = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_DANGER",
-        },
-        {
-            text = ccb.content.text("Tell me about the cargo."),
-            when = predicates.has_mission("MISSION_FIND_SUNKEN_HELICOPTER"),
-            next_topic = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_CARGO_0",
-        },
-        { text = ccb.content.text("Never mind…"), next_topic = "TALK_NONE" },
     },
+    replies = { { text = ccb.content.text("Well, thanks anyway."), next_topic = "TALK_OLD_GUARD_REP" } },
 }
