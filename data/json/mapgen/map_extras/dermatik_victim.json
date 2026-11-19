@@ -1,43 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "mx_dermatikvictim",
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "              sss       ",
-        "              sSs       ",
-        "              sss       ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "nested": {
-        "S": { "chunks": [ "corpse_blood_gibs_dermatik_3x3" ] },
-        "s": { "chunks": [ [ "null", 4 ], [ "dermatik_trap", 1 ] ] }
-      },
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "corpse_blood_gibs_dermatik_3x3",
     "object": {
       "mapgensize": [ 3, 3 ],
