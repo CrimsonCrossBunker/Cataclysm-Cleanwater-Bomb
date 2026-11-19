@@ -296,14 +296,16 @@ struct mutation_branch {
         std::map<mtype_id, int> moncams;
         /** effect_on_conditions triggered when this mutation activates */
         std::vector<effect_on_condition_id> activated_eocs;
-        std::function<void( Character & )> platform_on_activate;
+        using lifecycle_callback = std::function<void( Character &, const trait_id & )>;
+        lifecycle_callback platform_on_activate;
         // Keep the mutation powered after its activation actions.
         bool activated_is_setup = false;
         /** effect_on_conditions triggered while this mutation is active */
         std::vector<effect_on_condition_id> processed_eocs;
+        lifecycle_callback platform_on_process;
         /** effect_on_conditions triggered when this mutation deactivates */
         std::vector<effect_on_condition_id> deactivated_eocs;
-        std::function<void( Character & )> platform_on_deactivate;
+        lifecycle_callback platform_on_deactivate;
         /** mutation enchantments */
         std::vector<enchantment_id> enchantments;
 

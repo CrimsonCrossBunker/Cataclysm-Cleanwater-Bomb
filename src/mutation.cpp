@@ -902,7 +902,7 @@ void Character::activate_cached_mutation( const trait_id &mut )
             eoc->activate_activation_only( d, "a mutation activation", "mutation being activated", "mutation" );
         }
         if( mdata.platform_on_activate ) {
-            mdata.platform_on_activate( *this );
+            mdata.platform_on_activate( *this, mut );
         }
         const auto current = cached_mutations.find( mut );
         if( current == cached_mutations.end() ) {
@@ -1064,7 +1064,7 @@ void Character::deactivate_mutation( const trait_id &mut )
                                        "mutation" );
     }
     if( mdata.platform_on_deactivate ) {
-        mdata.platform_on_deactivate( *this );
+        mdata.platform_on_deactivate( *this, mut );
     }
     if( mdata.transform && !mdata.transform->msg_transform.empty() ) {
         add_msg_if_player( m_neutral, mdata.transform->msg_transform );

@@ -6328,15 +6328,15 @@ void creatures_content_transaction::impl::apply_mutation()
                                 source.activation_message.native();
         if( !source.activation_handler.empty() ) {
             native.activated_is_setup = source.activation_stays_on;
-            native.platform_on_activate = [owner = this->owner, mutation = source.id,
-                                             handler = source.activation_handler]( Character & character ) {
-                detail::invoke_mutation_lifecycle_handler( owner, mutation, "activation", handler, character );
+            native.platform_on_activate = [owner = this->owner,
+                                             handler = source.activation_handler]( Character & character, const trait_id & mutation ) {
+                detail::invoke_mutation_lifecycle_handler( owner, mutation.str(), "activation", handler, character );
             };
         }
         if( !source.deactivation_handler.empty() ) {
-            native.platform_on_deactivate = [owner = this->owner, mutation = source.id,
-                                               handler = source.deactivation_handler]( Character & character ) {
-                detail::invoke_mutation_lifecycle_handler( owner, mutation, "deactivation", handler, character );
+            native.platform_on_deactivate = [owner = this->owner,
+                                               handler = source.deactivation_handler]( Character & character, const trait_id & mutation ) {
+                detail::invoke_mutation_lifecycle_handler( owner, mutation.str(), "deactivation", handler, character );
             };
         }
         if( !source.scent_type.empty() ) {

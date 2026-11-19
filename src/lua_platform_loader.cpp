@@ -2650,6 +2650,25 @@ void load_static_mutation( const sol::table &options, const std::string &source 
     write_static_mutation_uses( json, options );
     write_static_mutation_attacks( json, options );
     write_static_mutation_comfort( json, options );
+    const auto activate = options.get<sol::optional<std::string>>( "on_activate" );
+    const auto deactivate = options.get<sol::optional<std::string>>( "on_deactivate" );
+    const auto process = options.get<sol::optional<std::string>>( "on_process" );
+    if( activate || deactivate || process ) {
+        // Keep the names on the native input for deferred inheritance after
+        // the temporary Lua state has been discarded.
+        json.member( "//ccb_lua_mutation_lifecycle" );
+        json.start_object();
+        if( activate ) {
+            json.member( "activate", *activate );
+        }
+        if( deactivate ) {
+            json.member( "deactivate", *deactivate );
+        }
+        if( process ) {
+            json.member( "process", *process );
+        }
+        json.end_object();
+    }
     json.end_object();
     const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
     static_cast<void>( definition.get_string( "type" ) );
@@ -3264,6 +3283,35 @@ runtime_state load_source( const mod_source &source,
 
 } // namespace
 
+void bind_ordered_mutation_lifecycle( mutation_branch &definition, const JsonObject &object,
+                                      std::string_view source )
+{
+    const auto lifecycle = object.get_member_opt( "//ccb_lua_mutation_lifecycle" );
+    if( !lifecycle ) {
+        return;
+    }
+    if( lifecycle->has_source_file() ) {
+        lifecycle->throw_error( "mutation lifecycle metadata is reserved for ordered Lua definitions" );
+    }
+    const JsonObject handlers = lifecycle->get_object();
+    const auto bind = [&]( const char *field, const char *phase,
+                           mutation_branch::lifecycle_callback &callback ) {
+        if( handlers.has_member( field ) ) {
+            const std::string name = handlers.get_string( field );
+            if( name.empty() || name.find( '\0' ) != std::string::npos ) {
+                handlers.throw_error_at( field, "mutation lifecycle requires a registered handler name" );
+            }
+            callback = [owner = std::string( source ), name, phase]( Character & actor,
+            const trait_id & id ) {
+                detail::invoke_mutation_lifecycle_handler( owner, id.str(), phase, name, actor );
+            };
+        }
+    };
+    bind( "activate", "activation", definition.platform_on_activate );
+    bind( "deactivate", "deactivation", definition.platform_on_deactivate );
+    bind( "process", "processing", definition.platform_on_process );
+}
+
 void load_core_content( const fs::path &root )
 {
     const fs::path entry = root / "main.lua";
@@ -3805,6 +3853,10 @@ void load_core_content( const std::filesystem::path & )
 void load_mod_content_with_data( const mod_source &, const std::set<std::string> & )
 {
     throw std::runtime_error( "Lua-first Platform support is disabled" );
+}
+
+void bind_ordered_mutation_lifecycle( mutation_branch &, const JsonObject &, std::string_view )
+{
 }
 
 bool read_mod_definition( const std::filesystem::path &, mod_definition &, std::string &error )

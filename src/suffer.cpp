@@ -333,6 +333,9 @@ void suffer::mutation_power( Character &you, const trait_id &mut_id )
             d.set_value( "this", mut_id.str() );
             eoc->activate_activation_only( d, "a mutation process", "mutation being activated", "mutation" );
         }
+        if( mut_id->platform_on_process ) {
+            mut_id->platform_on_process( you, mut_id );
+        }
         cata::lua_platform::dispatch_native_hook( "on_mutation_processed", {
             { "character", static_cast<const Character *>( &you ) },
             { "mutation", cata::lua_platform::native_callback_id{ "mutation", mut_id.str() } },
@@ -1794,7 +1797,7 @@ void Character::suffer()
             suffer::water_damage( *this );
         }
         if( has_active_mutation( mut_id ) || ( !mut_id->activated &&
-                                               !mut_id->processed_eocs.empty() ) ) {
+                                               ( !mut_id->processed_eocs.empty() || mut_id->platform_on_process ) ) ) {
             suffer::mutation_power( *this, mut_id );
         }
     }

@@ -7752,6 +7752,9 @@ function CcbPlatformContent.define_item(options) end
 ---@field vanity? boolean
 ---@field dummy? boolean
 ---@field activation_setup_only? boolean
+---@field on_activate? string Mod handler receiving MutationActivationPayload after native activation costs. Set activation_setup_only=true to keep the mutation powered after it runs.
+---@field on_deactivate? string Mod handler receiving MutationActivationPayload after native deactivation and enchantment updates.
+---@field on_process? string Mod handler receiving MutationActivationPayload at the native processing interval for powered and passive mutations.
 ---@field initial_martial_arts? string[]
 ---@field threshold_substitutes? string[]
 ---@field ignored_by? string[]

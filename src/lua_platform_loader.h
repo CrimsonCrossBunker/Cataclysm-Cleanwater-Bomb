@@ -13,6 +13,9 @@
 #include "mod_world_option.h"
 #include "translation.h"
 
+class JsonObject;
+struct mutation_branch;
+
 namespace cata
 {
 class event;
@@ -87,6 +90,10 @@ void load_core_content( const std::filesystem::path &root );
 
 /** Execute a Mod's static entry at the native data load position. */
 void load_mod_content_with_data( const mod_source &source, const std::set<std::string> &selected_mod_ids );
+
+/** Bind the private lifecycle metadata of a mutation defined in ordered Lua data. */
+void bind_ordered_mutation_lifecycle( mutation_branch &definition, const JsonObject &object,
+                                      std::string_view source );
 
 /** Execute root/mod.lua and require exactly one native ccb.ModDefinition result.
  * This executes trusted code, including external/native modules. User-facing

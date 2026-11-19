@@ -227,6 +227,9 @@ class JsonValue : Json
         using Json::throw_error_after;
         using Json::string_error;
         using Json::get_root_source_path;
+        bool has_source_file() const {
+            return !root_->get_source_path().empty();
+        }
 
         // optionally-fatal reading into values by reference
         // returns true if the data was read successfully, false otherwise

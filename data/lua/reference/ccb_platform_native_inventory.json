@@ -15724,7 +15724,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.h",
-                "line": 66
+                "line": 69
               }
             ]
           },
@@ -15741,7 +15741,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.h",
-                "line": 62
+                "line": 65
               }
             ]
           },
@@ -15758,7 +15758,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.h",
-                "line": 61
+                "line": 64
               }
             ]
           },
@@ -15775,7 +15775,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.h",
-                "line": 58
+                "line": 61
               }
             ]
           },
@@ -15792,7 +15792,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.h",
-                "line": 59
+                "line": 62
               }
             ]
           },
@@ -15809,7 +15809,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.h",
-                "line": 60
+                "line": 63
               }
             ]
           },

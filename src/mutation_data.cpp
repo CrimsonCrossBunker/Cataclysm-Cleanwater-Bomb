@@ -32,6 +32,7 @@
 #include "json.h"
 #include "localized_comparator.h"
 #include "lua_platform_content.h"
+#include "lua_platform_loader.h"
 #include "magic_enchantment.h"
 #include "memory_fast.h"
 #include "npc.h"
@@ -491,6 +492,9 @@ void mutation_branch::load( const JsonObject &jo, std::string_view src )
     }
 
     optional( jo, was_loaded, "activated_is_setup", activated_is_setup, false );
+    if( jo.has_member( "//ccb_lua_mutation_lifecycle" ) ) {
+        cata::lua_platform::bind_ordered_mutation_lifecycle( *this, jo, src );
+    }
 
     int enchant_num = 0;
     for( JsonValue jv : jo.get_array( "enchantments" ) ) {
