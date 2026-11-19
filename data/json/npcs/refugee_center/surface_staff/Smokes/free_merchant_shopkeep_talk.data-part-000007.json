@@ -1,0 +1,26 @@
+[
+  {
+    "id": [ "TALK_FREE_MERCHANTS_MERCHANT_SellingHardware", "TALK_FREE_MERCHANTS_MERCHANT_SellingHardware1" ],
+    "type": "talk_topic",
+    "dynamic_line": "Tools, to be precise.  The basement and the storage rooms had way more than we need, and a lot of people brought their own when they were evacuating.  There's more than we could ever use, so we'll be happy to sell them at a very fair price.  Nothing in the way of radios, so you'll have to look somewhere else for that.",
+    "responses": [
+      {
+        "text": "Wait, basement?  I didn't know this place had a basement.",
+        "topic": "TALK_FREE_MERCHANTS_MERCHANT_Basement",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_free_merchants_u_knows_about_basement" } ] } },
+        "effect": { "u_add_var": "general_free_merchants_u_knows_about_basement", "value": "yes" }
+      },
+      {
+        "text": "Mind if I take a look at your stock?",
+        "trial": {
+          "type": "CONDITION",
+          "condition": { "math": [ "faction_food_supply('free_merchants', 'vitamin':'human_flesh_vitamin')", "<", "1" ] }
+        },
+        "success": { "effect": "start_trade", "topic": "TALK_FREE_MERCHANTS_MERCHANT_DoneTrading" },
+        "failure": { "topic": "TALK_FREE_MERCHANTS_MERCHANT_CANNIBAL_GTFO" }
+      },
+      { "text": "Radios?  That seems awfully specific.", "topic": "TALK_FREE_MERCHANTS_MERCHANT_SellingHardware1" },
+      { "text": "Good to know.", "topic": "TALK_FREE_MERCHANTS_MERCHANT_Talk" }
+    ]
+  }
+]
