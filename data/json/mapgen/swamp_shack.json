@@ -6,11 +6,6 @@
     "terrain": { "i": "t_water_sh" }
   },
   {
-    "type": "mapgen",
-    "nested_mapgen_id": "cattail",
-    "object": { "rows": [ "i" ], "furniture": { "i": "f_cattails" }, "mapgensize": [ 1, 1 ] }
-  },
-  {
     "type": "palette",
     "id": "swampshack_palette",
     "parameters": {
@@ -131,42 +126,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "hunter_shack_roof",
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "       ...........      ",
-        "       ..%........      ",
-        "       ...........      ",
-        "       ...........      ",
-        "       ...........      ",
-        "       ...........      ",
-        "       ...........      ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "furniture": { "%": "f_chimney" },
-      "terrain": { ".": "t_shingle_flat_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "hunter_shack_1" ],
     "object": {
       "predecessor_mapgen": "forest_water",
@@ -199,42 +158,6 @@
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "palettes": [ "swampshack_palette" ],
       "place_loot": [ { "item": "net", "x": 4, "y": 18, "chance": 100 }, { "item": "stepladder", "x": 13, "y": 4, "chance": 50 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "hunter_shack_roof_1",
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "          .........     ",
-        "          .........     ",
-        "          .........     ",
-        "          .........     ",
-        "          .%.......     ",
-        "          .........     ",
-        "          .........     ",
-        "          .........     ",
-        "          .........     ",
-        "          .........     ",
-        "          ........      ",
-        "   .....  ........      ",
-        "   .....                ",
-        "   .....                ",
-        "   .....                ",
-        "   .....                ",
-        "   .....                ",
-        "   .....                ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "furniture": { "%": "f_chimney" },
-      "terrain": { ".": "t_shingle_flat_roof" }
     }
   }
 ]

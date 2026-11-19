@@ -1,0 +1,87 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "cattail",
+    layout = {
+        rows = {
+            "i",
+        },
+        furniture = { i = "f_cattails" },
+        size = { width = 1, height = 1 },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "hunter_shack_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "       ...........      ",
+            "       ..%........      ",
+            "       ...........      ",
+            "       ...........      ",
+            "       ...........      ",
+            "       ...........      ",
+            "       ...........      ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        furniture = { ["%"] = "f_chimney" },
+        terrain = { ["."] = "t_shingle_flat_roof" },
+        fill_terrain = "t_shingle_flat_roof",
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "hunter_shack_roof_1",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "          .........     ",
+            "          .........     ",
+            "          .........     ",
+            "          .........     ",
+            "          .%.......     ",
+            "          .........     ",
+            "          .........     ",
+            "          .........     ",
+            "          .........     ",
+            "          .........     ",
+            "          ........      ",
+            "   .....  ........      ",
+            "   .....                ",
+            "   .....                ",
+            "   .....                ",
+            "   .....                ",
+            "   .....                ",
+            "   .....                ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        furniture = { ["%"] = "f_chimney" },
+        terrain = { ["."] = "t_shingle_flat_roof" },
+        fill_terrain = "t_shingle_flat_roof",
+    },
+}
