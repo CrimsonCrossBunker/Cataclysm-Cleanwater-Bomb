@@ -1,6 +1,7 @@
 local ccb = require("ccb")
 
 return ccb.ModDefinition {
+    ordered_data_files = true,
     world_options = {
         GENERIC_PROFESSION_ID = "afs_salvor",
         GENERIC_SCENARIO_ID = "augustmoon",
