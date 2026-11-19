@@ -1,0 +1,17 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ARSONIST_MUTATION_INSULT",
+    "dynamic_line": {
+      "u_has_any_trait": [ "CANINE_EARS", "LUPINE_EARS", "FELINE_EARS", "URSINE_EARS", "ELFA_EARS" ],
+      "yes": { "gendered_line": "As if you're one to talk.  Screw You.", "relevant_genders": [ "u" ] },
+      "no": { "gendered_line": "Screw You!", "relevant_genders": [ "u" ] }
+    },
+    "responses": [
+      {
+        "text": "…",
+        "success": { "effect": "end_conversation", "opinion": { "trust": -1, "fear": -2, "value": -1, "anger": 1 }, "topic": "TALK_DONE" }
+      }
+    ]
+  }
+]
