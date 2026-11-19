@@ -1,0 +1,20 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "COMP_LS_Entrance_Controls2",
+    "dynamic_line": "& Truly?  Aye/Nay",
+    "responses": [
+      {
+        "text": "[Select \"Aye\"]",
+        "effect": [
+          { "finish_mission": "MISSION_EXODII_LABYRINTHS_INTRO", "success": true },
+          { "math": [ "labyrinth_access_points -= 1" ] },
+          { "math": [ "u_timer_exodii_labyrinth_cooldown = time('now')" ] },
+          { "run_eocs": "EOC_LS_Teleport_to_labyrinth" }
+        ],
+        "topic": "TALK_DONE"
+      },
+      { "text": "[Select \"Nay\"]", "topic": "COMP_LS_Entrance_Controls" }
+    ]
+  }
+]

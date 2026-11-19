@@ -100,47 +100,5 @@
       },
       { "text": "[Step away]", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "COMP_LS_Entrance_Controls2_no",
-    "dynamic_line": "& User not permitted.",
-    "responses": [ { "text": "[Step away]", "topic": "TALK_DONE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "COMP_LS_Entrance_Controls2_wait",
-    "dynamic_line": "& Cycle in effect.  Wait five days from last jump.",
-    "responses": [ { "text": "[Step away]", "topic": "TALK_DONE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "COMP_LS_Entrance_Controls2_no_access",
-    "dynamic_line": "& ERROR: Doing 'wobble()' terminated unwarly.  DIAGNOSTIC: Labyrinth coordinate update required.",
-    "responses": [ { "text": "[Step away]", "topic": "TALK_DONE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "COMP_LS_Entrance_Controls2_no_charges",
-    "dynamic_line": "& ERROR: Doing 'wobble()' terminated unwarly.  DIAGNOSTIC: No valid coordinates in attached device.",
-    "responses": [ { "text": "[Step away]", "topic": "TALK_DONE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "COMP_LS_Entrance_Controls2",
-    "dynamic_line": "& Truly?  Aye/Nay",
-    "responses": [
-      {
-        "text": "[Select \"Aye\"]",
-        "effect": [
-          { "finish_mission": "MISSION_EXODII_LABYRINTHS_INTRO", "success": true },
-          { "math": [ "labyrinth_access_points -= 1" ] },
-          { "math": [ "u_timer_exodii_labyrinth_cooldown = time('now')" ] },
-          { "run_eocs": "EOC_LS_Teleport_to_labyrinth" }
-        ],
-        "topic": "TALK_DONE"
-      },
-      { "text": "[Select \"Nay\"]", "topic": "COMP_LS_Entrance_Controls" }
-    ]
   }
 ]
