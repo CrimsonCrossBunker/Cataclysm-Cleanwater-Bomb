@@ -23,61 +23,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "wasp_brood",
-    "//": "Empty cell",
-    "weight": 100,
-    "object": { "mapgensize": [ 1, 1 ], "rows": [ "0" ], "terrain": { "0": "t_open_air" } }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "wasp_brood",
-    "//": "Egg cell.",
-    "weight": 200,
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "0" ],
-      "terrain": { "0": "t_floor_brood_fake" },
-      "item": { "0": { "item": "egg_wasp" } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "wasp_brood",
-    "//": "Hatched larva, unsealed",
-    "weight": 300,
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "0" ],
-      "terrain": { "0": "t_open_air" },
-      "monster": { "0": { "monster": "mon_wasp_larva" } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "wasp_brood",
-    "//": "Sealed brood with a pupating wasp.",
-    "weight": 300,
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "0" ],
-      "terrain": { "0": "t_floor_brood_wasp" },
-      "monster": { "0": { "monster": "mon_wasp_pupa" } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "wasp_brood",
-    "//": "Just in time for the adult. Lucky you.",
-    "weight": 100,
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "0" ],
-      "terrain": { "0": "t_open_air" },
-      "monster": { "0": { "group": "GROUP_WASP_NEST" } }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "wasp_gibs",
     "weight": 100,
     "object": {
