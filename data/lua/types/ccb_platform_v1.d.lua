@@ -4091,6 +4091,7 @@ function MartialArtDefinition:on(handler_id) end
 ---@field id string
 local TrapDefinition = {}
 
+---CONSUME_ON_TRIGGER removes the trap after a handled Lua trigger or a successful native action.
 ---@param flag_id string Native trap flag id.
 ---@return TrapDefinition self
 function TrapDefinition:flag(flag_id) end
@@ -7291,13 +7292,44 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field group string Item group placed on the glyph.
 ---@field chance? integer Native placement chance.
 
+---@class StaticMapgenItemSpawn
+---@field id string Item ID spawned on the glyph.
+---@field chance? integer Native placement chance.
+
+---@class StaticMapgenNestedPlacement
+---@field id string Nested mapgen ID.
+---@field x integer X offset in map squares.
+---@field y integer Y offset in map squares.
+
+---@class StaticMapgenGlyphChoice
+---@field id string Terrain, furniture, or trap ID for the glyph.
+---@field copies? integer Repetitions in the ordered native choice list. Defaults to one.
+
+---@alias StaticMapgenGlyph string|StaticMapgenGlyphChoice[]
+
 ---@class StaticOvermapMapgenLayout
 ---@field fill_terrain? string Terrain ID used as the base fill.
 ---@field rows? string[] Terrain layout rows in map order.
----@field terrain? table<string, string> Glyph to terrain ID.
----@field furniture? table<string, string> Glyph to furniture ID.
+---@field size? {width: integer, height: integer} Native dimensions for a nested layout.
+---@field erase_before_terrain? boolean Use native erase-before-terrain placement.
+---@field palettes? string[] Native map palette IDs.
+---@field terrain? table<string, StaticMapgenGlyph> Glyph to terrain ID or native choices.
+---@field furniture? table<string, StaticMapgenGlyph> Glyph to furniture ID or native choices.
+---@field traps? table<string, StaticMapgenGlyph> Glyph to trap ID or native choices.
 ---@field item_groups? table<string, StaticOvermapMapgenItemGroup> Glyph to item-group placement.
+---@field item_spawns? table<string, StaticMapgenItemSpawn> Glyph to single-item placement.
 ---@field toilets? string[] Glyphs where native default toilets are placed.
+---@field nested? StaticMapgenNestedPlacement[] Nested layouts in placement order.
+
+---@class StaticMapgenDefinitionOptions
+---@field kind 'overmap'|'nested'|'update' Selects the native mapgen registry.
+---@field id string Overmap terrain ID, nested ID, or update ID.
+---@field layout StaticOvermapMapgenLayout
+---@field weight? integer Native selection weight for overmap and nested variants.
+
+---Register mapgen during the Mod's ordered data load.
+---@param options StaticMapgenDefinitionOptions
+function CcbPlatformContent.define_mapgen(options) end
 
 ---@class StaticOvermapMapgen
 ---@field weight? integer Native selection weight. Defaults to 1000.

@@ -53,6 +53,7 @@ extern "C" {
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
+#include "mapgen.h"
 #include "omdata.h"
 #include "recipe_dictionary.h"
 #include <functional>
@@ -653,7 +654,26 @@ end
     lua["require"] = bound.get<sol::function>();
 }
 
-void write_overmap_mapgen_layout( JsonOut &json, const sol::table &layout )
+void write_static_mapgen_items( JsonOut &json, const sol::table &items,
+                                const char *member, const char *id_field )
+{
+    json.member( member );
+    json.start_object();
+    for( const auto &[glyph, options] : items ) {
+        const sol::table placement = options.as<sol::table>();
+        json.member( glyph.as<std::string>() );
+        json.start_object();
+        json.member( "item", placement.get<std::string>( id_field ) );
+        if( const auto chance = placement.get<sol::optional<int>>( "chance" ) ) {
+            json.member( "chance", *chance );
+        }
+        json.end_object();
+    }
+    json.end_object();
+}
+
+void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
+                                 std::size_t max_rows )
 {
     json.member( "object" );
     json.start_object();
@@ -661,32 +681,69 @@ void write_overmap_mapgen_layout( JsonOut &json, const sol::table &layout )
         json.member( "fill_ter", *fill );
     }
     if( const auto rows = layout.get<sol::optional<sol::table>>( "rows" ) ) {
-        json.member( "rows", bounded_string_array( *rows, "rows", 24, "overmap mapgen layout" ) );
+        json.member( "rows", bounded_string_array( *rows, "rows", max_rows, "mapgen layout" ) );
     }
-    for( const char *field : { "terrain", "furniture" } ) {
+    if( const auto size = layout.get<sol::optional<sol::table>>( "size" ) ) {
+        json.member( "mapgensize", std::array<int, 2>{ size->get<int>( "width" ),
+                     size->get<int>( "height" ) } );
+    }
+    if( layout.get_or( "erase_before_terrain", false ) ) {
+        json.member( "flags", std::array<const char *, 1>{ "ERASE_ALL_BEFORE_PLACING_TERRAIN" } );
+    }
+    if( const auto palettes = layout.get<sol::optional<sol::table>>( "palettes" ) ) {
+        json.member( "palettes", bounded_string_array( *palettes, "palettes",
+                     std::numeric_limits<std::size_t>::max(), "mapgen layout" ) );
+    }
+    for( const char *field : { "terrain", "furniture", "traps" } ) {
         if( const auto glyphs = layout.get<sol::optional<sol::table>>( field ) ) {
             json.member( field );
             json.start_object();
-            for( const auto &[glyph, id] : *glyphs ) {
-                json.member( glyph.as<std::string>(), id.as<std::string>() );
+            for( const auto &[glyph, value] : *glyphs ) {
+                const std::string name = glyph.as<std::string>();
+                if( value.get_type() == sol::type::string ) {
+                    json.member( name, value.as<std::string>() );
+                } else {
+                    const sol::table choices = value.as<sol::table>();
+                    const std::size_t count = choices.size();
+                    json.member( name );
+                    json.start_array();
+                    for( std::size_t i = 1; i <= count; ++i ) {
+                        const sol::table choice = choices.get<sol::table>( i );
+                        const std::string id = choice.get<std::string>( "id" );
+                        if( const auto copies = choice.get<sol::optional<int>>( "copies" ) ) {
+                            json.start_array();
+                            json.write( id );
+                            json.write( *copies );
+                            json.end_array();
+                        } else {
+                            json.write( id );
+                        }
+                    }
+                    json.end_array();
+                }
             }
             json.end_object();
         }
     }
     if( const auto items = layout.get<sol::optional<sol::table>>( "item_groups" ) ) {
-        json.member( "items" );
-        json.start_object();
-        for( const auto &[glyph, options] : *items ) {
-            const sol::table placement = options.as<sol::table>();
-            json.member( glyph.as<std::string>() );
+        write_static_mapgen_items( json, *items, "items", "group" );
+    }
+    if( const auto items = layout.get<sol::optional<sol::table>>( "item_spawns" ) ) {
+        write_static_mapgen_items( json, *items, "item", "id" );
+    }
+    if( const auto placements = layout.get<sol::optional<sol::table>>( "nested" ) ) {
+        const std::size_t count = placements->size();
+        json.member( "place_nested" );
+        json.start_array();
+        for( std::size_t i = 1; i <= count; ++i ) {
+            const sol::table placement = placements->get<sol::table>( i );
             json.start_object();
-            json.member( "item", placement.get<std::string>( "group" ) );
-            if( const auto chance = placement.get<sol::optional<int>>( "chance" ) ) {
-                json.member( "chance", *chance );
-            }
+            json.member( "chunks", std::array<std::string, 1>{ placement.get<std::string>( "id" ) } );
+            json.member( "x", placement.get<int>( "x" ) );
+            json.member( "y", placement.get<int>( "y" ) );
             json.end_object();
         }
-        json.end_object();
+        json.end_array();
     }
     if( const auto toilets = layout.get<sol::optional<sol::table>>( "toilets" ) ) {
         json.member( "toilets" );
@@ -720,11 +777,36 @@ void write_overmap_mapgens( JsonOut &json, const char *key, const sol::table &va
         if( builtin ) {
             json.member( "builtin", *builtin );
         } else {
-            write_overmap_mapgen_layout( json, *layout );
+            write_static_mapgen_layout( json, *layout, 24 );
         }
         json.end_object();
     }
     json.end_array();
+}
+
+void load_static_mapgen( const sol::table &options )
+{
+    const std::string kind = options.get<std::string>( "kind" );
+    const std::string id = options.get<std::string>( "id" );
+    std::ostringstream serialized;
+    JsonOut json( serialized );
+    json.start_object();
+    if( kind == "overmap" ) {
+        json.member( "om_terrain", id );
+    } else if( kind == "nested" ) {
+        json.member( "nested_mapgen_id", id );
+    } else if( kind == "update" ) {
+        json.member( "update_mapgen_id", id );
+    } else {
+        throw std::runtime_error( "mapgen kind must be overmap, nested or update" );
+    }
+    if( const auto weight = options.get<sol::optional<int>>( "weight" ) ) {
+        json.member( "weight", *weight );
+    }
+    write_static_mapgen_layout( json, options.get<sol::table>( "layout" ),
+                                std::numeric_limits<std::size_t>::max() );
+    json.end_object();
+    load_mapgen( json_loader::from_string( serialized.str() ).get_object() );
 }
 
 void load_static_overmap_terrain( const sol::table &options, const std::string &source,
@@ -911,6 +993,7 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "is_mod_active", [&selected_mod_ids]( const std::string &id ) {
         return selected_mod_ids.count( id ) != 0;
     } );
+    content.set_function( "define_mapgen", load_static_mapgen );
     content.set_function( "define_overmap_terrain", [&resolved]( const sol::table &options ) {
         load_static_overmap_terrain( options, resolved.id, false );
     } );
