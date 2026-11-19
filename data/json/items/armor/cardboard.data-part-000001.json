@@ -1,0 +1,36 @@
+[
+  {
+    "id": "cardboard_crown",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "cardboard crown" },
+    "description": "A piece of cardboard crudely bent into shape and cut to look like a crown.",
+    "weight": "200 g",
+    "volume": "100 ml",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "material": [ "cardboard" ],
+    "looks_like": "crown_golden",
+    "symbol": "[",
+    "color": "brown_yellow",
+    "material_thickness": 1,
+    "flags": [ "WATER_DISSOLVE", "FRAGILE_MELEE", "NO_WEAR_EFFECT", "FRAGILE", "SOFT" ],
+    "armor": [ { "encumbrance": 1, "coverage": 20, "covers": [ "head" ], "specifically_covers": [ "head_crown" ] } ],
+    "use_action": {
+      "type": "transform",
+      "menu_text": "Loosen",
+      "target": "cardboard_crown_loose",
+      "msg": "You loosen your cardboard crown."
+    }
+  },
+  {
+    "id": "cardboard_crown_loose",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "cardboard crown (loosened)", "str_pl": "cardboard crowns (loosened)" },
+    "description": "A piece of cardboard crudely bent into shape and cut to look like a crown.  This one's been loosened up somewhat, allowing it to be worn over some headgear comfortably.",
+    "copy-from": "cardboard_crown",
+    "flags": [ "WATER_DISSOLVE", "FRAGILE_MELEE", "NO_WEAR_EFFECT", "FRAGILE", "OUTER", "POWERARMOR_COMPATIBLE", "SOFT" ],
+    "use_action": { "type": "transform", "menu_text": "Adjust", "target": "cardboard_crown", "msg": "You adjust your cardboard crown." }
+  }
+]
