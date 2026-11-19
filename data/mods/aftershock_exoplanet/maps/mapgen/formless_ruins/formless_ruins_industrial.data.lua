@@ -430,3 +430,147 @@ ccb.content.define_mapgen {
         flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_formless_ruins_industrial",
+    weight = 5,
+    layout = {
+        predecessor_mapgen = "glacial_field",
+        nested = {
+            { id = "afs_formless_ruins_industrial_base", x = 0, y = 0 },
+            {
+                choices = { { id = "null", weight = 45 }, { id = "formless_piping", weight = 45 } },
+                x = 0,
+                y = 0,
+            },
+            { id = "afs_ruin_pollution", x = 0, y = 0 },
+        },
+        loot_placements = {
+            {
+                group = "afs_formless_ruins_random_loot",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 50,
+                repetitions = { 1, 4 },
+            },
+        },
+        monster_group_placements = {
+            {
+                group = "AFS_GROUP_ROBOT_LOW_RISK",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 10,
+                density = 0.1,
+            },
+            {
+                group = "AFS_GROUP_MOXIE_LOW_RISK",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 2,
+                density = 0.2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_formless_ruins_industrial",
+    weight = 1,
+    layout = {
+        predecessor_mapgen = "glacial_field",
+        nested = {
+            {
+                choices = {
+                    { id = "afs_formless_reactor", weight = 45 },
+                    { id = "afs_formless_manufab", weight = 45 },
+                },
+                x = 0,
+                y = 0,
+            },
+            { id = "afs_ruin_pollution", x = 0, y = 0 },
+        },
+        loot_placements = {
+            {
+                group = "afs_formless_ruins_random_loot",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 50,
+                repetitions = { 1, 4 },
+            },
+        },
+        monster_group_placements = {
+            {
+                group = "AFS_GROUP_ROBOT_LOW_RISK",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 10,
+                density = 0.1,
+            },
+            {
+                group = "AFS_GROUP_MOXIE_LOW_RISK",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 2,
+                density = 0.2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_formless_manufab",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "      |                 ",
+            "||||||||          ||    ",
+            " |5              6|     ",
+            " |5      1...  166|6    ",
+            " ||||    ...  ..  |    |",
+            " | |     ....  .       |",
+            "   p|||  1 ....1     |||",
+            "   pp|     ..    |||    ",
+            "    p| 44444...44444|   ",
+            "    p. .. ..  4   4 |   ",
+            "     ...|||...||| 4     ",
+            "     ... |3...1|  4     ",
+            "  6      =1...2=  4     ",
+            "  66     =3...2=  4     ",
+            "  6  ....|1...1|  4     ",
+            "     ...|||...|||.4.    ",
+            "     |...  4     ...|   ",
+            "    ||6 .. 4 ...... |  |",
+            "||!666||..1...1 ..|    |",
+            "|  |E6    ..          ||",
+            "|  |E     1  .1       | ",
+            "|55|E    6666       66| ",
+            "|||||  |||||||||||||6|| ",
+            "   |                    ",
+        },
+        terrain = {
+            ["1"] = "t_metal_floor",
+            ["2"] = "t_metal_floor",
+            ["3"] = "t_metal_floor",
+            ["4"] = "t_conveyor",
+            ["5"] = "t_metal_floor",
+            ["6"] = "t_metal_floor",
+        },
+        furniture = {
+            ["1"] = "f_robotic_arm",
+            ["2"] = "f_metal_deposition_u",
+            ["3"] = "f_monomolecularsaw",
+            ["5"] = "f_ancient_processor",
+            ["6"] = "f_wreckage",
+        },
+        palettes = { "afs_habitat_structure", "afs_habitat_heavy_industry_furnishing" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        nested = { { id = "afs_formless_manufab_up", x = 0, y = 0, z = 1 } },
+        monster_placements = {
+            { id = "mon_zenit", x = 11, y = 8, patrol = { { x = 11, y = 8 } } },
+            { id = "mon_zenit", x = 11, y = 17, patrol = { { x = 11, y = 17 } } },
+        },
+    },
+}

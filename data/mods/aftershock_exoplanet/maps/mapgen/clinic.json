@@ -64,50 +64,5 @@
         { "chunks": [ [ "afs_clinic_unlooted", 60 ], [ "afs_clinic_looted", 40 ] ], "x": 0, "y": 0 }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "afs_clinic_unlooted",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "                        ",
-        "                        ",
-        "              1 11 2    ",
-        "              1 11 2    ",
-        "              1 11 2    ",
-        "                3       ",
-        "                        ",
-        "                 4      ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { "4": "t_door_metal_elocked" },
-      "items": {
-        "1": [
-          { "item": "softdrugs", "chance": 60, "repeat": [ 3, 5 ] },
-          { "item": "drugs_analgesic", "chance": 60, "repeat": [ 1, 3 ] }
-        ],
-        "2": [
-          { "item": "harddrugs", "chance": 70, "repeat": [ 1, 2 ] },
-          { "item": "drugs_rare", "chance": 70, "repeat": [ 1, 2 ] }
-        ]
-      },
-      "monster": { "3": { "monster": "mon_afs_commercial_laser_turret" } }
-    }
   }
 ]

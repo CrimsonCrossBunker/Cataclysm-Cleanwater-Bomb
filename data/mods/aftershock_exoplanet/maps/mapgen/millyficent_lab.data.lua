@@ -48,3 +48,12 @@ ccb.content.define_mapgen {
         nested_glyphs = { U = { id = "roof_2x2_infrastructure" } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "whately_bioturret_update",
+    layout = {
+        size = { width = 1, height = 1 },
+        monster_placements = { { id = "mon_migoturret_whately", x = 0, y = 0 } },
+    },
+}

@@ -1,0 +1,43 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "municipal_reactor_ware" },
+    layout = {
+        rows = {
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+            ",#,,,,,,,,,,,,,,,,,,,,,,",
+            ",,,,||||||||||,,,,,,,,,,",
+            ",,,,| i&-rttr||||,,,,,,,",
+            ",###|   -    |> |,,,,,,,",
+            "s||||||2||||2||2||||,,,,",
+            "s|              2ee|,,,,",
+            "s|  hd   h      2ee|,,,,",
+            "s| ddd   dd     |eE|,,,,",
+            "s|              ||||,,,,",
+            "s|             * **|,,,,",
+            "s|             * **|,,,,",
+            "s|             * **|,,,,",
+            "s|              M  |,,,,",
+            "s|             * **|,,,,",
+            "s|             * **|,,,,",
+            "s|            eeee||,,,,",
+            "s|            eeee|#,,,,",
+            "s| h          eeee|#,,,,",
+            "s|dd          eeee|#,,,,",
+            "s|            eeee|#,,,,",
+            "s|||4|5555555||||||#,,,,",
+            "ssssssssssssssssssssssss",
+        },
+        palettes = { "general_jc" },
+        terrain = { e = "t_elevator", E = "t_elevator_control_off" },
+        fill_terrain = "t_floor",
+        item_groups = {
+            r = { { group = "cleaning", chance = 90 }, { group = "hardware", chance = 90 } },
+            t = { group = "hardware", chance = 90 },
+            ["*"] = { group = "nuclear_waste", chance = 70 },
+        },
+        monster_glyphs = { M = { id = "mon_hazmatbot" } },
+    },
+}

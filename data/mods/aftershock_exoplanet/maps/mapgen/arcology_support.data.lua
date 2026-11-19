@@ -95,3 +95,81 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "glass_monster_cage",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "ggggg",
+            "g,STg",
+            "g,,,g",
+            "g,,,g",
+            "ggGgg",
+        },
+        palettes = { "lab_palette" },
+        terrain = { [","] = "t_floor_blue" },
+        rotation = { 0, 3 },
+        monster_placements = {
+            {
+                choices = {
+                    "mon_zombie_brute",
+                    "mon_zombie_screecher",
+                    "mon_zombie_hollow",
+                    "mon_zombie_master",
+                    "mon_zombie_necro",
+                },
+                x = { 2, 3 },
+                y = { 1, 3 },
+                chance = 80,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "glass_monster_cage",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "ggggg",
+            "g,,,g",
+            "g,,,G",
+            "g,,,g",
+            "ggggg",
+        },
+        palettes = { "lab_palette" },
+        terrain = { [","] = "t_floor_blue" },
+        rotation = { 0, 3 },
+        monster_placements = {
+            {
+                choices = { "mon_zombie_pig", "mon_zombear", "mon_zoose", "mon_zolf", "mon_zombie_dog" },
+                x = { 1, 3 },
+                y = { 1, 3 },
+                chance = 80,
+            },
+        },
+    },
+}
+
+-- big ash pile (shovel-needed) with a chance of science gear
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "sub_f_ash",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "a",
+        },
+        furniture = { a = "f_ash" },
+        item_spawns = {
+            a = {
+                { id = "ash", amount = 4, chance = 100 },
+                { id = "bone_human", amount = { 3, 5 }, chance = 50 },
+            },
+        },
+        item_groups = { a = { group = "science", chance = 10 } },
+    },
+}

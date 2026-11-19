@@ -118,61 +118,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "afs_modular_habitat_greenhouse_control_ramp",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "..//    |//==//|    //..",
-        "..=                  =..",
-        "//- 22 2   ,,   2 22 -//",
-        "/7  22 2   ,,   2 22   /",
-        "/7  22 2   ,,   2 22   /",
-        "/7                     /",
-        "///      / ,, /111111/!/",
-        "} /333333/4   /888888/ }",
-        "} ///------¡¡------/// }",
-        "}    -8__________8-    }",
-        "}    --___-4¡-___--    }",
-        "}    -____-__-____-    }",
-        "}    -____-_5-____-    }",
-        "}    -____----____-    }",
-        "}}}}}---________---}}}}}",
-        ".......-========-.......",
-        ".......$........$.......",
-        ".......$........$.......",
-        "$$$$$$$$$$$$$$$$$$$$$$$$",
-        "...$...$...$....$....$..",
-        "..$....$....$...$...$...",
-        "$$$$$$$$$$$$$$$$$$$$$$$$",
-        ".......$........$.......",
-        "........................"
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "palettes": [ "afs_habitat_structure" ],
-      "terrain": {
-        ".": "t_open_air",
-        "¡": "t_door_metal_locked",
-        "4": "t_afs_industrial_card_reader",
-        "1": "t_reinforced_glass",
-        "=": "t_wall_clearcrete_alarm",
-        "_": "t_metal_floor_no_roof",
-        " ": "t_metal_floor_no_roof",
-        "}": "t_metal_railing"
-      },
-      "furniture": {
-        "2": "f_planter",
-        "3": "f_drone_recharge_station",
-        "7": "f_habitat_storage_board",
-        "5": [ [ "f_drone_ai_core_broken", 20 ], [ "f_drone_ai_core", 1 ] ],
-        "8": "f_ancient_processor"
-      },
-      "items": { "7": [ { "item": "farming_tools", "chance": 60, "repeat": [ 2, 3 ] } ] },
-      "monsters": { "_": { "monster": "GROUP_ROBOT_FARM_HOSTILE", "chance": 15, "density": 0.1 } },
-      "place_nested": [ { "chunks": [ "afs_modular_habitat_greenhouse_control_ramp_roof" ], "x": 0, "y": 0, "z": 1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "afs_modular_habitat_greenhouse",
     "object": {
       "mapgensize": [ 24, 24 ],
@@ -278,58 +223,6 @@
         { "chunks": [ "afs_modular_habitat_greenhouse_roof_full" ], "x": 0, "y": 0, "z": 1 },
         { "chunks": [ "afs_modular_habitat_greenhouse_tanks_under" ], "x": 0, "y": 0, "z": -1 }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "afs_modular_habitat_greenhouse_tanks_under",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "........................",
-        "........................",
-        "........................",
-        "........................",
-        "..--................--..",
-        "..-..................-..",
-        "..--................--..",
-        "........................",
-        "..........||||..........",
-        ".....||||||55||||||.....",
-        "..--||2222|  |2222||--..",
-        "..-3 |2222|  |2222| 3-..",
-        "..-3 |||#||  ||#||| 3-..",
-        "..-- !            ! --..",
-        "...= |||#||  ||#||| =...",
-        "...= |2222|  |2222| =...",
-        "...= |2222|  |2222| =...",
-        "..-- |2222|  |2222| --..",
-        "..-  ||||||55||||||  -..",
-        "..--  7/16||||61/7  --..",
-        "...=                =...",
-        "...||||||||44||||||||...",
-        "......... ////..........",
-        "........................"
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "palettes": [ "afs_habitat_structure" ],
-      "terrain": {
-        ".": "t_open_air",
-        "=": "t_wall_clearcrete_alarm",
-        " ": "t_metal_floor",
-        "1": "t_metal_floor",
-        "2": "t_ice",
-        "5": "t_ramp_up_high"
-      },
-      "furniture": {
-        "1": "f_water_heater",
-        "3": "f_drone_recharge_station",
-        "4": "f_water_purifier",
-        "6": "f_future_industy_pump",
-        "7": "f_command_console_old"
-      },
-      "items": { " ": [ { "item": "afs_machinery_maintenance_scrapgroup", "chance": 3 } ] },
-      "monsters": { "3": { "monster": "AFS_GROUP_ROBOT_LOW_RISK", "chance": 15, "density": 0.1 } }
     }
   },
   {

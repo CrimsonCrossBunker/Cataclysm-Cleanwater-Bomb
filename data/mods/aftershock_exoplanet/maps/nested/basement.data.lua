@@ -1,0 +1,188 @@
+local ccb = require("ccb")
+
+-- a nested map for basements.  resistance_12x12
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "recroom_12x12",
+    layout = {
+        size = { width = 12, height = 12 },
+        rows = {
+            "............",
+            "....ElHHHl..",
+            "..........T.",
+            "..........ER",
+            "...eee.....R",
+            "...eee.....R",
+            "...eee......",
+            "...eee.....$",
+            "........AC..",
+            "........AC..",
+            "........AC..",
+            "MMM......CS!",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_basement_palette" },
+        terrain = {
+            ["."] = "t_carpet_purple",
+            e = "t_carpet_purple",
+            R = "t_carpet_purple",
+            E = "t_carpet_purple",
+            l = "t_carpet_purple",
+            H = "t_carpet_purple",
+            T = "t_carpet_purple",
+            A = "t_carpet_purple",
+            C = "t_carpet_purple",
+            S = "t_carpet_purple",
+            ["!"] = "t_carpet_purple",
+            ["$"] = "t_carpet_purple",
+        },
+        furniture = { ["!"] = "f_fridge", ["$"] = "f_server", e = "f_workbench" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            ["!"] = { group = "supplies_reagents_lab", chance = 100, repetitions = { 1, 10 } },
+            e = {
+                { group = "book_gunref", chance = 5 },
+                { group = "supplies_mechanics", chance = 50, repetitions = { 1, 3 } },
+                { group = "schematics", chance = 3 },
+            },
+            C = { { group = "wetbar_stack", chance = 25 }, { group = "wetbar_counter", chance = 25 } },
+            M = { { group = "afs_scrapgroup", chance = 65, repetitions = { 1, 3 } } },
+        },
+    },
+}
+
+-- a nested map for basements.  cyberpunk_12x12
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "tvroom_12x12",
+    layout = {
+        size = { width = 12, height = 12 },
+        rows = {
+            "............",
+            ".00,,,,,,,..",
+            ".,,,,,,,,,!.",
+            ".,,,,,,,,,!.",
+            ".,,,,,,,,,!.",
+            ".,,,,,,,,,..",
+            "..HHHHHHH...",
+            "..H........T",
+            "....lll....E",
+            "........K...",
+            ".....$......",
+            "............",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_basement_palette" },
+        terrain = {
+            ["."] = "t_carpet_yellow",
+            [","] = "t_carpet_yellow",
+            H = "t_carpet_yellow",
+            l = "t_carpet_yellow",
+            T = "t_carpet_yellow",
+            E = "t_carpet_yellow",
+            ["$"] = "t_carpet_yellow",
+            ["!"] = "t_carpet_yellow",
+            ["0"] = "t_carpet_yellow",
+        },
+        furniture = { ["!"] = "f_utility_shelf", ["$"] = "f_utility_shelf", ["0"] = "f_sleep_pod" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            ["!"] = { group = "guns_ganger", chance = 80, repetitions = { 1, 3 } },
+            ["."] = {
+                { group = "ammo_common_boxed_used", chance = 5 },
+                { group = "SUS_trash_floor", chance = 1 },
+                { group = "bed", chance = 1 },
+                { group = "afs_scrapgroup", chance = 3 },
+            },
+            ["$"] = { group = "a_television", chance = 100 },
+        },
+    },
+}
+
+-- a nested map for basements.  amateur_crispr_12x12
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "workoutroom_12x12",
+    layout = {
+        size = { width = 12, height = 12 },
+        rows = {
+            "............",
+            "..,,,,,,,,..",
+            "..,0,,,,0,..",
+            "..,,,,,,,,..",
+            "..,,,,,,,,..",
+            "..,!!,,uu,..",
+            "..,,,,,,,,..",
+            "............",
+            ".........AA.",
+            ".......CCCC.",
+            ".......S....",
+            ".......!...$",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_basement_palette" },
+        terrain = {
+            ["."] = "t_carpet_red",
+            A = "t_carpet_red",
+            C = "t_carpet_red",
+            S = "t_carpet_red",
+            ["!"] = "t_carpet_red",
+            ["$"] = "t_carpet_red",
+            [","] = "t_linoleum_white",
+            c = "t_linoleum_white",
+            u = "t_linoleum_white",
+            X = "t_linoleum_white",
+        },
+        furniture = { ["!"] = "f_fridge", ["$"] = "f_rack_wood", ["0"] = "f_crispr", u = "f_cryo_pod" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            ["!"] = { group = "tools_medical", chance = 80, repetitions = { 2, 8 } },
+            ["$"] = { group = "a_television", chance = 100 },
+        },
+    },
+}
+
+-- a nested map for basements.  room_6x6_makerspace
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_6x6_woodworker",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "||||||",
+            "|GEEA|",
+            "|0  C|",
+            "|G FD|",
+            "|GF B|",
+            "|||+||",
+        },
+        terrain = {
+            ["|"] = "t_wall_w",
+            ["+"] = "t_door_locked",
+            [" "] = "t_thconc_floor",
+            A = "t_thconc_floor",
+            B = "t_thconc_floor",
+            C = "t_thconc_floor",
+            D = "t_thconc_floor",
+            E = "t_thconc_floor",
+            F = "t_thconc_floor",
+            G = "t_thconc_floor",
+        },
+        furniture = {
+            A = { { id = "f_neuralnet_inserter" } },
+            B = { { id = "f_server" } },
+            C = "f_atomic_butter_churn",
+            D = "f_monomolecularsaw",
+            E = "f_workbench",
+            F = "f_stool",
+            G = "f_rack_wood",
+            ["0"] = "f_3dprinter",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = {
+            { group = "home_hw", x = { 1, 3 }, y = 4, chance = 50, repetitions = { 1, 3 } },
+            { group = "afs_scrapgroup", x = 1, y = { 1, 4 }, chance = 70, repetitions = { 1, 3 } },
+        },
+    },
+}

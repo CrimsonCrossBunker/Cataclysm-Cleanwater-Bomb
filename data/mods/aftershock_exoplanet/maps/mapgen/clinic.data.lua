@@ -76,3 +76,49 @@ ccb.content.define_mapgen {
         terrain = { ["4"] = "t_mdoor_frame" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_clinic_unlooted",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "                        ",
+            "                        ",
+            "              1 11 2    ",
+            "              1 11 2    ",
+            "              1 11 2    ",
+            "                3       ",
+            "                        ",
+            "                 4      ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        terrain = { ["4"] = "t_door_metal_elocked" },
+        item_groups = {
+            ["1"] = {
+                { group = "softdrugs", chance = 60, repetitions = { 3, 5 } },
+                { group = "drugs_analgesic", chance = 60, repetitions = { 1, 3 } },
+            },
+            ["2"] = {
+                { group = "harddrugs", chance = 70, repetitions = { 1, 2 } },
+                { group = "drugs_rare", chance = 70, repetitions = { 1, 2 } },
+            },
+        },
+        monster_glyphs = { ["3"] = { id = "mon_afs_commercial_laser_turret" } },
+    },
+}

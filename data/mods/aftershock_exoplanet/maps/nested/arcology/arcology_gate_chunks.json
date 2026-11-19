@@ -63,32 +63,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_w_5",
-    "//": "Broken Console, broke gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        ",,,,,,||",
-        ",,,,,,.C",
-        ",,,,,,CW",
-        ",,,,,,W.",
-        ",,,,,,CP",
-        ",,,,,,W.",
-        ",,,,,,..",
-        ",,,,%,||"
-      ],
-      "palettes": [ "arcology_exterior" ],
-      "terrain": { "P": "t_metal_floor", "C": "t_metal_floor", "W": "t_metal_floor" },
-      "items": {
-        "W": [ { "item": "collapsed_building_rubble", "chance": 80, "repeat": [ 1, 3 ] } ],
-        "C": [ { "item": "wreckage", "chance": 100, "repeat": [ 1, 2 ] } ]
-      },
-      "furniture": { "P": "f_ash" }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "arcology_8x8_gate_w_6",
     "//": "Working Console, broken gate",
     "object": {
@@ -187,33 +161,6 @@
           "failures": [ { "action": "damage" }, { "action": "shutdown" } ]
         }
       }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_s_5",
-    "//": "Broken Console, broke gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "________",
-        "________",
-        "6_______",
-        "|.CWCOO|",
-        "|COWPW.|",
-        ",,,,,,,%",
-        ",,,,,,,,",
-        ",,,,,,,,"
-      ],
-      "palettes": [ "arcology_exterior" ],
-      "terrain": { "P": "t_metal_floor", "C": "t_metal_floor", "W": "t_metal_floor" },
-      "items": {
-        "W": [ { "item": "collapsed_building_rubble", "chance": 80, "repeat": [ 1, 3 ] } ],
-        "C": [ { "item": "wreckage", "chance": 100, "repeat": [ 1, 2 ] } ]
-      },
-      "furniture": { "P": "f_ash" },
-      "nested": { "6": { "chunks": [ [ "arcology_1x1_gate", 50 ], [ "arcology_1x1_gate_broken", 50 ] ] } }
     }
   },
   {
@@ -321,33 +268,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_e_5",
-    "//": "Broken Console, broke gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "__||,%,,",
-        "__..,,,,",
-        "__.W,,,,",
-        "__CW,,,,",
-        "__W.,,,,",
-        "__OP,,,,",
-        "__C.,,,,",
-        "_6||,,,,"
-      ],
-      "palettes": [ "arcology_exterior" ],
-      "nested": { "6": { "chunks": [ [ "arcology_1x1_gate", 50 ], [ "arcology_1x1_gate_broken", 50 ] ] } },
-      "terrain": { "P": "t_metal_floor", "C": "t_metal_floor", "W": "t_metal_floor" },
-      "items": {
-        "W": [ { "item": "collapsed_building_rubble", "chance": 80, "repeat": [ 1, 3 ] } ],
-        "C": [ { "item": "wreckage", "chance": 100, "repeat": [ 1, 2 ] } ]
-      },
-      "furniture": { "P": "f_ash" }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "arcology_8x8_gate_e_6",
     "//": "Working Console, broken gate",
     "object": {
@@ -447,33 +367,6 @@
           "failures": [ { "action": "damage" }, { "action": "shutdown" } ]
         }
       }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_n_5",
-    "//": "Broken Console, broke gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        ",,,,,,,,",
-        "%,,,,,,,",
-        ",,,,,,,,",
-        "|.CWCOO|",
-        "|COWPW.|",
-        "_______6",
-        "________",
-        "________"
-      ],
-      "palettes": [ "arcology_exterior" ],
-      "nested": { "6": { "chunks": [ [ "arcology_1x1_gate", 50 ], [ "arcology_1x1_gate_broken", 50 ] ] } },
-      "terrain": { "P": "t_metal_floor", "C": "t_metal_floor", "W": "t_metal_floor" },
-      "items": {
-        "W": [ { "item": "collapsed_building_rubble", "chance": 80, "repeat": [ 1, 3 ] } ],
-        "C": [ { "item": "wreckage", "chance": 100, "repeat": [ 1, 2 ] } ]
-      },
-      "furniture": { "P": "f_ash" }
     }
   },
   {

@@ -83,3 +83,62 @@ ccb.content.define_mapgen {
         flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
     },
 }
+
+-- Loot still inside, turret friend is there too.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "afs_exosuit_garage_2_unlooted",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "                        ",
+            "                        ",
+            "                 ê      ",
+            "      á                 ",
+            "      â                 ",
+            "                  äää   ",
+            "   †                    ",
+            "      á           äää   ",
+            "      â                 ",
+            "                        ",
+            "                 ê      ",
+            "      á                 ",
+            "      â                 ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "       íííí             ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        furniture = {
+            ["á"] = "f_exo_gantry",
+            ["â"] = "f_rack",
+            ["ä"] = "f_rack",
+            ["ê"] = "f_rack",
+            ["í"] = "f_locker",
+        },
+        item_groups = {
+            ["á"] = { group = "afs_exosuits_civ", chance = 40 },
+            ["â"] = { group = "afs_exo_civ_modules", chance = 60, repetitions = { 1, 3 } },
+            ["ä"] = { group = "afs_robotics_scrapgroup", chance = 60, repetitions = { 1, 4 } },
+            ["ê"] = { group = "afs_tools_robot_maintenance", chance = 50, repetitions = { 1, 3 } },
+            ["í"] = { group = "afs_exo_underlayer_civ", chance = 40, repetitions = { 1, 2 } },
+        },
+        monster_glyphs = { ["†"] = { id = "mon_afs_commercial_laser_turret" } },
+        monster_placements = {
+            {
+                group = "AFS_GROUP_ROBOT_LOW_RISK",
+                x = { 17, 20 },
+                y = { 2, 10 },
+                pack_size = { 1, 3 },
+                chance = 80,
+            },
+        },
+    },
+}

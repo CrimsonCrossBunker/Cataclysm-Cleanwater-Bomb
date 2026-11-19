@@ -193,3 +193,38 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "afs_aeolian_plain" },
+    weight = 3,
+    layout = {
+        predecessor_mapgen = "glacial_field",
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_aeolian_plain",
+    weight = 1,
+    layout = {
+        predecessor_mapgen = "glacial_field",
+        nested = { { id = "aeolian_base_tile", x = 0, y = 0 } },
+        monster_group_placements = {
+            {
+                group = "AFS_GROUP_FAUNA_HERBIVORE",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 3,
+                density = 0.1,
+            },
+            {
+                group = "AFS_GROUP_FAUNA_PREDATORS_LOW_RISK",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 10,
+                density = 0.1,
+            },
+        },
+    },
+}

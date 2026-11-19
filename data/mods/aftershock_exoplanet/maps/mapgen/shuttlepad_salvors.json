@@ -553,11 +553,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "afs_shuttlepad_salvors_garage_place_lynx",
-    "object": { "place_vehicles": [ { "vehicle": "uica_lynx_ex", "x": 6, "y": 5, "status": 0, "faction": "your_followers" } ] }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "afs_shuttlepad_salvors_old_pad",
     "object": {
       "fill_ter": "t_region_groundcover_urban",
