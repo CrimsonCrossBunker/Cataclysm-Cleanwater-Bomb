@@ -1,13 +1,12 @@
 local ccb = require("ccb")
 
--- It means what it means.  Your land's dead already, it's just still kicking is all.
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_Purpose4",
-    line = ccb.content.text("Means what it means.  Your land's a deadun', still kickin' is all."),
+    id = "TALK_EXODII_MERCHANT_Exodus",
+    line = ccb.content.text("Oh yeah, right and so.  Each and every.  We wander, we make do.  It's a livin'."),
     replies = {
         {
-            text = ccb.content.text("Are you saying you think we're doomed?  Why would you have come here if there wasn't some way to survive?"),
-            next_topic = "TALK_EXODII_MERCHANT_Survival",
+            text = ccb.content.text("What drove you out?"),
+            next_topic = "TALK_EXODII_MERCHANT_Exodus2",
         },
         {
             text = ccb.content.text_without_extraction("<done_conversation_section>"),

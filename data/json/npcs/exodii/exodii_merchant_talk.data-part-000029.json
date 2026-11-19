@@ -63,22 +63,5 @@
       },
       { "text": "I'm not interested in anything right now.  <end_talking_bye>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "TALK_EXODII_MERCHANT_Dialect",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "//~": "Sure you can, at least a bit.  I'll do my best to speak your Anglic, but seeing as we're from otherlands and all, it's not that simple.",
-      "str": "Sure as ye can, at least sommat.  Us'n'll try as we might to parley your Anglic, but so ye kennit as us be from otherlands and all, it ain't that simple."
-    },
-    "responses": [
-      {
-        "text": "[INT or PER 7] How come you speak English, or uh, 'Anglic' like that?",
-        "condition": { "or": [ { "u_has_intelligence": 7 }, { "u_has_perception": 7 } ] },
-        "topic": "TALK_EXODII_MERCHANT_Dialect_Anglic"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
-    ]
   }
 ]

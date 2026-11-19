@@ -1,19 +1,5 @@
 [
   {
-    "id": "TALK_EXODII_MERCHANT_Talk_IntroBenzete3",
-    "type": "talk_topic",
-    "dynamic_line": { "//~": "Sure, that word is fine, I think.", "str": "Sure an' that's a fine enough word, an I'm ken." },
-    "responses": [
-      {
-        "text": "You said this was an especially good jump?",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_completed_rubik_intro" } ] } },
-        "topic": "TALK_EXODII_MERCHANT_Talk_Intro3"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
-      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
     "id": "TALK_EXODII_MERCHANT_Aliens",
     "type": "talk_topic",
     "dynamic_line": {

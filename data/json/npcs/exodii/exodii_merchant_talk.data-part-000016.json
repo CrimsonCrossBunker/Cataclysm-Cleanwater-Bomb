@@ -1,76 +1,16 @@
 [
   {
-    "id": "TALK_EXODII_MERCHANT_Metal",
+    "id": "TALK_EXODII_MERCHANT_Talk_Intro4a",
     "type": "talk_topic",
     "dynamic_line": {
-      "//~": "I realized that it was a no-brainer question.  There was only one other option, you see, if I didn't join the Exodii.",
-      "str": "Us'n saw this were a pidgeon's road, I'd razz.  Only one way, I'm ken, if I'm not to join the rank an' file."
+      "//~": "That's a part of it, sure, but this is nice for other reasons, and much better than our last jump.  Otherlands with fusillies and mobbings are really useful to us.",
+      "str": "That be a part an' switch, but this be'n nice for all, overtop the last jump by heads.  Otherlands with fusillies and mobbings, us'n gets a fine change on that."
     },
+    "speaker_effect": { "effect": { "u_add_var": "knowledge_exodii_transdimensional_u_knows_exodiilore", "value": "yes" } },
     "responses": [
-      {
-        "text": "I think I know what you mean.  The only way to survive is to… \"upgrade\".  Can you help me with that?",
-        "topic": "TALK_EXODII_MERCHANT_Exodize",
-        "condition": {
-          "not": {
-            "or": [
-              { "u_has_mission": "RUBIK_ANUS_FETICK" },
-              { "compare_string": [ "yes", { "u_val": "mission_completed_anusfetick" } ] },
-              { "u_has_trait": "CBM_Interface" },
-              { "u_has_trait": "NL_CBM_Interface" }
-            ]
-          }
-        },
-        "effect": { "u_add_var": "knowledge_exodization_u_knows_exodiilore", "value": "yes" }
-      },
-      {
-        "text": "What are you meaning with 'razzing up our green and brown'?",
-        "topic": "TALK_EXODII_MERCHANT_Purpose2"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_EXODII_MERCHANT_Robot",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "//~": "Robot?  What does that word mean?  Hang on.  …Ah, an automate?  No, I'm as flesh and blood as you are, encased in a shell of metal and wire.  Not as much flesh as there used to be.  The wire is mixed and woven into the flesh, all as one, you see.",
-      "str": "Robot?  What assert is f'r it?  Ahold…\"  Rubik stops for a moment, as if thinking.  \"Ah, an automate?  No, this'n be flesh 'n blood as ye be, encased in a shell o' metal an' wire.  Not so much flesh as there were.  The wire is amixed an' afloat with the flesh, all as one, kennit."
-    },
-    "speaker_effect": { "effect": { "u_add_var": "knowledge_rubik_is_cyborg_u_knows_exodiilore", "value": "yes" } },
-    "responses": [
-      {
-        "truefalsetext": {
-          "condition": { "mod_is_loaded": "catalegacy_future" },
-          "true": "<fcl_exodii_cyborg_question>",
-          "false": "[INT 9] So you're a cyborg of some kind?  That's awesome.  How do I become a cyborg?"
-        },
-        "topic": "TALK_EXODII_MERCHANT_Exodize",
-        "condition": {
-          "and": [
-            { "u_has_intelligence": 9 },
-            {
-              "not": {
-                "or": [
-                  { "u_has_mission": "RUBIK_ANUS_FETICK" },
-                  { "compare_string": [ "yes", { "u_val": "mission_completed_anusfetick" } ] },
-                  { "u_has_trait": "CBM_Interface" },
-                  { "u_has_trait": "NL_CBM_Interface" }
-                ]
-              }
-            }
-          ]
-        },
-        "effect": { "u_add_var": "knowledge_exodization_u_knows_exodiilore", "value": "yes" }
-      },
-      {
-        "text": "I don't have any idea what you mean.  You're kind of a robot, but you're also flesh and blood?",
-        "topic": "TALK_EXODII_MERCHANT_Robot2"
-      },
-      { "text": "What are you meaning 'razzing up our green and brown'?", "topic": "TALK_EXODII_MERCHANT_Purpose2" },
-      { "text": "I don't understand a word you're saying.", "topic": "TALK_EXODII_MERCHANT_Dialect" },
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
+      { "text": "I don't know what fusillies and mobbings are.", "topic": "TALK_EXODII_MERCHANT_Talk_Intro5" },
+      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
+      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
     ]
   }
 ]
