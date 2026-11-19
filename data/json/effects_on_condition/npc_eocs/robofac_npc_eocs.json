@@ -51,11 +51,6 @@
     ]
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "remove_robofac_intercom",
-    "object": { "remove_npcs": [ { "class": "robofac_intercom", "x": 19, "y": 11 } ] }
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_ROBOFAC_LOCK_INTERCOM",
     "global": true,
@@ -93,20 +88,6 @@
         ]
       }
     ]
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "remove_robofac_mercs",
-    "object": {
-      "remove_npcs": [
-        { "class": "robofac_chop_shop_merc_1", "x": [ 0, 23 ], "y": [ 0, 23 ] },
-        { "class": "robofac_chop_shop_merc_2", "x": [ 0, 23 ], "y": [ 0, 23 ] },
-        { "class": "robofac_chop_shop_merc_3", "x": [ 0, 23 ], "y": [ 0, 23 ] },
-        { "class": "robofac_chop_shop_merc_4", "x": [ 0, 23 ], "y": [ 0, 23 ] },
-        { "class": "robofac_chop_shop_merc_5", "x": [ 0, 23 ], "y": [ 0, 23 ] },
-        { "class": "robofac_chop_shop_merc_6", "x": [ 0, 23 ], "y": [ 0, 23 ] }
-      ]
-    }
   },
   {
     "type": "effect_on_condition",
