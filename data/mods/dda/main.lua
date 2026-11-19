@@ -6,6 +6,8 @@ require("dimensions")
 
 require("imperial_road")
 
+require("highland_relics")
+
 local ccb = require("ccb")
 
 local function mounted_charge_available(context)
