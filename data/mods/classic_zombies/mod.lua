@@ -1,6 +1,7 @@
 local ccb = require("ccb")
 
 return ccb.ModDefinition {
+    ordered_data_files = true,
     world_options = {
         DISABLE_ROBOT_RESPONSE = true,
         -- The scenario selected by default in the character creator menu.
