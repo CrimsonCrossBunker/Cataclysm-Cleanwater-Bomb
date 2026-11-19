@@ -1,0 +1,60 @@
+[
+  {
+    "id": "animist_slow_food_rotting_spell",
+    "type": "SPELL",
+    "name": "Abjure Spirits of Rot",
+    "description": "Placing a warding on food or drink, preventing the spirits of decay from nesting within it.  The mage may affect as much food or drink as they can carry.  The principles by which this spell functions were not discovered until the 20th century, but some animists maintain that radiation is frightening to decay spirits.",
+    "valid_targets": [ "self" ],
+    "spell_class": "ANIMIST",
+    "flags": [ "ENHANCEMENT_SPELL", "CONCENTRATE", "VERBAL", "SOMATIC" ],
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_ANIMIST_SLOW_FOOD_ROTTING_SPELL",
+    "components": "spell_components_slow_food_rotting",
+    "shape": "blast",
+    "difficulty": 5,
+    "max_level": 15,
+    "magic_type": "magiclysm_enhancement_magic",
+    "base_energy_cost": 550,
+    "base_casting_time": 90000,
+    "extra_effects": [ { "id": "eoc_enhancement_setup", "hit_self": true } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_ANIMIST_SLOW_FOOD_ROTTING_SPELL",
+    "effect": [
+      {
+        "u_run_inv_eocs": "manual_mult",
+        "search_data": [ { "category": "food" }, { "category": "drink" } ],
+        "true_eocs": [
+          {
+            "id": "EOC_ANIMIST_SLOW_FOOD_ROTTING_SPELL_ITEM",
+            "effect": [ { "npc_set_flag": "IRRADIATED" }, { "npc_set_flag": "NO_PARASITES" } ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "animist_magic_fissile",
+    "type": "SPELL",
+    "name": "Magic Fissile",
+    "description": "I cast Magic… Fissile?  At the darkness?",
+    "valid_targets": [ "hostile" ],
+    "flags": [ "EVOCATION_SPELL", "VERBAL", "SOMATIC", "RANDOM_DAMAGE", "NO_LEGS", "SILENT", "NO_PROJECTILE" ],
+    "extra_effects": [ { "id": "animist_radiation_bolt", "hit_self": false }, { "id": "eoc_evocation_setup", "hit_self": true } ],
+    "min_damage": { "math": [ "(u_spell_level('animist_magic_fissile') * 0.75) + 0" ] },
+    "max_damage": { "math": [ "(u_spell_level('animist_magic_fissile') * 1) + 3" ] },
+    "damage_type": "necrotic",
+    "min_range": 8,
+    "range_increment": 0.8,
+    "max_range": 20,
+    "base_energy_cost": 50,
+    "spell_class": "ANIMIST",
+    "difficulty": 1,
+    "max_level": 15,
+    "base_casting_time": 100,
+    "magic_type": "magiclysm_evocation_magic",
+    "shape": "blast",
+    "effect": "attack"
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "necrotic_gaze",
+    "type": "SPELL",
+    "name": "Necrotic Gaze",
+    "description": "Using the power of blood contained within a rune, you imbue necrotic energy into your gaze, damaging the target you look at.",
+    "valid_targets": [ "hostile" ],
+    "effect": "attack",
+    "shape": "line",
+    "spell_class": "ANIMIST",
+    "magic_type": "magiclysm_evocation_magic",
+    "flags": [
+      "EVOCATION_SPELL",
+      "NO_LEGS",
+      "CONCENTRATE",
+      "RANDOM_DAMAGE",
+      "SOMATIC",
+      "NO_PROJECTILE",
+      "NO_HANDS",
+      "CONSUMES_RUNES",
+      "SPLIT_DAMAGE"
+    ],
+    "components": "spell_components_rune_animist",
+    "min_damage": { "math": [ "(u_spell_level('necrotic_gaze') * 2) + 4" ] },
+    "max_damage": { "math": [ "(u_spell_level('necrotic_gaze') * 5) + 8" ] },
+    "min_range": 3,
+    "max_range": 5,
+    "range_increment": 0.1,
+    "max_level": 25,
+    "difficulty": 3,
+    "base_casting_time": 100,
+    "min_aoe": 1,
+    "max_aoe": 3,
+    "aoe_increment": 0.1,
+    "extra_effects": [ { "id": "eoc_evocation_setup", "hit_self": true } ],
+    "damage_type": "necrotic"
+  }
+]

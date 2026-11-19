@@ -1,0 +1,20 @@
+[
+  {
+    "id": "animist_mass_hiding_self",
+    "type": "SPELL",
+    "name": { "str": "A Shadow in the Crowd Self", "//~": "NO_I18N" },
+    "description": {
+      "str": "Puts an effect on you so anyone affected by A Shadow in the Crowd knows to ignore you.  It's a bug if you have this directly.",
+      "//~": "NO_I18N"
+    },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "flags": [ "ENERVATION_SPELL", "SILENT", "NO_HANDS", "NO_LEGS" ],
+    "effect": "attack",
+    "effect_str": "telepathic_ignorance_self",
+    "shape": "blast",
+    "min_duration": { "math": [ "(u_spell_level('animist_mass_hiding_aoe') * 3000) + 3000" ] },
+    "max_duration": { "math": [ "(u_spell_level('animist_mass_hiding_aoe') * 3000) + 3000" ] }
+  }
+]

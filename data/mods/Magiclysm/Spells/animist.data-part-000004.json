@@ -1,0 +1,29 @@
+[
+  {
+    "id": "bleed",
+    "type": "SPELL",
+    "name": "Bleed",
+    "description": "Agitate old wounds on a creature, causing blood to ooze out of them.",
+    "valid_targets": [ "hostile" ],
+    "effect": "attack",
+    "shape": "blast",
+    "flags": [ "EVOCATION_SPELL", "VERBAL", "SOMATIC", "NO_LEGS", "NO_PROJECTILE", "NO_HANDS" ],
+    "magic_type": "magiclysm_evocation_magic",
+    "spell_class": "ANIMIST",
+    "difficulty": 2,
+    "base_casting_time": 100,
+    "base_energy_cost": 150,
+    "damage_type": "necrotic",
+    "max_level": 25,
+    "min_range": 3,
+    "max_range": 5,
+    "range_increment": 0.1,
+    "min_duration": 500,
+    "max_duration": 1000,
+    "duration_increment": 20,
+    "min_dot": { "math": [ "(u_spell_level('bleed') * 0.3) + 0.2" ] },
+    "max_dot": { "math": [ "(u_spell_level('bleed') * 0.3) + 0.2" ] },
+    "extra_effects": [ { "id": "eoc_evocation_setup", "hit_self": true } ],
+    "ignored_monster_species": [ "ROBOT", "NETHER_EMANATION", "ROBOT_FLYING", "GOLEM" ]
+  }
+]
