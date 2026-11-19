@@ -1,0 +1,372 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "road_straight" },
+    layout = {
+        rows = {
+            "  .................1..  ",
+            "  1..................   ",
+            "  1...............1..   ",
+            "  ......1.............  ",
+            "  .................1..  ",
+            "  ...............1....  ",
+            "  ................1...  ",
+            "  ........1...........  ",
+            "  1................1..  ",
+            "  ....................  ",
+            "  ....1....1.......1..  ",
+            "  ....................  ",
+            "  .......1.......1....  ",
+            "  ........... .....1..  ",
+            "  1...................  ",
+            "  .......1.......1....  ",
+            "  ....................  ",
+            "  1...............1...  ",
+            "  ....1...............  ",
+            "  ...........1.....1..  ",
+            "  ................  ..  ",
+            "  ....................  ",
+            "  ....................  ",
+            "  ....................  ",
+        },
+        terrain = { ["."] = "t_pavement" },
+        predecessor_mapgen = "glacial_field",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested_glyphs = {
+            ["1"] = { choices = { { id = "road_crater", weight = 50 }, { id = "null", weight = 50 } } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "road_end" },
+    layout = {
+        rows = {
+            "                        ",
+            "    ................    ",
+            "   .....1..........1.   ",
+            "  ....................  ",
+            "  ....................  ",
+            "  .1.............1....  ",
+            "  .......1............  ",
+            "  ....................  ",
+            "  1...................  ",
+            "  ....................  ",
+            "  .................1..  ",
+            "  ....................  ",
+            "  .......1............  ",
+            "  ....................  ",
+            "  ...1................  ",
+            "  ........1......1....  ",
+            "  ....................  ",
+            "  .................1..  ",
+            "  ....................  ",
+            "   .1......1.........   ",
+            "   .................    ",
+            "    .................   ",
+            "   ..................   ",
+            "   ..................   ",
+        },
+        terrain = { ["."] = "t_pavement" },
+        predecessor_mapgen = "glacial_field",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested_glyphs = {
+            ["1"] = { choices = { { id = "road_crater", weight = 50 }, { id = "null", weight = 50 } } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "road_curved" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                     ...",
+            "                    ....",
+            "                   1....",
+            "                  ......",
+            "                 .......",
+            "                1..1....",
+            "               .........",
+            "              1.........",
+            "             ......1....",
+            "            ............",
+            "           1.....1......",
+            "          ..............",
+            "         ...............",
+            "        1........1......",
+            "       .................",
+            "      .......1..........",
+            "     .1.................",
+            "    .......1......1.....",
+            "   .....................",
+            "  ......................",
+            "  ..................... ",
+            "  ....................  ",
+        },
+        terrain = { ["."] = "t_pavement" },
+        predecessor_mapgen = "glacial_field",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested_glyphs = {
+            ["1"] = { choices = { { id = "road_crater", weight = 50 }, { id = "null", weight = 50 } } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "road_tee" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "..2.....2..........1....",
+            "..............1.........",
+            "........................",
+            "...2.............1......",
+            ".........2..............",
+            "........................",
+            "..2...............1.....",
+            ".............1..........",
+            ".......2...........1....",
+            "........................",
+            ".........1.........1....",
+            "........................",
+            ".....1.....1............",
+            ".................1......",
+            "......1.................",
+            "...........1............",
+            "...................1....",
+            "....1......1............",
+            "........................",
+            "........................",
+            "  ....................  ",
+            "  ....................  ",
+        },
+        terrain = { ["."] = "t_pavement" },
+        predecessor_mapgen = "glacial_field",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested_glyphs = {
+            ["1"] = { choices = { { id = "road_crater", weight = 50 }, { id = "null", weight = 50 } } },
+            ["2"] = {
+                choices = {
+                    { id = "road_crater", weight = 30 },
+                    { id = "road_rift", weight = 20 },
+                    { id = "null", weight = 50 },
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "road_nesw_manhole" },
+    layout = {
+        rows = {
+            "2 ..........2........   ",
+            "  ....................  ",
+            "..1.....1..........1....",
+            "..............1.........",
+            "........................",
+            "1..1.............1......",
+            ".........1.....1........",
+            "........................",
+            "..1.....................",
+            "......1.....1...........",
+            "...................1....",
+            "........................",
+            "..1......1....1.........",
+            "........................",
+            ".....1..................",
+            ".........1.......1......",
+            "....1...................",
+            "........................",
+            "........................",
+            "....1......1............",
+            "........................",
+            "........................",
+            "  ....................  ",
+            "  ....................  ",
+        },
+        terrain = { ["."] = "t_pavement" },
+        predecessor_mapgen = "glacial_field",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested_glyphs = {
+            ["1"] = { choices = { { id = "road_crater", weight = 50 }, { id = "null", weight = 50 } } },
+            ["2"] = {
+                choices = {
+                    { id = "formless_ruins_ribs1", weight = 5 },
+                    { id = "formless_ruins_empty1", weight = 5 },
+                    { id = "formless_ruins_empty2", weight = 5 },
+                    { id = "formless_ruins_empty3", weight = 5 },
+                    { id = "formless_ruins_empty4", weight = 5 },
+                    { id = "null", weight = 80 },
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "road_four_way" },
+    weight = 100000,
+    layout = {
+        rows = {
+            "2 ..........2........   ",
+            "  ....................  ",
+            "..1.....1..........1....",
+            "..............1.........",
+            "........................",
+            "1..1.............1......",
+            ".........1.....1........",
+            "........................",
+            "..1.....................",
+            "......1.....1...........",
+            "...................1....",
+            "........................",
+            "..1......1....1.........",
+            "........................",
+            ".....1..................",
+            ".........1.......1......",
+            "....1...................",
+            "........................",
+            "........................",
+            "....1......1............",
+            "........................",
+            "........................",
+            "  ....................  ",
+            "  ....................  ",
+        },
+        terrain = { ["."] = "t_pavement" },
+        predecessor_mapgen = "glacial_field",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested_glyphs = {
+            ["1"] = { choices = { { id = "road_crater", weight = 50 }, { id = "null", weight = 50 } } },
+            ["2"] = {
+                choices = {
+                    { id = "formless_ruins_ribs1", weight = 5 },
+                    { id = "formless_ruins_empty1", weight = 5 },
+                    { id = "formless_ruins_empty2", weight = 5 },
+                    { id = "formless_ruins_empty3", weight = 5 },
+                    { id = "formless_ruins_empty4", weight = 5 },
+                    { id = "null", weight = 80 },
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "road_crater",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "  .  ",
+            "  .. ",
+            ".....",
+            " ... ",
+            "  .. ",
+        },
+        terrain = { ["."] = "t_region_groundcover_urban" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "road_crater",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "  .  ",
+            ".... ",
+            " . ..",
+            " ... ",
+            "  .  ",
+        },
+        terrain = { ["."] = "t_region_groundcover_urban" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "road_crater",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            " ..  ",
+            "..   ",
+            "   ..",
+            " ... ",
+            "  .  ",
+        },
+        terrain = { ["."] = "t_region_groundcover_urban" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "road_crater",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "  . .",
+            ".. . ",
+            " .  .",
+            " . . ",
+            " .   ",
+        },
+        terrain = { ["."] = "t_region_groundcover_urban" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "road_crater",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            " ..  ",
+            "  .. ",
+            ".  ..",
+            " ... ",
+            "  ...",
+        },
+        terrain = { ["."] = "t_region_groundcover_urban" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "road_rift",
+    layout = {
+        size = { width = 12, height = 12 },
+        rows = {
+            "           .",
+            "    .  .....",
+            "   ..   ....",
+            "    ..  . . ",
+            "      ..   .",
+            "     . . .. ",
+            "     .. .   ",
+            "   ...   .. ",
+            "....     .. ",
+            "...      .. ",
+            "..     ..   ",
+            ".       .   ",
+        },
+        terrain = { ["."] = "t_region_groundcover_urban" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+    },
+}
