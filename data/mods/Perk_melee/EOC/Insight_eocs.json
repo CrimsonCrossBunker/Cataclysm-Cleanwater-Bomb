@@ -4,13 +4,5 @@
     "type": "effect_on_condition",
     "condition": { "u_has_flag": "MELEE_PERK_INSIGHT" },
     "effect": [ { "math": [ "u_perk_last_insight = u_effect_intensity('perk_insight')" ] }, { "u_lose_effect": "perk_insight" } ]
-  },
-  {
-    "id": "EOC_PERK_CLEAR_INSIGHT",
-    "type": "effect_on_condition",
-    "condition": { "math": [ "u_monsters_nearby('radius': 20) == 0" ] },
-    "deactivate_condition": { "not": { "u_has_flag": "MELEE_PERK_INSIGHT" } },
-    "recurrence": "20 seconds",
-    "effect": [ { "u_lose_effect": "perk_insight" } ]
   }
 ]

@@ -3,6 +3,7 @@ local services = ccb.services
 local effects = services.effects
 local tasks = ccb.tasks
 local id = services.types.id
+local saved = ccb.state.character
 
 local insight = id("effect", "perk_insight")
 local blind_check = id("effect", "perk_blind_check")
@@ -10,6 +11,8 @@ local insight_flag = id("json_flag", "MELEE_PERK_INSIGHT")
 local infinite = id("json_flag", "MELEE_PERK_INSIGHT_INFINITE")
 local sixth_sense = id("json_flag", "MELEE_PERK_SIXTH_SENSE")
 local insight_spell = id("spell", "perk_insight_spell")
+local clear_timer = "perk_clear_insight_timer"
+local clear_due = "martial_perks_clear_insight_due"
 
 local function checked(result)
     if not result.ok then error(result.error.message) end
@@ -102,5 +105,61 @@ local function restore_after_kill(actor)
     local applied = effects.add(actor, insight, services.time.duration(4, "day"), { intensity = restored })
     if not applied.ok and applied.error.code ~= "rejected" then error(applied.error.message) end
 end
+
+local function schedule_clear_insight(actor)
+    tasks.after_character_turn(actor, 20, clear_due)
+    if saved.get(clear_timer) ~= "scheduled" then
+        saved.set(clear_timer, "scheduled")
+    end
+end
+
+local function wake_clear_insight(actor)
+    if saved.get(clear_timer) == "dormant" and checked(services.characters.has_flag(actor, insight_flag)) then
+        schedule_clear_insight(actor)
+    end
+end
+
+ccb.runtime.handler(clear_due, function(payload)
+    local actor = payload.character
+    local position = checked(services.creatures.snapshot(actor)).position
+    if checked(services.monsters.count_nearby(position, nil, { radius = 20 })) == 0 then
+        checked(effects.remove(actor, insight))
+        schedule_clear_insight(actor)
+    elseif checked(services.characters.has_flag(actor, insight_flag)) then
+        schedule_clear_insight(actor)
+    else
+        saved.set(clear_timer, "dormant")
+    end
+end, 1)
+
+ccb.runtime.handler("martial_perks_clear_insight_ready", function(event)
+    local actor = event.actors.character
+    if tasks.has_character_turn(actor, clear_due) then
+        if saved.get(clear_timer) ~= "scheduled" then
+            saved.set(clear_timer, "scheduled")
+        end
+    elseif saved.get(clear_timer) == "dormant" then
+        wake_clear_insight(actor)
+    else
+        schedule_clear_insight(actor)
+    end
+end, 1)
+ccb.runtime.on("character_ready", "martial_perks_clear_insight_ready")
+
+ccb.runtime.handler("martial_perks_clear_insight_conditions", function(event)
+    wake_clear_insight(event.actors.character)
+end, 1)
+ccb.runtime.on("character_conditions_changed", "martial_perks_clear_insight_conditions")
+
+ccb.runtime.handler("perk_style_static", function(style)
+    local actor = style.character
+    if checked(services.creatures.has_flag_text(actor, "MELEE_PERK_BLIND_CALCULUS"))
+        and not checked(services.characters.snapshot(actor)).senses.can_see then
+        local applied = effects.add(actor, blind_check, services.time.duration(4, "day"))
+        if not applied.ok and applied.error.code ~= "rejected" then error(applied.error.message) end
+    else
+        checked(effects.remove(actor, blind_check))
+    end
+end)
 
 return { restore_after_kill = restore_after_kill }
