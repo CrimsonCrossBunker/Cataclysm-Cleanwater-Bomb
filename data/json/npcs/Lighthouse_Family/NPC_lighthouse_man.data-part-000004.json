@@ -1,0 +1,50 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_lighthouse_man_family",
+    "dynamic_line": { "gendered_line": "Did you find them, <name_g>?", "relevant_genders": [ "u" ] },
+    "responses": [
+      {
+        "text": "We did it.  All safe.",
+        "topic": "TALK_MISSION_SUCCESS",
+        "condition": {
+          "and": [
+            { "u_has_mission": "MISSION_lighthouse_man_3" },
+            { "not": "mission_complete" },
+            { "compare_string": [ "yes", { "u_val": "flag_safe_lighthouse_woman" } ] },
+            { "compare_string": [ "yes", { "u_val": "flag_safe_lighthouse_girl" } ] }
+          ]
+        },
+        "effect": [ "mission_success", { "npc_first_topic": "TALK_lighthouse_man_1" } ]
+      },
+      {
+        "text": "I'm sorry, I failed you… I couldn't bring them alive…",
+        "topic": "TALK_lighthouse_man_fail",
+        "condition": {
+          "and": [
+            "mission_complete",
+            { "not": { "compare_string": [ "yes", { "u_val": "flag_safe_lighthouse_woman" } ] } },
+            { "compare_string": [ "yes", { "u_val": "flag_death_lighthouse_girl_dead" } ] }
+          ]
+        }
+      },
+      {
+        "text": "I'm sorry, I failed you… I couldn't bring your wife alive…",
+        "topic": "TALK_lighthouse_man_fail",
+        "condition": { "and": [ "mission_complete", { "compare_string": [ "yes", { "u_val": "flag_safe_lighthouse_girl" } ] } ] }
+      },
+      {
+        "text": "I'm sorry, I failed you… I couldn't bring your daughter alive…",
+        "topic": "TALK_lighthouse_man_fail",
+        "condition": {
+          "and": [
+            { "not": "mission_complete" },
+            { "compare_string": [ "yes", { "u_val": "flag_safe_lighthouse_woman" } ] },
+            { "compare_string": [ "yes", { "u_val": "flag_death_lighthouse_girl_dead" } ] }
+          ]
+        }
+      },
+      { "text": "Nothing, really.", "topic": "TALK_DONE" }
+    ]
+  }
+]

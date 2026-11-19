@@ -1,0 +1,198 @@
+[
+  {
+    "id": "MISSION_lighthouse_man_1",
+    "type": "mission_definition",
+    "has_generic_rewards": false,
+    "name": { "str": "Lighthouse" },
+    "description": "Lead Mikhail to lighthouse.",
+    "goal": "MGOAL_GO_TO",
+    "difficulty": 0,
+    "value": 5000,
+    "start": {
+      "assign_mission_target": { "om_terrain": "lighthouse_ground", "om_special": "Lighthouse Island", "reveal_radius": 10, "cant_see": true },
+      "update_mapgen": [
+        {
+          "om_terrain": "lighthouse_ground",
+          "place_monsters": [ { "monster": "GROUP_ZOMBIE", "x": [ 1, 22 ], "y": [ 1, 22 ], "density": 0.3 } ]
+        },
+        {
+          "om_terrain": "lighthouse_z1",
+          "place_monsters": [ { "monster": "GROUP_ZOMBIE", "x": [ 11, 16 ], "y": [ 8, 16 ], "density": 0.3 } ]
+        },
+        {
+          "om_terrain": "lighthouse_z2",
+          "place_monsters": [ { "monster": "GROUP_ZOMBIE", "x": [ 11, 16 ], "y": [ 8, 16 ], "density": 0.3 } ]
+        },
+        {
+          "om_terrain": "lighthouse_z3",
+          "place_monsters": [ { "monster": "GROUP_ZOMBIE", "x": [ 11, 16 ], "y": [ 8, 16 ], "density": 0.3 } ]
+        },
+        {
+          "om_terrain": "lighthouse_z4",
+          "place_monsters": [ { "monster": "GROUP_ZOMBIE", "x": [ 11, 16 ], "y": [ 8, 16 ], "density": 0.3 } ]
+        },
+        {
+          "om_terrain": "lighthouse_z5",
+          "place_monsters": [ { "monster": "GROUP_ZOMBIE", "x": [ 11, 16 ], "y": [ 8, 16 ], "density": 0.3 } ]
+        }
+      ],
+      "effect": [ "follow_only", { "npc_first_topic": "TALK_lighthouse_man_lighthouse" } ]
+    },
+    "end": { "opinion": { "trust": 3, "value": 3 } },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "followup": "MISSION_lighthouse_man_2",
+    "dialogue": {
+      "describe": "-",
+      "offer": "We've been wandering around the state with my family for a long time since <the_cataclysm>, and I realized that the safest hideout is the island.  I left my family in a shelter, and went to explore the area, looking for some island nearby, in a lake or in the ocean.  And you know, I found a sea map marked with navigational beacons near here.  If you want, you can help me get to one of these and take a good look at it.",
+      "accepted": "Good.  I'll be right behind you.",
+      "rejected": "Well, it's your choice.",
+      "advice": "First we need to find a transport to get there.",
+      "inquire": "We finally reached it.",
+      "success": "Looks nice, <name_g>.  Now I need to clean it from <zombies> somehow…",
+      "success_lie": "-",
+      "failure": "-"
+    }
+  },
+  {
+    "id": "MISSION_lighthouse_man_2",
+    "type": "mission_definition",
+    "has_generic_rewards": false,
+    "name": { "str": "House cleaning" },
+    "description": "Clean lighthouse from <zombies> with Mikhail.",
+    "goal": "MGOAL_CONDITION",
+    "goal_condition": { "math": [ "n_count_cleaning_lighthouse_man == 7 " ] },
+    "difficulty": 0,
+    "value": 5000,
+    "start": {
+      "effect": [
+        "follow_only",
+        { "npc_first_topic": "TALK_lighthouse_man_cleaning" },
+        { "math": [ "n_count_cleaning_lighthouse_man = 0" ] }
+      ]
+    },
+    "end": {
+      "opinion": { "trust": 3, "value": 3 },
+      "update_mapgen": {
+        "om_terrain": "lighthouse_ground",
+        "faction_owner": [ { "id": "fisherman_family", "x": [ 0, 23 ], "y": [ 0, 23 ] } ],
+        "place_zones": [ { "type": "NPC_INVESTIGATE_ONLY", "faction": "fisherman_family", "x": [ 0, 23 ], "y": [ 0, 23 ] } ]
+      },
+      "effect": [
+        "stop_following",
+        { "npc_first_topic": "TALK_lighthouse_man_1" },
+        { "npc_lose_var": "count_cleaning_lighthouse_man" }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "followup": "MISSION_lighthouse_man_3",
+    "dialogue": {
+      "describe": "-",
+      "offer": "So, we found the lighthouse.  Now, I need to clean it.  Want to help me with it?",
+      "accepted": "Great.  Let's do it together.  I'll be right behind you.  We will clean floor by floor.  If you decide that the floor is clean, tell me about it, and we will move on to the next, and so on to the very top.",
+      "rejected": "Well, it's your choice.",
+      "advice": "Be careful.  These <name_b>s are most dangerous in tight spaces.",
+      "inquire": "<its_safe>",
+      "success": "Great, incredibly great.  All that remains is to wash all the floors…",
+      "success_lie": "-",
+      "failure": "-"
+    }
+  },
+  {
+    "id": "MISSION_lighthouse_man_3",
+    "type": "mission_definition",
+    "name": { "str": "Fisherman's family" },
+    "description": "Mikhail asked you to bring back his family.",
+    "goal": "MGOAL_ASSASSINATE",
+    "difficulty": 0,
+    "value": 25000,
+    "start": {
+      "effect": { "npc_first_topic": "TALK_lighthouse_man_family" },
+      "assign_mission_target": { "om_terrain": "house_04_basement", "reveal_radius": 2 },
+      "update_mapgen": {
+        "place_npcs": [
+          { "class": "NPC_lighthouse_woman", "x": 4, "y": 8, "target": true },
+          { "class": "NPC_lighthouse_girl", "x": 3, "y": 8 }
+        ]
+      }
+    },
+    "end": { "opinion": { "trust": 6, "value": 6 }, "effect": { "u_add_var": "flag_help_lighthouse_family_safe", "value": "yes" } },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "followup": "MISSION_lighthouse_man_4",
+    "dialogue": {
+      "describe": "-",
+      "offer": "We found the lighthouse and cleared it of <zombies>.  Now, I need to bring my family here.  May I ask you for a favor?  Since you bring me here, can you go back, find my family and bring them here?",
+      "accepted": "You are my savior!  I'll take a look around here for a while, prepare everything here for their arrival.",
+      "rejected": "Well, it's your choice.",
+      "advice": "Please be very careful.  I don't want to lose them…",
+      "inquire": "-",
+      "success": "I don't even know how to thank you, <name_g>.  I am in eternal debt to you.",
+      "success_lie": "-",
+      "failure": "-"
+    }
+  },
+  {
+    "id": "MISSION_lighthouse_man_4",
+    "type": "mission_definition",
+    "name": { "str": "Fisherman's boat" },
+    "description": "Help Mikhail make a boat.  Bring 250 nails.",
+    "goal": "MGOAL_FIND_ITEM",
+    "item": "nail",
+    "count": 250,
+    "difficulty": 0,
+    "value": 10000,
+    "end": {
+      "opinion": { "trust": 3, "value": 3 },
+      "update_mapgen": {
+        "om_terrain": "lighthouse_ground",
+        "place_vehicles": [ { "vehicle": "canoe", "x": 3, "y": 3, "rotation": 0, "status": 0, "chance": 100 } ]
+      },
+      "effect": [ { "npc_add_var": "flag_help_helped_lighthouse_man", "value": "yes" } ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "followup": "MISSION_lighthouse_man_5",
+    "dialogue": {
+      "describe": "-",
+      "offer": "The building has been cleared of <zombies>, my family is here, everything is going very well.  It remains only to provide ourselves with food, transport and we can not worry about the future.  You helped me and my family so much, can you help us with something else?  I need a boat for fishing, or just to explore the area.  Can you help me make a boat?",
+      "accepted": "Thank you, <name_g>.  I need only 250 nails.  I'll find the planks, the rest of the tools too, but the main problem is the nails.  Too much for one boat, but I want to have resources in reserve, just in case.",
+      "rejected": "Well, it's your choice.",
+      "advice": "Please, if you can, don't disassemble furniture here.  It can still be useful.",
+      "inquire": "Did you find it?",
+      "success": "Very good, <name_g>, thank you!  Now we are not afraid of hunger, rain, or other bad weather, he-he.  By the way, I have a small supply of fish, tackle, baits and rods.  If you are interested, I can share some with you.",
+      "success_lie": "-",
+      "failure": "-"
+    }
+  },
+  {
+    "id": "MISSION_lighthouse_man_5",
+    "type": "mission_definition",
+    "name": { "str": "Fixing lighthouse" },
+    "description": "Mikhail asked you to find someone, who have enough expertise to fix the mechanism of lighthouse.",
+    "goal": "MGOAL_CONDITION",
+    "goal_condition": { "compare_string": [ "ready", { "u_val": "global_safe_space_lighthouse_fixed" } ] },
+    "difficulty": 0,
+    "value": 100000,
+    "end": {
+      "opinion": { "trust": 3, "value": 3 },
+      "update_mapgen": {
+        "om_terrain": "lighthouse_z5",
+        "place_terrain": [ { "ter": "t_floor_olight", "x": 11, "y": 12 }, { "ter": "t_floor_olight", "x": 13, "y": 13 } ]
+      },
+      "effect": [
+        { "math": [ "n_time_survivors_wait = time('now')" ] },
+        { "u_add_var": "global_safe_space_lighthouse_fixed", "value": "yes" }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "-",
+      "offer": "My family is here, we have food, water, boat and a roof over our heads, all thanks to you, <name_g>.  Now, I also want to help other survivors.  Here's what I thought: if I can get this old lighthouse up and running, other survivors will see its light from afar.  If they see it, they will think that there are living people here, and will try to get here.  Can you help me fix it?",
+      "accepted": "I knew you wouldn't refuse!  But there is one problem: I have no idea how to fix it.  Maybe if you met someone who have experience in electrical engineering, we can figure out how to start this old junk.",
+      "rejected": "Well, it's your choice.",
+      "advice": "I'm sure that not all burned in flames of <the_cataclysm> and you can find someone suitable.",
+      "inquire": "Well, have you fixed it?",
+      "success": "Splendid, <name_g>!  We can only wait now…",
+      "success_lie": "-",
+      "failure": "-"
+    }
+  }
+]

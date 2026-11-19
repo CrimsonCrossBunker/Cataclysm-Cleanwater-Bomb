@@ -1,0 +1,89 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_lighthouse_man_lighthouse",
+    "dynamic_line": "Are we there yet, <name_g>?",
+    "responses": [
+      { "text": "I want you to use this item.", "topic": "TALK_lighthouse_man_lighthouse", "effect": "npc_gets_item_to_use" },
+      {
+        "text": "We're here.",
+        "topic": "TALK_MISSION_INQUIRE",
+        "condition": "mission_complete",
+        "effect": [ "stop_following", { "npc_first_topic": "TALK_lighthouse_man_1" } ]
+      },
+      { "text": "Almost.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_lighthouse_man_cleaning",
+    "dynamic_line": "Is it safe, my <name_g>?",
+    "responses": [
+      {
+        "text": "Yes.  Ground floor is clear.",
+        "topic": "TALK_lighthouse_man_cleaned",
+        "condition": {
+          "and": [
+            { "math": [ "n_count_cleaning_lighthouse_man == 0" ] },
+            "at_safe_space",
+            { "npc_at_om_location": "lighthouse_ground" }
+          ]
+        },
+        "effect": { "math": [ "n_count_cleaning_lighthouse_man++" ] }
+      },
+      {
+        "text": "Yes.  First floor is clear.",
+        "topic": "TALK_lighthouse_man_cleaned",
+        "condition": {
+          "and": [ { "math": [ "n_count_cleaning_lighthouse_man == 1 " ] }, "at_safe_space", { "npc_at_om_location": "lighthouse_z1" } ]
+        },
+        "effect": { "math": [ "n_count_cleaning_lighthouse_man++" ] }
+      },
+      {
+        "text": "Yes.  Second floor is clear.",
+        "topic": "TALK_lighthouse_man_cleaned",
+        "condition": {
+          "and": [ { "math": [ "n_count_cleaning_lighthouse_man == 2 " ] }, "at_safe_space", { "npc_at_om_location": "lighthouse_z2" } ]
+        },
+        "effect": { "math": [ "n_count_cleaning_lighthouse_man++" ] }
+      },
+      {
+        "text": "Yes.  Third floor is clear.",
+        "topic": "TALK_lighthouse_man_cleaned",
+        "condition": {
+          "and": [ { "math": [ "n_count_cleaning_lighthouse_man == 3 " ] }, "at_safe_space", { "npc_at_om_location": "lighthouse_z3" } ]
+        },
+        "effect": { "math": [ "n_count_cleaning_lighthouse_man++" ] }
+      },
+      {
+        "text": "Yes.  Fourth floor is clear.",
+        "topic": "TALK_lighthouse_man_cleaned",
+        "condition": {
+          "and": [ { "math": [ "n_count_cleaning_lighthouse_man == 4 " ] }, "at_safe_space", { "npc_at_om_location": "lighthouse_z4" } ]
+        },
+        "effect": { "math": [ "n_count_cleaning_lighthouse_man++" ] }
+      },
+      {
+        "text": "Yes.  Top floor is clear.",
+        "condition": {
+          "and": [ { "math": [ "n_count_cleaning_lighthouse_man == 5 " ] }, "at_safe_space", { "npc_at_om_location": "lighthouse_z5" } ]
+        },
+        "effect": { "math": [ "n_count_cleaning_lighthouse_man++" ] },
+        "topic": "TALK_lighthouse_man_cleaned_done"
+      },
+      {
+        "text": "Looks like that's over.",
+        "condition": {
+          "and": [
+            { "math": [ "n_count_cleaning_lighthouse_man == 6 " ] },
+            "at_safe_space",
+            { "npc_at_om_location": "lighthouse_ground" }
+          ]
+        },
+        "effect": { "math": [ "n_count_cleaning_lighthouse_man++" ] },
+        "topic": "TALK_MISSION_INQUIRE"
+      },
+      { "text": "Not yet.", "topic": "TALK_DONE" }
+    ]
+  }
+]
