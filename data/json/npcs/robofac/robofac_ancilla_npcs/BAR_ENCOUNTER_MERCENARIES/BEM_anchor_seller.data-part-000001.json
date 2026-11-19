@@ -1,0 +1,26 @@
+[
+  {
+    "id": "BEM_ANCHOR_SELLER_2",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "gendered_line": "It takes only a moment to retrieve a suitable coin from your pockets, and yet your interlocutor found enough time to disappear, having left a sharp emptiness both in memory and the chair before you.  The anchor has been neatly folded on the table.",
+      "relevant_genders": [ "npc" ]
+    },
+    "speaker_effect": {
+      "effect": [
+        { "u_add_var": "dialogue_BEM_ANCHOR_SELLER_ANCHOR_SELLER_paranormal", "value": "yes" },
+        { "run_eocs": "EOC_BEM_ANCHOR_SELLER_GONE", "time_in_future": [ "0s", "0s" ] }
+      ]
+    },
+    "responses": [
+      { "text": "Take the anchor.", "effect": [ { "u_spawn_item": "dimensional_anchor", "count": 1 } ], "topic": "TALK_DONE" },
+      {
+        "text": "Take the anchor and leave the coin.  Do we have a deal?",
+        "condition": { "u_has_items": { "item": "RobofacCoin", "count": 1 } },
+        "effect": [ { "u_sell_item": "RobofacCoin", "count": 1 }, { "u_spawn_item": "dimensional_anchor", "count": 1 } ],
+        "topic": "TALK_DONE"
+      },
+      { "text": "Just leave, this isn't right at all.", "topic": "TALK_DONE" }
+    ]
+  }
+]
