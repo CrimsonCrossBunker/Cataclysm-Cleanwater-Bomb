@@ -1,22 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_XEDRA_MERC_MAIN",
-    "dynamic_line": "As you approach you feel compelled to touch the creature encased in glass.  The corpse inside is screaming, it needs your help.",
-    "responses": [
-      { "text": "Say: \"Is someone there?\"", "topic": "TALK_XEDRA_MERC_SCREEM" },
-      { "text": "Touch it.", "topic": "TALK_XEDRA_MERC_HAUNTING" },
-      { "text": "Back away.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_XEDRA_MERC_SCREEM",
-    "dynamic_line": "An almost human voice erupts in your mind:\n\"FREE ME!\"",
-    "responses": [ { "text": "Touch it.", "topic": "TALK_XEDRA_MERC_HAUNTING" }, { "text": "Back away.", "topic": "TALK_DONE" } ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_XEDRA_MERC_HAUNTING",
     "dynamic_line": "With a terrible shriek the mercenary falls off the spike and begins to move.  It stares right at you before vanishing.  In the distance you can hear a radio squelch:\n\"Target acquired.  Falling back, regroup and prepare to attack the intruder.\"",
     "responses": [
