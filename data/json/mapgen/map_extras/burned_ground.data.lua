@@ -61,3 +61,33 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- Bash to wreck any vehicle parts present then destroy flammable ter/furn and their flammable bash results. Leave some unburned/unbashed so the transform/fireweed is still present
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_burned_ground",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        nested_glyphs = {
+            [" "] = {
+                choices = {
+                    { id = "1x1_bash_burn", weight = 2 },
+                    { id = "1x1_burn", weight = 1 },
+                    { id = "null", weight = 1 },
+                },
+            },
+        },
+        transform_glyphs = { [" "] = { id = "dead_vegetation" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_burned_ground_slight",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        transform_glyphs = { [" "] = { id = "dead_vegetation" } },
+    },
+}

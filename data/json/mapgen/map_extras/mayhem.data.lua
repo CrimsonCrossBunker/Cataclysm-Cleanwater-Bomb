@@ -285,3 +285,14 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_dead_wolf",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        corpse_placements = { { group = "GROUP_WOLFS", age_days = 3, x = 0, y = 0 } },
+        field_placements = { { id = "fd_blood", x = 0, y = 0, intensity = { 1, 3 } } },
+    },
+}

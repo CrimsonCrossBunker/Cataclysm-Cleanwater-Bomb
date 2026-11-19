@@ -29,10 +29,5 @@
       ",": [ [ "f_null", 2000 ], [ "f_region_plain", 40 ], [ "f_boulder_small", 6 ], [ "f_boulder_medium", 2 ], "f_boulder_large" ],
       ";": [ [ "f_null", 2000 ], [ "f_region_plain", 60 ], [ "f_boulder_small", 6 ], [ "f_boulder_medium", 2 ], "f_boulder_large" ]
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "1x1_upturn_earth",
-    "object": { "mapgensize": [ 1, 1 ], "place_ter_furn_transforms": [ { "transform": "upturn_earth", "x": 0, "y": 0 } ] }
   }
 ]

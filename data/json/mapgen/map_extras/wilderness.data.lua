@@ -1010,3 +1010,12 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_upturn_earth",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "upturn_earth", x = 0, y = 0 } },
+    },
+}

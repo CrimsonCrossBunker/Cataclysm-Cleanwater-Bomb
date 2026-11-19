@@ -1,7 +1,0 @@
-[
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "mx_clearcut",
-    "object": { "ter_furn_transforms": { " ": { "transform": "clearcut" } } }
-  }
-]

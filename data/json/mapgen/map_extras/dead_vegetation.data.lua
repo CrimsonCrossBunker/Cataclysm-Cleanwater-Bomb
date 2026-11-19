@@ -52,3 +52,13 @@ ccb.content.define_mapgen {
         nested_glyphs = { X = { id = "1x1_dead_vegetation" }, x = { choices = { "1x1_dead_vegetation", "null" } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_dead_vegetation",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_glyphs = { [" "] = { id = "dead_vegetation" } },
+        item_group_placements = { { group = "dead_vegetation", x = 0, y = 0, chance = 1 } },
+    },
+}

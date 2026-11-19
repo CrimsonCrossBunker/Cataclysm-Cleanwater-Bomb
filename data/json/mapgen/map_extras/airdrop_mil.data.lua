@@ -91,3 +91,63 @@ ccb.content.define_mapgen {
         furniture_placements = { { id = "f_pallet_belted", x = 0, y = 0 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "supply_fuel_gas",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = {
+            { id = "f_432gal_drum_rubber", x = 0, y = 0 },
+            { id = "f_432gal_drum_rubber", x = 1, y = 1 },
+        },
+        item_placements = {
+            { id = "parachute_mil", x = { 0, 1 }, y = 1 },
+            { id = "parachute_mil", x = 1, y = { 0, 1 } },
+        },
+        liquid_placements = {
+            { id = "gasoline", x = 0, y = 0, amount = { 9000, 10000 } },
+            { id = "gasoline", x = 1, y = 1, amount = { 9000, 10000 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "supply_fuel_diesel",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = {
+            { id = "f_432gal_drum_rubber", x = 0, y = 0 },
+            { id = "f_432gal_drum_rubber", x = 1, y = 1 },
+        },
+        liquid_placements = {
+            { id = "diesel", x = 0, y = 0, amount = { 9000, 10000 } },
+            { id = "diesel", x = 1, y = 1, amount = { 9000, 10000 } },
+        },
+        item_placements = {
+            { id = "parachute_mil", x = { 0, 1 }, y = 1 },
+            { id = "parachute_mil", x = 1, y = { 0, 1 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "supply_fuel_jp8",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = {
+            { id = "f_432gal_drum_rubber", x = 0, y = 0 },
+            { id = "f_432gal_drum_rubber", x = 1, y = 1 },
+        },
+        item_placements = {
+            { id = "parachute_mil", x = { 0, 1 }, y = 1 },
+            { id = "parachute_mil", x = 1, y = { 0, 1 } },
+        },
+        liquid_placements = {
+            { id = "jp8", x = 0, y = 0, amount = { 9000, 10000 } },
+            { id = "jp8", x = 1, y = 1, amount = { 9000, 10000 } },
+        },
+    },
+}

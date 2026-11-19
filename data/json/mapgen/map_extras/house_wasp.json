@@ -1,35 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "mx_house_wasp",
-    "object": {
-      "ter_furn_transforms": { " ": { "transform": "remove_door" } },
-      "nested": {
-        " ": [
-          { "chunks": [ [ "null", 2 ], [ "1x1_remove_window", 1 ] ] },
-          { "chunks": [ [ "null", 7 ], [ "1x1_wall_to_paper", 1 ] ] }
-        ]
-      },
-      "place_nested": [
-        { "chunks": [ "3x3_wasp_pod" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod", "null" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod", "null" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod", "null" ], "x": [ 1, 20 ], "y": [ 1, 20 ] },
-        { "chunks": [ "3x3_wasp_pod", "null" ], "x": [ 1, 20 ], "y": [ 1, 20 ] }
-      ],
-      "place_monster": [ { "group": "GROUP_WASP_QUEEN", "x": [ 0, 23 ], "y": [ 0, 23 ] } ],
-      "place_monsters": [ { "monster": "GROUP_DERMATIK", "chance": 20, "x": 22, "y": 22, "density": 0.1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "3x3_wasp_pod",
     "object": {
       "mapgensize": [ 3, 3 ],
@@ -150,15 +121,5 @@
       "place_monster": [ { "group": "GROUP_WASP_GUARD", "x": 1, "y": 1 } ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "1x1_remove_window",
-    "object": { "mapgensize": [ 1, 1 ], "place_ter_furn_transforms": [ { "transform": "remove_window", "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "1x1_wall_to_paper",
-    "object": { "mapgensize": [ 1, 1 ], "place_ter_furn_transforms": [ { "transform": "wall_to_paper", "x": 0, "y": 0 } ] }
   }
 ]

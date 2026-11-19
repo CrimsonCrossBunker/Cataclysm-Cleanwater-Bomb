@@ -142,3 +142,15 @@ ccb.content.define_mapgen {
         sign_placements = { { text = ccb.content.text("Wiggle your big toe."), x = 0, y = 0 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "pet_corpse",
+    layout = {
+        size = { width = 2, height = 2 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        terrain_placements = { { id = "t_grave_new", x = 0, y = 1 } },
+        corpse_placements = { { group = "GROUP_PETS", x = 0, y = 1 } },
+        sign_placements = { { snippet = "grave_label", x = 0, y = 0 } },
+    },
+}
