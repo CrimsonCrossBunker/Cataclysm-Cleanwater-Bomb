@@ -1,0 +1,16 @@
+local ccb = require("ccb")
+
+ccb.content.define_overmap_terrain {
+    id = {
+        "deserter_city_gate", "deserter_city_park", "deserter_city_office_1f",
+        "deserter_city_office_2f", "deserter_city_office_3f", "deserter_city_office_roof",
+        "deserter_city_office_1fb", "deserter_city_office_2fb", "deserter_city_office_3fb",
+        "deserter_city_office_roofb",
+    },
+    vision_levels = "large_city_building",
+    name = ccb.content.text("deserter outpost"),
+    symbol = "D",
+    color = "brown",
+    see_cost = "full_high",
+    flags = { "SIDEWALK" },
+}
