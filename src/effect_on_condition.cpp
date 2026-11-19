@@ -239,7 +239,9 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 283> migrated_character_tasks = {{
+const std::array<character_task_migration, 284> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_OPEN_IMPERIAL_ROAD_MAINTAIN" ),
+          "maintain_imperial_road_gate", nullptr, true, "ccb" },
         { effect_on_condition_id( "EOC_LOSE_WHISPER_LEAVES" ),
           "restore_whisper_leaves_cleanup", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_DRUID_DISINFECTANT_REMOVE" ),

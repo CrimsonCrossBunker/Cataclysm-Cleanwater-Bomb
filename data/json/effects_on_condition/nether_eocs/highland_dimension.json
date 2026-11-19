@@ -17,42 +17,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_OPEN_IMPERIAL_ROAD_PREP",
-    "global": true,
-    "effect": [ { "run_eocs": "EOC_OPEN_IMPERIAL_ROAD_MAINTAIN", "time_in_future": "1 seconds" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_OPEN_IMPERIAL_ROAD_MAINTAIN",
-    "global": true,
-    "condition": { "u_at_om_location": "conquerors_road" },
-    "effect": [
-      {
-        "if": {
-          "and": [
-            { "u_is_on_terrain": "t_highland_bronze_floor" },
-            { "math": [ "gate_open != 1" ] },
-            {
-              "or": [
-                { "u_has_flag": "IMPERIAL_ROAD_TRAVELER" },
-                {
-                  "and": [ { "math": [ "u_artifact_resonance() >= 4500" ] }, { "u_has_worn_with_flag": "IMPERIAL_ROAD_KEY" } ]
-                }
-              ]
-            }
-          ]
-        },
-        "then": [ { "mapgen_update": "conquerors_road_open" }, { "math": [ "gate_open = 1" ] } ]
-      },
-      {
-        "if": { "and": [ { "not": { "u_is_on_terrain": "t_highland_bronze_floor" } }, { "math": [ "gate_open == 1" ] } ] },
-        "then": [ { "mapgen_update": "conquerors_road_close" }, { "math": [ "gate_open = 0" ] } ]
-      },
-      { "run_eocs": "EOC_OPEN_IMPERIAL_ROAD_MAINTAIN", "time_in_future": "1 seconds" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_IMPERIAL_ROAD_LOST",
     "global": true,
     "condition": {

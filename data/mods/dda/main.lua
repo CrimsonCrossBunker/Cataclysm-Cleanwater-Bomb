@@ -4,6 +4,8 @@ require("region_settings")
 
 require("dimensions")
 
+require("imperial_road")
+
 local ccb = require("ccb")
 
 local function mounted_charge_available(context)
