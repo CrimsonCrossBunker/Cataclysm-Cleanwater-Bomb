@@ -1,0 +1,61 @@
+[
+  {
+    "type": "MONSTER",
+    "id": "mon_zombie_levinbolt",
+    "name": { "str": "levinbolt zombie" },
+    "description": "A strong blue glow surrounds this zombie, frequently letting off bright sparks.  Occasionally, it makes an awkward gesture and a series of magical bolts flash from its fingers into the scenery.",
+    "copy-from": "mon_zombie_thaumic",
+    "melee_damage": [ { "damage_type": "nether", "amount": 6 } ],
+    "emit_fields": [ { "emit_id": "emit_glimmer_thaumic", "delay": "4 s" } ],
+    "relative": { "armor": { "nether": 15 } },
+    "special_attacks": [
+      [ "PARROT", 400 ],
+      [ "PARROT_AT_DANGER", 0 ],
+      { "id": "grab" },
+      { "id": "bite_humanoid", "cooldown": 5 },
+      {
+        "id": "levinbolt_zombie_spell_attack",
+        "type": "spell",
+        "spell_data": { "id": "seeker_bolts_levinbolt_spell" },
+        "cooldown": 20,
+        "condition": { "and": [ { "not": { "u_has_flag": "NO_SPELLCASTING" } }, { "not": { "u_has_flag": "GRAB_FILTER" } } ] },
+        "monster_message": "%1$s flings its arms out and glowing bolts erupt from them."
+      }
+    ],
+    "luminance": 20,
+    "upgrades": { "half_life": 120, "into": "mon_zombie_manastorm" }
+  },
+  {
+    "type": "MONSTER",
+    "id": "mon_zombie_manastorm",
+    "name": { "str": "manastorm zombie" },
+    "description": "This zombie is barely visible behind the bright blue glow and constantly flashes of light.  When it can be seen, its body is covered in a bright tracery of active ley lines.",
+    "copy-from": "mon_zombie_thaumic",
+    "melee_damage": [ { "damage_type": "nether", "amount": 8 } ],
+    "emit_fields": [ { "emit_id": "emit_glimmer_thaumic", "delay": "1 s" } ],
+    "relative": { "armor": { "nether": 25, "necrotic": 15 } },
+    "special_attacks": [
+      [ "PARROT", 400 ],
+      [ "PARROT_AT_DANGER", 0 ],
+      { "id": "grab" },
+      { "id": "bite_humanoid", "cooldown": 5 },
+      {
+        "id": "levinbolt_zombie_spell_attack",
+        "type": "spell",
+        "spell_data": { "id": "seeker_bolts_levinbolt_spell" },
+        "cooldown": 15,
+        "condition": { "and": [ { "not": { "u_has_flag": "NO_SPELLCASTING" } }, { "not": { "u_has_flag": "GRAB_FILTER" } } ] },
+        "monster_message": "%1$s flings its arms out and glowing bolts erupt from them."
+      },
+      {
+        "id": "manastorm_zombie_spell_attack",
+        "type": "spell",
+        "spell_data": { "id": "manastorm_zombie_spell" },
+        "cooldown": 35,
+        "condition": { "and": [ { "not": { "u_has_flag": "NO_SPELLCASTING" } }, { "not": { "u_has_flag": "GRAB_FILTER" } } ] },
+        "monster_message": "%1$s makes a jerky motion and eldritch blue fire explodes from its arm."
+      }
+    ],
+    "luminance": 40
+  }
+]
