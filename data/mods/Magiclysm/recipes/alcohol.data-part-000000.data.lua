@@ -1,0 +1,60 @@
+local ccb = require("ccb")
+
+-- Less fun than vodka.
+ccb.content.define_item {
+    id = "dragonfire",
+    looks_like = "water",
+    name = ccb.content.plural_text("dragonfire", "dragonfire"),
+    mass = "36 g",
+    color = "light_cyan",
+    default_container = "bottle_glass",
+    symbol = "~",
+    description = ccb.content.text("A beverage made from dragonails.  It has a distinct, almost unpleasant taste that makes your throat burn."),
+    price = "49 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "alcohol" },
+    volume = "250 ml",
+    phase = "liquid",
+    flags = { "EATEN_COLD", "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" },
+    comestible = {
+        addiction = "alcohol",
+        kind = "DRINK",
+        quench = -10,
+        healthy = -1,
+        addiction_potential = 5,
+        calories = 79,
+        servings = 7,
+        vitamins = { { id = "ethanol", amount = 15 } },
+        freezing_point = -30,
+        fun = 10,
+    },
+}
+
+-- slightly more fun than your average alcoholic drink
+ccb.content.define_item {
+    id = "goldbrew",
+    name = ccb.content.plural_text("goldbrew", "goldbrew"),
+    mass = "36 g",
+    color = "yellow",
+    default_container = "bottle_glass",
+    symbol = "~",
+    description = ccb.content.text("Goldbrew, made from golden reeds.  Smells like wanderlust and wistful contemplation."),
+    price = "21 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "alcohol" },
+    volume = "250 ml",
+    flags = { "EATEN_COLD", "NO_AUTO_CONSUME" },
+    phase = "liquid",
+    comestible = {
+        addiction = "alcohol",
+        kind = "DRINK",
+        quench = -12,
+        healthy = -1,
+        addiction_potential = 5,
+        calories = 79,
+        vitamins = { { id = "ethanol", amount = 16 } },
+        freezing_point = -30,
+        servings = 7,
+        fun = 18,
+    },
+}

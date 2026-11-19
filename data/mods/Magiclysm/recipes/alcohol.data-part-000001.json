@@ -1,0 +1,39 @@
+[
+  {
+    "id": "brew_dragonfire",
+    "type": "ITEM",
+    "subtypes": [ "BREWABLE", "COMESTIBLE" ],
+    "copy-from": "brew_vodka",
+    "name": { "str_sp": "dragonfire wort" },
+    "description": "Unfermented dragonfire.  Made from dragonail, this will make a truly sharp drink.  You need to put it in a fermenting vat to brew it.",
+    "material": [ { "type": "water", "portion": 757 }, { "type": "veggy", "portion": 180 }, { "type": "yeast", "portion": 1 } ],
+    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE" ],
+    "charges": 1,
+    "phase": "liquid",
+    "comestible_type": "DRINK",
+    "vitamins": [  ],
+    "brew_time": "7 days",
+    "brew_results": [ "wash_dragonfire", "yeast" ]
+  },
+  {
+    "id": "brew_goldbrew",
+    "type": "ITEM",
+    "subtypes": [ "BREWABLE", "COMESTIBLE" ],
+    "copy-from": "brew_whiskey",
+    "name": { "str_sp": "goldbrew wort" },
+    "description": "Unfermented goldbrew.  Smells like unrequited love and endless yearning.  You need to put it in a fermenting vat to brew it.",
+    "material": [
+      { "type": "water", "portion": 757 },
+      { "type": "veggy", "portion": 180 },
+      { "type": "sugar", "portion": 50 },
+      { "type": "yeast", "portion": 1 }
+    ],
+    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE" ],
+    "charges": 1,
+    "phase": "liquid",
+    "comestible_type": "DRINK",
+    "vitamins": [  ],
+    "brew_time": "7 days",
+    "brew_results": [ "wash_goldbrew", "yeast" ]
+  }
+]
