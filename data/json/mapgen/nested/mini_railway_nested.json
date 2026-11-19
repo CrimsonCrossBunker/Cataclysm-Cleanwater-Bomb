@@ -1,22 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "trolley_problem",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rows": [
-        "*****",
-        ".....",
-        ".....",
-        "==*==",
-        "....."
-      ],
-      "item": { "*": { "item": "talking_doll", "chance": 100 } },
-      "terrain": { ".": "t_region_groundcover_urban", "*": "t_railroad_track_small", "=": "t_railroad_track_small" }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "ordinary_railways",
     "object": {
       "mapgensize": [ 5, 5 ],
