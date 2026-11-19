@@ -1,0 +1,53 @@
+[
+  {
+    "id": "mon_boomer_glutton",
+    "type": "MONSTER",
+    "name": "boomer glutton",
+    "description": "A large, grotesque ball of flesh and fat.  Seemingly vestigial limbs flop around haphazardly as it rolls across the ground.  You occasionally catch a glimpse of bulging eyes and a distended gaping maw oozing some sort of black sludge.",
+    "copy-from": "mon_boomer",
+    "bodytype": "blob",
+    "diff": 8,
+    "weight": "180kg",
+    "hp": 200,
+    "speed": 75,
+    "color": "pink",
+    "melee_skill": 4,
+    "melee_dice": 0,
+    "melee_dice_sides": 0,
+    "vision_night": 5,
+    "emit_fields": [ { "emit_id": "emit_sludge_puddle", "delay": "1 s" } ],
+    "grab_strength": 30,
+    "starting_ammo": { "boomer_bile_adv": 999 },
+    "special_attacks": [
+      {
+        "type": "gun",
+        "move_cost": 150,
+        "cooldown": 7,
+        "id": "boomer_bile_adv",
+        "gun_type": "boomer_head",
+        "ammo_type": "boomer_bile_adv",
+        "fake_skills": [ [ "gun", 3 ], [ "rifle", 3 ] ],
+        "fake_dex": 10,
+        "targeting_sound": "gurgling.",
+        "description": "The %s spews bile!",
+        "no_ammo_sound": "dry heaving.",
+        "ranges": [ [ 0, 2, "DEFAULT" ] ]
+      },
+      {
+        "id": "bite_humanoid",
+        "cooldown": 3,
+        "min_mul": 0.75,
+        "max_mul": 1.25,
+        "damage_max_instance": [ { "damage_type": "stab", "amount": 15, "armor_multiplier": 0.8 } ]
+      },
+      {
+        "type": "spell",
+        "spell_data": { "id": "spread_sludge", "min_level": 1 },
+        "cooldown": 28,
+        "monster_message": "The glutton vomits sludge!"
+      }
+    ],
+    "armor": { "bash": 20, "cut": 5, "bullet": 5, "electric": 2 },
+    "extend": { "flags": [ "PACIFIST", "SLUDGEPROOF" ] }
+  }
+]
