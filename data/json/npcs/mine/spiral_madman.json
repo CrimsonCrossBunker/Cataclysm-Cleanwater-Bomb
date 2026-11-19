@@ -44,46 +44,5 @@
         "condition": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_first_meeting" } ] }
       }
     ]
-  },
-  {
-    "id": "TALK_SPIRAL_MADMAN_GENERIC",
-    "type": "talk_topic",
-    "dynamic_line": "<spirals>",
-    "responses": [
-      { "text": "What are you doing here?", "topic": "TALK_SPIRAL_MADMAN_SPIRALS" },
-      { "text": "Sorry, what?", "topic": "TALK_SPIRAL_MADMAN_SPIRALS" },
-      { "text": "I'm outta here.  Bye.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_SPIRAL_MADMAN_SPIRALS",
-    "type": "talk_topic",
-    "dynamic_line": "<spirals>",
-    "responses": [
-      { "text": "Why are you repeating 'spirals' over and over again?", "topic": "TALK_SPIRAL_MADMAN_R_U_NUTS" },
-      { "text": "Sorry, what?", "topic": "TALK_SPIRAL_MADMAN_R_U_NUTS" },
-      { "text": "I'm outta here.  Bye.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_SPIRAL_MADMAN_R_U_NUTS",
-    "type": "talk_topic",
-    "dynamic_line": "<spirals>",
-    "responses": [
-      { "text": "Are you nuts?", "topic": "TALK_SPIRAL_MADMAN_THIS_IS_MADNESS" },
-      { "text": "Sorry, what?", "topic": "TALK_SPIRAL_MADMAN_THIS_IS_MADNESS" },
-      { "text": "I'm outta here.  Bye.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_SPIRAL_MADMAN_THIS_IS_MADNESS",
-    "type": "talk_topic",
-    "dynamic_line": "<spirals>",
-    "responses": [
-      {
-        "text": "Poor fellow - looks like you're out of your mind.  Can't help you, sorry.  I'm outta here.  Bye.",
-        "topic": "TALK_DONE"
-      }
-    ]
   }
 ]
