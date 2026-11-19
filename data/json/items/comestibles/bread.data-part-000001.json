@@ -1,28 +1,5 @@
 [
   {
-    "id": "donut_holes",
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "name": { "str": "donut hole" },
-    "material": [ "wheat" ],
-    "weight": "14 g",
-    "color": "yellow",
-    "spoils_in": "10 days",
-    "comestible_type": "FOOD",
-    "symbol": "%",
-    "calories": 60,
-    "quench": -1,
-    "description": "These balls of dough have been cut into shape, covered with sugar, and cooked to a crisp.  A staple of fairgrounds everywhere.",
-    "price": "25 cent",
-    "price_postapoc": "12 cent",
-    "volume": "30 ml",
-    "flags": [ "EATEN_HOT" ],
-    "looks_like": "bread",
-    "fun": 4,
-    "vitamins": [ [ "wheat_allergen", 1 ] ],
-    "stackable": true
-  },
-  {
     "id": "sourdough_young_uncovered_active",
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE", "TOOL" ],
