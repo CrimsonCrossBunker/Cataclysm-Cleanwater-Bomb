@@ -19,24 +19,5 @@
       { "text": "<done_conversation_section>", "topic": "TALK_FRIEND" },
       { "text": "<end_talking>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "BGSS_EVACUEE_3_STORY2",
-    "type": "talk_topic",
-    "dynamic_line": "Sheer luck I guess.  I got lost in the woods and lived off of whatever nuts and berries I found.  Not as many things are poisonous as I thought.",
-    "responses": [
-      {
-        "text": "What got you out of the woods?",
-        "condition": { "not": { "npc_has_effect": "BGSS_EVACUEE_3_earlymeeting" } },
-        "topic": "BGSS_EVACUEE_3_STORY3_LATE"
-      },
-      {
-        "text": "What got you out of the woods?",
-        "condition": { "npc_has_effect": "BGSS_EVACUEE_3_earlymeeting" },
-        "topic": "BGSS_EVACUEE_3_STORY3_EARLY"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_FRIEND" },
-      { "text": "<end_talking>", "topic": "TALK_DONE" }
-    ]
   }
 ]
