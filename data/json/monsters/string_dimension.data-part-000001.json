@@ -1,0 +1,45 @@
+[
+  {
+    "id": "mon_zomborg_boss_string_dimension",
+    "type": "MONSTER",
+    "species": [ "CYBORG", "ZOMBIE" ],
+    "name": { "str": "frostbitten zomborg hulk" },
+    "description": "A dead, staggering creature, more cyborg than human.  Robotic components cover most of its body, with only a few bands of black flesh, frostbitten by long exposure to cold, wrapped around them, tugging and pulling them in awkward directions.  It staggers about, its awkward limbs clanking against armored torso.",
+    "copy-from": "mon_zombie_base",
+    "bodytype": "human",
+    "material": [ "qt_steel", "flesh", "exodii_ceramic" ],
+    "diff": 20,
+    "hp": 140,
+    "speed": 90,
+    "color": "red",
+    "melee_skill": 8,
+    "melee_dice": 3,
+    "melee_dice_sides": 8,
+    "special_attacks": [
+      { "id": "slam", "cooldown": 12, "damage_max_instance": [ { "damage_type": "bash", "amount": 35 } ] },
+      { "id": "longswipe" },
+      { "id": "cut_throat" },
+      { "id": "smash", "throw_strength": 72 },
+      { "id": "hulk_wide_swing", "accuracy": 9 }
+    ],
+    "weakpoint_sets": [ "wps_humanoid_full_helmet" ],
+    "weakpoints": [
+      {
+        "name": "a crack in the armor",
+        "armor_mult": { "bullet": 0.5, "cut": 0.5, "stab": 0.25, "bash": 0.25 },
+        "coverage": 4,
+        "coverage_mult": { "broad": 0.75 },
+        "difficulty": { "ranged": 7, "melee": 5 }
+      }
+    ],
+    "bleed_rate": 0,
+    "vision_day": 30,
+    "death_drops": "mon_zomborg_boss_string_dimension_death_drops",
+    "harvest": "mon_zomborg",
+    "dissect": "dissect_mon_zomborg",
+    "upgrades": false,
+    "armor": { "bash": 18, "cut": 28, "acid": 28, "heat": 8, "bullet": 12, "electric": 0 },
+    "extend": { "families": [ "prof_wp_syn_armored", "prof_wp_cyborg" ], "flags": [ "PULP_PRYING" ] },
+    "delete": { "flags": [ "GRABS", "PUSH_MON" ], "special_attacks": [ "bite_humanoid", "scratch_humanoid", "grab" ] }
+  }
+]
