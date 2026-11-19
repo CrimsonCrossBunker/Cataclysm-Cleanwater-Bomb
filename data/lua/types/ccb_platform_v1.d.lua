@@ -7502,6 +7502,229 @@ function CcbPlatformContent.define_harvest(options) end
 ---@param options StaticConstructionOptions
 function CcbPlatformContent.define_construction(options) end
 
+---@class StaticTileDrop
+---@field item? string
+---@field group? string
+---@field contents_group? string
+---@field variant? string
+---@field chance? integer
+---@field count? integer|[integer, integer]
+---@field charges? integer|[integer, integer]
+---@field damage? integer|[integer, integer]
+---@field distribution? StaticTileDrop[]
+---@field collection? StaticTileDrop[]
+
+---@class StaticTileBash
+---@field minimum_strength? integer
+---@field maximum_strength? integer
+---@field minimum_strength_blocked? integer
+---@field maximum_strength_blocked? integer
+---@field minimum_strength_supported? integer
+---@field maximum_strength_supported? integer
+---@field explosive? integer
+---@field volume? integer
+---@field failure_volume? integer
+---@field collapse_radius? integer
+---@field destroy_only? boolean
+---@field bash_below? boolean
+---@field profile? string
+---@field terrain? string
+---@field terrain_from_above? string
+---@field furniture? string
+---@field sound? string|LocalizedText
+---@field failure_sound? string|LocalizedText
+---@field hit_field? [string, integer]
+---@field destroyed_field? [string, integer]
+---@field tent_centers? string[]
+---@field drops? string|StaticTileDrop[] Named item group or ordered drop entries.
+
+---@class StaticTilePractice
+---@field id string
+---@field minimum? integer
+---@field maximum? integer
+---@field multiplier? number
+
+---@class StaticTileDeconstruct
+---@field terrain? string
+---@field furniture? string
+---@field deconstruct_above? boolean
+---@field drops? string|StaticTileDrop[] Named item group or ordered drop entries.
+---@field practice? StaticTilePractice
+
+---@class StaticTileShoot
+---@field chance_to_hit? integer
+---@field reduce_damage [integer, integer]
+---@field reduce_damage_laser [integer, integer]
+---@field destroy_damage [integer, integer]
+---@field no_laser_destroy? boolean
+
+---@class StaticTileLiquid
+---@field item string
+---@field dries_to? string
+---@field minimum_temperature? number
+---@field count? integer|[integer, integer]
+
+---@class StaticTileSeasonalHarvest
+---@field harvest string
+---@field seasons string|string[]
+
+---@class StaticTilePry
+---@field difficulty? integer
+---@field prying_level? integer
+---@field prying_nails? boolean
+---@field noisy? boolean
+---@field alarm? boolean
+---@field breakable? boolean
+---@field failure? string|LocalizedText
+
+---@class StaticTileToolDrop
+---@field item string
+---@field count? integer|[integer, integer]
+
+---@class StaticTilePlant
+---@field transform? string
+---@field base? string
+---@field growth_multiplier? number
+---@field harvest_multiplier? number
+---@field water_consumption_multiplier? number
+---@field max_water_storage? integer
+
+---@class StaticTileWorkbench
+---@field multiplier? number
+---@field mass? string|integer
+---@field volume? string|integer
+
+---@class StaticTileGrowth
+---@field transform? string
+---@field growth_time string
+---@field growth_multiplier? number
+---@field fertilize_seasons? string|string[]
+
+---@class StaticTileCropClimate
+---@field base_c number
+---@field optimum_c number
+---@field min_c number
+---@field max_c number
+---@field degree_days number
+---@field water_mm number
+---@field water_peak? number
+---@field growing_days integer
+
+---@class StaticTileFruitClimate
+---@field harvest string
+---@field growth StaticTileCropClimate
+---@field bearing_days integer
+
+---@class StaticTileExtends
+---@field flags? string[]
+---@field connect_groups? string|string[]
+---@field connects_to? string|string[]
+---@field rotates_to? string|string[]
+
+---@class StaticTileAppliance
+---@field item string
+---@field furniture? string
+---@field terrain? string
+
+---@class StaticTileCardReader
+---@field flags string[]
+---@field consume_card? boolean
+---@field allow_hacking? boolean
+---@field despawn_monsters? boolean
+---@field query? boolean
+---@field radius? integer
+---@field omt_allowed_radius? integer
+---@field mapgen_id? string
+---@field query_message? string|LocalizedText
+---@field success_message string|LocalizedText
+---@field redundant_message string|LocalizedText
+---@field terrain_changes? table<string, string>
+---@field furniture_changes? table<string, string>
+
+---@class StaticMapTileOptions
+---@field id? string Stable identifier. Provide either id or abstract.
+---@field abstract? string Abstract definition available for inheritance.
+---@field copy_from? string Parent ID loaded through the native registry.
+---@field looks_like? string
+---@field curtain_transform? string
+---@field base_item? string
+---@field lockpick_result? string
+---@field open? string
+---@field close? string
+---@field max_volume? string|integer
+---@field symbol? string|string[] One symbol, or the native array of seasonal symbols.
+---@field color? string|string[] Use either color or background_color.
+---@field background_color? string|string[]
+---@field connect_groups? string|string[]
+---@field connects_to? string|string[]
+---@field rotates_to? string|string[]
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field lockpick_message? string|LocalizedText
+---@field coverage? integer
+---@field comfort? integer
+---@field floor_bedding_warmth? integer
+---@field light_emitted? integer
+---@field flags? string[]
+---@field emissions? string[]
+---@field light_color? [integer, integer, integer]
+---@field bash? StaticTileBash
+---@field deconstruct? StaticTileDeconstruct
+---@field shoot? StaticTileShoot
+---@field liquid_source? StaticTileLiquid
+---@field harvest_by_season? StaticTileSeasonalHarvest[]
+---@field plant? StaticTilePlant
+---@field boltcut? StaticTileToolAction
+---@field hacksaw? StaticTileToolAction
+---@field oxytorch? StaticTileToolAction
+---@field prying? StaticTileToolAction
+---@field extend? StaticTileExtends
+---@field delete? StaticTileExtends
+---@field builtin_examine? string|string[] Native examine action names in order.
+---@field appliance_conversion? StaticTileAppliance Convert the tile to an appliance.
+---@field card_reader? StaticTileCardReader Apply the native card reader interaction.
+
+---@class StaticTerrainOptions : StaticMapTileOptions
+---@field transforms_into? string
+---@field roof? string
+---@field trap? string
+---@field phase_method? string
+---@field move_cost? integer
+---@field heat_radiation? integer
+---@field phase_targets? string[]
+---@field allowed_template_ids? string[]
+---@field phase_temperatures? (number|string)[] Phase thresholds in degrees Celsius.
+---@field growth? StaticTileGrowth
+---@field fruit_climate? StaticTileFruitClimate
+
+---@class StaticFurnitureOptions : StaticMapTileOptions
+---@field move_cost_mod? integer
+---@field required_strength? integer
+---@field fall_damage_reduction? integer
+---@field bonus_fire_warmth_feet? integer
+---@field mass? string|integer
+---@field keg_capacity? string|integer
+---@field crafting_pseudo_item? string
+---@field deployed_item? string
+---@field surgery_skill_multiplier? number
+---@field workbench? StaticTileWorkbench
+
+---@class StaticTileToolAction
+---@field duration? string
+---@field result? string
+---@field message? string|LocalizedText
+---@field sound? string|LocalizedText
+---@field byproducts? StaticTileToolDrop[]
+---@field prying? StaticTilePry
+
+---Define native terrain in ordered data.
+---@param options StaticTerrainOptions
+function CcbPlatformContent.define_terrain(options) end
+
+---Define native furniture in ordered data.
+---@param options StaticFurnitureOptions
+function CcbPlatformContent.define_furniture(options) end
+
 ---@param options ItemDefinitionOptions
 ---@return ItemDefinition
 function CcbPlatformContent.Item(options) end

@@ -61,6 +61,7 @@ extern "C" {
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
+#include "mapdata.h"
 #include "mapgen.h"
 #include "monfaction.h"
 #include "monstergenerator.h"
@@ -3934,11 +3935,11 @@ void write_static_monster_faction( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_overmap_point( JsonOut &json, const sol::table &entry, const char *field )
+void write_static_int_triplet( JsonOut &json, const sol::table &entry, const char *field )
 {
     if( const auto point = entry.get<sol::optional<sol::table>>( field ) ) {
         if( checked_dense_array_size( *point, field, 3 ) != 3 ) {
-            throw std::invalid_argument( std::string( field ) + " requires three coordinates" );
+            throw std::invalid_argument( std::string( field ) + " requires three integers" );
         }
         json.member( field );
         json.start_array();
@@ -3952,7 +3953,7 @@ void write_static_overmap_point( JsonOut &json, const sol::table &entry, const c
 void write_static_overmap_tile( JsonOut &json, const sol::table &tile )
 {
     json.start_object();
-    write_static_overmap_point( json, tile, "point" );
+    write_static_int_triplet( json, tile, "point" );
     write_item_fields<std::string>( json, tile, {
         { "terrain", "overmap" }, { "camp", "camp" }, { "camp_name", "camp_name" }
     } );
@@ -3963,8 +3964,8 @@ void write_static_overmap_tile( JsonOut &json, const sol::table &tile )
 void write_static_overmap_connection( JsonOut &json, const sol::table &connection )
 {
     json.start_object();
-    write_static_overmap_point( json, connection, "point" );
-    write_static_overmap_point( json, connection, "from" );
+    write_static_int_triplet( json, connection, "point" );
+    write_static_int_triplet( json, connection, "from" );
     write_item_fields<std::string>( json, connection, {
         { "terrain", "terrain" }, { "connection", "connection" }
     } );
@@ -4261,6 +4262,413 @@ void write_static_construction( JsonOut &json, const sol::table &options )
     }
 }
 
+template<typename Writer>
+void write_static_tile_object( JsonOut &json, const sol::table &options, const char *field,
+                               const char *native, Writer write_fields )
+{
+    if( const auto value = options.get<sol::optional<sol::table>>( field ) ) {
+        json.member( native );
+        write_fields( json, *value );
+    }
+}
+
+void write_static_tile_unit( JsonOut &json, const sol::table &options, const char *field,
+                             const char *native )
+{
+    if( const sol::object value = options.raw_get<sol::object>( field );
+        value.get_type() == sol::type::number ) {
+        json.member( native, value.as<int>() );
+    } else {
+        write_placement_member<std::string>( json, options, field, native );
+    }
+}
+
+void write_static_tile_field( JsonOut &json, const sol::table &options, const char *field,
+                              const char *native )
+{
+    if( const auto value = options.get<sol::optional<sol::table>>( field ) ) {
+        if( checked_dense_array_size( *value, field, 2 ) != 2 ) {
+            throw std::invalid_argument( std::string( field ) + " requires a field ID and intensity" );
+        }
+        json.member( native );
+        json.start_array();
+        json.write( value->raw_get<std::string>( 1 ) );
+        json.write( value->raw_get<int>( 2 ) );
+        json.end_array();
+    }
+}
+
+void write_static_tile_temperatures( JsonOut &json, const sol::table &options, const char *field,
+                                     const char *native )
+{
+    if( const auto values = options.get<sol::optional<sol::table>>( field ) ) {
+        json.member( native );
+        write_static_values<sol::object>( json, *values, field,
+        []( JsonOut & out, const sol::object & value ) {
+            if( value.get_type() == sol::type::string ) {
+                out.write( value.as<std::string>() );
+            } else {
+                out.write( value.as<double>() );
+            }
+        } );
+    }
+}
+
+void write_static_tile_drop( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "item", "item" }, { "group", "group" }, { "contents_group", "contents-group" },
+        { "variant", "variant" }
+    } );
+    write_placement_member<int>( json, options, "chance", "prob" );
+    write_mapgen_range( json, "count", options.raw_get<sol::object>( "count" ) );
+    write_mapgen_range( json, "charges", options.raw_get<sol::object>( "charges" ) );
+    write_mapgen_range( json, "damage", options.raw_get<sol::object>( "damage" ) );
+    write_static_catalog_array( json, options, "distribution", "distribution", write_static_tile_drop );
+    write_static_catalog_array( json, options, "collection", "collection", write_static_tile_drop );
+    json.end_object();
+}
+
+void write_static_tile_drops( JsonOut &json, const sol::table &options, const char *field,
+                              const char *native )
+{
+    if( const sol::object value = options.raw_get<sol::object>( field );
+        value.get_type() == sol::type::string ) {
+        json.member( native, value.as<std::string>() );
+    } else {
+        write_static_catalog_array( json, options, field, native, write_static_tile_drop );
+    }
+}
+
+void write_static_tile_bash( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "profile", "profile" }, { "terrain", "ter_set" },
+        { "terrain_from_above", "ter_set_bashed_from_above" }, { "furniture", "furn_set" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "minimum_strength", "str_min" }, { "maximum_strength", "str_max" },
+        { "minimum_strength_blocked", "str_min_blocked" },
+        { "maximum_strength_blocked", "str_max_blocked" },
+        { "minimum_strength_supported", "str_min_supported" },
+        { "maximum_strength_supported", "str_max_supported" }, { "explosive", "explosive" },
+        { "volume", "sound_vol" }, { "failure_volume", "sound_fail_vol" },
+        { "collapse_radius", "collapse_radius" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "destroy_only", "destroy_only" }, { "bash_below", "bash_below" }
+    } );
+    write_item_ids( json, options, {
+        { "tent_centers", "tent_centers" }
+    } );
+    write_item_text( json, "sound", options.raw_get<sol::object>( "sound" ), false );
+    write_item_text( json, "sound_fail", options.raw_get<sol::object>( "failure_sound" ), false );
+    write_static_tile_field( json, options, "hit_field", "hit_field" );
+    write_static_tile_field( json, options, "destroyed_field", "destroyed_field" );
+    write_static_tile_drops( json, options, "drops", "items" );
+    json.end_object();
+}
+
+void write_static_tile_practice( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_placement_member<std::string>( json, options, "id", "skill" );
+    write_item_fields<int>( json, options, {
+        { "minimum", "min" }, { "maximum", "max" }
+    } );
+    write_placement_member<double>( json, options, "multiplier", "multiplier" );
+    json.end_object();
+}
+
+void write_static_tile_deconstruct( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "terrain", "ter_set" }, { "furniture", "furn_set" }
+    } );
+    write_placement_member<bool>( json, options, "deconstruct_above", "deconstruct_above" );
+    write_static_tile_drops( json, options, "drops", "items" );
+    write_static_tile_object( json, options, "practice", "skill", write_static_tile_practice );
+    json.end_object();
+}
+
+void write_static_tile_shoot( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_placement_member<int>( json, options, "chance_to_hit", "chance_to_hit" );
+    write_placement_member<bool>( json, options, "no_laser_destroy", "no_laser_destroy" );
+    write_mapgen_range( json, "reduce_damage", options.raw_get<sol::object>( "reduce_damage" ) );
+    write_mapgen_range( json, "reduce_damage_laser",
+                        options.raw_get<sol::object>( "reduce_damage_laser" ) );
+    write_mapgen_range( json, "destroy_damage", options.raw_get<sol::object>( "destroy_damage" ) );
+    json.end_object();
+}
+
+void write_static_tile_liquid( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "item", "id" }, { "dries_to", "dries_to" }
+    } );
+    write_placement_member<double>( json, options, "minimum_temperature", "min_temp" );
+    write_mapgen_range( json, "count", options.raw_get<sol::object>( "count" ) );
+    json.end_object();
+}
+
+void write_static_tile_seasonal_harvest( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_placement_member<std::string>( json, options, "harvest", "id" );
+    write_static_string_or_ids( json, options, "seasons", "seasons" );
+    json.end_object();
+}
+
+void write_static_tile_pry( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<int>( json, options, {
+        { "difficulty", "difficulty" }, { "prying_level", "prying_level" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "prying_nails", "prying_nails" }, { "noisy", "noisy" }, { "alarm", "alarm" },
+        { "breakable", "breakable" }
+    } );
+    write_item_text( json, "failure", options.raw_get<sol::object>( "failure" ), false );
+    json.end_object();
+}
+
+void write_static_tile_tool_drop( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_placement_member<std::string>( json, options, "item", "item" );
+    write_mapgen_range( json, "count", options.raw_get<sol::object>( "count" ) );
+    json.end_object();
+}
+
+void write_static_tile_tool_action( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "duration", "duration" }, { "result", "result" }
+    } );
+    write_item_text( json, "message", options.raw_get<sol::object>( "message" ), false );
+    write_item_text( json, "sound", options.raw_get<sol::object>( "sound" ), false );
+    write_static_catalog_array( json, options, "byproducts", "byproducts",
+                                write_static_tile_tool_drop );
+    write_static_tile_object( json, options, "prying", "prying_data", write_static_tile_pry );
+    json.end_object();
+}
+
+void write_static_tile_plant( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "transform", "transform" }, { "base", "base" }
+    } );
+    write_placement_member<int>( json, options, "max_water_storage", "max_water_storage" );
+    write_item_fields<double>( json, options, {
+        { "growth_multiplier", "growth_multiplier" },
+        { "harvest_multiplier", "harvest_multiplier" },
+        { "water_consumption_multiplier", "water_consumption_multiplier" }
+    } );
+    json.end_object();
+}
+
+void write_static_tile_workbench( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_placement_member<double>( json, options, "multiplier", "multiplier" );
+    write_static_tile_unit( json, options, "mass", "mass" );
+    write_static_tile_unit( json, options, "volume", "volume" );
+    json.end_object();
+}
+
+void write_static_tile_growth( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "transform", "transform" }, { "growth_time", "growth_time" }
+    } );
+    write_placement_member<double>( json, options, "growth_multiplier", "growth_multiplier" );
+    write_static_string_or_ids( json, options, "fertilize_seasons", "fertilize_seasons" );
+    json.end_object();
+}
+
+void write_static_tile_crop_climate( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_placement_member<int>( json, options, "growing_days", "growing_days" );
+    write_item_fields<double>( json, options, {
+        { "base_c", "base_c" }, { "optimum_c", "optimum_c" }, { "min_c", "min_c" },
+        { "max_c", "max_c" }, { "degree_days", "degree_days" }, { "water_mm", "water_mm" },
+        { "water_peak", "water_peak" }
+    } );
+    json.end_object();
+}
+
+void write_static_tile_fruit_climate( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_placement_member<std::string>( json, options, "harvest", "harvest" );
+    write_placement_member<int>( json, options, "bearing_days", "bearing_days" );
+    write_static_tile_object( json, options, "growth", "growth", write_static_tile_crop_climate );
+    json.end_object();
+}
+
+void write_static_tile_extends( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_ids( json, options, {
+        { "flags", "flags" }
+    } );
+    write_static_string_or_ids( json, options, "connect_groups", "connect_groups" );
+    write_static_string_or_ids( json, options, "connects_to", "connects_to" );
+    write_static_string_or_ids( json, options, "rotates_to", "rotates_to" );
+    json.end_object();
+}
+
+void write_static_tile_appliance( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    json.member( "type", "appliance_convert" );
+    write_item_fields<std::string>( json, options, {
+        { "item", "item" }, { "furniture", "furn_set" }, { "terrain", "ter_set" }
+    } );
+    json.end_object();
+}
+
+void write_static_tile_card_reader( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    json.member( "type", "cardreader" );
+    write_placement_member<std::string>( json, options, "mapgen_id", "mapgen_id" );
+    write_item_fields<int>( json, options, {
+        { "radius", "radius" }, { "omt_allowed_radius", "omt_allowed_radius" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "consume_card", "consume_card" }, { "allow_hacking", "allow_hacking" },
+        { "despawn_monsters", "despawn_monsters" }, { "query", "query" }
+    } );
+    write_item_ids( json, options, {
+        { "flags", "flags" }
+    } );
+    write_item_text( json, "query_msg", options.raw_get<sol::object>( "query_message" ), false );
+    write_item_text( json, "success_msg", options.raw_get<sol::object>( "success_message" ), false );
+    write_item_text( json, "redundant_msg", options.raw_get<sol::object>( "redundant_message" ),
+                     false );
+    if( const auto value = options.get<sol::optional<sol::table>>( "terrain_changes" ) ) {
+        write_item_keyed_values<std::string>( json, "terrain_changes", *value );
+    }
+    if( const auto value = options.get<sol::optional<sol::table>>( "furniture_changes" ) ) {
+        write_item_keyed_values<std::string>( json, "furn_changes", *value );
+    }
+    json.end_object();
+}
+
+void write_static_tile_examine( JsonOut &json, const sol::table &options )
+{
+    const sol::object builtin = options.raw_get<sol::object>( "builtin_examine" );
+    const auto appliance = options.get<sol::optional<sol::table>>( "appliance_conversion" );
+    const auto card_reader = options.get<sol::optional<sol::table>>( "card_reader" );
+    if( ( builtin.get_type() != sol::type::nil ) + appliance.has_value() + card_reader.has_value() >
+        1 ) {
+        throw std::invalid_argument( "tile examine requires one interaction kind" );
+    }
+    if( appliance ) {
+        json.member( "examine_action" );
+        write_static_tile_appliance( json, *appliance );
+    } else if( card_reader ) {
+        json.member( "examine_action" );
+        write_static_tile_card_reader( json, *card_reader );
+    } else {
+        write_static_string_or_ids( json, options, "builtin_examine", "examine_action" );
+    }
+}
+
+void write_static_tile_shared( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
+        { "looks_like", "looks_like" }, { "curtain_transform", "curtain_transform" },
+        { "base_item", "item" }, { "lockpick_result", "lockpick_result" }, { "open", "open" },
+        { "close", "close" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "coverage", "coverage" }, { "comfort", "comfort" },
+        { "floor_bedding_warmth", "floor_bedding_warmth" }, { "light_emitted", "light_emitted" }
+    } );
+    write_item_ids( json, options, {
+        { "flags", "flags" }, { "emissions", "emissions" }
+    } );
+    write_static_tile_unit( json, options, "max_volume", "max_volume" );
+    write_static_string_or_ids( json, options, "symbol", "symbol" );
+    write_static_string_or_ids( json, options, "color", "color" );
+    write_static_string_or_ids( json, options, "background_color", "bgcolor" );
+    write_static_string_or_ids( json, options, "connect_groups", "connect_groups" );
+    write_static_string_or_ids( json, options, "connects_to", "connects_to" );
+    write_static_string_or_ids( json, options, "rotates_to", "rotates_to" );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    write_item_text( json, "lockpick_message", options.raw_get<sol::object>( "lockpick_message" ),
+                     false );
+    write_static_int_triplet( json, options, "light_color" );
+    write_static_tile_object( json, options, "bash", "bash", write_static_tile_bash );
+    write_static_tile_object( json, options, "deconstruct", "deconstruct",
+                              write_static_tile_deconstruct );
+    write_static_tile_object( json, options, "shoot", "shoot", write_static_tile_shoot );
+    write_static_tile_object( json, options, "liquid_source", "liquid_source",
+                              write_static_tile_liquid );
+    write_static_catalog_array( json, options, "harvest_by_season", "harvest_by_season",
+                                write_static_tile_seasonal_harvest );
+    write_static_tile_object( json, options, "plant", "plant_data", write_static_tile_plant );
+    write_static_tile_object( json, options, "boltcut", "boltcut", write_static_tile_tool_action );
+    write_static_tile_object( json, options, "hacksaw", "hacksaw", write_static_tile_tool_action );
+    write_static_tile_object( json, options, "oxytorch", "oxytorch", write_static_tile_tool_action );
+    write_static_tile_object( json, options, "prying", "prying", write_static_tile_tool_action );
+    write_static_tile_object( json, options, "extend", "extend", write_static_tile_extends );
+    write_static_tile_object( json, options, "delete", "delete", write_static_tile_extends );
+    write_static_tile_examine( json, options );
+}
+
+void write_static_tile_terrain( JsonOut &json, const sol::table &options )
+{
+    write_static_tile_shared( json, options );
+    write_item_fields<std::string>( json, options, {
+        { "transforms_into", "transforms_into" }, { "roof", "roof" }, { "trap", "trap" },
+        { "phase_method", "phase_method" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "move_cost", "move_cost" }, { "heat_radiation", "heat_radiation" }
+    } );
+    write_item_ids( json, options, {
+        { "phase_targets", "phase_targets" }, { "allowed_template_ids", "allowed_template_ids" }
+    } );
+    write_static_tile_temperatures( json, options, "phase_temperatures", "phase_temps" );
+    write_static_tile_object( json, options, "growth", "terrain_growth", write_static_tile_growth );
+    write_static_tile_object( json, options, "fruit_climate", "fruit_climate",
+                              write_static_tile_fruit_climate );
+}
+
+void write_static_tile_furniture( JsonOut &json, const sol::table &options )
+{
+    write_static_tile_shared( json, options );
+    write_item_fields<std::string>( json, options, {
+        { "crafting_pseudo_item", "crafting_pseudo_item" }, { "deployed_item", "deployed_item" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "move_cost_mod", "move_cost_mod" }, { "required_strength", "required_str" },
+        { "fall_damage_reduction", "fall_damage_reduction" },
+        { "bonus_fire_warmth_feet", "bonus_fire_warmth_feet" }
+    } );
+    write_placement_member<double>( json, options, "surgery_skill_multiplier",
+                                    "surgery_skill_multiplier" );
+    write_static_tile_unit( json, options, "mass", "mass" );
+    write_static_tile_unit( json, options, "keg_capacity", "keg_capacity" );
+    write_static_tile_object( json, options, "workbench", "workbench", write_static_tile_workbench );
+}
+
 using static_catalog_writer = void ( * )( JsonOut &, const sol::table & );
 
 template<typename Loader>
@@ -4400,6 +4808,10 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "harvest", write_static_harvest, harvest_list::load_harvest_list ) );
     content.set_function( "define_widget", static_catalog_definition(
                               resolved.id, "widget", write_static_widget, widget::load_widget ) );
+    content.set_function( "define_terrain", static_catalog_definition(
+                              resolved.id, "terrain", write_static_tile_terrain, load_terrain ) );
+    content.set_function( "define_furniture", static_catalog_definition(
+                              resolved.id, "furniture", write_static_tile_furniture, load_furniture ) );
     install_static_dialogue_predicates( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );
