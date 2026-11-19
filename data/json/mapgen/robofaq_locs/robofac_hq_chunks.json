@@ -125,34 +125,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "window_sandbags_meteorology1",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "robofachqy_window_sand_wall" ], "x": 2, "y": 11 },
-        { "chunks": [ "robofachqy_window_sand_wall" ], "x": 2, "y": 19 },
-        { "chunks": [ "robofachqy_window_sand_wall" ], "x": 15, "y": 11 },
-        { "chunks": [ "robofachqy_window_sand_wall" ], "x": 15, "y": 19 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "window_sandbags_meteorology2",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "robofachqy_window_sand_wall" ], "x": 4, "y": 11 },
-        { "chunks": [ "robofachqy_window_sand_wall" ], "x": 4, "y": 19 },
-        { "chunks": [ "robofachq_window_sand_wall_l" ], "x": 13, "y": 9 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "window_sandbags_surface_road2",
-    "object": { "place_nested": [ { "chunks": [ "robofachq_window_sand_wall_l" ], "x": 13, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "robofachq_ancilla_fortress_basic",
     "object": {
       "rows": [
@@ -246,45 +218,6 @@
         { "type": "LOOT_UNSORTED", "faction": "robofac_auxiliaries", "x": [ 1, 1 ], "y": [ 10, 10 ] },
         { "type": "LOOT_CURRENCY", "faction": "robofac_auxiliaries", "x": [ 1, 1 ], "y": [ 9, 9 ] }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "nest_ancilla_bar_place_BEMs",
-    "//": "remove the null chunks once there's enough BEM npcs.",
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "    1    4    2         ",
-        "                        ",
-        "                        ",
-        "           3            ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "nested": {
-        "1": { "chunks": [ [ "BEM_hireable", 40 ], [ "BEM_jabberwock", 20 ], [ "null", 20 ] ] },
-        "2": { "chunks": [ [ "BEM_human_sample", 20 ], [ "BEM_anchor_seller", 20 ], [ "BEM_exodii_hunter", 20 ], [ "null", 20 ] ] },
-        "3": { "chunks": [ [ "BEM_keycard_seller", 20 ], [ "BEM_template_seller", 20 ], [ "null", 20 ] ] },
-        "4": { "chunks": [ [ "BEM_gunrunner", 20 ], [ "BEM_drugrunner", 20 ], [ "BEM_chatting_veterans", 20 ], [ "null", 20 ] ] }
-      }
     }
   },
   {

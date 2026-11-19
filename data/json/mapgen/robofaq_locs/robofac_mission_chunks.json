@@ -50,17 +50,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "robofac_mi3_photonics_chunk",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "T" ],
-      "terrain": { "T": "t_metal_floor" },
-      "items": { "T": { "item": "nano_templates", "chance": 100 } },
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "robofac_radio_leech",
     "object": {
       "mapgensize": [ 24, 24 ],
