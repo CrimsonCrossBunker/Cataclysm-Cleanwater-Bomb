@@ -1,7 +1,0 @@
-[
-  {
-    "id": "animalshelter",
-    "type": "vehicle_group",
-    "vehicles": [ [ "animalctrl", 300 ] ]
-  }
-]

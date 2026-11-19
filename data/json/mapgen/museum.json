@@ -1,7 +1,0 @@
-[
-  {
-    "id": "museum_cannon",
-    "type": "vehicle_group",
-    "vehicles": [ [ "cannon_3in", 10 ], [ "cannon_3in_plugged", 90 ] ]
-  }
-]

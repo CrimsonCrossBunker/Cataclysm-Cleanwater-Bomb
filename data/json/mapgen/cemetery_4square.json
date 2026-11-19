@@ -1,7 +1,0 @@
-[
-  {
-    "id": "FUNERAL",
-    "type": "vehicle_group",
-    "vehicles": [ [ "car", 300 ], [ "hearse", 200 ], [ "suv", 100 ], [ "policecar", 50 ] ]
-  }
-]
