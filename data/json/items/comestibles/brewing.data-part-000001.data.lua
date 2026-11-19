@@ -1,0 +1,31 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "wash_whiskey",
+    looks_like = "whiskey",
+    name = ccb.content.plural_text("whiskey wash", "whiskey wash"),
+    description = ccb.content.text("Fermented, but not distilled whiskey.  No longer tastes sweet.  You may want to distill it before drinking."),
+    display_type = "BY_VOLUME",
+    materials = { { id = "water", portions = 100 }, { id = "alcohol", portions = 40 } },
+    mass = "34 g",
+    color = "brown",
+    default_container = "jug_plastic",
+    sealed_container = false,
+    symbol = "~",
+    volume = "36 ml",
+    survival_price = "10 cent",
+    phase = "liquid",
+    flags = { "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" },
+    comestible = {
+        addiction = "alcohol",
+        addiction_potential = 1,
+        calories = 26,
+        quench = 2,
+        healthy = -1,
+        fun = 2,
+        servings = 1,
+        vitamins = { { id = "ethanol", amount = 3 } },
+        kind = "DRINK",
+        freezing_point = -15,
+    },
+}

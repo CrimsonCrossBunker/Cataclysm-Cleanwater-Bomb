@@ -1,0 +1,27 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE", "TOOL" ],
+    "id": "soaking_dandelion_active",
+    "looks_like": "dandelion",
+    "name": { "str_sp": "soaking dandelion" },
+    "weight": "274 g",
+    "color": "brown",
+    "comestible_type": "FOOD",
+    "symbol": ",",
+    "quench": -10,
+    "calories": 41,
+    "description": "Soaked dandelions that can be used for brewing.",
+    "display_type": "BY_WEIGHT",
+    "price": "20 cent",
+    "price_postapoc": "2 USD 50 cent",
+    "material": [ "veggy" ],
+    "volume": "250 ml",
+    "flags": [ "EDIBLE_FROZEN", "RAW", "SPAWN_ACTIVE" ],
+    "vitamins": [ [ "calcium", 6 ], [ "iron", 29 ], [ "veggy_allergen", 1 ] ],
+    "fun": -15,
+    "countdown_interval": "2 hours",
+    "revert_to": "soaked_dandelion",
+    "stackable": true
+  }
+]

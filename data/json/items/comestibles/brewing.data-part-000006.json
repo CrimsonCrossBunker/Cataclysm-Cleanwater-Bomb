@@ -1,0 +1,29 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "BREWABLE", "COMESTIBLE" ],
+    "id": "brew_vodka",
+    "looks_like": "vodka",
+    "name": { "str_sp": "vodka wort" },
+    "description": "Unfermented vodka.  Water with sugar from the enzymatic breakdown of malted grains, or just added in pure form.  You need to put it in a fermenting vat to brew it.",
+    "display_type": "BY_VOLUME",
+    "material": [ { "type": "water", "portion": 757 }, { "type": "veggy", "portion": 1500 }, { "type": "yeast", "portion": 1 } ],
+    "weight": "34 g",
+    "color": "light_cyan",
+    "container": "bottle_glass",
+    "symbol": "~",
+    "calories": 17,
+    "quench": 4,
+    "fun": -5,
+    "price": "0 cent",
+    "volume": "36 ml",
+    "price_postapoc": "10 cent",
+    "charges": 1,
+    "phase": "liquid",
+    "comestible_type": "DRINK",
+    "flags": [ "NUTRIENT_OVERRIDE" ],
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "brew_time": "7 days",
+    "brew_results": [ "wash_vodka", "yeast" ]
+  }
+]

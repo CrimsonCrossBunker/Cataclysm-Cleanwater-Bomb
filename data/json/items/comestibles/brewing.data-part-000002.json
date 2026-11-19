@@ -1,0 +1,28 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "BREWABLE", "COMESTIBLE" ],
+    "id": "brew_gin",
+    "looks_like": "gin_mash",
+    "name": { "str_sp": "gin mash" },
+    "description": "Unfermented gin mash.  Fermenting it will produce gin.",
+    "display_type": "BY_VOLUME",
+    "material": [ { "type": "water", "portion": 757 }, { "type": "sugar", "portion": 53 }, { "type": "yeast", "portion": 1 } ],
+    "weight": "34 g",
+    "color": "brown",
+    "container": "bottle_glass",
+    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE" ],
+    "symbol": "~",
+    "calories": 17,
+    "quench": 4,
+    "fun": -15,
+    "price": "0 cent",
+    "price_postapoc": "10 cent",
+    "volume": "36 ml",
+    "charges": 1,
+    "phase": "liquid",
+    "comestible_type": "DRINK",
+    "brew_time": "7 days",
+    "brew_results": [ "gin_mash" ]
+  }
+]

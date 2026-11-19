@@ -1,0 +1,31 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "wash_moonshine",
+    looks_like = "moonshine",
+    name = ccb.content.plural_text("moonshine wash", "moonshine wash"),
+    description = ccb.content.text("Fermented, but not distilled moonshine.  Contains all the contaminants you don't want in your moonshine, so you may want to distill it first."),
+    display_type = "BY_VOLUME",
+    materials = { { id = "water", portions = 100 }, { id = "alcohol", portions = 50 } },
+    mass = "34 g",
+    color = "brown",
+    default_container = "jug_plastic",
+    sealed_container = false,
+    symbol = "~",
+    volume = "36 ml",
+    survival_price = "10 cent",
+    phase = "liquid",
+    flags = { "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" },
+    comestible = {
+        addiction = "alcohol",
+        addiction_potential = 1,
+        calories = 33,
+        quench = -2,
+        healthy = -1,
+        fun = -20,
+        servings = 1,
+        vitamins = { { id = "ethanol", amount = 3 } },
+        kind = "DRINK",
+        freezing_point = -15,
+    },
+}

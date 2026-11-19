@@ -1,0 +1,31 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "gin_mash",
+    looks_like = "gin",
+    name = ccb.content.plural_text("gin wash", "gin wash"),
+    description = ccb.content.text("Gin wash, after the junipers have had time to add flavor.  Ready to be distilled or drunk as is."),
+    display_type = "BY_VOLUME",
+    materials = { { id = "water", portions = 100 }, { id = "alcohol", portions = 50 } },
+    mass = "34 g",
+    color = "yellow",
+    default_container = "jug_plastic",
+    sealed_container = false,
+    symbol = "~",
+    volume = "36 ml",
+    survival_price = "10 cent",
+    phase = "liquid",
+    flags = { "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" },
+    comestible = {
+        addiction = "alcohol",
+        addiction_potential = 1,
+        calories = 26,
+        quench = 2,
+        healthy = -1,
+        fun = 2,
+        servings = 1,
+        vitamins = { { id = "ethanol", amount = 3 } },
+        kind = "DRINK",
+        freezing_point = -15,
+    },
+}
