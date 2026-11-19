@@ -1,0 +1,30 @@
+[
+  {
+    "type": "mutation",
+    "id": "IERDE_SINK_INTO_EARTH",
+    "name": { "str": "In the Earthmother's Embrace" },
+    "points": 3,
+    "visibility": 0,
+    "ugliness": 0,
+    "description": "Upon gaining this ability the Ierde gains the ability to sink into the living earth, where they will heal faster, they will not need to eat or drink, and sleep will be more restful for them.",
+    "prereqs": [ "IERDE_REGAIN_STAMINA_UNDERGROUND", "IERDE_HEAL_FASTER_UNDERGROUND" ],
+    "category": [ "IERDE" ],
+    "purifiable": false,
+    "activated_is_setup": false,
+    "active": true,
+    "activated_eocs": [ "EOC_IERDE_SINK_INTO_EARTH_activate" ],
+    "comfort": [
+      {
+        "conditions": [ { "type": "terrain", "flag": "DIGGABLE" } ],
+        "comfort": "very_comfortable",
+        "msg_try": { "text": "You settle down to rest on the living earth.", "rating": "good" }
+      },
+      {
+        "conditions": [ { "type": "terrain", "id": "t_rock" } ],
+        "comfort": "very_comfortable",
+        "msg_try": { "text": "Encased within the living earth, you drift off to sleep.", "rating": "good" }
+      }
+    ],
+    "enchantments": [ "INLINE_ENCH_IERDE_SINK_INTO_EARTH_0" ]
+  }
+]

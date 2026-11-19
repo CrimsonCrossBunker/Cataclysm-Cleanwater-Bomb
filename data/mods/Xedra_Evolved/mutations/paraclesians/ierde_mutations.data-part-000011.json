@@ -1,0 +1,21 @@
+[
+  {
+    "type": "mutation",
+    "id": "IERDE_STONE_FORM",
+    "name": { "str": "Form of the Solid Earth" },
+    "points": 8,
+    "description": "The Ierde may transform into rock and earth.  They become incredibly resilient and nearly immune to some forms of damage, but will be much, much slower.",
+    "prereqs": [ "IERDE_NO_KNOCKBACK" ],
+    "prereqs2": [ "IERDE_FEEL_NO_PAIN" ],
+    "category": [ "IERDE" ],
+    "purifiable": false,
+    "threshreq": [ "THRESH_IERDE" ],
+    "active": true,
+    "activated_is_setup": true,
+    "cost": 1,
+    "time": 2,
+    "mana": true,
+    "activated_eocs": [ "EOC_IERDE_STONE_FORM_ON" ],
+    "deactivated_eocs": [ "EOC_IERDE_STONE_FORM_OFF" ]
+  }
+]

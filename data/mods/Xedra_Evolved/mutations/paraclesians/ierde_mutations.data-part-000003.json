@@ -1,0 +1,14 @@
+[
+  {
+    "type": "mutation",
+    "id": "IERDE_SMASHING_PUNCH",
+    "name": { "str": "Avalanche Blow" },
+    "points": 3,
+    "description": "With a brief moment to stabilize themselves, the Ierde strikes a wall, door, or other terrain feature with the force of a falling boulder, doing many times their normal damage.",
+    "category": [ "IERDE" ],
+    "purifiable": false,
+    "activated_is_setup": false,
+    "active": true,
+    "activated_eocs": [ "EOC_IERDE_SMASHING_PUNCH_activated" ]
+  }
+]

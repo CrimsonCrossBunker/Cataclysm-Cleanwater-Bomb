@@ -1,0 +1,125 @@
+local ccb = require("ccb")
+
+ccb.content.define_mutation {
+    id = "IERDE_SKIN_1",
+    name = ccb.content.text("Clay of the Earth"),
+    points = 0,
+    visibility = 2,
+    ugliness = 0,
+    description = ccb.content.text("Your skin has turned the color of manganese stained soil.  Your skin is now a purplish black.  This has no gameplay effects."),
+    types = { "skin_tone" },
+    additions = { "IERDE_SKIN_2" },
+    categories = { "IERDE", "FAIR_FOLK_COMMONER_TROW" },
+    purifiable = false,
+}
+
+ccb.content.define_mutation {
+    id = "IERDE_SKIN_2",
+    name = ccb.content.text("Pebbled Skin"),
+    points = 2,
+    visibility = 4,
+    ugliness = 3,
+    description = ccb.content.text("Your skin has toughened and formed pebble-like growths in some places, acting as natural armor.  Somewhat reduces wet effects."),
+    types = { "SKIN" },
+    categories = { "IERDE", "FAIR_FOLK_COMMONER_TROW" },
+    purifiable = false,
+    prerequisites = { "IERDE_SKIN_1" },
+    replacements = { "IERDE_SKIN_3" },
+    wet_protection = {
+        { part = "head", ignored = 2 },
+        { part = "leg_l", ignored = 5 },
+        { part = "leg_r", ignored = 5 },
+        { part = "foot_l", ignored = 2 },
+        { part = "foot_r", ignored = 2 },
+        { part = "arm_l", ignored = 4 },
+        { part = "arm_r", ignored = 4 },
+        { part = "hand_l", ignored = 1 },
+        { part = "hand_r", ignored = 1 },
+        { part = "torso", ignored = 6 },
+    },
+    integrated_armor = { "integrated_pebbled" },
+    enchantments = { "INLINE_ENCH_IERDE_SKIN_2_0" },
+    flags = { "TOUGH_FEET", "BARKY" },
+}
+
+ccb.content.define_mutation {
+    id = "IERDE_SKIN_3",
+    name = ccb.content.text("Stone Skin"),
+    points = 3,
+    visibility = 10,
+    ugliness = 4,
+    mixed_effect = true,
+    description = ccb.content.text("Your skin has developed into strong granite-like covering that retains some flexibility and has grown to cover most of your body, acting as natural armor.  While difficult to penetrate, it also limits your flexibility.  Greatly reduces wet effects."),
+    types = { "skin_tone" },
+    prerequisites = { "IERDE_SKIN_2" },
+    threshold_requirements = { "THRESH_IERDE" },
+    categories = { "IERDE" },
+    purifiable = false,
+    wet_protection = {
+        { part = "head", ignored = 5 },
+        { part = "leg_l", ignored = 16 },
+        { part = "leg_r", ignored = 16 },
+        { part = "foot_l", ignored = 5 },
+        { part = "foot_r", ignored = 5 },
+        { part = "arm_l", ignored = 14 },
+        { part = "arm_r", ignored = 14 },
+        { part = "hand_l", ignored = 4 },
+        { part = "hand_r", ignored = 4 },
+        { part = "torso", ignored = 30 },
+    },
+    integrated_armor = { "integrated_granite_skin" },
+    enchantments = { "INLINE_ENCH_IERDE_SKIN_3_0" },
+    flags = { "TOUGH_FEET", "BARKY" },
+}
+
+ccb.content.define_mutation {
+    id = "IERDE_EYES",
+    name = ccb.content.text("Ierde Eyes"),
+    points = 1,
+    visibility = 2,
+    ugliness = 0,
+    description = ccb.content.text("Upon gaining this ability the Ierde's eyes begin reflecting their mood: a pale white streaked with rose when happy; pale green or grey when calm, and pure obsidian black when angry.  Glare no longer impacts them and they are not bothered by light levels when sleeping.  In addition, they have much better night vision."),
+    categories = { "IERDE" },
+    purifiable = false,
+    enchantments = { "INLINE_ENCH_IERDE_EYES_0" },
+}
+
+ccb.content.define_mutation {
+    id = "IERDE_EARS",
+    name = ccb.content.text("Ierde Ears"),
+    points = 1,
+    visibility = 2,
+    ugliness = 0,
+    description = ccb.content.text("The Ierde's ears are longer and pointed, like the peak of a high mountain.  They can hear slightly better and are unphased by loud sounds."),
+    categories = { "IERDE" },
+    purifiable = false,
+    enchantments = { "INLINE_ENCH_IERDE_EARS_0" },
+    flags = { "IMMUNE_HEARING_DAMAGE" },
+}
+
+ccb.content.define_mutation {
+    id = "IERDE_STONE_FISTS",
+    name = ccb.content.text("Fists of Stone"),
+    points = 4,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("The Ierde's stony skin makes their fists hit like hammers.  Though their attacks are slower, the Ierde does more bashing damage with punches and can use their hands to replace some simple tools."),
+    types = { "CLAWS" },
+    prerequisites = { "IERDE_SKIN_2", "IERDE_SKIN_3" },
+    categories = { "IERDE" },
+    purifiable = false,
+    integrated_armor = { "integrated_ierde_fists" },
+}
+
+ccb.content.define_mutation {
+    id = "IERDE_STRONG_EQUIPMENT",
+    name = ccb.content.text("Stone-Hardened Panoply"),
+    points = 6,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Just as their body is now one with the stone, the Ierde can infuse the strength of the earth into their equipment, rendering it more resilient.  While on natural earth or stone or underground, the Ierde's equipment is twice as difficult to damage."),
+    prerequisites = { "IERDE_STONE_FISTS" },
+    categories = { "IERDE" },
+    purifiable = false,
+    enchantments = { "INLINE_ENCH_IERDE_STRONG_EQUIPMENT_0" },
+}
