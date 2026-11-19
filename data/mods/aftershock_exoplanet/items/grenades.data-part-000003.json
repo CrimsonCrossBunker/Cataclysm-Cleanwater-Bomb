@@ -1,0 +1,41 @@
+[
+  {
+    "id": "afs_HE_grenade_act",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "copy-from": "afs_HE_grenade",
+    "name": "active HE grenade",
+    "looks_like": "grenade_act",
+    "description": "A high explosive grenade that deals most of its damage through a powerful shockwave.  It's currently active.",
+    "use_action": { "type": "message", "message": "You've already pulled the pin, try throwing it instead.", "name": "Pull pin" },
+    "countdown_action": { "type": "explosion", "explosion": { "power": 3000, "max_noise": 250, "distance_factor": 0.7 } },
+    "extend": { "flags": [ "TRADER_AVOID" ] }
+  },
+  {
+    "id": "grenade_cryo_act",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "weapons",
+    "name": { "str": "active cryo grenade" },
+    "description": "This is an active grenade, and will explode any second now.  Once it explodes it spreads exotic highly-thermodynamic shrapnel.  Better throw it!",
+    "weight": "397 g",
+    "volume": "250 ml",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "to_hit": -1,
+    "material": [ "superalloy" ],
+    "symbol": "*",
+    "color": "green",
+    "use_action": { "type": "message", "message": "You've already pulled the pin, try throwing it instead.", "name": "Pull pin" },
+    "countdown_action": {
+      "type": "explosion",
+      "fields_type": "fd_rad_glimmer",
+      "fields_radius": 3,
+      "fields_min_intensity": 3,
+      "fields_max_intensity": 3,
+      "explosion": { "power": 540, "shrapnel": { "casing_mass": 217, "fragment_mass": 0.125 } }
+    },
+    "flags": [ "BOMB", "TRADER_AVOID" ],
+    "melee_damage": { "bash": 6 }
+  }
+]
