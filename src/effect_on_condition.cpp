@@ -239,7 +239,7 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 281> migrated_character_tasks = {{
+const std::array<character_task_migration, 283> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_LOSE_WHISPER_LEAVES" ),
           "restore_whisper_leaves_cleanup", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_DRUID_DISINFECTANT_REMOVE" ),
@@ -252,6 +252,10 @@ const std::array<character_task_migration, 281> migrated_character_tasks = {{
           "reset_druid_deer", nullptr, false, "magiclysm" },
         { effect_on_condition_id( "EOC_DRUID_SHIFTER_RAVEN_FORM_deactivate_future" ),
           "reset_druid_raven", nullptr, false, "magiclysm" },
+        { effect_on_condition_id( "EOC_DRUID_SHIFTER_GIVE_FORM_2" ),
+          "choose_starting_druid_form", nullptr, false, "magiclysm" },
+        { effect_on_condition_id( "EOC_MAGICLYSM_GAME_ONGOING_GRANT_DRUIDIC_CRAFTING_PROFICIENCY" ),
+          "magiclysm_druid_training_due", "magiclysm_druid_training_timer", false, "magiclysm" },
         { effect_on_condition_id( "eoc_update_moabosaurus" ),
           "sauropod_update_moabosaurus", nullptr, true, "DinoMod" },
         { effect_on_condition_id( "eoc_update_haplocanthosaurus" ),

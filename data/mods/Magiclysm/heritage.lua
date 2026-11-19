@@ -1,6 +1,7 @@
 local ccb = require("ccb")
 local content = ccb.content
 local services = ccb.services
+local id = services.types.id
 local state = ccb.state.character
 local sky_island = content.is_mod_active("skyisland")
 local mind_over_matter = content.is_mod_active("mindovermatter")
@@ -50,7 +51,7 @@ local function other_heritage(character)
         or (xedra and has_any(character, xedra_heritages))
 end
 
-local function install(name, mutation, eligible, inactive)
+local function install(name, apply, eligible, inactive)
     local key = name .. "_timer"
     local due = name .. "_due"
 
@@ -68,7 +69,7 @@ local function install(name, mutation, eligible, inactive)
     ccb.runtime.handler(due, function(event)
         local character = event.character
         if eligible(character) then
-            value(services.mutations.replace(character, services.types.id("mutation", mutation)))
+            apply(character)
         elseif inactive(character) then
             state.set(key, "dormant")
             return
@@ -96,7 +97,9 @@ local function install(name, mutation, eligible, inactive)
     ccb.runtime.on("character_conditions_changed", changed)
 end
 
-install("magiclysm_human_build", "HUMAN_BUILD", function(character)
+install("magiclysm_human_build", function(character)
+    value(services.mutations.replace(character, id("mutation", "HUMAN_BUILD")))
+end, function(character)
     return not other_heritage(character)
         and not (sky_island and has(character, "SI_TRIFFID_DECOR_MUTATION"))
 end, function(character)
@@ -104,9 +107,13 @@ end, function(character)
 end)
 
 if xedra then
-    install("magiclysm_chronomancer_build", "HUMAN_CHRONOMANCER_BUILD", function(character)
+    install("magiclysm_chronomancer_build", function(character)
+        value(services.mutations.replace(character, id("mutation", "HUMAN_CHRONOMANCER_BUILD")))
+    end, function(character)
         return has(character, "XEDRA_CHRONOMANCER")
     end, function(character)
         return not has(character, "XEDRA_CHRONOMANCER") or has(character, "HUMAN_CHRONOMANCER_BUILD")
     end)
 end
+
+return install
