@@ -1,48 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ "mansion_boarded_e1" ],
-    "//": "updated",
-    "object": {
-      "fill_ter": "t_floor",
-      "rows": [
-        "..!......!````!p........",
-        "........!``````!........",
-        "........!``??``!........",
-        "........!``??``!........",
-        "........!``````!........",
-        "%........!````!........%",
-        ".%........!``!........%.",
-        "..%.......!``!.......%..",
-        "...%%.....!``!.....%%...",
-        ".....%%...!``!...%%.....",
-        ".......%%%!``!%%%.......",
-        ".........%!``!%.........",
-        ".%%%%....%!``!%.........",
-        "%%%%%%....!``!...#oo#...",
-        "#oooo##...````...#<<##o#",
-        "TlHHlT#...````...#++|iii",
-        "E    E##oo#$$#oo##      ",
-        "                        ",
-        "                        ",
-        "      ||||yIIy||||      ",
-        "      +  ||||||  +      ",
-        "E     |  I|   +  |      ",
-        "lE   c|LLL|UUw|>>|c   ii",
-        "###++##############++###"
-      ],
-      "palettes": [ "standard_domestic_palette", "standard_domestic_landscaping_palette" ],
-      "terrain": { "?": "t_pool_water_shallow_outdoors", "o": "t_window_enhanced", "$": "t_door_metal_locked" },
-      "items": {
-        " ": { "item": "clutter_mansion", "chance": 1 },
-        "K": { "item": "crate_cleaning", "chance": 100 },
-        "I": { "item": "table_foyer", "chance": 40 }
-      },
-      "place_monster": [ { "group": "GROUP_VANILLA_ONLY_HUMANS", "x": [ 0, 23 ], "y": [ 12, 23 ], "chance": 25, "repeat": [ 1, 2 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "mansion_boarded_e1u" ],
     "object": {
       "fill_ter": "t_floor",
@@ -85,68 +43,6 @@
       "furniture": { "&": "f_sofa" },
       "items": { " ": { "item": "clutter_mansion", "chance": 2 }, "c": { "item": "suit_of_armor", "chance": 100 } },
       "place_monster": [ { "group": "GROUP_VANILLA_ONLY_HUMANS", "x": [ 0, 23 ], "y": [ 17, 23 ], "chance": 25, "repeat": [ 1, 2 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "mansion_boarded_t2d" ],
-    "object": {
-      "fill_ter": "t_thconc_floor",
-      "rows": [
-        "#.HHHiHH#.....Y#.PP.%..#",
-        ".&&&.i..[...........[...",
-        ".&&&....[...........%...",
-        "%%%%%%%%%......%%%%%%...",
-        "...............[.≠₸.%...",
-        ".............!!%...E%...",
-        "........#!!..!!#..El%...",
-        "#%%#%%[###%%%%###%%%#%%#",
-        ".nT%!!..#.!!...#!z!.%...",
-        "...[!...%.!!...%!!..%...",
-        "x..%!...%......%....[..c",
-        "WZ.%...!%q...!!%..z!%.!!",
-        ".J.#...!#q...!!#..!!#.!!",
-        "#####%[###%[%%###[%#####",
-        "   #....#......#...q#   ",
-        "   #...............q#   ",
-        "   #]]]....}........#   ",
-        "   #..].....Ł...=.=.#   ",
-        "   #..)]]...........#   ",
-        "   #....]........ggg#   ",
-        "   ##################   ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "standard_domestic_palette" ],
-      "terrain": {
-        " ": "t_soil",
-        ".": "t_thconc_floor",
-        "]": "t_sewage_pipe",
-        ")": "t_sewage_pump",
-        "[": "t_chaingate_c",
-        "%": "t_chainfence"
-      },
-      "furniture": {
-        "&": "f_table",
-        "=": "f_machinery_old",
-        "}": [
-          [ "f_generator_broken", 25 ],
-          [ "f_portable_generator", 20 ],
-          [ "f_diesel_generator", 5 ],
-          [ "f_12000_gasoline_generator", 5 ]
-        ],
-        "!": [ "f_crate_c", "f_cardboard_box" ]
-      },
-      "items": {
-        ".": { "item": "clutter_basement", "chance": 1 },
-        "!": { "item": "crate_stack", "chance": 100 },
-        "H": { "item": "mansion_ammo", "chance": 40 },
-        "x": { "item": "a_television", "chance": 100 },
-        "c": { "item": "suit_of_armor", "chance": 100 }
-      },
-      "vehicles": { "Ł": { "vehicle": "hand_truck", "chance": 75 } },
-      "place_monster": [ { "group": "GROUP_VANILLA_ONLY_HUMANS", "x": [ 0, 23 ], "y": [ 0, 23 ], "chance": 25, "repeat": [ 1, 2 ] } ]
     }
   },
   {

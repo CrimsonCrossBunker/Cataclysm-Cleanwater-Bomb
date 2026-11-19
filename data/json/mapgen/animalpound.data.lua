@@ -1,0 +1,60 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "animalpound_roof" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "  -----------           ",
+            "  -.........-           ",
+            "  -..:...&..-           ",
+            "  -.........----------- ",
+            " -5...................- ",
+            " ->...................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " ---------------------5 ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        terrain = { ["."] = "t_tar_flat_roof" },
+        fill_terrain = "t_tar_flat_roof",
+        nested = {
+            {
+                choices = { { id = "roof_2x2_golf", weight = 15 }, { id = "null", weight = 80 } },
+                x = 7,
+                y = 9,
+            },
+            {
+                choices = { { id = "roof_2x2_utilities", weight = 50 }, { id = "null", weight = 50 } },
+                x = 5,
+                y = 9,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 40 },
+                    { id = "roof_4x4_party", weight = 5 },
+                    { id = "roof_4x4_utility", weight = 45 },
+                    { id = "roof_5x5_coop", weight = 10 },
+                },
+                x = { 9, 12 },
+                y = { 9, 12 },
+            },
+        },
+        item_group_placements = { { group = "SUS_trash_roof", x = { 4, 6 }, y = 9, chance = 50, repetitions = { 1, 3 } } },
+    },
+}

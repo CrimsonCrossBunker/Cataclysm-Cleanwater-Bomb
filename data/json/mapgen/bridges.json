@@ -204,32 +204,5 @@
       "palettes": [ "bridge_road_palette" ],
       "place_nested": [ { "chunks": [ "24x24_bridgehead_ramp_trash" ], "x": 0, "y": 0 } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "24x24_bridge_road_trash",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rotation": [ 0, 3 ],
-      "place_items": [ { "item": "bridge", "x": [ 4, 19 ], "y": [ 0, 23 ], "chance": 10 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "24x24_bridgehead_ground_trash",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rotation": [ 0, 3 ],
-      "place_items": [ { "item": "bridge", "x": [ 4, 19 ], "y": [ 0, 12 ], "chance": 5 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "24x24_bridgehead_ramp_trash",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rotation": [ 0, 3 ],
-      "place_items": [ { "item": "bridge", "x": [ 4, 19 ], "y": [ 15, 23 ], "chance": 5 } ]
-    }
   }
 ]

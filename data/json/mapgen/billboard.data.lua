@@ -174,3 +174,51 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "billboard_wasp",
+    weight = 200,
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            " |||",
+            "|__|",
+            "|__|",
+            "||| ",
+        },
+        terrain = { ["|"] = "t_paper_hard", _ = "t_floor_paper_noroof" },
+        nested = { { id = "wasp_gibs", x = { 1, 2 }, y = { 1, 2 }, repetitions = { 1, 2 } } },
+        loot_placements = {
+            { group = "wasp_lair", x = { 1, 2 }, y = { 1, 2 }, repetitions = { 0, 2 } },
+            { group = "human_parts", x = { 1, 2 }, y = { 1, 2 } },
+        },
+        monster_placements = { { group = "GROUP_WASP_QUEEN", x = { 0, 3 }, y = { 0, 3 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "billboard_wasp",
+    weight = 100,
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            " ||||",
+            "|_|_|",
+            "||__|",
+            " ||||",
+            "     ",
+        },
+        terrain = { ["|"] = "t_paper_hard", _ = "t_floor_paper_noroof" },
+        nested = { { id = "wasp_gibs", x = { 1, 2 }, y = { 1, 2 }, repetitions = { 1, 2 } } },
+        loot_placements = {
+            { group = "wasp_lair", x = { 1, 2 }, y = { 1, 2 }, repetitions = { 0, 2 } },
+            { group = "human_parts", x = { 1, 2 }, y = { 1, 2 } },
+        },
+        monster_placements = {
+            { group = "GROUP_WASP_QUEEN", x = { 0, 3 }, y = { 0, 3 } },
+            { group = "GROUP_WASP_PUPA", x = { 2, 3 }, y = 2 },
+        },
+    },
+}

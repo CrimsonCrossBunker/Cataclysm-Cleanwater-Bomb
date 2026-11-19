@@ -80,41 +80,5 @@
       "toilets": { "T": {  } },
       "nested": { "§": { "chunks": [ "fire_extinguisher" ] } }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "cs_car_dealership_roof",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "   --------             ",
-        "   -......-----         ",
-        "   -..........-         ",
-        "   -....A.....-         ",
-        "   -..........-         ",
-        "   -..........-         ",
-        "   -...&......-         ",
-        "   -........=.-         ",
-        "   ----------5-         ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" },
-      "place_items": [ { "item": "SUS_trash_roof", "x": [ 4, 12 ], "y": [ 14, 19 ], "chance": 50, "repeat": [ 1, 3 ] } ]
-    }
   }
 ]

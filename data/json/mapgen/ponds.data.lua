@@ -69,3 +69,75 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "pond_field" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "       ??????????       ",
+            "    ????????????????    ",
+            "   ?????]]]]]]]]?????   ",
+            "   ???]]]]]]]]]]]]???   ",
+            "   ??]]]]******]]]]??   ",
+            "  ???]]**********]]???  ",
+            "  ??]]]**[[[[[[**]]]??  ",
+            "  ??]]**[[[[[[[[**]]??  ",
+            "  ??]]**[[~~~~[[**]]??  ",
+            "  ??]]**[[~~~~[[**]]??  ",
+            "  ??]]**[[~~~~[[**]]??  ",
+            "  ??]]**[[~~~~[[**]]??  ",
+            "  ??]]**[[[[[[[[**]]??  ",
+            "  ??]]]**[[[[[[**]]]??  ",
+            "  ???]]**********]]???  ",
+            "   ??]]]]******]]]]??   ",
+            "   ???]]]]]]]]]]]]???   ",
+            "   ?????]]]]]]]]?????   ",
+            "    ????????????????    ",
+            "       ??????????       ",
+            "                        ",
+            "                        ",
+        },
+        terrain = {
+            ["?"] = { { id = "t_pond_water_sh", copies = 2 }, { id = "t_region_groundcover", copies = 20 } },
+            ["]"] = {
+                { id = "t_pond_water_sh", copies = 6 },
+                { id = "t_region_soil" },
+                { id = "t_region_groundcover" },
+            },
+            ["*"] = "t_pond_water_sh",
+            ["["] = { { id = "t_pond_water_dp", copies = 2 }, { id = "t_pond_water_sh", copies = 3 } },
+            ["~"] = "t_pond_water_dp",
+        },
+        rotation = { 0, 3 },
+        predecessor_mapgen = "forest",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested_glyphs = {
+            ["]"] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+            ["*"] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+            ["["] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+            ["~"] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+        },
+        monster_group_placements = {
+            { group = "GROUP_SAFE", x = { 0, 23 }, y = { 0, 23 }, chance = 5 },
+            {
+                group = "GROUP_FISH",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 4,
+                repetitions = { 1, 2 },
+            },
+            { group = "GROUP_DOMESTIC", x = { 0, 23 }, y = { 0, 23 }, chance = 5 },
+        },
+    },
+}

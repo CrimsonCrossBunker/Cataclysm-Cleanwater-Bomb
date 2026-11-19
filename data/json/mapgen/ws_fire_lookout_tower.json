@@ -68,58 +68,5 @@
       "liquids": { "0": { "liquid": "water", "amount": [ 10, 900 ] } },
       "toilets": { "T": {  } }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "ws_fire_lookout_tower_f4" ],
-    "object": {
-      "fill_ter": "t_floor",
-      "rows": [
-        "........................",
-        "........................",
-        "........................",
-        "........................",
-        "........................",
-        "........................",
-        "........................",
-        "........................",
-        "........................",
-        "........................",
-        "........................",
-        "........................",
-        "............-----------.",
-        "............-         -.",
-        "............- #oo+oo# -.",
-        "............- oIR 66o -.",
-        "............- oIh  3o -.",
-        "............- oI O 2o>-.",
-        "............-God   1o -.",
-        "............- o@@∞ ko -.",
-        "............- #ooooo# -.",
-        "............-         -.",
-        "............-----------.",
-        "........................"
-      ],
-      "palettes": [ "standard_domestic_palette" ],
-      "terrain": { "#": "t_wall_wood", ".": "t_open_air", "-": "t_railing", ">": "t_wood_stairs_down" },
-      "place_monster": [ { "group": "GROUP_ZOMBIE", "x": [ 12, 22 ], "y": [ 13, 22 ], "repeat": [ 1, 2 ] } ],
-      "item": {
-        "∞": [
-          { "item": "binoculars", "chance": 80 },
-          { "item": "coffeemaker", "chance": 60 },
-          { "item": "char_purifier", "chance": 80 },
-          { "item": "two_way_radio", "chance": 50 },
-          { "item": "handflare", "chance": 33 },
-          { "item": "signal_flare", "chance": 50 },
-          { "item": "flaregun", "chance": 50 }
-        ]
-      },
-      "items": {
-        "∞": [
-          { "item": "camping", "chance": 66, "repeat": [ 1, 4 ] },
-          { "item": "gear_survival", "chance": 80, "repeat": [ 1, 6 ] }
-        ]
-      }
-    }
   }
 ]

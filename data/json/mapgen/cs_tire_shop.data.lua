@@ -1,0 +1,72 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "cs_tire_shop_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "    ------------------  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................-  ",
+            "    -................5  ",
+            "    -----####---------  ",
+            "         #v##           ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 40 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities_c", weight = 5 },
+                    { id = "roof_2x2_utilities_d", weight = 10 },
+                    { id = "roof_2x2_utilities", weight = 10 },
+                    { id = "roof_2x2_golf", weight = 5 },
+                },
+                x = { 7, 16 },
+                y = 17,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "roof_4x4_party", weight = 5 },
+                    { id = "roof_4x4_holdout", weight = 5 },
+                    { id = "roof_4x4_utility", weight = 10 },
+                    { id = "roof_4x4_utility_1", weight = 10 },
+                    { id = "roof_6x6_survivor", weight = 10 },
+                    { id = "roof_6x6_utility", weight = 10 },
+                },
+                x = { 6, 15 },
+                y = { 9, 12 },
+            },
+        },
+        item_group_placements = {
+            {
+                group = "SUS_trash_roof",
+                x = { 7, 15 },
+                y = { 7, 18 },
+                chance = 20,
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}

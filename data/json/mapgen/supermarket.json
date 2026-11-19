@@ -859,23 +859,5 @@
       "place_furniture": [ { "furn": "f_warehouse_shelf", "x": 0, "y": 0 } ],
       "place_items": [ { "item": "SUS_shelf_any", "x": 0, "y": 0 } ]
     }
-  },
-  {
-    "nested_mapgen_id": "pallet_supermarket_interior",
-    "type": "mapgen",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_item": [ { "item": "pallet", "x": 0, "y": 0 } ],
-      "place_items": [ { "item": "any_supermarket_SUS", "x": 0, "y": 0, "chance": 50 } ]
-    }
-  },
-  {
-    "nested_mapgen_id": "pallet_supermarket_exterior",
-    "type": "mapgen",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_item": [ { "item": "pallet", "x": 0, "y": 0 } ],
-      "place_items": [ { "item": "cardboards", "x": 0, "y": 0, "chance": 50 } ]
-    }
   }
 ]

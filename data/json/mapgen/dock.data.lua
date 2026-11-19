@@ -80,3 +80,43 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "lake_shore_dock_small" },
+    layout = {
+        rows = {
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "           dd           ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "dock_small" },
+        predecessor_mapgen = "lake_shore",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        vehicle_placements = {
+            { chance = 10, fuel = 15, id = "boat_motor_single", x = 8, y = 5, rotation = 270 },
+            { chance = 10, fuel = 15, id = "boat_motor_single", x = 13, y = 5, rotation = 270 },
+        },
+    },
+}

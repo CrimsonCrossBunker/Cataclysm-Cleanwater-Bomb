@@ -126,3 +126,61 @@ ccb.content.define_mapgen {
         fill_terrain = "t_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "police_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "------------------------",
+            "-......................-",
+            "-.................:.X..-",
+            "-......................-",
+            "-......................-",
+            "-......................-",
+            "-......................-",
+            "-......................-",
+            "-......................-",
+            "-......................-",
+            "-......................-",
+            "-....................&.-",
+            "-............=.........-",
+            "-5----------------------",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities_c", weight = 5 },
+                    { id = "roof_2x2_utilities_d", weight = 40 },
+                    { id = "roof_2x2_utilities", weight = 50 },
+                    { id = "roof_4x4_utility", weight = 30 },
+                },
+                x = { 3, 17 },
+                y = { 7, 10 },
+            },
+        },
+        item_group_placements = {
+            {
+                group = "SUS_trash_roof",
+                x = { 3, 17 },
+                y = { 7, 15 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}

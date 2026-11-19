@@ -1,0 +1,50 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "s_jewelry_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "    ----------------    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -...Z..........-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    5..............-----",
+            "    -..................-",
+            "    -..................-",
+            "    -.............U....-",
+            "    -..R...............-",
+            "    -..................-",
+            "    -..................-",
+            "    --------------------",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+        nested_glyphs = {
+            U = { id = "roof_2x2_infrastructure" },
+            R = { id = "roof_2x2_infrastructure_1" },
+            Z = { id = "roof_2x2_infrastructure_2" },
+        },
+        item_group_placements = {
+            {
+                group = "SUS_trash_roof",
+                x = { 5, 17 },
+                y = { 9, 23 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}

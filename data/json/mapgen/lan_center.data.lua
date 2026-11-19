@@ -39,3 +39,72 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lancenter_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            " ---------------------- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -....................- ",
+            " -.R..................- ",
+            " -....................- ",
+            " -----5...............- ",
+            "      -..Z........U...- ",
+            "      -...............- ",
+            "      ----------------- ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_2x2_utilities_d", weight = 40 },
+                    { id = "roof_2x2_utilities", weight = 50 },
+                },
+                x = { 7, 17 },
+                y = 17,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_4x4_utility", weight = 40 },
+                    { id = "roof_6x6_utility", weight = 20 },
+                },
+                x = { 3, 15 },
+                y = { 8, 10 },
+            },
+        },
+        nested_glyphs = {
+            U = { id = "roof_2x2_infrastructure" },
+            R = { id = "roof_2x2_infrastructure_1" },
+            Z = { id = "roof_2x2_infrastructure_2" },
+        },
+        item_group_placements = {
+            {
+                group = "SUS_trash_roof",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}

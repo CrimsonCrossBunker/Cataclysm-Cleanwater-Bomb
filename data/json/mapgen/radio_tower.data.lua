@@ -267,3 +267,50 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "radio_tower_reverberation_mp3" },
+    layout = {
+        rows = {
+            " |2222222|||||||||||||| ",
+            " |_______             | ",
+            " |_______             | ",
+            " |_______ R____R      | ",
+            " |_______ ______      | ",
+            " |_______ ______      | ",
+            " |_______ ______      | ",
+            " |_______ _<____      | ",
+            " |_______ R____R      | ",
+            " |_______   9  6      | ",
+            " |_______             | ",
+            " ||||||22|||||||||||||| ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "radio_tower_palette" },
+        terrain = { ["9"] = "t_region_groundcover" },
+        fill_terrain = "t_floor",
+        item_groups = { ["9"] = { { group = "corpse_painful" } } },
+        item_placements = { { id = "mp3_reverberation", x = { 11, 13 }, y = { 10, 11 }, amount = 1 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "radio_tower_2x2_map",
+    layout = {
+        size = { width = 2, height = 2 },
+        loot_placements = { { id = "binoculars", x = 1, y = 0 }, { id = "survivormap", x = 1, y = 0 } },
+    },
+}

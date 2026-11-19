@@ -35,3 +35,88 @@ ccb.content.define_mapgen {
         fill_terrain = "t_tar_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "cs_internet_cafe_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "  --------------------  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -........=.........-  ",
+            "  -.#######ggg##.....-  ",
+            "  -.#k,k#cPcccP#.....-  ",
+            "  -.#,,,#,,Y,,cg.....-  ",
+            "  -.#,,,#,,,,,y#.....-  ",
+            "  -.##D####D####.....-  ",
+            "  -.#L,,,,,,,CC#.....-  ",
+            "  -.#r,,,>,,,,Cg.....-  ",
+            "  -.#r,,,,,,,,r#.....-  ",
+            "  -.####g#Dg####.....-  ",
+            "  -....AA............-  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -.......&..........-  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -5------------------  ",
+            "                        ",
+        },
+        palettes = { "roof_palette", "parametrized_walls_palette" },
+        terrain = {
+            [","] = "t_thconc_floor",
+            D = "t_door_locked",
+            g = "t_wall_glass_alarm",
+            ["&"] = "t_flat_roof",
+            ["="] = "t_flat_roof",
+        },
+        furniture = {
+            P = "f_console_broken",
+            k = {
+                { id = "f_generator_broken", copies = 35 },
+                { id = "f_diesel_generator", copies = 5 },
+                { id = "f_12000_gasoline_generator", copies = 5 },
+            },
+        },
+        fill_terrain = "t_thconc_floor",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities_c", weight = 5 },
+                    { id = "roof_2x2_utilities_d", weight = 40 },
+                    { id = "roof_2x2_utilities", weight = 20 },
+                    { id = "roof_3x3_wine", weight = 10 },
+                },
+                x = { 3, 15 },
+                y = { 3, 4 },
+            },
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_4x4_party", weight = 15 },
+                    { id = "roof_6x6_survivor", weight = 5 },
+                    { id = "roof_4x4_utility", weight = 40 },
+                    { id = "roof_4x4_utility_1", weight = 30 },
+                },
+                x = 13,
+                y = 16,
+            },
+        },
+        loot_placements = {
+            { id = "television", x = 14, y = 9, chance = 100 },
+            { id = "stepladder", x = 5, y = 10, chance = 100 },
+        },
+        item_groups = {
+            c = { group = "electronics", chance = 40 },
+            r = { group = "ic_merch", chance = 70, repetitions = { 1, 2 } },
+            C = { group = "ic_merch_vending", chance = 70, repetitions = { 2, 4 } },
+            L = { group = "cleaning", chance = 60, repetitions = { 2, 4 } },
+        },
+    },
+}

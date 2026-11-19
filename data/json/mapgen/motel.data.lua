@@ -312,3 +312,417 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "9x9_motel_room_twin_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "'s|:QxBhn",
+            "''+      ",
+            "T'|:    L",
+            "''|@@ @@ ",
+            "88|@@d@@a",
+            "         ",
+            "         ",
+            "         ",
+            "         ",
+        },
+        palettes = { "motel_rooms_palette" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_placements = {
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 1, 7 },
+                y = { 1, 3 },
+                chance = 20,
+                repetitions = { 1, 4 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "9x9_motel_room_single_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "'s|::QxBL",
+            "''+      ",
+            "T'|H     ",
+            "''|H  @@ ",
+            "88|H d@@a",
+            "         ",
+            "         ",
+            "         ",
+            "         ",
+        },
+        palettes = { "motel_rooms_palette" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_placements = {
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 1, 7 },
+                y = { 1, 3 },
+                chance = 20,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "9x9_motel_room_single_1_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "'s|::QBxL",
+            "''+      ",
+            "T'|h    H",
+            "''|d  @@H",
+            "88|h a@@H",
+            "         ",
+            "         ",
+            "         ",
+            "         ",
+        },
+        palettes = { "motel_rooms_palette" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_placements = {
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 1, 7 },
+                y = { 1, 3 },
+                chance = 20,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "9x9_motel_room_twin_N",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "a L n    ",
+            "@@  h    ",
+            "@@  B    ",
+            "d   x    ",
+            "@@  :    ",
+            "@@  Q    ",
+            "|||+|    ",
+            "8'''s    ",
+            "8'T''    ",
+        },
+        palettes = { "motel_rooms_palette" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_placements = {
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 1, 3 },
+                y = { 1, 7 },
+                chance = 20,
+                repetitions = { 1, 4 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "9x9_motel_room_single_N",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "a   L    ",
+            "d   B    ",
+            "@@  x    ",
+            "@@  a    ",
+            "    :    ",
+            "QHH :    ",
+            "|||+|    ",
+            "8'''s    ",
+            "8'T''    ",
+        },
+        palettes = { "motel_rooms_palette" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_placements = {
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 1, 3 },
+                y = { 1, 7 },
+                chance = 20,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "9x9_motel_room_single_1_N",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "a L      ",
+            "@@  x    ",
+            "@@  B    ",
+            "Q        ",
+            "h   :    ",
+            "dh  :    ",
+            "|||+|    ",
+            "8'''s    ",
+            "8'T''    ",
+        },
+        palettes = { "motel_rooms_palette" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_placements = {
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 1, 3 },
+                y = { 1, 7 },
+                chance = 20,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+-- Used by both out of city specials
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = {
+        { "motel_1_no_sidewalk", "motel_entrance_no_sidewalk" },
+        { "motel_2_no_sidewalk", "motel_3_no_sidewalk" },
+    },
+    layout = {
+        rows = {
+            "``````````````````````````````````4```**********",
+            "`%%%%%%%%%%%%%%%%#######oooo###w####`***********",
+            "`%______________%#nnh...HHHHa#Ps#'sw************",
+            "`%_WWWWWWW_____d%#nnh........#I'+'T#************",
+            "`%_WWWWWWW_____t%#nnh......c/#p'####*****       ",
+            "`%_WWWWWWW_____d%ohh.......Ch+..nAY#****        ",
+            "`%_WWWWWWW0______G.........cB#.....#***         ",
+            "`%_WWWWWWW_______G.........cc##L####**          ",
+            "`%_WWWWWWW_____d%ohh........D#~~99~f*           ",
+            "`%_WWWWWWW_____t%#nnh.......a#~~~~~g*           ",
+            "`%_WWWWWWW_____d%#nnh...Y...F#~{{{~g*           ",
+            "`%______________%#######oGGo########*           ",
+            "`###########%__%%%%%%%%%%__%%%%%%%%%*        yy ",
+            "4#E........#_________________________       yy  ",
+            "`#.........+_________________________      yy   ",
+            "`#.........O__  y    y    y    y    y           ",
+            "`#.........O__  y    y    y    y    y           ",
+            "`#.........#__  y Á  y    y Á  y Á  y           ",
+            "`###########__  y    y    y    y    y           ",
+            "`#E........#__yyy    y    y    y    y           ",
+            "`#.........+__                                 %",
+            "`#.........O__                                 %",
+            "`#.........O__                                 %",
+            "`#.........#__                                 %",
+            "`###########__                                 %",
+            "`#E........#__                                 %",
+            "`#.........+__                                 %",
+            "`#.........O__                                 %",
+            "`#.........O__                                 %",
+            "`#.........#__yyy    y    y    y    y    y    y%",
+            "`###########__  y    y    y    y    y    y    y%",
+            "`#E........#__  y  É y    y  É y  É y  É y  É y%",
+            "`#.........+__  y    y    y    y    y    y    y%",
+            "`#.........O__  y    y    y    y    y    y    y%",
+            "`#.........O___________________________________%",
+            "`#.........#___________________________________%",
+            "`############OO+###OO+###OO+###OO+###OO+###OO+##",
+            "```````````#N....#N....#N....#N....#N....#N....#",
+            "```````````#.....#.....#.....#.....#.....#.....#",
+            "```````````#.....#.....#.....#.....#.....#.....#",
+            "```````````#.....#.....#.....#.....#.....#.....#",
+            "```````````#.....#.....#.....#.....#.....#.....#",
+            "```````````#.....#.....#.....#.....#.....#.....#",
+            "```````````#.....#.....#.....#.....#.....#.....#",
+            "```````````#.....#.....#.....#.....#.....#.....#",
+            "``````````4#.....#.....#.....#.....#.....#.....#",
+            "```````````#####################################",
+            "``````````````````````````````````````````````4`",
+        },
+        palettes = { "motel_2x2_palette" },
+        fill_terrain = "t_floor",
+        nested = {
+            { id = "sub_t_stairs_up", x = 46, y = 35, neighbors = { above = { "2fmotel_3_f2" } } },
+            { id = "sub_t_stairs_up", x = 12, y = 13, neighbors = { above = { "2fmotel_1_f2" } } },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_ZOMBIE_POOL",
+                x = { 2, 15 },
+                y = { 2, 11 },
+                chance = 60,
+                repetitions = { 0, 5 },
+            },
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 18, 23 },
+                y = { 2, 10 },
+                chance = 60,
+                repetitions = { 1, 2 },
+            },
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 24, 28 },
+                y = { 2, 10 },
+                chance = 60,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+-- Used by both the city buildings
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "motel_1", "motel_entrance" }, { "motel_2", "motel_3" } },
+    layout = {
+        rows = {
+            "*************************__*******4*%          %",
+            "*%%%%%%%%%%%%%%%%#######oGGo###w####%          %",
+            "*%______________%#nnh...Y....#Ps#'sw%          %",
+            "*%_WWWWWWW_____d%#nnh........#I'+'T#%          %",
+            "*%_WWWWWWW_____t%#nnh......c/#p'####%          %",
+            "*%_WWWWWWW_____d%ohh.......Ch+..nAY#%          %",
+            "*%_WWWWWWW0______G.........cB#.....#%          %",
+            "*%_WWWWWWW_______G.........cc##L####%          %",
+            "*%_WWWWWWW_____d%ohh........D#~~99~f_          %",
+            "*%_WWWWWWW_____t%#nnh.......a#~~~~~g_          %",
+            "*%_WWWWWWW_____d%#nnh...Y...F#~{{{~g_          %",
+            "*%______________%#######oGGo########_          %",
+            "*###########%__%%%%%%%%%%__%%%%%%%%%_          %",
+            "4#E........#_________________________          %",
+            "*#.........+_________________________          %",
+            "*#.........O__  y    y    y    y    y          %",
+            "*#.........O__  y    y    y    y    y          %",
+            "*#.........#__  y Á  y    y Á  y Á  y          %",
+            "*###########__  y    y    y    y    y          %",
+            "*#E........#__yyy    y    y    y    y          %",
+            "*#.........+__                                 %",
+            "*#.........O__                                 %",
+            "*#.........O__                                 %",
+            "*#.........#__                                 %",
+            "*###########__                                 %",
+            "*#E........#__                                 %",
+            "*#.........+__                                 %",
+            "*#.........O__                                 %",
+            "*#.........O__                                 %",
+            "*#.........#__yyy    y    y    y    y    y    y%",
+            "*###########__  y    y    y    y    y    y    y%",
+            "*#E........#__  y  É y    y  É y  É y  É y  É y%",
+            "*#.........+__  y    y    y    y    y    y    y%",
+            "*#.........O__  y    y    y    y    y    y    y%",
+            "*#.........O___________________________________%",
+            "*#.........#___________________________________%",
+            "*############OO+###OO+###OO+###OO+###OO+###OO+##",
+            "***********#N....#N....#N....#N....#N....#N....#",
+            "***********#.....#.....#.....#.....#.....#.....#",
+            "***********#.....#.....#.....#.....#.....#.....#",
+            "***********#.....#.....#.....#.....#.....#.....#",
+            "***********#.....#.....#.....#.....#.....#.....#",
+            "***********#.....#.....#.....#.....#.....#.....#",
+            "***********#.....#.....#.....#.....#.....#.....#",
+            "***********#.....#.....#.....#.....#.....#.....#",
+            "**********4#.....#.....#.....#.....#.....#.....#",
+            "***********#####################################",
+            "**********************************************4*",
+        },
+        palettes = { "motel_2x2_palette" },
+        fill_terrain = "t_floor",
+        nested = {
+            { id = "sub_t_stairs_up", x = 46, y = 35, neighbors = { above = { "2fmotel_3_f2" } } },
+            { id = "sub_t_stairs_up", x = 12, y = 13, neighbors = { above = { "2fmotel_1_f2" } } },
+            { id = "10x10_road_crossing", x = 37, y = 13, neighbors = { east = { "road" } } },
+            { id = "2x2_sidewalk_right", x = 46, y = 13, neighbors = { east = { "road" } } },
+            { id = "2x2_sidewalk_right", x = 46, y = 34, neighbors = { east = { "road" } } },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_ZOMBIE_POOL",
+                x = { 2, 15 },
+                y = { 2, 11 },
+                chance = 100,
+                repetitions = { 0, 3 },
+            },
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 18, 23 },
+                y = { 2, 10 },
+                chance = 60,
+                repetitions = { 1, 2 },
+            },
+            {
+                group = "GROUP_ZOMBIE",
+                x = { 24, 28 },
+                y = { 2, 10 },
+                chance = 60,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_motel_twd_1",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0, 3 },
+        monster_placements = {
+            { group = "GROUP_ZOMBIE", x = { 6, 23 }, y = { 3, 10 }, chance = 25 },
+            { group = "GROUP_ZOMBIE", x = 2, y = 4, chance = 40 },
+            { group = "GROUP_ZOMBIE", x = 2, y = 15, chance = 25 },
+            { group = "GROUP_ZOMBIE", x = 8, y = 20, chance = 25 },
+            { group = "GROUP_ZOMBIE", x = 15, y = 20, chance = 25 },
+            { group = "GROUP_ZOMBIE", x = 22, y = 20, chance = 25 },
+        },
+        item_group_placements = { { group = "maps", x = 3, y = 4, chance = 70 } },
+        vehicle_placements = {
+            { id = "parkinglotbasic", x = 10, y = 6, chance = 25, rotation = 180 },
+            { id = "rv", x = 13, y = 10, chance = 40, rotation = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_motel_twd_2",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0, 3 },
+        monster_placements = {
+            { group = "GROUP_ZOMBIE", x = { 0, 16 }, y = { 3, 10 }, chance = 25 },
+            { group = "GROUP_ZOMBIE", x = 20, y = 3, chance = 25 },
+            { group = "GROUP_ZOMBIE", x = 20, y = 10, chance = 25 },
+            { group = "GROUP_ZOMBIE", x = 5, y = 20, chance = 25 },
+        },
+        vehicle_placements = {
+            { id = "parkinglotbasic", x = 6, y = 6, chance = 25, rotation = 180 },
+            { id = "parkinglotbasic", x = 6, y = 11, chance = 25, rotation = 180 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_motel_twd_1_f1",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0, 3 },
+        monster_placements = {
+            { group = "GROUP_ZOMBIE", x = 2, y = 3, chance = 25 },
+            { group = "GROUP_ZOMBIE", x = 2, y = 15, chance = 25 },
+        },
+    },
+}

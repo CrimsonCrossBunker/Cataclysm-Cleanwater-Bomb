@@ -35,3 +35,59 @@ ccb.content.define_mapgen {
         fill_terrain = "t_tar_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "s_teashop_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            " ---------------------  ",
+            " -...................-  ",
+            " -...................-  ",
+            " -...................-  ",
+            " -...................-  ",
+            " -...................-  ",
+            " -...................-  ",
+            " -...................-  ",
+            " -...................-  ",
+            " -...................-  ",
+            " -..&................-  ",
+            " -...................-  ",
+            " ------............---  ",
+            "      -............5    ",
+            "      -......XA.=..-    ",
+            "      --------------    ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_4x4_utility", weight = 40 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities", weight = 50 },
+                },
+                x = { 7, 15 },
+                y = { 9, 12 },
+            },
+        },
+        item_group_placements = {
+            {
+                group = "SUS_trash_roof",
+                x = { 5, 20 },
+                y = { 7, 18 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}

@@ -397,3 +397,67 @@ ccb.content.define_mapgen {
         fill_terrain = "t_rock",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "LIXA_entry_1", "LIXA_entry_2" } },
+    layout = {
+        rows = {
+            "                   ......                       ",
+            "                   ......                       ",
+            "                   ......                       ",
+            "               ////....................         ",
+            "               /ll/....................         ",
+            "               /,,/....................         ",
+            "               /,,w....................         ",
+            "               /,hw....................         ",
+            "               /,,/....................         ",
+            "               /,,w....................         ",
+            "               /,hw....................         ",
+            "               /,,/....................         ",
+            "               /d//....................         ",
+            "               ........................         ",
+            "                   .........yy.........         ",
+            "                    .........yy.........        ",
+            "                     .........yy.........       ",
+            "                      .........yy.........      ",
+            "                       .........yy.........     ",
+            "                        .........yy.........    ",
+            "                         .........yy.........   ",
+            "                          .........yy.........  ",
+            "                          .........yy.........  ",
+            "                          .........yy.........  ",
+        },
+        palettes = { "LIXA_ground_palette" },
+        terrain = {
+            ["."] = "t_pavement",
+            y = "t_pavement_y",
+            [","] = "t_thconc_floor",
+            h = "t_thconc_floor",
+            l = "t_thconc_floor",
+            ["/"] = "t_lixa_wall",
+            w = "t_window_bars",
+            d = { { id = "t_door_metal_c" }, { id = "t_door_metal_o" } },
+        },
+        fill_terrain = "t_region_groundcover",
+        item_groups = {
+            l = {
+                { group = "army_personal_locker", chance = 50, repetitions = { 5, 10 } },
+                { group = "mil_base_coats", chance = 10 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "LIXA_goodbye_cards",
+    layout = {
+        item_placements = {
+            { id = "id_LIXA_najma", x = 9, y = 12 },
+            { id = "id_LIXA_jason", x = 9, y = 12 },
+            { id = "id_LIXA_kai_mei", x = 9, y = 12 },
+            { id = "id_LIXA_rich", x = 9, y = 12 },
+        },
+    },
+}

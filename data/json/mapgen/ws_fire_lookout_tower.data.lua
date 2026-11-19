@@ -190,3 +190,62 @@ ccb.content.define_mapgen {
         fill_terrain = "t_shingle_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "ws_fire_lookout_tower_f4" },
+    layout = {
+        rows = {
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "............-----------.",
+            "............-         -.",
+            "............- #oo+oo# -.",
+            "............- oIR 66o -.",
+            "............- oIh  3o -.",
+            "............- oI O 2o>-.",
+            "............-God   1o -.",
+            "............- o@@∞ ko -.",
+            "............- #ooooo# -.",
+            "............-         -.",
+            "............-----------.",
+            "........................",
+        },
+        palettes = { "standard_domestic_palette" },
+        terrain = {
+            ["#"] = "t_wall_wood",
+            ["."] = "t_open_air",
+            ["-"] = "t_railing",
+            [">"] = "t_wood_stairs_down",
+        },
+        fill_terrain = "t_floor",
+        monster_placements = { { group = "GROUP_ZOMBIE", x = { 12, 22 }, y = { 13, 22 }, repetitions = { 1, 2 } } },
+        item_spawns = {
+            ["∞"] = {
+                { id = "binoculars", chance = 80 },
+                { id = "coffeemaker", chance = 60 },
+                { id = "char_purifier", chance = 80 },
+                { id = "two_way_radio", chance = 50 },
+                { id = "handflare", chance = 33 },
+                { id = "signal_flare", chance = 50 },
+                { id = "flaregun", chance = 50 },
+            },
+        },
+        item_groups = {
+            ["∞"] = {
+                { group = "camping", chance = 66, repetitions = { 1, 4 } },
+                { group = "gear_survival", chance = 80, repetitions = { 1, 6 } },
+            },
+        },
+    },
+}

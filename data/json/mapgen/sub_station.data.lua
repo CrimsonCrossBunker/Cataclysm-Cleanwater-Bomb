@@ -34,3 +34,42 @@ ccb.content.define_mapgen {
         fill_terrain = "t_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "underground_sub_station" },
+    layout = {
+        rows = {
+            "0^^^X^^^X^^^^^^X^^^X^^^0",
+            "0^^-x---x-^^^^-x---x-^^0",
+            "0^^^X^^^X^IIII^X^^^X^^^0",
+            "R^^^X^^^X^<<<<^X^^^X^^^R",
+            "R^^-x---x-____-x---x-^^R",
+            "G^^^X^^^X^____^X^^^X^^^G",
+            "R^^^X^^^X^____^X^^^X^^^R",
+            "R^^-x---x-_MM_-x---x-^^R",
+            "R^^^X^^^X^_bb_^X^^^X^^^R",
+            "B^^^X^^^X^_bb_^X^^^X^^^B",
+            "B^^-x---x-_bb_-x---x-^^B",
+            "B^^^X^^^X^_MM_^X^^^X^^^B",
+            "B^^^X^^^X^____^X^^^X^^^B",
+            "B^^-x---x-____-x---x-^^B",
+            "B^^^X^^^X^_MM_^X^^^X^^^B",
+            "R^^^X^^^X^_bb_^X^^^X^^^R",
+            "R^^-x---x-_bb_-x---x-^^R",
+            "R^^^X^^^X^_bb_^X^^^X^^^R",
+            "G^^^X^^^X^_MM_^X^^^X^^^G",
+            "R^^-x---x-____-x---x-^^R",
+            "R^^^X^^^X^____^X^^^X^^^R",
+            "0^^^X^^^X^____^X^^^X^^^0",
+            "0^^-x---x-IIII-x---x-^^0",
+            "0^^^X^^^X^^^^^^X^^^X^^^0",
+        },
+        palettes = { "subway_underground" },
+        fill_terrain = "t_thconc_floor",
+        vehicle_placements = {
+            { id = "train_car_passenger", x = 6, y = { 8, 15 }, chance = 20, rotation = 90 },
+            { id = "train_car_passenger", x = 17, y = { 8, 15 }, chance = 20, rotation = 90 },
+        },
+    },
+}

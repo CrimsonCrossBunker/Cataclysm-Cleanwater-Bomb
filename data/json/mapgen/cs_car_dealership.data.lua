@@ -1,0 +1,46 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "cs_car_dealership_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "   --------             ",
+            "   -......-----         ",
+            "   -..........-         ",
+            "   -....A.....-         ",
+            "   -..........-         ",
+            "   -..........-         ",
+            "   -...&......-         ",
+            "   -........=.-         ",
+            "   ----------5-         ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        terrain = { ["."] = "t_tar_flat_roof" },
+        fill_terrain = "t_tar_flat_roof",
+        item_group_placements = {
+            {
+                group = "SUS_trash_roof",
+                x = { 4, 12 },
+                y = { 14, 19 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}

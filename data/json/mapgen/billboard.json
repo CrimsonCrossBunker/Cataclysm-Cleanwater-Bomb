@@ -30,48 +30,5 @@
       "place_loot": [ { "item": "binoculars", "x": 0, "y": 0 } ],
       "place_corpses": [ { "group": "GROUP_VANILLA", "x": 0, "y": 0 } ]
     }
-  },
-  {
-    "nested_mapgen_id": "billboard_wasp",
-    "type": "mapgen",
-    "weight": 200,
-    "object": {
-      "mapgensize": [ 4, 4 ],
-      "rows": [
-        " |||",
-        "|__|",
-        "|__|",
-        "||| "
-      ],
-      "terrain": { "|": "t_paper_hard", "_": "t_floor_paper_noroof" },
-      "place_loot": [
-        { "group": "wasp_lair", "x": [ 1, 2 ], "y": [ 1, 2 ], "repeat": [ 0, 2 ] },
-        { "group": "human_parts", "x": [ 1, 2 ], "y": [ 1, 2 ] }
-      ],
-      "place_monster": [ { "group": "GROUP_WASP_QUEEN", "x": [ 0, 3 ], "y": [ 0, 3 ] } ],
-      "place_nested": [ { "chunks": [ "wasp_gibs" ], "x": [ 1, 2 ], "y": [ 1, 2 ], "repeat": [ 1, 2 ] } ]
-    }
-  },
-  {
-    "nested_mapgen_id": "billboard_wasp",
-    "type": "mapgen",
-    "weight": 100,
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rows": [
-        " ||||",
-        "|_|_|",
-        "||__|",
-        " ||||",
-        "     "
-      ],
-      "terrain": { "|": "t_paper_hard", "_": "t_floor_paper_noroof" },
-      "place_loot": [
-        { "group": "wasp_lair", "x": [ 1, 2 ], "y": [ 1, 2 ], "repeat": [ 0, 2 ] },
-        { "group": "human_parts", "x": [ 1, 2 ], "y": [ 1, 2 ] }
-      ],
-      "place_monster": [ { "group": "GROUP_WASP_QUEEN", "x": [ 0, 3 ], "y": [ 0, 3 ] }, { "group": "GROUP_WASP_PUPA", "x": [ 2, 3 ], "y": 2 } ],
-      "place_nested": [ { "chunks": [ "wasp_gibs" ], "x": [ 1, 2 ], "y": [ 1, 2 ], "repeat": [ 1, 2 ] } ]
-    }
   }
 ]

@@ -126,53 +126,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ [ "LIXA_entry_1", "LIXA_entry_2" ] ],
-    "object": {
-      "fill_ter": "t_region_groundcover",
-      "rows": [
-        "                   ......                       ",
-        "                   ......                       ",
-        "                   ......                       ",
-        "               ////....................         ",
-        "               /ll/....................         ",
-        "               /,,/....................         ",
-        "               /,,w....................         ",
-        "               /,hw....................         ",
-        "               /,,/....................         ",
-        "               /,,w....................         ",
-        "               /,hw....................         ",
-        "               /,,/....................         ",
-        "               /d//....................         ",
-        "               ........................         ",
-        "                   .........yy.........         ",
-        "                    .........yy.........        ",
-        "                     .........yy.........       ",
-        "                      .........yy.........      ",
-        "                       .........yy.........     ",
-        "                        .........yy.........    ",
-        "                         .........yy.........   ",
-        "                          .........yy.........  ",
-        "                          .........yy.........  ",
-        "                          .........yy.........  "
-      ],
-      "palettes": [ "LIXA_ground_palette" ],
-      "terrain": {
-        ".": "t_pavement",
-        "y": "t_pavement_y",
-        ",": "t_thconc_floor",
-        "h": "t_thconc_floor",
-        "l": "t_thconc_floor",
-        "/": "t_lixa_wall",
-        "w": "t_window_bars",
-        "d": [ "t_door_metal_c", "t_door_metal_o" ]
-      },
-      "items": {
-        "l": [ { "item": "army_personal_locker", "chance": 50, "repeat": [ 5, 10 ] }, { "item": "mil_base_coats", "chance": 10 } ]
-      }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "LIXA_road_guard",
     "object": {
       "fill_ter": "t_region_groundcover",
@@ -1555,18 +1508,6 @@
         "2": [ "t_LIXA_unfolded_tube", "t_LIXA_unfolded_tube_broken" ],
         "3": [ "t_LIXA_unfolded_tube", "t_LIXA_unfolded_tube_broken" ]
       }
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "LIXA_goodbye_cards",
-    "object": {
-      "place_item": [
-        { "item": "id_LIXA_najma", "x": 9, "y": 12 },
-        { "item": "id_LIXA_jason", "x": 9, "y": 12 },
-        { "item": "id_LIXA_kai_mei", "x": 9, "y": 12 },
-        { "item": "id_LIXA_rich", "x": 9, "y": 12 }
-      ]
     }
   },
   {

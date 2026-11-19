@@ -359,63 +359,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "24x24_road_curved_layby",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "    gggggggg   _________",
-        "   ggbbgggg_____________",
-        "  gggttggg________Y_____",
-        " ggxgbbgg_______________",
-        "gggggggg_______.*.*.....",
-        "gbtbggg____*.....*......",
-        "gbtbgg____..*...*.......",
-        "ggggg____....*.*........",
-        "gggg____*.....*.........",
-        "g6g____..*...*..........",
-        "gg____....*.*...........",
-        "g____*.....*........*...",
-        " ____.*...*........*.*__",
-        " ____..*.*........*.*___",
-        " ____...*........*.*___Y",
-        "____...*........*.*_____",
-        "____*.*........*.*______",
-        "____.*........*.*_______",
-        "__Y_*........*.*________",
-        "____........*.*_________",
-        "____.......*.*___X______",
-        "____........*___________",
-        "____........____________",
-        "____........__Y_________"
-      ],
-      "palettes": [ "road_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "terrain": {
-        "t": "t_region_groundcover",
-        "b": "t_region_groundcover",
-        "x": "t_region_groundcover",
-        "X": "t_sidewalk",
-        "Y": "t_sidewalk"
-      },
-      "furniture": { "t": "f_table", "X": "f_trashcan" },
-      "items": {
-        "t": { "item": "fast_food", "chance": 33, "repeat": [ 0, 2 ] },
-        "x": { "item": "SUS_trash_floor", "chance": 50, "repeat": [ 0, 5 ] },
-        "X": { "item": "SUS_trash_trashcan_public", "chance": 50 }
-      },
-      "place_nested": [
-        { "chunks": [ [ "24x24_road_curved_layby_vehicles", 1 ], [ "null", 3 ] ], "x": 0, "y": 0 },
-        { "chunks": [ "24x24_road_trash" ], "x": 0, "y": 0 },
-        { "chunks": [ "24x24_road_trash" ], "x": 0, "y": 0 },
-        { "chunks": [ "24x24_road_trash" ], "x": 0, "y": 0 },
-        { "chunks": [ "24x24_road_trash" ], "x": 0, "y": 0 },
-        { "chunks": [ "24x24_road_trash" ], "x": 0, "y": 0 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "road_tee",
     "weight": { "global_val": "vanilla_road_weight", "default": 1000 },
     "object": {

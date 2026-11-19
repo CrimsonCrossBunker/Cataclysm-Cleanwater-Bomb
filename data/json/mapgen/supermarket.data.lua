@@ -93,3 +93,23 @@ ccb.content.define_mapgen {
         fill_terrain = "t_open_air",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "pallet_supermarket_interior",
+    layout = {
+        size = { width = 1, height = 1 },
+        item_placements = { { id = "pallet", x = 0, y = 0 } },
+        item_group_placements = { { group = "any_supermarket_SUS", x = 0, y = 0, chance = 50 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "pallet_supermarket_exterior",
+    layout = {
+        size = { width = 1, height = 1 },
+        item_placements = { { id = "pallet", x = 0, y = 0 } },
+        item_group_placements = { { group = "cardboards", x = 0, y = 0, chance = 50 } },
+    },
+}

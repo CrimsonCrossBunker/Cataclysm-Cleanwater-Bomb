@@ -100,3 +100,70 @@ ccb.content.define_mapgen {
         fill_terrain = "t_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "gambling_hall_roof_1",
+    layout = {
+        rows = {
+            "    -----               ",
+            "    -...-               ",
+            "    -...-               ",
+            "  ---...--------------- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -...................- ",
+            "  -------------....5--- ",
+            "              -....-    ",
+            "              -....-    ",
+            "              ------    ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities_c", weight = 15 },
+                    { id = "roof_2x2_utilities_d", weight = 30 },
+                    { id = "roof_2x2_utilities", weight = 30 },
+                },
+                x = { 3, 15 },
+                y = 5,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_4x4_utility", weight = 40 },
+                    { id = "roof_4x4_utility_1", weight = 30 },
+                    { id = "roof_6x6_utility", weight = 20 },
+                },
+                x = { 5, 15 },
+                y = { 11, 12 },
+            },
+        },
+        item_group_placements = {
+            {
+                group = "SUS_trash_roof",
+                x = { 4, 20 },
+                y = { 6, 17 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}

@@ -1,0 +1,43 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "publicgarden",
+    layout = {
+        rows = {
+            "________________________",
+            "_______________bb_______",
+            "__4_o######__######o_4__",
+            "____##o o o__o o o##____",
+            "__o##o     __     o##o__",
+            "__##o  ####__####  o##__",
+            "__#o  ##o o__o o##  o#__",
+            "_b#  ##o   __   o##  #__",
+            "_b#o #o  ##__##  o# o#__",
+            "__#  #  ##o__o##  #  #__",
+            "__#o #o #o____o# o# o#__",
+            "___________bb___________",
+            "___________bb___________",
+            "__#o #o #o____o# o# o#__",
+            "__#  #  ##o__o##  #  #__",
+            "__#o #o  ##__##  o# o#b_",
+            "__#  ##o   __   o##  #b_",
+            "__#o  ##o o__o o##  o#__",
+            "__##o  ####__####  o##__",
+            "__o##o     __     o##o__",
+            "____##o o o__o o o##____",
+            "__4_o######__######o_4__",
+            "_______bb_______________",
+            "________________________",
+        },
+        terrain = {
+            _ = "t_concrete",
+            b = "t_concrete",
+            ["4"] = "t_region_tree",
+            [" "] = "t_region_groundcover_urban",
+        },
+        furniture = { ["#"] = "f_hedge_short", b = "f_bench", o = "f_region_flower_decorative" },
+        fill_terrain = "t_region_groundcover_urban",
+        item_placements = { { id = "ref_lighter", chance = 10, x = 11, y = 11 } },
+    },
+}
