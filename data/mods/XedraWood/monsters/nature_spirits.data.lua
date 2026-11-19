@@ -1,0 +1,38 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_dryad",
+    name = ccb.content.plural_text("dryad", "dryads"),
+    description = ccb.content.text("You would have thought this was a tree until it suddenly moved.  It is human-shaped and human-sized, but with wood for skin and leaves for hair.  It regards you impassively."),
+    default_faction = "forest_spirit_faction",
+    species = { "FOREST_SPIRIT" },
+    symbol = "d",
+    color = "green",
+    body_type = "human",
+    volume = "62500 ml",
+    mass = "81500 g",
+    hp = 80,
+    speed = 105,
+    aggression = -10,
+    morale = 80,
+    aggressive_to_characters = false,
+    melee_skill = 4,
+    melee_dice = 2,
+    melee_sides = 5,
+    dodge = 3,
+    regenerates = 1,
+    armor = { bash = 15, cut = 5, stab = 30, bullet = 40, heat = -30 },
+    vision_day = 40,
+    vision_night = 5,
+    materials = { "veggy" },
+    attacks = { { id = "scratch", cooldown = 8 } },
+    anger_triggers = { "FRIEND_DIED", "FRIEND_ATTACKED", "HURT", "FIRE" },
+    flags = {
+        "SEES", "HEARS", "BASHES", "GROUP_BASH", "CAMOUFLAGE", "PATH_AVOID_DANGER", "NO_BREATHE",
+        "PATH_AVOID_FIRE", "FLAMMABLE",
+    },
+    death = {
+        drops = "dryad_death_drops",
+        outcome = { corpse = "NO_CORPSE", message = ccb.content.text("The %s collapses into splinters.") },
+    },
+}
