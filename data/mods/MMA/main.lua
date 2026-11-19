@@ -44,3 +44,5 @@ content.upsert_enchantment(content.Enchantment {
 require("item_group_changes")
 
 require("book_items")
+
+require("technique_predicates")
