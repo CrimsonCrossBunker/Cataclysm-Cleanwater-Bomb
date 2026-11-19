@@ -1,7 +1,31 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_DENY_VITAKINETIC_HEALING_NON_PERSUADE",
-    line = ccb.content.text("I don't think so.  I know there are zombies out there and the world is all fucked up, but I'd rather keep that fucked-up-ness as far away from me as possible.  No offense."),
-    replies = { { text = ccb.content.text("Alright, if you insist."), next_topic = "TALK_DONE" } },
+    id = "TALK_PERSUADE_VITAKINETIC_HEALING",
+    line = ccb.content.text("You're going to what?  How are you going to do that?"),
+    replies = {
+        {
+            text = ccb.content.text("You've seen what I can do, right?  Let me try.  (Note: By doing this you will absorb <npc_name>'s disease into yourself.)"),
+            trial = {
+                kind = "persuade",
+                difficulty = 0,
+                modifiers = {
+                    { score = "TRUST", scale = 6 },
+                    { score = "VALUE", scale = 2 },
+                    { score = "ANGER", scale = -6 },
+                },
+            },
+            success = { next_topic = "TALK_ACCEPT_VITAKINETIC_HEALING" },
+            failure = {
+                next_topic = "TALK_DENY_VITAKINETIC_HEALING_NON_PERSUADE",
+                actions = {
+                    actions.add_effect("interlocutor", "asked_to_vitakinetic_heal", { turns = 86400 }),
+                },
+            },
+        },
+        { text = ccb.content.text("Never mind then."), next_topic = "TALK_FRIEND" },
+        { text = ccb.content.text("Forget it, let's get going."), next_topic = "TALK_DONE" },
+    },
 }

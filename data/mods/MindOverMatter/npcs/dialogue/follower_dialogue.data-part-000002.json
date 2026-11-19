@@ -125,23 +125,5 @@
         "failure": { "topic": "TALK_PERSUADE_VITAKINETIC_HEALING" }
       }
     ]
-  },
-  {
-    "id": "TALK_PERSUADE_VITAKINETIC_HEALING",
-    "type": "talk_topic",
-    "dynamic_line": "You're going to what?  How are you going to do that?",
-    "responses": [
-      {
-        "text": "You've seen what I can do, right?  Let me try.  (Note: By doing this you will absorb <npc_name>'s disease into yourself.)",
-        "trial": { "type": "PERSUADE", "difficulty": 0, "mod": [ [ "TRUST", 6 ], [ "VALUE", 2 ], [ "ANGER", -6 ] ] },
-        "success": { "topic": "TALK_ACCEPT_VITAKINETIC_HEALING" },
-        "failure": {
-          "topic": "TALK_DENY_VITAKINETIC_HEALING_NON_PERSUADE",
-          "effect": { "npc_add_effect": "asked_to_vitakinetic_heal", "duration": 86400 }
-        }
-      },
-      { "text": "Never mind then.", "topic": "TALK_FRIEND" },
-      { "text": "Forget it, let's get going.", "topic": "TALK_DONE" }
-    ]
   }
 ]
