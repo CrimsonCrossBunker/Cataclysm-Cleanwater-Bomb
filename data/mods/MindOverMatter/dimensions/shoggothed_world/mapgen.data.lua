@@ -90,3 +90,20 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "mom_shoggothed_world_ravine_floor" },
+    layout = {
+        fill_terrain = "t_dirt_cracked",
+        monster_placements = {
+            {
+                id = "mon_shoggoth",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 100,
+                repetitions = { 350, 500 },
+            },
+        },
+    },
+}
