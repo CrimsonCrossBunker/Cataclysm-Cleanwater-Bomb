@@ -24,15 +24,5 @@
         }
       }
     ]
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "nest_RandEnc_lizardfolk_hunting_party_add",
-    "object": { "place_monster": [ { "group": "GROUP_LIZARDFOLK_RANDENC", "x": [ 0, 23 ], "y": [ 0, 23 ] } ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "nest_RandEnc_lizardfolk_hunting_party_remove",
-    "object": { "set": [ { "square": "creature_remove", "x": 0, "y": 0, "x2": 23, "y2": 23 } ], "flags": [ "NO_UNDERLYING_ROTATE" ] }
   }
 ]
