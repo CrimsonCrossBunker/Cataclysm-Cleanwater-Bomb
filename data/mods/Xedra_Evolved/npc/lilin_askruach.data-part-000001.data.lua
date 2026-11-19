@@ -1,32 +1,14 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_FRIEND_FOLLOWER_RUACH_DRAIN_NOPE",
-    line = ccb.content.text("Nope.  I'm not giving you any of mine.  Find someone else if you want some."),
+    id = { "TALK_FRIEND" },
+    insert_before_standard_exits = true,
     replies = {
         {
-            text = ccb.content.text("Got it.  Can we talk about something else?"),
-            next_topic = "TALK_FRIEND",
+            text = ccb.content.text("Can I take a little bit of your energy?  I really need some of it."),
+            next_topic = "TALK_FRIEND_FOLLOWER_RUACH_DRAIN_IMPOSSIBLE",
+            when = predicates.all({ predicates.has_trait("speaker", "LILIN_TRAITS"), predicates.any({ predicates.has_trait("interlocutor", "LILIN_TRAITS"), predicates.has_trait("interlocutor", "BLOOD_OF_SAINTS") }), predicates.negate(predicates.has_trait("speaker", "TURN_INTO_OWL_TRAITS")), predicates.negate(predicates.has_trait("speaker", "LILIN_WAR_OWL_FORM_TRAITS")) }),
         },
-        { text = ccb.content.text("Got it.  See you later."), next_topic = "TALK_DONE" },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_FRIEND_FOLLOWER_RUACH_DRAIN_IMPOSSIBLE",
-    line = ccb.content.text("(you sense that you won't be able to drain this person's ruach, so you decide to not ask your question)"),
-    replies = {
-        { text = ccb.content.text("(Ask them about something else)"), next_topic = "TALK_FRIEND" },
-        { text = ccb.content.text("(Go do something else)"), next_topic = "TALK_DONE" },
-    },
-}
-
--- separate dialogue to include a more explicit message about why the follower cannot be drained.
-ccb.content.define_dialogue_topic {
-    id = "TALK_FRIEND_FOLLOWER_RUACH_DRAIN_OWL_FORM",
-    line = ccb.content.text("(you sense that you won't be able to drain this person's ruach while you are maintaining your owl transformation, so you decide to not ask your question)"),
-    replies = {
-        { text = ccb.content.text("(Ask them about something else)"), next_topic = "TALK_FRIEND" },
-        { text = ccb.content.text("(Go do something else)"), next_topic = "TALK_DONE" },
     },
 }
