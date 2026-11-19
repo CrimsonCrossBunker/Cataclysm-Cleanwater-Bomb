@@ -7,7 +7,7 @@
     "root_class": "CcbPlatformV1"
   },
   "lua_luals": {
-    "class_count": 955,
+    "class_count": 956,
     "classes": [
       {
         "fields": [
@@ -11873,6 +11873,36 @@
       {
         "fields": [],
         "name": "CcbSpawnsApi"
+      },
+      {
+        "fields": [
+          {
+            "line": 15150,
+            "name": "flag_blacklist",
+            "type": "string"
+          },
+          {
+            "line": 15149,
+            "name": "flag_whitelist",
+            "type": "string"
+          },
+          {
+            "line": 15148,
+            "name": "mod",
+            "type": "GameId"
+          },
+          {
+            "line": 15147,
+            "name": "school",
+            "type": "GameId"
+          },
+          {
+            "line": 15146,
+            "name": "spell",
+            "type": "GameId"
+          }
+        ],
+        "name": "CcbSpellCastingAdjustmentOptions"
       },
       {
         "fields": [],
@@ -29050,7 +29080,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1654,
+    "function_count": 1656,
     "functions": [
       {
         "line": "4330",
@@ -34375,6 +34405,12 @@
         "parameters": "character, id_text"
       },
       {
+        "line": "15143",
+        "name": "practice",
+        "owner": "CcbProficienciesApi",
+        "parameters": "character, id, amount"
+      },
+      {
         "line": "13974",
         "name": "set_practiced_time",
         "owner": "CcbProficienciesApi",
@@ -34529,6 +34565,12 @@
         "name": "population",
         "owner": "CcbSpawnsApi",
         "parameters": "monster_type, position, options"
+      },
+      {
+        "line": "15158",
+        "name": "adjust_casting",
+        "owner": "CcbSpellsApi",
+        "parameters": "character, property, amount, options"
       },
       {
         "line": "10477",

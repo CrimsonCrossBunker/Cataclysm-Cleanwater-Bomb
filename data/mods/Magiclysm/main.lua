@@ -139,3 +139,5 @@ require("active_items")
 require("denarius")
 
 require("spell_traps")
+
+require("spell_proficiencies")

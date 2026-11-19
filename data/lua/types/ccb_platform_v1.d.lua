@@ -15134,3 +15134,25 @@ function CcbPlatformContent.bind_monster_death(monster_id, handler_id) end
 ---Add a spell or replace a definition from the same or an earlier source in Mod load order.
 ---@param definition SpellDefinition
 function CcbPlatformContent.upsert_spell(definition) end
+
+---Practice a proficiency with native prerequisites, focus and learning rules.
+---@param character GameHandle Exact live Character.
+---@param id GameId GameId<proficiency>.
+---@param amount TimeDuration Positive practice duration.
+---@return CcbResult
+function CcbProficienciesApi.practice(character, id, amount) end
+
+---@class CcbSpellCastingAdjustmentOptions
+---@field spell? GameId Match a single GameId<spell>.
+---@field school? GameId Match a GameId<mutation> spell class.
+---@field mod? GameId Match a GameId<mod>.
+---@field flag_whitelist? string Restrict matches to spells with this flag.
+---@field flag_blacklist? string Exclude matches with this flag.
+
+---Add a temporary adjustment to matching known spells.
+---@param character GameHandle Exact live Character.
+---@param property 'caster_level'|'casting_time'|'damage'|'cost'|'aoe'|'range'|'duration'|'difficulty'|'somatic_difficulty'|'sound'|'concentration'
+---@param amount number Finite native adjustment.
+---@param options? CcbSpellCastingAdjustmentOptions
+---@return CcbResult
+function CcbSpellsApi.adjust_casting(character, property, amount, options) end
