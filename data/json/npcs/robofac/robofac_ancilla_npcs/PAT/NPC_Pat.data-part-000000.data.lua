@@ -1,11 +1,14 @@
 local ccb = require("ccb")
 
-ccb.content.define_npc_class {
-    id = "NPC_ROBOFAC_MERC_PAT",
-    name = ccb.content.text("Hub Mercenary"),
-    traits = { { trait = "RETURN_TO_START_POS" } },
-    job_description = ccb.content.text("Fighting for the all-mighty dollar."),
-    common = false,
-    worn = "NPC_ROBOFAC_MERC_PAT_worn",
-    carry = "NPC_ROBOFAC_MERC_PAT_carry",
+-- Appears on the Hub service.
+ccb.content.define_npc {
+    id = "chief_meteorologist_pat",
+    unique_name = ccb.content.text("Pat"),
+    suffix = ccb.content.text("Hub Mercenary"),
+    class = "NPC_ROBOFAC_MERC_PAT",
+    attitude = 0,
+    mission = "GUARD",
+    chat = "TALK_ROBOFAC_MERC_PAT",
+    faction = "robofac_auxiliaries",
+    on_death = "record_hub_pat_death",
 }

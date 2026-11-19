@@ -154,12 +154,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_event_NPC_DEATH_test",
-    "eoc_type": "NPC_DEATH",
-    "effect": [ "u_prevent_death" ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_event_character_dies_test",
     "eoc_type": "EVENT",
     "required_event": "character_dies",

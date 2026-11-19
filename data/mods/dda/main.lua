@@ -8,6 +8,7 @@ require("imperial_road")
 
 require("highland_relics")
 require("npc_shop_rules")
+require("npc_death")
 
 local ccb = require("ccb")
 
