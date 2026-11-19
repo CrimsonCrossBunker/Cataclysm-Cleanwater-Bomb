@@ -1,0 +1,24 @@
+[
+  {
+    "id": "mon_zombie_hazmat",
+    "type": "MONSTER",
+    "name": { "str": "hazmat zombie" },
+    "description": "This zombie is completely encased in a protective suit that apparently failed to protect it from whatever this infection is.  At least it can't bite you from inside that suit.",
+    "copy-from": "mon_zombie",
+    "color": "white_green",
+    "melee_skill": 3,
+    "weakpoints": [
+      {
+        "name": "a tear in its hazmat suit",
+        "armor_mult": { "all": 0.5 },
+        "coverage": 5,
+        "difficulty": { "ranged": 3, "melee": 1 },
+        "coverage_mult": { "broad": 0.65 }
+      }
+    ],
+    "death_drops": "mon_zombie_hazmat_death_drops",
+    "armor": { "bash": 5, "cut": 4, "bullet": 3, "electric": 5 },
+    "extend": { "weakpoint_sets": [ "wps_humanoid_gasmask" ], "families": [ "prof_wp_syn_armored" ], "flags": [ "ACIDPROOF" ] },
+    "delete": { "special_attacks": [ "bite_humanoid", "scratch_humanoid" ] }
+  }
+]
