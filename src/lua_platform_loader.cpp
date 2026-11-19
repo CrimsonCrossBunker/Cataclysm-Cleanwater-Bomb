@@ -179,11 +179,9 @@ void set_optional_field( const sol::table &values, const char *key, T &field, bo
     was_set = true;
 }
 
-std::vector<std::string> bounded_string_array( const sol::table &values,
-        const std::string_view field, const std::size_t maximum_entries = 256,
-        const std::string_view context = "ModDefinition" )
+std::size_t checked_dense_array_size( const sol::table &values, const std::string &label,
+                                     std::size_t maximum_entries )
 {
-    const std::string label = std::string( context ) + " " + std::string( field );
     const std::size_t count = values.size();
     if( count > maximum_entries ) {
         throw std::runtime_error( label + " exceed " + std::to_string( maximum_entries ) + " entries" );
@@ -203,6 +201,15 @@ std::vector<std::string> bounded_string_array( const sol::table &values,
     if( observed != count ) {
         throw std::runtime_error( label + " must be a dense array" );
     }
+    return count;
+}
+
+std::vector<std::string> bounded_string_array( const sol::table &values,
+        const std::string_view field, const std::size_t maximum_entries = 256,
+        const std::string_view context = "ModDefinition" )
+{
+    const std::string label = std::string( context ) + " " + std::string( field );
+    const std::size_t count = checked_dense_array_size( values, label, maximum_entries );
     std::vector<std::string> result;
     result.reserve( count );
     for( std::size_t index = 1; index <= count; ++index ) {
@@ -685,6 +692,82 @@ void write_placement_member( JsonOut &json, const sol::table &options, const cha
     }
 }
 
+void write_mapgen_value( JsonOut &json, const sol::object &value );
+
+template<typename Weight, bool AllowExpression = true>
+void write_mapgen_weighted_choices( JsonOut &json, const char *field, const sol::table &choices )
+{
+    const auto write_choice = [&]( const sol::object &id ) {
+        if constexpr( AllowExpression ) {
+            write_mapgen_value( json, id );
+        } else {
+            json.write( id.as<std::string>() );
+        }
+    };
+    json.member( field );
+    json.start_array();
+    const std::size_t count = choices.size();
+    for( std::size_t i = 1; i <= count; ++i ) {
+        const sol::object value = choices.raw_get<sol::object>( i );
+        if( value.get_type() == sol::type::table ) {
+            const sol::table choice = value.as<sol::table>();
+            const sol::object id = choice.raw_get<sol::object>( "id" );
+            if( id.get_type() != sol::type::nil ) {
+                json.start_array();
+                write_choice( id );
+                json.write( choice.get<Weight>( "weight" ) );
+                json.end_array();
+                continue;
+            }
+        }
+        write_choice( value );
+    }
+    json.end_array();
+}
+
+void write_mapgen_value( JsonOut &json, const sol::object &value )
+{
+    if( value.get_type() == sol::type::string ) {
+        json.write( value.as<std::string>() );
+        return;
+    }
+    const sol::table definition = value.as<sol::table>();
+    const auto parameter = definition.get<sol::optional<std::string>>( "parameter" );
+    const auto weighted = definition.get<sol::optional<sol::table>>( "weighted" );
+    const sol::object select = definition.raw_get<sol::object>( "select" );
+    const bool has_select = select.get_type() == sol::type::table;
+    if( parameter.has_value() + weighted.has_value() + has_select != 1 ) {
+        throw std::invalid_argument( "mapgen value requires one of parameter, weighted or select" );
+    }
+    json.start_object();
+    if( parameter ) {
+        json.member( "param", *parameter );
+        write_placement_member<std::string>( json, definition, "fallback", "fallback" );
+    } else if( weighted ) {
+        if( weighted->size() == 0 ) {
+            throw std::invalid_argument( "mapgen value requires at least one weighted choice" );
+        }
+        write_mapgen_weighted_choices<int, false>( json, "distribution", *weighted );
+    } else {
+        json.member( "switch" );
+        write_mapgen_value( json, select );
+        json.member( "cases" );
+        json.start_object();
+        const sol::table cases = definition.get<sol::table>( "cases" );
+        for( const auto &[key, result] : cases ) {
+            json.member( key.as<std::string>(), result.as<std::string>() );
+        }
+        json.end_object();
+    }
+    json.end_object();
+}
+
+void write_mapgen_value_member( JsonOut &json, std::string_view field, const sol::object &value )
+{
+    json.member( field );
+    write_mapgen_value( json, value );
+}
+
 void write_mapgen_integer_choices( JsonOut &json, const sol::table &options, const char *field )
 {
     const sol::object value = options.raw_get<sol::object>( field );
@@ -707,7 +790,7 @@ void write_mapgen_integer_choices( JsonOut &json, const sol::table &options, con
 
 void write_placement_item( JsonOut &json, const sol::table &options )
 {
-    json.member( "item", options.get<std::string>( "id" ) );
+    write_mapgen_value_member( json, "item", options.raw_get<sol::object>( "id" ) );
     write_mapgen_range( json, "chance", options.raw_get<sol::object>( "chance" ) );
     write_mapgen_range( json, "amount", options.raw_get<sol::object>( "amount" ) );
     write_placement_member<std::string>( json, options, "variant", "variant" );
@@ -769,7 +852,7 @@ void write_placement_loot( JsonOut &json, const sol::table &options )
 
 void write_placement_monster_group( JsonOut &json, const sol::table &options )
 {
-    json.member( "monster", options.get<std::string>( "group" ) );
+    write_mapgen_value_member( json, "monster", options.raw_get<sol::object>( "group" ) );
     write_mapgen_range( json, "chance", options.raw_get<sol::object>( "chance" ) );
     write_placement_member<double>( json, options, "density", "density" );
 }
@@ -792,40 +875,21 @@ void write_static_singular_text( JsonOut &json, const char *field, const sol::ob
     }
 }
 
-template<typename Weight>
-void write_mapgen_weighted_choices( JsonOut &json, const char *field, const sol::table &choices )
-{
-    json.member( field );
-    json.start_array();
-    const std::size_t count = choices.size();
-    for( std::size_t i = 1; i <= count; ++i ) {
-        const sol::object value = choices.raw_get<sol::object>( i );
-        if( value.get_type() == sol::type::string ) {
-            json.write( value.as<std::string>() );
-        } else {
-            const sol::table choice = value.as<sol::table>();
-            json.start_array();
-            json.write( choice.get<std::string>( "id" ) );
-            json.write( choice.get<Weight>( "weight" ) );
-            json.end_array();
-        }
-    }
-    json.end_array();
-}
-
 void write_placement_monster( JsonOut &json, const sol::table &options )
 {
-    const auto id = options.get<sol::optional<std::string>>( "id" );
-    const auto group = options.get<sol::optional<std::string>>( "group" );
+    const sol::object id = options.raw_get<sol::object>( "id" );
+    const sol::object group = options.raw_get<sol::object>( "group" );
+    const bool has_id = id.get_type() != sol::type::nil;
+    const bool has_group = group.get_type() != sol::type::nil;
     const auto choices = options.get<sol::optional<sol::table>>( "choices" );
-    const int sources = id.has_value() + group.has_value() + choices.has_value();
+    const int sources = has_id + has_group + choices.has_value();
     if( sources != 1 ) {
         throw std::invalid_argument( "mapgen monster placement requires one of id, group or choices" );
     }
-    if( id ) {
-        json.member( "monster", *id );
-    } else if( group ) {
-        json.member( "group", *group );
+    if( has_id ) {
+        write_mapgen_value_member( json, "monster", id );
+    } else if( has_group ) {
+        write_mapgen_value_member( json, "group", group );
     } else {
         write_mapgen_weighted_choices<int>( json, "monster", *choices );
     }
@@ -1184,23 +1248,28 @@ void write_mapgen_glyph_alternatives( JsonOut &json, std::string_view member,
                                       const sol::object &value )
 {
     if( value.get_type() == sol::type::string ) {
-        json.member( member, value.as<std::string>() );
+        write_mapgen_value_member( json, member, value );
         return;
     }
     const sol::table choices = value.as<sol::table>();
+    const std::size_t count = choices.size();
+    if( count == 0 && choices.begin() != choices.end() ) {
+        write_mapgen_value_member( json, member, value );
+        return;
+    }
     json.member( member );
     json.start_array();
-    const std::size_t count = choices.size();
     for( std::size_t i = 1; i <= count; ++i ) {
         const sol::table choice = choices.raw_get<sol::table>( i );
-        const std::string id = choice.get<std::string>( "id" );
-        if( const auto copies = choice.get<sol::optional<int>>( "copies" ) ) {
+        const sol::object id = choice.raw_get<sol::object>( "id" );
+        const auto copies = choice.get<sol::optional<int>>( "copies" );
+        if( copies || id.get_type() != sol::type::string ) {
             json.start_array();
-            json.write( id );
-            json.write( *copies );
+            write_mapgen_value( json, id );
+            json.write( copies.value_or( 1 ) );
             json.end_array();
         } else {
-            json.write( id );
+            write_mapgen_value( json, id );
         }
     }
     json.end_array();
@@ -1314,13 +1383,17 @@ void write_mapgen_terrain_matchers( JsonOut &json, const sol::table &matches )
 void write_mapgen_nested_placement( JsonOut &json, const sol::table &placement )
 {
     json.start_object();
-    const auto id = placement.get<sol::optional<std::string>>( "id" );
+    const sol::object id = placement.raw_get<sol::object>( "id" );
+    const bool has_id = id.get_type() != sol::type::nil;
     const auto choices = placement.get<sol::optional<sol::table>>( "choices" );
-    if( id && choices ) {
+    if( has_id && choices ) {
         throw std::invalid_argument( "nested placement can take an id or a choice list" );
     }
-    if( id ) {
-        json.member( "chunks", std::array<std::string, 1>{ *id } );
+    if( has_id ) {
+        json.member( "chunks" );
+        json.start_array();
+        write_mapgen_value( json, id );
+        json.end_array();
     } else if( choices ) {
         write_mapgen_weighted_choices<double>( json, "chunks", *choices );
     }
@@ -1382,13 +1455,50 @@ void write_mapgen_nested_placement( JsonOut &json, const sol::table &placement )
     json.end_object();
 }
 
+void write_mapgen_parameters( JsonOut &json, const sol::table &parameters )
+{
+    static constexpr std::pair<std::string_view, std::string_view> value_types[] = {
+        { "palette", "palette_id" }, { "terrain", "ter_str_id" }, { "string", "string" },
+        { "nested_mapgen", "nested_mapgen_id" }, { "monster_group", "mongroup_id" }, { "boolean", "bool" },
+    };
+    static constexpr std::pair<std::string_view, std::string_view> scopes[] = {
+        { "overmap_special", "overmap_special" }, { "map_stack", "omt_stack" },
+        { "map_tile", "omt" }, { "nested", "nest" },
+    };
+    const auto native_name = []( const auto & entries, const std::string & name ) {
+        const auto entry = std::find_if( std::begin( entries ), std::end( entries ),
+        [&]( const auto &candidate ) {
+            return candidate.first == name;
+        } );
+        if( entry == std::end( entries ) ) {
+            throw std::invalid_argument( "unknown mapgen parameter type or scope: " + name );
+        }
+        return entry->second;
+    };
+    json.member( "parameters" );
+    json.start_object();
+    for( const auto &[name, value] : parameters ) {
+        const sol::table parameter = value.as<sol::table>();
+        json.member( name.as<std::string>() );
+        json.start_object();
+        json.member( "type", native_name( value_types, parameter.get<std::string>( "value_type" ) ) );
+        if( const auto scope = parameter.get<sol::optional<std::string>>( "scope" ) ) {
+            json.member( "scope", native_name( scopes, *scope ) );
+        }
+        write_mapgen_value_member( json, "default", parameter.raw_get<sol::object>( "default" ) );
+        json.end_object();
+    }
+    json.end_object();
+}
+
 void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
                                  std::size_t max_rows )
 {
     json.member( "object" );
     json.start_object();
-    if( const auto fill = layout.get<sol::optional<std::string>>( "fill_terrain" ) ) {
-        json.member( "fill_ter", *fill );
+    const sol::object fill = layout.raw_get<sol::object>( "fill_terrain" );
+    if( fill.get_type() != sol::type::nil ) {
+        write_mapgen_value_member( json, "fill_ter", fill );
     }
     if( const auto rows = layout.get<sol::optional<sol::table>>( "rows" ) ) {
         json.member( "rows", bounded_string_array( *rows, "rows", max_rows, "mapgen layout" ) );
@@ -1414,9 +1524,18 @@ void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
             json.member( field, *predecessor );
         }
     }
+    if( const auto parameters = layout.get<sol::optional<sol::table>>( "parameters" ) ) {
+        write_mapgen_parameters( json, *parameters );
+    }
     if( const auto palettes = layout.get<sol::optional<sol::table>>( "palettes" ) ) {
-        json.member( "palettes", bounded_string_array( *palettes, "palettes",
-                     std::numeric_limits<std::size_t>::max(), "mapgen layout" ) );
+        const std::size_t count = checked_dense_array_size( *palettes, "mapgen layout palettes",
+                                  std::numeric_limits<std::size_t>::max() );
+        json.member( "palettes" );
+        json.start_array();
+        for( std::size_t i = 1; i <= count; ++i ) {
+            write_mapgen_value( json, palettes->raw_get<sol::object>( i ) );
+        }
+        json.end_array();
     }
     for( const char *field : { "terrain", "furniture", "traps" } ) {
         if( const auto glyphs = layout.get<sol::optional<sol::table>>( field ) ) {
