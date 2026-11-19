@@ -1,20 +1,19 @@
 local ccb = require("ccb")
 
 ccb.content.define_technique {
-    id = "tec_kickboxing_roundhouse",
-    name = ccb.content.text("Roundhouse Kick"),
-    messages = {
-        ccb.content.text("You roundhouse kick %s"),
-        ccb.content.text("<npcname> roundhouse kicks %s"),
-    },
+    id = "tec_capoeira_sweepkick",
+    name = ccb.content.text("Sweep Kick"),
+    messages = { ccb.content.text("You sweep kick %s"), ccb.content.text("<npcname> sweep kicks %s") },
     skills = { { id = "unarmed", level = 2 } },
     unarmed_allowed = true,
-    melee_allowed = true,
-    crit_ok = true,
+    required_buffs_all = { "buff_capoeira_onmove" },
+    weighting = 2,
+    down_dur = 1,
     mult_bonuses = {
-        { stat = "damage", damage_type = "bash", scale = 1.4 },
-        { stat = "damage", damage_type = "cut", scale = 1.4 },
-        { stat = "damage", damage_type = "stab", scale = 1.4 },
+        { stat = "movecost", scale = 0.75 },
+        { stat = "damage", damage_type = "bash", scale = 1.2 },
+        { stat = "damage", damage_type = "cut", scale = 1.2 },
+        { stat = "damage", damage_type = "stab", scale = 1.2 },
     },
     attack_vectors = {
         "vector_foot_toes",
@@ -22,44 +21,27 @@ ccb.content.define_technique {
         "vector_hoof_kick",
         "vector_digitigrade_paws",
     },
+    when = "allow_tec_brawl_trip",
+    condition_description = ccb.content.text("* Only works on a <info>non-downed humanoid</info> target of <info>similar</info> size"),
 }
 
 ccb.content.define_technique {
-    id = "tec_krav_maga_rapid",
-    messages = { ccb.content.text("You jab at %s"), ccb.content.text("<npcname> jabs at %s") },
-    name = ccb.content.text("Jab"),
-    skills = { { id = "melee", level = 1 } },
-    melee_allowed = true,
+    id = "tec_capoeira_spinkick",
+    name = ccb.content.text("Spin Kick"),
+    messages = { ccb.content.text("You spin kick %s"), ccb.content.text("<npcname> spin kicks %s") },
+    skills = { { id = "unarmed", level = 5 } },
     unarmed_allowed = true,
+    required_buffs_all = { "buff_capoeira_onmove" },
+    weighting = 2,
+    crit_tec = true,
+    stun_dur = 1,
     mult_bonuses = {
-        { stat = "movecost", scale = 0.5 },
-        { stat = "damage", damage_type = "bash", scale = 0.66 },
-        { stat = "damage", damage_type = "cut", scale = 0.66 },
-        { stat = "damage", damage_type = "stab", scale = 0.66 },
+        { stat = "movecost", scale = 0.75 },
+        { stat = "damage", damage_type = "bash", scale = 1.4 },
+        { stat = "damage", damage_type = "cut", scale = 1.4 },
+        { stat = "damage", damage_type = "stab", scale = 1.4 },
     },
-    attack_vectors = { "vector_null", "vector_punch" },
-}
-
-ccb.content.define_technique {
-    id = "tec_krav_maga_disarm_simple",
-    messages = {
-        ccb.content.text("You quickly slap and disarm %s"),
-        ccb.content.text("<npcname> quickly slaps and disarms %s"),
-    },
-    name = ccb.content.text("Disarming Slap"),
-    skills = { { id = "unarmed", level = 2 } },
-    melee_allowed = true,
-    unarmed_allowed = true,
-    mult_bonuses = { { stat = "movecost", scale = 0.9 } },
-    disarms = true,
-    effects = {
-        {
-            id = "disarmed",
-            chance = 100,
-            duration_turns = 400,
-            on_damage = true,
-            message = ccb.content.text("The weapon of %s has been forced out of their hands!"),
-        },
-    },
-    attack_vectors = { "vector_null", "vector_grasp" },
+    attack_vectors = { "vector_foot_sole" },
+    when = "allow_tec_capoeira_spinkick",
+    condition_description = ccb.content.text("* Only works on a <info>non-stunned</info> target of <info>similar or smaller</info> size"),
 }

@@ -1,25 +1,29 @@
 local ccb = require("ccb")
 
+-- Similar size, no wrapping tiny or very nonstandard targets
 ccb.content.define_technique {
-    id = "tec_aikido_break",
-    name = ccb.content.text("Grab Break"),
-    messages = {
-        ccb.content.text("You were almost grabbed by %s, but you smoothly break free"),
-        ccb.content.text("<npcname> was almost grabbed by %s, but they smoothly break free"),
-    },
-    skills = { { id = "unarmed", level = 3 } },
-    unarmed_allowed = true,
+    id = "WRAP",
+    name = ccb.content.text("Wrap Attack"),
     melee_allowed = true,
-    defensive = true,
-    grab_break = true,
+    skills = { { id = "melee", level = 4 } },
+    stun_dur = 2,
+    messages = { ccb.content.text("You wrap up %s"), ccb.content.text("<npcname> wraps up %s") },
+    description = ccb.content.text("Stun 2 turns, min 4 melee"),
+    attack_vectors = { "vector_null" },
+    when = "allow_wrap",
+    condition_description = ccb.content.text("* Only works on a target of <info>similar size</info> with limbs to catch"),
 }
 
+-- Humanoids of similar size
 ccb.content.define_technique {
-    id = "tec_bojutsu_thrust",
-    name = ccb.content.text("Front Thrust"),
-    messages = { ccb.content.text("You thrust at %s"), ccb.content.text("<npcname> thrusts at %s") },
-    skills = { { id = "melee", level = 1 } },
+    id = "SWEEP",
+    name = ccb.content.text("Sweep Attack"),
     melee_allowed = true,
-    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 1.2 } },
+    skills = { { id = "melee", level = 3 } },
+    down_dur = 2,
+    messages = { ccb.content.text("You sweep %s"), ccb.content.text("<npcname> sweeps %s") },
+    description = ccb.content.text("Down 2 turns, min 3 melee"),
     attack_vectors = { "vector_null" },
+    when = "allow_sweep",
+    condition_description = ccb.content.text("* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size"),
 }

@@ -1,53 +1,49 @@
 local ccb = require("ccb")
 
 ccb.content.define_technique {
-    id = "tec_taekwondo_roundhouse",
-    name = ccb.content.text("Roundhouse Kick"),
+    id = "tec_fencing_riposte",
+    name = ccb.content.text("Fencing Riposte"),
     messages = {
-        ccb.content.text("You roundhouse kick %s"),
-        ccb.content.text("<npcname> roundhouse kicks %s"),
+        ccb.content.text("You deliver a perfect riposte to %s"),
+        ccb.content.text("<npcname> delivers a perfect riposte to %s"),
     },
+    skills = { { id = "melee", level = 5 } },
     melee_allowed = true,
-    unarmed_allowed = true,
+    required_buffs_all = { "buff_fencing_onblock" },
+    crit_ok = true,
+    weighting = 2,
+    stun_dur = 1,
     mult_bonuses = {
+        { stat = "movecost", scale = 0.66 },
         { stat = "damage", damage_type = "bash", scale = 1.2 },
         { stat = "damage", damage_type = "cut", scale = 1.2 },
         { stat = "damage", damage_type = "stab", scale = 1.2 },
     },
-    attack_vectors = {
-        "vector_foot_toes",
-        "vector_avian_talons",
-        "vector_hoof_kick",
-        "vector_digitigrade_paws",
-    },
+    attack_vectors = { "vector_null" },
+    when = "allow_tec_crane_strike",
+    condition_description = ccb.content.text("* Only works on a <info>non-stunned mundane</info> target of <info>similar or smaller</info> size"),
 }
 
 ccb.content.define_technique {
-    id = "tec_taekwondo_feint",
-    name = ccb.content.text("Feint"),
-    messages = { ccb.content.text("You fake a kick at %s"), ccb.content.text("<npcname> fakes a kick at %s") },
-    skills = { { id = "unarmed", level = 3 } },
+    id = "tec_medievalpole_counter",
+    name = ccb.content.text("Displace and Hook"),
+    messages = {
+        ccb.content.text("You parry and hook %s down"),
+        ccb.content.text("<npcname> parries and hooks %s down"),
+    },
+    skills = { { id = "melee", level = 4 } },
     melee_allowed = true,
-    unarmed_allowed = true,
-    defensive = true,
-    miss_recovery = true,
-}
-
-ccb.content.define_technique {
-    id = "tec_taichi_disarm",
-    name = ccb.content.text("Disarm"),
-    messages = { ccb.content.text("You gently disarm %s"), ccb.content.text("<npcname> gently disarms %s") },
-    skills = { { id = "unarmed", level = 3 } },
-    unarmed_allowed = true,
-    disarms = true,
-    effects = {
-        {
-            id = "disarmed",
-            chance = 100,
-            duration_turns = 400,
-            on_damage = true,
-            message = ccb.content.text("The weapon of %s has been forced out of their hands!"),
-        },
+    required_buffs_all = { "buff_medievalpole_onblock" },
+    crit_ok = true,
+    weighting = 2,
+    down_dur = 2,
+    mult_bonuses = {
+        { stat = "movecost", scale = 0.5 },
+        { stat = "damage", damage_type = "bash", scale = 0.5 },
+        { stat = "damage", damage_type = "cut", scale = 0.5 },
+        { stat = "damage", damage_type = "stab", scale = 0.5 },
     },
-    attack_vectors = { "vector_grasp" },
+    attack_vectors = { "vector_null" },
+    when = "allow_sweep",
+    condition_description = ccb.content.text("* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size"),
 }

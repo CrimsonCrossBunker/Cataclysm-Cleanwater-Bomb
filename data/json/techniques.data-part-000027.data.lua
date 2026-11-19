@@ -1,47 +1,34 @@
 local ccb = require("ccb")
 
 ccb.content.define_technique {
-    id = "tec_snake_swift",
-    name = ccb.content.text("Snake Snap"),
-    messages = { ccb.content.text("You swiftly jab %s"), ccb.content.text("<npcname> swiftly jabs %s") },
-    unarmed_allowed = true,
-    crit_ok = true,
-    flat_bonuses = {
-        { stat = "arpen", damage_type = "bash", scaling_stat = "per", scale = 0.5 },
-        { stat = "arpen", damage_type = "cut", scaling_stat = "per", scale = 0.5 },
-        { stat = "arpen", damage_type = "stab", scaling_stat = "per", scale = 0.5 },
+    id = "tec_eskrima_stun",
+    name = ccb.content.text("Stunning Strike"),
+    messages = {
+        ccb.content.text("You deliver a stunning strike to %s"),
+        ccb.content.text("<npcname> delivers a stunning strike to %s"),
     },
+    skills = { { id = "melee", level = 3 } },
+    melee_allowed = true,
+    crit_tec = true,
+    stun_dur = 1,
     mult_bonuses = { { stat = "movecost", scale = 0.8 } },
-    attack_vectors = {
-        "vector_punch",
-        "vector_slime_punch",
-        "vector_paw_rat_punch",
-        "vector_little_paw_punch",
-    },
+    attack_vectors = { "vector_null" },
+    when = "allow_tec_crane_strike",
+    condition_description = ccb.content.text("* Only works on a <info>non-stunned mundane</info> target of <info>similar or smaller</info> size"),
 }
 
 ccb.content.define_technique {
-    id = "tec_snake_feint",
-    name = ccb.content.text("Snake Slide"),
+    id = "tec_eskrima_low",
+    name = ccb.content.text("Low Strike"),
     messages = {
-        ccb.content.text("You make serpentine hand motions at %s"),
-        ccb.content.text("<npcname> makes serpentine hand motions at %s"),
+        ccb.content.text("Your weapon becomes a blur as you ground %s"),
+        ccb.content.text("<npcname>'s weapon becomes a blur as they ground %s"),
     },
-    skills = { { id = "unarmed", level = 4 } },
-    unarmed_allowed = true,
-    defensive = true,
-    miss_recovery = true,
-}
-
-ccb.content.define_technique {
-    id = "tec_snake_break",
-    name = ccb.content.text("Snake Slither"),
-    messages = {
-        ccb.content.text("You were almost grabbed by %s, but you slither free"),
-        ccb.content.text("<npcname> was almost grabbed by %s, but they slither free"),
-    },
-    skills = { { id = "unarmed", level = 4 } },
-    unarmed_allowed = true,
-    defensive = true,
-    grab_break = true,
+    skills = { { id = "melee", level = 4 } },
+    melee_allowed = true,
+    crit_tec = true,
+    down_dur = 1,
+    attack_vectors = { "vector_null" },
+    when = "allow_sweep",
+    condition_description = ccb.content.text("* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size"),
 }

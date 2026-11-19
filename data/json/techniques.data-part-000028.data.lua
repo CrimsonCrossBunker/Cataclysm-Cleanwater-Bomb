@@ -1,28 +1,12 @@
 local ccb = require("ccb")
 
 ccb.content.define_technique {
-    id = "tec_sojutsu_jab",
-    name = ccb.content.text("Jab"),
-    messages = { ccb.content.text("You quickly strike %s"), ccb.content.text("<npcname> quickly strikes %s") },
-    skills = { { id = "melee", level = 2 } },
-    melee_allowed = true,
-    reach_tec = true,
-    mult_bonuses = {
-        { stat = "movecost", scale = 0.5 },
-        { stat = "damage", damage_type = "bash", scale = 0.66 },
-        { stat = "damage", damage_type = "cut", scale = 0.66 },
-        { stat = "damage", damage_type = "stab", scale = 0.66 },
-    },
-    attack_vectors = { "vector_null" },
-}
-
-ccb.content.define_technique {
-    id = "tec_sojutsu_feint",
-    name = ccb.content.text("Feint"),
+    id = "tec_fencing_feint",
     messages = {
-        ccb.content.text("You fake a thrust at %s"),
-        ccb.content.text("<npcname> fakes a thrust at %s"),
+        ccb.content.text("You steady your weapon and fake a thrust at %s"),
+        ccb.content.text("<npcname> steadies their weapon and fakes a thrust at %s"),
     },
+    name = ccb.content.text("Feint"),
     skills = { { id = "melee", level = 4 } },
     melee_allowed = true,
     defensive = true,
@@ -30,16 +14,52 @@ ccb.content.define_technique {
 }
 
 ccb.content.define_technique {
-    id = "tec_taekwondo_disarm",
-    name = ccb.content.text("Snatch Weapon"),
+    id = "tec_fencing_lunge",
+    name = ccb.content.text("Fencing Lunge"),
+    messages = { ccb.content.text("You lunge at %s"), ccb.content.text("<npcname> lunges at %s") },
+    skills = { { id = "melee", level = 2 } },
+    melee_allowed = true,
+    crit_ok = true,
+    mult_bonuses = { { stat = "movecost", scale = 0.8 } },
+    attack_vectors = { "vector_null" },
+}
+
+ccb.content.define_technique {
+    id = "tec_fencing_compound1",
+    name = ccb.content.text("Compound Attack (Remise)"),
     messages = {
-        ccb.content.text("You snatch %s's weapon"),
-        ccb.content.text("<npcname> snatches %s's weapon"),
+        ccb.content.text("Your feint leads to a compound attack against %s"),
+        ccb.content.text("<npcname>'s feint leads to a compound attack against %s"),
     },
-    skills = { { id = "unarmed", level = 4 } },
-    unarmed_allowed = true,
-    weighting = 2,
-    take_weapon = true,
-    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 0.5 } },
-    attack_vectors = { "vector_grasp" },
+    skills = { { id = "melee", level = 3 } },
+    melee_allowed = true,
+    required_buffs_all = { "buff_fencing_onmiss" },
+    weighting = 4,
+    crit_ok = true,
+    mult_bonuses = {
+        { stat = "damage", damage_type = "bash", scale = 1.25 },
+        { stat = "damage", damage_type = "cut", scale = 1.25 },
+        { stat = "damage", damage_type = "stab", scale = 1.25 },
+    },
+    attack_vectors = { "vector_null" },
+}
+
+ccb.content.define_technique {
+    id = "tec_fencing_compound2",
+    name = ccb.content.text("Compound Attack (Counter Time)"),
+    messages = {
+        ccb.content.text("Your feint leads to a compound attack against %s"),
+        ccb.content.text("<npcname>'s feint leads to a compound attack against %s"),
+    },
+    skills = { { id = "melee", level = 4 } },
+    melee_allowed = true,
+    required_buffs_all = { "buff_fencing_onpause" },
+    weighting = 4,
+    crit_ok = true,
+    mult_bonuses = {
+        { stat = "damage", damage_type = "bash", scale = 1.25 },
+        { stat = "damage", damage_type = "cut", scale = 1.25 },
+        { stat = "damage", damage_type = "stab", scale = 1.25 },
+    },
+    attack_vectors = { "vector_null" },
 }

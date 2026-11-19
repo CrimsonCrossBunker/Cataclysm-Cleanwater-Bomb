@@ -1,47 +1,15 @@
 local ccb = require("ccb")
 
 ccb.content.define_technique {
-    id = "tec_tiger_wide",
-    name = ccb.content.text("Tiger Rampage"),
+    id = "tec_judo_break",
+    name = ccb.content.text("Grab Break"),
     messages = {
-        ccb.content.text("You slash wildly at %s and those nearby"),
-        ccb.content.text("<npcname> slashes wildly at %s and those nearby"),
+        ccb.content.text("You were almost grabbed by %s, but you break their feeble grapple"),
+        ccb.content.text("<npcname> was almost grabbed by %s, but they break its feeble grapple"),
     },
-    skills = { { id = "unarmed", level = 5 } },
+    skills = { { id = "unarmed", level = 1 } },
     unarmed_allowed = true,
-    crit_tec = true,
-    weighting = 3,
-    aoe = "wide",
-    mult_bonuses = {
-        { stat = "damage", damage_type = "bash", scale = 1.25 },
-        { stat = "damage", damage_type = "cut", scale = 1.25 },
-        { stat = "damage", damage_type = "stab", scale = 1.25 },
-    },
-    attack_vectors = {
-        "vector_punch",
-        "vector_slime_punch",
-        "vector_paw_rat_punch",
-        "vector_little_paw_punch",
-    },
-}
-
-ccb.content.define_technique {
-    id = "tec_wingchun_punch",
-    name = ccb.content.text("Straight Punch"),
-    messages = {
-        ccb.content.text("You deliver a straight vertical punch to %s"),
-        ccb.content.text("<npcname> delivers a straight vertical punch to %s"),
-    },
-    unarmed_allowed = true,
-    mult_bonuses = {
-        { stat = "damage", damage_type = "bash", scale = 1.1 },
-        { stat = "damage", damage_type = "cut", scale = 1.1 },
-        { stat = "damage", damage_type = "stab", scale = 1.1 },
-    },
-    attack_vectors = {
-        "vector_punch",
-        "vector_slime_punch",
-        "vector_paw_rat_punch",
-        "vector_little_paw_punch",
-    },
+    melee_allowed = true,
+    defensive = true,
+    grab_break = true,
 }

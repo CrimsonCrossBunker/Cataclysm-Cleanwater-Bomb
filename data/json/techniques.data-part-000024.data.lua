@@ -1,18 +1,18 @@
 local ccb = require("ccb")
 
 ccb.content.define_technique {
-    id = "niten_water_cut",
-    name = ccb.content.text("Flowing Water Cut"),
+    id = "tec_dragon_claw",
+    name = ccb.content.text("Dragon Claw"),
+    unarmed_allowed = true,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 1.2 } },
     messages = {
-        ccb.content.text("You strike %s with the slow power of flowing water"),
-        ccb.content.text("<npcname> strikes %s with the slow power of flowing water"),
+        ccb.content.text("You lash out at %s with a Dragon Claw"),
+        ccb.content.text("<npcname> lashes out at %s with a Dragon Claw"),
     },
-    skills = { { id = "melee", level = 4 } },
-    melee_allowed = true,
-    mult_bonuses = {
-        { stat = "movecost", scale = 1.75 },
-        { stat = "damage", damage_type = "bash", scale = 2.0 },
-        { stat = "damage", damage_type = "cut", scale = 2.0 },
+    attack_vectors = {
+        "vector_punch",
+        "vector_slime_punch",
+        "vector_paw_rat_punch",
+        "vector_little_paw_punch",
     },
-    attack_vectors = { "vector_null" },
 }
