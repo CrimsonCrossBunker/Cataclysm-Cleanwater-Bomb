@@ -707,3 +707,60 @@ ccb.content.define_mapgen {
         palettes = { "trail_palette" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_forest_trail_straight_sett",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "        432101234       ",
+            "        432101234       ",
+            "         432101234      ",
+            "        S432101234      ",
+            "      ****432101234     ",
+            "     *m***432101234     ",
+            "    **ad*S*432101234    ",
+            "   ********432101234    ",
+            "  ********S432101234    ",
+            "  *********432101234    ",
+            "  *****ad**S432101234   ",
+            "  **A****m**432101234   ",
+            "  **********432101234   ",
+            "  ***adm****432101234   ",
+            "   ******S*432101234    ",
+            "   *****d**432101234    ",
+            "   *****am*432101234    ",
+            "     ****S*432101234    ",
+            "      *****432101234    ",
+            "           432101234    ",
+            "          432101234     ",
+            "         432101234      ",
+            "         432101234      ",
+            "        432101234       ",
+        },
+        flags = {
+            "ERASE_FURNITURE_BEFORE_PLACING_TERRAIN",
+            "ERASE_TRAP_BEFORE_PLACING_TERRAIN",
+            "ALLOW_TERRAIN_UNDER_ITEMS",
+        },
+        parameters = {
+            den_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        { id = "trail_small_den_empty_palette", weight = 20 },
+                        { id = "trail_small_den_groundhog_palette", weight = 500 },
+                        { id = "trail_small_den_hare_palette", weight = 5 },
+                        { id = "trail_large_den_empty_palette", weight = 10 },
+                        { id = "trail_large_den_fox_gray_palette", weight = 2 },
+                        { id = "trail_large_den_fox_red_palette", weight = 2 },
+                        { id = "trail_large_den_bear_palette", weight = 200 },
+                    },
+                },
+                scope = "nested",
+            },
+        },
+        palettes = { "trail_palette", { parameter = "den_palette" } },
+    },
+}

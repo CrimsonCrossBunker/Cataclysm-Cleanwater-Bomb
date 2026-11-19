@@ -57,3 +57,50 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- Fabric Outlet
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "s_fabricstore" },
+    layout = {
+        rows = {
+            "------------------------",
+            "------------------------",
+            "------------------------",
+            "..p--####:::++:::#......",
+            "..p--#JJ|§       #......",
+            "..p--#  |        #......",
+            "..p--#+||        #......",
+            "..p--# [Q  ccc  C#......",
+            "..p--#  Q       C#......",
+            "..p--#  Q  CCC  C#......",
+            "..p--#  c        #......",
+            "..p--#  c        #......",
+            "..p--#+|||i|ccccc#......",
+            "..p--# [[[ |   s%#......",
+            "..p--#  s  |    §#......",
+            "..p--;   s |+||||#......",
+            ".....0  [[   +___#......",
+            "....z#|+||i|||_St#......",
+            "....z#d |    #####......",
+            "....z#ds|LlLl#4zzz......",
+            "....z##0######z.........",
+            "........................",
+            "........................",
+            "........................",
+        },
+        nested_glyphs = { ["§"] = { id = "fire_extinguisher" } },
+        loot_placements = { { group = "cash_register_random", x = 7, y = 7 } },
+        fill_terrain = "t_floor",
+        palettes = {
+            "parametrized_linoleum_palette",
+            "standard_building_general_and_variant_palette",
+            "fabric_store_pallete",
+        },
+        terrain = {
+            t = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            S = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            _ = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+        },
+    },
+}

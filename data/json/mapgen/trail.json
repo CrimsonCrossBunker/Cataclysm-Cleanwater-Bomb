@@ -21,58 +21,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "24x24_forest_trail_straight_sett",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "        432101234       ",
-        "        432101234       ",
-        "         432101234      ",
-        "        S432101234      ",
-        "      ****432101234     ",
-        "     *m***432101234     ",
-        "    **ad*S*432101234    ",
-        "   ********432101234    ",
-        "  ********S432101234    ",
-        "  *********432101234    ",
-        "  *****ad**S432101234   ",
-        "  **A****m**432101234   ",
-        "  **********432101234   ",
-        "  ***adm****432101234   ",
-        "   ******S*432101234    ",
-        "   *****d**432101234    ",
-        "   *****am*432101234    ",
-        "     ****S*432101234    ",
-        "      *****432101234    ",
-        "           432101234    ",
-        "          432101234     ",
-        "         432101234      ",
-        "         432101234      ",
-        "        432101234       "
-      ],
-      "parameters": {
-        "den_palette": {
-          "type": "palette_id",
-          "scope": "nest",
-          "default": {
-            "distribution": [
-              [ "trail_small_den_empty_palette", 20 ],
-              [ "trail_small_den_groundhog_palette", 500 ],
-              [ "trail_small_den_hare_palette", 5 ],
-              [ "trail_large_den_empty_palette", 10 ],
-              [ "trail_large_den_fox_gray_palette", 2 ],
-              [ "trail_large_den_fox_red_palette", 2 ],
-              [ "trail_large_den_bear_palette", 200 ]
-            ]
-          }
-        }
-      },
-      "palettes": [ "trail_palette", { "param": "den_palette" } ],
-      "flags": [ "ERASE_FURNITURE_BEFORE_PLACING_TERRAIN", "ERASE_TRAP_BEFORE_PLACING_TERRAIN", "ALLOW_TERRAIN_UNDER_ITEMS" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "forest_trail_tee",
     "weight": { "global_val": "vanilla_trail_intersection_weight", "default": 1000 },
     "object": {

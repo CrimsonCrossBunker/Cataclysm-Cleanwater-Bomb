@@ -150,42 +150,5 @@
       "-": { "chunks": [ [ "1x1_2z_bash", 1 ], [ "null", 4 ] ] },
       "5": { "chunks": [ [ "1x1_2z_bash", 1 ], [ "null", 4 ] ] }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "derelict_property",
-    "object": {
-      "fallback_predecessor_mapgen": "forest",
-      "palettes": [ "derelict_variant_parameter_palette" ],
-      "place_nested": [ { "chunks": [ { "param": "variant", "fallback": "derelict_property_1" } ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "derelict_property_roof",
-    "object": {
-      "fill_ter": "t_open_air",
-      "palettes": [ "derelict_variant_parameter_palette" ],
-      "place_nested": [
-        {
-          "chunks": [
-            {
-              "switch": { "param": "variant", "fallback": "derelict_property_1" },
-              "cases": {
-                "derelict_property_1": "derelict_property_1_roof",
-                "derelict_property_2": "derelict_property_2_roof",
-                "derelict_property_3": "derelict_property_3_roof",
-                "derelict_property_4": "derelict_property_4_roof",
-                "derelict_property_5": "derelict_property_5_roof",
-                "derelict_property_6": "derelict_property_6_roof",
-                "derelict_property_7": "derelict_property_7_roof"
-              }
-            }
-          ],
-          "x": 0,
-          "y": 0
-        }
-      ]
-    }
   }
 ]

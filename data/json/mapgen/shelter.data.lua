@@ -540,3 +540,239 @@ ccb.content.define_mapgen {
         zone_placements = { { id = "ZONE_START_POINT", faction = "your_followers", x = { 7, 17 }, y = { 12, 14 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "shelter",
+    layout = {
+        nested = { { x = 0, y = 0, id = { parameter = "shelter_layout", fallback = "24x24_shelter" } } },
+        fill_terrain = "t_region_groundcover_urban",
+        palettes = { "shelter" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "shelter_under",
+    layout = {
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "shelter_layout", fallback = "24x24_shelter" },
+                    cases = {
+                        ["24x24_shelter"] = "24x24_shelter_under",
+                        ["24x24_shelter_1"] = "24x24_shelter_1_under",
+                        ["24x24_shelter_2"] = "24x24_shelter_2_under",
+                    },
+                },
+            },
+        },
+        fill_terrain = "t_soil",
+        palettes = { "shelter" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "shelter_roof",
+    layout = {
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "shelter_layout", fallback = "24x24_shelter" },
+                    cases = {
+                        ["24x24_shelter"] = "24x24_shelter_roof",
+                        ["24x24_shelter_1"] = "24x24_shelter_1_roof",
+                        ["24x24_shelter_2"] = "24x24_shelter_2_roof",
+                    },
+                },
+            },
+        },
+        fill_terrain = "t_open_air",
+        palettes = { "shelter" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_shelter_roof",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "    ----------------    ",
+            "    -..............-    ",
+            "    -.........2....-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -.Я............-    ",
+            "    -...........&..-    ",
+            "    -v.............-    ",
+            "    ---------------5    ",
+        },
+        item_group_placements = {
+            {
+                group = "SUS_trash_roof",
+                x = { 5, 17 },
+                y = { 9, 22 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+        vehicle_placements = { { id = "aircanoe", x = 12, y = 15, chance = 15, rotation = 0, fuel = 0, status = -1 } },
+        palettes = { "parametrized_roof_palette" },
+        terrain = { ["2"] = { parameter = "roof_type", fallback = "t_flat_roof" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_shelter_1_roof",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "       ----------       ",
+            "       -........-       ",
+            "    ----........-       ",
+            "    -...........----    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -..............-    ",
+            "    -........Я.....-    ",
+            "    -.........v....-    ",
+            "    -..............-    ",
+            "    -.......&......-    ",
+            "    -..........2...-    ",
+            "    -..............-    ",
+            "    -..............5    ",
+            "    ----------------    ",
+        },
+        item_group_placements = {
+            {
+                group = "SUS_trash_roof",
+                x = { 5, 17 },
+                y = { 11, 22 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+        vehicle_placements = { { id = "aircanoe", x = 12, y = 16, chance = 15, rotation = 0, fuel = 0, status = -1 } },
+        palettes = { "parametrized_roof_palette" },
+        terrain = { ["2"] = { parameter = "roof_type", fallback = "t_flat_roof" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_shelter_2_roof",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "           ----------   ",
+            "   ---------........-   ",
+            "   -v...............-   ",
+            "   -................-   ",
+            "  --.....2..........--  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -..............Я...-  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -.....&............-  ",
+            "  -..................-  ",
+            "  --................--  ",
+            "   -................5   ",
+            "   ----------.......-   ",
+            "            ---------   ",
+        },
+        item_group_placements = {
+            {
+                group = "SUS_trash_roof",
+                x = { 8, 15 },
+                y = { 7, 22 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+        vehicle_placements = { { id = "aircanoe", x = 12, y = 15, chance = 15, rotation = 0, fuel = 0, status = -1 } },
+        palettes = { "parametrized_roof_palette" },
+        terrain = { ["2"] = { parameter = "roof_type", fallback = "t_flat_roof" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "shelter_unfinished",
+    layout = {
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                id = { parameter = "shelter_unfinished_layout", fallback = "24x24_shelter_unfinished" },
+            },
+        },
+        fill_terrain = "t_region_groundcover_urban",
+        palettes = { "shelter_unfinished" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "shelter_under_unfinished",
+    layout = {
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = {
+                        parameter = "shelter_unfinished_layout",
+                        fallback = "24x24_shelter_unfinished",
+                    },
+                    cases = {
+                        ["24x24_shelter_unfinished"] = "24x24_shelter_unfinished_under",
+                        ["24x24_shelter_unfinished_1"] = "24x24_shelter_unfinished_1_under",
+                        ["24x24_shelter_unfinished_2"] = "24x24_shelter_unfinished_2_under",
+                    },
+                },
+            },
+        },
+        fill_terrain = "t_soil",
+        palettes = { "shelter_unfinished" },
+    },
+}

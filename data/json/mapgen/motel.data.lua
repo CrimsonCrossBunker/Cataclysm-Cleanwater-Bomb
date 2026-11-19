@@ -899,3 +899,140 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "motel_twd_1", "motel_twd_2" } },
+    layout = {
+        rows = {
+            "*****               ________               *****",
+            "*4****              _UUUUUU_              ****4*",
+            "||||||_             ________             _||||||",
+            "|u.vVw_)))))))       )))))))))))))       _wtbbT|",
+            "w.rc.+_)                   )             _+....w",
+            "|B.c.w_)                   )             _wY.BD|",
+            "|y...w_)                   )             _||=|||",
+            "|||=||_)                   )             _|,,,S|",
+            "|L,,S|_)))))))       )))))))))))))       _|$,,L|",
+            "||||||_)                   )             _||||||",
+            "|L,,$|_)                   )             _wtbbT|",
+            "|S,,,|_)                   )             _+....w",
+            "|||=||_)                   )             _wY.BD|",
+            "|DB.Yw_)                   )             _||=|||",
+            "w....+_)))))))       )))))))))))))       _|$,,S|",
+            "|Tbbtw_                                  _|,,,L|",
+            "||||||_                                  _||||||",
+            "f<<___________________________________________4f",
+            "f______|w+w||||w+w||||w+w||||w+w||||___________f",
+            "f__dd_4|t.Y|,$|t.Y|,$|t.Y|,$|t.Y|$,|4__________f",
+            "fffffff|b..=,,|b..=,,|b..=,,|b..=,,|ffffffffffff",
+            "*******|b.B|,,|b.B|,,|b.B|,,|b.B|,,|************",
+            "*******|T.D|SL|T.D|SL|T.D|SL|T.D|SL|************",
+            "*******||w||||||w||||||w||||||w|||||************",
+        },
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "overrun", fallback = "0" },
+                    cases = { ["0"] = "24x24_motel_twd_1", ["1"] = "24x24_motel_twd_1_overrun" },
+                },
+            },
+            {
+                x = 24,
+                y = 0,
+                id = {
+                    select = { parameter = "overrun", fallback = "0" },
+                    cases = { ["0"] = "24x24_motel_twd_2", ["1"] = "24x24_motel_twd_2_overrun" },
+                },
+            },
+        },
+        item_groups = { [" "] = { group = "SUS_trash_forest_manmade", chance = 1 } },
+        item_group_placements = { { group = "cash_register_random", x = 3, y = 3, chance = 100 } },
+        fill_terrain = "t_linoleum_white",
+        palettes = { "motel_twd_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "motel_twd_1_f1", "motel_twd_2_f1" } },
+    layout = {
+        rows = {
+            "                                                ",
+            " 4                                              ",
+            "||||||////                                ----5-",
+            "|Tbbt|~~~/                                -'''''",
+            "|....+~~~/                                -'''''",
+            "|DB.Yw~~~/                                -'''''",
+            "|||=||~///                                -'''''",
+            "|S,,,|~/                                  -'''''",
+            "|L,,$|~/                                  -'''''",
+            "||||||~/                                  -'''''",
+            "|L,,$|~/                                  -'''''",
+            "|S,,,|~/                                  -'''''",
+            "|||=||~/                                  -'''''",
+            "|DB.Yw~/                                  -'''''",
+            "|....+~/                                  -'''''",
+            "|Tbbtw~/                                  -'''''",
+            "||||||~/                                  ----5-",
+            "/>>~~~~/                                        ",
+            "////////----------------------------            ",
+            "       5-''''''''''''''''''''''''''5            ",
+            "       -'''''''''''''''''''''''''''-            ",
+            "       -'''''''''''''''''''''''''''-            ",
+            "       -'''''''''''''''''''''''''''-            ",
+            "       -'''''''''''''''''''''''''''-            ",
+        },
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "overrun", fallback = "0" },
+                    cases = { ["0"] = "24x24_motel_twd_1_f1", ["1"] = "24x24_motel_twd_1_f1_overrun" },
+                },
+            },
+            {
+                x = 24,
+                y = 0,
+                id = {
+                    select = { parameter = "overrun", fallback = "0" },
+                    cases = { ["0"] = "null", ["1"] = "24x24_motel_twd_2_f1_overrun" },
+                },
+            },
+            {
+                x = { 9, 14 },
+                y = { 19, 20 },
+                id = {
+                    select = { parameter = "overrun", fallback = "0" },
+                    cases = { ["0"] = "null", ["1"] = "roof_4x4_survivor" },
+                },
+            },
+            {
+                x = { 24, 33 },
+                y = { 19, 22 },
+                choices = {
+                    { id = "null", weight = 30 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities_c", weight = 5 },
+                    { id = "roof_2x2_utilities_d", weight = 40 },
+                },
+            },
+            {
+                x = { 43, 46 },
+                y = { 3, 14 },
+                choices = {
+                    { id = "null", weight = 30 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities_c", weight = 5 },
+                    { id = "roof_2x2_utilities_d", weight = 40 },
+                },
+            },
+        },
+        fill_terrain = "t_linoleum_white",
+        palettes = { "motel_twd_palette" },
+        terrain = { [" "] = "t_open_air", ["~"] = "t_floor_noroof" },
+    },
+}

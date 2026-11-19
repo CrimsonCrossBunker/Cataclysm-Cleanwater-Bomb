@@ -75,3 +75,177 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- This particular 2-bed shelter is a more professionally done, all metal bomb shelter with kitchen, secret safe room / gun locker, and workshop.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lmoe_under",
+    layout = {
+        rows = {
+            "########################",
+            "########################",
+            "##||||||||||||||||||||##",
+            "##|{{{{{|UUUUUU|w__BB|##",
+            "##|u____|U____U|d__BB|##",
+            "##|u___h|U_UU_U|A,,,_|##",
+            "##|u___D|=*==*=|_,,,}|##",
+            "##|A____:______+_,,,}|##",
+            "##|||||||_1,,1_|S__hD|##",
+            "##|VVVVV=_e,,P_|||||||##",
+            "##|_____*__,,____|s_K|##",
+            "##|vvvvv=_E,,f___+__t|##",
+            "##|||||||||++|||||||||##",
+            "##|c_bbbbA|,,|CSCCKCC|##",
+            "##|c______|,,|u_____C|##",
+            "##|c_TT___|,,|u_hLh_F|##",
+            "##|c_TTh__+__+______é|##",
+            "##|c_TT___|__|rrrr__~|##",
+            "##|c______|__|||||+|||##",
+            "##|c______|__*__a|__A|##",
+            "##|ccccccc|<<=G_a|HlW|##",
+            "##||||||||||||||||||||##",
+            "########################",
+            "########################",
+        },
+        nested = { { x = 9, y = 17, z = 1, id = "lmoe_exit_n" } },
+        fill_terrain = "t_metal_floor",
+        palettes = {
+            "bunker",
+            {
+                weighted = { { id = "null_palette", weight = 1 }, { id = "empty_bunker_items", weight = 3 } },
+            },
+        },
+    },
+}
+
+-- Empty LMOE shelter that has been looted or used.
+-- This particular 4-bed shelter is definitely homemade, mostly carved out of bare rock, and seems to be incomplete.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lmoe_under",
+    layout = {
+        rows = {
+            "########################",
+            "########################",
+            "##<<..=...^#############",
+            "##....*....^############",
+            "##....=....^############",
+            "##===###Y...^###########",
+            "##G.R###-+|||####||||||#",
+            "##a.l###A.|UUVVvv|{{{{|#",
+            "##=*=###..|U.....:....|#",
+            "##c..ll-..|Uuuu.u||||||#",
+            "##c....+..|||||+||Dh..d#",
+            "##c.h..-r.+......+...BB#",
+            "##c.TTT-r.-r..h..------#",
+            "#######--+-r.hLh.+...BB#",
+            "#######-F.Sr..h..-Dh..d#",
+            "#######-é.......-------#",
+            "#######-CCKC.uu.+...hD-#",
+            "#######-----.--+-}....-#",
+            "#########W.~.-s.-}.BBS-#",
+            "#########H...-&.-w.BBr-#",
+            "#########l..A-Kt-------#",
+            "#########--------#######",
+            "########################",
+            "########################",
+        },
+        nested = { { x = 0, y = 0, z = 1, id = "lmoe_exit_s" } },
+        fill_terrain = "t_dirt_underground",
+        palettes = {
+            "bunker",
+            {
+                weighted = { { id = "null_palette", weight = 1 }, { id = "empty_bunker_items", weight = 3 } },
+            },
+        },
+    },
+}
+
+-- This is a commercially built 4-bed LMOE shelter based on IRL plans.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lmoe_under",
+    layout = {
+        rows = {
+            "########################",
+            "##|||||||||||###########",
+            "##|,,<|w,BBd|###########",
+            "##|Y,<|},BB,|###########",
+            "||||+||,,,,,|###########",
+            "|A,,,E|+|||||||||||#####",
+            "|f,,,,|,,,,b|_____|#####",
+            "|f,,,e|,,h,,|_____|#####",
+            "|f,,,,|,hLh,|_____|#####",
+            "|Dh,,P|,hLh,|_____|#####",
+            "|,,,,,+,,h,,|_____|#####",
+            "|,|||||~,,,u|_____|#####",
+            "|,+,,B|K,,,u:_____|#####",
+            "|,|d,B|COC,u|_____|#####",
+            "|,||||||||+||_____|#####",
+            "|,+,,B|t,,,K|_____|#####",
+            "|}|d,B|WAv,s|_____|#####",
+            "|;|||||||||:|||+||||||||",
+            "|__|_____|__|_______=__|",
+            "|__|_____||+|_______*__|",
+            "|__|________|_______=__|",
+            "|__|________+_______=__|",
+            "|__+________|_______=__|",
+            "||||||||||||||||||||||||",
+        },
+        nested = {
+            { x = 13, y = 6, id = "lmoe3_storage_11x11" },
+            { x = 1, y = 18, id = "lmoe3_tankroom_11x11" },
+            { x = 13, y = 18, id = "lmoe3_crafting_11x11" },
+            { x = 3, y = 0, z = 1, id = "lmoe_exit_e" },
+        },
+        fill_terrain = "t_carpet_metal_purple",
+        palettes = {
+            "bunker",
+            {
+                weighted = { { id = "null_palette", weight = 1 }, { id = "empty_bunker_items", weight = 3 } },
+            },
+        },
+    },
+}
+
+-- This is a 4 bed shelter done in a realistic style. The secret room was intended to be a science lab but construction was never completed.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lmoe_under",
+    layout = {
+        rows = {
+            "########################",
+            "||||||||||||||||||######",
+            "|A,BdBd|AA|V,ee,A|######",
+            "|w,B,B,|,,|V,,,,f|######",
+            "|w,,,,,+,,+,,PP,f|######",
+            "|w,B,B,|,,|V,,,,f|######",
+            "|w,BdBd|,,|V,EE,f|######",
+            "||||||||,,||||||||||||||",
+            "|A}}}}}|,,|KvKvvA:____A|",
+            "|b,,,,,+,,+______|c_c_c|",
+            "|b,hTh,|,,|+|+|__|c_c_c|",
+            "|b,hTh,|,,|t|t|ss|c_c_c|",
+            "||||||||,,||||||||||||||",
+            "|AUUUUU|,,|CCKCCA|######",
+            "|l_____+,,+_____F|######",
+            "|l_cc_{|,,|u____é|######",
+            "|l_cc_{|,,|uuuu_é|######",
+            "|l_cc_{|,,|||||+||######",
+            "|l____{|,,|__*__W|######",
+            "|lUUUUU|++|GG|A~H|######",
+            "||||||||__||||||||######",
+            "#######|<<|#############",
+            "#######||||#############",
+            "########################",
+        },
+        nested = { { x = 6, y = 18, z = 1, id = "lmoe_exit_n" } },
+        fill_terrain = "t_metal_floor",
+        palettes = {
+            "bunker",
+            {
+                weighted = { { id = "null_palette", weight = 1 }, { id = "empty_bunker_items", weight = 3 } },
+            },
+        },
+    },
+}

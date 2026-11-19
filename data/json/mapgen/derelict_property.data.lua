@@ -524,3 +524,40 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "derelict_property",
+    layout = {
+        fallback_predecessor_mapgen = "forest",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "derelict_property_1" } } },
+        palettes = { "derelict_variant_parameter_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "derelict_property_roof",
+    layout = {
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "variant", fallback = "derelict_property_1" },
+                    cases = {
+                        derelict_property_1 = "derelict_property_1_roof",
+                        derelict_property_2 = "derelict_property_2_roof",
+                        derelict_property_3 = "derelict_property_3_roof",
+                        derelict_property_4 = "derelict_property_4_roof",
+                        derelict_property_5 = "derelict_property_5_roof",
+                        derelict_property_6 = "derelict_property_6_roof",
+                        derelict_property_7 = "derelict_property_7_roof",
+                    },
+                },
+            },
+        },
+        fill_terrain = "t_open_air",
+        palettes = { "derelict_variant_parameter_palette" },
+    },
+}

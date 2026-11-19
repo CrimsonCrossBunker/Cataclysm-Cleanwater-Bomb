@@ -35,3 +35,83 @@ ccb.content.define_mapgen {
         fill_terrain = "t_open_air",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "cs_market_small",
+    layout = {
+        rows = {
+            "        ,,    ,,        ",
+            "        ,,    ,,        ",
+            "        ,,bTTb,,        ",
+            "        ,,bTTb,,        ",
+            "        ,,bTTb,,        ",
+            "        ,,    ,,        ",
+            "        ,, gB ,,        ",
+            "        ,,GYYG,,        ",
+            "        ,,GGGG,,        ",
+            "        ,,G!!G,,        ",
+            "        ,,G!!G,,        ",
+            "        ,,GYYG,,        ",
+            "        ,,GYYG,,        ",
+            "        ,,G!!G,,        ",
+            "        ,,G!!G,,        ",
+            "        ,,G!!G,,        ",
+            "        ,,GYYG,,        ",
+            "        ,, Bg ,,        ",
+            "        ,,    ,,        ",
+            "        ,,bTTb,,        ",
+            "        ,,bTTb,,        ",
+            "        ,,bTTb,,        ",
+            "        ,,,,,,,,        ",
+            "G        ,,,,,,        G",
+        },
+        nested = {
+            {
+                x = 1,
+                y = 1,
+                id = { parameter = "topleft_market_variant_nests", fallback = "market_meat" },
+            },
+            {
+                x = 16,
+                y = 1,
+                id = { parameter = "topright_market_variant_nests", fallback = "market_clothes" },
+            },
+            {
+                x = 1,
+                y = 9,
+                id = { parameter = "midleft_market_variant_nests", fallback = "market_meat" },
+            },
+            {
+                x = 16,
+                y = 9,
+                id = { parameter = "midright_market_variant_nests", fallback = "market_clothes" },
+            },
+            {
+                x = 1,
+                y = 16,
+                id = { parameter = "bottomleft_market_variant_nests", fallback = "market_meat" },
+            },
+            {
+                x = 16,
+                y = 16,
+                id = { parameter = "bottomright_market_variant_nests", fallback = "market_clothes" },
+            },
+        },
+        item_groups = {
+            g = { group = "SUS_trash_trashcan_public", chance = 50 },
+            B = { group = "bulletin_public", chance = 75 },
+        },
+        fill_terrain = "t_sidewalk",
+        palettes = { "open_air_market_palette" },
+        terrain = { Y = "t_tree", G = "t_region_groundcover_urban", ["!"] = "t_region_groundcover_urban" },
+        furniture = {
+            A = "f_atm_off",
+            T = "f_table",
+            b = "f_bench",
+            g = "f_trashcan",
+            B = "f_bulletin",
+            ["!"] = { { id = "f_region_flower" }, { id = "f_null" } },
+        },
+    },
+}
