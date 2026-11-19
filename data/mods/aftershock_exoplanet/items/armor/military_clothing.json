@@ -57,45 +57,5 @@
         "moves": 30
       }
     ]
-  },
-  {
-    "id": "afs_backpack_rockets",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR" ],
-    "name": { "str": "U38m munitions carrier" },
-    "description": "A large carrying frame designed to hold up to 10 rockets or similarly shaped munitions on your back.  Most often used in conjunction with a lifting frame to manage the weight.",
-    "weight": "4 kg",
-    "volume": "18000 ml",
-    "price": "1 kUSD",
-    "price_postapoc": "1 kUSD",
-    "material": [ "nylon", "aluminum" ],
-    "symbol": "[",
-    "looks_like": "backpack",
-    "color": "brown",
-    "warmth": 10,
-    "material_thickness": 2,
-    "pocket_data": [
-      { "pocket_type": "CONTAINER", "ammo_restriction": { "84x246mm": 1, "afs_82mm_flashbulb": 1 } },
-      { "pocket_type": "CONTAINER", "ammo_restriction": { "84x246mm": 1, "afs_82mm_flashbulb": 1 } },
-      { "pocket_type": "CONTAINER", "ammo_restriction": { "84x246mm": 1, "afs_82mm_flashbulb": 1 } },
-      { "pocket_type": "CONTAINER", "ammo_restriction": { "84x246mm": 1, "afs_82mm_flashbulb": 1 } },
-      { "pocket_type": "CONTAINER", "ammo_restriction": { "84x246mm": 1, "afs_82mm_flashbulb": 1 } },
-      { "pocket_type": "CONTAINER", "ammo_restriction": { "84x246mm": 1, "afs_82mm_flashbulb": 1 } },
-      { "pocket_type": "CONTAINER", "ammo_restriction": { "84x246mm": 1, "afs_82mm_flashbulb": 1 } },
-      { "pocket_type": "CONTAINER", "ammo_restriction": { "84x246mm": 1, "afs_82mm_flashbulb": 1 } },
-      { "pocket_type": "CONTAINER", "ammo_restriction": { "84x246mm": 1, "afs_82mm_flashbulb": 1 } },
-      { "pocket_type": "CONTAINER", "ammo_restriction": { "84x246mm": 1, "afs_82mm_flashbulb": 1 } }
-    ],
-    "flags": [ "BELTED", "WATERPROOF" ],
-    "max_worn": 1,
-    "armor": [
-      {
-        "encumbrance": [ 3, 12 ],
-        "volume_encumber_modifier": 0.2,
-        "coverage": 100,
-        "covers": [ "torso" ],
-        "specifically_covers": [ "torso_hanging_back", "torso_waist" ]
-      }
-    ]
   }
 ]
