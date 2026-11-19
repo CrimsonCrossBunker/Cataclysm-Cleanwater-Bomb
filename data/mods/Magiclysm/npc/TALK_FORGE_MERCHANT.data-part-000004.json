@@ -1,0 +1,13 @@
+[
+  {
+    "type": "shopkeeper_whitelist",
+    "id": "NC_FORGE_LORD_WHITELIST",
+    "message": "<npcname> is thoroughly uninterested in this.",
+    "entries": [
+      { "item": "denarius" },
+      { "group": "NC_FORGE_LORD_SHOP" },
+      { "group": "NC_FORGE_LORD_ACCEPTED_BOOKS" },
+      { "item": "forge_of_wonders_tradeables" }
+    ]
+  }
+]
