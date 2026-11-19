@@ -228,41 +228,5 @@
         "condition": { "u_is_wearing": "badge_marshal" }
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ISHERWOOD_CHRIS_TALK1",
-    "dynamic_line": "Yeah, they are always worried about us, I prefer to survey the land and try to track the changes.  I'm thinking about fixing up this cabin for some peace and quiet…",
-    "responses": [
-      { "text": "Sounds like you are restless, why not leave?", "topic": "TALK_ISHERWOOD_CHRIS_WANTS" },
-      { "text": "What sort of changes have you seen?", "topic": "TALK_ISHERWOOD_CHRIS_LAND" },
-      {
-        "text": "I was talking to Luke earlier, said you had some interesting ideas about the world ending.",
-        "topic": "TALK_CHRIS_THEORIES",
-        "condition": {
-          "and": [ { "not": { "u_is_wearing": "badge_marshal" } }, { "compare_string": [ "yes", { "u_val": "u_heard_about_chris" } ] } ]
-        }
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_ISHERWOOD_CHRIS_TOPICS" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ISHERWOOD_CHRIS_TALK2",
-    "dynamic_line": "I surveyed the land, and I am trying to track the changes.  I fixed up this cabin for some peace and quiet… you can settle here if you want",
-    "responses": [
-      { "text": "Sounds like you are restless, why not leave?", "topic": "TALK_ISHERWOOD_CHRIS_WANTS" },
-      { "text": "What sort of changes have you seen?", "topic": "TALK_ISHERWOOD_CHRIS_LAND" },
-      {
-        "text": "Do you think, monsters that kidnaped Barry are responsible for end of the world?",
-        "topic": "TALK_CHRIS_THEORIES2",
-        "condition": {
-          "and": [ { "not": { "u_is_wearing": "badge_marshal" } }, { "compare_string": [ "yes", { "u_val": "u_heard_about_chris" } ] } ]
-        }
-      },
-      { "text": "Let's talk about something else.", "topic": "TALK_ISHERWOOD_CHRIS_TOPICS" },
-      { "text": "I'd better get going.", "topic": "TALK_DONE" }
-    ]
   }
 ]
