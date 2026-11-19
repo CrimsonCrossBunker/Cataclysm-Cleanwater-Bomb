@@ -220,3 +220,48 @@ ccb.content.define_mapgen {
         fill_terrain = "t_shingle_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "horse_farm_isherwood_13_2ndfloor",
+    layout = {
+        rows = {
+            "                        ",
+            "     |-vv-|-v-v-|_____  ",
+            "     |@*hk|@@**d|_____  ",
+            "     |@**k|***hkv_____  ",
+            "     vd**8|8w**k|_____  ",
+            "     |-+------+-|_____  ",
+            "     v**********|_____  ",
+            "     |---|-+-|*8|_____  ",
+            "     |t*B|S*y|**v_____  ",
+            "     |**B|***|**v_____  ",
+            "     |S*D|BBt|**v_____  ",
+            "     |-+------*8|_____  ",
+            "     |>*********|______ ",
+            "     |---+-------______ ",
+            "     |@@****w|_________ ",
+            "     v@@****yv_________ ",
+            "     |n*****d|_________ ",
+            "     |--1n1---_________ ",
+            "       -vvv-            ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "farm_horse" },
+        terrain = {
+            _ = "t_shingle_flat_roof",
+            ["*"] = "t_floor",
+            [" "] = "t_open_air",
+            [">"] = "t_stairs_down",
+        },
+        fill_terrain = "t_floor",
+        item_groups = {
+            k = { group = "bedroom", chance = 60, repetitions = { 2, 4 } },
+            D = { group = "SUS_trash_floor_light", chance = 50 },
+        },
+    },
+}
