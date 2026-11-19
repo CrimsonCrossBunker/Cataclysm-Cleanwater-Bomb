@@ -18,16 +18,5 @@
       "I": [ [ "t_region_tree_fruit", 2 ], [ "t_mega_fern", 8 ], [ "t_region_tree", 1 ], [ "t_underbrush", 1 ], [ "t_shrub", 1 ] ]
     },
     "furniture": { "T": "f_glowingbulb", "@": "f_brambles", "i": [ "f_mutpoppy", "f_region_flower" ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "1x1_triffid_field_furniture",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "i" ],
-      "palettes": [ "triffid" ],
-      "place_ter_furn_transforms": [ { "transform": "remove_forest_terrain_plants", "x": 0, "y": 0 } ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
   }
 ]

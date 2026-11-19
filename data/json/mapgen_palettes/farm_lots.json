@@ -1,23 +1,5 @@
 [
   {
-    "type": "mapgen",
-    "nested_mapgen_id": "seedling_corn",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "#" ],
-      "sealed_item": { "#": { "item": { "item": "seed_corn" }, "furniture": "f_plant_seedling", "chance": 70 } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "seedling_wheat",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "#" ],
-      "sealed_item": { "#": { "item": { "item": "seed_wheat" }, "furniture": "f_plant_seedling", "chance": 70 } }
-    }
-  },
-  {
     "type": "palette",
     "id": "farm_lots",
     "parameters": {
