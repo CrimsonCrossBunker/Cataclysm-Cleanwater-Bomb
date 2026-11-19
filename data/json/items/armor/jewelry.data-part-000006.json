@@ -1,0 +1,18 @@
+[
+  {
+    "id": "small_relic",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "small relic" },
+    "description": "A small relic from a forgotten saint.  As extraordinary as the world has become, it may have some power yet.",
+    "weight": "60 g",
+    "volume": "15 ml",
+    "price": "10 USD",
+    "price_postapoc": "75 cent",
+    "material": [ { "type": "bone", "portion": 8 }, { "type": "silver", "portion": 2 } ],
+    "symbol": "[",
+    "color": "white",
+    "use_action": [ "MEDITATE" ],
+    "flags": [ "NO_WEAR_EFFECT" ]
+  }
+]

@@ -1,0 +1,21 @@
+[
+  {
+    "id": "diving_watch",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "diver's watch", "str_pl": "diver's watches" },
+    "description": "A waterproof, self-winding watch on a stainless steel watchband.  Tells the time and current temperature.  Activate to check the digital thermometer.",
+    "weight": "100 g",
+    "volume": "90 ml",
+    "price": "120 USD",
+    "price_postapoc": "7 USD",
+    "material": [ "steel" ],
+    "symbol": "[",
+    "looks_like": "gold_watch",
+    "color": "light_gray",
+    "sided": true,
+    "use_action": [ "WEATHER_TOOL" ],
+    "flags": [ "WATCH", "ALARMCLOCK", "WATER_FRIENDLY", "THERMOMETER", "BELTED", "ALLOWS_NATURAL_ATTACKS", "OVERSIZE" ],
+    "armor": [ { "coverage": 50, "covers": [ "hand_l", "hand_r" ], "specifically_covers": [ "hand_wrist_l", "hand_wrist_r" ] } ]
+  }
+]

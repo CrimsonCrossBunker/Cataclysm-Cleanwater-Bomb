@@ -1,0 +1,19 @@
+[
+  {
+    "id": "bead_necklace",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "beaded necklace" },
+    "description": "A simple necklace made of string and wooden beads.  Also doubles as a set of prayer beads, if you're so inclined.",
+    "looks_like": "silver_necklace",
+    "weight": "18 g",
+    "volume": "30 ml",
+    "price": "1 USD",
+    "price_postapoc": "10 cent",
+    "material": [ "wood" ],
+    "symbol": "u",
+    "color": "brown",
+    "use_action": [ "MEDITATE" ],
+    "flags": [ "NO_WEAR_EFFECT" ]
+  }
+]
