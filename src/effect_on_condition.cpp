@@ -239,7 +239,7 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 322> migrated_character_tasks = {{
+const std::array<character_task_migration, 323> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_MARLOSS_VOMIT_AFTER_CONSUMPTION" ),
           "marloss_vomit_due", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_MARLOSS_REJECTION_AFTER_CONSUMPTION" ),
@@ -362,6 +362,8 @@ const std::array<character_task_migration, 322> migrated_character_tasks = {{
           "martial_perks_clear_insight_due", "perk_clear_insight_timer", false, "perk_melee_system" },
         { effect_on_condition_id( "EOC_PERK_POISE_REGEN" ),
           "martial_perks_poise_regen_due", nullptr, false, "perk_melee_system" },
+        { effect_on_condition_id( "EOC_PERK_PRESSURE_STRIKES_DEAL_DAMAGE" ),
+          "perk_pressure_strikes_deal_damage", nullptr, false, "perk_melee_system" },
         { effect_on_condition_id( "EOC_LIXA_unfold_spawn_goodbye_cards" ),
           "lixa_leave_goodbye_cards", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_LIXA_unfold_shift_0" ),

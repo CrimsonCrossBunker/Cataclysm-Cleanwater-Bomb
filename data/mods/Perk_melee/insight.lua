@@ -84,15 +84,19 @@ ccb.runtime.handler("martial_perks_insight_ready", function(event)
 end)
 ccb.runtime.on("character_ready", "martial_perks_insight_ready")
 
+local function spend_insight(actor)
+    if checked(services.characters.has_flag(actor, insight_flag)) then
+        checked(services.variables.set(actor, "perk_last_insight", intensity(actor, insight), { include_before = false }))
+        checked(effects.remove(actor, insight))
+    end
+end
+
 ccb.runtime.handler("perk_insight_ranged_attack", function(event)
     local actor = event.actors.speaker or event.actors.attacker or services.characters.avatar()
     if not actor:is_valid() or not checked(services.creatures.has_flag_text(actor, "MELEE_PERK_MYSTIC_SHOT")) then
         return
     end
-    if checked(services.characters.has_flag(actor, insight_flag)) then
-        checked(services.variables.set(actor, "perk_last_insight", intensity(actor, insight), { include_before = false }))
-        checked(effects.remove(actor, insight))
-    end
+    spend_insight(actor)
 end)
 ccb.runtime.on("game:character_ranged_attacks_character", "perk_insight_ranged_attack")
 ccb.runtime.on("game:character_ranged_attacks_monster", "perk_insight_ranged_attack")
@@ -162,4 +166,4 @@ ccb.runtime.handler("perk_style_static", function(style)
     end
 end)
 
-return { restore_after_kill = restore_after_kill }
+return { restore_after_kill = restore_after_kill, spend = spend_insight }

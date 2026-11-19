@@ -18,6 +18,8 @@ require("poise_spells")
 
 require("insight")
 
+require("pressure_strikes")
+
 require("technique_predicates")
 
 require("technique_actions")

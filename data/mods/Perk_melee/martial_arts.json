@@ -52,7 +52,6 @@
         "flat_bonuses": [ { "stat": "hit", "scale": 1.0 } ]
       }
     ],
-    "onhit_eocs": [ "EOC_PERK_SPEND_INSIGHT", "EOC_PERK_PRESSURE_STRIKES_SCHEDULE" ],
     "techniques": [
       "tec_perk_stagger_strike",
       "tec_perk_feint",
