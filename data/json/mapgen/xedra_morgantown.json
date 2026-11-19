@@ -103,59 +103,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ "morgantown_forest" ],
-    "object": {
-      "fill_ter": "t_region_groundcover",
-      "rows": [
-        "123123123123123123123123",
-        "231231231231231231231231",
-        "312312312312312312312312",
-        "123123123123123123123123",
-        "2312M12312312312312M1231",
-        "312312312312312312312312",
-        "12312312312M123123123123",
-        "231231231231231231231231",
-        "312312312312312312312312",
-        "123123123123123123123123",
-        "2312M12312312312312M1231",
-        "312312312312312312312312",
-        "12312312312M123123123123",
-        "231231231231231231231231",
-        "312312312312312312312312",
-        "123123123123123123123123",
-        "2312M12312312312312M1231",
-        "312312312312312312312312",
-        "123123123123123123123123",
-        "231231231231231231231231",
-        "312312312312312312312312",
-        "123123123123123123123123",
-        "231231231231231231231231",
-        "312312312312312312312312"
-      ],
-      "//": "3: reserve for furniture.",
-      "terrain": {
-        "1": [ [ "t_region_groundcover", 10 ], [ "t_region_shrub_forest", 50 ], [ "t_region_tree_forest", 50 ] ],
-        "2": [ [ "t_region_groundcover", 10 ], [ "t_region_shrub_forest", 50 ], [ "t_region_tree_forest", 50 ] ],
-        "3": "t_region_groundcover",
-        ",": [ [ "t_region_soil", 7 ], [ "t_region_shrub_forest", 1 ], [ "t_region_groundcover", 2 ] ],
-        "M": [ [ "t_region_soil", 7 ], [ "t_region_shrub_forest", 1 ], [ "t_region_groundcover", 2 ] ]
-      },
-      "furniture": {
-        "1": [
-          [ "f_null", 35000 ],
-          [ "f_region_plain", 100 ],
-          [ "f_boulder_small", 10 ],
-          [ "f_boulder_medium", 8 ],
-          [ "f_boulder_large", 2 ],
-          [ "f_region_flower", 1 ]
-        ],
-        "2": "f_null",
-        "3": "f_null"
-      }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "morgantown_forest_fence_s" ],
     "object": {
       "fill_ter": "t_region_groundcover",
@@ -333,61 +280,6 @@
         "3": "f_null"
       },
       "monster": { "M": { "monster": "mon_dish_head" } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "morgantown_forest_fence_corner" ],
-    "object": {
-      "fill_ter": "t_region_groundcover",
-      "rows": [
-        "12312312312312312312Ff,,",
-        "23123M23123123123123Ff,,",
-        "31231231231231231231Ff,,",
-        "12312312312312312312Ff,,",
-        "23123123123123123123Ff,,",
-        "31231231231231231231Ff,,",
-        "12312312312312312312Ff,,",
-        "23123M23123123123123Ff,,",
-        "31231231231231231231Ff,,",
-        "12312312312312312312Ff,,",
-        "23123123123123123123Ff,,",
-        "31231231231231231231Ff,,",
-        "12312312312312312312Ff,,",
-        "23123M23123123123123Ff,,",
-        "31231231231231231231Ff,,",
-        "12312312312312312312Ff,,",
-        "23123123123123123123Ff,,",
-        "31231231231231231231Ff,,",
-        "12312312312312312312Ff,,",
-        "23123123123123123123Ff,,",
-        "FFFFFFFFFFFFFFFFFFFFFf,,",
-        "ffffffffffffffffffffff,,",
-        ",,,,,,,,,,,,,,,,,,,,,,,,",
-        ",,,,,,,,,,,,,,,,,,,,,,,,"
-      ],
-      "//": "3: reserve for furniture.",
-      "terrain": {
-        "1": [ [ "t_region_groundcover", 10 ], [ "t_region_shrub_forest", 50 ], [ "t_region_tree_forest", 50 ] ],
-        "2": [ [ "t_region_groundcover", 10 ], [ "t_region_shrub_forest", 50 ], [ "t_region_tree_forest", 50 ] ],
-        "3": "t_region_groundcover",
-        "F": "t_fence_barbed",
-        "f": "t_chainfence",
-        ",": [ [ "t_region_soil", 7 ], [ "t_region_shrub_forest", 1 ], [ "t_region_groundcover", 2 ] ],
-        "M": [ [ "t_region_soil", 7 ], [ "t_region_shrub_forest", 1 ], [ "t_region_groundcover", 2 ] ]
-      },
-      "furniture": {
-        "1": [
-          [ "f_null", 35000 ],
-          [ "f_region_plain", 100 ],
-          [ "f_boulder_small", 10 ],
-          [ "f_boulder_medium", 8 ],
-          [ "f_boulder_large", 2 ],
-          [ "f_region_flower", 1 ]
-        ],
-        "2": "f_null",
-        "3": "f_null"
-      }
     }
   }
 ]

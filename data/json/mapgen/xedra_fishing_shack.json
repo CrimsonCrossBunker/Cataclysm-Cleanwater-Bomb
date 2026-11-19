@@ -204,48 +204,5 @@
       },
       "place_loot": [ { "item": "radio", "x": 13, "y": 18 }, { "item": "binoculars", "x": 12, "y": 18 } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "xedra_fishing_shack_2" ],
-    "object": {
-      "predecessor_mapgen": "open_air",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "    ,,,,,,,,,,,         ",
-        "    ,,,,,,,a,s,         ",
-        "    ,,,,,,,,c,,         ",
-        "   >,,,,,,,,,,,         ",
-        "    ,,,,,,,,,,,         ",
-        "    ,,,,,,,,,,,         ",
-        "    ,,,,,o,,,,,         "
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "terrain": {
-        ",": "t_metal_roof_red",
-        "o": "t_metal_roof_red",
-        "a": "t_metal_roof_red",
-        "s": "t_metal_roof_red",
-        "c": "t_metal_roof_red",
-        ">": "t_ladder_down"
-      },
-      "furniture": { "a": "f_TV_antenna", "s": "f_small_satellite_dish", "c": "f_cellphone_booster", "o": "f_vent_pipe" }
-    }
   }
 ]

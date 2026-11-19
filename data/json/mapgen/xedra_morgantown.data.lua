@@ -1,0 +1,143 @@
+local ccb = require("ccb")
+
+-- 3: reserve for furniture.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "morgantown_forest" },
+    layout = {
+        rows = {
+            "123123123123123123123123",
+            "231231231231231231231231",
+            "312312312312312312312312",
+            "123123123123123123123123",
+            "2312M12312312312312M1231",
+            "312312312312312312312312",
+            "12312312312M123123123123",
+            "231231231231231231231231",
+            "312312312312312312312312",
+            "123123123123123123123123",
+            "2312M12312312312312M1231",
+            "312312312312312312312312",
+            "12312312312M123123123123",
+            "231231231231231231231231",
+            "312312312312312312312312",
+            "123123123123123123123123",
+            "2312M12312312312312M1231",
+            "312312312312312312312312",
+            "123123123123123123123123",
+            "231231231231231231231231",
+            "312312312312312312312312",
+            "123123123123123123123123",
+            "231231231231231231231231",
+            "312312312312312312312312",
+        },
+        terrain = {
+            ["1"] = {
+                { id = "t_region_groundcover", copies = 10 },
+                { id = "t_region_shrub_forest", copies = 50 },
+                { id = "t_region_tree_forest", copies = 50 },
+            },
+            ["2"] = {
+                { id = "t_region_groundcover", copies = 10 },
+                { id = "t_region_shrub_forest", copies = 50 },
+                { id = "t_region_tree_forest", copies = 50 },
+            },
+            ["3"] = "t_region_groundcover",
+            [","] = {
+                { id = "t_region_soil", copies = 7 },
+                { id = "t_region_shrub_forest", copies = 1 },
+                { id = "t_region_groundcover", copies = 2 },
+            },
+            M = {
+                { id = "t_region_soil", copies = 7 },
+                { id = "t_region_shrub_forest", copies = 1 },
+                { id = "t_region_groundcover", copies = 2 },
+            },
+        },
+        furniture = {
+            ["1"] = {
+                { id = "f_null", copies = 35000 },
+                { id = "f_region_plain", copies = 100 },
+                { id = "f_boulder_small", copies = 10 },
+                { id = "f_boulder_medium", copies = 8 },
+                { id = "f_boulder_large", copies = 2 },
+                { id = "f_region_flower", copies = 1 },
+            },
+            ["2"] = "f_null",
+            ["3"] = "f_null",
+        },
+        fill_terrain = "t_region_groundcover",
+    },
+}
+
+-- 3: reserve for furniture.
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "morgantown_forest_fence_corner" },
+    layout = {
+        rows = {
+            "12312312312312312312Ff,,",
+            "23123M23123123123123Ff,,",
+            "31231231231231231231Ff,,",
+            "12312312312312312312Ff,,",
+            "23123123123123123123Ff,,",
+            "31231231231231231231Ff,,",
+            "12312312312312312312Ff,,",
+            "23123M23123123123123Ff,,",
+            "31231231231231231231Ff,,",
+            "12312312312312312312Ff,,",
+            "23123123123123123123Ff,,",
+            "31231231231231231231Ff,,",
+            "12312312312312312312Ff,,",
+            "23123M23123123123123Ff,,",
+            "31231231231231231231Ff,,",
+            "12312312312312312312Ff,,",
+            "23123123123123123123Ff,,",
+            "31231231231231231231Ff,,",
+            "12312312312312312312Ff,,",
+            "23123123123123123123Ff,,",
+            "FFFFFFFFFFFFFFFFFFFFFf,,",
+            "ffffffffffffffffffffff,,",
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+        },
+        terrain = {
+            ["1"] = {
+                { id = "t_region_groundcover", copies = 10 },
+                { id = "t_region_shrub_forest", copies = 50 },
+                { id = "t_region_tree_forest", copies = 50 },
+            },
+            ["2"] = {
+                { id = "t_region_groundcover", copies = 10 },
+                { id = "t_region_shrub_forest", copies = 50 },
+                { id = "t_region_tree_forest", copies = 50 },
+            },
+            ["3"] = "t_region_groundcover",
+            F = "t_fence_barbed",
+            f = "t_chainfence",
+            [","] = {
+                { id = "t_region_soil", copies = 7 },
+                { id = "t_region_shrub_forest", copies = 1 },
+                { id = "t_region_groundcover", copies = 2 },
+            },
+            M = {
+                { id = "t_region_soil", copies = 7 },
+                { id = "t_region_shrub_forest", copies = 1 },
+                { id = "t_region_groundcover", copies = 2 },
+            },
+        },
+        furniture = {
+            ["1"] = {
+                { id = "f_null", copies = 35000 },
+                { id = "f_region_plain", copies = 100 },
+                { id = "f_boulder_small", copies = 10 },
+                { id = "f_boulder_medium", copies = 8 },
+                { id = "f_boulder_large", copies = 2 },
+                { id = "f_region_flower", copies = 1 },
+            },
+            ["2"] = "f_null",
+            ["3"] = "f_null",
+        },
+        fill_terrain = "t_region_groundcover",
+    },
+}
