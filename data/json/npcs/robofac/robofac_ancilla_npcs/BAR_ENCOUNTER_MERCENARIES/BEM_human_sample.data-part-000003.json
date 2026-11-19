@@ -1,18 +1,5 @@
 [
   {
-    "id": "BEM_HUMAN_SAMPLE2",
-    "type": "talk_topic",
-    "dynamic_line": "Most I can give is two gold coins.  I've arranged a drop in the nearby woods, put the goods there and you can get your cash with the barkeep here.",
-    "responses": [
-      {
-        "text": "It'll get done.",
-        "effect": [ { "assign_mission": "BEM_human_sample_mission" }, "end_conversation" ],
-        "topic": "TALK_DONE"
-      },
-      { "text": "Not interested after all?", "topic": "TALK_DONE" }
-    ]
-  },
-  {
     "id": "BEM_HUMAN_SAMPLE_BUY",
     "type": "talk_topic",
     "dynamic_line": {
