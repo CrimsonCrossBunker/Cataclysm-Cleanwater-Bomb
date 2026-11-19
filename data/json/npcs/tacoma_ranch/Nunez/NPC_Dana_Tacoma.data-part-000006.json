@@ -1,20 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_TACOMA_Dana_Trailer2",
-    "dynamic_line": "It's all propane!\"  She grins.  \"The oven, especially.  We don't need electric, which means we don't need to run the gennie and attract attention.",
-    "responses": [
-      { "text": "Seems like a tiny kitchen for a bakery.", "topic": "TALK_TACOMA_Dana_Trailer3" },
-      {
-        "text": "Won't you run out of propane?",
-        "topic": "TALK_TACOMA_Dana_TrailerPropane",
-        "condition": { "not": { "compare_string": [ "knows", { "u_val": "knowledge_propane_scavenging" } ] } }
-      },
-      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_TACOMA_Dana_Trailer3",
     "dynamic_line": "*sighs and nods.  \"Making do with what I've got, but yeah.  I can only crank out a couple loaves a day, and can't do anything fun.  Pablo has been talking about setting me up a separate kitchen to really get going, but we've got so much critical work to do, and fresh bread is a luxury, even if it's great for morale.\"",
     "speaker_effect": { "effect": { "u_add_var": "knowledge_tacoma_bakery", "value": "knows" } },

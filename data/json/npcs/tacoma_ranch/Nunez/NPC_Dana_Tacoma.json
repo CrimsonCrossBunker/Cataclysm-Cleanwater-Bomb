@@ -47,38 +47,5 @@
       { "skill": "survival", "bonus": 1 },
       { "skill": "unarmed", "bonus": 1 }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_TACOMA_Dana_1",
-    "dynamic_line": {
-      "gendered_line": "*stands in the middle of a cramped kitchen, covered in flour.  The scene looks reminiscent of easier times, but the illusion is broken as he apron shifts to reveal a heavy machete and holstered pistol on her belt.  She looks up as you approach, then beams in recognition.  \"Welcome to Dana's Bakery, stranger!\"  She laughs brightly.  \"Glad you made out this way.  What can I do for you?\"",
-      "relevant_genders": [ "u" ]
-    },
-    "responses": [
-      { "text": "Hi Dana, how are things here?", "topic": "TALK_TACOMA_Dana_2" },
-      { "text": "Got any bread for sale?", "topic": "TALK_TACOMA_Dana_Baking" },
-      { "text": "Hello, Dana!  What's with the trailer?", "topic": "TALK_TACOMA_Dana_Trailer1" },
-      {
-        "text": "Hey, Pablo!  Dana said you had some plans to build a bakery?",
-        "topic": "TALK_TACOMA_Dana_Bakery1",
-        "condition": { "compare_string": [ "knows", { "u_val": "knowledge_tacoma_bakery" } ] }
-      },
-      { "text": "Nice to see you Dana, I'm just checking in.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_TACOMA_Dana_2",
-    "dynamic_line": "Not bad.  Much better than before.  Pablo and I have privacy, and the folks here actually appreciate my bread instead of paying me a pittance for it and then taking it to the basement without so much as a 'thanks'.",
-    "responses": [
-      { "text": "What's with the trailer?", "topic": "TALK_TACOMA_Dana_Trailer1" },
-      {
-        "text": "Any luck with the pregnancy?",
-        "topic": "TALK_TACOMA_Dana_Pregnancy",
-        "condition": { "compare_string": [ "knows", { "u_val": "knowledge_dana_pregnancy" } ] }
-      },
-      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
-    ]
   }
 ]
