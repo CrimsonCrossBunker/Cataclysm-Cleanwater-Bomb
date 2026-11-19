@@ -1,0 +1,53 @@
+[
+  {
+    "id": "mon_zombie_corrosive",
+    "type": "MONSTER",
+    "name": { "str": "corrosive zombie" },
+    "description": "This zombie has swollen to immense proportions, but still manages to hold itself together with semi-congealed acid all over its bloated, leathery body.  It moves clumsily, but spits from a large reserve of acid with uncanny accuracy.",
+    "copy-from": "mon_zombie_base",
+    "species": [ "ZOMBIE" ],
+    "diff": 15,
+    "volume": "108500 ml",
+    "weight": "120 kg",
+    "hp": 140,
+    "speed": 75,
+    "color": "yellow_white",
+    "melee_skill": 1,
+    "melee_dice": 1,
+    "melee_dice_sides": 6,
+    "bleed_rate": 50,
+    "harvest": "zombie_humanoid_acid",
+    "//grab": "Basic zed grab strength but icky icky acid on the hands",
+    "special_attacks": [
+      {
+        "id": "grab",
+        "damage_max_instance": [ { "damage_type": "acid", "amount": 2 } ],
+        "effects": [ { "id": "corroding", "duration": [ 2, 10 ], "affect_hit_bp": true } ]
+      },
+      {
+        "type": "gun",
+        "cooldown": 5,
+        "move_cost": 50,
+        "gun_type": "acid_spit",
+        "fake_skills": [ [ "gun", 8 ], [ "rifle", 8 ] ],
+        "fake_dex": 8,
+        "fake_per": 8,
+        "require_targeting_player": false,
+        "target_moving_vehicles": true,
+        "description": "The corrosive zombie spits a glob of acid!",
+        "ranges": [ [ 2, 10, "DEFAULT" ] ]
+      },
+      [ "ACID_BARF", 5 ]
+    ],
+    "special_when_hit": [ "ACIDSPLASH", 100 ],
+    "death_function": { "message": "The %s's body leaks acid.", "effect": { "id": "death_acid", "hit_self": true } },
+    "fungalize_into": "mon_zombie_acidic_dusted",
+    "upgrades": false,
+    "armor": { "bash": 10, "cut": 2, "stab": 12, "bullet": 2, "electric": 2 },
+    "extend": {
+      "flags": [ "ACIDPROOF", "ACID_BLOOD", "RANGED_ATTACKER" ],
+      "weakpoint_sets": [ "wps_natural_armor" ],
+      "families": [ "prof_wp_nat_armored" ]
+    }
+  }
+]
