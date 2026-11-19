@@ -1,0 +1,12 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_CARAVAN_GUARD_A1",
+    "dynamic_line": "Sup?  Nice to see a survivor.  If you're here for business, talk to the trader.",
+    "speaker_effect": { "effect": { "npc_first_topic": "TALK_CARAVAN_GUARD_A2" } },
+    "responses": [
+      { "text": "What are you doing here?", "topic": "TALK_CARAVAN_GUARD_A_Job" },
+      { "text": "Thanks for the tip.", "topic": "TALK_DONE" }
+    ]
+  }
+]
