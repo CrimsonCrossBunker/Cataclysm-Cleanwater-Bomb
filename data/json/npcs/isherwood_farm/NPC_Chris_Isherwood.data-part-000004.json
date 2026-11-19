@@ -1,0 +1,53 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ISHERWOOD_CHRIS_TOPICS",
+    "dynamic_line": "Go on…",
+    "responses": [
+      {
+        "text": "Your dad asked me to come find you, said you've been looking for your uncle.",
+        "topic": "TALK_ISHERWOOD_CHRIS_TALK1",
+        "condition": { "and": [ { "not": { "u_is_wearing": "badge_marshal" } }, { "math": [ "isherwood_barry_rescued != 1" ] } ] }
+      },
+      {
+        "text": "I was talking to Luke earlier, he said you had some interesting ideas about the world ending.",
+        "topic": "TALK_CHRIS_THEORIES",
+        "condition": { "and": [ { "not": { "u_is_wearing": "badge_marshal" } }, { "math": [ "isherwood_barry_rescued != 1" ] } ] }
+      },
+      {
+        "text": "Do you think, monsters that kidnaped Barry are responsible for end of the world?",
+        "topic": "TALK_CHRIS_THEORIES2",
+        "condition": { "and": [ { "not": { "u_is_wearing": "badge_marshal" } }, { "math": [ "isherwood_barry_rescued == 1" ] } ] }
+      },
+      { "text": "What sort of changes have you seen?", "topic": "TALK_ISHERWOOD_CHRIS_LAND" },
+      {
+        "text": "<end_talking_leave>",
+        "topic": "TALK_DONE",
+        "condition": { "and": [ { "not": { "u_is_wearing": "badge_marshal" } }, { "math": [ "isherwood_barry_rescued != 1" ] } ] }
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY",
+    "dynamic_line": "&Chris looks you up and down, and nods.  \"I'm definitely not going to say no to a willing body, and you look like you know what's up.\"  He sighs.  \"To be honest with you, I've been a bit stuck.  I can't tackle that thing alone, and I'm not willing to bring my dad or Uncle Eddie in either.  Dad's got a bum knee - don't tell him I said that - and Eddie's not that great a shot.  Luke's still too young for something like this… you get the idea.\"  He leans forward, self-consciously running his hand through his hair.  \"I think if we work together maybe we'd stand a chance.  I don't have a great plan though.  That tower doesn't look like something a person could just storm up to full-frontal style.\"",
+    "responses": [
+      {
+        "text": "Actually, I was just planning to go in by myself.  I've handled worse.",
+        "condition": { "not": { "npc_allies": 1 } },
+        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_GO_IT_ALONE"
+      },
+      {
+        "text": "I've got my own team here, we'll take this.  You stay back here, keep the family safe.",
+        "condition": { "npc_allies": 1 },
+        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_TAKE_OWN_TEAM"
+      },
+      {
+        "text": "Yeah, I think we should work together on this.  Do you mind if I take the lead?  I've probably got more experience.",
+        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_CHRIS_JOINS"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_ISHERWOOD_CHRIS_TOPICS" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]

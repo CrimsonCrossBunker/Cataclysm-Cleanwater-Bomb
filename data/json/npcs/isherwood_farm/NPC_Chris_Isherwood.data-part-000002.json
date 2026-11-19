@@ -1,0 +1,19 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ISHERWOOD_CHRIS_MIGO_BASE",
+    "dynamic_line": "They made their way to this weird spire like structure, I've never seen anything like it, it glistened in the sun like something organic.  I think they could be holding Barry there, I've seen them arrive and leave with other humans.",
+    "responses": [
+      {
+        "text": "I might be able to help you get Barry back, but we've got to plan this out.",
+        "condition": {
+          "and": [ { "math": [ "isherwood_barry_rescued != 1" ] }, { "not": { "u_has_mission": "MISSION_ISHERWOOD_CHRIS_1" } } ]
+        },
+        "effect": { "add_mission": "MISSION_ISHERWOOD_CHRIS_1" },
+        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_ISHERWOOD_CHRIS_TOPICS" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
