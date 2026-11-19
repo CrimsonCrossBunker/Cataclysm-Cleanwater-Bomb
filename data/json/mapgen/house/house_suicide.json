@@ -1,46 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ "house_suicide" ],
-    "//": "uses house_10 basement",
-    "object": {
-      "fill_ter": "t_floor",
-      "rows": [
-        "............--..........",
-        "............--..........",
-        "...........p--..........",
-        "..##oo##oo##--......%...",
-        "..#c      y#--..........",
-        "..or hffh  o-------.....",
-        "..or hffh  #-------.....",
-        "..or hffh  #**###ooo##..",
-        "..#c          y|Ih  d#..",
-        "..#||| |||||  L|I  @@o..",
-        "..oS +  EsE    +   @@o..",
-        "..#8t|x       H| y  s#..",
-        "..#|||x    l  H|+||||#..",
-        "..#q>+     l  H|D|8St#..",
-        "..####R  A    s|||8 B#^.",
-        "....^oY AJJ    |D| 8B#..",
-        ".....o7 AJ  6|+|+||!|#..",
-        "%....o1     6|   RE T#..",
-        ".....#F 45O32|d      o..",
-        ".....##*#ooo##I @@   o..",
-        ".....--------oI @@s D#..",
-        ".....--------##o###o##..",
-        "........................",
-        "........................"
-      ],
-      "palettes": [ "standard_domestic_palette" ],
-      "terrain": { "%": [ "t_region_shrub", "t_region_shrub_fruit", "t_region_shrub_decorative" ], "!": "t_door_locked_interior" },
-      "place_nested": [
-        { "chunks": [ [ "bathroom_suicide", 100 ] ], "x": 18, "y": 13 },
-        { "chunks": [ "rolling_trash_can_1x1" ], "x": 3, "y": 1 }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "bathroom_suicide",
     "object": {
       "mapgensize": [ 3, 3 ],
@@ -96,41 +56,6 @@
         { "item": "razor_blade", "x": 2, "y": 2 },
         { "item": "corpse", "x": 2, "y": 2 }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "house_suicide_roof",
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "  ----------            ",
-        "  -........-            ",
-        "  -........-            ",
-        "  -........-            ",
-        "  -........-----------  ",
-        "  -..................-  ",
-        "  -.....&...1........-  ",
-        "  -..................-  ",
-        "  -..................-  ",
-        "  -..................-  ",
-        "  -..................-  ",
-        "  ---5............oo.5  ",
-        "     -....=.......oo.-  ",
-        "     -...............-  ",
-        "     -...............-  ",
-        "     -...............-  ",
-        "     ---------.......-  ",
-        "             -.......-  ",
-        "             ---------  ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
     }
   }
 ]

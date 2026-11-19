@@ -33,39 +33,5 @@
       "palettes": [ "standard_domestic_landscaping_palette", "domestic_general_and_variant_palette" ],
       "vehicles": { "À": { "vehicle": "parking_garage", "chance": 75, "rotation": 90 } }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "house_46_roof" ],
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "      ------------------",
-        "      -................-",
-        "      -.1..............-",
-        "      -................-",
-        "      -................-",
-        "      -................-",
-        "      -................-",
-        "      -................-",
-        "      -................-",
-        "      -................-",
-        "      ------------------",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ]
-    }
   }
 ]

@@ -85,40 +85,5 @@
       "palettes": [ "construction_general_palette" ],
       "terrain": { "C": "t_region_groundcover_urban", "{": "t_region_groundcover_urban", "M": "t_region_groundcover_urban" }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "house_03_roof",
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "  --------------------  ",
-        "  -..................-  ",
-        "  -..................-  ",
-        "  -...N........=.....-  ",
-        "  -..................-  ",
-        "  -.1................-  ",
-        "  -...........&......-  ",
-        "  -..................-  ",
-        "  -..................-  ",
-        "  -..................-  ",
-        "  -.....--------.....-  ",
-        "  5.....-      -.....5  ",
-        "  -------      -------  ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
-    }
   }
 ]

@@ -1,0 +1,88 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_12_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "            ---------   ",
+            "            -.......-   ",
+            "            -.......-   ",
+            "            -...&...-   ",
+            "            -.......-   ",
+            "          ---.......-   ",
+            "          -.........-   ",
+            "  ---------.........-   ",
+            "  -................5-   ",
+            "  -.1..............-    ",
+            "  -................-    ",
+            "  -................-    ",
+            "  -.............=..-    ",
+            "  -................-    ",
+            "  5...........------    ",
+            "  -------------         ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        terrain = { ["."] = "t_shingle_flat_roof" },
+        fill_terrain = "t_shingle_flat_roof",
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_12_basement",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "            |||||||||   ",
+            "            |2......|   ",
+            "            |.......|   ",
+            "            |.......|   ",
+            "            |.......|   ",
+            "          |||.......|   ",
+            "          |â........|   ",
+            "  |||||||||.........|   ",
+            "  |1...............||   ",
+            "  |................|    ",
+            "  |...............g|    ",
+            "  |................|    ",
+            "  |...........z...U|    ",
+            "  |.............z.z|    ",
+            "  |..........<||||||    ",
+            "  |||||||||||||         ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "standard_domestic_basement_palette" },
+        fill_terrain = "t_thconc_floor",
+        nested_glyphs = {
+            ["1"] = {
+                choices = {
+                    { id = "null", weight = 70 },
+                    { id = "7x7_tent_indoors", weight = 10 },
+                    { id = "7x7_band_practice_open", weight = 30 },
+                },
+            },
+            ["2"] = {
+                choices = {
+                    { id = "null", weight = 70 },
+                    { id = "room_7x7_recroom_S", weight = 30 },
+                    { id = "room_7x7_wine_cellar_S", weight = 30 },
+                },
+            },
+        },
+    },
+}

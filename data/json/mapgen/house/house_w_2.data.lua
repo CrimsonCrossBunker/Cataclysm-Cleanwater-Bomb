@@ -1,0 +1,193 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_w_2",
+    layout = {
+        rows = {
+            "..%%ùù%%%p```%%%ùù%%....",
+            "..%µ```µ``````µ```µ%....",
+            "...````````````````.....",
+            "..##o#o###+###o##o##....",
+            "..#0    |  T|§  è  #....",
+            "..#     |  r|      #....",
+            "..#     |  r|      #....",
+            "..#     +  ||||  ||#....",
+            "..#|+||||   à      #....",
+            "..#D D|>+       ç  o....",
+            "..#||||||          o....",
+            "..#é               #....",
+            "..o     |  |||||####....",
+            "..#     |  y| tB#^......",
+            "..o     |   +  Bo.......",
+            "..#     |   |S  #.......",
+            "..#|+|||||+||||+#.......",
+            "..#1   3|&    |6#.......",
+            "..#2 s é|     ||#.......",
+            "..o5 s O|     |D#.......",
+            "..#4   4|     + #.......",
+            "..#F31 T|     |D#.......",
+            "..##o#+###o######.......",
+            "...``````...............",
+        },
+        palettes = { "domestic_general_and_variant_palette", "standard_domestic_landscaping_palette" },
+        terrain = { ["µ"] = "t_column", ["ù"] = "t_region_groundcover_urban" },
+        furniture = { ["ù"] = "f_region_weed" },
+        fill_terrain = "t_floor",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 30 },
+                    { id = "reflecting_pool_5x5_1", weight = 10 },
+                    { id = "reflecting_pool_5x5_2", weight = 10 },
+                    { id = "playset_4x4_1", weight = 10 },
+                    { id = "playset_4x4_2", weight = 10 },
+                    { id = "firepit_5x5_1", weight = 10 },
+                    { id = "firepit_5x5_2", weight = 10 },
+                },
+                x = 18,
+                y = { 14, 17 },
+            },
+        },
+        nested_glyphs = {
+            ["0"] = { choices = { { id = "bedroom_4x4_adult_1_N", weight = 20 } } },
+            ["&"] = {
+                choices = {
+                    { id = "bedroom_5x5_adult_S_1", weight = 50 },
+                    { id = "bedroom_5x5_adult_W_1", weight = 50 },
+                    { id = "bedroom_5x5_adult_N_2", weight = 50 },
+                    { id = "bedroom_5x5_adult_S_2", weight = 50 },
+                    { id = "bedroom_5x5_adult_E_2", weight = 50 },
+                    { id = "bedroom_5x5_adult_W_2", weight = 50 },
+                },
+            },
+            ["é"] = {
+                choices = {
+                    { id = "diningroom_5x5_N_S", weight = 50 },
+                    { id = "diningroom_5x5_E_W", weight = 50 },
+                },
+            },
+            ["§"] = {
+                choices = {
+                    { id = "bonus_room_2x2_1", weight = 50 },
+                    { id = "bonus_room_2x2_2", weight = 50 },
+                    { id = "bonus_room_2x2_4_W", weight = 50 },
+                    { id = "bonus_room_3x3_1", weight = 50 },
+                    { id = "bonus_room_3x3_2", weight = 50 },
+                },
+            },
+            ["è"] = {
+                choices = {
+                    { id = "bonus_room_3x3_4", weight = 50 },
+                    { id = "bonus_room_3x3_N_6", weight = 50 },
+                    { id = "bonus_room_3x3_E_6", weight = 50 },
+                    { id = "bonus_room_3x3_N_8", weight = 50 },
+                    { id = "bonus_room_3x3_E_8", weight = 50 },
+                },
+            },
+            ["ç"] = {
+                choices = {
+                    { id = "bonus_room_3x3_S_5", weight = 50 },
+                    { id = "bonus_room_3x3_E_5", weight = 50 },
+                },
+            },
+            ["à"] = {
+                choices = {
+                    { id = "bonus_room_2x2_1", weight = 50 },
+                    { id = "bonus_room_2x2_2", weight = 50 },
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_w_2_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "   ................     ",
+            "   ................     ",
+            "  ------------------    ",
+            "  -................-    ",
+            "  -.1..............-    ",
+            "  -................-    ",
+            "  -................-    ",
+            "  -................-    ",
+            "  -................-    ",
+            "  -................-    ",
+            "  -................-    ",
+            "  -.............5---    ",
+            "  -.............-       ",
+            "  -.............-       ",
+            "  -.............-       ",
+            "  -.............-       ",
+            "  -.............-       ",
+            "  -.............-       ",
+            "  -.............-       ",
+            "  -.............-       ",
+            "  -.............-       ",
+            "  ---------------       ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        terrain = { ["."] = "t_shingle_flat_roof" },
+        fill_terrain = "t_shingle_flat_roof",
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_w_2_basement",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "  ||||||||||||||||||    ",
+            "  |â.g.....1.......|    ",
+            "  |................|    ",
+            "  |................|    ",
+            "  |................|    ",
+            "  |z.W|............|    ",
+            "  |U.J|<...........|    ",
+            "  |z.Z|............|    ",
+            "  |...|............|    ",
+            "  |2............||||    ",
+            "  |.............|       ",
+            "  |.............|       ",
+            "  |.............|       ",
+            "  |.............|       ",
+            "  |.............|       ",
+            "  |.............|       ",
+            "  |.............|       ",
+            "  |.............|       ",
+            "  |.............|       ",
+            "  |||||||||||||||       ",
+            "                        ",
+        },
+        palettes = { "standard_domestic_basement_palette" },
+        fill_terrain = "t_thconc_floor",
+        nested_glyphs = {
+            ["1"] = {
+                choices = {
+                    { id = "null", weight = 70 },
+                    { id = "8x8_gym_W", weight = 20 },
+                    { id = "room_8x8_junk_W", weight = 30 },
+                    { id = "room_8x8_hobby_W", weight = 10 },
+                },
+            },
+            ["2"] = {
+                choices = {
+                    { id = "null", weight = 70 },
+                    { id = "room_10x10_woodworker_N", weight = 20 },
+                    { id = "room_10x10_guns_N", weight = 5 },
+                    { id = "room_10x10_pool_N", weight = 5 },
+                    { id = "room_10x10_recording_studio_N", weight = 20 },
+                    { id = "room_10x10_junk_N", weight = 20 },
+                },
+            },
+        },
+    },
+}
