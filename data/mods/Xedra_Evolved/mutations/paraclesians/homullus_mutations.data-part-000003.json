@@ -1,0 +1,19 @@
+[
+  {
+    "type": "mutation",
+    "id": "HOMULLUS_DOLL_FORM",
+    "name": { "str": "Mien of the Mannequin" },
+    "points": 8,
+    "description": "You may transform yourself into a doll in truth, ignoring the needs of the flesh and making most monsters less likely to attack you.  However, your stiff limbs will inhibit your movement.",
+    "prereqs": [ "BEAUTIFUL2", "BEAUTIFUL3" ],
+    "prereqs2": [ "HOMULLUS_SKIN_3" ],
+    "category": [ "HOMULLUS" ],
+    "purifiable": false,
+    "threshreq": [ "THRESH_HOMULLUS" ],
+    "active": true,
+    "activated_is_setup": true,
+    "activated_eocs": [ "EOC_HOMULLUS_DOLL_FORM_ON" ],
+    "processed_eocs": [ "EOC_HOMULLUS_DOLL_FORM_MOVEMENT_COUNTER" ],
+    "deactivated_eocs": [ "EOC_HOMULLUS_DOLL_FORM_ON" ]
+  }
+]
