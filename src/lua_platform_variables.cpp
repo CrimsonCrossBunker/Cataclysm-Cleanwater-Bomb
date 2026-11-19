@@ -13,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "creature.h"
 #include "dialogue.h"
@@ -937,6 +938,20 @@ void install_variable_api(
                    lua_state, handle, key, value,
                    current_runtime_generation(),
                    current_world_generation(), mutation_options.include_before );
+    } );
+    variables.set_function(
+        "set_string_notifying",
+        [current_runtime_generation, current_world_generation, require_write, has_active_callback](
+    const game_handle & handle, const std::string & key, const std::string & value ) {
+        require_write();
+        require_active_callback( has_active_callback, "services.variables.set_string_notifying" );
+        const auto resolved = handle.resolve_creature( current_runtime_generation(),
+            current_world_generation() );
+        if( !resolved || resolved.value->as_character() == nullptr ) {
+            throw std::runtime_error( "services.variables.set_string_notifying requires a live Character" );
+        }
+        dialogue context( get_talker_for( *resolved.value ), nullptr );
+        dialogue_action::set_actor_value( false, key, std::vector<std::string> { value } )( context );
     } );
     variables.set_function(
         "remove",

@@ -3,6 +3,7 @@
 #define CATA_SRC_IEXAMINE_ACTORS_H
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -88,6 +89,9 @@ class cardreader_examine_actor : public iexamine_actor
 
         std::unique_ptr<iexamine_actor> clone() const override;
 };
+
+std::unique_ptr<iexamine_actor> make_lua_examine_actor( std::string target_kind,
+        std::string target_id, std::string owner, std::string handler, std::string label = {} );
 
 class eoc_examine_actor : public iexamine_actor
 {

@@ -80,6 +80,7 @@ extern "C" {
 #include "generic_factory.h"
 #include "harvest.h"
 #include "hsv_color.h"
+#include "iexamine_actors.h"
 #include "item.h"
 #include "item_group.h"
 #include "json.h"
@@ -420,38 +421,6 @@ struct harvest_definition_data {
     std::string butchery_requirements = "default";
     std::vector<harvest_entry_definition_data> entries;
     bool registered = false;
-};
-
-class lua_platform_examine_actor final : public iexamine_actor
-{
-    public:
-        lua_platform_examine_actor( std::string target_kind, std::string target_id,
-                                    std::string owner, std::string handler,
-                                    std::string label ) :
-            iexamine_actor( "lua_platform" ), target_kind_( std::move( target_kind ) ),
-            target_id_( std::move( target_id ) ), owner_( std::move( owner ) ),
-            handler_( std::move( handler ) ) {
-            name = no_translation( label.empty() ? "Examine" : label );
-        }
-
-        void load( const JsonObject &, const std::string & ) override {}
-
-        void call( Character &character, const tripoint_bub_ms &position ) const override {
-            invoke_examine_handler( target_kind_, target_id_, owner_, handler_,
-                                    character, position );
-        }
-
-        void finalize() const override {}
-
-        std::unique_ptr<iexamine_actor> clone() const override {
-            return std::make_unique<lua_platform_examine_actor>( *this );
-        }
-
-    private:
-        std::string target_kind_;
-        std::string target_id_;
-        std::string owner_;
-        std::string handler_;
 };
 
 struct construction_category_definition_data {
@@ -9166,7 +9135,7 @@ bool content_transaction::apply( std::string &error )
             }
             if( !source.examine_handler.empty() ) {
                 native.examine_actor.emplace_back(
-                    std::make_unique<lua_platform_examine_actor>(
+                    make_lua_examine_actor(
                         "furniture", source.id, pimpl_->owner,
                         source.examine_handler, source.examine_name ) );
             }
@@ -9277,7 +9246,7 @@ bool content_transaction::apply( std::string &error )
                 native.examine_func.clear();
                 native.examine_actor.clear();
                 native.examine_actor.emplace_back(
-                    std::make_unique<lua_platform_examine_actor>(
+                    make_lua_examine_actor(
                         "terrain", source.id, pimpl_->owner,
                         source.examine_handler, source.examine_name ) );
             }

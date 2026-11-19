@@ -4053,7 +4053,9 @@ void invoke_examine_handler(
     const tripoint_abs_ms absolute = here.get_abs( position );
     sol::table payload = owner->lua->create_table();
     payload["target_kind"] = std::string( target_kind );
-    payload["target_id"] = std::string( target_id );
+    payload["target_id"] = target_id.empty() ?
+                           ( target_kind == "terrain" ? here.ter( position ).id().str() :
+                             here.furn( position ).id().str() ) : std::string( target_id );
     payload["terrain_id"] = here.ter( position ).id().str();
     payload["furniture_id"] = here.furn( position ).id().str();
     payload["character"] = platform_creature_handle( *owner, character );

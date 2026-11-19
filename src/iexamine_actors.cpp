@@ -37,6 +37,7 @@
 #include "json.h"
 #include "line.h"
 #include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "mapdata.h"
@@ -389,6 +390,48 @@ void cardreader_examine_actor::finalize() const
 std::unique_ptr<iexamine_actor> cardreader_examine_actor::clone() const
 {
     return std::make_unique<cardreader_examine_actor>( *this );
+}
+
+namespace
+{
+class lua_platform_examine_actor final : public iexamine_actor
+{
+    public:
+        lua_platform_examine_actor( std::string target_kind, std::string target_id,
+                                    std::string owner, std::string handler,
+                                    std::string label ) :
+            iexamine_actor( "lua_platform" ), target_kind_( std::move( target_kind ) ),
+            target_id_( std::move( target_id ) ), owner_( std::move( owner ) ),
+            handler_( std::move( handler ) ) {
+            name = no_translation( label.empty() ? "Examine" : label );
+        }
+
+        void load( const JsonObject &, const std::string & ) override {}
+
+        void call( Character &character, const tripoint_bub_ms &position ) const override {
+            cata::lua_platform::invoke_examine_handler( target_kind_, target_id_, owner_, handler_,
+                    character, position );
+        }
+
+        void finalize() const override {}
+
+        std::unique_ptr<iexamine_actor> clone() const override {
+            return std::make_unique<lua_platform_examine_actor>( *this );
+        }
+
+    private:
+        std::string target_kind_;
+        std::string target_id_;
+        std::string owner_;
+        std::string handler_;
+};
+} // namespace
+
+std::unique_ptr<iexamine_actor> make_lua_examine_actor( std::string target_kind,
+        std::string target_id, std::string owner, std::string handler, std::string label )
+{
+    return std::make_unique<lua_platform_examine_actor>( std::move( target_kind ),
+            std::move( target_id ), std::move( owner ), std::move( handler ), std::move( label ) );
 }
 
 void eoc_examine_actor::call( Character &you, const tripoint_bub_ms &examp ) const

@@ -1775,6 +1775,22 @@ void write_item_text( JsonOut &json, const char *field, const sol::object &value
     }
 }
 
+void write_static_native_text( JsonOut &json, const sol::table &options, const char *field,
+                               const char *native )
+{
+    const sol::object value = options.raw_get<sol::object>( field );
+    if( value.is<detail::localized_text>() ) {
+        // These native readers translate their strings at the point of use.
+        const detail::localized_text &text = value.as<const detail::localized_text &>();
+        if( text.context || text.plural ) {
+            throw std::invalid_argument( std::string( field ) + " only accepts unqualified singular text" );
+        }
+        json.member( native, text.singular );
+    } else {
+        write_placement_member<std::string>( json, options, field, native );
+    }
+}
+
 template<typename T>
 void write_item_keyed_values( JsonOut &json, const char *field, const sol::table &values )
 {
@@ -4554,10 +4570,9 @@ void write_static_tile_card_reader( JsonOut &json, const sol::table &options )
     write_item_ids( json, options, {
         { "flags", "flags" }
     } );
-    write_item_text( json, "query_msg", options.raw_get<sol::object>( "query_message" ), false );
-    write_item_text( json, "success_msg", options.raw_get<sol::object>( "success_message" ), false );
-    write_item_text( json, "redundant_msg", options.raw_get<sol::object>( "redundant_message" ),
-                     false );
+    write_static_native_text( json, options, "query_message", "query_msg" );
+    write_static_native_text( json, options, "success_message", "success_msg" );
+    write_static_native_text( json, options, "redundant_message", "redundant_msg" );
     if( const auto value = options.get<sol::optional<sol::table>>( "terrain_changes" ) ) {
         write_item_keyed_values<std::string>( json, "terrain_changes", *value );
     }
@@ -4572,11 +4587,18 @@ void write_static_tile_examine( JsonOut &json, const sol::table &options )
     const sol::object builtin = options.raw_get<sol::object>( "builtin_examine" );
     const auto appliance = options.get<sol::optional<sol::table>>( "appliance_conversion" );
     const auto card_reader = options.get<sol::optional<sol::table>>( "card_reader" );
-    if( ( builtin.get_type() != sol::type::nil ) + appliance.has_value() + card_reader.has_value() >
-        1 ) {
+    const auto handler = options.get<sol::optional<std::string>>( "examine_handler" );
+    const int kinds = ( builtin.get_type() != sol::type::nil ) + appliance.has_value() +
+                      card_reader.has_value() + handler.has_value();
+    if( kinds > 1 ) {
         throw std::invalid_argument( "tile examine requires one interaction kind" );
     }
-    if( appliance ) {
+    if( handler ) {
+        if( handler->empty() || handler->find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument( "tile examine requires a registered handler name" );
+        }
+        json.member( "//ccb_lua_examine_handler", *handler );
+    } else if( appliance ) {
         json.member( "examine_action" );
         write_static_tile_appliance( json, *appliance );
     } else if( card_reader ) {

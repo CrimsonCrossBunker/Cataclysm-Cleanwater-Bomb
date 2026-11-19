@@ -1382,6 +1382,20 @@ void map_data_common_t::load( const JsonObject &jo, const std::string &src )
         }
     }
 
+    if( const auto lua_examine = jo.get_member_opt( "//ccb_lua_examine_handler" ) ) {
+        if( lua_examine->has_source_file() ) {
+            lua_examine->throw_error( "Lua examine metadata is reserved for ordered Lua definitions" );
+        }
+        const std::string handler = lua_examine->get_string();
+        if( handler.empty() || handler.find( '\0' ) != std::string::npos ) {
+            lua_examine->throw_error( "Lua examine requires a registered handler name" );
+        }
+        examine_func.clear();
+        examine_actor.clear();
+        examine_actor.emplace_back( make_lua_examine_actor(
+                                        is_terrain() ? "terrain" : "furniture", {}, src, handler ) );
+    }
+
     if( was_loaded && jo.has_member( "flags" ) ) {
         unset_flags();
     }

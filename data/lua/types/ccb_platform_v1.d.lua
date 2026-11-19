@@ -7641,6 +7641,14 @@ function CcbPlatformContent.define_construction(options) end
 ---@field terrain_changes? table<string, string>
 ---@field furniture_changes? table<string, string>
 
+---@class CcbTileExamineContext
+---@field target_kind "terrain"|"furniture"
+---@field target_id string
+---@field terrain_id string
+---@field furniture_id string
+---@field character GameHandle
+---@field position {coordinate_space:"abs_ms",x:integer,y:integer,z:integer} Absolute map-square position being examined.
+
 ---@class StaticMapTileOptions
 ---@field id? string Stable identifier. Provide either id or abstract.
 ---@field abstract? string Abstract definition available for inheritance.
@@ -7681,6 +7689,7 @@ function CcbPlatformContent.define_construction(options) end
 ---@field extend? StaticTileExtends
 ---@field delete? StaticTileExtends
 ---@field builtin_examine? string|string[] Native examine action names in order.
+---@field examine_handler? string Named handler in the owning runtime, receiving CcbTileExamineContext.
 ---@field appliance_conversion? StaticTileAppliance Convert the tile to an appliance.
 ---@field card_reader? StaticTileCardReader Apply the native card reader interaction.
 
@@ -11075,6 +11084,12 @@ local CcbPlatformInteractionApi = {}
 ---@param message string
 ---@return boolean confirmed
 function CcbPlatformInteractionApi.confirm(message) end
+
+---Open a native conversation with a topic and no NPC, during an active callback.
+---@param speaker GameHandle Exact live avatar; a non-avatar speaker is ignored.
+---@param topic string Native dialogue topic ID.
+---@return boolean started
+function CcbPlatformInteractionApi.open_topic(speaker, topic) end
 
 ---@class PlatformInteractionTextInputOptions
 ---@field default? string Raw initial editable value; defaults to empty. No extra byte or NUL restriction is imposed.
@@ -15798,6 +15813,12 @@ function CcbVariablesApi.get(character, key) end
 ---@param options CcbVariableMutationOptions?
 ---@return CcbResult result `value` contains existed and after; before is present by default and omitted when include_before=false.
 function CcbVariablesApi.set(character, key, value, options) end
+
+---Store a native Character string and emit its variable-changed event during a writable callback.
+---@param character GameHandle Exact live Character.
+---@param key string Raw native storage key.
+---@param value string
+function CcbVariablesApi.set_string_notifying(character, key, value) end
 
 ---@param character GameHandle
 ---@param key string Native actor/item/vehicle storage key; callback-context key limits do not apply.
