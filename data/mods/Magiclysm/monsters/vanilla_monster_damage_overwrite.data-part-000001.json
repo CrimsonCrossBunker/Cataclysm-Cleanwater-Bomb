@@ -1,0 +1,8 @@
+[
+  {
+    "type": "MONSTER",
+    "id": "mon_zomborg",
+    "copy-from": "mon_zomborg",
+    "extend": { "poison": 15, "nether": 4, "necrotic": 8, "psionic": 14 }
+  }
+]
