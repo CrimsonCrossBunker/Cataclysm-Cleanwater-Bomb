@@ -43,14 +43,5 @@
     "mission": "SHOPKEEP",
     "chat": "TALK_AUGUSTMOON_OUTFITTER",
     "faction": "UICA"
-  },
-  {
-    "id": [ "TALK_AUGUSTMOON_OUTFITTER" ],
-    "type": "talk_topic",
-    "dynamic_line": "&You find the clerk in between stacked second hand outfits of all kinds.",
-    "responses": [
-      { "text": "I want to buy some gear.", "topic": "TALK_DONE", "effect": "start_trade" },
-      { "text": "Maybe later.", "topic": "TALK_DONE" }
-    ]
   }
 ]
