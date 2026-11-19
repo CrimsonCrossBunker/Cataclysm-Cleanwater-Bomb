@@ -1,0 +1,22 @@
+[
+  {
+    "id": "bfipowder",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "comestible_type": "MED",
+    "name": { "str_sp": "antiseptic powder" },
+    "description": "A powdered form of chemical antiseptic, this bismuth formic iodide cleans wounds quickly and painlessly.",
+    "display_type": "BY_WEIGHT",
+    "weight": "6 g",
+    "volume": "6 ml",
+    "price": "22 cent",
+    "price_postapoc": "50 cent",
+    "material": [ "powder" ],
+    "symbol": "!",
+    "color": "white",
+    "container": "bottle_plastic_small",
+    "flags": [ "NO_INGEST", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
+    "use_action": { "type": "heal", "disinfectant_power": 4, "bite": 0.95, "move_cost": 2000 },
+    "stackable": true
+  }
+]

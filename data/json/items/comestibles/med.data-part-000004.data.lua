@@ -1,0 +1,55 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "crack",
+    name = ccb.content.plural_text("crack", "crack"),
+    description = ccb.content.text("Deprotonated cocaine crystals, incredibly addictive and deleterious to brain chemistry."),
+    display_type = "BY_WEIGHT",
+    mass = "80 mg",
+    volume = "1 ml",
+    stack_size = 10,
+    price = "720 cent",
+    survival_price = "50 cent",
+    materials = { "powder" },
+    symbol = "!",
+    color = "white",
+    default_container = "bag_zipper",
+    flags = { "NO_INGEST", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" },
+    stackable = true,
+    comestible = {
+        kind = "MED",
+        stimulation = 40,
+        healthy = -2,
+        fun = 50,
+        addiction_potential = 80,
+        addiction = "crack",
+    },
+    use_actions = {
+        {
+            kind = "consume_drug",
+            message = ccb.content.text("You smoke your crack rocks.  Mother would be proud."),
+            effects = { { id = "high", duration = 15 } },
+            stat_adjustments = { hunger = -10 },
+            fields_produced = { fd_cracksmoke = 2 },
+            charges_needed = { fire = 1 },
+            tools_needed = { apparatus = -1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "dayquil",
+    name = ccb.content.plural_text("non-drowsy cough syrup", "non-drowsy cough syrup"),
+    description = ccb.content.text("Daytime cold and flu medication, non-drowsy formula.  Will suppress coughing, aching, headaches and runny noses, but you'll still need lots of fluids and rest."),
+    display_type = "BY_VOLUME",
+    mass = "48 g",
+    volume = "250 ml",
+    price = "8 USD",
+    survival_price = "10 USD",
+    symbol = "~",
+    color = "yellow",
+    phase = "liquid",
+    flags = { "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE" },
+    comestible = { kind = "MED", servings = 5 },
+    use_actions = { "FLUMED" },
+}

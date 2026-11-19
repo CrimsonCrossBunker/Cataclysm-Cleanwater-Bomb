@@ -1,0 +1,22 @@
+[
+  {
+    "id": "quikclot",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "comestible_type": "MED",
+    "name": { "str_sp": "hemostatic powder" },
+    "description": "A powdered antihemorrhagic compound that reacts with blood to immediately form a gel-like substance that stops bleeding.",
+    "display_type": "BY_WEIGHT",
+    "weight": "5 g",
+    "volume": "5 ml",
+    "price": "9 cent",
+    "price_postapoc": "50 cent",
+    "material": [ "powder" ],
+    "symbol": "!",
+    "color": "light_gray",
+    "container": "bag_plastic_small",
+    "flags": [ "NO_INGEST", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
+    "use_action": { "type": "heal", "bleed": 20, "move_cost": 2000 },
+    "stackable": true
+  }
+]
