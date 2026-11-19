@@ -1,0 +1,8 @@
+[
+  {
+    "type": "MONSTER",
+    "id": "mon_zomborg",
+    "copy-from": "mon_zomborg",
+    "extend": { "withering_damage": 15 }
+  }
+]
