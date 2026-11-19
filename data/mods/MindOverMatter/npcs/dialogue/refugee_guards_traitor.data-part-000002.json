@@ -29,18 +29,5 @@
         "topic": "TALK_EVAC_GUARD3_post_scan"
       }
     ]
-  },
-  {
-    "id": [ "TALK_EVAC_GUARD3_post_scan" ],
-    "type": "talk_topic",
-    "dynamic_line": "&Only a few moments have passed.  <npc_name> hasn't noticed anything amiss.",
-    "responses": [
-      { "text": "…", "topic": "TALK_EVAC_GUARD3" },
-      {
-        "text": "It's you.",
-        "topic": "TALK_EVAC_GUARD3_direct_accusation",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_refugee_center_traitor_deep_scanned_evac_guard_3" } ] }
-      }
-    ]
   }
 ]
