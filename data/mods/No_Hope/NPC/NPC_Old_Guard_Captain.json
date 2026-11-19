@@ -10,45 +10,5 @@
     "chat": "TALK_OLD_GUARD_NEC_CPT",
     "faction": "old_guard",
     "mission_offered": "MISSION_OLD_GUARD_NEC_1"
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_OLD_GUARD_NEC_CPT",
-    "dynamic_line": {
-      "u_is_wearing": "badge_marshal",
-      "yes": "Marshal, I hope you're here to assist us.",
-      "no": {
-        "u_male": "Sir, I don't know how the hell you got down here but if you have any sense you'll get out while you can.",
-        "no": "Ma'am, I don't know how the hell you got down here but if you have any sense you'll get out while you can."
-      }
-    },
-    "responses": [
-      {
-        "text": "What are you doing down here?",
-        "topic": "TALK_OLD_GUARD_NEC_CPT_GOAL",
-        "condition": { "u_is_wearing": "badge_marshal" }
-      },
-      {
-        "text": "Can you tell me about this facility?",
-        "topic": "TALK_OLD_GUARD_NEC_CPT_VAULT",
-        "condition": { "u_is_wearing": "badge_marshal" }
-      },
-      {
-        "text": "What do you need done?",
-        "topic": "TALK_MISSION_LIST",
-        "condition": { "u_is_wearing": "badge_marshal" }
-      },
-      {
-        "text": "About the mission…",
-        "topic": "TALK_MISSION_INQUIRE",
-        "condition": { "and": [ "has_assigned_mission", { "u_is_wearing": "badge_marshal" } ] }
-      },
-      {
-        "text": "About one of those missions…",
-        "topic": "TALK_MISSION_LIST_ASSIGNED",
-        "condition": { "and": [ "has_many_assigned_missions", { "u_is_wearing": "badge_marshal" } ] }
-      },
-      { "text": "I've got to go…", "topic": "TALK_DONE" }
-    ]
   }
 ]

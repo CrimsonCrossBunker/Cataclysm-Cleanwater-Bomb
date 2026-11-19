@@ -1,18 +1,43 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_OLD_GUARD_NEC_CPT_GOAL",
-    line = ccb.content.text("I'm leading what remains of my company on a mission to re-secure this facility.  We entered the complex with two dozen men and immediately went about securing this control room.  From here I dispatched my men to secure vital systems located on this floor and the floors below this one.  If we are successful, this facility can be cleared and used as a permanent base of operations in the region.  Most importantly it will allow us to redirect refugee traffic away from overcrowded outposts and free up more of our forces to conduct recovery operations."),
-    replies = { { text = ccb.content.text("Seems like a decent plan…"), next_topic = "TALK_NONE" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_OLD_GUARD_NEC_CPT_VAULT",
-    line = ccb.content.text("This facility was constructed to provide a safe haven in the event of a global conflict.  The vault can support several thousand people for a few years if all systems are operational and sufficient notification is given.  Unfortunately, the power system was damaged or sabotaged at some point and released a single extremely lethal burst of radiation.  The catastrophic event lasted for several minutes and resulted in the deaths of most people located on the 2nd and lower floors.  Those working on this floor were able to seal the access ways to the lower floors before succumbing to radiation sickness.  The only other thing the logs tell us is that all water pressure was diverted to the lower levels."),
+    id = "TALK_OLD_GUARD_NEC_CPT",
+    line = {
+        when = predicates.wears("speaker", "badge_marshal"),
+        yes = ccb.content.text("Marshal, I hope you're here to assist us."),
+        no = {
+            when = predicates.actor_state("speaker", "male"),
+            yes = ccb.content.text("Sir, I don't know how the hell you got down here but if you have any sense you'll get out while you can."),
+            no = ccb.content.text("Ma'am, I don't know how the hell you got down here but if you have any sense you'll get out while you can."),
+        },
+    },
     replies = {
         {
-            text = ccb.content.text("Whatever they did it must have worked since we are still alive…"),
-            next_topic = "TALK_NONE",
+            text = ccb.content.text("What are you doing down here?"),
+            next_topic = "TALK_OLD_GUARD_NEC_CPT_GOAL",
+            when = predicates.wears("speaker", "badge_marshal"),
         },
+        {
+            text = ccb.content.text("Can you tell me about this facility?"),
+            next_topic = "TALK_OLD_GUARD_NEC_CPT_VAULT",
+            when = predicates.wears("speaker", "badge_marshal"),
+        },
+        {
+            text = ccb.content.text("What do you need done?"),
+            next_topic = "TALK_MISSION_LIST",
+            when = predicates.wears("speaker", "badge_marshal"),
+        },
+        {
+            text = ccb.content.text("About the mission…"),
+            next_topic = "TALK_MISSION_INQUIRE",
+            when = predicates.all({ predicates.assigned_missions(1, 1), predicates.wears("speaker", "badge_marshal") }),
+        },
+        {
+            text = ccb.content.text("About one of those missions…"),
+            next_topic = "TALK_MISSION_LIST_ASSIGNED",
+            when = predicates.all({ predicates.assigned_missions(2), predicates.wears("speaker", "badge_marshal") }),
+        },
+        { text = ccb.content.text("I've got to go…"), next_topic = "TALK_DONE" },
     },
 }
