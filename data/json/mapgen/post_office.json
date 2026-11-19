@@ -93,59 +93,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "post_office_roof",
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "            ----------- ",
-        "            -.........- ",
-        "            -..oo.oo..- ",
-        "            -..oo.oo..- ",
-        "            -..oo.oo..- ",
-        "            -R........- ",
-        "            -..oo.oo..- ",
-        "            -..oo.oo..- ",
-        " ------------..oo.oo..- ",
-        " -....................- ",
-        " -.U..................- ",
-        " -....................- ",
-        " 5....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " ---------------------- "
-      ],
-      "palettes": [ "roof_palette" ],
-      "nested": { "U": { "chunks": [ "roof_2x2_infrastructure" ] }, "R": { "chunks": [ "roof_2x2_infrastructure_1" ] } },
-      "place_nested": [
-        {
-          "chunks": [
-            [ "null", 20 ],
-            [ "roof_2x2_utilities_b", 15 ],
-            [ "roof_2x2_utilities_c", 5 ],
-            [ "roof_2x2_utilities_d", 40 ],
-            [ "roof_2x2_utilities", 50 ]
-          ],
-          "x": [ 5, 15 ],
-          "y": [ 12, 13 ]
-        },
-        {
-          "chunks": [ [ "null", 40 ], [ "roof_4x4_utility", 40 ], [ "roof_6x6_utility", 20 ] ],
-          "x": [ 3, 13 ],
-          "y": [ 15, 17 ]
-        }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "post_office_1" ],
     "object": {
       "fill_ter": "t_floor",
@@ -234,45 +181,6 @@
       },
       "toilets": { "T": {  } },
       "place_loot": [ { "group": "cash_register_random", "x": [ 9, 11 ], "y": 15 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "post_office_roof_1",
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "   ----------------     ",
-        "   -..............-     ",
-        "   -...ooo..ooo...-     ",
-        "   -..............-     ",
-        "   -..............-     ",
-        "   -............U.-     ",
-        "   -..............-     ",
-        "   -...........---5     ",
-        "   -..R...Z....-        ",
-        "   -...........-        ",
-        "   -------------        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "nested": {
-        "U": { "chunks": [ "roof_2x2_infrastructure" ] },
-        "R": { "chunks": [ "roof_2x2_infrastructure_1" ] },
-        "Z": { "chunks": [ "roof_2x2_infrastructure_2" ] }
-      }
     }
   }
 ]
