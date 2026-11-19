@@ -179,49 +179,5 @@
     "recovery_chance": 86,
     "description": "An arrow with a fragment of an animist rune in the arrowhead.  It unleashes a cloud of enervating gas.",
     "effects": [ "PARALYZEPOISON", "TOXICGAS" ]
-  },
-  {
-    "id": "quiver_of_holding_plus_one",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR" ],
-    "name": { "str": "quiver of holding +1", "str_pl": "quivers of holding +1" },
-    "description": "A quiver enchanted to hold 40 arrows or bolts while not taking up any more space than a normal quiver.  Rarely made after the invention of firearms.",
-    "copy-from": "quiver",
-    "price": "500 USD",
-    "price_postapoc": "20 USD",
-    "looks_like": "quiver",
-    "pocket_data": [
-      {
-        "ammo_restriction": { "arrow": 40, "bolt": 40, "arrow_orichalcum": 40 },
-        "weight_multiplier": 0.5,
-        "volume_multiplier": 0.5,
-        "moves": 20
-      }
-    ],
-    "armor": [
-      {
-        "encumbrance": [ 3, 11 ],
-        "coverage": 25,
-        "covers": [ "leg_l", "leg_r" ],
-        "specifically_covers": [ "leg_upper_l", "leg_upper_r" ]
-      }
-    ],
-    "extend": { "flags": [ "TARDIS" ] }
-  },
-  {
-    "id": "quiver_of_holding_plus_two",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR" ],
-    "name": { "str": "quiver of holding +2", "str_pl": "quivers of holding +2" },
-    "description": "A quiver enchanted to hold 80 arrows or bolts while not taking up any more space than a normal quiver.  Rarely made after the invention of firearms.",
-    "copy-from": "quiver_of_holding_plus_one",
-    "pocket_data": [
-      {
-        "ammo_restriction": { "arrow": 80, "bolt": 80, "arrow_orichalcum": 80 },
-        "weight_multiplier": 0.25,
-        "volume_multiplier": 0.25,
-        "moves": 20
-      }
-    ]
   }
 ]
