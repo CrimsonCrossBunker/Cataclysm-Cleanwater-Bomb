@@ -9,39 +9,5 @@
     "chat": "TALK_OLD_GUARD_RED",
     "faction": "old_guard",
     "mission_offered": [ "MISSION_OLD_GUARD_DINO_1" ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_OLD_GUARD_RED",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_red" } ],
-      "no": "You there, wanderer.  You have the look of someone who hates dinosaurs.  Are you ready to take this country back?",
-      "yes": {
-        "compare_string": [ "yes", { "u_val": "dialogue_dino_asked_about_kill_dinos" } ],
-        "no": "You're back.  I knew you were a killer.  Are you ready to take this country back?",
-        "yes": "It's a good day to shoot some dinos."
-      }
-    },
-    "speaker_effect": { "effect": { "u_add_var": "dialogue_first_meeting_talked_to_red", "value": "yes" } },
-    "responses": [
-      {
-        "text": "Dinosaurs?  What are you talking about?",
-        "topic": "TALK_RED_DINOSAURS",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_dino_asked_about_kill_dinos" } ] } },
-        "effect": { "u_add_var": "dialogue_dino_asked_about_kill_dinos", "value": "yes" }
-      },
-      { "text": "Let's trade items.", "topic": "TALK_OLD_GUARD_RED", "effect": "start_trade" },
-      {
-        "text": "How can I help?",
-        "topic": "TALK_MISSION_LIST",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_dino_asked_about_kill_dinos" } ] }
-      },
-      {
-        "text": "Mission update for you, Red.",
-        "topic": "TALK_MISSION_INQUIRE",
-        "condition": { "and": [ "has_assigned_mission" ] }
-      },
-      { "text": "Anyway.  Take care, Red.", "topic": "TALK_DONE" }
-    ]
   }
 ]
