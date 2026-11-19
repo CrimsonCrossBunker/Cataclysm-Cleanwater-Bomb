@@ -1,53 +1,40 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_AR_GLASSES_NO",
-    line = ccb.content.text("Pair'a advanced AR glasses, 2 two-way radios, and 2 tablet PCs.  Or, ya' cough up 10 HGC, and I'll scrounge up the pahts myself.  Cool?"),
-    replies = { { text = ccb.content.text("Cool."), next_topic = "TALK_ROBOFAC_MERC_PAT" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_EARPIECE_NO",
-    line = ccb.content.text("No prob.  Just cough up 2 HGC, and I'll scrounge up the pahts myself.  Cool?"),
-    replies = { { text = ccb.content.text("Cool."), next_topic = "TALK_ROBOFAC_MERC_PAT" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_AR_GLASSES_YES",
-    line = ccb.content.text("&Pat whips out their soldering iron and starts to clear their desk.  \"Wicked.  Come back tomorrah.\""),
-    replies = { { text = ccb.content.text("Thanks, Pat.  See you tomorrow."), next_topic = "TALK_DONE" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_EARPIECE_YES",
-    line = ccb.content.text("&Pat whips out their soldering iron and starts to clear their desk.  \"Wicked.  Come back tomorrah.\""),
-    replies = { { text = ccb.content.text("Thanks, Pat.  See you tomorrow."), next_topic = "TALK_DONE" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_AR_GLASSES_DONE",
-    line = ccb.content.text("&Pat picks up a new pair of modified AR glasses, wipes the lenses, and hands them over to you.  \"Careful with this set, yeah?\""),
-    replies = { { text = ccb.content.text("Thanks, Pat.  See you later."), next_topic = "TALK_DONE" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_EARPIECE_DONE",
-    line = ccb.content.text("&Pat whistles sharply and tosses the earpiece in the air.  You catch it.  Pat chuckles.  \"Don' lose that one, got it?\""),
-    replies = { { text = ccb.content.text("Thanks, Pat.  See you later."), next_topic = "TALK_DONE" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_MISSION_FRIEND_1",
-    line = ccb.content.text("Actually, yeah, I been thinkin' about this a lot.  I'm probably bettah suited stayin' heah, an' you're bettah out in the field.  I'm wonderin' if maybe we team up.  Partners.  Whaddaya think?"),
-    replies = {
-        {
-            text = ccb.content.text("Sure, I like it.  What do you have in mind?"),
-            next_topic = "TALK_ROBOFAC_MERC_PAT_MISSION_FRIEND_2",
+    id = "TALK_ROBOFAC_MERC_PAT_MORALE_CHAT",
+    line = {
+        choices = {
+            ccb.content.text("Tell me ya haven't seen the LAST Sox game.  Found it recorded on a scrap tablet.  Absolute heartbreak, even now.  So in the ninth…"),
+            ccb.content.text("You wouldn't believe the data I pulled last night.  Before all this, never seem storms like these.  Lemme tell ya'…"),
+            ccb.content.text("Kinda weird, right?  Apocalypse an' I'm still doin' weathah modeling like it matters.  Look at this latest one…"),
+            ccb.content.text("You drink rum before noon now, or we still pretendin' it's a bad habit?  Ya' know, I had this rum once…"),
+            ccb.content.text("Portal storms ain't random, by the way.  Anyone tells ya that's full a shit.  Listen…"),
+            ccb.content.text("This might sound stupid, but it reminds me a little a how things used ta be…"),
+            ccb.content.text("So, uh… you trust these folks, or we just survivin' near 'em?  I got ideas…"),
+            ccb.content.text("I been rationin' smokes, but yeah, this feels like a good exception…"),
+            ccb.content.text("Nevah been a menthol-smoker, but post-apocalypse, they're not bad…"),
+            ccb.content.text("Popcorn.  Hot dogs.  Some smuggled-in Rum.  THAT was a ball game…"),
+            ccb.content.text("I was thinkin' about the Sox, an' now I'm in a wicked bad mood…"),
+            ccb.content.text("I had this theory once, back before everythin' went ta hell…"),
+            ccb.content.text("Wicked cool gear you got theah.  Tell me where ya' found it?"),
+            ccb.content.text("You wouldn't believe the asshole came through heah earliah…"),
+            ccb.content.text("So I been thinkin' about somethin' I saw out theah today…"),
+            ccb.content.text("Yeah, sure.  Can I run somethin' by ya?  Nothin' serious…"),
+            ccb.content.text("So, we callin' these things zombies?  I dunno…"),
+            ccb.content.text("So I've been scannin' the radio waves, and…"),
+            ccb.content.text("This reminds me of a bar back home…"),
+            ccb.content.text("So what's ya favorite cocktail?"),
         },
-        {
-            text = ccb.content.text("Let me think about this.  We'll talk again later, maybe.  See you later, Pat."),
-            next_topic = "TALK_DONE",
-        },
-        { text = ccb.content.text("I work alone.  I gotta go."), next_topic = "TALK_DONE" },
     },
+    on_enter = {
+        {
+            actions = {
+                "morale_chat_activity",
+                actions.add_effect("interlocutor", "asked_to_socialize", { turns = 7000 }),
+            },
+        },
+    },
+    replies = { { text = ccb.content.text("[Have a chat then say goodbye]"), next_topic = "TALK_DONE" } },
 }

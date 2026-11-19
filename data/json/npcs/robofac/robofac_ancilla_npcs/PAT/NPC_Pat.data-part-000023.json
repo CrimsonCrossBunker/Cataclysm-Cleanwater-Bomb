@@ -1,0 +1,17 @@
+[
+  {
+    "id": "TALK_PAT_RECON_DIRECTIONS_INTRO",
+    "type": "talk_topic",
+    "dynamic_line": "Yeah, absolutely.  I'll chat with mercs and traders as they come by.  Check in every 3 days or so?",
+    "responses": [
+      {
+        "text": "Yeah, alright.  Thanks, Pat.",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "effect": [
+          { "u_add_var": "robofac_pat_talked_about_recon", "value": "yes" },
+          { "math": [ "robofac_timer_pat_recon = time('now')" ] }
+        ]
+      }
+    ]
+  }
+]

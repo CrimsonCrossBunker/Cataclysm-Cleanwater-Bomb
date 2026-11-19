@@ -1,12 +1,7 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_GIVE_EARPIECE",
-    line = ccb.content.text("Right, so check this shit out.  I rigged up'a small radio transponder to an earpiece.  Just put it in your ear, plug it in'ta the port there on the headset, switch it on, and as long as your AR headset is on, I can see, heah, and talk.  Wicked, eh?  You just keep that transmitter-receiver toggled on and I'll do what I can to give you some wicked fahkin' good advice and info.  On my end, I'll sell data to the Hub to keep me afloat, and you keep whatever comes out of the jobs."),
-    replies = {
-        {
-            text = ccb.content.text("Wicked.  Guess we'll talk soon, Pat.  Thanks."),
-            next_topic = "TALK_DONE",
-        },
-    },
+    id = "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01_AR_INFOLINK_INSTALLED",
+    line = ccb.content.text("&Pat plugs their laptop into your USB port and starts to clack away.  After 10 minutes, you hear a BEEP.  Your Infolink resets, and Pat unplugs you.  \"All done.  The Hub made that shit theah easy.  All I had to do… well, it isn't impahtant.  Should be able to toggle ya' integrated transpondah to keep connected to me, now.  You can also just call me up on the comm, now, yeah?\""),
+    replies = { { text = ccb.content.text("Thanks, Pat."), next_topic = "TALK_ROBOFAC_MERC_PAT" } },
 }

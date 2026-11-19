@@ -1,34 +1,53 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_MISSION_FRIEND_3",
-    line = ccb.content.text("Pat laughs, nods, and offers a handshake.  \"See ya around?\""),
-    replies = {
-        {
-            text = ccb.content.text("[Return the handshake]  See you around."),
-            next_topic = "TALK_DONE",
-        },
-        { text = ccb.content.text("[Offer a fistbump]  See you around."), next_topic = "TALK_DONE" },
-        {
-            text = ccb.content.text("[Go for the shake and pull away last minute]  Hah, psych!  See you around."),
-            next_topic = "TALK_DONE",
-        },
-    },
+    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_AR_GLASSES_NO",
+    line = ccb.content.text("Pair'a advanced AR glasses, 2 two-way radios, and 2 tablet PCs.  Or, ya' cough up 10 HGC, and I'll scrounge up the pahts myself.  Cool?"),
+    replies = { { text = ccb.content.text("Cool."), next_topic = "TALK_ROBOFAC_MERC_PAT" } },
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_GEAR",
-    line = ccb.content.text("Check this shit out, eh?  So ya' wear the glasses like normal, but I've made a leg-strap for the other bits.  The tablet heah is useless for ya', we just need it for extra processin' powah to run the long range radiowave emitter and receiver.  The pictures you send'll be shit, but it should work, long as you aren't stupid enough to drive off to Texas or some shit.  Ya' stick that earbud in ya' ear, and we should be able to chat.  Here's the trick - toggle the recording switch on, and I'll be able to collect pictures and audio now and again, and I'll keep an eye on the feed, even though it may be slow n' ugly.  You just keep that transmitter-receiver toggled on and I'll do what I can to give you some wicked fahkin' good advice and info."),
-    replies = {
-        {
-            text = ccb.content.text("Sounds great.  Guess we'll talk soon."),
-            next_topic = "TALK_DONE",
-        },
-    },
+    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_EARPIECE_NO",
+    line = ccb.content.text("No prob.  Just cough up 2 HGC, and I'll scrounge up the pahts myself.  Cool?"),
+    replies = { { text = ccb.content.text("Cool."), next_topic = "TALK_ROBOFAC_MERC_PAT" } },
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ROBOFAC_MERC_PAT_IMPROVE_GEAR_NO",
-    line = ccb.content.text("We've only just made'em, come on.  Try it out for a couple weeks, then we can talk."),
-    replies = { { text = ccb.content.text("Yeah, alright."), next_topic = "TALK_ROBOFAC_MERC_PAT" } },
+    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_AR_GLASSES_YES",
+    line = ccb.content.text("&Pat whips out their soldering iron and starts to clear their desk.  \"Wicked.  Come back tomorrah.\""),
+    replies = { { text = ccb.content.text("Thanks, Pat.  See you tomorrow."), next_topic = "TALK_DONE" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_EARPIECE_YES",
+    line = ccb.content.text("&Pat whips out their soldering iron and starts to clear their desk.  \"Wicked.  Come back tomorrah.\""),
+    replies = { { text = ccb.content.text("Thanks, Pat.  See you tomorrow."), next_topic = "TALK_DONE" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_AR_GLASSES_DONE",
+    line = ccb.content.text("&Pat picks up a new pair of modified AR glasses, wipes the lenses, and hands them over to you.  \"Careful with this set, yeah?\""),
+    replies = { { text = ccb.content.text("Thanks, Pat.  See you later."), next_topic = "TALK_DONE" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ROBOFAC_MERC_PAT_REMAKE_EARPIECE_DONE",
+    line = ccb.content.text("&Pat whistles sharply and tosses the earpiece in the air.  You catch it.  Pat chuckles.  \"Don' lose that one, got it?\""),
+    replies = { { text = ccb.content.text("Thanks, Pat.  See you later."), next_topic = "TALK_DONE" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ROBOFAC_MERC_PAT_MISSION_FRIEND_1",
+    line = ccb.content.text("Actually, yeah, I been thinkin' about this a lot.  I'm probably bettah suited stayin' heah, an' you're bettah out in the field.  I'm wonderin' if maybe we team up.  Partners.  Whaddaya think?"),
+    replies = {
+        {
+            text = ccb.content.text("Sure, I like it.  What do you have in mind?"),
+            next_topic = "TALK_ROBOFAC_MERC_PAT_MISSION_FRIEND_2",
+        },
+        {
+            text = ccb.content.text("Let me think about this.  We'll talk again later, maybe.  See you later, Pat."),
+            next_topic = "TALK_DONE",
+        },
+        { text = ccb.content.text("I work alone.  I gotta go."), next_topic = "TALK_DONE" },
+    },
 }
