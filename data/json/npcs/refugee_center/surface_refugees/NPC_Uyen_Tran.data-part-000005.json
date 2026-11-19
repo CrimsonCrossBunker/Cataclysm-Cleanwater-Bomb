@@ -1,17 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_Uyen_Teach",
-    "dynamic_line": "Sure, I don't see why not.  It's always good to have more people who can do it.  I'll need a bit of payment for my time, of course.",
-    "speaker_effect": { "effect": { "u_add_var": "knowledge_flag_Uyen_teach", "value": "yes" } },
-    "responses": [
-      { "text": "All right, let's do it!", "topic": "TALK_TRAIN" },
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_REFUGEE_Uyen_Situation",
     "dynamic_line": {
       "concatenate": [
