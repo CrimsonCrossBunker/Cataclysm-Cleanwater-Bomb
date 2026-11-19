@@ -1,0 +1,47 @@
+[
+  {
+    "id": "mon_frog_dad",
+    "type": "MONSTER",
+    "name": { "str": "colossal zombie bullfrog" },
+    "description": "This gigantic zombified frog lets out an ear splitting unholy wail as it slowly takes notice of you.  Its mostly lethargic movements are offset by its ability to leap great distances using its gargantuan stout legs.",
+    "copy-from": "mon_proxy_frog_zombie",
+    "volume": "200 L",
+    "weight": "180 kg",
+    "hp": 500,
+    "attack_cost": 60,
+    "symbol": "F",
+    "color": "light_green",
+    "grab_strength": 50,
+    "melee_skill": 8,
+    "melee_dice": 6,
+    "melee_dice_sides": 5,
+    "vision_day": 30,
+    "special_attacks": [
+      {
+        "type": "leap",
+        "cooldown": 8,
+        "move_cost": 0,
+        "max_range": 8,
+        "min_consider_range": 2,
+        "condition": { "not": { "u_has_effect": "maimed_leg" } }
+      },
+      {
+        "id": "ranged_pull",
+        "range": 4,
+        "condition": { "and": [ { "not": { "u_has_flag": "GRAB_FILTER" } }, { "not": { "u_has_effect": "maimed_tongue" } } ] },
+        "hit_dmg_u": "%s catches you with its tongue and pulls you in!",
+        "hit_dmg_npc": "%s catches <npcname> with its tongue and pulls them in!",
+        "miss_msg_u": "%s's tongue lashes out at you, but you dodge!",
+        "miss_msg_npc": "%s's tongue lashes out at <npcname>, but they dodge!",
+        "no_dmg_msg_u": "%s catches you with its tongue and pulls you in!",
+        "no_dmg_msg_npc": "%s catches <npcname> with its tongue and pulls them in!"
+      },
+      { "id": "grab_drag", "cooldown": 3 },
+      { "id": "drag_followup" },
+      [ "SHRIEK_ALERT", 20 ],
+      [ "SHRIEK_STUN", 5 ]
+    ],
+    "armor": { "bash": 15, "cut": 7, "bullet": 5, "electric": 2 },
+    "burn_into": "mon_frog_smoker_hulk"
+  }
+]
