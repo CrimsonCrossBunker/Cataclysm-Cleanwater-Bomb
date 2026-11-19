@@ -32,49 +32,5 @@
     "chat": "TALK_SWAMPER",
     "faction": "swamper",
     "mission_offered": "MISSION_SWAMPER_GATHER_MEAT"
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_SWAMPER",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_talked_to_swamper" } ],
-      "no": "You look hungry friend.  So much hunger in this world.  This is the time of the eaters.",
-      "yes": {
-        "compare_string": [ "yes", { "u_val": "dialogue_eating_asked_about_eating" } ],
-        "no": "Welcome.  Are you hungry friend?",
-        "yes": "The eaters will be fed."
-      }
-    },
-    "speaker_effect": { "effect": { "u_add_var": "dialogue_first_meeting_talked_to_swamper", "value": "yes" } },
-    "responses": [
-      {
-        "text": "Hello.  Who are the eaters?",
-        "topic": "TALK_SWAMPER_EATING",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_eating_asked_about_eating" } ] } },
-        "effect": { "u_add_var": "dialogue_eating_asked_about_eating", "value": "yes" }
-      },
-      {
-        "text": "So about the eaters…",
-        "topic": "TALK_SWAMPER_EATING",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_eating_asked_about_eating" } ] }
-      },
-      {
-        "text": "You mentioned some pretenders before.  What does that mean?",
-        "topic": "TALK_SWAMPER_PRETENDER",
-        "condition": { "compare_string": [ "yes", { "u_val": "general_mission_NC_SWAMPER_MISSION_1" } ] }
-      },
-      {
-        "text": "Would you like to join me on my travels?",
-        "topic": "TALK_SUGGEST_FOLLOW_SWAMPER",
-        "condition": { "not": "npc_following" }
-      },
-      { "text": "Let's trade items.", "topic": "TALK_SWAMPER", "effect": "start_trade" },
-      {
-        "text": "Is there a way I can help feed the eaters?",
-        "topic": "TALK_MISSION_LIST_SWAMPER",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_eating_asked_about_eating" } ] }
-      },
-      { "text": "I have to get going.  Take care, CEO Baronyx.", "topic": "TALK_DONE" }
-    ]
   }
 ]
