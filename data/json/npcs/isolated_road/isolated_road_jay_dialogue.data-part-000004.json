@@ -1,0 +1,12 @@
+[
+  {
+    "id": "TALK_GUNSMITH_LOCATION_ABOUT",
+    "type": "talk_topic",
+    "dynamic_line": "It's my house.  Cody's in the other building, if you've met her.  We dug a trench and set up some milspec turrets.  I programmed them, Cody armored them.  Now we're just trying to get by.  This ain't the wizard of Oz, you can look behind the curtain over there.",
+    "speaker_effect": { "effect": [ { "u_add_var": "dialogue_artisans_gunsmith_mentioned_cody", "value": "yes" } ] },
+    "responses": [
+      { "text": "Where'd you get half a dozen milspec turrets?", "topic": "TALK_GUNSMITH_TURRETS" },
+      { "text": "…", "topic": "TALK_GUNSMITH_SERVICES" }
+    ]
+  }
+]

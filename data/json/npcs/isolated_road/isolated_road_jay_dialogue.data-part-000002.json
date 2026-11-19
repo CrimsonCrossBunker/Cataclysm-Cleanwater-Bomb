@@ -1,0 +1,13 @@
+[
+  {
+    "id": "TALK_GUNSMITH_SHOP_ABOUT_MORE",
+    "type": "talk_topic",
+    "dynamic_line": "Pretty simple stuff, bud.  I barter in pre-shitshow ammo, and to stimulate the growing economy, I print and issue more.  I take your goods - Cody would call it labor - and exchange it for the new universal currency.  If you want to convert currency I'm happy to facilitate, but it'll take a few days and there is a service charge.",
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_artisans_gunsmith_knows_about_conversion", "value": "yes" } },
+    "responses": [
+      { "text": "So you're really going all in on this bank thing?", "topic": "TALK_GUNSMITH_SERVICES" },
+      { "text": "So you'll exchange bullets for other bullets directly?", "topic": "TALK_BULLET_EXCHANGE_INFO" },
+      { "text": "…", "topic": "TALK_GUNSMITH_SERVICES" }
+    ]
+  }
+]
