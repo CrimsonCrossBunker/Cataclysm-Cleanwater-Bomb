@@ -1,0 +1,20 @@
+[
+  {
+    "id": "integrated_ierde_fists",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR", "ARTIFACT" ],
+    "category": "armor",
+    "name": { "str_sp": "stone fists" },
+    "description": "Your stone-like skin means your hands hit like hammers, and can be used like hammers as well.",
+    "weight": "300 g",
+    "volume": "500 ml",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "material": [ "stone" ],
+    "symbol": ",",
+    "color": "brown",
+    "flags": [ "INTEGRATED", "SEMITANGIBLE", "ALLOWS_NATURAL_ATTACKS", "UNBREAKABLE", "PERSONAL", "PADDED" ],
+    "qualities": [ [ "HAMMER", 3 ], [ "HAMMER_FINE", 1 ], [ "PRYING_NAIL", 1 ], [ "PRY", 2 ] ],
+    "passive_effects": [ { "id": "ench_ierde_stone_fists" } ]
+  }
+]

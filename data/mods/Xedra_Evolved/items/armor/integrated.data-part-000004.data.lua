@@ -1,0 +1,93 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "integrated_gelatinous_skin",
+    category = "armor",
+    name = ccb.content.plural_text("liquid skin", "liquid skin"),
+    description = ccb.content.text("Your skin has become vaguely gelatinous.  Provides some extra bash defense and immunity to wet effects."),
+    mass = "1 kg",
+    volume = "3 L",
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "elemental_water" },
+    symbol = "x",
+    color = "light_red",
+    flags = {
+        "INTEGRATED",
+        "ALLOWS_NATURAL_ATTACKS",
+        "UNBREAKABLE",
+        "PERSONAL",
+        "WATER_FRIENDLY",
+        "PADDED",
+        "SOFT",
+    },
+    armor = {
+        portions = {
+            {
+                materials = { { id = "elemental_water", coverage = 100, thickness = 3 } },
+                covers = {
+                    "hand_l",
+                    "hand_r",
+                    "foot_l",
+                    "foot_r",
+                    "leg_l",
+                    "leg_r",
+                    "arm_l",
+                    "arm_r",
+                    "torso",
+                    "head",
+                    "mouth",
+                },
+                coverage = 100,
+                encumbrance = 0,
+                breathability = "SECOND_SKIN",
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "integrated_wave_skin",
+    category = "armor",
+    name = ccb.content.plural_text("wave skin", "wave skin"),
+    description = ccb.content.text("Your skin is completely replaced by magickal water.  You have become immune to acid effects."),
+    mass = "1 kg",
+    volume = "3 L",
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "elemental_water" },
+    symbol = "x",
+    color = "light_red",
+    flags = {
+        "INTEGRATED",
+        "ALLOWS_NATURAL_ATTACKS",
+        "UNBREAKABLE",
+        "PERSONAL",
+        "WATER_FRIENDLY",
+        "PADDED",
+        "SOFT",
+    },
+    armor = {
+        portions = {
+            {
+                materials = { { id = "elemental_water", coverage = 100, thickness = 6 } },
+                covers = {
+                    "hand_l",
+                    "hand_r",
+                    "foot_l",
+                    "foot_r",
+                    "leg_l",
+                    "leg_r",
+                    "arm_l",
+                    "arm_r",
+                    "torso",
+                    "head",
+                    "mouth",
+                },
+                coverage = 100,
+                encumbrance = 0,
+                breathability = "SECOND_SKIN",
+            },
+        },
+    },
+}

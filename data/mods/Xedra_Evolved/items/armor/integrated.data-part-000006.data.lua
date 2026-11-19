@@ -1,0 +1,107 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "integrated_porcelain_skin",
+    category = "armor",
+    name = ccb.content.plural_text("porcelain skin", "porcelain skin"),
+    description = ccb.content.text("Your skin has smoothed and all your prior blemishes have faded away.  This somewhat reduces wet effects and leads to a more durable yet harder to heal body."),
+    mass = "1 kg",
+    volume = "3 L",
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "glass" },
+    symbol = "x",
+    color = "light_red",
+    flags = {
+        "INTEGRATED",
+        "ALLOWS_NATURAL_ATTACKS",
+        "UNBREAKABLE",
+        "PERSONAL",
+        "WATER_FRIENDLY",
+        "PADDED",
+        "SOFT",
+    },
+    armor = {
+        portions = {
+            {
+                materials = { { id = "glass", coverage = 100, thickness = 3 } },
+                covers = {
+                    "hand_l",
+                    "hand_r",
+                    "foot_l",
+                    "foot_r",
+                    "leg_l",
+                    "leg_r",
+                    "arm_l",
+                    "arm_r",
+                    "torso",
+                    "head",
+                    "mouth",
+                },
+                coverage = 100,
+                encumbrance = 0,
+                breathability = "SECOND_SKIN",
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "integrated_latex_skin",
+    category = "armor",
+    name = ccb.content.plural_text("latex skin", "latex skin"),
+    description = ccb.content.text("Your skin has become latex like.  While it provides additional protection and attractiveness it also heals at a much slower rate."),
+    mass = "1 kg",
+    volume = "3 L",
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "thermo_resin" },
+    symbol = "x",
+    color = "light_gray",
+    flags = {
+        "INTEGRATED",
+        "ALLOWS_NATURAL_ATTACKS",
+        "UNBREAKABLE",
+        "PERSONAL",
+        "WATER_FRIENDLY",
+        "PADDED",
+        "SOFT",
+    },
+    armor = {
+        portions = {
+            {
+                materials = { { id = "thermo_resin", coverage = 100, thickness = 3 } },
+                covers = {
+                    "hand_l",
+                    "hand_r",
+                    "foot_l",
+                    "foot_r",
+                    "leg_l",
+                    "leg_r",
+                    "arm_l",
+                    "arm_r",
+                    "torso",
+                    "head",
+                    "mouth",
+                },
+                coverage = 100,
+                encumbrance = 0,
+                breathability = "SECOND_SKIN",
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "integrated_homullus_tools",
+    category = "armor",
+    copy_from = "toolset",
+    name = ccb.content.plural_text("essence of the makers", "essence of the makers"),
+    description = ccb.content.text("The spirits of past artisans guide your hands."),
+    materials = { "fae_flesh" },
+    mass = "0 g",
+    volume = "0 ml",
+    melee_damage = {},
+    armor = { portions = {} },
+    inheritance = { add = { flags = { "SEMITANGIBLE", "ZERO_WEIGHT" } } },
+}
