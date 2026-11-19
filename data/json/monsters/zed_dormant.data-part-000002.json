@@ -1,0 +1,36 @@
+[
+  {
+    "type": "SPELL",
+    "id": "cause_loud_moaning",
+    "name": { "str": "cause loud moaning", "//~": "NO_I18N" },
+    "description": { "str": "You should not see this.  Causes loud noise.", "//~": "NO_I18N" },
+    "valid_targets": [ "ground", "ally" ],
+    "max_level": 1,
+    "shape": "blast",
+    "effect": "noise",
+    "flags": [ "NO_EXPLOSION_SFX" ],
+    "sound_type": "combat",
+    "sound_id": "melee_attack",
+    "sound_variant": "monster_melee_hit",
+    "sound_description": "a zombie moaning!",
+    "min_damage": 60,
+    "max_damage": 60,
+    "//": "volume is damage/3, so 20"
+  },
+  {
+    "type": "SPELL",
+    "id": "wake_up_dormant",
+    "name": { "str": "dormant corpse waking up", "//~": "NO_I18N" },
+    "description": { "str": "You should not see this.  Causes all dormant corpses in the tile to revive.", "//~": "NO_I18N" },
+    "valid_targets": [ "ground" ],
+    "max_level": 1,
+    "flags": [ "NO_EXPLOSION_SFX" ],
+    "base_casting_time": 1,
+    "shape": "blast",
+    "min_aoe": 1,
+    "max_aoe": 1,
+    "effect": "revive_dormant",
+    "effect_str": "ZOMBIE",
+    "extra_effects": [ { "id": "cause_loud_moaning" } ]
+  }
+]
