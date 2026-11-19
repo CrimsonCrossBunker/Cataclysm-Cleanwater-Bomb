@@ -1,21 +1,41 @@
 local ccb = require("ccb")
 
+-- Change charges and charge_regen only
 ccb.content.define_item {
-    id = "q_solarpack",
-    name = ccb.content.plural_text("quantum solar backpack (folded)", "quantum solar backpacks (folded)"),
-    description = ccb.content.text("Personal portable charging system consisting of an array of quantum solar panels neatly folded in the form of a large backpack.  It can be worn as one, and has an integrated cable to plug it into a cable charger system.  Cutting edge technology."),
-    mass = "7500 g",
-    volume = "5 L",
+    id = "afs_holo_cloak_mk2",
+    copy_from = "afs_sentinel_cloak",
+    name = ccb.content.plural_text("hologram cloak Mk. II", "hologram cloaks Mk. II"),
+    description = ccb.content.text("When activated, creates a holographic decoy of its wearer.  Powered by an experimental n-space energy generator, it slowly recharges itself for free, probably by siphoning excess energy from some unknown hyperdimensional space."),
+    pockets = { { kind = "MAGAZINE", ammunition = { battery = 15 } } },
+    flags = { "OVERSIZE", "HOOD", "WATERPROOF", "STURDY", "OUTER", "NO_UNLOAD", "NO_RELOAD" },
+    subtype_order = { "tool", "armor", "artifact" },
+    tool = { charges_per_use = 1 },
+    armor = {},
+    artifact = { charge = { recharge_type = "periodic", interval = "1 h", regenerate_ammo = true } },
+    use_actions = { "DIRECTIONAL_HOLOGRAM" },
+}
+
+ccb.content.define_item {
+    id = "afs_sentinel_cloak",
+    copy_from = "jedi_cloak",
+    name = ccb.content.plural_text("Sentinel-lx cloak", "Sentinel-lx cloaks"),
+    description = ccb.content.text("The vantablack cloak of Sentinel-lx hangs around ones shoulders as a solid, unnatural shadow.  Made from woven graphene, it's lightweight and resistant, but cannot be repaired."),
     price = "15 kUSD",
-    accuracy = -1,
-    materials = { "glass", "steel" },
+    materials = { "graphene_weave" },
     symbol = "[",
-    color = "light_gray",
-    flags = { "FRAGILE", "BELTED", "OVERSIZE", "SOLARPACK" },
-    max_worn = 1,
-    melee_damage = { bash = 10 },
-    subtype_order = { "tool", "armor" },
-    tool = {},
-    armor = { thickness = 3, portions = { { encumbrance = 12, coverage = 40, covers = { "torso" } } } },
-    use_actions = { "SOLARPACK" },
+    color = "dark_gray",
+    flags = { "OVERSIZE", "HOOD", "OUTER", "NO_REPAIR", "STURDY", "COSPLAY_COSTUME" },
+    subtype_order = { "armor", "artifact" },
+    armor = {
+        warmth = 30,
+        thickness = 1,
+        portions = {
+            {
+                encumbrance = 4,
+                coverage = 85,
+                covers = { "torso", "head", "arm_l", "arm_r", "leg_l", "leg_r" },
+            },
+        },
+    },
+    artifact = { enchantments = { "ITEM_ENCH_aftershock_exoplanet_afs_sentinel_cloak_0" } },
 }
