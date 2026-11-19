@@ -1,0 +1,53 @@
+local ccb = require("ccb")
+
+ccb.content.define_mutation {
+    id = "SUGAR",
+    name = ccb.content.text("Made Of Sugar"),
+    mixed_effect = true,
+    valid = false,
+    purifiable = false,
+    profession = true,
+    points = 2,
+    enchantments = { "INLINE_ENCH_SUGAR_0" },
+    ignored_by = { "ZOMBIE" },
+    scent_type = "sc_sugar",
+    cancels = {
+        "THIRST", "THIRST2", "THIRST3", "ANTIJUNK", "LACTOSE", "ANTIFRUIT", "MEATARIAN", "ANTIWHEAT",
+        "PROJUNK", "CHAOTIC", "CHAOTIC_BAD", "UNSTABLE", "HERBIVORE", "ROBUST", "CARNIVORE",
+        "FASTHEALER", "FASTHEALER2", "REGEN", "REGEN_LIZ", "SLOWHEALER", "SLOWHEALER2", "SLOWHEALER3",
+        "NOHEAL",
+    },
+    can_only_eat = { "junk", "sugar", "honey" },
+    can_only_heal_with = { "caramel_ointement" },
+    description = ccb.content.text("You are literally made of sugar."),
+    vitamin_intervals = { vitC = -900, iron = -900, calcium = -900 },
+    starting_trait = true,
+    species_anger = { MARSHMALLOW = 20, GUMMY = 5, CHEWGUM = 20 },
+    allowed_categories = { "SUGAR" },
+    armor = {
+        {
+            parts = {
+                "torso",
+                "arm_l",
+                "arm_r",
+                "hand_l",
+                "hand_r",
+                "leg_l",
+                "leg_r",
+                "foot_l",
+                "foot_r",
+                "mouth",
+                "eyes",
+            },
+            resistances = { cut = 10, bash = 5 },
+        },
+    },
+    flags = {
+        "NO_THIRST",
+        "NO_DISEASE",
+        "NO_RADIATION",
+        "BLEED_IMMUNE",
+        "INFECTION_IMMUNE",
+        "NO_CBM_INSTALLATION",
+    },
+}
