@@ -1,39 +1,5 @@
 [
   {
-    "type": "mapgen",
-    "om_terrain": [ "urban_25_sewer_connector" ],
-    "object": {
-      "fill_ter": "t_thconc_floor",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "|||||||||||||||||||     ",
-        "oooooooooooooooooo|     ",
-        "----------|o  o  o|     ",
-        "~~~~~~~~=#|o  o  o|     ",
-        "~~~~~~~~=#|o  o  o|     ",
-        "-#--------|o  o  o|     ",
-        "o=oooooooooooooooo|     ",
-        "|~o||||||||||||||||     ",
-        "|~o|                    ",
-        "|~o|                    ",
-        "|~o|                    ",
-        "|~o|                    ",
-        "|~o|                    ",
-        "|~o|                    ",
-        "|~o|                    ",
-        "|~ooooooooooooooo       "
-      ],
-      "palettes": [ "sewers" ]
-    }
-  },
-  {
     "object": {
       "fill_ter": "t_thconc_floor",
       "rows": [
@@ -372,40 +338,6 @@
         { "monster": "GROUP_ZOMBIE", "x": [ 1, 18 ], "y": [ 3, 20 ], "density": 0.02 },
         { "monster": "GROUP_ZOMBIE", "x": [ 31, 46 ], "y": [ 1, 19 ], "density": 0.03 }
       ]
-    }
-  },
-  {
-    "om_terrain": "urban_25_12",
-    "type": "mapgen",
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "             .....      ",
-        "             .....      ",
-        "             .....      ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ]
     }
   }
 ]
