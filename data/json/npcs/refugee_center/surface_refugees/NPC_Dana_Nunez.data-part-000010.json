@@ -1,0 +1,46 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_Dana_Recruit",
+    "dynamic_line": "Pablo's a little quicker on the trigger than I am.  We're trying to have a baby, did you know that?  It's a bit crazy in this world, but I won't change those plans.  Tell you what: if your camp has access to a doctor and some medical facilities, in case I actually can get pregnant again, I would consider getting out of here and signing up.",
+    "speaker_effect": { "effect": { "u_add_var": "knowledge_dana_pregnancy", "value": "knows" } },
+    "responses": [
+      { "text": "I'll look into that.  <done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "I'll look into that.  <end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "MISSION_REFUGEE_Dana_Sourdough",
+    "type": "mission_definition",
+    "name": { "str": "Find Dana's family sourdough culture" },
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 2,
+    "value": 1000,
+    "item": "landough_calrisean",
+    "start": {
+      "assign_mission_target": { "om_terrain": "bakery", "reveal_radius": 1, "random": true, "search_range": 800 },
+      "update_mapgen": { "place_item": [ { "item": "landough_calrisean", "x": 5, "y": 16 } ] },
+      "effect": { "u_add_var": "mission_flag_Dana_Sourdough", "value": "in_progress" }
+    },
+    "end": {
+      "effect": [
+        { "u_add_var": "mission_flag_Dana_Sourdough", "value": "yes" },
+        { "npc_add_effect": "dana_sourdough_revival", "duration": "7 d" },
+        { "math": [ "u_counter_refugee_center_refugee_happiness += 2" ] }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "I could get my real sourdough starter…",
+      "offer": "If you really like this second-rate bread, you could risk your life for something actually worth it.  I left my actual sourdough starter back in the bakery where I worked.  That baby is a hundred years old, and has been in my family for generations… if you can bring him to me, I'll bake you the finest bread you've ever had.",
+      "accepted": "Take care of yourself out there.  And listen, when you bring my sourdough back, I don't want to see a scratch on him, you understand?",
+      "rejected": "I can understand why you think you wouldn't want to risk your life for a bread starter.  You haven't tried that bread.",
+      "advice": "He'll be in the right-hand fridge, in a jar with a picture of the Millennium Falcon on it.",
+      "inquire": "So, you seen my sourdough starter?",
+      "success": "Oh, you will not regret this.  He may not look like much, but he's got it where it counts, kid.  It's gonna take me a few days to revive him after being abandoned so long, but he'll be operational soon and then you can come back for some real bread.",
+      "success_lie": "This ain't it.",
+      "failure": "I am not sure if I'm gonna make it through the Cataclysm without my special jar of goop."
+    }
+  }
+]

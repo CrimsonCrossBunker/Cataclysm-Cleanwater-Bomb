@@ -1,0 +1,32 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_Boris_Background",
+    "dynamic_line": "I was a carpenter.  I like to keep my hands busy, especially when I am stressed.  Now, here I am, picking my nose and stuck thinking about my problems and all that I've lost.",
+    "responses": [
+      { "text": "What have you lost, if it's okay for me to ask?", "topic": "TALK_REFUGEE_Boris_Background_loss" },
+      {
+        "text": "It seems like carpentry work would be something the Free Merchants need.  Why are you so bored?",
+        "topic": "TALK_REFUGEE_Boris_Work1",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "mission_completed_Boris_mission_1" } ] } }
+      },
+      {
+        "text": "Could you teach me something about carpentry?",
+        "topic": "TALK_REFUGEE_Boris_NoTeach",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "mission_completed_Boris_mission_2" } ] } }
+      },
+      {
+        "text": "Could you teach me something about carpentry?",
+        "topic": "TALK_REFUGEE_Boris_Teach",
+        "condition": { "compare_string": [ "yes", { "u_val": "mission_completed_Boris_mission_2" } ] }
+      },
+      {
+        "text": "Now that things are cleaned up in the back, is there anything holding you back from working?",
+        "topic": "TALK_MISSION_LIST",
+        "condition": { "compare_string": [ "yes", { "u_val": "mission_completed_Boris_mission_1" } ] }
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
