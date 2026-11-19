@@ -39,5 +39,6 @@ require("craft_recipes")
 
 require("second_wind")
 require("mutation_abilities")
+require("metamagic_casting")
 
 require("terrain_transforms")
