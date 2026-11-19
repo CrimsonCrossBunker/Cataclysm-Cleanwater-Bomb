@@ -10,26 +10,5 @@
         "condition": { "math": [ "time_since('cataclysm', 'unit':'days') >= 30" ] }
       }
     ]
-  },
-  {
-    "id": [ "TALK_EXODII_MERCHANT_alien_flora" ],
-    "type": "talk_topic",
-    "dynamic_line": {
-      "//~": "Oh, right, the alien plants.  The portals bring them.  As far as I've seen in the past, it's just going to keep getting worse.",
-      "str": "Sure, the plants o' otherworlds.  Them as comes from the wibbles.  Like as this'n's seen, 'tis all down 'n down, an I'm ken."
-    },
-    "responses": [
-      {
-        "text": " 'Down 'n down'?  So it's going to keep happening until…what?",
-        "topic": "TALK_EXODII_MERCHANT_alien_flora2"
-      },
-      {
-        "text": "From the portals…like you, right?  You've seen this before?",
-        "topic": "TALK_EXODII_MERCHANT_alien_flora_source",
-        "condition": { "compare_string": [ "yes", { "u_val": "knowledge_exodii_transdimensional_u_knows_exodiilore" } ] }
-      },
-      { "text": "Can we talk about something else?", "topic": "TALK_EXODII_MERCHANT_Talk" },
-      { "text": "I've gotta go.  See you later, Rubik.", "topic": "TALK_DONE" }
-    ]
   }
 ]
