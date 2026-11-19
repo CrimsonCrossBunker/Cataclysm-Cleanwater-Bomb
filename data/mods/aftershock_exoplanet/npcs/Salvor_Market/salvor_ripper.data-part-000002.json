@@ -12,18 +12,5 @@
     "dynamic_line": "&The ripper scoffs at you, clearly not taking you seriously.  \"Come back when you know what you're doing.\"",
     "speaker_effect": { "effect": { "npc_first_topic": "TALK_SALVOR_RIPPER_IGNORE" } },
     "responses": [ { "text": "I don't think I will.", "topic": "TALK_DONE" }, { "text": "Yeah.  Sure thing.", "topic": "TALK_DONE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_SALVOR_RIPPER_IGNORE",
-    "dynamic_line": "&The ripper is ignoring you.  They continue to tap away at their wrist computer, occasionally glancing up to make sure you're still there, but otherwise not acknowledging your presence.",
-    "responses": [
-      { "text": "…", "topic": "TALK_DONE" },
-      {
-        "text": "[Ancient Mercurial ID codes] I've found something you want.  Lets have a real talk.",
-        "topic": "TALK_SALVOR_MERCURIAL_IDENTS",
-        "condition": { "u_has_item": "ruin_data_mercurial_id" }
-      }
-    ]
   }
 ]
