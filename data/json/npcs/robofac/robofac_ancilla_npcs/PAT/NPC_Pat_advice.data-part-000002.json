@@ -1,0 +1,28 @@
+[
+  {
+    "id": "TALK_PAT_ADVICE_MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ],
+      "yes": "Swing by heah and ask me about this again.  Got somethin' for ya'.",
+      "no": "I saw that gun they gave ya' theah.  Cool shit.  I'd take their advice to heaht, though.  If you aren't up to snuff on workin' on electronics, I'd do a bit of reading.  That book they gave ya' is pretty advanced, so here, in case you need something to get stahted."
+    },
+    "responses": [
+      {
+        "text": "Sure, I'll swing by sometime.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE",
+        "condition": { "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ] }
+      },
+      {
+        "text": "Thanks a lot.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ] } },
+        "effect": [
+          { "u_spawn_item": "manual_electronics" },
+          { "u_spawn_item": "mag_electronics" },
+          { "u_add_var": "robofac_pat_gave_electronics_books", "value": "yes" }
+        ]
+      }
+    ]
+  }
+]

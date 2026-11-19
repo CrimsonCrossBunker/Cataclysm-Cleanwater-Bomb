@@ -1,0 +1,47 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_EVAC_SMOKER_GET_CIGARETTES",
+    "dynamic_line": "Well, if you're gatherin' cigs, maybe bring some back for me, yeah?  Tell ya' what I bet they got crates full of them in shipping containahs, if you're willin' to dig around.  My cousin's fathah - not really my uncle, but long story - ran one close by.  His name's Mike.  If ya' see'im, ask how his mothah is.  But seriously, if ya' go, go careful, yeah?  I bet we ain't the first to think about this.",
+    "responses": [
+      {
+        "text": "Thanks a lot.  Maybe I'll check it out.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE",
+        "effect": [
+          { "assign_mission": "MISSION_ROBOFAC_PAT_CONTAINAH" },
+          { "u_add_var": "robofac_pat_gave_directions_container", "value": "yes" }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_directions_isherwood",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "u_met_an_isherwood" } ],
+      "yes": "It's just that Isherwood farm, yeah?",
+      "no": "More recon is good for me.  Go locked and loaded, yeah?"
+    },
+    "responses": [ { "text": "Thanks a lot.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" } ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_directions_exodii",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Rubik" } ],
+      "yes": "You've been there, remember?  It's got those fahkin' robots!",
+      "no": "I say this a lot, but go strapped, yeah?  Don't like the sound of that."
+    },
+    "responses": [ { "text": "Thanks a lot.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" } ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_directions_artisans",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "u_met_isolated_road_artisans" } ],
+      "yes": "You've been there, remember?  Cody n' Jay.",
+      "no": "Could always use more bullets.  If it's like anywhere else, I bet they got work.  Make sure ya' check in if they do."
+    },
+    "responses": [ { "text": "Right.  Thanks a lot.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" } ]
+  }
+]

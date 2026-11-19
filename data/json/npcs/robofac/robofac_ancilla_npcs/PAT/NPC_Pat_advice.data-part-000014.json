@@ -1,0 +1,17 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_RUBIK_ANUS_FETICK",
+    "dynamic_line": "Easy: the fahkin' hospital, ya' fahkin' stunad, hah!  Heah, I'll upload a map to one neahby.",
+    "responses": [
+      {
+        "text": "Thanks, mabye I'll check it out.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE",
+        "effect": [
+          { "assign_mission": "MISSION_ROBOFAC_PAT_HOSPITAL" },
+          { "u_add_var": "robofac_pat_gave_directions_hospital", "value": "yes" }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_BUILD_CAMP",
+    "dynamic_line": "Best bet for all that shit they'll need is a lumbahmill.  In fact, I heard some mercs talkin' about one that's occupied by friendly-ish tradahs.  Heah, check it out.",
+    "responses": [
+      {
+        "text": "Thanks.  Maybe I'll check it out.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE",
+        "effect": [
+          { "assign_mission": "MISSION_ROBOFAC_PAT_LUMBERMILL" },
+          { "u_add_var": "robofac_pat_gave_directions_lumbermill", "value": "yes" }
+        ]
+      }
+    ]
+  }
+]

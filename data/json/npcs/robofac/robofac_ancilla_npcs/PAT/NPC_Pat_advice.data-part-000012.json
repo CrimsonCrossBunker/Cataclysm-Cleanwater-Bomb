@@ -1,0 +1,24 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_OLD_GUARD_REP_1",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ],
+      "yes": "Heh, alright, the Feds.  Tell ya' what I got somethin' special for yah'.  Swing by heah and see me.",
+      "no": "The Feds.  If they're payin', let's do it.  If they're all laid up in a cabin, I think your best bet may be explosives.  Heah.  Take this grenade.  Don't ask."
+    },
+    "responses": [
+      {
+        "text": "Sure, I'll swing by.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE",
+        "condition": { "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ] }
+      },
+      {
+        "text": "[take the grenade] Thanks, Pat.  I'll put it to good use?",
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ] } },
+        "effect": [ { "u_add_var": "robofac_pat_gave_grenade", "value": "yes" }, { "u_spawn_item": "grenade" } ]
+      }
+    ]
+  }
+]
