@@ -59,39 +59,5 @@
         { "signage": "Christmas trees available early winter!", "x": 5, "y": 1 }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "TreeFarm_1a_roof" ],
-    "object": {
-      "fill_ter": "t_floor",
-      "rows": [
-        "                        ",
-        "                        ",
-        "  ----                  ",
-        "  -..-                  ",
-        "  -..-                  ",
-        "  -..-                  ",
-        "  ----                  ",
-        "                        ",
-        "  ----                  ",
-        "  -..-                  ",
-        "  -..-                  ",
-        "  -..-                  ",
-        "  ----                  ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ]
-    }
   }
 ]

@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "TreeFarm_1a_roof" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "  ----                  ",
+            "  -..-                  ",
+            "  -..-                  ",
+            "  -..-                  ",
+            "  ----                  ",
+            "                        ",
+            "  ----                  ",
+            "  -..-                  ",
+            "  -..-                  ",
+            "  -..-                  ",
+            "  ----                  ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_floor",
+    },
+}
