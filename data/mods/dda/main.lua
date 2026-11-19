@@ -493,6 +493,8 @@ require("active_items")
 
 require("contact_lenses")
 
+require("food_side_effects")
+
 require("fidget_spinner")
 
 require("saline_infusion")
