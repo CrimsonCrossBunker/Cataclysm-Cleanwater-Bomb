@@ -1,0 +1,51 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "pool_ball",
+    symbol = "*",
+    color = "blue",
+    name = ccb.content.text("pool ball"),
+    description = ccb.content.text("A colorful, hard plastic ball for playing games on a pool table.  Essentially a rock."),
+    category = "other",
+    price = "30 USD",
+    survival_price = "0 cent",
+    materials = { "plastic" },
+    flags = { "NPC_THROWN", "SLING_PROJECTILE" },
+    mass = "170 g",
+    volume = "250 ml",
+    length = "57 mm",
+    thrown_damage = { { type = "bash", amount = 3 } },
+    ammunition = {
+        type = "rock",
+        range = 10,
+        dispersion = 14,
+        loudness = 0,
+        recovery_chance = 98,
+        effects = { "NON_FOULING" },
+    },
+}
+
+ccb.content.define_item {
+    id = "baseball",
+    symbol = "*",
+    color = "white",
+    name = ccb.content.text("baseball"),
+    category = "other",
+    description = ccb.content.text("A baseball, good for throwing at enemies.  Getting hit with one of these hurts a lot more than you might think."),
+    price = "10 USD",
+    survival_price = "0 cent",
+    materials = { "leather" },
+    flags = { "NPC_THROWN", "SLING_PROJECTILE" },
+    mass = "150 g",
+    volume = "250 ml",
+    length = "75 mm",
+    thrown_damage = { { type = "bash", amount = 3 } },
+    ammunition = {
+        type = "rock",
+        range = 12,
+        dispersion = 12,
+        loudness = 0,
+        recovery_chance = 99,
+        effects = { "NON_FOULING" },
+    },
+}
