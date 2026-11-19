@@ -1,0 +1,42 @@
+[
+  {
+    "id": "crafting_assistant",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "category": "armor",
+    "name": { "str": "Crafting Assistant Robot" },
+    "description": "A bulky wearable robot that significantly helps with all crafting tasks while powered.  It has some strange obsession with frequently taking apart and reassembling its own arms and its programming is far too focused on creation and disassembly for it to have any combat or destructive use.",
+    "weight": "7500 g",
+    "volume": "5550 ml",
+    "looks_like": "bot_nursebot",
+    "material": [ "steel", "aluminum" ],
+    "symbol": "[",
+    "color": "light_gray",
+    "use_action": [
+      {
+        "target": "crafting_assistant_on",
+        "need_charges": 1,
+        "need_charges_msg": "The batteries are dead.",
+        "msg": "The assistant deploys its new arms, ready to help with crafting.",
+        "type": "transform"
+      }
+    ],
+    "pocket_data": [
+      {
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "airtight": true,
+        "watertight": true,
+        "flag_restriction": [ "BATTERY_MEDIUM", "BATTERY_HEAVY" ],
+        "max_contains_volume": "20 L",
+        "max_contains_weight": "20 kg",
+        "default_magazine": "medium_battery_cell"
+      }
+    ],
+    "flags": [ "MORPHIC", "BELTED", "ALLOWS_NATURAL_ATTACKS", "WATER_FRIENDLY", "OVERSIZE", "ELECTRONIC", "INVENTOR_CRAFTED" ],
+    "faults": [ { "fault_group": "electronic_general" } ],
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_crafting_assistant_0" } ],
+    "armor": [ { "coverage": 50, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ],
+    "tool_ammo": [ "battery" ]
+  }
+]

@@ -1,0 +1,51 @@
+[
+  {
+    "id": "wolf_mask",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "category": "clothing",
+    "name": { "str": "wolf's mask" },
+    "description": "A huge, respirator-like mask covering the whole head except for the right eye.  Upon activation it protects you lungs from toxic gases as well as improving your breathing and stamina.",
+    "weight": "405 g",
+    "volume": "1479 ml",
+    "material": [ "aluminum" ],
+    "symbol": "[",
+    "looks_like": "mask_gas",
+    "color": "dark_gray",
+    "material_thickness": 0.4,
+    "environmental_protection": 4,
+    "flags": [ "MORPHIC", "MUNDANE", "INVENTOR_CRAFTED" ],
+    "armor": [
+      { "covers": [ "eyes" ], "rigid_layer_only": true, "coverage": 100, "encumbrance": 3 },
+      {
+        "covers": [ "mouth", "muzzle", "beak", "insect_proboscis" ],
+        "rigid_layer_only": true,
+        "coverage": 100,
+        "encumbrance": 7
+      }
+    ],
+    "pocket_data": [
+      {
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "airtight": true,
+        "watertight": true,
+        "flag_restriction": [ "BATTERY_ULTRA_LIGHT", "BATTERY_LIGHT" ],
+        "max_contains_volume": "20 L",
+        "max_contains_weight": "20 kg",
+        "default_magazine": "light_minus_disposable_cell"
+      }
+    ],
+    "use_action": [
+      {
+        "target": "wolf_mask_act",
+        "msg": "You turn on the %s.",
+        "need_charges": 1,
+        "need_charges_msg": "The batteries are dead.",
+        "type": "transform"
+      }
+    ],
+    "tool_ammo": [ "battery" ],
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_wolf_mask_0" } ]
+  }
+]
