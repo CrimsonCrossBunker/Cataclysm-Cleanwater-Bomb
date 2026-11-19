@@ -1,0 +1,16 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_JENNY_Refugees1",
+    "dynamic_line": {
+      "math": [ "time_since('cataclysm', 'unit':'days') >= 90" ],
+      "yes": "For better or worse, we're a community now.  Fatima and I work together a fair bit, and I consider Dana, Draco, and Aleesha my friends, and so of course I've gotten to know Dana's husband Pedro too.  The Borichenkos are their own sweet brand of messed up, like all of us.  The Singhs have each other, and keep mostly to themselves.  Vanessa and I don't see eye to eye, but I'm still glad she's here.  Uyen and Rhyzaea are always bickering about leadership decisions, as if they made those kind of calls.  What did you want to know?",
+      "no": "Well, there's a bunch of us.  We're starting to form a bit of a community.  Fatima and I work together a fair bit, and I've been hanging out with Dana, Draco, and Aleesha quite a lot.  I don't know the Borichenko bunch, the Singhs, Vanessa, Uyen, or Rhyzaea quite as well, but we've talked.  What did you want to know?"
+    },
+    "//": "see table of contents for the rest of the conversation options here",
+    "responses": [
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]

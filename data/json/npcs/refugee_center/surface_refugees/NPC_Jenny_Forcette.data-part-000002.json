@@ -1,0 +1,30 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_JENNY_Background1",
+    "dynamic_line": "Me?  I trained at MIT in mechanical engineering, I worked for a long time as senior engineer at Marduk Thermal in Rhode Island.  It was a good job, but I landed my dream gig at Boston Dynamics and moved up north to start there.\"  She tips back her head and lets out a long, wistful sigh.  \"I had just finished my orientation and was going to start work when the riots started.  Just my damn luck.",
+    "responses": [
+      {
+        "text": "That's impressive, but there must be more to you than just your job.",
+        "topic": "TALK_REFUGEE_JENNY_Background2"
+      },
+      {
+        "text": "You must know some great stuff.  Can you teach me anything?",
+        "topic": "TALK_REFUGEE_JENNY_Teach1",
+        "condition": {
+          "and": [
+            { "math": [ "time_since(n_timer_flag_Jenny_teach) > time('1 d')" ] },
+            { "not": { "compare_string": [ "yes", { "u_val": "knowledge_flag_Jenny_teach" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "So, did anyone tell you there are actual no-kidding talking cyborg-robot people out there now?",
+        "condition": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Rubik" } ] },
+        "topic": "TALK_REFUGEE_JENNY_Exodii"
+      },
+      { "text": "Sorry about your luck.  <done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
