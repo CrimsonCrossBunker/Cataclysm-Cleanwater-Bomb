@@ -1,0 +1,81 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lab_security_z-5",
+    layout = {
+        rows = {
+            "||||||||||||||||||||||||",
+            "|,,,,,,,,,,,,|````î`````",
+            "|,,,,,,,,,,,,|``````````",
+            "|,,,ê,,,,ê,,,|##||||||||",
+            "|,,,,,,,,,,,,|><|``||``|",
+            "|,,,,,,,,,,,,|||||||||||",
+            "|,,,,,,,,,,,,|||||||||||",
+            "|,,,,,,,,,,,,|||||||||||",
+            "|,,,,,,,,,,,,|||||||||||",
+            "|,,,,,,,,,,,,||≠LLLL≠|||",
+            "|,,,ê,,,,ê,,,||`î````|||",
+            "|,,,,,,,,,,,,#``j``j```=",
+            "|,,,,,,,,,,,,#``j``j```¥",
+            "|,,,ê,,,,ê,,,||````î`||ƶ",
+            "|,,,,,,,,,,,,||≠LLLL≠|||",
+            "|,,,,,,,,,,,,|||||||||||",
+            "|,,,,,,,,,,,,|||||||||||",
+            "|,,,,,,,,,,,,|||||||||||",
+            "|,,,,,,,,,,,,|||||||||||",
+            "|,,,,,,,,,,,,|><|``||``|",
+            "|,,,ê,,,,ê,,,|##||||||||",
+            "|,,,,,,,,,,,,|``````````",
+            "|,,,,,,,,,,,,|````î`````",
+            "||||||||||||||||||||||||",
+        },
+        palettes = { "lab_common_palette", "lab_security_palette" },
+        terrain = { ["ƶ"] = "t_card_reader_broken", ["¥"] = "t_door_metal_o" },
+        fill_terrain = "t_metal_floor",
+        nested = {
+            { choices = { { id = "12x12_obstacle_course_N", weight = 100 } }, x = 1, y = 1 },
+            { choices = { { id = "12x12_obstacle_course_S", weight = 100 } }, x = 1, y = 11 },
+        },
+        monster_group_placements = { { group = "GROUP_LAB_MILITARY", x = { 1, 22 }, y = { 1, 22 }, density = 0.1 } },
+        item_group_placements = {
+            {
+                group = "ammo_casings_milspec",
+                x = { 13, 22 },
+                y = { 11, 14 },
+                chance = 100,
+                repetitions = { 10, 20 },
+            },
+        },
+        item_groups = {
+            L = {
+                { group = "guns_milspec", chance = 50 },
+                { group = "fcl_SUS_heavy_rail_rifle", chance = 5 },
+            },
+            ["≠"] = {
+                { group = "ammo_milspec", chance = 70, repetitions = { 1, 2 } },
+                { group = "mags_milspec", chance = 70, repetitions = { 1, 2 } },
+            },
+        },
+        monster_placements = {
+            { id = "mon_flashbang_hack", x = 17, y = 4, chance = 100 },
+            { id = "mon_gasbomb_hack", x = 18, y = 4, chance = 100 },
+            { id = "mon_skitterbot", x = 21, y = 4, chance = 100 },
+            { id = "mon_tazer_hack", x = 22, y = 4, chance = 100 },
+            { id = "mon_gasbomb_hack", x = 17, y = 19, chance = 100 },
+            { id = "mon_grenade_hack", x = 18, y = 19, chance = 100 },
+            { id = "mon_tazer_hack", x = 21, y = 19, chance = 100 },
+            { id = "mon_skitterbot", x = 22, y = 19, chance = 100 },
+            { id = "mon_devourer_lab_sec", x = { 1, 10 }, y = 11, chance = 100 },
+        },
+        tile_edits = {
+            {
+                shape = "point",
+                operation = "bash",
+                x = { 10, 22 },
+                y = { 10, 16 },
+                repetitions = { 5, 30 },
+            },
+        },
+    },
+}
