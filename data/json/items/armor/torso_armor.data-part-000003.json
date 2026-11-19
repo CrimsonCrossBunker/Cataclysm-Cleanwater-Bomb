@@ -1,0 +1,80 @@
+[
+  {
+    "id": "armor_riot_torso",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "name": { "str": "riot chest guard" },
+    "description": "A hard chest protector, attached to thigh and upper arm guards.  Used by riot police officers.  MOLLE webbing is attached to the torso and the word POLICE is emblazoned across the front.",
+    "weight": "2 kg",
+    "volume": "10 L",
+    "price": "400 USD",
+    "price_postapoc": "25 USD",
+    "material": [ "thermo_resin", "plastic_pad" ],
+    "symbol": "[",
+    "looks_like": "chestguard_hard",
+    "color": "dark_gray",
+    "warmth": 20,
+    "longest_side": "60 cm",
+    "flags": [ "STURDY", "OUTER", "WATER_FRIENDLY", "PADDED", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "use_action": [ { "type": "attach_molle", "size": 6 }, { "type": "detach_molle" } ],
+    "armor": [
+      {
+        "encumbrance": 6,
+        "coverage": 75,
+        "covers": [ "torso" ],
+        "volume_encumber_modifier": 0.3,
+        "material": [
+          { "type": "plastic_pad", "covered_by_mat": 100, "thickness": 7 },
+          { "type": "thermo_resin", "covered_by_mat": 90, "thickness": 2 }
+        ]
+      },
+      {
+        "covers": [ "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "volume_encumber_modifier": 0,
+        "encumbrance": 2,
+        "coverage": 65,
+        "material": [
+          { "type": "plastic_pad", "covered_by_mat": 100, "thickness": 6 },
+          { "type": "thermo_resin", "covered_by_mat": 90, "thickness": 1.5 }
+        ],
+        "specifically_covers": [ "arm_shoulder_l", "arm_shoulder_r", "arm_upper_l", "arm_upper_r", "leg_upper_l", "leg_upper_r" ]
+      },
+      {
+        "covers": [ "leg_l", "leg_r" ],
+        "volume_encumber_modifier": 0,
+        "coverage": 30,
+        "material": [ { "type": "plastic_pad", "covered_by_mat": 100, "thickness": 7 } ],
+        "specifically_covers": [ "leg_hip_l", "leg_hip_r" ]
+      },
+      {
+        "volume_encumber_modifier": 0,
+        "coverage": 30,
+        "material": [ { "type": "plastic_pad", "covered_by_mat": 100, "thickness": 7 } ],
+        "covers": [ "gastropod_foot" ],
+        "specifically_covers": [ "leg_hip_gastropod_l", "leg_hip_gastropod_r" ]
+      },
+      {
+        "volume_encumber_modifier": 0,
+        "coverage": 30,
+        "material": [ { "type": "plastic_pad", "covered_by_mat": 100, "thickness": 7 } ],
+        "covers": [
+          "tentacle_lower_front_l",
+          "tentacle_lower_middle_l",
+          "tentacle_lower_rear_l",
+          "tentacle_lower_front_r",
+          "tentacle_lower_middle_r",
+          "tentacle_lower_rear_r"
+        ],
+        "specifically_covers": [
+          "tentacle_lower_front_base_l",
+          "tentacle_lower_middle_base_l",
+          "tentacle_lower_rear_base_l",
+          "tentacle_lower_middle_base_r",
+          "tentacle_lower_middle_base_r",
+          "tentacle_lower_rear_base_r"
+        ]
+      }
+    ]
+  }
+]
