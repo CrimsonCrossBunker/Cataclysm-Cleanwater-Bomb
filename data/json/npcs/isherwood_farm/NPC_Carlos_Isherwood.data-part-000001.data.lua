@@ -1,40 +1,67 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ISHERWOOD_CARLOS_SawMarshal",
-    line = {
-        when = predicates.wears("speaker", "badge_marshal"),
-        yes = ccb.content.text("* glares at you, his hand moving again to his gun.  \"I see that badge, I think you need to keep on walking, straight off this property.\""),
-        no = ccb.content.text("*rolls his eyes.  \"I'm not an idiot.  You think if you don't wear your badge, I won't know who you're working for?  Get out of here.\""),
-    },
+    id = { "TALK_ISHERWOOD_CARLOS", "TALK_ISHERWOOD_CARLOS_ConvincedMarshal" },
     replies = {
         {
-            text = ccb.content.text("Look, I took it off to show I'm not here as a marshal.  I'm just here as a traveler, someone who can maybe help you out.  I know you've got problems bigger than you can handle right now."),
-            next_topic = "TALK_ISHERWOOD_CARLOS_MarshalSaveBarry",
-            when = predicates.all({ predicates.any_equal({ "yes", { scope = "speaker", key = "u_learned_barry_missing" } }), predicates.negate(predicates.wears("speaker", "badge_marshal")) }),
+            text = ccb.content.text("Hi, looks like you are building a forge setup."),
+            next_topic = "TALK_ISHERWOOD_CARLOS_TALK1",
+            actions = {
+                actions.set_actor_value("speaker", "u_met_Carlos_Isherwood", "yes"),
+                actions.set_actor_value("speaker", "u_met_an_isherwood", "yes"),
+            },
+            when = predicates.all({ predicates.negate(predicates.wears("speaker", "badge_marshal")) }),
         },
-        { text = ccb.content.text("…[Leave.]"), next_topic = "TALK_DONE" },
+        {
+            text = ccb.content.text("Hi, Jack and Claire suggested I come talk to you about a job."),
+            next_topic = "TALK_CARLOS_FORGE1",
+            actions = { actions.set_actor_value("speaker", "u_met_Carlos_Isherwood", "yes") },
+            when = predicates.all({ predicates.negate(predicates.wears("speaker", "badge_marshal")), predicates.any_equal({ "yes", { scope = "speaker", key = "u_learned_about_jesse" } }) }),
+        },
+        {
+            text = ccb.content.text("Can I do anything for you?"),
+            next_topic = "TALK_MISSION_LIST",
+            when = predicates.negate(predicates.wears("speaker", "badge_marshal")),
+        },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+            when = predicates.negate(predicates.wears("speaker", "badge_marshal")),
+        },
     },
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ISHERWOOD_CARLOS_ConvincedMarshal",
+    id = "TALK_ISHERWOOD_CARLOS",
     line = {
         joined = {
-            ccb.content.text("*looks up warily as you approach"),
+            ccb.content.text("*is an older middle-aged man, well-muscled and darkly tanned, with worried lines around the corners of his eyes and mouth.  He looks up as you get close"),
             {
                 when = predicates.wears("speaker", "badge_marshal"),
-                yes = ccb.content.gendered_line(", looking at your marshal badge immediately.  \"You said you'd keep that goddamn piece of tin out of my sight.\"", { "speaker" }),
-                no = ccb.content.text(".  \"Yeah?\""),
+                yes = ccb.content.text(", and then puts his hand on the butt of the rifle slung across his back.  \"I see that badge, I think you need to keep on walking, straight off this property.\""),
+                no = {
+                    when = predicates.actor_state("speaker", "male"),
+                    yes = ccb.content.text(", then smiles distantly.  \"Hello Sir, what brings you here?\""),
+                    no = ccb.content.text(", then smiles distantly.  \"Hello Ma'am, what brings you here?\""),
+                },
             },
         },
     },
     replies = {
         {
-            text = ccb.content.text("Oh, right… [Leave.]"),
+            text = ccb.content.text("Yeah, I'm a Marshal, what are you going to do about it?"),
+            next_topic = "TALK_LEAVE_NOW_MARSHAL",
+            actions = { "hostile" },
+            opinion = { trust = -20, value = -20 },
+            when = predicates.wears("speaker", "badge_marshal"),
+        },
+        {
+            text = ccb.content.text("…[Leave.]"),
             next_topic = "TALK_DONE",
-            opinion = { trust = -10, value = -10 },
+            actions = { actions.set_first_topic("TALK_ISHERWOOD_CARLOS_SawMarshal") },
+            opinion = { trust = -20, value = -20 },
             when = predicates.wears("speaker", "badge_marshal"),
         },
     },
