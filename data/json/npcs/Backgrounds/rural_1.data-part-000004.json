@@ -1,0 +1,33 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_RURAL_1_MAKE_MISSION",
+    "//": "Assigns the mission through an EOC to avoid having to bring the NPC along with the player.",
+    "effect": [ { "assign_mission": "directions_rural_1_FARM" } ]
+  },
+  {
+    "id": "directions_rural_1_FARM",
+    "type": "mission_definition",
+    "name": { "str": "Check out that farm" },
+    "description": "You were told to check out a farm that might be infested with zombies.",
+    "goal": "MGOAL_GO_TO",
+    "difficulty": 3,
+    "value": 0,
+    "start": {
+      "assign_mission_target": { "om_special": "Farm Mutable", "om_terrain": "farm_3", "reveal_radius": 3 },
+      "effect": { "u_add_var": "mission_BGSS_rural_1_started_quest", "value": "yes" }
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "…",
+      "offer": "…",
+      "accepted": "…",
+      "rejected": "…",
+      "advice": "…",
+      "inquire": "Any luck finding the farm?",
+      "success": "I don't know how I can ever make it up to you!  I barely made it out of this place alive.  I wasn't sure I'd ever see it again, to be honest.",
+      "success_lie": "Great!",
+      "failure": "I guess I don't blame you.  I knew it wouldn't be easy."
+    }
+  }
+]

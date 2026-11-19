@@ -1,0 +1,53 @@
+[
+  {
+    "id": "BGSS_RURAL_1_STORY3",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "mission_BGSS_rural_1_started_quest" } ],
+      "no": {
+        "gendered_line": "That was the first thing to really shake me out of it.  I didn't really have any very close friends, but there were people back in town I cared about a bit.  I had sent some texts, but I hadn't really twigged that they hadn't replied for days.  I got in my truck and tried to get back to town.  Didn't get far before I hit a <zombie> infested pileup blocking the highway, and that's when I started to put it all together.  Never did get to town.  Unfortunately I led the <zombies> back to my farm, and had to bug out of there.  Might go back and clear it out, someday.",
+        "relevant_genders": [ "npc" ]
+      },
+      "yes": {
+        "gendered_line": "That was the first thing to really shake me out of it.  I didn't really have any very close friends, but there were people back in town I cared about a bit.  I had sent some texts, but I hadn't really twigged that they hadn't replied for days.  I got in my truck and tried to get back to town.  Didn't get far before I hit a <zombie> infested pileup blocking the highway, and that's when I started to put it all together.  Never did get to town.  Unfortunately I led the <zombies> back to my farm, and had to bug out of there.  And now I'm here with you.",
+        "relevant_genders": [ "npc" ]
+      }
+    },
+    "responses": [
+      {
+        "text": "I could help you clear out your farm if you wanted.  You just have to show me the way…",
+        "condition": {
+          "and": [
+            { "not": { "compare_string": [ "yes", { "u_val": "mission_BGSS_rural_1_started_quest" } ] } },
+            {
+              "not": {
+                "and": [
+                  { "compare_string": [ "yes", { "u_val": "general_BGSS_rural_1_asked_about_quest" } ] },
+                  { "math": [ "time_since(u_timer_timers_rural_1_asked_about_quest) < time('8 h')" ] }
+                ]
+              }
+            }
+          ]
+        },
+        "trial": { "type": "PERSUADE", "difficulty": 30, "mod": [ [ "TRUST", 6 ], [ "VALUE", 3 ], [ "ANGER", -6 ] ] },
+        "success": {
+          "topic": "BGSS_RURAL_1_FARMSUCCESS",
+          "effect": [
+            { "run_eocs": [ "EOC_RURAL_1_MAKE_MISSION" ] },
+            { "u_message": "<npc_name> marks the location of the farm on your map.", "type": "good", "popup": true }
+          ]
+        },
+        "failure": {
+          "topic": "BGSS_RURAL_1_FARMFAILURE",
+          "opinion": { "trust": -1 },
+          "effect": [
+            { "math": [ "u_timer_timers_rural_1_asked_about_quest = time('now')" ] },
+            { "u_add_var": "general_BGSS_rural_1_asked_about_quest", "value": "yes" }
+          ]
+        }
+      },
+      { "text": "Thanks for telling me that.  <done_conversation_section>", "topic": "TALK_FRIEND_CONVERSATION" },
+      { "text": "<end_talking>", "topic": "TALK_DONE" }
+    ]
+  }
+]
