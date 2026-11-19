@@ -1,0 +1,16 @@
+[
+  {
+    "id": "migo_fleshwarper_mutate",
+    "type": "SPELL",
+    "name": { "str": "Fleshwarp Target", "//~": "NO_I18N" },
+    "description": { "str": "A spell for the mi-go fleshwarper to cause a random mutation.", "//~": "NO_I18N" },
+    "valid_targets": [ "hostile" ],
+    "//": "Random 25% to 75% chance to cause a mutation",
+    "flags": [ "SILENT", "RANDOM_DAMAGE", "TOUCH_REQUIRED" ],
+    "shape": "blast",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_random_mi_go_fleshwarper_mutate",
+    "min_range": 1,
+    "max_range": 1
+  }
+]
