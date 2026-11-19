@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "abandoned_textile_mill_b_1_1", "abandoned_textile_mill_b_1_2" } },
+    layout = {
+        rows = {
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "     ]*]               ]]+]]]]           ]*]    ",
+            "     *                 ]     ]             *    ",
+            "     ]                       ]             ]    ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "     ]                 ]                   ]    ",
+            "     *                 ]                   *    ",
+            "     ]*]               ]]+]]]]           ]*]    ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+        },
+        palettes = { "abandoned_textile_mill" },
+        fill_terrain = "t_open_air",
+    },
+}
