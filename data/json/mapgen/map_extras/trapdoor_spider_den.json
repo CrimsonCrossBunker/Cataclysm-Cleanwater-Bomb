@@ -1,42 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "mx_Trapdoor_spider_den",
-    "object": {
-      "rows": [
-        "                   s    ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "  s                     ",
-        "                        ",
-        "                        ",
-        "                s       ",
-        "                        ",
-        "        s            s  ",
-        "                        ",
-        "              S         ",
-        "                        ",
-        "                        ",
-        "       s                ",
-        "                s       ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "  s                     ",
-        "      s                 ",
-        "                  s     ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { "s": [ "t_region_soil" ] },
-      "nested": { "s": { "chunks": [ [ "null", 1 ], [ "trapdoor_trap", 1 ] ] } },
-      "traps": { "S": "tr_spider" },
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "trapdoor_trap",
     "weight": 1,
     "object": {

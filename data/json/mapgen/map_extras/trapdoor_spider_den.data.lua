@@ -1,0 +1,38 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "mx_Trapdoor_spider_den",
+    layout = {
+        rows = {
+            "                   s    ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "  s                     ",
+            "                        ",
+            "                        ",
+            "                s       ",
+            "                        ",
+            "        s            s  ",
+            "                        ",
+            "              S         ",
+            "                        ",
+            "                        ",
+            "       s                ",
+            "                s       ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "  s                     ",
+            "      s                 ",
+            "                  s     ",
+            "                        ",
+            "                        ",
+        },
+        terrain = { s = { { id = "t_region_soil" } } },
+        traps = { S = "tr_spider" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested_glyphs = { s = { choices = { { id = "null", weight = 1 }, { id = "trapdoor_trap", weight = 1 } } } },
+    },
+}
