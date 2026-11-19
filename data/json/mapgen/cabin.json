@@ -412,41 +412,6 @@
     }
   },
   {
-    "type": "mapgen",
-    "om_terrain": "cabin_roof_5",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "     --------------     ",
-        "     -............-     ",
-        "     -............-     ",
-        "     -............-     ",
-        "     -............-     ",
-        "     -............-     ",
-        "     -............-     ",
-        "     -.........~..-     ",
-        "     -5------------     ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "   ...                  ",
-        "   ...                  ",
-        "   ...                  ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
-    }
-  },
-  {
     "om_terrain": "cabin_6",
     "type": "mapgen",
     "object": {
@@ -550,41 +515,6 @@
       ],
       "palettes": [ { "distribution": [ [ "cabin_palette", 1 ], [ "cabin_palette_abandoned", 1 ] ] } ],
       "terrain": { "G": "t_slide", ">": "t_dock", "b": "t_region_groundcover" }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "cabin_roof_7",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "             ---------- ",
-        "             -........- ",
-        "             -~.......- ",
-        "             -........- ",
-        "             -........- ",
-        "             -........- ",
-        "             -........- ",
-        "             -........- ",
-        "             -........- ",
-        "             -........5 ",
-        "             -........- ",
-        "             -........- ",
-        "             ---------- ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
     }
   },
   {
@@ -799,41 +729,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "cabin_roof_lapin",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "         -------        ",
-        "         -.....-        ",
-        "         -.....-        ",
-        "      ----.....----     ",
-        "      -..~........-     ",
-        "      -...........-     ",
-        "      -...........-     ",
-        "      -...........5     ",
-        "      -...........-     ",
-        "      -...........-     ",
-        "      -...........-     ",
-        "      -------------     ",
-        "                        ",
-        "                        ",
-        "  .....                 ",
-        "  .....                 ",
-        "  .....                 ",
-        "  .....                 ",
-        "  .....                 ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "cabin_prepper" ],
     "object": {
       "fill_ter": "t_floor",
@@ -928,41 +823,6 @@
         }
       ],
       "set": [ { "point": "trap", "id": "tr_beartrap", "x": 3, "y": 7 }, { "point": "trap", "id": "tr_shotgun_1", "x": 18, "y": 8 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "cabin_cellar" ],
-    "//": "Used to clear out space to allow cellars to spawn without problems.",
-    "object": {
-      "fill_ter": "t_soil",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { " ": "t_soil" }
     }
   }
 ]
