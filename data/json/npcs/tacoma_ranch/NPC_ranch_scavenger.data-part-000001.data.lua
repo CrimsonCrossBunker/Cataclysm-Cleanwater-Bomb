@@ -1,13 +1,39 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_RANCH_SCAVENGER_ASK_RESTOCK",
-    line = ccb.content.text("Nope, current run hasn't returned yet.  Come back after <restock_time_point>.  You might find something you like."),
-    replies = { { text = ccb.content.text("Alright, thanks."), next_topic = "TALK_RANCH_SCAVENGER_1" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_RANCH_SCAVENGER_1_JOB",
-    line = ccb.content.gendered_line("I organize scavenging runs to bring in supplies that we can't produce ourselves.  I try and provide incentives to get migrants to join one of the teams… it's dangerous work, but keeps our outpost alive.  Selling anything we can't use helps keep us afloat with the traders.  If you wanted to drop off a companion or two to assist in one of the runs, I'd appreciate it.", { "interlocutor" }),
-    replies = { { text = ccb.content.text("I'll think about it."), next_topic = "TALK_RANCH_SCAVENGER_1" } },
+    id = "TALK_RANCH_SCAVENGER_1",
+    line = ccb.content.text("Welcome to the junk shop."),
+    replies = {
+        {
+            text = ccb.content.text("The doctor needs some help building an anesthetic machine.  Do you have anything that could help?"),
+            next_topic = "TALK_RANCH_SCAVENGER_ANESTHETIC_FOR_DOCTOR",
+            when = predicates.all({ predicates.has_mission("MISSION_RANCH_DOCTOR_MEDICAL_ANESTHETIC"), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "mission_tacoma_ranch_doctor_anesthetic_scavengers_helped" } })), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "mission_tacoma_ranch_scavenger_hospital_raid_started" } })) }),
+            actions = {
+                actions.set_actor_value("speaker", "mission_tacoma_ranch_scavenger_hospital_raid", "yes"),
+            },
+        },
+        {
+            text = ccb.content.text("What is your job here?"),
+            next_topic = "TALK_RANCH_SCAVENGER_1_JOB",
+        },
+        {
+            text = ccb.content.text("Do you need any help?"),
+            next_topic = "TALK_RANCH_SCAVENGER_1_HIRE",
+        },
+        {
+            text = ccb.content.text("Let's see what you've managed to find."),
+            next_topic = "TALK_RANCH_SCAVENGER_1",
+            actions = { "start_trade" },
+        },
+        {
+            text = ccb.content.text("Any lucky find?"),
+            next_topic = "TALK_RANCH_SCAVENGER_ASK_RESTOCK",
+        },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
 }
