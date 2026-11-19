@@ -14,18 +14,5 @@
       },
       { "text": "Leave.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "elevator_controls_call_success",
-    "dynamic_line": "&You hear the elevator arrive.",
-    "responses": [ { "text": "Leave.", "topic": "TALK_DONE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "elevator_controls_call_fail",
-    "dynamic_line": "&You fail to make the elevator move.",
-    "//": "TODO: Make this have actual consequences",
-    "responses": [ { "text": "Leave.", "topic": "TALK_DONE" } ]
   }
 ]
