@@ -1,0 +1,29 @@
+local ccb = require("ccb")
+
+ccb.content.define_overmap_terrain {
+    abstract = "generic_private_resort",
+    name = ccb.content.text("private resort"),
+    symbol = "p",
+    color = "yellow",
+    vision_levels = "large_building",
+    see_cost = "full_high",
+    monster_density = 1,
+    flags = { "RISK_EXTREME", "SOURCE_DRINK", "SOURCE_LUXURY" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = { "p_resort_1nw", "p_resort_pm" },
+    symbol = "P",
+    copy_from = "generic_private_resort",
+}
+
+ccb.content.define_overmap_terrain {
+    id = {
+        "p_resort_0nw", "p_resort_0se", "p_resort_1ee", "p_resort_1mm", "p_resort_1ne", "p_resort_1nn",
+        "p_resort_1se", "p_resort_1ss", "p_resort_1sw", "p_resort_1ww", "p_resort_2ee", "p_resort_2mm",
+        "p_resort_2ne", "p_resort_2nn", "p_resort_2nw", "p_resort_2se", "p_resort_2ss", "p_resort_2sw",
+        "p_resort_2ww", "p_resort_pe", "p_resort_pw", "p_resort_ree", "p_resort_rmm", "p_resort_rne",
+        "p_resort_rnn", "p_resort_rnw", "p_resort_rse", "p_resort_rss", "p_resort_rsw", "p_resort_rww",
+    },
+    copy_from = "generic_private_resort",
+}
