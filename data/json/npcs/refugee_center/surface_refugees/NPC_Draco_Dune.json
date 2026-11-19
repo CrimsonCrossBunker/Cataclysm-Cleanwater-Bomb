@@ -39,49 +39,5 @@
     "chat": "TALK_REFUGEE_Draco_1",
     "faction": "free_merchants",
     "mission_offered": "MISSION_REFUGEE_Draco_GET_GUITAR"
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_Draco_1",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Draco_Dune" } ],
-      "yes": { "gendered_line": "Always good to see you, friend.", "relevant_genders": [ "u" ] },
-      "no": "Well now, good to see another new face!  Welcome to the center, friend, I'm Draco."
-    },
-    "speaker_effect": {
-      "effect": [ { "u_add_var": "general_meeting_u_met_Draco_Dune", "value": "yes" }, { "npc_first_topic": "TALK_REFUGEE_Draco_1a" } ]
-    },
-    "responses": [
-      { "text": "Nice to meet you, Draco.", "topic": "TALK_REFUGEE_Draco_1_firstmeet" },
-      { "text": "Hi Draco, nice to meet you.  <end_talking_leave>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_Draco_1a",
-    "dynamic_line": { "gendered_line": "Always good to see you, friend.", "relevant_genders": [ "u" ] },
-    "responses": [
-      {
-        "text": "Hi, Draco, how are you doing?",
-        "condition": {
-          "and": [
-            { "math": [ "u_general_meeting_Draco_Dune_convo_depth != 3 " ] },
-            { "math": [ "u_general_meeting_Draco_Dune_convo_depth != 7 " ] }
-          ]
-        },
-        "topic": "TALK_REFUGEE_Draco_2"
-      },
-      {
-        "text": "Hi again, Draco, nice to see you too.",
-        "condition": { "math": [ "u_general_meeting_Draco_Dune_convo_depth == 3 " ] },
-        "topic": "TALK_REFUGEE_Draco_5a"
-      },
-      {
-        "text": "Hi again, Draco, nice to see you too.",
-        "condition": { "math": [ "u_general_meeting_Draco_Dune_convo_depth == 7 " ] },
-        "topic": "TALK_REFUGEE_Draco_7"
-      },
-      { "text": "Hi Draco, nice to see you too.  <end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]

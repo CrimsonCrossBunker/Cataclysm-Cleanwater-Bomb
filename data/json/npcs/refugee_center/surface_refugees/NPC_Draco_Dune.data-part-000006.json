@@ -1,125 +1,39 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_Draco_9",
-    "dynamic_line": "Say, I don't mean to get you in any trouble or nothing, if any folks still care about that, but you haven't seen any green around town, have ya?",
-    "responses": [
-      { "text": "What?", "topic": "TALK_REFUGEE_Draco_10_question" },
-      { "text": "WHAT.", "topic": "TALK_REFUGEE_Draco_10_disapprove" },
-      {
-        "text": "Oh yeah, some people've been growing it in their basements.",
-        "topic": "TALK_REFUGEE_Draco_10_approve",
-        "effect": { "math": [ "u_general_meeting_Draco_Dune_convo_depth = 3" ] }
-      },
-      { "text": "I'm not comfortable with where this is going.", "topic": "TALK_REFUGEE_Draco_10_disapprove" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_Draco_10_question",
+    "id": "TALK_REFUGEE_Draco_7",
     "dynamic_line": {
-      "gendered_line": "Where you say you're from again?  You're not as worldly as you look.  I'm talking about weed.  Marijuana.  Wondered if you've happened upon any.",
-      "relevant_genders": [ "u" ]
+      "compare_string": [ "yes", { "u_val": "general_mission_NC_REFUGEE_Draco_has_guitar" } ],
+      "yes": {
+        "gendered_line": "My savior!  My patron of the arts!  You're always welcome here, friend.",
+        "relevant_genders": [ "u" ]
+      },
+      "no": "Man, just imagine what I could do with a new guitar."
     },
-    "responses": [
-      { "text": "Oh.  Uh, sure.", "topic": "TALK_REFUGEE_Draco_10_approve" },
-      {
-        "text": "Right, of course I knew that!  There's tons of the stuff out there for the taking.",
-        "topic": "TALK_REFUGEE_Draco_10_approve",
-        "effect": { "math": [ "u_general_meeting_Draco_Dune_convo_depth = 3" ] }
-      },
-      { "text": "Nope, sorry.", "topic": "TALK_REFUGEE_Draco_10_hasnt_found_weed" },
-      { "text": "I'm not doing this.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_Draco_10_disapprove",
-    "dynamic_line": "Hey, don't get all serious on me all of a sudden.  It helps me relax.  Lubricates my joints.  Eases the pain, ya know?  Makes every day a bit more bearable.",
+    "speaker_effect": { "effect": { "math": [ "u_general_meeting_Draco_Dune_convo_depth = 7" ] } },
     "responses": [
       {
-        "text": "I can help.",
-        "topic": "TALK_REFUGEE_Draco_10_approve",
-        "effect": { "math": [ "u_general_meeting_Draco_Dune_convo_depth = 3" ] }
-      },
-      { "text": "Find somebody else, dude.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_Draco_10_approve",
-    "dynamic_line": {
-      "npc_has_effect": "u_sold_to_Draco",
-      "yes": "Yeah, no worries, though.  I'm good at the moment.  Ask me again later and maybe I'll have scrounged up some more cash for you.",
-      "no": "Amazing!  My lucky day.  Let's see here.  What can I offer… I can scrounge up some merch bucks for, say, five joints or joints-worth of the good stuff."
-    },
-    "responses": [
-      {
-        "text": "You have yourself a deal.  Here's the marijuana.",
-        "condition": {
-          "and": [
-            { "u_has_items": { "item": "weed", "count": 5 } },
-            { "not": { "compare_string": [ "yes", { "u_val": "general_mission_NC_REFUGEE_Draco_has_guitar" } ] } },
-            { "not": { "npc_has_effect": "u_sold_to_Draco" } }
-          ]
-        },
-        "effect": [
-          { "u_sell_item": "weed", "count": 5 },
-          { "u_spawn_item": "FMCNote", "count": 4 },
-          { "npc_add_effect": "u_sold_to_Draco", "duration": 240000 }
-        ],
-        "topic": "TALK_REFUGEE_Draco_10_sold"
+        "text": "Let's talk about getting you that guitar.",
+        "topic": "TALK_MISSION_LIST",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_mission_NC_REFUGEE_Draco_has_guitar" } ] } }
       },
       {
-        "text": "You have yourself a deal.  Here's the marijuana.",
-        "condition": {
-          "and": [
-            { "u_has_items": { "item": "weed", "count": 5 } },
-            { "compare_string": [ "yes", { "u_val": "general_mission_NC_REFUGEE_Draco_has_guitar" } ] },
-            { "not": { "npc_has_effect": "u_sold_to_Draco" } }
-          ]
-        },
-        "effect": [
-          { "u_sell_item": "weed", "count": 5 },
-          { "u_spawn_item": "FMCNote", "count": 6 },
-          { "npc_add_effect": "u_sold_to_Draco", "duration": 200000 }
-        ],
-        "topic": "TALK_REFUGEE_Draco_10_sold"
+        "text": "I've been thinking about that deal you mentioned.",
+        "condition": { "compare_string": [ "yes", { "u_val": "general_barter_NC_REFUGEE_Draco_offered_weed_deal" } ] },
+        "topic": "TALK_REFUGEE_Draco_10_approve"
       },
       {
-        "text": "You have yourself a deal.  Here's some joints.",
-        "condition": {
-          "and": [
-            { "u_has_items": { "item": "joint", "count": 5 } },
-            { "not": { "compare_string": [ "yes", { "u_val": "general_mission_NC_REFUGEE_Draco_has_guitar" } ] } },
-            { "not": { "npc_has_effect": "u_sold_to_Draco" } }
-          ]
-        },
-        "effect": [
-          { "u_sell_item": "joint", "count": 5 },
-          { "u_spawn_item": "FMCNote", "count": 4 },
-          { "npc_add_effect": "u_sold_to_Draco", "duration": 240000 }
-        ],
-        "topic": "TALK_REFUGEE_Draco_10_sold"
+        "text": "Anything you buying or selling, by chance?",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_barter_NC_REFUGEE_Draco_offered_weed_deal" } ] } },
+        "effect": { "u_add_var": "general_barter_NC_REFUGEE_Draco_offered_weed_deal", "value": "yes" },
+        "topic": "TALK_REFUGEE_Draco_8"
       },
       {
-        "text": "You have yourself a deal.  Here's some joints.",
-        "condition": {
-          "and": [
-            { "u_has_items": { "item": "joint", "count": 5 } },
-            { "compare_string": [ "yes", { "u_val": "general_mission_NC_REFUGEE_Draco_has_guitar" } ] },
-            { "not": { "npc_has_effect": "u_sold_to_Draco" } }
-          ]
-        },
-        "effect": [
-          { "u_sell_item": "joint", "count": 5 },
-          { "u_spawn_item": "FMCNote", "count": 6 },
-          { "npc_add_effect": "u_sold_to_Draco", "duration": 200000 }
-        ],
-        "topic": "TALK_REFUGEE_Draco_10_sold"
+        "text": "Do you know any tunes good to dance to?",
+        "condition": { "compare_string": [ "yes", { "u_val": "general_mission_NC_REFUGEE_Draco_has_guitar" } ] },
+        "topic": "TALK_REFUGEE_Draco_Dance"
       },
-      { "text": "Oh, alright.  I'll be back later with the goods.", "topic": "TALK_REFUGEE_Draco_7" },
-      { "text": "On second thought, maybe later.", "topic": "TALK_DONE" }
+      { "text": "See you around, Draco.", "topic": "TALK_DONE" }
     ]
   }
 ]

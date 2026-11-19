@@ -1,23 +1,7 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_Draco_10_hasnt_found_weed",
-    line = ccb.content.text("Well, let me know when you have.  I'm not going anywhere."),
-    replies = {
-        { text = ccb.content.text("Sure."), next_topic = "TALK_REFUGEE_Draco_10_approve" },
-        {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_REFUGEE_Draco_7",
-        },
-        { text = ccb.content.text("I'm not your drug dealer, buddy."), next_topic = "TALK_DONE" },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_Draco_10_sold",
-    line = ccb.content.gendered_line("Sold!  Thanks for helping me out, friend.", { "speaker" }),
-    replies = {
-        { text = ccb.content.text("No problem, Draco."), next_topic = "TALK_REFUGEE_Draco_7" },
-        { text = ccb.content.text("You're welcome.  <end_talking_bye>"), next_topic = "TALK_DONE" },
-    },
+    id = "TALK_REFUGEE_Draco_8",
+    line = ccb.content.text("Well now, my friend-o!  You just asked a mighty fine question.  Folks have been missing the little things in life.  New shoes, new cellphones, can't exactly go shopping, or, well, I guess you sorta can, if you mind the broken glass.  I left my wallet in an outdoorsman's store when I 'bought' this warmer coat.  Figured that's kinda it, you know?  It didn't matter anymore.  I don't think my insurance's going to pay out for any health care I get now.  I did what you see in the movies though, I rolled a joint with a hundred dollar bill.  Ended up coughing and rerolling it in regular paper though.  Was too harsh.  Just letting you know in case you get the smart idea of trying it."),
+    replies = { { text = ccb.content.text("Go on."), next_topic = "TALK_REFUGEE_Draco_9" } },
 }

@@ -1,39 +1,15 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_Draco_7",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "general_mission_NC_REFUGEE_Draco_has_guitar" } ],
-      "yes": {
-        "gendered_line": "My savior!  My patron of the arts!  You're always welcome here, friend.",
-        "relevant_genders": [ "u" ]
-      },
-      "no": "Man, just imagine what I could do with a new guitar."
-    },
-    "speaker_effect": { "effect": { "math": [ "u_general_meeting_Draco_Dune_convo_depth = 7" ] } },
+    "id": "TALK_REFUGEE_Draco_2",
+    "dynamic_line": "Well, look at you.  Asking after random folks like some sort of shepherd!  No, don't take offense now… I mean it well.  We could use more folks askin' after other folks.  I figure it makes the world go round, now, more than ever.  I'm well, friend, considering I have both of my legs and much of my health left to me.  A bit of pain in the back, but can't really complain much if that's the worst of it, right?  You look like you've had a story of your own to tell, just getting here.  I'm writing it in my imagination right now.  Fought through countless hordes, run ragged, chased at every turn, yeah, no thank-you any more of that for me!",
     "responses": [
       {
-        "text": "Let's talk about getting you that guitar.",
-        "topic": "TALK_MISSION_LIST",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_mission_NC_REFUGEE_Draco_has_guitar" } ] } }
+        "text": "What about you, what's your story?",
+        "topic": "TALK_REFUGEE_Draco_3",
+        "effect": { "math": [ "u_general_meeting_Draco_Dune_convo_depth = 3" ] }
       },
-      {
-        "text": "I've been thinking about that deal you mentioned.",
-        "condition": { "compare_string": [ "yes", { "u_val": "general_barter_NC_REFUGEE_Draco_offered_weed_deal" } ] },
-        "topic": "TALK_REFUGEE_Draco_10_approve"
-      },
-      {
-        "text": "Anything you buying or selling, by chance?",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_barter_NC_REFUGEE_Draco_offered_weed_deal" } ] } },
-        "effect": { "u_add_var": "general_barter_NC_REFUGEE_Draco_offered_weed_deal", "value": "yes" },
-        "topic": "TALK_REFUGEE_Draco_8"
-      },
-      {
-        "text": "Do you know any tunes good to dance to?",
-        "condition": { "compare_string": [ "yes", { "u_val": "general_mission_NC_REFUGEE_Draco_has_guitar" } ] },
-        "topic": "TALK_REFUGEE_Draco_Dance"
-      },
-      { "text": "See you around, Draco.", "topic": "TALK_DONE" }
+      { "text": "No more indeed.", "topic": "TALK_DONE" }
     ]
   }
 ]
