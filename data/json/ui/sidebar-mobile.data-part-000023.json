@@ -1,0 +1,17 @@
+[
+  {
+    "id": "a_bpower",
+    "width": 9,
+    "style": "layout",
+    "arrange": "minimum_columns",
+    "clauses": [
+      {
+        "id": "cyborg",
+        "widgets": [ "l_bpower", "i_bpower_graph", "i_bpower_balance_graph" ],
+        "condition": { "u_has_bionics": "ANY" }
+      },
+      { "id": "not_cyborg", "widgets": [ "l_space" ], "condition": { "not": { "u_has_bionics": "ANY" } } }
+    ],
+    "type": "widget"
+  }
+]

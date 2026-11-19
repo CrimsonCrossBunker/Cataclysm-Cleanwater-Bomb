@@ -23,36 +23,5 @@
         "condition": { "math": [ "u_val('sleepiness') >= 575" ] }
       }
     ]
-  },
-  {
-    "id": "sleepiness_num",
-    "type": "widget",
-    "label": "Sleepiness",
-    "var": "sleepiness",
-    "style": "number"
-  },
-  {
-    "id": "sleepiness_graph",
-    "type": "widget",
-    "label": "Fatig",
-    "var": "sleepiness",
-    "style": "graph",
-    "fill": "bucket",
-    "width": 5,
-    "symbols": "-fF",
-    "colors": [ "c_green", "c_yellow", "c_red" ]
-  },
-  {
-    "id": "sleepiness_desc_label",
-    "type": "widget",
-    "label": "Rest",
-    "style": "text",
-    "copy-from": "sleepiness_desc_template"
-  },
-  {
-    "id": "sleepiness_desc_no_label",
-    "type": "widget",
-    "copy-from": "sleepiness_desc_label",
-    "flags": [ "W_LABEL_NONE" ]
   }
 ]

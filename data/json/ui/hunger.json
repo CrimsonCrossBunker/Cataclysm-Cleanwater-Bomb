@@ -35,11 +35,5 @@
         "condition": { "u_has_effect": "hunger_famished" }
       }
     ]
-  },
-  {
-    "id": "hunger_desc_no_label",
-    "type": "widget",
-    "copy-from": "hunger_desc_label",
-    "flags": [ "W_LABEL_NONE" ]
   }
 ]

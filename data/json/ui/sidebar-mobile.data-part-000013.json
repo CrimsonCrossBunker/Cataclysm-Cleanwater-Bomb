@@ -1,0 +1,81 @@
+[
+  {
+    "id": "i_stunned_sym",
+    "width": 1,
+    "style": "symbol",
+    "clauses": [
+      { "id": "stunned", "sym": "õ", "color": "h_red", "condition": { "u_has_effect": "stunned" } },
+      { "id": "ok", "sym": "▮", "color": "h_black", "condition": { "not": { "u_has_effect": "stunned" } } }
+    ],
+    "type": "widget"
+  },
+  {
+    "id": "i_hypovolemia_sym",
+    "width": 1,
+    "style": "symbol",
+    "clauses": [
+      { "id": "stunned", "sym": "♥", "color": "h_red", "condition": { "u_has_effect": "hypovolemia" } },
+      { "id": "ok", "sym": "▮", "color": "h_black", "condition": { "not": { "u_has_effect": "hypovolemia" } } }
+    ],
+    "type": "widget"
+  },
+  {
+    "id": "t_bp_status_sym",
+    "width": 6,
+    "style": "symbol",
+    "clauses": [
+      {
+        "id": "1bleeding0",
+        "sym": "▮",
+        "color": "h_black",
+        "condition": { "not": { "u_has_effect": "bleed", "intensity": 1 } }
+      },
+      {
+        "id": "1bleeding1",
+        "sym": "│",
+        "color": "h_light_red",
+        "condition": {
+          "and": [ { "u_has_effect": "bleed", "intensity": 1 }, { "math": [ "u_effect_intensity('bleed', 'bodypart': _widget) < 11" ] } ]
+        }
+      },
+      {
+        "id": "1bleeding2",
+        "sym": "║",
+        "color": "h_red",
+        "condition": {
+          "and": [
+            { "u_has_effect": "bleed", "intensity": 11 },
+            { "math": [ "u_effect_intensity('bleed', 'bodypart': _widget) < 21" ] }
+          ]
+        }
+      },
+      {
+        "id": "1bleeding3",
+        "sym": "║",
+        "color": "c_red_red",
+        "condition": { "u_has_effect": "bleed", "intensity": 21 }
+      },
+      { "id": "2bandaged", "sym": "@", "color": "h_white", "condition": { "u_has_effect": "bandaged" } },
+      { "id": "2intact", "sym": "▮", "color": "h_black", "condition": { "not": { "u_has_effect": "bandaged" } } },
+      { "id": "3bitten", "sym": "⣿", "color": "h_red", "condition": { "u_has_effect": "bite" } },
+      { "id": "3notbitten", "sym": "▮", "color": "h_black", "condition": { "not": { "u_has_effect": "bite" } } },
+      { "id": "4disinfected", "sym": "Ọ", "color": "h_white", "condition": { "u_has_effect": "disinfected" } },
+      {
+        "id": "4notdisinfected",
+        "sym": "▮",
+        "color": "h_black",
+        "condition": { "not": { "u_has_effect": "disinfected" } }
+      },
+      { "id": "5blisters", "sym": "∞", "color": "h_red", "condition": { "u_has_effect": "blisters" } },
+      {
+        "id": "5notblisters",
+        "sym": "▮",
+        "color": "h_black",
+        "condition": { "not": { "u_has_effect": "blisters" } }
+      },
+      { "id": "6chafing", "sym": "Ξ", "color": "h_red", "condition": { "u_has_effect": "chafing" } },
+      { "id": "6notchafing", "sym": "▮", "color": "h_black", "condition": { "not": { "u_has_effect": "chafing" } } }
+    ],
+    "type": "widget"
+  }
+]

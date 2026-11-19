@@ -1,0 +1,12 @@
+[
+  {
+    "id": "t_bp_mending_sym",
+    "width": 1,
+    "style": "symbol",
+    "clauses": [
+      { "id": "mending", "sym": "+", "color": "h_white", "condition": { "u_has_effect": "mending" } },
+      { "id": "notmending", "sym": "▮", "color": "h_black", "condition": { "not": { "u_has_effect": "mending" } } }
+    ],
+    "type": "widget"
+  }
+]

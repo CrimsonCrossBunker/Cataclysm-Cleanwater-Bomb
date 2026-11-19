@@ -1,0 +1,18 @@
+[
+  {
+    "id": "a_bp_LA_enc_splint",
+    "width": 1,
+    "style": "layout",
+    "arrange": "minimum_columns",
+    "bodypart": "arm_l",
+    "clauses": [
+      { "id": "splinted", "condition": { "u_has_worn_with_flag": "SPLINT" }, "widgets": [ "i_splinted_sym" ] },
+      {
+        "id": "intact",
+        "condition": { "not": { "u_has_worn_with_flag": "SPLINT" } },
+        "widgets": [ "i_bp_LA_enc_graph" ]
+      }
+    ],
+    "type": "widget"
+  }
+]
