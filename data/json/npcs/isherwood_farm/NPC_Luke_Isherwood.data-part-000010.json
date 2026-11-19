@@ -1,0 +1,34 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_ISHERWOOD_LUKE_TOPICS",
+    "dynamic_line": "Go on…",
+    "responses": [
+      {
+        "text": "Must be tough having the world fall apart when you had you future to look forward to.",
+        "topic": "TALK_ISHERWOOD_LUKE3"
+      },
+      {
+        "text": "Tell me about your dad.",
+        "topic": "TALK_LUKE_EDDIE_NoBarry",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "u_met_Eddie_Isherwood" } ] },
+            { "not": { "compare_string": [ "yes", { "u_val": "u_saved_barry_isherwood" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "Tell me about your dad.",
+        "topic": "TALK_LUKE_EDDIE_YesBarry",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "u_met_Eddie_Isherwood" } ] },
+            { "compare_string": [ "yes", { "u_val": "u_saved_barry_isherwood" } ] }
+          ]
+        }
+      },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
