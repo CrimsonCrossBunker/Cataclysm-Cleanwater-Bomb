@@ -744,3 +744,269 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_fallen_shed_nested",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "--++++--||-",
+            "-_______RR|",
+            "w_______RRw",
+            "w________Rw",
+            "|_________|",
+            "||-_____|||",
+            "|_________|",
+            "w_________w",
+            "w_________w",
+            "-_________|",
+            "--||||||-||",
+        },
+        palettes = { "desolatebarn_palette" },
+        terrain = { _ = "t_dirt" },
+        furniture = { _ = { { id = "f_null", copies = 30 }, { id = "f_rubble" }, { id = "f_rubble_rock" } } },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            _ = { group = "wood_workshop", chance = 1 },
+            R = { { group = "wood_workshop", chance = 3 }, { group = "mischw", chance = 2 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_fallen_shed_nested",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "--w_-||-",
+            "-______|",
+            "|______+",
+            "|R_____+",
+            "|RR____|",
+            "|_RRR__w",
+            "-__RRR_w",
+            "--w||-||",
+        },
+        palettes = { "desolatebarn_palette" },
+        terrain = { _ = "t_dirt" },
+        furniture = { _ = { { id = "f_null", copies = 30 }, { id = "f_rubble" }, { id = "f_rubble_rock" } } },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_groups = {
+            _ = { group = "wood_workshop", chance = 1 },
+            R = { { group = "wood_workshop", chance = 3 }, { group = "mischw", chance = 2 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "mx_pond_forest",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "     ????????????????   ",
+            "   ???????????????????  ",
+            "   ?**]]]]]*]***]]]]??  ",
+            "  ???**************]??  ",
+            "  ???*************]]??  ",
+            "  ????***[[[*******]??  ",
+            "  ???***[[[[[[[[**]]??  ",
+            "  ???***[[[[[[[[**]]??  ",
+            "  ???***[[[~~~[[**]]??  ",
+            "  ??****[[[~~~[[***]??  ",
+            "  ??]***[[~~~~[[***]??  ",
+            "  ??]***[[~~~~[[**]]??  ",
+            "  ??]***[[~[[[[[**]]??  ",
+            "  ??]***[[[[[[[[**]]??  ",
+            "  ??]*****[[******]]??  ",
+            "  ??]**************]??  ",
+            "  ??]**************]??  ",
+            "  ????]??]]]]]]]]]]]??  ",
+            "  ????????]]]????????   ",
+            "  ?????????????????     ",
+            "                        ",
+            "                        ",
+        },
+        terrain = {
+            ["*"] = "t_pond_water_sh",
+            ["?"] = {
+                { id = "t_pond_water_sh", copies = 3 },
+                { id = "t_dirt", copies = 5 },
+                { id = "t_grass", copies = 6 },
+                { id = "t_shrub", copies = 2 },
+                { id = "t_tree_young" },
+                { id = "t_tree", copies = 2 },
+                { id = "t_tree_willow" },
+            },
+            ["["] = { { id = "t_pond_water_dp", copies = 2 }, { id = "t_pond_water_sh", copies = 3 } },
+            ["]"] = { { id = "t_pond_water_sh", copies = 8 }, { id = "t_dirt" }, { id = "t_grass" } },
+            ["~"] = "t_pond_water_dp",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            {
+                choices = { { id = "null", weight = 30 }, { id = "mx_pond_forest_fruit_patch", weight = 1 } },
+                x = 2,
+                y = 18,
+            },
+        },
+        nested_glyphs = {
+            ["*"] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+            ["["] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+            ["]"] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+            ["~"] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+        },
+        monster_group_placements = {
+            { group = "GROUP_SAFE", x = { 0, 23 }, y = { 0, 23 }, chance = 5, density = 0.5 },
+            {
+                group = "GROUP_FISH",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 1,
+                repetitions = { 1, 2 },
+                density = 0.5,
+            },
+            { group = "GROUP_FOREST", x = { 0, 23 }, y = { 0, 23 }, chance = 5, density = 0.5 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "mx_pond_forest_2",
+    layout = {
+        rows = {
+            "                        ",
+            "         ??             ",
+            "         ???            ",
+            "          ???? ?        ",
+            "          ?????         ",
+            "        ]]]**]]]]       ",
+            "        ]]*****]]]      ",
+            "       ]***[******]     ",
+            "      ]]***[[[[****]    ",
+            "     ]]***[[[[*****]    ",
+            "     ?**[[~~~~[****]]   ",
+            "     ]**[[~~~~[****]]   ",
+            "    ]]***[~~~~[***]]]   ",
+            "    ]]***[~~~~[[]]]     ",
+            "    ]]****[[[[**]???    ",
+            "     ]]***[[***]]???    ",
+            "     ]]]]*****]]  ? ?   ",
+            "       ??]]****]        ",
+            "           **           ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        furniture = { ["~"] = "f_clear", ["*"] = "f_clear", ["["] = "f_clear", ["]"] = "f_clear" },
+        terrain = {
+            ["*"] = "t_pond_water_sh",
+            ["?"] = {
+                { id = "t_pond_water_sh", copies = 3 },
+                { id = "t_dirt", copies = 5 },
+                { id = "t_grass", copies = 6 },
+                { id = "t_shrub", copies = 2 },
+                { id = "t_tree_young" },
+                { id = "t_tree", copies = 2 },
+                { id = "t_tree_willow" },
+            },
+            ["["] = { { id = "t_pond_water_dp", copies = 2 }, { id = "t_pond_water_sh", copies = 3 } },
+            ["]"] = { { id = "t_pond_water_sh", copies = 8 }, { id = "t_dirt" }, { id = "t_grass" } },
+            ["~"] = "t_pond_water_dp",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 3000 },
+                    { id = "mx_pond_forest_fruit_patch", weight = 1000 },
+                    { id = "void_spider_webs", weight = 1 },
+                },
+                x = 16,
+                y = 16,
+            },
+        },
+        nested_glyphs = {
+            ["*"] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+            ["["] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+            ["]"] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+            ["~"] = {
+                choices = { { id = "pond_water_furniture", weight = 8 }, { id = "null", weight = 92 } },
+            },
+        },
+        monster_group_placements = {
+            { group = "GROUP_SAFE", x = { 0, 23 }, y = { 0, 23 }, chance = 5, density = 0.5 },
+            {
+                group = "GROUP_FISH",
+                x = { 0, 23 },
+                y = { 0, 23 },
+                chance = 1,
+                repetitions = { 1, 2 },
+                density = 0.5,
+            },
+            { group = "GROUP_FOREST", x = { 0, 23 }, y = { 0, 23 }, chance = 5, density = 0.5 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "mx_worm_sign",
+    layout = {
+        rows = {
+            "        .........       ",
+            "     ...............    ",
+            "   ...................  ",
+            "  ....................  ",
+            "  ..................... ",
+            " ...................... ",
+            " ...................... ",
+            "........................",
+            "........................",
+            "........................",
+            "...........x............",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            " ...................... ",
+            " ...................... ",
+            " ...................... ",
+            "  ....................  ",
+            "  ....................  ",
+            "    ................    ",
+            "       ..........       ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        nested_glyphs = {
+            ["."] = { choices = { { id = "null", weight = 20 }, { id = "1x1_upturn_earth", weight = 1 } } },
+            x = { choices = { { id = "null", weight = 20 }, { id = "1x1_upturn_earth", weight = 1 } } },
+        },
+        monster_group_glyphs = {
+            ["."] = { group = "GROUP_WORM", chance = 2, density = 0.0001 },
+            x = { group = "GROUP_WORM", chance = 100, density = 0.0001 },
+        },
+    },
+}

@@ -59,3 +59,11 @@ ccb.content.define_mapgen {
         item_groups = { ["@"] = { group = "portal_storm_dungeon_items", chance = 100 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "mx_portal_ingress",
+    layout = {
+        monster_placements = { { group = "GROUP_NETHER", x = { 0, 23 }, y = { 0, 23 }, repetitions = { 2, 3 } } },
+    },
+}

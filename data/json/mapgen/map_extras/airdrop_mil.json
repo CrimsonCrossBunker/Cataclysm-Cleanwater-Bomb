@@ -1,26 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "mx_airdrop_mil",
-    "//": "extra rare version, also has few mil troops.  Should be a separate map extra, but i still don't know what one should contain, ",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "place_nested": [
-        { "chunks": [ [ "supply_generatos_mil", 50 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_water_drums_55", 100 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_water_drums_55", 50 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_water_drums_55", 20 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_fuel_gas", 35 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_fuel_diesel", 35 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_fuel_jp8", 35 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_military_kit", 50 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_military_kit", 50 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] }
-      ],
-      "place_monster": [ { "group": "GROUP_MIL_EXTRA", "x": [ 0, 23 ], "y": [ 0, 23 ], "repeat": [ 10, 16 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "supply_generatos_mil",
     "object": {
       "mapgensize": [ 2, 2 ],

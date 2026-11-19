@@ -3,10 +3,5 @@
     "type": "mapgen",
     "update_mapgen_id": "mx_portal_cracked_mirror",
     "object": { "place_fields": [ { "field": "fd_portal_cracked_mirror", "x": [ 0, 23 ], "y": [ 0, 23 ] } ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "mx_portal_ingress",
-    "object": { "place_monster": [ { "group": "GROUP_NETHER", "x": [ 0, 23 ], "y": [ 0, 23 ], "repeat": [ 2, 3 ] } ] }
   }
 ]
