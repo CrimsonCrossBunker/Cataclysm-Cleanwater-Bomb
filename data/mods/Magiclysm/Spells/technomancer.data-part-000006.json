@@ -1,0 +1,25 @@
+[
+  {
+    "id": "technomancer_robot_shutdown",
+    "type": "SPELL",
+    "name": "Shutdown",
+    "description": "Overload the target, stunning it briefly.  Originally developed during the Roman Empire to target out-of-control golems, this spell became significantly more popular in modern times when it was discovered it also worked on robots and machinery.",
+    "valid_targets": [ "hostile", "ally" ],
+    "flags": [ "ENERVATION_SPELL", "VERBAL", "SOMATIC", "RANDOM_DAMAGE", "SILENT" ],
+    "extra_effects": [ { "id": "eoc_enervation_setup", "hit_self": true } ],
+    "effect": "mod_moves",
+    "shape": "blast",
+    "spell_class": "TECHNOMANCER",
+    "difficulty": 6,
+    "max_level": 15,
+    "min_range": 5,
+    "max_range": 20,
+    "range_increment": 1,
+    "min_damage": { "math": [ "(u_spell_level('technomancer_robot_shutdown') * -15) * evocation_proficiency_modifier()" ] },
+    "max_damage": { "math": [ "(u_spell_level('technomancer_robot_shutdown') * -25) * evocation_proficiency_modifier()" ] },
+    "magic_type": "magiclysm_enervation_magic",
+    "base_casting_time": 150,
+    "base_energy_cost": 250,
+    "targeted_monster_species": [ "GOLEM", "ROBOT", "CYBORG" ]
+  }
+]
