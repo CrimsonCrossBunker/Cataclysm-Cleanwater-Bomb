@@ -1,0 +1,21 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "MILLING", "COMESTIBLE" ],
+    "id": "frost_bone_human",
+    "category": "spare_parts",
+    "name": { "str": "frostbitten human bone" },
+    "weight": "225 g",
+    "color": "white",
+    "symbol": "%",
+    "description": "A stretched bumpy piece of bone, unpleasant to hold.",
+    "comestible_type": "FOOD",
+    "price": "0 cent",
+    "price_postapoc": "10 cent",
+    "material": [ "bone" ],
+    "volume": "250 ml",
+    "vitamins": [ [ "calcium", 96 ], [ "mutant_toxin", 25 ], [ "meat_allergen", 1 ], [ "human_flesh_vitamin", 1 ] ],
+    "into": "meal_bone",
+    "recipe": "meal_bone_mill_1_4"
+  }
+]
