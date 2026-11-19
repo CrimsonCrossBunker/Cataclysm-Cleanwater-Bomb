@@ -74,43 +74,5 @@
       },
       { "text": "No, I'll be on my way.", "topic": "TALK_DONE", "condition": { "math": [ "n_npc_anger() >= 5" ] } }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_GODCO_Olwen_Firstmeet",
-    "dynamic_line": "You look somewhat interesting.  So, what's your story?",
-    "responses": [
-      {
-        "text": "I'm just a curious traveler.",
-        "condition": {
-          "and": [
-            { "not": { "compare_string": [ "yes", { "u_val": "general_meeting_godco_joinee" } ] } },
-            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_godco_godco_notalk_to_u" } ] } }
-          ]
-        },
-        "topic": "TALK_GODCO_Olwen_Traveler"
-      },
-      {
-        "text": "I'm seeking asylum here.",
-        "condition": {
-          "and": [
-            { "compare_string": [ "yes", { "u_val": "general_meeting_godco_joinee" } ] },
-            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_godco_godco_notalk_to_u" } ] } }
-          ]
-        },
-        "topic": "TALK_GODCO_Olwen_Joinee"
-      },
-      {
-        "text": "I'm just a curious traveler.",
-        "condition": {
-          "and": [
-            { "not": { "compare_string": [ "yes", { "u_val": "general_meeting_godco_joinee" } ] } },
-            { "compare_string": [ "yes", { "u_val": "dialogue_godco_godco_notalk_to_u" } ] }
-          ]
-        },
-        "topic": "TALK_GODCO_Olwen_Mutant_Traveler"
-      },
-      { "text": "I'd rather not say.  <end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
