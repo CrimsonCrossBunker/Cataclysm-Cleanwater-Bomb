@@ -10,16 +10,5 @@
     "chat": "TALK_EVAC_GUARD1",
     "mission_offered": "MISSION_EVAC_SMOKER_GET_CIGARETTES",
     "faction": "free_merchants"
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_EVAC_GUARD1",
-    "dynamic_line": { "u_is_wearing": "badge_marshal", "yes": "Hello marshal.", "no": "Hello there." },
-    "responses": [
-      { "text": "What is this place?", "topic": "TALK_EVAC_GUARD1_PLACE" },
-      { "text": "Can I join you guys?", "topic": "TALK_EVAC_GUARD1_JOIN" },
-      { "text": "Anything I can do for you?", "topic": "TALK_EVAC_GUARD1_JOB" },
-      { "text": "See you later.", "topic": "TALK_EVAC_GUARD1_BYE" }
-    ]
   }
 ]
