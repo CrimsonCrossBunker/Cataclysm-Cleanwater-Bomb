@@ -48,20 +48,5 @@
         "topic": "TALK_DONE"
       }
     ]
-  },
-  {
-    "id": [ "TALK_VAMPIRE_MENTOR_BECOME_VAMPIRE" ],
-    "type": "talk_topic",
-    "dynamic_line": {
-      "str": "I can do it, if you truly want it.  I've seen that those who willingly become vampires are more likely to fully walk the path so I won't attempt to force you."
-    },
-    "responses": [
-      {
-        "text": "I am sure.  Grant me vampirism.",
-        "effect": [ { "u_add_effect": "vampire_virus", "intensity": 1, "duration": "PERMANENT" } ],
-        "topic": "TALK_VAMPIRE_MENTOR_NEWVAMPIRE"
-      },
-      { "text": "Maybe later, but not now.", "topic": "TALK_DONE" }
-    ]
   }
 ]

@@ -1,28 +1,13 @@
 local ccb = require("ccb")
-local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = { "TALK_VAMPIRE_MENTOR_BECOME_STRONGER" },
-    line = {
-        when = predicates.has_trait("speaker", "VAMPIRE3"),
-        yes = ccb.content.text("You are ready for the next step.  However, I must warn you: there is no coming back from that.  Your vampirism will become impossible to lose.  Do you wish to proceed?"),
-        no = ccb.content.text("Your vampirism isn't potent enough.  Come back when your mortal hungers will begin to be replaced by immortal hungers.  They are the signs that your power increased enough to withstand what you'll gain from my help."),
-    },
+    id = { "TALK_VAMPIRE_MENTOR_NEWVAMPIRE" },
+    line = ccb.content.text("[Drains a significant portion of your blood and begins speaking to you before you black out] Here you go.  You might not notice the effects at first, but keep some human blood close for when your thirst will appear and some shelter for when the sun will start to burn your skin.  There are levels of vampiric power that cannot be achieved through time alone.  When you'll reach that point, come back here and I'll help you reach them.  [Slits its own wrist and lets you drink, as the blood hits your tongue it energizes you and washes away the dizziness of blood loss]"),
     replies = {
         {
-            text = ccb.content.text("I am certain.  Make me more powerful."),
-            when = predicates.has_trait("speaker", "VAMPIRE3"),
-            next_topic = "TALK_VAMPIRE_MENTOR_POWER",
+            text = ccb.content.text("Can we talk about something else?"),
+            next_topic = "TALK_VAMPIRE_MENTOR_TALK",
         },
-        {
-            text = ccb.content.text("I do not wish to be struck as a vampire forever."),
-            when = predicates.has_trait("speaker", "VAMPIRE3"),
-            next_topic = "TALK_DONE",
-        },
-        {
-            text = ccb.content.text("Got it.  See you."),
-            when = predicates.negate(predicates.has_trait("speaker", "VAMPIRE3")),
-            next_topic = "TALK_DONE",
-        },
+        { text = ccb.content.text("Got it.  See you."), next_topic = "TALK_DONE" },
     },
 }
