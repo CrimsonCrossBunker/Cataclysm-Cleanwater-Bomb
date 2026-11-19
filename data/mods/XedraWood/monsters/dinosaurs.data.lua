@@ -1,0 +1,33 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_claw_runner_hatchling",
+    name = ccb.content.plural_text("claw runner hatchling", "claw runner hatchlings"),
+    description = ccb.content.text("A tiny claw runner hatchling with huge shiny eyes.  Its teeth are small now, but they won't be for long."),
+    default_faction = "velociraptor_hatchling",
+    categories = { "DINOSAUR", "WILDLIFE" },
+    species = { "DINOSAUR" },
+    volume = "50 ml",
+    mass = "57 g",
+    hp = 2,
+    speed = 40,
+    materials = { "flesh" },
+    symbol = "v",
+    color = "green_yellow",
+    looks_like = "mon_compsognathus",
+    aggression = -99,
+    morale = -8,
+    melee_skill = 1,
+    melee_dice = 1,
+    melee_sides = 1,
+    melee_damage = { { type = "cut", amount = 1 } },
+    dodge = 1,
+    upgrade = { grow_at_age = 720, monster = "mon_claw_runner" },
+    biosignature = { item = "feces_dino", interval = 3 },
+    flags = {
+        "SEES", "HEARS", "ANIMAL", "PATH_AVOID_DANGER", "WARM", "STUMBLES", "NO_BREED", "CANPLAY",
+        "CAN_BE_CULLED", "GUILT_ANIMAL",
+    },
+    harvest = "bird_tiny",
+    death = { outcome = { spell = { id = "death_guilt", min_level = 3 } } },
+}

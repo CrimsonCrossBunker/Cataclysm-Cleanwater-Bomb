@@ -1,0 +1,46 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_claw_hunter_juvenile",
+    name = ccb.content.plural_text("claw hunter juvenile", "claw hunter juveniles"),
+    default_faction = "utahraptor_juvenile",
+    copy_from = "mon_claw_hunter",
+    looks_like = "mon_utahraptor",
+    volume = "250 L",
+    mass = "250 kg",
+    hp = 75,
+    upgrade = { grow_at_age = 720, monster = "mon_claw_hunter" },
+    inheritance = { add = { flags = { "CANPLAY", "NO_BREED", "CAN_BE_CULLED" } } },
+}
+
+ccb.content.define_monster {
+    id = "mon_claw_hunter_hatchling",
+    name = ccb.content.plural_text("claw hunter hatchling", "claw hunter hatchlings"),
+    description = ccb.content.text("A small claw hunter hatchling with bedraggled feathers.  Its teeth are small now, but they won't be for long."),
+    default_faction = "utahraptor_hatchling",
+    categories = { "DINOSAUR", "WILDLIFE" },
+    species = { "DINOSAUR" },
+    mass = "4 kg",
+    volume = "4 L",
+    hp = 5,
+    speed = 60,
+    materials = { "flesh" },
+    symbol = "v",
+    color = "green_yellow",
+    looks_like = "mon_compsognathus",
+    aggression = -99,
+    morale = -8,
+    melee_skill = 1,
+    melee_dice = 1,
+    melee_sides = 1,
+    melee_damage = { { type = "cut", amount = 1 } },
+    dodge = 1,
+    upgrade = { grow_at_age = 720, monster = "mon_claw_hunter_juvenile" },
+    biosignature = { item = "feces_dino", interval = 3 },
+    flags = {
+        "SEES", "HEARS", "ANIMAL", "PATH_AVOID_DANGER", "WARM", "STUMBLES", "NO_BREED", "CANPLAY",
+        "CAN_BE_CULLED", "GUILT_ANIMAL",
+    },
+    harvest = "bird_tiny",
+    death = { outcome = { spell = { id = "death_guilt", min_level = 3 } } },
+}
