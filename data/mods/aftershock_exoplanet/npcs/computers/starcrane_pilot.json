@@ -85,11 +85,5 @@
       },
       { "text": "Cancel.", "topic": "THI_CONTROL_START" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": [ "THI_CONTROL_CONTROL_READY" ],
-    "dynamic_line": "&************************************************\n\nINTEGRITY CHK : ███████████████ 100% (COMPLETE)\nNAV TRANSFER :  ███████████████ 100% (COMPLETE)\n\n************************************************\n*  Operation Successful                         *\n************************************************",
-    "responses": [ { "text": "Pilot the ship.", "topic": "TALK_DONE" } ]
   }
 ]
