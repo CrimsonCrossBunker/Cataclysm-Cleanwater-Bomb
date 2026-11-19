@@ -1007,3 +1007,181 @@ ccb.content.define_mapgen {
         nested = { { id = "tacoma_commune_toolshed_9_roof", x = 0, y = 0, z = 1 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "tacoma_commune_makeshift_bed",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "B#",
+            "  ",
+        },
+        furniture = { ["#"] = "f_makeshift_bed", B = "f_makeshift_bed" },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_spawns = { B = { id = "blanket", faction = "tacoma_commune" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "tacoma_commune_clinic_9",
+    layout = {
+        size = { width = 19, height = 19 },
+        rows = {
+            "                   ",
+            "                   ",
+            "                   ",
+            "wwwwwwww   wwwwwwww",
+            "w      w   w      w",
+            "w      ww ww      w",
+            "w      w   w      w",
+            "w                 w",
+            "w      w   w      w",
+            "w      wwwww      w",
+            "www  www   wwwwwwww",
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+        },
+        terrain = { w = "t_wall_half" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = { { id = "hammer_sledge", x = 12, y = 18, faction = "tacoma_commune" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "tacoma_commune_clinic_10",
+    layout = {
+        size = { width = 19, height = 19 },
+        rows = {
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+            " ......     ...... ",
+            " ......  .  ...... ",
+            " ...... ... ...... ",
+            " ................. ",
+            " ...... ... ...... ",
+            " ......     ...... ",
+            "   ..              ",
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+            "                   ",
+        },
+        terrain = { ["."] = "t_dirtfloor" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "tacoma_commune_clinic_10_roof", x = 0, y = 0, z = 1 } },
+        item_placements = { { id = "ax", x = 13, y = 18, faction = "tacoma_commune" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "tacoma_commune_junk_shop_shed_2",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "wdww",
+            "w..w",
+            "w.sw",
+            "wwww",
+        },
+        terrain = { w = "t_wall_wood", d = "t_door_locked", ["."] = "t_dirtfloor", s = "t_dirtfloor" },
+        furniture = { s = "f_woodstove" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_placements = { { id = "log", x = 2, y = 1, amount = { 3, 5 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "tacoma_commune_lumbermill_6",
+    layout = {
+        size = { width = 12, height = 12 },
+        rows = {
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "            ",
+            "        r   ",
+            "        r   ",
+            "            ",
+        },
+        terrain = {},
+        furniture = { r = "f_rack" },
+        item_placements = {
+            { id = "frame", x = 3, y = 6, faction = "tacoma_commune" },
+            { id = "frame", x = 3, y = 7, faction = "tacoma_commune" },
+            { id = "frame", x = 3, y = 8, faction = "tacoma_commune" },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "tacoma_commune_woodcutter_10_logs",
+    layout = {
+        item_placements = { { id = "log", x = 7, y = 15, amount = 10 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "tacoma_commune_woodcutter_100_logs",
+    layout = {
+        item_placements = { { id = "log", x = 7, y = 15, amount = 100 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "tacoma_commune_shot_brandy",
+    layout = {
+        item_group_placements = { { group = "ranch_bartender_shot_brandy", x = 11, y = 12, chance = 100 } },
+        item_placements = { { id = "tacoma_drink_token", x = 11, y = 12 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "tacoma_commune_shot_rum",
+    layout = {
+        item_group_placements = { { group = "ranch_bartender_shot_rum", x = 11, y = 12, chance = 100 } },
+        item_placements = { { id = "tacoma_drink_token", x = 11, y = 12 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "tacoma_commune_shot_whiskey",
+    layout = {
+        item_group_placements = { { group = "ranch_bartender_shot_whiskey", x = 11, y = 12, chance = 100 } },
+        item_placements = { { id = "tacoma_drink_token", x = 11, y = 12 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "tacoma_commune_glass_water",
+    layout = {
+        item_group_placements = { { group = "ranch_bartender_glass_water", x = 11, y = 12, chance = 100 } },
+    },
+}

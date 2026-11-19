@@ -1,20 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "tacoma_commune_makeshift_bed",
-    "object": {
-      "mapgensize": [ 2, 2 ],
-      "rows": [
-        "B#",
-        "  "
-      ],
-      "furniture": { "#": "f_makeshift_bed", "B": "f_makeshift_bed" },
-      "item": { "B": { "item": "blanket", "faction": "tacoma_commune" } },
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "tacoma_commune_bar_16_done",
     "object": {
       "mapgensize": [ 20, 20 ],
@@ -132,69 +118,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "tacoma_commune_clinic_9",
-    "object": {
-      "mapgensize": [ 19, 19 ],
-      "rows": [
-        "                   ",
-        "                   ",
-        "                   ",
-        "wwwwwwww   wwwwwwww",
-        "w      w   w      w",
-        "w      ww ww      w",
-        "w      w   w      w",
-        "w                 w",
-        "w      w   w      w",
-        "w      wwwww      w",
-        "www  www   wwwwwwww",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   "
-      ],
-      "terrain": { "w": "t_wall_half" },
-      "place_item": [ { "item": "hammer_sledge", "x": 12, "y": 18, "faction": "tacoma_commune" } ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "tacoma_commune_clinic_10",
-    "object": {
-      "mapgensize": [ 19, 19 ],
-      "rows": [
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   ",
-        " ......     ...... ",
-        " ......  .  ...... ",
-        " ...... ... ...... ",
-        " ................. ",
-        " ...... ... ...... ",
-        " ......     ...... ",
-        "   ..              ",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   "
-      ],
-      "terrain": { ".": "t_dirtfloor" },
-      "place_item": [ { "item": "ax", "x": 13, "y": 18, "faction": "tacoma_commune" } ],
-      "place_nested": [ { "chunks": [ "tacoma_commune_clinic_10_roof" ], "x": 0, "y": 0, "z": 1 } ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "tacoma_commune_clinic_11",
     "object": {
       "mapgensize": [ 17, 17 ],
@@ -294,51 +217,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "tacoma_commune_junk_shop_shed_2",
-    "object": {
-      "mapgensize": [ 4, 4 ],
-      "rows": [
-        "wdww",
-        "w..w",
-        "w.sw",
-        "wwww"
-      ],
-      "terrain": { "w": "t_wall_wood", "d": "t_door_locked", ".": "t_dirtfloor", "s": "t_dirtfloor" },
-      "furniture": { "s": "f_woodstove" },
-      "place_item": [ { "item": "log", "x": 2, "y": 1, "amount": [ 3, 5 ] } ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "tacoma_commune_lumbermill_6",
-    "object": {
-      "mapgensize": [ 12, 12 ],
-      "rows": [
-        "            ",
-        "            ",
-        "            ",
-        "            ",
-        "            ",
-        "            ",
-        "            ",
-        "            ",
-        "            ",
-        "        r   ",
-        "        r   ",
-        "            "
-      ],
-      "terrain": {  },
-      "furniture": { "r": "f_rack" },
-      "place_item": [
-        { "item": "frame", "x": 3, "y": 6, "faction": "tacoma_commune" },
-        { "item": "frame", "x": 3, "y": 7, "faction": "tacoma_commune" },
-        { "item": "frame", "x": 3, "y": 8, "faction": "tacoma_commune" }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "tacoma_commune_lumbermill_8_done",
     "object": {
       "mapgensize": [ 12, 12 ],
@@ -390,16 +268,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "tacoma_commune_woodcutter_10_logs",
-    "object": { "place_item": [ { "item": "log", "x": 7, "y": 15, "amount": 10 } ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "tacoma_commune_woodcutter_100_logs",
-    "object": { "place_item": [ { "item": "log", "x": 7, "y": 15, "amount": 100 } ] }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "tacoma_commune_crop_overseer_field_1_plant",
     "object": {
       "set": [
@@ -433,34 +301,5 @@
       ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
     }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "tacoma_commune_shot_brandy",
-    "object": {
-      "place_items": [ { "item": "ranch_bartender_shot_brandy", "x": 11, "y": 12, "chance": 100 } ],
-      "place_item": [ { "item": "tacoma_drink_token", "x": 11, "y": 12 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "tacoma_commune_shot_rum",
-    "object": {
-      "place_items": [ { "item": "ranch_bartender_shot_rum", "x": 11, "y": 12, "chance": 100 } ],
-      "place_item": [ { "item": "tacoma_drink_token", "x": 11, "y": 12 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "tacoma_commune_shot_whiskey",
-    "object": {
-      "place_items": [ { "item": "ranch_bartender_shot_whiskey", "x": 11, "y": 12, "chance": 100 } ],
-      "place_item": [ { "item": "tacoma_drink_token", "x": 11, "y": 12 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "tacoma_commune_glass_water",
-    "object": { "place_items": [ { "item": "ranch_bartender_glass_water", "x": 11, "y": 12, "chance": 100 } ] }
   }
 ]
