@@ -31,3 +31,5 @@ require("generic_items")
 require("inherited_items")
 
 require("effect_types")
+
+require("monster_groups")
