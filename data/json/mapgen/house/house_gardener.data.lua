@@ -99,3 +99,63 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "house_gardener" },
+    layout = {
+        rows = {
+            ".%.--.%.................",
+            "...--p..................",
+            ".##**###................",
+            ".#L  +U#^...............",
+            ".#y  ||##oooo###oo#oo#..",
+            ".#3  h   HHHHy|dy TII#..",
+            ".o2  ff       +     h#..",
+            ".o5  ff  E   R|E     #..",
+            ".#O   h    E R|T  @@ #..",
+            ".#1F7  66y   y|D s@@s#..",
+            ".#|||+|||||+|||||||||#..",
+            ".#t   B|>+   yy ;;;;;#..",
+            ".#S8y8B|U|i        y;#..",
+            ".##o####v|i  yyy'''''#^.",
+            ".$%%%%%####*##########..",
+            ".$...................$..",
+            ".$.=.!.!.!..!!!!!!!!.$..",
+            ".$.=.!.!.!...........$..",
+            ".$.&.!.!.!..!!!!!!!!.$..",
+            ".$.&.!.!.!...........$..",
+            ".$.&.!.!.!..!!!!!!!!.$..",
+            ".$...................$..",
+            ".$$$$$$$$$$$$$$$$$$$$$..",
+            "........................",
+        },
+        palettes = { "domestic_general_and_variant_palette" },
+        terrain = {
+            ["%"] = {
+                { id = "t_region_shrub" },
+                { id = "t_region_shrub_fruit" },
+                { id = "t_region_shrub_decorative" },
+            },
+            ["$"] = "t_fence",
+            ["="] = "t_shrub_blueberry",
+            ["!"] = "t_dirtmound",
+            ["&"] = "t_shrub_strawberry",
+        },
+        furniture = { [";"] = "f_rack", ["'"] = "f_table" },
+        fill_terrain = "t_floor",
+        nested = { { id = "rolling_trash_can_1x1", x = 10, y = 1 } },
+        sealed_item_glyphs = {
+            ["!"] = {
+                item_group = { group = "farming_seeds", chance = 100 },
+                furniture = "f_plant_seedling",
+                chance = 80,
+            },
+        },
+        loot_placements = {
+            { group = "farming_tools", x = { 16, 20 }, y = 11, chance = 65, repetitions = { 1, 2 } },
+            { group = "farming_seeds", x = { 16, 20 }, y = 13, chance = 85, repetitions = { 1, 5 } },
+        },
+        monster_group_placements = { { group = "GROUP_ZOMBIE", x = { 2, 21 }, y = { 2, 21 }, chance = 2 } },
+    },
+}
