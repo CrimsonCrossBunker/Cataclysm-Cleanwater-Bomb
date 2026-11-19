@@ -84,20 +84,5 @@
       },
       { "text": "Alright, see you later.", "topic": "TALK_DONE", "condition": { "math": [ "n_npc_anger() >= 5" ] } }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_GODCO_Sonia_Tunes",
-    "dynamic_line": [
-      {
-        "compare_string": [ "yes", { "npc_val": "mission_completed_sonia_guitar_fixed" } ],
-        "yes": "Just playing some good ol' tunes.  There's so much negativity around here, someone's gotta cheer people up, ya know?",
-        "no": "Nothin' much, just sitting around and biding my time, getting any work I can.  I might play something to cheer everyone up, if my guitar wasn't busted."
-      }
-    ],
-    "responses": [
-      { "text": "Is there anything I can help you with?", "topic": "TALK_MISSION_LIST" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
