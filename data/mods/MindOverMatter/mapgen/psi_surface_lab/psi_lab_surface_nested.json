@@ -132,35 +132,5 @@
         }
       }
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "portal_field_nether_water",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_terrain": [ { "ter": "t_nether_water_sh", "x": 0, "y": 0 } ],
-      "place_fields": [ { "field": "fd_fatigue", "x": 0, "y": 0, "intensity": 3 } ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "portal_field_concrete_floor",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_terrain": [ { "ter": "t_strconc_floor", "x": 0, "y": 0 } ],
-      "place_fields": [ { "field": "fd_fatigue", "x": 0, "y": 0, "intensity": 3 } ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "portal_field_floor",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_terrain": [ { "ter": "t_floor", "x": 0, "y": 0 } ],
-      "place_fields": [ { "field": "fd_fatigue", "x": 0, "y": 0, "intensity": 3 } ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
   }
 ]

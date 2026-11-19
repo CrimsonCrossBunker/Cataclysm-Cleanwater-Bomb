@@ -2495,3 +2495,36 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "portal_field_nether_water",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        terrain_placements = { { id = "t_nether_water_sh", x = 0, y = 0 } },
+        field_placements = { { id = "fd_fatigue", x = 0, y = 0, intensity = 3 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "portal_field_concrete_floor",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        terrain_placements = { { id = "t_strconc_floor", x = 0, y = 0 } },
+        field_placements = { { id = "fd_fatigue", x = 0, y = 0, intensity = 3 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "portal_field_floor",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        terrain_placements = { { id = "t_floor", x = 0, y = 0 } },
+        field_placements = { { id = "fd_fatigue", x = 0, y = 0, intensity = 3 } },
+    },
+}
