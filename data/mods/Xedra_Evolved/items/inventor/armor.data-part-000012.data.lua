@@ -1,44 +1,51 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
-    id = "crafting_assistant",
-    category = "armor",
-    name = ccb.content.plural_text("Crafting Assistant Robot", "Crafting Assistant Robots"),
-    description = ccb.content.text("A bulky wearable robot that significantly helps with all crafting tasks while powered.  It has some strange obsession with frequently taking apart and reassembling its own arms and its programming is far too focused on creation and disassembly for it to have any combat or destructive use."),
-    mass = "7500 g",
-    volume = "5550 ml",
-    looks_like = "bot_nursebot",
-    materials = { "steel", "aluminum" },
+    id = "wolf_mask_act",
+    copy_from = "wolf_mask",
+    name = ccb.content.plural_text("wolf's mask (on)", "wolf's masks (on)"),
+    revert_to = "wolf_mask",
+    inheritance = { add = { flags = { "SPAWN_ACTIVE" } } },
+    subtype_order = { "tool", "armor" },
+    tool = { power_draw = "5 W" },
+    armor = { environmental_protection = 25 },
+    use_actions = {
+        {
+            kind = "transform",
+            ammo_scale = 0,
+            target = "wolf_mask",
+            menu_text = ccb.content.text("Turn off"),
+            message = ccb.content.text("You turn off the %s."),
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "magnetic_holster",
+    name = ccb.content.plural_text("magnetic holster", "magnetic holsters"),
+    looks_like = "shoulder_strap",
+    description = ccb.content.text("A long strap with small, powerful gravity field emitters on the surface.  Allows one to strap and carry almost anything."),
+    mass = "250 g",
+    volume = "250 ml",
+    materials = { "plastic", "aluminum" },
     symbol = "[",
     color = "light_gray",
     pockets = {
         {
-            kind = "MAGAZINE_WELL",
+            kind = "CONTAINER",
+            holster = true,
             rigid = true,
-            airtight = true,
-            watertight = true,
-            allowed_flags = { "BATTERY_MEDIUM", "BATTERY_HEAVY" },
             capacity = "20 L",
-            mass_limit = "20 kg",
-            default_magazine = "medium_battery_cell",
+            mass_limit = "15 kg",
+            max_item_length = "300 cm",
+            moves = 50,
         },
     },
-    flags = {
-        "MORPHIC", "BELTED", "ALLOWS_NATURAL_ATTACKS", "WATER_FRIENDLY", "OVERSIZE", "ELECTRONIC",
-        "INVENTOR_CRAFTED",
+    flags = { "MORPHIC", "BELTED", "OVERSIZE", "MUNDANE", "INVENTOR_CRAFTED", "TARDIS" },
+    armor = {
+        sided = true,
+        thickness = 1,
+        portions = { { encumbrance = 1, coverage = 5, covers = { "torso" }, subparts = { "torso_upper" } } },
     },
-    faults = { { group = "electronic_general" } },
-    subtype_order = { "tool", "armor", "artifact" },
-    tool = { ammo_types = { "battery" } },
-    armor = { portions = { { coverage = 50, covers = { "torso" }, subparts = { "torso_hanging_back" } } } },
-    artifact = { enchantments = { "ITEM_ENCH_Xedra_Evolved_crafting_assistant_0" } },
-    use_actions = {
-        {
-            kind = "transform",
-            target = "crafting_assistant_on",
-            need_charges = 1,
-            need_charges_message = ccb.content.text("The batteries are dead."),
-            message = ccb.content.text("The assistant deploys its new arms, ready to help with crafting."),
-        },
-    },
+    use_actions = { { kind = "holster" } },
 }
