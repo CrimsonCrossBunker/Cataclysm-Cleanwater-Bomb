@@ -131,20 +131,5 @@
       { "text": "You don't seem to be doing great.", "topic": "TALK_REFUGEE_Boris_Background_B" },
       { "text": "How are things here?", "topic": "TALK_REFUGEE_Boris_Situation" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_REFUGEE_Boris_1",
-    "dynamic_line": "Ah, another new face.  Hello.  I am Boris.",
-    "speaker_effect": {
-      "effect": [
-        { "u_add_var": "general_meeting_u_met_Boris_Borichenko", "value": "yes" },
-        { "npc_first_topic": "TALK_REFUGEE_Boris_1a" }
-      ]
-    },
-    "responses": [
-      { "text": "Nice to meet you, Boris.", "topic": "TALK_REFUGEE_Boris_1_firstmeet" },
-      { "text": "Hi Boris, nice to meet you.  <end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
