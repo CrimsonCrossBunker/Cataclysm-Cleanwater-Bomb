@@ -1,0 +1,20 @@
+[
+  {
+    "id": "grenade_pistol",
+    "copy-from": "m320",
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "name": { "str": "grenade pistol" },
+    "//": "more like granadepistole",
+    "ammo": [ "ammo_grenade" ],
+    "description": "A stubby single shot pistol with a large bore barrel, suitable for launching grenades or flares.  This is a slightly more convenient way to transport a grenade launcher than mounted to one's rifle, a practice more common among special forces.  In more recent years, variants were sold commercially to ostensibly launch flares.  With the right cartridges, this would be devastating against hard or soft targets.  This could be attached to a suitable rifle, if so desired.",
+    "clip_size": 1,
+    "use_action": {
+      "menu_text": "Deploy as attachment",
+      "type": "transform",
+      "target": "grenade_under",
+      "msg": "You make the launcher ready for attachment."
+    },
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "ammo_grenade": 1 }, "rigid": true } ]
+  }
+]
