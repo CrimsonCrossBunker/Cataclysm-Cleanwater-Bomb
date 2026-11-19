@@ -1,18 +1,23 @@
 local ccb = require("ccb")
 
--- NO_I18N
 ccb.content.define_item {
-    id = "elemental_mana_draught",
-    name = ccb.content.plural_text("elemental mana draught", "elemental mana draughts"),
-    description = ccb.content.text_without_extraction("Converting"),
-    mass = "245 g",
-    volume = "250ml",
-    symbol = "~",
-    default_container = "flask_glass",
-    color = "light_blue",
-    flags = { "EATEN_COLD", "NO_AUTO_CONSUME", "NUTRIENT_OVERRIDE" },
+    id = "blood_treatment",
+    name = ccb.content.plural_text("questionable blood treatment", "questionable blood treatment"),
+    description = ccb.content.text("This homemade blood treatment purports to reduce the cravings brought on by vampirism and if applied often and early to even reverse some stages of the disease.  But vampires surely can't be real, can they?"),
+    mass = "1 g",
+    volume = "12ml",
+    price = "50 USD",
     phase = "liquid",
-    price = "25 USD",
-    comestible = { quench = 1, calories = 0, servings = 1, fun = -1, kind = "DRINK", freezing_point = 4 },
-    use_actions = { { kind = "cast_spell", spell = "potion_recover_mana_xe", no_fail = true, level = 0 } },
+    survival_price = "20 USD",
+    materials = { "hflesh" },
+    stack_size = 4,
+    symbol = "!",
+    color = "magenta",
+    flags = { "NPC_SAFE", "TRADER_AVOID" },
+    comestible = {
+        kind = "MED",
+        servings = 4,
+        vitamins = { { id = "meat_allergen", amount = 1 } },
+        on_consume = "drink_blood_treatment",
+    },
 }

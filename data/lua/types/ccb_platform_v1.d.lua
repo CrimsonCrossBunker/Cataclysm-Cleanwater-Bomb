@@ -12775,6 +12775,11 @@ function CcbCharactersApi.heal(character, body_part, amount) end
 ---@return CcbResult result value is the native current HP, including the native null-body-part result when this Character lacks the registered part.
 function CcbCharactersApi.hp(character, body_part) end
 
+---@param character GameHandle Exact live Character.
+---@param body_part GameId Registered GameId<body_part>; current anatomy membership is not required.
+---@return CcbResult result value is the native maximum HP for the requested part.
+function CcbCharactersApi.hp_max(character, body_part) end
+
 ---Assign raw HP directly without healing, affliction removal or a maximum-HP clamp.
 ---@param character GameHandle Exact live Character.
 ---@param body_part GameId Registered GameId<body_part>; must be present unless native_fallback is true.

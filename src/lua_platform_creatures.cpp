@@ -5207,6 +5207,24 @@ void install_creature_api(
                                        sol::make_object( state, character->get_part_hp_cur( part ) ) );
     } );
     characters.set_function(
+        "hp_max",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & body_part ) {
+        require_read();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Character *character = resolve_exact_character( handle, current_runtime_generation(),
+                                     current_world_generation(), error );
+        if( !character ) {
+            return make_game_error_result( state, *error );
+        }
+        require_id_kind( body_part, "body_part", "services.characters.hp_max" );
+        const bodypart_id part = bodypart_str_id( body_part.value() ).id();
+        return make_game_value_result( state,
+                                       sol::make_object( state, character->get_hp_max( part ) ) );
+    } );
+    characters.set_function(
         "set_hp",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
