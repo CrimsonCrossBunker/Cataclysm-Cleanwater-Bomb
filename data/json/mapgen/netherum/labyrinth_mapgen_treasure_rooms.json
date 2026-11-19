@@ -64,32 +64,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "LS_10x10_deadend_1_room1",
-    "//": "Treasure room Circle of Wings",
-    "object": {
-      "mapgensize": [ 10, 10 ],
-      "rows": [
-        "|________|",
-        "_((_______",
-        "_((L______",
-        "__LÜ______",
-        "__________",
-        "____UU____",
-        "__s_UU_s__",
-        "____UU____",
-        "__s_UU_s__",
-        "|________|"
-      ],
-      "palettes": [ "labyrinthine_base_palette" ],
-      "furniture": { "s": "f_statue", "Ü": "f_lab_bench" },
-      "items": {
-        "U": { "item": "LS_Rewardroom_Scatter_Passcode1", "chance": 32 },
-        "Ü": { "item": "LS_Rewardroom_Primary_Passcode1" }
-      }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "LS_10x10_deadend_1_room2",
     "//": "Room full of shelves, should have CBMs and weapons and a big fight",
     "object": {
@@ -115,34 +89,6 @@
           { "item": "LS_Rewardroom_Scatter_Passcode2", "chance": 25 },
           { "item": "LS_Rewardroom_Primary_Passcode2", "chance": 2 }
         ]
-      }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "LS_10x10_deadend_1_room3",
-    "//": "Room full of shelves, should have CBMs",
-    "object": {
-      "mapgensize": [ 10, 10 ],
-      "rows": [
-        "|________|",
-        "ϟ________ϟ",
-        "ϟ__M__M__ϟ",
-        "(________(",
-        "ϟ__M__M__ϟ",
-        "ϟ________ϟ",
-        "(__M__M__(",
-        "ϟ________ϟ",
-        "ϟ__M__M__ϟ",
-        "|ccCUÜCcc|"
-      ],
-      "palettes": [ "labyrinthine_base_palette" ],
-      "furniture": { "Ü": "f_utility_shelf" },
-      "items": {
-        "c": { "item": "LS_SUS_crate_tier0_materials" },
-        "C": { "item": "LS_Rewardroom_Scatter_Passcode3", "chance": 75 },
-        "U": { "item": "LS_Rewardroom_Scatter_Passcode3", "chance": 75 },
-        "Ü": { "item": "LS_Rewardroom_Primary_Passcode3" }
       }
     }
   },

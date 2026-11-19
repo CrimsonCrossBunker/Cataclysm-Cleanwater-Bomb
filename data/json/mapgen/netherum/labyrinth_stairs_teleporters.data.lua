@@ -1,0 +1,85 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth_stairs_1_to_2",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvvv....vvvvvvvvvv",
+            "vvvvvvvvvv....vvvvvvvvvv",
+            "vvvvvvvvvv....vvvvvvvvvv",
+            "......vvvv###.vvvv......",
+            "..........#>o...........",
+            "..........###...........",
+            "..........#<#...........",
+            "..........+.+...........",
+            "......vvvv###.vvvv......",
+            "vvvvvvvvvv....vvvvvvvvvv",
+            "vvvvvvvvvv....vvvvvvvvvv",
+            "vvvvvvvvvv....vvvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+        },
+        terrain = {
+            [">"] = "t_nl_stairs_down",
+            ["<"] = "t_nl_stairs_up_false",
+            ["#"] = "t_nl_metal_wall",
+            s = "t_nl_mist",
+            ["."] = "t_nl_metal_floor",
+            ["+"] = "t_nl_door_c",
+            o = "t_nl_archway",
+            v = "t_nl_chasm",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            {
+                choices = { { id = "labyrinth_stairs_1_to_2_teleporter", weight = 1 } },
+                x = 0,
+                y = 0,
+                z = -1,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth_stairs_2_to_1",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            ".###.",
+            ".#<o.",
+            ".###.",
+            ".....",
+        },
+        terrain = {
+            ["<"] = "t_nl_stairs_up",
+            ["#"] = "t_nl_metal_wall",
+            s = "t_nl_mist",
+            ["."] = "t_nl_metal_floor",
+            o = "t_nl_archway",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            {
+                choices = { { id = "labyrinth_stairs_2_to_1_teleporter", weight = 1 } },
+                x = 0,
+                y = 0,
+                z = 1,
+            },
+        },
+    },
+}
