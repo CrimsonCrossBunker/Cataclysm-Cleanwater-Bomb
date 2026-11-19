@@ -1,27 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_NPC_CAMPER_SURVIVOR",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "npc_val": "dialogue_first_meeting_knows_u" } ],
-      "yes": "<greet>.",
-      "no": { "gendered_line": "Hey, stranger.  Glad to see a new face around here.", "relevant_genders": [ "npc", "u" ] }
-    },
-    "speaker_effect": { "effect": { "npc_add_var": "dialogue_first_meeting_knows_u", "value": "yes" } },
-    "responses": [
-      { "text": "<greet>", "topic": "TALK_NPC_CAMPER_SURVIVOR_INTRO" },
-      {
-        "text": "Glad to see you too.  Now, hand over your things.",
-        "trial": { "type": "INTIMIDATE", "difficulty": 30 },
-        "success": { "topic": "TALK_WEAPON_DROPPED", "effect": "drop_weapon", "opinion": { "trust": -4, "fear": 3 } },
-        "failure": { "topic": "TALK_DONE", "effect": "hostile" },
-        "condition": { "not": { "compare_string": [ "yes", { "npc_val": "dialogue_first_meeting_knows_u" } ] } }
-      },
-      { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_NPC_CAMPER_SURVIVOR_INTRO",
     "dynamic_line": "So, what's up?",
     "responses": [
