@@ -1,10 +1,5 @@
 [
   {
-    "type": "ter_furn_transform",
-    "id": "industrial_runoff",
-    "terrain": [ { "result": [ [ "t_polluted_snow", 1 ], [ "t_snow", 2 ] ], "valid_terrain": [ "t_snow" ] } ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": "afs_formless_ruins_industrial",
     "weight": 5,

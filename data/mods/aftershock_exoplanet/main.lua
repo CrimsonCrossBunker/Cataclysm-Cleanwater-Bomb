@@ -127,3 +127,5 @@ require("inherited_items")
 require("active_items")
 
 require("esper_enkindling")
+
+require("terrain_transforms")
