@@ -1,0 +1,21 @@
+[
+  {
+    "id": [ "TALK_ROBOFAC_INTERCOM_HWP_EXODII_STARTED" ],
+    "//": "creating EXODII barrel",
+    "type": "talk_topic",
+    "dynamic_line": "Brilliant!!  Just brilliant.  Thank you very much.  Please contact us again in three days.  Thank you!\"\n\nThe voice abruptly disconnects.  When the intercom comes back on, it's the original voice again.  \"Was there anything else?",
+    "speaker_effect": {
+      "effect": [
+        { "u_add_faction_trust": 1 },
+        { "math": [ "u_timer_hub_rnd_u_waiting_on_hub = time('now')" ] },
+        { "u_add_var": "dialogue_hub_rnd_u_project_ongoing", "value": "yes" },
+        { "u_add_var": "dialogue_hub_rnd_u_current_project", "value": "hwp_exodii" }
+      ],
+      "sentinel": "started_exodii_gun_research"
+    },
+    "responses": [
+      { "text": "You seem very… excited about this.", "topic": "TALK_ROBOFAC_INTERCOM_HWP_EXODII_STARTED_1" },
+      { "text": "What about another project?", "topic": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_MENU" }
+    ]
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_GUN_YES",
+    "//": "quick access to prototype menu through the merc vouching",
+    "type": "talk_topic",
+    "dynamic_line": "Yes, Foster gave you quite a recommendation.  Very well - I will authorize you access to our prototype fabrication services for agents in the field.  This includes the Hybrid Weapons Platform, alongside the ability to order spare or replacement parts for your field gear.",
+    "speaker_effect": { "effect": [ { "u_add_var": "dialogue_intercom_u_hub_prototypes", "value": "yes" } ] },
+    "responses": [
+      {
+        "text": "Great.  What exactly is this 'Hybrid Weapons Platform', anyway?",
+        "topic": "TALK_ROBOFAC_INTERCOM_RIFLE_REQUEST"
+      },
+      { "text": "What about another project?", "topic": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_MENU" }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_INTERCOM_RIFLE_BREAKTHROUGH",
+    "//": "getting an HWP",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "math": [ "time_since(u_timer_hub_rnd_u_waiting_on_gun) >= time('7 d')" ],
+      "yes": "The Platform is complete.  As a reminder, the HWP will not function as a weapon without a conversion kit installed.  Transferring the requested items now.\"\n\nThe tray shakes as several heavy objects are dropped into it, and it slides open.  Inside: the Hybrid Weapons Platform.  On its own, it doesn't look like much; it resembles the body of a service rifle without a stock or barrel, colored in sleek black with blue highlights around the magazine well.  Small yellow arrows and inscriptions are present at certain points, highlighting the fasteners used to assemble the thing in earnest.  Accompanying the Platform itself is a series of four bundles of parts for it, each held together using velcro strips and tagged by caliber.  A drawstring nylon bag, embroidered with the Hub's logo and filled with proprietary tools, completes the whole package.\n\nAll in all, not a bad deal.\n\n\"Should you require magazines of any given caliber, we are willing to provide them through standard requisitions.  We hope you find its performance to be satisfactory.",
+      "no": "Work is still ongoing.  These things can take time."
+    },
+    "responses": [
+      {
+        "text": "Thanks.",
+        "condition": { "math": [ "time_since(u_timer_hub_rnd_u_waiting_on_gun) >= time('7 d')" ] },
+        "effect": [
+          { "u_add_var": "dialogue_hub_rnd_u_has_researched_gun", "value": "yes" },
+          { "u_lose_var": "dialogue_hub_rnd_u_project_ongoing" },
+          { "u_lose_var": "timer_hub_rnd_u_waiting_on_gun" },
+          { "u_spawn_item": "robofac_gun" },
+          { "u_spawn_item": "robofac_gun_ar" },
+          { "u_spawn_item": "robofac_gun_smg" },
+          { "u_spawn_item": "robofac_gun_dmr" },
+          { "u_spawn_item": "robofac_gun_shotgun" },
+          { "u_spawn_item": "robofac_gun_kit" },
+          { "u_spawn_item": "robofac40", "count": 2 },
+          { "u_spawn_item": "robofac60", "count": 2 },
+          { "u_spawn_item": "robofac20", "count": 2 },
+          { "u_spawn_item": "robofac10", "count": 2 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES"
+      },
+      { "text": "What about another project?", "topic": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_MENU" }
+    ]
+  },
+  {
+    "id": [
+      "TALK_ROBOFAC_INTERCOM_RIFLE_REQUEST",
+      "TALK_ROBOFAC_INTERCOM_RIFLE_ADAPTERS",
+      "TALK_ROBOFAC_INTERCOM_RIFLE_TIMEGATE",
+      "TALK_ROBOFAC_INTERCOM_RIFLE_BENEFITS"
+    ],
+    "//": "buying an HWP",
+    "type": "talk_topic",
+    "dynamic_line": "I'll spare you the marketing pitch.  The Hybrid Weapons Platform - or more commonly the HWP - is a weapons platform capable of supporting multiple calibers via the use of quick-release adapters.  On its own, the platform does nothing; each adapter, however, allows it to chamber and fire a different type of round.\"\n\n\"Each new HWP is printed to order.  Materials will require eight HGC up front, and fabrication will take seven days.",
+    "responses": [
+      {
+        "text": "[8 HGC] A week is fine.",
+        "condition": { "u_has_items": { "item": "RobofacCoin", "count": 8 } },
+        "effect": [
+          { "u_consume_item": "RobofacCoin", "count": 8, "popup": true },
+          { "u_add_faction_trust": 2 },
+          { "math": [ "u_timer_hub_rnd_u_waiting_on_gun = time('now')" ] },
+          { "u_add_var": "dialogue_hub_rnd_u_project_ongoing", "value": "yes" }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_RIFLE_STARTED"
+      },
+      {
+        "text": "Tell me about the adapters.  Does it come with any?",
+        "topic": "TALK_ROBOFAC_INTERCOM_RIFLE_ADAPTERS"
+      },
+      {
+        "text": "A week feels like an eternity these days.  Why the wait?",
+        "topic": "TALK_ROBOFAC_INTERCOM_RIFLE_TIMEGATE"
+      },
+      {
+        "text": "Why should I use this over something like a rifle that doesn't need proprietary parts?",
+        "topic": "TALK_ROBOFAC_INTERCOM_RIFLE_BENEFITS"
+      },
+      { "text": "What about another project?", "topic": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_MENU" }
+    ]
+  }
+]

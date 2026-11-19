@@ -1,0 +1,31 @@
+[
+  {
+    "id": "TALK_ROBOFAC_INTERCOM_HEW_UPGRADE",
+    "//": "creating better mobile weather station",
+    "type": "talk_topic",
+    "dynamic_line": "Yes.  For the cost of three HGC we can begin R&D to incorporate your NRE recorder.  You'll need to provide the HEW and your NRE recorder.  R&D will take one working week.",
+    "responses": [
+      {
+        "text": "[3 HGC, HEW, NRE] See you in five days.",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "RobofacCoin", "count": 3 } },
+            { "u_has_items": { "item": "xedra_mobile_weather_station", "count": 1 } },
+            { "u_has_items": { "item": "nre_recorder", "count": 1 } }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "RobofacCoin", "count": 3, "popup": true },
+          { "u_consume_item": "xedra_mobile_weather_station", "count": 1, "popup": true },
+          { "u_consume_item": "nre_recorder", "count": 1, "popup": true },
+          { "u_add_faction_trust": 1 },
+          { "math": [ "u_timer_hub_rnd_u_waiting_on_hub = time('now')" ] },
+          { "u_add_var": "dialogue_hub_rnd_u_project_ongoing", "value": "yes" },
+          { "u_add_var": "dialogue_hub_rnd_u_current_project", "value": "hew_upgrade" }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_HEW_UPGRADE_STARTED"
+      },
+      { "text": "What about another project?", "topic": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_MENU" }
+    ]
+  }
+]
