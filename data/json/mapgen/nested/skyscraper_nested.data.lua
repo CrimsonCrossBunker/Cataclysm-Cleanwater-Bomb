@@ -1279,3 +1279,3427 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- This is a pet supply store in the upper-left.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_shopping_0_ul_store_1",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "     HHH   HH   HHH     ",
+            "    R.D.d.t..uu.]..U    ",
+            "   HR.D.d.t..uu.cbS.    ",
+            "   HR.D.d.t..uu.cc$c ^  ",
+            "    ~~~~~~~~~~~~~~~~G   ",
+            "   H.RRRRRR..RRRRRR. ^  ",
+            "   H................    ",
+            "  s!.CCCCCC..CCCCCC.    ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        item_groups = {
+            b = { group = "behindcounter", chance = 60 },
+            ["$"] = { group = "cash_register_random", chance = 100 },
+            R = { group = "petstore_shelves", chance = 70, repetitions = { 2, 8 } },
+            C = { group = "petstore_misc", chance = 70, repetitions = { 2, 8 } },
+            d = { group = "vet_softdrug", chance = 70, repetitions = { 1, 2 } },
+            D = { group = "vet_hardrug", chance = 20 },
+            u = { group = "vet_utility", chance = 85, repetitions = { 1, 4 } },
+            t = { group = "magazines", chance = 70, repetitions = { 1, 6 } },
+            U = { group = "SUS_trash_trashcan", chance = 70 },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_VANILLA",
+                x = { 4, 18 },
+                y = { 5, 11 },
+                chance = 50,
+                repetitions = { 6, 10 },
+            },
+        },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_floor",
+                x = 4,
+                y = 5,
+                end_x = 19,
+                end_y = 11,
+            },
+        },
+        palettes = { "parametrized_carpets_nest_palette" },
+        terrain = {
+            ["."] = "t_floor",
+            ["!"] = "t_door_metal_locked",
+            s = "t_sidewalk",
+            ["~"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            G = "t_door_glass_c",
+            H = "t_wall_glass",
+        },
+        furniture = {
+            ["^"] = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            ["]"] = "f_counter_gate_c",
+            c = "f_counter",
+            ["$"] = "f_counter",
+            R = "f_rack",
+            C = "f_counter",
+            d = "f_counter",
+            D = "f_counter",
+            u = "f_counter",
+            t = "f_table",
+            S = "f_stool",
+            U = "f_trashcan",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small1_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "FFF.d",
+            "....d",
+            "....c",
+            "ddx.c",
+            ".....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = { { id = "swivel_chair", x = 2, y = 2, rotation = 90, chance = 75 } },
+        monster_placements = {
+            {
+                group = "GROUP_VANILLA",
+                x = { 0, 4 },
+                y = { 0, 2 },
+                chance = 80,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small2_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "xddhc",
+            "x...c",
+            "xFF.c",
+            "|||+|",
+            ".....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = { { id = "swivel_chair", x = 2, y = 1, rotation = 90, chance = 75 } },
+        monster_placements = {
+            {
+                group = "GROUP_VANILLA",
+                x = { 0, 4 },
+                y = { 0, 2 },
+                chance = 80,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small_sofa_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "?????",
+            "?....",
+            "?.nn.",
+            "^...M",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small_sofa_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "?????",
+            "?....",
+            "?.nn.",
+            "^...M",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small_sofa_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "?????",
+            "?....",
+            "?.nn.",
+            "^...M",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small_sofa_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "?????",
+            "?....",
+            "?.nn.",
+            "^...M",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small_office_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "xdFdx",
+            "dh.hd",
+            "d...d",
+            "|HGH|",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            x = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            d = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            h = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+        },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small_office_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "xdFdx",
+            "dh.hd",
+            "d...d",
+            "|HGH|",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small_office_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "xdFdx",
+            "dh.hd",
+            "d...d",
+            "|HGH|",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small_office_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "xdFdx",
+            "dh.hd",
+            "d...d",
+            "|HGH|",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_small_office_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "xdFdx",
+            "dh.hd",
+            "d...d",
+            "|HGH|",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_6x6_glass_ur",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "Vdd..F",
+            "Vxh..F",
+            "Vdd...",
+            "||HGH|",
+            "::::::",
+            "::::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 4 },
+                y = { 0, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            x = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            d = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            h = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+        },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_6x6_glass_ur",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "Vdd..F",
+            "Vxh..F",
+            "Vdd...",
+            "||HGH|",
+            "::::::",
+            "::::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 4 },
+                y = { 0, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_6x6_glass_ur",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "Vdd..F",
+            "Vxh..F",
+            "Vdd...",
+            "||HGH|",
+            "::::::",
+            "::::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 4 },
+                y = { 0, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_6x6_glass_ur",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "Vdd..F",
+            "Vxh..F",
+            "Vdd...",
+            "||HGH|",
+            "::::::",
+            "::::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 4 },
+                y = { 0, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_6x6_glass_ur",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "Vdd..F",
+            "Vxh..F",
+            "Vdd...",
+            "||HGH|",
+            "::::::",
+            "::::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 4 },
+                y = { 0, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_6x6_office_ur",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "d.FF.c",
+            "d...hc",
+            "ch...d",
+            "cx..xd",
+            "......",
+            "......",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 1, 4 },
+                y = { 1, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_6x6_computer_ur",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "Vx.x.x",
+            "Vx.x.x",
+            "Vx...x",
+            "HHHGHH",
+            "..^.^.",
+            "......",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_6x6_files_ur",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "|F.F.F",
+            "|F.F.F",
+            "|F...F",
+            "|||+||",
+            "......",
+            "......",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_register_ur",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "..FFF",
+            "c....",
+            "c....",
+            "cxddd",
+            ".....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 1, 4 },
+                y = { 1, 1 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_benches_ur",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".bttb",
+            ".bttb",
+            ".bttb",
+            ".....",
+            ".cccc",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        monster_placements = {
+            {
+                group = "GROUP_VANILLA",
+                x = { 0, 4 },
+                y = { 0, 4 },
+                chance = 80,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofa_ur",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "c????",
+            "c...?",
+            "..n.?",
+            "M.n.?",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            c = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofa_ur",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "c????",
+            "c...?",
+            "..n.?",
+            "M.n.?",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            c = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofa_ur",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "c????",
+            "c...?",
+            "..n.?",
+            "M.n.?",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            c = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofa_ur",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "c????",
+            "c...?",
+            "..n.?",
+            "M.n.?",
+            ":::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            c = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_office_ur",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "d..xd",
+            "d..hd",
+            "dh..d",
+            "dx..d",
+            ".....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 1, 3 },
+                y = { 1, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_crowded_dl",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "*V..............",
+            "*VY.............",
+            "*Vdh...d.h......",
+            "*|dxdd.dxdd.FF..",
+            "*Vdddd.ddxd.dd..",
+            "*Vx..h..h.d..d..",
+            "*Vd.h..d..h.hd..",
+            "*|dddx.dddx..x..",
+            "*Vdxdd.xddd.dd..",
+            "*Vd.h...h.d..d..",
+            "*Vx..h.d.h..hd..",
+            "*|dddd.dxdd..x..",
+            "*||HHH|HHHH|HHH|",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_generic_dl",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "*V..............",
+            "*VY.............",
+            "*V..............",
+            "*|dddxdddxdddx..",
+            "*Vd.h.d.h.d.h...",
+            "*V..............",
+            "*Vdddxdddxdddx..",
+            "*|d...d..hdh....",
+            "*V..h...........",
+            "*Vdddxdddxdddx..",
+            "*Vd.h.d.h.d.....",
+            "*|..........h...",
+            "*||HHH|HHHH|HHH|",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_glass_dl",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "*V::::::::::::::",
+            "*V::::::::::::::",
+            "*V^::::^::^::::^",
+            "*||HHHH||||HGGH|",
+            "*Vd.h..d.h.....Y",
+            "*Vdddx.dxdd.....",
+            "*V..............",
+            "*|F..........MtM",
+            "*VF..........MtM",
+            "*V..............",
+            "*Vdddd.xddd.xddd",
+            "*|x.h....hd..h.d",
+            "*||HHH|HHHH|HHH|",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            a = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            h = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            d = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            x = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            t = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+        },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_private_dl",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "*V..............",
+            "*V..............",
+            "*V..FFFFF..^....",
+            "*|||||||||||d..Y",
+            "*Vdx.d|dx.d|dh..",
+            "*Vdhhd|d.hd|d...",
+            "*Vd.xd|dhxd|dx..",
+            "*|..............",
+            "*V..............",
+            "*Vd.xd|d.xd|dh.d",
+            "*Vdh.d|dhhd|d.hd",
+            "*|dxhd|dx.d|dxxd",
+            "*||HHH|HHHH|HHH|",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_slide_dl",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "*V..............",
+            "*V..............",
+            "*V..............",
+            "*|...FFF..FFF...",
+            "*V...|||..|||...",
+            "*Vdx.d|dx.d|dx..",
+            "*Vdh.d|dh.d|d...",
+            "*|d.hd|d.hd|d.h.",
+            "*Vd.xd|d.xd|d...",
+            "*V....|....|....",
+            "*Vd.h.|d.h.|..hd",
+            "*|dddx|dxdd|xddd",
+            "*||HHH|HHHH|HHH|",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_boss_cafe_dr",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "::::::::::::::V*",
+            ":::::::::::::^V*",
+            "::::^::^a:::::V*",
+            "|||||++|HHGGHH|*",
+            "CoSe|..|⌅~~~~⌅V*",
+            "Ciii|..|~~~~~~V*",
+            ".......|~~ddxdV*",
+            ".......|~~~~~dV*",
+            "bb...bb|~~~~~~V*",
+            "tt...tt||=|||||*",
+            "tt...tt|......|*",
+            "bb.å.bb|FFFFFF|*",
+            "|HHHHH|||||||||*",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 9, 12 },
+                y = { 7, 8 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            b = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            t = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["å"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["~"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["⌅"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        furniture = { ["å"] = "f_trashcan", ["⌅"] = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } } },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_boss_cafe_dr",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "::::::::::::::V*",
+            ":::::::::::::^V*",
+            "::::^::^a:::::V*",
+            "|||||++|HHGGHH|*",
+            "CoSe|..|⌅~~~~⌅V*",
+            "Ciii|..|~~~~~~V*",
+            ".......|~~ddxdV*",
+            ".......|~~~~~dV*",
+            "bb...bb|~~~~~~V*",
+            "tt...tt||=|||||*",
+            "tt...tt|......|*",
+            "bb.å.bb|FFFFFF|*",
+            "|HHHHH|||||||||*",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 9, 12 },
+                y = { 7, 8 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            b = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            t = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["å"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["~"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["⌅"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        furniture = { ["å"] = "f_trashcan", ["⌅"] = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } } },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_boss_cafe_dr",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "::::::::::::::V*",
+            ":::::::::::::^V*",
+            "::::^::^a:::::V*",
+            "|||||++|HHGGHH|*",
+            "CoSe|..|⌅~~~~⌅V*",
+            "Ciii|..|~~~~~~V*",
+            ".......|~~ddxdV*",
+            ".......|~~~~~dV*",
+            "bb...bb|~~~~~~V*",
+            "tt...tt||=|||||*",
+            "tt...tt|......|*",
+            "bb.å.bb|FFFFFF|*",
+            "|HHHHH|||||||||*",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 9, 12 },
+                y = { 7, 8 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            b = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            t = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["å"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["~"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["⌅"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        furniture = { ["å"] = "f_trashcan", ["⌅"] = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } } },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_boss_cafe_dr",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "::::::::::::::V*",
+            ":::::::::::::^V*",
+            "::::^::^a:::::V*",
+            "|||||++|HHGGHH|*",
+            "CoSe|..|⌅~~~~⌅V*",
+            "Ciii|..|~~~~~~V*",
+            ".......|~~ddxdV*",
+            ".......|~~~~~dV*",
+            "bb...bb|~~~~~~V*",
+            "tt...tt||=|||||*",
+            "tt...tt|......|*",
+            "bb.å.bb|FFFFFF|*",
+            "|HHHHH|||||||||*",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 9, 12 },
+                y = { 7, 8 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            b = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            t = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["å"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["~"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["⌅"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        furniture = { ["å"] = "f_trashcan", ["⌅"] = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } } },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_dr",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            ".............aV*",
+            ".............YV*",
+            "..............V*",
+            "..xdddxdddxddd|*",
+            "...h.d.h.d...dV*",
+            "............h.V*",
+            "..xdddxdddxdddV*",
+            "....hdh..d.h.d|*",
+            "..............V*",
+            "..xdddxdddxdddV*",
+            ".....d.h.d...dV*",
+            "...h.......h..|*",
+            "|HHH|HHHH|HHH||*",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_glass_dr",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "::::::::::::::V*",
+            "::::::::::::::V*",
+            "^::::FFFF:::::V*",
+            "|HGGH||||HHHH||*",
+            "^.....h.d...hdV*",
+            ".....ddxd.xdddV*",
+            "..............V*",
+            ".............Y|*",
+            ".............aV*",
+            "..............V*",
+            "dddx.dddx.ddddV*",
+            "d..h.d.h...h.x|*",
+            "|HHH|HHHH|HHH||*",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            h = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            a = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            d = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            x = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+        },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_slide_dr",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            ".............aV*",
+            ".............YV*",
+            "..............V*",
+            "...FFF..FFF...|*",
+            "|..|||..|||...V*",
+            "...d|dx.d|dx.dV*",
+            "...d|dh.d|d.hdV*",
+            "..hc|d.hd|dh.d|*",
+            "..xc|d.xd|d.xdV*",
+            "...|||..|||...V*",
+            "d.h.|.h.d|.h.dV*",
+            "dddx|ddxd|xddd|*",
+            "|HHH|HHHH|HHH||*",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_private_dr",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "..............V*",
+            "..............V*",
+            ".....^FFFF^...V*",
+            "..xd|||||||||||*",
+            "...d|dddd|dxddV*",
+            "..hd|dhhc|dhhdV*",
+            "...d|x..x|d..xV*",
+            "..............|*",
+            "..............V*",
+            "d.hd|x.hd|dh.dV*",
+            "dh.d|dh.d|d.hdV*",
+            "dxxd|dddx|xddx|*",
+            "|HHH|HHHH|HHH||*",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_crowded_dr",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "..............V*",
+            "..............V*",
+            "......h.x..h.dV*",
+            "..FF.dddd.ddxd|*",
+            "..dd.ddxd.ddddV*",
+            "..x...h.d..h.xV*",
+            "..dh.d.h..d.h.V*",
+            "..d..dxdd.dxdd|*",
+            "..dd.dddd.dddxV*",
+            "..d..xh...d.h.V*",
+            "..dh...hd..h.dV*",
+            "..x..ddxd.ddxd|*",
+            "|HHH|HHHH|HHH||*",
+            "****************",
+            "****************",
+            "****************",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_register_ol",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "ddddx",
+            "....d",
+            "....d",
+            "FFF..",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 0, 3 },
+                y = { 2, 3 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_office1_ol",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "xddd.",
+            "..h..",
+            ".h...",
+            "dddx.",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_office2_ol",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "ddxd.",
+            ".h.d.",
+            "d.h..",
+            "dddx^",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofas_ol",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "^:M::",
+            "?:::?",
+            "?:n:?",
+            "?:::?",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofas_ol",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "^:M::",
+            "?:::?",
+            "?:n:?",
+            "?:::?",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofas_ol",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "^:M::",
+            "?:::?",
+            "?:n:?",
+            "?:::?",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofas_ol",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "^:M::",
+            "?:::?",
+            "?:n:?",
+            "?:::?",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_slide_al",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "****************",
+            "****************",
+            "****************",
+            "*||HHH|HHHH|HHH|",
+            "*|dddx|dxdd|xddd",
+            "*Vd.h.|d.h.|..hd",
+            "*V...|||..|||...",
+            "*Vdx.d|dx.d|dx..",
+            "*|dh.d|d.hd|d...",
+            "*Vd.hc|dh.d|dh..",
+            "*Vd.xc|d.xd|d...",
+            "*V...|||..|||..a",
+            "*|...FFF..FFF..Y",
+            "*V..............",
+            "*V..............",
+            "*V..............",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_crowded_al",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "****************",
+            "****************",
+            "****************",
+            "*||HHH|HHHH|HHH|",
+            "*|dddd.dddd.dda.",
+            "*V..hx..h.x..d..",
+            "*V..........hd..",
+            "*V.h.d..h.d..x..",
+            "*|xddd.ddxd.dd..",
+            "*Vxddd.dddd.hd..",
+            "*V..hd..h.x..d..",
+            "*Vxh...d.h...x..",
+            "*|dddd.dddx.FF..",
+            "*VY..^.^........",
+            "*V..............",
+            "*V..............",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_al",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "****************",
+            "****************",
+            "****************",
+            "*||HHH|HHHH|HHH|",
+            "*|......h......F",
+            "*Vd.h.d...d.h..F",
+            "*Vdddxdddxdddx..",
+            "*V.......h......",
+            "*|dh..d...dh...a",
+            "*Vdddxdddxdddx..",
+            "*V..h...........",
+            "*Vd...d.h.d..h.F",
+            "*|dddxdddxdddx.F",
+            "*V...........Y..",
+            "*V..............",
+            "*V..............",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_private_al",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "****************",
+            "****************",
+            "****************",
+            "*||HHH|HHHH|HHH|",
+            "*|dddd|dddx|dddd",
+            "*Vd.hd|xh.d|x.h.",
+            "*Vxh.x|d.hd|....",
+            "*V..............",
+            "*|..............",
+            "*Vx.hd|d..d|d...",
+            "*Vdh.d|dhhd|dh..",
+            "*Vdddx|dxxd|d...",
+            "*|||||||||||dx..",
+            "*V.....^FFFY....",
+            "*V..............",
+            "*V..............",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_glass_al",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "****************",
+            "****************",
+            "****************",
+            "*||HHH|HHHH|HHH|",
+            "*|d.h....hd..h.d",
+            "*Vdddx.xddd.ddxd",
+            "*V..............",
+            "*V..............",
+            "*|Y.............",
+            "*V..MM........h.",
+            "*V.Mtt.xddd.xddd",
+            "*V..MM..h.d.....",
+            "*||HHHH||||HGGH|",
+            "*Va::::FFFF:::::",
+            "*V::::::::::::::",
+            "*V::::::::::::::",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            a = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            h = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            d = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            x = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            t = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+        },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_slide_ar",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "****************",
+            "****************",
+            "****************",
+            "|HHH|HHHH|HHH||*",
+            "dddx|dxdd|xddd|*",
+            "d.h.|d.h.|..hdV*",
+            "...|||..|||...V*",
+            "...d|dx.d|dx.dV*",
+            "...d|d.hd|d.hd|*",
+            "..hd|dh.d|dh.dV*",
+            "..xd|d.xd|d.xdV*",
+            "...|||..|||..aV*",
+            "...FFF..FFF..Y|*",
+            "..............V*",
+            "..............V*",
+            "..............V*",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_crowded_ar",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "****************",
+            "****************",
+            "****************",
+            "|HHH|HHHH|HHH||*",
+            "..x..dddd.dddd|*",
+            "..dh...hx..h.xV*",
+            "..dh..........V*",
+            "..dd..h.d..h.dV*",
+            "..x..xddd.ddxd|*",
+            "..dh.xddd.ddddV*",
+            "..d....hd..h.xV*",
+            "..dd.xh...d.h.V*",
+            "..FF.dddd.dddx|*",
+            "Y.......^.^...V*",
+            "..............V*",
+            "..............V*",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_ar",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "****************",
+            "****************",
+            "****************",
+            "|HHH|HHHH|HHH||*",
+            "^.............|*",
+            "..d.h.d.h.d.h.V*",
+            "..dddxdddxdddxV*",
+            ".......h....h.V*",
+            "a.dh..d...dh..|*",
+            "..dddxdddxdddxV*",
+            "..h...........V*",
+            "..d...d.h.d..hV*",
+            "^.dddxdddxdddx|*",
+            "...FF..FF..FF.V*",
+            "..............V*",
+            "..............V*",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_private_ar",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "****************",
+            "****************",
+            "****************",
+            "|HHH|HHHH|HHH||*",
+            "dddd|dddx|dddd|*",
+            "..hx|xh.d|d.hdV*",
+            "....|d.hd|xh.xV*",
+            "..............V*",
+            "..............|*",
+            "...d|x.hd|d..dV*",
+            "..hd|dh.d|dhhdV*",
+            "a..d|dddx|dxxdV*",
+            "Y.xd|||||||||||*",
+            "....^.FF.^.FF.V*",
+            "..............V*",
+            "..............V*",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_office_glass_ar",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "****************",
+            "****************",
+            "****************",
+            "|HHH|HHHH|HHH||*",
+            "d.h....hd..h.d|*",
+            "dddx.xddd.ddxdV*",
+            ".............FV*",
+            ".............FV*",
+            ".............F|*",
+            ".............FV*",
+            ".....xddd.xdddV*",
+            "Y.....h.d..h.dV*",
+            "|HGGH||||HHHH||*",
+            "a::::^::^:::::V*",
+            "::::::::::::::V*",
+            "::::::::::::::V*",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = {
+            [":"] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            a = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            D = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            h = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            d = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            x = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+        },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_register_or",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            ".....",
+            "ddxcc",
+            "d.h..",
+            "..FFF",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_office_or",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            ".....",
+            ".d.hd",
+            ".dh.d",
+            ".xccx",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofas_or",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "::M:^",
+            "?:::?",
+            "?:n:?",
+            "?:::?",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofas_or",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "::M:^",
+            "?:::?",
+            "?:n:?",
+            "?:::?",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofas_or",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "::M:^",
+            "?:::?",
+            "?:n:?",
+            "?:::?",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_sofas_or",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "::M:^",
+            "?:::?",
+            "?:n:?",
+            "?:::?",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_storage1_il",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "???.=",
+            "nnhh|",
+            "|||||",
+            "*****",
+            "*****",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_storage3_il",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "xcc.=",
+            "xx.h|",
+            "|||||",
+            "*****",
+            "*****",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_storage1_ir",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "=.???",
+            "|nnhh",
+            "|||||",
+            "*****",
+            "*****",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_5x5_storage3_ir",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "=xc.c",
+            "|.xxh",
+            "|||||",
+            "*****",
+            "*****",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_boss_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**V...d|",
+            "**V...d|",
+            "**G.ddx|",
+            "**G..h.+",
+            "**V.h..|",
+            "**VFFFF|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 5 },
+                y = { 1, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_boss_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**V...d|",
+            "**V...d|",
+            "**G.ddx|",
+            "**G..h.+",
+            "**V.h..|",
+            "**VFFFF|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 5 },
+                y = { 1, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_boss_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**V...d|",
+            "**V...d|",
+            "**G.ddx|",
+            "**G..h.+",
+            "**V.h..|",
+            "**VFFFF|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 5 },
+                y = { 1, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_boss_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**V...d|",
+            "**V...d|",
+            "**G.ddx|",
+            "**G..h.+",
+            "**V.h..|",
+            "**VFFFF|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 5 },
+                y = { 1, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+        terrain = {
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_office_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**Vdddx|",
+            "**Vd.h.|",
+            "**G...F|",
+            "**G....|",
+            "**V.h.d|",
+            "**Vxddd|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_office_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**Vdccx|",
+            "**Vd:h:|",
+            "**G:::F|",
+            "**G::::|",
+            "**V:h:d|",
+            "**Vxccd|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_office_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**Vdccx|",
+            "**Vd:h:|",
+            "**G:::F|",
+            "**G::::|",
+            "**V:h:d|",
+            "**Vxccd|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_office_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**Vdccx|",
+            "**Vd:h:|",
+            "**G:::F|",
+            "**G::::|",
+            "**V:h:d|",
+            "**Vxccd|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            [":"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_meeting_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**V^..B|",
+            "**V....+",
+            "**GMnnM|",
+            "**GMnnM|",
+            "**VMnnM|",
+            "**V....|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            B = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_meeting_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**V^..B|",
+            "**V....+",
+            "**GMnnM|",
+            "**GMnnM|",
+            "**VMnnM|",
+            "**V....|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            B = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_meeting_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**V^..B|",
+            "**V....+",
+            "**GMnnM|",
+            "**GMnnM|",
+            "**VMnnM|",
+            "**V....|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            B = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_meeting_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH||",
+            "**V^..B|",
+            "**V....+",
+            "**GMnnM|",
+            "**GMnnM|",
+            "**VMnnM|",
+            "**V....|",
+            "**||||||",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            B = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_office_ar",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||HHH|**",
+            "FdddxV**",
+            ".d.h.V**",
+            ".....G**",
+            ".....G**",
+            "..h.dV**",
+            "FxdddV**",
+            "||||||**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_office_ar",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||HHH|**",
+            "FdddxV**",
+            ".d.h.V**",
+            ".....G**",
+            ".....G**",
+            "..h.dV**",
+            "FxdddV**",
+            "||||||**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_office_ar",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||HHH|**",
+            "FdddxV**",
+            ".d.h.V**",
+            ".....G**",
+            ".....G**",
+            "..h.dV**",
+            "FxdddV**",
+            "||||||**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_office_ar",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||HHH|**",
+            "FdddxV**",
+            ".d.h.V**",
+            ".....G**",
+            ".....G**",
+            "..h.dV**",
+            "FxdddV**",
+            "||||||**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            x = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            h = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            d = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            F = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_boss_ar",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||HHH|**",
+            "..M.dV**",
+            ".xdddV**",
+            ".h...G**",
+            "...h.G**",
+            ".....V**",
+            "^FFF^V**",
+            "||||||**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = { ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" } },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_sofas_ar",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||HHH|**",
+            "^???.V**",
+            "....MV**",
+            "..n..G**",
+            ".....G**",
+            "....MV**",
+            "^???.V**",
+            "||||||**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_sofas_ar",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||HHH|**",
+            "^???.V**",
+            "....MV**",
+            "..n..G**",
+            ".....G**",
+            "....MV**",
+            "^???.V**",
+            "||||||**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_sofas_ar",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||HHH|**",
+            "^???.V**",
+            "....MV**",
+            "..n..G**",
+            ".....G**",
+            "....MV**",
+            "^???.V**",
+            "||||||**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_sofas_ar",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||HHH|**",
+            "^???.V**",
+            "....MV**",
+            "..n..G**",
+            ".....G**",
+            "....MV**",
+            "^???.V**",
+            "||||||**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["."] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["^"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["?"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = { "skyscraper_office_palette", "parametrized_carpets_nest_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_files_ar",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||HHH|**",
+            "FFFF^|**",
+            ".....|**",
+            "cccc.+**",
+            "cccc.+**",
+            ".....|**",
+            "FFFF^|**",
+            "||||||**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            c = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_gray" },
+        },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr1_l",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|^....",
+            "**H.....",
+            "**HB.MMM",
+            "**G..nnn",
+            "**G..nnn",
+            "**HB.MMM",
+            "**H.....",
+            "**|^....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            B = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr1_l",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|^....",
+            "**H.....",
+            "**HB.MMM",
+            "**G..nnn",
+            "**G..nnn",
+            "**HB.MMM",
+            "**H.....",
+            "**|^....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            B = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr1_l",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|^....",
+            "**H.....",
+            "**HB.MMM",
+            "**G..nnn",
+            "**G..nnn",
+            "**HB.MMM",
+            "**H.....",
+            "**|^....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            B = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr1_l",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|^....",
+            "**H.....",
+            "**HB.MMM",
+            "**G..nnn",
+            "**G..nnn",
+            "**HB.MMM",
+            "**H.....",
+            "**|^....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            B = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr2_l",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|^....",
+            "**|.....",
+            "**|..c..",
+            "**|.hc..",
+            "**+..c..",
+            "**|B.c..",
+            "**|.....",
+            "**|.....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            c = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            B = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            h = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+        },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr3_l",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|.B...",
+            "**H.....",
+            "**G.¢MM¢",
+            "**H.MnnM",
+            "**H.MnnM",
+            "**G.MnnM",
+            "**H.¢MM¢",
+            "**|^....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            B = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["¢"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr3_l",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|.B...",
+            "**H.....",
+            "**G.¢MM¢",
+            "**H.MnnM",
+            "**H.MnnM",
+            "**G.MnnM",
+            "**H.¢MM¢",
+            "**|^....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            B = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["¢"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr3_l",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|.B...",
+            "**H.....",
+            "**G.¢MM¢",
+            "**H.MnnM",
+            "**H.MnnM",
+            "**G.MnnM",
+            "**H.¢MM¢",
+            "**|^....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["¢"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr3_l",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|.B...",
+            "**H.....",
+            "**G.¢MM¢",
+            "**H.MnnM",
+            "**H.MnnM",
+            "**G.MnnM",
+            "**H.¢MM¢",
+            "**|^....",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["¢"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr1_r",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "....Y|**",
+            ".....H**",
+            "MMM..H**",
+            "nnn..G**",
+            "nnn..G**",
+            "MMM..H**",
+            ".....H**",
+            "...FF|**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr1_r",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "....Y|**",
+            ".....H**",
+            "MMM..H**",
+            "nnn..G**",
+            "nnn..G**",
+            "MMM..H**",
+            ".....H**",
+            "...FF|**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr1_r",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "....Y|**",
+            ".....H**",
+            "MMM..H**",
+            "nnn..G**",
+            "nnn..G**",
+            "MMM..H**",
+            ".....H**",
+            "...FF|**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr1_r",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "....Y|**",
+            ".....H**",
+            "MMM..H**",
+            "nnn..G**",
+            "nnn..G**",
+            "MMM..H**",
+            ".....H**",
+            "...FF|**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr2_r",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "....^|**",
+            ".....|**",
+            "MMM.c|**",
+            "nnn.c|**",
+            "nnn.c|**",
+            "MMM.c|**",
+            ".....|**",
+            ".Y..a|**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            a = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr3_r",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "....^|**",
+            "¢nn¢.H**",
+            "MnnM.H**",
+            "MnnM.G**",
+            "MnnM.G**",
+            "MnnM.H**",
+            "¢nn¢.H**",
+            "....Y|**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+            ["¢"] = { parameter = "carpet_color_type", fallback = "t_carpet_yellow" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr3_r",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "....^|**",
+            "¢nn¢.H**",
+            "MnnM.H**",
+            "MnnM.G**",
+            "MnnM.G**",
+            "MnnM.H**",
+            "¢nn¢.H**",
+            "....Y|**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+            ["¢"] = { parameter = "carpet_color_type", fallback = "t_carpet_green" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr3_r",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "....^|**",
+            "¢nn¢.H**",
+            "MnnM.H**",
+            "MnnM.G**",
+            "MnnM.G**",
+            "MnnM.H**",
+            "¢nn¢.H**",
+            "....Y|**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+            ["¢"] = { parameter = "carpet_color_type", fallback = "t_carpet_red" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr3_r",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "....^|**",
+            "¢nn¢.H**",
+            "MnnM.H**",
+            "MnnM.G**",
+            "MnnM.G**",
+            "MnnM.H**",
+            "¢nn¢.H**",
+            "....Y|**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            M = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            n = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+            ["¢"] = { parameter = "carpet_color_type", fallback = "t_carpet_purple" },
+        },
+        palettes = {
+            "parametrized_linoleum_palette",
+            "skyscraper_office_palette",
+            "parametrized_carpets_nest_palette",
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "skyscraper_8x8_mr4_r",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "....^|**",
+            ".....H**",
+            ".h.h.H**",
+            ".h.h.G**",
+            ".h.h.G**",
+            ".h.h.H**",
+            ".....H**",
+            "FFF.Y|**",
+        },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        terrain = {
+            ["."] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            h = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            Y = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            F = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+            ["^"] = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+        },
+        palettes = { "parametrized_linoleum_palette", "skyscraper_office_palette" },
+    },
+}
