@@ -1,11 +1,5 @@
 [
   {
-    "id": "TALK_SHELTER_ADVICE",
-    "type": "talk_topic",
-    "dynamic_line": { "give_hint": true },
-    "responses": [ { "text": "Thanks!", "topic": "TALK_NONE" } ]
-  },
-  {
     "id": "TALK_SHELTER_DENY_ADVICE",
     "type": "talk_topic",
     "dynamic_line": {
