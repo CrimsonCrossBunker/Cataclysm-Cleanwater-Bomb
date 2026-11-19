@@ -67,13 +67,5 @@
       { "id": "feral_weapon_crowbar" }
     ],
     "death_drops": "starer_death_drops_crowbar"
-  },
-  {
-    "id": "mon_starer_axe",
-    "type": "MONSTER",
-    "description": "A horribly burned human, reeking of charred meat.  Their flesh has mended into a leathery shell, and the pupils of their wide-open eyes are dilated and the iris and sclera are bloodshot.  Somehow they still breathe, in deep, ragged gulps.",
-    "copy-from": "mon_starer_pipe",
-    "special_attacks": [ { "id": "feral_weapon_axe" } ],
-    "death_drops": "starer_death_drops_axe"
   }
 ]
