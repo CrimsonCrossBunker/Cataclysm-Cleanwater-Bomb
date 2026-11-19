@@ -7978,6 +7978,109 @@ function CcbPlatformContent.define_vehicle_part(options) end
 ---@param options StaticVehicleOptions
 function CcbPlatformContent.define_vehicle(options) end
 
+---@class StaticNpcPersonality
+---@field aggression integer
+---@field bravery integer
+---@field collector integer
+---@field altruism integer
+
+---@class StaticNpcOptions
+---@field id string Stable NPC-template ID.
+---@field unique_name? string|LocalizedText
+---@field suffix? string|LocalizedText
+---@field temporary_suffix? string
+---@field gender? "male"|"female" Omitting it allows random generation.
+---@field class string
+---@field faction? string
+---@field attitude integer Native attitude enum value.
+---@field mission? string Native mission enum name.
+---@field chat string
+---@field friend_chat? string
+---@field friend_guard_chat? string
+---@field farewell? string|LocalizedText
+---@field missions_offered? string|string[]
+---@field age? integer
+---@field height? integer
+---@field strength? integer
+---@field dexterity? integer
+---@field intelligence? integer
+---@field perception? integer
+---@field personality? StaticNpcPersonality
+
+---Define an NPC template at its ordered position during native content loading.
+---@param options StaticNpcOptions
+function CcbPlatformContent.define_npc(options) end
+
+---@class StaticNpcDistribution
+---@field constant? number
+---@field one_in? number
+---@field dice? [integer, integer] Dice count and sides.
+---@field rng? [integer, integer] Inclusive random interval.
+---@field sum? StaticNpcDistribution[]
+---@field mul? StaticNpcDistribution[]
+
+---@class StaticNpcSkill
+---@field skill string|string[]
+---@field level? StaticNpcDistribution Starting level. Exclusive with bonus.
+---@field bonus? number|StaticNpcDistribution
+
+---@class StaticNpcBionic
+---@field id string|string[]
+---@field chance integer
+
+---@class StaticNpcShopGroup
+---@field id string Existing item-group ID.
+---@field trust? integer
+---@field strict? boolean
+---@field rigid? boolean
+---@field refusal? string|LocalizedText
+
+---@class StaticNpcPriceRule
+---@field item? string
+---@field group? string
+---@field category? string
+---@field markup? number
+---@field premium? number
+---@field fixed_adjustment? number
+---@field price? integer
+
+---@class StaticNpcClassOptions
+---@field id string Stable NPC-class ID.
+---@field copy_from? string
+---@field name? string|LocalizedText
+---@field job_description? string|LocalizedText
+---@field common? boolean
+---@field spawn_weight? number
+---@field sells_belongings? boolean
+---@field strength? number|StaticNpcDistribution
+---@field dexterity? number|StaticNpcDistribution
+---@field intelligence? number|StaticNpcDistribution
+---@field perception? number|StaticNpcDistribution
+---@field aggression? number|StaticNpcDistribution
+---@field bravery? number|StaticNpcDistribution
+---@field collector? number|StaticNpcDistribution
+---@field altruism? number|StaticNpcDistribution
+---@field worn? string
+---@field carry? string
+---@field weapon? string
+---@field bye_message? string
+---@field restock_interval? string Duration with a unit.
+---@field work_hours? [integer, integer]
+---@field consumption_rates? string
+---@field blacklist? string
+---@field whitelist? string
+---@field proficiencies? string[]
+---@field traits? string|(StaticTraitGroupEntry|[string, integer])[]
+---@field skills? StaticNpcSkill[]
+---@field spells? StaticProfessionSpell[]
+---@field bionics? StaticNpcBionic[]
+---@field shop_groups? string|StaticNpcShopGroup[]
+---@field price_rules? StaticNpcPriceRule[]
+
+---Define an NPC class at its ordered position during native content loading.
+---@param options StaticNpcClassOptions
+function CcbPlatformContent.define_npc_class(options) end
+
 ---@class StaticMapTileOptions
 ---@field id? string Stable identifier. Provide either id or abstract.
 ---@field abstract? string Abstract definition available for inheritance.

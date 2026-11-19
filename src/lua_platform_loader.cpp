@@ -67,6 +67,8 @@ extern "C" {
 #include "monfaction.h"
 #include "monstergenerator.h"
 #include "mutation.h"
+#include "npc.h"
+#include "npc_class.h"
 #include "omdata.h"
 #include "output.h"
 #include "profession.h"
@@ -5218,6 +5220,154 @@ void write_static_vehicle( JsonOut &json, const sol::table &options )
     write_static_catalog_array( json, options, "zones", "zones", write_static_vehicle_zone );
 }
 
+void write_static_npc( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_text( json, "name_unique", options.raw_get<sol::object>( "unique_name" ), false );
+    write_item_text( json, "name_suffix", options.raw_get<sol::object>( "suffix" ), false );
+    write_item_text( json, "snip_bye", options.raw_get<sol::object>( "farewell" ), false );
+    write_item_fields<std::string>( json, options, {
+        { "gender", "gender" }, { "faction", "faction" }, { "class", "class" },
+        { "mission", "mission" }, { "chat", "chat" }, { "temporary_suffix", "temp_suffix" },
+        { "friend_chat", "talk_friend" }, { "friend_guard_chat", "talk_friend_guard" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "attitude", "attitude" }, { "age", "age" }, { "height", "height" },
+        { "strength", "str" }, { "dexterity", "dex" }, { "intelligence", "int" }, { "perception", "per" }
+    } );
+    write_static_string_or_ids( json, options, "missions_offered", "mission_offered" );
+    write_static_tile_object( json, options, "personality", "personality",
+    []( JsonOut & out, const sol::table & value ) {
+        out.start_object();
+        for( const char *field : { "aggression", "bravery", "collector", "altruism" } ) {
+            out.member( field, value.get<int>( field ) );
+        }
+        out.end_object();
+    } );
+}
+
+void write_static_npc_distribution( JsonOut &json, const sol::object &value )
+{
+    if( value.get_type() == sol::type::number ) {
+        json.write( value.as<double>() );
+        return;
+    }
+    const sol::table expression = value.as<sol::table>();
+    json.start_object();
+    write_item_fields<double>( json, expression, { { "constant", "constant" }, { "one_in", "one_in" } } );
+    write_mapgen_range( json, "dice", expression.raw_get<sol::object>( "dice" ) );
+    write_mapgen_range( json, "rng", expression.raw_get<sol::object>( "rng" ) );
+    for( const char *field : { "sum", "mul" } ) {
+        if( const auto terms = expression.get<sol::optional<sol::table>>( field ) ) {
+            json.member( field );
+            write_static_values<sol::object>( json, *terms, field, write_static_npc_distribution );
+        }
+    }
+    json.end_object();
+}
+
+void write_static_npc_distribution_field( JsonOut &json, const sol::table &options, const char *field,
+        const char *native )
+{
+    const sol::object value = options.raw_get<sol::object>( field );
+    if( value.get_type() != sol::type::nil ) {
+        json.member( native );
+        write_static_npc_distribution( json, value );
+    }
+}
+
+void write_static_npc_shop_group( JsonOut &json, const sol::table &group )
+{
+    json.start_object();
+    json.member( "group", group.get<std::string>( "id" ) );
+    write_placement_member<int>( json, group, "trust", "trust" );
+    write_item_fields<bool>( json, group, { { "strict", "strict" }, { "rigid", "rigid" } } );
+    write_item_text( json, "refusal", group.raw_get<sol::object>( "refusal" ), false );
+    json.end_object();
+}
+
+void write_static_npc_price_rule( JsonOut &json, const sol::table &rule )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, rule, {
+        { "item", "item" }, { "group", "group" }, { "category", "category" }
+    } );
+    write_item_fields<double>( json, rule, {
+        { "markup", "markup" }, { "premium", "premium" }, { "fixed_adjustment", "fixed_adj" }
+    } );
+    write_placement_member<int>( json, rule, "price", "price" );
+    json.end_object();
+}
+
+void write_static_npc_class( JsonOut &json, const sol::table &options )
+{
+    write_static_named_definition( json, options );
+    write_item_text( json, "job_description", options.raw_get<sol::object>( "job_description" ), false );
+    write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
+    write_item_fields<bool>( json, options, { { "common", "common" }, { "sells_belongings", "sells_belongings" } } );
+    write_placement_member<double>( json, options, "spawn_weight", "common_spawn_weight" );
+    for( const auto &[field, native] : {
+             std::pair{ "strength", "bonus_str" }, std::pair{ "dexterity", "bonus_dex" },
+             std::pair{ "intelligence", "bonus_int" }, std::pair{ "perception", "bonus_per" },
+             std::pair{ "aggression", "bonus_aggression" }, std::pair{ "bravery", "bonus_bravery" },
+             std::pair{ "collector", "bonus_collector" }, std::pair{ "altruism", "bonus_altruism" }
+         } ) {
+        write_static_npc_distribution_field( json, options, field, native );
+    }
+    write_item_fields<std::string>( json, options, {
+        { "worn", "worn_override" }, { "carry", "carry_override" }, { "weapon", "weapon_override" },
+        { "bye_message", "bye_message_override" }, { "restock_interval", "restock_interval" },
+        { "consumption_rates", "shopkeeper_consumption_rates" },
+        { "blacklist", "shopkeeper_blacklist" }, { "whitelist", "shopkeeper_whitelist" }
+    } );
+    write_mapgen_range( json, "work_hours", options.raw_get<sol::object>( "work_hours" ) );
+    write_item_ids( json, options, { { "proficiencies", "proficiencies" } } );
+    const sol::object shop_groups = options.raw_get<sol::object>( "shop_groups" );
+    if( shop_groups.get_type() == sol::type::string ) {
+        json.member( "shopkeeper_item_group", shop_groups.as<std::string>() );
+    } else {
+        write_static_catalog_array( json, options, "shop_groups", "shopkeeper_item_group",
+                                    write_static_npc_shop_group );
+    }
+    write_static_catalog_array( json, options, "price_rules", "shopkeeper_price_rules",
+                                write_static_npc_price_rule );
+    const sol::object traits = options.raw_get<sol::object>( "traits" );
+    if( traits.get_type() == sol::type::string ) {
+        json.member( "traits", traits.as<std::string>() );
+    } else {
+        write_static_catalog_array( json, options, "traits", "traits",
+        []( JsonOut & out, const sol::table & entry ) {
+            if( entry.raw_get<sol::object>( 1 ).get_type() == sol::type::string ) {
+                write_static_construction_requirement( out, entry );
+            } else {
+                write_static_trait_group_entry( out, entry );
+            }
+        } );
+    }
+    write_static_catalog_array( json, options, "skills", "skills",
+    []( JsonOut & out, const sol::table & row ) {
+        out.start_object();
+        write_static_string_or_ids( out, row, "skill", "skill" );
+        write_static_npc_distribution_field( out, row, "level", "level" );
+        write_static_npc_distribution_field( out, row, "bonus", "bonus" );
+        out.end_object();
+    } );
+    write_static_catalog_array( json, options, "spells", "spells",
+    []( JsonOut & out, const sol::table & spell ) {
+        out.start_object();
+        out.member( "id", spell.get<std::string>( "id" ) );
+        out.member( "level", spell.get<int>( "level" ) );
+        out.end_object();
+    } );
+    write_static_catalog_array( json, options, "bionics", "bionics",
+    []( JsonOut & out, const sol::table & bionic ) {
+        out.start_object();
+        write_static_string_or_ids( out, bionic, "id", "id" );
+        out.member( "chance", bionic.get<int>( "chance" ) );
+        out.end_object();
+    } );
+}
+
 using static_catalog_writer = void ( * )( JsonOut &, const sol::table & );
 
 template<typename Loader>
@@ -5381,6 +5531,10 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "vehicle_part", write_static_vehicle_part, vehicles::parts::load ) );
     content.set_function( "define_vehicle", static_catalog_definition(
                               resolved.id, "vehicle", write_static_vehicle, vehicles::load_prototype ) );
+    content.set_function( "define_npc", static_catalog_definition(
+                              resolved.id, "npc", write_static_npc, npc_template::load ) );
+    content.set_function( "define_npc_class", static_catalog_definition(
+                              resolved.id, "npc_class", write_static_npc_class, npc_class::load_npc_class ) );
     install_static_dialogue_predicates( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );
