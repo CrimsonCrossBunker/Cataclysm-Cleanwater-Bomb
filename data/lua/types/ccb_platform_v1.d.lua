@@ -7621,6 +7621,318 @@ function CcbPlatformContent.Item(options) end
 ---@param options StaticItemOptions
 function CcbPlatformContent.define_item(options) end
 
+---@class StaticMonsterAttackReference
+---@field reference string Registered monster attack to copy.
+---@field cooldown number Cooldown in game turns.
+
+---@class StaticMonsterGrabSettings
+---@field strength? integer
+---@field pull_chance? integer
+---@field drag_distance? integer
+---@field drag_deviation? integer
+---@field break_distance? integer
+---@field move_cost_multiplier? number
+---@field pull_weight_ratio? number
+---@field exclusive? boolean
+---@field respect_seatbelts? boolean
+---@field effect? string
+
+---@class StaticMonsterAttackOverride
+---@field id? string Native attack ID. Required when configuring a registered attack with no kind.
+---@field kind? 'leap'|'spell'|'melee'|'bite' Native actor type for an inline attack.
+---@field cooldown? number Cooldown in turns. Required for an inline actor without inherited defaults.
+---@field move_cost? integer
+---@field accuracy? integer
+---@field range? integer Melee range.
+---@field minimum_hit_size? integer
+---@field maximum_hit_size? integer
+---@field throw_strength? integer
+---@field infection_chance? integer
+---@field minimum_damage_multiplier? number
+---@field maximum_damage_multiplier? number
+---@field minimum_range? number Minimum leap distance.
+---@field maximum_range? number Maximum leap distance.
+---@field minimum_target_distance? number
+---@field maximum_target_distance? number
+---@field allow_no_target? boolean
+---@field prefer_leap? boolean
+---@field random_leap? boolean
+---@field ignore_destination_terrain? boolean
+---@field ignore_destination_danger? boolean
+---@field no_adjacent? boolean
+---@field dodgeable? boolean
+---@field uncanny_dodgeable? boolean
+---@field blockable? boolean
+---@field effects_require_damage? boolean
+---@field effects_require_organic? boolean
+---@field spread_damage? boolean
+---@field attack_upper? boolean
+---@field grab? boolean
+---@field grab_settings? StaticMonsterGrabSettings
+---@field body_part_types? string[]
+---@field attack_count? integer|integer[]
+---@field damage? StaticItemDamage
+---@field spell? StaticMonsterSpellCast
+---@field message? string|LocalizedText
+---@field casting_message? string|LocalizedText
+---@field avatar_hit? string|LocalizedText
+---@field avatar_miss? string|LocalizedText
+---@field avatar_no_damage? string|LocalizedText
+---@field npc_hit? string|LocalizedText
+---@field npc_miss? string|LocalizedText
+---@field npc_no_damage? string|LocalizedText
+---@field avatar_thrown? string|LocalizedText
+---@field npc_thrown? string|LocalizedText
+---@field effects? StaticMonsterAttackEffect[]
+---@field self_effects? StaticMonsterAttackEffect[]
+---@field self_effects_always? StaticMonsterAttackEffect[]
+---@field self_effects_on_hit? StaticMonsterAttackEffect[]
+---@field self_effects_on_damage? StaticMonsterAttackEffect[]
+
+---@alias StaticMonsterAttack StaticMonsterAttackReference|StaticMonsterAttackOverride
+
+---@class StaticMonsterMoveSkills
+---@field climb? integer
+---@field swim? integer
+---@field dig? integer
+
+---@class StaticMonsterTraits
+---@field flags? string[]
+---@field species? string[]
+---@field categories? string[]
+---@field families? string[]
+---@field weakpoint_sets? string[]
+---@field anger_triggers? string[]
+---@field fear_triggers? string[]
+---@field placate_triggers? string[]
+---@field move_skills? StaticMonsterMoveSkills
+
+---@class StaticMonsterAdditions : StaticMonsterTraits
+---@field attacks? StaticMonsterAttack[]
+---@field armor? table<string, number>
+
+---@class StaticMonsterRemovals : StaticMonsterTraits
+---@field attacks? string[]
+---@field weakpoints? string[]
+
+---@class StaticMonsterStatChanges
+---@field speed? number
+---@field hp? number
+---@field morale? number
+---@field melee_dice? number
+---@field melee_sides? number
+---@field melee_skill? number
+---@field dodge? number
+---@field attack_cost? number
+---@field vision_day? number
+---@field vision_night? number
+---@field aggression? number
+---@field regenerates? number
+---@field armor? table<string, number> Changes by damage type.
+---@field melee_damage? StaticItemDamage
+
+---@class StaticMonsterScaling : StaticMonsterStatChanges
+---@field mass? number
+---@field volume? number
+
+---@class StaticMonsterInheritance
+---@field add? StaticMonsterAdditions
+---@field remove? StaticMonsterRemovals
+---@field scale? StaticMonsterScaling
+---@field offset? StaticMonsterStatChanges Integer changes for the core statistics; damage and armor can be fractional.
+
+---@class StaticMonsterUpgrade
+---@field half_life? integer
+---@field grow_at_age? integer
+---@field spawn_range? integer
+---@field monster? string
+---@field monster_group? string
+---@field multiple_spawns? boolean
+---@field despawn_when_null? boolean
+
+---@class StaticMonsterOffspring
+---@field monster? string
+---@field monster_group? string
+---@field egg? string
+---@field egg_group? string
+
+---@class StaticMonsterReproduction
+---@field count? integer
+---@field interval? integer|string Days or a duration with units.
+---@field offspring? StaticMonsterOffspring
+
+---@class StaticMonsterBiosignature
+---@field item? string
+---@field interval? integer|string Days or a duration with units.
+
+---@class StaticMonsterBlock
+---@field chance? integer
+---@field effectiveness? integer
+---@field count? integer
+---@field ranged? boolean
+
+---@class StaticMonsterPathing
+---@field max_distance? integer
+---@field max_length? integer
+---@field bash_strength? integer
+---@field open_doors? boolean
+---@field climb_stairs? boolean
+---@field avoid_traps? boolean
+---@field avoid_sharp? boolean
+---@field avoid_dangerous_fields? boolean
+
+---@class StaticMonsterPet
+---@field food? string[]
+---@field feed_message? string|LocalizedText
+---@field pet_message? string|LocalizedText
+
+---@class StaticMonsterSpellCast
+---@field id string
+---@field once_in? integer
+---@field hit_self? boolean
+---@field min_level? integer
+---@field max_level? integer
+---@field message? string|LocalizedText
+---@field npc_message? string|LocalizedText
+
+---@class StaticMonsterDeathOutcome
+---@field corpse? 'NORMAL'|'SPLATTER'|'BROKEN'|'NO_CORPSE'
+---@field message? string|LocalizedText
+---@field spell? StaticMonsterSpellCast
+
+---@class StaticMonsterDeath
+---@field drops? string|StaticMonsterDropGroup Item group ID or inline group.
+---@field outcome? StaticMonsterDeathOutcome
+
+---@class StaticMonsterDrop
+---@field item? string Provide exactly one of item and group.
+---@field group? string
+---@field probability? integer
+---@field count? integer|integer[]
+---@field charges? integer|integer[]
+---@field damage? integer|integer[]
+
+---@class StaticMonsterWeightedDropGroup
+---@field id string Item group ID.
+---@field weight integer
+
+---@class StaticMonsterDropGroup
+---@field kind? 'collection'|'distribution' Defaults to distribution.
+---@field entries? StaticMonsterDrop[] Native inline distribution; omit kind, items and groups when using entries.
+---@field items? StaticMonsterDrop[]
+---@field groups? (string|StaticMonsterWeightedDropGroup)[]
+
+---@class StaticMonsterAttackEffect
+---@field id string
+---@field chance? number
+---@field permanent? boolean
+---@field affect_hit_body_part? boolean
+---@field body_part? string
+---@field message? string|LocalizedText
+---@field duration? integer|integer[]
+---@field intensity? integer|integer[]
+
+---@class StaticMonsterEmission
+---@field id string Emission ID.
+---@field delay string Duration with units.
+
+---@class StaticMonsterMountItems
+---@field tied? string
+---@field tack? string
+---@field armor? string
+
+---@class StaticMonsterShearing
+---@field item string
+---@field amount? integer
+---@field volume_ratio? number
+
+---@class StaticMonsterOptions : StaticMonsterTraits
+---@field id string Stable monster or abstract template ID.
+---@field abstract? boolean Register an inheritance template.
+---@field copy_from? string An existing or deferred monster or template.
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field ascii_picture? string
+---@field default_faction? string
+---@field symbol? string
+---@field looks_like? string
+---@field body_type? string
+---@field color? string
+---@field volume? string Volume with units.
+---@field mass? string Mass with units.
+---@field phase? 'NULL'|'SOLID'|'LIQUID'|'GAS'|'PLASMA'
+---@field harvest? string
+---@field dissect? string
+---@field decay? string
+---@field speed_description? string
+---@field revert_item? string
+---@field broken_item? string
+---@field mech_weapon? string
+---@field mech_battery? string
+---@field zombify_into? string
+---@field fungalize_into? string
+---@field burn_into? string
+---@field difficulty_adjustment? integer
+---@field hp? integer
+---@field speed? integer
+---@field aggression? integer
+---@field morale? integer
+---@field tracking_distance? integer
+---@field attack_cost? integer
+---@field melee_skill? integer
+---@field melee_dice? integer
+---@field melee_sides? integer
+---@field melee_armor_penetration? integer
+---@field grab_strength? integer
+---@field dodge? integer
+---@field bleed_rate? integer
+---@field vision_day? integer
+---@field vision_night? integer
+---@field regenerates? integer
+---@field mech_strength_bonus? integer
+---@field melee_training_cap? integer
+---@field absorb_ml_per_hp? integer
+---@field split_move_cost? integer
+---@field absorb_move_cost_min? integer
+---@field absorb_move_cost_max? integer
+---@field mountable_weight_ratio? number
+---@field status_chance_multiplier? number
+---@field luminance? number
+---@field absorb_move_cost_per_ml? number
+---@field regenerates_in_dark? boolean
+---@field regenerates_morale? boolean
+---@field aggressive_to_characters? boolean
+---@field trap_avoids? string[]
+---@field absorb_materials? string[]
+---@field ignored_absorb_materials? string[]
+---@field scents_tracked? string[]
+---@field scents_ignored? string[]
+---@field chat_topics? string[]
+---@field mating_seasons? string[]
+---@field materials? (string|StaticItemMaterial)[]
+---@field armor? table<string, number>
+---@field starting_ammo? table<string, integer>
+---@field melee_damage? StaticItemDamage
+---@field defense? MonsterDefenseDefinitionOptions
+---@field block? StaticMonsterBlock
+---@field pathing? StaticMonsterPathing
+---@field pet? StaticMonsterPet
+---@field mount_items? StaticMonsterMountItems
+---@field shearing? StaticMonsterShearing[]
+---@field attack_effects? StaticMonsterAttackEffect[]
+---@field emissions? StaticMonsterEmission[]
+---@field regeneration_modifiers? table<string, integer>
+---@field upgrade? StaticMonsterUpgrade|false
+---@field reproduction? StaticMonsterReproduction
+---@field biosignature? StaticMonsterBiosignature
+---@field attacks? StaticMonsterAttack[]
+---@field death? StaticMonsterDeath
+---@field inheritance? StaticMonsterInheritance
+
+---Register a monster during ordered Mod data loading, using native inheritance and finalization.
+---@param options StaticMonsterOptions
+function CcbPlatformContent.define_monster(options) end
+
 ---@param options FactionDefinitionOptions
 ---@return FactionDefinition
 function CcbPlatformContent.Faction(options) end

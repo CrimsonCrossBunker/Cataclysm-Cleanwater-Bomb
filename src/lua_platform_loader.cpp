@@ -55,6 +55,7 @@ extern "C" {
 #include "json.h"
 #include "json_loader.h"
 #include "mapgen.h"
+#include "monstergenerator.h"
 #include "omdata.h"
 #include "output.h"
 #include "recipe_dictionary.h"
@@ -1712,13 +1713,13 @@ void write_item_ids( JsonOut &json, const sol::table &values,
     for( const auto &[field, native] : fields ) {
         if( const auto ids = values.get<sol::optional<sol::table>>( field ) ) {
             json.member( native, bounded_string_array( *ids, field,
-                         std::numeric_limits<std::size_t>::max(), "item definition" ) );
+                         std::numeric_limits<std::size_t>::max(), "static definition" ) );
         }
     }
 }
 
 void write_item_text_value( JsonOut &json, const char *field, const sol::object &value,
-                            bool allow_plural )
+                            bool allow_plural, bool infer_regular_plural = false )
 {
     if( value.get_type() == sol::type::string ) {
         json.write( value.as<std::string>() );
@@ -1733,7 +1734,7 @@ void write_item_text_value( JsonOut &json, const char *field, const sol::object 
         json.member( "str_sp", text.singular );
     } else {
         json.member( "str", text.singular );
-        if( text.plural ) {
+        if( text.plural && ( !infer_regular_plural || *text.plural != text.singular + "s" ) ) {
             json.member( "str_pl", *text.plural );
         }
     }
@@ -2352,6 +2353,474 @@ void load_static_item( const sol::table &options, const std::string &source )
     items::load( json_loader::from_string( serialized.str() ).get_object(), source );
 }
 
+void write_static_monster_spell( JsonOut &json, const sol::table &options, const char *field,
+                                 const char *native )
+{
+    if( const auto spell = options.get<sol::optional<sol::table>>( field ) ) {
+        json.member( native );
+        json.start_object();
+        json.member( "id", spell->get<std::string>( "id" ) );
+        write_item_fields<int>( json, *spell, {
+            { "once_in", "once_in" }, { "min_level", "min_level" }, { "max_level", "max_level" },
+        } );
+        write_placement_member<bool>( json, *spell, "hit_self", "hit_self" );
+        write_item_text( json, "message", spell->raw_get<sol::object>( "message" ), false );
+        write_item_text( json, "npc_message", spell->raw_get<sol::object>( "npc_message" ), false );
+        json.end_object();
+    }
+}
+
+void write_static_monster_effect_list( JsonOut &json, const sol::table &options, const char *field,
+                                       const char *native )
+{
+    if( const auto effects = options.get<sol::optional<sol::table>>( field ) ) {
+        json.member( native );
+        json.start_array();
+        for( std::size_t i = 1, count = effects->size(); i <= count; ++i ) {
+            const sol::table effect = effects->raw_get<sol::table>( i );
+            json.start_object();
+            json.member( "id", effect.get<std::string>( "id" ) );
+            write_item_fields<bool>( json, effect, {
+                { "permanent", "permanent" }, { "affect_hit_body_part", "affect_hit_bp" },
+            } );
+            write_placement_member<double>( json, effect, "chance", "chance" );
+            write_placement_member<std::string>( json, effect, "body_part", "bp" );
+            write_item_text( json, "message", effect.raw_get<sol::object>( "message" ), false );
+            write_mapgen_range( json, "duration", effect.raw_get<sol::object>( "duration" ) );
+            write_mapgen_range( json, "intensity", effect.raw_get<sol::object>( "intensity" ) );
+            json.end_object();
+        }
+        json.end_array();
+    }
+}
+
+void write_static_monster_inline_attack( JsonOut &json, const sol::table &attack )
+{
+    json.start_object();
+    const auto kind = attack.get<sol::optional<std::string>>( "kind" );
+    if( kind ) {
+        if( *kind != "leap" && *kind != "spell" && *kind != "melee" && *kind != "bite" ) {
+            throw std::invalid_argument( "unknown inline monster attack kind: " + *kind );
+        }
+        json.member( "type", *kind );
+        write_placement_member<std::string>( json, attack, "id", "id" );
+    } else {
+        json.member( "id", attack.get<std::string>( "id" ) );
+    }
+    write_item_fields<int>( json, attack, {
+        { "move_cost", "move_cost" }, { "accuracy", "accuracy" }, { "range", "range" },
+        { "minimum_hit_size", "hitsize_min" }, { "maximum_hit_size", "hitsize_max" },
+        { "throw_strength", "throw_strength" }, { "infection_chance", "infection_chance" },
+    } );
+    write_item_fields<double>( json, attack, {
+        { "cooldown", "cooldown" }, { "minimum_damage_multiplier", "min_mul" },
+        { "maximum_damage_multiplier", "max_mul" }, { "minimum_range", "min_range" },
+        { "maximum_range", "max_range" }, { "minimum_target_distance", "min_consider_range" },
+        { "maximum_target_distance", "max_consider_range" },
+    } );
+    write_item_fields<bool>( json, attack, {
+        { "allow_no_target", "allow_no_target" }, { "prefer_leap", "prefer_leap" },
+        { "random_leap", "random_leap" }, { "ignore_destination_terrain", "ignore_dest_terrain" },
+        { "ignore_destination_danger", "ignore_dest_danger" }, { "no_adjacent", "no_adjacent" },
+        { "dodgeable", "dodgeable" }, { "uncanny_dodgeable", "uncanny_dodgeable" },
+        { "blockable", "blockable" }, { "effects_require_damage", "effects_require_dmg" },
+        { "effects_require_organic", "effects_require_organic" }, { "spread_damage", "spread_damage" },
+        { "attack_upper", "attack_upper" }, { "grab", "grab" },
+    } );
+    write_item_ids( json, attack, { { "body_part_types", "body_part_types" } } );
+    write_mapgen_range( json, "attack_amount", attack.raw_get<sol::object>( "attack_count" ) );
+    write_item_damage( json, attack, "damage", "damage_max_instance" );
+    write_static_monster_spell( json, attack, "spell", "spell_data" );
+    for( const auto &[field, native] : {
+             item_field{ "message", "message" }, { "casting_message", "monster_message" },
+             { "avatar_hit", "hit_dmg_u" }, { "avatar_miss", "miss_msg_u" },
+             { "avatar_no_damage", "no_dmg_msg_u" }, { "npc_hit", "hit_dmg_npc" },
+             { "npc_miss", "miss_msg_npc" }, { "npc_no_damage", "no_dmg_msg_npc" },
+             { "avatar_thrown", "throw_msg_u" }, { "npc_thrown", "throw_msg_npc" },
+         } ) {
+        write_item_text( json, native, attack.raw_get<sol::object>( field ), false );
+    }
+    for( const auto &[field, native] : {
+             item_field{ "effects", "effects" }, { "self_effects", "self_effects" },
+             { "self_effects_always", "self_effects_always" }, { "self_effects_on_hit", "self_effects_onhit" },
+             { "self_effects_on_damage", "self_effects_ondmg" },
+         } ) {
+        write_static_monster_effect_list( json, attack, field, native );
+    }
+    if( const auto grab = attack.get<sol::optional<sol::table>>( "grab_settings" ) ) {
+        json.member( "grab_data" );
+        json.start_object();
+        write_item_fields<int>( json, *grab, {
+            { "strength", "grab_strength" }, { "pull_chance", "pull_chance" },
+            { "drag_distance", "drag_distance" }, { "drag_deviation", "drag_deviation" },
+            { "break_distance", "drag_grab_break_distance" },
+        } );
+        write_item_fields<double>( json, *grab, {
+            { "move_cost_multiplier", "drag_movecost_mod" }, { "pull_weight_ratio", "pull_weight_ratio" },
+        } );
+        write_item_fields<bool>( json, *grab, {
+            { "exclusive", "exclusive_grab" }, { "respect_seatbelts", "respect_seatbelts" },
+        } );
+        write_placement_member<std::string>( json, *grab, "effect", "grab_effect" );
+        json.end_object();
+    }
+    json.end_object();
+}
+
+void write_static_monster_attacks( JsonOut &json, const sol::table &options )
+{
+    if( const auto attacks = options.get<sol::optional<sol::table>>( "attacks" ) ) {
+        json.member( "special_attacks" );
+        json.start_array();
+        for( std::size_t i = 1, count = attacks->size(); i <= count; ++i ) {
+            const sol::table attack = attacks->raw_get<sol::table>( i );
+            if( const auto base = attack.get<sol::optional<std::string>>( "reference" ) ) {
+                json.start_array();
+                json.write( *base );
+                json.write( attack.get<double>( "cooldown" ) );
+                json.end_array();
+            } else {
+                write_static_monster_inline_attack( json, attack );
+            }
+        }
+        json.end_array();
+    }
+}
+
+void write_static_monster_drop_entries( JsonOut &json, const sol::table &entries )
+{
+    json.start_array();
+    for( std::size_t i = 1, count = entries.size(); i <= count; ++i ) {
+        const sol::table entry = entries.raw_get<sol::table>( i );
+        json.start_object();
+        write_item_fields<std::string>( json, entry, { { "item", "item" }, { "group", "group" } } );
+        write_placement_member<int>( json, entry, "probability", "prob" );
+        for( const char *field : { "count", "charges", "damage" } ) {
+            write_mapgen_range( json, field, entry.raw_get<sol::object>( field ) );
+        }
+        json.end_object();
+    }
+    json.end_array();
+}
+
+void write_static_monster_death( JsonOut &json, const sol::table &death )
+{
+    const sol::object drops = death.raw_get<sol::object>( "drops" );
+    if( drops.get_type() == sol::type::string ) {
+        json.member( "death_drops", drops.as<std::string>() );
+    } else if( drops.get_type() == sol::type::table ) {
+        const sol::table drop_group = drops.as<sol::table>();
+        if( const auto entries = drop_group.get<sol::optional<sol::table>>( "entries" ) ) {
+            json.member( "death_drops" );
+            write_static_monster_drop_entries( json, *entries );
+        } else {
+            json.member( "death_drops" );
+            json.start_object();
+            write_placement_member<std::string>( json, drop_group, "kind", "subtype" );
+            if( const auto items = drop_group.get<sol::optional<sol::table>>( "items" ) ) {
+                json.member( "items" );
+                write_static_monster_drop_entries( json, *items );
+            }
+            if( const auto groups = drop_group.get<sol::optional<sol::table>>( "groups" ) ) {
+                write_mapgen_weighted_choices<int, false>( json, "groups", *groups );
+            }
+            json.end_object();
+        }
+    }
+    const auto outcome = death.get<sol::optional<sol::table>>( "outcome" );
+    if( !outcome ) {
+        return;
+    }
+    json.member( "death_function" );
+    json.start_object();
+    write_placement_member<std::string>( json, *outcome, "corpse", "corpse_type" );
+    write_item_text( json, "message", outcome->raw_get<sol::object>( "message" ), false );
+    write_static_monster_spell( json, *outcome, "spell", "effect" );
+    json.end_object();
+}
+
+void write_static_monster_lifecycle( JsonOut &json, const sol::table &options )
+{
+    const sol::object upgrades = options.raw_get<sol::object>( "upgrade" );
+    if( upgrades.get_type() == sol::type::boolean && !upgrades.as<bool>() ) {
+        json.member( "upgrades", false );
+    } else if( upgrades.get_type() == sol::type::table ) {
+        const sol::table upgrade = upgrades.as<sol::table>();
+        json.member( "upgrades" );
+        json.start_object();
+        write_item_fields<int>( json, upgrade, {
+            { "half_life", "half_life" }, { "grow_at_age", "age_grow" }, { "spawn_range", "spawn_range" },
+        } );
+        write_item_fields<std::string>( json, upgrade, {
+            { "monster", "into" }, { "monster_group", "into_group" },
+        } );
+        write_item_fields<bool>( json, upgrade, {
+            { "multiple_spawns", "multiple_spawns" }, { "despawn_when_null", "despawn_when_null" },
+        } );
+        json.end_object();
+    }
+    if( const auto reproduction = options.get<sol::optional<sol::table>>( "reproduction" ) ) {
+        json.member( "reproduction" );
+        json.start_object();
+        write_placement_member<int>( json, *reproduction, "count", "baby_count" );
+        const sol::object interval = reproduction->raw_get<sol::object>( "interval" );
+        if( interval.get_type() == sol::type::string ) {
+            json.member( "baby_timer", interval.as<std::string>() );
+        } else if( interval.get_type() == sol::type::number ) {
+            json.member( "baby_timer", interval.as<int>() );
+        }
+        if( const auto offspring = reproduction->get<sol::optional<sol::table>>( "offspring" ) ) {
+            json.member( "baby_type" );
+            json.start_object();
+            write_item_fields<std::string>( json, *offspring, {
+                { "monster", "baby_monster" }, { "monster_group", "baby_monster_group" },
+                { "egg", "baby_egg" }, { "egg_group", "baby_egg_group" },
+            } );
+            json.end_object();
+        }
+        json.end_object();
+    }
+    if( const auto biosignature = options.get<sol::optional<sol::table>>( "biosignature" ) ) {
+        json.member( "biosignature" );
+        json.start_object();
+        write_placement_member<std::string>( json, *biosignature, "item", "biosig_item" );
+        const sol::object interval = biosignature->raw_get<sol::object>( "interval" );
+        if( interval.get_type() == sol::type::string ) {
+            json.member( "biosig_timer", interval.as<std::string>() );
+        } else if( interval.get_type() == sol::type::number ) {
+            json.member( "biosig_timer", interval.as<int>() );
+        }
+        json.end_object();
+    }
+}
+
+void write_static_monster_traits( JsonOut &json, const sol::table &options )
+{
+    write_item_ids( json, options, {
+        { "flags", "flags" }, { "species", "species" }, { "categories", "categories" },
+        { "families", "families" }, { "weakpoint_sets", "weakpoint_sets" },
+        { "anger_triggers", "anger_triggers" }, { "fear_triggers", "fear_triggers" },
+        { "placate_triggers", "placate_triggers" },
+    } );
+    if( const auto skills = options.get<sol::optional<sol::table>>( "move_skills" ) ) {
+        json.member( "move_skills" );
+        json.start_object();
+        write_item_fields<int>( json, *skills, {
+            { "climb", "climb" }, { "swim", "swim" }, { "dig", "dig" },
+        } );
+        json.end_object();
+    }
+}
+
+void write_static_monster_effects( JsonOut &json, const sol::table &options )
+{
+    write_static_monster_effect_list( json, options, "attack_effects", "attack_effs" );
+    if( const auto emissions = options.get<sol::optional<sol::table>>( "emissions" ) ) {
+        json.member( "emit_fields" );
+        json.start_array();
+        for( std::size_t i = 1, count = emissions->size(); i <= count; ++i ) {
+            const sol::table emission = emissions->raw_get<sol::table>( i );
+            json.start_object();
+            json.member( "emit_id", emission.get<std::string>( "id" ) );
+            json.member( "delay", emission.get<std::string>( "delay" ) );
+            json.end_object();
+        }
+        json.end_array();
+    }
+    if( const auto regen = options.get<sol::optional<sol::table>>( "regeneration_modifiers" ) ) {
+        write_item_keyed_values<int>( json, "regeneration_modifiers", *regen );
+    }
+}
+
+template<typename T>
+void write_static_monster_stat_changes( JsonOut &json, const sol::table &change )
+{
+    write_item_fields<T>( json, change, {
+        { "speed", "speed" }, { "hp", "hp" }, { "morale", "morale" },
+        { "melee_dice", "melee_dice" }, { "melee_sides", "melee_dice_sides" },
+        { "melee_skill", "melee_skill" }, { "dodge", "dodge" }, { "attack_cost", "attack_cost" },
+        { "vision_day", "vision_day" }, { "vision_night", "vision_night" },
+        { "aggression", "aggression" }, { "regenerates", "regenerates" },
+    } );
+    if( const auto armor = change.get<sol::optional<sol::table>>( "armor" ) ) {
+        write_item_keyed_values<double>( json, "armor", *armor );
+    }
+    write_item_damage( json, change, "melee_damage", "melee_damage" );
+}
+
+void write_static_monster_inheritance( JsonOut &json, const sol::table &inheritance )
+{
+    if( const auto add = inheritance.get<sol::optional<sol::table>>( "add" ) ) {
+        json.member( "extend" );
+        json.start_object();
+        write_static_monster_traits( json, *add );
+        write_static_monster_attacks( json, *add );
+        if( const auto armor = add->get<sol::optional<sol::table>>( "armor" ) ) {
+            write_item_keyed_values<double>( json, "armor", *armor );
+        }
+        json.end_object();
+    }
+    if( const auto remove = inheritance.get<sol::optional<sol::table>>( "remove" ) ) {
+        json.member( "delete" );
+        json.start_object();
+        write_static_monster_traits( json, *remove );
+        write_item_ids( json, *remove, {
+            { "attacks", "special_attacks" }, { "weakpoints", "weakpoints" },
+        } );
+        json.end_object();
+    }
+    if( const auto scale = inheritance.get<sol::optional<sol::table>>( "scale" ) ) {
+        json.member( "proportional" );
+        json.start_object();
+        write_static_monster_stat_changes<double>( json, *scale );
+        write_item_fields<double>( json, *scale, { { "mass", "weight" }, { "volume", "volume" } } );
+        json.end_object();
+    }
+    if( const auto offset = inheritance.get<sol::optional<sol::table>>( "offset" ) ) {
+        json.member( "relative" );
+        json.start_object();
+        write_static_monster_stat_changes<int>( json, *offset );
+        json.end_object();
+    }
+}
+
+void load_static_monster( const sol::table &options, const std::string &source )
+{
+    std::ostringstream serialized;
+    JsonOut json( serialized );
+    json.start_object();
+    json.member( "type", "MONSTER" );
+    json.member( options.get_or( "abstract", false ) ? "abstract" : "id",
+                 options.get<std::string>( "id" ) );
+    const sol::object name = options.raw_get<sol::object>( "name" );
+    if( name.get_type() != sol::type::nil ) {
+        json.member( "name" );
+        write_item_text_value( json, "name", name, true, true );
+    }
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "ascii_picture", "ascii_picture" },
+        { "default_faction", "default_faction" }, { "symbol", "symbol" },
+        { "looks_like", "looks_like" }, { "body_type", "bodytype" }, { "color", "color" },
+        { "volume", "volume" }, { "mass", "weight" }, { "phase", "phase" },
+        { "harvest", "harvest" }, { "dissect", "dissect" }, { "decay", "decay" },
+        { "speed_description", "speed_description" }, { "revert_item", "revert_to_itype" },
+        { "broken_item", "broken_itype" }, { "mech_weapon", "mech_weapon" },
+        { "mech_battery", "mech_battery" }, { "zombify_into", "zombify_into" },
+        { "fungalize_into", "fungalize_into" }, { "burn_into", "burn_into" },
+    } );
+    write_item_fields<int>( json, options, {
+        { "difficulty_adjustment", "diff" }, { "hp", "hp" }, { "speed", "speed" },
+        { "aggression", "aggression" }, { "morale", "morale" },
+        { "tracking_distance", "tracking_distance" }, { "attack_cost", "attack_cost" },
+        { "melee_skill", "melee_skill" }, { "melee_dice", "melee_dice" }, { "melee_sides", "melee_dice_sides" },
+        { "melee_armor_penetration", "melee_dice_ap" }, { "grab_strength", "grab_strength" },
+        { "dodge", "dodge" }, { "bleed_rate", "bleed_rate" },
+        { "vision_day", "vision_day" }, { "vision_night", "vision_night" },
+        { "regenerates", "regenerates" }, { "mech_strength_bonus", "mech_str_bonus" },
+        { "melee_training_cap", "melee_training_cap" }, { "absorb_ml_per_hp", "absorb_ml_per_hp" },
+        { "split_move_cost", "split_move_cost" }, { "absorb_move_cost_min", "absorb_move_cost_min" },
+        { "absorb_move_cost_max", "absorb_move_cost_max" },
+    } );
+    write_item_fields<double>( json, options, {
+        { "mountable_weight_ratio", "mountable_weight_ratio" },
+        { "status_chance_multiplier", "status_chance_multiplier" }, { "luminance", "luminance" },
+        { "absorb_move_cost_per_ml", "absorb_move_cost_per_ml" },
+    } );
+    write_item_fields<bool>( json, options, {
+        { "regenerates_in_dark", "regenerates_in_dark" }, { "regenerates_morale", "regen_morale" },
+        { "aggressive_to_characters", "aggro_character" },
+    } );
+    write_static_monster_traits( json, options );
+    write_item_ids( json, options, {
+        { "trap_avoids", "trap_avoids" }, { "absorb_materials", "absorb_material" },
+        { "ignored_absorb_materials", "no_absorb_material" },
+        { "scents_tracked", "scents_tracked" }, { "scents_ignored", "scents_ignored" },
+        { "chat_topics", "chat_topics" }, { "mating_seasons", "baby_flags" },
+    } );
+    if( const auto materials = options.get<sol::optional<sol::table>>( "materials" ) ) {
+        write_item_materials( json, *materials, false );
+    }
+    if( const auto armor = options.get<sol::optional<sol::table>>( "armor" ) ) {
+        write_item_keyed_values<double>( json, "armor", *armor );
+    }
+    if( const auto ammo = options.get<sol::optional<sol::table>>( "starting_ammo" ) ) {
+        write_item_keyed_values<int>( json, "starting_ammo", *ammo );
+    }
+    write_item_damage( json, options, "melee_damage", "melee_damage" );
+    if( const auto defense = options.get<sol::optional<sol::table>>( "defense" ) ) {
+        json.member( "special_when_hit" );
+        json.start_array();
+        json.write( defense->get<std::string>( "id" ) );
+        json.write( defense->get<int>( "chance" ) );
+        json.end_array();
+    }
+    if( const auto block = options.get<sol::optional<sol::table>>( "block" ) ) {
+        json.member( "block" );
+        json.start_object();
+        write_item_fields<int>( json, *block, {
+            { "chance", "chance" }, { "effectiveness", "effectiveness" }, { "count", "count" },
+        } );
+        write_placement_member<bool>( json, *block, "ranged", "ranged" );
+        json.end_object();
+    }
+    if( const auto pathing = options.get<sol::optional<sol::table>>( "pathing" ) ) {
+        json.member( "path_settings" );
+        json.start_object();
+        write_item_fields<int>( json, *pathing, {
+            { "max_distance", "max_dist" }, { "max_length", "max_length" }, { "bash_strength", "bash_strength" },
+        } );
+        write_item_fields<bool>( json, *pathing, {
+            { "open_doors", "allow_open_doors" }, { "climb_stairs", "allow_climb_stairs" },
+            { "avoid_traps", "avoid_traps" }, { "avoid_sharp", "avoid_sharp" },
+            { "avoid_dangerous_fields", "avoid_dangerous_fields" },
+        } );
+        json.end_object();
+    }
+    if( const auto pet = options.get<sol::optional<sol::table>>( "pet" ) ) {
+        json.member( "petfood" );
+        json.start_object();
+        write_item_ids( json, *pet, { { "food", "food" } } );
+        write_item_text( json, "feed", pet->raw_get<sol::object>( "feed_message" ), false );
+        write_item_text( json, "pet", pet->raw_get<sol::object>( "pet_message" ), false );
+        json.end_object();
+    }
+    if( const auto mount = options.get<sol::optional<sol::table>>( "mount_items" ) ) {
+        json.member( "mount_items" );
+        json.start_object();
+        write_item_fields<std::string>( json, *mount, {
+            { "tied", "tied" }, { "tack", "tack" }, { "armor", "armor" },
+        } );
+        json.end_object();
+    }
+    if( const auto shearing = options.get<sol::optional<sol::table>>( "shearing" ) ) {
+        json.member( "shearing" );
+        json.start_array();
+        for( std::size_t i = 1, count = shearing->size(); i <= count; ++i ) {
+            const sol::table yield = shearing->raw_get<sol::table>( i );
+            json.start_object();
+            json.member( "result", yield.get<std::string>( "item" ) );
+            write_placement_member<int>( json, yield, "amount", "amount" );
+            write_placement_member<double>( json, yield, "volume_ratio", "ratio_volume" );
+            json.end_object();
+        }
+        json.end_array();
+    }
+    write_static_monster_effects( json, options );
+    write_static_monster_lifecycle( json, options );
+    write_static_monster_attacks( json, options );
+    if( const auto death = options.get<sol::optional<sol::table>>( "death" ) ) {
+        write_static_monster_death( json, *death );
+    }
+    if( const auto inheritance = options.get<sol::optional<sol::table>>( "inheritance" ) ) {
+        write_static_monster_inheritance( json, *inheritance );
+    }
+    json.end_object();
+    const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
+    static_cast<void>( definition.get_string( "type" ) );
+    MonsterGenerator::generator().load_monster( definition, source );
+}
+
 void load_static_overmap_terrain( const sol::table &options, const std::string &source,
                                   bool patch )
 {
@@ -2528,6 +2997,9 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_mapgen", load_static_mapgen );
     content.set_function( "define_item", [&resolved]( const sol::table &options ) {
         load_static_item( options, resolved.id );
+    } );
+    content.set_function( "define_monster", [&resolved]( const sol::table &options ) {
+        load_static_monster( options, resolved.id );
     } );
     content.set_function( "define_mapgen_palette", [&resolved]( const sol::table &options ) {
         load_static_mapgen_palette( options, resolved.id );
