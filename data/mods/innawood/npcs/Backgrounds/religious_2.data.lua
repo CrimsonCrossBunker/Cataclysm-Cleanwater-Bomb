@@ -1,0 +1,25 @@
+local ccb = require("ccb")
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_RELIGIOUS_2_STORY1",
+    line = ccb.content.text("Same as anyone.  I turned away from God, and now I'm paying the price.  The Rapture has come, and I was left behind.  So now, I guess I wander through Hell on Earth."),
+    replies = {
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "CWH_RELIGIOUS_2_IDEAS1",
+    line = ccb.content.text("Well, I guess that was the Rapture.  It didn't play out how I thought it would.  They made me think it was gonna be a flash of light and then *poof*, everyone's gone.  Instead it was messy and dirty.  Riots in the streets, the leadership serving the Antichrist to cut the people down like - what was it my dad used to say - like wheat before the chaff?  Then when we'd really showed our Sin, God came in with the real plagues.  The dead started walking, getting up with holes in them to fight, and then people started turning on each other too.  After that, the legions of Hell itself came out.  Huge monsters, worse than anything I'd ever imagined, just tore through ripping everything to shreds.  Then they started dying off as quick as they'd arrived, and we were left trying to run and hide from the undead."),
+    replies = {
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
