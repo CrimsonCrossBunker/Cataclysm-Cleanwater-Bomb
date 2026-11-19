@@ -1,0 +1,42 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "ammonia_hydroxide",
+    name = ccb.content.plural_text("ammonia solution", "ammonia solution"),
+    materials = { "ammonia_hydroxide" },
+    display_type = "BY_VOLUME",
+    mass = "124 g",
+    color = "white",
+    flags = { "CORROSIVE" },
+    sealed_container = false,
+    symbol = "~",
+    description = ccb.content.text("Ammonium hydroxide, a common household cleaning agent."),
+    price = "33 cent",
+    survival_price = "25 cent",
+    volume = "125 ml",
+    phase = "liquid",
+    category = "chems",
+    comestible = { kind = "INVALID", servings = 1, freezing_point = -78 },
+    use_actions = { "BLECH" },
+}
+
+ccb.content.define_item {
+    id = "fertilizer_liquid",
+    name = ccb.content.plural_text("liquid fertilizer", "liquid fertilizer"),
+    mass = "67 g",
+    color = "yellow",
+    flags = { "FERTILIZER", "NUTRIENT_OVERRIDE" },
+    fertilizer_quality = 0.8,
+    default_container = "jug_plastic",
+    sealed_container = false,
+    symbol = "~",
+    description = ccb.content.text("A nutrient-rich elixir for plants."),
+    price = "10 USD",
+    survival_price = "1 USD",
+    volume = "250 ml",
+    phase = "liquid",
+    category = "chems",
+    display_type = "BY_VOLUME",
+    comestible = { kind = "DRINK", quench = -10, healthy = -1, calories = 260, servings = 4, fun = -30 },
+    use_actions = { "PLANTBLECH" },
+}
