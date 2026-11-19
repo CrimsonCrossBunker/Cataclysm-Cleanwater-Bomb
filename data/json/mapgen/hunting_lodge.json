@@ -222,43 +222,5 @@
         }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ [ "lodge_basement_residential3", "lodge_basement_residential4" ] ],
-    "object": {
-      "fill_ter": "t_soil",
-      "rows": [
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                         ##############         ",
-        "                         #__________RR#         ",
-        "                         #____________#         ",
-        "                         #____________#         ",
-        "                         #____________#         ",
-        "                         #____________#         ",
-        "                         #____________#         ",
-        "                         ###______#####         ",
-        "                         #<#______#             ",
-        "                         #_+______#             ",
-        "                         ##########             ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                "
-      ],
-      "palettes": [ "standard_domestic_basement_palette" ],
-      "terrain": { "_": "t_carpet_green", "R": "t_carpet_green" },
-      "place_nested": [
-        { "chunks": [ [ "room_6x6_woodworker", 5 ], [ "room_6x6_bike", 15 ], [ "room_6x6_office_E", 5 ] ], "x": 26, "y": 10 }
-      ]
-    }
   }
 ]
