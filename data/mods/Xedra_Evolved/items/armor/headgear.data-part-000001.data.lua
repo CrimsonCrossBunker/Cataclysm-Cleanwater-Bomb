@@ -1,0 +1,25 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "bleeding_cap",
+    name = ccb.content.text("Bleeding Cap"),
+    description = ccb.content.text("Blood starts seeping out of the cap, down your face."),
+    valid_targets = { "self" },
+    flags = { "NO_LEGS", "SILENT" },
+    min_range = 0,
+    max_range = 0,
+    min_damage = 1,
+    max_damage = 1,
+    effect = "spawn_item",
+    effect_data = "bloody_cap",
+    shape = "blast",
+    spell_class = "NONE",
+    energy_source = "NONE",
+    difficulty = 5,
+    max_level = 20,
+    base_casting_time = 0,
+    base_energy_cost = 1,
+    min_duration = 6000,
+    max_duration = 60000,
+    duration_increment = 4000,
+}

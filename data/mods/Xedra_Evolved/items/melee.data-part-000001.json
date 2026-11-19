@@ -1,0 +1,15 @@
+[
+  {
+    "id": "pooka_gladius",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "name": { "str": "pooka gladius", "str_pl": "pooka gladii" },
+    "copy-from": "wakizashi",
+    "description": "A gladius covered in the whorls of Celtic knots.  Sparks seems to pop off the edge of the blade.",
+    "flags": [ "DURABLE_MELEE", "SHEATH_SWORD" ],
+    "longest_side": "60 cm",
+    "material": [ "moon_tears" ],
+    "weapon_category": [ "SHORT_SWORDS" ],
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_pooka_gladius_0" } ]
+  }
+]
