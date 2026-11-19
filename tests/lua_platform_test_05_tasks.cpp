@@ -1,12 +1,6 @@
 // Preserve the established numbered domain test filenames.
 // NOLINTBEGIN(cata-test-filename)
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "messages.h"
-#include "debug.h"
-#include <algorithm>
-#include <cstdint>
-#include <stdexcept>
-#include <string>
 #include <avatar.h>
 #include <basecamp.h>
 #include <calendar.h>
@@ -32,15 +26,23 @@
 #include <vehicle.h>
 #include <vehicle_uid.h>
 #include <vpart_position.h>
+#include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
+
 #include "cata_catch.h"
-#include "map_helpers.h"
+#include "debug.h"
 #include "lua_platform_sol.h"
+#include "map_helpers.h"
+#include "messages.h"
+#include "player_helpers.h"
 
 namespace cata::lua_platform
 {
@@ -521,6 +523,7 @@ TEST_CASE( "lua_platform_persistent_task_vehicle_actor_reacquires_persistent_ide
            "[lua][platform][runtime][tasks][handles][vehicle]" )
 {
     clear_map_without_vision();
+    clear_avatar();
     cata::lua_platform::clear_active_runtimes();
 
     sol::state lua;

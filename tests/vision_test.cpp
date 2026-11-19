@@ -1,12 +1,14 @@
-#include <functional>
 #include <bodypart.h>
 #include <level_cache.h>
 #include <lightmap.h>
 #include <mdarray.h>
+#include <shadowcasting.h>
 #include <bitset>
+#include <functional>
 #include <initializer_list>
 #include <memory>
 #include <optional>
+#include <random>
 #include <set>
 #include <sstream>
 #include <string>
@@ -45,8 +47,16 @@
 #include "vpart_range.h"
 #include "weather_type.h"
 
-static const efftype_id effect_narcosis( "narcosis" );
+class submap;
 
+static const efftype_id effect_blind( "blind" );
+static const efftype_id effect_boomered( "boomered" );
+static const efftype_id effect_glowing( "glowing" );
+static const efftype_id effect_haslight( "haslight" );
+static const efftype_id effect_narcosis( "narcosis" );
+static const efftype_id effect_onfire( "onfire" );
+
+static const field_type_str_id field_fd_clairvoyant( "fd_clairvoyant" );
 static const field_type_str_id field_fd_smoke( "fd_smoke" );
 
 static const move_mode_id move_mode_crouch( "crouch" );
@@ -58,6 +68,8 @@ static const mtype_id mon_zombie( "mon_zombie" );
 static const mtype_id mon_zombie_electric( "mon_zombie_electric" );
 
 static const ter_str_id ter_t_brick_wall( "t_brick_wall" );
+static const ter_str_id ter_t_door_c( "t_door_c" );
+static const ter_str_id ter_t_door_o( "t_door_o" );
 static const ter_str_id ter_t_flat_roof( "t_flat_roof" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_utility_light( "t_utility_light" );
@@ -67,8 +79,15 @@ static const ter_str_id ter_t_window_stained_green( "t_window_stained_green" );
 static const trait_id trait_MYOPIC( "MYOPIC" );
 
 static const vpart_id vpart_inboard_mirror( "inboard_mirror" );
+
 static const vproto_id vehicle_prototype_meth_lab( "meth_lab" );
 static const vproto_id vehicle_prototype_vehicle_camera_test( "vehicle_camera_test" );
+
+
+
+
+
+
 
 TEST_CASE( "monster_infrared_requires_unobstructed_path", "[vision]" )
 {
@@ -91,8 +110,8 @@ TEST_CASE( "monster_infrared_requires_unobstructed_path", "[vision]" )
     here.build_map_cache( 0 );
     CHECK_FALSE( observer->sees( here, you ) );
     const tripoint_bub_ms upstairs{ 60, 60, 1 };
-    you.setpos( here, upstairs );
     here.ter_set( upstairs, ter_t_floor );
+    you.setpos( here, upstairs );
     here.invalidate_map_cache( 1 );
     here.build_map_cache( 1 );
     CHECK_FALSE( observer->sees( here, you ) );
@@ -160,7 +179,7 @@ TEST_CASE( "character_light_changes_invalidate_each_map", "[vision][map][cache]"
     avatar &you = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms original_position = you.pos_bub( here );
-    const efftype_id light_effect( "haslight" );
+    const efftype_id &light_effect = effect_haslight;
     on_out_of_scope restore_player( [&]() {
         you.remove_effect( light_effect );
         you.setpos( here, original_position );
@@ -220,8 +239,8 @@ BENCHMARK_TEST_CASE( "unchanged_character_light_map_cache", "[vision][map_cache]
 TEST_CASE( "only_emitting_character_movement_invalidates_lightmap", "[vision][map][cache]" )
 {
     const bool npc_actor = GENERATE( false, true );
-    const efftype_id light_effect = GENERATE( efftype_id( "haslight" ), efftype_id( "onfire" ),
-                                    efftype_id( "glowing" ) );
+    const efftype_id light_effect = GENERATE( effect_haslight, effect_onfire,
+                                    effect_glowing );
     CAPTURE( npc_actor, light_effect );
     clear_avatar();
     clear_map();
@@ -318,8 +337,8 @@ TEST_CASE( "local_door_changes_preserve_other_submap_vision", "[vision][map][cac
     for( int y = 0; y < SEEY * 2; ++y ) {
         candidate.ter_set( tripoint_bub_ms( window.x(), y, z ), ter_t_brick_wall );
     }
-    candidate.ter_set( window, ter_str_id( "t_window_stained_green" ) );
-    candidate.ter_set( door, ter_str_id( "t_door_c" ) );
+    candidate.ter_set( window, ter_t_window_stained_green );
+    candidate.ter_set( door, ter_t_door_c );
     you.setpos( candidate, tripoint_bub_ms( 14, 12, z ) );
     candidate.set_seen_cache_dirty( z );
     candidate.build_map_cache( z, true );
@@ -328,7 +347,7 @@ TEST_CASE( "local_door_changes_preserve_other_submap_vision", "[vision][map][cac
     REQUIRE( candidate.get_cache_ref( z ).seen_cache[behind.x()][behind.y()] == 0.0f );
 
     for( const ter_str_id state : {
-             ter_str_id( "t_door_o" ), ter_str_id( "t_door_c" )
+             ter_t_door_o, ter_t_door_c
          } ) {
         candidate.ter_set( door, state );
         REQUIRE( candidate.get_cache_ref( z ).transparency_cache_dirty.count() == 1 );
@@ -353,8 +372,8 @@ TEST_CASE( "vision_posture_overrides_restore_across_submap_boundary", "[vision][
     const tripoint_bub_ms observer( 59, 59, 0 );
     const tripoint_bub_ms frame( 60, 59, 0 );
     const tripoint_bub_ms stained( 61, 59, 0 );
-    here.ter_set( frame, ter_str_id( "t_window_frame" ) );
-    here.ter_set( stained, ter_str_id( "t_window_stained_green" ) );
+    here.ter_set( frame, ter_t_window_frame );
+    here.ter_set( stained, ter_t_window_stained_green );
     you.setpos( here, observer );
     you.set_movement_mode( move_mode_crouch );
     here.build_map_cache( 0, true );
@@ -388,8 +407,8 @@ BENCHMARK_TEST_CASE( "local_door_transparency_refresh", "[vision][map_cache]" )
     } );
     set_time( calendar::turn_zero + 12_hours );
     const tripoint_bub_ms door( 60, 60, 0 );
-    const ter_id closed = ter_str_id( "t_door_c" ).id();
-    const ter_id open = ter_str_id( "t_door_o" ).id();
+    const ter_id closed = ter_t_door_c.id();
+    const ter_id open = ter_t_door_o.id();
     here.ter_set( door, closed );
     you.setpos( here, tripoint_bub_ms( 58, 60, 0 ) );
     here.build_map_cache( 0 );
@@ -436,17 +455,17 @@ TEST_CASE( "visibility_refreshes_after_map_cache_rebuild", "[vision][map][cache]
         for( int y = 0; y < MAPSIZE_Y; ++y ) {
             here.ter_set( tripoint_bub_ms( door.x(), y, 0 ), ter_t_brick_wall );
         }
-        here.ter_set( door, ter_str_id( "t_door_c" ) );
+        here.ter_set( door, ter_t_door_c );
         here.invalidate_visibility_cache();
         refresh();
         const lit_level closed_visibility = target_visibility();
         for( const ter_str_id state : {
-                 ter_str_id( "t_door_o" ), ter_str_id( "t_door_c" )
+                 ter_t_door_o, ter_t_door_c
              } ) {
             here.ter_set( door, state );
             refresh();
             require_current_visibility();
-            if( state == ter_str_id( "t_door_o" ) ) {
+            if( state == ter_t_door_o ) {
                 CHECK( target_visibility() != closed_visibility );
             } else {
                 CHECK( target_visibility() == closed_visibility );
@@ -506,7 +525,7 @@ TEST_CASE( "visibility_cache_refreshes_each_requested_level", "[vision][map][cac
     for( int y = 0; y < MAPSIZE_Y; ++y ) {
         here.ter_set( tripoint_bub_ms( door.x(), y, 1 ), ter_t_brick_wall );
     }
-    here.ter_set( door, ter_str_id( "t_door_c" ) );
+    here.ter_set( door, ter_t_door_c );
     here.build_map_cache( 1 );
     here.invalidate_visibility_cache();
     here.update_visibility_cache( 1 );
@@ -514,7 +533,7 @@ TEST_CASE( "visibility_cache_refreshes_each_requested_level", "[vision][map][cac
                                             1 ).visibility_cache[target.x()][target.y()];
 
     for( const ter_str_id state : {
-             ter_str_id( "t_door_o" ), ter_str_id( "t_door_c" )
+             ter_t_door_o, ter_t_door_c
          } ) {
         here.ter_set( door, state );
         here.build_map_cache( 1 );
@@ -523,7 +542,7 @@ TEST_CASE( "visibility_cache_refreshes_each_requested_level", "[vision][map][cac
         here.update_visibility_cache( 1 );
         const lit_level visible = here.get_cache_ref( 1 ).visibility_cache[target.x()][target.y()];
         CHECK( visible == here.apparent_light_at( target, here.get_visibility_variables_cache() ) );
-        if( state == ter_str_id( "t_door_o" ) ) {
+        if( state == ter_t_door_o ) {
             CHECK( visible != closed_visibility );
         } else {
             CHECK( visible == closed_visibility );
@@ -550,7 +569,7 @@ TEST_CASE( "visibility_grid_refresh_uses_current_observer", "[vision][map][cache
     const tripoint_bub_ms old_pos = you.pos_bub( here );
     const time_point old_time = calendar::turn;
     on_out_of_scope restore_player( [&]() {
-        you.remove_effect( efftype_id( "blind" ) );
+        you.remove_effect( effect_blind );
         you.last_target_pos.reset();
         you.recoil = MAX_RECOIL;
         you.aim_cache_dirty = true;
@@ -566,7 +585,7 @@ TEST_CASE( "visibility_grid_refresh_uses_current_observer", "[vision][map][cache
     const bool blind = GENERATE( false, true );
     CAPTURE( aiming, blind );
     if( blind ) {
-        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.add_effect( effect_blind, 1_turns );
         you.recalc_sight_limits();
     }
     if( aiming ) {
@@ -574,7 +593,7 @@ TEST_CASE( "visibility_grid_refresh_uses_current_observer", "[vision][map][cache
         you.recoil = 0;
     }
     // A clairvoyant field must override the wall, blindness and aiming alike.
-    REQUIRE( here.add_field( target, field_type_str_id( "fd_clairvoyant" ) ) );
+    REQUIRE( here.add_field( target, field_fd_clairvoyant ) );
     for( const tripoint_bub_ms pos : {
              tripoint_bub_ms( 60, 60, 0 ),
              tripoint_bub_ms( 66, 60, 0 ),
@@ -619,7 +638,7 @@ TEST_CASE( "unseen_light_sources_preserve_camera_clairvoyance_and_lazy_aiming",
         you.recoil = MAX_RECOIL;
         you.aim_cache_dirty = true;
     } );
-    const field_type_id clairvoyant_field = field_type_str_id( "fd_clairvoyant" );
+    const field_type_id clairvoyant_field = field_fd_clairvoyant;
     if( clairvoyant ) {
         REQUIRE( here.add_field( target, clairvoyant_field ) );
     }
@@ -638,13 +657,13 @@ TEST_CASE( "unseen_light_sources_preserve_camera_clairvoyance_and_lazy_aiming",
     variables.clairvoyance_field = clairvoyant_field;
     const lit_level expected = seen || camera || clairvoyant ?
                                lit_level::BRIGHT : lit_level::BLANK;
-    const auto rng_before = rng_get_engine(); // NOLINT(cata-determinism)
+    const cata_default_random_engine rng_before = rng_get_engine(); // NOLINT(cata-determinism)
     // The unchanged point helper is the reference for lazy aiming and its
     // RNG consumption. A clairvoyant query never calls that helper.
     if( !clairvoyant ) {
         static_cast<void>( map::apparent_light_helper( cache, target ) );
     }
-    const auto expected_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const cata_default_random_engine expected_rng = rng_get_engine(); // NOLINT(cata-determinism)
     rng_get_engine() = rng_before;
     you.aim_cache_dirty = true;
     CHECK( here.apparent_light_at( target, variables ) == expected );
@@ -680,7 +699,7 @@ TEST_CASE( "visibility_grid_preserves_ordered_point_queries_for_unseen_cells",
     } );
     you.last_target_pos = here.get_abs( tripoint_bub_ms( 64, 60, 0 ) );
     you.recoil = aiming ? 0 : MAX_RECOIL;
-    const field_type_id clairvoyant = field_type_str_id( "fd_clairvoyant" );
+    const field_type_id clairvoyant = field_fd_clairvoyant;
     REQUIRE( here.add_field( tripoint_bub_ms( 71, 59, 0 ), clairvoyant ) );
     REQUIRE( here.add_field( tripoint_bub_ms( 72, 60, 0 ), clairvoyant ) );
     visibility_variables variables = here.get_visibility_variables_cache();
@@ -702,7 +721,7 @@ TEST_CASE( "visibility_grid_preserves_ordered_point_queries_for_unseen_cells",
     cata::mdarray<lit_level, point_bub_ms> expected;
     cata::mdarray<int, point_bub_sm> expected_seen = {};
     you.aim_cache_dirty = true;
-    const auto rng_before = rng_get_engine(); // NOLINT(cata-determinism)
+    const cata_default_random_engine rng_before = rng_get_engine(); // NOLINT(cata-determinism)
     for( int x = 0; x < MAPSIZE_X; ++x ) {
         for( int y = 0; y < MAPSIZE_Y; ++y ) {
             const lit_level light = here.apparent_light_at( tripoint_bub_ms( x, y, 0 ), variables );
@@ -710,7 +729,7 @@ TEST_CASE( "visibility_grid_preserves_ordered_point_queries_for_unseen_cells",
             expected_seen[x / SEEX][y / SEEY] += light == lit_level::BRIGHT || light == lit_level::LIT;
         }
     }
-    const auto expected_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const cata_default_random_engine expected_rng = rng_get_engine(); // NOLINT(cata-determinism)
     const bool expected_aim_dirty = you.aim_cache_dirty;
     rng_get_engine() = rng_before;
     you.aim_cache_dirty = true;
@@ -741,7 +760,7 @@ TEST_CASE( "visibility_grid_tracks_fields_across_submap_boundaries", "[vision][m
     const tripoint_bub_ms old_pos = you.pos_bub( here );
     const time_point old_time = calendar::turn;
     on_out_of_scope restore_player( [&]() {
-        you.remove_effect( efftype_id( "blind" ) );
+        you.remove_effect( effect_blind );
         you.last_target_pos.reset();
         you.recoil = MAX_RECOIL;
         you.aim_cache_dirty = true;
@@ -757,14 +776,14 @@ TEST_CASE( "visibility_grid_tracks_fields_across_submap_boundaries", "[vision][m
     const bool aiming = GENERATE( false, true );
     CAPTURE( blind, aiming );
     if( blind ) {
-        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.add_effect( effect_blind, 1_turns );
         you.recalc_sight_limits();
     }
     if( aiming ) {
         you.last_target_pos = here.get_abs( tripoint_bub_ms( 72, 60, 0 ) );
         you.recoil = 0;
     }
-    const field_type_id clairvoyant = field_type_str_id( "fd_clairvoyant" );
+    const field_type_id clairvoyant = field_fd_clairvoyant;
     const auto refresh = [&]() {
         you.aim_cache_dirty = true;
         here.build_map_cache( 0 );
@@ -854,7 +873,7 @@ TEST_CASE( "visibility_cache_reuse_preserves_invalidation", "[vision][map][cache
     const tripoint_bub_ms original_position = you.pos_bub( here );
     const time_point original_time = calendar::turn;
     on_out_of_scope restore_player( [&]() {
-        you.remove_effect( efftype_id( "blind" ) );
+        you.remove_effect( effect_blind );
         you.setpos( here, original_position );
         set_time( original_time );
     } );
@@ -869,12 +888,12 @@ TEST_CASE( "visibility_cache_reuse_preserves_invalidation", "[vision][map][cache
     REQUIRE( initial != lit_level::BLANK );
 
     SECTION( "explicit invalidation refreshes previously queried levels" ) {
-        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.add_effect( effect_blind, 1_turns );
         you.recalc_sight_limits();
         here.invalidate_visibility_cache();
     }
     SECTION( "perception changes without an explicit map invalidation" ) {
-        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.add_effect( effect_blind, 1_turns );
         you.recalc_sight_limits();
     }
     SECTION( "observer movement invalidates previously queried levels" ) {
@@ -898,8 +917,8 @@ TEST_CASE( "same_level_visibility_refreshes_after_perception_changes", "[vision]
     map &here = get_map();
     const tripoint_bub_ms original_position = you.pos_bub( here );
     const time_point original_time = calendar::turn;
-    const efftype_id perception_effect = GENERATE( efftype_id( "blind" ), efftype_id( "boomered" ),
-                                         efftype_id( "narcosis" ) );
+    const efftype_id perception_effect = GENERATE( effect_blind, effect_boomered,
+                                         effect_narcosis );
     on_out_of_scope restore_player( [&]() {
         you.remove_effect( perception_effect );
         you.recalc_sight_limits();
@@ -922,7 +941,7 @@ TEST_CASE( "same_level_visibility_refreshes_after_perception_changes", "[vision]
     here.update_visibility_cache( 0 );
     CHECK( target_visibility() == lit_level::BLANK );
     CHECK( here.get_visibility_variables_cache().u_is_boomered ==
-           you.has_effect( efftype_id( "boomered" ) ) );
+           you.has_effect( effect_boomered ) );
 
     // Recovery before a map-cache rebuild must also refresh the same level.
     you.remove_effect( perception_effect );
@@ -1555,7 +1574,7 @@ TEST_CASE( "vision_blindfold_reciprocity", "[vision][reciprocity]" )
         t.set_up_tiles;
     t.test_all();
 
-    REQUIRE( !get_avatar().sees( here,  *zombie ) );
+    REQUIRE( !get_avatar().sees( here, *zombie ) );
     // don't "optimize" lightcasting with player sight range
     REQUIRE( zombie->sees( here, get_avatar() ) );
 }

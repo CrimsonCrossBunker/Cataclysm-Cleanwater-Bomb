@@ -1036,9 +1036,8 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
                     here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_SHORT, pos ) ) &&
                  // These are bashable, but don't interact with vehicles.
                  !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NOCOLLIDE, pos ) &&
-                 // Do not collide with track tiles if we can use rails
-                 !( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_RAIL, pos ) &&
-                    this->can_use_rails( here ) ) ) ) {
+                 !( here.has_flag_ter( ter_furn_flag::TFLAG_RAIL, pos ) &&
+                    !here.is_bashable_furn( pos ) ) ) ) {
         // Movecost 2 indicates flat terrain like a floor, no collision there.
         ret.type = veh_coll_bashable;
         terrain_collision_data( here, pos, bash_floor, mass2, part_dens, e );
@@ -1917,7 +1916,7 @@ void vehicle::precalculate_vehicle_turning( map &here, units::angle new_turn_dir
     turning_wheels_that_are_one_axis = 0;
 
     for( int part_index : wheelcache ) {
-        const auto &wheel = parts[ part_index ];
+        const vehicle_part &wheel = parts[ part_index ];
         bool rails_ahead = true;
         tripoint_rel_ms wheel_point;
         coord_translate( mdir.dir(), this->pivot_point( here ), wheel.mount,

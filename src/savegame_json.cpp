@@ -926,6 +926,15 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
     } else {
         data.read( "martial_arts_data", martial_arts_data );
     }
+    if( data.has_member( "technique_cooldowns" ) ) {
+        std::map<matec_id, time_point> legacy_cooldowns;
+        data.read( "technique_cooldowns", legacy_cooldowns );
+        for( const auto &entry : legacy_cooldowns ) {
+            if( entry.first.is_valid() && entry.second > calendar::turn ) {
+                martial_arts_data->start_technique_cooldown( entry.first, entry.second - calendar::turn );
+            }
+        }
+    }
 
     JsonObject vits = data.get_object( "vitamin_levels" );
     vits.allow_omitted_members();
@@ -1366,7 +1375,7 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
     data.read( "items_identified", items_identified );
     data.read( "in_vehicle", in_vehicle );
     data.read( "last_sleep_check", last_sleep_check );
-    if( data.read( "id", tmpid ) && tmpid.is_valid() ) {
+    if( data.read( "id", tmpid ) && tmpid.is_valid() && tmpid != getID() ) {
         // Templates have invalid ids, so we only assign here when valid.
         // When the game starts, a new valid id will be assigned if not already
         // present.
@@ -5485,7 +5494,7 @@ void Creature::load( const JsonObject &jsin )
     // potentially migrate some values
     for( std::pair<std::string, std::string> migration : get_globals().migrations ) {
         if( values.count( migration.first ) != 0 ) {
-            auto extracted = values.extract( migration.first );
+            global_variables::impl_t::node_type extracted = values.extract( migration.first );
             extracted.key() = migration.second;
             values.insert( std::move( extracted ) );
         }

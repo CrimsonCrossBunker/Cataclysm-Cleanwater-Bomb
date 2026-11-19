@@ -775,4 +775,3 @@ void show( Character &who, item_location gun, bool resume )
 }
 
 } // namespace gunmod_ui
-
