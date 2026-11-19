@@ -19,3 +19,5 @@ require("poise_spells")
 require("insight")
 
 require("technique_predicates")
+
+require("technique_actions")

@@ -10,11 +10,6 @@
     "effect": [ { "u_lose_effect": "mabuff:buff_perk_tempo" } ]
   },
   {
-    "id": "EOC_CLEAR_MOMENTUM",
-    "type": "effect_on_condition",
-    "effect": [ { "u_lose_effect": [ "mabuff:buff_perk_momentum", "perk_dex_bonus" ] } ]
-  },
-  {
     "id": "EOC_CLEAR_MOMENTUM_DUELIST",
     "type": "effect_on_condition",
     "condition": {

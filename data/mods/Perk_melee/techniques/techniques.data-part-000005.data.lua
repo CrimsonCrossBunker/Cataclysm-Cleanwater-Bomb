@@ -1,28 +1,32 @@
 local ccb = require("ccb")
 
 ccb.content.define_technique {
-    id = "tec_perk_coiling_strike",
-    name = ccb.content.text("Coiling strike"),
-    weapon_categories = { "QUARTERSTAVES", "SPEARS", "POLEARMS" },
-    required_buffs_any = { "buff_perk_momentum" },
-    melee_allowed = true,
-    reach_tec = true,
-    required_char_flags_all = { "MELEE_PERK_COILING_STRIKE" },
-    flat_bonuses = {
-        { stat = "damage", damage_type = "bash", scaling_stat = "per", scale = 0.5 },
-        { stat = "damage", damage_type = "cut", scaling_stat = "per", scale = 0.5 },
-        { stat = "damage", damage_type = "stab", scaling_stat = "per", scale = 0.5 },
-    },
-    mult_bonuses = {
-        { stat = "movecost", scale = 0.5 },
-        { stat = "damage", damage_type = "bash", scale = 0.25 },
-        { stat = "damage", damage_type = "cut", scale = 0.66 },
-        { stat = "damage", damage_type = "stab", scale = 0.66 },
-    },
+    id = "tec_perk_vulgar_opening",
+    name = ccb.content.text("Vulgar Opening"),
     messages = {
-        ccb.content.text("You quickly stab %s with a sideways thrust"),
-        ccb.content.text("<npcname> stabs %s with a quick thrust"),
+        ccb.content.text("You cleave into %s with a mighty strike"),
+        ccb.content.text("<npcname> cleaves into %s with a powerful blow"),
     },
-    description = ccb.content.text("A quick reach attack that scales heavily with perception."),
+    required_char_flags_all = { "MELEE_PERK_JUST_HIT_IT" },
+    melee_allowed = true,
+    crit_ok = true,
+    weapon_categories = {
+        "GREAT_AXES",
+        "GREAT_SWORDS",
+        "GREAT_HAMMERS",
+        "AXE",
+        "MEDIUM-SWORDS",
+        "LONG_SWORDS",
+        "MACES",
+        "AXES",
+        "FLAILS",
+    },
+    weighting = 100,
+    flat_bonuses = {
+        { stat = "arpen", damage_type = "bash", scaling_stat = "str", scale = 2.25 },
+        { stat = "arpen", damage_type = "cut", scaling_stat = "str", scale = 2.25 },
+        { stat = "arpen", damage_type = "stab", scaling_stat = "str", scale = 2.25 },
+    },
     attack_vectors = { "vector_null" },
+    when = "allow_tec_perk_vulgar_opening",
 }

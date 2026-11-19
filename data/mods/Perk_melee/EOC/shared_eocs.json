@@ -66,32 +66,6 @@
     "effect": [ { "run_eocs": [ "EOC_PERK_POISE_FOOTWORK" ] } ]
   },
   {
-    "id": "EOC_EXECUTION_EXTA_EFFECTS",
-    "type": "effect_on_condition",
-    "effect": [
-      { "math": [ "u_val('stamina') += 1200" ] },
-      {
-        "run_eocs": [
-          {
-            "id": "_EOC_EXECUTION_BRUTALITY",
-            "condition": { "u_has_flag": "MELEE_PERK_BRUTALITY" },
-            "effect": {
-              "u_run_monster_eocs": [
-                {
-                  "id": "brutality_stun",
-                  "condition": { "test_eoc": "EOC_CONDITION_has_mind" },
-                  "effect": [ { "u_add_effect": "stunned", "duration": "2 seconds" } ]
-                }
-              ],
-              "monster_range": 60,
-              "monster_must_see": true
-            }
-          }
-        ]
-      }
-    ]
-  },
-  {
     "id": "EOC_PERK_STEP_CLOSER",
     "type": "effect_on_condition",
     "effect": [
