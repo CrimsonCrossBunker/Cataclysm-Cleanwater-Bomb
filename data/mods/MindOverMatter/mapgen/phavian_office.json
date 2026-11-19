@@ -80,58 +80,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "office_cubical_phavian_roof",
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        " --------      -------- ",
-        " -......-      -......- ",
-        " -......--------......- ",
-        " -..U.................- ",
-        " -........oooo........- ",
-        " -........oooo....M...- ",
-        " -..Z.....oooo........- ",
-        " -........oooo........- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " -....................- ",
-        " --------------------5- ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "nested": {
-        "U": { "chunks": [ "roof_2x2_infrastructure" ] },
-        "M": { "chunks": [ "roof_2x2_infrastructure_1" ] },
-        "Z": { "chunks": [ "roof_2x2_infrastructure_2" ] }
-      },
-      "place_nested": [
-        {
-          "chunks": [
-            [ "null", 20 ],
-            [ "roof_2x2_utilities_b", 15 ],
-            [ "roof_2x2_utilities_c", 50 ],
-            [ "roof_2x2_utilities_d", 30 ],
-            [ "roof_2x2_utilities", 40 ]
-          ],
-          "x": [ 4, 17 ],
-          "y": [ 10, 19 ]
-        }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "office_cubical_phavian_basement" ],
     "object": {
       "fill_ter": "t_strconc_floor",

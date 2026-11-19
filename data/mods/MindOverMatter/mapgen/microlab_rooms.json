@@ -1,31 +1,6 @@
 [
   {
     "type": "mapgen",
-    "weight": 333,
-    "nested_mapgen_id": "microlab_distorted_chunk",
-    "//": "This is a Physics lab tile with guaranteed matrix crystal",
-    "object": {
-      "mapgensize": [ 12, 12 ],
-      "rows": [
-        "| .....  ||.",
-        "|.....   ...",
-        "  |.C...C...",
-        "   ....,.C..",
-        "   ..| ..C. ",
-        "   Cc....|  ",
-        "  .CC.. .  |",
-        "  |  ,  .C..",
-        ".  ,,    ..|",
-        "..   ..   . ",
-        ",.  .. CC   ",
-        "|           "
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
-      "palettes": [ "microlab_matrix_chunk" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "microlab_generic_special_tile",
     "//": "Project PHAVIAN / COLD BELOW research",
     "weight": 750,
