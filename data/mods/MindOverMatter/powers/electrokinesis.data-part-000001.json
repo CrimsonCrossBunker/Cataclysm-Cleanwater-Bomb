@@ -1,0 +1,238 @@
+[
+  {
+    "id": "electrokinetic_lightning_aura",
+    "type": "SPELL",
+    "name": "[Ψ]Galvanic Aura (C)",
+    "description": "Charge the air around you with power, unleashing blasts at anyone nearby.  This power does not discriminate between friend and foe.  It will also protect you from electricity while active.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>",
+    "message": "The air around you hums with power.",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "ELECTROKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 8,
+    "max_level": { "math": [ "mom_electrokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_ELECTROKIN_LIGHTNING_AURA_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('electrokinetic_lightning_aura') * 1500) + 6000) * psionic_power_modifiers()" ] },
+    "max_duration": { "math": [ "( (u_spell_level('electrokinetic_lightning_aura') * 2500) + 25000) * psionic_power_modifiers()" ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_electrokinetic_lightning_aura') > -1 ? 0 : max((9000 - (u_spell_level('electrokinetic_lightning_aura') * 200)), 4500)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_electrokinetic_lightning_aura') > -1 ? 10 : max((150 -(u_spell_level('electrokinetic_lightning_aura') * 8.5)), 55)"
+      ]
+    }
+  },
+  {
+    "id": "electrokinetic_lightning_aura_spark",
+    "type": "SPELL",
+    "name": { "str": "[Ψ]Galvanic Aura Sparks", "//~": "NO_I18N" },
+    "description": { "str": "Galvanic Aura attacks.  It's a bug if you have it.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "hostile", "ally" ],
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "LOUD", "NO_EXPLOSION_SFX", "NO_HANDS", "NO_LEGS" ],
+    "effect": "emit",
+    "effect_str": "emit_shock_cloud_big",
+    "shape": "blast",
+    "damage_type": "electric",
+    "max_level": { "math": [ "mom_electrokinesis_max_power_formula()" ] }
+  },
+  {
+    "id": "electrokinetic_lightning_aura_attack_placeholder",
+    "//": "Currently galvanic aura successfully calls this spell to attack enemies.  However, it does not 'draw a line' towards the enemy, merely spawning on top of them.  Still not fully functional.",
+    "type": "SPELL",
+    "name": { "str": "[Ψ]Galvanic Aura Bolt", "//~": "NO_I18N" },
+    "description": { "str": "Galvanic Aura attacks.  It's a bug if you have it.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "hostile", "ally" ],
+    "skill": "metaphysics",
+    "flags": [ "SILENT", "NO_PROJECTILE", "RANDOM_DAMAGE", "RANDOM_CRITTER", "NO_EXPLOSION_SFX" ],
+    "effect": "attack",
+    "shape": "line",
+    "damage_type": "electric",
+    "max_level": { "math": [ "mom_electrokinesis_max_power_formula()" ] },
+    "min_damage": {
+      "math": [ "( (u_spell_level('electrokinetic_lightning_aura') * 1) + 5) * (scaling_factor(u_val('intelligence') ) )" ]
+    },
+    "max_damage": {
+      "math": [ "( (u_spell_level('electrokinetic_lightning_bolt') * 1.5) + 20) * (scaling_factor(u_val('intelligence') ) )" ]
+    },
+    "min_range": {
+      "math": [
+        "min( ( (u_spell_level('electrokinetic_lightning_aura') * 0.33) + 2) * (scaling_factor(u_val('intelligence') ) ), 10)"
+      ]
+    },
+    "max_range": 10,
+    "field_id": "fd_electricity",
+    "min_field_intensity": 1,
+    "max_field_intensity": 4,
+    "field_chance": 1
+  },
+  {
+    "id": "electrokinetic_lightning_blast",
+    "type": "SPELL",
+    "name": "[Ψ]Ion Blast",
+    "description": "Launch a blast of lightning at a nearby target, causing a secondary explosion at the location.",
+    "message": "You unleash an explosive blast of lightning.",
+    "teachable": false,
+    "valid_targets": [ "hostile", "ground", "ally" ],
+    "spell_class": "ELECTROKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "LOUD", "RANDOM_DAMAGE", "NO_HANDS", "NO_LEGS" ],
+    "difficulty": 9,
+    "max_level": { "math": [ "mom_electrokinesis_max_power_formula()" ] },
+    "effect": "attack",
+    "extra_effects": [ { "id": "electrokinetic_lightning_blast_trail", "hit_self": false } ],
+    "shape": "blast",
+    "damage_type": "electric",
+    "min_damage": { "math": [ "( (u_spell_level('electrokinetic_lightning_blast') * 2) + 25) * psionic_power_modifiers()" ] },
+    "max_damage": { "math": [ "( (u_spell_level('electrokinetic_lightning_blast') * 4.5) + 90) * psionic_power_modifiers()" ] },
+    "min_range": { "math": [ "min( (( (u_spell_level('electrokinetic_lightning_blast') * 0.7) + 2) * psionic_power_modifiers()), 50)" ] },
+    "max_range": 50,
+    "min_aoe": {
+      "math": [ "min( (( (u_spell_level('electrokinetic_lightning_blast') * 0.25) + 1) * psionic_power_modifiers()), 15)" ]
+    },
+    "field_id": "fd_electricity",
+    "min_field_intensity": 3,
+    "max_field_intensity": 7,
+    "field_chance": 1,
+    "base_energy_cost": 8500,
+    "final_energy_cost": 4000,
+    "energy_increment": -100,
+    "base_casting_time": 150,
+    "final_casting_time": 65,
+    "casting_time_increment": -6,
+    "sound_type": "combat",
+    "sound_description": "zzzzaaaaaapp!",
+    "ignored_monster_species": [ "PSI_NULL" ]
+  },
+  {
+    "id": "electrokinetic_lightning_blast_trail",
+    "type": "SPELL",
+    "name": { "str": "[Ψ]Ion Blast Trail", "//~": "NO_I18N" },
+    "description": {
+      "str": "This causes the lightning bolt at the target location.  It's a bug if you have it directly.",
+      "//~": "NO_I18N"
+    },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "hostile", "ground", "ally" ],
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "LOUD", "RANDOM_DAMAGE", "NO_HANDS", "NO_LEGS" ],
+    "effect": "attack",
+    "shape": "line",
+    "damage_type": "electric",
+    "min_damage": { "math": [ "( (u_spell_level('electrokinetic_lightning_blast') * 0.5) + 5) * psionic_power_modifiers()" ] },
+    "max_damage": { "math": [ "( (u_spell_level('electrokinetic_lightning_blast') * 1.5) + 25) * psionic_power_modifiers()" ] },
+    "min_range": { "math": [ "min( (( (u_spell_level('electrokinetic_lightning_blast') * 0.3) + 2) * psionic_power_modifiers()), 50)" ] },
+    "max_range": 50,
+    "min_aoe": { "math": [ "min( (( (u_spell_level('electrokinetic_lightning_blast') * 0.06) + 0) * psionic_power_modifiers()), 1)" ] },
+    "field_id": "fd_electricity",
+    "min_field_intensity": 3,
+    "max_field_intensity": 7,
+    "field_chance": 1
+  },
+  {
+    "id": "electrokinetic_revive",
+    "type": "SPELL",
+    "name": "[Ψ]Revivification",
+    "description": "Manipulate the nervous system of a corpse, causing it to rise and protect you.  This protection will only last a short time.",
+    "message": "You charge a nearby corpse with lightning.",
+    "teachable": false,
+    "valid_targets": [ "hostile", "ground", "ally" ],
+    "spell_class": "ELECTROKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "NO_HANDS", "NO_LEGS" ],
+    "difficulty": 10,
+    "max_level": { "math": [ "mom_electrokinesis_max_power_formula()" ] },
+    "effect": "revive",
+    "effect_str": "ZOMBIE",
+    "extra_effects": [
+      { "id": "electrokinetic_revive_charm", "hit_self": false },
+      { "id": "electrokinetic_revive_heal", "hit_self": false },
+      { "id": "electrokinetic_revive_debuff", "hit_self": false }
+    ],
+    "shape": "blast",
+    "min_range": { "math": [ "min( (( (u_spell_level('electrokinetic_revive') * 0.25) + 2) * psionic_power_modifiers()), 40)" ] },
+    "max_range": 50,
+    "base_energy_cost": 10000,
+    "final_energy_cost": 6000,
+    "energy_increment": -150,
+    "base_casting_time": 250,
+    "final_casting_time": 125,
+    "casting_time_increment": -6,
+    "ignored_monster_species": [ "PSI_NULL", "ZOMBIE" ]
+  },
+  {
+    "id": "electrokinetic_revive_charm",
+    "type": "SPELL",
+    "name": { "str": "[Ψ]Revive Charm", "//~": "NO_I18N" },
+    "description": { "str": "This turns the revived monster to your side.  It's a bug if you have it.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "hostile", "ground" ],
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_LEGS", "NO_HANDS", "NO_EXPLOSION_SFX" ],
+    "effect": "charm_monster",
+    "shape": "blast",
+    "min_damage": 1500,
+    "max_damage": 1500,
+    "min_range": { "math": [ "min( (( (u_spell_level('electrokinetic_revive') * 0.25) + 2) * psionic_power_modifiers()), 40)" ] },
+    "min_duration": 360000,
+    "max_duration": 360000,
+    "//": "Long duration doesn't matter since the below spells will ensure the target dies",
+    "targeted_monster_species": [ "ZOMBIE" ]
+  },
+  {
+    "id": "electrokinetic_revive_heal",
+    "type": "SPELL",
+    "name": { "str": "[Ψ]Revive Heal", "//~": "NO_I18N" },
+    "description": {
+      "str": "This heals the revivified target so it doesn't die basically immediately after rising.  It's a bug if you have it.",
+      "//~": "NO_I18N"
+    },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ally" ],
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_LEGS", "NO_HANDS", "PERCENTAGE_DAMAGE", "NO_EXPLOSION_SFX" ],
+    "effect": "attack",
+    "shape": "blast",
+    "min_damage": -50,
+    "max_damage": -80,
+    "min_range": { "math": [ "min( (( (u_spell_level('electrokinetic_revive') * 0.25) + 2) * psionic_power_modifiers()), 40)" ] },
+    "targeted_monster_species": [ "ZOMBIE" ]
+  },
+  {
+    "id": "electrokinetic_revive_debuff",
+    "type": "SPELL",
+    "name": { "str": "[Ψ]Revive Debuff", "//~": "NO_I18N" },
+    "description": {
+      "str": "This puts a debuff on the revived monster that will make sure it eventually dies.  It's a bug if you have it.",
+      "//~": "NO_I18N"
+    },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ally" ],
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_LEGS", "NO_HANDS", "NO_EXPLOSION_SFX" ],
+    "effect": "attack",
+    "effect_str": "effect_electrokin_revive_debuff",
+    "shape": "blast",
+    "min_duration": 360000,
+    "max_duration": 360000,
+    "min_range": { "math": [ "min( (( (u_spell_level('electrokinetic_revive') * 0.25) + 2) * psionic_power_modifiers()), 40)" ] },
+    "targeted_monster_species": [ "ZOMBIE" ]
+  }
+]
