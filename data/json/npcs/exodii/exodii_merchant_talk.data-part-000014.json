@@ -1,0 +1,30 @@
+[
+  {
+    "id": "TALK_EXODII_MERCHANT_Talk_IntroBenzete3",
+    "type": "talk_topic",
+    "dynamic_line": { "//~": "Sure, that word is fine, I think.", "str": "Sure an' that's a fine enough word, an I'm ken." },
+    "responses": [
+      {
+        "text": "You said this was an especially good jump?",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_completed_rubik_intro" } ] } },
+        "topic": "TALK_EXODII_MERCHANT_Talk_Intro3"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
+      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_EXODII_MERCHANT_Aliens",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "Yeah, you could say that.  We're from otherlands, most of the time.  Not otherworlds though.  Too risky bringing those monsters into our safe haven.",
+      "str": "Yeah, you could call us as it.  Us're from otherlands mostlike.  Not otherworlds though.  Too risky bringin' them squelchies into the fold."
+    },
+    "speaker_effect": { "effect": { "u_add_var": "knowledge_exodii_transdimensional_u_knows_exodiilore", "value": "yes" } },
+    "responses": [
+      { "text": "I don't know the difference between otherlands and otherworlds.", "topic": "TALK_EXODII_MERCHANT_Aliens2" },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
+    ]
+  }
+]

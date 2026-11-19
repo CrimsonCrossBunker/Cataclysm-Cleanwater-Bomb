@@ -1,0 +1,46 @@
+[
+  {
+    "id": "TALK_EXODII_MERCHANT_DoneTrade",
+    "type": "talk_topic",
+    "dynamic_line": [
+      "Good an' fine, then.",
+      "Have it as ye'll see.",
+      { "//~": "That was a good exchange.", "str": "For a card an' a wink, eh?" }
+    ],
+    "speaker_effect": {
+      "condition": { "and": [ { "math": [ "n_val('sold') >= 20" ] }, { "not": { "u_has_faction_trust": 21 } } ] },
+      "effect": [ { "math": [ "n_val('sold') -= 20" ] }, { "u_add_faction_trust": 1 } ]
+    },
+    "responses": [
+      {
+        "text": "How come that dude is selling medieval gear in addition to all those guns?",
+        "topic": "TALK_EXODII_MERCHANT_Stock_Medieval",
+        "condition": { "compare_string": [ "yes", { "u_val": "u_met_weaponmaster" } ] }
+      },
+      {
+        "text": "You seem to have a bunch of blueprints.  Can you tell me more about those?",
+        "topic": "TALK_EXODII_MERCHANT_Stock_Nomad"
+      },
+      { "text": "Have you anything more back there?", "topic": "TALK_EXODII_MERCHANT_AskedRestock" },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_EXODII_MERCHANT_Stock_Medieval",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "It's a bit of a surprise, isn't it?  Before we came here, we were in a place about 600 years earlier in time, or so.  We landed in the middle of a war that turned wrong when the dead started joining back in.  Truth be told, not a very unusual situation.  The Enemy makes us fight.  By and by, we came in, and by then the killing fields were ready for us to harvest their bronze.  It's not Avalonian steel, but it's a good strong metal for stopping a nibbling mouth, so we kept some of their armor and weapons to trade.",
+      "str": "That be a right welcher, eh?  Afore us'n were to this land, the preface were on a half-score century by the reckonin'.  Landed us in amidst of a war'd turned wrong, for an' as the dead had come back in.  By the butcher's block, not much an unusual case, really.  The Enemy makes us fight.  By an' by, we came in, an' by then the killin' fields were plump and ready to harvest the bronze.  'Tain't no steel-of-the-lake, but 'tis a good dross metal for holdin' off a nibblin' mouth, so we kept a few o' their vestments an' stickers for to trade."
+    },
+    "speaker_effect": { "effect": { "u_add_var": "u_talk_exodii_about_medieval_stock", "value": "yes" } },
+    "responses": [
+      {
+        "text": "You seem to have a bunch of blueprints.  Can you tell me more about those?",
+        "topic": "TALK_EXODII_MERCHANT_Stock_Nomad"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
+    ]
+  }
+]

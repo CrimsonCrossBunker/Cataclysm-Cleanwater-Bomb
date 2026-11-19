@@ -1,0 +1,17 @@
+[
+  {
+    "id": "TALK_EXODII_MERCHANT_Talk_Intro2",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "Lovely!  Benzete (this is a name) is going to be beside themselves, that's for sure.  I mean, they'll be really happy.  This is their first jump, and it's a lucky one.",
+      "str": "Lovely!  Benzete's gonna be a pair, that's a track!  I mean, they'll be right happy.  This is their first jump, and it's a flappin' duck."
+    },
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_midpoint_rubik_intro", "value": "yes" } },
+    "responses": [
+      { "text": "What makes it such a good jump?", "topic": "TALK_EXODII_MERCHANT_Talk_Intro3" },
+      { "text": "Who is Benzete?", "topic": "TALK_EXODII_MERCHANT_Talk_IntroBenzete1" },
+      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
+      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
+    ]
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "TALK_EXODII_MERCHANT_Purpose",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "Making do, making do, same as you I'd imagine.  Our last home got too dead and putrid around the edges, basically.  It happens to the best of them.  We caught some news that brought us along to your place here, fired up the engines, and boom!  Now, quick as can be, here we are.  We got a good timing this time, seems to me you'd only been dead a few days when we got here.  Freshest corpse I've seen in a while.",
+      "str": "Makin' do, makin' do, same as you, an I'm ken.  Last home got a bit too dead 'n putrid roun' the edges, like.  Happens to the best of 'em.  Caught a jibber that made us ken 'bout your place here, fired up the ol' wibble-wammles and boom!  Now it's all tick-tock on a zimmer, here we be.  Got a good timing this time, I razz you only been dead a few days when we wobbled in.  Freshest corpse this'n's seen in a kitchen sink."
+    },
+    "responses": [
+      { "text": "…what?", "topic": "TALK_EXODII_MERCHANT_Purpose_Dialect" },
+      {
+        "text": "[INT or PER 9] Where did you come from then?  Are you aliens or something?",
+        "condition": { "or": [ { "u_has_intelligence": 9 }, { "u_has_perception": 9 } ] },
+        "topic": "TALK_EXODII_MERCHANT_Aliens"
+      },
+      { "text": "Is there anything else you want from this place?", "topic": "TALK_EXODII_MERCHANT_Purpose2" },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_EXODII_MERCHANT_Purpose_Dialect",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "We're just here to survive, you understand?  Our last world got too overrun with undead.  So, we came to a new world.  This one.  If I'm not mistaken, it's not so long dead around here just yet.",
+      "str": "Us're here to live and breathe, kennit?  After our last otherland got a li'l too dead an' all.  So, us'n came to a new place.  This'n.  An I'm ken, it's not so long dead round here jus' yet."
+    },
+    "responses": [
+      {
+        "text": "[INT or PER 7] Otherland?  Are you aliens or something?",
+        "condition": { "or": [ { "u_has_intelligence": 7 }, { "u_has_perception": 7 } ] },
+        "topic": "TALK_EXODII_MERCHANT_Aliens"
+      },
+      { "text": "Is there anything else you want from this place?", "topic": "TALK_EXODII_MERCHANT_Purpose2" },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_EXODII_MERCHANT_Purpose2",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "Aside from just having a safe place to live?  We're here to mine, you understand.  Picking the scraps, seeing if this world has any tech worth reverse engineering.  No sense letting good scraps go to waste.  If we're lucky, maybe we'll get some new Exodii before we teleport out.  Pickin' up the pieces of our sweet, shattered dreams, such as they are.",
+      "str": "Aside from jus' livin' in such a cozy nook?  Us be minin', ye kennit.  Pickin' the scraps, seein' if for your otherland has any tech worth an upside-down.  No sense lettin' good scraps go to waste.  If we're lucky, pickin' a few new Exodii afore we wobble out.  Pickin' up the pieces of our sweet, shattered dreams, suchlike."
+    },
+    "speaker_effect": { "effect": { "u_add_var": "u_know_exodii_purpose2", "value": "yes" } },
+    "responses": [
+      {
+        "text": "What do you mean 'go to waste'?  The zombies aren't using the scrap, and there's plenty to go around.",
+        "topic": "TALK_EXODII_MERCHANT_Purpose3"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_EXODII_MERCHANT_Purpose3",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "This is a deadland, don't you see?  You've already got an infestation and it's not going away.  There's no cure for the zombies.",
+      "str": "This'n be a deadland, an I'm ken.  You gots you a case o' the willies ain't gonna sing along.  No cure for these rats and fleas."
+    },
+    "responses": [
+      { "text": "What the hell does that mean?", "topic": "TALK_EXODII_MERCHANT_Purpose4" },
+      {
+        "text": "[INT 8] Are you saying you think we're doomed?  Why would you have come here if there wasn't some way to survive?",
+        "condition": { "u_has_intelligence": 8 },
+        "topic": "TALK_EXODII_MERCHANT_Survival"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
+    ]
+  }
+]

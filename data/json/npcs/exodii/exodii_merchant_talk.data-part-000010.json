@@ -1,0 +1,20 @@
+[
+  {
+    "id": "TALK_EXODII_MERCHANT_Talk_Intro3",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "We've got to leave the old world before it gets too worn out, you see, and find a nice fresh one on the other side.  Your deadland is as fresh as it gets.",
+      "str": "Us gotta leave the old world afore it's worn right to the gums, an y'ken, and find a nice twitchy one on t'other side.  Your deadland be a brand shiny"
+    },
+    "responses": [
+      { "text": "I'm not following that at all.", "topic": "TALK_EXODII_MERCHANT_Talk_Intro3a" },
+      {
+        "text": "[INT 9] So you mean, we have a nice, freshly dead world for you to visit?",
+        "condition": { "u_has_intelligence": 9 },
+        "topic": "TALK_EXODII_MERCHANT_Talk_Intro4b"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
+      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
+    ]
+  }
+]
