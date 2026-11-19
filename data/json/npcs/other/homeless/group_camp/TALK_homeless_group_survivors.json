@@ -63,23 +63,5 @@
       },
       { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_NPC_HOMELESS_GROUP_SURVIVOR_FRIENDS",
-    "dynamic_line": "Oh, they're right over there, and one of us is in that tent over there.  They handle any stuff we manage to scavenge, so feel free to trade for what you want.",
-    "responses": [ { "text": "Alright.", "topic": "TALK_NONE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_NPC_HOMELESS_GROUP_SURVIVOR_NOTRADE",
-    "dynamic_line": "Thanks for the offer, but I don't have anything to spare right now.  One of my buddies over in that tent handles stuff like this, though.  You might find something.",
-    "responses": [ { "text": "Alright.", "topic": "TALK_NONE" } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_NPC_HOMELESS_GROUP_SURVIVOR_BROKER",
-    "dynamic_line": "Well, they were the brightest of us when all hell broke loose.  They managed to get us some food and weapons early on.  I guess that just kinda made them the leader.",
-    "responses": [ { "text": "Hmm.", "topic": "TALK_NONE" } ]
   }
 ]
