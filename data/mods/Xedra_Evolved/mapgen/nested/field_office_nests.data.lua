@@ -1433,3 +1433,249 @@ ccb.content.define_mapgen {
         flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_small1_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "FFF.d",
+            "....d",
+            "....c",
+            "ddx.c",
+            ".....",
+        },
+        palettes = { "field_office_palette" },
+        rotation = { 0, 0 },
+        vehicle_placements = { { id = "swivel_chair", x = 2, y = 2, rotation = 90, chance = 75 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_small2_ul",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "xddhc",
+            "x...c",
+            "xFF.c",
+            "---+-",
+            ".....",
+        },
+        palettes = { "field_office_palette" },
+        rotation = { 0, 0 },
+        vehicle_placements = { { id = "swivel_chair", x = 2, y = 1, rotation = 90, chance = 75 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_6x6_glass_ur",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "Vdd..F",
+            "Vx...F",
+            "Vcc...",
+            "|-HGH-",
+            "......",
+            "......",
+        },
+        palettes = { "field_office_palette" },
+        rotation = { 0, 0 },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 4 },
+                y = { 0, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_6x6_office_ur",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "d.FF.c",
+            "d...hc",
+            "ch...d",
+            "cx..xd",
+            "......",
+            "......",
+        },
+        palettes = { "field_office_palette" },
+        rotation = { 0, 0 },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 1, 4 },
+                y = { 1, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_5x5_register_ur",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "..FFF",
+            "c....",
+            "c....",
+            "cxddd",
+            ".....",
+        },
+        palettes = { "field_office_palette" },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 1, 4 },
+                y = { 1, 1 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_5x5_office_ur",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "d..xc",
+            "d...c",
+            "c...d",
+            "cx..d",
+            ".....",
+        },
+        palettes = { "field_office_palette" },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 1, 3 },
+                y = { 1, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_armory_cafe_dr",
+    layout = {
+        size = { width = 16, height = 16 },
+        rows = {
+            "..............V*",
+            ".............^V*",
+            "....^..^a.....V*",
+            "----|++|HHGGHH|*",
+            "CoSe|..|^....^V*",
+            "Ciii|..|......V*",
+            ".......|..ddxcV*",
+            ".......|.....cV*",
+            "bb...bb|......V*",
+            "tt...tt|-=----|*",
+            "tt...tt|......|*",
+            "bb.a.bb|QQQQQQ|*",
+            "-HHHHH-|------|*",
+            "****************",
+            "****************",
+            "****************",
+        },
+        palettes = { "field_office_palette" },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 9, 12 },
+                y = { 7, 8 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_5x5_register_ol",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            ".....",
+            "ddddx",
+            "....c",
+            "....c",
+            "FFF..",
+        },
+        palettes = { "field_office_palette" },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 0, 3 },
+                y = { 2, 3 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "xed_8x8_boss_al",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "**|HHH-|",
+            "**V...c|",
+            "**V...c|",
+            "**G.ddx|",
+            "**G..h.+",
+            "**V.h..|",
+            "**VFFFF|",
+            "**|----|",
+        },
+        palettes = { "field_office_palette" },
+        rotation = { 0, 0 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        vehicle_placements = {
+            {
+                id = "swivel_chair",
+                x = { 3, 5 },
+                y = { 1, 2 },
+                rotation = 90,
+                chance = 75,
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
