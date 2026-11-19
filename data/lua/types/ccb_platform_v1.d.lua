@@ -7303,10 +7303,32 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field id string Item ID spawned on the glyph.
 ---@field chance? integer Native placement chance.
 
----@class StaticMapgenNestedPlacement
+---@alias StaticMapgenRange integer|[integer]|[integer, integer]
+
+---@class StaticMapgenNestedChoice
 ---@field id string Nested mapgen ID.
----@field x integer X offset in map squares.
----@field y integer Y offset in map squares.
+---@field weight number Native selection weight.
+
+---@class StaticMapgenTerrainMatcher
+---@field terrain string Overmap terrain selector.
+---@field match? 'exact'|'type'|'subtype'|'prefix'|'contains' Defaults to contains.
+
+---@class StaticMapgenNestedOptions
+---@field id? string Single nested mapgen ID.
+---@field choices? (string|StaticMapgenNestedChoice)[] Ordered alternatives. Supply either id or choices if a successful condition should place a layout.
+---@field otherwise? (string|StaticMapgenNestedChoice)[] Alternatives when the conditions fail.
+---@field repetitions? StaticMapgenRange Number of placements.
+---@field neighbors? table<string, string|(string|StaticMapgenTerrainMatcher)[]> Terrain selectors by direction.
+---@field joins? table<string, string|string[]> Required native joins by direction.
+---@field required_flags? table<string, string|string[]> Every listed direction must match one of its flags.
+---@field any_flags? table<string, string|string[]> One flag from any listed direction must match.
+---@field predecessors? (string|StaticMapgenTerrainMatcher)[] Alternatives among previous terrain IDs.
+---@field levels? integer[] Allowed overmap z-levels.
+
+---@class StaticMapgenNestedPlacement: StaticMapgenNestedOptions
+---@field x StaticMapgenRange X offset in map squares.
+---@field y StaticMapgenRange Y offset in map squares.
+---@field z? StaticMapgenRange Z offset.
 
 ---@class StaticMapgenGlyphChoice
 ---@field id string Terrain, furniture, or trap ID for the glyph.
@@ -7319,6 +7341,10 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field rows? string[] Terrain layout rows in map order.
 ---@field size? {width: integer, height: integer} Native dimensions for a nested layout.
 ---@field erase_before_terrain? boolean Use native erase-before-terrain placement.
+---@field flags? string[] Native mapgen placement flags.
+---@field rotation? StaticMapgenRange Native quarter-turn rotations.
+---@field predecessor_mapgen? string Fixed underlay terrain's mapgen ID.
+---@field fallback_predecessor_mapgen? string Underlay terrain ID when the predecessor list is empty.
 ---@field palettes? string[] Native map palette IDs.
 ---@field terrain? table<string, StaticMapgenGlyph> Glyph to terrain ID or native choices.
 ---@field furniture? table<string, StaticMapgenGlyph> Glyph to furniture ID or native choices.
@@ -7327,10 +7353,11 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field item_spawns? table<string, StaticMapgenItemSpawn> Glyph to single-item placement.
 ---@field toilets? string[] Glyphs where native default toilets are placed.
 ---@field nested? StaticMapgenNestedPlacement[] Nested layouts in placement order.
+---@field nested_glyphs? table<string, StaticMapgenNestedOptions|StaticMapgenNestedOptions[]> Ordered nested placements keyed by map glyph.
 
 ---@class StaticMapgenDefinitionOptions
 ---@field kind 'overmap'|'nested'|'update' Selects the native mapgen registry.
----@field id string Overmap terrain ID, nested ID, or update ID.
+---@field id string|string[]|string[][] Single ID, or for overmap mapgen a shared-generator list or a grid in row-major order.
 ---@field layout StaticOvermapMapgenLayout
 ---@field weight? integer Native selection weight for overmap and nested variants.
 

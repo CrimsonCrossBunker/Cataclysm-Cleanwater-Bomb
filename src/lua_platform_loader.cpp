@@ -672,6 +672,140 @@ void write_static_mapgen_items( JsonOut &json, const sol::table &items,
     json.end_object();
 }
 
+void write_mapgen_range( JsonOut &json, const char *field, const sol::object &value )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return;
+    }
+    if( value.get_type() != sol::type::table ) {
+        json.member( field, value.as<int>() );
+        return;
+    }
+    const sol::table range = value.as<sol::table>();
+    const std::size_t count = range.size();
+    if( count < 1 || count > 2 ) {
+        throw std::invalid_argument( std::string( field ) + " requires one or two integers" );
+    }
+    json.member( field );
+    json.start_array();
+    for( std::size_t i = 1; i <= count; ++i ) {
+        json.write( range.raw_get<int>( i ) );
+    }
+    json.end_array();
+}
+
+void write_mapgen_nested_choices( JsonOut &json, const char *field, const sol::table &choices )
+{
+    json.member( field );
+    json.start_array();
+    const std::size_t count = choices.size();
+    for( std::size_t i = 1; i <= count; ++i ) {
+        const sol::object value = choices.raw_get<sol::object>( i );
+        if( value.get_type() == sol::type::string ) {
+            json.write( value.as<std::string>() );
+        } else {
+            const sol::table choice = value.as<sol::table>();
+            json.start_array();
+            json.write( choice.get<std::string>( "id" ) );
+            json.write( choice.get<double>( "weight" ) );
+            json.end_array();
+        }
+    }
+    json.end_array();
+}
+
+void write_mapgen_terrain_matchers( JsonOut &json, const sol::table &matches )
+{
+    json.start_array();
+    const std::size_t count = matches.size();
+    for( std::size_t i = 1; i <= count; ++i ) {
+        const sol::object value = matches.raw_get<sol::object>( i );
+        if( value.get_type() == sol::type::string ) {
+            json.write( value.as<std::string>() );
+        } else {
+            const sol::table matcher = value.as<sol::table>();
+            json.start_object();
+            json.member( "om_terrain", matcher.get<std::string>( "terrain" ) );
+            if( const auto mode = matcher.get<sol::optional<std::string>>( "match" ) ) {
+                json.member( "om_terrain_match_type", *mode );
+            }
+            json.end_object();
+        }
+    }
+    json.end_array();
+}
+
+void write_mapgen_nested_placement( JsonOut &json, const sol::table &placement )
+{
+    json.start_object();
+    const auto id = placement.get<sol::optional<std::string>>( "id" );
+    const auto choices = placement.get<sol::optional<sol::table>>( "choices" );
+    if( id && choices ) {
+        throw std::invalid_argument( "nested placement can take an id or a choice list" );
+    }
+    if( id ) {
+        json.member( "chunks", std::array<std::string, 1>{ *id } );
+    } else if( choices ) {
+        write_mapgen_nested_choices( json, "chunks", *choices );
+    }
+    if( const auto fallback = placement.get<sol::optional<sol::table>>( "otherwise" ) ) {
+        write_mapgen_nested_choices( json, "else_chunks", *fallback );
+    }
+    for( const auto &[field, native] : {
+             std::pair{ "x", "x" }, std::pair{ "y", "y" }, std::pair{ "z", "z" },
+             std::pair{ "repetitions", "repeat" }
+         } ) {
+        write_mapgen_range( json, native, placement.raw_get<sol::object>( field ) );
+    }
+    if( const auto neighbors = placement.get<sol::optional<sol::table>>( "neighbors" ) ) {
+        json.member( "neighbors" );
+        json.start_object();
+        for( const auto &[direction, matches] : *neighbors ) {
+            const std::string key = direction.as<std::string>();
+            if( matches.get_type() == sol::type::string ) {
+                json.member( key, matches.as<std::string>() );
+            } else {
+                json.member( key );
+                write_mapgen_terrain_matchers( json, matches.as<sol::table>() );
+            }
+        }
+        json.end_object();
+    }
+    for( const auto &[field, native] : {
+             std::pair{ "joins", "joins" }, std::pair{ "required_flags", "flags" },
+             std::pair{ "any_flags", "flags_any" }
+         } ) {
+        if( const auto directions = placement.get<sol::optional<sol::table>>( field ) ) {
+            json.member( native );
+            json.start_object();
+            for( const auto &[direction, values] : *directions ) {
+                const std::string key = direction.as<std::string>();
+                if( values.get_type() == sol::type::string ) {
+                    json.member( key, values.as<std::string>() );
+                } else {
+                    json.member( key, bounded_string_array( values.as<sol::table>(), field,
+                                 std::numeric_limits<std::size_t>::max(), "nested mapgen" ) );
+                }
+            }
+            json.end_object();
+        }
+    }
+    if( const auto predecessors = placement.get<sol::optional<sol::table>>( "predecessors" ) ) {
+        json.member( "predecessors" );
+        write_mapgen_terrain_matchers( json, *predecessors );
+    }
+    if( const auto levels = placement.get<sol::optional<sol::table>>( "levels" ) ) {
+        json.member( "check_z" );
+        json.start_array();
+        const std::size_t count = levels->size();
+        for( std::size_t i = 1; i <= count; ++i ) {
+            json.write( levels->raw_get<int>( i ) );
+        }
+        json.end_array();
+    }
+    json.end_object();
+}
+
 void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
                                  std::size_t max_rows )
 {
@@ -687,8 +821,22 @@ void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
         json.member( "mapgensize", std::array<int, 2>{ size->get<int>( "width" ),
                      size->get<int>( "height" ) } );
     }
-    if( layout.get_or( "erase_before_terrain", false ) ) {
-        json.member( "flags", std::array<const char *, 1>{ "ERASE_ALL_BEFORE_PLACING_TERRAIN" } );
+    const auto layout_flags = layout.get<sol::optional<sol::table>>( "flags" );
+    const bool erase = layout.get_or( "erase_before_terrain", false );
+    if( layout_flags || erase ) {
+        std::vector<std::string> flags = layout_flags ?
+            bounded_string_array( *layout_flags, "flags", std::numeric_limits<std::size_t>::max(),
+                                  "mapgen layout" ) : std::vector<std::string>{};
+        if( erase && std::find( flags.begin(), flags.end(), "ERASE_ALL_BEFORE_PLACING_TERRAIN" ) == flags.end() ) {
+            flags.emplace_back( "ERASE_ALL_BEFORE_PLACING_TERRAIN" );
+        }
+        json.member( "flags", flags );
+    }
+    write_mapgen_range( json, "rotation", layout.raw_get<sol::object>( "rotation" ) );
+    for( const char *field : { "predecessor_mapgen", "fallback_predecessor_mapgen" } ) {
+        if( const auto predecessor = layout.get<sol::optional<std::string>>( field ) ) {
+            json.member( field, *predecessor );
+        }
     }
     if( const auto palettes = layout.get<sol::optional<sol::table>>( "palettes" ) ) {
         json.member( "palettes", bounded_string_array( *palettes, "palettes",
@@ -736,14 +884,28 @@ void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
         json.member( "place_nested" );
         json.start_array();
         for( std::size_t i = 1; i <= count; ++i ) {
-            const sol::table placement = placements->get<sol::table>( i );
-            json.start_object();
-            json.member( "chunks", std::array<std::string, 1>{ placement.get<std::string>( "id" ) } );
-            json.member( "x", placement.get<int>( "x" ) );
-            json.member( "y", placement.get<int>( "y" ) );
-            json.end_object();
+            write_mapgen_nested_placement( json, placements->raw_get<sol::table>( i ) );
         }
         json.end_array();
+    }
+    if( const auto glyphs = layout.get<sol::optional<sol::table>>( "nested_glyphs" ) ) {
+        json.member( "nested" );
+        json.start_object();
+        for( const auto &[glyph, value] : *glyphs ) {
+            json.member( glyph.as<std::string>() );
+            const sol::table placements = value.as<sol::table>();
+            const std::size_t count = placements.size();
+            if( count == 0 ) {
+                write_mapgen_nested_placement( json, placements );
+            } else {
+                json.start_array();
+                for( std::size_t i = 1; i <= count; ++i ) {
+                    write_mapgen_nested_placement( json, placements.raw_get<sol::table>( i ) );
+                }
+                json.end_array();
+            }
+        }
+        json.end_object();
     }
     if( const auto toilets = layout.get<sol::optional<sol::table>>( "toilets" ) ) {
         json.member( "toilets" );
@@ -784,19 +946,41 @@ void write_overmap_mapgens( JsonOut &json, const char *key, const sol::table &va
     json.end_array();
 }
 
+void write_static_mapgen_targets( JsonOut &json, const sol::object &id )
+{
+    if( id.get_type() != sol::type::table ) {
+        json.member( "om_terrain", id.as<std::string>() );
+        return;
+    }
+    const sol::table targets = id.as<sol::table>();
+    const std::size_t limit = std::numeric_limits<std::size_t>::max();
+    if( targets.raw_get<sol::object>( 1 ).get_type() != sol::type::table ) {
+        json.member( "om_terrain", bounded_string_array( targets, "id", limit, "overmap mapgen" ) );
+        return;
+    }
+    std::vector<std::vector<std::string>> grid;
+    const std::size_t rows = targets.size();
+    grid.reserve( rows );
+    for( std::size_t i = 1; i <= rows; ++i ) {
+        grid.push_back( bounded_string_array( targets.raw_get<sol::table>( i ), "id row", limit,
+                                             "overmap mapgen" ) );
+    }
+    json.member( "om_terrain", grid );
+}
+
 void load_static_mapgen( const sol::table &options )
 {
     const std::string kind = options.get<std::string>( "kind" );
-    const std::string id = options.get<std::string>( "id" );
+    const sol::object id = options.raw_get<sol::object>( "id" );
     std::ostringstream serialized;
     JsonOut json( serialized );
     json.start_object();
     if( kind == "overmap" ) {
-        json.member( "om_terrain", id );
+        write_static_mapgen_targets( json, id );
     } else if( kind == "nested" ) {
-        json.member( "nested_mapgen_id", id );
+        json.member( "nested_mapgen_id", id.as<std::string>() );
     } else if( kind == "update" ) {
-        json.member( "update_mapgen_id", id );
+        json.member( "update_mapgen_id", id.as<std::string>() );
     } else {
         throw std::runtime_error( "mapgen kind must be overmap, nested or update" );
     }
