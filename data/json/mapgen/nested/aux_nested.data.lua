@@ -257,3 +257,154 @@ ccb.content.define_mapgen {
         tile_edits = { { shape = "rectangle", operation = "remove_items", x = 0, y = 0, end_x = 7, end_y = 7 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "destroyed_glass_door_wall",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "glass_door_wall_2_floor", x = 0, y = 0 } },
+        item_placements = { { id = "glass_shard", x = 0, y = 0, repetitions = { 42, 84 }, chance = 100 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "damaged_door_nested",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "damaged_door", x = 0, y = 0 } },
+        item_group_placements = { { group = "door_damage", x = 0, y = 0, chance = 100 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "damaged_door_nested_no_junk",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "damaged_door", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "destroyed_door_nested",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "destroyed_door", x = 0, y = 0 } },
+        item_group_placements = { { group = "door_destruction", x = 0, y = 0, chance = 100 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "destroyed_door_nested_no_junk",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "destroyed_door", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "destroyed_metal_door_nested",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "destroyed_metal_door", x = 0, y = 0 } },
+        item_placements = {
+            { id = "steel_plate", x = 0, y = 0, chance = 75 },
+            { id = "hinge", x = 0, y = 0, repetitions = { 1, 3 } },
+            { id = "scrap", x = 0, y = 0, repetitions = { 12, 24 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "damaged_window_bars_nested",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "damaged_window_bars", x = 0, y = 0 } },
+        item_placements = { { id = "glass_shard", x = 0, y = 0, repetitions = { 34, 50 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "destroyed_window_bars_nested",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "destroyed_window_bars", x = 0, y = 0 } },
+        item_placements = {
+            { id = "lc_steel_lump", x = 0, y = 0, chance = 25 },
+            { id = "lc_steel_chunk", x = 0, y = 0, repetitions = { 1, 4 } },
+            { id = "scrap", x = 0, y = 0, repetitions = { 1, 5 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "damaged_window_nested",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "damaged_window", x = 0, y = 0 } },
+        item_placements = { { id = "glass_shard", x = 0, y = 0, repetitions = { 21, 29 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "destroyed_window_nested",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "destroyed_window", x = 0, y = 0 } },
+        item_placements = { { id = "glass_shard", x = 0, y = 0, repetitions = { 27, 39 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_boarded_up",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "boarded_up", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "1x1_boarded_up_rushed",
+    layout = {
+        size = { width = 1, height = 1 },
+        transform_placements = { { id = "boarded_up_rushed", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "destroyed_furniture",
+    layout = {
+        size = { width = 1, height = 1 },
+        rubble_placements = { { x = 0, y = 0, furniture = "f_null", with_debris = true } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "destroyed_furniture_gunstore",
+    layout = {
+        size = { width = 1, height = 1 },
+        rubble_placements = { { x = 0, y = 0, furniture = "f_null", with_debris = true } },
+        item_group_placements = {
+            {
+                group = "ammo_common_loose",
+                x = { 0, 0 },
+                y = { 0, 0 },
+                chance = 50,
+                repetitions = { 1, 4 },
+            },
+        },
+    },
+}

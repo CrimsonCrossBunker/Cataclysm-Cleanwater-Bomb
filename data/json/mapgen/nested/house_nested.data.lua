@@ -3109,3 +3109,42 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- a nested map for lawns
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "garden_3x3_1",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "PPP",
+            "PPP",
+            "PPP",
+        },
+        palettes = { "domestic_garden_nest_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        sealed_item_glyphs = {
+            P = {
+                item_group = { group = "farming_seeds", chance = 100 },
+                furniture = "f_plant_seedling",
+            },
+        },
+        item_group_placements = {
+            {
+                group = "farming_tools",
+                x = { 0, 2 },
+                y = { 0, 2 },
+                chance = 5,
+                repetitions = { 1, 3 },
+            },
+            {
+                group = "farming_seeds",
+                x = { 0, 2 },
+                y = { 0, 2 },
+                chance = 75,
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}

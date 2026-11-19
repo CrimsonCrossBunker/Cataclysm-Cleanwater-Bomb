@@ -335,3 +335,25 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- A cellar overlay with a mycus infestation.  Pouf!
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "cabin_6x6_cellar_nested_mycus",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "      ",
+            "      ",
+            "      ",
+            "      ",
+            "      ",
+            "      ",
+        },
+        palettes = { "cabin_cellar" },
+        rotation = { 0, 0 },
+        transform_glyphs = { [" "] = { id = "fungalize" } },
+        field_placements = { { id = "fd_fungal_haze", x = { 0, 5 }, y = { 0, 5 }, repetitions = { 10, 20 } } },
+        monster_placements = { { id = "mon_zombie_fungus", x = { 0, 5 }, y = { 0, 5 }, chance = 85 } },
+    },
+}

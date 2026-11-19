@@ -375,3 +375,38 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "market_fish",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "cccccc",
+            "cr  ht",
+            "C    d",
+            "cr   d",
+            "cr   d",
+            "cccccc",
+        },
+        palettes = { "open_air_stall_palette" },
+        nested = { { id = "market_6x6_roof", x = 0, y = 0, z = 1 } },
+        liquid_glyphs = { d = { id = "water", amount = { 12, 60 } } },
+        item_groups = {
+            t = { group = "cash_register_random", chance = 100 },
+            d = { group = "fresh_fish", chance = 50, repetitions = { 1, 2 } },
+            r = { group = "fish_market_stall", chance = 30, repetitions = { 1, 3 } },
+        },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_sidewalk_roof_canvas",
+                x = 0,
+                y = 0,
+                end_x = 5,
+                end_y = 5,
+            },
+        },
+    },
+}

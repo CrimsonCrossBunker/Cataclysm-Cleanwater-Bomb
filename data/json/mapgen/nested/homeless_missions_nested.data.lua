@@ -264,3 +264,47 @@ ccb.content.define_mapgen {
         furniture = { ["!"] = "f_smoking_rack", ["@"] = "f_kiln_empty" },
     },
 }
+
+-- Phase 1 of homeless expansions.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "homeless_camp_expand_1",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "          qqqq          ",
+            "   ////////++////////   ",
+            "   /qqqqqqqqqqqqqqqq/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /q..q..q..q..q..q/   ",
+            "   /qqqqqqqqqqqqqqqq/   ",
+            "   //////////////////   ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        terrain = {
+            ["."] = "t_dirtmound",
+            q = "t_region_groundcover",
+            ["/"] = "t_splitrail_fence",
+            ["+"] = "t_splitrail_fencegate_c",
+        },
+        sealed_item_glyphs = {
+            ["."] = { item = { id = "seed_zucchini" }, furniture = "f_plant_seedling", chance = 100 },
+        },
+    },
+}

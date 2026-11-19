@@ -651,3 +651,240 @@ ccb.content.define_mapgen {
         furniture_placements = { { id = "f_solar_unit_v2", x = 0, y = 0 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_4x4_utility",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            " xxx",
+            "  ax",
+            " xxx",
+            "  ox",
+        },
+        terrain = { x = "t_sewage_pipe" },
+        furniture = {
+            o = { { id = "f_water_heater" }, { id = "f_water_heater_family" } },
+            a = "f_air_conditioner",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = { o = { id = "water_clean", amount = { 0, 100 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_4x4_utility_1",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "UUUU",
+            "UAaU",
+            "c oU",
+            "UUUU",
+        },
+        terrain = { c = "t_chaingate_l", U = "t_chainfence" },
+        furniture = {
+            o = { { id = "f_water_heater" }, { id = "f_water_heater_family" } },
+            a = "f_water_purifier",
+            A = "f_standing_tank",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = { o = { id = "water_clean", amount = { 0, 100 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_6x6_utility",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            " xxxxx",
+            " xA  x",
+            " xx  x",
+            "     x",
+            "xooa x",
+            "xxxxxx",
+        },
+        terrain = { x = "t_sewage_pipe" },
+        furniture = {
+            o = { { id = "f_water_heater" }, { id = "f_water_heater_family" } },
+            a = "f_water_purifier",
+            A = "f_standing_tank",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = { o = { id = "water_clean", amount = { 0, 100 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_2x2_golf",
+    layout = {
+        size = { width = 2, height = 2 },
+        liquid_placements = { { id = "vodka", x = 0, y = 0, amount = { 2, 4 } } },
+        loot_placements = {
+            { id = "bottle_glass", x = 0, y = 0 },
+            { id = "golf_club", x = 1, y = 1 },
+            { id = "golf_bag", x = 0, y = 1, chance = 20 },
+            { id = "golf_tee", x = 1, y = 0 },
+            { id = "golf_ball", x = 1, y = 0 },
+            { id = "scorecard", x = 0, y = 0 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_6x6_greenhouse_1",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "%#++#%",
+            "%1  1%",
+            "#1  1#",
+            "#1  1#",
+            "%1  1%",
+            "%#++#%",
+        },
+        terrain = {
+            ["#"] = "t_reinforced_glass_shutter_open",
+            ["+"] = "t_reinforced_door_glass_c",
+            ["%"] = "t_reinforced_glass_shutter",
+            ["$"] = "t_wall_glass",
+        },
+        furniture = { S = "f_statue" },
+        rotation = { 0, 3 },
+        nested = { { id = "roof_6x6_greenhouse_roof", x = 0, y = 0, z = 1 } },
+        sealed_item_glyphs = { ["1"] = { item = { id = "seed_rose" }, furniture = "f_planter_mature" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_6x6_greenhouse_2",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "%#++#%",
+            "%1  1%",
+            "#S  b#",
+            "#S  b#",
+            "%1  1%",
+            "%#++#%",
+        },
+        terrain = {
+            ["#"] = "t_reinforced_glass_shutter_open",
+            ["+"] = "t_reinforced_door_glass_c",
+            ["%"] = "t_reinforced_glass_shutter",
+            ["$"] = "t_wall_glass",
+        },
+        furniture = { S = "f_statue", b = "f_bench" },
+        rotation = { 0, 3 },
+        nested = { { id = "roof_6x6_greenhouse_roof", x = 0, y = 0, z = 1 } },
+        sealed_item_glyphs = { ["1"] = { item = { id = "seed_sugar_beet" }, furniture = "f_planter_mature" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_6x6_greenhouse_3",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "%#++#%",
+            "%1  1%",
+            "#1a 1#",
+            "#1  1#",
+            "%1 a1%",
+            "%#++#%",
+        },
+        terrain = {
+            ["#"] = "t_reinforced_glass_shutter_open",
+            ["+"] = "t_reinforced_door_glass_c",
+            ["%"] = "t_reinforced_glass_shutter",
+            ["$"] = "t_wall_glass",
+        },
+        furniture = { a = "f_stool" },
+        rotation = { 0, 2 },
+        nested = { { id = "roof_6x6_greenhouse_roof", x = 0, y = 0, z = 1 } },
+        loot_placements = {
+            { id = "stepladder", x = 3, y = 5, chance = 75, repetitions = { 1, 3 } },
+            { id = "seed_weed", x = { 2, 3 }, y = { 2, 3 }, chance = 75, repetitions = { 1, 3 } },
+        },
+        sealed_item_glyphs = { ["1"] = { item = { id = "seed_weed" }, furniture = "f_planter_harvest" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_6x6_garden_1",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "      ",
+            "      ",
+            "b111b ",
+            "b1B1b ",
+            "b111b ",
+            "      ",
+        },
+        terrain = { B = "t_railroad_rubble" },
+        furniture = { b = "f_bench", B = { { id = "f_birdbath" }, { id = "f_statue" } } },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        sealed_item_glyphs = { ["1"] = { item = { id = "seed_rose" }, furniture = "f_planter_seedling" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_6x6_garden_2",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "1____1",
+            "1_bb_1",
+            "11__B1",
+            "1B__11",
+            "1_bb_1",
+            "1____1",
+        },
+        terrain = { _ = "t_railroad_rubble", b = "t_railroad_rubble", B = "t_railroad_rubble" },
+        furniture = { B = { { id = "f_birdbath" }, { id = "f_statue" } }, b = "f_bench" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        sealed_item_glyphs = { ["1"] = { item = { id = "seed_rose" }, furniture = "f_planter_seedling" } },
+    },
+}
+
+-- herb garden
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_6x6_garden_3",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "      ",
+            "44433 ",
+            "BBBBB ",
+            "22233 ",
+            "BBBBB ",
+            "11112 ",
+        },
+        terrain = { B = "t_railroad_rubble" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        sealed_item_glyphs = {
+            ["1"] = { item = { id = "seed_chamomile" }, furniture = "f_planter_harvest" },
+            ["2"] = { item = { id = "seed_thyme" }, furniture = "f_planter_harvest" },
+            ["3"] = { item = { id = "seed_bee_balm" }, furniture = "f_planter_harvest" },
+            ["4"] = { item = { id = "seed_mugwort" }, furniture = "f_planter_harvest" },
+        },
+    },
+}

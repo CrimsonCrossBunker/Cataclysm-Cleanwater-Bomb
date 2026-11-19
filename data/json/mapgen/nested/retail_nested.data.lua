@@ -1093,3 +1093,265 @@ ccb.content.define_mapgen {
         vehicle_placements = { { id = "canoe", x = 2, y = 0, rotation = 180, fuel = 0, status = 0 } },
     },
 }
+
+-- designed for 5x5 shop backroom.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "city_block_5x5_backroom_shop",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "d   G",
+            "L   G",
+            "BA   ",
+            "B  zz",
+            "Cyz  ",
+        },
+        terrain = { [" "] = "t_floor", ["?"] = "t_floor" },
+        furniture = {
+            ["?"] = "f_console_broken",
+            A = "f_chair",
+            B = "f_desk",
+            C = "f_rack",
+            G = "f_locker",
+            b = "f_bench",
+            d = "f_filing_cabinet",
+            L = "f_shredder",
+            y = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            z = { { id = "f_cardboard_box", copies = 5 }, { id = "f_crate_c" } },
+        },
+        rotation = { 0, 3 },
+        item_groups = {
+            d = { { group = "SUS_office_filing_cabinet", chance = 25 } },
+            C = { { group = "cleaning", chance = 30, repetitions = { 1, 2 } } },
+            B = { { group = "SUS_office_desk", chance = 30, repetitions = { 1, 2 } } },
+            G = {
+                { group = "jackets", chance = 30, repetitions = { 0, 1 } },
+                { group = "bags", chance = 30, repetitions = { 0, 1 } },
+            },
+        },
+    },
+}
+
+-- designed for 5x5 shop backroom.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "city_block_5x5_backroom_shop",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "y  GG",
+            "b   G",
+            "b z  ",
+            "   zz",
+            "CDF  ",
+        },
+        terrain = { [" "] = "t_floor", ["?"] = "t_floor" },
+        furniture = {
+            ["?"] = "f_console_broken",
+            A = "f_chair",
+            B = "f_desk",
+            C = "f_rack",
+            G = "f_locker",
+            b = "f_bench",
+            d = "f_filing_cabinet",
+            L = "f_shredder",
+            y = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            z = { { id = "f_cardboard_box", copies = 5 }, { id = "f_crate_c" } },
+        },
+        rotation = { 0, 3 },
+        vending_glyphs = {
+            D = { group = "vending_drink", lootable = true },
+            F = { group = "vending_food", lootable = true },
+        },
+        item_groups = {
+            C = { { group = "cleaning", chance = 30, repetitions = { 1, 2 } } },
+            G = {
+                { group = "jackets", chance = 30, repetitions = { 0, 1 } },
+                { group = "bags", chance = 30, repetitions = { 0, 1 } },
+            },
+        },
+    },
+}
+
+-- designed for 4x4 shop backroom.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "city_block_4x4_backroom_shop",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "FD d",
+            "G   ",
+            "G   ",
+            "ybb ",
+        },
+        terrain = { [" "] = "t_floor", ["?"] = "t_floor" },
+        furniture = {
+            ["?"] = "f_console_broken",
+            G = "f_locker",
+            b = "f_bench",
+            d = "f_filing_cabinet",
+            y = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+        },
+        rotation = { 0, 3 },
+        vending_glyphs = {
+            D = { group = "vending_drink", lootable = true },
+            F = { group = "vending_food", lootable = true },
+        },
+        item_groups = {
+            G = {
+                { group = "jackets", chance = 30, repetitions = { 0, 1 } },
+                { group = "bags", chance = 30, repetitions = { 0, 1 } },
+            },
+        },
+    },
+}
+
+-- designed for 4x4 shop backroom.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "city_block_4x4_backroom_shop",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "FD d",
+            "G   ",
+            "G   ",
+            "y C ",
+        },
+        terrain = { [" "] = "t_floor" },
+        furniture = {
+            C = "f_rack",
+            G = "f_sofa",
+            d = "f_filing_cabinet",
+            y = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            ["?"] = "f_console_broken",
+        },
+        rotation = { 0, 3 },
+        vending_glyphs = {
+            D = { group = "vending_drink", lootable = true },
+            F = { group = "vending_food", lootable = true },
+        },
+        item_groups = {
+            C = { { group = "cleaning", chance = 30, repetitions = { 1, 2 } } },
+            G = {
+                { group = "jackets", chance = 30, repetitions = { 0, 1 } },
+                { group = "bags", chance = 30, repetitions = { 0, 1 } },
+            },
+        },
+    },
+}
+
+-- designed for 4x4 shop backroom.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "city_block_4x4_backroom_shop",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "d  L",
+            "B   ",
+            "BA  ",
+            "y GC",
+        },
+        terrain = { [" "] = "t_floor" },
+        furniture = {
+            ["?"] = "f_console_broken",
+            A = "f_chair",
+            B = "f_desk",
+            C = "f_rack",
+            G = "f_locker",
+            d = "f_filing_cabinet",
+            L = "f_shredder",
+            y = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+        },
+        rotation = { 0, 3 },
+        item_groups = {
+            C = { { group = "cleaning", chance = 30, repetitions = { 1, 2 } } },
+            B = { { group = "SUS_office_desk", chance = 30, repetitions = { 1, 2 } } },
+            G = {
+                { group = "jackets", chance = 30, repetitions = { 0, 1 } },
+                { group = "bags", chance = 30, repetitions = { 0, 1 } },
+            },
+        },
+    },
+}
+
+-- designed for 5x5 shop backroom.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "city_block_5x5_backroom_shop",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "d  FD",
+            "G b  ",
+            "G b z",
+            "G b  ",
+            "yz CC",
+        },
+        terrain = { [" "] = "t_floor" },
+        furniture = {
+            A = "f_chair",
+            B = "f_desk",
+            C = "f_rack",
+            G = "f_locker",
+            b = "f_bench",
+            d = "f_filing_cabinet",
+            L = "f_shredder",
+            y = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            z = { { id = "f_cardboard_box", copies = 5 }, { id = "f_crate_c" } },
+            ["?"] = "f_console_broken",
+        },
+        rotation = { 0, 3 },
+        vending_glyphs = {
+            D = { group = "vending_drink", lootable = true },
+            F = { group = "vending_food", lootable = true },
+        },
+        item_groups = {
+            C = { { group = "cleaning", chance = 30, repetitions = { 1, 2 } } },
+            G = {
+                { group = "jackets", chance = 30, repetitions = { 0, 1 } },
+                { group = "bags", chance = 30, repetitions = { 0, 1 } },
+            },
+        },
+    },
+}
+
+-- designed for 5x5 shop backroom.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "city_block_5x5_backroom_shop",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "d  FD",
+            "G    ",
+            "G   z",
+            "C    ",
+            "yAAA ",
+        },
+        terrain = { [" "] = "t_floor" },
+        furniture = {
+            A = "f_sofa",
+            C = "f_rack",
+            G = "f_locker",
+            d = "f_filing_cabinet",
+            y = { { id = "f_indoor_plant" }, { id = "f_indoor_plant_y" } },
+            z = { { id = "f_cardboard_box", copies = 5 }, { id = "f_crate_c" } },
+        },
+        rotation = { 0, 3 },
+        vending_glyphs = {
+            D = { group = "vending_drink", lootable = true },
+            F = { group = "vending_food", lootable = true },
+        },
+        item_groups = {
+            C = { { group = "cleaning", chance = 30, repetitions = { 1, 2 } } },
+            G = {
+                { group = "jackets", chance = 30, repetitions = { 0, 1 } },
+                { group = "bags", chance = 30, repetitions = { 0, 1 } },
+            },
+        },
+    },
+}

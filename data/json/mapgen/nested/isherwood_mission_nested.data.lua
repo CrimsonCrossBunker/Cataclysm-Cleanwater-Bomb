@@ -226,3 +226,46 @@ ccb.content.define_mapgen {
         npc_placements = { { id = "isherwood_lisa_swat_copy", unique_id = "LISA_MISSION", x = 1, y = 1 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "isherwood_rescue_remove_npcs",
+    layout = {
+        npc_removals = {
+            { id = "isherwood_carlos_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_eddie_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_luke_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_jesse_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_chris_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_lisa_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_carlos_swat_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_eddie_swat_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_luke_swat_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_jesse_swat_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_chris_swat_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_lisa_swat_copy", x = { 0, 23 }, y = { 0, 23 } },
+        },
+        vehicle_removals = { { prototypes = { "extended_pickup" }, x = { 0, 23 }, y = { 0, 23 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "remove_barry_and_company",
+    layout = {
+        npc_removals = {
+            { id = "isherwood_chris_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_lisa_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_chris_swat_copy", x = { 0, 23 }, y = { 0, 23 } },
+            { id = "isherwood_lisa_swat_copy", x = { 0, 23 }, y = { 0, 23 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "LUKE_REMOVE_TRUCK",
+    layout = {
+        vehicle_removals = { { prototypes = { "pickup" }, x = { 0, 23 }, y = { 0, 23 } } },
+    },
+}

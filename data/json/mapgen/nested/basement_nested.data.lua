@@ -1804,3 +1804,556 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- a nested map for basements
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_9x9_cellar_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "#########",
+            "#aafffaa#",
+            "#c..A..b#",
+            "#c.....b#",
+            "#c.HXW..+",
+            "#c.....f#",
+            "#e.....f#",
+            "#eeerrrr#",
+            "#########",
+        },
+        terrain = { ["+"] = "t_door_locked", ["#"] = "t_wall_w", ["."] = "t_thconc_floor" },
+        furniture = {
+            a = "f_rack_wood",
+            A = "f_stool",
+            r = "f_rack_wood",
+            c = "f_rack_wood",
+            e = "f_rack_wood",
+            f = "f_table",
+            H = "f_fvat_empty",
+            b = "f_sofa",
+            X = "f_wood_keg",
+            W = "f_wood_keg",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            X = { id = "hb_beer", amount = { 0, 100 } },
+            W = { id = "dandelion_wine", amount = { 0, 100 } },
+        },
+        loot_placements = {
+            { id = "jar_3l_glass_sealed", x = 7, y = { 5, 6 }, chance = 60, repetitions = { 0, 4 } },
+            { id = "pot_canning", x = 7, y = 5, chance = 80 },
+            { id = "hotplate", x = 7, y = 6, chance = 50 },
+            { id = "jar_glass_sealed", x = { 3, 5 }, y = 1, chance = 60, repetitions = { 0, 4 } },
+        },
+        item_groups = {
+            a = { group = "dry_goods", chance = 50, repetitions = { 1, 2 } },
+            r = { group = "preserved_food", chance = 50, repetitions = { 1, 2 } },
+            c = { group = "condiments", chance = 50, repetitions = { 1, 4 } },
+            e = { group = "pantry_liquids", chance = 50, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+-- a nested map for basements
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_9x9_cellar_W",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "#########",
+            "#aafffaa#",
+            "#b.A...c#",
+            "#b..H..c#",
+            "+...X..c#",
+            "#f..W..c#",
+            "#f.....e#",
+            "#eeerrrr#",
+            "#########",
+        },
+        terrain = { ["+"] = "t_door_locked", ["#"] = "t_wall_w", ["."] = "t_thconc_floor" },
+        furniture = {
+            a = "f_rack_wood",
+            A = "f_stool",
+            r = "f_rack_wood",
+            c = "f_rack_wood",
+            e = "f_rack_wood",
+            f = "f_table",
+            H = "f_fvat_empty",
+            b = "f_sofa",
+            X = "f_wood_keg",
+            W = "f_wood_keg",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            X = { id = "mead", amount = { 0, 100 } },
+            W = { id = "dandelion_wine", amount = { 0, 100 } },
+        },
+        loot_placements = {
+            { id = "jar_3l_glass_sealed", x = 1, y = { 5, 6 }, chance = 60, repetitions = { 0, 4 } },
+            { id = "pot_canning", x = 1, y = 5, chance = 80 },
+            { id = "hotplate", x = 1, y = 6, chance = 50 },
+            { id = "jar_glass_sealed", x = { 3, 5 }, y = 1, chance = 60, repetitions = { 0, 4 } },
+        },
+        item_groups = {
+            a = { group = "dry_goods", chance = 50, repetitions = { 1, 2 } },
+            r = { group = "preserved_food", chance = 50, repetitions = { 1, 2 } },
+            c = { group = "condiments", chance = 50, repetitions = { 1, 4 } },
+            e = { group = "pantry_liquids", chance = 50, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+-- a nested map for basements
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_9x9_cellar_S",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "#########",
+            "#aafffaa#",
+            "#b.A...c#",
+            "#b..f..c#",
+            "#W..f..c#",
+            "#X..f..c#",
+            "#H...h.c#",
+            "#eee.rrr#",
+            "####+####",
+        },
+        terrain = { ["+"] = "t_door_locked", ["#"] = "t_wall_w", ["."] = "t_thconc_floor" },
+        furniture = {
+            a = "f_rack_wood",
+            A = "f_stool",
+            r = "f_rack_wood",
+            c = "f_rack_wood",
+            e = "f_rack_wood",
+            f = "f_table",
+            h = "f_chair",
+            H = "f_fvat_empty",
+            b = "f_sofa",
+            X = "f_wood_keg",
+            W = "f_wood_keg",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            X = { id = "hb_beer", amount = { 0, 100 } },
+            W = { id = "dandelion_wine", amount = { 0, 100 } },
+        },
+        loot_placements = {
+            { id = "jar_3l_glass_sealed", x = 4, y = { 3, 5 }, chance = 60, repetitions = { 0, 4 } },
+            { id = "pot_canning", x = 4, y = 4, chance = 80 },
+            { id = "hotplate", x = 4, y = 3, chance = 50 },
+            { id = "jar_glass_sealed", x = { 3, 5 }, y = 1, chance = 60, repetitions = { 0, 4 } },
+        },
+        item_groups = {
+            a = { group = "dry_goods", chance = 50, repetitions = { 1, 2 } },
+            r = { group = "preserved_food", chance = 50, repetitions = { 1, 2 } },
+            c = { group = "condiments", chance = 50, repetitions = { 1, 4 } },
+            e = { group = "pantry_liquids", chance = 50, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+-- a nested map for basements
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_9x9_cellar_N",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "####+####",
+            "#aae.eaa#",
+            "#b.A...c#",
+            "#b..f..c#",
+            "#H..f..c#",
+            "#X..fA.c#",
+            "#W.....r#",
+            "#eefffrr#",
+            "#########",
+        },
+        terrain = { ["+"] = "t_door_locked", ["#"] = "t_wall_w", ["."] = "t_thconc_floor" },
+        furniture = {
+            a = "f_rack_wood",
+            A = "f_stool",
+            r = "f_rack_wood",
+            c = "f_rack_wood",
+            e = "f_rack_wood",
+            f = "f_table",
+            H = "f_fvat_empty",
+            b = "f_sofa",
+            X = "f_wood_keg",
+            W = "f_wood_keg",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            X = { id = "mead", amount = { 0, 100 } },
+            W = { id = "dandelion_wine", amount = { 0, 100 } },
+        },
+        loot_placements = {
+            { id = "jar_3l_glass_sealed", x = 4, y = { 3, 5 }, chance = 60, repetitions = { 0, 4 } },
+            { id = "pot_canning", x = 4, y = 4, chance = 80 },
+            { id = "hotplate", x = 4, y = 3, chance = 50 },
+            { id = "jar_glass_sealed", x = { 3, 5 }, y = 7, chance = 60, repetitions = { 0, 4 } },
+        },
+        item_groups = {
+            a = { group = "dry_goods", chance = 50, repetitions = { 1, 2 } },
+            r = { group = "preserved_food", chance = 50, repetitions = { 1, 2 } },
+            c = { group = "condiments", chance = 50, repetitions = { 1, 4 } },
+            e = { group = "pantry_liquids", chance = 50, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+-- a nested map for basements
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_6x6_brewer_W",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "||||||",
+            "|THHs|",
+            "+    |",
+            "|   $|",
+            "|%%0!|",
+            "||||||",
+        },
+        palettes = { "standard_domestic_palette" },
+        terrain = { ["|"] = "t_wall_wood" },
+        furniture = {
+            ["%"] = "f_rack_wood",
+            ["$"] = "f_fvat_empty",
+            ["0"] = "f_wood_keg",
+            ["!"] = "f_wood_keg",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            X = { id = "hb_beer", amount = { 100, 500 } },
+            W = { id = "dandelion_wine", amount = { 100, 500 } },
+        },
+        item_groups = {
+            ["%"] = {
+                { group = "liqstore_brew", chance = 50, repetitions = { 2, 8 } },
+                { group = "misc_alcohol", chance = 100, repetitions = { 2, 8 } },
+            },
+        },
+    },
+}
+
+-- a nested map for basements
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_6x6_brewer_E",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "||||||",
+            "|THHs|",
+            "|    +",
+            "| A $|",
+            "|%%0!|",
+            "||||||",
+        },
+        palettes = { "standard_domestic_palette" },
+        terrain = { ["|"] = "t_wall_wood" },
+        furniture = {
+            ["%"] = "f_rack_wood",
+            ["$"] = "f_fvat_empty",
+            ["0"] = "f_wood_keg",
+            ["!"] = "f_wood_keg",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            ["0"] = { id = "hb_beer", amount = { 10, 500 } },
+            ["!"] = { id = "dandelion_wine", amount = { 10, 500 } },
+        },
+        item_groups = {
+            ["%"] = {
+                { group = "liqstore_brew", chance = 50, repetitions = { 2, 8 } },
+                { group = "misc_alcohol", chance = 100, repetitions = { 2, 8 } },
+            },
+        },
+    },
+}
+
+-- a nested map for basements
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_6x6_brewer_N",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "|||+||",
+            "|%  0|",
+            "|%  $|",
+            "|E  !|",
+            "|~,ss|",
+            "||||||",
+        },
+        palettes = { "standard_domestic_palette" },
+        terrain = { ["|"] = "t_wall_wood" },
+        furniture = {
+            ["%"] = "f_rack_wood",
+            ["$"] = "f_fvat_empty",
+            ["0"] = "f_wood_keg",
+            [","] = "f_still",
+            ["~"] = "f_ash",
+            ["!"] = "f_wood_keg",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            ["0"] = { id = "moonshine", amount = { 100, 500 } },
+            ["!"] = { id = "mead", amount = { 100, 500 } },
+        },
+        item_groups = {
+            ["%"] = {
+                { group = "liqstore_brew", chance = 50, repetitions = { 2, 8 } },
+                { group = "misc_alcohol", chance = 50, repetitions = { 2, 8 } },
+            },
+        },
+    },
+}
+
+-- a nested map for basements
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_6x6_brewer_S",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "||||||",
+            "|%~,s|",
+            "|%  s|",
+            "|E  !|",
+            "|  0$|",
+            "||+|||",
+        },
+        palettes = { "standard_domestic_palette" },
+        terrain = { ["|"] = "t_wall_wood" },
+        furniture = {
+            ["%"] = "f_rack_wood",
+            ["$"] = "f_fvat_empty",
+            ["0"] = "f_wood_keg",
+            [","] = "f_still",
+            ["~"] = "f_ash",
+            ["!"] = "f_wood_keg",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            ["0"] = { id = "moonshine", amount = { 100, 500 } },
+            ["!"] = { id = "mead", amount = { 100, 500 } },
+        },
+        item_groups = {
+            ["%"] = {
+                { group = "liqstore_brew", chance = 50, repetitions = { 2, 8 } },
+                { group = "misc_alcohol", chance = 50, repetitions = { 2, 8 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_7x7_wine_cellar_N",
+    layout = {
+        size = { width = 7, height = 7 },
+        rows = {
+            "|||+|||",
+            "|!...0|",
+            "|. E .|",
+            "|.EtE.|",
+            "|. E .|",
+            "|%%.%m|",
+            "|||||||",
+        },
+        terrain = {
+            ["|"] = "t_wall_r",
+            ["+"] = "t_door_c",
+            ["."] = "t_floor",
+            ["!"] = "t_floor",
+            ["0"] = "t_floor",
+            ["%"] = "t_floor",
+            m = "t_floor",
+            t = "t_carpet_red",
+            [" "] = "t_carpet_red",
+            E = "t_carpet_red",
+        },
+        furniture = {
+            ["%"] = "f_rack_wood",
+            ["0"] = "f_wood_keg",
+            ["!"] = "f_wood_keg",
+            t = "f_table",
+            E = "f_armchair",
+            m = "f_glass_fridge",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            ["0"] = { id = "wine_cabernet", amount = { 100, 500 } },
+            ["!"] = { id = "wine_chardonnay", amount = { 100, 500 } },
+        },
+        loot_placements = { { id = "deck_of_cards", x = 3, y = 3, chance = 100 } },
+        item_groups = {
+            ["%"] = { group = "wines_worthy", chance = 70, repetitions = { 1, 2 } },
+            m = { group = "chilled_wine", chance = 40, repetitions = { 1, 4 } },
+            t = { group = "table_wine", chance = 100, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_7x7_wine_cellar_S",
+    layout = {
+        size = { width = 7, height = 7 },
+        rows = {
+            "|||||||",
+            "|!...0|",
+            "|. E .|",
+            "|.EtE.|",
+            "|. E .|",
+            "|%%.%m|",
+            "|||+|||",
+        },
+        terrain = {
+            ["|"] = "t_wall_r",
+            ["+"] = "t_door_c",
+            ["."] = "t_floor",
+            ["!"] = "t_floor",
+            ["0"] = "t_floor",
+            ["%"] = "t_floor",
+            m = "t_floor",
+            t = "t_carpet_red",
+            [" "] = "t_carpet_red",
+            E = "t_carpet_red",
+        },
+        furniture = {
+            ["%"] = "f_rack_wood",
+            ["0"] = "f_wood_keg",
+            ["!"] = "f_wood_keg",
+            t = "f_table",
+            E = "f_armchair",
+            m = "f_glass_fridge",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            ["0"] = { id = "wine_cabernet", amount = { 100, 500 } },
+            ["!"] = { id = "wine_chardonnay", amount = { 100, 500 } },
+        },
+        loot_placements = { { id = "deck_of_cards", x = 3, y = 3, chance = 100 } },
+        item_groups = {
+            ["%"] = { group = "wines_worthy", chance = 70, repetitions = { 1, 2 } },
+            m = { group = "chilled_wine", chance = 40, repetitions = { 1, 4 } },
+            t = { group = "table_wine", chance = 100, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_7x7_wine_cellar_E",
+    layout = {
+        size = { width = 7, height = 7 },
+        rows = {
+            "|||||||",
+            "|!...0|",
+            "|. E .|",
+            "|.EtE.+",
+            "|. E .|",
+            "|%%.%m|",
+            "|||||||",
+        },
+        terrain = {
+            ["|"] = "t_wall_r",
+            ["+"] = "t_door_c",
+            ["."] = "t_floor",
+            ["!"] = "t_floor",
+            ["0"] = "t_floor",
+            ["%"] = "t_floor",
+            m = "t_floor",
+            t = "t_carpet_red",
+            [" "] = "t_carpet_red",
+            E = "t_carpet_red",
+        },
+        furniture = {
+            ["%"] = "f_rack_wood",
+            ["0"] = "f_wood_keg",
+            ["!"] = "f_wood_keg",
+            t = "f_table",
+            E = "f_armchair",
+            m = "f_glass_fridge",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            ["0"] = { id = "wine_cabernet", amount = { 100, 500 } },
+            ["!"] = { id = "wine_chardonnay", amount = { 100, 500 } },
+        },
+        loot_placements = { { id = "deck_of_cards", x = 3, y = 3, chance = 100 } },
+        item_groups = {
+            ["%"] = { group = "wines_worthy", chance = 70, repetitions = { 1, 2 } },
+            m = { group = "chilled_wine", chance = 40, repetitions = { 1, 4 } },
+            t = { group = "table_wine", chance = 100, repetitions = { 1, 4 } },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "room_7x7_wine_cellar_W",
+    layout = {
+        size = { width = 7, height = 7 },
+        rows = {
+            "|||||||",
+            "|!...0|",
+            "|. E .|",
+            "+.EtE.|",
+            "|. E .|",
+            "|%%.%m|",
+            "|||||||",
+        },
+        terrain = {
+            ["|"] = "t_wall_r",
+            ["+"] = "t_door_c",
+            ["."] = "t_floor",
+            ["!"] = "t_floor",
+            ["0"] = "t_floor",
+            ["%"] = "t_floor",
+            m = "t_floor",
+            t = "t_carpet_red",
+            [" "] = "t_carpet_red",
+            E = "t_carpet_red",
+        },
+        furniture = {
+            ["%"] = "f_rack_wood",
+            ["0"] = "f_wood_keg",
+            ["!"] = "f_wood_keg",
+            t = "f_table",
+            E = "f_armchair",
+            m = "f_glass_fridge",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        liquid_glyphs = {
+            ["0"] = { id = "wine_cabernet", amount = { 100, 500 } },
+            ["!"] = { id = "wine_chardonnay", amount = { 100, 500 } },
+        },
+        loot_placements = { { id = "deck_of_cards", x = 3, y = 3, chance = 100 } },
+        item_groups = {
+            ["%"] = { group = "wines_worthy", chance = 70, repetitions = { 1, 2 } },
+            m = { group = "chilled_wine", chance = 40, repetitions = { 1, 4 } },
+            t = { group = "table_wine", chance = 100, repetitions = { 1, 4 } },
+        },
+    },
+}
