@@ -1,53 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "mx_dead_vegetation",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "15x15_dead_vegetation" ], "x": [ 4, 5 ], "y": [ 4, 5 ] },
-        { "chunks": [ "15x15_dead_vegetation" ], "x": [ 0, 4 ], "y": [ 0, 9 ] },
-        { "chunks": [ "15x15_dead_vegetation" ], "x": [ 5, 9 ], "y": [ 0, 9 ] },
-        { "chunks": [ "15x15_dead_vegetation" ], "x": [ 0, 9 ], "y": [ 0, 4 ] },
-        { "chunks": [ "15x15_dead_vegetation" ], "x": [ 0, 9 ], "y": [ 5, 9 ] }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "mx_point_dead_vegetation",
-    "object": { "place_nested": [ { "chunks": [ "15x15_dead_vegetation" ], "x": [ 0, 9 ], "y": [ 0, 9 ] } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "15x15_dead_vegetation",
-    "object": {
-      "mapgensize": [ 15, 15 ],
-      "place_nested": [
-        { "chunks": [ "7x7_dead_vegetation" ], "x": [ 0, 8 ], "y": [ 0, 8 ] },
-        { "chunks": [ "7x7_dead_vegetation" ], "x": [ 0, 8 ], "y": [ 0, 8 ] },
-        { "chunks": [ "7x7_dead_vegetation" ], "x": [ 0, 8 ], "y": [ 0, 8 ] }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "7x7_dead_vegetation",
-    "object": {
-      "mapgensize": [ 7, 7 ],
-      "rows": [
-        "  xxx  ",
-        " xXXXx ",
-        "xXXXXXx",
-        "xXXXXXx",
-        "xXXXXXx",
-        " xXXXx ",
-        "  xxx  "
-      ],
-      "nested": { "X": { "chunks": [ "1x1_dead_vegetation" ] }, "x": { "chunks": [ "1x1_dead_vegetation", "null" ] } }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "1x1_dead_vegetation",
     "object": {
       "mapgensize": [ 1, 1 ],
