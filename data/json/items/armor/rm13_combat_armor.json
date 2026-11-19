@@ -247,26 +247,5 @@
     "consumption_per_use": [ { "pocket": "battery", "qty": 3 }, { "pocket": "rebreather", "qty": 1 } ],
     "turns_per_charge": 30,
     "revert_to": "rm13_armor"
-  },
-  {
-    "id": "rm13_battery",
-    "type": "ITEM",
-    "subtypes": [ "MAGAZINE" ],
-    "category": "tool_magazine",
-    "name": "RM13 battery pack",
-    "description": "A simple, heavy, black battery pack labeled \"RM13\".",
-    "weight": "14000 g",
-    "volume": "10000 ml",
-    "longest_side": "300 mm",
-    "price": "10000 USD",
-    "price_postapoc": "50 USD",
-    "material": [ { "type": "budget_steel", "portion": 99 }, { "type": "plastic", "portion": 1 } ],
-    "symbol": "=",
-    "color": "yellow",
-    "ammo_type": [ "battery" ],
-    "capacity": 5000,
-    "looks_like": "battery",
-    "flags": [ "NO_SALVAGE", "NO_UNLOAD", "NO_RELOAD", "RECHARGE" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 5000 } } ]
   }
 ]
