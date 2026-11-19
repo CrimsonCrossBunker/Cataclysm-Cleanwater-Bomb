@@ -1,0 +1,105 @@
+[
+  {
+    "type": "talk_topic",
+    "//": "common talk responses",
+    "id": [ "TALK_REFUGEE_Alonso_2", "TALK_REFUGEE_Alonso_Background", "TALK_REFUGEE_Alonso_Situation" ],
+    "responses": [
+      {
+        "text": "I'm trying to put a cleanup crew together to tidy up the back room.  Can you help?",
+        "condition": {
+          "and": [
+            { "u_has_mission": "MISSION_REFUGEE_Boris_CLEANUP" },
+            { "not": { "compare_string": [ "yes", { "npc_val": "mission_Boris_mission_1_cleanup_asked" } ] } }
+          ]
+        },
+        "topic": "TALK_REFUGEE_Alonso_Refuse_Boris_Mission_1"
+      },
+      { "text": "You seem a little forward…", "topic": "TALK_REFUGEE_Alonso_Forward" },
+      {
+        "text": "[PER 10] What is up with you?  What's with the fake accent, and speaking in the third person?",
+        "topic": "TALK_REFUGEE_Alonso_CalledOut1",
+        "condition": {
+          "and": [
+            { "u_has_perception": 10 },
+            { "not": { "compare_string": [ "asked", { "npc_val": "general_none_Alonso_accent" } ] } },
+            { "not": { "compare_string": [ "accepted", { "npc_val": "general_none_Alonso_accent" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "Why aren't you wearing any pants?",
+        "topic": "TALK_REFUGEE_Alonso_Pants1",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "mission_flag_Alonso_pants" } ] } }
+      },
+      {
+        "text": "About those special pants a sexy clown hid in a shop for mysterious reasons…",
+        "topic": "TALK_MISSION_INQUIRE",
+        "condition": { "compare_string": [ "in_progress", { "u_val": "mission_flag_Alonso_pants" } ] }
+      },
+      { "text": "What's your story?", "topic": "TALK_REFUGEE_Alonso_Background" },
+      { "text": "How are things here?", "topic": "TALK_REFUGEE_Alonso_Situation" },
+      {
+        "text": "[PRETTY] Remember that nice thing I did for you?  Can you do something nice for me?",
+        "topic": "TALK_REFUGEE_Alonso_Pretty_Action",
+        "condition": {
+          "and": [
+            {
+              "or": [
+                { "u_has_trait": "PRETTY" },
+                { "u_has_trait": "BEAUTIFUL" },
+                { "u_has_trait": "BEAUTIFUL2" },
+                { "u_has_trait": "BEAUTIFUL3" }
+              ]
+            },
+            { "npc_has_effect": "Alonso_pants_restored" },
+            { "math": [ "u_val('age') >= 18" ] },
+            { "u_has_item": "condom" }
+          ]
+        }
+      },
+      {
+        "text": "So about those condoms.  I thought of a good use for them…",
+        "topic": "TALK_REFUGEE_Alonso_Normal_Action",
+        "condition": {
+          "and": [
+            { "not": { "u_has_trait": "PRETTY" } },
+            { "not": { "u_has_trait": "BEAUTIFUL" } },
+            { "not": { "u_has_trait": "BEAUTIFUL2" } },
+            { "not": { "u_has_trait": "BEAUTIFUL3" } },
+            { "not": { "u_has_trait": "UGLY" } },
+            { "not": { "u_has_trait": "DEFORMED" } },
+            { "not": { "u_has_trait": "DEFORMED2" } },
+            { "not": { "u_has_trait": "DEFORMED3" } },
+            { "npc_has_effect": "Alonso_pants_restored" },
+            { "math": [ "u_val('age') >= 18" ] },
+            { "u_has_item": "condom" }
+          ]
+        }
+      },
+      {
+        "text": "[UGLY] I'm desperate.  You're my only chance.",
+        "topic": "TALK_REFUGEE_Alonso_Ugly_Action",
+        "condition": {
+          "and": [
+            {
+              "or": [
+                { "u_has_trait": "UGLY" },
+                { "u_has_trait": "DEFORMED" },
+                { "u_has_trait": "DEFORMED2" },
+                { "u_has_trait": "DEFORMED3" }
+              ]
+            },
+            { "npc_has_effect": "Alonso_pants_restored" },
+            { "math": [ "u_val('age') >= 18" ] },
+            { "u_has_item": "condom" }
+          ]
+        }
+      },
+      {
+        "text": "So about those condoms.  I thought of a good use for them…",
+        "topic": "TALK_REFUGEE_Alonso_Too_Young",
+        "condition": { "math": [ "u_val('age') < 18" ] }
+      }
+    ]
+  }
+]

@@ -10,49 +10,5 @@
         "effect": { "set_string_var": { "mutator": "topic_item" }, "target_var": { "global_val": "key1" } }
       }
     ]
-  },
-  {
-    "type": "npc_class",
-    "id": "test_shop_class",
-    "name": { "str": "Test NPC class" },
-    "job_description": "Participating in unit tests.",
-    "common": false,
-    "bonus_str": { "rng": [ -4, 0 ] },
-    "bonus_dex": { "rng": [ -2, 0 ] },
-    "bonus_int": { "rng": [ 1, 5 ] },
-    "skills": [
-      {
-        "skill": "ALL",
-        "level": { "mul": [ { "one_in": 3 }, { "sum": [ { "dice": [ 2, 2 ] }, { "constant": -2 }, { "one_in": 4 } ] } ] }
-      }
-    ],
-    "shopkeeper_item_group": [
-      { "group": "test_npc_belt" },
-      { "group": "test_npc_eyes", "trust": 10 },
-      { "group": "test_npc_hat", "trust": 40, "strict": true }
-    ]
-  },
-  {
-    "type": "npc",
-    "id": "test_shopkeep",
-    "//": "NPC in unit tests",
-    "name_suffix": "Tester",
-    "class": "test_shop_class",
-    "attitude": 1,
-    "mission": "NULL",
-    "chat": "TALK_TEST_FACTION_TRUST",
-    "faction": "free_merchants"
-  },
-  {
-    "type": "npc",
-    "id": "test_talker",
-    "//": "NPC in unit tests",
-    "name_suffix": "Tester",
-    "class": "NC_DOCTOR",
-    "attitude": 1,
-    "mission": "NULL",
-    "chat": "TALK_TEST_START",
-    "faction": "tacoma_commune",
-    "talk_friend_guard": "TALK_TEST_GUARD"
   }
 ]

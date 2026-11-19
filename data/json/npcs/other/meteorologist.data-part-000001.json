@@ -1,0 +1,43 @@
+[
+  {
+    "type": "talk_topic",
+    "id": [ "TALK_meteorologist_1" ],
+    "dynamic_line": {
+      "compare_string": [ "yes", { "npc_val": "flag_mission_u_helped_meteorologist" } ],
+      "yes": "Run, I need to run, where to run…",
+      "no": {
+        "compare_string": [ "yes", { "npc_val": "general_meeting_u_met_meteorologist" } ],
+        "yes": {
+          "gendered_line": "Air temperature, precipitation, but what about… oh, I'm sorry, I didn't notice you.  Hello.",
+          "relevant_genders": [ "npc" ]
+        },
+        "no": {
+          "gendered_line": "I have not seen living people for a long time.  Glad to see another survivor.  Greetings, <name_g>.",
+          "relevant_genders": [ "npc" ]
+        }
+      }
+    },
+    "speaker_effect": {
+      "sentinel": "u_met_meteorologist",
+      "effect": [ { "npc_add_var": "general_meeting_u_met_meteorologist", "value": "yes" } ]
+    },
+    "responses": [
+      { "text": "About that job…", "condition": "has_assigned_mission", "topic": "TALK_MISSION_INQUIRE" },
+      { "text": "<BGSS_intro_question>", "topic": "TALK_meteorologist_Background" },
+      {
+        "text": "Maybe I can help you with your problem?",
+        "topic": "TALK_meteorologist_safety",
+        "condition": { "compare_string": [ "yes", { "npc_val": "flag_mission_u_helped_meteorologist" } ] },
+        "switch": true
+      },
+      {
+        "text": "Do you need any help?",
+        "switch": true,
+        "trial": { "type": "CONDITION", "condition": { "math": [ "time_since(n_time_mission_meteorologist_wait) >= time('2 d')" ] } },
+        "success": { "effect": [ { "npc_lose_var": "time_mission_meteorologist_wait" } ], "topic": "TALK_MISSION_LIST" },
+        "failure": { "topic": "TALK_meteorologist_wait" }
+      },
+      { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
+    ]
+  }
+]

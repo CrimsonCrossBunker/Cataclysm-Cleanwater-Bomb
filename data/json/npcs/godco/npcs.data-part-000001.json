@@ -1,0 +1,14 @@
+[
+  {
+    "type": "npc",
+    "id": "FM_caravan_merchant_godco_predatory",
+    "//": "Random NPC, persistent, is predatory in their pricing and aims to exploit God's Chosen for profit.",
+    "name_suffix": "merchant",
+    "class": "NC_TRADER_PREDATORY",
+    "attitude": 0,
+    "mission": "SHOPKEEP",
+    "death_eocs": [ "GODCO_TRADER_MISSION_DEATHFAIL" ],
+    "chat": "TALK_CARAVAN_MERCHANT_PREDATORY_1",
+    "faction": "free_merchants"
+  }
+]

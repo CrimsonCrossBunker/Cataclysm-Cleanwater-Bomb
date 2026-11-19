@@ -1,0 +1,63 @@
+local ccb = require("ccb")
+
+-- Appears in the refugee center as a unique trader and potential mission provider.
+ccb.content.define_npc {
+    id = "arsonist",
+    unique_name = ccb.content.text("Makayla Sanchez"),
+    suffix = ccb.content.text("Arsonist"),
+    gender = "female",
+    class = "NC_ARSONIST",
+    attitude = 0,
+    mission = "SHOPKEEP",
+    age = 24,
+    height = 165,
+    chat = "TALK_ARSONIST",
+    faction = "no_faction",
+    missions_offered = "MISSION_ARSONIST_1_AMMONIUM_NITRATE",
+}
+
+ccb.content.define_npc_class {
+    id = "NC_ARSONIST",
+    name = ccb.content.text("Arsonist"),
+    job_description = ccb.content.text("I'm just watching the world burn."),
+    common = false,
+    traits = {
+        { group = "BG_survival_story_CRIMINAL" },
+        { trait = "hair_long_over_eye", variant = "brown" },
+        { trait = "natural_hair_color_brown" },
+        { trait = "eye_color", variant = "blue" },
+        { trait = "SKIN_LIGHT" },
+        { trait = "QUICK" },
+        { trait = "FASTHEALER" },
+        { trait = "OPTIMISTIC" },
+        { trait = "FELINE_EARS" },
+        { trait = "MAKAYLA_MUTATOR" },
+    },
+    dexterity = { rng = { 2, 2 } },
+    intelligence = { rng = { 1, 1 } },
+    perception = { rng = { 2, 2 } },
+    aggression = { rng = { 0, 1 } },
+    collector = { rng = { 0, 2 } },
+    shop_groups = "NC_ARSONIST_STOCK",
+    price_rules = {
+        { item = "FMCNote", fixed_adjustment = 0 },
+        { item = "money_strap_FMCNote", fixed_adjustment = 0 },
+        { item = "money_bundle_FMCNote", fixed_adjustment = 0 },
+    },
+    carry = "NC_ARSONIST_STOCK",
+    worn = "NC_ARSONIST_worn",
+    skills = {
+        { skill = "firstaid", bonus = 3 },
+        { skill = "cooking", bonus = 5 },
+        { skill = "fabrication", bonus = 5 },
+        { skill = "survival", bonus = 2 },
+        { skill = "melee", bonus = 5 },
+        { skill = "bashing", bonus = 4 },
+        { skill = "gun", bonus = 4 },
+        { skill = "pistol", bonus = 4 },
+        { skill = "throw", bonus = 6 },
+        { skill = "swimming", bonus = 3 },
+        { skill = "driving", bonus = 3 },
+        { skill = "speech", bonus = 3 },
+    },
+}

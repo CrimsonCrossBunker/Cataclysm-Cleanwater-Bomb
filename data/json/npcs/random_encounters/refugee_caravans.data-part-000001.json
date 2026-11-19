@@ -1,0 +1,23 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_CARAVAN_REFUGEE_A1",
+    "dynamic_line": "Please don't hurt us, we're just trying to get to safety.",
+    "speaker_effect": { "effect": { "npc_first_topic": "TALK_CARAVAN_REFUGEE_A2" } },
+    "responses": [
+      { "text": "What's your situation here?", "topic": "TALK_CARAVAN_REFUGEE_A1_Job" },
+      {
+        "text": "I don't mean any harm.  I'm looking for a specific, strange building.  I wonder if you've heard anything about it?",
+        "topic": "TALK_CARAVAN_REFUGEES_EXODII_MISSION_WAREHOUSE",
+        "condition": {
+          "and": [
+            { "u_has_mission": "EXODII_MISSION_WAREHOUSE" },
+            { "not": { "compare_string": [ "yes", { "npc_val": "asked_about_exodii_warehouse_mission" } ] } }
+          ]
+        },
+        "effect": { "run_eocs": [ "EOC_exodii_mission_wh_directions_chance" ] }
+      },
+      { "text": "I don't have time for zombie bait like you.", "topic": "TALK_DONE" }
+    ]
+  }
+]

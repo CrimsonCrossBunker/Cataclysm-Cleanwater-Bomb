@@ -1,0 +1,68 @@
+local ccb = require("ccb")
+
+-- Angry beggar in the refugee center.
+ccb.content.define_npc {
+    id = "refugee_beggar3",
+    unique_name = ccb.content.text("Luo Meizhen"),
+    gender = "female",
+    suffix = ccb.content.text("Mycologist"),
+    temporary_suffix = "Beggar",
+    class = "NC_BEGGAR_3",
+    attitude = 0,
+    mission = "GUARD",
+    chat = "TALK_REFUGEE_BEGGAR_3",
+    faction = "lobby_beggars",
+    age = 31,
+    height = 160,
+    strength = 6,
+    dexterity = 7,
+    intelligence = 12,
+    perception = 10,
+    personality = { aggression = -10, bravery = -10, collector = 2, altruism = 1 },
+    friend_chat = "TALK_FRIEND_Luo",
+    friend_guard_chat = "TALK_FRIEND_GUARD_Luo",
+}
+
+-- All the beggars have been camping inside the evac shelter because they're too weak and unskilled to make it on their own.
+ccb.content.define_npc_class {
+    id = "NC_BEGGAR_3",
+    name = ccb.content.text("Beggar"),
+    job_description = ccb.content.text("I'm just trying to survive."),
+    common = false,
+    strength = { rng = { -1, 1 } },
+    dexterity = { rng = { -1, 1 } },
+    intelligence = { rng = { 0, 1 } },
+    perception = { rng = { 0, 1 } },
+    skills = {
+        { skill = "computer", bonus = { rng = { 3, 5 } } },
+        { skill = "cooking", bonus = { rng = { 1, 3 } } },
+        { skill = "chemistry", bonus = { rng = { 7, 8 } } },
+        { skill = "driving", bonus = { rng = { 2, 5 } } },
+        { skill = "electronics", bonus = { rng = { 1, 2 } } },
+        { skill = "fabrication", bonus = { rng = { 1, 3 } } },
+        { skill = "firstaid", bonus = { rng = { 1, 4 } } },
+        { skill = "speech", bonus = { rng = { 1, 4 } } },
+    },
+    proficiencies = {
+        "prof_intro_chemistry",
+        "prof_intro_biology",
+        "prof_organic_chemistry",
+        "prof_biochemistry",
+        "prof_intro_chem_synth",
+        "prof_mycology",
+        "prof_mycology_advanced",
+    },
+    worn = "NC_BEGGAR_3_worn",
+    carry = "EMPTY_GROUP",
+    weapon = "EMPTY_GROUP",
+    traits = {
+        { trait = "SLOWHEALER2" },
+        { trait = "SLOWRUNNER" },
+        { trait = "HEAVYSLEEPER" },
+        { trait = "FLIMSY2" },
+        { trait = "FASTLEARNER" },
+        { trait = "PACIFIST" },
+        { trait = "Exp_Mycology2" },
+        { group = "Appearance_EastAsian" },
+    },
+}

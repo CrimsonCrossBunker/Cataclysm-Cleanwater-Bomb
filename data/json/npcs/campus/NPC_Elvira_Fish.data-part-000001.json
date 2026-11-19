@@ -1,0 +1,8 @@
+[
+  {
+    "id": "elvira_shop_rates",
+    "copy-from": "basic_shop_rates",
+    "type": "shopkeeper_consumption_rates",
+    "extend": { "rates": [ { "item": "FMCNote", "rate": -1 } ] }
+  }
+]

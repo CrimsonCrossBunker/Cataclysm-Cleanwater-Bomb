@@ -1,0 +1,68 @@
+local ccb = require("ccb")
+
+-- A survivor who sometimes visits the refugee center.
+ccb.content.define_npc {
+    id = "RC_John_Bailey_visiting",
+    unique_name = ccb.content.text("John Bailey"),
+    suffix = ccb.content.text("Survivor"),
+    class = "NC_John_Bailey",
+    attitude = 0,
+    mission = "SHOPKEEP",
+    chat = "TALK_RC_John_Bailey_1",
+    faction = "no_faction",
+}
+
+-- A wandering survivor, a pretty tough and capable dude.  Represents an NPC version of a person much like the player.
+ccb.content.define_npc_class {
+    id = "NC_John_Bailey",
+    name = ccb.content.text("Survivor"),
+    job_description = ccb.content.text("I'm just trying to survive."),
+    common = false,
+    strength = 1,
+    dexterity = 2,
+    intelligence = 1,
+    perception = 2,
+    worn = "John_Bailey_worn",
+    carry = "John_Bailey_carried",
+    weapon = "John_Bailey_wield",
+    traits = {
+        { trait = "SKIN_LIGHT" },
+        { trait = "eye_color", variant = "brown" },
+        { trait = "hair_short", variant = "brown" },
+        { trait = "natural_hair_color_brown" },
+        { trait = "DEFT" },
+        { trait = "OUTDOORSMAN" },
+        { trait = "GOODCARDIO" },
+        { trait = "TOUGH" },
+    },
+    proficiencies = {
+        "prof_bow_basic",
+        "prof_bow_expert",
+        "prof_carpentry_basic",
+        "prof_elec_soldering",
+        "prof_elec_circuits",
+        "prof_elec_semiconductors",
+        "prof_electromagnetics",
+        "prof_fletching",
+        "prof_food_prep",
+        "prof_metalworking",
+        "prof_spotting",
+    },
+    skills = {
+        { skill = "archery", bonus = 6 },
+        { skill = "computer", bonus = 8 },
+        { skill = "cooking", bonus = 2 },
+        { skill = "dodge", bonus = 3 },
+        { skill = "electronics", bonus = 6 },
+        { skill = "fabrication", bonus = 5 },
+        { skill = "firstaid", bonus = 4 },
+        { skill = "gun", bonus = 6 },
+        { skill = "mechanics", bonus = 4 },
+        { skill = "melee", bonus = 6 },
+        { skill = "pistol", bonus = 1 },
+        { skill = "speech", bonus = 5 },
+        { skill = "stabbing", bonus = 4 },
+        { skill = "survival", bonus = 6 },
+        { skill = "swimming", bonus = 3 },
+    },
+}

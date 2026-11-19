@@ -1,0 +1,48 @@
+[
+  {
+    "id": "TALK_RANCH_CROP_OVERSEER",
+    "type": "talk_topic",
+    "dynamic_line": "I hope you are here to do business.",
+    "responses": [
+      {
+        "text": "The doctor needs some help building an anesthetic machine.  Do you have anything that could help?",
+        "topic": "TALK_RANCH_GENERIC_ANESTHETIC_FOR_DOCTOR",
+        "condition": {
+          "and": [
+            { "u_has_mission": "MISSION_RANCH_DOCTOR_MEDICAL_ANESTHETIC" },
+            { "not": { "compare_string": [ "yes", { "npc_val": "mission_tacoma_ranch_doctor_anesthetic_asked" } ] } }
+          ]
+        },
+        "effect": [ { "npc_add_var": "mission_tacoma_ranch_doctor_anesthetic_asked", "value": "yes" } ]
+      },
+      { "text": "What are you doing here?", "topic": "TALK_RANCH_CROP_OVERSEER_JOB" },
+      {
+        "text": "I figured you might be looking for some help…",
+        "topic": "TALK_RANCH_CROP_OVERSEER",
+        "effect": { "companion_mission": "COMMUNE CROPS" }
+      },
+      {
+        "text": "I'm interested in investing in agriculture…",
+        "topic": "TALK_RANCH_CROP_OVERSEER_FIELD",
+        "condition": {
+          "and": [
+            { "not": { "npc_has_trait": "NPC_CONSTRUCTION_LEV_1" } },
+            { "not": { "compare_string": [ "yes", { "npc_val": "dialogue_tacoma_ranch_purchased_field_1" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "I'd like to discuss my field…",
+        "topic": "TALK_RANCH_CROP_OVERSEER_FIELD",
+        "condition": {
+          "or": [
+            { "npc_has_trait": "NPC_CONSTRUCTION_LEV_1" },
+            { "compare_string": [ "yes", { "npc_val": "dialogue_tacoma_ranch_purchased_field_1" } ] }
+          ]
+        }
+      },
+      { "text": "What do you need done?", "topic": "TALK_MISSION_LIST" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]

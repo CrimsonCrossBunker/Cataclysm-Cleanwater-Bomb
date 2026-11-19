@@ -1,0 +1,64 @@
+[
+  {
+    "id": [ "TALK_ANCILLA_HQ_GUARD", "TALK_ANCILLA_HQ_GUARD_AskJob", "TALK_ANCILLA_HQ_GUARD_AskJoin" ],
+    "type": "talk_topic",
+    "dynamic_line": {
+      "u_has_any_trait": [ "PROF_FED" ],
+      "yes": [
+        "We'll protect our own, marshal.",
+        "Make sure you don't get in trouble, officer.",
+        "Don't let me see you snooping around.",
+        "Stay out of trouble, right?",
+        "How do you like that boot, huh?"
+      ],
+      "no": {
+        "u_has_trait": "PROF_HUB01_ANCILLIARY",
+        "yes": [
+          "Hey, oh, umm.  Yes, Sir?",
+          { "gendered_line": "&The mercenary looks noticeably tense as you approach.", "relevant_genders": [ "npc" ] },
+          "Nothing to report, Sir!",
+          "Hey boss."
+        ],
+        "no": {
+          "u_has_faction_trust": 15,
+          "yes": [
+            "Great to see you back in base.",
+            "Here's hoping I get out of guard duty soon.",
+            "Got anything good?",
+            "On an errand from the box?",
+            "Up and at them again?",
+            "Up for a drink when my shift ends?",
+            "Well I can't complain much, money and free food for standing around with a gun?\n\nSure looks like a steal nowadays."
+          ],
+          "no": {
+            "compare_string": [ "yes", { "u_val": "dialogue_ancilla_hq_guard_first_meet" } ],
+            "yes": [
+              "If you don't have any business here, you better get going.",
+              "Terminal is down there, please move along.",
+              "Please head right down, scavenger.",
+              "Are you here to do anything?"
+            ],
+            "no": "If you are looking for the Terminal, it's in the first basement, right down the stairs and to the left."
+          }
+        }
+      }
+    },
+    "speaker_effect": { "effect": [ { "u_add_var": "bool_ancilla_barkeep", "value": "yes" } ] },
+    "responses": [
+      {
+        "text": "What are you doing here?",
+        "topic": "TALK_ANCILLA_HQ_GUARD_AskJob",
+        "condition": { "not": { "u_has_any_trait": [ "PROF_FED" ] } }
+      },
+      {
+        "text": "Is there any way I can join your team?",
+        "topic": "TALK_ANCILLA_HQ_GUARD_AskJoin",
+        "condition": { "not": { "or": [ { "u_has_any_trait": [ "PROF_FED" ] }, { "u_has_faction_trust": 15 } ] } }
+      },
+      {
+        "truefalsetext": { "condition": { "u_has_faction_trust": 15 }, "true": "See you around.", "false": "Don't mind me…" },
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]

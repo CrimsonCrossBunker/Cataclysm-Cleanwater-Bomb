@@ -1,0 +1,44 @@
+[
+  {
+    "type": "npc_class",
+    "id": "NC_godco_russell",
+    "name": { "str": "Hunter" },
+    "job_description": "I am a member of the New England Church Community.",
+    "common": false,
+    "bonus_str": { "rng": [ 0, 1 ] },
+    "bonus_dex": { "rng": [ -1, 2 ] },
+    "bonus_int": { "rng": [ -1, 0 ] },
+    "bonus_per": 4,
+    "worn_override": "GODCO_russell_worn",
+    "carry_override": "GODCO_russell_carried",
+    "weapon_override": "GODCO_russell_wield",
+    "proficiencies": [ "prof_traps", "prof_trapsetting", "prof_tanning_basic" ],
+    "shopkeeper_item_group": [
+      { "group": "GODCO_russell_sell", "rigid": true },
+      {
+        "group": "GODCO_russell_carried",
+        "rigid": true,
+        "condition": { "math": [ "n_NEVER == 1" ] },
+        "refusal": "<npcname> will never sell this"
+      }
+    ],
+    "traits": [
+      { "trait": "NIGHTVISION" },
+      { "trait": "OUTDOORSMAN" },
+      { "trait": "EAGLEEYED" },
+      { "group": "Appearance_demographics" },
+      { "trait": "FACIAL_HAIR_BEARD" },
+      { "trait": "NO_BASH" },
+      { "trait": "RETURN_TO_START_POS" }
+    ],
+    "skills": [
+      { "skill": "ALL", "level": { "mul": [ { "one_in": 3 }, { "sum": [ { "dice": [ 2, 2 ] }, { "rng": [ -1, -4 ] } ] } ] } },
+      { "skill": "survival", "bonus": { "rng": [ 2, 3 ] } },
+      { "skill": "fabrication", "bonus": { "rng": [ 1, 2 ] } },
+      { "skill": "melee", "bonus": { "rng": [ 1, 2 ] } },
+      { "skill": "cutting", "bonus": { "rng": [ 1, 2 ] } },
+      { "skill": "gun", "bonus": { "rng": [ 3, 5 ] } },
+      { "skill": "rifle", "bonus": { "rng": [ 2, 4 ] } }
+    ]
+  }
+]
