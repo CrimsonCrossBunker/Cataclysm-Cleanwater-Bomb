@@ -83,23 +83,5 @@
     "passive_effects": [
       { "id": "ITEM_ENCH_MindOverMatter_psionic_mindsight_glasses_0" }
     ]
-  },
-  {
-    "id": "psionic_mindsight_glasses_on",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "category": "clothing",
-    "copy-from": "psionic_mindsight_glasses",
-    "name": { "str": "QD944-P 'Mindsight' glasses (on)", "str_pl": "sets of QD944-P 'Mindsight' glasses (on)" },
-    "description": "A set of AR-looking glasses.  The code \"QD944-P\" is printed in small letters on the temples.  They are currently active.",
-    "use_action": {
-      "ammo_scale": 0,
-      "type": "transform",
-      "menu_text": "Turn off",
-      "msg": "You deactivate your %s.",
-      "target": "psionic_mindsight_glasses"
-    },
-    "extend": { "flags": [ "SPAWN_ACTIVE" ] },
-    "power_draw": "3500 mW"
   }
 ]
