@@ -1,0 +1,83 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "nl_chem_thrower",
+    looks_like = "laser_rifle",
+    name = ccb.content.text("boneclad chem rifle"),
+    description = ccb.content.text("A boxy rifle-like weapon made of unnaturally dense bone and plastic, sporting a series of <meta_colors> LEDs along the length of the barrel.  Tubes, wires, and plastic-like sinew dangle from where it was pulled free of a fleshy, turret-like creature.  It has a trigger and a connection for a battery pack, if you can find batteries that fit."),
+    expand_snippets = true,
+    mass = "6950 g",
+    volume = "6 L",
+    length = "900 mm",
+    price = "0 USD",
+    survival_price = "15 USD",
+    accuracy = { grip = "bad", length = "long", surface = "any", balance = "clumsy" },
+    materials = { "plastic", "cyber_bone" },
+    symbol = "(",
+    color = "white",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            magazine_well = "50 ml",
+            allowed_items = { "nl_chem_thrower_mag" },
+        },
+    },
+    flags = { "OVERHEATS" },
+    faults = { { fault = "fault_overheat_melting" }, { fault = "fault_overheat_safety" } },
+    melee_damage = { bash = 18 },
+    gun = {
+        reload_noise_volume = 10,
+        skill = "rifle",
+        range = 30,
+        dispersion = 40,
+        durability = 8,
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("semi-auto"), quantity = 1 },
+            { id = "AUTO", label = ccb.content.text("auto-rpm"), rpm = 1200 },
+        },
+        overheat_threshold = 100,
+        cooling = 2,
+        heat_per_shot = 5,
+        loudness = 12,
+        reload_time = 250,
+        mod_locations = { { id = "sling", count = 1 } },
+        ammunition = { "nl_chem_thrower_ammo" },
+        effects = { "LASER" },
+    },
+}
+
+ccb.content.define_item {
+    id = "nl_chem_thrower_mag",
+    name = ccb.content.text("odd charge pack"),
+    description = ccb.content.text("Some kind of blocky battery pack made of unnaturally dense bone.  The connection-points look like stubby, fleshy gums, but despite their shape, otherwise appear to be copper."),
+    mass = "149 g",
+    volume = "49 ml",
+    materials = { "cyber_bone", "copper" },
+    price = "0 USD",
+    survival_price = "1 cent",
+    symbol = "#",
+    color = "white",
+    pockets = { { kind = "MAGAZINE", ammunition = { nl_chem_thrower_ammo = 57 } } },
+    flags = { "MAG_COMPACT", "NO_UNLOAD" },
+    magazine = { ammunition = { "nl_chem_thrower_ammo" } },
+}
+
+ccb.content.define_item {
+    id = "nl_chem_thrower_ammo",
+    name = ccb.content.text("chem charge"),
+    description = ccb.content.text("Charges for an otherworldly chem rifle."),
+    mass = "1 g",
+    volume = "1 ml",
+    price = "1 USD 60 cent",
+    survival_price = "8 USD",
+    flags = { "IRREPLACEABLE_CONSUMABLE" },
+    materials = { "anomaly" },
+    symbol = "=",
+    color = "green",
+    stack_size = 57,
+    ammunition = {
+        count = 57,
+        type = "nl_chem_thrower_ammo",
+        damage = { type = "acid", amount = 6, penetration = 0 },
+    },
+}
