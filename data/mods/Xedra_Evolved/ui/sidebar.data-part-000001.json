@@ -1,0 +1,41 @@
+[
+  {
+    "clauses": [
+      { "condition": { "u_has_effect": "vampire_virus" }, "id": "content", "widgets": "vampire_blood_levels" },
+      { "condition": { "u_has_trait": "DHAMPIR_TRAIT" }, "id": "content", "widgets": "vampire_blood_levels" },
+      { "condition": { "u_has_trait": "LILIN_TRAITS" }, "id": "content", "widgets": "ruach_counter_meter" }
+    ],
+    "default_clause": { "widgets": "blood_ruach_blank_line" },
+    "flags": [ "W_DISABLED_WHEN_EMPTY" ],
+    "label": "Blood/Ruach Descriptor",
+    "id": "blood_ruach_descriptor",
+    "style": "layout",
+    "type": "widget"
+  },
+  {
+    "clauses": [
+      { "condition": { "u_has_effect": "vampire_virus" }, "id": "content", "widgets": "vampire_blood_levels_numbers" },
+      { "condition": { "u_has_trait": "DHAMPIR_TRAIT" }, "id": "content", "widgets": "vampire_blood_levels" },
+      { "condition": { "u_has_trait": "LILIN_TRAITS" }, "id": "content", "widgets": "ruach_counter_numbers" }
+    ],
+    "default_clause": { "widgets": "blood_ruach_blank_line" },
+    "flags": [ "W_DISABLED_WHEN_EMPTY" ],
+    "label": "Blood/Ruach Numbers",
+    "id": "blood_ruach_numbers",
+    "style": "layout",
+    "type": "widget"
+  },
+  {
+    "clauses": [
+      { "condition": { "u_has_effect": "vampire_virus" }, "id": "content", "widgets": "vampire_blood_levels_graph" },
+      { "condition": { "u_has_trait": "DHAMPIR_TRAIT" }, "id": "content", "widgets": "vampire_blood_levels" },
+      { "condition": { "u_has_trait": "LILIN_TRAITS" }, "id": "content", "widgets": "ruach_counter_graph" }
+    ],
+    "default_clause": { "widgets": "blood_ruach_blank_line" },
+    "flags": [ "W_DISABLED_WHEN_EMPTY" ],
+    "label": "Blood/Ruach Graph",
+    "id": "blood_ruach_graph",
+    "style": "layout",
+    "type": "widget"
+  }
+]
