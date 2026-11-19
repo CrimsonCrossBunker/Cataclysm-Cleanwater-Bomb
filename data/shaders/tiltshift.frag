@@ -1,5 +1,5 @@
 // Tilt-shift-style selective blur for the final 3D terrain composite.
-// The central focus band stays sharp; the upper and lower edges soften.
+// Only distant structural LOD softens; detailed terrain and UI stay sharp.
 
 #version 450
 
@@ -13,7 +13,8 @@ void main()
 {
     vec4 sharp = texture( u_atlas, v_uv );
     float edge = abs( v_uv.y - 0.5 ) * 2.0;
-    float amount = smoothstep( 0.30, 0.82, edge );
+    float lod_mask = sharp.a < 0.5 ? 1.0 : 0.0;
+    float amount = smoothstep( 0.30, 0.82, edge ) * lod_mask;
     vec4 result = sharp;
     if( amount > 0.001 ) {
         vec2 offset = 2.0 / vec2( textureSize( u_atlas, 0 ) );
@@ -28,5 +29,5 @@ void main()
         soft += texture( u_atlas, v_uv + vec2( -offset.x, offset.y ) ) * 0.05;
         result = mix( sharp, soft, amount );
     }
-    out_color = vec4( result.rgb, sharp.a ) * v_vertex_color;
+    out_color = vec4( result.rgb, 1.0 ) * v_vertex_color;
 }

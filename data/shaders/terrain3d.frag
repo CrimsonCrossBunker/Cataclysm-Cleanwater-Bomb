@@ -80,6 +80,9 @@ void main()
 
     bool textured = ( flags & 1 ) != 0;
     bool no_discard = ( flags & 2 ) != 0;
+    // Distant structural LOD alone is marked for the final tilt-shift pass.
+    // Alpha is an internal mask here; the composite restores full opacity.
+    float composite_alpha = ( flags & 512 ) != 0 ? 0.0 : 1.0;
     vec4 sampled = vec4( 1.0 );
     if( textured ) {
         sampled = texture( atlas_tex, v_uv );
@@ -101,7 +104,7 @@ void main()
         vec3 mem = memory_params.y > 0.5
                    ? memory_mixer( rgb, memory_dark.rgb, memory_light.rgb, memory_dark.w )
                    : memory_preset( int( memory_params.x + 0.5 ), rgb );
-        out_color = vec4( mem, 1.0 );
+        out_color = vec4( mem, composite_alpha );
         return;
     }
     // night vision goggles (NV_GREEN_TOGGLE): 2D's reference_night_rgb. the
@@ -118,12 +121,12 @@ void main()
         vec3 dim = nightvision_green( night * mix( nv_params.y, 1.0, light ) );
         vec3 nv = mix( dim, nightvision_green( over ),
                        smoothstep( nv_params.z, 1.0, light ) );
-        out_color = vec4( nv * v_shade, 1.0 );
+        out_color = vec4( nv * v_shade, composite_alpha );
         return;
     }
     // low light drains color, as 2D's lit shader does; v_color.a carries the
     // tile light's saturation (1 = full color, 0 = grayscale)
     float gray = ( rgb.r + rgb.g + rgb.b ) / 3.0;
     rgb = mix( vec3( gray ), rgb, v_color.a );
-    out_color = vec4( rgb * v_shade, 1.0 );
+    out_color = vec4( rgb * v_shade, composite_alpha );
 }

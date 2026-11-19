@@ -816,7 +816,8 @@ void reset_frame_tracking()
     }
     g_ctx.latest_ready = -1;
     g_ctx.latest_ready_serial = 0;
-    g_ctx.next_serial = 1;
+    // Keep serials monotonic across target reallocations: cached sprite lookups
+    // use them to retain texture owners once per recording frame.
 }
 
 void poll_frame_slots()
@@ -1076,6 +1077,9 @@ bool ensure_targets( SDL_Renderer *renderer, const int w, const int h )
             return false;
         }
         SDL_SetTextureScaleMode( slot.color_tex_sdl, SDL_SCALEMODE_LINEAR );
+        // Offscreen alpha carries the LOD mask until the composite restores
+        // opacity. The normal-composite fallback must ignore that mask too.
+        SDL_SetTextureBlendMode( slot.color_tex_sdl, SDL_BLENDMODE_NONE );
     }
 
     g_ctx.tex_w = w;
@@ -1905,6 +1909,7 @@ struct cached_sprite_lookup_3d {
     sprite_lookup_3d value;
     std::shared_ptr<SDL_Texture> fg_owner;
     std::shared_ptr<SDL_Texture> bg_owner;
+    uint64_t retained_serial = 0;
 };
 
 using sprite_lookup_cache = std::unordered_map<sprite_lookup_key,
@@ -1961,10 +1966,13 @@ bool lookup_sprite_layers_3d( cata_tiles *tiles, const std::string &id,
                            season_type::NUM_SEASONS *static_cast<int>( foliage_season_of_year( calendar::turn ) ) };
     sprite_lookup_cache &cache = sprite_cache();
     if( const auto it = cache.find( key ); it != cache.end() ) {
-        const cached_sprite_lookup_3d &cached = *it->second;
+        cached_sprite_lookup_3d &cached = *it->second;
         out = cached.value;
-        retain_frame_texture( cached.fg_owner );
-        retain_frame_texture( cached.bg_owner );
+        if( g_recording_slot && cached.retained_serial != g_recording_slot->serial ) {
+            retain_frame_texture( cached.fg_owner );
+            retain_frame_texture( cached.bg_owner );
+            cached.retained_serial = g_recording_slot->serial;
+        }
         ++g_profile.sprite_cache_hits;
         return out.fg_tex;
     }
@@ -2002,6 +2010,7 @@ bool lookup_sprite_layers_3d( cata_tiles *tiles, const std::string &id,
         cached->value = out;
         cached->fg_owner = layers.fg_owner;
         cached->bg_owner = layers.bg_owner;
+        cached->retained_serial = g_recording_slot ? g_recording_slot->serial : 0;
         const sprite_lookup_key stored_key{ cached->id, cached->variant, key.category,
                                             key.subtile, key.rota, key.force, key.season };
         cache.emplace( stored_key, std::move( cached ) );
@@ -2113,6 +2122,8 @@ void push_instance( instance_sink out, const float dx, const float dy,
     // alpha, for field sprites whose semi-transparent pixels 2D would blend
     // bit8: silhouette side — transpose linequad UV so the run follows sprite v
     // while sampling a fixed sprite-u edge column (independent of world rotation)
+    // bit9: distant structural LOD — terrain3d stores a composite-only mask in
+    // the offscreen alpha channel so tilt-shift never blurs detailed terrain
     // pad: side-strip v, or the run direction for MODE_LINEQUAD (0 = E-W)
     out.data[14] = ( spr.atlas ? 1.0f : 0.0f ) + ( no_discard ? 2.0f : 0.0f ) +
                    static_cast<float>( ( rota4 & 3 ) << 2 ) + ( side_strip ? 16.0f : 0.0f ) +
@@ -2120,6 +2131,15 @@ void push_instance( instance_sink out, const float dx, const float dy,
                    ( soft_alpha ? 128.0f : 0.0f ) + ( edge_skirt ? 256.0f : 0.0f );
     out.data[15] = pad_value >= 0.0f ? pad_value
                    : ( side_strip ? spr.v1 - 0.02f * ( spr.v1 - spr.v0 ) : 0.0f );
+}
+
+void push_lod_instance( instance_sink out, const float dx, const float dy,
+                        const float z, const float sx, const float sy, const float sz,
+                        const sprite_info &spr, const float r, const float g, const float b,
+                        const bool no_discard = false )
+{
+    push_instance( out, dx, dy, z, sx, sy, sz, spr, r, g, b, no_discard );
+    out.data[14] += 512.0f;
 }
 
 // A ground-level utility keeps its full horizontal sprite and extends the
@@ -2582,10 +2602,18 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     panels.clear();
     static bucket_index_map bucket_index;
     bucket_index.clear();
+    bucket_key last_bucket_key{ -1, nullptr };
+    size_t last_bucket_index = 0;
     auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> decltype( auto ) {
         const bucket_key key{ mode, atlas };
+        if( last_bucket_index < bucket_count && last_bucket_key == key ) {
+            // Parentheses preserve the reference return with decltype(auto).
+            return ( buckets[last_bucket_index].data ); // NOLINT(cata-redundant-parentheses)
+        }
         const auto it = bucket_index.find( key );
         if( it != bucket_index.end() ) {
+            last_bucket_key = key;
+            last_bucket_index = it->second;
             // Parentheses preserve the reference return with decltype(auto).
             return ( buckets[it->second].data ); // NOLINT(cata-redundant-parentheses)
         }
@@ -2599,6 +2627,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         } else {
             buckets.push_back( instance_bucket{ mode, atlas, {} } );
         }
+        last_bucket_key = key;
+        last_bucket_index = index;
         // Parentheses preserve the reference return with decltype(auto).
         return ( buckets[index].data ); // NOLINT(cata-redundant-parentheses)
     };
@@ -2675,6 +2705,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     struct structure_traits {
         sprite_info ground_sprite;
         sprite_info object_sprite;
+        std::array<float, 3> ground_color{};
+        std::array<float, 3> object_color{};
         bool no_floor = false;
         bool draw_floor = false;
         bool floor_overlay = false;
@@ -2682,12 +2714,17 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         bool is_shrub = false;
         bool is_wall = false;
     };
-    std::unordered_map<ter_id, structure_traits> structure_traits_cache;
-    const auto structure_traits_for = [&]( const ter_t & t, const tripoint_bub_ms & p ) {
+    std::vector<std::optional<structure_traits>> structure_traits_cache;
+    const auto structure_traits_for = [&]( const ter_t & t,
+    const tripoint_bub_ms & p ) -> const structure_traits & {
         const ter_id id( t.id );
-        auto iter = structure_traits_cache.find( id );
-        if( iter != structure_traits_cache.end() ) {
-            return iter;
+        const size_t index = static_cast<size_t>( id.to_i() );
+        if( index >= structure_traits_cache.size() ) {
+            structure_traits_cache.resize( index + 1 );
+        }
+        std::optional<structure_traits> &cached = structure_traits_cache[index];
+        if( cached ) {
+            return *cached;
         }
         structure_traits traits;
         traits.no_floor = t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
@@ -2705,76 +2742,72 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         lookup_sprite_layers_3d( tiles, id.id().str(), TILE_CATEGORY::TERRAIN, p,
                                  subtile, rota, traits.is_wall, layers );
         traits.ground_sprite = layers.bg_tex ? layers.bg : layers.fg;
+        traits.ground_sprite.u0 = traits.ground_sprite.gu0;
+        traits.ground_sprite.v0 = traits.ground_sprite.gv0;
+        traits.ground_sprite.u1 = traits.ground_sprite.gu1;
+        traits.ground_sprite.v1 = traits.ground_sprite.gv1;
         traits.object_sprite = layers.fg;
+        const auto color_for = []( const sprite_info & spr ) {
+            const float base = spr.atlas ? 1.0f : 0.45f;
+            return std::array<float, 3> { base * 0.78f, base * 0.88f, base };
+        };
+        traits.ground_color = color_for( traits.ground_sprite );
+        traits.object_color = color_for( traits.object_sprite );
         const bool plain_floor = traits.draw_floor && !traits.is_tree && !traits.is_shrub &&
                                  !is_panel && !is_fence && !is_upright && !traits.is_wall;
         traits.floor_overlay = plain_floor && layers.bg_tex && layers.fg_tex;
-        return structure_traits_cache.emplace( id, traits ).first;
+        cached.emplace( std::move( traits ) );
+        return *cached;
     };
     // Structural LOD uses the near renderer's bg/fg layering, but keeps one
     // sprite variant per terrain and avoids distant neighbor/orientation work.
     const auto gather_structure_tile = [&]( const ter_t & t, const tripoint_bub_ms & p,
-    const point d, const float wz, const tile_tone * tone, const bool memory ) -> bool {
-        const structure_traits &traits = structure_traits_for( t, p )->second;
+    const point d, const float wz ) -> bool {
+        const structure_traits &traits = structure_traits_for( t, p );
         if( traits.no_floor && !traits.is_tree && !traits.is_shrub )
         {
             return false;
         }
-        const float shade = tone ? tone->shade : 1.0f;
-        const float saturation = tone ? tone->sat : 1.0f;
-        const auto color_for = [&]( const sprite_info & spr ) {
-            const float base = spr.atlas ? 1.0f : 0.45f;
-            return std::array<float, 3> { base * 0.78f * shade, base * 0.88f * shade, base * shade };
-        };
         bool drew = false;
         if( traits.draw_floor && count < MAX_DRAW_INSTANCES )
         {
-            sprite_info ground_sprite = traits.ground_sprite;
-            ground_sprite.u0 = traits.ground_sprite.gu0;
-            ground_sprite.v0 = traits.ground_sprite.gv0;
-            ground_sprite.u1 = traits.ground_sprite.gu1;
-            ground_sprite.v1 = traits.ground_sprite.gv1;
-            const auto color = color_for( ground_sprite );
-            std::vector<float> &v = bucket_for( MODE_BOX, ground_sprite.atlas );
-            push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ),
-                           wz - FLOOR_THICK - 0.001f, 1.0f, 1.0f, FLOOR_THICK, ground_sprite,
-                           color[0], color[1], color[2], true, 0, false, -1.0f, false,
-                           saturation, memory );
+            const auto &color = traits.ground_color;
+            std::vector<float> &v = bucket_for( MODE_BOX, traits.ground_sprite.atlas );
+            push_lod_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ),
+                               wz - FLOOR_THICK - 0.001f, 1.0f, 1.0f, FLOOR_THICK,
+                               traits.ground_sprite, color[0], color[1], color[2], true );
             ++count;
             drew = true;
         }
         if( traits.floor_overlay && count < MAX_DRAW_INSTANCES )
         {
-            const auto color = color_for( traits.object_sprite );
+            const auto &color = traits.object_color;
             std::vector<float> &v = bucket_for( MODE_FLATQUAD, traits.object_sprite.atlas );
-            push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ),
-                           wz + 0.004f, 1.0f, 1.0f, 1.0f, traits.object_sprite,
-                           color[0], color[1], color[2], false, 0, false, -1.0f, false,
-                           saturation, memory );
+            push_lod_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ),
+                               wz + 0.004f, 1.0f, 1.0f, 1.0f, traits.object_sprite,
+                               color[0], color[1], color[2] );
             ++count;
             drew = true;
         }
         if( traits.is_wall && count < MAX_DRAW_INSTANCES )
         {
-            const auto color = color_for( traits.object_sprite );
+            const auto &color = traits.object_color;
             std::vector<float> &v = bucket_for( MODE_BOX, traits.object_sprite.atlas );
-            push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ), wz,
-                           1.0f, 1.0f, WALL_HEIGHT, traits.object_sprite,
-                           color[0], color[1], color[2], true, 0, false, -1.0f, false,
-                           saturation, memory );
+            push_lod_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ), wz,
+                               1.0f, 1.0f, WALL_HEIGHT, traits.object_sprite,
+                               color[0], color[1], color[2], true );
             ++count;
             drew = true;
         }
         if( ( traits.is_tree || traits.is_shrub ) && count < MAX_DRAW_INSTANCES )
         {
             const float height = traits.is_shrub ? SHRUB_HEIGHT : TREE_HEIGHT;
-            const auto color = color_for( traits.object_sprite );
+            const auto &color = traits.object_color;
             std::vector<float> &v = bucket_for( MODE_XQUAD, traits.object_sprite.atlas );
-            push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ),
-                           wz - height * traits.object_sprite.base_drop, 1.0f, 1.0f, height,
-                           traits.object_sprite, color[0], color[1], color[2],
-                           traits.object_sprite.atlas == nullptr, 0, false, -1.0f, false,
-                           saturation, memory );
+            push_lod_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ),
+                               wz - height * traits.object_sprite.base_drop, 1.0f, 1.0f, height,
+                               traits.object_sprite, color[0], color[1], color[2],
+                               traits.object_sprite.atlas == nullptr );
             ++count;
             drew = true;
         }
@@ -5238,6 +5271,12 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( max_corner_range2 <= VIEW_RADIUS * VIEW_RADIUS ) {
                     continue;
                 }
+                const point nearest( std::clamp( 0, smd.x, smd.x + SEEX - 1 ),
+                                     std::clamp( 0, smd.y, smd.y + SEEY - 1 ) );
+                if( nearest.x * nearest.x + nearest.y * nearest.y >
+                    FAR_SUBMAP_RADIUS * FAR_SUBMAP_RADIUS ) {
+                    continue;
+                }
                 ++g_profile.far_columns;
                 // Frustum work precedes LOS. A fully contained submap needs no
                 // per-tile plane tests later; an intersecting one stays conservative.
@@ -5261,8 +5300,6 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( !any_in_frustum ) {
                     continue;
                 }
-                const point nearest( std::clamp( 0, smd.x, smd.x + SEEX - 1 ),
-                                     std::clamp( 0, smd.y, smd.y + SEEY - 1 ) );
                 const bool memory_possible =
                     nearest.x * nearest.x + nearest.y * nearest.y <= FAR_MEMORY_RADIUS * FAR_MEMORY_RADIUS;
                 // The existing observer-level LOS gate is shared by the column;
@@ -5322,9 +5359,11 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             }
                         }
                     }
+                    const bool uniform_submap = sm && sm->is_uniform();
+                    ter_id uniform_ter;
                     bool uniform_open_air = false;
-                    if( sm && sm->is_uniform() ) {
-                        const ter_id uniform_ter = sm->get_ter( point_sm_ms( 0, 0 ) );
+                    if( uniform_submap ) {
+                        uniform_ter = sm->get_ter( point_sm_ms( 0, 0 ) );
                         uniform_open_air = uniform_ter &&
                                            uniform_ter->has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
                     }
@@ -5354,10 +5393,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 }
                             }
                             if( gray_visible && sm && !uniform_open_air ) {
-                                const ter_id t = sm->get_ter( point_sm_ms( lx, ly ) );
+                                const ter_id t = uniform_submap ? uniform_ter :
+                                                 sm->get_ter( point_sm_ms( lx, ly ) );
                                 if( t ) {
-                                    gather_structure_tile( t.obj(), here.get_bub( abs_p ), d, wz,
-                                                           nullptr, false );
+                                    gather_structure_tile( t.obj(), here.get_bub( abs_p ), d, wz );
                                 }
                             }
                         }
