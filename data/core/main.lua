@@ -150,6 +150,8 @@ tips:text(ccb.content.text("Just because a location is filled with zombies or we
 ccb.content.add(tips)
 
 require("weather_types")
+require("help")
+require("world_option_sliders")
 
 do
     local part = ccb.content.BodyPart {

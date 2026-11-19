@@ -260,3 +260,5 @@ require("paraclesian_training")
 require("technique_predicates")
 
 require("technique_actions")
+
+require("help_topics")

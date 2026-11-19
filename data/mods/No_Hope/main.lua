@@ -33,3 +33,5 @@ require("inherited_items")
 require("effect_types")
 
 require("monster_groups")
+
+require("help_topics")
