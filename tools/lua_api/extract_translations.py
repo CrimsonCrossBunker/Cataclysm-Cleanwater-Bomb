@@ -355,11 +355,57 @@ def _effect_memorial_edits(source: str) -> list[tuple[int, int, str]]:
     return edits
 
 
+def _profession_translation_edits(source: str) -> list[tuple[int, int, str]]:
+    """Keep the native profession title and description contexts."""
+    if "define_profession" not in source:
+        return []
+    tokens = _lua_tokens(source)
+    tables = _dialogue_tables(tokens)
+    edits = []
+
+    def literal(table: _LuaTable, field: str) -> _LuaToken | None:
+        values = table.fields.get(field, [])
+        if len(values) != 1 or values[0] + 1 >= len(tokens):
+            return None
+        index = values[0]
+        token = tokens[index]
+        if (token.kind == "string" and "\n" not in token.value and
+                "\r" not in token.value and tokens[index + 1].value in (",", ";", "}")):
+            return token
+        return None
+
+    def add(message: _LuaToken, prefix: str, *genders: str) -> None:
+        calls = [f'ccb.content.text({message.value}, "{prefix}_{gender}")' for gender in genders]
+        edits.append((message.start, message.end, " .. ".join(calls)))
+
+    for table in tables.values():
+        constructor = table.token_index - 1
+        if constructor >= 0 and tokens[constructor].value == "(":
+            constructor -= 1
+        if constructor < 4 or [t.value for t in tokens[constructor - 4:constructor + 1]] != [
+            "ccb", ".", "content", ".", "define_profession"
+        ]:
+            continue
+        for field, prefix in (("name", "profession"), ("description", "prof_desc")):
+            values = table.fields.get(field, [])
+            message = literal(table, "id" if not values and field == "name" else field)
+            if message is not None:
+                add(message, prefix, "male", "female")
+            elif len(values) == 1 and (gendered := tables.get(values[0])) is not None:
+                if (gendered.end_token_index is None or gendered.end_token_index + 1 >= len(tokens) or
+                        tokens[gendered.end_token_index + 1].value not in (",", ";", "}")):
+                    continue
+                for gender in ("male", "female"):
+                    if (message := literal(gendered, gender)) is not None:
+                        add(message, prefix, gender)
+    return edits
+
+
 def _rewrite_translation_markers(source: str) -> str | None:
     """Rewrite marked literals as an xgettext-only keyword call."""
     edits = (
         _dialogue_translation_edits(source) + _gendered_translation_edits(source) +
-        _effect_memorial_edits(source)
+        _effect_memorial_edits(source) + _profession_translation_edits(source)
     )
     if not edits:
         return None

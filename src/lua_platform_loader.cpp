@@ -69,6 +69,7 @@ extern "C" {
 #include "mutation.h"
 #include "omdata.h"
 #include "output.h"
+#include "profession.h"
 #include "proficiency.h"
 #include "recipe_dictionary.h"
 #include "start_location.h"
@@ -4820,6 +4821,152 @@ void write_static_start_location( JsonOut &json, const sol::table &options )
     }
 }
 
+void write_static_profession_text( JsonOut &json, const sol::table &options, const char *field )
+{
+    const sol::object text = options.raw_get<sol::object>( field );
+    if( text.get_type() == sol::type::nil ) {
+        return;
+    }
+    if( text.get_type() == sol::type::string ) {
+        json.member( field, text.as<std::string>() );
+        return;
+    }
+    const sol::table gendered = text.as<sol::table>();
+    json.member( field );
+    json.start_object();
+    for( const char *gender : { "male", "female" } ) {
+        json.member( gender, gendered.get<std::string>( gender ) );
+    }
+    json.end_object();
+}
+
+void write_static_spawn_entry( JsonOut &json, const sol::object &value )
+{
+    if( value.get_type() == sol::type::string ) {
+        json.write( value.as<std::string>() );
+        return;
+    }
+    const sol::table entry = value.as<sol::table>();
+    json.start_object();
+    write_item_fields<std::string>( json, entry, {
+        { "item", "item" }, { "group", "group" }, { "variant", "variant" },
+        { "ammo_item", "ammo-item" }, { "container_item", "container-item" },
+        { "entry_wrapper", "entry-wrapper" }
+    } );
+    write_placement_member<int>( json, entry, "probability", "prob" );
+    write_item_ids( json, entry, { { "custom_flags", "custom-flags" } } );
+    write_static_string_or_ids( json, entry, "contents_items", "contents-item" );
+    write_static_string_or_ids( json, entry, "contents_groups", "contents-group" );
+    for( const char *field : { "count", "charges" } ) {
+        write_mapgen_range( json, field, entry.raw_get<sol::object>( field ) );
+    }
+    json.end_object();
+}
+
+void write_static_profession_legacy_item( JsonOut &json, const sol::object &value )
+{
+    if( value.get_type() == sol::type::string ) {
+        json.write( value.as<std::string>() );
+        return;
+    }
+    const sol::table entry = value.as<sol::table>();
+    json.start_array();
+    json.write( entry.get<std::string>( "item" ) );
+    json.write( entry.get<std::string>( "snippet" ) );
+    json.end_array();
+}
+
+void write_static_profession_loadout( JsonOut &json, const sol::table &loadout )
+{
+    if( const auto legacy = loadout.get<sol::optional<sol::table>>( "legacy" ) ) {
+        write_static_values<sol::object>( json, *legacy, "legacy", write_static_profession_legacy_item );
+        return;
+    }
+    json.start_object();
+    write_item_fields<int>( json, loadout, { { "ammo_chance", "ammo" }, { "magazine_chance", "magazine" } } );
+    for( const char *field : { "entries", "items" } ) {
+        if( const auto entries = loadout.get<sol::optional<sol::table>>( field ) ) {
+            json.member( field );
+            write_static_values<sol::object>( json, *entries, field, write_static_spawn_entry );
+        }
+    }
+    json.end_object();
+}
+
+void write_static_profession_skill( JsonOut &json, const sol::table &skill )
+{
+    json.start_object();
+    json.member( "name", skill.get<std::string>( "id" ) );
+    json.member( "level", skill.get<int>( "level" ) );
+    json.end_object();
+}
+
+void write_static_profession( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_static_profession_text( json, options, "name" );
+    write_static_profession_text( json, options, "description" );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "subtype", "subtype" },
+        { "npc_background", "npc_background" }, { "vehicle", "vehicle" }, { "no_bonus", "no_bonus" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "points", "points" }, { "age_lower", "age_lower" }, { "age_upper", "age_upper" },
+        { "starting_cash", "starting_cash" }, { "martial_art_choice_count", "starting_styles_choices_amount" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "allow_npc", "chargen_allow_npc" }, { "hobbies_whitelist", "whitelist_hobbies" },
+        { "hard_requirement", "hard_requirement" }
+    } );
+    write_item_ids( json, options, {
+        { "flags", "flags" }, { "bionics", "CBMs" }, { "proficiencies", "proficiencies" },
+        { "recipes", "recipes" }, { "traits", "traits" }, { "forbidden_traits", "forbidden_traits" },
+        { "hobbies", "hobbies" }, { "martial_arts", "starting_styles" },
+        { "martial_art_choices", "starting_styles_choices" }, { "missions", "missions" }
+    } );
+    write_static_string_or_ids( json, options, "requirements", "requirement" );
+    write_static_catalog_array( json, options, "skills", "skills", write_static_profession_skill );
+    write_static_catalog_array( json, options, "addictions", "addictions",
+    []( JsonOut & out, const sol::table & addiction ) {
+        out.start_object();
+        out.member( "type", addiction.get<std::string>( "id" ) );
+        out.member( "intensity", addiction.get<int>( "intensity" ) );
+        out.end_object();
+    } );
+    write_static_catalog_array( json, options, "pets", "pets",
+    []( JsonOut & out, const sol::table & pet ) {
+        out.start_object();
+        out.member( "name", pet.get<std::string>( "monster" ) );
+        out.member( "amount", pet.get<int>( "count" ) );
+        out.end_object();
+    } );
+    write_static_catalog_array( json, options, "spells", "spells",
+    []( JsonOut & out, const sol::table & spell ) {
+        out.start_object();
+        out.member( "id", spell.get<std::string>( "id" ) );
+        out.member( "level", spell.get<int>( "level" ) );
+        out.end_object();
+    } );
+    if( const auto items = options.get<sol::optional<sol::table>>( "items" ) ) {
+        json.member( "items" );
+        json.start_object();
+        for( const char *gender : { "both", "male", "female" } ) {
+            if( const auto loadout = items->get<sol::optional<sol::table>>( gender ) ) {
+                json.member( gender );
+                write_static_profession_loadout( json, *loadout );
+            }
+        }
+        json.end_object();
+    }
+    if( const auto skills = options.get<sol::optional<sol::table>>( "extend_skills" ) ) {
+        json.member( "extend" );
+        json.start_object();
+        json.member( "skills" );
+        write_static_values<sol::table>( json, *skills, "extend_skills", write_static_profession_skill );
+        json.end_object();
+    }
+}
+
 using static_catalog_writer = void ( * )( JsonOut &, const sol::table & );
 
 template<typename Loader>
@@ -4977,6 +5124,8 @@ void load_mod_content_with_data( const mod_source &source,
     } ) );
     content.set_function( "define_start_location", static_catalog_definition(
                               resolved.id, "start_location", write_static_start_location, start_locations::load ) );
+    content.set_function( "define_profession", static_catalog_definition(
+                              resolved.id, "profession", write_static_profession, profession::load_profession ) );
     install_static_dialogue_predicates( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );

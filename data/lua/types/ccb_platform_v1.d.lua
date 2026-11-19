@@ -7725,6 +7725,95 @@ function CcbPlatformContent.define_proficiency(options) end
 ---@param options StaticStartLocationOptions
 function CcbPlatformContent.define_start_location(options) end
 
+---@class StaticProfessionText
+---@field male string
+---@field female string
+
+---@class StaticSpawnEntry
+---@field item? string
+---@field group? string
+---@field variant? string
+---@field probability? integer
+---@field count? integer|[integer, integer]
+---@field charges? integer|[integer, integer]
+---@field ammo_item? string
+---@field container_item? string
+---@field contents_items? string|string[]
+---@field contents_groups? string|string[]
+---@field entry_wrapper? string
+---@field custom_flags? string[]
+
+---@class StaticProfessionLegacyItem
+---@field item string
+---@field snippet string
+
+---@class StaticProfessionLoadout
+---@field legacy? (string|StaticProfessionLegacyItem)[] Legacy item IDs and snippet pairs. Exclusive with the other fields.
+---@field entries? (string|StaticSpawnEntry)[]
+---@field items? (string|StaticSpawnEntry)[] Item-only entries.
+---@field ammo_chance? integer
+---@field magazine_chance? integer
+
+---@class StaticProfessionItems
+---@field both? StaticProfessionLoadout
+---@field male? StaticProfessionLoadout
+---@field female? StaticProfessionLoadout
+
+---@class StaticProfessionSkill
+---@field id string
+---@field level integer
+
+---@class StaticProfessionAddiction
+---@field id string
+---@field intensity integer
+
+---@class StaticProfessionPet
+---@field monster string
+---@field count integer
+
+---@class StaticProfessionSpell
+---@field id string
+---@field level integer
+
+---@class StaticProfessionOptions
+---@field id string
+---@field copy_from? string
+---@field name? string|StaticProfessionText Uses the native gender-specific translation contexts.
+---@field description? string|StaticProfessionText Uses the native gender-specific translation contexts.
+---@field points? integer
+---@field subtype? string
+---@field npc_background? string
+---@field allow_npc? boolean
+---@field age_lower? integer
+---@field age_upper? integer
+---@field starting_cash? integer
+---@field vehicle? string
+---@field pets? StaticProfessionPet[]
+---@field spells? StaticProfessionSpell[]
+---@field items? StaticProfessionItems
+---@field no_bonus? string
+---@field requirements? string|string[]
+---@field hard_requirement? boolean
+---@field skills? StaticProfessionSkill[]
+---@field extend_skills? StaticProfessionSkill[]
+---@field addictions? StaticProfessionAddiction[]
+---@field bionics? string[]
+---@field proficiencies? string[]
+---@field recipes? string[]
+---@field traits? string[]
+---@field forbidden_traits? string[]
+---@field flags? string[]
+---@field hobbies? string[]
+---@field hobbies_whitelist? boolean
+---@field martial_arts? string[]
+---@field martial_art_choices? string[]
+---@field martial_art_choice_count? integer
+---@field missions? string[]
+
+---Define a profession or hobby at its ordered position during native content loading.
+---@param options StaticProfessionOptions
+function CcbPlatformContent.define_profession(options) end
+
 ---@class StaticMapTileOptions
 ---@field id? string Stable identifier. Provide either id or abstract.
 ---@field abstract? string Abstract definition available for inheritance.
