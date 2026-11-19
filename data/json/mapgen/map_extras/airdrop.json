@@ -1,37 +1,6 @@
 [
   {
     "type": "mapgen",
-    "//": "This is the 'base' airdrop, and doesn't actually contain anything. Variants are generated via the place_nested field.",
-    "update_mapgen_id": "mx_airdrop",
-    "object": {
-      "place_nested": [
-        {
-          "chunks": [ [ "mx_airdrop_humanitarian_full", 5 ], [ "mx_airdrop_humanitarian_looted", 93 ], [ "mx_airdrop_mil", 2 ] ],
-          "x": 0,
-          "y": 0
-        }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "mx_airdrop_humanitarian_full",
-    "//": "untouched version of drop, rare",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "place_nested": [
-        { "chunks": [ [ "supply_humanitarian", 100 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_humanitarian", 50 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_humanitarian", 20 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_water_bottles_full", 100 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_water_bottles_full", 50 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_water_bottles_full", 20 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] },
-        { "chunks": [ [ "supply_generatos", 30 ] ], "x": [ 0, 22 ], "y": [ 0, 22 ] }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "supply_humanitarian",
     "object": {
       "mapgensize": [ 2, 2 ],
