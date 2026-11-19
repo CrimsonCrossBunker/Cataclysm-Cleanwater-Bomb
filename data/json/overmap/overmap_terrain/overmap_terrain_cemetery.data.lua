@@ -1,0 +1,11 @@
+local ccb = require("ccb")
+
+ccb.content.define_overmap_terrain {
+    id = {
+        "cemetery_4square_00", "cemetery_4square_10", "cemetery_4square_01", "cemetery_4square_11",
+        "cemetery_4square_00_lacroix", "cemetery_4square_10_lacroix", "cemetery_4square_01_lacroix",
+        "cemetery_4square_11_lacroix", "cemetery_4square_11_roof", "Cemetery_1a", "Cemetery_1a_roof",
+        "Cemetery_1b",
+    },
+    copy_from = "generic_cemetery",
+}
