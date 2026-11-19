@@ -54,17 +54,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "mx_spider",
-    "object": {
-      "place_nested": [
-        { "chunks": [ "spider_nest" ], "x": [ 0, 6 ], "y": [ 0, 6 ] },
-        { "chunks": [ "spider_nest", "null" ], "x": [ 0, 6 ], "y": [ 0, 6 ] }
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "mx_basement_spider",
     "object": {
       "rows": [
