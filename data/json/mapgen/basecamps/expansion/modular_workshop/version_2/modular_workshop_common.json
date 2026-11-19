@@ -1,46 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmw_2",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "            ; ;;;;;;    ",
-        "            ; ;;;;;;    ",
-        "            ; ;;;;;;    ",
-        "              ;;;;;;    ",
-        "              ;;;;;;    ",
-        "                        ",
-        "                        ",
-        ";;;;;;                  ",
-        ";;;;;;                  ",
-        ";;;;;;                  ",
-        ";;;;;;                  ",
-        ";;;;;;                  ",
-        "                        ",
-        "     ;                  ",
-        "                ;;;;    ",
-        "    ;;;         ;;;;    ",
-        ";;;;;;;;;;;;;;;;;;;;    ",
-        ";;;;;;;;;;;;;;;;;;;;    ",
-        ";;;;;;;;;;;;;;;;;;;;    ",
-        ";;;;;;;;;;;;;;;;;;;;    ",
-        ";;;;;;;;;;;;;;;;;;;;    ",
-        ";;;;;;;;;;;;;;;;;;;;    ",
-        ";;;;;;;;;;;;;;;;;;;;    ",
-        "                        "
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
-      "palettes": [ "fbmw_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "faction_base_workshop_2_0",
-    "object": { "place_nested": [ { "chunks": [ "fbmw_2" ], "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmw_2_common_smithy_1",
     "object": {
       "set": [
@@ -183,25 +143,6 @@
         { "point": "furniture", "id": "f_55gal_firebarrel", "x": 5, "y": 13 }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmw_2_common_tanner",
-    "object": {
-      "mapgensize": [ 4, 4 ],
-      "rows": [
-        " t r",
-        " h B",
-        "   r",
-        "    "
-      ],
-      "palettes": [ "fbmw_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmw_2_common_tanner",
-    "object": { "place_nested": [ { "chunks": [ "fbmw_2_common_tanner" ], "x": 15, "y": 1 } ] }
   },
   {
     "type": "mapgen",
