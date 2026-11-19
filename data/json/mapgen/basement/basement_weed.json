@@ -1,22 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "cannabis_extraction_equipment_nested_1x1",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rotation": [ 0, 3 ],
-      "place_items": [
-        {
-          "item": { "subtype": "distribution", "entries": [ { "group": "cannabis_extraction_equipment", "prob": 100 } ] },
-          "x": 0,
-          "y": 0,
-          "chance": 10
-        }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "basement_weed" ],
     "//": "matches house_28",
     "object": {
