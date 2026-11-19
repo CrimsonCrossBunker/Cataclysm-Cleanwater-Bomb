@@ -1,40 +1,107 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_Fatima_Situation",
+    "id": "TALK_REFUGEE_Fatima_Teach",
     "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "mission_completed_Jenny_mission_2" } ],
-      "no": "It's tense here.  I know I'd feel a lot better if I had something to do with my skills, or even if I just had a quiet place to pray sometimes.  I feel a bit self-conscious praying in the common areas.  Jenny was talking about some project ideas she had that could get me doing my job again, but I admit I'm pretty nervous about going outside.",
-      "yes": "Things are still tense, but I've been busy lately.  Jenny's had her project going and got me started helping her out with it, and for some reason that seems to have been the tipping point: I'm getting chances to do a lot more welding work now.  It's helping.  I feel a bit self-conscious praying in the common areas, and of course, we don't go outside if we can help it."
-    }
+      "compare_string": [ "yes", { "u_val": "barter_flag_Fatima_barter_success" } ],
+      "yes": "Sure.  As agreed, 3 merch.",
+      "no": {
+        "compare_string": [ "yes", { "u_val": "mission_flag_Fatima_Mission1" } ],
+        "no": "Sure, I could teach you the basics, I'll have to charge you though.  Let's say, 5 merch for a teaching session, plus a bit in trade depending on how in-depth you're looking for?",
+        "yes": {
+          "gendered_line": "Sure, I could teach you the basics, it'll cost you merch though.  Since you helped me out, I can shave a bit off the price, let's say 4 merch, plus a bit in trade depending on how in-depth you're looking for?",
+          "relevant_genders": [ "u" ]
+        }
+      }
+    },
+    "speaker_effect": { "effect": { "u_add_var": "knowledge_trade_Fatima_Teacher", "value": "yes" } },
+    "responses": [
+      {
+        "//": "5 merch if player has not bartered nor finished mission",
+        "text": "[5 merch] All right, here's your money.",
+        "topic": "TALK_TRAIN",
+        "condition": {
+          "and": [
+            { "not": { "compare_string": [ "yes", { "u_val": "barter_flag_Fatima_barter_success" } ] } },
+            { "not": { "compare_string": [ "yes", { "u_val": "mission_flag_Fatima_Mission1" } ] } },
+            { "u_has_items": { "item": "FMCNote", "count": 5 } }
+          ]
+        },
+        "effect": [ { "u_sell_item": "FMCNote", "count": 5 } ]
+      },
+      {
+        "//": "4 merch if player has not bartered but has done the mission",
+        "text": "[4 merch] All right, here's your money.",
+        "topic": "TALK_TRAIN",
+        "condition": {
+          "and": [
+            { "not": { "compare_string": [ "yes", { "u_val": "barter_flag_Fatima_barter_success" } ] } },
+            { "compare_string": [ "yes", { "u_val": "mission_flag_Fatima_Mission1" } ] },
+            { "u_has_items": { "item": "FMCNote", "count": 4 } }
+          ]
+        },
+        "effect": [ { "u_sell_item": "FMCNote", "count": 4 } ]
+      },
+      {
+        "//": "3 merch if player has successfully bartered price down",
+        "text": "[3 merch] All right, here's your money.",
+        "topic": "TALK_TRAIN",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "barter_flag_Fatima_barter_success" } ] },
+            { "u_has_items": { "item": "FMCNote", "count": 3 } }
+          ]
+        },
+        "effect": [ { "u_sell_item": "FMCNote", "count": 3 } ]
+      },
+      {
+        "text": "[BARTER] Come on, I'm serious here.",
+        "condition": {
+          "and": [
+            { "math": [ "time_since(n_timer_flag_Fatima_barter_fail) > time('1 d')" ] },
+            { "not": { "compare_string": [ "yes", { "u_val": "barter_flag_Fatima_barter_success" } ] } },
+            { "not": { "compare_string": [ "yes", { "u_val": "mission_flag_Fatima_Mission1" } ] } }
+          ]
+        },
+        "trial": { "type": "PERSUADE", "difficulty": 35 },
+        "failure": { "topic": "TALK_REFUGEE_Fatima_Teach_nobarter" },
+        "success": { "topic": "TALK_REFUGEE_Fatima_Teach_yesbarter" }
+      },
+      {
+        "text": "[BARTER] That's still pretty steep, I risked my neck out there for your book.  Can't you manage a little lower?",
+        "condition": {
+          "and": [
+            { "math": [ "time_since(n_timer_flag_Fatima_barter_fail) > time('1 d')" ] },
+            { "not": { "compare_string": [ "yes", { "u_val": "barter_flag_Fatima_barter_success" } ] } },
+            { "compare_string": [ "yes", { "u_val": "mission_flag_Fatima_Mission1" } ] }
+          ]
+        },
+        "trial": { "type": "PERSUADE", "difficulty": 15 },
+        "failure": { "topic": "TALK_REFUGEE_Fatima_Teach_nobarter" },
+        "success": { "topic": "TALK_REFUGEE_Fatima_Teach_yesbarter" }
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
   },
   {
-    "id": "MISSION_REFUGEE_Fatima_1",
-    "type": "mission_definition",
-    "name": { "str": "Find a copy of the Quran" },
-    "goal": "MGOAL_FIND_ITEM",
-    "difficulty": 2,
-    "value": 0,
-    "item": "holybook_quran",
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "has_generic_rewards": false,
-    "dialogue": {
-      "describe": "I could use a bit of help to find a copy of the Quran.",
-      "offer": "I feel silly asking this, but here goes.  I've never been really into reading holy books and stuff like that.  I usually went to the mosque on Friday, and I try to pray five times a day but I hardly ever manage it.  I guess I'm not a very good Muslim, but with all that's happened I would really love to have a copy of the Quran to read.  This seems like a time to get back in touch with God, you know?",
-      "accepted": "Thank you.  I'll see if I can save up a little reward for you.",
-      "rejected": "That's okay.  Thanks for offering.",
-      "advice": "It's not as common as the bible, but you should be able to find copies in most libraries and bookstores, or in religious buildings.  Make sure you get the translated version, I can't read Arabic!",
-      "inquire": "How is the search going?",
-      "success": "Thank you so much.  Just having a copy to keep at hand does actually feel pretty comforting.  I did a few extra rounds of chores and saved the proceeds for if you managed this, here you go.  It's not much but I hope it helps.",
-      "success_lie": "What good does this do me?",
-      "failure": "It's okay.  I don't know how much comfort I'd have found in an old book anyway."
-    },
-    "end": {
-      "effect": [
-        { "u_spawn_item": "FMCNote", "count": 5 },
-        { "u_add_var": "mission_flag_Fatima_Mission1", "value": "yes" },
-        { "math": [ "u_counter_refugee_center_refugee_happiness++" ] }
-      ]
-    }
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_Fatima_Teach_nobarter",
+    "dynamic_line": "Hey, I appreciate that, but I know what I've got, and I can make good money with that time.  Sorry, my price stands.",
+    "speaker_effect": { "effect": { "math": [ "n_timer_flag_Fatima_barter_fail = time('now')" ] } },
+    "responses": [
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_Fatima_Teach_yesbarter",
+    "dynamic_line": "Oh, fine, you weasel.  I suppose I can manage for 3 notes.  I seriously can't go lower though, we'll be using up my resources and time and I gotta pay for the gas and the food somehow.",
+    "speaker_effect": { "effect": { "u_add_var": "barter_flag_Fatima_barter_success", "value": "yes" } },
+    "responses": [
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
   }
 ]
