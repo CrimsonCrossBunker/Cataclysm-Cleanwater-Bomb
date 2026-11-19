@@ -1,5 +1,24 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "tidal_flats_palette",
+    layout = {
+        terrain = {
+            ["."] = {
+                { id = "t_sand", copies = 2 },
+                { id = "t_water_sh", copies = 1 },
+                { id = "t_null", copies = 1 },
+            },
+            o = {
+                { id = "t_shore_boulder", copies = 2 },
+                { id = "t_shore_boulder_oyster", copies = 1 },
+                { id = "t_sand", copies = 2 },
+                { id = "t_null", copies = 1 },
+            },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "mx_tidal_flat",
