@@ -1,17 +1,6 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_SORCERER_PICK_BLOODLINE",
-    "dynamic_line": "While wizards spend their lives buried in books to understand magic, your power stems from your innately magical bloodline.  Magic is your birthright.\nInstead of studying books, you increase in power by slaying monsters.\n\nThe standard sorcerer gains a caster level bonus based on their intelligence, but some bloodlines change this.\nThat being said, what exactly is your bloodline?",
-    "responses": [
-      { "text": "Standard bloodline", "topic": "TALK_SORCERER_GAIN_BLOODLINE_STANDARD" },
-      { "text": "Bloodrager", "topic": "TALK_SORCERER_GAIN_BLOODLINE_BLOODRAGER" },
-      { "text": "Spelldancer", "topic": "TALK_SORCERER_GAIN_BLOODLINE_SPELLDANCER" },
-      { "text": "Quit.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_SORCERER_GAIN_BLOODLINE_STANDARD",
     "dynamic_line": "You're a fairly standard sorcerer.  You gain no special strengths or weaknesses.\nYour caster level is boosted by your intelligence.\nYou can pick one spell to be your favoured spell.  This boosts the starting level of that spell to 3.  This does not stack with spell level increases gained from leveling up as a sorcerer.\nIs this your bloodline?",
     "responses": [
