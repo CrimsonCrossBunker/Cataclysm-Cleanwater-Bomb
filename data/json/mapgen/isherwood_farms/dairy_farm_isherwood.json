@@ -296,41 +296,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "rural_outbuilding_roof",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "    ...............     ",
-        "    ...............     ",
-        "    ...............     ",
-        "    ...............     ",
-        "    ...............     ",
-        "    .........           ",
-        "    .........           ",
-        "    .........           ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "isherwood_outbuilding_kilns",
     "//": "Updates outbuilding to include kilns.",
     "object": {
@@ -445,41 +410,6 @@
         ]
       },
       "furniture": { "r": "f_rack", "b": "f_bench", "U": "f_bench", "#": "f_smoking_rack", "t": "f_table", "x": "f_metal_butcher_rack" }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "smokehouse_roof",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "            .......     ",
-        "            .......     ",
-        "            .......     ",
-        "            .......     ",
-        "            .......     ",
-        "            .......     ",
-        "            .......     ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
     }
   }
 ]
