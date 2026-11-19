@@ -88,11 +88,6 @@
     ]
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "open_airlock",
-    "object": { "place_nested": [ { "chunks": [ "24x24_sidewalk_airlock_open" ], "x": 0, "y": 0 } ] }
-  },
-  {
     "id": "EOC_elevator_decontamination",
     "type": "effect_on_condition",
     "effect": [

@@ -1,5 +1,225 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "store_unit" },
+    layout = {
+        rows = {
+            "###########  ###########",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "###########  ###########",
+            "#                      #",
+            "#                      #",
+            "###########  ###########",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "########################",
+        },
+        nested = { { x = 0, y = 0, choices = { "24x24_stores_straight", "24x24_stores_cross" } } },
+        fill_terrain = "t_concrete",
+        palettes = { "base" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_stores_cross",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                required_flags = { west = { "ROAD" } },
+                choices = { "11x11_restaurant_n", "11x11_restaurant_e", "11x11_restaurant_w" },
+                otherwise = { "11x11_restaurant_n", "11x11_restaurant_e" },
+            },
+            {
+                x = 13,
+                y = 0,
+                required_flags = { east = { "ROAD" } },
+                choices = { "11x11_restaurant_n", "11x11_restaurant_e", "11x11_restaurant_w" },
+                otherwise = { "11x11_restaurant_n", "11x11_restaurant_w" },
+            },
+            {
+                x = 0,
+                y = 13,
+                required_flags = { west = { "ROAD" } },
+                choices = { "11x11_restaurant_n", "11x11_restaurant_e", "11x11_restaurant_w" },
+                otherwise = { "11x11_restaurant_n", "11x11_restaurant_e" },
+            },
+            {
+                x = 13,
+                y = 13,
+                required_flags = { east = { "ROAD" } },
+                choices = { "11x11_restaurant_n", "11x11_restaurant_e", "11x11_restaurant_w" },
+                otherwise = { "11x11_restaurant_n", "11x11_restaurant_w" },
+            },
+            { x = 0, y = 0, required_flags = { south = { "ROAD" } }, id = "24x24_stores_south" },
+            { x = 23, y = 11, required_flags = { east = { "SIDEWALK" } }, id = "2x2_door_v" },
+            { x = 11, y = 23, required_flags = { south = { "SIDEWALK" } }, id = "2x2_door_h" },
+            { x = 0, y = 11, required_flags = { west = { "SIDEWALK" } }, id = "2x2_door_v" },
+            { x = 22, y = 11, required_flags = { east = { "ROAD" } }, id = "2x2_walkway" },
+            { x = 11, y = 22, required_flags = { south = { "ROAD" } }, id = "2x2_walkway" },
+            { x = 0, y = 11, required_flags = { west = { "ROAD" } }, id = "2x2_walkway" },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_stores_south",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            {
+                x = 0,
+                y = 13,
+                required_flags = { west = { "ROAD" } },
+                choices = { "11x11_restaurant_n", "11x11_restaurant_e", "11x11_restaurant_s" },
+                otherwise = {
+                    "11x11_restaurant_n",
+                    "11x11_restaurant_e",
+                    "11x11_restaurant_w",
+                    "11x11_restaurant_s",
+                },
+            },
+            {
+                x = 13,
+                y = 13,
+                required_flags = { east = { "ROAD" } },
+                choices = { "11x11_restaurant_n", "11x11_restaurant_w", "11x11_restaurant_s" },
+                otherwise = {
+                    "11x11_restaurant_n",
+                    "11x11_restaurant_e",
+                    "11x11_restaurant_w",
+                    "11x11_restaurant_s",
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_stores_straight",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "###########  ###########",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "###########  ###########",
+            "###########  ###########",
+            "###########  ###########",
+            "###########  ###########",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "#         #  #         #",
+            "########################",
+        },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                required_flags = { west = { "ROAD" } },
+                choices = { "11x11_restaurant_n", "11x11_restaurant_e", "11x11_restaurant_w" },
+                otherwise = { "11x11_restaurant_n", "11x11_restaurant_e" },
+            },
+            {
+                x = 13,
+                y = 0,
+                required_flags = { east = { "ROAD" } },
+                choices = { "11x11_restaurant_n", "11x11_restaurant_e", "11x11_restaurant_w" },
+                otherwise = { "11x11_restaurant_n", "11x11_restaurant_w" },
+            },
+            {
+                x = 0,
+                y = 13,
+                required_flags = { west = { "ROAD" } },
+                choices = { "11x11_restaurant_w", "11x11_restaurant_e" },
+                otherwise = { "11x11_restaurant_e" },
+            },
+            {
+                x = 13,
+                y = 13,
+                required_flags = { east = { "ROAD" } },
+                choices = { "11x11_restaurant_w", "11x11_restaurant_e" },
+                otherwise = { "11x11_restaurant_w" },
+            },
+            {
+                x = 0,
+                y = 0,
+                required_flags = { south = { "ROAD" } },
+                id = "24x24_stores_straight_south",
+            },
+            { x = 11, y = 23, required_flags = { south = { "SIDEWALK" } }, id = "2x2_door_h" },
+            { x = 11, y = 22, required_flags = { south = { "ROAD" } }, id = "2x2_walkway" },
+        },
+        palettes = { "base" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_stores_straight_south",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = {
+            {
+                x = 0,
+                y = 13,
+                required_flags = { west = { "ROAD" } },
+                choices = { "11x11_restaurant_e", "11x11_restaurant_s" },
+                otherwise = { "11x11_restaurant_e", "11x11_restaurant_w", "11x11_restaurant_s" },
+            },
+            {
+                x = 13,
+                y = 13,
+                required_flags = { east = { "ROAD" } },
+                choices = { "11x11_restaurant_w", "11x11_restaurant_s" },
+                otherwise = { "11x11_restaurant_e", "11x11_restaurant_w", "11x11_restaurant_s" },
+            },
+        },
+    },
+}
+
 ccb.content.define_overmap_terrain {
     id = "store_unit",
     name = ccb.content.text("store unit"),
