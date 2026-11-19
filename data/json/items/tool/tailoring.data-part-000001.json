@@ -1,0 +1,48 @@
+[
+  {
+    "id": "tailors_kit",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "tailor's kit" },
+    "description": "A high-quality kit consisting of a variety of needles, some plastic spools for thread, scissors and shears, and an awl.  Use a tailor's kit on an article of clothing to attempt to repair or refit if applicable.  This uses your tailoring skill.",
+    "weight": "100 g",
+    "volume": "500 ml",
+    "price": "10 USD",
+    "price_postapoc": "10 USD",
+    "material": [ "plastic", "steel" ],
+    "symbol": ";",
+    "color": "red",
+    "sub": "sewing_kit",
+    "charges_per_use": 1,
+    "qualities": [ [ "SEW", 4 ], [ "SEW_CURVED", 1 ], [ "KNIT", 1 ], [ "LEATHER_AWL", 2 ], [ "CUT", 2 ], [ "FABRIC_CUT", 2 ] ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "thread": 400 } } ],
+    "use_action": [
+      {
+        "type": "repair_item",
+        "item_action_type": "repair_fabric",
+        "materials": [
+          "cotton",
+          "leather",
+          "lycra",
+          "nylon",
+          "wool",
+          "fur",
+          "faux_fur",
+          "nomex",
+          "kevlar",
+          "kevlar_layered",
+          "neoprene",
+          "gutskin",
+          "denim",
+          "canvas"
+        ],
+        "skill": "tailor",
+        "tool_quality": 1,
+        "cost_scaling": 0.1,
+        "move_cost": 800
+      }
+    ],
+    "flags": [ "ALLOWS_REMOTE_USE" ],
+    "tool_ammo": [ "thread" ]
+  }
+]
