@@ -1,19 +1,21 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
--- Sure you can, at least a bit.  I'll do my best to speak your Anglic, but seeing as we're from otherlands and all, it's not that simple.
+-- I don't know about that.  Each one we make is very important to our operations here, and they're extremely expensive.  I might be able to sell you one later, but not right now.
+-- In the future, Rubik should be able to sell the player a robot.  This is a placeholder until that time arrives.
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_Dialect",
-    line = ccb.content.text("Sure as ye can, at least sommat.  Us'n'll try as we might to parley your Anglic, but so ye kennit as us be from otherlands and all, it ain't that simple."),
+    id = "TALK_EXODII_MERCHANT_Robot_Buy",
+    line = ccb.content.text("*sounds thoughtful.  \"This'n can't make a call o' the quarter.  The stompers be a king's necklace, and the manufactory don't run on dreams.  Mayhap when us'n be more on the solid, but for the tick and tumble, no.\""),
+    on_enter = {
+        {
+            actions = { actions.set_actor_value("speaker", "dialogue_exodii_rubik_offered_robosell", "yes") },
+        },
+    },
     replies = {
         {
-            text = ccb.content.text("[INT or PER 7] How come you speak English, or uh, 'Anglic' like that?"),
-            when = predicates.any({ predicates.minimum_attribute("speaker", "intelligence", 7), predicates.minimum_attribute("speaker", "perception", 7) }),
-            next_topic = "TALK_EXODII_MERCHANT_Dialect_Anglic",
-        },
-        {
             text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
+            next_topic = "TALK_EXODII_MERCHANT_Talk",
         },
         {
             text = ccb.content.text("<end_talking_leave>  <end_talking_bye>"),

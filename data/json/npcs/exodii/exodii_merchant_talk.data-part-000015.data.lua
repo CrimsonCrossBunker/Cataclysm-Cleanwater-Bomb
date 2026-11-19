@@ -1,13 +1,19 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
--- No worries.  I mean, the Enemy is new here, and we have a bit of safe time ahead of us before we have to jump away again.
+-- We've got to leave the old world before it gets too worn out, you see, and find a nice fresh one on the other side.  Your deadland is as fresh as it gets.
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_Talk_Intro3a",
-    line = ccb.content.text("Neverken.  Right and so, the Enemy is new here, and us'n have a few good hours in the sun beforenext the jump."),
+    id = "TALK_EXODII_MERCHANT_Talk_Intro3",
+    line = ccb.content.text("Us gotta leave the old world afore it's worn right to the gums, an y'ken, and find a nice twitchy one on t'other side.  Your deadland be a brand shiny"),
     replies = {
         {
-            text = ccb.content.text("Oh, you mean you got here early in the Cataclysm.  Why is that so good?"),
-            next_topic = "TALK_EXODII_MERCHANT_Talk_Intro4a",
+            text = ccb.content.text("I'm not following that at all."),
+            next_topic = "TALK_EXODII_MERCHANT_Talk_Intro3a",
+        },
+        {
+            text = ccb.content.text("[INT 9] So you mean, we have a nice, freshly dead world for you to visit?"),
+            when = predicates.minimum_attribute("speaker", "intelligence", 9),
+            next_topic = "TALK_EXODII_MERCHANT_Talk_Intro4b",
         },
         {
             text = ccb.content.text_without_extraction("<done_conversation_section>"),

@@ -1,64 +1,48 @@
 local ccb = require("ccb")
 
--- Yeah, that's the basic explanation.  A bit of both now, but I used to be just like you.
+-- Yeah, that's a big question.  Otherworlds are how you got those ugly bug-creatures around here, you know?  Walking plants, talking mushroom, stuff like that.  Otherlands are closer related.  I'm from Earth, just a different Earth.  You shouldn't be asking what the Exodii are doing in Earth, because some of us are feeling pretty at home here, I think.  You should be asking what we're doing hanging out in your part of town.
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_Robot2",
-    line = ccb.content.text("Yeah, that be the soggy leaves, an I'm ken.  A bit o' both, but Rubik were once as a kin, to you be."),
+    id = "TALK_EXODII_MERCHANT_Aliens2",
+    line = ccb.content.text("Sure an that's a biggun'.  Otherworlds be the wherefore o' them uggo buggers you got round and here, eh?  Walkin' plants and talkin' mushrooms and whatlike.  Otherlands be tassed more of a kinship.  I be from Earth, but my Earth be differed.  So you's shouldno be asked what the Exodii is doin' on Earth, because some is feelin' of us fine an' fine at home, an I'm ken.  You's should be askin' what the Exodii is doin' razzin up your green and brown."),
     replies = {
         {
-            text = ccb.content.text("What are you meaning 'razzing up our green and brown'?"),
+            text = ccb.content.text("OK then, what are you meaning with 'razzing up our green and brown'?"),
             next_topic = "TALK_EXODII_MERCHANT_Purpose2",
         },
         {
-            text = ccb.content.text("This is confusing.  <done_conversation_section>"),
+            text = ccb.content.text("Tell me about your own world."),
+            next_topic = "TALK_EXODII_MERCHANT_Home",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_NONE",
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>  <end_talking_bye>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+-- Ah.  Home.  That's a long time gone, you know?  Yours isn't too different.  I… don't think I want to talk about it.  I've changed too much between then and now.
+ccb.content.define_dialogue_topic {
+    id = "TALK_EXODII_MERCHANT_Home",
+    line = ccb.content.text("*becomes distant for a moment.  \"Ah.  Home.  It were a long time gone, kennit.  Your'n be not too far.  This'n… I don't think I want to talk 'bout it.  Too much metal atwixt now an' then.\""),
+    replies = {
+        {
+            text = ccb.content.text("That's rough, maybe we should talk about something else."),
             next_topic = "TALK_EXODII_MERCHANT_Talk",
         },
         {
-            text = ccb.content.text("I don't understand a word you're saying."),
-            next_topic = "TALK_EXODII_MERCHANT_Dialect",
+            text = ccb.content.text("What are you meaning with 'razzing up our green and brown'?"),
+            next_topic = "TALK_EXODII_MERCHANT_Purpose2",
+        },
+        {
+            text = ccb.content.text("How did you come to be made of metal like this?"),
+            next_topic = "TALK_EXODII_MERCHANT_Metal",
         },
         {
             text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
-        },
-        {
-            text = ccb.content.text("<end_talking_leave>  <end_talking_bye>"),
-            next_topic = "TALK_DONE",
-        },
-    },
-}
-
--- A junker base, obviously.  A jury-rigged mess.  We'll pack it up and leave eventually.
-ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_Base",
-    line = ccb.content.text("A junker base, innit?  Pile o' gamp.  Us'll pack it up and sing along soon enough."),
-    replies = {
-        {
-            text = ccb.content.text("Pack it up?  How can you pack up something like this?"),
-            next_topic = "TALK_EXODII_MERCHANT_Base2",
-        },
-        {
-            text = ccb.content.text("Soon?  How long will you still be here?"),
-            next_topic = "TALK_EXODII_MERCHANT_BaseTimeLeft",
-        },
-        {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
-        },
-        {
-            text = ccb.content.text("<end_talking_leave>  <end_talking_bye>"),
-            next_topic = "TALK_DONE",
-        },
-    },
-}
-
--- The otherlands we were in before had only little time left, so we can't say for sure.  But this land is as fresh as it can be.
-ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_BaseTimeLeft",
-    line = ccb.content.text("Yon aforetime otherland, 'twere a right soggy biscuit.  This'n be crisp an' fresh yet.  Us'n'll try as might stay a fair tick."),
-    replies = {
-        {
-            text = ccb.content.text("Good to know you will be here for a while."),
             next_topic = "TALK_NONE",
         },
         {

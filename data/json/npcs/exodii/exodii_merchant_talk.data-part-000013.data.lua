@@ -1,9 +1,12 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
--- As I recall, we were talking about Benzete and how this is a great jump for their first time.
+-- Lovely!  Benzete (this is a name) is going to be beside themselves, that's for sure.  I mean, they'll be really happy.  This is their first jump, and it's a lucky one.
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_Talk_Intro2a",
-    line = ccb.content.text("So 'twere an I recalt, us're yarkin' of Benzete an' their great first jump."),
+    id = "TALK_EXODII_MERCHANT_Talk_Intro2",
+    line = ccb.content.text("Lovely!  Benzete's gonna be a pair, that's a track!  I mean, they'll be right happy.  This is their first jump, and it's a flappin' duck."),
+    on_enter = { { actions = { actions.set_actor_value("speaker", "dialogue_midpoint_rubik_intro", "yes") } } },
     replies = {
         {
             text = ccb.content.text("What makes it such a good jump?"),

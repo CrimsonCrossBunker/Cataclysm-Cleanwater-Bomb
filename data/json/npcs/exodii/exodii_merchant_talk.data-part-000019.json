@@ -16,22 +16,5 @@
       { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
       { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "TALK_EXODII_MERCHANT_Talk_Intro6",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "//~": "Great, I'll put that in the dictionary.  Here's a token of my gratitude for your explanation.",
-      "str": "Right so, us'n'll write it in the dicky.  Here, a shiny brass farthing for crossin' the nation."
-    },
-    "speaker_effect": { "effect": { "u_add_var": "dialogue_completed_rubik_intro", "value": "yes" } },
-    "responses": [
-      {
-        "text": "Now that we've sorted that out, I have to ask.  You're from a place where this happened before, and you escaped to our world?",
-        "topic": "TALK_EXODII_MERCHANT_Exodus3"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
-      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
-    ]
   }
 ]

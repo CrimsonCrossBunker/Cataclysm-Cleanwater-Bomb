@@ -1,36 +1,5 @@
 [
   {
-    "id": "TALK_EXODII_MERCHANT_Metal",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "//~": "I realized that it was a no-brainer question.  There was only one other option, you see, if I didn't join the Exodii.",
-      "str": "Us'n saw this were a pidgeon's road, I'd razz.  Only one way, I'm ken, if I'm not to join the rank an' file."
-    },
-    "responses": [
-      {
-        "text": "I think I know what you mean.  The only way to survive is to… \"upgrade\".  Can you help me with that?",
-        "topic": "TALK_EXODII_MERCHANT_Exodize",
-        "condition": {
-          "not": {
-            "or": [
-              { "u_has_mission": "RUBIK_ANUS_FETICK" },
-              { "compare_string": [ "yes", { "u_val": "mission_completed_anusfetick" } ] },
-              { "u_has_trait": "CBM_Interface" },
-              { "u_has_trait": "NL_CBM_Interface" }
-            ]
-          }
-        },
-        "effect": { "u_add_var": "knowledge_exodization_u_knows_exodiilore", "value": "yes" }
-      },
-      {
-        "text": "What are you meaning with 'razzing up our green and brown'?",
-        "topic": "TALK_EXODII_MERCHANT_Purpose2"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
     "id": "TALK_EXODII_MERCHANT_Robot",
     "type": "talk_topic",
     "dynamic_line": {

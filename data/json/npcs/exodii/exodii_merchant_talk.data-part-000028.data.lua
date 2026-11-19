@@ -1,17 +1,22 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
--- Ah, you found another node - another community of Exodii.  Tell me what you saw?
+-- To understand how, you've gotta think eleven-dimensionally.  We'll open up a gate and teleport out, the same as we came.
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_String_Dimension_Exodii",
-    line = ccb.content.text("Ahh, mayhaps ye've found another node - kin o' us'n Exodii.  Tell ol' Rubik:  what'd ye escolt there?  Exodii alive?  Trade?  Stompers?  Manufactory?"),
+    id = "TALK_EXODII_MERCHANT_Base2",
+    line = ccb.content.text("For an' how, ye be needin' to think wi' them elevens o' directions, kennit?  Us'll open a gate an' wibble-an-wobble.  Same as us came."),
+    on_enter = {
+        {
+            actions = {
+                actions.set_actor_value("speaker", "knowledge_exodii_transdimensional_u_knows_exodiilore", "yes"),
+            },
+        },
+    },
     replies = {
         {
-            text = ccb.content.text("It was a large domed structure, with some towers around it.  The entire thing looked like it was made of metal - a lot like your castle.  Looked like it was a ruin, or abandoned.  If there was anyone alive, I didn't find them."),
-            next_topic = "TALK_EXODII_MERCHANT_String_Dimension_Exodii_Mission_Offer1",
-        },
-        {
             text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_EXODII_MERCHANT_Talk",
+            next_topic = "TALK_NONE",
         },
         {
             text = ccb.content.text("<end_talking_leave>  <end_talking_bye>"),

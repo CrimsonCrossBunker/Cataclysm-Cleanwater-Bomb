@@ -1,19 +1,22 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
--- That's exactly it!  This is nice for many reasons, and much better than our last jump.  Otherlands with fusillies and mobbings are really useful to us.
+-- That's a part of it, sure, but this is nice for other reasons, and much better than our last jump.  Otherlands with fusillies and mobbings are really useful to us.
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_Talk_Intro4b",
-    line = ccb.content.text("You kennit rightly!  That and this be'n nice for all, overtop the last jump by heads.  Otherlands with fusillies and mobbings, us'n gets a fine change on that."),
+    id = "TALK_EXODII_MERCHANT_Talk_Intro4a",
+    line = ccb.content.text("That be a part an' switch, but this be'n nice for all, overtop the last jump by heads.  Otherlands with fusillies and mobbings, us'n gets a fine change on that."),
+    on_enter = {
+        {
+            actions = {
+                actions.set_actor_value("speaker", "knowledge_exodii_transdimensional_u_knows_exodiilore", "yes"),
+            },
+        },
+    },
     replies = {
         {
             text = ccb.content.text("I don't know what fusillies and mobbings are."),
-            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dictionary_known_fussily" } })),
             next_topic = "TALK_EXODII_MERCHANT_Talk_Intro5",
-        },
-        {
-            text = ccb.content.text("Wait, am I following this right?  You're from a place where this happened before, and you escaped to our world?"),
-            next_topic = "TALK_EXODII_MERCHANT_Exodus3",
         },
         {
             text = ccb.content.text_without_extraction("<done_conversation_section>"),

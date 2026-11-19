@@ -1,19 +1,17 @@
 [
   {
-    "id": "TALK_EXODII_MERCHANT_Purpose2",
+    "id": "TALK_EXODII_MERCHANT_Talk_CataclysmTimelineTough",
     "type": "talk_topic",
+    "//": "While many people face the possibility of destruction with planning and hope, and the Exodii don't consider that unusual, it is a bit of a warning sign to be this overconfident.  That said, as an individual data point it doesn't mean much.",
+    "speaker_effect": { "effect": { "math": [ "u_counter_exodii_exodii_psychosis_judgment += 2" ] } },
     "dynamic_line": {
-      "//~": "Aside from just having a safe place to live?  We're here to mine, you understand.  Picking the scraps, seeing if this world has any tech worth reverse engineering.  No sense letting good scraps go to waste.  If we're lucky, maybe we'll get some new Exodii before we teleport out.  Pickin' up the pieces of our sweet, shattered dreams, such as they are.",
-      "str": "Aside from jus' livin' in such a cozy nook?  Us be minin', ye kennit.  Pickin' the scraps, seein' if for your otherland has any tech worth an upside-down.  No sense lettin' good scraps go to waste.  If we're lucky, pickin' a few new Exodii afore we wobble out.  Pickin' up the pieces of our sweet, shattered dreams, suchlike."
+      "//~": "You do that then.  I'll cheer for you when you stand over the vanquished corpse of the devil himself.",
+      "str": "Fine an' fine.  Rubik'll clarion for ye when ye stand o'er the garried trick o' Anubine hisself."
     },
-    "speaker_effect": { "effect": { "u_add_var": "u_know_exodii_purpose2", "value": "yes" } },
     "responses": [
-      {
-        "text": "What do you mean 'go to waste'?  The zombies aren't using the scrap, and there's plenty to go around.",
-        "topic": "TALK_EXODII_MERCHANT_Purpose3"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_leave>  <end_talking_bye>", "topic": "TALK_DONE" }
+      { "text": "Do you know what's going on?  What caused all this?", "topic": "TALK_EXODII_MERCHANT_Talk_CataclysmCause" },
+      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
+      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
     ]
   }
 ]
