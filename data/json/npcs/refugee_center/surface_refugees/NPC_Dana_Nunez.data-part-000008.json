@@ -1,16 +1,15 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_Dana_Tacoma",
-    "dynamic_line": {
-      "compare_string": [ "phase_1", { "u_val": "recruit_general_Nunez_Tacoma" } ],
-      "no": "Huh.  I've made a few friends here, but not so much as I'd stick around here with no future prospects, hoping someone downstairs dies to make room for me.  It does sound nice, if they're looking for more workers.",
-      "yes": { "gendered_line": "Have you heard anything back from the ranch about jobs yet?", "relevant_genders": [ "u" ] }
-    },
-    "speaker_effect": { "effect": { "u_add_var": "recruit_general_Nunez_Tacoma", "value": "phase_1" } },
+    "id": "TALK_DANA_Sourdough",
+    "dynamic_line": "Sure.  If you really like this second-rate bread, you could risk your life for something actually worth it.  I left my actual sourdough starter back in the bakery where I worked.  That baby is a hundred years old, and has been in my family for generations… if you can bring him to me, I'll bake you the finest bread you've ever had.",
     "responses": [
-      { "text": "I'll look into that.  <done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "I'll look into that.  <end_talking_leave>", "topic": "TALK_DONE" }
+      {
+        "text": "Why not?  I'll see what I can do.",
+        "effect": [ { "add_mission": "MISSION_REFUGEE_Dana_Sourdough" }, { "u_add_var": "mission_flag_Dana_Sourdough", "value": "yes" } ],
+        "topic": "TALK_DANA_Sourdough2"
+      },
+      { "text": "Maybe not right now.  <end_talking_leave>", "topic": "TALK_DONE" }
     ]
   }
 ]

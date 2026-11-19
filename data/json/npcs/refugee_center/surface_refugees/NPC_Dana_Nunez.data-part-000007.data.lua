@@ -1,25 +1,38 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_Dana_Background_baking_revival",
-    line = ccb.content.text("Sorry, not quite yet.  Landough was in pretty rough shape.  No fault of yours, it was no good having him cooped up in a dank fridge for that long… and I think my apprentice baker may have fucked with him before the Cataclysm too.  He'd better hope he's a zombie now, because if I see him alive… anyway, it's gonna take a few more feeds before I can get him ready for prime time, check back in a couple days."),
-    replies = {
-        {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
+    id = "TALK_REFUGEE_Dana_Background_baking2",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "mission_flag_Dana_Sourdough" } }),
+        yes = {
+            choices = {
+                ccb.content.text("Great, here's a loaf of the best damn sourdough bread in the world.  I used to make that claim as a joke, but I feel like now there's a fighting chance nobody else can beat me."),
+                ccb.content.text("Nice.  Enjoy the mighty bounty of Landough Calrisean."),
+                ccb.content.text("Here you go, from the family recipe."),
+                ccb.content.text("Hope you enjoy it as much as I do, this is the best damn bread in the world now."),
+            },
         },
-        { text = ccb.content.text("<end_talking_leave>  Bye, Dana."), next_topic = "TALK_DONE" },
+        no = ccb.content.text("Great, here's a loaf of my locally-famous, not-very-mature sourdough.  It's not too bad honestly.  Everyone here seems to like it."),
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_Dana_Situation",
-    line = ccb.content.text("Things are tense at the best of times.  We didn't choose this crowd, so not all of us really get along.  I like Jenny and Fatima, and the three of us are kind of lucky to have friends here, but that doesn't make up for us being a bunch of unfamiliar faces crammed into a tiny space.  Someone's gonna murder someone soon, mark my words."),
+    on_enter = {
+        {
+            actions = {
+                actions.add_effect("interlocutor", "dana_baking_sold", { turns = 64800 }),
+                actions.set_actor_value("speaker", "knowledge_Dana_Sourdough", "yes"),
+            },
+        },
+    },
     replies = {
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
+            text = ccb.content.text("You seem pretty unhappy about the quality of your bread.  Is there something I can do to help?"),
+            next_topic = "TALK_DANA_Sourdough",
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "mission_flag_Dana_Sourdough" } })),
         },
-        { text = ccb.content.text("<end_talking_leave>  Bye, Dana."), next_topic = "TALK_DONE" },
+        {
+            text = ccb.content.text("It smells awesome.  <end_talking_leave>  Thanks!"),
+            next_topic = "TALK_DONE",
+        },
     },
 }

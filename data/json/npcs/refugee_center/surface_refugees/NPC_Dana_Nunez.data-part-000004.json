@@ -1,43 +1,126 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_Dana_Background_baking2",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "mission_flag_Dana_Sourdough" } ],
-      "yes": [
-        "Great, here's a loaf of the best damn sourdough bread in the world.  I used to make that claim as a joke, but I feel like now there's a fighting chance nobody else can beat me.",
-        "Nice.  Enjoy the mighty bounty of Landough Calrisean.",
-        "Here you go, from the family recipe.",
-        "Hope you enjoy it as much as I do, this is the best damn bread in the world now."
-      ],
-      "no": "Great, here's a loaf of my locally-famous, not-very-mature sourdough.  It's not too bad honestly.  Everyone here seems to like it."
-    },
-    "speaker_effect": {
-      "effect": [
-        { "npc_add_effect": "dana_baking_sold", "duration": "18 h" },
-        { "u_add_var": "knowledge_Dana_Sourdough", "value": "yes" }
-      ]
-    },
+    "//": "Common 'buy bread' dialogue options put here to avoid reprinting.",
+    "id": [
+      "TALK_REFUGEE_Dana_Background_baking",
+      "TALK_TACOMA_Dana_Baking",
+      "TALK_REFUGEE_Dana_Background_baking2_nobarter",
+      "TALK_REFUGEE_Dana_Background_baking2_yesbarter"
+    ],
     "responses": [
       {
-        "text": "You seem pretty unhappy about the quality of your bread.  Is there something I can do to help?",
-        "topic": "TALK_DANA_Sourdough",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "mission_flag_Dana_Sourdough" } ] } }
+        "//": "Regular sourdough, trade flour, regular price",
+        "text": "[8 flour] That sounds like a great deal, here's some flour for you.",
+        "topic": "TALK_REFUGEE_Dana_Background_baking2",
+        "condition": {
+          "and": [
+            { "not": { "npc_has_effect": "dana_baking_sold" } },
+            { "not": { "npc_has_effect": "dana_barter_success" } },
+            { "u_has_items": { "item": "flour", "count": 8 } },
+            { "not": { "compare_string": [ "yes", { "u_val": "mission_flag_Dana_Sourdough" } ] } }
+          ]
+        },
+        "effect": [ { "u_sell_item": "flour", "count": 8 }, { "u_spawn_item": "sourdough_bread" } ]
       },
-      { "text": "It smells awesome.  <end_talking_leave>  Thanks!", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_DANA_Sourdough",
-    "dynamic_line": "Sure.  If you really like this second-rate bread, you could risk your life for something actually worth it.  I left my actual sourdough starter back in the bakery where I worked.  That baby is a hundred years old, and has been in my family for generations… if you can bring him to me, I'll bake you the finest bread you've ever had.",
-    "responses": [
       {
-        "text": "Why not?  I'll see what I can do.",
-        "effect": [ { "add_mission": "MISSION_REFUGEE_Dana_Sourdough" }, { "u_add_var": "mission_flag_Dana_Sourdough", "value": "yes" } ],
-        "topic": "TALK_DANA_Sourdough2"
+        "//": "Regular sourdough, trade merch, regular price",
+        "text": "[2 merch] I got two merch for you.",
+        "topic": "TALK_REFUGEE_Dana_Background_baking2",
+        "condition": {
+          "and": [
+            { "not": { "npc_has_effect": "dana_baking_sold" } },
+            { "not": { "npc_has_effect": "dana_barter_success" } },
+            { "u_has_items": { "item": "FMCNote", "count": 2 } },
+            { "not": { "compare_string": [ "yes", { "u_val": "mission_flag_Dana_Sourdough" } ] } }
+          ]
+        },
+        "effect": [ { "u_sell_item": "FMCNote", "count": 2 }, { "u_spawn_item": "sourdough_bread" } ]
       },
-      { "text": "Maybe not right now.  <end_talking_leave>", "topic": "TALK_DONE" }
+      {
+        "//": "Regular sourdough, trade flour, barter price",
+        "text": "[6 flour] Thanks for cutting me a deal, here's the six cups of flour.",
+        "topic": "TALK_REFUGEE_Dana_Background_baking2",
+        "condition": {
+          "and": [
+            { "not": { "npc_has_effect": "dana_baking_sold" } },
+            { "npc_has_effect": "dana_barter_success" },
+            { "u_has_items": { "item": "flour", "count": 6 } },
+            { "not": { "compare_string": [ "yes", { "u_val": "mission_flag_Dana_Sourdough" } ] } }
+          ]
+        },
+        "effect": [ { "u_sell_item": "flour", "count": 6 }, { "u_spawn_item": "sourdough_bread" } ]
+      },
+      {
+        "//": "Regular sourdough, trade merch, barter price",
+        "text": "[1 merch] All right, one merch as agreed.",
+        "topic": "TALK_REFUGEE_Dana_Background_baking2",
+        "condition": {
+          "and": [
+            { "not": { "npc_has_effect": "dana_baking_sold" } },
+            { "npc_has_effect": "dana_barter_success" },
+            { "u_has_items": { "item": "FMCNote", "count": 1 } },
+            { "not": { "compare_string": [ "yes", { "u_val": "mission_flag_Dana_Sourdough" } ] } }
+          ]
+        },
+        "effect": [ { "u_sell_item": "FMCNote", "count": 1 }, { "u_spawn_item": "sourdough_bread" } ]
+      },
+      {
+        "//": "Special sourdough, trade flour, regular price",
+        "text": "[8 flour] That sounds like a great deal, here's some flour for you.",
+        "topic": "TALK_REFUGEE_Dana_Background_baking2",
+        "condition": {
+          "and": [
+            { "not": { "npc_has_effect": "dana_baking_sold" } },
+            { "not": { "npc_has_effect": "dana_barter_success" } },
+            { "u_has_items": { "item": "flour", "count": 8 } },
+            { "compare_string": [ "yes", { "u_val": "mission_flag_Dana_Sourdough" } ] }
+          ]
+        },
+        "effect": [ { "u_sell_item": "flour", "count": 8 }, { "u_spawn_item": "Dana_sourdough_bread" } ]
+      },
+      {
+        "//": "Special sourdough, trade merch, regular price",
+        "text": "[2 merch] I got two merch for you.",
+        "topic": "TALK_REFUGEE_Dana_Background_baking2",
+        "condition": {
+          "and": [
+            { "not": { "npc_has_effect": "dana_baking_sold" } },
+            { "not": { "npc_has_effect": "dana_barter_success" } },
+            { "u_has_items": { "item": "FMCNote", "count": 2 } },
+            { "compare_string": [ "yes", { "u_val": "mission_flag_Dana_Sourdough" } ] }
+          ]
+        },
+        "effect": [ { "u_sell_item": "FMCNote", "count": 2 }, { "u_spawn_item": "Dana_sourdough_bread" } ]
+      },
+      {
+        "//": "Special sourdough, trade flour, barter price",
+        "text": "[6 flour] Thanks for cutting me a deal, here's the six cups of flour.",
+        "topic": "TALK_REFUGEE_Dana_Background_baking2",
+        "condition": {
+          "and": [
+            { "not": { "npc_has_effect": "dana_baking_sold" } },
+            { "npc_has_effect": "dana_barter_success" },
+            { "u_has_items": { "item": "flour", "count": 6 } },
+            { "compare_string": [ "yes", { "u_val": "mission_flag_Dana_Sourdough" } ] }
+          ]
+        },
+        "effect": [ { "u_sell_item": "flour", "count": 6 }, { "u_spawn_item": "Dana_sourdough_bread" } ]
+      },
+      {
+        "//": "Special sourdough, trade merch, barter price",
+        "text": "[1 merch] All right, one merch as agreed.",
+        "topic": "TALK_REFUGEE_Dana_Background_baking2",
+        "condition": {
+          "and": [
+            { "not": { "npc_has_effect": "dana_baking_sold" } },
+            { "npc_has_effect": "dana_barter_success" },
+            { "u_has_items": { "item": "FMCNote", "count": 1 } },
+            { "compare_string": [ "yes", { "u_val": "mission_flag_Dana_Sourdough" } ] }
+          ]
+        },
+        "effect": [ { "u_sell_item": "FMCNote", "count": 1 }, { "u_spawn_item": "Dana_sourdough_bread" } ]
+      }
     ]
   }
 ]

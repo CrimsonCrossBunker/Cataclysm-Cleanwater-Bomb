@@ -1,50 +1,20 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_Dana_Background_baking",
+    id = "TALK_REFUGEE_Dana_Background",
+    line = ccb.content.text("I was working in a nice restaurant as a baker, until <the_cataclysm>.  I was pregnant, and it was getting close to time to go on mat leave; lots of time on my feet, getting up stupid-early to make pastries, you know.  Because of the pregnancy we were evacuated early and shipped out this way, but our bus was attacked in the chaos.  We managed to escape, but had to hike the rest of the way, with the Singhs and a few other refugees that didn't make it.  I lost the baby.  It wasn't a good time."),
+    on_enter = { { actions = { actions.set_actor_value("speaker", "knowledge_dana_pregnancy", "knows") } } },
     replies = {
         {
-            text = ccb.content.text("Thanks, can we talk about something else?"),
-            next_topic = "TALK_REFUGEE_Dana_1",
+            text = ccb.content.text("Have you done any baking lately?"),
+            next_topic = "TALK_REFUGEE_Dana_Background_baking",
         },
         {
-            text = ccb.content.text("I'll look into that.  <end_talking_leave>"),
-            next_topic = "TALK_DONE",
+            text = ccb.content.text("I'm sorry for your loss."),
+            next_topic = "TALK_REFUGEE_Dana_Background_sorry",
         },
-    },
-}
-
--- see above for responses to buy bread at original price.
-ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_Dana_Background_baking2_nobarter",
-    line = ccb.content.text("Sorry, it's not something I can bend on.  I don't make a big profit off this, I use what I get to make more bread.  If I cut you a deal, I'll run out of supplies."),
-    replies = {
-        {
-            text = ccb.content.text("Thanks, but I think I'll pass.  <end_talking_leave>"),
-            next_topic = "TALK_DONE",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_Dana_Background_baking2_yesbarter",
-    line = ccb.content.text("Oh, fine.  Six cups of flour, or one merch.  I'm not going any lower, I got a business to run here."),
-    replies = {
-        {
-            text = ccb.content.text("You know, I think I changed my mind.  <done_conversation_section>"),
-            next_topic = "TALK_REFUGEE_Dana_1",
-        },
-        {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
-            next_topic = "TALK_DONE",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_REFUGEE_Dana_Background_sorry",
-    line = ccb.content.text("That's kind of you to say.  I'm doing my best to move on… it hurts, but in the scale of things it could be worse.  Pablo and I still have each other, that's a lot more than most."),
-    replies = {
         {
             text = ccb.content.text_without_extraction("<done_conversation_section>"),
             next_topic = "TALK_NONE",
