@@ -7379,6 +7379,129 @@ function CcbPlatformContent.define_trait_group(options) end
 ---@param options StaticVehicleGroupOptions
 function CcbPlatformContent.define_vehicle_group(options) end
 
+---@class StaticWidgetClause
+---@field id? string
+---@field text? string|LocalizedText
+---@field symbol? string
+---@field color? string
+---@field value? integer
+---@field parse_tags? boolean
+---@field widgets? string|string[]
+
+---@class StaticWidgetChildren
+---@field widgets? string|string[] Child widget IDs to append or remove.
+
+---@class StaticWidgetOptions
+---@field id string
+---@field copy_from? string
+---@field style? string
+---@field arrange? string
+---@field symbols? string
+---@field fill? string
+---@field body_graph? string
+---@field direction? string
+---@field text_align? string
+---@field label_align? string
+---@field separator? string
+---@field variable? string Built-in widget variable.
+---@field bodypart? string
+---@field bodyparts? string[]
+---@field width? integer
+---@field height? integer
+---@field padding? integer
+---@field pad_labels? boolean
+---@field flags? string[]
+---@field colors? string[]
+---@field breaks? integer[] Thresholds between adjacent colors.
+---@field widgets? string|string[]
+---@field label? string|LocalizedText
+---@field text? string|LocalizedText
+---@field description? string|LocalizedText Native source description.
+---@field clauses? StaticWidgetClause[]
+---@field default_clause? StaticWidgetClause
+---@field extend? StaticWidgetChildren
+---@field delete? StaticWidgetChildren
+
+---Define a widget with native display variables and unconditional clauses in ordered data.
+---@param options StaticWidgetOptions
+function CcbPlatformContent.define_widget(options) end
+
+---@class StaticHarvestDrop
+---@field output string
+---@field category? string
+---@field base_quantity? [number, number]
+---@field skill_quantity? [number, number]
+---@field maximum? integer
+---@field mass_ratio? number
+---@field flags? string[]
+---@field faults? string[]
+
+---@class StaticHarvestChanges
+---@field drops StaticHarvestDrop[]
+
+---@class StaticHarvestOptions
+---@field id string
+---@field copy_from? string
+---@field leftovers? string
+---@field butchery_requirements? string
+---@field message? string|LocalizedText
+---@field drops? StaticHarvestDrop[]
+---@field extend? StaticHarvestChanges
+---@field delete? StaticHarvestChanges
+
+---Define or extend a harvest list in ordered data.
+---@param options StaticHarvestOptions
+function CcbPlatformContent.define_harvest(options) end
+
+---@alias StaticConstructionRequirement [string, integer]|[string, integer, string]|[string, integer, string, string]
+
+---@class StaticConstructionQuality
+---@field id string
+---@field level? integer
+---@field amount? integer
+
+---@class StaticConstructionByproduct
+---@field item? string
+---@field group? string
+---@field count? integer|[integer, integer]
+---@field charges? integer|[integer, integer]
+
+---@class StaticConstructionPreFlag
+---@field flag string
+---@field force_terrain boolean
+
+---@class StaticConstructionOptions
+---@field id string
+---@field group string
+---@field duration? string Native time duration, including a unit.
+---@field category? string
+---@field skill? string
+---@field difficulty? integer
+---@field required_skills? [string, integer][]
+---@field post_terrain? string
+---@field activity_level? string
+---@field turn_action? string Built-in action applied during construction.
+---@field explain_failure? string Built-in placement failure explanation.
+---@field on_display? boolean
+---@field dark_craftable? boolean
+---@field vehicle_start? boolean
+---@field strict? boolean
+---@field post_flags? string[]
+---@field pre_terrain? string|string[]
+---@field pre_checks? string|string[] Built-in placement conditions.
+---@field completion_actions? string|string[] Built-in actions applied on completion.
+---@field pre_note? string|LocalizedText
+---@field pre_flags? string|string[]|StaticConstructionPreFlag
+---@field using_requirements? string|StaticConstructionRequirement[]
+---@field byproducts? string|StaticConstructionByproduct[]
+---@field components? StaticConstructionRequirement[][] Alternative component choices for each requirement.
+---@field tools? (string|StaticConstructionRequirement)[][] Alternative tool choices for each requirement.
+---@field qualities? (StaticConstructionQuality|StaticConstructionQuality[])[]
+
+---Define a construction and its inline requirements in ordered data.
+---@param options StaticConstructionOptions
+function CcbPlatformContent.define_construction(options) end
+
 ---@param options ItemDefinitionOptions
 ---@return ItemDefinition
 function CcbPlatformContent.Item(options) end

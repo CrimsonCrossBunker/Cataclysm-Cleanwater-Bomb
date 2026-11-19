@@ -52,9 +52,11 @@ extern "C" {
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
 #include "condition.h"
+#include "construction.h"
 #include "dialogue.h"
 #include "native_file_path.h"
 #include "generic_factory.h"
+#include "harvest.h"
 #include "item_factory.h"
 #include "itype.h"
 #include "json.h"
@@ -67,6 +69,7 @@ extern "C" {
 #include "output.h"
 #include "recipe_dictionary.h"
 #include "vehicle_group.h"
+#include "widget.h"
 #include <functional>
 
 namespace cata::lua_platform
@@ -3848,6 +3851,19 @@ void load_static_overmap_terrain( const sol::table &options, const std::string &
     overmap_terrains::load( definition, source );
 }
 
+template<typename Value, typename Writer>
+void write_static_values( JsonOut &json, const sol::table &values, const char *field,
+                          Writer write_value )
+{
+    const std::size_t count = checked_dense_array_size( values, field,
+        std::numeric_limits<std::size_t>::max() );
+    json.start_array();
+    for( std::size_t i = 1; i <= count; ++i ) {
+        write_value( json, values.raw_get<Value>( i ) );
+    }
+    json.end_array();
+}
+
 template<typename Writer>
 void write_static_catalog_array( JsonOut &json, const sol::table &options, const char *field,
                                  const char *native, Writer write_entry )
@@ -3856,14 +3872,8 @@ void write_static_catalog_array( JsonOut &json, const sol::table &options, const
     if( !entries ) {
         return;
     }
-    const std::size_t count = checked_dense_array_size( *entries, field,
-        std::numeric_limits<std::size_t>::max() );
     json.member( native );
-    json.start_array();
-    for( std::size_t i = 1; i <= count; ++i ) {
-        write_entry( json, entries->raw_get<sol::table>( i ) );
-    }
-    json.end_array();
+    write_static_values<sol::table>( json, *entries, field, write_entry );
 }
 
 void write_static_trait_group_entry( JsonOut &json, const sol::table &entry )
@@ -4012,6 +4022,245 @@ void write_static_mutation_type( JsonOut &json, const sol::table &options )
     json.member( "id", options.get<std::string>( "id" ) );
 }
 
+void write_static_string_or_ids( JsonOut &json, const sol::table &options, const char *field,
+                                 const char *native )
+{
+    if( const sol::object value = options.raw_get<sol::object>( field );
+        value.get_type() == sol::type::string ) {
+        json.member( native, value.as<std::string>() );
+    } else {
+        write_item_ids( json, options, { { field, native } } );
+    }
+}
+
+void write_static_widget_clause( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "symbol", "sym" }, { "color", "color" }
+    } );
+    write_item_text( json, "text", options.raw_get<sol::object>( "text" ), false );
+    write_placement_member<int>( json, options, "value", "value" );
+    write_placement_member<bool>( json, options, "parse_tags", "parse_tags" );
+    write_static_string_or_ids( json, options, "widgets", "widgets" );
+    json.end_object();
+}
+
+void write_static_widget( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "style", "style" }, { "arrange", "arrange" },
+        { "symbols", "symbols" }, { "fill", "fill" }, { "body_graph", "body_graph" },
+        { "direction", "direction" }, { "text_align", "text_align" },
+        { "label_align", "label_align" }, { "separator", "separator" },
+        { "variable", "var" }, { "bodypart", "bodypart" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "width", "width" }, { "height", "height" }, { "padding", "padding" }
+    } );
+    write_placement_member<bool>( json, options, "pad_labels", "pad_labels" );
+    write_item_ids( json, options, {
+        { "flags", "flags" }, { "colors", "colors" }, { "bodyparts", "bodyparts" }
+    } );
+    write_static_string_or_ids( json, options, "widgets", "widgets" );
+    if( const auto breaks = options.get<sol::optional<sol::table>>( "breaks" ) ) {
+        json.member( "breaks" );
+        write_static_values<int>( json, *breaks, "breaks", []( JsonOut & out, int value ) {
+            out.write( value );
+        } );
+    }
+    write_item_text( json, "label", options.raw_get<sol::object>( "label" ), false );
+    write_item_text( json, "string", options.raw_get<sol::object>( "text" ), false );
+    const sol::object description = options.raw_get<sol::object>( "description" );
+    if( description.is<detail::localized_text>() ) {
+        // Native widget descriptions are untranslated source strings.
+        json.member( "description", description.as<const detail::localized_text &>().singular );
+    } else {
+        write_placement_member<std::string>( json, options, "description", "description" );
+    }
+    write_static_catalog_array( json, options, "clauses", "clauses", write_static_widget_clause );
+    if( const auto fallback = options.get<sol::optional<sol::table>>( "default_clause" ) ) {
+        json.member( "default_clause" );
+        write_static_widget_clause( json, *fallback );
+    }
+    for( const char *operation : {
+             "extend", "delete"
+         } ) {
+        if( const auto edit = options.get<sol::optional<sol::table>>( operation ) ) {
+            json.member( operation );
+            json.start_object();
+            write_static_string_or_ids( json, *edit, "widgets", "widgets" );
+            json.end_object();
+        }
+    }
+}
+
+void write_static_harvest_range( JsonOut &json, const sol::table &entry, const char *field,
+                                 const char *native )
+{
+    if( const auto range = entry.get<sol::optional<sol::table>>( field ) ) {
+        if( checked_dense_array_size( *range, field, 2 ) != 2 ) {
+            throw std::invalid_argument( std::string( field ) + " requires two quantities" );
+        }
+        json.member( native );
+        json.start_array();
+        json.write( range->raw_get<double>( 1 ) );
+        json.write( range->raw_get<double>( 2 ) );
+        json.end_array();
+    }
+}
+
+void write_static_harvest_drop( JsonOut &json, const sol::table &entry )
+{
+    json.start_object();
+    json.member( "drop", entry.get<std::string>( "output" ) );
+    write_placement_member<std::string>( json, entry, "category", "type" );
+    write_placement_member<double>( json, entry, "mass_ratio", "mass_ratio" );
+    write_placement_member<int>( json, entry, "maximum", "max" );
+    write_static_harvest_range( json, entry, "base_quantity", "base_num" );
+    write_static_harvest_range( json, entry, "skill_quantity", "scale_num" );
+    write_item_ids( json, entry, { { "flags", "flags" }, { "faults", "faults" } } );
+    json.end_object();
+}
+
+void write_static_harvest( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "leftovers", "leftovers" },
+        { "butchery_requirements", "butchery_requirements" }
+    } );
+    write_item_text( json, "message", options.raw_get<sol::object>( "message" ), false );
+    write_static_catalog_array( json, options, "drops", "entries", write_static_harvest_drop );
+    for( const char *operation : {
+             "extend", "delete"
+         } ) {
+        if( const auto edit = options.get<sol::optional<sol::table>>( operation ) ) {
+            json.member( operation );
+            json.start_object();
+            write_static_catalog_array( json, *edit, "drops", "entries", write_static_harvest_drop );
+            json.end_object();
+        }
+    }
+}
+
+void write_static_construction_requirement( JsonOut &json, const sol::table &entry )
+{
+    const std::size_t size = checked_dense_array_size( entry, "construction requirement",
+        std::numeric_limits<std::size_t>::max() );
+    if( size < 2 ) {
+        throw std::invalid_argument( "construction requirement needs an id and quantity" );
+    }
+    json.start_array();
+    json.write( entry.raw_get<std::string>( 1 ) );
+    json.write( entry.raw_get<int>( 2 ) );
+    for( std::size_t i = 3; i <= size; ++i ) {
+        json.write( entry.raw_get<std::string>( i ) );
+    }
+    json.end_array();
+}
+
+void write_static_construction_quality( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<int>( json, options, { { "level", "level" }, { "amount", "amount" } } );
+    json.end_object();
+}
+
+void write_static_construction_byproduct( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, { { "item", "item" }, { "group", "group" } } );
+    for( const char *field : {
+             "count", "charges"
+         } ) {
+        write_mapgen_range( json, field, options.raw_get<sol::object>( field ) );
+    }
+    json.end_object();
+}
+
+void write_static_construction( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    json.member( "group", options.get<std::string>( "group" ) );
+    write_item_fields<std::string>( json, options, {
+        { "duration", "time" }, { "category", "category" }, { "skill", "skill" },
+        { "post_terrain", "post_terrain" }, { "activity_level", "activity_level" },
+        { "turn_action", "do_turn_special" }, { "explain_failure", "explain_failure" }
+    } );
+    write_placement_member<int>( json, options, "difficulty", "difficulty" );
+    write_item_fields<bool>( json, options, {
+        { "on_display", "on_display" }, { "dark_craftable", "dark_craftable" },
+        { "vehicle_start", "vehicle_start" }, { "strict", "strict" }
+    } );
+    write_item_ids( json, options, { { "post_flags", "post_flags" } } );
+    write_static_string_or_ids( json, options, "pre_terrain", "pre_terrain" );
+    write_static_string_or_ids( json, options, "pre_checks", "pre_special" );
+    write_static_string_or_ids( json, options, "completion_actions", "post_special" );
+    write_item_text( json, "pre_note", options.raw_get<sol::object>( "pre_note" ), false );
+
+    if( const sol::object flags = options.raw_get<sol::object>( "pre_flags" );
+        flags.get_type() == sol::type::table && flags.as<sol::table>().raw_get<sol::object>(
+            "flag" ).get_type() == sol::type::string ) {
+        const sol::table flag = flags.as<sol::table>();
+        json.member( "pre_flags" );
+        json.start_object();
+        json.member( "flag", flag.get<std::string>( "flag" ) );
+        write_placement_member<bool>( json, flag, "force_terrain", "force_terrain" );
+        json.end_object();
+    } else {
+        write_static_string_or_ids( json, options, "pre_flags", "pre_flags" );
+    }
+
+    const sol::object using_requirements = options.raw_get<sol::object>( "using_requirements" );
+    if( using_requirements.get_type() == sol::type::string ) {
+        json.member( "using", using_requirements.as<std::string>() );
+    } else {
+        write_static_catalog_array( json, options, "using_requirements", "using",
+                                    write_static_construction_requirement );
+    }
+    write_static_catalog_array( json, options, "required_skills", "required_skills",
+                                write_static_construction_requirement );
+
+    if( const sol::object byproducts = options.raw_get<sol::object>( "byproducts" );
+        byproducts.get_type() == sol::type::string ) {
+        json.member( "byproducts", byproducts.as<std::string>() );
+    } else {
+        write_static_catalog_array( json, options, "byproducts", "byproducts",
+                                    write_static_construction_byproduct );
+    }
+
+    for( const char *field : {
+             "components", "tools", "qualities"
+         } ) {
+        const auto groups = options.get<sol::optional<sol::table>>( field );
+        if( !groups ) {
+            continue;
+        }
+        const bool quality = std::string_view( field ) == "qualities";
+        json.member( field );
+        write_static_values<sol::table>( json, *groups, field,
+        [quality, field]( JsonOut & out, const sol::table & group ) {
+            if( quality && group.raw_get<sol::object>( "id" ).get_type() == sol::type::string ) {
+                write_static_construction_quality( out, group );
+                return;
+            }
+            write_static_values<sol::object>( out, group, field,
+            [quality]( JsonOut & dest, const sol::object & choice ) {
+                if( quality ) {
+                    write_static_construction_quality( dest, choice.as<sol::table>() );
+                } else if( choice.get_type() == sol::type::string ) {
+                    dest.write( choice.as<std::string>() );
+                } else {
+                    write_static_construction_requirement( dest, choice.as<sol::table>() );
+                }
+            } );
+        } );
+    }
+}
+
 using static_catalog_writer = void ( * )( JsonOut &, const sol::table & );
 
 template<typename Loader>
@@ -4021,6 +4270,7 @@ auto static_catalog_definition( const std::string &source, const char *type,
     return [&source, type, write_fields, load]( const sol::table & options ) {
         std::ostringstream serialized;
         JsonOut json( serialized );
+        serialized << std::defaultfloat << std::setprecision( std::numeric_limits<double>::max_digits10 );
         json.start_object();
         json.member( "type", type );
         write_fields( json, options );
@@ -4144,6 +4394,12 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_vehicle_group", static_catalog_definition(
                               resolved.id, "vehicle_group", write_static_vehicle_group,
                               VehicleGroup::load ) );
+    content.set_function( "define_construction", static_catalog_definition(
+                              resolved.id, "construction", write_static_construction, load_construction ) );
+    content.set_function( "define_harvest", static_catalog_definition(
+                              resolved.id, "harvest", write_static_harvest, harvest_list::load_harvest_list ) );
+    content.set_function( "define_widget", static_catalog_definition(
+                              resolved.id, "widget", write_static_widget, widget::load_widget ) );
     install_static_dialogue_predicates( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );
