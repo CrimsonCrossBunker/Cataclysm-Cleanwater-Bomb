@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "afs_shuttle_pad_a1_roof", "afs_shuttle_pad_a2_roof" } },
+    layout = {
+        rows = {
+            "                                                ",
+            "                                     .......... ",
+            "                                    ........X.. ",
+            "                                    ....&&..... ",
+            "                                    ........... ",
+            "                                     ..A....... ",
+            "                                     ..A=...... ",
+            "                                     .......... ",
+            "                                     .......... ",
+            "                                          ...   ",
+            "                                          ...   ",
+            "                                          ...   ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+    },
+}
