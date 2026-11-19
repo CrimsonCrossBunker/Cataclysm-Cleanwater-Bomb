@@ -51,41 +51,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ "silo_roof" ],
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                ........",
-        "                .:......",
-        "                ........",
-        "                ........",
-        "                ........",
-        "                ......X.",
-        "                ........"
-      ],
-      "palettes": [ "roof_palette" ],
-      "furniture": { "X": "f_satellite" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "silo_1" ],
     "object": {
       "fill_ter": "t_thconc_floor",

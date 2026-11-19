@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "silo_roof" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                ........",
+            "                .:......",
+            "                ........",
+            "                ........",
+            "                ........",
+            "                ......X.",
+            "                ........",
+        },
+        palettes = { "roof_palette" },
+        furniture = { X = "f_satellite" },
+        fill_terrain = "t_flat_roof",
+    },
+}
