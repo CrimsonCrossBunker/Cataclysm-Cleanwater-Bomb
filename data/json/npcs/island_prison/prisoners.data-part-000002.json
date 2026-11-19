@@ -1,0 +1,93 @@
+[
+  {
+    "id": "TALK_PRISONER_GREET",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_first_meeting" } ],
+      "no": {
+        "gendered_line": "Hey, who the fuck are you?  I haven't seen you 'round.  Ah, fuck it, it doesn't matter.\nHere's the rules.  The first and most important one: ALWAYS CLOSE THE FUCKING ENTRY DOOR BEHIND YOUR ASS!  If you're okay with that, the following rules are: don't fuck with us, don't steal from us, don't start a fight without a reason with someone from us.  Got it, punk?  Now get lost.",
+        "relevant_genders": [ "u" ]
+      },
+      "yes": "Do I need to repeat myself?  Get outta here, <name_b>."
+    },
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_first_meeting_first_meeting", "value": "yes" } },
+    "responses": [
+      {
+        "text": "Yeah, I got it.  <end_talking_bye>",
+        "topic": "TALK_DONE",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_first_meeting" } ] } }
+      },
+      {
+        "text": "I just wanted to ask if you have a job for me.",
+        "topic": "TALK_PRISONER_ANNOYED",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_first_meeting" } ] },
+            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_annoyed_greeter_talked_to_greeter" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "I'm just hungry, and I thought you might give me some food for some job.",
+        "topic": "TALK_PRISONER_ANGRY",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_first_meeting" } ] },
+            { "compare_string": [ "yes", { "u_val": "dialogue_annoyed_greeter_talked_to_greeter" } ] },
+            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_angry_greeter_talked_to_greeter" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "Can we just talk it over?",
+        "topic": "TALK_PRISONER_READY_TO_MUG",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "dialogue_first_meeting_first_meeting" } ] },
+            { "compare_string": [ "yes", { "u_val": "dialogue_angry_greeter_talked_to_greeter" } ] }
+          ]
+        }
+      },
+      { "text": "Hey, fuck you, <name_b>!", "topic": "TALK_DONE", "effect": "hostile" }
+    ]
+  },
+  {
+    "id": "TALK_PRISONER_ANNOYED",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "dialogue_annoyed_greeter_talked_to_greeter" } ],
+      "no": "Do I have a <freaking> exclamation sign over my <freaking> head, like I'm a <freaking> quest-giver from some <freaking> video game?",
+      "yes": "Get out, loser."
+    },
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_annoyed_greeter_talked_to_greeter", "value": "yes" } },
+    "responses": [
+      {
+        "text": "No, of course not!  Sorry, I'm leaving.",
+        "topic": "TALK_DONE",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_annoyed_greeter_talked_to_greeter" } ] } }
+      },
+      { "text": "Hey, fuck you, <name_b>!", "topic": "TALK_DONE", "effect": "hostile" }
+    ]
+  },
+  {
+    "id": "TALK_PRISONER_ANGRY",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "dialogue_annoyed_greeter_talked_to_greeter" } ],
+      "no": "Disappear, <name_b>.",
+      "yes": {
+        "gendered_line": "Are you deaf or stupid?  I said I don't give a fuck for you and your <freaking> problems.  Bother me one more time, and you'll regret that.  Get outta my sight.",
+        "relevant_genders": [ "u" ]
+      }
+    },
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_angry_greeter_talked_to_greeter", "value": "yes" } },
+    "responses": [
+      {
+        "text": "Ok, sorry, I promise I won't bother you anymore.",
+        "topic": "TALK_DONE",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_angry_greeter_talked_to_greeter" } ] } }
+      },
+      { "text": "Hey, fuck you, <name_b>!", "topic": "TALK_DONE", "effect": "hostile" }
+    ]
+  }
+]
