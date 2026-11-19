@@ -107,52 +107,5 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
-  },
-  {
-    "id": "TANK",
-    "looks_like": "m79",
-    "type": "ITEM",
-    "subtypes": [ "GUN" ],
-    "symbol": "(",
-    "color": "green",
-    "name": { "str_sp": "Tankbot Main Gun", "//~": "NO_I18N" },
-    "description": { "str": "The 120mm cannon from a tankbot.  If you have this, you'd best be debugging!", "//~": "NO_I18N" },
-    "price": "999 kUSD 999 USD 99 cent",
-    "material": [ "steel" ],
-    "skill": "launcher",
-    "ammo": [ "120mm" ],
-    "weight": "2500 g",
-    "volume": "2500 ml",
-    "to_hit": -3,
-    "dispersion": 60,
-    "durability": 9,
-    "clip_size": 1,
-    "loudness": 300,
-    "flags": [ "NO_TURRET" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "120mm": 1 } } ],
-    "melee_damage": { "bash": 6 }
-  },
-  {
-    "id": "bot_laserturret",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "inactive laser turret" },
-    "description": "This is an inactive laser turret.  Using this item involves turning it on and placing it on the ground, where it will attach itself.  If reprogrammed and rewired successfully the turret will identify you as a friendly, and attack all enemies with its revolving laser cannons.  It requires sunlight in order to fire.",
-    "weight": "40750 g",
-    "volume": "30 L",
-    "price": "6 kUSD",
-    "price_postapoc": "120 USD",
-    "material": [ "steel", "plastic" ],
-    "symbol": ";",
-    "color": "white",
-    "use_action": {
-      "type": "place_monster",
-      "monster_id": "mon_laserturret",
-      "difficulty": 6,
-      "moves": 100,
-      "skills": [ "electronics", "computer" ]
-    },
-    "flags": [ "SINGLE_USE" ],
-    "melee_damage": { "bash": 8 }
   }
 ]
