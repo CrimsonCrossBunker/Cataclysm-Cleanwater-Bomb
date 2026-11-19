@@ -1,0 +1,38 @@
+[
+  {
+    "type": "mutation",
+    "id": "PRE_ARM_FEATHERS",
+    "name": { "str": "Changing Arms" },
+    "types": [ "ARMS" ],
+    "points": 0,
+    "visibility": 0,
+    "ugliness": 0,
+    "description": "Your arms feel…different.  Occasionally something shifts under the skin - sometimes it does so without pain.  Whatever is happening in there, it's far from done.  <color_red>This change will be reversible.  The next one might not be, should you continue.</color>",
+    "time": "2 h",
+    "changes_to": [ "ARM_FEATHERS" ],
+    "prereqs": [ "FEATHERS", "SPARSE_SCALES" ],
+    "processed_eocs": [ "EOC_CHANGING_LIMB_SETUP", "EOC_PRE_ARM_FEATHERS" ],
+    "category": [ "BIRD", "RAPTOR" ]
+  },
+  {
+    "type": "mutation",
+    "id": "ARM_FEATHERS",
+    "name": { "str": "Feathered Arms" },
+    "types": [ "ARMS" ],
+    "points": 2,
+    "visibility": 8,
+    "mixed_effect": true,
+    "description": "Your forearms are covered by long, stiff feathers.  While they are impressive to look at and resistant to water and other contaminants, they always get in the way and you hate it when they get filthy.  <color_red>You can still go back to how you used to be.  If you continue changing in this direction you will be permanently changed.  Progress from this state will need the matching threshold.</color>",
+    "category": [ "RAPTOR", "BIRD" ],
+    "prereqs": [ "FEATHERS", "SPARSE_SCALES" ],
+    "prereqs2": [ "PRE_ARM_FEATHERS" ],
+    "valid": false,
+    "changes_to": [ "WINGS_BIRD" ],
+    "time": "2 h",
+    "processed_eocs": [ "EOC_ARM_FEATHERS" ],
+    "vitamin_cost": 150,
+    "enchantments": [
+      "INLINE_ENCH_ARM_FEATHERS_0"
+    ]
+  }
+]

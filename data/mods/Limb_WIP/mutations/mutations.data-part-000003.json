@@ -1,0 +1,33 @@
+[
+  {
+    "type": "mutation",
+    "id": "PRE_EYES_INSECT",
+    "name": { "str": "Changing Eyes" },
+    "types": [ "CHANGING_LIMB_EYES" ],
+    "prereqs": [ "EYEBULGE" ],
+    "prereqs2": [ "CHITIN2", "CHITIN2_MOLTED" ],
+    "description": "Something is shifting painfully behind your eyeballs.  <color_red>This change will be reversible.  The next one might not be, should you continue.</color>",
+    "points": 0,
+    "time": "2 h",
+    "processed_eocs": [ "EOC_CHANGING_LIMB_SETUP", "EOC_PRE_EYES_INSECT" ],
+    "category": [ "INSECT" ]
+  },
+  {
+    "type": "mutation",
+    "id": "EYES_INSECT",
+    "name": { "str": "Compound Eyes" },
+    "types": [ "EYES", "CHANGING_LIMB_EYES", "CHANGING_LIMB_HEAD" ],
+    "prereqs": [ "EYEBULGE", "PRE_EYES_INSECT" ],
+    "prereqs2": [ "CHITIN2", "CHITIN2_MOLTED" ],
+    "points": -2,
+    "description": "Your eyes have turned into iridescent spheres bulging out of their original sockets.  Your detail vision suffered terribly, and the expanded field of view is dizzying.  <color_red>You can still go back to how you used to be.  If you continue changing in this direction you will be permanently changed.  Progress from this state will need the matching threshold.</color>",
+    "category": [ "INSECT" ],
+    "cancels": [ "PRE_EYES_INSECT" ],
+    "changes_to": [ "EYES_INSECT_2" ],
+    "time": "2 h",
+    "processed_eocs": [ "EOC_EYES_INSECT" ],
+    "valid": false,
+    "vitamin_cost": 300,
+    "enchantments": [ "INLINE_ENCH_EYES_INSECT_0" ]
+  }
+]

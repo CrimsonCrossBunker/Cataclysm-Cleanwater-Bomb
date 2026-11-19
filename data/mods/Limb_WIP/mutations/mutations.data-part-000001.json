@@ -1,0 +1,15 @@
+[
+  {
+    "type": "mutation_type",
+    "id": "CHANGING_LIMB_EYES",
+    "//": "One changing limb per changed area"
+  },
+  {
+    "type": "mutation_type",
+    "id": "CHANGING_LIMB_HEAD"
+  },
+  {
+    "type": "mutation_type",
+    "id": "HEAD"
+  }
+]
