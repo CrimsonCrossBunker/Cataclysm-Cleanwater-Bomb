@@ -1,0 +1,7 @@
+[
+  {
+    "id": "EOC_QUARTERMASTER_DID_NOT_PAY_BRIBE",
+    "type": "effect_on_condition",
+    "effect": { "npc_add_var": "player_can_trade", "value": "no" }
+  }
+]
