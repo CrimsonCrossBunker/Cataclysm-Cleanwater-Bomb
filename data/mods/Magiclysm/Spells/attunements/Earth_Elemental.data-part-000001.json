@@ -1,0 +1,53 @@
+[
+  {
+    "id": "rock_blast",
+    "type": "SPELL",
+    "name": "Rock Blast",
+    "description": "Fire three large rocks at an enemy, causing blunt damage and knocking it back.",
+    "valid_targets": [ "hostile" ],
+    "flags": [ "EVOCATION_SPELL", "RANDOM_DAMAGE", "NO_HANDS", "NO_LEGS", "MUST_HAVE_CLASS_TO_LEARN" ],
+    "effect": "attack",
+    "shape": "blast",
+    "max_level": 35,
+    "min_damage": { "math": [ "(u_spell_level('rock_blast') * 1.7) + 6" ] },
+    "max_damage": { "math": [ "(u_spell_level('rock_blast') * 3.8) + 14" ] },
+    "min_range": 8,
+    "max_range": 15,
+    "range_increment": 0.2,
+    "sound_id": "earth_spell",
+    "sound_variant": "strong",
+    "energy_source": "STAMINA",
+    "magic_type": "magiclysm_evocation_magic",
+    "spell_class": "EARTH_ELEMENTAL",
+    "damage_type": "bash",
+    "base_energy_cost": 5000,
+    "base_casting_time": 200,
+    "final_casting_time": 50,
+    "casting_time_increment": -5,
+    "extra_effects": [
+      { "id": "single_rock_blast" },
+      { "id": "single_rock_blast" },
+      { "id": "rock_blast_push" },
+      { "id": "eoc_evocation_setup", "hit_self": true }
+    ]
+  },
+  {
+    "id": "single_rock_blast",
+    "type": "SPELL",
+    "flags": [ "EVOCATION_SPELL", "RANDOM_DAMAGE", "NO_EXPLOSION_SFX" ],
+    "name": { "str": "Single Rock Blast", "//~": "NO_I18N" },
+    "description": { "str": "A single portion of the rock blast spell.", "//~": "NO_I18N" },
+    "valid_targets": [ "hostile" ],
+    "effect": "attack",
+    "shape": "blast",
+    "max_level": 35,
+    "min_damage": { "math": [ "(u_spell_level('rock_blast') * 1.7) + 6" ] },
+    "max_damage": { "math": [ "(u_spell_level('rock_blast') * 3.8) + 14" ] },
+    "min_range": 8,
+    "max_range": 15,
+    "range_increment": 0.2,
+    "damage_type": "bash",
+    "sound_id": "earth_spell",
+    "sound_variant": "strong"
+  }
+]

@@ -1,0 +1,28 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "cold_energy",
+    name = ccb.content.text("Ice Fog"),
+    description = ccb.content.text("Using your mana, you began to accelerate ice particles inside a cold mist, eroding everything inside."),
+    valid_targets = { "self" },
+    flags = { "CHANNELING_SPELL", "SOMATIC", "VERBAL", "NO_LEGS", "MUST_HAVE_CLASS_TO_LEARN" },
+    extra_spells = { { spell = "eoc_channeling_setup", self = true } },
+    effect = "spawn_item",
+    effect_data = "aura_cold_energy",
+    shape = "blast",
+    spell_class = "PERMAFROST_MAGE",
+    magic_type = "magiclysm_channeling_magic",
+    difficulty = 9,
+    max_level = 35,
+    base_casting_time = 600,
+    casting_time_increment = -15,
+    final_casting_time = 200,
+    base_energy_cost = 800,
+    energy_increment = -15,
+    final_energy_cost = 400,
+    min_damage = 1,
+    max_damage = 1,
+    min_duration = 10000,
+    max_duration = 45000,
+    duration_increment = 2300,
+}

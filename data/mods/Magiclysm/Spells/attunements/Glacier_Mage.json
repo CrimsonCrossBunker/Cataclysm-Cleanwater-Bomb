@@ -73,26 +73,5 @@
     "difficulty": 3,
     "sound_description": "a whoosh",
     "damage_type": "cold"
-  },
-  {
-    "id": "frozen_winds_push",
-    "type": "SPELL",
-    "name": { "str": "Frozen Winds Push Effect", "//~": "NO_I18N" },
-    "description": { "str": "This is the push effect portion of the Frozen Winds spell.", "//~": "NO_I18N" },
-    "effect": "directed_push",
-    "shape": "line",
-    "flags": [ "EVOCATION_SPELL" ],
-    "valid_targets": [ "hostile", "ground" ],
-    "max_level": 35,
-    "min_damage": 3,
-    "max_damage": 5,
-    "damage_increment": 0.07,
-    "min_aoe": 3,
-    "max_aoe": 6,
-    "aoe_increment": 0.1,
-    "min_range": 12,
-    "max_range": 24,
-    "range_increment": 0.5,
-    "spell_class": "GLACIER_MAGE"
   }
 ]

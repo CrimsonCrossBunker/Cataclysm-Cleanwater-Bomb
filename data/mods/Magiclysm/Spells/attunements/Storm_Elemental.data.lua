@@ -1,0 +1,26 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "storm_elemental_electric_melee",
+    name = ccb.content.text("Galvanic"),
+    description = ccb.content.text("Fill your hands with high-voltage electricity, and deal additional electric damage in melee."),
+    valid_targets = { "self" },
+    effect = "attack",
+    effect_data = "eff_storm_elemental_electric_melee",
+    shape = "blast",
+    flags = { "ENHANCEMENT_SPELL", "NO_LEGS", "SILENT", "NO_HANDS", "NO_EXPLOSION_SFX" },
+    extra_spells = { { spell = "eoc_enhancement_setup", self = true } },
+    spell_class = "STORM_ELEMENTAL",
+    difficulty = 4,
+    min_duration = 20000,
+    max_duration = 720000,
+    duration_increment = 20000,
+    base_casting_time = 500,
+    final_casting_time = 150,
+    casting_time_increment = -10,
+    base_energy_cost = 325,
+    final_energy_cost = 150,
+    energy_increment = -5,
+    max_level = 35,
+    magic_type = "magiclysm_enhancement_magic",
+}

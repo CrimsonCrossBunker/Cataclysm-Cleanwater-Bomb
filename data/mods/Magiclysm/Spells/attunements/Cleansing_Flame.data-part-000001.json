@@ -1,0 +1,41 @@
+[
+  {
+    "id": "immolate",
+    "type": "SPELL",
+    "name": "Immolate",
+    "description": "A purifying blast of raw elemental heat wipes the slate clean, searing the Earth back to her most original state: a barren ball of burning rock.",
+    "valid_targets": [ "ally", "hostile", "ground" ],
+    "flags": [
+      "EVOCATION_SPELL",
+      "SOMATIC",
+      "VERBAL",
+      "NO_LEGS",
+      "LOUD",
+      "RANDOM_DAMAGE",
+      "CONCENTRATE",
+      "IGNITE_FLAMMABLE",
+      "MUST_HAVE_CLASS_TO_LEARN",
+      "NO_HANDS",
+      "SPLIT_DAMAGE"
+    ],
+    "effect": "attack",
+    "shape": "blast",
+    "extra_effects": [ { "id": "immolate_transform" }, { "id": "immolate_push" }, { "id": "eoc_evocation_setup", "hit_self": true } ],
+    "damage_type": "heat",
+    "min_damage": { "math": [ "(u_spell_level('immolate') * 2.6) + 61" ] },
+    "max_damage": { "math": [ "(u_spell_level('immolate') * 4.1) + 79" ] },
+    "min_range": 4,
+    "max_range": 8,
+    "range_increment": 0.12,
+    "min_aoe": 3,
+    "max_aoe": 5,
+    "aoe_increment": 0.07,
+    "base_energy_cost": 520,
+    "spell_class": "CLEANSING_FLAME",
+    "difficulty": 4,
+    "max_level": 35,
+    "base_casting_time": 390,
+    "sound_description": "a searing whoosh",
+    "magic_type": "magiclysm_evocation_magic"
+  }
+]
