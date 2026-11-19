@@ -1,0 +1,371 @@
+[
+  {
+    "id": [
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_PORTAL",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_STORM",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_VITRIFIED",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_EXODII",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_STRANGE_TEMPLE",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_LIXA",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_HIGHLANDS",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_LABYRINTH",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_PHYSICS_LAB",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_AMIGARA",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_RADIOSPHERE",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_MONSTER_CORPSE",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_CABIN_REVERB",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_CABIN_REVERB_DIMENSION",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_BARRICADED_CHURCH",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_MORGANTOWN",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_STRING_DIMENSION",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_SPIRAL_MINE",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_VOID_SPIDER_LAIR",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_INNER_CABINS",
+      "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_PORTAL_STORM_DUNGEON"
+    ],
+    "type": "talk_topic",
+    "dynamic_line": "Excellent; please deposit the printouts in the intercom's tray.",
+    "responses": [
+      {
+        "text": "[Deposit a \"stable portal\" datasheet.]",
+        "condition": {
+          "and": [ { "u_has_items": { "item": "HEW_printout_data_portal", "count": 1 } }, { "math": [ "HEW_portal_data_sold < 1" ] } ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_portal", "count": 1, "popup": true },
+          { "math": [ "HEW_portal_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_PORTAL"
+      },
+      {
+        "text": "[Deposit a \"unstable portal\" datasheet.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_portal_storm", "count": 1 } },
+            { "math": [ "HEW_portal_storm_data_sold < 15" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_portal_storm", "count": 1, "popup": true },
+          { "math": [ "HEW_portal_storm_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_STORM"
+      },
+      {
+        "text": "[Deposit datasheet CC1044.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_vitrified", "count": 1 } },
+            { "math": [ "HEW_vitrified_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_vitrified", "count": 1, "popup": true },
+          { "math": [ "HEW_vitrified_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_VITRIFIED"
+      },
+      {
+        "text": "[Deposit datasheet IAE20.]",
+        "condition": {
+          "and": [ { "u_has_items": { "item": "HEW_printout_data_exodii", "count": 1 } }, { "math": [ "HEW_exodii_data_sold < 1" ] } ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_exodii", "count": 1, "popup": true },
+          { "math": [ "HEW_exodii_data_sold++" ] },
+          { "math": [ "robofac_exodii_cbm_knowledge += 1" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_EXODII"
+      },
+      {
+        "text": "[Deposit datasheet WKG1.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_strange_temple", "count": 1 } },
+            { "math": [ "HEW_temple_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_strange_temple", "count": 1, "popup": true },
+          { "math": [ "HEW_temple_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_STRANGE_TEMPLE"
+      },
+      {
+        "text": "[Deposit datasheet DP72063.]",
+        "condition": {
+          "and": [ { "u_has_items": { "item": "HEW_printout_data_lixa", "count": 1 } }, { "math": [ "HEW_lixa_data_sold < 1" ] } ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_lixa", "count": 1, "popup": true },
+          { "math": [ "HEW_lixa_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_LIXA"
+      },
+      {
+        "text": "[Deposit datasheet TCOB1.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_highlands", "count": 1 } },
+            { "math": [ "HEW_highlands_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_highlands", "count": 1, "popup": true },
+          { "math": [ "HEW_highlands_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_HIGHLANDS"
+      },
+      {
+        "text": "[Deposit datasheet DB86.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_labyrinth", "count": 1 } },
+            { "math": [ "HEW_labyrinth_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_labyrinth", "count": 1, "popup": true },
+          { "math": [ "HEW_labyrinth_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_LABYRINTH"
+      },
+      {
+        "text": "[Deposit datasheet 22BMBS.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_physics_lab", "count": 1 } },
+            { "math": [ "HEW_physics_lab_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_physics_lab", "count": 1, "popup": true },
+          { "math": [ "HEW_physics_lab_data_sold++" ] },
+          { "math": [ "robofac_exodii_cbm_knowledge += 1" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_PHYSICS_LAB"
+      },
+      {
+        "text": "[Deposit datasheet 01ITO.]",
+        "condition": {
+          "and": [ { "u_has_items": { "item": "HEW_printout_data_amigara", "count": 1 } }, { "math": [ "HEW_amigara_data_sold < 1" ] } ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_amigara", "count": 1, "popup": true },
+          { "math": [ "HEW_amigara_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_AMIGARA"
+      },
+      {
+        "text": "[Deposit datasheet VKTRS.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_radiosphere", "count": 1 } },
+            { "math": [ "HEW_radiosphere_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_radiosphere", "count": 1, "popup": true },
+          { "math": [ "HEW_radiosphere_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_RADIOSPHERE"
+      },
+      {
+        "text": "[Deposit datasheet LKG1.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_monster_corpse", "count": 1 } },
+            { "math": [ "HEW_monster_corpse_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_monster_corpse", "count": 1, "popup": true },
+          { "math": [ "HEW_monster_corpse_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_MONSTER_CORPSE"
+      },
+      {
+        "text": "[Deposit datasheet CITW01.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_cabin_reverb", "count": 1 } },
+            { "math": [ "HEW_cabin_reverb_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_cabin_reverb", "count": 1, "popup": true },
+          { "math": [ "HEW_cabin_reverb_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_CABIN_REVERB"
+      },
+      {
+        "text": "[Deposit datasheet CITW02.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_cabin_reverb_dimension", "count": 1 } },
+            { "math": [ "HEW_cabin_reverb_dimension_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_cabin_reverb_dimension", "count": 1, "popup": true },
+          { "math": [ "HEW_cabin_reverb_dimension_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_CABIN_REVERB_DIMENSION"
+      },
+      {
+        "text": "[Deposit datasheet ESFX.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_barricaded_church", "count": 1 } },
+            { "math": [ "HEW_barricaded_church_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_barricaded_church", "count": 1, "popup": true },
+          { "math": [ "HEW_barricaded_church_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_BARRICADED_CHURCH"
+      },
+      {
+        "text": "[Deposit datasheet 01Z90.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_morgantown", "count": 1 } },
+            { "math": [ "HEW_morgantown_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_morgantown", "count": 1, "popup": true },
+          { "math": [ "HEW_morgantown_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_MORGANTOWN"
+      },
+      {
+        "text": "[Deposit datasheet IHS.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_string_dimension", "count": 1 } },
+            { "math": [ "HEW_string_dimension_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_string_dimension", "count": 1, "popup": true },
+          { "math": [ "HEW_string_dimension_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_STRING_DIMENSION"
+      },
+      {
+        "text": "[Deposit datasheet UJI98.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_spiral_mine", "count": 1 } },
+            { "math": [ "HEW_spiral_mine_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_spiral_mine", "count": 1, "popup": true },
+          { "math": [ "HEW_spiral_mine_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_SPIRAL_MINE"
+      },
+      {
+        "text": "[Deposit datasheet NLL8.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_void_spider_lair", "count": 1 } },
+            { "math": [ "HEW_void_spider_lair_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_void_spider_lair", "count": 1, "popup": true },
+          { "math": [ "HEW_void_spider_lair_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_VOID_SPIDER_LAIR"
+      },
+      {
+        "text": "[Deposit datasheet MROTS-S.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_portal_storm_dungeon", "count": 1 } },
+            { "math": [ "HEW_portal_storm_dungeon_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_portal_storm_dungeon", "count": 1, "popup": true },
+          { "math": [ "HEW_portal_storm_dungeon_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_PORTAL_STORM_DUNGEON"
+      },
+      {
+        "text": "[Deposit datasheet CITW-BFα and give a verbal report.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_inner_cabins_open_field", "count": 1 } },
+            { "math": [ "HEW_inner_cabins_alpha_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_inner_cabins_open_field", "count": 1, "popup": true },
+          { "math": [ "HEW_inner_cabins_alpha_data_sold++" ] },
+          { "math": [ "HEW_inner_cabins_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_INNER_CABINS"
+      },
+      {
+        "text": "[Deposit datasheet CITW-BFβ and give a verbal report.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_inner_cabins_warped_cabin", "count": 1 } },
+            { "math": [ "HEW_inner_cabins_beta_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_inner_cabins_warped_cabin", "count": 1, "popup": true },
+          { "math": [ "HEW_inner_cabins_beta_data_sold++" ] },
+          { "math": [ "HEW_inner_cabins_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_INNER_CABINS"
+      },
+      {
+        "text": "[Deposit datasheet CITW-BFγ and give a verbal report.]",
+        "condition": {
+          "and": [
+            { "u_has_items": { "item": "HEW_printout_data_inner_cabins_home_cabin", "count": 1 } },
+            { "math": [ "HEW_inner_cabins_gamma_data_sold < 1" ] }
+          ]
+        },
+        "effect": [
+          { "u_consume_item": "HEW_printout_data_inner_cabins_home_cabin", "count": 1, "popup": true },
+          { "math": [ "HEW_inner_cabins_gamma_data_sold++" ] },
+          { "math": [ "HEW_inner_cabins_data_sold++" ] },
+          { "u_spawn_item": "RobofacCoin", "count": 5 }
+        ],
+        "topic": "TALK_ROBOFAC_INTERCOM_SELL_HEW_DATA_INNER_CABINS"
+      },
+      { "text": "That would be all.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES" }
+    ]
+  }
+]
