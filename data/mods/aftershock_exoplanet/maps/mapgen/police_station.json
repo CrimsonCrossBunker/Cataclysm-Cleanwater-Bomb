@@ -152,41 +152,6 @@
     }
   },
   {
-    "type": "mapgen",
-    "om_terrain": [ "afs_enforcer_station_a1_roof" ],
-    "object": {
-      "fill_ter": "t_metal_floor",
-      "rows": [
-        "                        ",
-        " [[[[[[[[[[[[[[[[[[[[[[ ",
-        " [££££££££££££££££££££[ ",
-        " [££££££££££££££££££££[ ",
-        " [££££££££££££££££££££[ ",
-        " [££££££££££££££££££££[ ",
-        " [££££££££££££££££££££[ ",
-        " [££££££££££££££££££££[ ",
-        " [££££££££££££££££££££[ ",
-        " [££££££££££££££££££££[ ",
-        " [££££££££££££££££££££[ ",
-        " [££££££££££££££££££££[ ",
-        " [££££££££££££££££££££[ ",
-        " [[[[[[[[[[[[£££££££££[ ",
-        "            [£££££££££[ ",
-        "            [£££££££££[ ",
-        "            [££[[[[[££[ ",
-        "            [[[[   [[[[ ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "afs_habitat_structure", "afs_habitat_exterior" ],
-      "terrain": { " ": "t_open_air" }
-    }
-  },
-  {
     "type": "palette",
     "id": "afs_enforcer_station_a1_parrameter_palette",
     "parameters": {
@@ -267,76 +232,6 @@
         "ä": { "item": "afs_anti_robot_grenades", "chance": 60, "repeat": [ 2, 4 ] },
         "é": { "item": "afs_police_anti_robot_armory", "chance": 40, "repeat": [ 3, 8 ] }
       }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "afs_enforcer_station_a1_armory_looted",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "            2           ",
-        "           1 yy         ",
-        "           1  1         ",
-        "           1  1         ",
-        "           yy           ",
-        "              1         ",
-        "              1         ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "afs_habitat_residential_furnishing" ],
-      "terrain": { "2": "t_mdoor_frame" },
-      "furniture": { "1": "f_locker" }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "afs_enforcer_station_a1_garage_open",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "    111111              ",
-        "                        "
-      ],
-      "terrain": { "1": "t_afs_security_door_frame" }
     }
   },
   {
