@@ -739,3 +739,302 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_country_out_of_fuel_north_north_facing",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = { { id = "highway", x = { 15, 17 }, y = 5, fuel = -1, status = 1, rotation = 270 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_country_out_of_fuel_north_south_facing",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = { { id = "highway", x = { 7, 9 }, y = 11, fuel = -1, status = 1, rotation = 90 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_country_out_of_fuel_west_east_facing",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = { { id = "highway", x = 11, y = { 14, 16 }, fuel = -1, status = 1, rotation = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_country_out_of_fuel_west_west_facing",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = { { id = "highway", x = 5, y = { 7, 9 }, fuel = -1, status = 1, rotation = 180 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_city_parked_north_north_facing",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = {
+            {
+                id = "city_vehicles_wr",
+                x = { 15, 17 },
+                y = 5,
+                fuel = -1,
+                status = 1,
+                rotation = 270,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_city_parked_north_south_facing",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = { { id = "city_vehicles_wr", x = { 7, 9 }, y = 11, fuel = -1, status = 1, rotation = 90 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_city_parked_west_east_facing",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = { { id = "city_vehicles_wr", x = 11, y = { 14, 16 }, fuel = -1, status = 1, rotation = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_city_parked_west_west_facing",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = { { id = "city_vehicles_wr", x = 5, y = { 7, 9 }, fuel = -1, status = 1, rotation = 180 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_city_jack-knifed_semi_north",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = {
+            { id = "semi_truck", x = 15, y = 4, fuel = -1, status = 1, rotation = 290 },
+            { id = "truck_trailer", x = 18, y = 12, fuel = -1, status = 1, rotation = 20 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_city_jack-knifed_semi_east",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = {
+            { id = "semi_truck", x = 19, y = 15, fuel = -1, status = 1, rotation = 20 },
+            { id = "truck_trailer", x = 11, y = 18, fuel = -1, status = 1, rotation = 110 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_city_jack-knifed_semi_south",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = {
+            { id = "semi_truck", x = 8, y = 19, fuel = -1, status = 1, rotation = 110 },
+            { id = "truck_trailer", x = 5, y = 11, fuel = -1, status = 1, rotation = 200 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_city_jack-knifed_semi_west",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = {
+            { id = "semi_truck", x = 4, y = 8, fuel = -1, status = 1, rotation = 200 },
+            { id = "truck_trailer", x = 12, y = 5, fuel = -1, status = 1, rotation = 290 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_city_vehicle_pileup",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = {
+            { id = "city_pileup", x = 12, y = 8, fuel = -1, status = 1, rotation = 270 },
+            { id = "city_pileup", x = 8, y = 12, fuel = -1, status = 1, rotation = 0 },
+            { id = "city_pileup", x = 12, y = 16, fuel = -1, status = 1, rotation = 90 },
+            { id = "city_pileup", x = 15, y = 12, fuel = -1, status = 1, rotation = 180 },
+            { id = "city_pileup", x = 12, y = 12, fuel = -1, status = 1, rotation = 270 },
+            {
+                id = "city_pileup",
+                x = { 8, 16 },
+                y = { 4, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 0,
+            },
+            {
+                id = "city_pileup",
+                x = { 8, 16 },
+                y = { 4, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 0,
+            },
+            {
+                id = "city_pileup",
+                x = { 4, 16 },
+                y = { 8, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 90,
+            },
+            {
+                id = "city_pileup",
+                x = { 4, 16 },
+                y = { 8, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 90,
+            },
+            {
+                id = "city_pileup",
+                x = { 4, 15 },
+                y = { 4, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 180,
+            },
+            {
+                id = "city_pileup",
+                x = { 4, 15 },
+                y = { 4, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 180,
+            },
+            {
+                id = "city_pileup",
+                x = { 4, 16 },
+                y = { 4, 15 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 270,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_road_vehicles_wr_city_policecar_pileup",
+    layout = {
+        size = { width = 24, height = 24 },
+        rotation = { 0 },
+        vehicle_placements = {
+            { id = "police_pileup", x = 12, y = 8, fuel = -1, status = 1, rotation = 270 },
+            { id = "police_pileup", x = 8, y = 12, fuel = -1, status = 1, rotation = 0 },
+            { id = "police_pileup", x = 12, y = 16, fuel = -1, status = 1, rotation = 90 },
+            { id = "police_pileup", x = 16, y = 12, fuel = -1, status = 1, rotation = 180 },
+            { id = "police_pileup", x = 12, y = 12, fuel = -1, status = 1, rotation = 270 },
+            {
+                id = "police_pileup",
+                x = { 5, 16 },
+                y = { 5, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 0,
+            },
+            {
+                id = "police_pileup",
+                x = { 5, 16 },
+                y = { 5, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 0,
+            },
+            {
+                id = "police_pileup",
+                x = { 5, 16 },
+                y = { 5, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 90,
+            },
+            {
+                id = "police_pileup",
+                x = { 5, 16 },
+                y = { 5, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 90,
+            },
+            {
+                id = "police_pileup",
+                x = { 5, 16 },
+                y = { 5, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 180,
+            },
+            {
+                id = "police_pileup",
+                x = { 5, 16 },
+                y = { 5, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 180,
+            },
+            {
+                id = "police_pileup",
+                x = { 5, 16 },
+                y = { 5, 16 },
+                fuel = -1,
+                status = 1,
+                chance = 50,
+                rotation = 270,
+            },
+        },
+    },
+}
