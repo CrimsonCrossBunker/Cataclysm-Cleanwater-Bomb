@@ -1,0 +1,20 @@
+[
+  {
+    "type": "mutation",
+    "id": "SALAMANDER_SMOKE_FORM",
+    "name": { "str": "Form of Billowing Smoke" },
+    "points": 8,
+    "description": "The Salamander may transform into smoke.  They will have only a dim awareness of their surroundings, but can freely move including through the air and will be nearly immune to attack.  They will be unable to attack anyone else themselves, however.",
+    "prereqs": [ "SALAMANDER_SUMMON_WINGS", "SALAMANDER_SUMMON_WINGS_ON" ],
+    "category": [ "SALAMANDER" ],
+    "purifiable": false,
+    "threshreq": [ "THRESH_SALAMANDER" ],
+    "active": true,
+    "activated_is_setup": true,
+    "activated_eocs": [ "EOC_SALAMANDER_SMOKE_FORM_ON" ],
+    "time": 10,
+    "kcal": true,
+    "cost": 1,
+    "deactivated_eocs": [ "EOC_SALAMANDER_SMOKE_FORM_OFF" ]
+  }
+]

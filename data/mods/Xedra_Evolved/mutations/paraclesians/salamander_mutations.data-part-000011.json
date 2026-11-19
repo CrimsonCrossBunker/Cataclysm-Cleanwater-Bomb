@@ -1,0 +1,15 @@
+[
+  {
+    "type": "mutation",
+    "id": "SALAMANDER_SMOKE_FORM_ASCEND",
+    "name": { "str": "Smoke Form Ascension" },
+    "points": 10,
+    "description": "While in hot air or a fire, you may ascend upwards",
+    "category": [ "SALAMANDER" ],
+    "purifiable": false,
+    "threshreq": [ "THRESH_SALAMANDER" ],
+    "active": true,
+    "valid": false,
+    "activated_eocs": [ "EOC_SALAMANDER_SMOKE_FORM_ASCEND" ]
+  }
+]

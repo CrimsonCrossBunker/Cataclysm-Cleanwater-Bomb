@@ -1,0 +1,22 @@
+[
+  {
+    "type": "mutation",
+    "id": "SALAMANDER_SLEEP_LESS3",
+    "name": { "str": "The Watchfire Burns Throughout the Night" },
+    "points": 10,
+    "description": "Like a blazing signal fire, a Salamander never stops shining.  They never need to sleep if they do not want to, and when they do, they need much less sleep than normal.  However, they require twice as much food as a human.",
+    "prereqs": [ "SALAMANDER_SLEEP_LESS2" ],
+    "types": [ "SLEEP" ],
+    "active": true,
+    "activated_is_setup": true,
+    "category": [ "SALAMANDER" ],
+    "purifiable": false,
+    "threshreq": [ "THRESH_SALAMANDER" ],
+    "enchantments": [
+      "INLINE_ENCH_SALAMANDER_SLEEP_LESS3_0"
+    ],
+    "activated_eocs": [ "EOC_SALAMANDER_NO_SLEEP" ],
+    "processed_eocs": [ "EOC_SALAMANDER_NO_SLEEP" ],
+    "time": "6 h"
+  }
+]

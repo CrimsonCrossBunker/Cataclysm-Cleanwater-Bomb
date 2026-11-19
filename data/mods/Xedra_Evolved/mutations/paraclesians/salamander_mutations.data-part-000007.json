@@ -1,0 +1,33 @@
+[
+  {
+    "type": "mutation",
+    "id": "SALAMANDER_REMOVE_STUN",
+    "name": { "str": "Effortlessly-Rising Smoke" },
+    "points": 5,
+    "description": "Like smoke rising to the sky, the Salamander cannot be kept down.  This trait may be activated to immediately clear the Stunned, Dazed, or Downed effects.",
+    "prereqs": [ "SALAMANDER_REDUCED_MOVE_COST" ],
+    "active": true,
+    "category": [ "SALAMANDER" ],
+    "purifiable": false,
+    "activated_eocs": [ "EOC_SALAMANDER_REMOVE_STUN" ],
+    "cost": 75,
+    "kcal": true
+  },
+  {
+    "type": "mutation",
+    "id": "SALAMANDER_COOKING_HEAT",
+    "name": { "str": "Stove's Caress" },
+    "points": 4,
+    "description": "Instead of simply causing a burst of heat, the Salamander can emit heat from their hands at will, allowing them to use it to cook.",
+    "prereqs": [ "SALAMANDER_MAKE_FIRE" ],
+    "category": [ "SALAMANDER" ],
+    "purifiable": false,
+    "cost": 1,
+    "active": true,
+    "kcal": true,
+    "activated_is_setup": true,
+    "time": 60,
+    "activated_eocs": [ "EOC_SALAMANDER_GRANT_COOKING_HEAT" ],
+    "deactivated_eocs": [ "EOC_SALAMANDER_GRANT_COOKING_HEAT" ]
+  }
+]
