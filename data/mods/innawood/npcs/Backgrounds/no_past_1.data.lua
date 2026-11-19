@@ -1,0 +1,7 @@
+local ccb = require("ccb")
+
+ccb.content.define_dialogue_topic {
+    id = "CWH_NO_PAST_1_IDEAS2",
+    line = ccb.content.text("I - fine.  Drugs in the water, some kind of weapon I guess.  You know how things were with those other people, they blamed it on them mostly.  Made people violent and ugly.  There were riots.  People I cared about joined them, and I guess I'll never know why.  Riots led to action to shut them down, which made the riots worse.  People acted like animals, not just the rioters but everyone.  Then came the monsters and nightmares walking the world like real Armageddon, and everyone died, and started coming back as monsters themselves.  There's your story.  If you want more, talk to someone else."),
+    replies = { { text = ccb.content.text("Thanks for that."), next_topic = "TALK_FRIEND" } },
+}
