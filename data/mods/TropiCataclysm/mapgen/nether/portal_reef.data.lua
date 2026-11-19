@@ -1,0 +1,87 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "portal_reef" },
+    layout = {
+        rows = {
+            "     ..............     ",
+            "  .........&&.........  ",
+            " ......,,,&,,,,,,...... ",
+            " ....,,,,,&,&,,,,,,.... ",
+            " ...,,,,,&&__&,,,,,,... ",
+            "...,,,,&&&___&___,,,,...",
+            "...,,,&&____&_____,,&...",
+            "..,,,,_&&&&&___&__&&,,..",
+            "..&&,_&__&__&&&_&&_,,,..",
+            "..,,&_&_&_______&__,,,..",
+            "..,,_&_&&_______&__&&,..",
+            "..,&&&_&___X__&&&&&&,,..",
+            ".&&,&__&______&_&___,,..",
+            "..&,&__&&_____&_&_&_,,..",
+            "..&&&&__&&&&&&___&&,,,..",
+            "..,&,&&_______&____,,,..",
+            "..,&,,&____&&&___&&&,,..",
+            "...&,,&&__&____&&_,,,...",
+            "..&,,,,&&&_&&&&__,,,,...",
+            " ...,,,,,&__&_,,,,,,... ",
+            " ....,,,&&,,,&,,,,,.... ",
+            " ......&,,,,,,&&,...... ",
+            "  ..............&&....  ",
+            "     ..............     ",
+        },
+        terrain = {
+            [" "] = {
+                { id = "t_region_groundcover_urban", copies = 4 },
+                { id = "t_sand" },
+                { id = "t_grass" },
+                { id = "t_dirt" },
+            },
+            ["."] = { { id = "t_region_groundcover_urban", copies = 2 }, { id = "t_underbrush" } },
+            [","] = {
+                { id = "t_region_groundcover_urban", copies = 3 },
+                { id = "t_underbrush", copies = 7 },
+                { id = "t_sand" },
+            },
+            _ = {
+                { id = "t_sand", copies = 25 },
+                { id = "t_mud" },
+                { id = "t_alien_anemone", copies = 3 },
+                { id = "t_alien_chrinoid", copies = 2 },
+            },
+            ["&"] = "t_dirtmound",
+            X = "t_sand",
+        },
+        furniture = {
+            [" "] = {
+                { id = "f_null", copies = 18 },
+                { id = "f_boulder_small", copies = 3 },
+                { id = "f_boulder_medium", copies = 2 },
+                { id = "f_boulder_large" },
+                { id = "f_dandelion", copies = 2 },
+                { id = "f_brambles" },
+            },
+            ["."] = {
+                { id = "f_null", copies = 18 },
+                { id = "f_boulder_small", copies = 4 },
+                { id = "f_boulder_medium", copies = 3 },
+            },
+            [","] = {
+                { id = "f_null", copies = 12 },
+                { id = "f_alien_sponge", copies = 2 },
+                { id = "f_alien_coral_a" },
+            },
+            _ = {
+                { id = "f_null", copies = 10 },
+                { id = "f_alien_coral_b", copies = 2 },
+                { id = "f_alien_sponge" },
+            },
+            ["&"] = {
+                { id = "f_alien_coral_a", copies = 33 },
+                { id = "f_alien_coral_b", copies = 33 },
+                { id = "f_alien_coral_c", copies = 33 },
+                { id = "f_alien_sponge" },
+            },
+        },
+    },
+}
