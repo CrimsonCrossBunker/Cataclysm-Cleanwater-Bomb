@@ -1,0 +1,25 @@
+[
+  {
+    "id": "MISSION_lighthouse_woman_0",
+    "type": "mission_definition",
+    "has_generic_rewards": false,
+    "name": { "str": "Protect fisherman's wife" },
+    "description": "She looks like a nice woman.  Maybe you should not let her die?",
+    "goal": "MGOAL_CONDITION",
+    "difficulty": 0,
+    "value": 0,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "-",
+      "offer": "-",
+      "accepted": "-",
+      "rejected": "-",
+      "advice": "-",
+      "inquire": "-",
+      "success": "-",
+      "success_lie": "-",
+      "failure": "-"
+    },
+    "fail": { "effect": [ { "u_add_var": "flag_death_lighthouse_wife_dead", "value": "yes" } ] }
+  }
+]
