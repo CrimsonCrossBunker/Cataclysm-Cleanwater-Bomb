@@ -1,0 +1,39 @@
+[
+  {
+    "id": "mon_termite_king",
+    "type": "MONSTER",
+    "name": { "str": "giant termite king" },
+    "description": "A gigantic termite dedicated to protecting the queen and their offspring.  While his main role is breeding, the king is certainly well armed as well.",
+    "copy-from": "mon_termite_soldier",
+    "proportional": { "hp": 5, "speed": 0.25, "dodge": 0.5, "vision_day": 2 },
+    "volume": "625 L",
+    "weight": "815 kg",
+    "symbol": "T",
+    "melee_dice": 2,
+    "bleed_rate": 60,
+    "grab_strength": 75,
+    "special_attacks": [
+      { "id": "smash", "throw_strength": 48, "cooldown": 30 },
+      { "id": "leg_sweep" },
+      {
+        "id": "bite_grab",
+        "cooldown": 5,
+        "condition": { "not": { "u_has_effect": "maimed_mandible" } },
+        "damage_max_instance": [ { "damage_type": "cut", "amount": 12, "armor_penetration": 14 } ]
+      },
+      {
+        "id": "grab_drag",
+        "condition": { "and": [ { "not": { "u_has_effect": "maimed_mandible" } }, { "not": { "u_has_flag": "GRAB_FILTER" } } ] }
+      },
+      {
+        "id": "drag_followup",
+        "condition": {
+          "and": [ { "not": { "u_has_effect": "maimed_mandible" } }, { "u_has_flag": "GRAB_FILTER" }, { "npc_has_flag": "GRAB" } ]
+        }
+      }
+    ],
+    "zombify_into": "mon_meat_cocoon_large",
+    "armor": { "bash": 15, "cut": 24, "bullet": 15, "electric": 4 },
+    "extend": { "flags": [ "DESTROYS", "GRABS", "PUSH_MON", "PUSH_VEH" ] }
+  }
+]
