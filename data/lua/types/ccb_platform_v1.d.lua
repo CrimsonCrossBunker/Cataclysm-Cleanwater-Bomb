@@ -703,7 +703,7 @@ local ModDefinition = {}
 ---@field z integer Absolute map-square z coordinate.
 
 ---Immutable deferred translation value for native text fields declared to accept it.
----Create with content.text or content.plural_text; each field declaration determines whether plural text is accepted. Plain strings retain that field's existing behavior.
+---Each field declaration determines whether plural text is accepted. Plain strings retain that field's existing behavior.
 ---@class LocalizedText
 
 ---@class ItemChargedQualityOptions
@@ -7266,6 +7266,13 @@ function CcbPlatformContent.text(text, context) end
 ---@return LocalizedText
 function CcbPlatformContent.plural_text(singular, plural, context) end
 
+---Create a native translation value whose source forms are omitted from catalog extraction.
+---@param singular string
+---@param plural? string
+---@param context? string
+---@return LocalizedText
+function CcbPlatformContent.text_without_extraction(singular, plural, context) end
+
 ---@param options ItemDefinitionOptions
 ---@return ItemDefinition
 function CcbPlatformContent.Item(options) end
@@ -7352,6 +7359,7 @@ function CcbPlatformContent.Item(options) end
 
 ---@class StaticItemPocket
 ---@field kind? string Native pocket type.
+---@field id? string Stable pocket identifier used by firing requirements.
 ---@field capacity? string Volume with a native unit.
 ---@field mass_limit? string Mass with a native unit.
 ---@field max_item_length? string
@@ -7359,6 +7367,7 @@ function CcbPlatformContent.Item(options) end
 ---@field min_item_volume? string
 ---@field max_item_volume? string
 ---@field magazine_well? string
+---@field default_magazine? string
 ---@field name? string|LocalizedText
 ---@field description? string|LocalizedText
 ---@field moves? integer
@@ -7376,10 +7385,111 @@ function CcbPlatformContent.Item(options) end
 ---@field airtight? boolean
 ---@field inherits_flags? boolean
 ---@field fire_protection? boolean
+---@field open_container? boolean
 ---@field allowed_flags? string[]
 ---@field allowed_items? string[]
 ---@field allowed_materials? string[]
+---@field allowed_speedloaders? string[]
 ---@field ammunition? table<string, integer> Capacity by ammunition type.
+
+---@class StaticItemBarrelDamage
+---@field length string Barrel length with a native unit.
+---@field amount number
+
+---@class StaticItemDamageUnit
+---@field type string Native damage type ID.
+---@field amount? number
+---@field penetration? number
+---@field damage_multiplier? number
+---@field armor_multiplier? number
+---@field constant_damage_multiplier? number
+---@field constant_armor_multiplier? number
+---@field barrels? StaticItemBarrelDamage[]
+
+---@alias StaticItemDamage StaticItemDamageUnit|StaticItemDamageUnit[]
+
+---@class StaticItemBarrelDispersion
+---@field length string Barrel length with a native unit.
+---@field dispersion integer
+
+---@class StaticItemAmmunition
+---@field type? string Native ammunition type. Omit to inherit.
+---@field casing? string Item left as a casing.
+---@field drop? string Item dropped by the projectile.
+---@field drop_chance? number
+---@field drop_active? boolean
+---@field range? integer
+---@field dispersion? integer
+---@field recoil? integer
+---@field recovery_chance? integer
+---@field count? integer Default ammunition charges.
+---@field loudness? integer
+---@field projectile_count? integer
+---@field shot_spread? integer
+---@field range_multiplier? number
+---@field critical_multiplier? number
+---@field show_stats? boolean
+---@field effects? string[]
+---@field damage? StaticItemDamage
+---@field shot_damage? StaticItemDamage
+---@field barrel_dispersion? StaticItemBarrelDispersion[]
+
+---@class StaticItemMagazine
+---@field ammunition? string[] Accepted ammunition types.
+---@field default_ammo? string Default ammunition item ID.
+---@field linkage? string Link item ID for belts.
+---@field capacity? integer
+---@field count? integer Initial ammunition count.
+---@field reload_time? integer
+---@field jam_multiplier? number
+
+---@class StaticItemGunMode
+---@field id? string Native firing-mode ID. Omit id and label when defining a fixed burst.
+---@field label? string|LocalizedText Menu label.
+---@field quantity? integer Shots or strikes per use. Provide both quantity and rpm for a fixed burst.
+---@field rpm? integer Firing rate in rounds per minute.
+---@field flags? string[]
+
+---@class StaticItemGunModLocation
+---@field id string Native gun modification location.
+---@field count integer Number of available slots there.
+
+---@class StaticItemFiringRequirement
+---@field pocket string Pocket ID that provides the resource.
+---@field count integer Charges consumed from this pocket.
+
+---@class StaticItemGun
+---@field skill? string
+---@field ammunition? string[]
+---@field range? integer
+---@field damage? StaticItemDamage
+---@field dispersion? integer
+---@field sight_dispersion? integer
+---@field recoil? integer
+---@field handling? integer
+---@field durability? integer
+---@field loudness? integer
+---@field clip_size? integer
+---@field reload_time? integer
+---@field reload_noise? string|LocalizedText
+---@field reload_noise_volume? integer
+---@field barrel_volume? string
+---@field barrel_length? string
+---@field built_in_mods? string[]
+---@field default_mods? string[]
+---@field energy_drain? string
+---@field blackpowder_tolerance? integer
+---@field min_cycle_recoil? integer
+---@field effects? string[]
+---@field ammo_per_shot? integer
+---@field heat_per_shot? number
+---@field cooling? number
+---@field overheat_threshold? number
+---@field jam_multiplier? number
+---@field mod_locations? StaticItemGunModLocation[]
+---@field modes? StaticItemGunMode[]
+---@field injuries? table<string, integer>
+---@field firing_requirements? table<string, StaticItemFiringRequirement[]>
 
 ---@class StaticItemAdditions
 ---@field flags? string[]
@@ -7387,9 +7497,13 @@ function CcbPlatformContent.Item(options) end
 ---@field vitamins? StaticItemVitamin[]
 ---@field rot_spawn? StaticItemRotSpawn
 ---@field variants? ItemVariantDefinitionOptions[]
+---@field projectile_effects? string[]
+---@field firing_effects? string[]
 
 ---@class StaticItemRemovals
 ---@field flags? string[]
+---@field projectile_effects? string[]
+---@field firing_effects? string[]
 
 ---@class StaticItemScales
 ---@field mass? number
@@ -7402,6 +7516,17 @@ function CcbPlatformContent.Item(options) end
 ---@field fun? number
 ---@field quench? number
 ---@field parasites? number
+---@field dispersion? number
+---@field recoil? number
+---@field range? number
+---@field shot_spread? number
+---@field loudness? number
+---@field count? number
+---@field reload_time? number
+---@field damage? StaticItemDamage
+---@field shot_damage? StaticItemDamage
+---@field ranged_damage? StaticItemDamage
+---@field melee_damage? table<string, number>
 
 ---@class StaticItemOffsets
 ---@field mass? string
@@ -7409,6 +7534,14 @@ function CcbPlatformContent.Item(options) end
 ---@field warmth? integer
 ---@field fun? integer
 ---@field quench? integer
+---@field price? string
+---@field barrel_volume? string
+---@field range? integer
+---@field dispersion? integer
+---@field recoil? integer
+---@field accuracy? integer
+---@field damage? StaticItemDamage
+---@field ranged_damage? StaticItemDamage
 ---@field melee_damage? table<string, number>
 
 ---@class StaticItemInheritance
@@ -7465,9 +7598,12 @@ function CcbPlatformContent.Item(options) end
 ---@field techniques? string[]
 ---@field repair_materials? string[]
 ---@field emissions? string[]
+---@field weapon_categories? string[]
 ---@field materials? (string|StaticItemMaterial)[]
 ---@field replace_materials? table<string,string>
 ---@field melee_damage? table<string,number>
+---@field thrown_damage? StaticItemDamage
+---@field throwing_recovery_chance? integer
 ---@field accuracy? integer|ItemMeleeAccuracyOptions
 ---@field pockets? StaticItemPocket[]
 ---@field variants? ItemVariantDefinitionOptions[]
@@ -7475,8 +7611,11 @@ function CcbPlatformContent.Item(options) end
 ---@field faults? StaticItemFault[]
 ---@field qualities? StaticItemQuality[]
 ---@field inheritance? StaticItemInheritance
----@field armor? StaticItemArmor Supply one of armor and comestible.
----@field comestible? StaticItemComestible Supply one of armor and comestible.
+---@field armor? StaticItemArmor Supply exactly one subtype.
+---@field comestible? StaticItemComestible
+---@field ammunition? StaticItemAmmunition
+---@field magazine? StaticItemMagazine
+---@field gun? StaticItemGun
 
 ---Register an item in the Mod's ordered data load, preserving native inheritance and finalization.
 ---@param options StaticItemOptions

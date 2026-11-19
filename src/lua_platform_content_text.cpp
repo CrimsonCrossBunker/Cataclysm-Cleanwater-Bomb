@@ -15,6 +15,11 @@ void install_content_text( sol::table &content )
     const sol::optional<std::string> &context ) {
         return make_localized_text( singular, plural, context );
     } );
+    content.set_function( "text_without_extraction", []( const std::string & singular,
+    const sol::optional<std::string> &plural, const sol::optional<std::string> &context ) {
+        return make_localized_text( singular,
+                                    plural ? std::optional<std::string>( *plural ) : std::nullopt, context );
+    } );
 }
 
 authored_text read_singular_text( const sol::object &value, const std::string &fallback,
