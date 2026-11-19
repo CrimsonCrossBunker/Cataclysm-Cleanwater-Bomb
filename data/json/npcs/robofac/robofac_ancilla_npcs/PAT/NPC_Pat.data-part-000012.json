@@ -1,0 +1,93 @@
+[
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01",
+    "type": "talk_topic",
+    "dynamic_line": "I have, I have.  I hear they're stickin' radios in the skull's of some mercs.  You too, eh?  Crazy shit.  Maybe you can score some kinda fancy implant so we can ditch the ugly-ass AR glasses, yeah?  Lemme know if ya' find one, ya' nut-ckle-head, hah!  Get it?  Nuts n' bolts.",
+    "responses": [
+      {
+        "text": "Actually, I have an implanted AR system.  Think you could use it?",
+        "topic": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01_AR",
+        "condition": { "and": [ { "u_has_items": { "item": "integrated_ar", "count": 1 } }, { "u_has_trait": "Hub01_CBM_Interface" } ] }
+      },
+      { "text": "Yeah, alright.", "topic": "TALK_ROBOFAC_MERC_PAT" }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01_AR",
+    "type": "talk_topic",
+    "dynamic_line": "No shit?  You also got some kind of internal radio we can use?  If so, I'll plug my computah heah into your USB port, and see what we can do.  Platonically, of course.",
+    "responses": [
+      {
+        "text": "Yup, I have an Infolink CBM, too.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01_AR_INFOLINK_YES",
+        "condition": {
+          "and": [
+            { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ] } },
+            { "u_has_bionics": "bio_radio" }
+          ]
+        }
+      },
+      {
+        "text": "No, I don't have an internal radio CBM.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01_AR_INFOLINK_NO",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ] } },
+        "effect": { "u_add_var": "robofac_pat_said_use_the_earpiece", "value": "yes" }
+      },
+      {
+        "text": "Maybe I should come talk to you in person about this.  I'll swing by sometime.",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "condition": { "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ] }
+      },
+      { "text": "Let's talk about this some other time.", "topic": "TALK_ROBOFAC_MERC_PAT" }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01_AR_INFOLINK_NO",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_finished_earpiece" } ],
+      "yes": "Well, I guess an integrated radio'd be nice, but just use the earpiece you have for the headset, yeah?  It should work with that USB port just the same.",
+      "no": "&Pat reaches into their pocket and pulls out a small earpiece with some inline electronics.  \"Heah, I've been workin' on this for a while.  You can plug it right into your USB port there, and stick this part here in your ear.  If the earpiece is active, I'll be able to chat and talk with you, yeah?  Turn it off if you need privacy.\""
+    },
+    "responses": [
+      {
+        "text": "Great, I'll just use the earpiece for now.",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "condition": { "compare_string": [ "yes", { "u_val": "robofac_pat_finished_earpiece" } ] }
+      },
+      {
+        "text": "Huh, cool.  Thanks, Pat.  Talk to you soon.",
+        "topic": "TALK_DONE",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_finished_earpiece" } ] } },
+        "effect": [ { "u_spawn_item": "pat_earpiece", "count": 1 }, { "u_lose_var": "robofac_pat_finished_earpiece" } ]
+      }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01_AR_INFOLINK_YES",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ],
+      "yes": "Absolutely.  Come by heah sometime and show me, and we'll see what we can do.",
+      "no": "&Pat pulls out their laptop, sparks the makeshift car battery they use to power it, then boots it up.  \"Alright, now we're talkin'.  Like I said, I'll have to plug into your USB jack, Jack.  Ready?\""
+    },
+    "responses": [
+      {
+        "text": "Sure, I'll come by in person.",
+        "topic": "TALK_ROBOFAC_MERC_PAT",
+        "condition": { "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ] }
+      },
+      {
+        "text": "[Give Pat access to your USB port] Let's do it.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_HUB01_AR_INFOLINK_INSTALLED",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ] } },
+        "effect": [
+          { "u_add_var": "robofac_pat_gave_transponder_CBM", "value": "yes" },
+          { "u_lose_bionic": "bio_radio" },
+          { "u_add_bionic": "bio_radio_pat" }
+        ]
+      },
+      { "text": "Actually, let's talk about this some other time.", "topic": "TALK_ROBOFAC_MERC_PAT" }
+    ]
+  }
+]
