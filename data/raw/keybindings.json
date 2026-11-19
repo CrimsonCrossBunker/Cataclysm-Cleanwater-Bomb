@@ -2126,6 +2126,12 @@
   },
   {
     "type": "keybinding",
+    "id": "TOGGLE_START_OUTSKIRTS",
+    "name": "Toggle far-outskirts start",
+    "bindings": [ { "input_method": "keyboard_any", "key": "O" }, { "input_method": "keyboard_code", "key": "o", "mod": [ "shift" ] } ]
+  },
+  {
+    "type": "keybinding",
     "id": "QUIT",
     "category": "NEW_CHAR_DESCRIPTION",
     "name": "Exit new character screen",

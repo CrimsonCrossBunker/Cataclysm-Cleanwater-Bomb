@@ -33,7 +33,7 @@
     "copy-from": "road_abstract",
     "name": "avenue",
     "sym": "║",
-    "looks_like": "road_ns",
+    "looks_like": "atlas_highway_north_south",
     "flags": [ "NO_ROTATE", "ROAD", "SIDEWALK" ],
     "mapgen": [ { "object": { "fill_ter": "t_pavement" } } ]
   },
@@ -43,9 +43,26 @@
     "copy-from": "road_abstract",
     "name": "avenue",
     "sym": "═",
-    "looks_like": "road_ew",
+    "looks_like": "atlas_highway_east_west",
     "flags": [ "NO_ROTATE", "ROAD", "SIDEWALK" ],
     "mapgen": [ { "object": { "fill_ter": "t_pavement" } } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_highway_north_south",
+    "copy-from": "road_abstract",
+    "name": "highway",
+    "sym": "║",
+    "looks_like": "road",
+    "flags": [ "NO_ROTATE", "ROAD" ],
+    "mapgen": [ { "object": { "fill_ter": "t_grass" } } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_highway_east_west",
+    "copy-from": "atlas_highway_north_south",
+    "sym": "═",
+    "mapgen": [ { "object": { "fill_ter": "t_grass" } } ]
   },
   {
     "type": "overmap_terrain",

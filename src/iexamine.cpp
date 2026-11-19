@@ -3456,6 +3456,9 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
                                    get_plant_water( *seed ), get_plant_max_water( here.furn( p ).obj() ),
                                    status.daily_need_mm,
                                    plant_age_description( *seed, here.furn( p )->plant->growth_multiplier ) );
+            desc += string_format( _( "\nRecorded rain: %.1f mm  |  Growing degree days: %.1f / %.1f" ),
+                                   seed->get_var( "crop_sampled_rain_mm", 0.0 ),
+                                   seed->get_var( "crop_degree_days", 0.0 ), seed->type->seed->climate->degree_days );
             if( status.soil_moisture_mm + status.irrigation_mm < status.daily_need_mm ) {
                 desc += _( "\n<color_yellow>Water supply is below one day's demand.</color>" );
             } else {

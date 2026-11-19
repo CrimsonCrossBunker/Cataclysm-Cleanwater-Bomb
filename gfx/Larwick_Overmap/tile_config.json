@@ -5137,6 +5137,8 @@
         { "id": [ "npc_male", "npc_female" ], "rotates": false, "fg": 217 },
         { "id": [ "player_male", "player_female" ], "fg": 218, "rotates": false },
         { "id": "overmap_remembered_vehicle", "fg": 238, "rotates": false },
+        { "id": [ "atlas_highway_north_south", "atlas_avenue_flank_ns" ], "fg": 246 },
+        { "id": [ "atlas_highway_east_west", "atlas_avenue_flank_ew" ], "fg": 245 },
         {
           "id": [ "road", "mine_tunnel", "subway" ],
           "fg": 255,
