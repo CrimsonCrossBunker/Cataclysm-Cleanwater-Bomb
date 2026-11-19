@@ -1,0 +1,98 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "afs_holo_field",
+    name = ccb.content.text("Holographic Field"),
+    description = ccb.content.text("Creates several short-lived holograms around you."),
+    valid_targets = { "ground" },
+    flags = { "SILENT" },
+    effect = "summon",
+    effect_data = "mon_hologram",
+    shape = "blast",
+    max_level = 1,
+    base_casting_time = 10,
+    min_damage = 10,
+    max_damage = 10,
+    min_aoe = 5,
+    max_aoe = 5,
+    min_duration = 4000,
+}
+
+ccb.content.define_spell {
+    id = "afs_holo_decoy",
+    name = ccb.content.text("Holographic Decoy"),
+    description = ccb.content.text("Creates a short-lived hologram."),
+    valid_targets = { "ground" },
+    flags = { "SILENT" },
+    effect = "summon",
+    effect_data = "mon_hologram",
+    shape = "blast",
+    max_level = 1,
+    base_casting_time = 10,
+    min_range = 10,
+    max_range = 10,
+    min_damage = 1,
+    max_damage = 1,
+    min_aoe = 1,
+    max_aoe = 1,
+    min_duration = 4000,
+}
+
+ccb.content.define_spell {
+    id = "afs_holo_flare",
+    name = ccb.content.text("Holographic Flash"),
+    description = ccb.content.text("Causes an existing hologram to explode into burning light, harming and stunning enemies close to it."),
+    effect = "attack",
+    shape = "blast",
+    valid_targets = { "hostile", "ally" },
+    targeted_monsters = { "mon_hologram" },
+    max_level = 1,
+    flags = { "SILENT", "NO_PROJECTILE" },
+    min_damage = 2,
+    max_damage = 2,
+    base_casting_time = 10,
+    min_range = 20,
+    max_range = 20,
+    difficulty = 1,
+    extra_spells = { { spell = "afs_holo_flare_explosion" } },
+    damage_type = "pure",
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "afs_holo_flare_explosion",
+    name = ccb.content.text_without_extraction("Holographic Flash Explosion"),
+    description = ccb.content.text_without_extraction("Causes an existing hologram to explode into burning light, harming and stunning enemies close to it."),
+    valid_targets = { "hostile", "ground", "ally" },
+    effect = "attack",
+    effect_data = "stunned",
+    shape = "blast",
+    min_duration = 1000,
+    max_duration = 1000,
+    max_level = 1,
+    min_damage = 20,
+    max_damage = 20,
+    min_aoe = 3,
+    max_aoe = 3,
+    spell_class = "NONE",
+    flags = { "SILENT", "NO_PROJECTILE" },
+    base_casting_time = 0,
+    damage_type = "pure",
+    difficulty = 1,
+}
+
+ccb.content.define_spell {
+    id = "afs_holo_transposition",
+    name = ccb.content.text("Holographic Transposition"),
+    description = ccb.content.text("Allows you to swap places with a previously existing holographic image of yourself.  If the universe itself can't tell you apart, who could?"),
+    valid_targets = { "hostile", "ally" },
+    targeted_monsters = { "mon_hologram" },
+    flags = { "SILENT", "SWAP_POS", "NO_PROJECTILE" },
+    effect = "attack",
+    shape = "blast",
+    max_level = 1,
+    base_casting_time = 10,
+    min_range = 20,
+    max_range = 20,
+}
