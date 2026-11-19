@@ -1,0 +1,65 @@
+local ccb = require("ccb")
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_CRIMINAL_1_STORY1",
+    line = ccb.content.gendered_line("I was just sittin' in lockup.  They took me in the night before, for a bullshit parole violation.  Assholes.  I was stuck in my cell when the cops all started yelling about an emergency, geared up, and left me in there havin' a <freaking> staring contest with a security cam that probably wasn't even on.  I was stuck in there for two god-damn days, with no food and only a little water.  Then this big-ass zombie busted in.  I didn't know what the fuck to think, but if my cam wasn't working, the one in the hall sure was.  Tripped a motion sensor or some shit, alarm started going, and the big dumb fuck turned around to get at it while its arms were still stuck in the cell bars.  Ripped the whole door out.", { "interlocutor" }),
+    replies = {
+        {
+            text = ccb.content.text("Lucky you.  How did you get away?"),
+            next_topic = "BGSS_CRIMINAL_1_STORY2",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_CRIMINAL_1_STORY2",
+    line = ccb.content.text("It was just <freaking> chaos on the streets, man.  But I'm used to chaos.  You don't live as long as I've lived and not know how to keep away from a fight you can't win.  Biggest worry wasn't the zombies and the monsters, honestly.  But I swear, some cops got a nightstick so far up their ass…  I didn't have time to ditch my orange when stuff kept swipin' at me, and I swear, cops got a look at me, they decided I was the big problem.  Goddamn walking corpse next to me, who do they pick to shoot at?  Pricks."),
+    replies = {
+        {
+            text = ccb.content.text("How did you keep from getting arrested?"),
+            next_topic = "BGSS_CRIMINAL_1_STORY3",
+        },
+        {
+            text = ccb.content.text("What were you in for in the first place?"),
+            next_topic = "BGSS_CRIMINAL_1_PAROLE",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_CRIMINAL_1_STORY3",
+    line = ccb.content.gendered_line("'cuz I know how cops think.  If you can call it that.  Early days, they were still going after alarms in case it meant, I dunno, survivors.  You smack some fucker's sports car, it starts wailing, the cops come to take a look and you can walk right behind 'em.  That's the thing about cops; they follow orders, right?  Even when the world's comin' apart.  I kept my head down until I got past the worst of it, but then, lucky me, I got sergeant brainiac.  Figured out why someone would trip an alarm on purpose, had them case all up and down the streets for me.  I wound up on the edge of town layin' low under an abandoned RV for a few hours.  By then… well, they had some other big problems to deal with.  For a little bit.  Might've survived if they hadn't blown their wads chasing me around the block.", { "interlocutor" }),
+    replies = {
+        {
+            text = ccb.content.text("What were you in for in the first place?"),
+            next_topic = "BGSS_CRIMINAL_1_PAROLE",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_CRIMINAL_1_PAROLE",
+    line = ccb.content.gendered_line("Bullshit, that's what.  The assholes busted me on possession, wasn't even my fuckin' stash.  I don't do crack, man, that shit's nasty, I was just carryin' it for my buddy Johnny.  Y'know, this might be a <freaking> hellhole now, but if I've seen the last power-trippin' asshole cop, it might all be worth it.", { "interlocutor" }),
+    replies = {
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
