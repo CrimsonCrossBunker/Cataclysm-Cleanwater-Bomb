@@ -1,0 +1,36 @@
+[
+  {
+    "id": "integrated_pat_radio",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR" ],
+    "copy-from": "fake_item",
+    "name": { "str_sp": "Infolink: Call Pat" },
+    "description": "Custom software installed in your Infolink CBM for talking to Pat on your agreed-upon radio frequency.  Activate it to hail Pat.",
+    "use_action": [
+      {
+        "type": "effect_on_conditions",
+        "description": "Hail Pat on the radio",
+        "effect_on_conditions": [ "EOC_ROBOFAC_PAT_CHATTING_ON_RADIO" ]
+      }
+    ],
+    "flags": [ "INTEGRATED", "UNBREAKABLE", "PERSONAL", "NO_REPAIR", "ALLOWS_NATURAL_ATTACKS" ]
+  },
+  {
+    "id": "integrated_pat_transponder",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR" ],
+    "copy-from": "fake_item",
+    "name": { "str_sp": "Infolink: Pat's Transponder (off)" },
+    "description": "Custom software installed on your Infolink CBM for connecting to Pat's radio frequency.  If you have an integrated AR system CBM, or a compatible AR headset, activating this will put you in constant contact with Pat.  It is currently inactive.  Activate it to turn it on.",
+    "use_action": [
+      {
+        "type": "transform",
+        "menu_text": "Connect to Pat's system and start transmitting data",
+        "msg": "You switch on the transponder.",
+        "target": "integrated_pat_transponder_on"
+      }
+    ],
+    "tick_action": { "type": "effect_on_conditions", "effect_on_conditions": [ "EOC_pat_advanced_AR_activate" ] },
+    "flags": [ "INTEGRATED", "UNBREAKABLE", "PERSONAL", "NO_REPAIR", "ALLOWS_NATURAL_ATTACKS" ]
+  }
+]
