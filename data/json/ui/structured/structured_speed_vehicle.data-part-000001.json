@@ -1,0 +1,21 @@
+[
+  {
+    "id": "structured_wield_speed_vehicle_layout",
+    "type": "widget",
+    "style": "layout",
+    "arrange": "minimum_columns",
+    "width": 27,
+    "clauses": [
+      {
+        "id": "not_controlling_vehicle",
+        "widgets": [ "structured_wield_simple", "structured_speed_layout" ],
+        "condition": { "not": "u_controlling_vehicle" }
+      },
+      {
+        "id": "controlling_vehicle",
+        "widgets": [ "structured_fuel", "structured_vehicle_speed" ],
+        "condition": "u_controlling_vehicle"
+      }
+    ]
+  }
+]
