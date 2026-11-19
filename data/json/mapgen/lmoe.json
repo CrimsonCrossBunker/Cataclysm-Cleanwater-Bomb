@@ -1,40 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ "lmoe" ],
-    "//": "Above ground",
-    "object": {
-      "fill_ter": "t_region_groundcover",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "lmoe_under",
     "//": "This particular 2-bed shelter is a more professionally done, all metal bomb shelter with kitchen, secret safe room / gun locker, and workshop.",
     "object": {
@@ -181,46 +147,6 @@
       ],
       "palettes": [ "bunker", { "distribution": [ [ "null_palette", 1 ], [ "empty_bunker_items", 3 ] ] } ],
       "place_nested": [ { "chunks": [ "lmoe_exit_n" ], "x": 6, "y": 18, "z": 1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "lmoe_under_empty_prepperquest" ],
-    "//": "This particular 2-bed shelter is a more professionally done, all metal bomb shelter with kitchen, secret safe room / gun locker, and workshop.",
-    "//2": "This terrain is the destination for the prepper_1 quest.  The front door is locked and can be unlocked by completing the quest.",
-    "object": {
-      "fill_ter": "t_metal_floor",
-      "rows": [
-        "########################",
-        "########################",
-        "##||||||||||||||||||||##",
-        "##|{{{{{|UUUUUU|w__BB|##",
-        "##|u____|U____U|d__BB|##",
-        "##|u___h|U_UU_U|A,,,_|##",
-        "##|u___D|=*==*=|_,,,}|##",
-        "##|A____:______+_,,,}|##",
-        "##|||||||_1,,1_|S__h2|##",
-        "##|VVVVV=_e,,P_|||||||##",
-        "##|_____*__,,____|s_K|##",
-        "##|vvvvv=_E,,f___+__t|##",
-        "##|||||||||++|||||||||##",
-        "##|c_bbbbA|,,|CSCCKCC|##",
-        "##|c______|,,|u_____C|##",
-        "##|c_TT___|,,|u_hLh_F|##",
-        "##|c_TTh__+__+______é|##",
-        "##|c_TT___|__|rrrr__~|##",
-        "##|c______|__|||||+|||##",
-        "##|c______|__*__a|__A|##",
-        "##|ccccccc|<<=G_a|HlW|##",
-        "##||||||||||||||||||||##",
-        "########################",
-        "########################"
-      ],
-      "palettes": [ "bunker", "empty_prepperquest_bunker_items" ],
-      "place_nested": [
-        { "chunks": [ "lmoe_exit_prepperquest_n" ], "x": 9, "y": 17, "z": 1 },
-        { "chunks": [ "lmoe_prepperquest_sign" ], "x": 10, "y": 16, "z": 1 }
-      ]
     }
   }
 ]
