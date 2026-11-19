@@ -1,0 +1,86 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "afs_UICASTA30",
+    looks_like = "stanag30",
+    name = ccb.content.text("UICASTA 30-round magazine"),
+    description = ccb.content.text("A standardized 30-round magazine compatible with most UICA issue rifles."),
+    mass = "265 g",
+    volume = "290 ml",
+    length = "190 mm",
+    price = "80 USD",
+    materials = { "superalloy" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["afs_7.50mm"] = 30 } } },
+    magazine = { ammunition = { "afs_7.50mm" } },
+}
+
+ccb.content.define_item {
+    id = "afs_UICASTA100drum",
+    looks_like = "stanag30",
+    name = ccb.content.text("UICASTA 100-round double drum magazine"),
+    description = ccb.content.text("A standardized 100-round double drum magazine compatible with most UICA issue rifles."),
+    mass = "1700 g",
+    volume = "1200 ml",
+    length = "300 mm",
+    price = "140 USD",
+    materials = { "plastic", "superalloy" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_BULKY" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["afs_7.50mm"] = 100 } } },
+    magazine = { ammunition = { "afs_7.50mm" }, reload_time = 200, jam_multiplier = 2 },
+}
+
+ccb.content.define_item {
+    id = "afs_marsect72_speedloader9",
+    looks_like = "38_speedloader",
+    name = ccb.content.text("MarSec. T72 7.50mm speedloader"),
+    description = ccb.content.text("A speedloader for the MarSec T72 revolver, holds 9 rounds of 7.50mm ammunition."),
+    mass = "92 g",
+    volume = "350 ml",
+    price = "80 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "superalloy", "plastic" },
+    symbol = "#",
+    color = "dark_gray",
+    flags = { "SPEEDLOADER" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["afs_7.50mm"] = 9 } } },
+    magazine = { ammunition = { "afs_7.50mm" }, capacity = 9 },
+}
+
+ccb.content.define_item {
+    id = "afs_sr77_45mag",
+    looks_like = "fnp90mag",
+    name = ccb.content.text("SR-77 45-round magazine"),
+    description = ccb.content.text("A translucent 45-round box magazine, for use with the SR-77."),
+    mass = "300 g",
+    volume = "430 ml",
+    length = "266 mm",
+    price = "90 USD",
+    materials = { "plastic" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_COMPACT" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["afs_7.50mm"] = 45 } } },
+    magazine = { ammunition = { "afs_7.50mm" } },
+}
+
+ccb.content.define_item {
+    id = "afs_vahagn_smartgun_mag",
+    looks_like = "fnp90mag",
+    name = ccb.content.text("Vahagn 10XR 80-round magazine"),
+    description = ccb.content.text("A large box magazine and accompanying feed chute for the Vahagn 10XR.  Holds 80 rounds of 7.50mm SDART ammunition."),
+    mass = "300 g",
+    volume = "1500 ml",
+    length = "266 mm",
+    price = "300 USD",
+    materials = { "qt_steel" },
+    symbol = "#",
+    color = "light_gray",
+    flags = { "MAG_BULKY" },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { ["afs_7.50mm_smart"] = 80 } } },
+    magazine = { ammunition = { "afs_7.50mm_smart" } },
+}
