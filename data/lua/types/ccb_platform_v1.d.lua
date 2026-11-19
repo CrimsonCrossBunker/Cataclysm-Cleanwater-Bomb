@@ -16290,6 +16290,7 @@ local CcbPlatformGameplayApi = {}
 ---@field has_path boolean Whether the native overmap travel path is non-empty.
 
 ---@class CcbCharacterCombatSnapshot
+---@field dodge number Effective native dodge, including current bonuses and penalties.
 ---@field artifact_resonance number Raw native cached artifact-resonance modifier; truncate toward zero for the Character's integer resonance.
 
 ---@class CcbCharacterSnapshot
