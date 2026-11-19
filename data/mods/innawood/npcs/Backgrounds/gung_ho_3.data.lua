@@ -1,0 +1,107 @@
+local ccb = require("ccb")
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_GUNG_HO_3_STORY1",
+    line = ccb.content.text("Well y'see, I'm not from these parts at all.  I came here from the south to visit my son when it all happened.  I just got scooped up with a bunch of others by the boss men to be taken to some kind of refugee camp."),
+    replies = {
+        { text = ccb.content.text("Tell me about your son."), next_topic = "BGSS_GUNG_HO_3_SON1" },
+        {
+            text = ccb.content.text("So, you went to one of the camps?"),
+            next_topic = "BGSS_GUNG_HO_3_FEMA1",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_GUNG_HO_3_SON1",
+    line = ccb.content.text("He lives way up north, way in the middle of nowhere, with his crazy wife and my three grandkids.  Some kind of mining.  She's a bit of a hippy-dippy headcase.  I love em both though, and as far as I'm concerned they all made it out of this fucked up mess safe, out there in the boondocks.  I guess they think I'm dead, so they'll steer clear of this hellhole, and that's the best as could be."),
+    replies = {
+        {
+            text = ccb.content.text("What was it you said before?"),
+            next_topic = "BGSS_GUNG_HO_3_STORY1",
+        },
+        {
+            text = ccb.content.text("So, you went to one of the camps?"),
+            next_topic = "BGSS_GUNG_HO_3_FEMA1",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_GUNG_HO_3_FEMA1",
+    line = ccb.content.text("Lord no.  I'll be fucked if I let a kid tell me what the hell to do.  I had my horse ready to go, I had a ton of food, and I even had a blunderbuss.  I didn't know what I was supposed to be running from, but I sure as shit didn't run."),
+    replies = {
+        { text = ccb.content.text("Where did you go then?"), next_topic = "BGSS_GUNG_HO_3_STORY2" },
+        { text = ccb.content.text("Tell me about your son."), next_topic = "BGSS_GUNG_HO_3_SON1" },
+        {
+            text = ccb.content.text("What was it you said before?"),
+            next_topic = "BGSS_GUNG_HO_3_STORY1",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BGSS_GUNG_HO_3_STORY2",
+    line = ccb.content.text("At first, I just kept going north, but I ran into a huge blockade, spears and pistols and all.  I started going up to check it out, and before I knew it they were opening fire!  I coulda died, but I still have pretty good reactions.  I turned tail and rode out of there.  My horse had taken some bad hits though, and I found out the hard way when he stumbled and fell and I broke my ass.  Made it a few miles before I wound up stuck in the ass-end of nowhere.  I settled in to wander.  I guess I'm still kinda heading north, just by a pretty round-about way, you know?"),
+    replies = {
+        { text = ccb.content.text("Tell me about your son."), next_topic = "BGSS_GUNG_HO_3_SON1" },
+        {
+            text = ccb.content.text("What was it you said before?"),
+            next_topic = "BGSS_GUNG_HO_3_STORY1",
+        },
+        {
+            text = ccb.content.text("That's quite a story.  <done_conversation_section>"),
+            next_topic = "TALK_FRIEND",
+        },
+        {
+            text = ccb.content.text("That's quite a story.  <end_talking>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "CWH_GUNG_HO_3_IDEAS1",
+    line = ccb.content.text("We're all thinking the same thing, aren't we?  Not much this could be but some kind of secret magic bullshit.  At first, I thought it was our own people, but after all that went down, it's just too much.  It must've been some kind of dangerous foreigners.  I wonder if those sons of bitches are sitting back home, right as rain, watching us struggling down here and waiting for things to die down."),
+    replies = {
+        {
+            text = ccb.content.text("How could that have caused everything that went down?"),
+            next_topic = "BGSS_GUNG_HO_3_IDEAS2",
+        },
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_FRIEND",
+        },
+        { text = ccb.content.text_without_extraction("<end_talking>"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "CWH_GUNG_HO_3_IDEAS2",
+    line = ccb.content.text("I dunno, I'm no expert.  You might not remember, but there was that big news a couple years back that supposedly some enemy power was up to something nefarious.  I heard it all third hand, I don't know.  Apparently some kind of secret weapon they were working on.  Who knows?  You like berries?"),
+    replies = {
+        {
+            text = ccb.content.text("Huh.  Interesting stuff.  <done_conversation_section>"),
+            next_topic = "TALK_FRIEND",
+        },
+        {
+            text = ccb.content.text("Huh.  Interesting stuff.  <end_talking>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
