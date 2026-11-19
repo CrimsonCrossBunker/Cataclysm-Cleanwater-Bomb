@@ -286,39 +286,5 @@
         { "chunks": [ [ "null", 70 ], [ "roof_6x6_survivor", 5 ] ], "x": [ 6, 15 ], "y": 8 }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "music_venue_1_roof_top",
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                   ...  ",
-        "                   ...  ",
-        "                   ...  ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ]
-    }
   }
 ]
