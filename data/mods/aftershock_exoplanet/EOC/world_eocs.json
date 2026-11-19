@@ -20,12 +20,5 @@
         "u_message": "You notice the rocket plumes of three ascending ships in the distance.  There must be a large space port in that direction."
       }
     ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_KNOW_SPACEPORT",
-    "global": true,
-    "condition": { "not": { "math": [ "has_var(know_spaceport)" ] } },
-    "effect": [ { "math": [ "know_spaceport = 1" ] } ]
   }
 ]

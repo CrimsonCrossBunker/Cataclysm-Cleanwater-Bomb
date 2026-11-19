@@ -5,6 +5,7 @@ require("item_blacklists")
 require("region_settings")
 
 require("dimensions")
+require("spaceport")
 
 local ccb = require("ccb")
 local content = ccb.content
