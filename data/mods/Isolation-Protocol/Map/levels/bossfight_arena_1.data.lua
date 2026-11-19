@@ -1,0 +1,20 @@
+local ccb = require("ccb")
+
+ccb.content.define_fixed_overmap_special {
+    id = "iso_bossfight_arena_1",
+    tiles = {
+        { point = { 0, 0, -1 }, terrain = "iso_next_level_elevator_north" },
+        { point = { -1, -2, -1 }, terrain = "iso_nexus_north" },
+        { point = { 0, -2, -1 }, terrain = "iso_nexus_1_north" },
+        { point = { 1, -2, -1 }, terrain = "iso_nexus_2_north" },
+        { point = { -1, -1, -1 }, terrain = "iso_nexus_3_north" },
+        { point = { 0, -1, -1 }, terrain = "iso_nexus_4_north" },
+        { point = { 1, -1, -1 }, terrain = "iso_nexus_5_north" },
+        { point = { 0, -3, -1 }, terrain = "iso_elevator_south" },
+    },
+    locations = { "iso_nether" },
+    flags = { "ISO_MAP" },
+    city_distance = { 0, 30 },
+    city_sizes = { 0, 16 },
+    occurrences = { 0, 0 },
+}
