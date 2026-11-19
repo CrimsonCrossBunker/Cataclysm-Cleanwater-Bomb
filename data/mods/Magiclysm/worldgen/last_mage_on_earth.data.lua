@@ -208,3 +208,27 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- lore: a dead mage.  Maybe killed in some kind of magical ritual that the portal storms messed up, maybe they went feral and their defense golems killed them, maybe they tried to summon a star vampire and it went out of control.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lmoe_dead_mage",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "X",
+        },
+        terrain = { X = "t_magiconc_floor" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        field_placements = {
+            { id = "fd_blood", x = 0, y = 0, intensity = 2, age_turns = 0 },
+            { id = "fd_gibs_flesh", x = 0, y = 0, intensity = 3, age_turns = 0 },
+        },
+        monster_placements = { { id = "mon_star_vampire", x = 0, y = 0, chance = 50 } },
+        item_group_placements = {
+            { group = "corpse_bloody", x = 0, y = 0 },
+            { group = "enchanted_worn_items", x = 0, y = 0, chance = 100 },
+            { group = "default_zombie_death_drops", x = 0, y = 0, chance = 100 },
+        },
+    },
+}

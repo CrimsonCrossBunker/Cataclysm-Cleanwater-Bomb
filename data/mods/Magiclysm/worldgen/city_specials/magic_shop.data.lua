@@ -265,3 +265,15 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "NPC_healer_priest",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            " ",
+        },
+        npc_placements = { { id = "healer_priest", x = 0, y = 0 } },
+    },
+}

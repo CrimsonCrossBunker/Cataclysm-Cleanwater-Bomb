@@ -1,0 +1,110 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "magic_basement" },
+    layout = {
+        rows = {
+            "                        ",
+            "        ||||||||||||||| ",
+            "        |gUU|yRRRRRRET| ",
+            "   ||||||~~~%........E| ",
+            "  ||????|||||........L| ",
+            " ||.......E!|...E....|| ",
+            " |&.........|.yrrr...<| ",
+            " ||...$...Py||||||/|||| ",
+            "  ||TIII|||||RRR......| ",
+            "   ||||||88S|.....H..x| ",
+            "        |~~~/.....H..x| ",
+            "        |B~~|.....s..x| ",
+            "        |BYt|RRRR.....| ",
+            "        ||||||||||||||| ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "standard_domestic_palette" },
+        terrain = {
+            ["~"] = "t_thconc_floor",
+            g = "t_thconc_floor",
+            U = "t_thconc_floor",
+            ["8"] = "t_thconc_floor",
+            Y = "t_thconc_floor",
+            B = "t_thconc_floor",
+            S = "t_thconc_floor",
+            _ = "t_water_pool_shallow",
+            [" "] = "t_rock",
+            ["/"] = "t_door_green_c",
+            ["."] = "t_carpet_green",
+            ["-"] = "t_wall_w",
+            ["|"] = "t_wall_metal",
+            ["<"] = "t_wood_stairs_up",
+            ["%"] = "t_secretdoor_metal_c",
+        },
+        furniture = {
+            ["&"] = "f_magiclysm_translocator_gate",
+            ["!"] = "f_rack_coat",
+            ["?"] = "f_bookcase",
+            ["="] = "f_bookcase",
+        },
+        fill_terrain = "t_carpet_green",
+        nested = { { id = "magic_door_graffiti_snippet", x = 12, y = 6 } },
+        trap_placements = { { id = "tr_magic_door", x = 21, y = 4 } },
+        zone_placements = { { id = "ZONE_START_POINT", faction = "your_followers", x = { 13, 20 }, y = { 3, 5 } } },
+        item_placements = { { id = "television", x = 21, y = 10 }, { id = "wizard_photo", x = 16, y = 6 } },
+        loot_placements = {
+            { id = "corpse", x = 2, y = 6, chance = 100 },
+            { id = "translocate_spellbook", x = 2, y = 6, chance = 100 },
+            { id = "robe", x = 2, y = 6, chance = 100 },
+            { id = "candle", x = 3, y = 5, chance = 100, ammo = 100 },
+            { id = "candle", x = 3, y = 6, chance = 100, ammo = 100 },
+            { id = "candle", x = 3, y = 7, chance = 100, ammo = 100 },
+        },
+        item_groups = {
+            ["?"] = {
+                { group = "magic_shop_books", chance = 40 },
+                { group = "spellbook_mana_upgrades", chance = 2 },
+                { group = "magic_shop_potions", chance = 60 },
+            },
+            ["="] = { { group = "novels", chance = 30 }, { group = "homebooks", chance = 10 } },
+            ["~"] = { { group = "magic_shop_potions", chance = 15, repetitions = { 1, 2 } } },
+            I = {
+                { group = "magic_shop_potions", chance = 30, repetitions = { 1, 2 } },
+                { group = "magic_shop_wands", chance = 15 },
+                { group = "enchanted_small_items", chance = 30, repetitions = { 1, 2 } },
+                { group = "magic_CBM", chance = 30, repetitions = { 1, 2 } },
+            },
+            ["!"] = {
+                { group = "enchanted_worn_items", chance = 20, repetitions = { 1, 2 } },
+                { group = "enchanted_combat_items", chance = 10 },
+                { group = "magic_shop_clothes", chance = 30, repetitions = { 1, 2 } },
+            },
+        },
+        vehicle_glyphs = { ["$"] = { id = "swivel_chair", status = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "magic_door_appear",
+    layout = {
+        terrain_placements = { { id = "t_carpet_green", x = 12, y = 6 } },
+        furniture_placements = { { id = "f_beaded_door", x = 12, y = 6 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "magic_door_graffiti_snippet",
+    layout = {
+        size = { width = 1, height = 1 },
+        graffiti_placements = { { snippet = "magic_door_graffiti", x = 0, y = 0 } },
+    },
+}
