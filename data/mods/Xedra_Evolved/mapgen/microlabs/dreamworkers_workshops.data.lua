@@ -1,0 +1,117 @@
+local ccb = require("ccb")
+
+-- Dreamer workshop
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "microlab_generic_special_tile",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            " cc  |   c|  |    |r    ",
+            " cc  |   c|  |    |r  c ",
+            "     | h 6|  2 cc 2   c ",
+            " dd  |==|||5G||||||6h   ",
+            " hd  |tt|    |ni|;|6    ",
+            "|||22||||    2    ||||||",
+            " c|  |##|  ||||||||hd^= ",
+            " c|  ||||  3    hd| d = ",
+            " c|    c|  |6h dd6|   [ ",
+            "  2    c|  ||||||||   = ",
+            "|||    c|  |@D|D @||||||",
+            "       ?|  |@ |  @|     ",
+            "       ?|  ||2|2|||     ",
+            "||2||||||        Ŧ|  |||",
+            "       r|        Ŧ|  |r ",
+            "cc  c  r||2||2||2||  |r ",
+            "cc  c rr|   |  |  |  |r ",
+            "       r|  @| @| @|  |r ",
+            "||||||rr|D @|D@|D@|  |||",
+            "     ||||||||||||||  |c ",
+            "  c      6|          |c ",
+            "  iccc   6|          2  ",
+            "  c      6|  ||22|||||  ",
+            "  c c|c   |22|    |cc   ",
+        },
+        palettes = { "microlab" },
+        terrain = { G = "t_card_science", X = "t_strconc_floor" },
+        furniture = { ["Ŧ"] = "f_table" },
+        toilets = { ";" },
+        item_groups = {
+            ["@"] = {
+                { group = "xed_office_dreamdross", chance = 50 },
+                { group = "dreamer_artifact", chance = 2 },
+            },
+            D = {
+                { group = "SUS_wardrobe_mens", chance = 50 },
+                { group = "SUS_wardrobe_womens", chance = 50 },
+            },
+            ["Ŧ"] = { { group = "diazepam_scrip", repetitions = { 2, 3 } } },
+        },
+        monster_placements = {
+            {
+                group = "GROUP_XE_DREAMER_LAB_MONSTERS",
+                x = { 9, 17 },
+                y = { 4, 18 },
+                chance = 70,
+                repetitions = { 2, 5 },
+            },
+        },
+    },
+}
+
+-- Dreamsmith workshop
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "microlab_generic_special_tile",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "^|FFF|c  c|  |c  c|     ",
+            " ||||||||||  |||||||||| ",
+            " |D      D|  |^^^^|ccc| ",
+            " |@@    @@|       2   2 ",
+            "^|D      D|       |   | ",
+            "||@@    @@|  |2(((||||||",
+            "r|        2  |       O| ",
+            "r|||||2||||  |  cc   O| ",
+            "r|l  | | l|  |  cc   O| ",
+            " |l  | 2 l|  |       O| ",
+            "2||||||||||22|  |UUUU|||",
+            "           YY|  |-----|^",
+            "           YY|  |-ÛÛÛ-|^",
+            "|||||2||||||||5G|-Û Û-||",
+            " |        |---5----5--| ",
+            " | cc  cc |-c        -| ",
+            " | cc  cc |-c      h6-|t",
+            " |     cc |-    Ä   c-|t",
+            "||     cc |-    Ŧ  h6-||",
+            " |2|||    |-Ŧ       c-| ",
+            " |   |dh d|-ŦŦŦ    h6-| ",
+            " 2   |dddd|-----------| ",
+            " |||||||||||||||||||||| ",
+            "     |ttt |^^| cc |     ",
+        },
+        palettes = { "microlab" },
+        terrain = { G = "t_card_science" },
+        furniture = { ["Ä"] = "f_anvil_heavy", ["Ŧ"] = "f_table", ["Û"] = "f_utility_shelf" },
+        item_placements = { { id = "xe_oneiric_hammer", x = 16, y = 18 } },
+        item_groups = {
+            ["Û"] = {
+                { group = "xe_lab_dreamsmith_dreamdross", chance = 10, repetitions = { 1, 2 } },
+                { group = "xe_lab_dreamsmith_dream_gear", chance = 40, repetitions = { 1, 3 } },
+            },
+            ["Ŧ"] = { group = "xe_lab_dreamsmith_dreamdross", chance = 100, repetitions = { 1, 3 } },
+        },
+        monster_placements = {
+            { id = "mon_secubot", x = { 13, 19 }, y = { 6, 9 }, chance = 95 },
+            {
+                group = "GROUP_XE_INVENTOR_LAB_MONSTERS",
+                x = { 12, 20 },
+                y = { 15, 20 },
+                chance = 50,
+                repetitions = { 1, 3 },
+            },
+        },
+        monster_group_placements = { { group = "GROUP_LAB", x = { 2, 21 }, y = { 2, 21 }, repetitions = { 1, 5 } } },
+    },
+}
