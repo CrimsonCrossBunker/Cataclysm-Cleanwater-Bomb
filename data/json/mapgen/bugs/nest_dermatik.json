@@ -1,36 +1,6 @@
 [
   {
     "type": "mapgen",
-    "nested_mapgen_id": "nest_dermatik_paper_roof",
-    "object": { "mapgensize": [ 1, 1 ], "rows": [ "#" ], "terrain": { "#": "t_roof_paper" } }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "nest_dermatik_paper_wall",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "#" ],
-      "terrain": { "#": "t_paper" },
-      "place_nested": [ { "chunks": [ "nest_dermatik_paper_roof" ], "x": 0, "y": 0, "z": 1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "nest_dermatik_dirt_roof",
-    "object": { "mapgensize": [ 1, 1 ], "rows": [ "#" ], "terrain": { "#": "t_dirt" } }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "nest_dermatik_dirt_wall",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "rows": [ "#" ],
-      "terrain": { "#": "t_wall_dirt" },
-      "place_nested": [ { "chunks": [ "nest_dermatik_dirt_roof" ], "x": 0, "y": 0, "z": 1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": "nest_dermatik",
     "object": {
       "fill_ter": "t_region_groundcover",
@@ -78,40 +48,6 @@
         { "monster": "mon_dermatik", "x": [ 0, 23 ], "y": [ 0, 23 ], "repeat": [ 1, 4 ] }
       ],
       "nested": { "#": { "chunks": [ [ "nest_dermatik_paper_wall", 3 ], [ "nest_dermatik_dirt_wall", 1 ] ] } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "nest_dermatik_roof",
-    "object": {
-      "fill_ter": "t_open_air",
-      "rows": [
-        "                        ",
-        "              -         ",
-        "      -    ----         ",
-        "     ---...-..---       ",
-        "    --.--..-...--- -    ",
-        "    -... .- ...------   ",
-        "   -- .  .   ..-..---   ",
-        "  --- ....- .   ..--    ",
-        "  -   ..   ..... .---   ",
-        "  - ..   .. .... --.-   ",
-        "  -- .      ....  ..--  ",
-        "   --... . .....  ...-- ",
-        "  -- .  . ....... ..--- ",
-        "  --      ...... . .--  ",
-        "  -... ........   ...-  ",
-        " - ...  .........  .--  ",
-        "  --. .........  .---   ",
-        " --   .......   . ..--  ",
-        "--.... .. . . ... ...-  ",
-        " - .          ......--  ",
-        " ------...  .......--   ",
-        "   ---- ...  -.-----    ",
-        "      ---------- -      ",
-        "       --- --           "
-      ],
-      "terrain": { "-": [ "t_dirt" ], ".": [ "t_roof_paper" ] }
     }
   }
 ]
