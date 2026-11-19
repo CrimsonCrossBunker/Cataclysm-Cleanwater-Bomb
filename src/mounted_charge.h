@@ -25,6 +25,12 @@ struct mounted_charge_profile {
     }
 };
 
+inline const mounted_charge_profile &mounted_body_charge_profile()
+{
+    static const mounted_charge_profile profile { 5, "bash", 0.20f, 2.0f };
+    return profile;
+}
+
 inline float mounted_charge_multiplier( const mounted_charge_profile &profile,
                                         int completed_steps, double mount_speed )
 {

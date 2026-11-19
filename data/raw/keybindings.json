@@ -1,6 +1,48 @@
 [
   {
     "type": "keybinding",
+    "id": "SELECT_ITEM",
+    "category": "PET_ITEM_TRANSFER",
+    "name": "Select or unselect item",
+    "bindings": [ { "input_method": "keyboard_any", "key": "SPACE" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "SELECT_QUANTITY",
+    "category": "PET_ITEM_TRANSFER",
+    "name": "Select quantity",
+    "bindings": [ { "input_method": "keyboard_any", "key": "n" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "FILTER",
+    "category": "PET_ITEM_TRANSFER",
+    "name": "Filter items",
+    "bindings": [ { "input_method": "keyboard_any", "key": "/" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "MOVE_ALL_ITEMS",
+    "category": "PET_ITEM_TRANSFER",
+    "name": "Select all visible items",
+    "bindings": [ { "input_method": "keyboard_any", "key": "a" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "EXAMINE",
+    "category": "PET_ITEM_TRANSFER",
+    "name": "Examine item",
+    "bindings": [ { "input_method": "keyboard_any", "key": "e" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "EXAMINE",
+    "category": "PET_EQUIPMENT",
+    "name": "Examine equipment",
+    "bindings": [ { "input_method": "keyboard_any", "key": "e" } ]
+  },
+  {
+    "type": "keybinding",
     "id": "SLOT_UP",
     "name": "Scroll slot preview up",
     "category": "GUNMOD_MANAGER",

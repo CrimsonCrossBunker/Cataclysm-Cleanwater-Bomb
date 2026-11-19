@@ -1,6 +1,8 @@
 #include "overmap_ui.h"
 
 #include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <monster.h>
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -33,6 +35,7 @@
 #include "city.h"
 #include "color.h"
 #include "coordinates.h"
+#include "creature_tracker.h"
 #include "cuboid_rectangle.h"
 #include "cursesdef.h"
 #include "debug.h"
@@ -1286,6 +1289,10 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
     for( om_vehicle &v : overmap_buffer.get_vehicle( cursor_pos ) ) {
         corner_text.emplace_back( c_white, v.name );
     }
+    for( const overmap_tracked_pet &pet : overmap_buffer.get_tracked_pets( cursor_pos ) ) {
+        corner_text.emplace_back( c_light_green, string_format( _( "%s (last known position)" ),
+                                  pet.name ) );
+    }
 
     if( !corner_text.empty() ) {
         int maxlen = 0;
@@ -2214,6 +2221,12 @@ static bool overmap_tiles_animated()
 
 static tripoint_abs_omt display()
 {
+    for( const shared_ptr_fast<monster> &pet : get_creature_tracker().get_monsters_list() ) {
+        if( pet->has_flag( mon_flag_PET_MOUNTABLE ) &&
+            ( get_avatar().sees( get_map(), *pet ) || pet->mounted_player == &get_avatar() ) ) {
+            overmap_buffer.update_tracked_pet( *pet, get_avatar() );
+        }
+    }
     // HACK: Remove saved land use code uistate for people who might have accidentally turned it on previously, before it was debug-only
     // Remove after 0.J.
     if( uistate.overmap_show_land_use_codes && !debug_mode ) {
@@ -2822,6 +2835,9 @@ std::pair<std::string, nc_color> oter_symbol_and_color( const tripoint_abs_omt &
             ret.second = c_red;
             ret.first = "Z";
         }
+    } else if( blink && overmap_buffer.has_tracked_pet( omp ) ) {
+        ret.second = c_light_green;
+        ret.first = "h";
     } else if( blink && overmap_buffer.has_vehicle( omp ) ) {
         ret.second = c_cyan;
         ret.first = overmap_buffer.get_vehicle_ter_sym( omp );

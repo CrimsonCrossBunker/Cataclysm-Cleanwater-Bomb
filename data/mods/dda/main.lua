@@ -58,6 +58,27 @@ local mounted_charge = ccb.content.Technique {
 mounted_charge:attack_vector("vector_null")
 ccb.content.replace(mounted_charge)
 
+local wild_charge = ccb.content.Technique {
+    id = "WILD_CHARGE",
+    name = ccb.content.text("Wild Charge"),
+    description = ccb.content.text(
+        "Build up at least two tiles of momentum while trotting, then ram a creature. " ..
+        "Light targets can be knocked down and stunned. Shares recovery with Mounted Charge."
+    ),
+    avatar_message = ccb.content.text("Your mount rams %s"),
+    npc_message = ccb.content.text("<npcname>'s mount rams %s"),
+    manual_activation = true,
+    cooldown_seconds = 10,
+    melee_allowed = true,
+    unarmed_allowed = true,
+    down_dur = 2,
+    stun_dur = 1,
+    active_when = "ccb_mounted_charge_available",
+    charge_damage = "ccb_mounted_charge_damage",
+}
+wild_charge:attack_vector("vector_null")
+ccb.content.add(wild_charge)
+
 require("grappling")
 require("position_techniques")
 require("combat_techniques")

@@ -637,6 +637,17 @@ Pet armor can be defined like this:
 "power_armor" : false,  // If this is a power armor item (those are special).
 ```
 
+Animal armor uses the animal's armor equipment slot and contributes to its carried load.
+The equipment menu shows armor resistances and offers a full item description. The
+`padded_armor_horse` recipe provides a lightweight cloth-and-leather option; heavier horse
+armor uses the same slot.
+
+Storage equipment can be installed with its contents intact. Removing it returns the
+complete container rather than emptying its pockets. The animal cargo interface supports
+filtering, quantity selection, and selection on both sides before confirmation. Confirmed
+transfers run as an interruptible `ACT_PET_TRANSFER` activity; each item is rechecked before
+moving, and cancellation leaves already transferred items where they are.
+
 ### Books
 
 Books can be defined like this:

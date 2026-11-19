@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:cc52f93ece0f156e55c86acdff1e9cfcdaf6bde18012dc4b009c84a35bc93ce8",
+    "source_fingerprint": "sha256:e870a08064af9a345e448b59a7230b3f8612ed12c56f7f98ac0d7e127570d668",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6879,
-    "top_level_objects": 97815,
+    "tracked_json_files": 6883,
+    "top_level_objects": 97860,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15336,
+        "occurrences": 15339,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -1071,7 +1071,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 211,
+        "occurrences": 212,
         "examples": [
           {
             "path": "data/json/obsoletion_and_migration_0.J/player_activities.json",
@@ -3884,7 +3884,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 942
+            "line": 953
           }
         ],
         "confidence": "lexical_only"
@@ -4273,7 +4273,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 629,
+        "occurrences": 631,
         "examples": [
           {
             "path": "data/json/harvest.json",
@@ -5479,7 +5479,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MONSTERS.md",
-            "line": 576
+            "line": 587
           }
         ],
         "confidence": "lexical_only"
@@ -6733,7 +6733,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2738,
+        "occurrences": 2760,
         "examples": [
           {
             "path": "data/json/mapgen/debug.json",
@@ -7485,7 +7485,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8214,
+        "occurrences": 8215,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -9923,7 +9923,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1791,
+        "occurrences": 1807,
         "examples": [
           {
             "path": "data/json/furniture_and_terrain/LIXA_furniture_and_terrain.json",
@@ -10060,7 +10060,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 1491
+            "line": 1502
           }
         ],
         "confidence": "lexical_only"
