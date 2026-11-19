@@ -1,0 +1,38 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "glowing_mushroom",
+    "name": { "str_sp": "glowing mushroom caps" },
+    "//": "'light' related, partially 'speed'",
+    "description": "Slim stripes cut from a bioluminescent mushroom, still surrounded by a faint glowing aura.",
+    "price_postapoc": "9 USD 70 cent",
+    "symbol": "o",
+    "color": "light_cyan",
+    "weight": "70 g",
+    "volume": "200 ml",
+    "comestible_type": "FOOD",
+    "calories": 86,
+    "use_action": { "type": "cast_spell", "spell_id": "glowing_mushroom_spell", "no_fail": true, "level": 0 },
+    "looks_like": "mushroom",
+    "vitamins": [ [ "redcells", 25 ], [ "vitC", 6 ] ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "horn_moss_capsule",
+    "name": { "str_sp": "horn moss capsules" },
+    "//": "'healing' related",
+    "description": "Pure white moss capsules, shaped like a goat's horn.  The fine spores contained within are a powerful magical reagent, and can be consumed to recover small amounts of health.",
+    "price_postapoc": "12 USD 50 cent",
+    "symbol": "o",
+    "color": "white",
+    "weight": "35 g",
+    "volume": "50 ml",
+    "comestible_type": "FOOD",
+    "calories": 65,
+    "use_action": { "type": "cast_spell", "spell_id": "flask_regeneration_effect", "no_fail": true, "level": 0 },
+    "looks_like": "mushroom",
+    "vitamins": [ [ "iron", 7 ], [ "vitC", 5 ] ]
+  }
+]
