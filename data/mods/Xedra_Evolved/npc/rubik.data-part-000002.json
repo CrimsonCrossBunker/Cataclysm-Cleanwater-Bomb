@@ -1,0 +1,20 @@
+[
+  {
+    "id": "TALK_EXODII_MERCHANT_VAMPIRE",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "//~": "Blood drinking dead and a group of Renfield's attending to the vampires. They aren't on every world and the Exodii don't know why that is.",
+      "str": "Claret drinking brown bread, an' a crew of Renny's, on this mudball.  Us un's can't tell if they're part of the enemy or parasites exposed when the enemy rises.  Not on every mudball but definitely moar than enough to be a right pain."
+    },
+    "responses": [
+      { "text": "Well that's certainly disturbing.", "topic": "TALK_EXODII_MERCHANT_Talk" },
+      {
+        "text": "[DEDUCTION 4 or INT 14 ] Would you have any specialized weapons to use against them?",
+        "//": "Change to some variable that ties to having encountered vampires previously.",
+        "condition": { "or": [ { "math": [ "u_skill('deduction') >= 4" ] }, { "u_has_intelligence": 14 } ] },
+        "effect": { "u_add_var": "rubik_vampire_weapons", "value": "banger_and_smash" },
+        "topic": "TALK_EXODII_MERCHANT_VAMPIRE_GEAR"
+      }
+    ]
+  }
+]
