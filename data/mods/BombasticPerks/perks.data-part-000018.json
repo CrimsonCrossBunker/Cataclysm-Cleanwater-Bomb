@@ -1,0 +1,16 @@
+[
+  {
+    "type": "mutation",
+    "id": "perk_unopenable_grip",
+    "name": { "str": "Unopenable Grip" },
+    "points": 0,
+    "purifiable": false,
+    "valid": false,
+    "description": "After having things you held in your hands stolen countless times, your grip became strong enough to keep anything in your hands as long as you will it.  Activate to toggle the ability to drop your held item.",
+    "category": [ "perk" ],
+    "active": true,
+    "activated_is_setup": false,
+    "activated_eocs": [ "EOC_unopenable_grip" ],
+    "flags": [ "PERK" ]
+  }
+]

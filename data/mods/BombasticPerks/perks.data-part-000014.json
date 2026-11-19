@@ -1,0 +1,14 @@
+[
+  {
+    "type": "mutation",
+    "id": "perk_frakenstein",
+    "name": { "str": "Playing God" },
+    "points": 0,
+    "purifiable": false,
+    "valid": false,
+    "description": "You've been dissecting critters since high school.  Last night a voice gave you an idea for how to bring them back to life.  Activate the perk to gain insight into the nature of life itself!",
+    "active": true,
+    "activated_eocs": [ "EOC_frankenstein_insight" ],
+    "flags": [ "PERK" ]
+  }
+]

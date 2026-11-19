@@ -1,0 +1,47 @@
+[
+  {
+    "type": "mutation",
+    "id": "perk_recycler",
+    "name": { "str": "Recycler" },
+    "points": 0,
+    "purifiable": false,
+    "valid": false,
+    "description": "Even with no one around you feel obligated to clean up the streets.  You find full cans of soda in the weirdest places.",
+    "active": true,
+    "activated_is_setup": true,
+    "activated_eocs": [ "EOC_can_finder_on" ],
+    "deactivated_eocs": [ "EOC_can_finder_off" ],
+    "processed_eocs": [ "EOC_can_hunting" ],
+    "time": 24000,
+    "flags": [ "PERK" ]
+  },
+  {
+    "type": "mutation",
+    "id": "perk_troubleseeker",
+    "name": { "str": "Trouble Seeker" },
+    "points": 0,
+    "purifiable": false,
+    "valid": false,
+    "description": "As if the apocalypse itself wasn't enough, you are constantly looking for some trouble.  Zombies somehow sometimes sense your presence and approach you.  Fortunately, they always appear at a good distance from you.  Activate to toggle.",
+    "active": true,
+    "activated_is_setup": true,
+    "activated_eocs": [ "EOC_troubleseek_on" ],
+    "deactivated_eocs": [ "EOC_troubleseek_off" ],
+    "processed_eocs": [ "EOC_troubleseeking" ],
+    "time": 20000,
+    "flags": [ "PERK" ]
+  },
+  {
+    "type": "mutation",
+    "id": "perk_second_wind",
+    "name": { "str": "Second Wind" },
+    "points": 0,
+    "purifiable": false,
+    "valid": false,
+    "description": "Anyone can pause and catch their breath but you're extremely good at doing so.  You can regenerate one-third of your stamina over ten seconds, once every fifteen minutes.  Being hit will interrupt the regeneration.",
+    "active": true,
+    "activation_msg": "",
+    "activated_eocs": [ "EOC_perk_second_wind" ],
+    "flags": [ "PERK" ]
+  }
+]

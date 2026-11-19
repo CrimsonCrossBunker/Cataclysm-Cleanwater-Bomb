@@ -1,0 +1,29 @@
+[
+  {
+    "type": "mutation",
+    "id": "perk_grit_your_teeth",
+    "name": { "str": "Grit Your Teeth" },
+    "points": 0,
+    "purifiable": false,
+    "valid": false,
+    "description": "When you have to you can wipe the blood off your chin, grit your teeth, and get it done.  Use to reduce your pain by 30 or half (whichever is greater) for 3 minutes.\n\nThe cooldown on this perk scales based on your pain at the time you used it.",
+    "active": true,
+    "activated_is_setup": false,
+    "activated_eocs": [ "EOC_PERK_GRIT_YOUR_TEETH" ],
+    "flags": [ "PERK" ]
+  },
+  {
+    "type": "mutation",
+    "id": "perk_slippery_escape",
+    "name": { "str": "Slippery Escape" },
+    "points": 0,
+    "purifiable": false,
+    "valid": false,
+    "description": "Your joints are flexible enough that you can twist out of nearly anything when given a mind, though that doesn't make it hurt any less.  At the cost of some pain, you can twist out of enemy grabs.",
+    "active": true,
+    "activated_is_setup": false,
+    "activation_msg": "You twist out of the grab with a wrench!",
+    "activated_eocs": [ "EOC_PERK_SLIPPERY_ESCAPE" ],
+    "flags": [ "PERK" ]
+  }
+]

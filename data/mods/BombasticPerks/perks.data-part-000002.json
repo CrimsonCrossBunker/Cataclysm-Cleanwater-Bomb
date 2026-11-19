@@ -1,0 +1,16 @@
+[
+  {
+    "type": "mutation",
+    "id": "perk_sight_beyond_sight",
+    "name": { "str": "Sight Beyond Sight" },
+    "points": 0,
+    "purifiable": false,
+    "valid": false,
+    "description": "You have an instinctive sense for the uncanny and unearthy.  Activate this perk to close your eyes and become aware of nearby Nether creatures.",
+    "activated_is_setup": true,
+    "active": true,
+    "activated_eocs": [ "EOC_perk_sight_beyond_sight_ON" ],
+    "deactivated_eocs": [ "EOC_perk_sight_beyond_sight_ON" ],
+    "flags": [ "PERK" ]
+  }
+]

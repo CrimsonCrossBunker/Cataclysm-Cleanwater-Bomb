@@ -1,0 +1,15 @@
+[
+  {
+    "type": "mutation",
+    "id": "perk_radio_infusion",
+    "name": { "str": "Radioactive Infusion" },
+    "points": 0,
+    "purifiable": false,
+    "valid": false,
+    "description": "You somehow learned to focus on an item to make it emit radiation forever.  You still have trouble understanding how this could ever be useful, but maybe you might find a use for it.  Activate to use.",
+    "active": true,
+    "activated_is_setup": false,
+    "activated_eocs": [ "EOC_radio_infusion" ],
+    "flags": [ "PERK" ]
+  }
+]

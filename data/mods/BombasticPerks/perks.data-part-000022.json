@@ -1,0 +1,15 @@
+[
+  {
+    "type": "mutation",
+    "id": "perk_forge_blood",
+    "name": { "str": "Blood of the Forge" },
+    "points": 0,
+    "purifiable": false,
+    "valid": false,
+    "description": "Your blood might not be able to make weapons, but it still can make anything coated with sturdier but unable to be repaired.  Activate to use.",
+    "active": true,
+    "activated_is_setup": false,
+    "activated_eocs": [ "EOC_forge_blood" ],
+    "flags": [ "PERK" ]
+  }
+]
