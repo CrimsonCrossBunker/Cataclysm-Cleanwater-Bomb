@@ -18,19 +18,5 @@
       { "text": "<done_conversation_section>", "topic": "TALK_FRIEND" },
       { "text": "<end_talking>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "BGSS_COP_3_STORY2",
-    "type": "talk_topic",
-    "dynamic_line": "At first I wanted to help.  The riots, the fighting, it was too much for me to just sit back and listen to the chaos.  Then a buddy of mine visited me.  He'd been hurt and he wasn't making much sense, but what he told me… well, you can imagine the kind of stuff he told me.  Everything the worst of the story tellers was making up, and more.  Instead of packing up to try to fight, I took his advice and packed up to leave.  I was out at the edge and the riots hadn't reached me yet, but from what I'd heard it was smarter to get out than to hold tight.  I slipped out that night and camped a few days in the woods, waiting for it to blow over.  It never did.",
-    "responses": [
-      {
-        "text": "What was it like, surviving out there with an injury?",
-        "condition": { "not": { "npc_has_effect": "BGSS_Cop_3_earlymeeting" } },
-        "topic": "BGSS_COP_3_STORY3"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_FRIEND" },
-      { "text": "<end_talking>", "topic": "TALK_DONE" }
-    ]
   }
 ]
