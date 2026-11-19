@@ -1,0 +1,16 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Jeremiah_Dnd",
+    "dynamic_line": "Yeah, I play.  I ran a campaign for a while with some of my friends, we'd play after school.  I don't know where they are now, though.  Do you wanna play some?",
+    "responses": [
+      {
+        "text": "Sure, I'm up for it.",
+        "effect": { "u_assign_activity": "ACT_GENERIC_GAME", "duration": "45 minutes" },
+        "topic": "TALK_DONE"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_GODCO_Jeremiah_2" },
+      { "text": "No thanks.  <end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]

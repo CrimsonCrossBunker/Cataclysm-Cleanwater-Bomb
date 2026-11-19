@@ -1,0 +1,55 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Jeremiah_Plans",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "npc_val": "general_mission_jeremiah_apprentice" } ],
+      "yes": "I don't know, exactly.  I think I'll stay here and do what I can for the community.",
+      "no": "I'd like to study herbology with Kostas, it seems like a useful skill these days.  I do feel bad for Jane though, she's a skilled doctor and nobody here cares, they all just think any illness can be prayed away."
+    },
+    "responses": [
+      {
+        "text": "When do you plan on starting that apprenticeship?",
+        "condition": {
+          "and": [
+            { "not": { "compare_string": [ "yes", { "u_val": "general_mission_convince_kostas" } ] } },
+            { "not": { "compare_string": [ "yes", { "u_val": "general_mission_kostas_teach_jeremiah" } ] } },
+            { "not": { "compare_string": [ "yes", { "npc_val": "general_mission_jeremiah_apprentice" } ] } }
+          ]
+        },
+        "topic": "TALK_GODCO_Jeremiah_Apprenticeship"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_GODCO_Jeremiah_2" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Jeremiah_Apprenticeship",
+    "dynamic_line": "Well…  Kostas is a bit unsure about teaching me, for some reason.  If you could change his mind, I'd pay you some \"icons\", what we've started using for money around here.",
+    "responses": [
+      { "text": "No thanks.  <done_conversation_section>", "topic": "TALK_GODCO_Jeremiah_2" },
+      {
+        "text": "I'll see what I can do for you.",
+        "effect": [ { "u_add_var": "general_mission_convince_kostas", "value": "yes" } ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Jeremiah_Kostas_Convinced",
+    "dynamic_line": "That's great!  Thanks <name_g>, here's the money.",
+    "responses": [
+      {
+        "text": "You're welcome.",
+        "effect": [
+          { "u_spawn_item": "icon", "count": 4 },
+          { "u_lose_var": "general_mission_kostas_teach_jeremiah" },
+          { "npc_add_var": "general_mission_jeremiah_apprentice", "value": "yes" }
+        ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]

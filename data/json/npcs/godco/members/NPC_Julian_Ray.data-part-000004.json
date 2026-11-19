@@ -1,0 +1,42 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Julian_Joinee",
+    "dynamic_line": "Your name is now on the books.  Here's your blanket, joinee.  Those two beds next to the window, you can choose one of them.  It's safe, don't worry.  I'm armed.  By the way, if you're hungry you can go bug Simon for a meal, up to one in a day.",
+    "speaker_effect": { "effect": [ { "u_spawn_item": "blanket" }, { "u_add_var": "general_meeting_godco_joinee", "value": "yes" } ] },
+    "responses": [ { "text": "Thank you.  See you around, Julian.", "topic": "TALK_DONE" } ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Julian_Story",
+    "dynamic_line": "&Julian suddenly appears disturbed, and looks away from you for a moment.  \"It's a long story, and not an interesting one at that.  I was a cop before.  You must've heard about those riots and all that.  I'm glad we all managed to make it out alive.\"",
+    "responses": [
+      {
+        "text": "How did you make it out?",
+        "condition": { "not": { "compare_string": [ "yes", { "npc_val": "general_meeting_told_backstory" } ] } },
+        "trial": { "type": "PERSUADE", "difficulty": 30 },
+        "failure": { "topic": "TALK_GODCO_Julian_NoChat" },
+        "success": { "topic": "TALK_GODCO_Julian_Riots" }
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Julian_Riots",
+    "dynamic_line": "Well, I might as well be honest with you.  I ran mostly, ran like the devil was chasin' me.  I was at one of the police stations in town, when we were called out to handle a violent mob on the loose.  When we got there, the people were crazy, smashing and killing everything in their way.  They had these bloodshot eyes and a weird goo in their mouths.  We pulled out all the stops to handle them.  When tear gas wouldn't work, the chief told us to draw guns and kill them all.  We did…  There was so much blood…  That maneuver killed a lot of them, but not all.  One snuck up behind a lady who worked with us, tore a whole section of her spine out.  She never even had time to scream, just slumped over the cruiser door…  So I jumped post and ran, never looked back.  God, I can still hear the cries…",
+    "responses": [
+      {
+        "text": "I'm sorry for your loss.  Maybe we should change the subject.",
+        "effect": { "npc_add_var": "general_meeting_told_backstory", "value": "yes" },
+        "topic": "TALK_GODCO_Julian_2"
+      },
+      {
+        "text": "I'm sorry for your loss.  <end_talking_leave>",
+        "effect": { "npc_add_var": "general_meeting_told_backstory", "value": "yes" },
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]
