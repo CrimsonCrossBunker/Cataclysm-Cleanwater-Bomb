@@ -1,5 +1,76 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "boat_rental_palette",
+    layout = {
+        toilets = { "t" },
+        item_spawns = {
+            r = { id = "flotation_vest", chance = 75, repetitions = { 1, 5 } },
+            X = {
+                { id = "flotation_vest", chance = 75, repetitions = { 1, 5 } },
+                { id = "swimming_kickboard", chance = 25, repetitions = { 1, 3 } },
+            },
+        },
+        item_groups = {
+            ["&"] = { group = "SUS_trash_trashcan", chance = 60 },
+            X = {
+                { chance = 55, group = "swimmer_head", repetitions = { 1, 4 } },
+                { chance = 55, group = "swimmer_glasses", repetitions = { 1, 4 } },
+                { chance = 75, group = "swimmer_torso", repetitions = { 1, 4 } },
+                { chance = 75, group = "swimmer_pants", repetitions = { 1, 4 } },
+                { chance = 75, group = "swimmer_wetsuit", repetitions = { 1, 4 } },
+                { chance = 55, group = "swimmer_shoes", repetitions = { 1, 4 } },
+                { chance = 45, group = "swimmer_gloves", repetitions = { 1, 4 } },
+            },
+            r = {
+                { chance = 55, group = "swimmer_head", repetitions = { 1, 3 } },
+                { chance = 55, group = "swimmer_glasses", repetitions = { 1, 3 } },
+                { chance = 75, group = "swimmer_torso", repetitions = { 1, 3 } },
+                { chance = 75, group = "swimmer_pants", repetitions = { 1, 3 } },
+                { chance = 75, group = "swimmer_wetsuit", repetitions = { 1, 3 } },
+                { chance = 55, group = "swimmer_shoes", repetitions = { 1, 3 } },
+                { chance = 45, group = "swimmer_gloves", repetitions = { 1, 3 } },
+            },
+            t = { group = "SUS_toilet", chance = 50 },
+        },
+        vending_glyphs = {
+            D = { group = "vending_drink", lootable = true },
+            F = { group = "vending_food", lootable = true },
+        },
+        palettes = { "parametrized_walls_palette" },
+        terrain = {
+            ["4"] = "t_gutter_downspout",
+            s = "t_concrete",
+            ["'"] = "t_thconc_floor",
+            ["."] = "t_floor",
+            c = "t_floor",
+            h = "t_floor",
+            D = "t_floor",
+            F = "t_floor",
+            [","] = "t_linoleum_white",
+            S = "t_linoleum_white",
+            t = "t_linoleum_white",
+            T = "t_floor",
+            r = "t_floor",
+            ["&"] = "t_floor",
+            X = "t_floor",
+            w = "t_window",
+            ["+"] = "t_door_c",
+            _ = { { id = "t_region_soil", copies = 20 }, { id = "t_region_groundcover", copies = 3 } },
+            ["-"] = "t_region_shrub_decorative",
+        },
+        furniture = {
+            T = "f_table",
+            X = "f_cardboard_box",
+            c = "f_counter",
+            ["&"] = "f_trashcan",
+            r = "f_rack",
+            h = "f_chair",
+            S = "f_sink",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "boat_rental_roof",
