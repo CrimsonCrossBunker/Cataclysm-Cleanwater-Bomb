@@ -1,0 +1,45 @@
+[
+  {
+    "id": "helmet_xlblack_dragon_scale",
+    "copy-from": "helmet_black_dragon_scale",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": "black dragonscale helmet",
+    "description": "A massive helmet made from incredibly durable black dragonscale, held together with black dragonhide.  It comes equipped with a full face visor you can raise and is large enough to fit even the strangest of heads.",
+    "use_action": {
+      "type": "transform",
+      "menu_text": "Raise visor",
+      "target": "helmet_xlblack_dragon_scale_raised",
+      "msg": "You raise the helm's visor."
+    },
+    "weight": "1256 g",
+    "volume": "4500 ml",
+    "material_thickness": 5,
+    "environmental_protection": 3,
+    "armor": [
+      { "covers": [ "head" ], "coverage": 100, "encumbrance": 42 },
+      { "covers": [ "eyes", "mouth" ], "coverage": 100, "encumbrance": 20 }
+    ],
+    "extend": { "flags": [ "OVERSIZE", "PREFIX_XL" ] }
+  },
+  {
+    "id": "helmet_xlblack_dragon_scale_raised",
+    "copy-from": "helmet_black_dragon_scale_raised",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "black dragonscale helmet (raised visor)", "str_pl": "black dragonscale helmets (raised visor)" },
+    "description": "A massive helmet made from incredibly durable black dragonscale, held together with black dragonhide.  It is large enough to fit even the strangest of heads.  The visor is raised",
+    "use_action": {
+      "type": "transform",
+      "menu_text": "Lower visor",
+      "target": "helmet_xlblack_dragon_scale",
+      "msg": "You lower the helm's visor."
+    },
+    "material_thickness": 5,
+    "environmental_protection": 3,
+    "armor": [ { "covers": [ "head" ], "coverage": 100, "encumbrance": 42 } ],
+    "weight": "1256 g",
+    "volume": "4500 ml",
+    "extend": { "flags": [ "OVERSIZE", "PREFIX_XL" ] }
+  }
+]

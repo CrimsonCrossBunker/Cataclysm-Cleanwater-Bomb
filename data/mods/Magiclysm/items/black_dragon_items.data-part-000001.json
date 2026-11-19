@@ -1,0 +1,53 @@
+[
+  {
+    "id": "helmet_black_dragon_scale",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "name": "black dragonscale helmet",
+    "description": "A helmet made from black incredibly durable dragonscale, held together with black dragonhide.  It comes equipped with a full face visor with only a thin slit to see out of.  Activate to raise the visor.",
+    "use_action": {
+      "type": "transform",
+      "menu_text": "Raise visor",
+      "target": "helmet_black_dragon_scale_raised",
+      "msg": "You raise the helm's visor."
+    },
+    "weight": "856 g",
+    "volume": "2500 ml",
+    "price": "580 USD",
+    "to_hit": -1,
+    "material": [ "black_dragon_hide", "black_dragon_scales" ],
+    "symbol": "[",
+    "color": "black_white",
+    "armor": [
+      { "covers": [ "head" ], "coverage": 100, "encumbrance": 32 },
+      { "covers": [ "eyes", "mouth" ], "coverage": 100, "encumbrance": 20 }
+    ],
+    "warmth": 25,
+    "material_thickness": 5,
+    "environmental_protection": 3,
+    "techniques": [ "WBLOCK_1" ],
+    "flags": [ "VARSIZE", "WATERPROOF", "STURDY", "SUN_GLASSES" ],
+    "melee_damage": { "bash": 10 }
+  },
+  {
+    "id": "helmet_black_dragon_scale_raised",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "copy-from": "helmet_black_dragon_scale",
+    "name": { "str": "black dragonscale helmet (raised visor)", "str_pl": "black dragonscale helmets (raised visor)" },
+    "description": "A helmet made from incredibly durable black dragonscale, held together with black dragonhide.  The visor is raised.",
+    "use_action": {
+      "type": "transform",
+      "menu_text": "Lower visor",
+      "target": "helmet_black_dragon_scale",
+      "msg": "You lower the helm's visor."
+    },
+    "symbol": "[",
+    "armor": [ { "covers": [ "head" ], "coverage": 100, "encumbrance": 32 } ],
+    "material_thickness": 5,
+    "environmental_protection": 3,
+    "delete": { "flags": [ "SUN_GLASSES" ] }
+  }
+]
