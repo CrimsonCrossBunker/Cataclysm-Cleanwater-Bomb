@@ -1,0 +1,22 @@
+[
+  {
+    "id": "TALK_ROBOFAC_MERC_MONSTER_CORPSE_1_EQUIPMENT",
+    "type": "talk_topic",
+    "dynamic_line": "I've got an extra recon helmet and a powered air purifying respirator system.  The light amplification on the helmet still works.  The PAPR is a scavenged military mask with an old commercial blower.  Package deal.  Don't ask where I got 'em.  Ten coins.",
+    "responses": [
+      { "text": "No, thanks.", "topic": "TALK_DONE" },
+      {
+        "text": "[10 HGC] You have a deal.",
+        "topic": "TALK_ROBOFAC_MERC_MONSTER_CORPSE_1_EQUIPMENT_ACCEPTED",
+        "condition": { "u_has_items": { "item": "RobofacCoin", "count": 10 } },
+        "effect": [
+          { "u_consume_item": "RobofacCoin", "count": 10, "popup": true },
+          { "u_spawn_item": "military_papr_mask" },
+          { "u_spawn_item": "basic_papr_belt_off" },
+          { "u_spawn_item": "robofac_head_rig" },
+          { "u_add_var": "bought_gear_monster_corpse_merc", "value": "yes" }
+        ]
+      }
+    ]
+  }
+]

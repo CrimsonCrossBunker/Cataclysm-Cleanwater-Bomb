@@ -60,11 +60,5 @@
       "no": "We have been supplying this lab here with food from a few hunting and farming communities nearby.  The roads are tough and dangerous, but it makes good money, and beats scavenging the cities for scraps."
     },
     "responses": [ { "text": "Keep safe, then.", "topic": "TALK_ROBOFAC_FREE_MERCHANT" } ]
-  },
-  {
-    "id": "TALK_ROBOFAC_FREE_MERCHANT_INTERVAL",
-    "type": "talk_topic",
-    "dynamic_line": "Around <restock_time_point>, if the caravan doesn't run into trouble.",
-    "responses": [ { "text": "Thanks for the info, bye.", "topic": "TALK_DONE" } ]
   }
 ]
