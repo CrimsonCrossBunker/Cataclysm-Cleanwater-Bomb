@@ -154,40 +154,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "trailhead_outhouse_z1",
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                   ...  ",
-        "                   ...  ",
-        "                   ...  ",
-        "                   ...  ",
-        "                   ...  ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "trailhead_shack_z0" ],
     "object": {
       "rows": [
@@ -225,40 +191,6 @@
         { "signage": "PLEASE  No fish cleaning or dish washing.", "x": 19, "y": 15 }
       ],
       "place_nested": [ { "chunks": [ [ "null", 2 ], [ "trailhead_sub_graffiti_snippet", 1 ] ], "x": 5, "y": [ 18, 20 ] } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "trailhead_shack_z1",
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "    ------              ",
-        "    -....-              ",
-        "    -....-              ",
-        "    -....-              ",
-        "    -5----              ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
     }
   },
   {
