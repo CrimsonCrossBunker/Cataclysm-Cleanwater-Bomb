@@ -78,3 +78,28 @@ ccb.runtime.handler("consume_potion_fruit_wintergreen", function(context)
     local character = context.character
     apply_effect(character, "effect_pfruit_nightvision", 500 + services.random.native_int(0, 5000))
 end)
+
+ccb.runtime.handler("eat_potion_fruit_grapes", function(context)
+    local character = context.character
+    apply_effect(character, "effect_pfruit_no_drunk", 1)
+    local pain = checked(services.creatures.snapshot(character)).perceived_pain
+    checked(services.needs.modify_pain(character, pain + 10))
+end)
+
+ccb.runtime.handler("eat_potion_fruit_solomon_seal", function(context)
+    local character = context.character
+    local current = checked(services.spells.mana(character)).current
+    local mana = math.modf(current + services.random.native_float(200, 600))
+    checked(services.spells.set_mana_raw(character, mana))
+end)
+
+ccb.runtime.handler("eat_druid_goodberry", function(context)
+    local character = context.character
+    for _, part in ipairs({ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" }) do
+        local body_part = id("body_part", part)
+        local hp = checked(services.characters.hp(character, body_part))
+        if hp > 0 then
+            checked(services.characters.set_hp(character, body_part, hp + 3, true))
+        end
+    end
+end)
