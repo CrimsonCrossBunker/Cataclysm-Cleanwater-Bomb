@@ -1,0 +1,104 @@
+[
+  {
+    "id": "jacket_jean",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "jean jacket" },
+    "description": "A jacket made from denim.",
+    "//": "Mediumweight 14 oz denim jacket.",
+    "weight": "800 g",
+    "volume": "3250 ml",
+    "price": "80 USD",
+    "price_postapoc": "7 USD 50 cent",
+    "material": [ "denim" ],
+    "symbol": "[",
+    "looks_like": "jacket_windbreaker",
+    "color": "light_blue",
+    "armor": [
+      { "covers": [ "torso" ], "specifically_covers": [ "torso_lower" ], "coverage": 100, "encumbrance": [ 8, 10 ] },
+      { "covers": [ "torso" ], "specifically_covers": [ "torso_upper" ], "coverage": 95 },
+      { "covers": [ "arm_l", "arm_r" ], "coverage": 100, "encumbrance": [ 8, 8 ] }
+    ],
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1500 ml",
+        "max_contains_weight": "2 kg",
+        "max_item_length": "15 cm",
+        "moves": 80
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1500 ml",
+        "max_contains_weight": "2 kg",
+        "max_item_length": "15 cm",
+        "moves": 80
+      }
+    ],
+    "warmth": 15,
+    "material_thickness": 0.95,
+    "snippet_category": [
+      {
+        "id": "patchedjacket",
+        "text": "A jacket made from denim.  This one is haphazardly covered with patches featuring metal band logos."
+      },
+      { "id": "blackjacket", "text": "A jacket made from denim, dyed black." },
+      { "id": "patterned", "text": "A denim jacket ornamented with yellow filament patterns." },
+      {
+        "id": "old",
+        "text": "An old denim jacket.  It has wears in several places and has lost its blue color, but its overall integrity is preserved."
+      }
+    ],
+    "flags": [ "VARSIZE", "POCKETS", "OUTER" ]
+  },
+  {
+    "id": "vest_jean",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "jean vest" },
+    "description": "A vest made from denim.",
+    "weight": "600 g",
+    "volume": "2450 ml",
+    "price": "65 USD",
+    "price_postapoc": "5 USD",
+    "material": [ "denim" ],
+    "symbol": "[",
+    "looks_like": "vest_leather",
+    "color": "light_blue",
+    "armor": [
+      { "covers": [ "torso" ], "specifically_covers": [ "torso_lower" ], "coverage": 100, "encumbrance": [ 8, 10 ] },
+      { "covers": [ "torso" ], "specifically_covers": [ "torso_upper" ], "coverage": 95 }
+    ],
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1500 ml",
+        "max_contains_weight": "2 kg",
+        "max_item_length": "15 cm",
+        "moves": 80
+      },
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "1500 ml",
+        "max_contains_weight": "2 kg",
+        "max_item_length": "15 cm",
+        "moves": 80
+      }
+    ],
+    "warmth": 25,
+    "material_thickness": 0.95,
+    "flags": [ "VARSIZE", "POCKETS", "OUTER" ],
+    "snippet_category": [
+      {
+        "id": "patchedvest",
+        "text": "A vest made from denim.  This one is haphazardly covered with patches featuring metal band logos."
+      },
+      { "id": "blackvest", "text": "A vest made from denim, dyed black." },
+      { "id": "stonewashed", "text": "A stone washed blue vest made from denim." },
+      {
+        "id": "ripped",
+        "text": "A vest made from denim.  Its armholes have filament and torn fabric sticking out, as if someone just ripped the sleeves off."
+      }
+    ]
+  }
+]

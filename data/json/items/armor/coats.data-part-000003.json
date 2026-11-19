@@ -1,0 +1,158 @@
+[
+  {
+    "id": "grim_reaper_robe",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "grim reaper's robe" },
+    "description": "A black hooded grim reaper's robe with a face cover to hide the user's lack of facial skin.  It pairs nicely with a scythe.  Use it to remove the face cover and show yourself before your victims.",
+    "weight": "225 g",
+    "volume": "550 ml",
+    "price": "35 USD",
+    "price_postapoc": "90 cent",
+    "material": [ "cotton" ],
+    "symbol": "[",
+    "looks_like": "cloak",
+    "color": "dark_gray",
+    "armor": [
+      { "covers": [ "head" ], "coverage": 100, "encumbrance": 4 },
+      { "covers": [ "mouth", "eyes" ], "coverage": 100, "encumbrance": 5 },
+      { "covers": [ "torso" ], "coverage": 100, "encumbrance": 2 },
+      {
+        "covers": [ "leg_l", "leg_r" ],
+        "coverage": 92,
+        "encumbrance": 2,
+        "specifically_covers": [ "leg_draped_l", "leg_draped_r" ],
+        "layers": [ "BELTED" ]
+      },
+      {
+        "covers": [ "gastropod_foot" ],
+        "coverage": 80,
+        "specifically_covers": [ "leg_hip_gastropod_l", "leg_hip_gastropod_r", "leg_upper_gastropod" ],
+        "encumbrance": 2,
+        "layers": [ "BELTED" ]
+      },
+      {
+        "covers": [
+          "tentacle_lower_front_l",
+          "tentacle_lower_middle_l",
+          "tentacle_lower_rear_l",
+          "tentacle_lower_front_r",
+          "tentacle_lower_middle_r",
+          "tentacle_lower_rear_r"
+        ],
+        "coverage": 80,
+        "encumbrance": 2,
+        "specifically_covers": [
+          "tentacle_draped_lower_front_l",
+          "tentacle_draped_lower_middle_l",
+          "tentacle_draped_lower_rear_l",
+          "tentacle_draped_lower_front_r",
+          "tentacle_draped_lower_middle_r",
+          "tentacle_draped_lower_rear_r"
+        ],
+        "layers": [ "BELTED" ]
+      },
+      {
+        "covers": [ "arm_l", "arm_r" ],
+        "specifically_covers": [ "arm_shoulder_l", "arm_shoulder_r", "arm_upper_r", "arm_upper_l", "arm_elbow_r", "arm_elbow_l" ],
+        "coverage": 100,
+        "encumbrance": 2
+      },
+      { "covers": [ "arm_l", "arm_r" ], "specifically_covers": [ "arm_lower_l", "arm_lower_r" ], "coverage": 90 },
+      {
+        "covers": [ "tail_long", "tail_fluffy", "tail_bovine", "tail_rat" ],
+        "coverage": 80,
+        "encumbrance": [ 2, 2 ],
+        "layers": [ "BELTED" ]
+      },
+      { "covers": [ "tail_thick", "tail_club" ], "coverage": 60, "encumbrance": 4, "layers": [ "BELTED" ] }
+    ],
+    "use_action": {
+      "type": "transform",
+      "msg": "The darkness surrounding your face lightens.",
+      "target": "grim_reaper_robe_faceless",
+      "menu_text": "Remove face cover"
+    },
+    "warmth": 10,
+    "material_thickness": 0.1,
+    "flags": [
+      "UNRESTRICTED",
+      "OUTER",
+      "ALLOWS_NATURAL_ATTACKS",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "COSPLAY_COSTUME"
+    ]
+  },
+  {
+    "id": "grim_reaper_robe_faceless",
+    "copy-from": "grim_reaper_robe",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": {
+      "str": "grim reaper's robe (faceless)",
+      "str_pl": "grim reaper's robes (faceless)",
+      "//~": "'Faceless' as in 'face cover'less and because, without the cover of darkness (A black face cover) a real grim reaper would really be faceless"
+    },
+    "description": "A black hooded grim reaper's robe with the face cover removed to show the user's lack of facial skin.  It pairs nicely with a scythe.  Use it to hide your lack of facial features.",
+    "use_action": {
+      "type": "transform",
+      "msg": "You shroud your face in darkness.",
+      "target": "grim_reaper_robe",
+      "menu_text": "Adjust face cover"
+    },
+    "armor": [
+      { "covers": [ "head" ], "coverage": 100, "encumbrance": 4 },
+      { "covers": [ "torso" ], "coverage": 100, "encumbrance": 2 },
+      {
+        "covers": [ "leg_l", "leg_r" ],
+        "coverage": 92,
+        "encumbrance": 2,
+        "specifically_covers": [ "leg_draped_l", "leg_draped_r" ],
+        "layers": [ "BELTED" ]
+      },
+      {
+        "covers": [ "gastropod_foot" ],
+        "coverage": 80,
+        "specifically_covers": [ "leg_hip_gastropod_l", "leg_hip_gastropod_r", "leg_upper_gastropod" ],
+        "encumbrance": 2,
+        "layers": [ "BELTED" ]
+      },
+      {
+        "covers": [
+          "tentacle_lower_front_l",
+          "tentacle_lower_middle_l",
+          "tentacle_lower_rear_l",
+          "tentacle_lower_front_r",
+          "tentacle_lower_middle_r",
+          "tentacle_lower_rear_r"
+        ],
+        "coverage": 80,
+        "encumbrance": 2,
+        "specifically_covers": [
+          "tentacle_draped_lower_front_l",
+          "tentacle_draped_lower_middle_l",
+          "tentacle_draped_lower_rear_l",
+          "tentacle_draped_lower_front_r",
+          "tentacle_draped_lower_middle_r",
+          "tentacle_draped_lower_rear_r"
+        ],
+        "layers": [ "BELTED" ]
+      },
+      {
+        "covers": [ "arm_l", "arm_r" ],
+        "specifically_covers": [ "arm_shoulder_l", "arm_shoulder_r", "arm_upper_r", "arm_upper_l", "arm_elbow_r", "arm_elbow_l" ],
+        "coverage": 100,
+        "encumbrance": 2
+      },
+      { "covers": [ "arm_l", "arm_r" ], "specifically_covers": [ "arm_lower_l", "arm_lower_r" ], "coverage": 90 },
+      {
+        "covers": [ "tail_long", "tail_fluffy", "tail_bovine", "tail_rat" ],
+        "coverage": 80,
+        "encumbrance": [ 2, 2 ],
+        "layers": [ "BELTED" ]
+      },
+      { "covers": [ "tail_thick", "tail_club" ], "coverage": 60, "encumbrance": 4, "layers": [ "BELTED" ] }
+    ]
+  }
+]
