@@ -7621,6 +7621,185 @@ function CcbPlatformContent.Item(options) end
 ---@param options StaticItemOptions
 function CcbPlatformContent.define_item(options) end
 
+---@class StaticMutationLinks
+---@field categories? string[]
+---@field prerequisites? string[]
+---@field secondary_prerequisites? string[]
+---@field threshold_requirements? string[]
+---@field cancels? string[]
+---@field replacements? string[]
+---@field additions? string[]
+---@field flags? string[]
+---@field active_flags? string[]
+---@field inactive_flags? string[]
+---@field types? string[]
+
+---@class StaticMutationVariant
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field weight? integer
+---@field append_description? boolean
+
+---@class StaticMutationAppearance
+---@field id string
+---@field tile_category string
+
+---@class StaticMutationItemAction
+---@field item? string Item ID.
+---@field message? string|LocalizedText
+
+---@class StaticMutationTransform
+---@field target? string Mutation ID.
+---@field message? string|LocalizedText
+---@field active? boolean
+---@field safe? boolean
+---@field moves? integer
+
+---@class StaticMutationAttack
+---@field player_message string|LocalizedText
+---@field npc_message string|LocalizedText
+---@field body_part? string
+---@field chance integer One-in-N chance.
+---@field native_effect? boolean Use the attack already defined for this mutation in the engine.
+---@field required_mutations? string[]
+---@field blocker_mutations? string[]
+---@field base_damage? StaticItemDamage
+---@field strength_damage? StaticItemDamage
+
+---@class StaticMutationArmor
+---@field parts? string[]
+---@field part_types? string[]
+---@field resistances table<string, number> Resistances keyed by damage type.
+
+---@class StaticMutationWetProtection
+---@field part string
+---@field ignored? integer
+---@field neutral? integer
+---@field good? integer
+
+---@class StaticMutationSocialModifiers
+---@field lie? integer
+---@field persuade? integer
+---@field intimidate? integer
+
+---@class StaticMutationPersonality
+---@field min_aggression? integer
+---@field max_aggression? integer
+---@field min_bravery? integer
+---@field max_bravery? integer
+---@field min_collector? integer
+---@field max_collector? integer
+---@field min_altruism? integer
+---@field max_altruism? integer
+
+---@class StaticMutationComfortCondition
+---@field kind 'terrain'|'furniture'|'trap'|'field'|'vehicle'|'character'|'trait'
+---@field id? string
+---@field flag? string
+---@field intensity? integer Minimum field intensity for a field condition.
+---@field active? boolean Match only active mutations in a trait condition.
+---@field invert? boolean
+
+---@class StaticMutationComfortMessage
+---@field text string|LocalizedText
+---@field rating? string Native message rating.
+
+---@class StaticMutationComfort
+---@field conditions StaticMutationComfortCondition[]
+---@field any_condition? boolean Match any condition instead of requiring all of them.
+---@field comfort? string Native comfort level.
+---@field add_human_comfort? boolean
+---@field use_better_comfort? boolean
+---@field add_sleep_aids? boolean
+---@field try_message? StaticMutationComfortMessage
+---@field hint_message? StaticMutationComfortMessage
+---@field sleep_message? StaticMutationComfortMessage
+
+---@class StaticMutationOptions : StaticMutationLinks
+---@field id string Stable mutation or abstract template ID.
+---@field abstract? boolean Register an inheritance template.
+---@field copy_from? string Existing or deferred mutation or template.
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field scent_type? string
+---@field points? integer
+---@field vitamin_cost? integer
+---@field visibility? integer
+---@field ugliness? integer
+---@field cost? integer
+---@field scent_intensity? integer
+---@field starting_trait? boolean
+---@field chargen_allow_npc? boolean
+---@field random_start_allowed? boolean
+---@field mixed_effect? boolean
+---@field active? boolean
+---@field starts_active? boolean
+---@field destroys_gear? boolean
+---@field allow_soft_gear? boolean
+---@field consumes_calories? boolean
+---@field consumes_water? boolean
+---@field consumes_rest? boolean
+---@field consumes_mana? boolean
+---@field consumes_stamina? boolean
+---@field valid? boolean
+---@field purifiable? boolean
+---@field threshold? boolean
+---@field strict_threshold_requirements? boolean
+---@field profession? boolean
+---@field debug? boolean
+---@field player_display? boolean
+---@field vanity? boolean
+---@field dummy? boolean
+---@field activation_setup_only? boolean
+---@field initial_martial_arts? string[]
+---@field threshold_substitutes? string[]
+---@field ignored_by? string[]
+---@field empathize_with? string[]
+---@field no_empathize_with? string[]
+---@field can_only_eat? string[]
+---@field can_only_heal_with? string[]
+---@field can_heal_with? string[]
+---@field allowed_categories? string[]
+---@field enchantments? string[] Registered enchantment IDs.
+---@field bionic_exclusions? string[]
+---@field restricts_gear? string[]
+---@field remove_rigid? string[]
+---@field allowed_item_flags? string[]
+---@field integrated_armor? string[]
+---@field body_temperature? integer[] Exactly two temperature deltas in legacy body part temperature units.
+---@field add? StaticMutationLinks
+---@field remove? StaticMutationLinks
+---@field monster_cameras? table<string, integer> Vision range by monster ID.
+---@field spells_learned? table<string, integer> Initial level by spell ID.
+---@field craft_skill_bonuses? table<string, integer>
+---@field body_light? table<string, number>
+---@field species_anger? table<string, integer>
+---@field social_modifiers? StaticMutationSocialModifiers
+---@field personality? StaticMutationPersonality
+---@field provided_qualities? table<string, integer>
+---@field variants? StaticMutationVariant[]
+---@field appearance? StaticMutationAppearance
+---@field vitamin_intervals? table<string, integer> Interval in turns by vitamin ID.
+---@field vitamin_absorption? table<string, table<string, number>> Multiplier by material ID and vitamin ID.
+---@field armor? StaticMutationArmor[]
+---@field wet_protection? StaticMutationWetProtection[]
+---@field encumbrance? table<string, integer>
+---@field covered_encumbrance? table<string, integer>
+---@field encumbrance_multipliers? table<string, number>
+---@field bionic_slots? table<string, integer>
+---@field activation_message? string|LocalizedText
+---@field cooldown? integer|string Turns or a duration with units.
+---@field spawn_item? StaticMutationItemAction
+---@field ranged_mutation? StaticMutationItemAction
+---@field transform? StaticMutationTransform
+---@field attacks? StaticMutationAttack[]
+---@field comfort? StaticMutationComfort[]
+
+---Register a mutation during ordered Mod data loading, preserving native inheritance.
+---@param options StaticMutationOptions
+function CcbPlatformContent.define_mutation(options) end
+
 ---@class StaticMonsterAttackReference
 ---@field reference string Registered monster attack to copy.
 ---@field cooldown number Cooldown in game turns.
