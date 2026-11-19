@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "fcl_augmentation_clinic_n4",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "        ----------      ",
+            "   ------........-      ",
+            "   -..........:..-      ",
+            "   -.X....SS.....-      ",
+            "   -......SS.....-      ",
+            "  --.............-      ",
+            "  -........oooo..-      ",
+            "  ------5........-      ",
+            "        ----------      ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        furniture = { S = "f_solar_unit_v3" },
+        fill_terrain = "t_flat_roof",
+    },
+}
