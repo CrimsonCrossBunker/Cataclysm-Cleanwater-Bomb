@@ -1,28 +1,42 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_COOPER_ABOUT",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "dialogue_cooper_cooper_friendly" } ],
-      "no": "Sorry, but I don't know you that well and I'd rather not go into that.",
-      "yes": "I was born here in New England, lived here all my life.  Was an accountant before the Collapse, if you can believe that.  There wasn't really anything special about my life before I learned about the Song, so there isn't much to say."
+    "id": "TALK_COOPER_INTRODUCTION",
+    "dynamic_line": "I scavenge only so I can survive, but I have a much greater goal than just to live.",
+    "speaker_effect": { "effect": { "u_add_var": "dialogue_first_meeting_cooper_goal_dk", "value": "yes" } },
+    "responses": [
+      { "text": "A… goal?  What do you mean?  What is there to do other than survive?", "topic": "TALK_COOPER_GOAL" },
+      { "text": "Uh, okay then.  I have to go now; have a nice day.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_COOPER_GOAL",
+    "dynamic_line": "Something changed during the Collapse - the apocalypse, if you prefer that.  The way the dead rise again and again, it's tied to their bones - notice that only when you pulp and crush them properly do they actually die.  A woman I met - Brigitte was her name - taught me how to use the power.  We call it the Song, since if you know how, you can hear it, a quiet hum in the bones.  If I collect enough Song, the concentrated power can reverse the Cataclysm.  Undo all of this.",
+    "speaker_effect": {
+      "effect": [
+        { "u_lose_var": "dialogue_first_meeting_cooper_goal_dk" },
+        { "u_add_var": "dialogue_first_meeting_cooper_goal_k", "value": "yes" }
+      ]
     },
     "responses": [
+      { "text": "Do you have any proof that this will work?", "topic": "TALK_COOPER_WORK" },
       {
-        "text": "I understand.",
-        "topic": "TALK_KINDRED_COOPER",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_cooper_cooper_friendly" } ] } }
+        "text": "You mentioned a woman, Brigitte.  Why isn't she with you?  What happened?",
+        "topic": "TALK_COOPERS_SIDE",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "dialogue_song_asked_about_song" } ] } }
       },
       {
-        "text": "Do you have a favorite food?",
-        "topic": "TALK_COOPER_FOOD",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_cooper_cooper_friendly" } ] }
+        "text": "Wait, Brigitte LaCroix?  I've met her.",
+        "topic": "TALK_COOPER_KNOWBRIG",
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "dialogue_song_asked_about_song" } ] },
+            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_cooper_cooper_friendly" } ] } }
+          ]
+        }
       },
-      {
-        "text": "I see.  Thanks for sharing.",
-        "topic": "TALK_KINDRED_COOPER",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_cooper_cooper_friendly" } ] }
-      }
+      { "text": "That's insane.  I'm going.", "topic": "TALK_DONE" }
     ]
   }
 ]
