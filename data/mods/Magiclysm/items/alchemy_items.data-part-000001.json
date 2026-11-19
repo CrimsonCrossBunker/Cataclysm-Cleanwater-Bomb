@@ -1,0 +1,42 @@
+[
+  {
+    "id": "copper_circlet",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "name": { "str": "copper circlet" },
+    "description": "A wooden band with copper trimmings to be worn on the head.  Touching your temples with it on makes you feel very calm.",
+    "weight": "700 g",
+    "volume": "600ml",
+    "price": "15 USD",
+    "price_postapoc": "1 USD",
+    "material": [ "copper", "wood" ],
+    "symbol": "[",
+    "color": "brown",
+    "warmth": 0,
+    "material_thickness": 1,
+    "flags": [ "BELTED", "PADDED" ],
+    "qualities": [ { "id": "MANA_FOCUS", "level": 1 } ],
+    "armor": [ { "encumbrance": 1, "coverage": 5, "covers": [ "head" ] } ]
+  },
+  {
+    "id": "silver_circlet",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "name": { "str": "silver circlet" },
+    "description": "A wooden band with silver trimmings to be worn on the head.  Touching your temples with it on makes you feel very calm.",
+    "weight": "700 g",
+    "volume": "600ml",
+    "price": "30 USD",
+    "price_postapoc": "2 USD",
+    "material": [ "silver", "wood" ],
+    "symbol": "[",
+    "color": "light_gray",
+    "warmth": 0,
+    "material_thickness": 1,
+    "flags": [ "BELTED", "PADDED" ],
+    "qualities": [ { "id": "MANA_FOCUS", "level": 2, "speed": 0.66 } ],
+    "armor": [ { "encumbrance": 1, "coverage": 5, "covers": [ "head" ] } ]
+  }
+]

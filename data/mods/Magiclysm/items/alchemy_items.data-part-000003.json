@@ -1,0 +1,42 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "AMMO" ],
+    "id": "alumentum",
+    "category": "spare_parts",
+    "price": "9 USD",
+    "name": { "str_sp": "alumentum" },
+    "symbol": "=",
+    "color": "light_blue",
+    "description": "Alumentum is magically processed coal or charcoal.  It burns as hot as magnesium, and for a significantly longer period of time.  One of the very few magical materials that is still produced in any quantity today due to its usefulness.",
+    "phase": "solid",
+    "volume": "250 ml",
+    "weight": "11 g",
+    "material": [ "alumentum" ],
+    "ammo_type": "alumentum",
+    "count": 50,
+    "stack_size": 10
+  },
+  {
+    "id": "alchemist_bomb_act",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "weapons",
+    "name": { "str": "mana bomb (lit)", "str_pl": "mana bombs (lit)" },
+    "description": "The liquid in the bottle is sizzling.  Throwing it away from you, preferably at an enemy, would be a very good idea.",
+    "weight": "430 g",
+    "volume": "200 ml",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "to_hit": -3,
+    "material": [ "concentrated_mana", "crystallized_mana" ],
+    "symbol": "*",
+    "color": "red",
+    "explode_in_fire": true,
+    "explosion": { "power": 200 },
+    "use_action": { "type": "message", "message": "The reaction has already started - all you can do is get it away from you!" },
+    "countdown_action": { "type": "explosion", "explosion": { "power": 200 } },
+    "flags": [ "TRADER_AVOID" ],
+    "melee_damage": { "bash": 14 }
+  }
+]
