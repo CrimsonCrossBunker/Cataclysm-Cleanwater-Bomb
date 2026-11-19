@@ -1,14 +1,6 @@
 [
   {
     "type": "mapgen",
-    "update_mapgen_id": "mx_roadblock",
-    "object": {
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
-      "place_nested": [ { "chunks": [ "24x24_roadblock_turret", "24x24_roadblock_cops", "24x24_roadblock_crash" ], "x": 0, "y": 0 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "24x24_roadblock_turret",
     "object": {
       "mapgensize": [ 24, 24 ],
