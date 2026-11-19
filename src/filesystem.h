@@ -92,7 +92,11 @@ std::vector<P> get_files_from_path_with_path_exclusion( const std::string &patte
         const P &root_path = P(), bool recursive_search = false,
         bool match_extension = false );
 
-/** Load order for native JSON and Lua data files. A .data.lua file occupies its matching .json slot. */
+/**
+ * Native JSON and Lua files share a slot by basename. Within each slot, load
+ * the unnumbered JSON file, numbered .data-part-NNNNNN fragments in order,
+ * then the unnumbered .data.lua file. JSON precedes Lua at the same position.
+ */
 std::vector<cata_path> get_ordered_mod_data_files( const cata_path &root_path,
         bool exclude_interactions );
 

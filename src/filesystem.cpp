@@ -2,6 +2,7 @@
 #include "cata_path.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -10,7 +11,11 @@
 #include <filesystem>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <string>
+#include <string_view>
+#include <system_error>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 
@@ -450,13 +455,28 @@ std::vector<cata_path> get_ordered_mod_data_files( const cata_path &root_path,
         bool exclude_interactions )
 {
     static const std::string lua_suffix = ".data.lua";
-    const auto slot_name = []( const std::filesystem::path & path ) {
+    static constexpr std::string_view part_suffix = ".data-part-";
+    const auto slot_order = []( const std::filesystem::path & path ) {
         const std::filesystem::path filename = path.filename();
         const std::string name = filename.generic_u8string();
-        if( string_ends_with( name, lua_suffix ) ) {
-            return std::filesystem::u8path( name.substr( 0, name.size() - lua_suffix.size() ) + ".json" );
+        const bool lua = string_ends_with( name, lua_suffix );
+        const std::string_view suffix = lua ? std::string_view( lua_suffix ) : ".json";
+        std::string_view stem( name.data(), name.size() - suffix.size() );
+        unsigned int position = lua ? std::numeric_limits<unsigned int>::max() : 0u;
+        const std::size_t part = stem.rfind( part_suffix );
+        if( part != std::string_view::npos ) {
+            const std::string_view digits = stem.substr( part + part_suffix.size() );
+            if( digits.size() == 6 ) {
+                unsigned int number = 0;
+                const char *end = digits.data() + digits.size();
+                const auto parsed = std::from_chars( digits.data(), end, number );
+                if( parsed.ec == std::errc{} && parsed.ptr == end ) {
+                    position = number + 1;
+                    stem = stem.substr( 0, part );
+                }
+            }
         }
-        return filename;
+        return std::tuple( std::filesystem::u8path( std::string( stem ) + ".json" ), position, lua );
     };
     return find_file_if_bfs( root_path, true,
     [exclude_interactions]( const std::filesystem::directory_entry & entry, bool is_dir ) {
@@ -464,10 +484,8 @@ std::vector<cata_path> get_ordered_mod_data_files( const cata_path &root_path,
                  ( !is_dir && name_contains( entry, lua_suffix, true, false ) ) ) &&
                !( exclude_interactions && name_contains( entry, "mod_interactions", false, true ) );
     },
-    [&slot_name]( const std::filesystem::path & lhs, const std::filesystem::path & rhs ) {
-        const auto left = slot_name( lhs );
-        const auto right = slot_name( rhs );
-        return left == right ? lhs.extension() == ".json" && rhs.extension() != ".json" : left < right;
+    [&slot_order]( const std::filesystem::path & lhs, const std::filesystem::path & rhs ) {
+        return slot_order( lhs ) < slot_order( rhs );
     } );
 }
 
