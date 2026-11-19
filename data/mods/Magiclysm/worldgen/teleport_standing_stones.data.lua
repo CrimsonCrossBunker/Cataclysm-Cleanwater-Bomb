@@ -1,0 +1,56 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "standing_teleport_stones",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "          S,S           ",
+            "        S,,,,,S         ",
+            "      S,,,S,S,,,S       ",
+            "      ,,,,,,,,,,,       ",
+            "     S,,,S,,,S,,,S      ",
+            "     ,,,,,,S,,,,,,      ",
+            "    S,,,S,mmm,S,,,S     ",
+            "     ,,,,,mAm,,,,,      ",
+            "    S,,,S,mmm,S,,,S     ",
+            "     ,,,,,,S,,,,,,      ",
+            "     S,,,S,,,S,,,S      ",
+            "      ,,,,,,,,,,,       ",
+            "      S,,,S,S,,,S       ",
+            "        S,,,,,S         ",
+            "          S,S           ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        terrain = {
+            [","] = {
+                { id = "t_moss", copies = 50 },
+                { id = "t_grass", copies = 25 },
+                { id = "t_dirt", copies = 25 },
+            },
+            S = {
+                { id = "t_moss", copies = 50 },
+                { id = "t_grass", copies = 25 },
+                { id = "t_dirt", copies = 25 },
+            },
+            m = { { id = "t_moss", copies = 100 } },
+            A = { { id = "t_moss", copies = 100 } },
+            [" "] = "t_null",
+        },
+        furniture = {
+            S = { { id = "f_myst_standing_stone", copies = 65 }, { id = "f_rubble_rock", copies = 35 } },
+            A = "f_teleport_altar",
+        },
+        fill_terrain = "t_region_groundcover",
+        fallback_predecessor_mapgen = "field",
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
