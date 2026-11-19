@@ -1,0 +1,20 @@
+[
+  {
+    "type": "mutation",
+    "id": "WEREWOLF_SILVER_CLAWS",
+    "name": { "str": "Argent Claws" },
+    "points": 4,
+    "description": "While in war form, transform your claws into silver, causing them to do additional damage to creatures of the Nether.",
+    "starting_trait": false,
+    "purifiable": false,
+    "valid": false,
+    "active": true,
+    "activated_is_setup": true,
+    "mana": true,
+    "cost": 1,
+    "time": 6,
+    "activation_msg": "",
+    "activated_eocs": [ "EOC_WEREWOLF_SILVER_CLAWS_ON" ],
+    "deactivated_eocs": [ "EOC_WEREWOLF_SILVER_CLAWS_OFF" ]
+  }
+]

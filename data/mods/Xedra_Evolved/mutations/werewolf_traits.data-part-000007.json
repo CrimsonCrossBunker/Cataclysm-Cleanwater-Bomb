@@ -1,0 +1,21 @@
+[
+  {
+    "//": "Tier 5 traits begin here",
+    "type": "mutation",
+    "id": "WEREWOLF_TRANSFORM_INTO_PRIMAL_FORM",
+    "name": { "str": "Form of the Primal Hunter" },
+    "points": 10,
+    "description": "While in wolf form, you can call on the spirit of the primal wolves of the mythic past and transform into an atavistic creature of nightmare, two meters high at the shoulder, with fur as thick as armor and teeth that can rend steel.  This form also regenerates the same as the war form does.",
+    "starting_trait": false,
+    "purifiable": false,
+    "valid": false,
+    "active": true,
+    "activated_is_setup": true,
+    "mana": true,
+    "cost": 3,
+    "time": 1,
+    "activated_eocs": [ "EOC_WEREWOLF_TRANSFORM_INTO_PRIMAL_FORM_activated" ],
+    "processed_eocs": [ "EOC_WEREWOLF_HYBRID_FORM_healing" ],
+    "deactivated_eocs": [ "EOC_WEREWOLF_TRANSFORM_INTO_PRIMAL_FORM_deactivated" ]
+  }
+]

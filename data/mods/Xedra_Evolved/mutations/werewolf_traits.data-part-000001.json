@@ -1,0 +1,21 @@
+[
+  {
+    "//": "Tier 2 traits begin here",
+    "type": "mutation",
+    "id": "WEREWOLF_SENSE_SPIRITS_AND_ALIENS",
+    "name": { "str": "Sense the Outsider" },
+    "points": 2,
+    "description": "The People have long fought the things from Outside and developed a keen sense when one of them is near.  When active, you can sense nearby creatures of the Nether or beings from Under the Hill.",
+    "starting_trait": false,
+    "purifiable": false,
+    "valid": false,
+    "mana": true,
+    "active": true,
+    "activated_is_setup": true,
+    "cost": 1,
+    "time": 5,
+    "activation_msg": "You open your senses to the presence of your prey.",
+    "activated_eocs": [ "EOC_WEREWOLF_SENSE_SPIRITS_AND_ALIENS_ON" ],
+    "deactivated_eocs": [ "EOC_WEREWOLF_SENSE_SPIRITS_AND_ALIENS_OFF" ]
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "type": "mutation",
+    "id": "WEREWOLF_CURE_OUTSIDE_EFFECTS",
+    "name": "Strike the Inner Outsider",
+    "points": 4,
+    "description": "The People is meant to fight the things from Outside, but sometimes they must fight what is inside their own bodies.  You can focus your mana to try and cure most ailments caused by beings from the Nether, from Under the Hill and from wherever vampires come from.  The amount of mana this requires increases with the amount and severity of your afflictions, and will fail if your mana is insufficient.",
+    "starting_trait": false,
+    "purifiable": false,
+    "valid": false,
+    "active": true,
+    "activated_eocs": [ "EOC_WEREWOLF_CURE_OUTSIDE_EFFECTS_ACTIVATED" ]
+  },
+  {
+    "//": "Tier 4 traits begin here",
+    "type": "mutation",
+    "id": "WEREWOLF_SUPER_FAST_REGENERATION",
+    "name": { "str": "Gift of Lunar Renewal" },
+    "points": 8,
+    "description": "The moon cycles from new to full and back to new, and it always returns no matter how many cycles pass.  You can draw on that eternal renewal and enhance your natural regeneration to a truly monstrous level, healing grievous wounds in seconds and regrowing lost limbs in less than a minute.",
+    "starting_trait": false,
+    "purifiable": false,
+    "valid": false,
+    "active": true,
+    "activated_is_setup": true,
+    "mana": true,
+    "cost": 7,
+    "time": 1,
+    "activation_msg": "Your natural regeneration kicks into overdrive.",
+    "processed_eocs": [ "EOC_WEREWOLF_SUPER_FAST_REGENERATION_activated" ]
+  }
+]
