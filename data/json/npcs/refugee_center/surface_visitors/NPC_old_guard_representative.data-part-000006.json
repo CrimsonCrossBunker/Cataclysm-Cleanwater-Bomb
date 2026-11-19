@@ -1,0 +1,46 @@
+[
+  {
+    "id": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_HUB",
+    "type": "talk_topic",
+    "dynamic_line": "I'm listening.",
+    "responses": [
+      {
+        "text": "Tell me about it.",
+        "condition": { "not": { "u_has_mission": "MISSION_FIND_SUNKEN_HELICOPTER" } },
+        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_1"
+      },
+      {
+        "text": "Anything else I should know?",
+        "condition": { "u_has_mission": "MISSION_FIND_SUNKEN_HELICOPTER" },
+        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_DANGER"
+      },
+      {
+        "text": "Tell me about the cargo.",
+        "condition": { "u_has_mission": "MISSION_FIND_SUNKEN_HELICOPTER" },
+        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_CARGO_0"
+      },
+      { "text": "Never mind…", "topic": "TALK_NONE" }
+    ]
+  },
+  {
+    "id": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_1",
+    "type": "talk_topic",
+    "dynamic_line": "A helicopter crashed in the region not long ago, at first I thought it was just a rumor, caravan guards talking about some crash nearby, but then I got a visit from a couple of Old Guard people looking for a lost helicopter, one of them got quite drunk one night and shared some interesting details, turns out it was an Old Guard heli coming back from way out west with quite the cargo, and I know where you can find it.  That's all you're getting for free though, I'd like to see some return on investment on that bottle you understand.",
+    "responses": [
+      { "text": "I'm not buying anything without some proof.", "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_PROOF" },
+      {
+        "text": "Why sell the info instead of retrieving the cargo yourself?  What happened to the old guard investigation?  How can you be sure that it wasn't looted already?  This sounds sketchy as hell.",
+        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_SKETCHY"
+      },
+      {
+        "condition": { "u_has_items": { "item": "FMCNote", "count": 50 } },
+        "effect": [ { "u_sell_item": "FMCNote", "count": 50 }, { "assign_mission": "MISSION_FIND_SUNKEN_HELICOPTER" } ],
+        "text": "[50 merch] Fine.",
+        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_2",
+        "failure_explanation": "You don't have enough.",
+        "failure_topic": "TALK_DONE"
+      },
+      { "text": "Never mind…", "topic": "TALK_OLD_GUARD_REP" }
+    ]
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "TALK_OLD_GUARD_REP_EXODII_1",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "gendered_line": "If you want to know what our next steps are, I'm not at liberty to tell you.  Truth be told, I don't even know myself.  They don't share that sort of information with me.",
+      "relevant_genders": [ "npc" ]
+    },
+    "responses": [
+      {
+        "text": "Actually, I've met them.  They seem open to trade and things.  Thought you might want to know.",
+        "topic": "TALK_OLD_GUARD_REP_EXODII_2",
+        "condition": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Rubik" } ] }
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_OLD_GUARD_REP" }
+    ]
+  }
+]
