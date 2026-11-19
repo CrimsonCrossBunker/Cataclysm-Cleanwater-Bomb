@@ -1,26 +1,5 @@
 [
   {
-    "id": "water_thirsttrouncer",
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "comestible_type": "DRINK",
-    "category": "food",
-    "material": [ "water" ],
-    "weight": "250 g",
-    "volume": "250 ml",
-    "charges": 1,
-    "symbol": "~",
-    "phase": "liquid",
-    "flags": [ "EATEN_COLD", "NUTRIENT_OVERRIDE" ],
-    "name": { "str_sp": "ThirstTrouncer" },
-    "description": "A watery liquid that holds a truly dangerous amount of hydration.  Nothing hydrates like forcing your body to generate water!  Nothing hydrates like ThirstTrouncer!",
-    "container": "bottle_plastic",
-    "sealed": false,
-    "color": "light_blue",
-    "copy-from": "water",
-    "extend": { "flags": [ "INVENTOR_CRAFTED" ] }
-  },
-  {
     "id": "oxygen_jelly_quick",
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
