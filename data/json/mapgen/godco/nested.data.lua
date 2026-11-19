@@ -422,3 +422,33 @@ ccb.content.define_mapgen {
         terrain = { v = "t_palisade", ["+"] = "t_palisade_gate_o", ["/"] = "t_palisade_pulley" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "darryl_coop",
+    layout = {
+        size = { width = 14, height = 14 },
+        rows = {
+            "AAAAAAAWWWWWWW",
+            "A......W;W;W;W",
+            "T......W;;;;;W",
+            "A......W;W;W;W",
+            "A......A;;;;;W",
+            "A......K;W;W;W",
+            "A......W;;;;;W",
+            "A......W;W;W;W",
+            "A......W;;;;;W",
+            "A......W;W;W;W",
+            "A......W;;;;;W",
+            "A......WWWWWWW",
+            "A............A",
+            "AAAAAAAAAAAAAA",
+        },
+        palettes = { "farm_horse" },
+        terrain = { [";"] = "t_dirtfloor" },
+        rotation = 1,
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested = { { id = "darryl_coop_roof", x = 0, y = 0, z = 1 } },
+        monster_placements = { { id = "mon_chicken", x = 10, y = 5, repetitions = { 5, 7 }, chance = 100 } },
+    },
+}
