@@ -1,45 +1,5 @@
 [
   {
-    "copy-from": "custom_sidebar",
-    "type": "widget",
-    "id": "custom_sidebar",
-    "extend": { "widgets": [ "martial_mastery" ] }
-  },
-  {
-    "//": "Extend with the danger widget",
-    "copy-from": "sidebar-mobile",
-    "type": "widget",
-    "id": "sidebar-mobile",
-    "extend": { "widgets": [ "martial_mastery" ] }
-  },
-  {
-    "id": "martial_mastery",
-    "type": "widget",
-    "style": "layout",
-    "arrange": "rows",
-    "label": "Combat Style",
-    "label_align": "right",
-    "text_align": "right",
-    "widgets": [ "martial_mastery_title", "style_stats", "poise" ]
-  },
-  {
-    "id": "martial_mastery_title",
-    "type": "widget",
-    "width": 8,
-    "style": "text",
-    "string": "Combat Stats:",
-    "flags": [ "W_LABEL_NONE", "W_NO_PADDING" ]
-  },
-  {
-    "id": "style_stats",
-    "type": "widget",
-    "style": "layout",
-    "arrange": "minimum_columns",
-    "label": "SHIELD",
-    "flags": [ "W_DISABLED_WHEN_EMPTY" ],
-    "widgets": [ "tempo", "momentum", "insight" ]
-  },
-  {
     "id": "tempo",
     "type": "widget",
     "style": "text",
