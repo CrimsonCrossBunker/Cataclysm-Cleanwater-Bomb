@@ -6540,6 +6540,7 @@ local SpellDefinition = {}
 ---@field inputs? string[] Native input ids for the selected rule kind.
 ---@field flags? string[] Input terrain/furniture/trap flags; unavailable for field rules.
 ---@field results CcbLuaValue[] Dense native weighted results, such as { { "f_null", 1 } }.
+---@field optional_ids? string[] Input or result IDs allowed to be unresolved at load. The transform uses normal native ID resolution when applied.
 ---@field message? string|LocalizedText Plain strings remain literal; content.text is translated when the transform runs. Plural messages are rejected.
 ---@field message_good? boolean Defaults to true.
 

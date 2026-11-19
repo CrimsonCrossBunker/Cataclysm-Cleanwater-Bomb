@@ -1108,6 +1108,7 @@ struct terrain_transform_rule_definition_data {
     std::vector<std::string> inputs;
     std::vector<std::string> flags;
     std::vector<std::pair<std::string, std::int64_t>> results;
+    std::set<std::string> optional_ids;
     detail::authored_text message;
     bool message_good = true;
 };
@@ -1179,6 +1180,8 @@ struct terrain_transform_definition_handle {
         value.kind = kind;
         value.inputs = string_array( options, "inputs" );
         value.flags = string_array( options, "flags" );
+        const std::vector<std::string> optional_ids = string_array( options, "optional_ids" );
+        value.optional_ids.insert( optional_ids.begin(), optional_ids.end() );
         value.message = detail::read_singular_text( options["message"], {}, "terrain transform message" );
         value.message_good = options.get_or( "message_good", true );
         const sol::optional<sol::table> results =
@@ -7945,6 +7948,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                               "' has an invalid " + rule.kind + " rule" );
                 }
                 const auto valid_native_id = [&]( const std::string & id ) {
+                    if( rule.optional_ids.count( id ) != 0 ) {
+                        return true;
+                    }
                     if( rule.kind == "terrain" ) {
                         return terrain_ids.count( id ) != 0 || ter_str_id( id ).is_valid();
                     }
@@ -7982,6 +7988,13 @@ bool content_transaction::validate( const runtime &owner_runtime,
                         throw std::runtime_error( "terrain transform '" + definition.id +
                                                   "' has an unknown, duplicate, or invalid result '" +
                                                   result + "'" );
+                    }
+                }
+                for( const std::string &id : rule.optional_ids ) {
+                    if( results.count( id ) == 0 &&
+                        std::find( rule.inputs.begin(), rule.inputs.end(), id ) == rule.inputs.end() ) {
+                        throw std::runtime_error( "terrain transform '" + definition.id +
+                                                  "' has an optional id that is neither an input nor a result: '" + id + "'" );
                     }
                 }
             }
@@ -12336,6 +12349,10 @@ std::string content_transaction::fingerprint() const
             for( const auto &[result, weight] : rule.results ) {
                 hash_part( state, result );
                 hash_part( state, std::to_string( weight ) );
+            }
+            for( const std::string &id : rule.optional_ids ) {
+                hash_part( state, "optional_id" );
+                hash_part( state, id );
             }
             hash_part( state, rule.message.raw );
             hash_part( state, rule.message.translated ? "translated" : "literal" );
