@@ -1,0 +1,105 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "beans_cooked",
+    name = ccb.content.plural_text("cooked beans", "cooked beans"),
+    mass = "270 g",
+    color = "light_gray",
+    symbol = "%",
+    description = ccb.content.text("A hearty serving of cooked great northern beans."),
+    display_type = "BY_WEIGHT",
+    price = "1 USD",
+    survival_price = "1 USD",
+    materials = { "bean" },
+    volume = "250 ml",
+    flags = { "EATEN_HOT", "NUTRIENT_OVERRIDE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "10 days",
+        kind = "FOOD",
+        quench = 1,
+        calories = 203,
+        fun = 1,
+        vitamins = { { id = "calcium", amount = 8 }, { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "tofu",
+    name = ccb.content.plural_text("tofu", "tofu"),
+    mass = "85 g",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("Tofu, a soy protein crucial to East Asian cuisine.  It absorbs flavors very well and can be used as a meat alternative in many dishes."),
+    display_type = "BY_WEIGHT",
+    price = "90 cent",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    volume = "85 ml",
+    flags = { "EATEN_HOT", "NUTRIENT_OVERRIDE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "4 days",
+        kind = "FOOD",
+        calories = 130,
+        fun = -4,
+        smoking_result = "dry_tofu",
+        vitamins = {
+            { id = "calcium", amount = 20 },
+            { id = "iron", amount = 4 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "tofu_fried",
+    name = ccb.content.plural_text("fried tofu", "fried tofu"),
+    mass = "85 g",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("Tofu, a soy protein crucial to East Asian cuisine.  It absorbs flavors very well and can be used as a meat alternative in many dishes."),
+    display_type = "BY_WEIGHT",
+    price = "90 cent",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    volume = "85 ml",
+    flags = { "EATEN_HOT", "NUTRIENT_OVERRIDE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "4 days",
+        kind = "FOOD",
+        fun = 10,
+        calories = 150,
+        vitamins = {
+            { id = "calcium", amount = 16 },
+            { id = "iron", amount = 4 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "dry_tofu",
+    name = ccb.content.plural_text("dehydrated tofu", "dehydrated tofu"),
+    mass = "25 g",
+    volume = "50 ml",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("Dehydrated tofu, sealed and still extra firm to last a long time."),
+    display_type = "BY_WEIGHT",
+    price = "90 cent",
+    survival_price = "75 cent",
+    materials = { "veggy" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        calories = 130,
+        vitamins = {
+            { id = "calcium", amount = 16 },
+            { id = "iron", amount = 4 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}

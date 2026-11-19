@@ -1,0 +1,26 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "BREWABLE", "COMESTIBLE" ],
+    "id": "acid_soaked_hide",
+    "name": { "str_sp": "acid soaked hide" },
+    "description": "Raw hide soaking in a dilute acid solution to extract collagen.  After 24 hours the solution can be strained to extract fresh gelatin.",
+    "weight": "500 g",
+    "material": [ "leather", "acid" ],
+    "color": "yellow",
+    "sealed": false,
+    "symbol": "~",
+    "calories": 9,
+    "quench": 6,
+    "fun": -10,
+    "price": "0 cent",
+    "volume": "10L",
+    "charges": 1,
+    "price_postapoc": "10 cent",
+    "phase": "liquid",
+    "comestible_type": "DRINK",
+    "flags": [ "NUTRIENT_OVERRIDE" ],
+    "brew_time": "24 hours",
+    "brew_results": [ "gelatin_extracted" ]
+  }
+]

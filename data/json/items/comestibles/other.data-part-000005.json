@@ -1,0 +1,47 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "dry_beans",
+    "name": { "str_sp": "dried beans" },
+    "weight": "55 g",
+    "color": "light_gray",
+    "container": "bag_plastic_small",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "quench": -4,
+    "calories": 203,
+    "description": "Dehydrated great northern beans.  Tasty and nutritious when cooked, virtually inedible when dry.",
+    "display_type": "BY_WEIGHT",
+    "price": "50 cent",
+    "price_postapoc": "25 cent",
+    "material": [ "bean" ],
+    "volume": "50 ml",
+    "cooks_like": "beans_cooked",
+    "vitamins": [ [ "calcium", 56 ], [ "iron", 22 ], [ "veggy_allergen", 1 ] ],
+    "petfood": [ "CATTLEFOOD" ],
+    "flags": [ "EDIBLE_FROZEN", "RAW", "INEDIBLE", "CATTLE", "PLANTABLE_SEED" ],
+    "plant_name": "beans",
+    "fruit": "raw_beans",
+    "seeds": false,
+    "byproducts": [ "withered" ],
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ],
+    "stackable": true,
+    "crop_climate": {
+      "base_c": 10,
+      "optimum_c": 25,
+      "min_c": 0,
+      "max_c": 36,
+      "degree_days": 480,
+      "water_mm": 350,
+      "growing_days": 63,
+      "water_peak": 0.68
+    }
+  }
+]

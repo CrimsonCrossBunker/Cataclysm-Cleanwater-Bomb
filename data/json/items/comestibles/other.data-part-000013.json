@@ -1,0 +1,20 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "comestible_type": "FOOD",
+    "id": "camp_meal_small",
+    "name": { "str": "prepared meal (small)", "str_pl": "prepared meals (small)" },
+    "description": { "str": "I am an item used in faction camps.  If you see this description, it is a bug.", "//~": "NO_I18N" },
+    "weight": "250 g",
+    "volume": "250 ml",
+    "price": "100 cent",
+    "price_postapoc": "100 cent",
+    "material": [ "foodplace_foodstuff" ],
+    "symbol": "F",
+    "color": "brown",
+    "spoils_in": "300 days",
+    "calories": 0,
+    "flags": [ "DEBUG_ONLY" ]
+  }
+]

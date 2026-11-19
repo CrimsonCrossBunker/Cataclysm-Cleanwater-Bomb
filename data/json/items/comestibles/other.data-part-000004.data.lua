@@ -1,0 +1,173 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "yeast",
+    name = ccb.content.plural_text("yeast", "yeast"),
+    mass = "11 g",
+    color = "white",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("A powder-like mix of cultured yeast, good for baking and brewing alike."),
+    display_type = "BY_WEIGHT",
+    price = "6 cent",
+    survival_price = "2 cent",
+    materials = { "yeast" },
+    volume = "10 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = { kind = "FOOD", quench = -1, calories = 9, fun = -10 },
+}
+
+ccb.content.define_item {
+    id = "yogurt_starter_culture",
+    name = ccb.content.plural_text("yogurt starter culture", "yogurt starter culture"),
+    mass = "11 g",
+    color = "white",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("A powder-like mix of cultured yogurt bacteria, good for fermenting yogurt."),
+    display_type = "BY_WEIGHT",
+    price = "37 cent",
+    survival_price = "12 cent",
+    materials = { "powder" },
+    volume = "62 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = { kind = "FOOD", quench = -1, calories = 1, fun = -10 },
+}
+
+ccb.content.define_item {
+    id = "koji",
+    looks_like = "yeast",
+    name = ccb.content.plural_text("koji", "koji"),
+    mass = "11 g",
+    color = "white",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("Some ground rice covered with a special kind of mold used for saccharification and fermentation in Japanese cuisine."),
+    display_type = "BY_WEIGHT",
+    price = "6 cent",
+    survival_price = "2 cent",
+    materials = { "powder" },
+    volume = "10 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = { kind = "FOOD", quench = -1, calories = 9, fun = -10 },
+}
+
+ccb.content.define_item {
+    id = "gelatin_powder",
+    name = ccb.content.plural_text("powdered gelatin", "powdered gelatin"),
+    mass = "11 g",
+    color = "yellow",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("Dried and powdered gelatin, used as a gelling agent when mixed with water."),
+    display_type = "BY_WEIGHT",
+    price = "6 cent",
+    survival_price = "2 cent",
+    materials = { "powder" },
+    volume = "10 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        quench = -1,
+        calories = 37,
+        fun = -10,
+        vitamins = {
+            { id = "iron", amount = "100 μg" },
+            { id = "calcium", amount = "6 mg" },
+            { id = "meat_allergen", amount = 1 },
+        },
+    },
+}
+
+-- Same as the meat it's been made from.  It's additional ingredient compared to smoking, jerking, and dehydrating, so there's no incentive otherwise.
+ccb.content.define_item {
+    id = "gelatin_fresh",
+    name = ccb.content.plural_text("fresh gelatin", "fresh gelatin"),
+    conditional_names = {
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "mutant",
+            name = ccb.content.plural_text("abomination %s", "abomination %s"),
+        },
+        {
+            kind = "VITAMIN",
+            key = "human_flesh_vitamin",
+            name = ccb.content.plural_text("amoral %s", "amoral %s"),
+        },
+        {
+            kind = "FLAG",
+            key = "STRICT_HUMANITARIANISM",
+            name = ccb.content.plural_text("Orwell's %s", "Orwell's %s"),
+        },
+    },
+    mass = "25 g",
+    color = "yellow",
+    symbol = "%",
+    description = ccb.content.text("Fresh gelatin.  Not vegan-friendly!"),
+    price = "1 USD 50 cent",
+    survival_price = "50 cent",
+    materials = { "flesh" },
+    volume = "250 ml",
+    flags = { "EATEN_COLD", "FREEZERBURN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "7 days",
+        kind = "FOOD",
+        calories = 6,
+        vitamins = {
+            { id = "vitC", amount = 15 },
+            { id = "calcium", amount = 2 },
+            { id = "iron", amount = 8 },
+            { id = "meat_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "meal_chitin_piece",
+    name = ccb.content.plural_text("chitin powder", "chitin powder"),
+    mass = "62 g",
+    color = "brown",
+    symbol = "%",
+    description = ccb.content.text("This chitin powder can be used to craft fertilizer and some other things."),
+    display_type = "BY_WEIGHT",
+    price = "6 cent",
+    survival_price = "2 cent",
+    materials = { "powder" },
+    volume = "112 ml",
+    flags = { "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE" },
+    stackable = true,
+    comestible = { kind = "FOOD", quench = -5, calories = 17, fun = -10 },
+}
+
+ccb.content.define_item {
+    id = "can_beans",
+    name = ccb.content.plural_text("canned beans", "canned beans"),
+    mass = "256 g",
+    color = "brown",
+    sealed_container = true,
+    symbol = "%",
+    description = ccb.content.text("Canned beans.  A staple among canned goods, these are reputedly good for one's coronary health."),
+    display_type = "BY_WEIGHT",
+    price = "75 cent",
+    survival_price = "75 cent",
+    materials = { "bean" },
+    volume = "250 ml",
+    flags = { "EATEN_HOT" },
+    stackable = true,
+    comestible = {
+        shelf_life = "2 days",
+        kind = "FOOD",
+        quench = -1,
+        calories = 203,
+        vitamins = {
+            { id = "calcium", amount = 9 },
+            { id = "iron", amount = 24 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
