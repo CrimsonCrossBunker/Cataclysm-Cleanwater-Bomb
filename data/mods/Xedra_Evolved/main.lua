@@ -252,3 +252,4 @@ require("monster_groups")
 require("tile_interactions")
 
 require("consumable_effects")
+require("alchemy_consumables")

@@ -3450,6 +3450,7 @@ sol::table recalculate_character_enchantments(
 struct character_demographic_updates {
     std::optional<int> age;
     std::optional<int> height_cm;
+    std::optional<bool> male;
 };
 
 character_demographic_updates read_character_demographic_updates(
@@ -3463,6 +3464,14 @@ character_demographic_updates read_character_demographic_updates(
         }
         const std::string key =
             entry.first.as<std::string>();
+        if( key == "male" ) {
+            if( entry.second.get_type() != sol::type::boolean ) {
+                throw std::invalid_argument(
+                    "services.characters.set_demographics male must be a boolean" );
+            }
+            result.male = entry.second.as<bool>();
+            continue;
+        }
         if( key != "age" && key != "height_cm" ) {
             throw std::invalid_argument(
                 "services.characters.set_demographics received unknown field '" +
@@ -3489,9 +3498,9 @@ character_demographic_updates read_character_demographic_updates(
             result.height_cm = static_cast<int>( value );
         }
     }
-    if( !result.age && !result.height_cm ) {
+    if( !result.age && !result.height_cm && !result.male ) {
         throw std::invalid_argument(
-            "services.characters.set_demographics requires age or height_cm" );
+            "services.characters.set_demographics requires age, height_cm or male" );
     }
     return result;
 }
@@ -3504,6 +3513,7 @@ sol::table character_demographic_state(
     result["base_age"] = character.base_age();
     result["height_cm"] = character.height();
     result["base_height_cm"] = character.base_height();
+    result["male"] = character.male;
     result["bmi"] = character.get_bmi();
     result["fat_bmi"] = character.get_bmi_fat();
     result["lean_bmi"] = character.get_bmi_lean();
@@ -3541,6 +3551,9 @@ sol::table set_character_demographics(
         // Mirrors talker_character::set_height and therefore the legacy
         // assignment semantic: the supplied value becomes base height.
         character->set_base_height( *updates.height_cm );
+    }
+    if( updates.male.has_value() ) {
+        character->male = *updates.male;
     }
     sol::table value = state.create_table();
     value["before"] = std::move( before );

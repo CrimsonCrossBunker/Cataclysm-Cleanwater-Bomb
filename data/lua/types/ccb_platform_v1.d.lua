@@ -12848,6 +12848,17 @@ function CcbCharactersApi.drop_weapon(character) end
 ---@return CcbCharacterAdjustmentResult result
 function CcbCharactersApi.adjust(character, adjustments) end
 
+---@class CcbCharacterDemographicsUpdate
+---@field age? integer Effective age in years, 0 through 10000.
+---@field height_cm? integer Base height in centimeters, 1 through 10000.
+---@field male? boolean Native Character gender flag.
+
+---Update age, base height or the saved gender flag of an exact Character.
+---@param character GameHandle Exact live Character handle.
+---@param updates CcbCharacterDemographicsUpdate At least one field is required.
+---@return CcbResult result `value.before` and `value.after` contain demographic snapshots.
+function CcbCharactersApi.set_demographics(character, updates) end
+
 ---Query vehicle occupancy at the Character's current map square, matching the native vehicle-at-position lookup.
 ---This may differ from snapshot movement.in_vehicle, which is a cached passenger flag.
 ---@param character GameHandle Exact live Character handle.

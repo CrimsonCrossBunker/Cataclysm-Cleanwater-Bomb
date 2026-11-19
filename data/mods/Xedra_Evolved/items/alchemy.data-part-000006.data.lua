@@ -1,6 +1,38 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "life_extension_potion",
+    name = ccb.content.plural_text("life extension potion", "life extension potions"),
+    description = ccb.content.text("A source of considerable wealth for the few alchemists talented enough to distill them, these potions are capable of adding decades to the lifespan of those who can afford the price of the rare and expensive ingredients they require.  They are however not able to prolong a life indefinitely beyond its natural years, and you will need to find other means to achieve immortality, if that is your goal."),
+    mass = "50 g",
+    volume = "250 ml",
+    price = "150 cent",
+    survival_price = "5 USD",
+    materials = { "water" },
+    symbol = "!",
+    color = "light_cyan",
+    default_container = "flask_glass",
+    flags = { "NO_INGEST", "WATER_DISSOLVE", "EDIBLE_FROZEN", "SINGLE_USE" },
+    comestible = { kind = "MED", quench = 2, healthy = 7, fun = -30, on_consume = "drink_life_extension" },
+}
+
+ccb.content.define_item {
+    id = "gender_potion",
+    name = ccb.content.plural_text("gender change potion", "gender change potions"),
+    description = ccb.content.text("This is a potion of change.  It will turn you into the opposite gender.  Turn into your true self, or otherwise experience what lies within the opposite gender."),
+    mass = "50 g",
+    volume = "250 ml",
+    price = "150 cent",
+    survival_price = "5 USD",
+    materials = { "water" },
+    symbol = "!",
+    color = "light_cyan",
+    default_container = "flask_glass",
+    flags = { "NO_INGEST", "WATER_DISSOLVE", "EDIBLE_FROZEN", "SINGLE_USE" },
+    comestible = { kind = "MED", quench = 2, healthy = 3, fun = -1, on_consume = "drink_gender_potion" },
+}
+
+ccb.content.define_item {
     id = "potion_dex",
     name = ccb.content.plural_text("potion of wicked quick hands", "potions of wicked quick hands"),
     description = ccb.content.text("This is a potion of wicked quick hands.  It will increase your dexterity for 50 minutes."),
