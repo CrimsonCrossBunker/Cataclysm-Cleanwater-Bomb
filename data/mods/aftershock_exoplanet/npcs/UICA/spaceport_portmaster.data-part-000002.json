@@ -1,0 +1,15 @@
+[
+  {
+    "id": "TALK_SPACEPORT_PORTMASTER_UP",
+    "type": "talk_topic",
+    "dynamic_line": "Excellent, the current price for a trip up is 12500 USD.  Do you wish to book passage?",
+    "responses": [
+      {
+        "text": "I'm ready, book me in the next ship.",
+        "effect": [ { "u_spend_cash": 1250000, "true_eocs": "EOC_AFS_AUGUSTMOON_SPACEPORT_TP" } ],
+        "topic": "TALK_DONE"
+      },
+      { "text": "I need to settle a few things first", "topic": "TALK_DONE" }
+    ]
+  }
+]
