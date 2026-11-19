@@ -164,3 +164,5 @@ require("item_groups")
 require("item_group_changes")
 
 require("effect_types")
+
+require("monster_groups")
