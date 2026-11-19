@@ -129,3 +129,5 @@ require("active_items")
 require("esper_enkindling")
 
 require("terrain_transforms")
+
+require("monster_groups")
