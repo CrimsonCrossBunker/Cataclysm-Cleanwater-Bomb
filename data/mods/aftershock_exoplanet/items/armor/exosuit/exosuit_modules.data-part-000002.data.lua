@@ -1,23 +1,44 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
-    id = "exo_carry_on",
-    copy_from = "exo_carry",
-    name = ccb.content.plural_text("exosuit load support module (on)", "exosuit load support modules (on)"),
-    description = ccb.content.text("This module significantly increases the exosuit's weight bearing at the cost of increased power consumption.  It is turned on and continually drawing power.  Use it to turn it off."),
-    flags = { "FRAGILE", "CANT_WEAR", "WATERPROOF", "USE_UPS", "EXO_MEDIUM_GADGET", "SPAWN_ACTIVE" },
-    max_worn = 1,
-    revert_to = "exo_carry",
-    subtype_order = { "tool", "armor" },
-    tool = { power_draw = "1 W" },
-    armor = {},
-    use_actions = {
-        {
-            kind = "transform",
-            ammo_scale = 0,
-            target = "exo_carry",
-            message = ccb.content.text("You deactivate the module."),
-            menu_text = ccb.content.text("Turn off module"),
-        },
+    id = "exo_aux_power",
+    category = "exosuit",
+    name = ccb.content.plural_text("exosuit auxiliary battery", "exosuit auxiliary batteries"),
+    description = ccb.content.text("This is a rechargeable auxiliary power unit that attaches to an exosuit hardpoint."),
+    mass = "5 kg",
+    volume = "2500 ml",
+    materials = { "plastic", "qt_steel" },
+    symbol = "=",
+    looks_like = "storage_battery",
+    color = "light_gray",
+    flags = {
+        "FRAGILE", "CANT_WEAR", "NO_UNLOAD", "NO_RELOAD", "RECHARGE", "WATERPROOF", "IS_UPS", "USE_UPS",
+        "EXO_MEDIUM_GADGET",
     },
+    max_worn = 1,
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { battery = 6000 } } },
+    subtype_order = { "tool", "armor" },
+    tool = { ammo_types = { "battery" } },
+    armor = {},
+}
+
+ccb.content.define_item {
+    id = "exo_small_aux_power",
+    category = "exosuit",
+    name = ccb.content.plural_text("exosuit small auxiliary battery", "exosuit small auxiliary batteries"),
+    description = ccb.content.text("This is a small rechargeable auxiliary power unit that attaches to an exosuit hardpoint."),
+    mass = "500 g",
+    volume = "500 ml",
+    materials = { "plastic", "qt_steel" },
+    symbol = "=",
+    looks_like = "storage_battery",
+    color = "light_gray",
+    flags = {
+        "FRAGILE", "CANT_WEAR", "NO_UNLOAD", "NO_RELOAD", "RECHARGE", "WATERPROOF", "IS_UPS", "USE_UPS",
+        "EXO_SMALL_GADGET",
+    },
+    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { battery = 2500 } } },
+    subtype_order = { "tool", "armor" },
+    tool = { ammo_types = { "battery" } },
+    armor = {},
 }
