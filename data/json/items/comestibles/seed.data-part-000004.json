@@ -1,0 +1,28 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "coffee_pod",
+    "name": { "str": "Kentucky coffee pod" },
+    "category": "other",
+    "weight": "26 g",
+    "color": "light_green",
+    "comestible_type": "FOOD",
+    "looks_like": "hickory_nut",
+    "symbol": "%",
+    "quench": -6,
+    "calories": 9,
+    "description": "Coffee pods taken from a Kentucky coffeetree.  If washed thoroughly and roasted, you could use them to make a dark and bitter brew much like coffee.",
+    "display_type": "BY_WEIGHT",
+    "price": "25 cent",
+    "price_postapoc": "12 cent",
+    "material": [ { "type": "dried_vegetable", "portion": 10 }, { "type": "veggy", "portion": 1 } ],
+    "volume": "62 ml",
+    "fun": -10,
+    "flags": [ "HIDDEN_POISON", "RAW" ],
+    "use_action": [ "POISON" ],
+    "//": "USDA states that the pods of the Kentucky coffeetree contain a toxic alkaloid broken down in the roasting process, so they're poisonous",
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
+  }
+]

@@ -1,0 +1,436 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_chamomile",
+    "copy-from": "seed",
+    "looks_like": "seed_raw_dandelion",
+    "name": { "str_sp": "chamomile seeds" },
+    "description": "Some chamomile seeds.",
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "INEDIBLE" ],
+    "plant_name": "chamomile",
+    "fruit": "chamomile",
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 5,
+      "optimum_c": 22,
+      "min_c": -4,
+      "max_c": 34,
+      "degree_days": 590,
+      "water_mm": 275,
+      "growing_days": 70,
+      "water_peak": 0.58
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_spurge",
+    "copy-from": "seed",
+    "looks_like": "seed_raw_dandelion",
+    "name": { "str_sp": "spurge seeds" },
+    "description": "Some spurge seeds.",
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "INEDIBLE" ],
+    "plant_name": "spurge",
+    "fruit": "spurge",
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 5,
+      "optimum_c": 22,
+      "min_c": -4,
+      "max_c": 36,
+      "degree_days": 640,
+      "water_mm": 250,
+      "growing_days": 75,
+      "water_peak": 0.58
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "category": "seeds",
+    "id": "seed_popcorn",
+    "copy-from": "kernels",
+    "name": { "str_sp": "seed popcorn" },
+    "container": "null",
+    "extend": { "flags": [ "NUTRIENT_OVERRIDE" ] },
+    "description": "A bunch of dry unpopped corn.  It's intended for planting, but could be put to other uses.",
+    "plant_name": "popcorn",
+    "fruit": "popcorn_cob",
+    "seeds": false,
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 10,
+      "optimum_c": 27,
+      "min_c": 0,
+      "max_c": 38,
+      "degree_days": 1120,
+      "water_mm": 520,
+      "growing_days": 111,
+      "water_peak": 0.66
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_horseradish",
+    "copy-from": "seed",
+    "name": { "str_sp": "horseradish seeds" },
+    "description": "Some horseradish seeds.",
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "INEDIBLE" ],
+    "plant_name": "horseradish",
+    "fruit": "horseradish_root",
+    "byproducts": [ "horseradish_greens" ],
+    "crop_climate": {
+      "base_c": 4,
+      "optimum_c": 20,
+      "min_c": -6,
+      "max_c": 34,
+      "degree_days": 850,
+      "water_mm": 390,
+      "growing_days": 104,
+      "water_peak": 0.7
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_mustard",
+    "copy-from": "seed",
+    "name": { "str_sp": "mustard seeds" },
+    "weight": "2 g",
+    "color": "yellow",
+    "use_action": [ "SEED" ],
+    "fun": -3,
+    "description": "Some mustard seeds.  Could be ground into mustard powder.",
+    "price": "1 cent",
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "INEDIBLE" ],
+    "volume": "2 ml",
+    "plant_name": "mustard",
+    "fruit": "seed_mustard",
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 4,
+      "optimum_c": 20,
+      "min_c": -5,
+      "max_c": 32,
+      "degree_days": 450,
+      "water_mm": 210,
+      "growing_days": 55,
+      "water_peak": 0.59
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_bell_pepper",
+    "copy-from": "seed",
+    "price": "50 cent",
+    "name": { "str_sp": "bell pepper seeds" },
+    "description": "Some bell pepper seeds.",
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "INEDIBLE" ],
+    "plant_name": "bell pepper",
+    "fruit": "bell_pepper",
+    "seeds": false,
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 10,
+      "optimum_c": 26,
+      "min_c": 0,
+      "max_c": 37,
+      "degree_days": 790,
+      "water_mm": 480,
+      "growing_days": 92,
+      "water_peak": 0.67
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "18 days" },
+      { "GROWTH_SEEDLING": "18 days" },
+      { "GROWTH_MATURE": "17 days" },
+      { "GROWTH_HARVEST": "17 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_bottle_gourd",
+    "copy-from": "seed",
+    "price": "50 cent",
+    "name": { "str_sp": "bottle gourd seeds" },
+    "description": "Some bottle gourd seeds.",
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "INEDIBLE" ],
+    "plant_name": "bottle gourd",
+    "fruit": "raw_bottle_gourd",
+    "seeds": false,
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 10,
+      "optimum_c": 28,
+      "min_c": 1,
+      "max_c": 40,
+      "degree_days": 890,
+      "water_mm": 430,
+      "growing_days": 97,
+      "water_peak": 0.65
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "15 days" },
+      { "GROWTH_SEEDLING": "15 days" },
+      { "GROWTH_MATURE": "15 days" },
+      { "GROWTH_HARVEST": "15 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_eggplant",
+    "copy-from": "seed",
+    "price": "70 cent",
+    "name": { "str_sp": "eggplant seeds" },
+    "description": "Some eggplant seeds.",
+    "flags": [ "PLANTABLE_SEED" ],
+    "plant_name": "eggplant",
+    "fruit": "eggplant",
+    "seeds": false,
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 15.5,
+      "optimum_c": 29,
+      "min_c": 4,
+      "max_c": 40,
+      "degree_days": 740,
+      "water_mm": 480,
+      "growing_days": 99,
+      "water_peak": 0.68
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "15 days" },
+      { "GROWTH_SEEDLING": "15 days" },
+      { "GROWTH_MATURE": "15 days" },
+      { "GROWTH_HARVEST": "15 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_cauliflower",
+    "copy-from": "seed",
+    "price": "70 cent",
+    "name": { "str_sp": "cauliflower seeds" },
+    "description": "Some cauliflower seeds.",
+    "flags": [ "PLANTABLE_SEED" ],
+    "plant_name": "cauliflower",
+    "fruit": "cauliflower_head",
+    "seeds": false,
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 4.4,
+      "optimum_c": 19,
+      "min_c": -3,
+      "max_c": 29,
+      "degree_days": 620,
+      "water_mm": 380,
+      "growing_days": 83,
+      "water_peak": 0.68
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "15 days" },
+      { "GROWTH_SEEDLING": "15 days" },
+      { "GROWTH_MATURE": "15 days" },
+      { "GROWTH_HARVEST": "15 days" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_artichoke",
+    "copy-from": "seed",
+    "price": "70 cent",
+    "name": { "str_sp": "artichoke seeds" },
+    "description": "Some artichoke seeds.",
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "INEDIBLE" ],
+    "plant_name": "artichoke",
+    "fruit": "raw_artichoke",
+    "seeds": false,
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 7,
+      "optimum_c": 20,
+      "min_c": -4,
+      "max_c": 31,
+      "degree_days": 900,
+      "water_mm": 440,
+      "growing_days": 106,
+      "water_peak": 0.68
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "20 days" },
+      { "GROWTH_SEEDLING": "20 days" },
+      { "GROWTH_MATURE": "20 days" },
+      { "GROWTH_HARVEST": "20 days" },
+      { "GROWTH_OVERGROWN": "10 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_asparagus",
+    "copy-from": "seed",
+    "price": "70 cent",
+    "name": { "str_sp": "asparagus seeds" },
+    "description": "Some asparagus seeds.",
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "INEDIBLE" ],
+    "plant_name": "asparagus",
+    "fruit": "raw_asparagus",
+    "seeds": false,
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 4.4,
+      "optimum_c": 23,
+      "min_c": -4,
+      "max_c": 35,
+      "degree_days": 730,
+      "water_mm": 350,
+      "growing_days": 86,
+      "water_peak": 0.64
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "30 days" },
+      { "GROWTH_SEEDLING": "30 days" },
+      { "GROWTH_MATURE": "20 days" },
+      { "GROWTH_HARVEST": "10 days" },
+      { "GROWTH_OVERGROWN": "10 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_brussels_sprout",
+    "copy-from": "seed",
+    "price": "70 cent",
+    "name": { "str_sp": "brussels sprout seeds" },
+    "description": "Some brussels sprout seeds.",
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "INEDIBLE" ],
+    "plant_name": "brussels sprout",
+    "fruit": "brussels_sprout_stalk",
+    "seeds": false,
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 4.4,
+      "optimum_c": 18,
+      "min_c": -6,
+      "max_c": 29,
+      "degree_days": 810,
+      "water_mm": 410,
+      "growing_days": 105,
+      "water_peak": 0.7
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "20 days" },
+      { "GROWTH_SEEDLING": "20 days" },
+      { "GROWTH_MATURE": "10 days" },
+      { "GROWTH_HARVEST": "10 days" },
+      { "GROWTH_OVERGROWN": "10 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_kale",
+    "copy-from": "seed",
+    "price": "70 cent",
+    "name": { "str_sp": "kale seeds" },
+    "description": "Some kale sprout seeds.",
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "INEDIBLE" ],
+    "plant_name": "kale",
+    "fruit": "kale_head",
+    "seeds": false,
+    "byproducts": [ "withered" ],
+    "crop_climate": {
+      "base_c": 4,
+      "optimum_c": 19,
+      "min_c": -7,
+      "max_c": 31,
+      "degree_days": 450,
+      "water_mm": 260,
+      "growing_days": 60,
+      "water_peak": 0.55
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "15 days" },
+      { "GROWTH_SEEDLING": "15 days" },
+      { "GROWTH_MATURE": "10 days" },
+      { "GROWTH_HARVEST": "10 days" },
+      { "GROWTH_OVERGROWN": "10 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "seed_pea",
+    "copy-from": "pea",
+    "category": "seeds",
+    "name": { "str_sp": "pea seeds" },
+    "container": "null",
+    "description": "Some fresh peas, ready for planting.",
+    "extend": { "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE" ] },
+    "plant_name": "pea",
+    "fruit": "pea_pods",
+    "seeds": false,
+    "crop_climate": {
+      "base_c": 4.4,
+      "optimum_c": 19,
+      "min_c": -4,
+      "max_c": 29,
+      "degree_days": 480,
+      "water_mm": 320,
+      "growing_days": 63,
+      "water_peak": 0.7
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "20 days" },
+      { "GROWTH_SEEDLING": "20 days" },
+      { "GROWTH_MATURE": "20 days" },
+      { "GROWTH_HARVEST": "20 days" },
+      { "GROWTH_OVERGROWN": "10 hour" }
+    ]
+  }
+]
