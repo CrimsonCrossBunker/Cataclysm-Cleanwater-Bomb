@@ -59,25 +59,6 @@
     "min_max_zlevel": [ 0, 0 ]
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "mx_sct_day1",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_utility_light", "x": 5, "y": 10 },
-        { "ter": "t_utility_light", "x": 7, "y": 22 },
-        { "ter": "t_utility_light", "x": 17, "y": 9 },
-        { "ter": "t_utility_light", "x": 17, "y": 22 }
-      ],
-      "place_loot": [
-        { "item": "makeshift_machete", "x": 11, "y": 10, "chance": 100 },
-        { "item": "mace_pipe", "x": 12, "y": 10, "chance": 100 },
-        { "item": "spear_knife", "x": 13, "y": 10, "chance": 100 },
-        { "item": "glock_17", "x": 14, "y": 10, "ammo": 100, "magazine": 100, "chance": 100 },
-        { "item": "glock17_17", "x": 14, "y": 10, "ammo": 100, "chance": 100 }
-      ]
-    }
-  },
-  {
     "id": "mx_sct_mid",
     "type": "map_extra",
     "name": { "str": "Standard midgame combat test area" },
@@ -86,53 +67,12 @@
     "min_max_zlevel": [ 0, 0 ]
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "mx_sct_mid",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_utility_light", "x": 5, "y": 10 },
-        { "ter": "t_utility_light", "x": 7, "y": 22 },
-        { "ter": "t_utility_light", "x": 17, "y": 9 },
-        { "ter": "t_utility_light", "x": 17, "y": 22 }
-      ],
-      "place_loot": [
-        { "item": "fire_ax", "x": 11, "y": 10, "chance": 100 },
-        { "item": "shillelagh", "x": 12, "y": 10, "chance": 100 },
-        { "item": "knife_combat", "x": 13, "y": 10, "chance": 100 },
-        { "group": "modular_ar15", "x": 14, "y": 10, "ammo": 100, "magazine": 100, "chance": 100 },
-        { "item": "stanag30", "x": 14, "y": 10, "ammo": 100, "chance": 100 }
-      ]
-    }
-  },
-  {
     "id": "mx_sct_late",
     "type": "map_extra",
     "name": { "str": "Standard lategame combat test area" },
     "description": "There are some survivor weapons nearby.",
     "generator": { "generator_method": "update_mapgen", "generator_id": "mx_sct_late" },
     "min_max_zlevel": [ 0, 0 ]
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "mx_sct_late",
-    "object": {
-      "place_terrain": [
-        { "ter": "t_utility_light", "x": 5, "y": 10 },
-        { "ter": "t_utility_light", "x": 7, "y": 22 },
-        { "ter": "t_utility_light", "x": 17, "y": 9 },
-        { "ter": "t_utility_light", "x": 17, "y": 22 }
-      ],
-      "place_loot": [
-        { "item": "nodachi", "x": 11, "y": 10, "chance": 100 },
-        { "item": "broadsword", "x": 11, "y": 10, "chance": 100 },
-        { "item": "mace", "x": 12, "y": 10, "chance": 100 },
-        { "item": "lucern_hammer", "x": 12, "y": 10, "chance": 100 },
-        { "item": "pike", "x": 13, "y": 10, "chance": 100 },
-        { "item": "rapier", "x": 13, "y": 10, "chance": 100 },
-        { "item": "m107a1", "x": 14, "y": 10, "ammo": 100, "chance": 100 },
-        { "item": "m107a1mag", "x": 14, "y": 10, "ammo": 100, "chance": 100 }
-      ]
-    }
   },
   {
     "type": "profession",
