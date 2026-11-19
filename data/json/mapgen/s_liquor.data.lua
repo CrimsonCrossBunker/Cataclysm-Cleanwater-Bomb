@@ -1,0 +1,61 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "s_liquor_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "   ------------------   ",
+            "   -................-   ",
+            "   -................-   ",
+            "   -................-   ",
+            "   -................-   ",
+            "   -................-   ",
+            "   -................-   ",
+            "   -................-   ",
+            "   -.&..............-   ",
+            "   -.=..............-   ",
+            "   -5----...........-   ",
+            "        -......v....-   ",
+            "        -...........-   ",
+            "        -...........-   ",
+            "        -.......-----   ",
+            "        -.......-       ",
+            "        ---------       ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "roof_2x2_utilities_b", weight = 15 },
+                    { id = "roof_2x2_utilities_c", weight = 5 },
+                    { id = "roof_2x2_utilities_d", weight = 40 },
+                    { id = "roof_2x2_golf", weight = 20 },
+                    { id = "roof_3x3_wine", weight = 10 },
+                },
+                x = { 10, 11 },
+                y = 12,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "roof_4x4_party", weight = 10 },
+                    { id = "roof_4x4_holdout", weight = 5 },
+                    { id = "roof_4x4_utility", weight = 40 },
+                    { id = "roof_4x4_survivor", weight = 5 },
+                },
+                x = { 5, 15 },
+                y = { 4, 5 },
+            },
+        },
+    },
+}
