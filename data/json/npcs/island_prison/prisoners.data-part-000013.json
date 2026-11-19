@@ -1,15 +1,5 @@
 [
   {
-    "id": "TALK_PRISONER_LEADER_DEMANDED_SUBSTANTIAL_REWARD",
-    "type": "talk_topic",
-    "speaker_effect": { "effect": { "u_add_var": "mission_military_id_prisoner_leader_mission", "value": "yes" } },
-    "dynamic_line": "I'm afraid you're not in the position to demand anything from me, <name_b>.  You're done here, leave.",
-    "responses": [
-      { "text": "Hey, fuck you, <name_b>!  You'll regret that!", "topic": "TALK_DONE", "effect": "hostile" },
-      { "text": "Okay, fine.  Cheapskate!", "topic": "TALK_DONE" }
-    ]
-  },
-  {
     "id": "MISSION_PRISONER_LEADER_GET_ID_CARD",
     "type": "mission_definition",
     "name": { "str": "Get The Thing from the chief's office" },
