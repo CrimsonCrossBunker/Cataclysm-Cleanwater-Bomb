@@ -315,6 +315,22 @@
   },
   {
     "type": "effect_type",
+    "id": "afs_stimpack_thermal_relief",
+    "max_duration": "40 minutes",
+    "max_intensity": 80,
+    "rating": "good",
+    "flags": [ "THERMAL_PAIN_RELIEF" ]
+  },
+  {
+    "type": "effect_type",
+    "id": "afs_chemhealing_thermal_relief",
+    "max_duration": "2 minutes",
+    "max_intensity": 5,
+    "rating": "good",
+    "flags": [ "POWERED_THERMAL_PAIN_RELIEF" ]
+  },
+  {
+    "type": "effect_type",
     "id": "afs_medigel_eff",
     "rating": "good",
     "name": [ "MediGel" ],

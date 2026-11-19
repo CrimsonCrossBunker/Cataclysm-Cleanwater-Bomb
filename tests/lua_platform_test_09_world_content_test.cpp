@@ -1354,7 +1354,6 @@ TEST_CASE( "lua_platform_weather_write_controls_apply_valid_overrides",
     const std::optional<int> saved_windspeed_override =
         weather_manager_ref.windspeed_override;
     const time_point saved_nextweather = weather_manager_ref.nextweather;
-    const auto saved_temperature_cache = weather_manager_ref.temperature_cache;
     using weather_precise_type = std::remove_cv_t<std::remove_reference_t<
                                  decltype( *weather_manager_ref.weather_precise )>>;
     constexpr bool weather_precise_copyable =
@@ -1377,7 +1376,6 @@ TEST_CASE( "lua_platform_weather_write_controls_apply_valid_overrides",
                                       saved_wind_direction_override,
                                       saved_windspeed_override,
                                       saved_nextweather,
-                                      saved_temperature_cache,
     saved_weather_precise]() {
         weather_manager_ref.temperature = saved_temperature;
         weather_manager_ref.lightning_active = saved_lightning_active;
@@ -1392,9 +1390,8 @@ TEST_CASE( "lua_platform_weather_write_controls_apply_valid_overrides",
         weather_manager_ref.wind_direction_override = saved_wind_direction_override;
         weather_manager_ref.windspeed_override = saved_windspeed_override;
         weather_manager_ref.nextweather = saved_nextweather;
-        weather_manager_ref.temperature_cache = saved_temperature_cache;
-        if constexpr( std::is_copy_constructible_v<weather_precise_type> &&
-                      std::is_copy_assignable_v<weather_precise_type> ) {
+        weather_manager_ref.clear_temp_cache();
+        if constexpr( weather_precise_copyable ) {
             *weather_manager_ref.weather_precise = *saved_weather_precise;
         }
     } );

@@ -228,7 +228,7 @@ struct widget_clause {
         // Whether parse tags in this clause
         bool should_parse_tags = false;
         std::function<bool( const_dialogue const & )> condition;
-        bool meets_condition( const std::string &opt_var = "" ) const;
+        bool meets_condition( std::optional<bodypart_id> bp = std::nullopt ) const;
         bool meets_condition( const std::set<bodypart_id> &bps ) const;
 
         static const widget_clause *get_clause_for_id( const std::string &clause_id, const widget_id &wgt,

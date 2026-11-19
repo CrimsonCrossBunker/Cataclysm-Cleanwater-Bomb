@@ -19,6 +19,7 @@
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_id.h"
 #include "condition.h"
 #include "creature.h"
@@ -594,6 +595,19 @@ void eoc_events::notify( const cata::event &e )
 void eoc_events::notify( const cata::event &e, std::unique_ptr<talker> alpha,
                          std::unique_ptr<talker> beta )
 {
+    notify_impl( e, std::move( alpha ), std::move( beta ), nullptr );
+}
+
+void eoc_events::notify_character_damage( const cata::event &e,
+        const damage_event_participants &participants )
+{
+    notify_impl( e, nullptr, nullptr, &participants );
+}
+
+void eoc_events::notify_impl( const cata::event &e, std::unique_ptr<talker> alpha,
+                              std::unique_ptr<talker> beta,
+                              const damage_event_participants *participants )
+{
     if( !has_cached ) {
 
         // initialize all events to an empty vector
@@ -614,7 +628,17 @@ void eoc_events::notify( const cata::event &e, std::unique_ptr<talker> alpha,
     }
 
     for( const effect_on_condition &eoc : event_EOCs[e.type()] ) {
-        if( !alpha ) {
+        if( participants ) {
+            // Do not use the legacy event-ID/avatar fallback for a retired
+            // damage target, or reuse either talker after a previous EOC.
+            Character *current = participants->target();
+            if( !current ) {
+                return;
+            }
+            alpha = get_talker_for( *current );
+            Creature *source = participants->source();
+            beta = source ? get_talker_for( source ) : nullptr;
+        } else if( !alpha ) {
             // try to assign a character for the EOC
             // TODO: refactor event_spec to take consistent inputs
             npc *alpha_talker = nullptr;
@@ -636,15 +660,13 @@ void eoc_events::notify( const cata::event &e, std::unique_ptr<talker> alpha,
                 alpha = get_talker_for( get_avatar() );
             }
         }
-        dialogue d;
         global_variables::impl_t context;
         for( const auto &val : e.data() ) {
             context[val.first] = diag_value{ val.second };
         }
 
-        // if we have an NPC to trigger this event for, do so,
-        // otherwise fallback to having it effect the player
-        d = dialogue( alpha->clone(), beta ? beta->clone() : nullptr, {}, context );
+        dialogue d( participants ? std::move( alpha ) : alpha->clone(),
+                    participants ? std::move( beta ) : ( beta ? beta->clone() : nullptr ), {}, context );
 
         eoc.activate( d );
     }

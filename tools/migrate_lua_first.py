@@ -394,6 +394,19 @@ def native_eoc_required_event(value: dict[str, Any]) -> str | None:
     return event if isinstance(event, str) and event else None
 
 
+def _native_eoc_event_has_platform_alpha(
+    event: str, game_start_avatar_proven: bool,
+) -> bool:
+    return (
+        event in AVATAR_ACTOR_EVENTS or
+        event in CREATURE_ACTOR_EVENTS or
+        event in PROVEN_ITEM_ACTOR_EVENTS or
+        event in PROVEN_NPC_ACTOR_EVENTS or
+        (event == "game_start" and game_start_avatar_proven) or
+        event_character_actor_fields().get(event) in NATIVE_EOC_ALPHA_EVENT_FIELDS
+    )
+
+
 def render_static_item_fault_effect(
     effect: dict[str, Any],
     key: str,
@@ -1223,9 +1236,58 @@ def _inline_actor_kind(member: str) -> str:
     return "inherit"
 
 
+@dataclass(frozen=True)
+class _DialogueBranch:
+    """A private effect-body call, blocked when no child can safely run."""
+
+    child_id: str | None
+
+
+def _is_effect_body(value: Any) -> bool:
+    return (
+        isinstance(value, (str, dict, _DialogueBranch)) or
+        isinstance(value, list) and all(isinstance(entry, (str, dict)) for entry in value)
+    )
+
+
+def _only_effect_members(effect: dict[str, Any], allowed: set[str]) -> bool:
+    return all(
+        key in allowed or (isinstance(key, str) and key.startswith("//"))
+        for key in effect
+    )
+
+
+def _is_if_effect(effect: dict[str, Any]) -> bool:
+    branches = {"then", "else"} & effect.keys()
+    return (
+        isinstance(effect.get("if"), (str, dict)) and bool(branches) and
+        _only_effect_members(effect, {"if", "then", "else"}) and
+        all(_is_effect_body(effect[key]) for key in branches)
+    )
+
+
+def _switch_effect_cases(effect: dict[str, Any]) -> list[dict[str, Any]] | None:
+    cases = effect.get("cases")
+    if (
+        not _only_effect_members(effect, {"switch", "cases"}) or
+        not (isinstance(effect.get("switch"), dict) or type(effect.get("switch")) in (int, float)) or
+        not isinstance(cases, list) or not 1 <= len(cases) <= 128 or
+        any(
+            not isinstance(case, dict) or
+            not (isinstance(case.get("case"), dict) or type(case.get("case")) in (int, float)) or
+            not _only_effect_members(case, {"case", "effect"}) or
+            not _is_effect_body(case.get("effect"))
+            for case in cases
+        )
+    ):
+        return None
+    return cases
+
+
 def normalize_inline_eocs(
     objects: list[SourceObject],
     game_start_event_emitted_by_eoc: bool,
+    dialogue_branch_parents: dict[str, str] | None = None,
 ) -> tuple[
     list[SourceObject], frozenset[str], frozenset[str], frozenset[str], frozenset[str]
 ]:
@@ -1276,6 +1338,7 @@ def normalize_inline_eocs(
     def lower_descriptor(
         entry: dict[str, Any], parent: str, member: str, index: int,
         source: SourceObject, actor_kind: str,
+        *, shares_dialogue: bool = False,
     ) -> str:
         child = copy.deepcopy(entry)
         child_id = child.get("id")
@@ -1289,6 +1352,8 @@ def normalize_inline_eocs(
         child["id"] = child_id
         child["__inline_eoc"] = True
         child["__inline_actor_kind"] = actor_kind
+        if shares_dialogue and dialogue_branch_parents is not None:
+            dialogue_branch_parents[child_id] = parent
         child_source = SourceObject(
             source.path, source.index * 100000 + counter, child
         )
@@ -1324,51 +1389,39 @@ def normalize_inline_eocs(
             return node
         result = copy.deepcopy(node)
 
-        # Effect nodes carry the selector/branches as sibling members (the
-        # ``switch`` member is only the selector expression).  Normalize those
-        # nodes before walking their children so each branch becomes a private
-        # callback rather than an opaque legacy object.  Native ``f_switch``
-        # has no action-level default branch, so leave that whole switch intact
-        # for the renderer to report as a manual rewrite.
-        if "switch" in result and isinstance(result.get("cases"), list):
-            if "default" not in result:
-                switch_cases = result.get("cases")
-                actor_kind = (
-                    inherited_actor_kind
-                    if inherited_actor_kind != "inherit"
-                    else actor_kind_for(result)
-                )
-                for case_index, case in enumerate(switch_cases):
-                    if not isinstance(case, dict) or "effect" not in case:
-                        continue
-                    descriptor = {
-                        "type": "effect_on_condition",
-                        "effect": case.get("effect"),
-                    }
-                    child_id = lower_descriptor(
-                        descriptor, parent, "switch", case_index,
-                        source, actor_kind,
-                    )
-                    case["effect"] = {"run_eocs": child_id}
-
-        if "if" in result and "then" in result:
+        # Native f_if and f_switch apply their effect bodies to the current
+        # dialogue. Only canonical effect containers get private branch calls.
+        # Else-only ifs retain the existing direct effect renderer.
+        switch_cases = _switch_effect_cases(result)
+        if switch_cases is not None or (_is_if_effect(result) and "then" in result):
             actor_kind = (
                 inherited_actor_kind
                 if inherited_actor_kind != "inherit"
                 else actor_kind_for(result)
             )
-            for branch_name in ("then", "else"):
-                if branch_name not in result:
-                    continue
-                descriptor = {
-                    "type": "effect_on_condition",
-                    "effect": result.get(branch_name),
-                }
-                child_id = lower_descriptor(
-                    descriptor, parent, f"if_{branch_name}", 0,
-                    source, actor_kind,
-                )
-                result[branch_name] = {"run_eocs": child_id}
+            unsupported_actorless_branch = inherited_actor_kind == "actorless" and (
+                _node_mentions_actor(result) or _node_has_item_actor(result)
+            )
+
+            def lower_branch(body: Any, member: str, index: int) -> _DialogueBranch:
+                if unsupported_actorless_branch:
+                    # A branch shares its owner's dialogue; its syntax cannot
+                    # supply the alpha missing from the Platform event.
+                    return _DialogueBranch(None)
+                return _DialogueBranch(lower_descriptor(
+                    {"effect": body}, parent, member, index, source, actor_kind,
+                    shares_dialogue=True,
+                ))
+
+            if switch_cases is not None:
+                for case_index, case in enumerate(switch_cases):
+                    case["effect"] = lower_branch(case["effect"], "switch", case_index)
+            else:
+                for branch_name in ("then", "else"):
+                    if branch_name in result:
+                        result[branch_name] = lower_branch(
+                            result[branch_name], f"if_{branch_name}", 0
+                        )
 
         roll_vector_actor_kind: str | None = None
         if (
@@ -1391,60 +1444,8 @@ def normalize_inline_eocs(
                 roll_vector_actor_kind = "character"
 
         for member, raw in list(result.items()):
-            # ``switch`` and nested ``if`` branches are effect containers, not
-            # ordinary data tables.  Lower each branch to a private callback
-            # before the owning EOC is rendered.  This keeps the generated
-            # source in normal Lua control flow while reusing the same typed
-            # effect renderer for arbitrarily nested branches.
-            if member == "switch" and isinstance(raw, dict):
-                switch = copy.deepcopy(raw)
-                switch_cases = switch.get("cases")
-                actor_kind = (
-                    inherited_actor_kind
-                    if inherited_actor_kind != "inherit"
-                    else actor_kind_for(switch)
-                )
-                # This non-canonical nested form is not a native switch
-                # branch container.  In particular, never reinterpret its
-                # ``default`` member as an executable fallback callback.
-                if isinstance(switch_cases, list) and "default" not in switch:
-                    for case_index, case in enumerate(switch_cases):
-                        if not isinstance(case, dict) or "effect" not in case:
-                            continue
-                        branch = case.get("effect")
-                        descriptor = {
-                            "type": "effect_on_condition",
-                            "effect": branch,
-                        }
-                        child_id = lower_descriptor(
-                            descriptor, parent, "switch", case_index,
-                            source, actor_kind,
-                        )
-                        case["effect"] = {"run_eocs": child_id}
-                    switch["cases"] = switch_cases
-                result[member] = switch
-                continue
-            if member == "if" and isinstance(raw, dict) and "then" in raw:
-                conditional = copy.deepcopy(raw)
-                actor_kind = (
-                    inherited_actor_kind
-                    if inherited_actor_kind != "inherit"
-                    else actor_kind_for(conditional)
-                )
-                for branch_name in ("then", "else"):
-                    if branch_name not in conditional:
-                        continue
-                    branch = conditional.get(branch_name)
-                    descriptor = {
-                        "type": "effect_on_condition",
-                        "effect": branch,
-                    }
-                    child_id = lower_descriptor(
-                        descriptor, parent, f"if_{branch_name}", 0,
-                        source, actor_kind,
-                    )
-                    conditional[branch_name] = {"run_eocs": child_id}
-                result[member] = conditional
+            if member in {"if", "switch"}:
+                # These are predicates/selectors, not inline effect containers.
                 continue
             if member not in INLINE_EOC_MEMBERS:
                 result[member] = walk(
@@ -1533,6 +1534,10 @@ def normalize_inline_eocs(
             required_event == "game_start"
         ):
             inherited_actor_kind = "avatar"
+        elif required_event and not _native_eoc_event_has_platform_alpha(
+            required_event, game_start_avatar_proven=False
+        ):
+            inherited_actor_kind = "actorless"
         value = walk(
             source.value,
             stable_id(source.value, f"anonymous_{source.index}"),
@@ -1560,9 +1565,8 @@ def normalize_inline_eocs(
 def _node_mentions_actor(node: Any) -> bool:
     """Return whether a normalized EOC shape depends on a native actor.
 
-    This conservative scan is used only at a persistent-task boundary.  A
-    false positive produces an explicit migration TODO; a false negative
-    would invoke a callback after save/load with a missing borrowed handle.
+    This conservative scan is used for private branches and at callback
+    lifetime boundaries, where selector syntax cannot supply a missing talker.
     """
     if isinstance(node, str):
         return bool(re.search(r"\b(?:u|npc)_[A-Za-z][A-Za-z0-9_]*", node))
@@ -1573,6 +1577,10 @@ def _node_mentions_actor(node: Any) -> bool:
     if "map_spawn_item" in node and "loc" not in node:
         return True
     for key, value in node.items():
+        if key == "if":
+            if any(_condition_has_actor_prefix(value, prefix) for prefix in ("u_", "npc_")):
+                return True
+            continue
         if key in {"alpha_talker", "beta_talker"}:
             return True
         if (
@@ -1592,13 +1600,18 @@ def _node_mentions_actor(node: Any) -> bool:
     return False
 
 
-def _condition_has_actor_prefix(value: Any, prefix: str) -> bool:
+def _condition_has_actor_prefix(
+    value: Any, prefix: str, *, predicate_position: bool = True,
+) -> bool:
     """Recognize actor selectors nested under condition combinators."""
-    non_actor_keys = {"npc_allies", "npc_allies_global"}
+    non_actor_keys = {"npc_allies", "npc_allies_global", "u_has_camp"}
     if isinstance(value, str):
-        return value.startswith(prefix)
+        return predicate_position and value.startswith(prefix) and value not in non_actor_keys
     if isinstance(value, list):
-        return any(_condition_has_actor_prefix(entry, prefix) for entry in value)
+        return any(
+            _condition_has_actor_prefix(entry, prefix, predicate_position=predicate_position)
+            for entry in value
+        )
     if not isinstance(value, dict):
         return False
     for condition_key, condition_value in value.items():
@@ -1618,7 +1631,9 @@ def _condition_has_actor_prefix(value: Any, prefix: str) -> bool:
                 for part in parts
             ):
                 return True
-        elif _condition_has_actor_prefix(condition_value, prefix):
+        elif _condition_has_actor_prefix(
+            condition_value, prefix, predicate_position=condition_key in {"and", "or", "not"},
+        ):
             return True
     return False
 
@@ -2079,6 +2094,13 @@ def _content_callback_actor_provenance(
     graph: dict[str, set[str]] = {}
 
     def collect_reference_fields(node: Any, found: set[str]) -> None:
+        if isinstance(node, _DialogueBranch):
+            # Private if/switch bodies inherit the same dialogue. This edge
+            # is only for provenance, not the table used by named dispatch.
+            child_id = node.child_id
+            if child_id is not None and child_id in known_ids:
+                found.add(child_id)
+            return
         if isinstance(node, list):
             for entry in node:
                 collect_reference_fields(entry, found)
@@ -3980,18 +4002,25 @@ def _validated_eoc_references(
 
 def _traversal_calls(
     references: list[str], eoc_function_names: dict[str, str], *,
-    target: bool = True, owner_actor: str | None = None,
+    context_expression: str = "context",
 ) -> list[str]:
     lines: list[str] = []
     for reference in references:
         function_name = eoc_function_names[reference]
-        if target:
-            lines.append(f"        {function_name}(context, target)")
-        else:
-            lines.append(
-                f"        {function_name}(context, {owner_actor or 'nil'})"
-            )
+        lines.append(f"        {function_name}({context_expression}, target)")
     return lines
+
+
+def _render_dialogue_value_copy() -> list[str]:
+    return [
+        "    local function copy_child_value(value)",
+        "        if services.types and value == services.types.null then return value end",
+        "        if type(value) ~= \"table\" then return value end",
+        "        local copied = {}",
+        "        for key, entry in pairs(value) do copied[key] = copy_child_value(entry) end",
+        "        return copied",
+        "    end",
+    ]
 
 
 def _traversal_integer_expression(
@@ -4113,7 +4142,24 @@ def render_static_traversal(
                 if expression is None:
                     return None
                 unique_id_expressions.append(expression)
-        calls = _traversal_calls(references, eoc_function_names)
+        # Native constructs a fresh dialogue for each (target, EOC) pair,
+        # inheriting only variables and conditionals, not the owner's talkers.
+        calls = _traversal_calls(
+            references, eoc_function_names, context_expression="npc_dialogue(target)",
+        )
+
+        def with_npc_dialogue(lines: list[str]) -> list[str]:
+            body = [
+                *_render_dialogue_value_copy(),
+                "    local function npc_dialogue(target)",
+                "        return { data = copy_child_value(context.data or {}),",
+                "                 conditions = copy_child_value(context.conditions or {}),",
+                "                 actors = { alpha = target } }",
+                "    end",
+                *lines,
+            ]
+            return ["    do", *(f"    {line}" for line in body), "    end"]
+
         if not local:
             if unique_ids is None:
                 # Native non-local traversal iterates only ``unique_ids``;
@@ -4129,7 +4175,7 @@ def render_static_traversal(
                 "        end",
                 "    end",
             ]
-            return lines
+            return with_npc_dialogue(lines)
         lines = [
             f"    local npc_origin = service_value(services.characters.snapshot({actor_expression})).creature.position",
         ]
@@ -4153,7 +4199,7 @@ def render_static_traversal(
                 "        end",
                 "    end",
             ])
-            return lines
+            return with_npc_dialogue(lines)
         if radius is None:
             lines.extend([
                 "    local npc_offset = 0",
@@ -4181,7 +4227,7 @@ def render_static_traversal(
                 "        npc_offset = npc_offset + npc_page.returned",
                 "    end",
             ])
-            return lines
+            return with_npc_dialogue(lines)
         lines.extend([
             "    local npc_offset = 0",
             "    while true do",
@@ -4226,7 +4272,7 @@ def render_static_traversal(
             "        npc_offset = npc_offset + npc_page.returned",
             "    end",
         ])
-        return lines
+        return with_npc_dialogue(lines)
 
     if key in {"u_run_fixed_zone_eocs", "npc_run_fixed_zone_eocs"}:
         if actor_expression is None:
@@ -4775,21 +4821,24 @@ def render_static_run_eocs(
         return None
     if delayed_character and actor_expression is None and not has_talker_override:
         return None
-    context_expression = "context"
-    prefix: list[str] = []
-    prefix.extend([
-        "    local function copy_child_value(value)",
-        "        if services.types and value == services.types.null then return value end",
-        "        if type(value) ~= \"table\" then return value end",
-        "        local copied = {}",
-        "        for key, entry in pairs(value) do copied[key] = copy_child_value(entry) end",
-        "        return copied",
+    # f_run_eocs builds a dialogue snapshot with the selected talkers and
+    # explicit variables. Each activate() copies that snapshot again.
+    prefix = [
+        *_render_dialogue_value_copy(),
+        "    local function copy_child_context(source)",
+        "        local child_conditions = {}",
+        "        for name, predicate in pairs(source.conditions or {}) do",
+        "            child_conditions[name] = predicate",
+        "        end",
+        "        local child_context = { data = copy_child_value(source.data or {}),",
+        "                                conditions = child_conditions, actors = {} }",
+        "        for name, handle in pairs(source.actors or {}) do child_context.actors[name] = handle end",
+        "        return child_context",
         "    end",
-        "    local child_data = {}",
-        "    for name, value in pairs((context and context.data) or {}) do",
-        "        child_data[name] = copy_child_value(value)",
-        "    end",
-    ])
+        "    local child_context = copy_child_context(context)",
+    ]
+    if variables:
+        prefix.append("    local child_data = child_context.data")
     for name, value in (variables or {}).items():
         rendered = variable_expression(value)
         if rendered is None:
@@ -4798,20 +4847,11 @@ def render_static_run_eocs(
             f"    child_data[{lua_quote(name)}] = {rendered}",
             f"    child_data[{lua_quote(name)}] = copy_child_value(child_data[{lua_quote(name)}])",
         ])
-    prefix.extend([
-        "    local child_conditions = {}",
-        "    for name, predicate in pairs(context.conditions or {}) do",
-        "        child_conditions[name] = predicate",
-        "    end",
-        "    local child_context = { data = child_data, conditions = child_conditions, actors = {} }",
-        "    for name, handle in pairs(context.actors or {}) do child_context.actors[name] = handle end",
-    ])
     if has_talker_override:
         prefix.extend([
             "    child_context.actors.alpha = selected_alpha",
             "    child_context.actors.beta = selected_beta",
         ])
-    context_expression = "child_context"
     iterations = effect.get("iterations")
     loop_count_expression = None
     if iterations is not None:
@@ -4863,12 +4903,12 @@ def render_static_run_eocs(
         "selected_alpha" if has_talker_override else actor_expression or "nil"
     )
 
-    def callback_lines(context_value: str, indent: str) -> list[str]:
+    def callback_lines(indent: str) -> list[str]:
         rendered: list[str] = []
         for kind, value in reference_entries:
             if kind == "static":
                 rendered.append(
-                    f"{indent}{eoc_function_names[value]}({context_value}, "
+                    f"{indent}{eoc_function_names[value]}(copy_child_context(child_context), "
                     f"{callback_actor_expression})"
                 )
                 continue
@@ -4877,7 +4917,7 @@ def render_static_run_eocs(
                 f"{indent}    local dynamic_eoc_id = tostring(({value}) or \"\")",
                 f"{indent}    local dynamic_eoc = migrated_eoc_functions[dynamic_eoc_id]",
                 f"{indent}    if dynamic_eoc ~= nil then",
-                f"{indent}        dynamic_eoc({context_value}, {callback_actor_expression})",
+                f"{indent}        dynamic_eoc(copy_child_context(child_context), {callback_actor_expression})",
                 f"{indent}    end",
                 f"{indent}end",
             ])
@@ -4900,14 +4940,12 @@ def render_static_run_eocs(
             ]
         if condition_expression not in (None, "true"):
             lines.append(f"        if not ({condition_expression}) then break end")
-        lines.extend(callback_lines(context_expression, "        "))
+        lines.extend(callback_lines("        "))
         lines.append("    end")
         return wrap_talker_context(lines)
     if delay_turns is not None and delay_turns == 0:
-        return wrap_talker_context(
-            prefix + callback_lines(context_expression, "    ")
-        )
-    task_payload = context_expression + ".data"
+        return wrap_talker_context(prefix + callback_lines("    "))
+    task_payload = "child_context.data"
     task_scope = "\"character\"" if delayed_character else "\"world\""
     task_delay_expression = delay_turns_expression
     if not randomize_delay and len(task_references) > 1:
@@ -5480,6 +5518,18 @@ def render_static_false_effect(
     Unsupported shapes remain visible migration TODOs instead of being
     silently discarded or routed through a second EOC handler.
     """
+    if isinstance(effect, _DialogueBranch):
+        if effect.child_id is None:
+            return None
+        requirement = (eoc_actor_requirements or {}).get(effect.child_id)
+        if requirement in {"exact_avatar", "unproven"} or (
+            requirement == "character" and not (
+                avatar_actor_proven or npc_actor_proven or character_actor_proven
+            )
+        ):
+            return None
+        actor_argument = actor_expression or weighted_actor_expression or "nil"
+        return [f"        {lua_function_name(effect.child_id)}(context, {actor_argument})"]
     if isinstance(effect, dict) and "foreach" in effect:
         return render_static_foreach(
             effect, avatar_actor_proven, npc_actor_proven,
@@ -6079,12 +6129,8 @@ def render_static_false_effect(
                 # The generic Character proof is weaker than the native wound
                 # target proof. Use the same actor and registered-ID evidence
                 # as the main effect, including inside ordinary Lua branches.
-                wound_target = (
-                    wound_actor_targets.get("npc" if key.startswith("npc_") else "u")
-                    if wound_actor_targets is not None else None
-                )
                 rendered = render_static_character_wound(
-                    effect, key, wound_target, key.endswith("remove_wound"),
+                    effect, key, wound_actor_targets,
                     known_body_part_ids, known_wound_ids,
                 )
             if rendered is not None:
@@ -6677,11 +6723,7 @@ def render_static_if_effect(
     weighted_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Lower an ``if/then/else`` made solely of simple Lua-native effects."""
-    if (
-        set(effect) - {"if", "then", "else", "//"} or
-        "if" not in effect or
-        not ({"then", "else"} & set(effect))
-    ):
+    if not _is_if_effect(effect):
         return None
     condition = render_eoc_condition_expression(
         effect["if"], avatar_actor_proven, avatar_actor_proven or npc_actor_proven,
@@ -6763,17 +6805,8 @@ def render_static_switch_effect(
     callback.  It therefore also handles nested ``if``/``switch`` branches
     without exposing an EOC runner in the generated Mod.
     """
-    comment_keys = {
-        key for key in effect
-        if isinstance(key, str) and key.startswith("//")
-    }
-    # Legacy f_switch ignores an unmatched switch and has no top-level
-    # ``default`` branch.  Only numeric defaults inside selector descriptors
-    # (handled below) are supported here.
-    if (
-        "switch" not in effect or
-        set(effect) - {"switch", "cases"} - comment_keys
-    ):
+    cases = _switch_effect_cases(effect)
+    if cases is None:
         return None
     raw_switch = effect.get("switch")
     switch_expression: str | None = None
@@ -6823,13 +6856,8 @@ def render_static_switch_effect(
     if switch_expression is None:
         return None
 
-    cases = effect.get("cases")
-    if not isinstance(cases, list) or not cases or len(cases) > 128:
-        return None
     case_data: list[tuple[str, list[str]]] = []
     for case in cases:
-        if not isinstance(case, dict) or "case" not in case or "effect" not in case:
-            return None
         case_value = case.get("case")
         case_expression = render_eoc_numeric_expression(
             case_value, "0", actor_expression or "actor", effect_actor_targets
@@ -6852,6 +6880,8 @@ def render_static_switch_effect(
                 known_body_part_ids=known_body_part_ids,
                 known_wound_ids=known_wound_ids,
                 field_avatar_center_proven=field_avatar_center_proven,
+                character_actor_proven=character_actor_proven,
+                weighted_actor_expression=weighted_actor_expression,
             )
             if chunk is None:
                 return None
@@ -27516,16 +27546,17 @@ def _proven_character_variable_target(
 def render_static_character_wound(
     effect: dict[str, Any],
     key: str,
-    target_expression: str | None,
-    remove: bool,
+    wound_actor_targets: dict[str, str | None] | None,
     known_body_part_ids: frozenset[str],
     known_wound_ids: frozenset[str],
 ) -> list[str] | None:
-    """Render only catalog-proven native direct body-part wound operations."""
+    """Render catalog-proven wound operations; a present None proves no talker."""
+    if wound_actor_targets is None or key not in wound_actor_targets:
+        return None
+    remove = key.endswith("remove_wound")
     body_part = effect.get(key)
     if (
-        target_expression is None or not isinstance(body_part, str) or
-        body_part not in known_body_part_ids
+        not isinstance(body_part, str) or body_part not in known_body_part_ids
     ):
         return None
     if set(effect) - {key, "wound_id"}:
@@ -27539,6 +27570,9 @@ def render_static_character_wound(
             return None
     elif not isinstance(wound_ids, str) or wound_ids not in known_wound_ids:
         return None
+    target_expression = wound_actor_targets[key]
+    if target_expression is None:
+        return []
     values = wound_ids if remove else [wound_ids]
     lines: list[str] = []
     for wound_id in values:
@@ -32708,6 +32742,8 @@ def render_eoc(
     character_melee_event_emitted_by_eoc: bool = True,
     npc_becomes_hostile_event_emitted_by_eoc: bool = False,
     known_morale_ids: frozenset[str] = frozenset(),
+    inline_wound_beta_absent: bool = False,
+    private_dialogue_branch: bool = False,
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -32769,7 +32805,17 @@ def render_eoc(
         eoc_id in npc_dialogue_mission_pair_ids
     )
     content_primary_actor_override = eoc_id in content_primary_actor_ids
-    generic_talker_actor_override = _node_has_generic_talker_type_condition(value)
+    event_has_platform_alpha = required_event is not None and (
+        _native_eoc_event_has_platform_alpha(required_event, game_start_avatar_source_proven)
+    )
+    named_condition_requires_override = (
+        required_event not in {None, "game_start"} and not event_has_platform_alpha and
+        (eoc_id in eoc_referenced_ids or dynamic_eoc_dispatch_present) and
+        _node_has_generic_talker_type_condition(value.get("condition"))
+    )
+    generic_talker_actor_override = _node_has_generic_talker_type_condition(value) and (
+        required_event is None or event_has_platform_alpha or named_condition_requires_override
+    )
     vehicle_actor_override = (
         eoc_id in vehicle_override_ids or
         value.get("__inline_actor_kind") == "vehicle"
@@ -33251,7 +33297,15 @@ def render_eoc(
         creature_actor_proven
     ):
         lines.append("    context.actors = context.actors or {}")
-    if unbound_mixed_talker_contract:
+    if named_condition_requires_override:
+        # An explicit activation supplies alpha; this event itself does not.
+        # Do not evaluate either outcome of the predicate on event dispatch.
+        lines.extend([
+            f"    -- TODO: supply native dialogue alpha for direct {required_event} dispatch.",
+            "    local actor = actor_override",
+            "    if actor == nil then return false end",
+        ])
+    elif unbound_mixed_talker_contract:
         lines.extend([
             "    local actor = actor_override",
             "    if actor == nil then",
@@ -33458,9 +33512,6 @@ def render_eoc(
     # character_armor_destroyed; the Platform bridge resolves that same ID to
     # actors.character.  Each event producer is a live Character operation.
     # Keep the proof event-exclusive so child callbacks cannot replace alpha.
-    # npc_becomes_hostile is separately supported only as alpha with no beta;
-    # native actor(true) emits a missing-beta debug message before falling back,
-    # which Platform does not mirror, so only the wound-state mutation matches.
     wound_alpha_actor_proven = (
         event_exclusive_source_proven and not inline_eoc and
         not avatar_fatal_hook and not avatar_death_hook and not npc_fatal_hook and
@@ -33469,10 +33520,16 @@ def render_eoc(
             required_event in PROVEN_ITEM_ACTOR_EVENTS
         )
     )
-    wound_actor_targets = {
-        "u": "actor" if wound_alpha_actor_proven else None,
-        "npc": "actor" if mutation_npc_alpha_fallback_proven else None,
-    }
+    wound_actor_targets: dict[str, str | None] = {}
+    if wound_alpha_actor_proven:
+        wound_actor_targets.update(u_add_wound="actor", u_remove_wound="actor")
+    if mutation_npc_alpha_fallback_proven:
+        wound_actor_targets["npc_add_wound"] = "actor"
+    if inline_wound_beta_absent or (
+        required_event == "npc_becomes_hostile" and native_beta_absent_proven
+    ):
+        # Removal checks has_actor(true) instead of using actor(true)'s fallback.
+        wound_actor_targets["npc_remove_wound"] = None
     field_avatar_center_proven = (
         stable_handler and not inline_eoc and
         eoc_id not in eoc_referenced_ids and
@@ -33600,6 +33657,13 @@ def render_eoc(
             math_actor_targets=effect_actor_targets,
         )
         condition_converted = condition_expression is not None
+    if named_condition_requires_override and condition_converted:
+        result.add_todo(
+            "manual_rewrite",
+            f"{source.location}: EOC {eoc_id} needs a proven alpha for direct "
+            f"{required_event} dispatch; named activation uses its caller-supplied alpha"
+        )
+        condition_converted = False
     false_effect_converted = True
     if condition_expression is None:
         condition_todo = "translate the legacy condition into a Lua predicate"
@@ -34228,13 +34292,8 @@ def render_eoc(
                 ("u_add_wound" in effect or "npc_add_wound" in effect)
             ):
                 key = "u_add_wound" if "u_add_wound" in effect else "npc_add_wound"
-                target_expression = (
-                    "actor" if key == "u_add_wound" and wound_alpha_actor_proven
-                    else "actor" if key == "npc_add_wound" and mutation_npc_alpha_fallback_proven
-                    else None
-                )
                 rendered = render_static_character_wound(
-                    effect, key, target_expression, False,
+                    effect, key, wound_actor_targets,
                     known_body_part_ids, known_wound_ids,
                 )
                 if rendered is not None:
@@ -34256,13 +34315,8 @@ def render_eoc(
                 ("u_remove_wound" in effect or "npc_remove_wound" in effect)
             ):
                 key = "u_remove_wound" if "u_remove_wound" in effect else "npc_remove_wound"
-                target_expression = (
-                    "actor" if key == "u_remove_wound" and wound_alpha_actor_proven
-                    else "actor" if key == "npc_remove_wound" and mutation_npc_alpha_fallback_proven
-                    else None
-                )
                 rendered = render_static_character_wound(
-                    effect, key, target_expression, True,
+                    effect, key, wound_actor_targets,
                     known_body_part_ids, known_wound_ids,
                 )
                 if rendered is not None:
@@ -38840,9 +38894,10 @@ def render_eoc(
         lines.append("        return false")
         lines.append("    end")
     lines.append("end")
-    lines.append(
-        f"migrated_eoc_functions[{lua_quote(eoc_id)}] = {function_name}"
-    )
+    if not private_dialogue_branch:
+        lines.append(
+            f"migrated_eoc_functions[{lua_quote(eoc_id)}] = {function_name}"
+        )
     nested_only = (
         nested_character_override and not required_event and
         not avatar_fatal_hook and not npc_fatal_hook and not avatar_death_hook
@@ -38944,7 +38999,9 @@ def render_eoc(
         avatar_death_hook or inline_eoc or nested_only or
         periodic_trigger or referenced_only
     )
-    if inline_eoc:
+    if private_dialogue_branch:
+        lines.append("-- Invoked directly in the owning dialogue.")
+    elif inline_eoc:
         lines.append("-- Invoked as a normal Lua callback by its owning traversal.")
     elif nested_only:
         lines.append("-- Invoked as a normal Lua callback by an NPC traversal.")
@@ -39403,6 +39460,8 @@ def _migrate_with_math_namespace(objects: list[SourceObject], mod_id: str,
     character_melee_event_emitted_by_eoc = _has_static_event_emission(
         objects, "character_melee_attacks_character"
     )
+    original_objects = objects
+    dialogue_branch_parents: dict[str, str] = {}
     (
         objects,
         character_override_ids,
@@ -39410,7 +39469,7 @@ def _migrate_with_math_namespace(objects: list[SourceObject], mod_id: str,
         creature_override_ids,
         vehicle_override_ids,
     ) = normalize_inline_eocs(
-        objects, game_start_event_emitted_by_eoc
+        objects, game_start_event_emitted_by_eoc, dialogue_branch_parents
     )
     known_mutation_ids, known_mutation_category_ids = core_mutation_catalog_ids()
     known_body_part_ids = core_body_part_catalog_ids()
@@ -39442,15 +39501,20 @@ def _migrate_with_math_namespace(objects: list[SourceObject], mod_id: str,
         stable_id(source.value, f"anonymous_{source.index}"): source.value
         for source in objects
         if source.value.get("type") in EOC_TYPES and
-        source.value.get("type") not in exclude_types
+        source.value.get("type") not in exclude_types and
+        source.value.get("id") not in dialogue_branch_parents
     }
-    eoc_function_names = {
+    all_eoc_function_names = {
         stable_id(source.value, f"anonymous_{source.index}"): lua_function_name(
             stable_id(source.value, f"anonymous_{source.index}")
         )
         for source in objects
         if source.value.get("type") in EOC_TYPES and
         source.value.get("type") not in exclude_types
+    }
+    eoc_function_names = {
+        name: function for name, function in all_eoc_function_names.items()
+        if name not in dialogue_branch_parents
     }
     eoc_referenced_ids = _collect_eoc_references(
         objects, set(eoc_function_names)
@@ -39468,9 +39532,32 @@ def _migrate_with_math_namespace(objects: list[SourceObject], mod_id: str,
     eoc_referenced_ids = frozenset(
         set(eoc_referenced_ids) |
         set(raw_referenced_eoc_ids) |
+        set(dialogue_branch_parents) |
         {identifier for identifier, count in eoc_definition_counts.items()
          if count > 1}
     )
+    inline_wound_beta_absent_ids: set[str] = set()
+    if (
+        dialogue_branch_parents and not dynamic_eoc_dispatch_present and
+        not npc_becomes_hostile_event_emitted_by_eoc
+    ):
+        hostile_event_ids = {
+            eoc_id for eoc_id, value in eoc_conditions.items()
+            if native_eoc_required_event(value) == "npc_becomes_hostile" and
+            eoc_id not in eoc_referenced_ids and eoc_id not in talker_pair_ids and
+            value.get("__inline_eoc") is not True
+        }
+        if hostile_event_ids:
+            # Only synthetic if/switch branches inherit the native dialogue.
+            # Parent edges were recorded before descending into their branches.
+            independently_referenced = _collect_eoc_references(
+                original_objects, set(dialogue_branch_parents)
+            )
+            for child, parent in dialogue_branch_parents.items():
+                if child not in independently_referenced and (
+                    parent in hostile_event_ids or parent in inline_wound_beta_absent_ids
+                ):
+                    inline_wound_beta_absent_ids.add(child)
     item_use_plans = classify_item_use_actions(
         objects, eoc_definition_counts
     )
@@ -39625,6 +39712,8 @@ def _migrate_with_math_namespace(objects: list[SourceObject], mod_id: str,
                     character_melee_event_emitted_by_eoc,
                     npc_becomes_hostile_event_emitted_by_eoc,
                     known_morale_ids,
+                    inline_wound_beta_absent=eoc_id in inline_wound_beta_absent_ids,
+                    private_dialogue_branch=eoc_id in dialogue_branch_parents,
                 )
             )
         elif kind in CATALOGS and CATALOGS[kind].renderer is not None:
@@ -40022,12 +40111,12 @@ def _migrate_with_math_namespace(objects: list[SourceObject], mod_id: str,
         main.extend(("", '-- Native recipe definitions', *recipe_chunks))
     if behaviour_chunks:
         main.extend(("", '-- Native Lua behaviour'))
-        if eoc_function_names:
+        if all_eoc_function_names:
             main.extend((
                 "local migrated_eoc_functions = {}",
                 "local " + ", ".join(
-                    eoc_function_names[name]
-                    for name in sorted(eoc_function_names)
+                    all_eoc_function_names[name]
+                    for name in sorted(all_eoc_function_names)
                 ),
             ))
         main.extend(behaviour_chunks)

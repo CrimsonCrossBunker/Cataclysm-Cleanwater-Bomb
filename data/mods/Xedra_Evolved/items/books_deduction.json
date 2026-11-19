@@ -214,7 +214,7 @@
     "type": "effect_on_condition",
     "id": "EOC_READING_BOOK_LIES_PAIN",
     "condition": { "x_in_y_chance": { "x": 1, "y": 2 } },
-    "effect": [ { "math": [ "u_pain()++" ] }, { "math": [ "u_deduction_from_book_lies_counter += 25" ] } ]
+    "effect": [ { "math": [ "u_pain('type': 'base')++" ] }, { "math": [ "u_deduction_from_book_lies_counter += 25" ] } ]
   },
   {
     "type": "effect_on_condition",

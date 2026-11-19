@@ -153,6 +153,7 @@ static const json_character_flag json_flag_ENHANCED_VISION( "ENHANCED_VISION" );
 static const json_character_flag json_flag_MANUAL_CBM_INSTALLATION( "MANUAL_CBM_INSTALLATION" );
 static const json_character_flag json_flag_NO_CBM_INSTALLATION( "NO_CBM_INSTALLATION" );
 static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
+static const json_character_flag json_flag_POWERED_THERMAL_PAIN_RELIEF( "POWERED_THERMAL_PAIN_RELIEF" );
 
 static const material_id fuel_type_metabolism( "metabolism" );
 static const material_id fuel_type_sun_light( "sunlight" );
@@ -1431,6 +1432,11 @@ bool Character::deactivate_bionic( bionic &initial_bio, bool eff_only )
         return false;
     }
 
+    std::optional<pain_reaction_scope> pain_reaction;
+    if( !eff_only && initial_bio.info().has_active_flag( json_flag_POWERED_THERMAL_PAIN_RELIEF ) ) {
+        pain_reaction.emplace( *this );
+    }
+
     // Just do the effect, no stat changing or messages
     if( !eff_only ) {
         //We can actually deactivate now, do deactivation-y things
@@ -1918,6 +1924,10 @@ void Character::process_bionic( bionic &initial_bio )
                 bool recharged = attempt_recharge( *this, initial_bio, cost );
                 if( !recharged ) {
                     // No power to recharge, so deactivate
+                    std::optional<pain_reaction_scope> pain_reaction;
+                    if( initial_bio.info().has_active_flag( json_flag_POWERED_THERMAL_PAIN_RELIEF ) ) {
+                        pain_reaction.emplace( *this );
+                    }
                     initial_bio.powered = false;
                     add_msg_if_player( m_neutral, _( "Your %s powers down." ), initial_bio.info().name );
                     // This purposely bypasses the deactivation cost
@@ -3592,12 +3602,17 @@ void Character::remove_bionic( const bionic &bio )
     }
 
     const bionic removed_bionic = **bio_opt;
+    std::optional<pain_reaction_scope> pain_reaction;
     bionic_collection remaining_bionics;
     // any spells you should not forget due to still having a bionic installed that has it.
     std::set<spell_id> cbm_spells;
     for( const bionic &i : *my_bionics ) {
         // Linked bionics: if either is removed, the other is removed as well.
         if( i.get_uid() == bio_uid || i.get_parent_uid() == bio_uid ) {
+            if( !pain_reaction && i.powered &&
+                i.info().has_active_flag( json_flag_POWERED_THERMAL_PAIN_RELIEF ) ) {
+                pain_reaction.emplace( *this );
+            }
             continue;
         }
 

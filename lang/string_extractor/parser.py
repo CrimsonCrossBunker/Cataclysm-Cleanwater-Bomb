@@ -96,6 +96,7 @@ from .parsers.weakpoint_set import parse_weakpoint_set
 from .parsers.weapon_category import parse_weapon_category
 from .parsers.weather_type import parse_weather_type
 from .parsers.widget import parse_widget
+from .parsers.wound import parse_wound, parse_wound_fix
 
 
 def dummy_parser(json, origin):
@@ -314,4 +315,6 @@ parsers = {
     "weather_type": parse_weather_type,
     "weather_generator": dummy_parser,
     "widget": parse_widget,
+    "wound": parse_wound,
+    "wound_fix": parse_wound_fix,
 }

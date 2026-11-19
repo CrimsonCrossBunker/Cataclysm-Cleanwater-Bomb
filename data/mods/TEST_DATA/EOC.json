@@ -637,6 +637,31 @@
   },
   {
     "type": "effect_on_condition",
+    "id": "EOC_character_takes_damage_event_test_first",
+    "eoc_type": "EVENT",
+    "required_event": "character_takes_damage",
+    "condition": { "compare_string": [ "yes", { "global_val": "event_test_damage_enabled" } ] },
+    "effect": [
+      { "copy_var": { "global_val": "event_test_damage_enabled" }, "target_var": { "u_val": "event_test_damage_first" } },
+      {
+        "if": { "compare_string": [ "yes", { "global_val": "event_test_damage_retire" } ] },
+        "then": { "u_die": { "remove_corpse": true, "supress_message": true } },
+        "else": { "math": [ "u_hp('torso') = 0" ] }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_character_takes_damage_event_test_second",
+    "eoc_type": "EVENT",
+    "required_event": "character_takes_damage",
+    "condition": {
+      "and": [ { "compare_string": [ "yes", { "global_val": "event_test_damage_enabled" } ] }, { "math": [ "u_hp('torso') >= 0" ] } ]
+    },
+    "effect": [ { "copy_var": { "context_val": "damage" }, "target_var": { "u_val": "event_test_damage_second" } } ]
+  },
+  {
+    "type": "effect_on_condition",
     "id": "EOC_character_melee_attacks_character_event_test",
     "eoc_type": "EVENT",
     "required_event": "character_melee_attacks_character",

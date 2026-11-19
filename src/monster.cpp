@@ -2551,7 +2551,7 @@ void monster::deal_projectile_attack( map *here, Creature *source, dealt_project
 }
 
 void monster::deal_damage_handle_type( const effect_source &source, const damage_unit &du,
-                                       bodypart_id bp, int &damage, int &pain )
+                                       bodypart_id bp, int &damage, int &pain, std::optional<bodypart_id> ignition_part )
 {
     const int adjusted_damage = du.amount * du.damage_multiplier * du.unconditional_damage_mult;
     if( is_immune_damage( du.type ) ) {
@@ -2580,7 +2580,7 @@ void monster::deal_damage_handle_type( const effect_source &source, const damage
         make_bleed( source, bleed_dur );
     }
 
-    Creature::deal_damage_handle_type( source, du,  bp, damage, pain );
+    Creature::deal_damage_handle_type( source, du, bp, damage, pain, ignition_part );
 }
 
 int monster::heal( const int delta_hp, bool overheal )
@@ -3386,7 +3386,7 @@ void monster::explode()
     hp = INT_MIN + 1;
 }
 
-void monster::process_turn()
+bool monster::process_turn()
 {
     blocks_left = type->block.count;
 
@@ -3502,7 +3502,7 @@ void monster::process_turn()
         }
     }
 
-    Creature::process_turn();
+    return Creature::process_turn();
 }
 
 void monster::die( map *here, Creature *nkiller )
@@ -4048,7 +4048,7 @@ void monster::process_one_effect( effect &it, bool is_new )
     }
 }
 
-void monster::process_effects()
+bool monster::process_effects()
 {
     map &here = get_map();
 
@@ -4227,7 +4227,7 @@ void monster::process_effects()
         remove_effect( effect_cramped_space );
     }
 
-    Creature::process_effects();
+    return Creature::process_effects();
 }
 
 bool monster::make_fungus()

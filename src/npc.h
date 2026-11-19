@@ -1279,7 +1279,7 @@ class npc : public Character
         // Returns true if p is a valid sleep target: not in NPC_NO_GO and
         // reachable without bashing. Does not check occupancy.
         bool is_valid_sleep_candidate( const tripoint_bub_ms &p ) const;
-        void process_turn() override;
+        bool process_turn() override;
 
         using Character::invoke_item;
         bool invoke_item( item *, const tripoint_bub_ms &pt, int pre_obtain_moves ) override;
@@ -1747,15 +1747,17 @@ class npc : public Character
          * Retroactively update npc.
          */
         void on_load( map *here );
+        bool is_activating() const {
+            return activating;
+        }
+        bool is_replaying_effects_on_load() const {
+            return replaying_effects_on_load;
+        }
         /**
-         * Update body, but throttled.
+         * Advance temperature and drying once per active turn; throttle needs and schedule updates.
+         * Returns false if a burn reaction invalidates this NPC.
          */
-        void npc_update_body();
-        /**
-         * Recompute body temperature and wetness from current weather.
-         * Shared between npc_update_body() and on_load() catch-up.
-         */
-        void update_bodytemp_and_wetness();
+        bool npc_update_body();
 
         bool get_known_to_u() const;
 
@@ -1800,6 +1802,16 @@ class npc : public Character
         bool dead = false;  // If true, we need to be cleaned up
         // Temporary variable for preventing from death (used by EoC event)
         bool prevent_death_reminder = false; // NOLINT(cata-serialize)
+        bool activating = false; // NOLINT(cata-serialize)
+        bool replaying_effects_on_load = false; // NOLINT(cata-serialize)
+        time_point last_live_environment_update = calendar::before_time_starts;
+        struct bodytemp_environment_sample {
+            tripoint_abs_ms pos;
+            units::temperature temperature;
+        };
+        std::optional<bodytemp_environment_sample> bodytemp_target_environment; // NOLINT(cata-serialize)
+
+        bool update_live_bodytemp( bool body_tick, bool consecutive_turn );
 
         bool sees_dangerous_field( const tripoint_bub_ms &p ) const;
         bool could_move_onto( const tripoint_bub_ms &p ) const;

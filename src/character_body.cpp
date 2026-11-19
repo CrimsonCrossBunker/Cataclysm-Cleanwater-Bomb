@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <map>
 #include <memory>
@@ -31,6 +32,7 @@
 #include "map.h"
 #include "mapdata.h"
 #include "north_america_elevation.h"
+#include "npc.h"
 #include "output.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
@@ -64,7 +66,6 @@ static const efftype_id effect_bandaged( "bandaged" );
 static const efftype_id effect_betablock( "betablock" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
-static const efftype_id effect_blisters( "blisters" );
 static const efftype_id effect_caffeine_eff( "caffeine_eff" );
 static const efftype_id effect_cig( "cig" );
 static const efftype_id effect_cold( "cold" );
@@ -85,6 +86,7 @@ static const efftype_id effect_hunger_satisfied( "hunger_satisfied" );
 static const efftype_id effect_hunger_starving( "hunger_starving" );
 static const efftype_id effect_hunger_very_hungry( "hunger_very_hungry" );
 static const efftype_id effect_hypovolemia( "hypovolemia" );
+static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_mending( "mending" );
 static const efftype_id effect_narcosis( "narcosis" );
@@ -93,6 +95,7 @@ static const efftype_id effect_wet( "wet" );
 
 static const json_character_flag json_flag_BARKY( "BARKY" );
 static const json_character_flag json_flag_CANNOT_CHANGE_TEMPERATURE( "CANNOT_CHANGE_TEMPERATURE" );
+static const json_character_flag json_flag_CANNOT_TAKE_DAMAGE( "CANNOT_TAKE_DAMAGE" );
 static const json_character_flag json_flag_COLDBLOOD( "COLDBLOOD" );
 static const json_character_flag json_flag_COLDBLOOD2( "COLDBLOOD2" );
 static const json_character_flag json_flag_COLDBLOOD3( "COLDBLOOD3" );
@@ -104,6 +107,7 @@ static const json_character_flag json_flag_IGNORE_TEMP( "IGNORE_TEMP" );
 static const json_character_flag json_flag_LIMB_LOWER( "LIMB_LOWER" );
 static const json_character_flag json_flag_NO_THIRST( "NO_THIRST" );
 static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
+static const json_character_flag json_flag_THERMAL_BURN_PROTECTION( "THERMAL_BURN_PROTECTION" );
 
 static const morale_type morale_comfy( "morale_comfy" );
 static const morale_type morale_pyromania_nearfire( "morale_pyromania_nearfire" );
@@ -428,19 +432,119 @@ Hurricane : 100 mph (920 hPa)
 HURRICANE : 185 mph (880 hPa) [Ref: Hurricane Wilma]
 */
 
-void Character::update_bodytemp()
+// A live temperature update takes one second of convergence.
+static const double bodytemp_convergence_multiplier = 1 - std::exp( -0.002 );
+
+static units::temperature converged_bodytemp( units::temperature current, units::temperature target )
 {
-    if( has_trait( trait_DEBUG_NOTEMP ) ) {
-        set_all_parts_temp_conv( BODYTEMP_NORM );
-        set_all_parts_temp_cur( BODYTEMP_NORM );
-        return;
+    return current + ( target - current ) * bodytemp_convergence_multiplier;
+}
+
+static int bodytemp_tier( units::temperature temp )
+{
+    if( temp < BODYTEMP_COLD ) {
+        return temp < BODYTEMP_FREEZING ? -3 : temp < BODYTEMP_VERY_COLD ? -2 : -1;
     }
-    if( has_flag( json_flag_CANNOT_CHANGE_TEMPERATURE ) ) {
-        return;
+    if( temp > BODYTEMP_HOT ) {
+        return temp > BODYTEMP_SCORCHING ? 3 : temp > BODYTEMP_VERY_HOT ? 2 : 1;
+    }
+    return 0;
+}
+
+static std::optional<std::uint64_t> bodytemp_part_identity( const Character &who,
+        const bodypart_id &bp )
+{
+    const auto &body = who.get_body();
+    const auto found = body.find( bp.id() );
+    return found == body.end() ? std::nullopt :
+           std::optional<std::uint64_t>( found->second.identity_generation() );
+}
+
+Character::bodytemp_effect_result Character::update_bodytemp_effects( const bodypart_id &bp,
+        units::temperature temp, int tier, std::optional<bool> &heat_immune )
+{
+    int hot = 0;
+    int hot_speed = 0;
+    if( tier > 0 ) {
+        if( !heat_immune ) {
+            heat_immune = is_immune_damage( damage_heat );
+        }
+        if( !*heat_immune ) {
+            constexpr units::temperature heat_thresholds[] = {
+                BODYTEMP_HOT, BODYTEMP_VERY_HOT, BODYTEMP_SCORCHING
+            };
+            hot = tier;
+            hot_speed = hot - ( bp->main_part != bp.id() ||
+                                temp <= heat_thresholds[hot - 1] + BODYTEMP_THRESHOLD );
+        }
+    }
+
+    // Temperature penalties are permanent until the temperature changes tier.
+    const std::pair<const efftype_id *, int> penalties[] = {
+        { &effect_cold, std::max( 0, -tier ) }, { &effect_hot, hot }, { &effect_hot_speed, hot_speed }
+    };
+    std::optional<character_action_guard> actor;
+    std::optional<std::uint64_t> identity;
+    for( const auto &[id, intensity] : penalties ) {
+        const effect &current = get_effect( *id, bp );
+        if( intensity == 0 ? current.is_null() :
+            ( !current.is_null() && current.get_intensity() == intensity && current.is_permanent() &&
+              current.get_duration() > 0_turns ) ) {
+            continue;
+        }
+        // Only changing a penalty can run callbacks. Capture both identities before the first write.
+        if( !actor ) {
+            actor.emplace( *this );
+            identity = bodytemp_part_identity( *this, bp );
+            if( !identity ) {
+                return bodytemp_effect_result::part_replaced;
+            }
+        }
+        if( intensity == 0 ) {
+            remove_effect( *id, bp );
+        } else {
+            add_effect( *id, 1_turns, bp, true, intensity );
+        }
+        if( !actor->get() ) {
+            return bodytemp_effect_result::actor_invalidated;
+        }
+        if( bodytemp_part_identity( *this, bp ) != identity ) {
+            return bodytemp_effect_result::part_replaced;
+        }
+    }
+    return bodytemp_effect_result::stable;
+}
+
+bool Character::update_bodytemp( bool sample_heat_exposure )
+{
+    return update_bodytemp_impl( bodytemp_update::live, sample_heat_exposure );
+}
+
+void Character::refresh_bodytemp()
+{
+    update_bodytemp_impl( bodytemp_update::equilibrium_only, false );
+}
+
+bool Character::update_bodytemp_impl( bodytemp_update mode, bool sample_heat_exposure,
+                                      std::optional<units::temperature> local_temperature )
+{
+    // Activation must not spend a live turn, even through an indirect caller.
+    const npc *guy = as_npc();
+    const bool advance = mode != bodytemp_update::equilibrium_only && ( !guy || !guy->is_activating() );
+    const bool frostbite_tick = advance && mode == bodytemp_update::live;
+    const bool debug_notemp = has_trait( trait_DEBUG_NOTEMP );
+    if( debug_notemp || has_flag( json_flag_CANNOT_CHANGE_TEMPERATURE ) ) {
+        if( debug_notemp ) {
+            set_all_parts_temp_conv( BODYTEMP_NORM );
+            if( advance ) {
+                set_all_parts_temp_cur( BODYTEMP_NORM );
+            }
+        }
+        return true;
     }
     weather_manager &weather_man = get_weather();
-    /* Cache calls to g->get_temperature( player position ), used in several places in function */
-    const units::temperature player_local_temp = weather_man.get_temperature( pos_bub() );
+    const units::temperature player_local_temp = local_temperature ? *local_temperature :
+            weather_man.get_temperature( pos_bub() );
     const w_point weather = *weather_man.weather_precise;
     int vehwindspeed = 0;
     map &here = get_map();
@@ -451,13 +555,10 @@ void Character::update_bodytemp()
     const oter_id &cur_om_ter = overmap_buffer.ter( pos_abs_omt() );
     bool sheltered = g->is_sheltered( pos_bub() );
     const int windpower = get_local_windpower( weather_man.windspeed + vehwindspeed, cur_om_ter,
-                          pos_abs(), weather_man.winddirection, sheltered );
-    // Let's cache this not to check it for every bodyparts
-    const bool has_bark = has_flag( json_flag_BARKY );
+        pos_abs(), weather_man.winddirection, sheltered );
+    std::optional<bool> heat_immune;
     const bool has_sleep = has_effect( effect_sleep );
     const bool has_sleep_state = has_sleep || in_sleep_state();
-    const bool heat_immune = has_flag( json_flag_HEAT_IMMUNE );
-    const bool has_heatsink = has_flag( json_flag_HEATSINK ) || heat_immune;
     const bool has_common_cold = has_effect( effect_common_cold );
     const std::pair<int, int> climate_control = climate_control_strength();
     const int climate_control_heat = climate_control.first;
@@ -496,7 +597,10 @@ void Character::update_bodytemp()
             scaled_sun_irradiance :
             0_C_delta;
 
-    const int best_fire = get_best_fire( pos_bub() );
+    const bool apply_fire_morale = advance && has_trait( trait_PYROMANIA );
+    const nearby_fire_heat fire_heat = apply_fire_morale ?
+                                      get_nearby_fire_heat( pos_bub() ) : nearby_fire_heat{};
+    const int best_fire = apply_fire_morale ? fire_heat.best_fire : get_best_fire( pos_bub() );
 
     const units::temperature_delta lying_warmth = use_floor_warmth ? floor_warmth(
                 pos_bub() ) : 0_C_delta;
@@ -510,12 +614,21 @@ void Character::update_bodytemp()
     // Difference between high and low is the "safe" heat - one we only apply if it's beneficial
     const units::temperature_delta mutation_heat_bonus = mutation_heat_high - mutation_heat_low;
 
-    const units::temperature_delta h_radiation = get_heat_radiation( pos_bub() );
-
-    // 111F (44C) is a temperature in which proteins break down: https://en.wikipedia.org/wiki/Burn
-    // Blisters arbitrarily scale with the sqrt of the temperature difference in fahrenheit.
-    const int radiation_blister_count = h_radiation > 44_C_delta ? static_cast<int>( std::sqrt(
-                                            units::to_fahrenheit_delta( h_radiation - 44_C_delta ) ) ) : 0;
+    std::optional<units::temperature_delta> h_radiation;
+    if( apply_fire_morale ) {
+        h_radiation = fire_heat.radiation;
+    }
+    // Preserve the legacy thrill threshold, but count only radiation from actual flames.
+    int fire_thrill = 0;
+    if( fire_heat.flame_radiation > 44_C_delta ) {
+        const float radiant_excess = units::to_fahrenheit_delta( fire_heat.flame_radiation - 44_C_delta );
+        fire_thrill = static_cast<int>( std::sqrt( radiant_excess ) );
+        fire_thrill -= has_flag( json_flag_BARKY ) ? 5 : 0;
+        // Worn heat immunity is not the character flag used by the old threshold.
+        if( has_flag( json_flag_HEATSINK ) || has_flag( json_flag_HEAT_IMMUNE ) ) {
+            fire_thrill -= 20;
+        }
+    }
 
     // fat insulates and increases total heat production of body, but it should have a diminishing effect.
     // at 5 over healthy bmi (obese), it is ~5 warmth, at 20 over healthy bmi (morbid obesity) it is ~12 warmth
@@ -525,9 +638,6 @@ void Character::update_bodytemp()
     std::map<bodypart_id, int> warmth_per_bp = worn.warmth( *this );
     std::map<bodypart_id, int> bonus_warmth_per_bp = bonus_item_warmth();
     std::map<bodypart_id, int> wind_res_per_bp = get_wind_resistance();
-    // We might not use this at all, so leave it empty
-    // If we do need to use it, we'll initialize it (once) there
-    std::map<bodypart_id, int> fire_armor_per_bp;
     // Local humidity depends only on loop-invariant inputs (weather humidity,
     // weather type and shelter), so compute it once instead of per body part.
     const int local_humidity = get_local_humidity( weather.humidity, weather_man.weather_id,
@@ -535,6 +645,10 @@ void Character::update_bodytemp()
 
     // Current temperature and converging temperature calculations
     for( const bodypart_id &bp : get_all_body_parts() ) {
+        const auto identity = bodytemp_part_identity( *this, bp );
+        if( !identity ) {
+            continue;
+        }
 
         if( bp->has_flag( json_flag_IGNORE_TEMP ) ) {
             continue;
@@ -601,35 +715,19 @@ void Character::update_bodytemp()
         mod_part_temp_conv( bp, mutation_heat_low );
         // BMI
         mod_part_temp_conv( bp, bmi_heat_bonus );
-        // DIRECT HEAT SOURCES (generates body heat, helps fight frostbite)
-        // Bark : lowers blister count to -5; harder to get blisters
-        int blister_count = has_bark ? -5 : 0; // If the counter is high, your skin starts to burn
-
-        if( get_part_frostbite_timer( bp ) > 0 ) {
-            mod_part_frostbite_timer( bp, -std::max( 5.0f, units::to_fahrenheit_delta( h_radiation ) ) );
-        }
-        blister_count += radiation_blister_count;
-
-        const bool pyromania = has_trait( trait_PYROMANIA );
-        // BLISTERS : Skin gets blisters from intense heat exposure.
-        // Fire protection protects from blisters.
-        // Heatsinks give near-immunity.
-        if( has_heatsink ) {
-            blister_count -= 20;
-        }
-        if( fire_armor_per_bp.empty() && blister_count > 0 ) {
-            fire_armor_per_bp = get_all_armor_type( damage_heat );
-        }
-        if( blister_count - fire_armor_per_bp[bp] > 0 ) {
-            add_effect( effect_blisters, 1_turns, bp );
-            if( pyromania ) {
-                add_morale( morale_pyromania_nearfire, 10, 10, 1_hours,
-                            30_minutes ); // Proximity that's close enough to harm us gives us a bit of a thrill
-                rem_morale( morale_pyromania_nofire );
+        // DIRECT HEAT SOURCES (helps fight frostbite)
+        if( frostbite_tick && get_part_frostbite_timer( bp ) > 0 ) {
+            if( !h_radiation ) {
+                h_radiation = get_heat_radiation( pos_bub() );
             }
-        } else if( pyromania && best_fire >= 1 ) { // Only give us fire bonus if there's actually fire
-            add_morale( morale_pyromania_nearfire, 5, 5, 30_minutes,
-                        15_minutes ); // Gain a much smaller mood boost even if it doesn't hurt us
+            mod_part_frostbite_timer( bp, -std::max( 5.0f, units::to_fahrenheit_delta( *h_radiation ) ) );
+        }
+        // Each part applies its own cap, so a shielded part can lower an earlier +10 to +5.
+        if( fire_thrill > 0 && fire_thrill > get_armor_type( damage_heat, bp ) ) {
+            add_morale( morale_pyromania_nearfire, 10, 10, 1_hours, 30_minutes );
+            rem_morale( morale_pyromania_nofire );
+        } else if( fire_heat.adjacent_flame ) {
+            add_morale( morale_pyromania_nearfire, 5, 5, 30_minutes, 15_minutes );
             rem_morale( morale_pyromania_nofire );
         }
 
@@ -642,8 +740,10 @@ void Character::update_bodytemp()
             mod_part_temp_conv( bp, -1.5_C_delta );
         }
 
-        temp_equalizer( bp, bp->connected_to );
-        temp_equalizer( bp, bp->main_part );
+        if( advance ) {
+            temp_equalizer( bp, bp->connected_to );
+            temp_equalizer( bp, bp->main_part );
+        }
 
         // Climate Control eases the effects of high and low ambient temps
         if( climate_control_heat || climate_control_chill ) {
@@ -671,10 +771,6 @@ void Character::update_bodytemp()
 
         }
 
-        // exp(-0.001) : half life of 60 minutes, exp(-0.002) : half life of 30 minutes,
-        // exp(-0.003) : half life of 20 minutes, exp(-0.004) : half life of 15 minutes
-        const double convergence_multiplier = 1 - std::exp( -0.002 );
-
         const units::temperature_delta comfortable_warmth = bonus_fire_warmth + lying_warmth;
         const units::temperature_delta bonus_warmth = comfortable_warmth + metabolism_warmth +
                 mutation_heat_bonus + bp_temp_bonus;
@@ -682,7 +778,7 @@ void Character::update_bodytemp()
             // Approximate temp_conv needed to reach comfortable temperature in this very turn
             // Basically inverted formula for temp_cur below
             const units::temperature_delta delta = ( BODYTEMP_NORM - get_part_temp_conv(
-                    bp ) ) / convergence_multiplier;
+                    bp ) ) / bodytemp_convergence_multiplier;
             units::temperature desired = BODYTEMP_NORM + delta;
             if( units::abs( BODYTEMP_NORM - desired ) < 2_C_delta ) {
                 desired = BODYTEMP_NORM; // Ensure that it converges
@@ -701,7 +797,7 @@ void Character::update_bodytemp()
 
             // Morale bonus for comfiness - only if actually comfy (not too warm/cold)
             // Spread the morale bonus in time.
-            if( comfortable_warmth > 0_C_delta &&
+            if( advance && comfortable_warmth > 0_C_delta &&
                 calendar::once_every( 1_minutes ) && get_effect_int( effect_cold ) == 0 &&
                 get_effect_int( effect_hot ) == 0 &&
                 get_part_temp_conv( bp ) > BODYTEMP_COLD && get_part_temp_conv( bp ) <= BODYTEMP_NORM ) {
@@ -709,9 +805,7 @@ void Character::update_bodytemp()
             }
         }
 
-        const units::temperature temp_before = get_part_temp_cur( bp );
         const units::temperature cur_temp_conv = get_part_temp_conv( bp );
-        units::temperature_delta temp_difference = cur_temp_conv - temp_before;
 
         // This statement checks if we should be wearing our bonus warmth.
         // If, after all the warmth calculations, we should be, then we have to recalculate the temperature.
@@ -719,52 +813,32 @@ void Character::update_bodytemp()
             ( ( cur_temp_conv + clothing_warmth_adjusted_bonus ) < BODYTEMP_HOT ||
               get_part_temp_cur( bp ) < BODYTEMP_COLD ) ) {
             mod_part_temp_conv( bp, clothing_warmth_adjusted_bonus );
-            const units::temperature new_temp_conv = get_part_temp_conv( bp );
-            temp_difference = new_temp_conv - get_part_temp_cur( bp );
         }
+        if( !advance ) {
+            continue;
+        }
+
+        const units::temperature temp_before = get_part_temp_cur( bp );
 
         // Finally apply the temperature changes, subject to decay.
-        set_part_temp_cur( bp, temp_before + temp_difference * convergence_multiplier );
+        set_part_temp_cur( bp, converged_bodytemp( temp_before, get_part_temp_conv( bp ) ) );
 
         const units::temperature temp_after = get_part_temp_cur( bp );
-        // PENALTIES
-        if( temp_after < BODYTEMP_FREEZING ) {
-            add_effect( effect_cold, 1_turns, bp, true, 3 );
-        } else if( temp_after < BODYTEMP_VERY_COLD ) {
-            add_effect( effect_cold, 1_turns, bp, true, 2 );
-        } else if( temp_after < BODYTEMP_COLD ) {
-            add_effect( effect_cold, 1_turns, bp, true, 1 );
-        } else if( temp_after > BODYTEMP_SCORCHING && !heat_immune ) {
-            add_effect( effect_hot, 1_turns, bp, true, 3 );
-            // if a main part and past the additional threshold for heat tolerance
-            if( bp->main_part == bp.id() && temp_after > BODYTEMP_SCORCHING + BODYTEMP_THRESHOLD ) {
-                add_effect( effect_hot_speed, 1_turns, bp, true, 3 );
-            } else {
-                add_effect( effect_hot_speed, 1_turns, bp, true, 2 );
-            }
-        } else if( temp_after > BODYTEMP_VERY_HOT && !heat_immune ) {
-            add_effect( effect_hot, 1_turns, bp, true, 2 );
-            // if a main part and past the additional threshold for heat tolerance
-            if( bp->main_part == bp.id() && temp_after > BODYTEMP_VERY_HOT + BODYTEMP_THRESHOLD ) {
-                add_effect( effect_hot_speed, 1_turns, bp, true, 2 );
-            } else {
-                add_effect( effect_hot_speed, 1_turns, bp, true, 1 );
-            }
-        } else if( temp_after > BODYTEMP_HOT && !heat_immune ) {
-            add_effect( effect_hot, 1_turns, bp, true, 1 );
-            // if a main part and past the additional threshold for heat tolerance
-            if( bp->main_part == bp.id() && temp_after > BODYTEMP_HOT + BODYTEMP_THRESHOLD ) {
-                add_effect( effect_hot_speed, 1_turns, bp, true, 1 );
-            } else {
-                remove_effect( effect_hot_speed, bp );
-            }
-        } else {
-            remove_effect( effect_cold, bp );
-            remove_effect( effect_hot, bp );
-            remove_effect( effect_hot_speed, bp );
+        const int tier_after = bodytemp_tier( temp_after );
+        const auto penalty_result = update_bodytemp_effects( bp, temp_after, tier_after, heat_immune );
+        if( penalty_result == bodytemp_effect_result::actor_invalidated ) {
+            return false;
+        }
+        if( penalty_result == bodytemp_effect_result::part_replaced ) {
+            continue;
         }
 
-        update_frostbite( bp, bp_windpower, warmth_per_bp );
+        if( frostbite_tick ) {
+            update_frostbite( bp, bp_windpower, warmth_per_bp );
+            if( bodytemp_part_identity( *this, bp ) != identity ) {
+                continue;
+            }
+        }
 
         // Warn the player if condition worsens.
         // To avoid flooding the log when a body part's temperature hovers around a
@@ -772,31 +846,7 @@ void Character::update_bodytemp()
         // reaches a dangerous tier (freezing / red hot), if it reaches a different tier
         // than the one last announced for that part (a large or new change), or if enough
         // time has passed since the last message for that part. See temp_message_record.
-        const auto temp_tier = []( const units::temperature & t ) -> int {
-            if( t < BODYTEMP_FREEZING )
-            {
-                return -3;
-            } else if( t < BODYTEMP_VERY_COLD )
-            {
-                return -2;
-            } else if( t < BODYTEMP_COLD )
-            {
-                return -1;
-            } else if( t > BODYTEMP_SCORCHING )
-            {
-                return 3;
-            } else if( t > BODYTEMP_VERY_HOT )
-            {
-                return 2;
-            } else if( t > BODYTEMP_HOT )
-            {
-                return 1;
-            }
-            return 0;
-        };
-
-        const int tier_before = temp_tier( temp_before );
-        const int tier_after = temp_tier( temp_after );
+        const int tier_before = bodytemp_tier( temp_before );
         // Only warn when crossing a threshold in the worsening direction (further from comfort).
         const bool worsening = ( tier_after > 0 && tier_after > tier_before ) ||
                                ( tier_after < 0 && tier_after < tier_before );
@@ -847,6 +897,8 @@ void Character::update_bodytemp()
         }
 
 
+        const units::temperature conv_temp = get_part_temp_conv( bp );
+
         // Note: Numbers are based off of BODYTEMP at the top of weather.h
         // If torso is BODYTEMP_COLD which is 34C, the early stages of hypothermia begin
         // constant shivering will prevent the player from falling asleep.
@@ -871,7 +923,6 @@ void Character::update_bodytemp()
             }
         }
 
-        const units::temperature conv_temp = get_part_temp_conv( bp );
         // Warn the player that wind is going to be a problem.
         // But only if it can be a problem, no need to spam player with "wind chills your scorching body"
         if( conv_temp <= BODYTEMP_COLD && windchill < units::from_fahrenheit_delta( -10 ) &&
@@ -890,6 +941,158 @@ void Character::update_bodytemp()
                                body_part_name( bp ) );
         }
     }
+
+    return !advance || !sample_heat_exposure || update_thermal_exposure();
+}
+
+bool npc::update_live_bodytemp( bool body_tick, bool consecutive_turn )
+{
+    const bodytemp_update mode = body_tick ? bodytemp_update::live :
+                                 bodytemp_update::live_without_frostbite;
+    if( has_trait( trait_DEBUG_NOTEMP ) || has_flag( json_flag_CANNOT_CHANGE_TEMPERATURE ) ) {
+        bodytemp_target_environment.reset();
+        return update_bodytemp_impl( mode, true );
+    }
+
+    // Reuse the weather manager's per-tile sample. Local heat can change even
+    // while the NPC stays put, and data-defined heat can exceed any fixed margin.
+    const tripoint_abs_ms pos = pos_abs();
+    const units::temperature local_temperature = get_weather().get_temperature( pos_bub() );
+    bool refresh = body_tick || !consecutive_turn || !bodytemp_target_environment ||
+                   bodytemp_target_environment->pos != pos ||
+                   bodytemp_target_environment->temperature != local_temperature;
+    if( !refresh ) {
+        // Near scorching, also account for changes the air sample cannot see,
+        // such as adjacent fire warmth, immersion, and heat exchange between parts.
+        static const units::temperature refresh_band_start = BODYTEMP_SCORCHING - 1_C_delta;
+        for( const auto &[id, part] : body ) {
+            const units::temperature current = part.get_temp_cur();
+            const units::temperature target = part.get_temp_conv();
+            if( ( current >= refresh_band_start ||
+                  ( target > BODYTEMP_SCORCHING &&
+                    converged_bodytemp( current, target ) > BODYTEMP_SCORCHING ) ) &&
+                !id->has_flag( json_flag_IGNORE_TEMP ) ) {
+                refresh = true;
+                break;
+            }
+        }
+    }
+    if( refresh ) {
+        bodytemp_target_environment = bodytemp_environment_sample{ pos, local_temperature };
+        // An extra environment refresh does not advance the frostbite clock.
+        return update_bodytemp_impl( mode, true, local_temperature );
+    }
+
+    std::optional<bool> heat_immune;
+    bodypart_id bp = bodypart_str_id::NULL_ID().id();
+    while( true ) {
+        units::temperature temp;
+        {
+            // Keep only the last key across callbacks: the anatomy can be rebuilt.
+            const auto it = bp == bodypart_str_id::NULL_ID() ? body.begin() :
+                            body.upper_bound( bp.id() );
+            if( it == body.end() ) {
+                break;
+            }
+            bp = it->first.id();
+            if( bp->has_flag( json_flag_IGNORE_TEMP ) ) {
+                continue;
+            }
+            bodypart &part = it->second;
+            temp = converged_bodytemp( part.get_temp_cur(), part.get_temp_conv() );
+            part.set_temp_cur( temp );
+        }
+        if( update_bodytemp_effects( bp, temp, bodytemp_tier( temp ), heat_immune ) ==
+            bodytemp_effect_result::actor_invalidated ) {
+            return false;
+        }
+    }
+    return update_thermal_exposure();
+}
+
+bool Character::update_thermal_exposure()
+{
+    const time_point now = calendar::turn;
+    constexpr units::temperature_delta burn_protection_per_point = 0.25_C_delta;
+    units::temperature burn_start = BODYTEMP_SCORCHING;
+    std::optional<bool> temperature_paused;
+    std::optional<bool> burn_protected;
+    std::map<bodypart_id, std::pair<bodypart_id, bool>> burn_requests;
+    bool reset_applied = false;
+    for( auto &[id, part] : body ) {
+        const bool sample = part.try_sample_heat_exposure( now );
+        const units::temperature temp = part.get_temp_cur();
+        const bool has_dose = part.has_heat_exposure();
+        const bool scorching = temp > BODYTEMP_SCORCHING;
+        if( !has_dose && ( !sample || !scorching ) ) {
+            continue;
+        }
+        const bodypart_id contact = id.id();
+        const bodypart_id main = thermal_wound_part( contact );
+        if( main != bodypart_str_id::NULL_ID() && body.at( main.id() ).needs_heat_exposure_reset() ) {
+            part.reset_heat_exposure();
+            reset_applied = true;
+        }
+        if( id->has_flag( json_flag_IGNORE_TEMP ) ) {
+            continue;
+        }
+        if( !temperature_paused.has_value() ) {
+            temperature_paused = has_trait( trait_DEBUG_NOTEMP ) ||
+                                 has_flag( json_flag_CANNOT_CHANGE_TEMPERATURE );
+        }
+        if( *temperature_paused ) {
+            continue;
+        }
+        if( !sample ) {
+            continue;
+        }
+        int exposure_rate = -1;
+        if( scorching && main != bodypart_str_id::NULL_ID() ) {
+            if( !burn_protected.has_value() ) {
+                burn_protected = is_dead_state() || has_effect( effect_incorporeal ) ||
+                                 has_flag( json_flag_CANNOT_TAKE_DAMAGE ) || is_immune_damage( damage_heat ) ||
+                                 has_flag( json_flag_THERMAL_BURN_PROTECTION );
+                if( !*burn_protected ) {
+                    const int innate_protection = ( has_flag( json_flag_BARKY ) ? 5 : 0 ) +
+                                                  ( has_flag( json_flag_HEATSINK ) ? 20 : 0 );
+                    burn_start += innate_protection * burn_protection_per_point;
+                }
+            }
+            if( !*burn_protected && temp > burn_start ) {
+                const int heat_armor = get_armor_type( damage_heat, contact );
+                const units::temperature protected_burn_start = burn_start +
+                        std::max( 0, heat_armor ) * burn_protection_per_point;
+                if( temp > protected_burn_start ) {
+                    exposure_rate = temp > protected_burn_start + 4_C_delta ? 2 : 1;
+                }
+            }
+        }
+        const bodypart::thermal_burn_tier tier = part.update_heat_exposure( exposure_rate );
+        if( tier != bodypart::thermal_burn_tier::none ) {
+            // Only merge wound requests; each actual part accrues its own dose.
+            const bool severe = tier == bodypart::thermal_burn_tier::severe;
+            const auto [request, inserted] = burn_requests.try_emplace( main, contact, severe );
+            if( !inserted && severe ) {
+                request->second = { contact, true };
+            }
+        }
+    }
+    if( reset_applied ) {
+        // Wait until every contact on a healed main part has discarded its old dose.
+        for( auto &entry : body ) {
+            entry.second.acknowledge_heat_exposure_reset();
+        }
+    }
+    if( burn_requests.empty() ) {
+        return true;
+    }
+    pain_reaction_scope pain_reaction( *this );
+    for( const auto &request : burn_requests ) {
+        const auto &[bp, severe] = request.second;
+        apply_thermal_burn( bp, severe, /*from_exposure=*/true );
+    }
+    pain_reaction.finish();
+    return pain_reaction.lifetime().get_alive() != nullptr;
 }
 
 void Character::update_frostbite( const bodypart_id &bp, const int FBwindPower,

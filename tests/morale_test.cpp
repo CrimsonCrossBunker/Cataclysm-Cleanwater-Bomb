@@ -4,34 +4,61 @@
 #include <string>
 #include <vector>
 
+#include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
-#include "debug.h"
+#include "character_id.h"
 #include "coordinates.h"
+#include "debug.h"
+#include "event.h"
+#include "event_bus.h"
+#include "event_subscriber.h"
+#include "game.h"
+#include "generic_factory.h"
 #include "item.h"
 #include "item_location.h"
+#include "json.h"
+#include "json_loader.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "morale.h"
 #include "npc.h"
+#include "options_helpers.h"
 #include "pimpl.h"
+#include "player_activity.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "subbodypart.h"
 #include "type_id.h"
+#include "units.h"
+#include "weather.h"
+#include "weather_type.h"
+#include "wound.h"
+
+static const damage_type_id damage_heat( "heat" );
 
 static const efftype_id effect_cold( "cold" );
 static const efftype_id effect_hot( "hot" );
 static const efftype_id effect_took_prozac( "took_prozac" );
 
+static const field_type_str_id field_fd_fire( "fd_fire" );
+
 static const itype_id itype_boots( "boots" );
 static const itype_id itype_legpouch( "legpouch" );
 static const itype_id itype_shotgun_s( "shotgun_s" );
+static const itype_id itype_test_protective_clothing( "test_protective_clothing" );
+static const itype_id itype_test_zentai( "test_zentai" );
+static const itype_id itype_test_zentai_immune_test_fire( "test_zentai_immune_test_fire" );
 static const itype_id itype_tinfoil_hat( "tinfoil_hat" );
+
+static const json_character_flag json_flag_HEAT_IMMUNE( "HEAT_IMMUNE" );
+static const json_character_flag json_flag_IGNORE_TEMP( "IGNORE_TEMP" );
 
 static const morale_type morale_book( "morale_book" );
 static const morale_type morale_food_bad( "morale_food_bad" );
@@ -41,7 +68,11 @@ static const morale_type morale_perm_badtemper( "morale_perm_badtemper" );
 static const morale_type morale_perm_constrained( "morale_perm_constrained" );
 static const morale_type morale_perm_masochist( "morale_perm_masochist" );
 static const morale_type morale_perm_optimist( "morale_perm_optimist" );
+static const morale_type morale_pyromania_nearfire( "morale_pyromania_nearfire" );
+static const morale_type morale_pyromania_nofire( "morale_pyromania_nofire" );
 static const morale_type morale_wet( "morale_wet" );
+
+static const ter_str_id ter_t_water_hot( "t_water_hot" );
 
 static const trait_id trait_BADTEMPER( "BADTEMPER" );
 static const trait_id trait_CENOBITE( "CENOBITE" );
@@ -50,6 +81,7 @@ static const trait_id trait_FLOWERS( "FLOWERS" );
 static const trait_id trait_MASOCHIST( "MASOCHIST" );
 static const trait_id trait_OPTIMISTIC( "OPTIMISTIC" );
 static const trait_id trait_PLANT( "PLANT" );
+static const trait_id trait_PYROMANIA( "PYROMANIA" );
 static const trait_id trait_ROOTS1( "ROOTS1" );
 
 TEST_CASE( "player_morale_empty", "[player_morale]" )
@@ -59,6 +91,139 @@ TEST_CASE( "player_morale_empty", "[player_morale]" )
     GIVEN( "an empty morale" ) {
         CHECK( m.get_level() == 0 );
     }
+}
+
+TEST_CASE( "temporary_pain_relief_and_ceiling_leave_wounds_and_painkillers_intact",
+           "[player_morale][thermal_burn]" )
+{
+    clear_avatar();
+    avatar &u = get_avatar();
+    const efftype_id relief( "pain_relief" );
+    const efftype_id ceiling( "pain_ceiling" );
+    REQUIRE( u.apply_thermal_burn( body_part_arm_l, true ) );
+    u.set_pain( 47 );
+    u.set_painkiller( 5 );
+    REQUIRE( u.get_perceived_pain() == 52 );
+
+    u.add_effect( ceiling, 1_hours, false, 40 );
+    CHECK( u.get_perceived_pain() == 40 );
+    u.add_effect( relief, 3_minutes, false, 30 );
+    CHECK( u.get_perceived_pain() == 10 );
+    u.set_pain( 0 );
+    CHECK( u.get_perceived_pain() == 0 );
+
+    REQUIRE( u.remove_effect( relief ) );
+    CHECK( u.get_perceived_pain() == 5 );
+    REQUIRE( u.remove_effect( ceiling ) );
+    CHECK( u.get_painkiller() == 5 );
+    CHECK( u.Creature::get_pain() == 0 );
+    CHECK( u.get_pain() == 10 );
+}
+
+TEST_CASE( "environmental_blisters_react_to_the_combined_felt_pain",
+           "[player_morale][thermal_burn][pain_transition]" )
+{
+    clear_map_without_vision();
+    auto storage = std::make_unique<standard_npc>( "Heat exposure test NPC",
+                   tripoint_bub_ms( 50, 50, 0 ) );
+    standard_npc &target = *storage;
+    clear_character( target, true );
+    target.toggle_trait( trait_MASOCHIST );
+    // A 4–6 wake threshold is above either individual blister, but not their sum.
+    target.set_sensitive( 75 );
+
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    const restore_on_out_of_scope restore_temperature( get_weather().forced_temperature );
+    get_weather().forced_temperature = 19_C;
+    calendar::turn = calendar::turn_zero;
+    const auto sample_heat = [&target]() {
+        calendar::turn += 1_turns;
+        target.set_all_parts_temp_cur( BODYTEMP_NORM );
+        target.set_part_temp_cur( body_part_arm_l, BODYTEMP_SCORCHING + 2_C_delta );
+        target.set_part_temp_cur( body_part_arm_r, BODYTEMP_SCORCHING + 2_C_delta );
+        return target.update_bodytemp( true );
+    };
+    for( int turn = 0; turn < 29; ++turn ) {
+        REQUIRE( sample_heat() );
+    }
+    REQUIRE( target.get_perceived_pain() == 0 );
+    const efftype_id sleep( "sleep" );
+    target.add_effect( sleep, 1_hours );
+    REQUIRE( target.get_effect_dur( sleep ) > 0_turns );
+
+    SECTION( "the blisters together wake the sleeper" ) {
+        REQUIRE( sample_heat() );
+        CHECK( target.get_perceived_pain() == 6 );
+        CHECK( target.has_morale( morale_perm_masochist ) == 6 );
+        CHECK( target.get_effect_dur( sleep ) == 0_turns );
+        CHECK( target.Creature::get_pain() == 0 );
+    }
+    SECTION( "analgesia masks the reaction, but not the wounds" ) {
+        target.set_painkiller( 6 );
+        REQUIRE( sample_heat() );
+        CHECK( target.get_pain() == 6 );
+        CHECK( target.get_perceived_pain() == 0 );
+        CHECK( target.has_morale( morale_perm_masochist ) == 0 );
+        CHECK( target.get_effect_dur( sleep ) == 1_hours );
+        CHECK( target.Creature::get_pain() == 0 );
+    }
+    SECTION( "waking can invalidate the heated character" ) {
+        struct wake_observer : event_subscriber {
+            using event_subscriber::notify;
+
+            std::unique_ptr<standard_npc> &target_storage;
+            character_id target_id;
+
+            explicit wake_observer( std::unique_ptr<standard_npc> &storage ) :
+                target_storage( storage ), target_id( storage->getID() ) {
+                get_event_bus().subscribe( this );
+            }
+
+            void notify( const cata::event &e ) override {
+                if( e.type() == event_type::character_wakes_up &&
+                    e.get<character_id>( "character" ) == target_id ) {
+                    target_storage.reset();
+                }
+            }
+        } observer( storage );
+        CHECK_FALSE( sample_heat() );
+        CHECK_FALSE( storage );
+    }
+}
+
+TEST_CASE( "treating_a_burn_updates_pain_morale_immediately",
+           "[player_morale][thermal_burn][pain_transition]" )
+{
+    const wound_fix_id fix( "test_pain_morale_after_burn_treatment" );
+    wound_fix::load_wound_fixes( json_loader::from_string( R"({
+        "id": "test_pain_morale_after_burn_treatment",
+        "name": "test burn treatment",
+        "description": "A treatment that removes a severe burn.",
+        "success_msg": "Test treatment finished.",
+        "wounds_removed": [ "thermal_burn" ]
+    })" ).get_object(), "TEST_DATA" );
+    const on_out_of_scope cleanup( [&fix]() {
+        cata::lua_platform::detail::wound_fix_registry().erase( fix );
+    } );
+    REQUIRE( fix.is_valid() );
+    const_cast<wound_fix &>( *fix ).finalize();
+
+    clear_map_without_vision();
+    standard_npc patient( "Burn treatment test NPC", tripoint_bub_ms( 50, 50, 0 ) );
+    clear_character( patient, true );
+    patient.toggle_trait( trait_MASOCHIST );
+    REQUIRE( patient.apply_thermal_burn( body_part_arm_l, true ) );
+    patient.set_pain( 2 );
+    REQUIRE( patient.has_morale( morale_perm_masochist ) == 12 );
+
+    const wound_type_id burn( "thermal_burn" );
+    fix_wound_activity_actor treatment( 1_turns, body_part_arm_l, burn, fix );
+    player_activity activity( treatment );
+    treatment.finish( activity, patient );
+
+    CHECK_FALSE( patient.get_part( body_part_arm_l )->has_wound( burn ) );
+    CHECK( patient.get_perceived_pain() == 2 );
+    CHECK( patient.has_morale( morale_perm_masochist ) == 2 );
 }
 
 TEST_CASE( "player_morale_decay", "[player_morale]" )
@@ -787,4 +952,103 @@ TEST_CASE( "morale_mutation_state_after_load_like_sequence", "[player_morale]" )
         CHECK( m.has( morale_food_good ) == 20 );
         CHECK( m.has( morale_perm_constrained ) == -10 );
     }
+}
+
+TEST_CASE( "near_fire_pyromania_morale", "[player_morale][temperature]" )
+{
+    clear_map();
+    clear_avatar();
+    avatar &u = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms pos = u.pos_bub();
+    const scoped_weather_override weather_clear( WEATHER_CLEAR );
+    const restore_on_out_of_scope restore_temperature( get_weather().forced_temperature );
+    get_weather().forced_temperature = 19_C;
+    u.set_mutation( trait_PYROMANIA );
+    u.set_all_parts_temp_cur( BODYTEMP_NORM );
+    u.add_morale( morale_pyromania_nofire, -10, -30, 24_hours, 24_hours, true );
+
+    const auto add_flame = [&here, &pos]( const tripoint & offset, int intensity ) {
+        REQUIRE( here.add_field( pos + offset, field_fd_fire.id(), intensity, 0_turns, false ) );
+    };
+    int expected = 0;
+    bool long_decay = false;
+    bool thawing = false;
+    bool overheating = false;
+
+    SECTION( "hot spring radiation thaws frostbite without supplying a fire thrill" ) {
+        for( const tripoint_bub_ms &p : here.points_in_radius( pos, 2 ) ) {
+            if( p != pos ) {
+                here.ter_set( p, ter_t_water_hot.id() );
+            }
+        }
+        REQUIRE( get_best_fire( pos ) == 1 );
+        REQUIRE( units::to_celsius_delta( get_heat_radiation( pos ) ) > 44 );
+        u.set_part_frostbite_timer( body_part_hand_l, 100 );
+        thawing = true;
+
+        SECTION( "without flames" ) {
+            expected = 0;
+        }
+        SECTION( "with a small flame, only the flame counts for morale" ) {
+            add_flame( tripoint::east, 1 );
+            expected = 5;
+        }
+    }
+    SECTION( "an overheated clothed character does not mistake radiant terrain for fire" ) {
+        REQUIRE( u.wear_item( item( itype_test_zentai ), false ).has_value() );
+        u.set_all_parts_temp_cur( BODYTEMP_SCORCHING + 2_C_delta );
+        here.ter_set( pos + tripoint::east, ter_t_water_hot.id() );
+        REQUIRE( get_best_fire( pos ) == 1 );
+        overheating = true;
+    }
+    SECTION( "strong flames can give the thrill beyond the adjacent tiles" ) {
+        // The two nearer flames are not enough; radiation from six tiles away supplies the rest.
+        add_flame( tripoint::north * 2, 3 );
+        add_flame( tripoint::south * 2, 3 );
+        add_flame( tripoint::north * 6, 3 );
+        add_flame( tripoint::east * 6, 3 );
+        add_flame( tripoint::west * 6, 3 );
+        REQUIRE( get_best_fire( pos ) == 0 );
+        expected = 10;
+        long_decay = true;
+    }
+    SECTION( "adjacent flames strong enough for the thrill" ) {
+        // Two adjacent intensity-3 flames give a legacy thrill score of 5 before armor.
+        add_flame( tripoint::east, 3 );
+        add_flame( tripoint::west, 3 );
+        expected = 10;
+        long_decay = true;
+
+        SECTION( "worn-only heat immunity is not the intrinsic morale shield" ) {
+            REQUIRE( u.wear_item( item( itype_test_zentai_immune_test_fire ), false ).has_value() );
+            REQUIRE( u.is_immune_damage( damage_heat ) );
+            REQUIRE_FALSE( u.has_flag( json_flag_HEAT_IMMUNE ) );
+        }
+        SECTION( "mixed shielding preserves the cap of the last eligible body part" ) {
+            REQUIRE( u.wear_item( item( itype_test_protective_clothing ), false ).has_value() );
+            REQUIRE( u.get_armor_type( damage_heat, body_part_torso ) >= 5 );
+            REQUIRE( u.get_armor_type( damage_heat, body_part_head ) < 5 );
+            // Body part iteration follows interned IDs rather than anatomical order.
+            for( const bodypart_id &bp : u.get_all_body_parts() ) {
+                if( !bp->has_flag( json_flag_IGNORE_TEMP ) ) {
+                    expected = u.get_armor_type( damage_heat, bp ) >= 5 ? 5 : 10;
+                }
+            }
+        }
+    }
+
+    u.update_bodytemp();
+    CHECK( u.has_morale( morale_pyromania_nearfire ) == expected );
+    CHECK( u.has_morale( morale_pyromania_nofire ) == ( expected == 0 ? -10 : 0 ) );
+    if( thawing ) {
+        CHECK( u.get_part_frostbite_timer( body_part_hand_l ) < 5 );
+    }
+    if( overheating ) {
+        CHECK( u.get_part_temp_cur( body_part_torso ) > BODYTEMP_SCORCHING );
+    }
+    u.morale->decay( 30_minutes );
+    CHECK( u.has_morale( morale_pyromania_nearfire ) == ( long_decay ? expected : 0 ) );
+    u.morale->decay( 30_minutes );
+    CHECK( u.has_morale( morale_pyromania_nearfire ) == 0 );
 }

@@ -449,12 +449,26 @@ void widget_clause::load( const JsonObject &jo )
     optional( jo, false, "widgets", widgets, string_id_reader<::widget> {} );
 }
 
-bool widget_clause::meets_condition( const std::string &opt_var ) const
+bool widget_clause::meets_condition( std::optional<bodypart_id> bp ) const
 {
-    dialogue d( get_talker_for( get_avatar() ), nullptr );
-    d.reason = opt_var; // TODO: remove since it's replaced by context var
-    write_var_value( var_type::context, "widget", &d, opt_var );
-    return !has_condition || condition( d );
+    if( !has_condition ) {
+        return true;
+    }
+    avatar &ava = get_avatar();
+    dialogue d( get_talker_for( ava ), nullptr );
+    if( bp ) {
+        const bodypart_str_id &requested = bp->id();
+        d.reason = requested.str(); // Legacy implicit bodypart for dialogue conditions.
+        if( !requested.is_null() ) {
+            // Like the HP graph, use the exact part or an equivalent on the same side.
+            const bodypart_id resolved = ava.get_part_id( *bp, body_part_filter::equivalent, true );
+            if( resolved != bodypart_str_id::NULL_ID() ) {
+                d.set_value( "widget_bodypart", resolved.id().str() );
+            }
+        }
+    }
+    d.set_value( "widget", d.reason );
+    return condition( d );
 }
 
 bool widget_clause::meets_condition( const std::set<bodypart_id> &bps ) const
@@ -463,7 +477,7 @@ bool widget_clause::meets_condition( const std::set<bodypart_id> &bps ) const
         return meets_condition();
     }
     for( const bodypart_id &bid : bps ) {
-        if( meets_condition( bid.id().str() ) ) {
+        if( meets_condition( bid ) ) {
             return true;
         }
     }
@@ -1809,7 +1823,7 @@ const widget_clause *widget::get_clause( const std::string &clause_id ) const
             continue;
         }
         // Return this clause if it has no condition or the condition is true
-        if( !wp.has_condition || wp.meets_condition( only_bp().id().str() ) ) {
+        if( wp.meets_condition( only_bp() ) ) {
             return &wp;
         }
     }
@@ -1822,7 +1836,7 @@ std::vector<const widget_clause *> widget::get_clauses() const
     // Look for clauses with satisfied conditions
     for( const widget_clause &wp : _clauses ) {
         // Include this clause if it has no condition or the condition is true
-        if( !wp.has_condition || wp.meets_condition( _bps ) ) {
+        if( wp.meets_condition( _bps ) ) {
             ret.emplace_back( &wp );
         }
     }

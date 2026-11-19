@@ -19,6 +19,7 @@ extern "C" {
 
 #include "bodypart.h"
 #include "calendar.h"
+#include "character.h"
 #include "creature.h"
 #include "effect.h"
 #include "lua_platform_bindings_values.h"
@@ -36,6 +37,8 @@ constexpr int maximum_effect_limit = 256;
 constexpr std::size_t maximum_effect_relation_ids = 64;
 constexpr int maximum_effect_assignment_intensity = 1000000;
 constexpr int maximum_effect_intensity_delta = 1000;
+
+const efftype_id effect_onfire( "onfire" );
 
 void require_id_kind( const script_game_id &id, const std::string &kind,
                       const std::string &api_name )
@@ -97,10 +100,8 @@ sol::table typed_id_page(
     return result;
 }
 
-sol::table snapshot_effect(
-    sol::state_view lua, const effect &entry )
+sol::table snapshot_effect_record( sol::state_view lua, const effect &snapshot )
 {
-    const effect snapshot = entry;
     sol::table result = lua.create_table();
     result["id"] = script_game_id(
                        "effect", snapshot.get_id().str() );
@@ -156,6 +157,12 @@ sol::table snapshot_effect(
                                    lua, snapshot.get_blocks_effects(),
                                    "effect" );
     return result;
+}
+
+sol::table snapshot_effect( sol::state_view lua, const effect &entry )
+{
+    const effect snapshot = entry;
+    return snapshot_effect_record( lua, snapshot );
 }
 
 const effect *find_effect(
@@ -384,8 +391,8 @@ sol::table add_effect(
     const script_game_id &requested_id,
     const script_time_duration &duration,
     const sol::optional<sol::table> &requested_options,
-    const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation )
 {
     require_id_kind(
         requested_id, "effect", "services.effects.add" );
@@ -402,8 +409,8 @@ sol::table add_effect(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Creature *creature = resolve_exact_creature(
-                             handle, runtime_generation,
-                             world_generation, error );
+                             handle, current_runtime_generation(),
+                             current_world_generation(), error );
     if( creature == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -412,33 +419,34 @@ sol::table add_effect(
             options.body_part,
             "services.effects.add" );
     const efftype_id id( requested_id.value() );
-    if( body_part ) {
-        creature->add_effect(
-            id, duration.to_native(), *body_part,
-            options.permanent, options.intensity,
-            options.force );
-    } else {
-        creature->add_effect(
-            id, duration.to_native(), options.permanent,
-            options.intensity, options.force );
-    }
+    const bool targeted_fire = id == effect_onfire && creature->as_character() && body_part &&
+                               *body_part != bodypart_str_id::NULL_ID();
+    effect written_fire;
+    const std::optional<bodypart_id> applied_part = creature->add_effect(
+                effect_source::empty(), id, duration.to_native(),
+                body_part.value_or( bodypart_str_id::NULL_ID().id() ),
+                options.permanent, options.intensity, options.force, false,
+                targeted_fire ? &written_fire : nullptr );
     const native_handle_result<Creature> after_add =
-        handle.resolve_creature( runtime_generation, world_generation );
+        handle.resolve_creature( current_runtime_generation(), current_world_generation() );
     if( !after_add ) {
         return make_game_error_result( state, *after_add.error );
     }
-    const effect *entry = find_effect(
-                              *after_add.value, id, body_part );
-    if( entry == nullptr ) {
-        return make_game_error_result(
-        state, {
-            "rejected",
-            "The creature rejected the requested effect"
-        } );
+    if( !targeted_fire && ( id != effect_onfire || applied_part ) ) {
+        if( const effect *entry = find_effect( *after_add.value, id, body_part ) ) {
+            return make_game_value_result(
+                       state, sol::make_object( state, snapshot_effect( state, *entry ) ) );
+        }
+    } else if( targeted_fire && applied_part && *applied_part != bodypart_str_id::NULL_ID() ) {
+        written_fire.set_bp( applied_part->id() );
+        return make_game_value_result(
+                   state, sol::make_object( state, snapshot_effect_record( state, written_fire ) ) );
     }
-    return make_game_value_result(
-               state, sol::make_object(
-                   state, snapshot_effect( state, *entry ) ) );
+    return make_game_error_result(
+    state, {
+        "rejected",
+        "The creature rejected the requested effect"
+    } );
 }
 
 sol::table remove_effect(
@@ -503,6 +511,9 @@ sol::table adjust_effect_intensity(
     bool changed = false;
     bool removed = false;
     if( entry != nullptr ) {
+        if( id == effect_onfire && creature->is_pending_fire_removal( *entry ) ) {
+            return make_game_error_result( state, { "rejected", "The fire is already being removed" } );
+        }
         before = entry->get_intensity();
         const std::int64_t requested_after =
             static_cast<std::int64_t>( before ) + requested_delta;
@@ -511,6 +522,11 @@ sol::table adjust_effect_intensity(
             removed = creature->remove_effect( id, selected_body_part );
             changed = removed;
         } else {
+            std::optional<Character::pain_reaction_scope> pain_reaction;
+            if( Character *ch = creature->as_character();
+                ch && requested_delta != 0 && Character::is_pain_relief_effect( id, entry->get_bp() ) ) {
+                pain_reaction.emplace( *ch );
+            }
             entry->set_intensity( static_cast<int>( requested_after ) );
             after = entry->get_intensity();
             changed = after != before;
@@ -633,6 +649,9 @@ sol::table update_effect(
             "The creature does not have the requested effect"
         } );
     }
+    if( entry->get_id() == effect_onfire && creature->is_pending_fire_removal( *entry ) ) {
+        return make_game_error_result( state, { "rejected", "The fire is already being removed" } );
+    }
     sol::table before = snapshot_effect( state, *entry );
     creature = resolve_exact_creature(
                    handle, runtime_generation,
@@ -649,6 +668,17 @@ sol::table update_effect(
             "not_found", "The effect was removed while its state was captured"
         } );
     }
+    if( entry->get_id() == effect_onfire && creature->is_pending_fire_removal( *entry ) ) {
+        return make_game_error_result( state, { "rejected", "The fire is already being removed" } );
+    }
+    const efftype_id changed_id = entry->get_id();
+    const bodypart_id changed_body_part = entry->get_bp();
+    std::optional<Character::pain_reaction_scope> pain_reaction;
+    if( Character *ch = creature->as_character();
+        ch && ( options.duration || options.intensity ) &&
+        Character::is_pain_relief_effect( changed_id, changed_body_part ) ) {
+        pain_reaction.emplace( *ch );
+    }
     const int previous_intensity = entry->get_intensity();
     if( options.duration ) {
         entry->set_duration( options.duration->to_native() );
@@ -663,13 +693,14 @@ sol::table update_effect(
             entry->unpause_effect();
         }
     }
-    std::optional<effect> after_snapshot;
-    if( entry->get_intensity() != previous_intensity ) {
-        const efftype_id changed_id = entry->get_id();
-        const bodypart_id changed_body_part = entry->get_bp();
-        const int changed_intensity = entry->get_intensity();
+    const int changed_intensity = entry->get_intensity();
+    const bool intensity_changed = changed_intensity != previous_intensity;
+    if( intensity_changed ) {
         creature->notify_effect_int_change(
             changed_id, changed_intensity, changed_body_part );
+    }
+    if( intensity_changed || pain_reaction ) {
+        pain_reaction.reset();
         creature = resolve_exact_creature(
                        handle, runtime_generation,
                        world_generation, error );
@@ -680,6 +711,7 @@ sol::table update_effect(
                     *creature, changed_id,
                     std::optional<bodypart_id>( changed_body_part ) );
     }
+    std::optional<effect> after_snapshot;
     if( entry != nullptr ) {
         after_snapshot = *entry;
     }
@@ -751,8 +783,7 @@ void install_effect_api(
         require_write();
         return add_effect(
                    lua_state, handle, id, duration, options,
-                   current_runtime_generation(),
-                   current_world_generation() );
+                   current_runtime_generation, current_world_generation );
     } );
     effects.set_function(
         "remove",

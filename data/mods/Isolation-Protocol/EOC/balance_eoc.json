@@ -12,7 +12,7 @@
       { "math": [ "u_hp('arm_r') += 2" ] },
       { "math": [ "u_hp('leg_l') += 2" ] },
       { "math": [ "u_hp('leg_r') += 2" ] },
-      { "math": [ "u_pain() -= 4" ] },
+      { "math": [ "u_pain('type': 'base') -= 4" ] },
       { "u_lose_effect": "bleed" },
       { "if": { "u_has_trait": "iso_eldritch_sorcery" }, "then": { "math": [ "u_val('mana') += 25" ] } }
     ]
@@ -22,7 +22,29 @@
     "id": "ISO_PAIN_CEILING",
     "eoc_type": "EVENT",
     "required_event": "character_takes_damage",
-    "condition": { "math": [ "u_pain() > 40" ] },
-    "effect": [ { "math": [ "u_pain() = 40" ] } ]
+    "effect": [
+      { "if": { "math": [ "u_pain('type': 'base') > 40" ] }, "then": { "math": [ "u_pain('type': 'base') = 40" ] } },
+      { "run_eocs": "ISO_APPLY_PAIN_CEILING" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "ISO_MAINTAIN_PAIN_CEILING",
+    "recurrence": "15 seconds",
+    "global": true,
+    "effect": [ { "run_eocs": "ISO_APPLY_PAIN_CEILING" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "ISO_APPLY_PAIN_CEILING",
+    "condition": { "not": { "u_has_effect": "iso_thermal_pain_ceiling" } },
+    "effect": [ { "u_add_effect": "iso_thermal_pain_ceiling", "duration": "PERMANENT", "intensity": 40 } ]
+  },
+  {
+    "type": "effect_type",
+    "id": "iso_thermal_pain_ceiling",
+    "max_intensity": 40,
+    "rating": "good",
+    "flags": [ "THERMAL_PAIN_CEILING" ]
   }
 ]

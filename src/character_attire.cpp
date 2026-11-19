@@ -18,6 +18,7 @@
 #include <numeric>
 #include <optional>
 #include <ostream>
+#include <vector>
 
 #include "avatar_action.h"
 #include "bodygraph.h"
@@ -55,6 +56,7 @@
 #include "pocket_type.h"
 #include "relic.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "string_formatter.h"
 #include "translation.h"
 #include "translations.h"
@@ -1939,9 +1941,15 @@ item &outfit::front()
 void outfit::absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
                             std::list<item> &worn_remains, bool &armor_destroyed,
                             const std::optional<sub_bodypart_id> &forced_sbp,
-                            bool damage_armor )
+                            bool damage_armor, std::uint64_t thermal_contact_identity )
 {
     const map &here = get_map();
+    const auto contact_is_live = [&guy, bp, thermal_contact_identity]() {
+        const auto &body = guy.get_body();
+        const auto contact = body.find( bp.id() );
+        return contact != body.end() &&
+               contact->second.identity_generation() == thermal_contact_identity;
+    };
 
     sub_bodypart_id sbp;
     sub_bodypart_id secondary_sbp;
@@ -1957,19 +1965,50 @@ void outfit::absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
     // generate a single roll for determining if hit
     int roll = rng( 1, 100 );
 
+    // Walk from the outermost layer in. Only snapshot the remaining layers if
+    // an ignition notification can change the outfit during this traversal.
+    std::optional<std::vector<safe_reference<item>>> inner_layers;
+    const auto find_worn_layer = [this]( const safe_reference<item> &layer,
+                                        std::list<item>::iterator next_outer ) {
+        const item *target = layer.get();
+        if( !target ) {
+            return worn.end();
+        }
+        if( next_outer != worn.begin() ) {
+            const auto inner = std::prev( next_outer );
+            if( &*inner == target ) {
+                return inner;
+            }
+        }
+        return std::find_if( worn.begin(), worn.end(), [target]( const item &candidate ) {
+            return &candidate == target;
+        } );
+    };
+
     // Only the outermost armor can be set on fire
     bool outermost = true;
-    // The worn vector has the innermost item first, so
-    // iterate reverse to damage the outermost (last in worn vector) first.
-    for( auto iter = worn.rbegin(); iter != worn.rend(); ) {
-        item &armor = *iter;
-
-        if( !armor.covers( bp ) ) {
-            ++iter;
+    auto iter = worn.end();
+    while( true ) {
+        if( inner_layers ) {
+            if( inner_layers->empty() ) {
+                break;
+            }
+            iter = find_worn_layer( inner_layers->back(), iter );
+            inner_layers->pop_back();
+            if( iter == worn.end() ) {
+                continue;
+            }
+        } else {
+            if( iter == worn.begin() ) {
+                break;
+            }
+            --iter;
+        }
+        if( !iter->covers( bp ) ) {
             continue;
         }
 
-        const std::string pre_damage_name = armor.tname();
+        const std::string pre_damage_name = iter->tname();
         bool destroy = false;
 
         // Heat damage can set armor on fire
@@ -1978,13 +2017,40 @@ void outfit::absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
         if( outermost && elem.type == damage_heat && elem.amount >= 1.0f ) {
             // TODO: Different fire intensity values based on damage
             fire_data frd{ 2 };
-            destroy = !armor.has_flag( flag_INTEGRATED ) && armor.burn( frd );
+            destroy = !iter->has_flag( flag_INTEGRATED ) && iter->burn( frd );
             int fuel = roll_remainder( frd.fuel_produced );
-            if( fuel > 0 ) {
+            if( fuel > 0 && contact_is_live() ) {
+                // Deferring the first tick does not defer effect notifications.
+                if( !inner_layers ) {
+                    inner_layers.emplace();
+                    if( iter != worn.begin() ) {
+                        inner_layers->reserve( worn.size() - 1 );
+                        for( auto inner = worn.begin(); inner != iter; ++inner ) {
+                            inner_layers->push_back( inner->get_safe_reference() );
+                        }
+                    }
+                }
+                const safe_reference<item> current_layer = iter->get_safe_reference();
+                iter = {};
                 guy.add_effect( effect_onfire, time_duration::from_turns( fuel + 1 ), bp, false, 0, false,
                                 true );
+                const bool live_contact = contact_is_live();
+                if( !live_contact && !destroy ) {
+                    break;
+                }
+                iter = find_worn_layer( current_layer, worn.end() );
+                if( iter == worn.end() || ( !destroy && !iter->covers( bp ) ) ) {
+                    if( !live_contact ) {
+                        break;
+                    }
+                    // A surviving layer already had this hit's chance to ignite.
+                    outermost = destroy;
+                    continue;
+                }
             }
         }
+
+        item &armor = *iter;
 
         if( !destroy ) {
             const sub_bodypart_id armor_sbp = sbp;
@@ -2017,12 +2083,11 @@ void outfit::absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
             for( const item *it : armor.all_items_top( pocket_type::CONTAINER ) ) {
                 worn_remains.push_back( *it );
             }
-            // decltype is the type name of the iterator, note that reverse_iterator::base returns the
-            // iterator to the next element, not the one the revers_iterator points to.
-            // http://stackoverflow.com/questions/1830158/how-to-call-erase-with-a-reverse-iterator
-            iter = decltype( iter )( worn.erase( --iter.base() ) );
+            iter = worn.erase( iter );
+            if( thermal_contact_identity != 0 && !contact_is_live() ) {
+                break;
+            }
         } else {
-            ++iter;
             outermost = false;
         }
     }

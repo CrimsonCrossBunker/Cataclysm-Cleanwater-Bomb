@@ -291,6 +291,11 @@ class effect
         }
         effect( const effect & ) = default;
         effect &operator=( const effect & ) = default;
+        effect( effect && ) = default;
+        effect &operator=( effect && ) = default;
+
+        // A refresh preserves identity; copying or overwriting a record does not.
+        std::uint64_t identity_generation() const noexcept;
 
         /** Returns true if the effect is the result of `effect()`, ie. an effect that doesn't exist. */
         bool is_null() const;
@@ -318,6 +323,8 @@ class effect
          *  why we aren't allowed to remove the effects here. */
         void decay( std::vector<efftype_id> &rem_ids, std::vector<bodypart_id> &rem_bps,
                     const time_point &time, bool player, const effects_map &eff_map = effects_map() );
+        /** Decays the effect and returns whether it should be queued for removal. */
+        bool decay( const time_point &time, bool player, const effects_map &eff_map );
 
         /** Returns the remaining duration of an effect. */
         time_duration get_duration() const;
@@ -472,6 +479,28 @@ class effect
         int intensity;
         time_point start_time;
         effect_source source;
+
+    private:
+        struct identity_token {
+            mutable std::uint64_t value = 0;
+            identity_token() = default;
+            identity_token( const identity_token & ) noexcept {}
+            identity_token &operator=( const identity_token &other ) noexcept {
+                if( this != &other ) {
+                    value = 0;
+                }
+                return *this;
+            }
+            identity_token( identity_token &&other ) noexcept :
+                value( std::exchange( other.value, 0 ) ) {}
+            identity_token &operator=( identity_token &&other ) noexcept {
+                if( this != &other ) {
+                    value = std::exchange( other.value, 0 );
+                }
+                return *this;
+            }
+        };
+        identity_token identity; // NOLINT(cata-serialize)
 
 };
 

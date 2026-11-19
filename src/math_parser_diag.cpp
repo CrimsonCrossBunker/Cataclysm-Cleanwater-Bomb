@@ -7,6 +7,7 @@
 #include <functional>
 #include <limits>
 #include <list>
+#include <map>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -64,6 +65,7 @@
 #include "weather_gen.h"
 #include "weather_type.h"
 #include "worldfactory.h"
+#include "wound.h"
 
 class event_statistic;
 class vehicle;
@@ -388,6 +390,38 @@ double effect_intensity_eval( const_dialogue const & d, char scope,
     effect target =
         d.const_actor( is_beta( scope ) )->get_effect( efftype_id( params[0].str( d ) ), bp );
     return target.is_null() ? -1 : target.get_intensity();
+}
+
+double wound_count_eval( const_dialogue const &d, char scope,
+                         std::vector<diag_value> const &params, diag_kwargs const &kwargs )
+{
+    if( !d.has_actor( is_beta( scope ) ) ) {
+        return 0;
+    }
+    const const_talker *actor = d.const_actor( is_beta( scope ) );
+    const Character *character = actor ? actor->get_const_character() : nullptr;
+    if( !character ) {
+        return 0;
+    }
+
+    const wound_type_id type( params[0].str( d ) );
+    const auto count_on_part = [&type]( const bodypart &part ) {
+        const std::vector<wound> &wounds = part.get_wounds();
+        return static_cast<int>( std::count_if( wounds.begin(), wounds.end(),
+        [&type]( const wound &injury ) {
+            return injury.type == type;
+        } ) );
+    };
+    const std::map<bodypart_str_id, bodypart> &body = character->get_body();
+    if( const auto part = kwargs.kwargs.find( "bodypart" ); part != kwargs.kwargs.end() ) {
+        const auto found = body.find( bodypart_str_id( part->second.str( d ) ) );
+        return found == body.end() ? 0 : count_on_part( found->second );
+    }
+    int total = 0;
+    for( const auto &entry : body ) {
+        total += count_on_part( entry.second );
+    }
+    return total;
 }
 
 double limb_score_eval( const_dialogue const & d, char scope,
@@ -1164,6 +1198,13 @@ double pain_eval( const_dialogue const & d, char scope,
         return d.const_actor( is_beta( scope ) )->perceived_pain_cur();
     } else if( format == "raw" ) {
         return d.const_actor( is_beta( scope ) )->pain_cur();
+    } else if( format == "base" ) {
+        const bool beta = is_beta( scope );
+        if( !d.has_actor( beta ) ) {
+            return 0;
+        }
+        const Creature *creature = d.const_actor( beta )->get_const_creature();
+        return creature ? creature->Creature::get_pain() : 0;
     } else {
         throw math::runtime_error( R"(Unknown type "%s" for pain())", format );
     }
@@ -1230,8 +1271,11 @@ void pain_ass( double val, dialogue & d, char scope, std::vector<diag_value> con
     std::string const &format = format_value.str( d );
     if( format == "perceived" ) {
         d.actor( is_beta( scope ) )->mod_pain( val );
-    } else if( format == "raw" ) {
-        d.actor( is_beta( scope ) )->set_pain( val );
+    } else if( format == "raw" || format == "base" ) {
+        const bool beta = is_beta( scope );
+        if( format == "raw" || d.has_actor( beta ) ) {
+            d.actor( beta )->set_pain( val );
+        }
     } else {
         throw math::runtime_error( R"(Unknown type "%s" for pain())", format );
     }
@@ -2164,6 +2208,7 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "light_level", { "g", 1, light_level_eval } },
     { "effect_intensity", { "un", 1, effect_intensity_eval, {}, { "bodypart" } } },
     { "effect_duration", { "un", 1, effect_duration_eval, {}, { "bodypart", "unit" } } },
+    { "wound_count", { "un", 1, wound_count_eval, {}, { "bodypart" } } },
     { "limb_score", { "un", 1, limb_score_eval, {}, { "type" } } },
     { "health", { "un", 0, health_eval, health_ass } },
     { "sensitive", { "un", 0, sensitive_eval, sensitive_ass } },

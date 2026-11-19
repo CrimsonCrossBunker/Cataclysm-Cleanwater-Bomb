@@ -395,7 +395,7 @@ class monster : public Creature
                                      const double &missed_by = 0, bool print_messages = true,
                                      const weakpoint_attack &wp_attack = weakpoint_attack() ) override;
         void deal_damage_handle_type( const effect_source &source, const damage_unit &du, bodypart_id bp,
-                                      int &damage, int &pain ) override;
+                                      int &damage, int &pain, std::optional<bodypart_id> ignition_part = std::nullopt ) override;
         void apply_damage( Creature *source, bodypart_id bp, int dam,
                            bool bypass_med = false ) override;
         // create gibs/meat chunks/blood etc all over the place, does not kill, can be called on a dead monster.
@@ -416,7 +416,7 @@ class monster : public Creature
         void set_hp( int hp );
 
         /** Processes monster-specific effects before calling Creature::process_effects(). */
-        void process_effects() override;
+        bool process_effects() override;
 
         /** Returns true if the monster has its movement impaired */
         bool movement_impaired();
@@ -481,7 +481,7 @@ class monster : public Creature
         /** Test whether the specified special is ready. */
         bool special_available( std::string_view special_name ) const;
 
-        void process_turn() override;
+        bool process_turn() override;
         /** Resets the value of all bonus fields to 0, clears special effect flags. */
         void reset_bonuses() override;
         /** Resets stats, and applies effects in an idempotent manner */

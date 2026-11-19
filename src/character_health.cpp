@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -52,6 +53,8 @@
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
+#include "json.h"
+#include "json_loader.h"
 #include "line.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -119,8 +122,10 @@ character_modifier_stamina_recovery_breathing_mod( "stamina_recovery_breathing_m
 
 static const damage_type_id damage_acid( "acid" );
 static const damage_type_id damage_bash( "bash" );
+static const damage_type_id damage_cold( "cold" );
 static const damage_type_id damage_cut( "cut" );
 static const damage_type_id damage_electric( "electric" );
+static const damage_type_id damage_heat( "heat" );
 static const damage_type_id damage_stab( "stab" );
 
 static const efftype_id effect_adrenaline( "adrenaline" );
@@ -151,6 +156,8 @@ static const efftype_id effect_melatonin_sleep( "melatonin_sleep" );
 static const efftype_id effect_mending( "mending" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_nausea( "nausea" );
+static const efftype_id effect_pain_ceiling( "pain_ceiling" );
+static const efftype_id effect_pain_relief( "pain_relief" );
 static const efftype_id effect_pkill1_acetaminophen( "pkill1_acetaminophen" );
 static const efftype_id effect_pkill1_generic( "pkill1_generic" );
 static const efftype_id effect_pkill1_nsaid( "pkill1_nsaid" );
@@ -176,25 +183,33 @@ static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
 static const json_character_flag json_flag_BIONIC_SHOCKPROOF( "BIONIC_SHOCKPROOF" );
 static const json_character_flag json_flag_BLIND( "BLIND" );
 static const json_character_flag json_flag_CANNIBAL( "CANNIBAL" );
+static const json_character_flag json_flag_CANNOT_CHANGE_TEMPERATURE( "CANNOT_CHANGE_TEMPERATURE" );
 static const json_character_flag json_flag_CANNOT_GAIN_WEARINESS( "CANNOT_GAIN_WEARINESS" );
 static const json_character_flag json_flag_CANNOT_SLEEP( "CANNOT_SLEEP" );
 static const json_character_flag json_flag_CANNOT_TAKE_DAMAGE( "CANNOT_TAKE_DAMAGE" );
 static const json_character_flag json_flag_CARDIO_MIN_GUARANTE( "CARDIO_MIN_GUARANTE" );
 static const json_character_flag json_flag_DEAF( "DEAF" );
 static const json_character_flag json_flag_DISTRIBUTED_DAMAGE( "DISTRIBUTED_DAMAGE" );
+static const json_character_flag json_flag_FREEZE_EFFECTS( "FREEZE_EFFECTS" );
 static const json_character_flag json_flag_GRAB( "GRAB" );
 static const json_character_flag json_flag_HEAL_OVERRIDE( "HEAL_OVERRIDE" );
+static const json_character_flag json_flag_IGNORE_TEMP( "IGNORE_TEMP" );
 static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
 static const json_character_flag json_flag_NO_BODY_HEAT( "NO_BODY_HEAT" );
+static const json_character_flag json_flag_NON_FLESH_LIMB( "NON_FLESH_LIMB" );
 static const json_character_flag json_flag_NO_RADIATION( "NO_RADIATION" );
 static const json_character_flag json_flag_NO_THIRST( "NO_THIRST" );
 static const json_character_flag json_flag_NUMB( "NUMB" );
 static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
 static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB( "PARTIAL_BIONIC_LIMB" );
+static const json_character_flag json_flag_POWERED_THERMAL_PAIN_RELIEF( "POWERED_THERMAL_PAIN_RELIEF" );
 static const json_character_flag json_flag_PSYCHOPATH( "PSYCHOPATH" );
 static const json_character_flag json_flag_SAPIOVORE( "SAPIOVORE" );
 static const json_character_flag json_flag_SPIRITUAL( "SPIRITUAL" );
 static const json_character_flag json_flag_STOP_SLEEP_DEPRIVATION( "STOP_SLEEP_DEPRIVATION" );
+static const json_character_flag json_flag_THERMAL_BURN_PROTECTION( "THERMAL_BURN_PROTECTION" );
+static const json_character_flag json_flag_THERMAL_PAIN_CEILING( "THERMAL_PAIN_CEILING" );
+static const json_character_flag json_flag_THERMAL_PAIN_RELIEF( "THERMAL_PAIN_RELIEF" );
 static const json_character_flag json_flag_WALK_UNDERWATER( "WALK_UNDERWATER" );
 static const json_character_flag json_flag_WATERWALKING( "WATERWALKING" );
 
@@ -221,6 +236,7 @@ static const trait_id trait_CENOBITE( "CENOBITE" );
 static const trait_id trait_CHEMIMBALANCE( "CHEMIMBALANCE" );
 static const trait_id trait_CHLOROMORPH( "CHLOROMORPH" );
 static const trait_id trait_DEBUG_LS( "DEBUG_LS" );
+static const trait_id trait_DEBUG_NOTEMP( "DEBUG_NOTEMP" );
 static const trait_id trait_DEBUG_STAMINA( "DEBUG_STAMINA" );
 static const trait_id trait_DISRESISTANT( "DISRESISTANT" );
 static const trait_id trait_GLASSJAW( "GLASSJAW" );
@@ -246,6 +262,9 @@ static const trait_id trait_WATERSLEEP( "WATERSLEEP" );
 
 static const vitamin_id vitamin_calcium( "calcium" );
 static const vitamin_id vitamin_iron( "iron" );
+
+static const wound_type_id wound_thermal_blister( "thermal_blister" );
+static const wound_type_id wound_thermal_burn( "thermal_burn" );
 
 namespace io
 {
@@ -299,7 +318,11 @@ void Character::react_to_felt_pain( int intensity )
         return;
     }
     if( uistate.distraction_pain && is_avatar() && intensity >= 2 ) {
+        const character_action_guard self( *this, true );
         g->cancel_activity_or_ignore_query( distraction_type::pain, _( "Ouch, something hurts!" ) );
+        if( !self ) {
+            return;
+        }
     }
     // Only a large pain burst will actually wake people while sleeping.
     if( has_effect( effect_sleep ) && get_effect( effect_sleep ).get_duration() > 0_turns &&
@@ -2724,22 +2747,32 @@ void Character::wake_up()
         return;
     }
 
-    const bool was_sleeping = has_effect( effect_sleep );
+    const bool was_sleeping = get_effect_dur( effect_sleep ) > 0_turns;
+    const character_action_guard self( *this, true );
 
     // Do not remove effect_sleep or effect_alarm_clock now otherwise it invalidates an effect
     // iterator in player::process_effects().
     // We just set it for later removal (also happening in player::process_effects(), so no side
     // effects) with a duration of 0 turns.
 
-    if( has_effect( effect_sleep ) ) {
+    if( was_sleeping ) {
         get_effect( effect_sleep ).set_duration( 0_turns );
         get_event_bus().send<event_type::character_wakes_up>( getID() );
+        if( !self ) {
+            return;
+        }
     }
     if( has_effect( effect_melatonin_sleep ) ) {
         get_effect( effect_melatonin_sleep ).set_duration( 0_turns );
     }
     remove_effect( effect_slept_through_alarm );
+    if( !self ) {
+        return;
+    }
     remove_effect( effect_lying_down );
+    if( !self ) {
+        return;
+    }
     if( has_effect( effect_alarm_clock ) ) {
         get_effect( effect_alarm_clock ).set_duration( 0_turns );
     }
@@ -2816,17 +2849,406 @@ int Character::vitamin_RDA( const vitamin_id &vitamin, int amount ) const
 
 void Character::apply_wound( bodypart_id bp, wound_type_id wd )
 {
+    if( bodypart::is_thermal_wound( wd ) ) {
+        apply_thermal_burn( bp, wd == wound_thermal_burn );
+        return;
+    }
+
     bodypart &body_bp = body.at( bp.id() );
-    body_bp.add_or_worsen_wound( wd );
+    body_bp.add_or_worsen_wound( *this, wd );
     morale->on_stat_change( "perceived_pain", get_perceived_pain() );
+}
+
+bodypart_id Character::thermal_wound_part( const bodypart_id &contact ) const
+{
+    const bodypart_id null_part = bodypart_str_id::NULL_ID().id();
+    if( !contact.is_valid() || !has_part( contact ) ) {
+        return null_part;
+    }
+
+    // The replacement for a missing main can itself be a minor part. A valid
+    // chain reaches a self-main within the number of present parts.
+    bodypart_id part = contact;
+    for( size_t remaining = body.size(); remaining > 0; --remaining ) {
+        if( part == null_part || part->has_flag( json_flag_BIONIC_LIMB ) ||
+            part->has_flag( json_flag_NON_FLESH_LIMB ) ) {
+            return null_part;
+        }
+        const bodypart_str_id &main = part->main_part;
+        if( main == part.id() ) {
+            return part;
+        }
+        if( main.is_null() || !main.is_valid() ) {
+            return null_part;
+        }
+        part = get_part_id( main.id(), body_part_filter::next_best, true );
+    }
+    return null_part;
+}
+
+bool Character::apply_thermal_burn( const bodypart_id &contact, bool severe, bool from_exposure )
+{
+    if( is_dead_state() || has_effect( effect_incorporeal ) ||
+        has_flag( json_flag_CANNOT_TAKE_DAMAGE ) || is_immune_damage( damage_heat ) ||
+        has_flag( json_flag_THERMAL_BURN_PROTECTION ) ) {
+        return false;
+    }
+
+    const bodypart_id main = thermal_wound_part( contact );
+    if( main == bodypart_str_id::NULL_ID() ) {
+        return false;
+    }
+
+    bodypart &part = body.at( main.id() );
+    if( part.has_wound( wound_thermal_burn ) ||
+        ( !severe && part.has_wound( wound_thermal_blister ) ) ) {
+        if( from_exposure ) {
+            support_contact_burn( part, severe );
+        }
+        return false;
+    }
+    std::optional<pain_reaction_scope> pain_reaction;
+    if( from_exposure && !pain_reaction_scope::is_active( *this ) ) {
+        pain_reaction.emplace( *this );
+    }
+    // Install the new tier first: removing the last thermal wound would record a cure.
+    part.add_wound( severe ? wound_thermal_burn : wound_thermal_blister );
+    if( severe ) {
+        part.remove_all_wounds_of_type( wound_thermal_blister );
+    }
+    if( severe ) {
+        add_msg_if_player( m_bad, _( "You suffer a severe burn on your %s!" ), body_part_name( main ) );
+    } else {
+        add_msg_if_player( m_bad, _( "Heat blisters form on your %s!" ), body_part_name( main ) );
+    }
+    if( !from_exposure ) {
+        morale->on_stat_change( "perceived_pain", get_perceived_pain() );
+    }
+    return true;
+}
+
+void Character::support_contact_burn( bodypart &part, bool severe )
+{
+    if( !last_damage_record || last_damage_record->burn_part != part.get_id().id() ||
+        last_damage_record->burn_identity != part.identity_generation() ||
+        !part.has_wound( last_damage_record->burn_type ) ) {
+        return;
+    }
+    recent_damage_record &record = *last_damage_record;
+    wound &burn = *part.get_wound( record.burn_type );
+    if( !burn.reversible_contact ) {
+        return;
+    }
+    if( severe || burn.type == wound_thermal_blister ) {
+        // The environment independently earned this tier without refreshing the wound.
+        burn.reversible_contact = false;
+        return;
+    }
+
+    // The contact wound masks an environmental blister. Keep any still-healing
+    // prior blister rather than restarting its healing when this threshold is crossed.
+    const time_duration progress = burn.get_healing_progress();
+    if( !record.prior_blister ||
+        record.prior_blister->update_wound( progress - record.prior_blister_burn_progress ) ) {
+        record.prior_blister.emplace( wound_thermal_blister );
+    }
+    record.prior_blister_burn_progress = progress;
 }
 
 void Character::update_wounds( time_duration time_passed )
 {
+    const bool freeze_thermal = has_flag( json_flag_FREEZE_EFFECTS );
     for( auto &bp : body ) {
-        bp.second.update_wounds( time_passed );
+        bp.second.update_wounds( time_passed, freeze_thermal );
     }
     morale->on_stat_change( "perceived_pain", get_perceived_pain() );
+}
+
+void Character::save_thermal_wounds( const std::string &slot, bool include_hp )
+{
+    std::ostringstream saved;
+    JsonOut out( saved );
+    out.start_object();
+    out.member( "limb_identities" );
+    out.start_object();
+    for( auto &[id, part] : body ) {
+        out.member( id.str(), part.ensure_rewind_identity() );
+    }
+    out.end_object();
+    if( include_hp ) {
+        out.member( "hp_parts" );
+        out.start_object();
+        for( const auto &[id, part] : body ) {
+            out.member( id.str(), part.get_hp_cur() );
+        }
+        out.end_object();
+    }
+    out.member( "thermal_parts" );
+    out.start_object();
+    for( const auto &[id, part] : body ) {
+        const bodypart_str_id target = part.has_heat_exposure() ? thermal_wound_part( id.id() ).id() :
+                                       bodypart_str_id::NULL_ID();
+        part.write_thermal_state( out, target );
+    }
+    out.end_object();
+    // The wound flags and the latest hit (including its hidden blister) must rewind together.
+    write_last_damage_record( out );
+    out.end_object();
+    set_value( "thermal_snapshot:" + slot, std::move( saved ).str() );
+}
+
+bool Character::restore_thermal_wounds( const std::string &slot, bool keep_snapshot,
+                                       thermal_rewind_details *details )
+{
+    if( details ) {
+        details->has_hp_baseline = false;
+    }
+    const std::string key = "thermal_snapshot:" + slot;
+    const diag_value *saved = maybe_get_value( key );
+    if( !saved || !saved->is_str() ) {
+        return false;
+    }
+
+    try {
+        const JsonObject snapshot = json_loader::from_string( saved->str() ).get_object();
+        if( !snapshot.has_member( "limb_identities" ) ) {
+            // An old blob cannot distinguish a limb from a same-ID replacement.
+            snapshot.allow_omitted_members();
+            return false;
+        }
+        const JsonObject parts = snapshot.get_object( "thermal_parts" );
+        parts.allow_omitted_members(); // A captured limb may no longer exist.
+        const JsonObject identities = snapshot.get_object( "limb_identities" );
+        identities.allow_omitted_members();
+        std::optional<JsonObject> hp_parts;
+        if( snapshot.has_member( "hp_parts" ) ) {
+            hp_parts.emplace( snapshot.get_object( "hp_parts" ) ).allow_omitted_members();
+        }
+        struct limb_state {
+            bodypart *part;
+            bodypart::thermal_state thermal;
+            std::optional<int> hp;
+        };
+        std::vector<limb_state> states;
+        states.reserve( body.size() );
+        const bodypart *fallback_part = nullptr;
+        for( auto &[id, part] : body ) {
+            if( !part.matches_rewind_identity( identities ) ) {
+                continue;
+            }
+            if( details && id == details->fallback_hit.part ) {
+                fallback_part = &part;
+            }
+            limb_state &saved_limb = states.emplace_back( limb_state{ &part, {}, std::nullopt } );
+            bodypart::thermal_state &state = saved_limb.thermal;
+            if( hp_parts ) {
+                saved_limb.hp = hp_parts->get_int( id.str() );
+            }
+            if( parts.has_member( id.str() ) ) {
+                state.deserialize( parts.get_object( id.str() ) );
+                // A retained contact's old dose must not injure a different main part.
+                if( state.exposure > 0_turns ) {
+                    const auto target = body.find( state.exposure_target );
+                    if( state.exposure_target != thermal_wound_part( id.id() ).id() ||
+                        target == body.end() || !target->second.matches_rewind_identity( identities ) ) {
+                        state.exposure = 0_turns;
+                    }
+                }
+            }
+        }
+        read_last_damage_record( snapshot, &identities );
+        if( details && !last_damage_record && fallback_part &&
+            details->fallback_hit.part != bodypart_str_id::NULL_ID() &&
+            details->fallback_hit.amount > 0 ) {
+            // Promote a verified legacy hit before leaving this rewind. Every later
+            // reversal or save must check the actual limb generation, not its ID alone.
+            const recent_damage &hit = details->fallback_hit;
+            last_damage_record.emplace( recent_damage_record{
+                { hit.part, hit.amount, std::max( hit.pain, 0 ) }, fallback_part->identity_generation()
+            } );
+        }
+        for( auto &[part, thermal, hp] : states ) {
+            part->restore_thermal_state( std::move( thermal ) );
+            if( hp ) {
+                part->set_hp_cur( *hp );
+            }
+        }
+        if( hp_parts ) {
+            cached_dead_state.reset();
+        }
+        if( details ) {
+            details->has_hp_baseline = hp_parts.has_value();
+        }
+    } catch( const JsonError &err ) {
+        add_msg_debug( debugmode::DF_WOUNDS, "Invalid thermal wound snapshot: %s", err.what() );
+        return false;
+    }
+    ++damage_record_generation;
+    if( !keep_snapshot ) {
+        remove_value( key );
+    }
+    morale->on_stat_change( "perceived_pain", get_perceived_pain() );
+    return true;
+}
+
+bodypart_str_id Character::record_scripted_damage( const bodypart_str_id &part, int amount, int pain )
+{
+    if( part.is_null() || !part.is_valid() ) {
+        return bodypart_str_id::NULL_ID();
+    }
+    // Resolve aliases exactly as the scripted HP setter does.
+    const bodypart_str_id recipient = get_part_id( part, body_part_filter::next_best, true ).id();
+    const auto found = body.find( recipient );
+    if( found != body.end() ) {
+        remember_damage( recipient, found->second.identity_generation(), std::max( amount, 0 ),
+                         std::max( pain, 0 ) );
+    }
+    return recipient;
+}
+
+void Character::forget_recent_damage()
+{
+    if( last_damage_record && !last_damage_record->burn_part.is_null() ) {
+        const auto found = body.find( last_damage_record->burn_part );
+        if( found != body.end() &&
+            found->second.identity_generation() == last_damage_record->burn_identity &&
+            found->second.has_wound( last_damage_record->burn_type ) ) {
+            found->second.get_wound( last_damage_record->burn_type )->reversible_contact = false;
+        }
+    }
+    last_damage_record.reset();
+    ++damage_record_generation;
+}
+
+Character::recent_damage Character::damage_for_reversal( const recent_damage_record &record ) const
+{
+    const auto recipient = body.find( record.damage.part );
+    if( recipient == body.end() ||
+        recipient->second.identity_generation() != record.hp_identity ) {
+        // Keep the record (and its independent wound provenance), but never heal a fallback limb.
+        return {};
+    }
+    return record.damage;
+}
+
+std::optional<Character::recent_damage> Character::take_recent_damage()
+{
+    if( !last_damage_record ) {
+        return std::nullopt;
+    }
+
+    recent_damage damage = damage_for_reversal( *last_damage_record );
+    if( !last_damage_record->burn_part.is_null() ) {
+        const auto found = body.find( last_damage_record->burn_part );
+        if( found != body.end() &&
+            found->second.identity_generation() == last_damage_record->burn_identity &&
+            found->second.has_wound( last_damage_record->burn_type ) ) {
+            bodypart &part = found->second;
+            const wound &burn = *part.get_wound( last_damage_record->burn_type );
+            if( burn.reversible_contact ) {
+                std::optional<wound> &prior = last_damage_record->prior_blister;
+                // Use only the replacement's healing time elapsed, not wall time while frozen.
+                if( prior && !prior->update_wound(
+                        burn.get_healing_progress() - last_damage_record->prior_blister_burn_progress ) ) {
+                    part.add_wound( *prior );
+                }
+                // Reversing the contact is not a cure and must leave environmental dose intact.
+                part.erase_wound( last_damage_record->burn_type );
+                damage.burn_reverted = true;
+                morale->on_stat_change( "perceived_pain", get_perceived_pain() );
+            }
+        }
+    }
+    last_damage_record.emplace();
+    ++damage_record_generation;
+    return damage;
+}
+
+void Character::remember_damage( const bodypart_str_id &part, std::uint64_t hp_identity, int amount,
+                                 int pain )
+{
+    forget_recent_damage();
+    last_damage_record.emplace( recent_damage_record{ { part, amount, pain }, hp_identity } );
+}
+
+static void dispatch_damage_event( damage_event_participants &participants, character_id target,
+                                   const bodypart_id &part, int amount, int pain )
+{
+    participants.begin_notification();
+    const cata::event event = cata::event::make<event_type::character_takes_damage>(
+                                  target, amount, part.id(), pain );
+    get_event_bus().send_character_damage( event, participants );
+}
+
+static bool roll_for_wounds()
+{
+    const float chance = get_option<float>( "WOUND_CHANCE" );
+    return chance >= 1.0f || ( chance > 0.0f && x_in_y( chance, 1.0f ) );
+}
+
+void Character::commit_thermal_contact( const thermal_hit &thermal, const dealt_damage_instance &dealt,
+                                        std::optional<bool> &wound_roll, bool record_contact )
+{
+    constexpr int min_blister_damage = 4;
+    constexpr int min_severe_burn_damage = 12;
+    const int heat = dealt.type_damage( damage_heat );
+    const int cold = dealt.type_damage( damage_cold );
+    if( heat == cold && heat < min_blister_damage ) {
+        return;
+    }
+    // Replayed effects still deal HP damage, but aren't live thermal contacts.
+    const npc *target_npc = as_npc();
+    if( target_npc && target_npc->is_replaying_effects_on_load() ) {
+        return;
+    }
+    if( heat >= min_blister_damage ) {
+        wound_roll = roll_for_wounds();
+    }
+    const bool burn = wound_roll.value_or( false );
+    const bool impulse = heat != cold && !has_trait( trait_DEBUG_NOTEMP ) &&
+                         !has_flag( json_flag_CANNOT_CHANGE_TEMPERATURE );
+    if( !burn && !impulse ) {
+        return;
+    }
+
+    // HP callbacks may change the anatomy. Only the original contact can receive the impulse.
+    const auto actual_contact = body.find( thermal.contact.id() );
+    if( actual_contact == body.end() ||
+        actual_contact->second.identity_generation() != thermal.contact_identity ) {
+        return;
+    }
+    if( impulse && !thermal.contact->has_flag( json_flag_IGNORE_TEMP ) ) {
+        // Limit the net impulse, not the resulting absolute temperature.
+        constexpr units::temperature_delta per_damage = 0.25_C_delta;
+        constexpr units::temperature_delta max_impulse = 5_C_delta;
+        const units::temperature_delta delta = per_damage * ( heat - cold );
+        actual_contact->second.mod_temp_cur( std::clamp( delta, -max_impulse, max_impulse ) );
+    }
+    if( !burn || thermal.wound_identity == 0 ) {
+        return;
+    }
+    const bodypart_id main = thermal_wound_part( thermal.contact );
+    if( main == bodypart_str_id::NULL_ID() ) {
+        return;
+    }
+
+    bodypart &part = body.at( main.id() );
+    // Even a surviving contact must not send a burn to a new wound site.
+    if( part.identity_generation() != thermal.wound_identity ) {
+        return;
+    }
+    const bool severe = heat >= min_severe_burn_damage;
+    std::optional<wound> prior_blister;
+    if( record_contact && severe && part.has_wound( wound_thermal_blister ) ) {
+        prior_blister = *part.get_wound( wound_thermal_blister );
+    }
+    if( apply_thermal_burn( main, severe ) && record_contact ) {
+        last_damage_record->burn_part = main.id();
+        last_damage_record->burn_identity = part.identity_generation();
+        last_damage_record->burn_type = severe ? wound_thermal_burn : wound_thermal_blister;
+        last_damage_record->prior_blister = std::move( prior_blister );
+        part.get_wound( last_damage_record->burn_type )->reversible_contact = true;
+    }
 }
 
 /*
@@ -2836,7 +3258,14 @@ void Character::update_wounds( time_duration time_passed )
 void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
                               const bool bypass_med )
 {
-    if( is_dead_state() || has_effect( effect_incorporeal ) ||
+    damage_event_participants participants( *this, source );
+    apply_damage_internal( participants, hurt, dam, bypass_med );
+}
+
+void Character::apply_damage_internal( damage_event_participants &participants, bodypart_id hurt,
+                                       int dam, bool bypass_med, const direct_hit *hit )
+{
+    if( !participants.target() || is_dead_state() || has_effect( effect_incorporeal ) ||
         has_flag( json_flag_CANNOT_TAKE_DAMAGE ) ) {
         // don't do any more damage if we're already dead
         // Or if we're debugging and don't want to die
@@ -2844,9 +3273,7 @@ void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
         return;
     }
 
-    // Damage events can unload this character or start unrelated work. Retain
-    // the original body until the callback returns, including a lethal hit.
-    const character_action_guard lifetime( *this, true );
+    const character_id target = getID();
     const auto activity_generation = activity.identity_generation();
 
     if( hurt == bodypart_str_id::NULL_ID() ) {
@@ -2854,11 +3281,15 @@ void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
         hurt = body_part_torso;
     }
 
-    int pain = 0;
-
-    const bodypart_id &part_to_damage = hurt->main_part;
-
-    const int dam_to_bodypart = std::min( dam, get_part_hp_cur( part_to_damage ) );
+    const bodypart_id part_to_damage = hurt->main_part;
+    const bodypart_id hp_recipient = get_part_id( part_to_damage, body_part_filter::next_best, true );
+    const auto recipient = body.find( hp_recipient.id() );
+    const std::uint64_t hp_identity = recipient == body.end() ? 0 :
+                                      recipient->second.identity_generation();
+    const int dam_to_bodypart = recipient == body.end() ? 0 :
+                                std::min( dam, recipient->second.get_hp_cur() );
+    int hp_loss = 0;
+    const std::uint64_t prior_damage_generation = damage_record_generation;
 
     if( has_flag( json_flag_DISTRIBUTED_DAMAGE ) ) {
         int num_limbs = 0; // number of limbs
@@ -2871,23 +3302,35 @@ void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
         const int dam_per_part = dam / num_limbs;
         for( const bodypart_id &bp : get_all_body_parts() ) {
             if( bp->main_part ) {
+                if( bp == hp_recipient && has_part( bp ) ) {
+                    hp_loss = dam_per_part;
+                }
                 mod_part_hp_cur( bp, -dam_per_part );
+                if( !participants.same_target() ) {
+                    break;
+                }
             }
         }
 
-    } else {
-        mod_part_hp_cur( part_to_damage, - dam_to_bodypart );
+    } else if( recipient != body.end() ) {
+        hp_loss = dam_to_bodypart;
+        // HP helpers resolve the alias, but fracture events keep the requested main part.
+        mod_part_hp_cur( part_to_damage, -hp_loss );
     }
-
-    if( source ) {
-        cata::event e = cata::event::make<event_type::character_takes_damage>( getID(), dam_to_bodypart,
-                        part_to_damage.id(), pain );
-        get_event_bus().send_with_talker( this, source, e );
-    } else {
-        get_event_bus().send<event_type::character_takes_damage>( getID(), dam_to_bodypart,
-                part_to_damage.id(), pain );
+    if( participants.same_target() ) {
+        // A fracture listener may have applied a newer hit. The outer contact
+        // still resolves, but must not replace that hit or attach its burn to it.
+        const bool record_contact = damage_record_generation == prior_damage_generation;
+        if( record_contact ) {
+            remember_damage( hp_recipient.id(), hp_identity, hp_loss, hit ? hit->pain_added : 0 );
+        }
+        if( hit ) {
+            commit_thermal_contact( hit->thermal, hit->dealt, hit->wound_roll, record_contact );
+        }
     }
-    if( !lifetime || activity.identity_generation() != activity_generation ) {
+    // HP was already applied, even if a fracture listener invalidated the target.
+    dispatch_damage_event( participants, target, part_to_damage, dam_to_bodypart, 0 );
+    if( !participants.target() || activity.identity_generation() != activity_generation ) {
         return;
     }
 
@@ -2896,21 +3339,22 @@ void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
         add_msg_if_player( _( "You are no longer able to wield your %s and drop it!" ),
                            weapon.display_name() );
         put_into_vehicle_or_drop( *this, item_drop_reason::tumbling, { weapon } );
-        if( !lifetime || activity.identity_generation() != activity_generation ) {
+        if( !participants.target() || activity.identity_generation() != activity_generation ) {
             return;
         }
         i_rem( &weapon );
     }
-    if( has_effect( effect_mending, part_to_damage.id() ) && ( source == nullptr ||
-            !source->is_hallucination() ) ) {
+    const Creature *current_source = participants.source();
+    if( has_effect( effect_mending, part_to_damage.id() ) &&
+        ( !current_source || !current_source->is_hallucination() ) ) {
         effect &e = get_effect( effect_mending, part_to_damage );
         float remove_mend = dam / 20.0f;
         e.mod_duration( -e.get_max_duration() * remove_mend );
     }
 
     if( dam > get_painkiller() ) {
-        on_hurt( source );
-        if( !lifetime ) {
+        on_hurt( participants.source() );
+        if( !participants.target() ) {
             return;
         }
     }
@@ -2944,12 +3388,11 @@ bool Character::is_within_wound_limit_for_bp( const bodypart_id bp, wound_type_i
 
 void Character::apply_random_wound( bodypart_id bp, const damage_instance &d )
 {
-    if( x_in_y( 1.0f - get_option<float>( "WOUND_CHANCE" ), 1.0f ) ) {
-        return;
-    }
-
     weighted_int_list<wound_type_id> possible_wounds;
     for( const auto &[potential_wound, wound_weight] : bp->potential_wounds ) {
+        if( bodypart::is_thermal_wound( potential_wound.id ) ) {
+            continue;
+        }
         for( const damage_unit &du : d.damage_units ) {
             const bool damage_within_limits = du.amount >= potential_wound.damage_required.first &&
                                               du.amount <= potential_wound.damage_required.second;
@@ -2963,7 +3406,9 @@ void Character::apply_random_wound( bodypart_id bp, const damage_instance &d )
         }
     }
     if( !possible_wounds.empty() ) {
-        apply_wound( bp, *possible_wounds.pick() );
+        // Raw damage cannot grant thermal wounds, even through ordinary wound progression.
+        body.at( bp.id() ).add_or_worsen_wound( *this, *possible_wounds.pick(), /*allow_thermal=*/false );
+        morale->on_stat_change( "perceived_pain", get_perceived_pain() );
     }
 }
 
@@ -2976,8 +3421,17 @@ dealt_damage_instance Character::deal_damage( Creature *source, bodypart_id bp,
         return dealt_damage_instance();
     }
 
-    //damage applied here
-    dealt_damage_instance dealt_dams = Creature::deal_damage( source, bp, d, attack );
+    damage_event_participants participants( *this, source );
+    if( !participants.target() ) {
+        return dealt_damage_instance();
+    }
+    character_damage_context hit{ participants, std::nullopt };
+    source = participants.source();
+    dealt_damage_instance dealt_dams = deal_damage_impl( source, bp, d, attack, weakpoint(), &hit );
+    if( !participants.target() ) {
+        return dealt_dams;
+    }
+    source = participants.source();
     //block reduction should be by applied this point
     int dam = dealt_dams.total_damage();
 
@@ -3004,10 +3458,15 @@ dealt_damage_instance Character::deal_damage( Creature *source, bodypart_id bp,
 
     // And slimespawners too
     if( has_trait( trait_SLIMESPAWNER ) && ( dam >= 10 ) && one_in( 20 - dam ) ) {
-        if( monster *const slime = g->place_critter_around( mon_player_blob, pos, 1 ) ) {
+        monster *const slime = g->place_critter_around( mon_player_blob, pos, 1 );
+        if( !participants.target() ) {
+            return dealt_dams;
+        }
+        if( slime ) {
             slime->friendly = -1;
             add_msg_if_player( m_warning, _( "A mass of slime is torn from you, and moves on its own!" ) );
         }
+        source = participants.source();
     }
 
     Character &player_character = get_player_character();
@@ -3028,12 +3487,17 @@ dealt_damage_instance Character::deal_damage( Creature *source, bodypart_id bp,
         damage_instance acidblood_damage;
         // FIXME: Hardcoded damage type
         acidblood_damage.add_damage( damage_acid, rng( 4, 16 ) );
-        if( !one_in( 4 ) ) {
-            source->deal_damage( this, body_part_arm_l, acidblood_damage );
-            source->deal_damage( this, body_part_arm_r, acidblood_damage );
-        } else {
-            source->deal_damage( this, body_part_torso, acidblood_damage );
-            source->deal_damage( this, body_part_head, acidblood_damage );
+        const bool hit_arms = !one_in( 4 );
+        source->deal_damage( this, hit_arms ? body_part_arm_l : body_part_torso, acidblood_damage );
+        if( !participants.target() ) {
+            return dealt_dams;
+        }
+        if( Creature *current_source = participants.source() ) {
+            current_source->deal_damage( this, hit_arms ? body_part_arm_r : body_part_head,
+                                         acidblood_damage );
+            if( !participants.target() ) {
+                return dealt_dams;
+            }
         }
     }
 
@@ -3088,9 +3552,11 @@ dealt_damage_instance Character::deal_damage( Creature *source, bodypart_id bp,
         }
     }
 
-    apply_random_wound( bp, d );
+    if( hit.wound_roll ? *hit.wound_roll : roll_for_wounds() ) {
+        apply_random_wound( bp, d );
+    }
 
-    on_hurt( source );
+    on_hurt( participants.source() );
     return dealt_dams;
 }
 
@@ -3161,27 +3627,38 @@ void Character::hurtall( int dam, Creature *source, bool disturb /*= true*/ )
         return;
     }
 
+    damage_event_participants participants( *this, source );
+    if( !participants.target() ) {
+        return;
+    }
+    const character_id target = getID();
     // Low pain: damage is spread all over the body, so not as painful as 6 hits in one part
     int pain = mod_pain( dam );
+    if( !participants.target() ) {
+        return;
+    }
 
     std::vector<bodypart_id> body_parts = get_all_body_parts( get_body_part_flags::only_main );
     for( const bodypart_id &bp : body_parts ) {
         // Don't use apply_damage here or it will annoy the player with 6 queries
-        const int dam_to_bodypart = std::min( dam, get_part_hp_cur( bp ) );
-        mod_part_hp_cur( bp, - dam_to_bodypart );
-
-        if( source ) {
-            cata::event e = cata::event::make<event_type::character_takes_damage>( getID(), dam_to_bodypart,
-                            bp.id(), pain / body_parts.size() );
-            get_event_bus().send_with_talker( this, source == nullptr ? nullptr : source, e );
-        } else {
-            get_event_bus().send<event_type::character_takes_damage>( getID(), dam_to_bodypart, bp.id(),
-                    pain / body_parts.size() );
+        const bodypart_id hp_recipient = get_part_id( bp, body_part_filter::next_best, true );
+        const auto recipient = body.find( hp_recipient.id() );
+        if( recipient == body.end() ) {
+            continue;
         }
+        const std::uint64_t hp_identity = recipient->second.identity_generation();
+        const int dam_to_bodypart = std::min( dam, recipient->second.get_hp_cur() );
+        const int pain_to_bodypart = pain / body_parts.size();
+        remember_damage( hp_recipient.id(), hp_identity, dam_to_bodypart, pain_to_bodypart );
+        mod_part_hp_cur( hp_recipient, -dam_to_bodypart );
 
+        dispatch_damage_event( participants, target, bp, dam_to_bodypart, pain_to_bodypart );
+        if( !participants.target() ) {
+            return;
+        }
     }
 
-    on_hurt( source, disturb );
+    on_hurt( participants.source(), disturb );
 }
 
 int Character::hitall( int dam, int vary, Creature *source )
@@ -3349,12 +3826,7 @@ void Character::set_painkiller( int npkill )
         const int prev_pain = get_perceived_pain();
         pkill = npkill;
         on_stat_change( "pkill", pkill );
-        const int cur_pain = get_perceived_pain();
-
-        if( cur_pain != prev_pain ) {
-            react_to_felt_pain( cur_pain - prev_pain );
-            on_stat_change( "perceived_pain", cur_pain );
-        }
+        update_perceived_pain( prev_pain );
     }
 }
 
@@ -3651,19 +4123,33 @@ bool Character::immune_to( const bodypart_id &bp, damage_unit dam ) const
     return dam.amount <= 0;
 }
 
-int Character::get_pain() const
+std::pair<int, int> Character::pain_components() const
 {
     int p = 0;
+    int thermal_pain = 0;
     for( const std::pair<const bodypart_str_id, bodypart> &bp : get_body() ) {
         for( const wound &wd : bp.second.get_wounds() ) {
-            p += wd.get_pain();
+            if( bodypart::is_thermal_wound( wd.type ) ) {
+                thermal_pain += wd.get_pain();
+            } else {
+                p += wd.get_pain();
+            }
         }
     }
 
-    return p + Creature::get_pain();
+    if( thermal_pain != 0 && has_flag( json_flag_PAIN_IMMUNE ) ) {
+        thermal_pain = 0;
+    }
+    return { p + Creature::get_pain(), thermal_pain };
 }
 
-int Character::mod_pain( int npain, const bodypart_id bp )
+int Character::get_pain() const
+{
+    const auto [other_pain, thermal_pain] = pain_components();
+    return other_pain + thermal_pain;
+}
+
+int Character::adjusted_pain_delta( int npain, const bodypart_id &bp ) const
 {
     if( npain > 0 ) {
         double mult = enchantment_cache->get_value_multiply( enchant_vals::mod::PAIN );
@@ -3687,7 +4173,15 @@ int Character::mod_pain( int npain, const bodypart_id bp )
         // no matter how powerful the enchantment if we are gaining pain we don't lose any
         npain = std::max( 0, npain );
     }
-    Creature::mod_pain( npain );
+    return npain;
+}
+
+int Character::mod_pain( int npain, const bodypart_id bp )
+{
+    npain = adjusted_pain_delta( npain, bp );
+    if( npain != 0 ) {
+        Creature::mod_pain( npain );
+    }
     return npain;
 }
 
@@ -3722,11 +4216,141 @@ void Character::set_pain( int npain )
 {
     const int prev_pain = get_perceived_pain();
     Creature::set_pain( npain );
+    update_perceived_pain( prev_pain );
+}
+
+void Character::relieve_pain( int amount, const efftype_id &thermal_relief, time_duration duration )
+{
+    if( amount <= 0 || duration <= 0_turns || !thermal_relief.is_valid() ) {
+        return;
+    }
+    if( thermal_relief->has_flag( json_flag_POWERED_THERMAL_PAIN_RELIEF ) ) {
+        // Processed bionic EOCs can still run during incapacitation.
+        if( count_bionic_with_flag( json_flag_POWERED_THERMAL_PAIN_RELIEF ) == 0 ) {
+            return;
+        }
+    } else if( !thermal_relief->has_flag( json_flag_THERMAL_PAIN_RELIEF ) ) {
+        return;
+    }
+
+    const int base_pain = Creature::get_pain();
+    const int spent = std::min( amount, base_pain );
+    const int remaining = amount - spent;
+    if( spent > 0 ) {
+        set_pain( base_pain - spent );
+    }
+    if( remaining > 0 ) {
+        const effect &existing = get_effect( thermal_relief );
+        const int intensity = existing.get_duration() > 0_turns ? existing.get_intensity() : 0;
+        add_effect( thermal_relief, duration, bodypart_id(), false,
+                    intensity + std::min( remaining, std::numeric_limits<int>::max() - intensity ) );
+    }
+}
+
+thread_local const Character::pain_reaction_scope *Character::pain_reaction_scope::active = nullptr;
+
+bool Character::pain_reaction_scope::is_active( const Character &character )
+{
+    for( const pain_reaction_scope *scope = active; scope; scope = scope->parent ) {
+        if( scope->character.get() == &character ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+Character::pain_reaction_scope::pain_reaction_scope( Character &target ) : character( target, true )
+{
+    if( !is_active( target ) ) {
+        parent = active;
+        previous_pain = target.get_perceived_pain();
+        active = this;
+    }
+}
+
+Character::pain_reaction_scope::~pain_reaction_scope()
+{
+    finish();
+}
+
+void Character::pain_reaction_scope::finish()
+{
+    if( active == this ) {
+        active = parent;
+        if( Character *live = character.get() ) {
+            live->update_perceived_pain( previous_pain );
+        }
+    }
+}
+
+bool Character::is_pain_effect( const efftype_id &id, const bodypart_id &bp )
+{
+    // PAIN_IMMUNE is aggregated across all effects, including localized ones.
+    return id->has_flag( json_flag_PAIN_IMMUNE ) || is_pain_relief_effect( id, bp );
+}
+
+bool Character::is_pain_relief_effect( const efftype_id &id, const bodypart_id &bp )
+{
+    return bp == bodypart_id() &&
+           ( id == effect_pain_relief || id == effect_pain_ceiling ||
+             id->has_flag( json_flag_THERMAL_PAIN_CEILING ) ||
+             id->has_flag( json_flag_THERMAL_PAIN_RELIEF ) ||
+             id->has_flag( json_flag_POWERED_THERMAL_PAIN_RELIEF ) );
+}
+
+void Character::remove_effect_with_pain_delta( const efftype_id &id, const std::string &target,
+        int delta, bool exact_base )
+{
+    const pain_reaction_scope pain_reaction( *this );
+    const character_action_guard &self = pain_reaction.lifetime();
+    bool removed = false;
+    if( target == "ALL" ) {
+        // A callback can add a new record, even at a key the catch-all will visit.
+        std::map<bodypart_id, std::uint64_t> original;
+        if( const auto found = effects->find( id ); found != effects->end() ) {
+            for( const auto &[part, entry] : found->second ) {
+                original.emplace( part, entry.identity_generation() );
+            }
+        }
+        if( original.empty() ) {
+            return;
+        }
+        // The talker removes targeted records first, then uses bp_null as the catch-all.
+        const std::vector<bodypart_id> parts = get_all_body_parts( get_body_part_flags::none );
+        for( const bodypart_id &bp : parts ) {
+            removed |= remove_effect_impl( id, bp, &self, &original );
+            if( !self ) {
+                return;
+            }
+        }
+        removed |= remove_effect_impl( id, bodypart_id(), &self, &original );
+    } else {
+        const bodypart_id bp = target == "RANDOM" ? random_body_part( true ) : bodypart_id( target );
+        removed = remove_effect_impl( id, bp, &self );
+    }
+    if( !removed || !self ) {
+        return;
+    }
+    // Sample the initial pain before removal, but apply pain modifiers after it.
+    const int pain_delta = exact_base ? delta : adjusted_pain_delta( delta, bodypart_id() );
+    const int base_pain = Creature::get_pain();
+    Creature::set_pain( base_pain +
+                        std::min( pain_delta, std::numeric_limits<int>::max() - base_pain ) );
+}
+
+void Character::update_perceived_pain( int previous_pain )
+{
+    if( pain_reaction_scope::is_active( *this ) ) {
+        return;
+    }
     const int cur_pain = get_perceived_pain();
 
-    if( cur_pain != prev_pain ) {
-        react_to_felt_pain( cur_pain - prev_pain );
+    if( cur_pain != previous_pain ) {
+        const character_action_guard self( *this, true );
         on_stat_change( "perceived_pain", cur_pain );
+        if( self ) {
+            react_to_felt_pain( cur_pain - previous_pain );
+        }
     }
 }
 
@@ -3736,7 +4360,42 @@ int Character::get_perceived_pain() const
         return 0;
     }
 
-    return std::max( get_pain() - get_painkiller(), 0 );
+    const auto [other_pain, thermal_pain] = pain_components();
+    int unrelieved_thermal = thermal_pain;
+    int thermal_ceiling = std::numeric_limits<int>::max();
+    for( const auto &[id, parts] : *effects ) {
+        if( unrelieved_thermal <= 0 ) {
+            break;
+        }
+        const bool caps_thermal = id->has_flag( json_flag_THERMAL_PAIN_CEILING );
+        const bool powered_relief = id->has_flag( json_flag_POWERED_THERMAL_PAIN_RELIEF );
+        const bool relieves_thermal = powered_relief || id->has_flag( json_flag_THERMAL_PAIN_RELIEF );
+        if( !caps_thermal && !relieves_thermal ) {
+            continue;
+        }
+        const auto whole_body = parts.find( bodypart_id() );
+        if( whole_body == parts.end() || whole_body->second.get_duration() <= 0_turns ) {
+            continue;
+        }
+        const int intensity = whole_body->second.get_intensity();
+        if( caps_thermal ) {
+            thermal_ceiling = std::min( thermal_ceiling, intensity );
+        }
+        if( relieves_thermal &&
+            ( !powered_relief || count_bionic_with_flag( json_flag_POWERED_THERMAL_PAIN_RELIEF ) != 0 ) ) {
+            unrelieved_thermal -= std::min( unrelieved_thermal, intensity );
+        }
+    }
+    const int pkill = get_painkiller();
+    const int felt = std::max( other_pain + unrelieved_thermal - pkill, 0 );
+    if( felt == 0 ) {
+        return 0;
+    }
+    const int ceiling = get_effect_int( effect_pain_ceiling );
+    const int thermal_capped = std::min( felt, std::max( thermal_ceiling, other_pain - pkill ) );
+    const int capped = ceiling > 0 ? std::min( thermal_capped, ceiling ) : thermal_capped;
+    // This relief lasts until the native expiry removal, including a saved zero-duration record.
+    return std::max( capped - get_effect_int( effect_pain_relief ), 0 );
 }
 
 int Character::hp_percentage() const

@@ -39,9 +39,14 @@ class eoc_events : public event_subscriber
     public:
         void notify( const cata::event &e ) override;
         void notify( const cata::event &, std::unique_ptr<talker>, std::unique_ptr<talker> ) override;
+        void notify_character_damage( const cata::event &,
+                                      const damage_event_participants & ) override;
         void clear();
 
     private:
+        void notify_impl( const cata::event &, std::unique_ptr<talker>, std::unique_ptr<talker>,
+                          const damage_event_participants * );
+
         std::map<event_type, std::vector<effect_on_condition>> event_EOCs;
         bool has_cached = false;
 };

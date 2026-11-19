@@ -5,6 +5,7 @@
 #include <array>
 #include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <set>
@@ -14,9 +15,11 @@
 #include <utility>
 #include <vector>
 
+#include "calendar.h"
 #include "damage.h"
 #include "enums.h"
 #include "flat_set.h"
+#include "lua_platform_identity.h"
 #include "subbodypart.h"
 #include "translation.h"
 #include "type_id.h"
@@ -25,10 +28,10 @@
 #include "weighted_list.h"
 #include "wound.h"
 
+class Character;
 class Creature;
 class JsonObject;
 class JsonOut;
-class time_duration;
 struct body_part_type;
 struct localized_comparator;
 template <typename E> struct enum_traits;
@@ -454,7 +457,15 @@ struct encumbrance_data {
 class bodypart
 {
     private:
+        friend class Character;
+
         bodypart_str_id id;
+        cata::lua_platform::native_object_identity identity; // NOLINT(cata-serialize)
+        // Unlike native handle generations, this stamp follows the limb through a save.
+        // Only characters with a named rewind need to assign it.
+        std::uint64_t rewind_identity = 0;
+        std::uint64_t ensure_rewind_identity();
+        bool matches_rewind_identity( const JsonObject &identities ) const;
 
         int hp_cur = 0;
         int hp_max = 0;
@@ -463,16 +474,35 @@ class bodypart
         units::temperature temp_cur = BODYTEMP_NORM;
         units::temperature temp_conv = BODYTEMP_NORM;
         int frostbite_timer = 0;
+        time_duration heat_exposure = 0_turns;
+        time_point last_heat_exposure_update = calendar::before_time_starts;
 
         int healed_total = 0;
         int damage_bandaged = 0;
         int damage_disinfected = 0;
+        // Keep a cure pending even if another wound is added before contacts discard their old dose.
+        bool thermal_wound_cleared = false;
 
         encumbrance_data encumb_data; // NOLINT(cata-serialize)
 
         std::array<int, NUM_WATER_TOLERANCE> mut_drench; // NOLINT(cata-serialize)
 
         std::vector<wound> wounds;
+
+        bool has_thermal_wound() const;
+        void on_wound_removed( bool thermal );
+        bool erase_wound( const wound_type_id &type );
+
+        struct thermal_state {
+            std::vector<wound> wounds;
+            time_duration exposure = 0_turns;
+            bodypart_str_id exposure_target;
+            bool wound_cleared = false;
+
+            void deserialize( const JsonObject &jo );
+        };
+        void write_thermal_state( JsonOut &out, const bodypart_str_id &exposure_target ) const;
+        void restore_thermal_state( thermal_state &&state );
 
         // adjust any limb "value" based on how wounded the limb is. scaled to 0-75%
         float wound_adjusted_limb_value( float val, const limb_score_id &score ) const;
@@ -486,6 +516,9 @@ class bodypart
             mut_drench() {}
 
         bodypart_id get_id() const;
+        std::uint64_t identity_generation() const {
+            return identity.value();
+        }
 
         void set_hp_to_max();
         bool is_at_max_hp() const;
@@ -514,20 +547,20 @@ class bodypart
         float get_limb_score_max( const limb_score_id &score ) const;
 
         const std::vector<wound> &get_wounds() const;
-        std::vector<wound> &get_wounds();
+        static bool is_thermal_wound( const wound_type_id &type );
 
-        void add_or_worsen_wound( wound_type_id wd );
-        void add_or_worsen_wound( const wound &wd );
+        void add_or_worsen_wound( Character &who, wound_type_id wd, bool allow_thermal = true );
 
-        void add_wound( const wound &wd );
+        // Raw insertion; new thermal injuries must go through Character's burn policy.
         void add_wound( wound_type_id wd );
+        void add_wound( const wound &existing );
         bool has_wounds() const;
         bool has_wound( wound_type_id wd ) const;
         wound *get_wound( wound_type_id wd_id );
         void remove_wound( wound wd );
         void remove_wound( wound_type_id wd );
         void remove_all_wounds_of_type( wound_type_id wd );
-        void update_wounds( time_duration time_passed );
+        void update_wounds( time_duration time_passed, bool freeze_thermal = false );
 
         int get_hp_cur() const;
         int get_hp_max() const;
@@ -540,6 +573,24 @@ class bodypart
         int get_frostbite_timer() const;
         units::temperature get_temp_cur() const;
         units::temperature get_temp_conv() const;
+
+        enum class thermal_burn_tier : int {
+            none,
+            blister,
+            severe
+        };
+        // Claim the current turn's sample, without interpolating over unsimulated turns.
+        bool try_sample_heat_exposure( time_point now );
+        bool has_heat_exposure() const {
+            return heat_exposure > 0_turns;
+        }
+        // Keep the sample timestamp when clearing dose so a refresh cannot count the same turn twice.
+        void reset_heat_exposure();
+        bool needs_heat_exposure_reset() const;
+        void acknowledge_heat_exposure_reset();
+        // Rate is +1/+2 at damaging temperatures, -1 while cooling. Return only upward crossings.
+        thermal_burn_tier update_heat_exposure( int rate );
+
         int get_bmi_encumbrance_threshold() const;
         float get_bmi_encumbrance_scalar() const;
         int get_power_efficiency() const;

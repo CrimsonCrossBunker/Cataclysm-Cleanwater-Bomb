@@ -1071,7 +1071,9 @@ bool game::start_game()
     }
 
     u.set_moves( 0 );
-    u.process_turn(); // process_turn adds the initial move points
+    if( !u.process_turn() ) { // process_turn adds the initial move points
+        return false;
+    }
     u.set_stamina( u.get_stamina_max() );
     weather.temperature = SPRING_TEMPERATURE;
     weather.update_weather();
@@ -1807,84 +1809,78 @@ static int maptile_field_intensity( maptile &mt, field_type_id fld )
     return field_ptr == nullptr ? 0 : field_ptr->get_field_intensity();
 }
 
+static bool heat_can_spread( const map &here, const tripoint_bub_ms &from,
+                             const tripoint_bub_ms &to )
+{
+    bool reaches = true;
+    const auto check_tile = [&here, &reaches]( const tripoint_bub_ms & p ) {
+        reaches = here.has_flag( ter_furn_flag::TFLAG_PERMEABLE, p ) || !here.impassable( p );
+        return reaches;
+    };
+    // A heat source on the origin tile still has to pass the permeability check.
+    if( from == to ) {
+        return check_tile( to );
+    }
+    bresenham( from, to, 0, 0, std::cref( check_tile ) );
+    return reaches;
+}
+
+enum class nearby_heat_lookup {
+    warming,
+    radiation,
+    both
+};
+
+static nearby_fire_heat scan_nearby_heat( const tripoint_bub_ms &location,
+        nearby_heat_lookup lookup )
+{
+    nearby_fire_heat result;
+    const bool check_adjacent = lookup != nearby_heat_lookup::radiation;
+    const bool check_radiation = lookup != nearby_heat_lookup::warming;
+    const bool check_flames = lookup == nearby_heat_lookup::both;
+    const bool at_player = get_player_character().pos_bub() == location;
+    map &here = get_map();
+    const field_type_id fd_fire_int = fd_fire.id();
+    for( const tripoint_bub_ms &dest : here.points_in_radius( location, check_radiation ? 6 : 1 ) ) {
+        maptile mt = here.maptile_at( dest );
+        const int flame_intensity = maptile_field_intensity( mt, fd_fire_int );
+        const int heat_intensity = flame_intensity > 0 ? flame_intensity : mt.get_ter()->heat_radiation;
+        if( heat_intensity == 0 || ( !at_player && !here.sees( location, dest, -1 ) ) ) {
+            continue;
+        }
+
+        const int distance = square_dist( dest, location );
+        // Warming and radiation have different path rules for the player.
+        if( check_adjacent && distance <= 1 &&
+            ( !at_player || here.clear_path( dest, location, -1, 1, 100 ) ) ) {
+            result.best_fire = std::max( result.best_fire, heat_intensity );
+            result.adjacent_flame = result.adjacent_flame || ( check_flames && flame_intensity > 0 );
+        }
+        if( check_radiation && ( !at_player || heat_can_spread( here, location, dest ) ) ) {
+            const units::temperature_delta heat = units::from_fahrenheit_delta(
+                    6.f * heat_intensity * heat_intensity / std::max( 1, distance ) );
+            result.radiation += heat;
+            if( check_flames && flame_intensity > 0 ) {
+                result.flame_radiation += heat;
+            }
+        }
+    }
+    return result;
+}
+
 units::temperature_delta get_heat_radiation( const tripoint_bub_ms &location )
 {
-    units::temperature_delta temp_mod = units::from_kelvin_delta( 0 );
-    Character &player_character = get_player_character();
-    map &here = get_map();
-    // Convert it to an int id once, instead of 139 times per turn
-    const field_type_id fd_fire_int = fd_fire.id();
-    for( const tripoint_bub_ms &dest : here.points_in_radius( location, 6 ) ) {
-        int heat_intensity = 0;
-
-        maptile mt = here.maptile_at( dest );
-
-        int ffire = maptile_field_intensity( mt, fd_fire_int );
-        if( ffire > 0 ) {
-            heat_intensity = ffire;
-        } else  {
-            heat_intensity = mt.get_ter()->heat_radiation;
-        }
-        if( heat_intensity == 0 ) {
-            // No heat source here
-            continue;
-        }
-        if( player_character.pos_bub() == location ) {
-            bool heat_can_spread = true;
-            for( const tripoint_bub_ms &p : line_to( player_character.pos_bub(), dest ) ) {
-                if( !here.has_flag( ter_furn_flag::TFLAG_PERMEABLE, p ) && here.impassable( p ) ) {
-                    heat_can_spread = false;
-                    break;
-                }
-            }
-            if( !heat_can_spread ) {
-                continue;
-            }
-        } else if( !here.sees( location, dest, -1 ) ) {
-            continue;
-        }
-        // Ensure fire_dist >= 1 to avoid divide-by-zero errors.
-        const int fire_dist = std::max( 1, square_dist( dest, location ) );
-        temp_mod += units::from_fahrenheit_delta( 6.f * heat_intensity * heat_intensity / fire_dist );
-    }
-    return temp_mod;
+    return scan_nearby_heat( location, nearby_heat_lookup::radiation ).radiation;
 }
 
 int get_best_fire( const tripoint_bub_ms &location )
 {
-    int best_fire = 0;
-    Character &player_character = get_player_character();
-    map &here = get_map();
-    // Convert it to an int id once, instead of 139 times per turn
-    const field_type_id fd_fire_int = fd_fire.id();
-    for( const tripoint_bub_ms &dest : here.points_in_radius( location, 6 ) ) {
-        int heat_intensity = 0;
+    return scan_nearby_heat( location, nearby_heat_lookup::warming ).best_fire;
+}
 
-        maptile mt = here.maptile_at( dest );
-
-        int ffire = maptile_field_intensity( mt, fd_fire_int );
-        if( ffire > 0 ) {
-            heat_intensity = ffire;
-        } else  {
-            heat_intensity = mt.get_ter()->heat_radiation;
-        }
-        if( heat_intensity == 0 ) {
-            // No heat source here
-            continue;
-        }
-        if( player_character.pos_bub() == location ) {
-            if( !here.clear_path( dest, location, -1, 1, 100 ) ) {
-                continue;
-            }
-        } else if( !here.sees( location, dest, -1 ) ) {
-            continue;
-        }
-        if( square_dist( dest, location ) <= 1 ) {
-            // Extend limbs/lean over a single adjacent fire to warm up
-            best_fire = std::max( best_fire, heat_intensity );
-        }
-    }
-    return best_fire;
+nearby_fire_heat get_nearby_fire_heat( const tripoint_bub_ms &location )
+{
+    return scan_nearby_heat( location, nearby_heat_lookup::both );
 }
 
 units::temperature_delta get_convection_temperature( const tripoint_bub_ms &location )

@@ -30,6 +30,7 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_id.h"
 #include "city.h"  // IWYU pragma: keep
@@ -1034,6 +1035,10 @@ class Character : public Creature, public visitable
         void update_cached_mutations();
         /** Adds this specific wound to bodypart */
         void apply_wound( bodypart_id bp, wound_type_id wd );
+        /** Returns the actual main part for an already-resolved organic contact, or null. */
+        bodypart_id thermal_wound_part( const bodypart_id &contact ) const;
+        /** Applies a burn from an already-resolved contact; returns whether the wound changed. */
+        bool apply_thermal_burn( const bodypart_id &contact, bool severe, bool from_exposure = false );
         /** Updates the status of wounds character has */
         void update_wounds( time_duration time_passed );
         /** Returns true if character needs food, false if character is an NPC with NO_NPC_FOOD set */
@@ -1052,8 +1057,24 @@ class Character : public Creature, public visitable
         void get_sick( bool is_flu = false );
         /** Returns if the player has hibernation mutation and is asleep and well fed */
         bool is_hibernating() const;
-        /** Maintains body temperature */
-        void update_bodytemp();
+        /** Maintains body temperature; returns false if a thermal callback invalidates the actor. */
+        bool update_bodytemp( bool sample_heat_exposure = false );
+        /** Recomputes equilibrium temperatures without advancing any thermal state. */
+        void refresh_bodytemp();
+    protected:
+        enum class bodytemp_update {
+            equilibrium_only,
+            live,
+            live_without_frostbite
+        };
+        bool update_bodytemp_impl( bodytemp_update mode, bool sample_heat_exposure,
+                                   std::optional<units::temperature> local_temperature = std::nullopt );
+        enum class bodytemp_effect_result { stable, part_replaced, actor_invalidated };
+        bodytemp_effect_result update_bodytemp_effects( const bodypart_id &bp, units::temperature temp,
+                int tier, std::optional<bool> &heat_immune );
+        /** Samples actual part temperatures for one live turn without recomputing convergence. */
+        bool update_thermal_exposure();
+    public:
         void update_frostbite( const bodypart_id &bp, int FBwindPower,
                                const std::map<bodypart_id, int> &warmth_per_bp );
         /** Equalizes heat between body parts */
@@ -1183,7 +1204,7 @@ class Character : public Creature, public visitable
         /**
          * Handles end-of-turn processing.
          */
-        void process_turn() override;
+        bool process_turn() override;
 
         /** Recalculates HP after a change to max strength or enchantment */
         void recalc_hp();
@@ -1412,9 +1433,71 @@ class Character : public Creature, public visitable
         /** Actually hurt the player, hurts a body_part directly, no armor reduction */
         void apply_damage( Creature *source, bodypart_id hurt, int dam,
                            bool bypass_med = false ) override;
+        struct recent_damage {
+            bodypart_str_id part = bodypart_str_id::NULL_ID();
+            int amount = 0;
+            int pain = 0;
+            bool burn_reverted = false;
+        };
+        // A spent native record stays present with no HP, pain, or burn left to undo.
+        std::optional<recent_damage> take_recent_damage();
+        void forget_recent_damage();
+        /** Record an already-applied scripted hit and return the actual HP recipient. */
+        bodypart_str_id record_scripted_damage( const bodypart_str_id &part, int amount, int pain );
+        void save_thermal_wounds( const std::string &slot, bool include_hp = false );
+        struct thermal_rewind_details {
+            recent_damage fallback_hit;
+            bool has_hp_baseline = false;
+        };
+        bool restore_thermal_wounds( const std::string &slot, bool keep_snapshot = false,
+                                     thermal_rewind_details *details = nullptr );
+
+    private:
+        friend class Creature;
+        struct recent_damage_record {
+            recent_damage damage;
+            std::uint64_t hp_identity = 0; // Rebound to the exact saved part when loading.
+            std::uint64_t burn_identity = 0;
+            bodypart_str_id burn_part = bodypart_str_id::NULL_ID();
+            wound_type_id burn_type{};
+            std::optional<wound> prior_blister = std::nullopt;
+            time_duration prior_blister_burn_progress = 0_turns;
+        };
+        std::optional<recent_damage_record> last_damage_record;
+        std::uint64_t damage_record_generation = 0;
+        recent_damage damage_for_reversal( const recent_damage_record &record ) const;
+        void read_last_damage_record( const JsonObject &data,
+                                      const JsonObject *rewind_identities = nullptr );
+        void write_last_damage_record( JsonOut &out ) const;
+        struct thermal_hit {
+            thermal_hit();
+            bodypart_id contact;
+            std::uint64_t contact_identity = 0;
+            std::uint64_t wound_identity = 0;
+        };
+        thermal_hit absorb_damage( const bodypart_id &bp, const std::optional<sub_bodypart_id> &sbp,
+                                   damage_instance &dam, bool damage_armor = true,
+                                   bool resolve_wound = false );
+        struct direct_hit {
+            const thermal_hit &thermal;
+            const dealt_damage_instance &dealt;
+            std::optional<bool> &wound_roll;
+            int pain_added;
+        };
+        void apply_damage_internal( damage_event_participants &participants, bodypart_id hurt,
+                                    int dam, bool bypass_med,
+                                    const direct_hit *hit = nullptr );
+        void commit_thermal_contact( const thermal_hit &thermal, const dealt_damage_instance &dealt,
+                                     std::optional<bool> &wound_roll, bool record_contact );
+        void support_contact_burn( bodypart &part, bool severe );
+        void remember_damage( const bodypart_str_id &part, std::uint64_t hp_identity, int amount,
+                              int pain );
+
+    public:
         // checks if amount of specific wounds on bodypart is not higher than `limit`
         // return false if more than limit
         bool is_within_wound_limit_for_bp( bodypart_id bp, wound_type_id wound_id ) const;
+        /** Selects and progresses ordinary wounds based on raw damage after the wound chance roll. */
         void apply_random_wound( bodypart_id bp, const damage_instance &d );
         /** Calls Creature::deal_damage and handles damaged effects (waking up, etc.) */
         dealt_damage_instance deal_damage( Creature *source, bodypart_id bp,
@@ -1443,8 +1526,6 @@ class Character : public Creature, public visitable
         void absorb_hit( const sub_bodypart_id &sbp, damage_instance &dam,
                          bool damage_armor = true );
     protected:
-        void absorb_damage( const bodypart_id &bp, const std::optional<sub_bodypart_id> &sbp,
-                            damage_instance &dam, bool damage_armor = true );
         float generic_weakpoint_skill( skill_id skill_1, skill_id skill_2,
                                        limb_score_id limb_score_1, limb_score_id limb_score_2 ) const;
     public:
@@ -2917,13 +2998,18 @@ class Character : public Creature, public visitable
          */
         bool immune_to( const bodypart_id &bp, damage_unit dam ) const;
 
-        /** Modifies a pain value by wounds before passing it to Creature::mod_pain() */
+        /** Returns base and wound pain before analgesia. */
         int get_pain() const override;
         /** Modifies a pain value by player traits before passing it to Creature::mod_pain() */
         int mod_pain( int npain, bodypart_id bp = bodypart_id() ) override;
-        /** Sets new intensity of pain an reacts to it */
+        /** Sets stored base pain and reacts to the change in perceived pain. */
         void set_pain( int npain ) override;
-        /** Returns perceived pain (reduced with painkillers)*/
+        /** Spend a relief budget on base pain first, then on temporary thermal wound relief. */
+        void relieve_pain( int amount, const efftype_id &thermal_relief, time_duration duration );
+        /** Remove the effect with native talker targeting, then apply one base-pain delta. */
+        void remove_effect_with_pain_delta( const efftype_id &id, const std::string &target, int delta,
+                                           bool exact_base );
+        /** Returns pain after analgesia and other perception modifiers. */
         int get_perceived_pain() const override;
         /** Returns multiplier on fall damage at low velocity (knockback/pit/1 z-level, not 5 z-levels) */
         float fall_damage_mod() const override;
@@ -3657,6 +3743,38 @@ class Character : public Creature, public visitable
         int get_painkiller() const;
         void react_to_felt_pain( int intensity );
 
+    private:
+        // Base plus ordinary wound pain, followed by thermal wound pain.
+        std::pair<int, int> pain_components() const;
+        int adjusted_pain_delta( int delta, const bodypart_id &bp ) const;
+        void update_perceived_pain( int previous_pain );
+
+    public:
+        // Native effect changes bracket their writes to compare felt pain before and after.
+        static bool is_pain_effect( const efftype_id &id, const bodypart_id &bp );
+        static bool is_pain_relief_effect( const efftype_id &id, const bodypart_id &bp );
+
+        // React once to the net felt-pain change, including nested callbacks.
+        class pain_reaction_scope
+        {
+            public:
+                explicit pain_reaction_scope( Character &character );
+                ~pain_reaction_scope();
+                pain_reaction_scope( const pain_reaction_scope & ) = delete;
+                pain_reaction_scope &operator=( const pain_reaction_scope & ) = delete;
+                static bool is_active( const Character &character );
+                void finish();
+                const character_action_guard &lifetime() const {
+                    return character;
+                }
+
+            private:
+                static thread_local const pain_reaction_scope *active;
+                const pain_reaction_scope *parent = nullptr;
+                const character_action_guard character;
+                int previous_pain = 0;
+        };
+
         /** Monster cameras are mtype_ids with an integer range of transmission */
         void clear_moncams();
         void remove_moncam( const mtype_id &moncam_id );
@@ -4221,8 +4339,8 @@ class Character : public Creature, public visitable
          */
         std::pair < int, int > fun_for( const item &comest, bool ignore_already_ate = false ) const;
 
-        /** Handles a large number of timers decrementing and other randomized effects */
-        void suffer();
+        /** Processes per-turn conditions; returns false if a bionic callback invalidated the actor. */
+        bool suffer();
         /** Handles mitigation and application of radiation */
         bool irradiate( float rads, bool bypass = false );
         /** Handles the chance for broken limbs to spontaneously heal to 1 HP */
@@ -4328,9 +4446,9 @@ class Character : public Creature, public visitable
         /** Checked each turn during "lying_down", returns true if the player falls asleep */
         bool can_sleep();
         /** Processes human-specific effects of effects before calling Creature::process_effects(). */
-        void process_effects() override;
+        bool process_effects() override;
         /** Handles the still hard-coded effects. */
-        void hardcoded_effects( effect &it );
+        void hardcoded_effects( effect &it, bodypart_id bp );
 
         /** Estimate effect duration based on player relevant skill.
         @param error_magnitude Maximum error, with zero in the relevant skill.
@@ -4581,6 +4699,8 @@ class Character : public Creature, public visitable
          */
         std::map < bodypart_id, float > bodypart_exposure();
     private:
+        void process_one_effect( effect &it, bool is_new, bodypart_id bp );
+
         /**
          * Check whether the other creature is in range and can be seen by this creature.
          * @param critter Creature to check for visibility

@@ -1548,7 +1548,7 @@
         {
           "id": "EOC_MIGO_BIO_TECH_PAIN",
           "condition": { "compare_string": [ "pain", { "npc_val": "mbt_f_function" } ] },
-          "effect": [ { "u_message": "You feel your aches and pains fade away!" }, { "math": [ "u_pain() -= 30" ] } ]
+          "effect": [ { "u_message": "You feel your aches and pains fade away!" }, { "math": [ "u_pain('type': 'base') -= 30" ] } ]
         },
         {
           "id": "EOC_MIGO_BIO_TECH_SLEEPINESS",

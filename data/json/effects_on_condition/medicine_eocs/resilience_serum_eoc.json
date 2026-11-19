@@ -21,7 +21,7 @@
     "condition": { "and": [ { "compare_string": [ "resilience_serum_main", { "context_val": "effect" } ] } ] },
     "effect": [
       { "run_eocs": "EOC_APPLY_RESILIENCE_SERUM_CRASH_2", "time_in_future": 1 },
-      { "math": [ "u_pain() += (5 + rand(20) )" ] },
+      { "math": [ "u_pain('type': 'base') += (5 + rand(20) )" ] },
       { "run_eocs": "EOC_RESILIENCE_SERUM_CRASH_RANDOM_PARALYSIS", "time_in_future": [ "2 hours", "5 hours" ] }
     ]
   },

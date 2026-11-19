@@ -18,7 +18,9 @@ class npc_lifetime
 {
     public:
         npc_lifetime() = default;
-        npc *resolve( const npc_lifetime_registry &owner ) const;
+        // Lethal damage can still refer to an active incarnation at zero HP.
+        // Allowing death never bypasses retirement or replacement checks.
+        npc *resolve( const npc_lifetime_registry &owner, bool allow_dead = false ) const;
         bool belongs_to( const npc_lifetime_registry &owner ) const;
         std::size_t generation() const {
             return generation_;
@@ -42,13 +44,13 @@ class npc_lifetime_registry
         npc_lifetime_registry( const npc_lifetime_registry & ) = delete;
         npc_lifetime_registry &operator=( const npc_lifetime_registry & ) = delete;
 
-        npc_lifetime acquire( npc &value );
+        npc_lifetime acquire( npc &value, bool allow_dead = false );
         // Observe an already registered active incarnation without activating
         // an unloaded object or replacing the owner of a reused numeric ID.
-        npc_lifetime active_reference( npc &value ) const;
+        npc_lifetime active_reference( npc &value, bool allow_dead = false ) const;
         // Begin observing an NPC verified by the caller to be in the active
         // world. Never revive an incarnation already retired by a callback.
-        npc_lifetime track_active( npc &value );
+        npc_lifetime track_active( npc &value, bool allow_dead = false );
         void activate( npc &value );
         void retire( npc &value );
         void reset();

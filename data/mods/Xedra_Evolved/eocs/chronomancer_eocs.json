@@ -415,18 +415,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_XEDRA_TRACK_LAST_HIT",
-    "eoc_type": "EVENT",
-    "required_event": "character_takes_damage",
-    "//": "This value is intended to be used for time magic related powers.  It will get reset by their use, and should not be used for general purpose information.",
-    "effect": [
-      { "math": [ "u_xedra_last_damage_taken=_damage" ] },
-      { "math": [ "u_xedra_last_pain_taken=_pain" ] },
-      { "copy_var": { "context_val": "bodypart" }, "target_var": { "u_val": "xedra_last_damage_taken_bodypart" } }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "eoc_xedra_time_freeze_character_start_activity",
     "eoc_type": "EVENT",
     "required_event": "character_gains_effect",
@@ -466,26 +454,106 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_XEDRA_DAMAGE_REVERSAL",
-    "condition": { "math": [ "u_xedra_last_damage_taken > 0" ] },
+    "id": "EOC_XEDRA_CLEAR_LEGACY_LAST_DAMAGE",
+    "effect": [
+      { "u_lose_var": "xedra_last_damage_taken" },
+      { "u_lose_var": "xedra_last_pain_taken" },
+      { "u_lose_var": "xedra_last_damage_taken_bodypart" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_XEDRA_TIME_SNAPSHOT_LEGACY_LAST_DAMAGE",
+    "condition": { "expects_vars": [ "xedra_chronomancer_prefix", "xedra_last_damage_mode" ] },
     "effect": [
       {
-        "if": { "compare_string": [ "bp_null", "u_xedra_last_damage_taken_bodypart" ] },
+        "set_string_var": "u_xedra_last_damage_before_<context_val:xedra_chronomancer_prefix>",
+        "target_var": { "context_val": "legacy_damage_slot" },
+        "parse_tags": true
+      },
+      {
+        "set_string_var": "u_xedra_last_pain_before_<context_val:xedra_chronomancer_prefix>",
+        "target_var": { "context_val": "legacy_pain_slot" },
+        "parse_tags": true
+      },
+      {
+        "set_string_var": "u_xedra_last_damage_part_before_<context_val:xedra_chronomancer_prefix>",
+        "target_var": { "context_val": "legacy_damage_part_slot" },
+        "parse_tags": true
+      },
+      {
+        "if": { "compare_string": [ "save", { "context_val": "xedra_last_damage_mode" } ] },
         "then": [
-          { "math": [ "u_hp('ALL')+=u_xedra_last_damage_taken" ] },
-          { "math": [ "u_xedra_last_damage_taken=0" ] },
-          { "u_lose_effect": "bleed" }
+          { "math": [ "v_legacy_damage_slot = u_xedra_last_damage_taken" ] },
+          { "copy_var": { "u_val": "xedra_last_pain_taken" }, "target_var": { "var_val": "legacy_pain_slot" } },
+          {
+            "copy_var": { "u_val": "xedra_last_damage_taken_bodypart" },
+            "target_var": { "var_val": "legacy_damage_part_slot" }
+          }
         ],
         "else": [
-          { "math": [ "u_hp(u_xedra_last_damage_taken_bodypart)+=u_xedra_last_damage_taken" ] },
-          { "math": [ "u_pain()-=u_xedra_last_pain_taken" ] },
-          { "math": [ "u_xedra_last_damage_taken=0" ] },
-          { "u_lose_effect": "bleed", "target_part": { "u_val": "xedra_last_damage_taken_bodypart" } }
+          { "run_eocs": "EOC_XEDRA_CLEAR_LEGACY_LAST_DAMAGE" },
+          {
+            "//": "A per-limb hit is imported by the native rewind; only the whole-body sentinel uses these variables.",
+            "if": {
+              "and": [
+                { "math": [ "v_legacy_damage_slot > 0" ] },
+                { "compare_string": [ "bp_null", { "var_val": "legacy_damage_part_slot" } ] }
+              ]
+            },
+            "then": [
+              { "math": [ "u_xedra_last_damage_taken = v_legacy_damage_slot" ] },
+              { "copy_var": { "var_val": "legacy_pain_slot" }, "target_var": { "u_val": "xedra_last_pain_taken" } },
+              {
+                "copy_var": { "var_val": "legacy_damage_part_slot" },
+                "target_var": { "u_val": "xedra_last_damage_taken_bodypart" }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_XEDRA_DAMAGE_REVERSAL",
+    "effect": [
+      { "u_revert_last_damage": true },
+      {
+        "//": "Only old saves without a native hit can have a usable legacy record.",
+        "if": { "and": [ { "math": [ "_last_damage_recorded == 0" ] }, { "math": [ "u_xedra_last_damage_taken > 0" ] } ] },
+        "then": [
+          { "math": [ "_last_damage = u_xedra_last_damage_taken" ] },
+          { "math": [ "_last_damage_pain = u_xedra_last_pain_taken" ] },
+          {
+            "copy_var": { "u_val": "xedra_last_damage_taken_bodypart" },
+            "target_var": { "context_val": "last_damage_bodypart" }
+          }
         ]
       },
-      { "u_message": "Your wound heals!", "type": "good" }
-    ],
-    "false_effect": [ { "u_message": "You don't have a previous wound to heal.", "type": "neutral" } ]
+      { "run_eocs": "EOC_XEDRA_CLEAR_LEGACY_LAST_DAMAGE" },
+      {
+        "if": { "or": [ { "math": [ "_last_damage > 0" ] }, { "math": [ "_last_damage_burn_reverted > 0" ] } ] },
+        "then": [
+          {
+            "if": { "math": [ "_last_damage > 0" ] },
+            "then": [
+              {
+                "if": { "compare_string": [ "bp_null", { "context_val": "last_damage_bodypart" } ] },
+                "then": [ { "math": [ "u_hp('ALL') += _last_damage" ] }, { "u_lose_effect": "bleed" } ],
+                "else": [
+                  { "math": [ "u_hp(_last_damage_bodypart) += _last_damage" ] },
+                  { "math": [ "u_pain('type': 'base') -= _last_damage_pain" ] },
+                  { "u_lose_effect": "bleed", "target_part": { "context_val": "last_damage_bodypart" } }
+                ]
+              }
+            ]
+          },
+          { "u_message": "Your wound heals!", "type": "good" }
+        ],
+        "else": [ { "u_message": "You don't have a previous wound to heal.", "type": "neutral" } ]
+      }
+    ]
   },
   {
     "type": "effect_on_condition",
@@ -511,12 +579,14 @@
     "condition": { "u_has_trait": "XEDRA_CHRONOMANCER_LOOPING_WOUND" },
     "effect": [
       { "u_message": "You feel a sharp jolt of pain as a stab wound suddenly opens in your belly!", "type": "bad" },
-      { "math": [ "u_hp('torso')-=10" ] },
-      { "math": [ "u_xedra_last_damage_taken=10" ] },
-      { "set_string_var": "torso", "target_var": { "u_val": "xedra_last_damage_taken_bodypart" } },
-      { "math": [ "u_pain()+=30" ] },
-      { "math": [ "u_xedra_last_pain_taken=30" ] },
-      { "u_add_effect": "bleed", "duration": "10 minutes", "target_part": "torso" },
+      { "math": [ "u_hp('torso') -= 10" ] },
+      { "math": [ "u_pain('type': 'base') += 30" ] },
+      { "u_record_last_damage": "torso", "amount": 10, "pain": 30 },
+      { "run_eocs": "EOC_XEDRA_CLEAR_LEGACY_LAST_DAMAGE" },
+      {
+        "if": { "not": { "compare_string": [ "bp_null", { "context_val": "last_damage_bodypart" } ] } },
+        "then": [ { "u_add_effect": "bleed", "duration": "10 minutes", "target_part": { "context_val": "last_damage_bodypart" } } ]
+      },
       { "run_eocs": "EOC_XEDRA_CHRONOMANCER_LOOPING_WOUND_DAMAGE", "time_in_future": "24 hours" }
     ]
   },
@@ -555,16 +625,46 @@
     "required_event": "character_gains_effect",
     "condition": { "compare_string": [ "effect_xedra_time_loop", { "context_val": "effect" } ] },
     "effect": [
-      { "run_eocs": "EOC_XEDRA_TIME_SAVE_VARIABLES_DYNAMIC", "variables": { "xedra_chronomancer_prefix": "time_loop" } },
+      { "u_save_thermal_wounds": "xedra_time_loop" },
+      {
+        "run_eocs": "EOC_XEDRA_TIME_SNAPSHOT_LEGACY_LAST_DAMAGE",
+        "variables": { "xedra_chronomancer_prefix": "time_loop", "xedra_last_damage_mode": "save" }
+      },
+      {
+        "run_eocs": "EOC_XEDRA_TIME_SAVE_VARIABLES_DYNAMIC",
+        "variables": { "xedra_chronomancer_prefix": "time_loop" }
+      },
+      { "math": [ "u_xedra_time_loop_next_rewind = time('now') + time('5 seconds')" ] },
       { "run_eocs": "EOC_XEDRA_TIME_LOOP_LOOP", "time_in_future": "5 seconds" }
     ]
   },
   {
     "type": "effect_on_condition",
     "id": "EOC_XEDRA_TIME_LOOP_LOOP",
-    "condition": { "u_has_effect": "effect_xedra_time_loop" },
+    "//": "A queued tick from a previous loop must not rewind a replacement loop early.",
+    "condition": {
+      "and": [ { "u_has_effect": "effect_xedra_time_loop" }, { "math": [ "time('now') >= u_xedra_time_loop_next_rewind" ] } ]
+    },
     "effect": [
-      { "run_eocs": "EOC_XEDRA_TIME_LOAD_VARIABLES_DYNAMIC", "variables": { "xedra_chronomancer_prefix": "time_loop" } },
+      { "math": [ "u_xedra_time_loop_next_rewind = time('now') + time('5 seconds')" ] },
+      {
+        "run_eocs": "EOC_XEDRA_TIME_LOAD_VARIABLES_DYNAMIC",
+        "variables": { "xedra_chronomancer_prefix": "time_loop" }
+      },
+      {
+        "u_restore_thermal_wounds": "xedra_time_loop",
+        "keep_snapshot": true,
+        "discard_last_damage_if_missing": true,
+        "fallback_hit": {
+          "part": { "u_val": "xedra_last_damage_part_before_time_loop" },
+          "amount": { "u_val": "xedra_last_damage_before_time_loop" },
+          "pain": { "u_val": "xedra_last_pain_before_time_loop" }
+        }
+      },
+      {
+        "run_eocs": "EOC_XEDRA_TIME_SNAPSHOT_LEGACY_LAST_DAMAGE",
+        "variables": { "xedra_chronomancer_prefix": "time_loop", "xedra_last_damage_mode": "restore" }
+      },
       { "run_eocs": "EOC_XEDRA_TIME_LOOP_LOOP", "time_in_future": "5 seconds" }
     ]
   },
@@ -585,6 +685,19 @@
       {
         "run_eocs": "EOC_XEDRA_TIME_LOAD_VARIABLES_DYNAMIC",
         "variables": { "xedra_chronomancer_prefix": "time_loop" }
+      },
+      {
+        "u_restore_thermal_wounds": "xedra_time_loop",
+        "discard_last_damage_if_missing": true,
+        "fallback_hit": {
+          "part": { "u_val": "xedra_last_damage_part_before_time_loop" },
+          "amount": { "u_val": "xedra_last_damage_before_time_loop" },
+          "pain": { "u_val": "xedra_last_pain_before_time_loop" }
+        }
+      },
+      {
+        "run_eocs": "EOC_XEDRA_TIME_SNAPSHOT_LEGACY_LAST_DAMAGE",
+        "variables": { "xedra_chronomancer_prefix": "time_loop", "xedra_last_damage_mode": "restore" }
       }
     ]
   },
@@ -611,7 +724,15 @@
     "required_event": "character_gains_effect",
     "condition": { "compare_string": [ "effect_xedra_chronomancer_stable_timeloop", { "context_val": "effect" } ] },
     "effect": [
-      { "run_eocs": "EOC_XEDRA_TIME_SAVE_VARIABLES_DYNAMIC", "variables": { "xedra_chronomancer_prefix": "stable_timeloop" } }
+      { "u_save_thermal_wounds": "xedra_stable_timeloop" },
+      {
+        "run_eocs": "EOC_XEDRA_TIME_SNAPSHOT_LEGACY_LAST_DAMAGE",
+        "variables": { "xedra_chronomancer_prefix": "stable_timeloop", "xedra_last_damage_mode": "save" }
+      },
+      {
+        "run_eocs": "EOC_XEDRA_TIME_SAVE_VARIABLES_DYNAMIC",
+        "variables": { "xedra_chronomancer_prefix": "stable_timeloop" }
+      }
     ]
   },
   {
@@ -631,6 +752,19 @@
       {
         "run_eocs": "EOC_XEDRA_TIME_LOAD_VARIABLES_DYNAMIC",
         "variables": { "xedra_chronomancer_prefix": "stable_timeloop" }
+      },
+      {
+        "u_restore_thermal_wounds": "xedra_stable_timeloop",
+        "discard_last_damage_if_missing": true,
+        "fallback_hit": {
+          "part": { "u_val": "xedra_last_damage_part_before_stable_timeloop" },
+          "amount": { "u_val": "xedra_last_damage_before_stable_timeloop" },
+          "pain": { "u_val": "xedra_last_pain_before_stable_timeloop" }
+        }
+      },
+      {
+        "run_eocs": "EOC_XEDRA_TIME_SNAPSHOT_LEGACY_LAST_DAMAGE",
+        "variables": { "xedra_chronomancer_prefix": "stable_timeloop", "xedra_last_damage_mode": "restore" }
       }
     ]
   },
@@ -682,7 +816,7 @@
         "target_var": { "context_val": "target_var" },
         "parse_tags": true
       },
-      { "math": [ "v_target_var = u_pain()" ] },
+      { "math": [ "v_target_var = u_pain('type': 'base')" ] },
       {
         "set_string_var": "u_xedra_kcal_before_<context_val:xedra_chronomancer_prefix>",
         "target_var": { "context_val": "target_var" },
@@ -855,7 +989,7 @@
         "target_var": { "context_val": "temp_var" },
         "parse_tags": true
       },
-      { "math": [ "u_pain() = v_temp_var" ] },
+      { "math": [ "u_pain('type': 'base') = v_temp_var" ] },
       {
         "set_string_var": "u_xedra_kcal_before_<context_val:xedra_chronomancer_prefix>",
         "target_var": { "context_val": "temp_var" },

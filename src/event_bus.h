@@ -8,6 +8,7 @@
 #include "event.h"
 
 class Creature;
+class damage_event_participants;
 class event_subscriber;
 class item_location;
 class vehicle;
@@ -23,6 +24,7 @@ class event_bus
         void unsubscribe( event_subscriber * );
 
         void send( const cata::event & ) const;
+        void send_character_damage( const cata::event &, const damage_event_participants & ) const;
         void send_with_talker( Creature *, Creature *, const cata::event & ) const;
         void send_with_talker( Creature *, item_location *, const cata::event & ) const;
         void send_with_talker( vehicle *alpha, Creature *, const cata::event &e ) const;

@@ -984,6 +984,7 @@
     "max_intensity": 3,
     "int_dur_factor": "5 s",
     "max_duration": "50 s",
+    "flags": [ "EFFECT_ONFIRE" ],
     "show_in_info": true
   },
   {
@@ -3371,26 +3372,6 @@
   },
   {
     "type": "effect_type",
-    "id": "blisters",
-    "name": [ "Blisters" ],
-    "desc": [ "Your %s is blistering from the intense heat." ],
-    "main_parts_only": true,
-    "part_descs": true,
-    "miss_messages": [ [ "Your blisters distract you", 1 ] ],
-    "immune_bp_flags": [ "BIONIC_LIMB", "NON_FLESH_LIMB" ],
-    "base_mods": {
-      "dex_mod": [ -1 ],
-      "str_mod": [ -1 ],
-      "per_mod": [ -1 ],
-      "pain_max_val": [ 35 ],
-      "pain_chance": [ 2 ],
-      "pain_min": [ 1 ],
-      "hurt_chance": [ 4 ],
-      "hurt_min": [ 1 ]
-    }
-  },
-  {
-    "type": "effect_type",
     "id": "dermatik",
     "immune_bp_flags": [ "BIONIC_LIMB", "NON_FLESH_LIMB" ],
     "blood_analysis_description": "Insect Parasite",
@@ -4772,6 +4753,22 @@
     "scaling_mods": { "speed_mod": [ -1 ] },
     "rating": "good",
     "blood_analysis_description": "Painkiller"
+  },
+  {
+    "type": "effect_type",
+    "id": "pain_relief",
+    "name": [ "" ],
+    "desc": [ "" ],
+    "max_intensity": 2147483647,
+    "rating": "good"
+  },
+  {
+    "type": "effect_type",
+    "id": "pain_ceiling",
+    "name": [ "" ],
+    "desc": [ "" ],
+    "max_intensity": 2147483647,
+    "rating": "good"
   },
   {
     "type": "effect_type",

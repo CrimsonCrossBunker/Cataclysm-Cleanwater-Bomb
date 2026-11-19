@@ -246,11 +246,16 @@
   {
     "type": "effect_on_condition",
     "id": "EOC_SALAMANDER_BERSERK_STANCE_ON",
+    "//": "The stance's PAIN_IMMUNE flag suppresses only the burn component of raw wound pain.",
     "condition": { "not": { "u_has_effect": "effect_salamander_berserk_stance" } },
     "effect": [
-      { "math": [ "u_salamander_pain_value = u_pain()" ] },
-      { "math": [ "u_pain() = 0" ] },
-      { "u_add_effect": "effect_salamander_berserk_stance", "duration": "24 hours" }
+      { "math": [ "u_salamander_pain_value = u_pain('type': 'base')" ] },
+      { "math": [ "_wildfire_wound_pain = u_pain() - u_salamander_pain_value" ] },
+      { "math": [ "u_pain('type': 'base') = 0" ] },
+      { "u_add_effect": "effect_salamander_berserk_stance", "duration": "24 hours" },
+      {
+        "math": [ "u_salamander_suppressed_burn_pain = max(0, _wildfire_wound_pain - (u_pain() - u_pain('type': 'base')))" ]
+      }
     ],
     "false_effect": [ { "u_message": "You are already under the effects of Wildfire Soul!", "type": "mixed" } ]
   },
@@ -258,9 +263,9 @@
     "type": "effect_on_condition",
     "id": "EOC_SALAMANDER_BERSERK_STANCE_OFF",
     "condition": { "u_has_effect": "effect_salamander_berserk_stance" },
-    "effect": [
-      { "math": [ "u_pain() += (u_salamander_pain_value * 1.15)" ] },
-      { "u_lose_effect": "effect_salamander_berserk_stance" }
-    ]
+    "effect": {
+      "u_lose_effect": "effect_salamander_berserk_stance",
+      "base_pain_delta": { "math": [ "(u_salamander_pain_value * 115 + u_salamander_suppressed_burn_pain * 15) / 100" ] }
+    }
   }
 ]

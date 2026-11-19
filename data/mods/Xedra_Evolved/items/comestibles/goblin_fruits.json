@@ -141,7 +141,7 @@
   {
     "type": "effect_on_condition",
     "id": "EOC_GOBLIN_FRUIT_PAIN",
-    "effect": [ { "math": [ "u_pain() -= 5" ] } ]
+    "effect": [ { "math": [ "u_pain('type': 'base') -= 5" ] } ]
   },
   {
     "type": "ITEM",
@@ -304,7 +304,10 @@
   {
     "type": "effect_on_condition",
     "id": "EOC_GOBLIN_FRUIT_NO_DRUNK",
-    "effect": [ { "u_add_effect": "effect_goblin_fruit_no_drunk", "duration": "1 seconds" }, { "math": [ "u_pain() += 10" ] } ]
+    "effect": [
+      { "u_add_effect": "effect_goblin_fruit_no_drunk", "duration": "1 seconds" },
+      { "math": [ "u_pain('type': 'base') += 10" ] }
+    ]
   },
   {
     "type": "ITEM",

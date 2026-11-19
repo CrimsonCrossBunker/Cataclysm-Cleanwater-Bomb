@@ -22,6 +22,7 @@
 #include "body_part_set.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_small_literal_vector.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
@@ -1767,7 +1768,7 @@ void suffer::from_artifact_resonance( Character &you, int amt )
     }
 }
 
-void Character::suffer()
+bool Character::suffer()
 {
     const int current_stim = get_stim();
 
@@ -1783,8 +1784,27 @@ void Character::suffer()
         mod_power_level( trickle );
     }
 
-    for( bionic &bio : *my_bionics ) {
-        process_bionic( bio );
+    if( !my_bionics->empty() ) {
+        const character_action_guard self( *this );
+        // A powered-down implant can wake the character; the wake handler can replace the
+        // entire collection. Only implants present at the start of this turn get a tick.
+        small_literal_vector<bionic_uid, 8, size_t> pending;
+        pending.ensure_capacity_for( my_bionics->size() );
+        for( const bionic &bio : *my_bionics ) {
+            pending.push_back( bio.get_uid() );
+        }
+        size_t next = 0;
+        for( const bionic_uid uid : pending ) {
+            if( next < my_bionics->size() && ( *my_bionics )[next].get_uid() == uid ) {
+                process_bionic( ( *my_bionics )[next] );
+            } else if( const auto installed = find_bionic_by_uid( uid ) ) {
+                process_bionic( **installed );
+            }
+            if( !self ) {
+                return false;
+            }
+            ++next;
+        }
     }
 
     for( const trait_id &mut_id : get_functioning_mutations() ) {
@@ -1843,6 +1863,7 @@ void Character::suffer()
         int healthy_mod_cap = enchantment_cache->modify_value( enchant_vals::mod::MOD_HEALTH_CAP, 0 );
         mod_daily_health( healthy_mod, healthy_mod_cap );
     }
+    return true;
 }
 
 bool Character::irradiate( float rads, bool bypass )

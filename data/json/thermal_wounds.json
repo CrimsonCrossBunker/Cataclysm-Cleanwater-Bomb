@@ -1,0 +1,28 @@
+[
+  {
+    "type": "wound",
+    "id": "thermal_blister",
+    "name": "heat blister",
+    "description": "Painful blisters caused by exposure to heat.",
+    "damage_types": [  ],
+    "damage_required": [ 0, 0 ],
+    "weight": 0,
+    "limit": 1,
+    "pain": [ 3, 3 ],
+    "healing_time": [ "8 hours", "8 hours" ],
+    "limb_scores": [ { "score": "manip", "value": 0.05 }, { "score": "block", "value": 0.05 }, { "score": "move_speed", "value": 0.05 } ]
+  },
+  {
+    "type": "wound",
+    "id": "thermal_burn",
+    "name": "severe burn",
+    "description": "A deep burn that makes it painful to use the affected body part.",
+    "damage_types": [  ],
+    "damage_required": [ 0, 0 ],
+    "weight": 0,
+    "limit": 1,
+    "pain": [ 10, 10 ],
+    "healing_time": [ "2 days", "2 days" ],
+    "limb_scores": [ { "score": "manip", "value": 0.2 }, { "score": "block", "value": 0.2 }, { "score": "move_speed", "value": 0.15 } ]
+  }
+]

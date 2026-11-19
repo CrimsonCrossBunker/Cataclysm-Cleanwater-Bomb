@@ -273,8 +273,23 @@ static const item *platform_event_item( const cata::event &event, const talker *
 static sol::table event_to_lua( runtime &owner, const cata::event &event,
                                 const std::map<std::string, Character *> &characters,
                                 const item *event_item, const talker *speaker_actor,
-                                const talker *interlocutor_actor )
+                                const talker *interlocutor_actor,
+                                const damage_event_participants *damage = nullptr )
 {
+    std::optional<game_handle> damage_target;
+    std::optional<game_handle> damage_source;
+    bool damage_target_matches_id = false;
+    if( damage ) {
+        // Resolve participants before allocating Lua tables; a finalizer may
+        // retire them, but the snapshots cannot bind to a new incarnation.
+        if( Character *target = damage->target() ) {
+            damage_target = platform_creature_handle( owner, *target );
+            damage_target_matches_id = target->getID() == event.get<character_id>( "character" );
+            if( Creature *source = damage->source() ) {
+                damage_source = platform_creature_handle( owner, *source );
+            }
+        }
+    }
     sol::table result = owner.lua->create_table();
     sol::table data = owner.lua->create_table();
     sol::table data_types = owner.lua->create_table();
@@ -293,11 +308,15 @@ static sol::table event_to_lua( runtime &owner, const cata::event &event,
                 const character_id id =
                     value.get<cata_variant_type::character_id>();
                 data[name] = id.get_value();
-                const auto character = characters.find( name );
-                if( character != characters.end() ) {
-                    const cata::lua_platform::game_handle handle = platform_creature_handle(
-                                owner, *character->second );
-                    actors[name] = handle;
+                if( name == "character" && damage_target_matches_id ) {
+                    actors[name] = *damage_target;
+                } else {
+                    const auto character = characters.find( name );
+                    if( character != characters.end() ) {
+                        const cata::lua_platform::game_handle handle = platform_creature_handle(
+                                    owner, *character->second );
+                        actors[name] = handle;
+                    }
                 }
             }
             break;
@@ -332,6 +351,12 @@ static sol::table event_to_lua( runtime &owner, const cata::event &event,
             actors["interlocutor"] = platform_creature_handle( owner, *creature );
         }
     }
+    if( damage_target ) {
+        actors["speaker"] = *damage_target;
+    }
+    if( damage_source ) {
+        actors["interlocutor"] = *damage_source;
+    }
     result["data"] = std::move( data );
     result["data_types"] = std::move( data_types );
     result["actors"] = std::move( actors );
@@ -340,7 +365,7 @@ static sol::table event_to_lua( runtime &owner, const cata::event &event,
 
 static bool dispatch_event_handler( runtime &owner, const std::string &name,
                                     const std::string &handler_id, const sol::object &payload,
-                                    const bool cancellable = false )
+                                    const bool cancellable = false, const bool explicit_character = false )
 {
     if( owner.callback_depth >= 16 ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first event recursion limit reached for '"
@@ -356,6 +381,11 @@ static bool dispatch_event_handler( runtime &owner, const std::string &name,
     }
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( owner );
+    if( explicit_character ) {
+        // A missing explicit actor is not an actorless callback. Bind an
+        // invalid handle so state.character fails instead of inheriting.
+        owner.callback_character = game_handle{};
+    }
     if( payload.is<sol::table>() ) {
         const sol::optional<sol::table> actors = payload.as<sol::table>()["actors"];
         if( actors ) {
@@ -1326,7 +1356,8 @@ static void apply_platform_hook_table( const std::string_view name, const sol::t
 
 static void dispatch_platform_event( const cata::event &event, const item *event_item,
                                      const talker *alpha_actor,
-                                     const talker *beta_actor )
+                                     const talker *beta_actor,
+                                     const damage_event_participants *damage = nullptr )
 {
     if( g == nullptr || event.type() == event_type::num_event_types ) {
         return;
@@ -1347,8 +1378,8 @@ static void dispatch_platform_event( const cata::event &event, const item *event
         return;
     }
     platform_event_dispatch_scope event_scope;
-    const std::map<std::string, Character *> characters =
-        platform_event_characters( event );
+    const std::map<std::string, Character *> characters = damage ?
+            std::map<std::string, Character *>() : platform_event_characters( event );
     struct pending_callback {
         std::shared_ptr<runtime> owner;
         std::string handler_id;
@@ -1370,25 +1401,43 @@ static void dispatch_platform_event( const cata::event &event, const item *event
         }
         const std::vector<std::string> handler_ids = subscription->second;
         for( const std::string &handler_id : handler_ids ) {
-            try {
-                pending.push_back( {
-                    owner,
-                    handler_id,
-                    sol::make_object(
-                        *owner->lua, event_to_lua( *owner, event, characters,
-                                                   event_item, alpha_actor,
-                                                   beta_actor ) )
-                } );
-            } catch( const std::exception &exception ) {
-                DebugLog( D_ERROR, D_MAIN ) << "Lua-first event payload for '"
-                                            << owner->mod_id << ':' << event_name << ':'
-                                            << handler_id << "' failed: " << exception.what();
+            if( damage ) {
+                pending.push_back( { owner, handler_id, {} } );
+            } else {
+                try {
+                    pending.push_back( {
+                        owner, handler_id,
+                        sol::make_object( *owner->lua, event_to_lua( *owner, event, characters,
+                                          event_item, alpha_actor, beta_actor ) )
+                    } );
+                } catch( const std::exception &exception ) {
+                    DebugLog( D_ERROR, D_MAIN ) << "Lua-first event payload for '"
+                                                << owner->mod_id << ':' << event_name << ':'
+                                                << handler_id << "' failed: " << exception.what();
+                }
             }
         }
     }
     for( const pending_callback &callback : pending ) {
-        dispatch_event_handler( *callback.owner, event_name, callback.handler_id,
-                                callback.payload );
+        runtime &owner = *callback.owner;
+        if( !damage ) {
+            dispatch_event_handler( owner, event_name, callback.handler_id, callback.payload );
+            continue;
+        }
+        // An earlier subscriber or Lua handler can invalidate either actor.
+        // Keep the data, but never resolve the old character ID a second time.
+        sol::object payload;
+        try {
+            payload = sol::make_object( *owner.lua, event_to_lua( owner, event, characters,
+                                        nullptr, nullptr, nullptr, damage ) );
+        } catch( const std::exception &exception ) {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first event payload for '"
+                                        << owner.mod_id << ':' << event_name << ':'
+                                        << callback.handler_id << "' failed: " << exception.what();
+            continue;
+        }
+        dispatch_event_handler( owner, event_name, callback.handler_id, payload,
+                                /*cancellable=*/false, /*explicit_character=*/true );
     }
 }
 
@@ -1406,6 +1455,11 @@ class platform_event_bridge : public event_subscriber
             dispatch_platform_event(
                 event, platform_event_item( event, beta_actor.get() ),
                 alpha_actor.get(), beta_actor.get() );
+        }
+
+        void notify_character_damage( const cata::event &event,
+                                      const damage_event_participants &participants ) override {
+            dispatch_platform_event( event, nullptr, nullptr, nullptr, &participants );
         }
 };
 

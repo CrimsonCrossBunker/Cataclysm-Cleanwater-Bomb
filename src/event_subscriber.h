@@ -8,6 +8,7 @@ namespace cata
 {
 class event;
 }  // namespace cata
+class damage_event_participants;
 class event_bus;
 class talker;
 
@@ -23,6 +24,9 @@ class event_subscriber
         }
         virtual void notify( const cata::event & ) = 0;
         virtual void notify( const cata::event &, std::unique_ptr<talker>, std::unique_ptr<talker> );
+        // Explicit damage participants are borrowed for this call. The default
+        // delivers only event data when the target is no longer available.
+        virtual void notify_character_damage( const cata::event &, const damage_event_participants & );
     private:
         friend class event_bus;
         void on_subscribe( event_bus * );

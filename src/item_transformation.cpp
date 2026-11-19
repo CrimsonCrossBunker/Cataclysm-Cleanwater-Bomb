@@ -134,7 +134,7 @@ void item_transformation::transform( Character *carrier, item &it, bool dont_tak
 
         } else {
             carrier->calc_encumbrance();
-            carrier->update_bodytemp();
+            carrier->refresh_bodytemp();
             carrier->on_worn_item_transform( obj_copy, it );
         }
     }

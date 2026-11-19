@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_conditions",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:df213581fe05c71a48bc20ac5881ad739b9441ef991c4f2f96da790f80db7982",
+    "source_fingerprint": "sha256:1aef0c74611a4f8db0c77373cfb8b3b1c4eafc2cac52f1992abaaaddd952961a",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -117,7 +117,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 5476,
+        "occurrences": 5482,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -305,7 +305,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 3199,
+        "occurrences": 3205,
         "examples": [
           {
             "path": "data/json/effects_on_condition/anomalous_mp3_eocs.json",
@@ -584,7 +584,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 40,
+        "occurrences": 41,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -780,7 +780,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4034
+            "line": 4134
           }
         ],
         "confidence": "lexical_only"
@@ -1982,7 +1982,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4054
+            "line": 4154
           }
         ],
         "confidence": "lexical_only"
@@ -2256,7 +2256,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4054
+            "line": 4154
           }
         ],
         "confidence": "lexical_only"
@@ -3259,7 +3259,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 22473,
+        "occurrences": 22483,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3919,7 +3919,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 6747,
+        "occurrences": 6748,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -6815,7 +6815,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 435,
+        "occurrences": 427,
         "examples": [
           {
             "path": "data/json/effects_on_condition/general_conditions.json",
@@ -6910,7 +6910,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 254,
+        "occurrences": 255,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -16970,7 +16970,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 107,
+        "occurrences": 108,
         "examples": [
           {
             "path": "data/json/effects_on_condition/example_eocs.json",
@@ -17734,7 +17734,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 2282,
+        "occurrences": 2274,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -17924,7 +17924,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 834,
+        "occurrences": 835,
         "examples": [
           {
             "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
@@ -18694,7 +18694,7 @@
         "examples": [
           {
             "path": "data/mods/TEST_DATA/EOC.json",
-            "pointer": "/92/condition/not/u_has_martial_art"
+            "pointer": "/94/condition/not/u_has_martial_art"
           }
         ],
         "confidence": "lexical_only",
@@ -21701,7 +21701,7 @@
         "examples": [
           {
             "path": "data/mods/TEST_DATA/EOC.json",
-            "pointer": "/85/effect/5/if"
+            "pointer": "/87/effect/5/if"
           }
         ],
         "confidence": "lexical_only",
@@ -21796,7 +21796,7 @@
         "examples": [
           {
             "path": "data/json/effects.json",
-            "pointer": "/415/enchantments/0/condition/u_is_in_field"
+            "pointer": "/416/enchantments/0/condition/u_is_in_field"
           }
         ],
         "confidence": "lexical_only",
@@ -21986,7 +21986,7 @@
         "examples": [
           {
             "path": "data/mods/TEST_DATA/EOC.json",
-            "pointer": "/85/effect/4/if"
+            "pointer": "/87/effect/4/if"
           }
         ],
         "confidence": "lexical_only",

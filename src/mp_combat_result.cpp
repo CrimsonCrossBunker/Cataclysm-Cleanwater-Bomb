@@ -27,7 +27,7 @@ std::string make_combat_result( const Character &actor, pickup_host_state &state
     out.member( "stamina", actor.get_stamina() );
     out.member( "focus", actor.get_focus_pool() );
     out.member( "recoil", actor.recoil );
-    out.member( "pain", actor.get_pain() );
+    out.member( "pain", actor.Creature::get_pain() );
     out.member( "power_mj", units::to_millijoule( actor.get_power_level() ) );
     out.member( "skills" );
     out.start_object();

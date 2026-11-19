@@ -139,6 +139,10 @@ class wound
         }
 
     private:
+        friend class Character;
+        // Identifies the instance created by the actor's latest recorded hit, even after healing.
+        bool reversible_contact = false;
+
         // how long it takes for this wound to heal. Can be adjusted by wound fix.
         time_duration healing_time;
         // how much time passed since this wound was applied

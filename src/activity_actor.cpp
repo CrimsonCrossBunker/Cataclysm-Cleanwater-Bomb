@@ -13833,55 +13833,105 @@ void fix_wound_activity_actor::start( player_activity &act, Character & )
 
 void fix_wound_activity_actor::finish( player_activity &act, Character &who )
 {
+    const bodypart_id part_id = healed_bp;
+    const wound_type_id wound_id = mended_wound;
+    const wound_fix_id method = mending_method;
     act.set_to_null();
 
-    bodypart *bp = who.get_part( healed_bp );
-
-    if( !bp->has_wound( mended_wound ) ) {
+    if( !who.has_part( part_id ) ) {
+        return;
+    }
+    bodypart *bp = who.get_part( part_id );
+    if( !bp->has_wound( wound_id ) ) {
         // wound naturally disappeared while we tried to treat it
         return;
     }
-    if( mending_method.is_empty() ) {
+    if( method.is_empty() ) {
         debugmsg( "missing wound fix for ACT_TREAT_WOUND." );
         return;
     }
-    if( !mending_method.is_valid() ) {
-        debugmsg( "invalid wound fix '%s' for ACT_TREAT_WOUND.", mending_method.str() );
+    if( !method.is_valid() ) {
+        debugmsg( "invalid wound fix '%s' for ACT_TREAT_WOUND.", method.str() );
         return;
     }
-    const wound_fix &fix = *mending_method;
+    const wound_fix &fix = *method;
     const requirement_data &reqs = fix.get_requirements();
     const temp_crafting_inventory &inv = who.crafting_inventory();
     if( !reqs.can_make_with_inventory( &who, inv, is_crafting_component ) ) {
-        add_msg( m_info, _( "You are currently unable to heal the %s." ), healed_bp->name.translated() );
+        add_msg( m_info, _( "You are currently unable to heal the %s." ), part_id->name.translated() );
         return;
     }
+    const character_action_guard lifetime( who );
+    const std::uint64_t activity_identity = act.identity_generation();
+    const std::uint64_t limb_identity = bp->identity_generation();
+    const auto can_finish = [&]() {
+        return lifetime && act.identity_generation() == activity_identity;
+    };
+    const auto find_limb = [&]() -> bodypart * {
+        if( !can_finish() || !who.has_part( part_id ) ) {
+            return nullptr;
+        }
+        bodypart *current = who.get_part( part_id );
+        return current->identity_generation() == limb_identity ? current : nullptr;
+    };
     for( const auto &e : reqs.get_components() ) {
         who.consume_items( e );
+        if( !find_limb() ) {
+            return;
+        }
     }
     for( const auto &e : reqs.get_tools() ) {
         who.consume_tools( e );
+        if( !find_limb() ) {
+            return;
+        }
     }
     who.invalidate_crafting_inventory();
+    bp = find_limb();
+    if( !bp || !bp->has_wound( wound_id ) ) {
+        return;
+    }
+    bool removed_burn = false;
 
     for( const wound_type_id &id : fix.wounds_removed ) {
+        removed_burn |= bodypart::is_thermal_wound( id ) && bp->has_wound( id );
         bp->remove_wound( id );
     }
 
     for( const wound_type_id &id : fix.wounds_added ) {
-        bp->add_wound( id );
+        if( bodypart::is_thermal_wound( id ) ) {
+            who.apply_wound( part_id, id );
+            bp = find_limb();
+            if( !bp ) {
+                return;
+            }
+        } else {
+            bp->add_wound( id );
+        }
     }
 
     if( fix.mod_hp ) {
         bp->mod_hp_cur( fix.mod_hp );
     }
+    if( removed_burn ) {
+        who.on_stat_change( "perceived_pain", who.get_perceived_pain() );
+        if( !can_finish() ) {
+            return;
+        }
+    }
 
     for( const auto& [skill_id, level] : fix.skills ) {
         who.practice( skill_id, 10, static_cast<int>( level * 1.25 ) );
+        if( !can_finish() ) {
+            return;
+        }
     }
 
     for( const wound_proficiency &wound_prof : fix.proficiencies ) {
         who.practice_proficiency( wound_prof.prof, fix.time );
+        if( !can_finish() ) {
+            return;
+        }
     }
 
     add_msg( m_good, fix.success_msg.translated() );

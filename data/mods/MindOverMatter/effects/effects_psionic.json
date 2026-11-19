@@ -1965,9 +1965,8 @@
     "rating": "good",
     "max_duration": "7 days",
     "max_intensity": 95,
-    "blocks_effects": [ "blisters" ],
     "enchantments": [ { "incoming_damage_mod": [ { "type": "heat", "multiply": -1 } ] } ],
-    "flags": [ "HEAT_IMMUNE" ]
+    "flags": [ "HEAT_IMMUNE", "THERMAL_BURN_PROTECTION" ]
   },
   {
     "type": "effect_type",
