@@ -1,38 +1,28 @@
 local ccb = require("ccb")
 
--- You can technically eat 20 or 30 coffee beans before getting sick, but any more than that and you'll have a very bad time.  This is a negligible amount of calories so we either need to greatly reduce portion size here or find a way to simulate the agony someone would be in after eating an entire cup of the things.
+-- USDA states that the pods of the Kentucky coffeetree contain a toxic alkaloid broken down in the roasting process, so they're poisonous
 ccb.content.define_item {
-    id = "coffee_bean",
-    name = ccb.content.plural_text("coffee beans", "coffee beans"),
-    description = ccb.content.text("Some coffee beans, can be roasted."),
+    id = "coffee_pod",
+    name = ccb.content.plural_text("Kentucky coffee pod", "Kentucky coffee pods"),
+    category = "other",
+    mass = "26 g",
+    color = "light_green",
+    looks_like = "hickory_nut",
+    symbol = "%",
+    description = ccb.content.text("Coffee pods taken from a Kentucky coffeetree.  If washed thoroughly and roasted, you could use them to make a dark and bitter brew much like coffee."),
     display_type = "BY_WEIGHT",
-    symbol = ".",
-    color = "brown",
-    price = "1 cent",
-    volume = "30 ml",
-    mass = "15 g",
+    price = "25 cent",
+    survival_price = "12 cent",
     materials = { { id = "dried_vegetable", portions = 10 }, { id = "veggy", portions = 1 } },
-    flags = { "EDIBLE_FROZEN", "RAW", "NO_AUTO_CONSUME", "INEDIBLE", "NUTRIENT_OVERRIDE" },
+    volume = "62 ml",
+    flags = { "HIDDEN_POISON", "RAW" },
     stackable = true,
     comestible = {
         kind = "FOOD",
-        calories = 78,
-        vitamins = {
-            { id = "calcium", amount = 2 },
-            { id = "iron", amount = 4 },
-            { id = "veggy_allergen", amount = 1 },
-        },
-        addiction = "caffeine",
-        addiction_potential = 1,
+        quench = -6,
+        calories = 9,
+        fun = -10,
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
     },
-}
-
-ccb.content.define_item {
-    id = "roasted_coffee_bean",
-    copy_from = "coffee_bean",
-    category = "FOOD",
-    name = ccb.content.plural_text("roasted coffee beans", "roasted coffee beans"),
-    description = ccb.content.text("Some roasted coffee beans, can be ground into powder."),
-    comestible = {},
-    inheritance = { add = { flags = { "RAW" } } },
+    use_actions = { "POISON" },
 }

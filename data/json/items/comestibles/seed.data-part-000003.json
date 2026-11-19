@@ -1,0 +1,36 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "marloss_seed",
+    "category": "seeds",
+    "name": { "str": "Marloss seed" },
+    "weight": "177 g",
+    "color": "cyan",
+    "addiction_type": "marloss_b",
+    "comestible_type": "FOOD",
+    "symbol": ".",
+    "quench": 5,
+    "healthy": -10,
+    "addiction_potential": 5,
+    "calories": 174,
+    "description": "This looks like a sunflower seed the size of your palm.  It has a strong but delicious aroma, but is clearly either mutated or of alien origin.  You could probably plant it.",
+    "price": "1 cent",
+    "material": [ { "type": "dried_vegetable", "portion": 10 }, { "type": "fruit", "portion": 1 } ],
+    "volume": "175 ml",
+    "fun": 30,
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "MARLOSS" ],
+    "vitamins": [ [ "fruit_allergen", 1 ] ],
+    "fruit": "null",
+    "//": "dummy entry, results are hardcoded",
+    "plant_name": "Marloss berry",
+    "growth_stages": [
+      { "GROWTH_SEED": "23 days" },
+      { "GROWTH_SEEDLING": "23 days" },
+      { "GROWTH_MATURE": "23 days" },
+      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ],
+    "consumption_effect_on_conditions": [ "EOC_MARLOSS_SEED_CONSUME" ]
+  }
+]
