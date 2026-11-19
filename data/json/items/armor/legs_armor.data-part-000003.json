@@ -1,0 +1,70 @@
+[
+  {
+    "id": "trousers_eod",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "name": { "str_sp": "EOD trousers" },
+    "description": "This is a heavy pair of trousers armored in Kevlar, Nomex, and foam padding, for use by explosive ordnance disposal technicians.  While it offers near complete coverage in fragmentation resistant materials, it still offers insufficient protection from ballistic threats.",
+    "weight": "6400 g",
+    "volume": "7 L",
+    "price": "10 kUSD 60 USD",
+    "price_postapoc": "120 USD",
+    "warmth": 65,
+    "material": [ "kevlar", "nomex" ],
+    "symbol": "[",
+    "color": "light_green",
+    "environmental_protection": 2,
+    "material_thickness": 15,
+    "flags": [ "STURDY", "OUTER", "RAINPROOF" ],
+    "max_worn": 1,
+    "use_action": [ { "type": "attach_molle", "size": 4 }, { "type": "detach_molle" } ],
+    "armor": [
+      {
+        "material": [
+          { "type": "nylon", "covered_by_mat": 100, "thickness": 1.0 },
+          { "type": "kevlar", "covered_by_mat": 100, "thickness": 7.4 },
+          { "type": "plastic_pad", "covered_by_mat": 100, "thickness": 2.0 }
+        ],
+        "coverage": 100,
+        "cover_vitals": 100,
+        "covers": [ "leg_l", "leg_r" ],
+        "encumbrance": 80
+      }
+    ]
+  },
+  {
+    "id": "trousers_eod_light",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "category": "armor",
+    "name": { "str_sp": "tactical EOD trousers" },
+    "description": "This is a heavy pair of trousers armored in Kevlar, Nomex, and foam padding, for use by explosive ordnance disposal technicians in 'non-permissive environments'.  While it offers near complete coverage in fragmentation resistant materials, it still offers insufficient protection from ballistic threats.  These trousers are lighter than normal EOD armor to provide more maneuverability.",
+    "weight": "3000 g",
+    "volume": "7 L",
+    "price": "2 kUSD 734 USD 40 cent",
+    "price_postapoc": "33 USD",
+    "warmth": 40,
+    "material": [ "kevlar", "nomex" ],
+    "symbol": "[",
+    "color": "light_gray",
+    "environmental_protection": 2,
+    "material_thickness": 7,
+    "flags": [ "STURDY", "OUTER", "RAINPROOF" ],
+    "max_worn": 1,
+    "use_action": [ { "type": "attach_molle", "size": 6 }, { "type": "detach_molle" } ],
+    "armor": [
+      {
+        "material": [
+          { "type": "nylon", "covered_by_mat": 100, "thickness": 1.0 },
+          { "type": "kevlar", "covered_by_mat": 100, "thickness": 4.4 },
+          { "type": "plastic_pad", "covered_by_mat": 100, "thickness": 2 }
+        ],
+        "encumbrance": 40,
+        "coverage": 100,
+        "cover_vitals": 100,
+        "covers": [ "leg_l", "leg_r" ]
+      }
+    ]
+  }
+]
