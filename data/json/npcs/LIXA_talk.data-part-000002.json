@@ -1,0 +1,7 @@
+[
+  {
+    "id": "EOC_LIXA_personal_computer",
+    "type": "effect_on_condition",
+    "effect": { "open_dialogue": { "topic": "LIXA_personal_computer_main" } }
+  }
+]
