@@ -1,0 +1,39 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_GOLBIN_FRUIT_FOCUS_BOOST",
+    "effect": [ { "u_add_effect": "effect_goblin_fruit_focus_boost", "duration": { "math": [ "15000 + rand(5000)" ] } } ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "goblin_fruit_spawn_more_fruits",
+    "name": { "str": "pupating goblin fruit" },
+    "description": "This dark red half-liquid fruit fills you with dread and sadness as it endlessly tries to split but fails to do so.  You sense that it wants you to eat it, but you're not sure if it would be worth it.",
+    "copy-from": "goblin_fruit_abstract",
+    "//": "The idea is that this fruit needs to feed on happiness to create other goblin fruits and it can't do that unless you eat it, with predictable results on your own happiness.",
+    "comestible_type": "FOOD",
+    "color": "dark_gray_red",
+    "weight": "331 g",
+    "volume": "350 ml",
+    "fun": -30,
+    "vitamins": [ [ "vitC", 10 ], [ "calcium", 10 ], [ "iron", 10 ], [ "fruit_allergen", 1 ], [ "bad_food", 25 ] ],
+    "consumption_effect_on_conditions": [ "EOC_GOBLIN_FRUIT_SPAWN_MORE_FRUITS" ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_GOBLIN_FRUIT_SPAWN_MORE_FRUITS",
+    "effect": [
+      {
+        "u_spawn_item": "spell_spawned_goblin_fruit",
+        "count": { "math": [ "rng(2,3)" ] },
+        "use_item_group": true,
+        "suppress_message": true
+      },
+      {
+        "u_message": "Some hard chunks of that horrible fruit jump from your mouth and turn into fresh goblin fruits.",
+        "type": "info"
+      }
+    ]
+  }
+]

@@ -250,3 +250,5 @@ require("terrain_transforms")
 require("monster_groups")
 
 require("tile_interactions")
+
+require("consumable_effects")
