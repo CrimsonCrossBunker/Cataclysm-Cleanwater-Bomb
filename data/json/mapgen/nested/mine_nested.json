@@ -1,8 +1,0 @@
-[
-  {
-    "type": "palette",
-    "id": "mine_palette",
-    "terrain": { "#": "t_rock", " ": "t_rock_floor", "$": "t_rock_floor" },
-    "furniture": { "$": "f_boulder_large" }
-  }
-]

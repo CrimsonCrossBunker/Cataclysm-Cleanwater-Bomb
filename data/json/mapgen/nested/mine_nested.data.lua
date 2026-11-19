@@ -1,5 +1,13 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "mine_palette",
+    layout = {
+        terrain = { ["#"] = "t_rock", [" "] = "t_rock_floor", ["$"] = "t_rock_floor" },
+        furniture = { ["$"] = "f_boulder_large" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "spiral_cw",

@@ -1,5 +1,13 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "cave_palette",
+    layout = {
+        monster_glyphs = { [" "] = { id = "mon_sewer_rat", chance = 20 } },
+        terrain = { ["."] = "t_soil", [" "] = "t_dirt_underground" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "cave_nw",

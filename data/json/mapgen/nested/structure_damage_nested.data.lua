@@ -1,5 +1,52 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "struc_damage",
+    layout = {
+        transform_glyphs = {
+            c = {
+                id = {
+                    select = { parameter = "crashvariant" },
+                    cases = { fromleft = "struc_carcrash_dirt", fromright = "tft_null" },
+                },
+            },
+            v = {
+                id = {
+                    select = { parameter = "crashvariant" },
+                    cases = { fromleft = "tft_null", fromright = "struc_carcrash_dirt" },
+                },
+            },
+            w = {
+                id = {
+                    select = { parameter = "crashvariant" },
+                    cases = { fromleft = "struc_carcrash_rubble", fromright = "tft_null" },
+                },
+            },
+            j = {
+                id = {
+                    select = { parameter = "crashvariant" },
+                    cases = { fromleft = "tft_null", fromright = "struc_carcrash_rubble" },
+                },
+            },
+            r = { id = "struc_carcrash_rubble" },
+            x = { id = "struc_carcrash_clear" },
+            d = { id = "struc_carcrash_dirt" },
+        },
+        field_glyphs = {
+            m = { id = "fd_blood", intensity = 2 },
+            h = { id = "fd_blood", intensity = 3 },
+            k = { id = "fd_blood", intensity = 3 },
+        },
+        parameters = {
+            crashvariant = {
+                value_type = "string",
+                default = { weighted = { "fromleft", "fromright" } },
+                scope = "map_tile",
+            },
+        },
+    },
+}
+
 -- Randomizes between the three car crash variants. The walls for the structure being damaged start at y:3.
 ccb.content.define_mapgen {
     kind = "nested",

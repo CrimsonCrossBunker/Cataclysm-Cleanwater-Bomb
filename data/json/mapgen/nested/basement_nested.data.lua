@@ -1,5 +1,18 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "basement_utility_nest_palette",
+    layout = {
+        liquid_glyphs = { g = { id = "water_clean", amount = { 0, 100 } } },
+        terrain = { ["."] = "t_thconc_floor", g = "t_thconc_floor", f = "t_thconc_floor" },
+        furniture = {
+            g = { { id = "f_water_heater" }, { id = "f_water_heater_family" } },
+            f = "f_home_furnace",
+            a = { { id = "f_air_conditioner" }, { id = "f_null" }, { id = "f_counter" } },
+        },
+    },
+}
+
 -- a nested map for basements
 ccb.content.define_mapgen {
     kind = "nested",
