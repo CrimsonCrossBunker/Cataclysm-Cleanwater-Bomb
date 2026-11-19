@@ -1,0 +1,23 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_Pablo_Tacoma2",
+    "dynamic_line": "This is amazing news!  Thank you so much!  I've talked to some of the traders who have been there and I really think I can help, mostly with the manual labor but also with the bookkeeping end.  It sounds so much better than this place.  Thanks, my friend!  We'll get packing, and see if we can get a place on the next caravan out.  It'll be a little while I'm sure, but at least our child won't be born in captivity.",
+    "speaker_effect": {
+      "effect": [
+        { "finish_mission": "MISSION_TACOMA_Nunez", "success": true },
+        { "npc_location_variable": { "context_val": "refcenter_nunez_departure" } },
+        { "math": [ "_travel_time = time_since('cataclysm', 'unit': 'days') + 2" ] },
+        {
+          "run_eocs": [ "EOC_Nunez_Travel_To_Tacoma" ],
+          "time_in_future": { "context_val": "travel_time" },
+          "variables": {
+            "refcenter_nunez_departure": { "context_val": "refcenter_nunez_departure" },
+            "tacoma_nunez_trailer_arrive": { "u_val": "tacoma_nunez_trailer_arrive" }
+          }
+        },
+        { "u_lose_var": "tacoma_nunez_trailer_arrive" }
+      ]
+    }
+  }
+]

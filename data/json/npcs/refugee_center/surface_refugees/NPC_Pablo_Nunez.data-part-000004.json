@@ -1,0 +1,30 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_Pablo_Situation",
+    "dynamic_line": {
+      "math": [ "u_counter_refugee_center_refugee_happiness >= 5" ],
+      "yes": "It's pretty tough here.  People have made so much effort to make things better, and the group is kind of coming together, but I just don't feel like I could ever belong, you know?  I need somewhere with a sky, and a little privacy.",
+      "no": "It's pretty tough here.  We're packed into too small a location with too many people.  Everyone is dealing with their own trauma.  Rhy is trying to help out, but she can't be a proper counselor in these circumstances.  I don't know how we're going to survive for long.  As for me, I wish I could be anywhere but here.  I need to see the sky again, or I'm going to go insane."
+    },
+    "responses": [
+      {
+        "text": "Why not move to the Tacoma Commune?",
+        "topic": "TALK_REFUGEE_Pablo_Tacoma",
+        "effect": { "assign_mission": "MISSION_TACOMA_Nunez" },
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "knowledge_flag_tacoma_started" } ] },
+            { "not": { "u_has_mission": "MISSION_TACOMA_Nunez" } }
+          ]
+        }
+      },
+      {
+        "text": "I've got a secure base.  You and your wife could come with me.",
+        "topic": "TALK_REFUGEE_Pablo_Recruit",
+        "effect": { "u_add_var": "recruit_general_Pablo_ask_recruit", "value": "yes" },
+        "condition": "u_has_camp"
+      }
+    ]
+  }
+]
