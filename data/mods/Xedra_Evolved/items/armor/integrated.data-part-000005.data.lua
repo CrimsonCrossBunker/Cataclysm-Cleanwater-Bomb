@@ -1,0 +1,113 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "item_gracken_shadowstuff_pocket",
+    category = "clothing",
+    name = ccb.content.plural_text("shadowstuff organ", "shadowstuff organs"),
+    description = ccb.content.text("You have an organ inside of your body that grows a material you can create improved versions of your body parts with.  You must combine it with components taken from monsters with abilities you wish to gain and magickal essence."),
+    materials = { "flesh" },
+    symbol = ")",
+    color = "light_gray",
+    pockets = { { kind = "MAGAZINE", ammunition = { scrap_shadowstuff = 3 }, airtight = true } },
+    flags = {
+        "INTEGRATED", "PADDED", "SEMITANGIBLE", "ZERO_WEIGHT", "TARDIS", "UNBREAKABLE", "PERSONAL",
+        "SOFT", "WATER_FRIENDLY",
+    },
+    artifact = { charge = { recharge_type = "periodic", interval = "168 h", regenerate_ammo = true } },
+}
+
+ccb.content.define_item {
+    id = "integrated_cloud_skin",
+    category = "armor",
+    name = ccb.content.plural_text("cloud skin", "cloud skin"),
+    description = ccb.content.text("Your skin is clearly separate from the air around you but has become its own weather system.  If someone reaches out and touches you, they will clearly feel you but you look like someone might reach right through you."),
+    mass = "1 kg",
+    volume = "3 L",
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "fae_flesh" },
+    symbol = "x",
+    color = "light_red",
+    flags = {
+        "INTEGRATED",
+        "ALLOWS_NATURAL_ATTACKS",
+        "UNBREAKABLE",
+        "PERSONAL",
+        "WATER_FRIENDLY",
+        "PADDED",
+        "SOFT",
+    },
+    subtype_order = { "armor", "artifact" },
+    armor = {
+        portions = {
+            {
+                materials = { { id = "fae_flesh", coverage = 100, thickness = 3 } },
+                covers = {
+                    "hand_l",
+                    "hand_r",
+                    "foot_l",
+                    "foot_r",
+                    "leg_l",
+                    "leg_r",
+                    "arm_l",
+                    "arm_r",
+                    "torso",
+                    "head",
+                    "mouth",
+                },
+                coverage = 100,
+                encumbrance = 0,
+                breathability = "SECOND_SKIN",
+            },
+        },
+    },
+    artifact = { enchantments = { "cloud_skin_enchantment" } },
+}
+
+ccb.content.define_item {
+    id = "integrated_storm_skin",
+    category = "armor",
+    name = ccb.content.plural_text("storm skin", "storm skin"),
+    description = ccb.content.text("Your skin is a roiling storm.  Your flexibility is greatly increased, your ability to ignore temperatures hot and cold have greatly increased but your ability to carry objects has been reduced."),
+    mass = "1 kg",
+    volume = "3 L",
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "fae_flesh" },
+    symbol = "x",
+    color = "light_red",
+    flags = {
+        "INTEGRATED",
+        "ALLOWS_NATURAL_ATTACKS",
+        "UNBREAKABLE",
+        "PERSONAL",
+        "WATER_FRIENDLY",
+        "PADDED",
+        "SOFT",
+    },
+    subtype_order = { "armor", "artifact" },
+    armor = {
+        portions = {
+            {
+                materials = { { id = "fae_flesh", coverage = 100, thickness = 6 } },
+                covers = {
+                    "hand_l",
+                    "hand_r",
+                    "foot_l",
+                    "foot_r",
+                    "leg_l",
+                    "leg_r",
+                    "arm_l",
+                    "arm_r",
+                    "torso",
+                    "head",
+                    "mouth",
+                },
+                coverage = 100,
+                encumbrance = 0,
+                breathability = "SECOND_SKIN",
+            },
+        },
+    },
+    artifact = { enchantments = { "storm_skin_enchantment" } },
+}

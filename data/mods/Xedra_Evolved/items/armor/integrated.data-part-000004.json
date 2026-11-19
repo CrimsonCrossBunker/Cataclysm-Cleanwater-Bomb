@@ -1,0 +1,19 @@
+[
+  {
+    "id": "item_salamander_cooking_heat",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "name": { "str_sp": "stove's caress" },
+    "description": "Heat from your hands.  You may cook with it at will.",
+    "weight": "0 g",
+    "volume": "0 L",
+    "price": "1 cent",
+    "price_postapoc": "1 cent",
+    "symbol": "$",
+    "color": "red",
+    "flags": [ "PERSONAL", "PADDED", "UNBREAKABLE", "INTEGRATED", "SEMITANGIBLE", "ZERO_WEIGHT", "NO_DROP" ],
+    "qualities": [ [ "BLOW_HOT_AIR", 1 ] ],
+    "use_action": [ { "type": "HEAT_FOOD" } ],
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_item_salamander_cooking_heat_0" } ]
+  }
+]
