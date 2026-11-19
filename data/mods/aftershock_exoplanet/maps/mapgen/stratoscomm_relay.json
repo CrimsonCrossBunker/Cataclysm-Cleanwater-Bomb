@@ -83,41 +83,5 @@
       "monster": { "ö": { "monster": "mon_skitterbot" } },
       "place_nested": [ { "chunks": [ { "param": "lightstatus", "fallback": "null" } ], "x": 0, "y": 0 } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "afs_stratoscomm_relay_n2" ],
-    "object": {
-      "fill_ter": "t_metal_floor",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                  ....  ",
-        "          .....   ....  ",
-        "          ............  ",
-        "          ..4.........  ",
-        "          .........     ",
-        "          .....         ",
-        "           ...          ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "afs_habitat_structure" ],
-      "terrain": { " ": "t_open_air", "'": "t_door_glass_o", ".": "t_strconc_floor", ",": "t_sidewalk" },
-      "furniture": { "4": "f_mil_comms_sat", "E": "f_machinery_electronic" }
-    }
   }
 ]

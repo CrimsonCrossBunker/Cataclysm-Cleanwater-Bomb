@@ -1,0 +1,43 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "afs_stratoscomm_relay_n2" },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                  ....  ",
+            "          .....   ....  ",
+            "          ............  ",
+            "          ..4.........  ",
+            "          .........     ",
+            "          .....         ",
+            "           ...          ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "afs_habitat_structure" },
+        terrain = {
+            [" "] = "t_open_air",
+            ["'"] = "t_door_glass_o",
+            ["."] = "t_strconc_floor",
+            [","] = "t_sidewalk",
+        },
+        furniture = { ["4"] = "f_mil_comms_sat", E = "f_machinery_electronic" },
+        fill_terrain = "t_metal_floor",
+    },
+}
