@@ -6610,7 +6610,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                           "' requires receptive species and one registration per transaction" );
             }
             for( const std::string &species : definition.receptive_species ) {
-                if( !species_id( species ).is_valid() ) {
+                if( !( context.defines_species && context.defines_species( species ) ) &&
+                    !species_id( species ).is_valid() ) {
                     throw std::runtime_error( "scent type '" + definition.id +
                                               "' references unknown species '" + species + "'" );
                 }
@@ -6630,7 +6631,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             for( const auto &requirement : definition.entries ) {
                 if( !finite_native_float( requirement.speed ) || requirement.speed < 0.0 ||
                     !platform_creature_size( requirement.size ) || !platform_butcher_type( requirement.butcher ) ||
-                    !requirement_id( requirement.requirement ).is_valid() ) {
+                    ( requirement_ids.count( requirement.requirement ) == 0 &&
+                      !requirement_id( requirement.requirement ).is_valid() ) ) {
                     throw std::runtime_error( "butchery requirement '" + definition.id +
                                               "' has an invalid entry" );
                 }

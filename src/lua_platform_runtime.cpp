@@ -5872,6 +5872,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 return entry.definition->id == id;
             } );
         };
+        items_context.defines_species = [this]( const std::string_view id ) {
+            return pimpl_->creatures.defines_species( id );
+        };
         if( !pimpl_->item_content.validate(
                 owner_runtime, check_engine_state, items_context, error ) ) {
             return false;
@@ -7701,6 +7704,17 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 definition.id, "scenario" );
         }
 
+        const auto staged_named_color = [&named_color_ids]( const std::string &candidate ) {
+            return std::any_of( named_color_ids.begin(), named_color_ids.end(),
+            [&candidate]( const std::string &staged ) {
+                return candidate.size() == staged.size() &&
+                       std::equal( candidate.begin(), candidate.end(), staged.begin(),
+                []( const char lhs, const char rhs ) {
+                    return std::tolower( static_cast<unsigned char>( lhs ) ) ==
+                           std::tolower( static_cast<unsigned char>( rhs ) );
+                } );
+            } );
+        };
         std::set<std::string> vehicle_color_palette_ids;
         for( const vehicle_color_palette_registration &entry :
              pimpl_->vehicle_color_palettes ) {
@@ -7719,7 +7733,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     }
                 }
                 for( const auto &[name, weight] : group.colors ) {
-                    if( !RGBColor::try_parse( name ) ) {
+                    if( !staged_named_color( name ) && !RGBColor::try_parse( name ) ) {
                         throw std::runtime_error( "vehicle color palette '" + definition.id +
                                                   "' references unknown color '" + name + "'" );
                     }

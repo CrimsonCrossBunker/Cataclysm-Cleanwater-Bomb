@@ -32,6 +32,7 @@ class runtime;
 struct items_content_validation_context {
     std::function<bool( std::string_view )> defines_furniture;
     std::function<bool( std::string_view )> defines_explosion_light;
+    std::function<bool( std::string_view )> defines_species;
 };
 
 struct items_content_staged_ids {
