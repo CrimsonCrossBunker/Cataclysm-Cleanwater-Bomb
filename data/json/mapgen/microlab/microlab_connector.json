@@ -1,40 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ "microlab_sub_connector", "microlab_sub_connector_ratkin" ],
-    "object": {
-      "fill_ter": "t_concrete",
-      "rows": [
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################",
-        "########################"
-      ],
-      "palettes": [ "microlab" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "microlab_sub_station" ],
     "object": {
       "fill_ter": "t_strconc_floor",
@@ -133,24 +99,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "ratkin_sewer_entrance",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rows": [
-        "|o-~~-o|",
-        "|o-~~-o|",
-        "|o-~~-o|",
-        "|o-~~-o|",
-        "|o-~~-o|",
-        "|o-~~-o|",
-        "|p-~~-p|",
-        "||----||"
-      ],
-      "palettes": [ "sewers" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "microlab_generic_sub_entry", "microlab_ratkin_sub_entry" ],
     "object": {
       "fill_ter": "t_strconc_floor",
@@ -240,127 +188,6 @@
       },
       "monster": { "T": { "monster": "mon_turret_rifle", "spawn_data": { "ammo": [ { "ammo_id": "556", "qty": [ 30, 90 ] } ] } } },
       "nested": { "§": { "chunks": [ "fire_extinguisher" ] } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "microlab_generic_vent_shaft_connector", "microlab_ratkin_vent_shaft_connector" ],
-    "object": {
-      "fill_ter": "t_strconc_floor",
-      "rows": [
-        "     |    |  |cccc|     ",
-        "     |=[==|  ||||||     ",
-        "  ((2|   §|  2 Y  2  i  ",
-        "  (  | cci|  2 Y  2  c  ",
-        " 6|@@||||||||||||||§ c  ",
-        "||||||pppppppppppp|     ",
-        " F|%       YY    p|  c  ",
-        " F|%  ppppppppS  p|  c  ",
-        " F|%             S|  i  ",
-        "  |%    |||  ||   |     ",
-        "|5|||===|||44||  §|||22|",
-        "   ^|www|wwwww|    2 YY ",
-        "   ^|www|wwwww|%   2 YY ",
-        "||4||===|wwwww%%   |||||",
-        " |      |w<www|    |###|",
-        "c|l     |||||||    |###|",
-        "c|l l             6|||||",
-        " |l l §      %Spppppppp|",
-        "||||||||||||||||||||||#|",
-        " rrcc| hd^=^^=      ^|#|",
-        "    c| dd =  = Y  dh |#|",
-        " c6 6|B   =  = Y hd 6|#|",
-        " cc r|B   [  [    § ^|#|",
-        "     ||||||  |||||||||||"
-      ],
-      "place_nested": [
-        { "else_chunks": [ "concrete_corner" ], "x": 0, "y": 0, "neighbors": { "north_west": "microlab" } },
-        { "else_chunks": [ "concrete_corner" ], "x": 23, "y": 0, "neighbors": { "north_east": "microlab" } },
-        { "else_chunks": [ "concrete_corner" ], "x": 23, "y": 23, "neighbors": { "south_east": "microlab" } },
-        { "else_chunks": [ "concrete_corner" ], "x": 0, "y": 23, "neighbors": { "south_west": "microlab" } }
-      ],
-      "palettes": [ "microlab" ],
-      "terrain": { "p": "t_sewage_pipe", "w": "t_water_pool_shallow", "S": "t_sewage_pump" },
-      "furniture": { "%": "f_machinery_heavy" },
-      "items": { "l": { "item": "sewage_plant", "chance": 75 } },
-      "nested": { "§": { "chunks": [ "fire_extinguisher" ] } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ [ "microlab_generic_surface" ] ],
-    "object": {
-      "fill_ter": "t_concrete",
-      "rows": [
-        " yyyyyyyyyyyyyyyyyyyyyy ",
-        " yyyyyyyyyyyyyyyyyyyyyy ",
-        " y____________________y ",
-        " y____________________y ",
-        " y____________________y ",
-        " ||||||||||22|yyyyyyyyy ",
-        " |         SS|________y ",
-        " |         SS|________y ",
-        " |         SS|________y ",
-        " |         SS|________y ",
-        " |   |((((|22||555555|y ",
-        " |   |........|yyyyyy|. ",
-        " |   |..dddd..|......|. ",
-        " |   |^.d.hd..5yyyyyy|  ",
-        " |   |||||||..5......|  ",
-        " |   (V.??....Gyyyyyy|  ",
-        " |   (t.......|......|  ",
-        " |   (^???....|yyyyyy|  ",
-        " |   ||||||..^|yyyyyy|  ",
-        " |   |.hd^=..^|eeeeee|  ",
-        " |   |.dd.=..^|eeeeee|  ",
-        " |   |B...=..^|EeeeeE|  ",
-        " |   |B...[..^|eeeeee|  ",
-        " |||||||||||||||||||||  "
-      ],
-      "palettes": [ "microlab" ],
-      "terrain": {
-        "e": "t_elevator",
-        "E": "t_elevator_control",
-        " ": "t_grass",
-        "_": "t_pavement",
-        "S": "t_sidewalk",
-        ".": "t_thconc_floor",
-        "G": "t_card_science"
-      }
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ [ "microlab_generic_surface_roof" ] ],
-    "object": {
-      "fill_ter": "t_concrete",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  ",
-        "     .................  "
-      ],
-      "terrain": { " ": "t_open_air", ".": "t_concrete" }
     }
   }
 ]

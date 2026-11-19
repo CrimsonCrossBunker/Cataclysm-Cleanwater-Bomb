@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "microlab_generic_edge_room_connector" } },
+    layout = {
+        rows = {
+            "|||||| PP  PP  PP ||||||",
+            " c|#|N PP  PP  PP |##|  ",
+            " 6|||| PP |||| PP ||||F ",
+            " F|XX= PP   h  PP =XX|F ",
+            " F|XX= PP |dd| PP =XX|F ",
+            "|||XX= PPPPPPPPPP =XX||2",
+            " F|XX= PPPPPPPPPP =XX|F ",
+            " F|XX======[[======XX|F ",
+            " F|XXXXXX=YPPY=XXXXXX|F ",
+            "  |XXXXXX=YPPY=XXXXXX|F ",
+            "|||||||====[[====||||||2",
+            "     2YPPPPPPPPPPY2     ",
+            "     2YPPPPPPPPPPY2     ",
+            "|||  |||===[[===||||2((|",
+            "cc=  |XXX= PP =XXX|c    ",
+            "  [  |XXX= PP =XXX|c c  ",
+            "  =  |XXX= PP =XXX|c c  ",
+            "cc=  |XXX= PP =XXX|c    ",
+            "|||  |XXX=YPPY=XXX||||||",
+            " c|  ||||||PP||||||FFFFF",
+            " c|               2  c  ",
+            " c|               2  c  ",
+            " c|22||||||  ||||||c c  ",
+            "     |FFFF|  |FFFF|     ",
+        },
+        palettes = { "microlab" },
+        fill_terrain = "t_strconc_floor",
+    },
+}
