@@ -1,0 +1,34 @@
+[
+  {
+    "type": "MONSTER",
+    "id": "mon_amalgamation_swarmer",
+    "copy-from": "mon_amalgamation_abstract_small",
+    "//": "Small, nasty glass cannon spawning in groups.  WP: mandible, leg",
+    "name": { "str": "swarming amalgamation" },
+    "description": "A small, flat creature dashing around erratically on seven short legs.  Its form is dominated by an oversized set of black mandibles on an almost comically small head, featureless apart from a single black eye.  The rest of the body is covered with sickly white skin crisscrossed by black veins.",
+    "volume": "20 L",
+    "weight": "20 kg",
+    "hp": 35,
+    "speed": 120,
+    "move_skills": { "climb": 6 },
+    "attack_cost": 120,
+    "melee_dice": 2,
+    "melee_damage": [ { "damage_type": "cut", "amount": 3 } ],
+    "special_attacks": [
+      {
+        "type": "bite",
+        "cooldown": 3,
+        "move_cost": 150,
+        "damage_max_instance": [ { "damage_type": "cut", "amount": 15, "armor_penetration": 5 } ],
+        "hitsize_min": 4,
+        "min_mul": 0.5,
+        "max_mul": 1.2,
+        "condition": { "not": { "u_has_effect": "maimed_mandible" } },
+        "infection_chance": 10,
+        "attack_upper": false
+      }
+    ],
+    "vision_day": 18,
+    "extend": { "flags": [ "SWARMS", "HARDTOSHOOT", "HIT_AND_RUN" ], "weakpoint_sets": [ "wps_amalgamation_mandible" ] }
+  }
+]
