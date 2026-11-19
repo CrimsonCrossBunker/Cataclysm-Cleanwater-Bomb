@@ -1,0 +1,13 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_AFS_FAST_BLOOD_PRODUCTION",
+    "recurrence": "5 minutes",
+    "condition": { "u_has_trait": "AFS_FAST_BLOOD_PRODUCTION" },
+    "deactivate_condition": { "not": { "u_has_trait": "AFS_FAST_BLOOD_PRODUCTION" } },
+    "effect": [
+      { "math": [ "u_vitamin('blood') = min(0, u_vitamin('blood') + 50)" ] },
+      { "math": [ "u_vitamin('redcells') = min(0, u_vitamin('redcells') + 50)" ] }
+    ]
+  }
+]
