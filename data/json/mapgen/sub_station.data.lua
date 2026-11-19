@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "sub_station_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "  --------------------  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -.oooo........oooo.-  ",
+            "  -.oooo........oooo.-  ",
+            "  -.oooo........oooo.-  ",
+            "  -.oooo........oooo.-  ",
+            "  -.oooo........oooo.-  ",
+            "  -.oooo........oooo.-  ",
+            "  -.oooo........oooo.-  ",
+            "  -.oooo........oooo.-  ",
+            "  -.oooo........oooo.-  ",
+            "  -..................-  ",
+            "  -..................-  ",
+            "  -...oooooooooooo...-  ",
+            "  -...oooooooooooo...-  ",
+            "  --..oooooooooooo..--  ",
+            "   --..............--   ",
+            "    --............--    ",
+            "     -----------5--     ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_flat_roof",
+    },
+}
