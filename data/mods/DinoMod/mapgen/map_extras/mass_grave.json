@@ -1,20 +1,6 @@
 [
   {
     "type": "mapgen",
-    "//": "This is the 'base' mass grave, and doesn't actually contain anything. Variants are generated via the place_nested field.",
-    "update_mapgen_id": "mx_mass_grave_dino",
-    "object": {
-      "place_nested": [
-        {
-          "chunks": [ [ "mass_grave_abandoned_dino", 30 ], [ "mass_grave_partial_dino", 20 ], [ "mass_grave_finished_dino", 10 ] ],
-          "x": 0,
-          "y": 0
-        }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "mass_grave_abandoned_dino",
     "object": {
       "mapgensize": [ 24, 24 ],
