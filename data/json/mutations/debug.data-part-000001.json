@@ -1,0 +1,13 @@
+[
+  {
+    "type": "mutation",
+    "id": "DEBUG_MUTATE",
+    "name": { "str": "Debug Genetic Instability" },
+    "description": "You just can't wait to turn into a bug!  Triggers a mutation using the normal mutation rules (requiring primer but no catalyst) every five seconds.",
+    "points": 99,
+    "debug": true,
+    "valid": false,
+    "time": "5 s",
+    "processed_eocs": [ "eoc_debug_mutate" ]
+  }
+]
