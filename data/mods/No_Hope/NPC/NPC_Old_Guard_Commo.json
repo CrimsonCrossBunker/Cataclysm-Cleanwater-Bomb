@@ -10,52 +10,5 @@
     "chat": "TALK_OLD_GUARD_NEC_COMMO",
     "faction": "old_guard",
     "mission_offered": "MISSION_OLD_GUARD_NEC_COMMO_1"
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_OLD_GUARD_NEC_COMMO",
-    "dynamic_line": {
-      "u_is_wearing": "badge_marshal",
-      "yes": "Marshal, I'm rather surprised to see you here.",
-      "no": {
-        "u_male": true,
-        "yes": "Sir you are not authorized to be here… you should leave.",
-        "no": "Ma'am you are not authorized to be here… you should leave."
-      }
-    },
-    "responses": [
-      {
-        "text": "[MISSION] The captain sent me to get a frequency list from you.",
-        "topic": "TALK_OLD_GUARD_NEC_COMMO_FREQ",
-        "condition": {
-          "and": [
-            { "u_is_wearing": "badge_marshal" },
-            { "u_has_mission": "MISSION_OLD_GUARD_NEC_1" },
-            { "not": { "u_has_effect": "has_og_comm_freq" } }
-          ]
-        }
-      },
-      {
-        "text": "What are you doing here?",
-        "topic": "TALK_OLD_GUARD_NEC_COMMO_GOAL",
-        "condition": { "u_is_wearing": "badge_marshal" }
-      },
-      {
-        "text": "Do you need any help?",
-        "topic": "TALK_MISSION_LIST",
-        "condition": { "and": [ { "u_has_effect": "has_og_comm_freq" }, { "u_is_wearing": "badge_marshal" } ] }
-      },
-      {
-        "text": "About the mission…",
-        "topic": "TALK_MISSION_INQUIRE",
-        "condition": { "and": [ "has_assigned_mission", { "u_is_wearing": "badge_marshal" } ] }
-      },
-      {
-        "text": "About one of those missions…",
-        "topic": "TALK_MISSION_LIST_ASSIGNED",
-        "condition": { "and": [ "has_many_assigned_missions", { "u_is_wearing": "badge_marshal" } ] }
-      },
-      { "text": "I should be going", "topic": "TALK_DONE" }
-    ]
   }
 ]
