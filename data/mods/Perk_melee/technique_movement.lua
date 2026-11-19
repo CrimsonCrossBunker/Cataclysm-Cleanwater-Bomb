@@ -62,24 +62,44 @@ local function adjust_duelist_reach(character, momentum_id)
     end
 end
 
-local function after_automatic_movement(character)
-    local momentum = id("effect", "mabuff:buff_perk_momentum")
-    local duration = services.time.duration_from_turns(2)
+local function lose_poise(character)
+    local poise = number(character, "poise")
+    if poise > 0 then set_number(character, "poise", poise - 1) end
+end
+
+local function gain_poise(character)
+    if not has_flag(character, "MELEE_PERK_POISE") then return end
+    local poise = number(character, "poise")
+    if poise < 4 then set_number(character, "poise", poise + 1) end
+end
+
+local function add_momentum(character, momentum)
     if checked(services.mutations.has_id_text(character, "MELEE_PERK_MOMENTUM")) then
-        checked(effects.add(character, momentum, duration))
+        checked(effects.add(character, momentum, services.time.duration_from_turns(2)))
     end
+end
+
+local function add_momentum_dexterity(character, bonus)
     if checked(services.mutations.has_id_text(character, "MELEE_PERK_MOMENTUM_2")) then
-        checked(effects.add(character, id("effect", "perk_dex_bonus"), duration))
+        checked(effects.add(character, bonus, services.time.duration_from_turns(2)))
     end
+end
+
+local function after_movement(character)
+    local momentum = id("effect", "mabuff:buff_perk_momentum")
+    add_momentum_dexterity(character, id("effect", "perk_dex_bonus"))
     adjust_duelist_reach(character, momentum)
 
     if has_flag(character, "MELEE_PERK_POISE_MOUNTAIN") then
-        local poise = number(character, "poise")
-        if poise > 0 then set_number(character, "poise", poise - 1) end
+        lose_poise(character)
     end
-    if has_flag(character, "MELEE_PERK_POISE_FOOTWORK") and has_flag(character, "MELEE_PERK_POISE") then
-        local poise = number(character, "poise")
-        if poise < 4 then set_number(character, "poise", poise + 1) end
+end
+
+local function after_automatic_movement(character)
+    add_momentum(character, id("effect", "mabuff:buff_perk_momentum"))
+    after_movement(character)
+    if has_flag(character, "MELEE_PERK_POISE_FOOTWORK") then
+        gain_poise(character)
     end
 end
 
@@ -104,10 +124,7 @@ ccb.runtime.handler("perk_duelist_lunge", function(combat)
     set_number(attacker, "done_step_closer", 0)
 end)
 
-ccb.runtime.handler("perk_retreat_on_dodge", function(combat)
-    local attacker = combat.attacker
-    if not has_flag(attacker, "MELEE_PERK_MOVING_DODGE") then return end
-
+local function retreat(attacker)
     local attempt = services.coords.tripoint_abs_ms(0, 0, 0)
     for _ = 1, 10 do
         local original = position(attacker)
@@ -120,5 +137,58 @@ ccb.runtime.handler("perk_retreat_on_dodge", function(combat)
         else
             attacker = teleport(attacker, original)
         end
+    end
+    return attacker
+end
+
+local function retreat_on_dodge(character)
+    if has_flag(character, "MELEE_PERK_MOVING_DODGE") then
+        return retreat(character)
+    end
+    return character
+end
+
+ccb.runtime.handler("perk_retreat_on_dodge", function(combat)
+    retreat_on_dodge(combat.attacker)
+end)
+
+ccb.runtime.handler("perk_style_moved", function(style)
+    after_movement(style.character)
+end)
+
+ccb.runtime.handler("perk_style_dodged", function(style)
+    lose_poise(retreat_on_dodge(style.character))
+end)
+
+ccb.runtime.handler("perk_style_blocked", function(style)
+    gain_poise(style.character)
+end)
+
+ccb.runtime.handler("perk_style_paused", function(style)
+    local character = style.character
+    local momentum = id("effect", "mabuff:buff_perk_momentum")
+    local dexterity_bonus = id("effect", "perk_dex_bonus")
+    if has_flag(character, "MELEE_PERK_CAREFREE_STANCE") then
+        checked(effects.remove(character, id("effect", "mabuff:buff_perk_tempo")))
+        checked(effects.remove(character, momentum))
+        checked(effects.remove(character, dexterity_bonus))
+    end
+    local intensity = checked(effects.exact_intensity(character, momentum)) or -1
+    if intensity > 1 and has_flag(character, "MELEE_PERK_MOMENTUM_DUELIST") then
+        checked(effects.remove(character, momentum))
+        checked(effects.remove(character, dexterity_bonus))
+        add_momentum_dexterity(character, dexterity_bonus)
+        add_momentum(character, momentum)
+        adjust_duelist_reach(character, momentum)
+    end
+    if has_flag(character, "MELEE_PERK_POISE_MOUNTAIN") then
+        gain_poise(character)
+    end
+end)
+
+ccb.runtime.handler("perk_style_kill_tempo", function(style)
+    if has_flag(style.character, "MELEE_PERK_TEMPO_ZONING") then
+        local character = retreat(style.character)
+        checked(effects.remove(character, id("effect", "mabuff:buff_perk_tempo")))
     end
 end)
