@@ -1,0 +1,24 @@
+[
+  {
+    "id": "MISSION_REACH_FEMA_CA",
+    "type": "mission_definition",
+    "name": { "str": "Reach FEMA Camp" },
+    "goal": "MGOAL_GO_TO_TYPE",
+    "difficulty": 2,
+    "value": 60000,
+    "start": { "assign_mission_target": { "om_terrain": "fema", "reveal_radius": 5, "om_special": "FEMA Camp" } },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "destination": "fema",
+    "dialogue": {
+      "describe": "Things must be better at the camp…",
+      "offer": "We're all in this together, looking forward to meeting you there.",
+      "accepted": "Everything is going to be all right.",
+      "rejected": "No worries friend, good luck to you.",
+      "advice": "The hard part is getting there.",
+      "inquire": "Any progress on getting to the camp?",
+      "success": "Well, success I guess.",
+      "success_lie": "Thanks for trying… I guess.",
+      "failure": "Such a disappointment…"
+    }
+  }
+]
