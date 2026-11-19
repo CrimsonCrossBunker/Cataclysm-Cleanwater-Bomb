@@ -1,0 +1,72 @@
+[
+  {
+    "id": "sleeping_bag",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "sleeping bag" },
+    "description": "A large sleeping bag that covers you head to toe, with a strap for carrying it on your back when not in use.  This one is medium weight.  It is currently unrolled; activate it to roll it up for easy storage.",
+    "weight": "500 g",
+    "volume": "1 L",
+    "price": "205 USD",
+    "price_postapoc": "5 USD",
+    "material": [ "cotton" ],
+    "symbol": "[",
+    "looks_like": "blanket",
+    "color": "light_red",
+    "warmth": 80,
+    "material_thickness": 3,
+    "environmental_protection": 1,
+    "flags": [
+      "OVERSIZE",
+      "OUTER",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "ALLOWS_WINGS",
+      "NO_WING_GLIDING"
+    ],
+    "use_action": {
+      "menu_text": "Roll up",
+      "type": "transform",
+      "target": "sleeping_bag_roll",
+      "msg": "You roll up the sleeping bag, preparing it for transport."
+    },
+    "armor": [
+      {
+        "encumbrance": 80,
+        "coverage": 100,
+        "covers": [
+          "leg_l",
+          "leg_r",
+          "torso",
+          "arm_l",
+          "arm_r",
+          "hand_l",
+          "hand_r",
+          "head",
+          "foot_l",
+          "foot_r",
+          "mouth",
+          "tail",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r",
+          "gastropod_foot",
+          "beak",
+          "muzzle",
+          "hoof_r",
+          "hoof_l",
+          "avian_talon_l",
+          "avian_talon_r",
+          "animal_paw_l",
+          "animal_paw_r",
+          "animal_paw_rabbit_l",
+          "animal_paw_rabbit_r"
+        ]
+      }
+    ]
+  }
+]
