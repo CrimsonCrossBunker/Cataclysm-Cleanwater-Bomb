@@ -1,0 +1,27 @@
+[
+  {
+    "//": "The existing quadruped mutations check for thresholds so we need this custom one.",
+    "type": "mutation",
+    "id": "POOKA_QUADRUPED_TRAITS",
+    "name": { "str": "Quadruped" },
+    "points": 2,
+    "purifiable": false,
+    "visibility": 8,
+    "ugliness": 6,
+    "description": "Your arms, hands, and legs are animal-like, allowing you to move quickly when running on all fours, but preventing you from wearing shoes or gloves.",
+    "category": [ "FAIR_FOLK_COMMONER_POOKA" ],
+    "restricts_gear": [ "foot_l", "foot_r", "hand_l", "hand_r" ],
+    "triggers": [
+      [
+        {
+          "condition": { "and": [ { "u_has_move_mode": "crouch" }, { "not": "u_can_drop_weapon" } ] },
+          "msg_on": { "text": "You drop down on all fours." },
+          "msg_off": { "text": "You come out of your quadrupedal posture." }
+        }
+      ]
+    ],
+    "enchantments": [
+      "INLINE_ENCH_POOKA_QUADRUPED_TRAITS_0"
+    ]
+  }
+]
