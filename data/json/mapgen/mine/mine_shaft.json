@@ -1,40 +1,6 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ [ "mine_shaft_middle", "mine_shaft_middle_east" ] ],
-    "object": {
-      "fill_ter": "t_soil",
-      "rows": [
-        "                                                ",
-        "                      <#                        ",
-        "                       #                        ",
-        "                       #                        ",
-        "                       #                        ",
-        "                       #                        ",
-        "                       #                        ",
-        "                       #                        ",
-        "                       #                        ",
-        "                       #                        ",
-        "                       #                        ",
-        "                       #                        ",
-        "                     #>#                        ",
-        "                 ....###..                      ",
-        "                 ....   ..                      ",
-        "                        ..                      ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                "
-      ],
-      "terrain": { "<": "t_ladder_up", ">": "t_ladder_down", "#": "t_grate", ".": "t_open_air" }
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ [ "mine_shaft_lower", "mine_shaft_lower_east" ] ],
     "object": {
       "fill_ter": "t_rock_floor",

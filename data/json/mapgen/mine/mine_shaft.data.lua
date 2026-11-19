@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "mine_shaft_middle", "mine_shaft_middle_east" } },
+    layout = {
+        rows = {
+            "                                                ",
+            "                      <#                        ",
+            "                       #                        ",
+            "                       #                        ",
+            "                       #                        ",
+            "                       #                        ",
+            "                       #                        ",
+            "                       #                        ",
+            "                       #                        ",
+            "                       #                        ",
+            "                       #                        ",
+            "                       #                        ",
+            "                     #>#                        ",
+            "                 ....###..                      ",
+            "                 ....   ..                      ",
+            "                        ..                      ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+        },
+        terrain = { ["<"] = "t_ladder_up", [">"] = "t_ladder_down", ["#"] = "t_grate", ["."] = "t_open_air" },
+        fill_terrain = "t_soil",
+    },
+}
