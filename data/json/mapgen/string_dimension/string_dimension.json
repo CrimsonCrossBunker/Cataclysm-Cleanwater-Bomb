@@ -44,15 +44,5 @@
       },
       "monster": { "|": { "monster": "mon_linelander_cyan", "chance": 1 }, "-": { "monster": "mon_linelander_magenta", "chance": 1 } }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "string_dimension_void",
-    "object": { "fill_ter": "t_string_void" }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "string_dimension_true_void",
-    "object": { "fill_ter": "t_string_true_void" }
   }
 ]
