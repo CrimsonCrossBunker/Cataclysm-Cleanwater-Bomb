@@ -1,17 +1,5 @@
 [
   {
-    "type": "mutation",
-    "id": "perk_sight_beyond_sight_active",
-    "name": { "str": "Sight Beyond Sight Active" },
-    "points": 0,
-    "player_display": false,
-    "description": "Your Sight Beyond Sight is active.  You should never see this.",
-    "enchantments": [
-      "INLINE_ENCH_perk_sight_beyond_sight_active_0"
-    ],
-    "flags": [ "BLIND" ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_perk_sight_beyond_sight_ON",
     "condition": { "not": { "u_has_trait": "perk_sight_beyond_sight_active" } },
