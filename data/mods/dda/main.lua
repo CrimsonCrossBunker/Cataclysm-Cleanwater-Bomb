@@ -524,3 +524,5 @@ require("marloss_consumption")
 require("technique_predicates")
 
 require("technique_actions")
+
+require("vanilla_map_weights")

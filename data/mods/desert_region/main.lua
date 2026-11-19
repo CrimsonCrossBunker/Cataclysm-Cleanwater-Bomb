@@ -14,3 +14,5 @@ require("item_groups")
 require("effect_types")
 
 require("monster_groups")
+
+require("map_weights")

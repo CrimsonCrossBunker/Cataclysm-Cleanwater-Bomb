@@ -40,3 +40,5 @@ require("terrain_transforms")
 require("monster_groups")
 
 require("retractable_furniture")
+
+require("map_weights")

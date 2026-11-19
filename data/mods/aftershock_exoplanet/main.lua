@@ -135,3 +135,5 @@ require("terrain_transforms")
 require("monster_groups")
 
 require("tile_interactions")
+
+require("map_weights")
