@@ -1,27 +1,6 @@
 [
   {
     "type": "ITEM",
-    "subtypes": [ "AMMO" ],
-    "id": "ammonia_liquid",
-    "name": { "str_sp": "liquid ammonia" },
-    "weight": "124 g",
-    "color": "white",
-    "flags": [ "CORROSIVE" ],
-    "container": "pressure_tank",
-    "sealed": false,
-    "symbol": "~",
-    "description": "Anhydrous ammonia, a useful chemical compound.  It must be stored under pressure or refrigerated.  Don't even think about drinking it.",
-    "price": "67 cent",
-    "price_postapoc": "50 cent",
-    "volume": "250 ml",
-    "phase": "liquid",
-    "stack_size": 1,
-    "category": "chems",
-    "ammo_type": "ammonia_liquid",
-    "display_type": "BY_VOLUME"
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "ammonia_hydroxide",
     "name": { "str_sp": "ammonia solution" },
