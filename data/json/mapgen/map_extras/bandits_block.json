@@ -31,34 +31,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "24x24_bandits_block_horizontal",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "place_nested": [
-        {
-          "chunks": [ "24x24_bandits_block_horizontal_felled_trees", "24x24_bandits_block_horizontal_traps" ],
-          "x": 0,
-          "y": [ 3, 14 ]
-        }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "24x24_bandits_block_vertical",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "place_nested": [
-        {
-          "chunks": [ "24x24_bandits_block_vertical_felled_trees", "24x24_bandits_block_vertical_traps" ],
-          "x": [ 3, 14 ],
-          "y": 0
-        }
-      ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "24x24_bandits_block_horizontal_felled_trees",
     "object": {
       "mapgensize": [ 24, 24 ],
