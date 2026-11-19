@@ -1,0 +1,22 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_Accept_Boris_Mission_1",
+    "dynamic_line": [
+      "This is for Boris?  Yeah, Boris is has been through a lot, I'll do it for him.",
+      "It won't be pretty, but I'll see what I can do.  We'll all benefit from it after all.",
+      "I can try.  It's worth trying for Boris.",
+      "That's a big ask, for sure.  Okay, I'll see what I can do."
+    ],
+    "speaker_effect": {
+      "effect": [
+        { "npc_add_var": "mission_Boris_mission_1_cleanup_asked", "value": "yes" },
+        { "math": [ "u_mission_cleanup_promises_Boris_mission_1++" ] }
+      ]
+    },
+    "responses": [
+      { "text": "Thanks anyway.  <done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "Well, thanks anyway.", "topic": "TALK_DONE" }
+    ]
+  }
+]
