@@ -148,3 +148,119 @@ ccb.content.define_mapgen {
         tile_edits = { { shape = "point", operation = "trap", id = "tr_caltrops", x = 0, y = 0 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_bandits_block_horizontal_traps",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            " ss                     ",
+            "ssss                    ",
+            "ssss                    ",
+            " ss                     ",
+            "X X X X X X  X X X X X X",
+            "X X X X X X  X X X X X X",
+            "                     ss ",
+            "                    ssss",
+            "                    ssss",
+            "                     ss ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        nested = {
+            { x = { 1, 2 }, y = { 1, 2 }, id = "1x1_bandit_dirt" },
+            { x = { 21, 22 }, y = { 7, 8 }, id = "1x1_bandit_dirt" },
+        },
+        nested_glyphs = {
+            X = {
+                choices = {
+                    {
+                        select = { parameter = "trap_type", fallback = "tr_caltrops" },
+                        cases = { tr_nailboard = "1x1_nailboard", tr_caltrops = "1x1_caltrops" },
+                    },
+                    { id = "null", weight = 4 },
+                },
+            },
+        },
+        parameters = {
+            trap_type = {
+                value_type = "string",
+                default = { weighted = { "tr_nailboard", "tr_caltrops" } },
+                scope = "nested",
+            },
+        },
+        terrain = { s = { { id = "t_underbrush" }, { id = "t_null", copies = 2 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_bandits_block_vertical_traps",
+    layout = {
+        size = { width = 24, height = 24 },
+        rows = {
+            "    XX ss               ",
+            "      ssss              ",
+            "    XXssss              ",
+            "       ss               ",
+            "    XX                  ",
+            "                        ",
+            "    XX                  ",
+            "                        ",
+            "    XX                  ",
+            "                        ",
+            "    XX                  ",
+            "                        ",
+            "                        ",
+            "    XX                  ",
+            "                        ",
+            "    XX                  ",
+            "                        ",
+            "    XX                  ",
+            "                        ",
+            "    XX                  ",
+            " ss                     ",
+            "ssssXX                  ",
+            "ssss                    ",
+            " ss XX                  ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        nested = {
+            { x = { 7, 8 }, y = { 1, 2 }, id = "1x1_bandit_dirt" },
+            { x = { 1, 2 }, y = { 21, 22 }, id = "1x1_bandit_dirt" },
+        },
+        nested_glyphs = {
+            X = {
+                choices = {
+                    {
+                        select = { parameter = "trap_type", fallback = "tr_caltrops" },
+                        cases = { tr_nailboard = "1x1_nailboard", tr_caltrops = "1x1_caltrops" },
+                    },
+                    { id = "null", weight = 4 },
+                },
+            },
+        },
+        parameters = {
+            trap_type = {
+                value_type = "string",
+                default = { weighted = { "tr_nailboard", "tr_caltrops" } },
+                scope = "nested",
+            },
+        },
+        terrain = { s = { { id = "t_underbrush" }, { id = "t_null", copies = 2 } } },
+    },
+}
