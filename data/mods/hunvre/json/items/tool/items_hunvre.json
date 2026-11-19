@@ -26,12 +26,7 @@
         "need_charges_msg": "The batteries are dead.",
         "type": "transform"
       },
-      { "type": "link_up", "cable_length": 3, "charge_rate": "20 W" },
-      {
-        "type": "effect_on_conditions",
-        "menu_text": "Switch the lights",
-        "effect_on_conditions": [ "eoc_hunvre_blackout" ]
-      }
+      { "type": "link_up", "cable_length": 3, "charge_rate": "20 W" }
     ],
     "flags": [ "CONTRABAND" ]
   }

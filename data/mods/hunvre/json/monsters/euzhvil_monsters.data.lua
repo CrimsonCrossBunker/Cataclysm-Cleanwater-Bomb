@@ -25,7 +25,15 @@ ccb.content.define_monster {
     melee_skill = 6,
     melee_dice = 10,
     melee_sides = 2,
-    attacks = { { id = "euzhvil_phase", cooldown = 1 } },
+    attacks = {
+        {
+            kind = "spell",
+            id = "euzhvil_phase",
+            cooldown = 1,
+            casting_message = "",
+            spell = { id = "hunvre_euzhvil_phase_spell", hit_self = false },
+        },
+    },
 }
 
 ccb.content.define_monster {
@@ -69,7 +77,17 @@ ccb.content.define_monster {
     description = ccb.content.text("This euzhvil is perpetually seized by violent convulsions, fingers raking desperately at its throat and at the skin that seals its mouth, nose, and eyes.  Just looking at it makes your own breathing laborious."),
     looks_like = "mon_zombie",
     inheritance = {
-        add = { attacks = { { reference = "euzhvil_suffocate", cooldown = 1 } } },
+        add = {
+            attacks = {
+                {
+                    kind = "spell",
+                    id = "euzhvil_suffocate",
+                    cooldown = 1,
+                    casting_message = "",
+                    spell = { id = "hunvre_euzhvil_phase_spell", hit_self = false },
+                },
+            },
+        },
         scale = { volume = 1.25, mass = 1.25 },
     },
 }

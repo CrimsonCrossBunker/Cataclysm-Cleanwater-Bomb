@@ -239,7 +239,7 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 328> migrated_character_tasks = {{
+const std::array<character_task_migration, 333> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_MARLOSS_VOMIT_AFTER_CONSUMPTION" ),
           "marloss_vomit_due", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_MARLOSS_REJECTION_AFTER_CONSUMPTION" ),
@@ -745,7 +745,17 @@ const std::array<character_task_migration, 328> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_immortal_path_ensure_basic_elixir_recipe" ),
           "immortal_path_ensure_basic_elixir_recipe_due", nullptr, true, "immortal_path" },
         { effect_on_condition_id( "EOC_immortal_path_qi_clamp" ),
-          "immortal_path_qi_clamp_due", nullptr, true, "immortal_path" }
+          "immortal_path_qi_clamp_due", nullptr, true, "immortal_path" },
+        { effect_on_condition_id( "eoc_announcements" ),
+          "hunvre_announcements_due", nullptr, false, "hunvre" },
+        { effect_on_condition_id( "eoc_hunvre_blackout" ),
+          "hunvre_blackout_due", nullptr, false, "hunvre" },
+        { effect_on_condition_id( "eoc_hunvre_weather" ),
+          "hunvre_weather_due", nullptr, false, "hunvre" },
+        { effect_on_condition_id( "eoc_oneirosis" ),
+          "hunvre_oneirosis_due", nullptr, false, "hunvre" },
+        { effect_on_condition_id( "eoc_oneirosis_auditory_hallucinations" ),
+          "hunvre_oneirosis_hallucinations_due", nullptr, false, "hunvre" }
     }
 };
 

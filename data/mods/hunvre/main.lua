@@ -42,3 +42,5 @@ require("monster_groups")
 require("retractable_furniture")
 
 require("map_weights")
+
+require("ship_systems")
