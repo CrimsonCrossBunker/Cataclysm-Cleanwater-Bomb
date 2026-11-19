@@ -1,0 +1,30 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "blackout_rage_drink",
+    looks_like = "cola",
+    name = ccb.content.plural_text("Bored, the blackout rage drink", "Bored, the blackout rage drink"),
+    mass = "250 g",
+    color = "magenta",
+    default_container = "jug_plastic",
+    symbol = "~",
+    description = ccb.content.text("An incredibly alcoholic and caffeinated drink.  This probably isn't healthy."),
+    price = "1 USD 70 cent",
+    survival_price = "50 cent",
+    materials = { { id = "water", portions = 10 }, { id = "alcohol", portions = 1 } },
+    volume = "250 ml",
+    phase = "liquid",
+    flags = { "EATEN_COLD", "NO_AUTO_CONSUME", "SINGLE_USE" },
+    comestible = {
+        addiction = "alcohol",
+        vitamins = { { id = "ethanol", amount = 20 }, { id = "caffeine", amount = 255 } },
+        kind = "DRINK",
+        quench = 15,
+        healthy = -4,
+        addiction_potential = 6,
+        calories = 157,
+        servings = 1,
+        fun = 5,
+    },
+    use_actions = { { kind = "cast_spell", spell = "blackout_rage_drink", no_fail = true, level = 0 } },
+}
