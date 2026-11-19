@@ -1,5 +1,103 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "swamp_background",
+    layout = { furniture = { i = "f_cattails" }, terrain = { i = "t_water_sh" } },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "swampshack_palette",
+    layout = {
+        item_groups = {
+            B = { { group = "novels", chance = 50 }, { group = "textbooks", chance = 25 } },
+            C = {
+                { group = "kitchen", chance = 50, repetitions = { 3, 4 } },
+                { group = "preserved_food", chance = 50, repetitions = { 1, 4 } },
+            },
+            D = { group = "NC_HUNTER_misc", chance = 50, repetitions = { 2, 5 } },
+            L = { group = "NC_HUNTER_misc", chance = 50 },
+            N = { group = "cleaning", chance = 60 },
+            X = {
+                { group = "hardware", chance = 30, repetitions = { 1, 2 } },
+                { group = "mischw", chance = 30, repetitions = { 1, 4 } },
+            },
+            b = { group = "bed", chance = 60 },
+            d = { group = "dresser", chance = 75, repetitions = { 2, 4 } },
+            l = { group = "hardware", chance = 60 },
+            n = { group = "NC_HUNTER_misc", chance = 60 },
+            s = { group = "traveler", chance = 40, repetitions = { 1, 3 } },
+            x = { { group = "cleaning", chance = 30 }, { group = "hardware_plumbing", chance = 30 } },
+        },
+        parameters = {
+            wall_type = {
+                value_type = "terrain",
+                default = {
+                    weighted = {
+                        { id = "t_wall_wood", weight = 3 },
+                        { id = "t_drystone_wall", weight = 1 },
+                        { id = "t_wall_log", weight = 2 },
+                    },
+                },
+            },
+        },
+        terrain = {
+            ["#"] = "t_dirtmound",
+            ["&"] = "t_region_soil",
+            ["+"] = "t_door_c",
+            ["."] = "t_floor",
+            C = "t_floor",
+            c = "t_floor",
+            S = "t_floor",
+            s = "t_floor",
+            L = "t_floor",
+            B = "t_floor",
+            b = "t_floor",
+            T = "t_floor",
+            D = "t_floor",
+            d = "t_floor",
+            [","] = "t_dirtfloor",
+            X = "t_dirtfloor",
+            x = "t_dirtfloor",
+            N = "t_dirtfloor",
+            l = "t_dirtfloor",
+            ["@"] = "t_dirtfloor",
+            n = "t_dirtfloor",
+            ["1"] = "t_dirtfloor",
+            ["-"] = { parameter = "wall_type", fallback = "t_wall_wood" },
+            [";"] = "t_region_groundcover_barren",
+            R = "t_region_soil",
+            ["^"] = "t_region_soil",
+            o = "t_window_domestic",
+            ["="] = "t_region_soil",
+            V = "t_dirtfloor",
+        },
+        furniture = {
+            ["&"] = "f_kiln_empty",
+            ["@"] = "f_smoking_rack",
+            ["^"] = "f_bulletin",
+            B = "f_bookcase",
+            b = "f_makeshift_bed",
+            D = "f_rack",
+            d = "f_dresser",
+            L = "f_locker",
+            N = "f_cupboard",
+            n = "f_counter",
+            R = "f_rack_wood",
+            S = "f_woodstove",
+            s = "f_counter",
+            T = "f_table",
+            V = "f_fvat_empty",
+            l = "f_locker",
+            ["1"] = "f_crate_c",
+            C = "f_cupboard",
+            c = "f_chair",
+            ["="] = "f_sandbag_wall",
+            X = "f_crate_c",
+            x = "f_crate_o",
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "cattail",
