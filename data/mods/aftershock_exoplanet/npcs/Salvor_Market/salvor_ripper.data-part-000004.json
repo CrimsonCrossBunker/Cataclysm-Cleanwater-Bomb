@@ -1,0 +1,44 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_SALVOR_RIPPER_MERCURIAL_IDENTS_SELL",
+    "dynamic_line": "Done.",
+    "speaker_effect": { "effect": [ { "math": [ "u_val('cash') += 6000000" ] } ] },
+    "responses": [
+      {
+        "text": "A pleasure doing business.",
+        "effect": [ { "u_sell_item": "ruin_data_mercurial_id" } ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_SALVOR_RIPPER_MERCURIAL_IDENTS_FAVOUR",
+    "speaker_effect": { "effect": [ { "math": [ "u_val('cash') += 2000000" ] } ] },
+    "dynamic_line": "For sure.  Just wait to see the things I'll cook up with these.",
+    "responses": [
+      {
+        "text": "A pleasure doing business.",
+        "effect": [ { "u_sell_item": "ruin_data_mercurial_id" } ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": [ "TALK_SALVOR_RIPPER_MAIN" ],
+    "speaker_effect": { "effect": { "npc_add_var": "player_has_met", "value": "yes" }, "sentinel": "ripper_intro_complete" },
+    "dynamic_line": "&The ripper glances up at you as you approach, eyes briefly flicking over you before returning to the screen of their wrist computer.  They don't say anything, but it's clear they are waiting for you to make the first move.",
+    "responses": [
+      { "text": "Lets trade.", "topic": "TALK_SALVOR_RIPPER_MAIN", "effect": "start_trade" },
+      {
+        "text": "[Ancient Mercurial ID codes] I've found something you want.  Lets talk about real things.",
+        "topic": "TALK_SALVOR_MERCURIAL_IDENTS",
+        "condition": { "u_has_item": "ruin_data_mercurial_id" }
+      },
+      { "text": "What is it that you do here?", "topic": "TALK_SALVOR_RIPPER_EXPLAIN" },
+      { "text": "That's all for now.", "topic": "TALK_DONE" }
+    ]
+  }
+]
