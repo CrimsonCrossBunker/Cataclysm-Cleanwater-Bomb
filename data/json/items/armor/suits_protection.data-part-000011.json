@@ -1,0 +1,130 @@
+[
+  {
+    "id": "xedra_artifact_cleansuit",
+    "//": "Predecessor of, and lab equivalent to, the phase immersion suit",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "name": { "str": "S02a hazmat suit" },
+    "description": "A bulky hazardous materials handling suit.  This one appears outfitted for the highest levels of protection, featuring built in oversized rubber gloves, sealed boot covers with a rubber sole, and an active temperature control system.  It's clearly designed to accommodate additional equipment, including self-contained breathing apparatuses or powered air purifying respirator systems.  Strange wiring snakes the entire garment, connecting to small electronic pads on all of the joints and the head.  A battery compartment marked with \"X.E.D.R.A PROTOTYPE S02a\" is attached to the back.",
+    "weight": "2500 g",
+    "volume": "2500 ml",
+    "price": "1 kUSD 500 USD",
+    "price_postapoc": "80 USD",
+    "material": [ "plastic", "hard_plastic_transp", "butyl_rubber" ],
+    "symbol": "[",
+    "looks_like": "hazmat_suit",
+    "color": "white",
+    "warmth": 10,
+    "longest_side": "12 cm",
+    "environmental_protection": 10,
+    "flags": [ "OVERSIZE", "WATERPROOF", "HOOD", "RAINPROOF", "RAD_PROOF", "ELECTRONIC", "SOFT", "OUTER" ],
+    "pocket_data": [
+      {
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "flag_restriction": [ "BATTERY_HEAVY" ],
+        "default_magazine": "heavy_battery_cell"
+      }
+    ],
+    "armor": [
+      {
+        "material": [ { "type": "hard_plastic_transp", "covered_by_mat": 100, "thickness": 1.0 } ],
+        "//": "not in direct contact with eye or mouth",
+        "encumbrance": 5,
+        "coverage": 100,
+        "covers": [ "mouth", "eyes" ],
+        "volume_encumber_modifier": 0,
+        "layers": [ "OUTER" ],
+        "rigid_layer_only": true
+      },
+      {
+        "material": [ { "type": "butyl_rubber", "covered_by_mat": 100, "thickness": 2.0 } ],
+        "encumbrance": 5,
+        "coverage": 100,
+        "covers": [ "hand_l", "hand_r" ],
+        "layers": [ "OUTER" ],
+        "volume_encumber_modifier": 0
+      },
+      {
+        "covers": [ "foot_l", "foot_r" ],
+        "//": "feet have boot-covers with a tough footpad",
+        "specifically_covers": [
+          "foot_toes_r",
+          "foot_toes_l",
+          "foot_ankle_r",
+          "foot_ankle_l",
+          "foot_heel_r",
+          "foot_heel_l",
+          "foot_arch_r",
+          "foot_arch_l"
+        ],
+        "material": [ { "type": "plastic", "covered_by_mat": 100, "thickness": 2 } ],
+        "encumbrance": 5,
+        "coverage": 100,
+        "layers": [ "OUTER" ],
+        "rigid_layer_only": true
+      },
+      {
+        "covers": [ "foot_l", "foot_r" ],
+        "specifically_covers": [ "foot_sole_r", "foot_sole_l" ],
+        "material": [ { "type": "butyl_rubber", "covered_by_mat": 100, "thickness": 2 } ],
+        "encumbrance": 5,
+        "coverage": 100,
+        "layers": [ "OUTER" ],
+        "rigid_layer_only": true
+      },
+      {
+        "material": [ { "type": "plastic", "covered_by_mat": 100, "thickness": 2 } ],
+        "//": "standard hazmat suit on most of body",
+        "encumbrance": 27,
+        "coverage": 100,
+        "covers": [ "arm_l", "arm_r", "leg_l", "leg_r", "head", "torso" ],
+        "layers": [ "OUTER" ],
+        "volume_encumber_modifier": 0
+      }
+    ],
+    "use_action": {
+      "type": "transform",
+      "msg": "The %s starts to faintly vibrate.",
+      "target": "xedra_artifact_cleansuit_on",
+      "need_charges": 1,
+      "need_charges_msg": "It seems like this device needs power."
+    },
+    "charges_per_use": 1,
+    "tool_ammo": "battery",
+    "passive_effects": [ { "id": "resonance_suit_active" }, { "id": "ench_climate_control_all" } ]
+  },
+  {
+    "id": "xedra_artifact_cleansuit_on",
+    "copy-from": "xedra_artifact_cleansuit",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR" ],
+    "name": { "str": "S02a hazmat suit (on)", "str_pl": "S02a hazmat suits (on)" },
+    "looks_like": "xedra_artifact_cleansuit",
+    "description": "A bulky hazardous materials handling suit.  This one appears outfitted for the highest levels of protection, featuring built in oversized rubber gloves, sealed boot covers with a rubber sole, and an active temperature control system.  It's clearly designed to accommodate additional equipment, including self-contained breathing apparatuses or powered air purifying respirator systems.  Strange wiring snakes the entire garment, connecting to small electronic pads on all of the joints and the head.  A battery compartment marked with \"X.E.D.R.A PROTOTYPE S02a\" is attached to the back.  The device is currently switched on.",
+    "turns_per_charge": 100,
+    "revert_to": "xedra_artifact_cleansuit",
+    "use_action": {
+      "type": "transform",
+      "ammo_scale": 0,
+      "menu_text": "Turn off",
+      "msg": "The %s stops vibrating.",
+      "target": "xedra_artifact_cleansuit"
+    },
+    "flags": [
+      "OVERSIZE",
+      "WATERPROOF",
+      "HOOD",
+      "RAINPROOF",
+      "RAD_PROOF",
+      "ELECTRONIC",
+      "TRADER_AVOID",
+      "SPAWN_ACTIVE",
+      "PORTAL_PROOF",
+      "ELECTRIC_IMMUNE",
+      "PSYSHIELD_PARTIAL",
+      "SOFT",
+      "OUTER"
+    ]
+  }
+]
