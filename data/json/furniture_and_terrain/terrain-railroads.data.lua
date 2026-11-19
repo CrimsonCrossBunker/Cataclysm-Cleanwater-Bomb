@@ -1,0 +1,763 @@
+local ccb = require("ccb")
+
+ccb.content.define_terrain {
+    id = "t_railroad_rubble",
+    name = ccb.content.text("gravel"),
+    description = ccb.content.text("An area of small, uniformly-sized stones.  Often used for roads, as railroad ballast, and in many other applications."),
+    symbol = ",",
+    color = "light_gray",
+    move_cost = 2,
+    bash = {
+        minimum_strength = 100,
+        maximum_strength = 200,
+        terrain = "t_null",
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whump!"),
+        drops = { { item = "material_gravel", count = { 1, 3 } }, { item = "sharp_rock", count = { 0, 1 } } },
+        bash_below = true,
+    },
+    deconstruct = {
+        terrain = "t_pit_shallow",
+        drops = {
+            { item = "material_gravel", count = { 7, 10 } },
+            { item = "sharp_rock", count = { 0, 2 } },
+            { item = "rock", count = { 4, 12 } },
+        },
+    },
+    flags = { "TRANSPARENT", "DIGGABLE", "FLAT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track",
+    name = ccb.content.text("railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks stand unused in the face of the Cataclysm.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_h",
+    name = ccb.content.text("railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks stand unused in the face of the Cataclysm.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_v",
+    name = ccb.content.text("railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks stand unused in the face of the Cataclysm.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    deconstruct = {
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 1, 2 } },
+            { item = "mc_steel_chunk", count = { 1, 4 } },
+            { item = "scrap", count = { 3, 12 } },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_d",
+    name = ccb.content.text("railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks stand unused in the face of the Cataclysm.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_d1",
+    name = ccb.content.text("railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks stand unused in the face of the Cataclysm.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_d2",
+    name = ccb.content.text("railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks stand unused in the face of the Cataclysm.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_tie",
+    name = ccb.content.text("railroad tie"),
+    description = ccb.content.text("A crosstie, used to support train rails."),
+    symbol = "#",
+    color = "dark_gray_yellow",
+    move_cost = 2,
+    bash = {
+        minimum_strength = 10,
+        maximum_strength = 120,
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whump."),
+        terrain = "t_rock_floor",
+        drops = { { item = "splinter", count = { 10, 20 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    deconstruct = {
+        terrain = "t_rock_floor",
+        drops = { { item = "log", count = { 0, 1 } }, { item = "splinter", count = { 10, 20 } } },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_tie_h",
+    name = ccb.content.text("railroad tie"),
+    description = ccb.content.text("A crosstie, used to support train rails."),
+    symbol = "#",
+    color = "dark_gray_yellow",
+    move_cost = 2,
+    bash = {
+        minimum_strength = 10,
+        maximum_strength = 120,
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whump."),
+        terrain = "t_rock_floor",
+        drops = { { item = "splinter", count = { 10, 20 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    deconstruct = {
+        terrain = "t_rock_floor",
+        drops = { { item = "log", count = { 0, 1 } }, { item = "splinter", count = { 10, 20 } } },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_tie_v",
+    name = ccb.content.text("railroad tie"),
+    description = ccb.content.text("A crosstie, used to support train rails."),
+    symbol = "#",
+    color = "dark_gray_yellow",
+    move_cost = 2,
+    bash = {
+        minimum_strength = 10,
+        maximum_strength = 120,
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whump."),
+        terrain = "t_rock_floor",
+        drops = { { item = "splinter", count = { 10, 20 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    deconstruct = {
+        terrain = "t_rock_floor",
+        drops = { { item = "log", count = { 0, 1 } }, { item = "splinter", count = { 10, 20 } } },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_tie_d",
+    name = ccb.content.text("railroad tie"),
+    description = ccb.content.text("A crosstie, used to support train rails."),
+    symbol = "#",
+    color = "dark_gray_yellow",
+    move_cost = 2,
+    bash = {
+        minimum_strength = 10,
+        maximum_strength = 120,
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whump."),
+        terrain = "t_rock_floor",
+        drops = { { item = "splinter", count = { 10, 20 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    deconstruct = {
+        terrain = "t_rock_floor",
+        drops = { { item = "log", count = { 0, 1 } }, { item = "splinter", count = { 10, 20 } } },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_on_tie",
+    name = ccb.content.text("railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks stand unused in the face of the Cataclysm.  A crosstie sits underneath, supporting the rails.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_h_on_tie",
+    name = ccb.content.text("railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks stand unused in the face of the Cataclysm.  A crosstie sits underneath, supporting the rails.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    deconstruct = {
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 1, 2 } },
+            { item = "mc_steel_chunk", count = { 1, 4 } },
+            { item = "scrap", count = { 3, 12 } },
+            { item = "log", count = { 0, 1 } },
+            { item = "splinter", count = { 10, 20 } },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_v_on_tie",
+    name = ccb.content.text("railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks stand unused in the face of the Cataclysm.  A crosstie sits underneath, supporting the rails.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_d_on_tie",
+    name = ccb.content.text("railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks stand unused in the face of the Cataclysm.  A crosstie sits underneath, supporting the rails.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_buffer_stop",
+    name = ccb.content.text("buffer stop"),
+    description = ccb.content.text("A tiny blockade on the train tracks, meant to signify the end of a track, or mark a 'no-go' zone for trains."),
+    symbol = "S",
+    color = "brown",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 4,
+        maximum_strength = 12,
+        terrain = "t_dirt",
+        sound = ccb.content.text("crack."),
+        failure_sound = ccb.content.text("whump."),
+        drops = {
+            { item = "2x4", count = { 2, 5 } },
+            { item = "nail", charges = { 3, 8 } },
+            { item = "splinter", count = 2 },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    flags = { "TRANSPARENT", "NOITEM", "MOUNTABLE" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_tie_d1",
+    name = ccb.content.text("railroad tie"),
+    description = ccb.content.text("A crosstie, used to support train rails."),
+    symbol = "/",
+    color = "dark_gray_yellow",
+    move_cost = 2,
+    bash = {
+        minimum_strength = 10,
+        maximum_strength = 120,
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whump."),
+        terrain = "t_rock_floor",
+        drops = { { item = "splinter", count = { 10, 20 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    deconstruct = {
+        terrain = "t_rock_floor",
+        drops = { { item = "log", count = { 0, 1 } }, { item = "splinter", count = { 10, 20 } } },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_tie_d2",
+    name = ccb.content.text("railroad tie"),
+    description = ccb.content.text("A crosstie, used to support train rails."),
+    symbol = "\\",
+    color = "dark_gray_yellow",
+    move_cost = 2,
+    bash = {
+        minimum_strength = 10,
+        maximum_strength = 120,
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whump."),
+        terrain = "t_rock_floor",
+        drops = { { item = "splinter", count = { 10, 20 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    deconstruct = {
+        terrain = "t_rock_floor",
+        drops = { { item = "log", count = { 0, 1 } }, { item = "splinter", count = { 10, 20 } } },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_crossing_signal",
+    name = ccb.content.text("railroad crossing signal"),
+    description = ccb.content.text("Traffic lights meant to light and make noise when a train approaches, to prevent people from turning into meaty mush while they cross the tracks.  Won't stop people from turning into meaty mush by other means, though."),
+    symbol = "1",
+    color = "light_gray",
+    move_cost = 0,
+    bash = {
+        minimum_strength = 16,
+        maximum_strength = 75,
+        terrain = "t_dirt",
+        sound = ccb.content.text("crash!"),
+        failure_sound = ccb.content.text("clang."),
+        drops = {
+            { item = "pipe", count = { 2, 4 } },
+            { item = "scrap", count = { 2, 8 } },
+            { item = "mc_steel_chunk", count = { 0, 1 } },
+            { item = "e_scrap", count = { 0, 1 } },
+            { item = "power_supply", count = { 0, 1 } },
+        },
+    },
+    flags = { "TRANSPARENT", "PERMEABLE", "NOITEM" },
+}
+
+ccb.content.define_terrain {
+    id = "t_crossbuck_wood",
+    description = ccb.content.text("A traffic sign intended to indicate a level railway crossing.  If the trains were still running."),
+    name = ccb.content.text("crossbuck"),
+    symbol = "X",
+    color = "brown",
+    move_cost = 0,
+    bash = {
+        minimum_strength = 6,
+        maximum_strength = 18,
+        terrain = "t_dirt",
+        sound = ccb.content.text("crack."),
+        failure_sound = ccb.content.text("whump."),
+        drops = {
+            { item = "2x4", count = { 1, 3 } },
+            { item = "nail", charges = { 0, 4 } },
+            { item = "splinter", count = { 1, 2 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    flags = { "TRANSPARENT", "PERMEABLE", "NOITEM" },
+}
+
+ccb.content.define_terrain {
+    id = "t_crossbuck_metal",
+    name = ccb.content.text("crossbuck"),
+    description = ccb.content.text("A traffic sign intended to indicate a level railway crossing.  If the trains were still running."),
+    symbol = "X",
+    color = "light_gray",
+    move_cost = 0,
+    bash = {
+        minimum_strength = 10,
+        maximum_strength = 50,
+        terrain = "t_dirt",
+        sound = ccb.content.text("crash!"),
+        failure_sound = ccb.content.text("clang."),
+        drops = { { item = "pipe", count = { 2, 3 } }, { item = "scrap", count = { 0, 2 } } },
+    },
+    flags = { "TRANSPARENT", "PERMEABLE", "NOITEM" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_small",
+    name = ccb.content.text("small railroad track"),
+    description = ccb.content.text("Like a railroad track, only smaller.  You could probably run a small vehicle on this."),
+    symbol = "=",
+    color = "cyan",
+    move_cost = 3,
+    looks_like = "t_railroad_track",
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_railroad_rubble",
+        drops = {
+            { item = "mc_steel_lump", count = { 0, 1 } },
+            { item = "mc_steel_chunk", count = { 0, 2 } },
+            { item = "scrap", count = { 2, 6 } },
+            { item = "splinter", count = { 6, 12 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    deconstruct = {
+        terrain = "t_railroad_rubble",
+        drops = {
+            { item = "mc_steel_lump", count = { 0, 1 } },
+            { item = "mc_steel_chunk", count = { 0, 2 } },
+            { item = "scrap", count = { 2, 6 } },
+            { item = "splinter", count = { 6, 12 } },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_small_d",
+    name = ccb.content.text("small railroad track"),
+    description = ccb.content.text("Like a railroad track, only smaller.  You could probably run a small vehicle on this."),
+    symbol = "=",
+    color = "cyan",
+    looks_like = "t_railroad_track_d",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_railroad_rubble",
+        drops = {
+            { item = "mc_steel_lump", count = { 0, 1 } },
+            { item = "mc_steel_chunk", count = { 0, 2 } },
+            { item = "scrap", count = { 2, 6 } },
+            { item = "splinter", count = { 6, 12 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    deconstruct = {
+        terrain = "t_railroad_rubble",
+        drops = {
+            { item = "mc_steel_lump", count = { 0, 1 } },
+            { item = "mc_steel_chunk", count = { 0, 2 } },
+            { item = "scrap", count = { 2, 6 } },
+            { item = "splinter", count = { 6, 12 } },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT" },
+}
+
+ccb.content.define_terrain {
+    id = "t_railroad_track_recessed",
+    name = ccb.content.text("recessed railroad track"),
+    description = ccb.content.text("Trains used to chug along on these.  These rail tracks sit flush with the road.  You could probably reclaim lengths of the track itself with a metalcutting tool like a hacksaw."),
+    symbol = "X",
+    color = "cyan",
+    looks_like = "t_railroad_track",
+    move_cost = 3,
+    bash = {
+        minimum_strength = 60,
+        maximum_strength = 210,
+        sound = ccb.content.text("metal screeching!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_rock_floor",
+        drops = {
+            { item = "mc_steel_lump", count = { 10, 20 } },
+            { item = "mc_steel_chunk", count = { 20, 40 } },
+            { item = "splinter", count = { 5, 15 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+    hacksaw = {
+        result = "t_rock_floor",
+        duration = "30 minutes",
+        message = ccb.content.text("You finish cutting the metal."),
+        byproducts = {
+            { item = "railroad_track_item", count = 2 },
+            { item = "spike", count = 6 },
+            { item = "2x4", count = 3 },
+        },
+    },
+    connect_groups = "RAIL",
+    connects_to = "RAIL",
+    flags = { "RAIL", "TRANSPARENT", "NOCOLLIDE" },
+}

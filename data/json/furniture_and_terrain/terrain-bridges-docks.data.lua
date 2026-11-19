@@ -1,0 +1,401 @@
+local ccb = require("ccb")
+
+ccb.content.define_terrain {
+    id = "t_bridge",
+    name = ccb.content.text("walkway"),
+    description = ccb.content.text("A metallic bridge commonly used in industrial settings to meet specified safety standards."),
+    symbol = "#",
+    looks_like = "t_pavement",
+    color = "yellow",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "SWIM_UNDER" },
+    connect_groups = "WATER",
+}
+
+ccb.content.define_terrain {
+    id = "t_dock",
+    name = ccb.content.text("dock"),
+    description = ccb.content.text("A wooden platform held by a support made of logs dug into the ground."),
+    symbol = "8",
+    looks_like = "t_floor",
+    color = "brown",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "SWIM_UNDER" },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_water_sh",
+        drops = { { item = "nail", charges = { 6, 12 } }, { item = "2x4", count = 8 } },
+    },
+    bash = {
+        minimum_strength = 8,
+        maximum_strength = 80,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_water_moving_sh",
+        drops = { { item = "2x4", count = 2, chance = 25 }, { item = "splinter", count = { 2, 4 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_dock_deep_pile",
+    name = ccb.content.text("deep dock pile"),
+    description = ccb.content.text("A sturdy pile made of wood extending all the way to the riverbed.  A frame will be required to support a surface."),
+    symbol = "|",
+    color = "brown",
+    move_cost = 8,
+    flags = { "TRANSPARENT", "LIQUID", "SWIMMABLE", "DEEP_WATER", "FISHABLE" },
+    connect_groups = "WATER",
+    liquid_source = { item = "water" },
+    builtin_examine = "water_source",
+    deconstruct = {
+        terrain = "t_water_moving_dp",
+        drops = { { item = "spike", count = 4 }, { item = "wood_beam", count = 1 } },
+    },
+    looks_like = "t_column",
+    bash = {
+        minimum_strength = 20,
+        maximum_strength = 120,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_water_moving_dp",
+        drops = { { item = "splinter", count = { 12, 24 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_dock_deep_frame",
+    name = ccb.content.text("deep dock frame"),
+    description = ccb.content.text("A log frame secured atop a wooden pile.  Adding a wood surface will make this into a proper dock section."),
+    symbol = "#",
+    color = "brown",
+    move_cost = 6,
+    flags = {
+        "TRANSPARENT",
+        "NOITEM",
+        "THIN_OBSTACLE",
+        "MOUNTABLE",
+        "TINY",
+        "AUTO_WALL_SYMBOL",
+        "UNSTABLE",
+        "SWIM_UNDER",
+    },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_dock_deep_pile",
+        drops = { { item = "spike", count = 8 }, { item = "log", count = 4 } },
+    },
+    looks_like = "t_wall_log_half",
+    bash = {
+        minimum_strength = 12,
+        maximum_strength = 100,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_dock_deep_pile",
+        drops = { { item = "log", count = 2, chance = 25 }, { item = "splinter", count = { 4, 8 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_dock_deep",
+    name = ccb.content.text("deep dock"),
+    description = ccb.content.text("A wooden platform held by a tall wooden pile that extend to the riverbed.  Very sturdy, and likely to outlast you."),
+    symbol = "8",
+    color = "brown",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "SWIM_UNDER" },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_dock_deep_frame",
+        drops = { { item = "nail", charges = { 12, 24 } }, { item = "2x4", count = 16 } },
+    },
+    looks_like = "t_riverbridge_dp",
+    bash = {
+        minimum_strength = 12,
+        maximum_strength = 100,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_dock_deep_pile",
+        drops = { { item = "2x4", count = 8, chance = 25 }, { item = "splinter", count = { 8, 24 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_sh_bridge",
+    name = ccb.content.text("shallow bridge"),
+    description = ccb.content.text("A wooden platform held by a support made of logs dug into the ground."),
+    looks_like = "t_dock",
+    symbol = "8",
+    color = "brown",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "SWIM_UNDER" },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_water_sh",
+        drops = { { item = "nail", charges = { 6, 12 } }, { item = "2x4", count = 8 } },
+    },
+    bash = {
+        minimum_strength = 8,
+        maximum_strength = 80,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_water_sh",
+        drops = { { item = "2x4", count = 2, chance = 25 }, { item = "splinter", count = { 2, 4 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_pontoon_dp",
+    name = ccb.content.text("pontoon bridge"),
+    description = ccb.content.text("A floating temporary bridge over still water, like the ones armies used to make to cross lakes."),
+    looks_like = "t_pontoon",
+    symbol = "8",
+    color = "brown",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "SWIM_UNDER" },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_water_dp",
+        drops = { { item = "rope_makeshift_6", count = { 3, 4 } }, { item = "2x4", count = 8 } },
+    },
+    bash = {
+        minimum_strength = 8,
+        maximum_strength = 80,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_water_dp",
+        drops = { { item = "2x4", count = 2, chance = 25 }, { item = "splinter", count = { 2, 4 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_riverbridge_dp",
+    name = ccb.content.text("river bridge"),
+    description = ccb.content.text("A floating temporary bridge over flowing water, like the ones armies used to make to cross rivers."),
+    looks_like = "t_pontoon",
+    symbol = "8",
+    color = "brown",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "SWIM_UNDER" },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_water_moving_dp",
+        drops = { { item = "rope_makeshift_6", count = { 3, 4 } }, { item = "2x4", count = 8 } },
+    },
+    bash = {
+        minimum_strength = 8,
+        maximum_strength = 80,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_water_moving_dp",
+        drops = { { item = "2x4", count = 2, chance = 25 }, { item = "splinter", count = { 2, 4 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_pavement_bg_dp",
+    name = ccb.content.text("bridge pavement"),
+    description = ccb.content.text("A bridge section made out of concrete and metal."),
+    looks_like = "t_pavement",
+    symbol = ".",
+    color = "dark_gray",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "ROAD", "MINEABLE" },
+    connect_groups = { "PAVEMENT", "WATER" },
+    connects_to = "PAVEMENT",
+    bash = {
+        minimum_strength = 70,
+        maximum_strength = 300,
+        sound = ccb.content.text("concrete cracking and metal screeching!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_water_dp",
+        drops = { { item = "rock", count = { 4, 20 } }, { item = "rebar", count = { 10, 20 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_pavement_y_bg_dp",
+    name = ccb.content.text("bridge yellow pavement"),
+    description = ccb.content.text("A bridge section made out of concrete and metal.  It's painted yellow."),
+    looks_like = "t_pavement_y",
+    symbol = ".",
+    color = "yellow",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "ROAD", "MINEABLE" },
+    connect_groups = { "PAVEMENT", "WATER" },
+    connects_to = "PAVEMENT",
+    bash = {
+        minimum_strength = 70,
+        maximum_strength = 300,
+        sound = ccb.content.text("concrete cracking and metal screeching!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_water_dp",
+        drops = { { item = "rock", count = { 4, 20 } }, { item = "rebar", count = { 10, 20 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_sidewalk_bg_dp",
+    name = ccb.content.text("bridge sidewalk"),
+    description = ccb.content.text("The sidewalk section of a concrete bridge."),
+    looks_like = "t_sidewalk",
+    symbol = ".",
+    color = "light_gray",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "ROAD", "MINEABLE" },
+    connect_groups = "WATER",
+    bash = {
+        minimum_strength = 70,
+        maximum_strength = 300,
+        sound = ccb.content.text("concrete cracking and metal screeching!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_water_dp",
+        drops = { { item = "rock", count = { 4, 20 } }, { item = "rebar", count = { 10, 20 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_metal_dock",
+    name = ccb.content.text("dock"),
+    description = ccb.content.text("A metal platform held by a support made of concrete set into the ground."),
+    symbol = "8",
+    looks_like = "t_metal_floor",
+    color = "light_gray",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "SWIM_UNDER" },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_water_sh",
+        drops = { { item = "scrap", count = { 3, 6 } }, { item = "sheet_metal", count = 2 } },
+    },
+    bash = {
+        minimum_strength = 20,
+        maximum_strength = 80,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_water_moving_sh",
+        drops = { { item = "sheet_metal", count = 2, chance = 35 }, { item = "scrap", count = { 2, 4 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_concrete_dock_deep_pile",
+    name = ccb.content.text("deep dock pile"),
+    description = ccb.content.text("A sturdy pile made of poured concrete extending all the way to the riverbed.  A metal frame will be required to support a surface."),
+    looks_like = "t_concrete_wall",
+    symbol = "|",
+    color = "light_gray",
+    move_cost = 8,
+    flags = { "TRANSPARENT", "LIQUID", "SWIMMABLE", "DEEP_WATER", "FISHABLE" },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_water_moving_dp",
+        drops = { { item = "rebar", count = { 4, 6 } }, { item = "rock", count = { 6, 10 } } },
+    },
+    bash = {
+        minimum_strength = 50,
+        maximum_strength = 120,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_water_moving_dp",
+        drops = {
+            { item = "rock", count = { 6, 10 } },
+            { item = "rebar", count = { 2, 4 } },
+            { item = "scrap", count = { 2, 4 } },
+        },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_metal_dock_deep_frame",
+    name = ccb.content.text("deep dock frame"),
+    description = ccb.content.text("A metal frame secured atop a concrete pile.  Adding a metal surface will make this into a proper dock section."),
+    symbol = "#",
+    color = "light_gray",
+    move_cost = 6,
+    flags = {
+        "TRANSPARENT",
+        "NOITEM",
+        "THIN_OBSTACLE",
+        "MOUNTABLE",
+        "TINY",
+        "AUTO_WALL_SYMBOL",
+        "UNSTABLE",
+        "SWIM_UNDER",
+    },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_concrete_dock_deep_pile",
+        drops = { { item = "spike", count = 8 }, { item = "pipe", count = 4 } },
+    },
+    looks_like = "t_sconc_wall_halfway",
+    bash = {
+        minimum_strength = 12,
+        maximum_strength = 100,
+        sound = ccb.content.text("clang!"),
+        failure_sound = ccb.content.text("smash!"),
+        terrain = "t_concrete_dock_deep_pile",
+        drops = { { item = "pipe", count = 4, chance = 25 }, { item = "scrap", count = { 4, 8 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_metal_dock_deep",
+    name = ccb.content.text("deep dock"),
+    description = ccb.content.text("A metal platform held by a tall metal pile that extends to the riverbed.  Very sturdy, and likely to outlast you."),
+    symbol = "8",
+    color = "light_gray",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "SWIM_UNDER" },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_metal_dock_deep_frame",
+        drops = { { item = "nail", charges = { 12, 24 } }, { item = "sheet_metal", count = 4 } },
+    },
+    looks_like = "t_grate",
+    bash = {
+        minimum_strength = 20,
+        maximum_strength = 100,
+        sound = ccb.content.text("clang!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_concrete_dock_deep_pile",
+        drops = { { item = "sheet_metal", count = 4, chance = 25 }, { item = "scrap", count = { 8, 16 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_metal_pontoon_dp",
+    name = ccb.content.text("metal floating dock"),
+    description = ccb.content.text("A floating temporary dock, anchored to keep it from drifting away."),
+    looks_like = "t_grate",
+    symbol = "8",
+    color = "light_gray",
+    move_cost = 2,
+    flags = { "TRANSPARENT", "FLAT", "SWIM_UNDER" },
+    connect_groups = "WATER",
+    deconstruct = {
+        terrain = "t_water_dp",
+        drops = { { item = "sheet_metal", count = { 2, 4 } }, { item = "scrap", count = 8 } },
+    },
+    bash = {
+        minimum_strength = 20,
+        maximum_strength = 80,
+        sound = ccb.content.text("clang!"),
+        failure_sound = ccb.content.text("clang!"),
+        terrain = "t_water_dp",
+        drops = { { item = "sheet_metal", count = 2, chance = 25 }, { item = "scrap", count = { 2, 4 } } },
+    },
+}

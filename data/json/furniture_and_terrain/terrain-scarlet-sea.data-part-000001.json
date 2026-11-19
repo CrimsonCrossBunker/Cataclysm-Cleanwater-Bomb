@@ -1,0 +1,30 @@
+[
+  {
+    "type": "terrain",
+    "id": "t_nl_obelisk_scarlet",
+    "copy-from": "t_nl_obelisk_0",
+    "name": "Obelisk",
+    "description": "A dark gray obelisk.  Despite its solid appearance, the face of it seems to slightly ripple, as if it were sand, loosely suspended in space.",
+    "symbol": "A",
+    "color": "dark_gray",
+    "light_color": [ 110, 0, 0 ],
+    "light_emitted": 200,
+    "examine_action": {
+      "type": "effect_on_condition",
+      "effect_on_conditions": [
+        {
+          "id": "EOC_SCARLET_TO_LABYRINTH_OBELISK",
+          "effect": [
+            {
+              "run_eoc_selector": [ "EOC_LS_scarlet_Teleport_to_labyrinth" ],
+              "allow_cancel": true,
+              "names": [ "Place your hand upon the obelisk." ],
+              "title": "As you approach the massive obelisk,\nits surface starts to warp,\nlike sand in the wind.\nA depression quickly forms.\nIn the shape of your hand.",
+              "descriptions": [ "It looks like a perfect fit for you." ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

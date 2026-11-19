@@ -1,0 +1,237 @@
+local ccb = require("ccb")
+
+ccb.content.define_furniture {
+    id = "f_speaker_cabinet",
+    name = ccb.content.text("speaker cabinet"),
+    description = ccb.content.text("An upright wood-panel case of large speakers, built to produce a potentially deafening volume level.  While it would be a terrible idea to use this now, it could hold useful parts."),
+    symbol = "7",
+    color = "blue",
+    move_cost_mod = -1,
+    coverage = 50,
+    max_volume = "3750 ml",
+    required_strength = 7,
+    mass = "17 kg",
+    flags = { "TRANSPARENT", "FLAMMABLE", "PLACE_ITEM" },
+    deconstruct = {
+        drops = {
+            { item = "scrap", count = { 4, 6 } },
+            { item = "e_scrap", count = { 1, 2 } },
+            { item = "plastic_chunk", count = { 0, 2 } },
+            { item = "wood_panel", count = 1 },
+            { item = "2x4", count = 4 },
+            { item = "nail", charges = { 8, 10 } },
+            { item = "cable", count = { 1, 2 } },
+        },
+    },
+    bash = {
+        minimum_strength = 8,
+        maximum_strength = 20,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        drops = {
+            { item = "splinter", count = { 0, 6 } },
+            { item = "scrap", count = { 0, 3 } },
+            { item = "2x4", count = { 1, 2 } },
+            { item = "nail", charges = { 2, 6 } },
+            { item = "cable", count = { 1, 3 } },
+            { item = "e_scrap", chance = 25 },
+            { item = "plastic_chunk", count = { 0, 1 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_dancing_pole",
+    name = ccb.content.text("dancing pole"),
+    description = ccb.content.text("A tall steel pipe mounted vertically, securely fastened to the ceiling and floor.  Usually used for various forms of dancing, often in adult-oriented venues."),
+    symbol = "i",
+    color = "light_gray",
+    move_cost_mod = -1,
+    coverage = 5,
+    required_strength = 8,
+    flags = { "TRANSPARENT", "THIN_OBSTACLE" },
+    deconstruct = {
+        drops = {
+            { item = "scrap", count = { 1, 2 } },
+            { item = "nail", charges = { 4, 8 } },
+            { item = "pipe", count = 2 },
+        },
+    },
+    bash = {
+        minimum_strength = 8,
+        maximum_strength = 20,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump!"),
+        drops = {
+            { item = "pipe", count = { 0, 1 } },
+            { item = "scrap", count = { 2, 4 } },
+            { item = "nail", charges = { 2, 6 } },
+        },
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_roulette_table",
+    name = ccb.content.text("roulette table"),
+    symbol = "#",
+    description = ccb.content.text("A huge table specially made for a specific form of gambling, with a grid painted onto the felt top, and a concave spinning wheel intended to give a random selection of the inscribed possibilities."),
+    color = "green",
+    move_cost_mod = 2,
+    coverage = 50,
+    required_strength = -1,
+    flags = { "TRANSPARENT", "FLAMMABLE", "ORGANIC", "MOUNTABLE", "SHORT", "FLAT_SURF", "SMALL_HIDE" },
+    deconstruct = {
+        drops = {
+            { item = "2x4", count = 4 },
+            { item = "felt_patch", count = 4 },
+            { item = "wood_panel", count = 1 },
+            { item = "nail", charges = { 6, 10 } },
+            { item = "scrap", count = { 1, 2 } },
+        },
+    },
+    bash = {
+        minimum_strength = 12,
+        maximum_strength = 50,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump."),
+        drops = {
+            { item = "2x4", count = { 2, 6 } },
+            { item = "nail", charges = { 4, 12 } },
+            { item = "splinter", count = 1 },
+            { item = "felt_patch", count = { 0, 2 } },
+            { item = "scrap", count = { 0, 1 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_organ",
+    name = ccb.content.text("pipe organ"),
+    description = ccb.content.text("A majestic pipe organ.  Dubbed \"the king of instruments\", it is capable of producing powerful sound harmonies if used by a skilled player.  Rows of off-white and black keys are linked to a set of iron pipes, which resonate at a specific pitch when pressurized air is driven through them."),
+    symbol = "P",
+    color = "i_brown",
+    move_cost_mod = -1,
+    coverage = 100,
+    required_strength = -1,
+    flags = { "FLAMMABLE", "ORGANIC", "NOITEM", "SMALL_HIDE" },
+    looks_like = "f_piano",
+    deconstruct = {
+        drops = {
+            { item = "pipe", count = 26 },
+            { item = "2x4", count = 12 },
+            { item = "nail", charges = { 10, 15 } },
+            { item = "lc_wire", count = { 4, 12 } },
+            { item = "plastic_chunk", count = { 1, 12 } },
+            { item = "lc_steel_chunk", count = { 1, 3 } },
+            { item = "cable", count = { 1, 3 } },
+            { item = "motor_tiny", count = 1 },
+        },
+    },
+    bash = {
+        minimum_strength = 16,
+        maximum_strength = 40,
+        sound = ccb.content.text("a dramatic pipe organ!"),
+        failure_sound = ccb.content.text("kerchang."),
+        drops = {
+            { item = "pipe", count = { 4, 12 } },
+            { item = "2x4", count = { 4, 8 } },
+            { item = "nail", charges = { 6, 12 } },
+            { item = "lc_wire", count = { 0, 4 } },
+            { item = "splinter", count = { 1, 3 } },
+            { item = "plastic_chunk", count = { 1, 6 } },
+            { item = "lc_steel_chunk", count = { 1, 4 } },
+            { item = "cable", count = { 1, 3 } },
+        },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_training_dummy_light",
+    name = ccb.content.text("training dummy"),
+    description = ccb.content.text("A hand-made humanoid figure, useful for training in close quarters combat.  This one is made from wood and has some duct tape to mark the striking points.  It has been erected in the ground on its post."),
+    symbol = "@",
+    color = "brown",
+    move_cost_mod = 9,
+    required_strength = -1,
+    flags = { "TRANSPARENT", "FLAMMABLE", "EASY_DECONSTRUCT" },
+    crafting_pseudo_item = "pseudo_training_dummy_light",
+    base_item = "training_dummy_light",
+    bash = {
+        minimum_strength = 25,
+        maximum_strength = 75,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("whump."),
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_training_dummy_heavy",
+    name = ccb.content.text("armored training dummy"),
+    description = ccb.content.text("A hand-made humanoid figure, useful for training in close quarters combat.  This one is covered in scrap armor and looks on guard.  It has been erected in the ground on its post."),
+    symbol = "@",
+    color = "brown",
+    move_cost_mod = 11,
+    required_strength = -1,
+    flags = { "TRANSPARENT", "FLAMMABLE", "EASY_DECONSTRUCT" },
+    crafting_pseudo_item = "pseudo_training_dummy_heavy",
+    base_item = "training_dummy_heavy",
+    bash = {
+        minimum_strength = 75,
+        maximum_strength = 150,
+        sound = ccb.content.text("smash!"),
+        failure_sound = ccb.content.text("thump!"),
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_archery_target_box",
+    name = ccb.content.text("box archery target"),
+    description = ccb.content.text("A soft target for archery consisting of tightly-packed cloth stuffed into a cardboard box, with a bullseye marked on the front."),
+    symbol = "@",
+    color = "brown",
+    move_cost_mod = 9,
+    required_strength = 5,
+    mass = "16 kg",
+    flags = { "TRANSPARENT", "FLAMMABLE", "EASY_DECONSTRUCT" },
+    crafting_pseudo_item = "pseudo_archery_target_box",
+    base_item = "archery_target_box",
+    bash = {
+        minimum_strength = 4,
+        maximum_strength = 12,
+        sound = ccb.content.text("whish!"),
+        failure_sound = ccb.content.text("whish."),
+    },
+}
+
+ccb.content.define_furniture {
+    id = "f_archery_target_bale",
+    name = ccb.content.text("bale archery target"),
+    description = ccb.content.text("A soft target for archery consisting of a bale of hay with a bullseye marked on the front."),
+    symbol = "@",
+    color = "yellow",
+    move_cost_mod = 9,
+    required_strength = 6,
+    mass = "30 kg",
+    flags = { "TRANSPARENT", "FLAMMABLE", "EASY_DECONSTRUCT" },
+    crafting_pseudo_item = "pseudo_archery_target_bale",
+    deconstruct = {
+        drops = { { item = "straw_pile", count = 40 }, { item = "rope_makeshift_30", count = 1 } },
+    },
+    bash = {
+        minimum_strength = 4,
+        maximum_strength = 12,
+        sound = ccb.content.text("whish!"),
+        failure_sound = ccb.content.text("whish."),
+        drops = { { item = "straw_pile", count = { 6, 10 } }, { item = "rope_makeshift_6", count = { 1, 3 } } },
+    },
+}

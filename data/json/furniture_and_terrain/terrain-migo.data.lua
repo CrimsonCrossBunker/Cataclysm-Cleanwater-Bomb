@@ -1,0 +1,173 @@
+local ccb = require("ccb")
+
+ccb.content.define_terrain {
+    id = "t_wall_resin",
+    name = ccb.content.text("resin wall"),
+    description = ccb.content.text("A wall made of a glistening, nearly opaque, plastic-like substance.  Deep within, you can barely see a network of pulsating green conduits, snaking through it like blood vessels.  The material is hard, warm to the touch, and slightly damp."),
+    symbol = "#",
+    color = "dark_gray",
+    move_cost = 0,
+    coverage = 100,
+    roof = "t_resin_roof",
+    connect_groups = "WALL",
+    connects_to = "WALL",
+    flags = { "NOITEM", "PERMEABLE", "SUPPORTS_ROOF", "WALL", "NO_SCENT", "AUTO_WALL_SYMBOL", "BLOCK_WIND" },
+    bash = {
+        minimum_strength = 250,
+        maximum_strength = 700,
+        sound = ccb.content.text("boom!"),
+        failure_sound = ccb.content.text("whack!"),
+        terrain = "t_resin_hole",
+        drops = { { item = "resin_chunk", count = { 10, 40 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_wall_resin_cage",
+    name = ccb.content.text("resin cage"),
+    description = ccb.content.text("A resin wall that opens into a series of small honeycomb-like hexagons, allowing the passage of air and light.  While still made of the same sturdy material, it is thinner and more delicate in appearance."),
+    symbol = "#",
+    color = "dark_gray",
+    move_cost = 0,
+    coverage = 100,
+    roof = "t_resin_roof",
+    connect_groups = { "INDOORFLOOR", "WALL" },
+    connects_to = "WALL",
+    flags = { "NOITEM", "WALL", "PERMEABLE", "TRANSPARENT", "INDOORS", "MINEABLE", "SUPPORTS_ROOF" },
+    bash = {
+        minimum_strength = 70,
+        maximum_strength = 300,
+        sound = ccb.content.text("boom!"),
+        failure_sound = ccb.content.text("whack!"),
+        terrain = "t_floor_resin",
+        drops = { { item = "resin_chunk", count = { 2, 5 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_floor_resin",
+    name = ccb.content.text("resin floor"),
+    description = ccb.content.text("A nearly opaque, plastic-like floor.  It has a gentle curve from wall to wall, but in the central areas is quite flat.  The material is hard, warm to the touch, and slightly damp."),
+    symbol = "~",
+    color = "dark_gray",
+    move_cost = 1,
+    roof = "t_resin_roof",
+    connect_groups = "INDOORFLOOR",
+    flags = { "TRANSPARENT", "SUPPORTS_ROOF", "COLLAPSES", "INDOORS", "FLAT", "ROAD", "NOCOLLIDE" },
+    bash = {
+        minimum_strength = 250,
+        maximum_strength = 700,
+        sound = ccb.content.text("boom!"),
+        failure_sound = ccb.content.text("whack!"),
+        terrain = "t_null",
+        terrain_from_above = "t_platform_resin",
+        drops = { { item = "resin_chunk", count = { 10, 40 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_platform_resin",
+    name = ccb.content.text("resin floor"),
+    description = ccb.content.text("A nearly opaque, plastic-like floor that is smooth and flat.  The material is hard, warm to the touch, and slightly damp."),
+    symbol = "~",
+    color = "light_gray",
+    looks_like = "t_floor_resin",
+    move_cost = 1,
+    flags = { "TRANSPARENT", "COLLAPSES", "FLAT", "ROAD" },
+    bash = {
+        minimum_strength = 250,
+        maximum_strength = 700,
+        sound = ccb.content.text("boom!"),
+        failure_sound = ccb.content.text("whack!"),
+        terrain = "t_null",
+        drops = { { item = "resin_chunk", count = { 10, 40 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_resin_roof",
+    name = ccb.content.text("resin roof"),
+    description = ccb.content.text("A wide, domed section of nearly opaque, plastic-like material.  When the light hits it, a network of multicolored conduits like blood vessels can be seen snaking through its glistening interior."),
+    symbol = "~",
+    color = "dark_gray",
+    move_cost = 2,
+    looks_like = "t_floor_resin",
+    flags = { "TRANSPARENT", "FLAT" },
+    bash = {
+        minimum_strength = 250,
+        maximum_strength = 700,
+        sound = ccb.content.text("boom!"),
+        failure_sound = ccb.content.text("whack!"),
+        terrain = "t_open_air",
+        bash_below = true,
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_resin_hole_c",
+    name = ccb.content.text("closed resin portal"),
+    description = ccb.content.text("A tricuspid hatch of some sort of damp, flexible, resinous material.  This one is closed tightly, but it looks like a firm push would cause it to snap open."),
+    symbol = "Y",
+    color = "light_gray",
+    move_cost = 0,
+    coverage = 95,
+    roof = "t_resin_roof",
+    connect_groups = "WALL",
+    connects_to = "WALL",
+    rotates_to = "INDOORFLOOR",
+    flags = { "DOOR", "NOITEM", "BLOCK_WIND", "SUPPORTS_ROOF" },
+    open = "t_resin_hole_o",
+    deconstruct = { terrain = "t_resin_hole", drops = { { item = "resin_chunk", count = { 2, 5 } } } },
+    bash = {
+        minimum_strength = 90,
+        maximum_strength = 120,
+        sound = ccb.content.text("boom!"),
+        failure_sound = ccb.content.text("whack!"),
+        terrain = "t_resin_hole",
+        drops = { { item = "resin_chunk", count = { 2, 5 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_resin_hole_o",
+    name = ccb.content.text("open resin portal"),
+    description = ccb.content.text("A tricuspid hatch of some sort of damp, flexible, resinous material.  This one is open, the flaps held out by some sort of stringy mucus-like substance."),
+    symbol = "D",
+    color = "light_gray",
+    move_cost = 2,
+    roof = "t_resin_roof",
+    connect_groups = "WALL",
+    connects_to = "WALL",
+    flags = { "TRANSPARENT", "FLAT", "SUPPORTS_ROOF" },
+    deconstruct = { terrain = "t_resin_hole", drops = { { item = "resin_chunk", count = { 2, 5 } } } },
+    close = "t_resin_hole_c",
+    bash = {
+        minimum_strength = 90,
+        maximum_strength = 120,
+        sound = ccb.content.text("boom!"),
+        failure_sound = ccb.content.text("whack!"),
+        terrain = "t_resin_hole",
+        drops = { { item = "resin_chunk", count = { 2, 5 } } },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_resin_hole",
+    name = ccb.content.text("resin-lined hole"),
+    description = ccb.content.text("An open hole in the resin wall, large enough for you to crawl through."),
+    symbol = "O",
+    color = "light_gray",
+    move_cost = 4,
+    roof = "t_resin_roof",
+    connect_groups = "WALL",
+    connects_to = "WALL",
+    flags = { "TRANSPARENT", "FLAT", "SUPPORTS_ROOF" },
+    bash = {
+        minimum_strength = 100,
+        maximum_strength = 500,
+        sound = ccb.content.text("boom!"),
+        failure_sound = ccb.content.text("whack!"),
+        terrain = "t_floor_resin",
+        drops = { { item = "resin_chunk", count = { 2, 5 } } },
+    },
+}

@@ -1,0 +1,31 @@
+[
+  {
+    "type": "furniture",
+    "id": "f_empty_spike",
+    "name": "empty spike",
+    "description": "A strange otherworldly spike that refracts light in strange ways.  The body no longer rests on it.",
+    "symbol": "!",
+    "color": "black",
+    "move_cost_mod": -1,
+    "coverage": 100,
+    "flags": [ "TRANSPARENT", "ORGANIC" ],
+    "deconstruct": { "items": [ { "item": "glass_shard", "count": 1000 } ] },
+    "required_str": -1,
+    "bash": {
+      "str_min": 100,
+      "str_max": 100,
+      "sound": "smash!",
+      "sound_fail": "an absence of sound.",
+      "items": [ { "item": "glass_shard", "count": [ 1, 2 ] } ]
+    },
+    "examine_action": {
+      "type": "effect_on_condition",
+      "effect_on_conditions": [
+        {
+          "id": "EOC_MISSING_BODY",
+          "effect": [ { "u_message": "The body is gone but it can't have gone far, you need to destroy it." } ]
+        }
+      ]
+    }
+  }
+]
