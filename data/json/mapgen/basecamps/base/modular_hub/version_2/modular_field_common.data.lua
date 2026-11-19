@@ -302,3 +302,133 @@ ccb.content.define_mapgen {
         tile_edits = { { shape = "point", operation = "terrain", id = "t_radio_controls", x = 16, y = 8 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_2_cooking_NE",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "f",
+        },
+        parameters = {
+            fbmh_2_cooking_palette = {
+                value_type = "palette",
+                default = { weighted = { "fbmh_2_fireplace_palette", "fbmh_2_stove_palette" } },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_2_cooking_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_2_cooking_NE_roof",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "C",
+        },
+        parameters = {
+            fbmh_2_cooking_palette = {
+                value_type = "palette",
+                default = { weighted = { "fbmh_2_fireplace_palette", "fbmh_2_stove_palette" } },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_2_cooking_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_2_tent_cooking_NE",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "f",
+        },
+        parameters = {
+            fbmh_2_tent_cooking_palette = {
+                value_type = "palette",
+                default = { weighted = { "fbmh_2_tent_fireplace_palette", "fbmh_2_tent_stove_palette" } },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_2_tent_cooking_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_2_tent_cooking_NE_roof",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "C",
+        },
+        parameters = {
+            fbmh_2_tent_cooking_palette = {
+                value_type = "palette",
+                default = { weighted = { "fbmh_2_tent_fireplace_palette", "fbmh_2_tent_stove_palette" } },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_2_tent_cooking_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_2_bedset_east",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "bbB",
+            "   ",
+            "   ",
+        },
+        parameters = {
+            fbmh_2_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_2_straw_bed_palette",
+                        "fbmh_2_makeshift_bed_palette",
+                        "fbmh_2_bed_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_2_bed_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_2_bedset_west",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "Bbb",
+            "   ",
+            "   ",
+        },
+        parameters = {
+            fbmh_2_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_2_straw_bed_palette",
+                        "fbmh_2_makeshift_bed_palette",
+                        "fbmh_2_bed_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_2_bed_palette" } },
+    },
+}

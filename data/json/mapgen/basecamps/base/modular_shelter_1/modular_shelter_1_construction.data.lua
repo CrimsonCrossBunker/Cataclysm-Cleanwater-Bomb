@@ -45,3 +45,200 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_1_bedroom_NW",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "  w",
+            "  w",
+            "wdw",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmc_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmc_shelter_1_palette_log", "fbmc_shelter_1_palette_rock",
+                        "fbmc_shelter_1_palette_standard", "fbmc_shelter_1_palette_wad",
+                        "fbmc_shelter_1_palette_wood",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_1_bedroom_W1",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "  w",
+            "  d",
+            "www",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmc_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmc_shelter_1_palette_log", "fbmc_shelter_1_palette_rock",
+                        "fbmc_shelter_1_palette_standard", "fbmc_shelter_1_palette_wad",
+                        "fbmc_shelter_1_palette_wood",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_1_bedroom_W2",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "  w",
+            "  d",
+            "www",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmc_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmc_shelter_1_palette_log", "fbmc_shelter_1_palette_rock",
+                        "fbmc_shelter_1_palette_standard", "fbmc_shelter_1_palette_wad",
+                        "fbmc_shelter_1_palette_wood",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_1_bedroom_W3",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "  w",
+            " Xw",
+            "  d",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmc_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmc_shelter_1_palette_log", "fbmc_shelter_1_palette_rock",
+                        "fbmc_shelter_1_palette_standard", "fbmc_shelter_1_palette_wad",
+                        "fbmc_shelter_1_palette_wood",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_1_bedroom_SW",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "  ww",
+            "  w ",
+            "  w ",
+            "  w ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmc_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmc_shelter_1_palette_log", "fbmc_shelter_1_palette_rock",
+                        "fbmc_shelter_1_palette_standard", "fbmc_shelter_1_palette_wad",
+                        "fbmc_shelter_1_palette_wood",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_1_bedroom_S1",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            " dww",
+            "   w",
+            "   w",
+            "   w",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmc_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmc_shelter_1_palette_log", "fbmc_shelter_1_palette_rock",
+                        "fbmc_shelter_1_palette_standard", "fbmc_shelter_1_palette_wad",
+                        "fbmc_shelter_1_palette_wood",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_1_bedroom_S2",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "dw",
+            "  ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmc_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmc_shelter_1_palette_log", "fbmc_shelter_1_palette_rock",
+                        "fbmc_shelter_1_palette_standard", "fbmc_shelter_1_palette_wad",
+                        "fbmc_shelter_1_palette_wood",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_construction_palette" } },
+    },
+}

@@ -249,3 +249,785 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_room_NE_1",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "      ",
+            " ;;ww;",
+            " ;;..w",
+            " ;;..w",
+            " ;;;;;",
+            " ;;;;;",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_room_roof_NE_1",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "      ",
+            " ;;rr;",
+            " ;;rrr",
+            " ;;rrr",
+            " ;;;;;",
+            " ;;;;;",
+        },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_room_NE_2",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "      ",
+            "  v   ",
+            " w.   ",
+            "  .   ",
+            " w...w",
+            "      ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_room_roof_NE_2",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "      ",
+            "  r   ",
+            " rr   ",
+            "  r   ",
+            " rrrrr",
+            "      ",
+        },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_room_NE_3",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "      ",
+            " w   w",
+            "      ",
+            " +    ",
+            "      ",
+            " wwwww",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_room_roof_NE_3",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "      ",
+            " r   r",
+            "      ",
+            " r    ",
+            "      ",
+            " rrrrr",
+        },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_shack_east",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "wwwwww",
+            "w....w",
+            "+....w",
+            "w....v",
+            "w....w",
+            "w+wwww",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_roof",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "rrrrrr",
+            "rrrrrr",
+            "rrrrrr",
+            "rrrrrr",
+            "rrrrrr",
+            "rrrrrr",
+        },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_room_east",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "w....w",
+            "w....w",
+            "+....w",
+            "w....v",
+            "w....w",
+            "w+wwww",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_joining_wall",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "w",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_joining_wall_roof",
+    layout = {
+        size = { width = 1, height = 1 },
+        rows = {
+            "r",
+        },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_shack_northwest",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            ";;;;;;",
+            "wwwww;",
+            "w...w;",
+            "v...+;",
+            "w...w;",
+            "wwwww;",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_shack_roof_northwest",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            ";;;;;;",
+            "rrrrr;",
+            "rrrrr;",
+            "rrrrr;",
+            "rrrrr;",
+            "rrrrr;",
+        },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_shack_west",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "wwwwww",
+            "w....w",
+            "w....+",
+            "v....w",
+            "w....w",
+            "wwww+w",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_room_west",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "w....w",
+            "w....w",
+            "w....+",
+            "v....w",
+            "w....w",
+            "wwww+w",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_core_shack_ne",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "   www",
+            "   ..w",
+            "   ..w",
+            "   ..+",
+            "   ..w",
+            "   ..w",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_core_roof_e",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "   rrr",
+            "   rrr",
+            "   rrr",
+            "   rrr",
+            "   rrr",
+            "   rrr",
+        },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_core_room_ne",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "   www",
+            "   ...",
+            "   ...",
+            "   ...",
+            "   ...",
+            "   ...",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_core_shack_nw",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "ww+   ",
+            "w..   ",
+            "w..   ",
+            "+..   ",
+            "w..   ",
+            "w..   ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_core_roof_w",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "rrr   ",
+            "rrr   ",
+            "rrr   ",
+            "rrr   ",
+            "rrr   ",
+            "rrr   ",
+        },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_core_room_nw",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "ww+   ",
+            "...   ",
+            "...   ",
+            "...   ",
+            "...   ",
+            "...   ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_core_shack_se",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "   ..w",
+            "   ..w",
+            "   ..w",
+            "   ..+",
+            "   ..w",
+            "   +ww",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_core_room_se",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "   ...",
+            "   ...",
+            "   ...",
+            "   ...",
+            "   ...",
+            "   +ww",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_core_shack_sw",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "w..   ",
+            "w..   ",
+            "w..   ",
+            "+..   ",
+            "w..   ",
+            "www   ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmh_0_core_room_sw",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "...   ",
+            "...   ",
+            "...   ",
+            "...   ",
+            "...   ",
+            "www   ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmh_0_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmh_0_adobe_palette", "fbmh_0_concrete_palette", "fbmh_0_log_palette",
+                        "fbmh_0_metal_palette", "fbmh_0_migo_resin_palette",
+                        "fbmh_0_rammed_earth_palette", "fbmh_0_rock_palette", "fbmh_0_wad_palette",
+                        "fbmh_0_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmh_0_construction_palette" } },
+    },
+}

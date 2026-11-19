@@ -384,3 +384,95 @@ ccb.content.define_mapgen {
         tile_edits = { { shape = "point", operation = "furniture", id = "f_drophammer", x = 7, y = 21 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_firestation1_living_quarters_SW",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "bbL",
+            "t  ",
+            "bb ",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_bed_palette" }, "fbmc_firestation1_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_firestation1_living_quarters_NW",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "bbL",
+            "t  ",
+            "bbL",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_bed_palette" }, "fbmc_firestation1_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_firestation1_living_quarters_NE",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "Lbb",
+            "  t",
+            "Lbb",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_bed_palette" }, "fbmc_firestation1_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_firestation1_living_quarters_SE",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "Lbb",
+            "  t",
+            " bb",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_bed_palette" }, "fbmc_firestation1_palette" },
+    },
+}

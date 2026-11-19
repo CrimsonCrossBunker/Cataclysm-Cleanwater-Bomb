@@ -32,3 +32,65 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_pottery_cottage_blacksmith_roof_construction_nested",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "rrrrrr",
+            "rrrrrr",
+            "rrrrr ",
+            "rrrrr ",
+            "rrrrr ",
+            "rrrrr ",
+        },
+        parameters = {
+            fbmc_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmc_concrete_palette", "fbmc_log_palette", "fbmc_metal_palette",
+                        "fbmc_migo_resin_palette", "fbmc_rammed_earth_palette", "fbmc_rock_palette",
+                        "fbmc_wad_palette", "fbmc_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_construction_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_pottery_cottage_blacksmith_construction_nested",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "www+vw",
+            "w....w",
+            "w.... ",
+            "w.... ",
+            "w.... ",
+            "wwwww ",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        nested = { { x = 0, y = 0, z = 1, id = "fbmc_pottery_cottage_blacksmith_roof_construction_nested" } },
+        parameters = {
+            fbmc_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmc_concrete_palette", "fbmc_log_palette", "fbmc_metal_palette",
+                        "fbmc_migo_resin_palette", "fbmc_rammed_earth_palette", "fbmc_rock_palette",
+                        "fbmc_wad_palette", "fbmc_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_construction_palette" } },
+    },
+}

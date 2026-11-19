@@ -127,3 +127,61 @@ ccb.content.define_mapgen {
         nested = { { id = "fbms_2_storage_b", x = 15, y = 1 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbms_2_storage_a",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "s ss",
+            "s ss",
+            "s ss",
+            "s ss",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbms_2_storage_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbms_2_dresser_palette", "fbms_2_bookcase_palette", "fbms_2_locker_palette",
+                        "fbms_2_rack_wood_palette", "fbms_2_rack_palette",
+                        "fbms_2_warehouse_shelf_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbms_2_storage_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbms_2_storage_b",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "ss s",
+            "ss s",
+            "ss s",
+            "ss s",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbms_2_storage_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbms_2_dresser_palette", "fbms_2_bookcase_palette", "fbms_2_locker_palette",
+                        "fbms_2_rack_wood_palette", "fbms_2_rack_palette",
+                        "fbms_2_warehouse_shelf_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbms_2_storage_palette" } },
+    },
+}

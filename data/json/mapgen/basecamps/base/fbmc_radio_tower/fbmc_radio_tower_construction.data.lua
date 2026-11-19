@@ -93,3 +93,34 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_radio_tower_construction_shack",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "wwwwww",
+            "w....w",
+            "w....w",
+            "w....w",
+            "w ...w",
+            "ww+vww",
+        },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        parameters = {
+            fbmc_construction_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = {
+                        "fbmc_concrete_palette", "fbmc_log_palette", "fbmc_metal_palette",
+                        "fbmc_migo_resin_palette", "fbmc_rammed_earth_palette", "fbmc_rock_palette",
+                        "fbmc_wad_palette", "fbmc_wood_palette",
+                    },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { { parameter = "fbmc_construction_palette" } },
+    },
+}

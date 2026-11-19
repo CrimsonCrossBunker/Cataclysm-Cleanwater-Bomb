@@ -240,3 +240,157 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_2_bed_nw_wall",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "bb",
+            "L*",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { "fbmc_shelter_2_palette", { parameter = "fbmc_bed_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_2_bed_w1_wall",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "bb",
+            "L*",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { "fbmc_shelter_2_palette", { parameter = "fbmc_bed_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_2_bed_w2_wall",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "*L",
+            "bb",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { "fbmc_shelter_2_palette", { parameter = "fbmc_bed_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_2_bed_southwest_wall",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "*b",
+            "Lb",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { "fbmc_shelter_2_palette", { parameter = "fbmc_bed_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_2_bed_south1_wall",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "b*",
+            "bL",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { "fbmc_shelter_2_palette", { parameter = "fbmc_bed_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_2_bed_east1_wall",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "Lb",
+            "*b",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { "fbmc_shelter_2_palette", { parameter = "fbmc_bed_palette" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fbmc_shelter_2_bed_east2_wall",
+    layout = {
+        size = { width = 2, height = 2 },
+        rows = {
+            "bb",
+            "*L",
+        },
+        parameters = {
+            fbmc_bed_palette = {
+                value_type = "palette",
+                default = {
+                    weighted = { "fbmc_straw_bed_palette", "fbmc_makeshift_bed_palette", "fbmc_bed_palette" },
+                },
+                scope = "map_tile",
+            },
+        },
+        palettes = { "fbmc_shelter_2_palette", { parameter = "fbmc_bed_palette" } },
+    },
+}
