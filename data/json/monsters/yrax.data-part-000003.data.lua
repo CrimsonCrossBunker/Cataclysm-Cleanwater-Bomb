@@ -1,0 +1,32 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_yrax_apeirogon",
+    name = ccb.content.plural_text("Yrax apeirohedron", "Yrax apeirohedra"),
+    description = ccb.content.text("Its uncountable surfaces flow against each other in a dazzling sea of gold."),
+    default_faction = "yrax",
+    volume = "50 L",
+    mass = "30 kg",
+    species = { "ROBOT", "YRAX" },
+    body_type = "apeirohedra",
+    materials = { "steel" },
+    speed = 500,
+    symbol = "Y",
+    morale = 100,
+    hp = 1000000,
+    color = "yellow",
+    aggressive_to_characters = false,
+    melee_skill = 10,
+    melee_dice = 300,
+    melee_sides = 10,
+    vision_day = 50,
+    vision_night = 20,
+    anger_triggers = { "FRIEND_ATTACKED", "FRIEND_DIED", "HURT" },
+    flags = {
+        "SEES", "HEARS", "GOODHEARING", "NOHEAD", "NO_BREATHE", "PATH_AVOID_DANGER",
+        "PRIORITIZE_TARGETS", "HIT_AND_RUN", "ELECTRONIC",
+    },
+    pathing = { avoid_traps = true, avoid_dangerous_fields = true },
+    armor = { bash = 1000, cut = 1000, acid = 100, heat = 100, bullet = 1000 },
+    death = { outcome = { corpse = "NO_CORPSE", message = ccb.content.text("The %s folds away.") } },
+}
