@@ -1,143 +1,82 @@
 [
   {
-    "id": "afs_bionic_power_mod",
-    "copy-from": "mod_battery",
+    "id": "afs_atomic_smartphone_music",
+    "copy-from": "afs_atomic_smartphone",
     "type": "ITEM",
-    "subtypes": [ "TOOLMOD" ],
-    "category": "spare_parts",
-    "name": "cybernetic power port mod",
-    "description": "This device replaces standard power connections and battery ports for electronic devices with a carefully-shaped port that hooks into bionic implants.  When applied, it will convert an item to run directly off of bionic power.",
-    "ammo_modifier": [ "battery" ],
-    "flags": [ "USES_BIONIC_POWER", "NO_UNLOAD", "NO_RELOAD" ]
-  },
-  {
-    "id": "vr_laptop",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "category": "tools",
-    "name": "portable virtual reality rig",
-    "description": "A portable virtual reality rig with glasses for the HUD and the computing functions wrapped around the torso.  When powered on it will provide an overlay on everything you experience.",
-    "symbol": ",",
-    "color": "dark_gray",
-    "material": [ "glass", "titanium" ],
-    "copy-from": "sunglasses",
-    "charges_per_use": 2,
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "atomic smartphone - music", "str_pl": "atomic smartphones - music" },
+    "description": "This phone is playing music, steadily raising your morale.  You can't hear anything else while you're listening.",
+    "revert_to": "afs_atomic_smartphone",
     "use_action": [
+      "PORTABLE_GAME",
       "E_FILE_DEVICE",
       "EBOOKSAVE",
-      "PORTABLE_GAME",
       {
-        "target": "vr_laptop_holosuite",
-        "msg": "The holosuite comes to life around you.",
-        "need_charges": 1,
-        "need_charges_msg": "The batteries are dead.",
-        "type": "transform"
+        "type": "mp3",
+        "transform": "afs_atomic_smartphone",
+        "message": "You stop listening to music and take your earbuds out.",
+        "activate": false
       }
     ],
-    "flags": [ "WATCH", "SKINTIGHT" ],
-    "pocket_data": [
+    "tick_action": [ "MP3_ON" ],
+    "extend": { "flags": [ "TRADER_AVOID", "SPAWN_ACTIVE" ] }
+  },
+  {
+    "id": "afs_wraitheon_smartphone",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "Wraitheon executive's smartphone" },
+    "copy-from": "afs_atomic_smartphone",
+    "description": "Your custom crafted atomic smartphone.  Most notably a confidential executive-level override program allows you to remotely control most robots.",
+    "price": "200 kUSD",
+    "price_postapoc": "2 kUSD 500 USD",
+    "material": [ "superalloy", "aluminum" ],
+    "use_action": [
+      { "target": "afs_atomic_wraitheon_flashlight", "msg": "You activate the flashlight app.", "type": "transform" },
+      "CAMERA",
       {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM" ],
-        "default_magazine": "medium_battery_cell"
+        "type": "mp3",
+        "transform": "afs_atomic_wraitheon_music",
+        "message": "You put in the earbuds and start listening to music.",
+        "activate": true
       },
+      "ROBOTCONTROL",
+      "CALORIES_INTAKE_TRACKER",
+      "PORTABLE_GAME",
+      "E_FILE_DEVICE",
+      "EBOOKSAVE"
+    ],
+    "pocket_data": [
       {
         "pocket_type": "E_FILE_STORAGE",
         "rigid": true,
         "max_contains_volume": "1 ml",
         "max_contains_weight": "1 g",
-        "weight_multiplier": 0.0,
+        "weight_multiplier": 0,
         "ememory_max": "1 TB"
       }
-    ],
-    "armor": [ { "covers": [ "eyes", "torso" ] } ],
-    "tool_ammo": [ "battery" ]
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "id": "afs_shuttle_radiobeacon",
-    "name": { "str": "drone shuttle beacon" },
-    "description": "A portable high-power radiobeacon.  Signals a drone shuttle from Port Augustmoon, which will make landfall in about 30 minutes and leave 4 hours later, whether you board it or not.  Single use, all expenses paid in advance, and non refundable.",
-    "weight": "340 g",
-    "volume": "1 L",
-    "category": "tools",
-    "price": "55 kUSD",
-    "price_postapoc": "55 kUSD",
-    "to_hit": -1,
-    "material": [ "plastic", "aluminum" ],
-    "symbol": ";",
-    "color": "yellow",
-    "melee_damage": { "bash": 6 },
-    "use_action": {
-      "type": "effect_on_conditions",
-      "description": "Call a shuttle.",
-      "effect_on_conditions": [ "EOC_AFS_CALL_AUGUSTMOON_SHUTTLE" ]
-    },
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "afs_shuttle_beacon": 1 }, "rigid": true } ],
-    "flags": [ "NO_UNLOAD", "NO_RELOAD" ],
-    "tool_ammo": "afs_shuttle_beacon"
-  },
-  {
-    "id": "vr_laptop_holosuite",
-    "copy-from": "vr_laptop",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
-    "name": { "str": "VR rig - holosuite deployed", "str_pl": "VR rigs - holosuite deployed" },
-    "power_draw": "1 W",
-    "revert_to": "vr_laptop",
-    "use_action": {
-      "target": "vr_laptop",
-      "msg": "You power down the virtual overlay.",
-      "ammo_scale": 0,
-      "menu_text": "Turn off",
-      "type": "transform"
-    },
-    "flags": [ "WATCH", "TRADER_AVOID", "SPAWN_ACTIVE" ],
-    "passive_effects": [
-      { "id": "ITEM_ENCH_aftershock_exoplanet_vr_laptop_holosuite_0" }
     ]
   },
   {
-    "id": "nano_forge",
+    "id": "afs_atomic_wraitheon_music",
+    "copy-from": "afs_wraitheon_smartphone",
     "type": "ITEM",
-    "subtypes": [ "ARTIFACT" ],
-    "category": "tools",
-    "name": { "str": "folded nanotech forge" },
-    "description": "Matrioshka Fabritechnics created this portable nanotech forge for when expeditions are setting up a basecamp far from population centers.  Once deployed it can be used to craft ultratech marvels that otherwise are too minute for human crafting.",
-    "weight": "8464 g",
-    "volume": "11356 ml",
-    "price": "50 USD",
-    "price_postapoc": "450 USD",
-    "looks_like": "forge",
-    "symbol": "u",
-    "color": "light_green",
-    "use_action": { "type": "deploy_furn", "furn_type": "f_nano_forge" },
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "battery": 5000 } } ],
-    "material": [ "superalloy" ],
-    "flags": [ "DURABLE_MELEE", "HEAVY_TOOL" ],
-    "melee_damage": { "bash": 5 },
-    "charge_info": { "recharge_type": "periodic", "time": "1 h", "regenerate_ammo": true }
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "ARTIFACT" ],
-    "copy-from": "folding_solar_panel",
-    "id": "afs_cRTG",
-    "name": { "str": "U-344 RTG" },
-    "description": "A compact power source that employs the decay of transuranic elements to generate a small but constant amount of electricity and is commonly used in remote locations to power up equipment.  Must be integrated into a power grid before use.",
-    "weight": "17500 g",
-    "volume": "2 L",
-    "longest_side": "30 cm",
-    "color": "light_green",
-    "symbol": "]",
-    "material": [ "lead", "steel" ],
-    "use_action": { "type": "deploy_appliance", "base": "afs_cRTG" },
-    "extend": { "flags": [ "RECHARGE", "NO_UNLOAD", "NO_RELOAD", "WATERPROOF", "LEAK_DAM", "RADIOACTIVE" ] },
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 1000 } } ],
-    "price": "5600 USD",
-    "price_postapoc": "5600 USD",
-    "charge_info": { "regenerate_ammo": true, "recharge_type": "periodic", "time": "5 m" }
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "Wraitheon executive's smartphone - music", "str_pl": "Wraitheon executive's smartphones - music" },
+    "description": "This phone is playing music, steadily raising your morale.  You can't hear anything else while you're listening.",
+    "revert_to": "afs_atomic_smartphone",
+    "use_action": [
+      "PORTABLE_GAME",
+      "E_FILE_DEVICE",
+      "EBOOKSAVE",
+      {
+        "type": "mp3",
+        "transform": "afs_wraitheon_smartphone",
+        "message": "You stop listening to music and take your earbuds out.",
+        "activate": false
+      }
+    ],
+    "extend": { "flags": [ "TRADER_AVOID", "SPAWN_ACTIVE" ] },
+    "tick_action": [ "MP3_ON" ]
   }
 ]

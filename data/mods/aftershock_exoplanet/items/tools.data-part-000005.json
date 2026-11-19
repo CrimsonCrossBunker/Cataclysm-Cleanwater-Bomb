@@ -1,0 +1,43 @@
+[
+  {
+    "id": "nano_forge",
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "category": "tools",
+    "name": { "str": "folded nanotech forge" },
+    "description": "Matrioshka Fabritechnics created this portable nanotech forge for when expeditions are setting up a basecamp far from population centers.  Once deployed it can be used to craft ultratech marvels that otherwise are too minute for human crafting.",
+    "weight": "8464 g",
+    "volume": "11356 ml",
+    "price": "50 USD",
+    "price_postapoc": "450 USD",
+    "looks_like": "forge",
+    "symbol": "u",
+    "color": "light_green",
+    "use_action": { "type": "deploy_furn", "furn_type": "f_nano_forge" },
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "battery": 5000 } } ],
+    "material": [ "superalloy" ],
+    "flags": [ "DURABLE_MELEE", "HEAVY_TOOL" ],
+    "melee_damage": { "bash": 5 },
+    "charge_info": { "recharge_type": "periodic", "time": "1 h", "regenerate_ammo": true }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "copy-from": "folding_solar_panel",
+    "id": "afs_cRTG",
+    "name": { "str": "U-344 RTG" },
+    "description": "A compact power source that employs the decay of transuranic elements to generate a small but constant amount of electricity and is commonly used in remote locations to power up equipment.  Must be integrated into a power grid before use.",
+    "weight": "17500 g",
+    "volume": "2 L",
+    "longest_side": "30 cm",
+    "color": "light_green",
+    "symbol": "]",
+    "material": [ "lead", "steel" ],
+    "use_action": { "type": "deploy_appliance", "base": "afs_cRTG" },
+    "extend": { "flags": [ "RECHARGE", "NO_UNLOAD", "NO_RELOAD", "WATERPROOF", "LEAK_DAM", "RADIOACTIVE" ] },
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 1000 } } ],
+    "price": "5600 USD",
+    "price_postapoc": "5600 USD",
+    "charge_info": { "regenerate_ammo": true, "recharge_type": "periodic", "time": "5 m" }
+  }
+]
