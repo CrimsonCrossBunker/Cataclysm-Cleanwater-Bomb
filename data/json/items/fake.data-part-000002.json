@@ -1,0 +1,27 @@
+[
+  {
+    "id": "fake_dynamite_50lbs",
+    "//": "This is used exclusively in the rescue mission for Barry to blow a hole in the scout tower.",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "weapons",
+    "name": { "str": "fake 50lbs dynamite car bomb", "//~": "NO_I18N" },
+    "description": {
+      "str": "Several sticks of explosives, bundled together with a fuse attached.  Use this item to light the fuse.  You will, of course, need a lighter or matches in your inventory to do this.  Shortly after lighting the fuse, this item will explode, so get away!",
+      "//~": "NO_I18N"
+    },
+    "weight": "22680 g",
+    "volume": "15020 ml",
+    "price": "60 USD",
+    "price_postapoc": "10 USD",
+    "material": [ { "type": "tnt", "portion": 95 }, { "type": "paper", "portion": 5 } ],
+    "symbol": "*",
+    "color": "red",
+    "explode_in_fire": true,
+    "explosion": { "power": 18779 },
+    "countdown_action": { "type": "explosion", "explosion": { "power": 18779, "max_noise": 0 } },
+    "countdown_interval": "1 seconds",
+    "flags": [ "BOMB" ],
+    "melee_damage": { "bash": 4 }
+  }
+]
