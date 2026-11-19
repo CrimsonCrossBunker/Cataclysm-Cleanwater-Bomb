@@ -35,3 +35,71 @@ ccb.content.define_mapgen {
         fill_terrain = "t_shingle_flat_roof",
     },
 }
+
+-- uses house_08_basement
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "house_dogs" },
+    layout = {
+        rows = {
+            ".[%%....p.```...........",
+            ".%###o####o*o##########.",
+            ".%#EI  y| RRRR   sHHHHo.",
+            ".%# I E +            Ho.",
+            ".%#P    |            H#.",
+            ".##||||+|        EsE so.",
+            ".o      |             o.",
+            ".#d @@  |       A A A #.",
+            ".o  @@s | hfh | ||JJJ|#^",
+            ".#|||||+| hfh |  Y    #.",
+            ".#U|d     hfh |6     Oo.",
+            ".#>+          |7432F51#.",
+            ".###+###¶###¶###o######.",
+            ".oB  S#^``````........Ŧ.",
+            ".#B8 t#%``````........Ŧ.",
+            ".######%``````........Ŧ.",
+            ".Ŧ....................Ŧ.",
+            ".Ŧ....................Ŧ.",
+            ".Ŧ....................Ŧ.",
+            ".ɤ....................ɤ.",
+            ".Ŧ....................Ŧ.",
+            ".Ŧ....................Ŧ.",
+            ".ŦŦŦŦŦŦŦŦŦŦŦŦŦŦŦŦŦŦŦŦŦŦ.",
+            "........................",
+        },
+        nested = { { x = 6, y = 0, id = "rolling_trash_can_1x1" } },
+        loot_placements = {
+            { group = "guns_pistol_common", x = 4, y = 10, chance = 5, ammo = 90, magazine = 100 },
+            { group = "dogfight", x = 18, y = 17, chance = 95 },
+        },
+        monster_placements = { { group = "GROUP_DOGS", x = { 9, 21 }, y = { 13, 21 }, repetitions = { 3, 7 } } },
+        tile_edits = {
+            {
+                shape = "point",
+                operation = "terrain",
+                id = "t_tree_apple",
+                x = { 0, 14 },
+                y = 0,
+                repetitions = { 1, 2 },
+            },
+            {
+                shape = "point",
+                operation = "terrain",
+                id = "t_tree_young",
+                x = { 2, 14 },
+                y = { 17, 21 },
+                repetitions = { 3, 5 },
+            },
+        },
+        fill_terrain = "t_floor",
+        palettes = {
+            {
+                weighted = {
+                    { id = "standard_domestic_palette", weight = 10 },
+                    { id = "standard_domestic_abandoned_palette", weight = 2 },
+                },
+            },
+            "standard_domestic_landscaping_palette",
+        },
+    },
+}

@@ -97,3 +97,128 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_w_4",
+    layout = {
+        rows = {
+            ".........`p.............",
+            "..[.....ù`ù......[....[.",
+            ".......%```%............",
+            "...##ooo#*##oo#o#...[...",
+            "...#è     |R à  #.......",
+            "...#      |R    o%..[...",
+            "...#            o%......",
+            "...#      |ç    o%......",
+            "...#      |     #.......",
+            ".#o#||||||||| |##.......",
+            ".#§    |é2F3Y,3#........",
+            "%o      ,,,,,,Ooù.......",
+            "%o      ,,AAA,5où.......",
+            "%o     |T,412,,#........",
+            ".#     ||+||||+#........",
+            ".#o#|+||y RR|6 #........",
+            "..^#W Z|>  R|66#........",
+            "...#||||||  |||####.....",
+            ".[.#&    +  +?    #.....",
+            "...o     ||+|     o.....",
+            "...#     |t_|     #.....",
+            ".[.#     |B_|     o.....",
+            "...#     |BS|     #.....",
+            "[..####o###o##o####.....",
+        },
+        nested = {
+            {
+                x = 18,
+                y = { 9, 12 },
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "reflecting_pool_5x5_1", weight = 5 },
+                    { id = "reflecting_pool_5x5_2", weight = 5 },
+                    { id = "playset_4x4_1", weight = 10 },
+                    { id = "playset_4x4_2", weight = 10 },
+                    { id = "firepit_5x5_1", weight = 10 },
+                    { id = "firepit_5x5_2", weight = 10 },
+                },
+            },
+            {
+                x = 20,
+                y = 19,
+                choices = {
+                    { id = "null", weight = 40 },
+                    { id = "garden_3x3_1", weight = 20 },
+                    { id = "garden_3x3_2", weight = 20 },
+                    { id = "garden_3x3_3", weight = 20 },
+                },
+            },
+        },
+        nested_glyphs = {
+            ["&"] = {
+                choices = {
+                    { id = "bedroom_5x5_adult_W_1", weight = 50 },
+                    { id = "bedroom_5x5_adult_N_2", weight = 50 },
+                    { id = "bedroom_5x5_adult_S_2", weight = 50 },
+                    { id = "bedroom_5x5_adult_E_2", weight = 50 },
+                    { id = "bedroom_5x5_adult_W_2", weight = 50 },
+                },
+            },
+            ["?"] = {
+                choices = {
+                    { id = "bedroom_5x5_adult_N_1", weight = 50 },
+                    { id = "bedroom_5x5_adult_S_1", weight = 50 },
+                    { id = "bedroom_5x5_adult_E_1", weight = 50 },
+                    { id = "bedroom_5x5_adult_N_2", weight = 50 },
+                    { id = "bedroom_5x5_adult_S_2", weight = 50 },
+                    { id = "bedroom_5x5_adult_E_2", weight = 50 },
+                    { id = "bedroom_5x5_adult_W_2", weight = 50 },
+                },
+            },
+            ["§"] = {
+                choices = {
+                    { id = "diningroom_5x5_N_S", weight = 50 },
+                    { id = "diningroom_5x5_E_W", weight = 50 },
+                },
+            },
+            ["è"] = {
+                choices = {
+                    { id = "livingroom_5x5_S_1", weight = 20 },
+                    { id = "livingroom_5x5_E_1", weight = 20 },
+                    { id = "livingroom_5x5_W_1", weight = 20 },
+                },
+            },
+            ["ç"] = {
+                choices = {
+                    { id = "bonus_room_2x2_1", weight = 50 },
+                    { id = "bonus_room_2x2_2", weight = 50 },
+                    { id = "bonus_room_2x2_4_S", weight = 50 },
+                    { id = "bonus_room_2x2_4_W", weight = 50 },
+                },
+            },
+            ["à"] = {
+                choices = {
+                    { id = "bonus_room_3x3_4", weight = 40 },
+                    { id = "bonus_room_3x3_E_6", weight = 20 },
+                    { id = "bonus_room_3x3_N_6", weight = 20 },
+                    { id = "bonus_room_3x3_E_8", weight = 30 },
+                    { id = "bonus_room_3x3_N_8", weight = 30 },
+                },
+            },
+        },
+        fill_terrain = "t_floor",
+        palettes = {
+            "domestic_general_and_variant_palette", "standard_domestic_lino_kitchen",
+            "standard_domestic_lino_bathroom", "standard_domestic_landscaping_palette",
+        },
+        terrain = {
+            ["ù"] = "t_region_groundcover_urban",
+            _ = { parameter = "linoleum_color_bathroom", fallback = "t_linoleum_gray" },
+            [","] = { parameter = "linoleum_color_kitchen", fallback = "t_linoleum_gray" },
+            ["é"] = { parameter = "linoleum_color_kitchen", fallback = "t_linoleum_gray" },
+            T = { parameter = "linoleum_color_kitchen", fallback = "t_linoleum_gray" },
+            A = { parameter = "linoleum_color_kitchen", fallback = "t_linoleum_gray" },
+            Y = { parameter = "linoleum_color_kitchen", fallback = "t_linoleum_gray" },
+        },
+        furniture = { ["ù"] = "f_region_weed", Y = "f_indoor_plant_y" },
+    },
+}

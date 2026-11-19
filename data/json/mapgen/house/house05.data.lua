@@ -217,3 +217,62 @@ ccb.content.define_mapgen {
         monster_group_placements = { { group = "GROUP_ZOMBIE", x = { 2, 21 }, y = { 2, 21 }, chance = 2 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_05",
+    layout = {
+        rows = {
+            "                        ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            " ,,,,,,,,,,,,,,,,,,,,,, ",
+            "                        ",
+        },
+        nested = { { x = 0, y = 0, id = { parameter = "house_05_variant", fallback = "house_05_normal" } } },
+        fill_terrain = "t_region_groundcover_urban",
+        terrain = { [","] = "t_floor" },
+        palettes = { "house_05_variant_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "house_05_basement",
+    layout = {
+        nested = {
+            {
+                x = 0,
+                y = 0,
+                id = {
+                    select = { parameter = "house_05_variant", fallback = "house_05_normal" },
+                    cases = {
+                        house_05_normal = "house_05_basement_normal",
+                        house_05_construction = "house_05_basement_empty",
+                    },
+                },
+            },
+        },
+        fill_terrain = "t_thconc_floor",
+        palettes = { "house_05_variant_palette" },
+    },
+}

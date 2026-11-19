@@ -35,3 +35,53 @@ ccb.content.define_mapgen {
         fill_terrain = "t_shingle_flat_roof",
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "bungalow18",
+    layout = {
+        rows = {
+            "................_______.",
+            "................_______.",
+            "...............p_______.",
+            "..[........[...._______.",
+            "............----_______.",
+            "............----_______.",
+            ".%%%...%%%..--.._______.",
+            ".##o####oo##o*#########.",
+            ".#B~t|@¤  d|i |Lq|D zD#.",
+            ".#B~S|@   d|i +  ||+||#.",
+            ".#~~8| h  ||? ||||y  ¤#.",
+            "^#Q~8|rrr +   + U|d @@o.",
+            ".#|+|||||||y  |zU|d @@o.",
+            ".oy  b yRRR   ||||   ¤#.",
+            ".oy           T  +    #.",
+            ".#|+||           |||||#^",
+            ".#W~Z|  R|         666#.",
+            ".#||||  R|    h |    7#.",
+            ".#  xx  T|a hff |& J 4#.",
+            ".ol     E|   ffh|Y J 2o.",
+            ".ol      |    h      2o.",
+            ".# sHHHsy|VV      F5O1#.",
+            ".##oo#######oo#:¶:#####.",
+            "...............---......",
+        },
+        nested = { { x = 5, y = 1, id = "rolling_trash_can_1x1" } },
+        item_groups = { ["?"] = { group = "clothing_outdoor_shoes", chance = 50, repetitions = { 1, 3 } } },
+        loot_placements = {
+            { id = "television", x = { 4, 5 }, y = 18 },
+            { group = "SUS_cooking_bookcase", x = 17, y = 18 },
+        },
+        vehicle_placements = { { id = "car", x = 18, y = 2, chance = 15, rotation = 270 } },
+        palettes = {
+            "domestic_general_construction_and_variant_palette", "standard_domestic_lino_bathroom",
+            "standard_domestic_landscaping_palette",
+        },
+        fill_terrain = "t_floor_waxed",
+        terrain = {
+            Z = { parameter = "linoleum_color_bathroom", fallback = "t_linoleum_gray" },
+            W = { parameter = "linoleum_color_bathroom", fallback = "t_linoleum_gray" },
+        },
+        furniture = { ["&"] = "f_bookcase", ["?"] = "f_rack" },
+    },
+}
