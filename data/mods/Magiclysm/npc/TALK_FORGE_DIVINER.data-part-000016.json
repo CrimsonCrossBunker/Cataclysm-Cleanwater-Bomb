@@ -1,0 +1,22 @@
+[
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_LOVECRAFTIAN",
+    "type": "talk_topic",
+    "dynamic_line": "There are these city-sized creatures called Void Leviathans that live in the vast nether regions between realities.  Sometimes they used to wash up onto Earths that had recently had a Cataclysm.  Caused all kinds of trouble, they did, so Valzain made it so they would spawn underground instead.  I can mark the marooned corpse of one such creature on your map for one denarius.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_LOVECRAFTIAN" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  }
+]

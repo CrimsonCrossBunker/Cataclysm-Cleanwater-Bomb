@@ -1,0 +1,102 @@
+[
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_MI_GO_ENCAMPMENT",
+    "type": "talk_topic",
+    "dynamic_line": "Have you seen mi-go architecture?  They make these living, organic structures out of resin.  Kind of cool.  And disturbing, I guess.  Of course, they'll cut you to pieces if you gawk at it too long.  I'll mark the location of one of these places on your map for one denarius.  I heard a story, not sure if it was true, but allegedly one guy tried to use the mi-go building resin as armor.  Apparently, it bore into the poor guy's flesh!  Like lichen!  His friends tried to tear it off, but it wouldn't bulge.  He was in so much pain they decided to put him out of his misery.  But they couldn't do it, because the armor was too good!  So I guess that in a sense it worked.  Heh.  The mental image still keeps me awake at night, occasionally.  And now you have it too.  You're welcome.",
+    "responses": [
+      {
+        "text": "Uh, sure.  Thanks?  It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_MI_GO_ENCAMPMENT" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_MI_GO_TOWER",
+    "type": "talk_topic",
+    "dynamic_line": "The mi-go seem to abduct humans and animals for some alien purpose, and then build these towers for their spaceships to dock with to move the prisoners off-world.  Did I mention they have space ships?  Well, I've never actually seen one dock with a tower, but still.  I'll mark such a tower on your map for one denarius.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_MI_GO_TOWER" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_TRIFFID",
+    "type": "talk_topic",
+    "dynamic_line": "Right.  Extradimensional intelligent plants with a mean streak.  They seem to have a method of traveling from reality to reality without traversing the hazards between.  Interesting, no?  I'd ask them how they do it but I don't think I could get a word in edgewise before they cut me to pieces.  I'll mark one of their groves on your map for one denarius.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_MI_GO_TOWER" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_KRAKEN",
+    "type": "talk_topic",
+    "dynamic_line": "It seems that a group of mutated cephalopods have set up camp in a cave near the water.  I don't know what they're up to, but if you want to go and investigate I'll mark the cave on your map for one denarius.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_KRAKEN" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_SLIME",
+    "type": "talk_topic",
+    "dynamic_line": "Do you like slime?  Do you like living slime that tries to eat you?  Do you wish you were surrounded by lots and lots and lots of it?  Then perhaps this place is the place for you.  I'll mark the place on your map for one denarius.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_SLIME" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  }
+]

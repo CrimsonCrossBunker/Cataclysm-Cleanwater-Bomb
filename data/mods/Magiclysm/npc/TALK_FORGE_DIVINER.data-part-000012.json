@@ -1,0 +1,82 @@
+[
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_GOBLIN_ENCAMPMENT",
+    "type": "talk_topic",
+    "dynamic_line": "You've got a long walk deep into the forest ahead of you.  Oh, and did I mention the wargs?  They've got these wargs that are absolutely adorable.  Of course they'll maul you if you try to pet them, but the temptation is always there.  I'll mark one of their camps on your map for one denarius.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_GOBLIN_ENCAMPMENT" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_GOBLIN_OUTPOST",
+    "type": "talk_topic",
+    "dynamic_line": "Contrary to popular belief, goblins are not actually orcs.  Its the other way around.  Orcs are goblins who have taken one too many unlabeled potions and lived to tell the tale.  Sometimes this awakens powers much like my own.  Well, not exactly, if it did I'd be out of a job faster than a Magus could cast Phase Door.  Luckily for you, you shouldn't have to delve too deep into a forest to see for yourself.  I'll mark one of their outposts on your map for one denarius.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_GOBLIN_OUTPOST" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_SWAMP_DRAGON",
+    "type": "talk_topic",
+    "dynamic_line": "Oh, fancy yourself a dragon slayer, eh?  It's my understanding they use a lot of acid, so be ready for that.  And remember that the body parts of dragons are quite valuable.  Even the blood, so you might wanna bring something to keep said blood in, and bleed the corpses before you butcher.  I'll mark it on your map for one denarius.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_SWAMP_DRAGON" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_BALROG",
+    "type": "talk_topic",
+    "dynamic_line": "Now there is not a lot I can tell you about this one.  There is some kind of demonic beast living in this cave.  But it only surfaces occasionally, and the heavy metals in the cave walls interfere with my scrying.  There might be treasure down there, or there might not be.  But there is certain to be danger.  I'll mark it on your map for one denarius.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_BALROG" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  }
+]

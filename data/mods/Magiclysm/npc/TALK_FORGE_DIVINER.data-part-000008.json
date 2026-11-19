@@ -1,0 +1,62 @@
+[
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_FUNGAL_BLOOM",
+    "type": "talk_topic",
+    "dynamic_line": "I can almost smell them through the crystal ball.  Disturbing.  I'll mark the location on your map for one denarius.  Good luck.  You might need it.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_FUNGAL_BLOOM" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_FUNGAL_TOWER",
+    "type": "talk_topic",
+    "dynamic_line": "Scrying on these things makes me uneasy, but I'll mark the location on your map for one denarius.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_FUNGAL_TOWER" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_FORGE_LORD_DIVINER_FUNGAL_FLOWERS",
+    "type": "talk_topic",
+    "dynamic_line": "I can't even number the times I've scraped this mess off of the forge.  It's like walking into a spider web at an hundred miles an hour, and the web also smells terribly and tries to eat you.  At least the magical torches the forgemaster has installed help a bit.  See, the Mycus fears fire, and for good reasons.  Anyways, I'll mark the location on your map for one denarius.  Don't eat the fruit.",
+    "responses": [
+      {
+        "text": "It's a deal.",
+        "topic": "TALK_DONE",
+        "condition": { "u_has_item": "denarius" },
+        "effect": [ { "assign_mission": "MISSION_FORGE_DIVINER_FUNGAL_FLOWERS" }, { "u_consume_item": "denarius" } ]
+      },
+      {
+        "text": "I can't afford that right now.",
+        "topic": "TALK_FORGE_LORD_DIVINER_GET_MONEY",
+        "condition": { "not": { "u_has_item": "denarius" } }
+      },
+      { "text": "About something else…", "topic": "TALK_NONE" },
+      { "text": "Nevermind.", "topic": "TALK_DONE" }
+    ]
+  }
+]
