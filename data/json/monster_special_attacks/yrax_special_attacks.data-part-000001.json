@@ -1,0 +1,16 @@
+[
+  {
+    "id": "quadraphract_control",
+    "type": "SPELL",
+    "name": { "str": "Quadraphract control", "//~": "NO_I18N" },
+    "description": { "str": "Quadraphracts control themselves using this one.", "//~": "NO_I18N" },
+    "valid_targets": [ "self" ],
+    "flags": [ "SILENT", "NO_EXPLOSION_SFX" ],
+    "shape": "blast",
+    "min_range": 1,
+    "max_range": 1,
+    "message": "",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_QUADRAPHRACT_CONTROL"
+  }
+]

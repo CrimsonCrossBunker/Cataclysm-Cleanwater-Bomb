@@ -1,0 +1,143 @@
+local ccb = require("ccb")
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "centipede_mom_summon",
+    name = ccb.content.text_without_extraction("Summon Centipede"),
+    description = ccb.content.text_without_extraction("Summons a small, sometimes pissed off centipede."),
+    flags = {
+        "HOSTILE_SUMMON",
+        "PERMANENT",
+        "RANDOM_TARGET",
+        "NO_PROJECTILE",
+        "NO_EXPLOSION_SFX",
+        "SPAWN_GROUP",
+    },
+    valid_targets = { "ground" },
+    base_casting_time = 200,
+    min_range = 1,
+    max_range = 3,
+    min_damage = 1,
+    max_damage = 1,
+    min_aoe = 1,
+    max_aoe = 1,
+    shape = "line",
+    effect = "summon",
+    effect_data = "GROUP_CENTIPEDE_MOM_SUMMON",
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "phase_shrike_teleport",
+    name = ccb.content.text_without_extraction("Phase Skulker Teleport"),
+    description = ccb.content.text_without_extraction("Electric explosion followed by a teleport."),
+    extra_spells = { { spell = "phase_skulker_teleport", self = true } },
+    valid_targets = { "hostile", "ground", "self", "ally" },
+    effect = "attack",
+    shape = "blast",
+    flags = { "LOUD", "RANDOM_DAMAGE", "RANDOM_AOE", "NO_PROJECTILE", "NO_EXPLOSION_SFX" },
+    base_casting_time = 100,
+    min_damage = 5,
+    max_damage = 10,
+    damage_type = "electric",
+    min_aoe = 4,
+    max_aoe = 8,
+    min_range = 2,
+    max_range = 6,
+    field = "fd_electricity",
+    field_chance = 3,
+    min_field_intensity = 1,
+    max_field_intensity = 3,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "spur_shrill",
+    name = ccb.content.text_without_extraction("Spur Shrill"),
+    description = ccb.content.text_without_extraction("Heals nearby scrap swarms."),
+    valid_targets = { "hostile", "ground", "self", "ally" },
+    targeted_monsters = { "mon_shrapnel_swarm" },
+    effect = "attack",
+    shape = "blast",
+    flags = { "LOUD", "RANDOM_DAMAGE", "NO_PROJECTILE", "NO_EXPLOSION_SFX" },
+    base_casting_time = 100,
+    min_damage = -50,
+    max_damage = -100,
+    min_aoe = 12,
+    max_aoe = 12,
+    min_range = 2,
+    max_range = 6,
+    field = "fd_biolum",
+    field_chance = 2,
+    min_field_intensity = 1,
+    max_field_intensity = 3,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "shock_cone",
+    name = ccb.content.text_without_extraction("an arc of electricity"),
+    description = ccb.content.text_without_extraction("Spawns electric fields."),
+    effect = "attack",
+    shape = "cone",
+    valid_targets = { "hostile", "ground" },
+    max_level = 5,
+    min_damage = 0,
+    max_damage = 0,
+    min_aoe = 10,
+    max_aoe = 15,
+    aoe_increment = 1,
+    min_range = 8,
+    max_range = 16,
+    range_increment = 2,
+    base_casting_time = 50,
+    field = "fd_electricity",
+    min_field_intensity = 3,
+    max_field_intensity = 9,
+    field_intensity_increment = 1,
+    field_intensity_variance = 1,
+    field_chance = 4,
+    damage_type = "electric",
+    sound_type = "combat",
+    sound_id = "fire_gun",
+    sound_variant = "bio_lightning",
+    sound_description = ccb.content.text("a crackle"),
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "shock_blast",
+    name = ccb.content.text_without_extraction("Shock Blast"),
+    description = ccb.content.text_without_extraction("Spawns electric fields in a blast"),
+    base_casting_time = 10,
+    effect = "attack",
+    shape = "blast",
+    valid_targets = { "self", "ground" },
+    flags = { "LOUD", "SPLIT_DAMAGE" },
+    damage_type = "electric",
+    max_level = 4,
+    min_damage = 4,
+    max_damage = 16,
+    damage_increment = 4,
+    min_range = 1,
+    max_range = 5,
+    range_increment = 1,
+    min_aoe = 1,
+    max_aoe = 5,
+    aoe_increment = 1,
+    field = "fd_electricity",
+    min_field_intensity = 3,
+    max_field_intensity = 9,
+    field_intensity_increment = 2,
+    field_chance = 2,
+    field_intensity_variance = 0.2,
+    effect_data = "maimed_capacitor",
+    min_duration = 2000,
+    max_duration = 2000,
+    extra_spells = { { spell = "hit_and_run", self = true } },
+}

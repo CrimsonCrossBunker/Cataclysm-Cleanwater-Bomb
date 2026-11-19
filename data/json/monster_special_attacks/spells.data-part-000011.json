@@ -1,0 +1,10 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_guilt_attack",
+    "effect": [
+      { "math": [ "portal_dungeon_carry_strength = max(portal_dungeon_carry_strength - 1, -75)" ] },
+      { "u_add_effect": "strengthened_gravity", "duration": [ "4 hours", "6 hours" ] }
+    ]
+  }
+]

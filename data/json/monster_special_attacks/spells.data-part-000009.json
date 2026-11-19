@@ -1,0 +1,123 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_mon_reflection_attack",
+    "effect": {
+      "switch": { "math": [ "distance('u', 'npc')" ] },
+      "cases": [
+        {
+          "case": 0,
+          "effect": [
+            { "u_message": "Your reflection feasts directly on your essence." },
+            { "math": [ "u_val('sleepiness') = min(u_val('sleepiness') + portal_dungeon_reflect_strength, 1200)" ] },
+            { "math": [ "portal_dungeon_reflect_strength += 3" ] }
+          ]
+        },
+        {
+          "case": 2,
+          "effect": [
+            { "u_message": "Your reflection uses your bond to feast on your essence." },
+            { "math": [ "u_val('sleepiness') = min(u_val('sleepiness') + portal_dungeon_reflect_strength, 1200)" ] },
+            { "math": [ "portal_dungeon_reflect_strength++" ] }
+          ]
+        },
+        {
+          "case": 8,
+          "effect": [
+            {
+              "switch": { "math": [ "rand(10)" ] },
+              "cases": [
+                {
+                  "case": 0,
+                  "effect": [
+                    { "u_message": "Your reflection clears the way between you two." },
+                    { "u_location_variable": { "global_val": "first" } },
+                    { "npc_location_variable": { "global_val": "second" } },
+                    {
+                      "transform_line": "clear_portal_walls",
+                      "first": { "global_val": "first" },
+                      "second": { "global_val": "second" }
+                    }
+                  ]
+                },
+                {
+                  "case": 5,
+                  "effect": {
+                    "if": {
+                      "and": [
+                        { "math": [ "portal_dungeon_level > 0" ] },
+                        { "math": [ "u_monsters_nearby('mon_guilt', 'location': dungeon_loc) < 1" ] }
+                      ]
+                    },
+                    "then": {
+                      "u_spawn_monster": "mon_guilt",
+                      "real_count": 1,
+                      "min_radius": 2,
+                      "max_radius": 4,
+                      "spawn_message": "Something deep inside you is manifested physically."
+                    }
+                  }
+                },
+                {
+                  "case": 8,
+                  "effect": {
+                    "if": {
+                      "and": [
+                        { "math": [ "portal_dungeon_level > 0" ] },
+                        { "math": [ "u_monsters_nearby('mon_sloth', 'location': dungeon_loc) < 1" ] }
+                      ]
+                    },
+                    "then": {
+                      "u_spawn_monster": "mon_sloth",
+                      "real_count": 1,
+                      "min_radius": 2,
+                      "max_radius": 4,
+                      "spawn_message": "Something deep inside you is manifested physically."
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "type": "SPELL",
+    "id": "mon_XEDRA_officer_banish",
+    "name": { "str": "Officer banish", "//~": "NO_I18N" },
+    "description": { "str": "Stops the haunting.", "//~": "NO_I18N" },
+    "valid_targets": [ "self", "ground" ],
+    "max_level": 1,
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS" ],
+    "base_casting_time": 75,
+    "min_range": 15,
+    "max_range": 15,
+    "shape": "blast",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_HAUNTING_QUEUE_STOP"
+  },
+  {
+    "type": "SPELL",
+    "id": "mon_tainted_shadow_revive",
+    "name": { "str": "Tainted Shadow Revive", "//~": "NO_I18N" },
+    "description": { "str": "Revives the tainted shadow.", "//~": "NO_I18N" },
+    "valid_targets": [ "self", "ground" ],
+    "max_level": 1,
+    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "base_casting_time": 75,
+    "min_range": 15,
+    "max_range": 15,
+    "shape": "blast",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_PORTAL_STORM_SHADOW_RESPAWN"
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_PORTAL_STORM_SHADOW_RESPAWN",
+    "condition": { "x_in_y_chance": { "x": 8, "y": 10 } },
+    "effect": [ { "run_eocs": "EOC_PORTAL_STORM_SHADOW_SPAWN", "time_in_future": [ "30 seconds", "1 minutes" ] } ],
+    "false_effect": [ { "u_lose_trait": "TAINTED_SHADOW" } ]
+  }
+]
