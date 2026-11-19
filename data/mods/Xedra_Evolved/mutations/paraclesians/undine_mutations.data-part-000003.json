@@ -1,0 +1,17 @@
+[
+  {
+    "type": "mutation",
+    "id": "UNDINE_RIVER_MAPPING",
+    "name": { "str": "All Rivers Flow to the Sea" },
+    "description": "Water falls as rain, flows into streams, and then into rivers to the sea, and rises as clouds to fall as rain once again.  While submerged in a river, lake, or the ocean, the Undine can exploit this connection to locate other sources of water.",
+    "points": 3,
+    "visibility": 0,
+    "ugliness": 0,
+    "category": [ "UNDINE" ],
+    "purifiable": false,
+    "prereqs": [ "UNDINE_EYES" ],
+    "prereqs2": [ "BREATH_UNDERWATER" ],
+    "active": true,
+    "activated_eocs": [ "EOC_UNDINE_RIVER_MAPPING" ]
+  }
+]

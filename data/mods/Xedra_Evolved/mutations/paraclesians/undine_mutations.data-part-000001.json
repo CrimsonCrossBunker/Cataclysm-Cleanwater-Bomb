@@ -1,0 +1,19 @@
+[
+  {
+    "type": "mutation",
+    "id": "UNDINE_ESCAPE_GRABS",
+    "name": { "str": "Flow Like Water" },
+    "points": 2,
+    "visibility": 0,
+    "ugliness": 0,
+    "description": "With the Undine's more fluid skin has come more fluid motion.  Activate this trait to immediately escape a grab and suffer less damage from falls for a few seconds.",
+    "prereqs": [ "UNDINE_SKIN_2", "UNDINE_SKIN_3" ],
+    "category": [ "UNDINE" ],
+    "purifiable": false,
+    "active": true,
+    "activated_is_setup": false,
+    "cost": 2,
+    "thirst": true,
+    "activated_eocs": [ "EOC_UNDINE_ESCAPE_GRABS" ]
+  }
+]
