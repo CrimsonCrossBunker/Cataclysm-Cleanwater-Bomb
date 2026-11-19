@@ -1,0 +1,32 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_BEGGAR_5_TRAVEL1",
+    "dynamic_line": {
+      "gendered_line": "Well now, that's quite a kind offer, and I appreciate you looking past my full-body pubic hair.  Sorry though.  I've come to feel sort of responsible for this little gaggle of squatters.  As long as I'm the only one providing for them, I don't think I can leave.",
+      "relevant_genders": [ "u" ]
+    },
+    "responses": [
+      {
+        "condition": {
+          "and": [
+            { "compare_string": [ "yes", { "u_val": "general_recruit_reena_recruited" } ] },
+            { "compare_string": [ "yes", { "u_val": "general_recruit_luo_recruited" } ] },
+            { "compare_string": [ "yes", { "u_val": "general_recruit_brendan_recruited" } ] }
+          ]
+        },
+        "text": "I've spoken to all your friends, and except for Dave, they're good to go.  Dave wants to stay here.  How about you?",
+        "topic": "TALK_REFUGEE_BEGGAR_5_TRAVEL2"
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_REFUGEE_BEGGAR_5_TRAVEL2",
+    "dynamic_line": "Huh.  Getting those three to sign on to a suicide mission is quite the feat… sounds like you're pretty dedicated to this.  OK, I'm with you.  Let's round up the others and hit the road.",
+    "speaker_effect": [ { "effect": { "u_add_var": "general_recruit_beggars_recruited", "value": "yes" } } ],
+    "responses": [ { "text": "Right.  <lets_go>", "topic": "TALK_DONE", "effect": "follow" } ]
+  }
+]
