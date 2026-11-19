@@ -1,0 +1,91 @@
+[
+  {
+    "id": "TALK_GODCO_Darryl_Trade_Eggs",
+    "type": "talk_topic",
+    "dynamic_line": "It's finished, and I've got eggs!  I'd be willing to sell ya some, a dozen for seven icons.",
+    "responses": [
+      {
+        "text": "I'll buy some.",
+        "topic": "TALK_GODCO_Darryl_1",
+        "condition": { "u_has_items": { "item": "icon", "count": 7 } },
+        "effect": [ { "u_sell_item": "icon", "count": 7 }, { "u_spawn_item": "egg_chicken", "count": 12 } ]
+      },
+      { "text": "That's a bit rich for my blood.  <end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "id": "TALK_GODCO_Darryl_Trade2",
+    "type": "talk_topic",
+    "dynamic_line": "All right, this is what I've got:  I can give cucumber, barley or blackberry seeds for one icon; carrot, buckwheat or cranberry seeds for two icons; oat, sugar beet or potato seeds for three icons.",
+    "responses": [
+      {
+        "text": "I'll buy cucumber seeds.",
+        "topic": "TALK_GODCO_Darryl_Trade2",
+        "condition": { "u_has_items": { "item": "icon", "count": 1 } },
+        "effect": [ { "u_sell_item": "icon", "count": 1 }, { "u_spawn_item": "seed_cucumber", "count": 25 } ]
+      },
+      {
+        "text": "I'll buy barley seeds.",
+        "topic": "TALK_GODCO_Darryl_Trade2",
+        "condition": { "u_has_items": { "item": "icon", "count": 1 } },
+        "effect": [ { "u_sell_item": "icon", "count": 1 }, { "u_spawn_item": "seed_barley", "count": 25 } ]
+      },
+      {
+        "text": "I'll buy blackberry seeds.",
+        "topic": "TALK_GODCO_Darryl_Trade2",
+        "condition": { "u_has_items": { "item": "icon", "count": 1 } },
+        "effect": [ { "u_sell_item": "icon", "count": 1 }, { "u_spawn_item": "seed_blackberries", "count": 25 } ]
+      },
+      {
+        "text": "I'll buy carrot seeds.",
+        "topic": "TALK_GODCO_Darryl_Trade2",
+        "condition": { "u_has_items": { "item": "icon", "count": 2 } },
+        "effect": [ { "u_sell_item": "icon", "count": 2 }, { "u_spawn_item": "seed_carrot", "count": 25 } ]
+      },
+      {
+        "text": "I'll buy buckwheat seeds.",
+        "topic": "TALK_GODCO_Darryl_Trade2",
+        "condition": { "u_has_items": { "item": "icon", "count": 2 } },
+        "effect": [ { "u_sell_item": "icon", "count": 2 }, { "u_spawn_item": "seed_buckwheat", "count": 25 } ]
+      },
+      {
+        "text": "I'll buy cranberry seeds.",
+        "topic": "TALK_GODCO_Darryl_Trade2",
+        "condition": { "u_has_items": { "item": "icon", "count": 2 } },
+        "effect": [ { "u_sell_item": "icon", "count": 2 }, { "u_spawn_item": "seed_cranberries", "count": 25 } ]
+      },
+      {
+        "text": "I'll buy oat seeds.",
+        "topic": "TALK_GODCO_Darryl_Trade2",
+        "condition": { "u_has_items": { "item": "icon", "count": 3 } },
+        "effect": [ { "u_sell_item": "icon", "count": 3 }, { "u_spawn_item": "seed_oats", "count": 25 } ]
+      },
+      {
+        "text": "I'll buy sugar beet seeds.",
+        "topic": "TALK_GODCO_Darryl_Trade2",
+        "condition": { "u_has_items": { "item": "icon", "count": 3 } },
+        "effect": [ { "u_sell_item": "icon", "count": 3 }, { "u_spawn_item": "seed_sugar_beet", "count": 25 } ]
+      },
+      {
+        "text": "I'll buy potato seeds.",
+        "topic": "TALK_GODCO_Darryl_Trade2",
+        "condition": { "u_has_items": { "item": "icon", "count": 3 } },
+        "effect": [ { "u_sell_item": "icon", "count": 3 }, { "u_spawn_item": "seed_potato_raw", "count": 25 } ]
+      },
+      {
+        "text": "Can't you just give them to me for free?  You said you didn't need them.",
+        "condition": { "not": { "u_has_effect": "godco_darryl_bartered" } },
+        "trial": { "type": "PERSUADE", "difficulty": 25, "mod": [ [ "trust", 5 ] ] },
+        "success": {
+          "topic": "TALK_GODCO_Darryl_BarterSuccess",
+          "effect": [
+            { "npc_add_effect": "godco_darryl_bartered", "duration": "PERMANENT" },
+            { "u_spawn_item": "seed_potato_raw", "count": 25 }
+          ]
+        },
+        "failure": { "topic": "TALK_GODCO_Darryl_BarterFail", "opinion": { "trust": -6 } }
+      },
+      { "text": "That's a bit rich for my blood.  <end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
