@@ -68,35 +68,5 @@
         "condition": { "not": { "compare_string": [ "yes", { "npc_val": "player_has_met" } ] } }
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_SALVOR_RIPPER_INTRO_UNSKILLED",
-    "dynamic_line": "Huh?  You barely look like you know your way around a computer, let alone know what I do here.  Why don't you go bother someone else?",
-    "responses": [
-      {
-        "text": "Yeah, I was hoping to start learning here.",
-        "trial": { "type": "PERSUADE", "difficulty": 50 },
-        "success": { "topic": "TALK_SALVOR_RIPPER_PERSUADE_SUCCESS" },
-        "failure": { "topic": "TALK_SALVOR_RIPPER_FAIL" }
-      },
-      {
-        "text": "[LIE] I know a thing or two.",
-        "trial": { "type": "LIE", "difficulty": 50 },
-        "success": { "topic": "TALK_SALVOR_RIPPER_PERSUADE_SUCCESS" },
-        "failure": { "topic": "TALK_SALVOR_RIPPER_FAIL" }
-      },
-      {
-        "text": "[$400] My money spends just as well as anyone's.",
-        "trial": { "type": "PERSUADE", "difficulty": 90 },
-        "success": { "topic": "TALK_SALVOR_RIPPER_BRIBE_SUCCESS" },
-        "failure": { "topic": "TALK_SALVOR_RIPPER_FAIL" }
-      },
-      {
-        "text": "Maybe I should…",
-        "effect": { "npc_first_topic": "TALK_SALVOR_RIPPER_IGNORE" },
-        "topic": "TALK_DONE"
-      }
-    ]
   }
 ]

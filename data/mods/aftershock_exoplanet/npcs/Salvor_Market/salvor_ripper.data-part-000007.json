@@ -1,0 +1,28 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_SALVOR_RIPPER_MERCURIAL_IDENTS_SELL",
+    "dynamic_line": "Done.",
+    "speaker_effect": { "effect": [ { "math": [ "u_val('cash') += 6000000" ] } ] },
+    "responses": [
+      {
+        "text": "A pleasure doing business.",
+        "effect": [ { "u_sell_item": "ruin_data_mercurial_id" } ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_SALVOR_RIPPER_MERCURIAL_IDENTS_FAVOUR",
+    "speaker_effect": { "effect": [ { "math": [ "u_val('cash') += 2000000" ] } ] },
+    "dynamic_line": "For sure.  Just wait to see the things I'll cook up with these.",
+    "responses": [
+      {
+        "text": "A pleasure doing business.",
+        "effect": [ { "u_sell_item": "ruin_data_mercurial_id" } ],
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]
