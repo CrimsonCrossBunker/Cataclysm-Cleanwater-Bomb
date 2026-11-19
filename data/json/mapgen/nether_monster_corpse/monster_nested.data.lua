@@ -152,3 +152,61 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "nm_portal_incursion1",
+    layout = {
+        size = { width = 7, height = 7 },
+        rows = {
+            "  r   r",
+            "aq ar a",
+            " raQra ",
+            " arPaq ",
+            " aQrraa",
+            "aqraar ",
+            "   ar  ",
+        },
+        palettes = { "nether_monster_palette" },
+        terrain = {},
+        furniture = { r = "f_rubble_rock", a = "f_ash" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_placements = {
+            {
+                group = "GROUP_NETHER_CORPSE_PORTAL",
+                x = { 2, 5 },
+                y = { 2, 5 },
+                repetitions = { 2, 5 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "nm_portal_incursion2",
+    layout = {
+        size = { width = 7, height = 7 },
+        rows = {
+            "r aar r",
+            "ra raaa",
+            " rQPar ",
+            "arPPPQa",
+            " QrPqq ",
+            "rqaarrr",
+            " r aa  ",
+        },
+        palettes = { "nether_monster_palette" },
+        terrain = {},
+        furniture = { r = "f_rubble_rock", a = "f_ash" },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        monster_placements = {
+            {
+                group = "GROUP_NETHER_CORPSE_PORTAL",
+                x = { 2, 5 },
+                y = { 2, 5 },
+                repetitions = { 3, 6 },
+            },
+        },
+    },
+}
