@@ -9,17 +9,5 @@
     "mission": "GUARD_PATROL",
     "chat": "TALK_OLD_GUARD_RED_SOLDIER",
     "faction": "old_guard"
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_OLD_GUARD_RED_SOLDIER",
-    "dynamic_line": [
-      "I'm afraid I can't talk now.",
-      "Stay safe out there.",
-      "Kill all dinosaurs.",
-      "Welcome to whatever this is.",
-      "I'm supposed to direct all questions to my leadership, that's Red over there."
-    ],
-    "responses": [ { "text": "Sure sure…", "topic": "TALK_DONE" } ]
   }
 ]
