@@ -1,28 +1,5 @@
 [
   {
-    "id": "mon_feral_wizard_default",
-    "type": "MONSTER",
-    "copy-from": "mon_feral_human_pipe",
-    "//": "interstitial copy-from to edit flags and special attacks appropriately",
-    "special_attacks": [ [ "BROWSE", 100 ], [ "EAT_FOOD", 100 ] ],
-    "zombify_into": "mon_zombie_thaumic",
-    "flags": [
-      "SEES",
-      "HEARS",
-      "SMELLS",
-      "WARM",
-      "BASHES",
-      "GROUP_BASH",
-      "HUMAN",
-      "CAN_OPEN_DOORS",
-      "PATH_AVOID_DANGER",
-      "PATH_AVOID_FIRE",
-      "PRIORITIZE_TARGETS",
-      "EATS",
-      "MAGIC_USER"
-    ]
-  },
-  {
     "id": "mon_feral_human_magician",
     "type": "MONSTER",
     "name": { "str": "feral wizard" },
