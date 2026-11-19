@@ -9,20 +9,5 @@
     "mission": "NULL",
     "chat": "TALK_CAMP_GUARD",
     "faction": "the_great_library"
-  },
-  {
-    "id": "TALK_CAMP_GUARD",
-    "type": "talk_topic",
-    "dynamic_line": [
-      "I'm not in charge here, you're looking for someone else…",
-      "Stay alert, there's trouble in these woods.",
-      "Just on lookout, move along.",
-      "Don't distract me.  I'm on watch.",
-      { "is_day": [ "Hello.  Welcome to the library." ], "no": [ "Good evening.  Welcome to the library." ] }
-    ],
-    "responses": [
-      { "text": "How did you get stuck with guard duty?", "topic": "TALK_GUARD_CAMP_BACKGROUND" },
-      { "text": "Don't mind me…", "topic": "TALK_DONE" }
-    ]
   }
 ]
