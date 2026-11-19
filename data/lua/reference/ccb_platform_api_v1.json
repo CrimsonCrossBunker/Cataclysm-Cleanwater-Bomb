@@ -7,7 +7,7 @@
     "root_class": "CcbPlatformV1"
   },
   "lua_luals": {
-    "class_count": 1208,
+    "class_count": 1213,
     "classes": [
       {
         "fields": [
@@ -34135,6 +34135,496 @@
       {
         "fields": [
           {
+            "line": 17703,
+            "name": "end_spell",
+            "type": "string"
+          },
+          {
+            "line": 17704,
+            "name": "interrupt_spell",
+            "type": "string"
+          },
+          {
+            "line": 17702,
+            "name": "spell",
+            "type": "string"
+          },
+          {
+            "line": 17701,
+            "name": "turns",
+            "type": "integer"
+          },
+          {
+            "line": 17705,
+            "name": "uses_energy",
+            "type": "boolean"
+          }
+        ],
+        "name": "StaticSpellChannel"
+      },
+      {
+        "fields": [
+          {
+            "line": 17698,
+            "name": "color",
+            "type": "string"
+          },
+          {
+            "line": 17696,
+            "name": "source",
+            "type": "string"
+          },
+          {
+            "line": 17697,
+            "name": "vitamin",
+            "type": "string"
+          }
+        ],
+        "name": "StaticSpellEnergy"
+      },
+      {
+        "fields": [
+          {
+            "line": 17711,
+            "name": "max_level",
+            "type": "integer"
+          },
+          {
+            "line": 17713,
+            "name": "message",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17710,
+            "name": "min_level",
+            "type": "integer"
+          },
+          {
+            "line": 17714,
+            "name": "npc_message",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17712,
+            "name": "once_in",
+            "type": "integer"
+          },
+          {
+            "line": 17709,
+            "name": "self",
+            "type": "boolean"
+          },
+          {
+            "line": 17708,
+            "name": "spell",
+            "type": "string"
+          }
+        ],
+        "name": "StaticSpellFollowup"
+      },
+      {
+        "fields": [
+          {
+            "line": 17718,
+            "name": "level",
+            "type": "integer"
+          },
+          {
+            "line": 17717,
+            "name": "spell",
+            "type": "string"
+          }
+        ],
+        "name": "StaticSpellLearned"
+      },
+      {
+        "fields": [
+          {
+            "line": 17722,
+            "name": "abstract",
+            "type": "string"
+          },
+          {
+            "line": 17765,
+            "name": "accuracy_increment",
+            "type": "number"
+          },
+          {
+            "line": 17752,
+            "name": "affected_bodyparts",
+            "type": "string[]"
+          },
+          {
+            "line": 17774,
+            "name": "aoe_increment",
+            "type": "number"
+          },
+          {
+            "line": 17794,
+            "name": "base_casting_time",
+            "type": "number"
+          },
+          {
+            "line": 17788,
+            "name": "base_energy_cost",
+            "type": "number"
+          },
+          {
+            "line": 17786,
+            "name": "bash_scaling_increment",
+            "type": "number"
+          },
+          {
+            "line": 17728,
+            "name": "caster_condition_fail_message",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17796,
+            "name": "casting_time_increment",
+            "type": "number"
+          },
+          {
+            "line": 17756,
+            "name": "channel",
+            "type": "StaticSpellChannel"
+          },
+          {
+            "line": 17731,
+            "name": "components",
+            "type": "string"
+          },
+          {
+            "line": 17723,
+            "name": "copy_from",
+            "type": "string"
+          },
+          {
+            "line": 17768,
+            "name": "damage_increment",
+            "type": "number"
+          },
+          {
+            "line": 17741,
+            "name": "damage_type",
+            "type": "string"
+          },
+          {
+            "line": 17725,
+            "name": "description",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17791,
+            "name": "difficulty",
+            "type": "number"
+          },
+          {
+            "line": 17777,
+            "name": "dot_increment",
+            "type": "number"
+          },
+          {
+            "line": 17780,
+            "name": "duration_increment",
+            "type": "number"
+          },
+          {
+            "line": 17736,
+            "name": "effect",
+            "type": "string"
+          },
+          {
+            "line": 17737,
+            "name": "effect_data",
+            "type": "string"
+          },
+          {
+            "line": 17790,
+            "name": "energy_increment",
+            "type": "number"
+          },
+          {
+            "line": 17755,
+            "name": "energy_source",
+            "type": "string|StaticSpellEnergy"
+          },
+          {
+            "line": 17744,
+            "name": "exp_for_level_formula",
+            "type": "string"
+          },
+          {
+            "line": 17738,
+            "name": "explosion_light",
+            "type": "string"
+          },
+          {
+            "line": 17753,
+            "name": "extend_flags",
+            "type": "string[]"
+          },
+          {
+            "line": 17757,
+            "name": "extra_spells",
+            "type": "StaticSpellFollowup[]"
+          },
+          {
+            "line": 17739,
+            "name": "field",
+            "type": "string"
+          },
+          {
+            "line": 17759,
+            "name": "field_chance",
+            "type": "number"
+          },
+          {
+            "line": 17761,
+            "name": "field_intensity_increment",
+            "type": "number"
+          },
+          {
+            "line": 17763,
+            "name": "field_intensity_variance",
+            "type": "number"
+          },
+          {
+            "line": 17795,
+            "name": "final_casting_time",
+            "type": "number"
+          },
+          {
+            "line": 17789,
+            "name": "final_energy_cost",
+            "type": "number"
+          },
+          {
+            "line": 17754,
+            "name": "flags",
+            "type": "string|string[]"
+          },
+          {
+            "line": 17743,
+            "name": "get_level_formula",
+            "type": "string"
+          },
+          {
+            "line": 17721,
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "line": 17751,
+            "name": "ignored_species",
+            "type": "string[]"
+          },
+          {
+            "line": 17758,
+            "name": "learned_spells",
+            "type": "StaticSpellLearned[]"
+          },
+          {
+            "line": 17742,
+            "name": "magic_type",
+            "type": "string"
+          },
+          {
+            "line": 17766,
+            "name": "max_accuracy",
+            "type": "number"
+          },
+          {
+            "line": 17775,
+            "name": "max_aoe",
+            "type": "number"
+          },
+          {
+            "line": 17787,
+            "name": "max_bash_scaling",
+            "type": "number"
+          },
+          {
+            "line": 17747,
+            "name": "max_book_level",
+            "type": "integer"
+          },
+          {
+            "line": 17769,
+            "name": "max_damage",
+            "type": "number"
+          },
+          {
+            "line": 17778,
+            "name": "max_dot",
+            "type": "number"
+          },
+          {
+            "line": 17781,
+            "name": "max_duration",
+            "type": "number"
+          },
+          {
+            "line": 17762,
+            "name": "max_field_intensity",
+            "type": "number"
+          },
+          {
+            "line": 17793,
+            "name": "max_level",
+            "type": "number"
+          },
+          {
+            "line": 17784,
+            "name": "max_pierce",
+            "type": "number"
+          },
+          {
+            "line": 17772,
+            "name": "max_range",
+            "type": "number"
+          },
+          {
+            "line": 17726,
+            "name": "message",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17764,
+            "name": "min_accuracy",
+            "type": "number"
+          },
+          {
+            "line": 17773,
+            "name": "min_aoe",
+            "type": "number"
+          },
+          {
+            "line": 17785,
+            "name": "min_bash_scaling",
+            "type": "number"
+          },
+          {
+            "line": 17767,
+            "name": "min_damage",
+            "type": "number"
+          },
+          {
+            "line": 17776,
+            "name": "min_dot",
+            "type": "number"
+          },
+          {
+            "line": 17779,
+            "name": "min_duration",
+            "type": "number"
+          },
+          {
+            "line": 17760,
+            "name": "min_field_intensity",
+            "type": "number"
+          },
+          {
+            "line": 17782,
+            "name": "min_pierce",
+            "type": "number"
+          },
+          {
+            "line": 17770,
+            "name": "min_range",
+            "type": "number"
+          },
+          {
+            "line": 17792,
+            "name": "multiple_projectiles",
+            "type": "number"
+          },
+          {
+            "line": 17724,
+            "name": "name",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17783,
+            "name": "pierce_increment",
+            "type": "number"
+          },
+          {
+            "line": 17771,
+            "name": "range_increment",
+            "type": "number"
+          },
+          {
+            "line": 17735,
+            "name": "shape",
+            "type": "string"
+          },
+          {
+            "line": 17730,
+            "name": "skill",
+            "type": "string"
+          },
+          {
+            "line": 17746,
+            "name": "sound_ambient",
+            "type": "boolean"
+          },
+          {
+            "line": 17727,
+            "name": "sound_description",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17733,
+            "name": "sound_id",
+            "type": "string"
+          },
+          {
+            "line": 17732,
+            "name": "sound_type",
+            "type": "string"
+          },
+          {
+            "line": 17734,
+            "name": "sound_variant",
+            "type": "string"
+          },
+          {
+            "line": 17740,
+            "name": "spell_class",
+            "type": "string"
+          },
+          {
+            "line": 17729,
+            "name": "target_condition_fail_message",
+            "type": "string|LocalizedText"
+          },
+          {
+            "line": 17749,
+            "name": "targeted_monsters",
+            "type": "string[]"
+          },
+          {
+            "line": 17750,
+            "name": "targeted_species",
+            "type": "string[]"
+          },
+          {
+            "line": 17745,
+            "name": "teachable",
+            "type": "boolean"
+          },
+          {
+            "line": 17748,
+            "name": "valid_targets",
+            "type": "string[]"
+          }
+        ],
+        "name": "StaticSpellOptions"
+      },
+      {
+        "fields": [
+          {
             "line": 7719,
             "name": "city_distance",
             "type": "[integer,"
@@ -38788,7 +39278,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1717,
+    "function_count": 1718,
     "functions": [
       {
         "line": "4360",
@@ -42495,6 +42985,12 @@
       {
         "line": "7685",
         "name": "define_proficiency_category",
+        "owner": "CcbPlatformContent",
+        "parameters": "options"
+      },
+      {
+        "line": "17800",
+        "name": "define_spell",
         "owner": "CcbPlatformContent",
         "parameters": "options"
       },
@@ -50026,7 +50522,7 @@
         "lua_name": "LocalizedText",
         "registration": {
           "installer": "platform_v1.install_mod_definition",
-          "line": 391,
+          "line": 392,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },
@@ -50208,7 +50704,7 @@
         "lua_name": "ModDefinition",
         "registration": {
           "installer": "platform_v1.install_mod_definition",
-          "line": 392,
+          "line": 393,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },
@@ -51230,7 +51726,7 @@
         "lua_name": "StaticDialogueAction",
         "registration": {
           "installer": "platform_v1.initialize_state",
-          "line": 607,
+          "line": 608,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },
@@ -51244,7 +51740,7 @@
         "lua_name": "StaticDialoguePredicate",
         "registration": {
           "installer": "platform_v1.initialize_state",
-          "line": 606,
+          "line": 607,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },

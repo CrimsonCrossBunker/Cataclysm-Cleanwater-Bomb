@@ -17691,3 +17691,110 @@ function CcbProficienciesApi.practice(character, id, amount) end
 ---@param options? CcbSpellCastingAdjustmentOptions
 ---@return CcbResult
 function CcbSpellsApi.adjust_casting(character, property, amount, options) end
+
+---@class StaticSpellEnergy
+---@field source string
+---@field vitamin? string
+---@field color? string
+
+---@class StaticSpellChannel
+---@field turns integer
+---@field spell string
+---@field end_spell string
+---@field interrupt_spell? string
+---@field uses_energy? boolean
+
+---@class StaticSpellFollowup
+---@field spell string
+---@field self? boolean
+---@field min_level? integer
+---@field max_level? integer
+---@field once_in? integer
+---@field message? string|LocalizedText
+---@field npc_message? string|LocalizedText
+
+---@class StaticSpellLearned
+---@field spell string
+---@field level integer
+
+---@class StaticSpellOptions
+---@field id? string Provide either id or abstract.
+---@field abstract? string Base definition available for inheritance.
+---@field copy_from? string Parent loaded by the native spell registry.
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field message? string|LocalizedText
+---@field sound_description? string|LocalizedText
+---@field caster_condition_fail_message? string|LocalizedText
+---@field target_condition_fail_message? string|LocalizedText
+---@field skill? string
+---@field components? string
+---@field sound_type? string
+---@field sound_id? string
+---@field sound_variant? string
+---@field shape? string
+---@field effect? string
+---@field effect_data? string
+---@field explosion_light? string
+---@field field? string
+---@field spell_class? string
+---@field damage_type? string
+---@field magic_type? string
+---@field get_level_formula? string
+---@field exp_for_level_formula? string
+---@field teachable? boolean
+---@field sound_ambient? boolean
+---@field max_book_level? integer
+---@field valid_targets? string[]
+---@field targeted_monsters? string[]
+---@field targeted_species? string[]
+---@field ignored_species? string[]
+---@field affected_bodyparts? string[]
+---@field extend_flags? string[]
+---@field flags? string|string[]
+---@field energy_source? string|StaticSpellEnergy
+---@field channel? StaticSpellChannel
+---@field extra_spells? StaticSpellFollowup[]
+---@field learned_spells? StaticSpellLearned[]
+---@field field_chance? number
+---@field min_field_intensity? number
+---@field field_intensity_increment? number
+---@field max_field_intensity? number
+---@field field_intensity_variance? number
+---@field min_accuracy? number
+---@field accuracy_increment? number
+---@field max_accuracy? number
+---@field min_damage? number
+---@field damage_increment? number
+---@field max_damage? number
+---@field min_range? number
+---@field range_increment? number
+---@field max_range? number
+---@field min_aoe? number
+---@field aoe_increment? number
+---@field max_aoe? number
+---@field min_dot? number
+---@field dot_increment? number
+---@field max_dot? number
+---@field min_duration? number
+---@field duration_increment? number
+---@field max_duration? number
+---@field min_pierce? number
+---@field pierce_increment? number
+---@field max_pierce? number
+---@field min_bash_scaling? number
+---@field bash_scaling_increment? number
+---@field max_bash_scaling? number
+---@field base_energy_cost? number
+---@field final_energy_cost? number
+---@field energy_increment? number
+---@field difficulty? number
+---@field multiple_projectiles? number
+---@field max_level? number
+---@field base_casting_time? number
+---@field final_casting_time? number
+---@field casting_time_increment? number
+
+---Define a spell with a native effect at its ordered position during content loading.
+---@param options StaticSpellOptions
+function CcbPlatformContent.define_spell(options) end

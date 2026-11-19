@@ -62,6 +62,7 @@ extern "C" {
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
+#include "magic.h"
 #include "mapdata.h"
 #include "mapgen.h"
 #include "monfaction.h"
@@ -5399,6 +5400,110 @@ void write_static_npc_class( JsonOut &json, const sol::table &options, const std
     } );
 }
 
+void write_static_spell( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
+        { "skill", "skill" }, { "components", "components" }, { "sound_type", "sound_type" },
+        { "sound_id", "sound_id" }, { "sound_variant", "sound_variant" }, { "shape", "shape" },
+        { "effect_data", "effect_str" }, { "explosion_light", "explosion_light" },
+        { "field", "field_id" }, { "spell_class", "spell_class" }, { "damage_type", "damage_type" },
+        { "magic_type", "magic_type" }, { "get_level_formula", "get_level_formula_id" },
+        { "exp_for_level_formula", "exp_for_level_formula_id" }
+    } );
+    if( const auto effect = options.get<sol::optional<std::string>>( "effect" ) ) {
+        if( *effect == "effect_on_condition" ) {
+            throw std::invalid_argument( "ordered spell definitions require a native spell effect" );
+        }
+        json.member( "effect", *effect );
+    }
+    for( const char *field : { "name", "description", "message", "sound_description",
+                              "caster_condition_fail_message", "target_condition_fail_message" } ) {
+        write_item_text( json, field, options.raw_get<sol::object>( field ), false );
+    }
+    write_item_fields<bool>( json, options, {
+        { "teachable", "teachable" }, { "sound_ambient", "sound_ambient" }
+    } );
+    write_placement_member<int>( json, options, "max_book_level", "max_book_level" );
+    for( const char *stat : {
+             "field_chance", "min_field_intensity", "field_intensity_increment", "max_field_intensity",
+             "field_intensity_variance", "min_accuracy", "accuracy_increment", "max_accuracy",
+             "min_damage", "damage_increment", "max_damage", "min_range", "range_increment", "max_range",
+             "min_aoe", "aoe_increment", "max_aoe", "min_dot", "dot_increment", "max_dot", "min_duration",
+             "duration_increment", "max_duration", "min_pierce", "pierce_increment", "max_pierce",
+             "min_bash_scaling", "bash_scaling_increment", "max_bash_scaling", "base_energy_cost",
+             "final_energy_cost", "energy_increment", "difficulty", "multiple_projectiles", "max_level",
+             "base_casting_time", "final_casting_time", "casting_time_increment"
+         } ) {
+        const sol::object value = options.raw_get<sol::object>( stat );
+        if( value.get_type() == sol::type::nil ) {
+            continue;
+        }
+        if( value.get_type() != sol::type::number || !std::isfinite( value.as<double>() ) ) {
+            throw std::invalid_argument( std::string( "ordered spell stat must be a finite number: " ) + stat );
+        }
+        json.member( stat, value.as<double>() );
+    }
+    write_item_ids( json, options, {
+        { "valid_targets", "valid_targets" }, { "targeted_monsters", "targeted_monster_ids" },
+        { "targeted_species", "targeted_monster_species" }, { "ignored_species", "ignored_monster_species" },
+        { "affected_bodyparts", "affected_body_parts" }
+    } );
+    write_static_string_or_ids( json, options, "flags", "flags" );
+    if( const auto flags = options.get<sol::optional<sol::table>>( "extend_flags" ) ) {
+        json.member( "extend" );
+        json.start_object();
+        json.member( "flags", bounded_string_array( *flags, "extend_flags",
+                     std::numeric_limits<std::size_t>::max(), "static spell" ) );
+        json.end_object();
+    }
+    const sol::object energy = options.raw_get<sol::object>( "energy_source" );
+    if( energy.is<std::string>() ) {
+        json.member( "energy_source", energy.as<std::string>() );
+    } else if( energy.get_type() != sol::type::nil ) {
+        json.member( "energy_source" );
+        json.start_object();
+        const sol::table source = energy.as<sol::table>();
+        json.member( "type", source.get<std::string>( "source" ) );
+        write_item_fields<std::string>( json, source, { { "vitamin", "vitamin" }, { "color", "color" } } );
+        json.end_object();
+    }
+    if( const auto channel = options.get<sol::optional<sol::table>>( "channel" ) ) {
+        json.member( "channel_data" );
+        json.start_object();
+        write_placement_member<int>( json, *channel, "turns", "max_channel_turns" );
+        write_item_fields<std::string>( json, *channel, {
+            { "spell", "channel_spell" }, { "end_spell", "channel_end_spell" },
+            { "interrupt_spell", "channel_interrupt_spell" }
+        } );
+        write_placement_member<bool>( json, *channel, "uses_energy", "channel_uses_energy" );
+        json.end_object();
+    }
+    write_static_catalog_array( json, options, "extra_spells", "extra_effects",
+    []( JsonOut & out, const sol::table & spell ) {
+        out.start_object();
+        out.member( "id", spell.get<std::string>( "spell" ) );
+        write_placement_member<bool>( out, spell, "self", "hit_self" );
+        write_item_fields<int>( out, spell, {
+            { "min_level", "min_level" }, { "max_level", "max_level" }, { "once_in", "once_in" }
+        } );
+        write_item_text( out, "message", spell.raw_get<sol::object>( "message" ), false );
+        write_item_text( out, "npc_message", spell.raw_get<sol::object>( "npc_message" ), false );
+        out.end_object();
+    } );
+    if( const auto learned = options.get<sol::optional<sol::table>>( "learned_spells" ) ) {
+        json.member( "learn_spells" );
+        json.start_object();
+        const std::size_t count = checked_dense_array_size( *learned, "learned_spells",
+                                  std::numeric_limits<std::size_t>::max() );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::table spell = learned->raw_get<sol::table>( index );
+            json.member( spell.get<std::string>( "spell" ), spell.get<int>( "level" ) );
+        }
+        json.end_object();
+    }
+}
+
 template<typename Writer, typename Loader>
 auto static_catalog_definition( const std::string &source, const char *type,
                                 Writer write_fields, Loader load )
@@ -5560,6 +5665,8 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "vehicle_part", write_static_vehicle_part, vehicles::parts::load ) );
     content.set_function( "define_vehicle", static_catalog_definition(
                               resolved.id, "vehicle", write_static_vehicle, vehicles::load_prototype ) );
+    content.set_function( "define_spell", static_catalog_definition(
+                              resolved.id, "SPELL", write_static_spell, spell_type::load_spell ) );
     content.set_function( "define_npc", static_catalog_definition(
                               resolved.id, "npc", write_static_npc, npc_template::load ) );
     content.set_function( "define_npc_class", static_catalog_definition(
