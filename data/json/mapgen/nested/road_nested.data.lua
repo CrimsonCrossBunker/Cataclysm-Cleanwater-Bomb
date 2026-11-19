@@ -1,5 +1,134 @@
 local ccb = require("ccb")
 
+-- Could merge with traffic lights so they're not independent.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_marked_crosswalks",
+    layout = {
+        size = { width = 24, height = 24 },
+        nested = {
+            {
+                x = 4,
+                y = 1,
+                neighbors = { north = { { terrain = "road", match = "prefix" } } },
+                any_flags = {
+                    north_east = { "SIDEWALK" },
+                    east = { "SIDEWALK" },
+                    west = { "SIDEWALK" },
+                    north_west = { "SIDEWALK" },
+                },
+                choices = { "16x16_marked_crosswalk_h", "null" },
+            },
+            {
+                x = 21,
+                y = 4,
+                neighbors = { east = { { terrain = "road", match = "prefix" } } },
+                any_flags = {
+                    north = { "SIDEWALK" },
+                    north_east = { "SIDEWALK" },
+                    south_east = { "SIDEWALK" },
+                    south = { "SIDEWALK" },
+                },
+                choices = { "16x16_marked_crosswalk_v", "null" },
+            },
+            {
+                x = 4,
+                y = 21,
+                neighbors = { south = { { terrain = "road", match = "prefix" } } },
+                any_flags = {
+                    east = { "SIDEWALK" },
+                    south_east = { "SIDEWALK" },
+                    south_west = { "SIDEWALK" },
+                    west = { "SIDEWALK" },
+                },
+                choices = { "16x16_marked_crosswalk_h", "null" },
+            },
+            {
+                x = 1,
+                y = 4,
+                neighbors = { west = { { terrain = "road", match = "prefix" } } },
+                any_flags = {
+                    north = { "SIDEWALK" },
+                    south = { "SIDEWALK" },
+                    south_west = { "SIDEWALK" },
+                    north_west = { "SIDEWALK" },
+                },
+                choices = { "16x16_marked_crosswalk_v", "null" },
+            },
+        },
+    },
+}
+
+-- Could merge with crosswalks so they're not independent, places traffic light on right of joining roads
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_traffic_lights",
+    layout = {
+        size = { width = 24, height = 24 },
+        nested = {
+            {
+                x = 3,
+                y = 3,
+                neighbors = { north = { { terrain = "road", match = "prefix" } } },
+                id = "1x1_traffic_light",
+            },
+            {
+                x = 20,
+                y = 3,
+                neighbors = { east = { { terrain = "road", match = "prefix" } } },
+                id = "1x1_traffic_light",
+            },
+            {
+                x = 20,
+                y = 20,
+                neighbors = { south = { { terrain = "road", match = "prefix" } } },
+                id = "1x1_traffic_light",
+            },
+            {
+                x = 3,
+                y = 20,
+                neighbors = { west = { { terrain = "road", match = "prefix" } } },
+                id = "1x1_traffic_light",
+            },
+        },
+    },
+}
+
+-- Could merge with crosswalks so they're not independent, places traffic light on right of joining roads
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_stop_signs",
+    layout = {
+        size = { width = 24, height = 24 },
+        nested = {
+            {
+                x = 3,
+                y = 3,
+                neighbors = { north = { { terrain = "road", match = "prefix" } } },
+                id = "1x1_stop_sign",
+            },
+            {
+                x = 20,
+                y = 3,
+                neighbors = { east = { { terrain = "road", match = "prefix" } } },
+                id = "1x1_stop_sign",
+            },
+            {
+                x = 20,
+                y = 20,
+                neighbors = { south = { { terrain = "road", match = "prefix" } } },
+                id = "1x1_stop_sign",
+            },
+            {
+                x = 3,
+                y = 20,
+                neighbors = { west = { { terrain = "road", match = "prefix" } } },
+                id = "1x1_stop_sign",
+            },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "24x24_marked_crosswalk_and_lights",
