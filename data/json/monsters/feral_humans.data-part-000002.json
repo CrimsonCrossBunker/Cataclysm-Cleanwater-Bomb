@@ -1,0 +1,28 @@
+[
+  {
+    "id": "mon_feral_human_crowbar",
+    "type": "MONSTER",
+    "description": "Their pupils are dilated and what can be seen of the iris and sclera are bloodshot.  This crowbar-wielding maniac still breathes, but the zombies treat them like one of their own.",
+    "copy-from": "mon_feral_human_pipe",
+    "special_attacks": [
+      {
+        "type": "gun",
+        "cooldown": 5,
+        "move_cost": 150,
+        "gun_type": "feral_human_thrown_rock",
+        "ammo_type": "rock",
+        "no_ammo_sound": "",
+        "fake_skills": [ [ "throw", 3 ] ],
+        "fake_str": 8,
+        "condition": { "not": { "u_has_effect": "maimed_arm" } },
+        "require_targeting_player": false,
+        "ranges": [ [ 2, 5, "DEFAULT" ] ],
+        "description": "The feral human throws a rock!"
+      },
+      { "id": "feral_weapon_crowbar" },
+      [ "PARROT_AT_DANGER", 0 ]
+    ],
+    "death_drops": "feral_humans_death_drops_crowbar",
+    "fungalize_into": "mon_feral_human_crowbar_fungal_infected"
+  }
+]
