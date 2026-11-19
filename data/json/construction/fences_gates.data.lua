@@ -1,0 +1,367 @@
+local ccb = require("ccb")
+
+-- Step 2: chainlink
+ccb.content.define_construction {
+    id = "constr_chainfence",
+    group = "build_chainlink_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 3 } },
+    duration = "120 m",
+    components = { { { "lc_wire", 20 } } },
+    pre_terrain = "t_chainfence_posts",
+    post_terrain = "t_chainfence",
+}
+
+-- Step 1: fence posts
+ccb.content.define_construction {
+    id = "constr_chainfence_posts",
+    group = "build_chainlink_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 3 } },
+    duration = "30 m",
+    qualities = { { { id = "HAMMER", level = 2 } } },
+    components = { { { "pipe", 6 } }, { { "pipe_fittings", 3 } }, { { "scrap", 8 } } },
+    pre_flags = "DIGGABLE",
+    pre_note = ccb.content.text("Requires diggable terrain."),
+    pre_checks = "check_empty",
+    post_terrain = "t_chainfence_posts",
+}
+
+ccb.content.define_construction {
+    id = "constr_chaingate",
+    group = "build_chainlink_gate",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 3 } },
+    duration = "150 m",
+    components = {
+        { { "lc_wire", 20 } },
+        { { "steel_chunk_any", 3, "LIST" }, { "scrap", 12 } },
+        { { "pipe", 20 } },
+    },
+    pre_note = ccb.content.text("Needs to be supported on both sides by fencing, walls, etc."),
+    pre_checks = "check_empty",
+    post_terrain = "t_chaingate_c",
+}
+
+-- Step 2: chickenwire
+ccb.content.define_construction {
+    id = "constr_chickenwire_fence",
+    group = "build_chickenwire_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 } },
+    duration = "30 m",
+    components = { { { "lc_wire", 10 } } },
+    pre_terrain = "t_chickenwire_fence_post",
+    post_terrain = "t_chickenwire_fence",
+}
+
+-- Step 1: 2x4 stud frame
+ccb.content.define_construction {
+    id = "constr_chickenwire_fence_post",
+    group = "build_chickenwire_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 } },
+    duration = "30 m",
+    qualities = { { { id = "HAMMER", level = 2 } } },
+    components = { { { "2x4", 5 } }, { { "nails", 20, "LIST" } } },
+    pre_flags = "DIGGABLE",
+    pre_note = ccb.content.text("Requires diggable terrain."),
+    pre_checks = "check_empty",
+    post_terrain = "t_chickenwire_fence_post",
+}
+
+ccb.content.define_construction {
+    id = "constr_chickenwire_gate",
+    group = "build_chickenwire_gate",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 } },
+    duration = "45 m",
+    components = { { { "lc_wire", 10 } }, { { "2x4", 5 } }, { { "nails", 20, "LIST" } }, { { "hinge", 2 } } },
+    pre_note = ccb.content.text("Needs to be supported on both sides by fencing, walls, etc."),
+    pre_checks = "check_empty",
+    post_terrain = "t_chickenwire_gate_c",
+}
+
+ccb.content.define_construction {
+    id = "constr_fence",
+    group = "build_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 1 } },
+    duration = "15 m",
+    qualities = { { { id = "HAMMER", level = 2 } } },
+    components = { { { "2x4", 5 } }, { { "nails", 8, "LIST" } } },
+    pre_terrain = "t_fence_post",
+    post_terrain = "t_fence",
+}
+
+ccb.content.define_construction {
+    id = "constr_fencegate",
+    group = "build_fence_gate",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 }, { "survival", 1 } },
+    duration = "30 m",
+    qualities = { { { id = "HAMMER", level = 2 } }, { { id = "DIG", level = 2 } } },
+    components = {
+        { { "pointy_stick", 2 }, { "spear_wood", 2 }, { "pointy_stick_long", 2 } },
+        { { "2x4", 5 } },
+        { { "nails", 12, "LIST" } },
+        { { "hinge", 2 } },
+    },
+    pre_flags = "DIGGABLE",
+    pre_note = ccb.content.text("Requires diggable terrain."),
+    pre_checks = "check_empty",
+    post_terrain = "t_fencegate_c",
+}
+
+ccb.content.define_construction {
+    id = "constr_fence_barbed",
+    group = "build_barbed_wire_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 1 } },
+    duration = "15 m",
+    components = { { { "wire_barbed", 2 } } },
+    pre_terrain = "t_fence_post",
+    post_terrain = "t_fence_barbed",
+}
+
+ccb.content.define_construction {
+    id = "constr_fence_post",
+    group = "build_fence_posts",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 0 }, { "survival", 0 } },
+    duration = "15 m",
+    qualities = { { { id = "HAMMER", level = 2 } }, { { id = "DIG", level = 2 } } },
+    components = { { { "pointy_stick", 2 }, { "spear_wood", 2 }, { "pointy_stick_long", 2 } } },
+    pre_flags = "DIGGABLE",
+    pre_note = ccb.content.text("Requires diggable terrain."),
+    pre_checks = "check_empty",
+    post_terrain = "t_fence_post",
+}
+
+ccb.content.define_construction {
+    id = "constr_fence_rope",
+    group = "build_rope_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 1 } },
+    duration = "15 m",
+    components = { { { "rope_6", 2 } } },
+    pre_terrain = "t_fence_post",
+    post_terrain = "t_fence_rope",
+}
+
+ccb.content.define_construction {
+    id = "constr_fence_wire",
+    group = "build_wire_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 1 } },
+    duration = "15 m",
+    components = { { { "lc_wire", 2 } } },
+    pre_terrain = "t_fence_post",
+    post_terrain = "t_fence_wire",
+}
+
+ccb.content.define_construction {
+    id = "constr_palisade_gate",
+    group = "build_palisade_gate",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 4 }, { "survival", 2 } },
+    duration = "120 m",
+    qualities = { { { id = "DIG", level = 2 } } },
+    components = { { { "log", 2 } }, { { "2x4", 3 } }, { { "rope_natural_short", 2, "LIST" } } },
+    pre_note = ccb.content.text("Must be between palisade walls to function, and at least one wall must have an adjacent rope & pulley system."),
+    pre_terrain = "t_pit",
+    post_terrain = "t_palisade_gate",
+}
+
+-- Step 1: Build privacy fence
+ccb.content.define_construction {
+    id = "constr_privacy_fence",
+    group = "build_privacy_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 }, { "survival", 1 } },
+    duration = "30 m",
+    qualities = { { { id = "HAMMER", level = 2 } }, { { id = "DIG", level = 2 } } },
+    components = {
+        { { "pointy_stick", 2 }, { "spear_wood", 2 }, { "pointy_stick_long", 2 } },
+        { { "2x4", 8 } },
+        { { "nails", 20, "LIST" } },
+    },
+    pre_flags = "DIGGABLE",
+    pre_note = ccb.content.text("Requires diggable terrain."),
+    pre_checks = "check_empty",
+    post_terrain = "t_privacy_fence",
+}
+
+-- Step 2: Build privacy fence from existing fence posts
+ccb.content.define_construction {
+    id = "constr_privacy_fence_from_posts",
+    group = "build_privacy_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 } },
+    duration = "15 m",
+    qualities = { { { id = "HAMMER", level = 2 } } },
+    components = { { { "2x4", 8 } }, { { "nails", 20, "LIST" } } },
+    pre_terrain = "t_fence_post",
+    post_terrain = "t_privacy_fence",
+}
+
+ccb.content.define_construction {
+    id = "constr_privacy_fencegate",
+    group = "build_privacy_fence_gate",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 }, { "survival", 1 } },
+    duration = "30 m",
+    qualities = { { { id = "HAMMER", level = 2 } }, { { id = "DIG", level = 2 } } },
+    components = {
+        { { "pointy_stick", 2 }, { "spear_wood", 2 }, { "pointy_stick_long", 2 } },
+        { { "2x4", 8 } },
+        { { "nails", 20, "LIST" } },
+        { { "hinge", 2 } },
+    },
+    pre_flags = "DIGGABLE",
+    pre_note = ccb.content.text("Requires diggable terrain."),
+    pre_checks = "check_empty",
+    post_terrain = "t_privacy_fencegate_c",
+}
+
+ccb.content.define_construction {
+    id = "constr_railing",
+    group = "build_wooden_railing",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 } },
+    duration = "30 m",
+    qualities = { { { id = "HAMMER", level = 2 } } },
+    components = {
+        { { "2x4", 2 } },
+        { { "nails", 6, "LIST" } },
+        { { "steel_chunk_any", 1, "LIST" }, { "scrap", 5 } },
+    },
+    pre_terrain = "t_floor",
+    post_terrain = "t_railing",
+}
+
+ccb.content.define_construction {
+    id = "constr_screen_door",
+    group = "build_screen_door",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 } },
+    duration = "60 m",
+    qualities = { { { id = "HAMMER", level = 2 } }, { { id = "SAW_W", level = 2 } } },
+    components = {
+        { { "screen_mesh", 1 } },
+        { { "2x4", 4 } },
+        { { "nails", 20, "LIST" } },
+        { { "hinge", 2 } },
+    },
+    pre_note = ccb.content.text("Needs to be supported on both sides by fencing, walls, etc."),
+    pre_checks = "check_empty",
+    post_terrain = "t_screen_door_c",
+}
+
+ccb.content.define_construction {
+    id = "constr_screened_porch_wall",
+    group = "build_screen_mesh_wall",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 } },
+    duration = "60 m",
+    qualities = { { { id = "HAMMER", level = 2 } }, { { id = "SAW_W", level = 2 } } },
+    components = { { { "screen_mesh", 1 } }, { { "2x4", 4 } }, { { "nails", 10, "LIST" } } },
+    pre_note = ccb.content.text("Needs to be supported on both sides by fencing, walls, etc."),
+    pre_checks = "check_empty",
+    post_terrain = "t_screened_porch_wall",
+}
+
+-- Step 1: Build split rail fence
+ccb.content.define_construction {
+    id = "constr_splitrail_fence",
+    group = "build_split_rail_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 }, { "survival", 1 } },
+    duration = "30 m",
+    qualities = { { { id = "HAMMER", level = 2 } }, { { id = "DIG", level = 2 } } },
+    components = {
+        { { "pointy_stick", 2 }, { "spear_wood", 2 }, { "pointy_stick_long", 2 } },
+        { { "2x4", 4 } },
+        { { "nails", 20, "LIST" } },
+    },
+    pre_flags = "DIGGABLE",
+    pre_note = ccb.content.text("Requires diggable terrain."),
+    pre_checks = "check_empty",
+    post_terrain = "t_splitrail_fence",
+}
+
+-- Step 2: Build split rail fence from existing fence posts
+ccb.content.define_construction {
+    id = "constr_splitrail_fence_from_posts",
+    group = "build_split_rail_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 } },
+    duration = "15 m",
+    qualities = { { { id = "HAMMER", level = 2 } } },
+    components = { { { "2x4", 4 } }, { { "nails", 20, "LIST" } } },
+    pre_terrain = "t_fence_post",
+    post_terrain = "t_splitrail_fence",
+}
+
+ccb.content.define_construction {
+    id = "constr_splitrail_fencegate",
+    group = "build_split_rail_fence_gate",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 }, { "survival", 1 } },
+    duration = "30 m",
+    qualities = { { { id = "HAMMER", level = 2 } }, { { id = "DIG", level = 2 } } },
+    components = {
+        { { "pointy_stick", 2 }, { "spear_wood", 2 }, { "pointy_stick_long", 2 } },
+        { { "2x4", 5 } },
+        { { "nails", 12, "LIST" } },
+        { { "hinge", 2 } },
+    },
+    pre_flags = "DIGGABLE",
+    pre_note = ccb.content.text("Requires diggable terrain."),
+    pre_checks = "check_empty",
+    post_terrain = "t_splitrail_fencegate_c",
+}
+
+-- Step 1: narrow fence posts for a woven wattle wall
+ccb.content.define_construction {
+    id = "constr_wall_wattle_post",
+    group = "build_woven_wattle_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 0 }, { "survival", 1 } },
+    duration = "20 m",
+    qualities = {
+        { { id = "CUT", level = 2 } },
+        { { id = "HAMMER", level = 1 } },
+        { { id = "DIG", level = 1 } },
+    },
+    components = { { { "stick", 4 }, { "pointy_stick", 4 }, { "stick_long", 2 } } },
+    pre_flags = "DIGGABLE",
+    pre_note = ccb.content.text("Requires diggable terrain."),
+    pre_checks = "check_empty",
+    post_terrain = "t_wattle_fence_posts",
+}
+
+ccb.content.define_construction {
+    id = "constr_wall_wattle_woven",
+    group = "build_woven_wattle_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 }, { "survival", 2 } },
+    duration = "50 m",
+    qualities = { { { id = "CUT", level = 2 } }, { { id = "HAMMER", level = 1 } } },
+    components = { { { "stick", 10 }, { "stick_long", 5 } } },
+    pre_terrain = "t_wattle_fence_posts",
+    post_terrain = "t_wattle_fence",
+}
+
+-- Convert Split Rail Fence to Privacy Fence
+ccb.content.define_construction {
+    id = "convert_splitrail_to_privacy_fence",
+    group = "build_privacy_fence",
+    category = "CONSTRUCT",
+    required_skills = { { "fabrication", 2 } },
+    duration = "10 m",
+    qualities = { { { id = "HAMMER", level = 2 } } },
+    components = { { { "2x4", 4 } }, { { "nails", 10, "LIST" } } },
+    pre_terrain = "t_splitrail_fence",
+    post_terrain = "t_privacy_fence",
+}

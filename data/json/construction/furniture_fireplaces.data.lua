@@ -1,0 +1,95 @@
+local ccb = require("ccb")
+
+ccb.content.define_construction {
+    id = "constr_fireplace",
+    group = "build_brick_fireplace",
+    category = "FURN",
+    required_skills = { { "fabrication", 3 } },
+    duration = "120 m",
+    qualities = { { { id = "SMOOTH", level = 1 } } },
+    components = {
+        { { "brick", 30 } },
+        { { "mortar_build", 1 }, { "mortar_lime", 1 } },
+        { { "water", 1 }, { "water_clean", 1 } },
+    },
+    pre_checks = "check_empty",
+    post_terrain = "f_fireplace",
+}
+
+ccb.content.define_construction {
+    id = "constr_stone_fireplace",
+    group = "build_stone_fireplace",
+    category = "FURN",
+    required_skills = { { "fabrication", 3 }, { "survival", 2 } },
+    duration = "180 m",
+    qualities = { { { id = "HAMMER", level = 2 } }, { { id = "DIG", level = 2 } } },
+    components = { { { "rock", 50 } } },
+    pre_checks = "check_empty",
+    post_terrain = "f_fireplace_stone",
+}
+
+ccb.content.define_construction {
+    id = "constr_firering",
+    group = "build_fire_ring",
+    category = "FURN",
+    required_skills = { { "survival", 0 } },
+    duration = "15 m",
+    qualities = { { id = "DIG", level = 1 } },
+    components = { { { "rock", 20 } } },
+    pre_note = ccb.content.text("Can be deconstructed without tools."),
+    dark_craftable = true,
+    pre_terrain = "t_dirt",
+    post_terrain = "f_firering",
+}
+
+ccb.content.define_construction {
+    id = "constr_firering_on_rock",
+    group = "build_fire_ring",
+    category = "FURN",
+    required_skills = { { "survival", 0 } },
+    duration = "10 m",
+    components = { { { "rock", 20 } } },
+    pre_note = ccb.content.text("Can be deconstructed without tools."),
+    dark_craftable = true,
+    pre_terrain = "t_rock_floor",
+    post_terrain = "f_firering",
+}
+
+ccb.content.define_construction {
+    id = "constr_firering_on_rock_no_roof",
+    group = "build_fire_ring",
+    category = "FURN",
+    required_skills = { { "survival", 0 } },
+    duration = "10 m",
+    components = { { { "rock", 20 } } },
+    pre_note = ccb.content.text("Can be deconstructed without tools."),
+    dark_craftable = true,
+    pre_terrain = "t_rock_floor_no_roof",
+    post_terrain = "f_firering",
+}
+
+ccb.content.define_construction {
+    id = "constr_firering_underground",
+    group = "build_fire_ring",
+    category = "FURN",
+    required_skills = { { "survival", 0 } },
+    duration = "15 m",
+    qualities = { { id = "DIG", level = 1 } },
+    components = { { { "rock", 20 } } },
+    pre_note = ccb.content.text("Can be deconstructed without tools."),
+    dark_craftable = true,
+    pre_terrain = "t_dirt_underground",
+    post_terrain = "f_firering",
+}
+
+ccb.content.define_construction {
+    id = "constr_woodstove",
+    group = "build_wood_stove",
+    category = "FURN",
+    required_skills = { { "fabrication", 5 }, { "mechanics", 3 } },
+    duration = "60 m",
+    qualities = { { { id = "SAW_M", level = 1 } } },
+    components = { { { "metal_tank", 1 } }, { { "pipe", 1 } } },
+    pre_checks = "check_empty",
+    post_terrain = "f_woodstove",
+}

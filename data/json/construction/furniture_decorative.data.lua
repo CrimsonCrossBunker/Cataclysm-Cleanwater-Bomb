@@ -1,0 +1,29 @@
+local ccb = require("ccb")
+
+ccb.content.define_construction {
+    id = "constr_decorative_tree",
+    group = "build_decorative_tree",
+    category = "FURN",
+    required_skills = { { "fabrication", 0 } },
+    duration = "20 m",
+    qualities = { { { id = "HAMMER", level = 2 } }, { { id = "SAW_W", level = 1 } } },
+    components = {
+        { { "stick", 4 }, { "stick_long", 2 }, { "log", 1 } },
+        { { "nails", 20, "LIST" } },
+        { { "pine_bough", 8 } },
+    },
+    pre_checks = "check_empty",
+    post_terrain = "f_decorative_tree",
+}
+
+ccb.content.define_construction {
+    id = "constr_flagpole_indoor_wooden",
+    group = "build_flagpole_indoor_wooden",
+    category = "FURN",
+    required_skills = { { "fabrication", 2 } },
+    duration = "25 m",
+    qualities = { { { id = "HAMMER", level = 2 } } },
+    components = { { { "2x4", 2 } }, { { "stick_long", 1 } }, { { "nails", 8, "LIST" } } },
+    pre_checks = "check_empty",
+    post_terrain = "f_indoor_flagpole_wooden",
+}
