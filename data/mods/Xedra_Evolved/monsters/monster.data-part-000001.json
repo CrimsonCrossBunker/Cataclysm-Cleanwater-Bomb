@@ -1,0 +1,81 @@
+[
+  {
+    "id": "mon_luna_attuned_revenant",
+    "type": "MONSTER",
+    "name": { "str": "Luna-Attuned Revenant" },
+    "description": "Nearly seven feet tall and whip thin, this grotesque mockery of a March Lord is wrapped in fiery moonlight.  Moonlight courses its veins as the heart you granted it pulses with power.  Its face is struck in a grimace of pain and its eyes shine with endless hatred directed at you, the one responsible for its current state of agony.",
+    "default_faction": "changeling",
+    "bodytype": "human",
+    "species": [ "ZOMBIE" ],
+    "categories": [ "XE_CLASSIC" ],
+    "volume": "72500 ml",
+    "weight": "91500 g",
+    "hp": 690,
+    "speed": 160,
+    "material": [ "fae_flesh" ],
+    "symbol": "&",
+    "color": "blue",
+    "aggression": 100,
+    "morale": 120,
+    "melee_skill": 7,
+    "melee_dice": 8,
+    "melee_dice_sides": 3,
+    "melee_damage": [ { "damage_type": "cut", "amount": 12 } ],
+    "weakpoint_sets": [ "wps_humanoid_body", "wps_vital_organs", "wps_eyes", "wps_humanoid_body_armor", "wps_humanoid_open_helmet" ],
+    "dodge": 0,
+    "harvest": "exempt",
+    "death_function": { "corpse_type": "NO_CORPSE", "message": "The %s decoheres and is consumed by the moonlight!" },
+    "vision_day": 50,
+    "vision_night": 60,
+    "path_settings": { "max_dist": 30, "allow_open_doors": true, "avoid_traps": true, "avoid_sharp": true },
+    "anger_triggers": [ "FRIEND_DIED", "FRIEND_ATTACKED", "HURT" ],
+    "flags": [
+      "SEES",
+      "HEARS",
+      "BASHES",
+      "GROUP_BASH",
+      "HUMAN",
+      "FAE_CREATURE",
+      "CAN_OPEN_DOORS",
+      "PATH_AVOID_DANGER",
+      "ALL_SEEING",
+      "SUNDEATH"
+    ],
+    "special_attacks": [
+      { "id": "smash", "throw_strength": 96, "condition": "u_is_outside" },
+      {
+        "id": "mon_luna_attuned_revenant_spear",
+        "type": "spell",
+        "spell_data": { "id": "mon_dream_drainer_spear", "min_level": 5 },
+        "condition": "u_is_outside",
+        "cooldown": 20,
+        "monster_message": "%1$s points a finger at you, and a projectile suddenly appears from it!"
+      },
+      {
+        "id": "mon_luna_attuned_revenant_beam",
+        "type": "spell",
+        "spell_data": { "id": "mon_luna_attuned_revenant_beam", "min_level": 1 },
+        "condition": "u_is_outside",
+        "cooldown": 30,
+        "monster_message": "A ray of moonlight bursts from %1$s!"
+      },
+      {
+        "type": "spell",
+        "id": "mon_luna_attuned_revenant_moon_withdrawal",
+        "spell_data": { "id": "mon_luna_attuned_revenant_moon_withdrawal", "min_level": 1, "hit_self": true },
+        "allow_no_target": true,
+        "condition": { "not": "u_is_outside" },
+        "monster_message": "Without the moonlight shining on it, %1$s is weakened!",
+        "cooldown": 10
+      },
+      {
+        "type": "spell",
+        "id": "mon_luna_attuned_revenant_lash_out",
+        "spell_data": { "id": "mon_luna_attuned_revenant_lash_out", "min_level": 1 },
+        "condition": { "not": "u_is_outside" },
+        "monster_message": "%1$s lashes out as it attempts to be exposed to the moonlight again!",
+        "cooldown": 5
+      }
+    ]
+  }
+]
