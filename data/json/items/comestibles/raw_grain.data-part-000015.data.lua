@@ -1,0 +1,56 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "dry_lentils",
+    name = ccb.content.plural_text("dried lentils", "handfuls of dried lentils"),
+    mass = "132 g",
+    color = "light_gray",
+    default_container = "bag_plastic_small",
+    symbol = ",",
+    description = ccb.content.text("A humble but nutrient-rich legume.  They should be cooked prior to consumption, unless you're planning to plant them."),
+    display_type = "BY_WEIGHT",
+    price = "10 cent",
+    survival_price = "75 cent",
+    materials = { "veggy" },
+    volume = "125 ml",
+    flags = {
+        "EDIBLE_FROZEN", "RAW", "INEDIBLE", "NUTRIENT_OVERRIDE", "CATTLE", "PLANTABLE_SEED", "BIRD",
+        "RAT", "MOUSE",
+    },
+    stackable = true,
+    subtype_order = { "seed", "comestible" },
+    seed = {
+        plant_name = ccb.content.text("lentils"),
+        fruit = "dry_lentil_stalks",
+        drop_seeds = false,
+        growth_stages = {
+            { stage = "GROWTH_SEED", duration = "23 days" },
+            { stage = "GROWTH_SEEDLING", duration = "23 days" },
+            { stage = "GROWTH_MATURE", duration = "23 days" },
+            { stage = "GROWTH_HARVEST", duration = "22 days" },
+            { stage = "GROWTH_OVERGROWN", duration = "1 hour" },
+        },
+        climate = {
+            base_c = 5,
+            optimum_c = 23,
+            min_c = -3,
+            max_c = 33,
+            degree_days = 930,
+            water_mm = 365,
+            growing_days = 104,
+            water_peak = 0.68,
+        },
+    },
+    comestible = {
+        kind = "FOOD",
+        quench = -10,
+        calories = 230,
+        vitamins = {
+            { id = "calcium", amount = 4 },
+            { id = "iron", amount = 47 },
+            { id = "vitC", amount = 7 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+        pet_food = { "CATTLEFOOD", "BIRDFOOD" },
+    },
+}

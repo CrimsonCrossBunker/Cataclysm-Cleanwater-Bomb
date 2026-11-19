@@ -1,0 +1,56 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "seed_canola",
+    name = ccb.content.plural_text("canola seeds", "handfuls of canola seeds"),
+    mass = "132 g",
+    color = "light_gray",
+    symbol = ",",
+    category = "seeds",
+    description = ccb.content.text("A heap of round black seeds, typically milled and pressed for their oil."),
+    price = "20 cent",
+    survival_price = "1 USD 50 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = {
+        "EDIBLE_FROZEN", "RAW", "INEDIBLE", "NUTRIENT_OVERRIDE", "CATTLE", "PLANTABLE_SEED",
+        "CUT_HARVEST", "BIRD", "RAT", "MOUSE",
+    },
+    stackable = true,
+    subtype_order = { "seed", "milling", "comestible" },
+    seed = {
+        plant_name = ccb.content.text("canola"),
+        fruit = "canola_stalks",
+        drop_seeds = false,
+        growth_stages = {
+            { stage = "GROWTH_SEED", duration = "23 days" },
+            { stage = "GROWTH_SEEDLING", duration = "23 days" },
+            { stage = "GROWTH_MATURE", duration = "23 days" },
+            { stage = "GROWTH_HARVEST", duration = "22 days" },
+            { stage = "GROWTH_OVERGROWN", duration = "1 hour" },
+        },
+        climate = {
+            base_c = 5,
+            optimum_c = 22,
+            min_c = -5,
+            max_c = 34,
+            degree_days = 1200,
+            water_mm = 420,
+            growing_days = 102,
+            water_peak = 0.68,
+        },
+    },
+    milling = { result = "paste_seed", recipe = "paste_seed_mill_1_1" },
+    comestible = {
+        kind = "FOOD",
+        quench = -10,
+        calories = 230,
+        vitamins = {
+            { id = "calcium", amount = 4 },
+            { id = "iron", amount = 47 },
+            { id = "vitC", amount = 7 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+        pet_food = { "CATTLEFOOD", "BIRDFOOD" },
+    },
+}
