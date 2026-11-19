@@ -7295,15 +7295,86 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field population? [integer, integer] Minimum and maximum group population.
 ---@field chance? integer Native static spawn chance.
 
----@class StaticOvermapMapgenItemGroup
----@field group string Item group placed on the glyph.
----@field chance? integer Native placement chance.
-
----@class StaticMapgenItemSpawn
----@field id string Item ID spawned on the glyph.
----@field chance? integer Native placement chance.
-
 ---@alias StaticMapgenRange integer|[integer]|[integer, integer]
+
+---@class StaticMapgenPlacementOptions
+---@field repetitions? StaticMapgenRange Native placement repetitions.
+
+---@class StaticMapgenPosition
+---@field x StaticMapgenRange X offset in map squares.
+---@field y StaticMapgenRange Y offset in map squares.
+---@field z? StaticMapgenRange Z offset.
+
+---@class StaticOvermapMapgenItemGroup: StaticMapgenPlacementOptions
+---@field group string Item group ID.
+---@field chance? StaticMapgenRange Native placement chance.
+---@field faction? string Owning faction ID.
+
+---@class StaticMapgenItemGroupPlacement: StaticOvermapMapgenItemGroup, StaticMapgenPosition
+
+---@class StaticMapgenItemSpawn: StaticMapgenPlacementOptions
+---@field id string Item ID.
+---@field chance? StaticMapgenRange Native placement chance.
+---@field amount? StaticMapgenRange Item quantity per spawn.
+---@field variant? string Native item variant ID.
+---@field faction? string Owning faction ID.
+---@field flags? string[] Item flags to apply to spawned items.
+
+---@class StaticMapgenItemPlacement: StaticMapgenItemSpawn, StaticMapgenPosition
+
+---@class StaticMapgenLootPlacement: StaticMapgenPlacementOptions, StaticMapgenPosition
+---@field id? string Item ID. Supply exactly one of id and group.
+---@field group? string Item group ID. Supply exactly one of id and group.
+---@field chance? integer Native placement chance.
+---@field ammo? integer Native chance of loading ammo.
+---@field magazine? integer Native chance of inserting a magazine.
+---@field variant? string Native item variant ID when spawning an item directly.
+
+---@class StaticMapgenMonsterGroup: StaticMapgenPlacementOptions
+---@field group string Monster group ID.
+---@field chance? StaticMapgenRange Native one-in-N placement chance.
+---@field density? number Override map monster density.
+
+---@class StaticMapgenMonsterGroupPlacement: StaticMapgenMonsterGroup, StaticMapgenPosition
+
+---@class StaticMapgenMonsterChoice
+---@field id string Monster type ID.
+---@field weight integer Relative selection weight.
+
+---@class StaticMapgenMonsterAmmo
+---@field id string Item ID of ammunition.
+---@field quantity StaticMapgenRange Ammunition quantity.
+
+---@class StaticMapgenPatrolPoint
+---@field x StaticMapgenRange X offset in map squares.
+---@field y StaticMapgenRange Y offset in map squares.
+
+---@class StaticMapgenMonster: StaticMapgenPlacementOptions
+---@field id? string Monster type ID. Supply exactly one of id, group and choices.
+---@field group? string Monster group ID. Supply exactly one of id, group and choices.
+---@field choices? (string|StaticMapgenMonsterChoice)[] Ordered alternatives.
+---@field chance? StaticMapgenRange Native placement chance.
+---@field pack_size? StaticMapgenRange Number of monsters per successful roll.
+---@field one_or_none? boolean Cap the count at one pack. Defaults to true when pack_size and repetitions are both omitted.
+---@field friendly? boolean Spawn friendly to the player character.
+---@field target? boolean Mark the spawn as the active mapgen mission target.
+---@field use_pack_size? boolean Allow the native monster group to use its pack size.
+---@field name? string|LocalizedText Display name or snippet reference.
+---@field random_name? 'random'|'female'|'male'|'snippet'|'' Native name selection.
+---@field ammunition? StaticMapgenMonsterAmmo[] Native ammunition overrides.
+---@field patrol? StaticMapgenPatrolPoint[] Patrol points in traversal order.
+
+---@class StaticMapgenMonsterPlacement: StaticMapgenMonster, StaticMapgenPosition
+
+---@class StaticMapgenVehicle: StaticMapgenPlacementOptions
+---@field id string Vehicle group ID or single vehicle prototype ID.
+---@field chance? integer Native placement chance.
+---@field rotation? integer|integer[] Facing in degrees, or an ordered set of equally likely facings.
+---@field fuel? integer Native initial fuel status.
+---@field status? integer Native initial damage status.
+---@field faction? string Owning faction ID.
+
+---@class StaticMapgenVehiclePlacement: StaticMapgenVehicle, StaticMapgenPosition
 
 ---@class StaticMapgenNestedChoice
 ---@field id string Nested mapgen ID.
@@ -7349,8 +7420,17 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field terrain? table<string, StaticMapgenGlyph> Glyph to terrain ID or native choices.
 ---@field furniture? table<string, StaticMapgenGlyph> Glyph to furniture ID or native choices.
 ---@field traps? table<string, StaticMapgenGlyph> Glyph to trap ID or native choices.
----@field item_groups? table<string, StaticOvermapMapgenItemGroup> Glyph to item-group placement.
----@field item_spawns? table<string, StaticMapgenItemSpawn> Glyph to single-item placement.
+---@field item_groups? table<string, StaticOvermapMapgenItemGroup|StaticOvermapMapgenItemGroup[]> Item-group placements by glyph.
+---@field item_spawns? table<string, StaticMapgenItemSpawn|StaticMapgenItemSpawn[]> Item placements by glyph.
+---@field monster_glyphs? table<string, StaticMapgenMonster|StaticMapgenMonster[]> Monster placements by glyph.
+---@field monster_group_glyphs? table<string, StaticMapgenMonsterGroup|StaticMapgenMonsterGroup[]> Monster-group placements by glyph.
+---@field vehicle_glyphs? table<string, StaticMapgenVehicle|StaticMapgenVehicle[]> Vehicle placements by glyph.
+---@field item_placements? StaticMapgenItemPlacement[] Item placements by position.
+---@field item_group_placements? StaticMapgenItemGroupPlacement[] Item-group placements by position.
+---@field loot_placements? StaticMapgenLootPlacement[] Loot placements by position.
+---@field monster_placements? StaticMapgenMonsterPlacement[] Monster placements by position.
+---@field monster_group_placements? StaticMapgenMonsterGroupPlacement[] Monster-group placements by position.
+---@field vehicle_placements? StaticMapgenVehiclePlacement[] Vehicle placements by position.
 ---@field toilets? string[] Glyphs where native default toilets are placed.
 ---@field nested? StaticMapgenNestedPlacement[] Nested layouts in placement order.
 ---@field nested_glyphs? table<string, StaticMapgenNestedOptions|StaticMapgenNestedOptions[]> Ordered nested placements keyed by map glyph.
