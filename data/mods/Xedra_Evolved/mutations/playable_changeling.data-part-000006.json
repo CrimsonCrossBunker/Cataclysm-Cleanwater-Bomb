@@ -1,0 +1,44 @@
+[
+  {
+    "type": "mutation",
+    "id": "POOKA_WOLF_TAIL",
+    "name": { "str": "Wolf Tail (Shapeshift)" },
+    "points": 2,
+    "purifiable": false,
+    "description": "Grow the tail of a wolf, making it harder to wear pants but improving your balance.",
+    "category": [ "FAIR_FOLK_COMMONER_POOKA" ],
+    "active": true,
+    "activated_is_setup": true,
+    "activated_eocs": [ "EOC_POOKA_WOLF_TAIL_ON" ],
+    "processed_eocs": [ "EOC_POOKA_SHAPESHIFTING_MANA_CHECK" ],
+    "deactivated_eocs": [ "EOC_POOKA_WOLF_TAIL_OFF" ]
+  },
+  {
+    "type": "mutation",
+    "id": "POOKA_TAIL_LONG",
+    "name": { "str": "Cat Tail (Shapeshift)" },
+    "points": 2,
+    "purifiable": false,
+    "description": "Grow the tail of a cat, making it harder to wear pants but improving your balance.",
+    "category": [ "FAIR_FOLK_COMMONER_POOKA" ],
+    "active": true,
+    "activated_is_setup": true,
+    "activated_eocs": [ "EOC_POOKA_TAIL_LONG_ON" ],
+    "processed_eocs": [ "EOC_POOKA_SHAPESHIFTING_MANA_CHECK" ],
+    "deactivated_eocs": [ "EOC_POOKA_TAIL_LONG_OFF" ]
+  },
+  {
+    "type": "mutation",
+    "id": "POOKA_TAIL_STING",
+    "name": { "str": "Spiked Tail (Shapeshift)" },
+    "points": 2,
+    "purifiable": false,
+    "description": "Grow the tail of a scorpion, making it harder to wear pants but allowing you to attack with the stinger.",
+    "category": [ "FAIR_FOLK_COMMONER_POOKA" ],
+    "active": true,
+    "activated_is_setup": true,
+    "activated_eocs": [ "EOC_POOKA_TAIL_STING_ON" ],
+    "processed_eocs": [ "EOC_POOKA_SHAPESHIFTING_MANA_CHECK" ],
+    "deactivated_eocs": [ "EOC_POOKA_TAIL_STING_OFF" ]
+  }
+]
