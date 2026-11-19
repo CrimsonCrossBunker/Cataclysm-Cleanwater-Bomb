@@ -1,0 +1,32 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_CARAVAN_REFUGEE_B1_Directions",
+    "dynamic_line": "Sure, I can mark it on your map if you like.  Here.",
+    "speaker_effect": { "effect": { "assign_mission": "MISSION_REACH_REFUGEE_CENTER" } },
+    "responses": [
+      { "text": "Thanks for the tip!  <done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "Thanks for the tip!  <end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_CARAVAN_REFUGEE_C1",
+    "dynamic_line": "Hey man.  Do you have any heroin?  I'm in a bit of a bind.",
+    "responses": [
+      { "text": "Oh, uh, sorry.", "topic": "TALK_DONE" },
+      {
+        "text": "Never, that heroin is for me and me alone.",
+        "condition": { "u_has_item": "heroin" },
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "I think you might need it even more than me.  Here you go.",
+        "condition": { "u_has_item": "heroin" },
+        "effect": { "u_sell_item": "heroin" },
+        "opinion": { "trust": 2, "value": 2 },
+        "topic": "TALK_CARAVAN_REFUGEE_C_LOVE"
+      }
+    ]
+  }
+]
