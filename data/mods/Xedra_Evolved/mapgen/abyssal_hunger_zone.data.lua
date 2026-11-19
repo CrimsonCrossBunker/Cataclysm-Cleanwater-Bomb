@@ -1,5 +1,18 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "abyssal_hunger_palette",
+    layout = {
+        terrain = {
+            ["0"] = "t_abyssal_flesh_floor",
+            ["1"] = "t_abyssal_flesh_wall",
+            B = "t_abyssal_brain",
+            a = "t_open_air",
+        },
+        furniture = { T = "f_shard_location" },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "abyssal_hunger_roof",
