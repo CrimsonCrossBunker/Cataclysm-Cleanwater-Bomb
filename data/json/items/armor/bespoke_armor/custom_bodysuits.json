@@ -89,51 +89,5 @@
     "flags": [ "VARSIZE", "POCKETS", "STURDY", "USES_BIONIC_POWER", "MUNDANE" ],
     "tool_ammo": "battery",
     "passive_effects": [ { "id": "ITEM_ENCH_dda_armor_nomad_advanced_0" }, { "id": "ench_climate_control_all" } ]
-  },
-  {
-    "id": "armor_nomad_advanced_on",
-    "copy-from": "armor_nomad_advanced",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str": "advanced nomad jumpsuit (on)", "str_pl": "advanced nomad jumpsuits (on)" },
-    "description": "A reinforced but airy jumpsuit designed to survive the long-term wear and tear of exploring the apocalyptic wasteland.  Rather than advanced polymer fabrics which may not be available in many worlds, it is made of breathable twill fabric with leather reinforcements ensuring it can be produced easily regardless of technology level.  Its clever construction adds additional core support, helping you to carry more equipment.  The internal cooling tubes are active and humming.",
-    "revert_to": "armor_nomad_advanced",
-    "flags": [ "VARSIZE", "POCKETS", "STURDY", "USES_BIONIC_POWER", "MUNDANE", "SPAWN_ACTIVE" ],
-    "power_draw": "100 W",
-    "use_action": {
-      "ammo_scale": 0,
-      "type": "transform",
-      "menu_text": "Turn off",
-      "msg": "The hum of the suit's climate control fades.",
-      "target": "armor_nomad_advanced"
-    }
-  },
-  {
-    "id": "armor_nomad_light",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR" ],
-    "name": { "str": "light nomad jumpsuit" },
-    "description": "A light, airy jumpsuit designed to survive the long-term wear and tear of exploring the apocalyptic wasteland.  Rather than advanced polymer fabrics which may not be available in many worlds, it is made of breathable twill fabric with leather reinforcements ensuring it can be produced easily regardless of technology level.  Its clever construction adds additional core support, helping you to carry more equipment.",
-    "copy-from": "armor_nomad",
-    "price_postapoc": "12 USD 50 cent",
-    "material": [ "denim", "leather" ],
-    "color": "light_gray",
-    "armor": [
-      {
-        "material": [
-          { "type": "denim", "covered_by_mat": 100, "thickness": 0.5 },
-          { "type": "leather", "covered_by_mat": 30, "thickness": 1.5 }
-        ],
-        "covers": [ "torso", "leg_l", "leg_r", "arm_l", "arm_r" ],
-        "cover_vitals": 30,
-        "coverage": 100,
-        "encumbrance": [ 2, 2 ],
-        "breathability": "AVERAGE"
-      }
-    ],
-    "environmental_protection": 1,
-    "proportional": { "weight": 0.6, "volume": 0.75, "warmth": 0.75 },
-    "use_action": [  ],
-    "material_thickness": 0.5
   }
 ]
