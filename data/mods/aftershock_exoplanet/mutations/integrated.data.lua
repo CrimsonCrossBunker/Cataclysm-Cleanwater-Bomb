@@ -1,0 +1,151 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "integrated_mastodon_fur",
+    category = "armor",
+    name = ccb.content.text("wooly fur"),
+    description = ccb.content.text("A course thick matt of fur, somewhere between a ballistic vest and attic insulation."),
+    mass = "4 kg",
+    volume = "4 L",
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "mut_fur" },
+    symbol = "x",
+    color = "dark_gray",
+    flags = {
+        "INTEGRATED",
+        "ALLOWS_NATURAL_ATTACKS",
+        "UNBREAKABLE",
+        "SKINTIGHT",
+        "NORMAL",
+        "WATER_FRIENDLY",
+        "SOFT",
+    },
+    armor = {
+        warmth = 90,
+        environmental_protection = 2,
+        portions = {
+            {
+                materials = { { id = "mut_fur", coverage = 100, thickness = 20 } },
+                covers = { "leg_l", "leg_r", "arm_l", "arm_r", "torso" },
+                coverage = 100,
+                encumbrance = 5,
+            },
+            {
+                materials = { { id = "mut_fur", coverage = 100, thickness = 13 } },
+                covers = { "hand_l", "hand_r", "foot_l", "foot_r", "head" },
+                coverage = 100,
+                encumbrance = 6,
+            },
+            {
+                materials = { { id = "mut_fur", coverage = 100, thickness = 8 } },
+                covers = { "mouth" },
+                coverage = 85,
+                encumbrance = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "integrated_hide",
+    category = "armor",
+    name = ccb.content.plural_text("sparse scales", "sparse scales"),
+    description = ccb.content.text("Your dermis has toughened and thickened to provide additional protection."),
+    mass = "1 kg",
+    volume = "900 ml",
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "hflesh" },
+    symbol = "x",
+    color = "light_red",
+    flags = {
+        "INTEGRATED",
+        "ALLOWS_NATURAL_ATTACKS",
+        "UNBREAKABLE",
+        "PERSONAL",
+        "WATER_FRIENDLY",
+        "PADDED",
+        "SOFT",
+    },
+    armor = {
+        warmth = 1,
+        environmental_protection = 1,
+        portions = {
+            {
+                materials = { { id = "hflesh", coverage = 100, thickness = 3 } },
+                covers = {
+                    "hand_l",
+                    "hand_r",
+                    "foot_l",
+                    "foot_r",
+                    "leg_l",
+                    "leg_r",
+                    "arm_l",
+                    "arm_r",
+                    "torso",
+                    "head",
+                },
+                coverage = 100,
+                encumbrance = 0,
+                breathability = "SECOND_SKIN",
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "integrated_rhomboidal_denticles",
+    category = "armor",
+    name = ccb.content.plural_text("thick scales", "thick scales"),
+    description = ccb.content.text("Leathery and heavily armored, your lamellar skin has toughened for the fiercest battles ahead."),
+    mass = "4 kg",
+    volume = "3600 ml",
+    price = "0 cent",
+    survival_price = "0 cent",
+    materials = { "flesh", "enamel" },
+    symbol = "x",
+    color = "light_red",
+    flags = {
+        "INTEGRATED", "ALLOWS_NATURAL_ATTACKS", "UNBREAKABLE", "SKINTIGHT", "NORMAL", "WATER_FRIENDLY",
+        "PADDED", "SOFT",
+    },
+    armor = {
+        warmth = 5,
+        environmental_protection = 2,
+        portions = {
+            {
+                materials = {
+                    { id = "flesh", coverage = 100, thickness = 0.5 },
+                    { id = "enamel", coverage = 95, thickness = 1.0 },
+                },
+                covers = {
+                    "hand_l",
+                    "hand_r",
+                    "foot_l",
+                    "foot_r",
+                    "leg_l",
+                    "leg_r",
+                    "arm_l",
+                    "arm_r",
+                    "torso",
+                    "head",
+                },
+                coverage = 100,
+                encumbrance = 4,
+                breathability = "GOOD",
+            },
+            {
+                materials = {
+                    { id = "flesh", coverage = 100, thickness = 0.5 },
+                    { id = "enamel", coverage = 95, thickness = 1.0 },
+                },
+                covers = { "mouth" },
+                coverage = 100,
+                encumbrance = 0,
+                breathability = "GOOD",
+                layers = { "SKINTIGHT" },
+            },
+        },
+    },
+}
