@@ -1,0 +1,13 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Olwen_Skills",
+    "dynamic_line": "Yeah, I got a master's in computer science from the University of Rhode Island.  Everyone around here comes to me when they want to keep their computers running.  Corrie works more with the hardware portion of these things; I'd recommend visiting her.",
+    "speaker_effect": { "effect": { "npc_add_var": "general_training_olwen_can_teach", "value": "yes" } },
+    "responses": [
+      { "text": "Could you teach me anything?", "topic": "TALK_TRAIN" },
+      { "text": "<done_conversation_section>", "topic": "TALK_GODCO_Olwen_2" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]

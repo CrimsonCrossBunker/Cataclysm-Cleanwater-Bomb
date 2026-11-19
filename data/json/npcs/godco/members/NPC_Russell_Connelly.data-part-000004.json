@@ -1,0 +1,16 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Russell_Trophy3",
+    "dynamic_line": "I may be more skilled or better equipped but you, my friend, have something I don't: experience.  A good hunter never leaves his hunting ground.  I sure ain't gonna leave it!  Now you <name_g>, you know what it's REALLY like out there!",
+    "responses": [
+      {
+        "text": "I hate to break it to you, but I came here because I don't want to see the world.",
+        "topic": "TALK_GODCO_Russell_Joinee",
+        "condition": { "compare_string": [ "yes", { "u_val": "general_meeting_godco_joinee" } ] }
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "I'm humbled by your words.  <end_talking_bye>", "topic": "TALK_DONE" }
+    ]
+  }
+]

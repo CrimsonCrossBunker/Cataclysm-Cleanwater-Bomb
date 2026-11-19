@@ -1,0 +1,29 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Russell_Trade",
+    "dynamic_line": "We're all desperately holding on to our stockpiles, but I can find something for you.  I have some spare hides and pelts, if you're interested in buying.",
+    "responses": [
+      {
+        "text": "Since I helped you out with your trophies, can I get a discount?",
+        "topic": "TALK_GODCO_Russell_Trade2",
+        "condition": { "and": [ { "npc_has_effect": "hunt_godco_russell" }, { "not": { "npc_has_effect": "trade_godco_russell" } } ] }
+      },
+      { "text": "Let's make a deal.", "effect": "start_trade", "topic": "TALK_GODCO_Russell_2" },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Russell_Trade2",
+    "dynamic_line": "I can't give a discount, but here's some meat instead.  Made by yours truly.",
+    "speaker_effect": {
+      "effect": [ { "u_spawn_item": "meat_smoked", "count": 3 }, { "npc_add_effect": "trade_godco_russell", "duration": "PERMANENT" } ]
+    },
+    "responses": [
+      { "text": "Thank you.  <done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "Thank you.  I'll see you around, Russell.", "topic": "TALK_DONE" }
+    ]
+  }
+]
