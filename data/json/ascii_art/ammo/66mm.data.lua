@@ -1,0 +1,52 @@
+local ccb = require("ccb")
+
+ccb.content.define_ascii_art {
+    id = "m235tpa",
+    lines = {
+        "    <color_red>,-.",
+        "   /   \\",
+        "   ║<color_yellow>═══</color>║",
+        "   ║<color_dark_gray>≈≈≈</color>║",
+        "   ║   ║",
+        "   |   |",
+        "   │   │",
+        "   │   │",
+        "   \\   /",
+        "    ║ ║",
+        "    <color_yellow>\\═/",
+        "    │ │",
+        "    │ │",
+        "    │ │",
+        "    │ │",
+        "    │ │",
+        "    'W'",
+        "    / \\",
+        "  .'/|\\'.",
+        ".'.'.^.'.'.",
+        "└'└'   '┘'┘",
+    },
+}
+
+ccb.content.define_ascii_art {
+    id = "66mm_HEAT",
+    lines = {
+        "     <color_light_gray>A",
+        "    <color_green>/ \\",
+        "   /   \\",
+        "   │<color_yellow>≈≈≈</color>│",
+        "   │   │",
+        "   \\   /",
+        "    \\ /",
+        "    <color_yellow>│ │",
+        "    [ ]",
+        "    │ │",
+        "    │ │",
+        "    │ │",
+        "    │ │",
+        "    'W'",
+        "    / \\",
+        "  .'/|\\'.",
+        ".'.'.^.'.'.",
+        "└'└'   '┘'┘",
+    },
+}
