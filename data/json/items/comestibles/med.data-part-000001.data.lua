@@ -1,0 +1,33 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "cola_meth",
+    name = ccb.content.plural_text("methacola", "methacola"),
+    category = "drugs",
+    mass = "61 g",
+    color = "brown",
+    default_container = "bottle_glass",
+    symbol = "~",
+    description = ccb.content.text("A potent cocktail of amphetamines, caffeine and corn syrup, this stuff puts a spring in your step, a fire in your eye, and a bad case of tachycardia tremors in your somersaulting heart."),
+    display_type = "BY_VOLUME",
+    price = "90 USD",
+    survival_price = "3 USD",
+    materials = { "junk" },
+    volume = "250 ml",
+    phase = "liquid",
+    flags = { "EATEN_COLD", "WATER_DISSOLVE", "NO_AUTO_CONSUME" },
+    comestible = {
+        addiction = "amphetamine",
+        sleepiness = 60,
+        stimulation = 20,
+        kind = "DRINK",
+        quench = 15,
+        healthy = -8,
+        addiction_potential = 60,
+        calories = 49,
+        servings = 4,
+        freezing_point = -45,
+        fun = 30,
+        vitamins = { { id = "junk_allergen", amount = 1 } },
+    },
+}
