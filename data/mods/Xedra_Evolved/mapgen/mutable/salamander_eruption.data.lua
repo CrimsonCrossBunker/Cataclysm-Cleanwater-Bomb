@@ -637,3 +637,58 @@ ccb.content.define_mapgen {
         monster_glyphs = { D = { id = "mon_salamagman_warlord_butterfly" } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "salamander_eruption_ground",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "            <<          ",
+            "      ---------         ",
+            "     --,,,,,,,----      ",
+            "    <-,,,,,,,,,,,---    ",
+            "    <-,,,,,,,,,,,,-<    ",
+            "    --,,,,,<,,,,,,-<    ",
+            "   --,,,,,,,,,,,,,--    ",
+            "   <-,,,,,,,,,,,,,,--   ",
+            "   --,,,,,,,,,,,,,,,--  ",
+            "   -,,,,,,,><,,,,,,,,-  ",
+            "   -,,,,,,,><,,,,,,,,-  ",
+            "   -,,,,,,,,,,,,,,,,,-  ",
+            "  <-,,,,,,,,,,,,,,,,,-  ",
+            "  --,,,,,,,,,,,,,,,---  ",
+            "  -,,,,,,,,,,,,,,,,-<   ",
+            " --,,,,,<,,,,,,,<,,-<   ",
+            " <-,,,,,,,,,,,,,,,,---  ",
+            " ---,----,,,,,,,,,,---  ",
+            "   ---<<-,,,,,,---,-<   ",
+            "       <-,------<--     ",
+            "        ---   -         ",
+            "                        ",
+        },
+        terrain = {
+            [" "] = {
+                { id = "t_dirt", copies = 2 },
+                { id = "t_region_groundcover", copies = 7 },
+                { id = "t_pit_shallow", copies = 2 },
+                { id = "t_lava" },
+            },
+            [","] = { { id = "t_obsidian_floor" } },
+            ["-"] = { { id = "t_obsidian_wall" } },
+            ["<"] = { { id = "t_slope_up" } },
+            [">"] = { { id = "t_slope_down" } },
+        },
+        fill_terrain = "t_region_groundcover",
+        field_placements = {
+            { id = "fd_blood", x = { 3, 19 }, y = { 4, 20 }, repetitions = { 30, 50 } },
+            { id = "fd_blood_insect", x = { 3, 19 }, y = { 4, 20 }, repetitions = { 20, 30 } },
+        },
+        monster_placements = {
+            { id = "mon_dermatik_larva", x = { 3, 22 }, y = { 8, 22 }, repetitions = { 2, 4 } },
+            { id = "mon_dermatik_midwife", x = { 10, 12 }, y = { 14, 17 }, repetitions = { 0, 2 } },
+            { id = "mon_dermatik", x = { 0, 23 }, y = { 0, 23 }, repetitions = { 1, 4 } },
+        },
+    },
+}

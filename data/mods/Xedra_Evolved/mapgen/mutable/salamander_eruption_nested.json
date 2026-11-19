@@ -4,29 +4,5 @@
     "id": "salamander_eruption_palette",
     "terrain": { "#": "t_obsidian_wall", " ": "t_obsidian_floor", "$": "t_obsidian_roof" },
     "furniture": { "$": "f_boulder_large" }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "salamander_sinkhole",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_terrain": [ { "ter": "t_obsidian_floor", "x": 0, "y": 0 } ],
-      "place_traps": [ { "trap": "tr_sinkhole", "x": 0, "y": 0 } ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "salamander_toxic_gas",
-    "object": { "mapgensize": [ 1, 1 ], "place_fields": [ { "field": "fd_gas_vent", "x": 0, "y": 0, "intensity": 2, "age": 20 } ] }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fallen_adventurer",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_items": [ { "item": "map_extra_fallen_adventurer", "x": [ 0, 0 ], "y": [ 0, 0 ], "chance": 100 } ],
-      "place_fields": [ { "field": "fd_blood", "x": [ 0, 0 ], "y": [ 0, 0 ] }, { "field": "fd_gibs_flesh", "x": [ 0, 0 ], "y": [ 0, 0 ] } ]
-    }
   }
 ]

@@ -279,3 +279,36 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "salamander_sinkhole",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        terrain_placements = { { id = "t_obsidian_floor", x = 0, y = 0 } },
+        trap_placements = { { id = "tr_sinkhole", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "salamander_toxic_gas",
+    layout = {
+        size = { width = 1, height = 1 },
+        field_placements = { { id = "fd_gas_vent", x = 0, y = 0, intensity = 2, age_turns = 20 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "fallen_adventurer",
+    layout = {
+        size = { width = 1, height = 1 },
+        item_group_placements = { { group = "map_extra_fallen_adventurer", x = { 0, 0 }, y = { 0, 0 }, chance = 100 } },
+        field_placements = {
+            { id = "fd_blood", x = { 0, 0 }, y = { 0, 0 } },
+            { id = "fd_gibs_flesh", x = { 0, 0 }, y = { 0, 0 } },
+        },
+    },
+}
