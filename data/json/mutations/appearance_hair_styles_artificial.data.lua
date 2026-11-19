@@ -1,0 +1,2336 @@
+local ccb = require("ccb")
+
+ccb.content.define_mutation {
+    id = "artificial_hair_bald",
+    name = ccb.content.text("Artificial hair: bald"),
+    description = ccb.content.text("You are bald."),
+    points = 0,
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_buzzcut",
+    name = ccb.content.text("Artificial hair: buzz cut"),
+    points = 0,
+    description = ccb.content.text("Your hair has been shaved close to the head."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, buzz cut"),
+            description = ccb.content.text("Your black hair has been shaved close to the head."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, buzz cut"),
+            description = ccb.content.text("Your blond hair has been shaved close to the head."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, buzz cut"),
+            description = ccb.content.text("Your blue hair has been shaved close to the head."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, buzz cut"),
+            description = ccb.content.text("Your brown hair has been shaved close to the head."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, buzz cut"),
+            description = ccb.content.text("Your gray hair has been shaved close to the head."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, buzz cut"),
+            description = ccb.content.text("Your green hair has been shaved close to the head."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, buzz cut"),
+            description = ccb.content.text("Your pink hair has been shaved close to the head."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, buzz cut"),
+            description = ccb.content.text("Your purple hair has been shaved close to the head."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, buzz cut"),
+            description = ccb.content.text("Your red hair has been shaved close to the head."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, buzz cut"),
+            description = ccb.content.text("Your white hair has been shaved close to the head."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_crewcut",
+    name = ccb.content.text("Artificial hair: crew-cut"),
+    description = ccb.content.text("Crewcut hair style."),
+    points = 0,
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, crew-cut"),
+            description = ccb.content.text("Crewcut black hair style."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, crew-cut"),
+            description = ccb.content.text("Crewcut blond hair style."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, crew-cut"),
+            description = ccb.content.text("Crewcut blue hair style."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, crew-cut"),
+            description = ccb.content.text("Crewcut brown hair style."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, crew-cut"),
+            description = ccb.content.text("Crewcut gray hair style."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, crew-cut"),
+            description = ccb.content.text("Crewcut green hair style."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, crew-cut"),
+            description = ccb.content.text("Crewcut pink hair style."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, crew-cut"),
+            description = ccb.content.text("Crewcut purple hair style."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, crew-cut"),
+            description = ccb.content.text("Crewcut red hair style."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, crew-cut"),
+            description = ccb.content.text("Crewcut white hair style."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_fro",
+    name = ccb.content.text("Artificial hair: afro"),
+    description = ccb.content.text("'Fro hair style."),
+    points = 0,
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, afro"),
+            description = ccb.content.text("'Fro black hair style."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, afro"),
+            description = ccb.content.text("'Fro blond hair style."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, afro"),
+            description = ccb.content.text("'Fro blue hair style."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, afro"),
+            description = ccb.content.text("'Fro brown hair style."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, afro"),
+            description = ccb.content.text("'Fro gray hair style."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, afro"),
+            description = ccb.content.text("'Fro green hair style."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, afro"),
+            description = ccb.content.text("'Fro pink hair style."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, afro"),
+            description = ccb.content.text("'Fro purple hair style."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, afro"),
+            description = ccb.content.text("'Fro red hair style."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, afro"),
+            description = ccb.content.text("'Fro white hair style."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_long",
+    name = ccb.content.text("Artificial hair: long"),
+    description = ccb.content.text("Long hair style."),
+    points = 0,
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, long"),
+            description = ccb.content.text("Long black hair style."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, long"),
+            description = ccb.content.text("Long blond hair style."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, long"),
+            description = ccb.content.text("Long blue hair style."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, long"),
+            description = ccb.content.text("Long brown hair style."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, long"),
+            description = ccb.content.text("Long gray hair style."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, long"),
+            description = ccb.content.text("Long green hair style."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, long"),
+            description = ccb.content.text("Long pink hair style."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, long"),
+            description = ccb.content.text("Long purple hair style."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, long"),
+            description = ccb.content.text("Long red hair style."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, long"),
+            description = ccb.content.text("Long white hair style."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_long_over_eye",
+    name = ccb.content.text("Artificial hair: long over-eye"),
+    points = 0,
+    description = ccb.content.text("You have long hair, swooping over one eye."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, long over-eye"),
+            description = ccb.content.text("You have long black hair, swooping over one eye."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, long over-eye"),
+            description = ccb.content.text("You have long blond hair, swooping over one eye."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, long over-eye"),
+            description = ccb.content.text("You have long blue hair, swooping over one eye."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, long over-eye"),
+            description = ccb.content.text("You have long brown hair, swooping over one eye."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, long over-eye"),
+            description = ccb.content.text("You have long gray hair, swooping over one eye."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, long over-eye"),
+            description = ccb.content.text("You have long green hair, swooping over one eye."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, long over-eye"),
+            description = ccb.content.text("You have long pink hair, swooping over one eye."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, long over-eye"),
+            description = ccb.content.text("You have long purple hair, swooping over one eye."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, long over-eye"),
+            description = ccb.content.text("You have long red hair, swooping over one eye."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, long over-eye"),
+            description = ccb.content.text("You have long white hair, swooping over one eye."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_medium",
+    name = ccb.content.text("Artificial hair: medium-length"),
+    description = ccb.content.text("Medium-length hair style."),
+    points = 0,
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, medium-length"),
+            description = ccb.content.text("Medium-length black hair style."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, medium-length"),
+            description = ccb.content.text("Medium-length blond hair style."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, medium-length"),
+            description = ccb.content.text("Medium-length blue hair style."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, medium-length"),
+            description = ccb.content.text("Medium-length brown hair style."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, medium-length"),
+            description = ccb.content.text("Medium-length gray hair style."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, medium-length"),
+            description = ccb.content.text("Medium-length green hair style."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, medium-length"),
+            description = ccb.content.text("Medium-length pink hair style."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, medium-length"),
+            description = ccb.content.text("Medium-length purple hair style."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, medium-length"),
+            description = ccb.content.text("Medium-length red hair style."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, medium-length"),
+            description = ccb.content.text("Medium-length white hair style."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_messy",
+    name = ccb.content.text("Artificial hair: long messy"),
+    points = 0,
+    description = ccb.content.text("You have long, messy hair, worn loose and carefree!"),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, long messy"),
+            description = ccb.content.text("You have long black hair, worn loose and carefree!"),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, long messy"),
+            description = ccb.content.text("You have long blond hair, worn loose and carefree!"),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, long messy"),
+            description = ccb.content.text("You have long blue hair, worn loose and carefree!"),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, long messy"),
+            description = ccb.content.text("You have long brown hair, worn loose and carefree!"),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, long messy"),
+            description = ccb.content.text("You have long gray hair, worn loose and carefree!"),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, long messy"),
+            description = ccb.content.text("You have long green hair, worn loose and carefree!"),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, long messy"),
+            description = ccb.content.text("You have long pink hair, worn loose and carefree!"),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, long messy"),
+            description = ccb.content.text("You have long purple hair, worn loose and carefree!"),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, long messy"),
+            description = ccb.content.text("You have long red hair, worn loose and carefree!"),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, long messy"),
+            description = ccb.content.text("You have long white hair, worn loose and carefree!"),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_very_long",
+    name = ccb.content.text("Artificial hair: very long"),
+    points = 0,
+    description = ccb.content.text("You have very long hair, which goes down to your waist."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, very long"),
+            description = ccb.content.text("You have very long black hair, which goes down to your waist."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, very long"),
+            description = ccb.content.text("You have very long blond hair, which goes down to your waist."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, very long"),
+            description = ccb.content.text("You have very long blue hair, which goes down to your waist."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, very long"),
+            description = ccb.content.text("You have very long brown hair, which goes down to your waist."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, very long"),
+            description = ccb.content.text("You have very long gray hair, which goes down to your waist."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, very long"),
+            description = ccb.content.text("You have very long green hair, which goes down to your waist."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, very long"),
+            description = ccb.content.text("You have very long pink hair, which goes down to your waist."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, very long"),
+            description = ccb.content.text("You have very long purple hair, which goes down to your waist."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, very long"),
+            description = ccb.content.text("You have very long red hair, which goes down to your waist."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, very long"),
+            description = ccb.content.text("You have very long white hair, which goes down to your waist."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_extremely_long",
+    name = ccb.content.text("Artificial hair: extremely long"),
+    points = 0,
+    description = ccb.content.text("You have extremely long hair, which goes down to your knees."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, extremely long"),
+            description = ccb.content.text("You have extremely long black hair, which goes down to your knees."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, extremely long"),
+            description = ccb.content.text("You have extremely long blond hair, which goes down to your knees."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, extremely long"),
+            description = ccb.content.text("You have extremely long blue hair, which goes down to your knees."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, extremely long"),
+            description = ccb.content.text("You have extremely long brown hair, which goes down to your knees."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, extremely long"),
+            description = ccb.content.text("You have extremely long gray hair, which goes down to your knees."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, extremely long"),
+            description = ccb.content.text("You have extremely long green hair, which goes down to your knees."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, extremely long"),
+            description = ccb.content.text("You have extremely long pink hair, which goes down to your knees."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, extremely long"),
+            description = ccb.content.text("You have extremely long purple hair, which goes down to your knees."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, extremely long"),
+            description = ccb.content.text("You have extremely long red hair, which goes down to your knees."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, extremely long"),
+            description = ccb.content.text("You have extremely long white hair, which goes down to your knees."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_body_length",
+    name = ccb.content.text("Artificial hair: body-length"),
+    points = 0,
+    description = ccb.content.text("Your hair is now so long that it reaches the floor."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, body-length"),
+            description = ccb.content.text("Your black hair is now so long that it reaches the floor."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, body-length"),
+            description = ccb.content.text("Your blond hair is now so long that it reaches the floor."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, body-length"),
+            description = ccb.content.text("Your blue hair is now so long that it reaches the floor."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, body-length"),
+            description = ccb.content.text("Your brown hair is now so long that it reaches the floor."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, body-length"),
+            description = ccb.content.text("Your gray hair is now so long that it reaches the floor."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, body-length"),
+            description = ccb.content.text("Your green hair is now so long that it reaches the floor."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, body-length"),
+            description = ccb.content.text("Your pink hair is now so long that it reaches the floor."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, body-length"),
+            description = ccb.content.text("Your purple hair is now so long that it reaches the floor."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, body-length"),
+            description = ccb.content.text("Your red hair is now so long that it reaches the floor."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, body-length"),
+            description = ccb.content.text("Your white hair is now so long that it reaches the floor."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_mohawk",
+    name = ccb.content.text("Artificial hair: mohawk"),
+    description = ccb.content.text("Mohawk hair style."),
+    points = 0,
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, mohawk"),
+            description = ccb.content.text("Mohawk black hair style."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, mohawk"),
+            description = ccb.content.text("Mohawk blond hair style."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, mohawk"),
+            description = ccb.content.text("Mohawk blue hair style."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, mohawk"),
+            description = ccb.content.text("Mohawk brown hair style."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, mohawk"),
+            description = ccb.content.text("Mohawk gray hair style."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, mohawk"),
+            description = ccb.content.text("Mohawk green hair style."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, mohawk"),
+            description = ccb.content.text("Mohawk pink hair style."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, mohawk"),
+            description = ccb.content.text("Mohawk purple hair style."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, mohawk"),
+            description = ccb.content.text("Mohawk red hair style."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, mohawk"),
+            description = ccb.content.text("Mohawk white hair style."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_long_mohawk",
+    name = ccb.content.text("Artificial hair: long mohawk"),
+    description = ccb.content.text("You have a long mohawk."),
+    points = 0,
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, mohawk"),
+            description = ccb.content.text("You have a long black mohawk."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, mohawk"),
+            description = ccb.content.text("You have a long blond mohawk."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, mohawk"),
+            description = ccb.content.text("You have a long blue mohawk."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, mohawk"),
+            description = ccb.content.text("You have a long brown mohawk."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, mohawk"),
+            description = ccb.content.text("You have a long gray mohawk."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, mohawk"),
+            description = ccb.content.text("You have a long green mohawk."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, mohawk"),
+            description = ccb.content.text("You have a long pink mohawk."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, mohawk"),
+            description = ccb.content.text("You have a long purple mohawk."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, mohawk"),
+            description = ccb.content.text("You have a long red mohawk."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, mohawk"),
+            description = ccb.content.text("You have a long white mohawk."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_mullet",
+    name = ccb.content.text("Artificial hair: mullet"),
+    points = 0,
+    description = ccb.content.text("Business in the front, party in the back!"),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, mullet"),
+            description = ccb.content.text("You have long black hair, in the style of a mullet."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, mullet"),
+            description = ccb.content.text("You have long blond hair, in the style of a mullet."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, mullet"),
+            description = ccb.content.text("You have long blue hair, in the style of a mullet."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, mullet"),
+            description = ccb.content.text("You have long brown hair, in the style of a mullet."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, mullet"),
+            description = ccb.content.text("You have long gray hair, in the style of a mullet."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, mullet"),
+            description = ccb.content.text("You have long green hair, in the style of a mullet."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, mullet"),
+            description = ccb.content.text("You have long pink hair, in the style of a mullet."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, mullet"),
+            description = ccb.content.text("You have long purple hair, in the style of a mullet."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, mullet"),
+            description = ccb.content.text("You have long red hair, in the style of a mullet."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, mullet"),
+            description = ccb.content.text("You have long white hair, in the style of a mullet."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_ponytail",
+    name = ccb.content.text("Artificial hair: ponytail"),
+    points = 0,
+    description = ccb.content.text("You have long hair, pulled back into a ponytail."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, ponytail"),
+            description = ccb.content.text("You have long black hair, pulled back into a ponytail."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, ponytail"),
+            description = ccb.content.text("You have long blond hair, pulled back into a ponytail."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, ponytail"),
+            description = ccb.content.text("You have long blue hair, pulled back into a ponytail."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, ponytail"),
+            description = ccb.content.text("You have long brown hair, pulled back into a ponytail."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, ponytail"),
+            description = ccb.content.text("You have long gray hair, pulled back into a ponytail."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, ponytail"),
+            description = ccb.content.text("You have long green hair, pulled back into a ponytail."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, ponytail"),
+            description = ccb.content.text("You have long pink hair, pulled back into a ponytail."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, ponytail"),
+            description = ccb.content.text("You have long purple hair, pulled back into a ponytail."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, ponytail"),
+            description = ccb.content.text("You have long red hair, pulled back into a ponytail."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, ponytail"),
+            description = ccb.content.text("You have long white hair, pulled back into a ponytail."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_short",
+    name = ccb.content.text("Artificial hair: short"),
+    description = ccb.content.text("Short hair style."),
+    points = 0,
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, short"),
+            description = ccb.content.text("Short black hair style."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, short"),
+            description = ccb.content.text("Short blond hair style."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, short"),
+            description = ccb.content.text("Short blue hair style."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, short"),
+            description = ccb.content.text("Short brown hair style."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, short"),
+            description = ccb.content.text("Short gray hair style."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, short"),
+            description = ccb.content.text("Short green hair style."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, short"),
+            description = ccb.content.text("Short pink hair style."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, short"),
+            description = ccb.content.text("Short purple hair style."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, short"),
+            description = ccb.content.text("Short red hair style."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, short"),
+            description = ccb.content.text("Short white hair style."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_short_no_fringe",
+    name = ccb.content.text("Artificial hair: short without a fringe"),
+    points = 0,
+    description = ccb.content.text("You have short hair, without a fringe."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, short without a fringe"),
+            description = ccb.content.text("You have short black hair, without a fringe."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, short without a fringe"),
+            description = ccb.content.text("You have short blond hair, without a fringe."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, short without a fringe"),
+            description = ccb.content.text("You have short blue hair, without a fringe."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, short without a fringe"),
+            description = ccb.content.text("You have short brown hair, without a fringe."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, short without a fringe"),
+            description = ccb.content.text("You have short gray hair, without a fringe."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, short without a fringe"),
+            description = ccb.content.text("You have short green hair, without a fringe."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, short without a fringe"),
+            description = ccb.content.text("You have short pink hair, without a fringe."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, short without a fringe"),
+            description = ccb.content.text("You have short purple hair, without a fringe."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, short without a fringe"),
+            description = ccb.content.text("You have short red hair, without a fringe."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, short without a fringe"),
+            description = ccb.content.text("You have short white hair, without a fringe."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_short_over_eye",
+    name = ccb.content.text("Artificial hair: short over-eye"),
+    points = 0,
+    description = ccb.content.text("You have short hair, with the fringe over one eye."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, short over-eye"),
+            description = ccb.content.text("You have short black hair, with the fringe over one eye."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, short over-eye"),
+            description = ccb.content.text("You have short blond hair, with the fringe over one eye."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, short over-eye"),
+            description = ccb.content.text("You have short blue hair, with the fringe over one eye."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, short over-eye"),
+            description = ccb.content.text("You have short brown hair, with the fringe over one eye."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, short over-eye"),
+            description = ccb.content.text("You have short gray hair, with the fringe over one eye."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, short over-eye"),
+            description = ccb.content.text("You have short green hair, with the fringe over one eye."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, short over-eye"),
+            description = ccb.content.text("You have short pink hair, with the fringe over one eye."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, short over-eye"),
+            description = ccb.content.text("You have short purple hair, with the fringe over one eye."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, short over-eye"),
+            description = ccb.content.text("You have short red hair, with the fringe over one eye."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, short over-eye"),
+            description = ccb.content.text("You have short white hair, with the fringe over one eye."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_punk_long",
+    name = ccb.content.text("Artificial hair: long punk"),
+    points = 0,
+    description = ccb.content.text("You are rockin' with these long locks."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, long punk"),
+            description = ccb.content.text("You are rockin' with these long black locks."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, long punk"),
+            description = ccb.content.text("You are rockin' with these long blond locks."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, long punk"),
+            description = ccb.content.text("You are rockin' with these long blue locks."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, long punk"),
+            description = ccb.content.text("You are rockin' with these long brown locks."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, long punk"),
+            description = ccb.content.text("You are rockin' with these long gray locks."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, long punk"),
+            description = ccb.content.text("You are rockin' with these long green locks."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, long punk"),
+            description = ccb.content.text("You are rockin' with these long pink locks."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, long punk"),
+            description = ccb.content.text("You are rockin' with these long purple locks."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, long punk"),
+            description = ccb.content.text("You are rockin' with these long red locks."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, long punk"),
+            description = ccb.content.text("You are rockin' with these long white locks."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_curls",
+    name = ccb.content.text("Artificial hair: curls"),
+    points = 0,
+    description = ccb.content.text("Your face is framed by cute curls."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, curls"),
+            description = ccb.content.text("Your face is framed by cute curls."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, curls"),
+            description = ccb.content.text("Your face is framed by cute blond curls."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, curls"),
+            description = ccb.content.text("Your face is framed by cute blue curls."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, curls"),
+            description = ccb.content.text("Your face is framed by cute brown curls."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, curls"),
+            description = ccb.content.text("Your face is framed by cute gray curls."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, curls"),
+            description = ccb.content.text("Your face is framed by cute green curls."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, curls"),
+            description = ccb.content.text("Your face is framed by cute pink curls."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, curls"),
+            description = ccb.content.text("Your face is framed by cute purple curls."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, curls"),
+            description = ccb.content.text("Your face is framed by cute red curls."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, curls"),
+            description = ccb.content.text("Your face is framed by cute white curls."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_modern",
+    name = ccb.content.text("Artificial hair: modern"),
+    points = 0,
+    description = ccb.content.text("Your modern and plain cut common among college students."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, modern"),
+            description = ccb.content.text("Your modern and plain cut common among college students, black."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, modern"),
+            description = ccb.content.text("Your modern and plain cut common among college students, blond."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, modern"),
+            description = ccb.content.text("Your modern and plain cut common among college students, blue."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, modern"),
+            description = ccb.content.text("Your modern and plain cut common among college students, brown."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, modern"),
+            description = ccb.content.text("Your modern and plain cut common among college students, gray."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, modern"),
+            description = ccb.content.text("Your modern and plain cut common among college students, green."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, modern"),
+            description = ccb.content.text("Your modern and plain cut common among college students, pink."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, modern"),
+            description = ccb.content.text("Your modern and plain cut common among college students, purple."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, modern"),
+            description = ccb.content.text("Your modern and plain cut common among college students, red."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, modern"),
+            description = ccb.content.text("Your modern and plain cut common among college students, white."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_bun",
+    name = ccb.content.text("Artificial hair: bun"),
+    points = 0,
+    description = ccb.content.text("Your long hair is bound into a bun."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, bun"),
+            description = ccb.content.text("Your long black hair is bound into a bun."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, bun"),
+            description = ccb.content.text("Your long blond hair is bound into a bun."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, bun"),
+            description = ccb.content.text("Your long blue hair is bound into a bun."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, bun"),
+            description = ccb.content.text("Your long brown hair is bound into a bun."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, bun"),
+            description = ccb.content.text("Your long gray hair is bound into a bun."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, bun"),
+            description = ccb.content.text("Your long green hair is bound into a bun."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, bun"),
+            description = ccb.content.text("Your long pink hair is bound into a bun."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, bun"),
+            description = ccb.content.text("Your long purple hair is bound into a bun."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, bun"),
+            description = ccb.content.text("Your long red hair is bound into a bun."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, bun"),
+            description = ccb.content.text("Your long white hair is bound into a bun."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_braid",
+    name = ccb.content.text("Artificial hair: princess braid"),
+    points = 0,
+    description = ccb.content.text("Your long hair is bound in a braid."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, princess braid"),
+            description = ccb.content.text("Your long black hair is bound in a braid."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, princess braid"),
+            description = ccb.content.text("Your long blond hair is bound in a braid."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, princess braid"),
+            description = ccb.content.text("Your long blue hair is bound in a braid."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, princess braid"),
+            description = ccb.content.text("Your long brown hair is bound in a braid."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, princess braid"),
+            description = ccb.content.text("Your long gray hair is bound in a braid."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, princess braid"),
+            description = ccb.content.text("Your long green hair is bound in a braid."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, princess braid"),
+            description = ccb.content.text("Your long pink hair is bound in a braid."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, princess braid"),
+            description = ccb.content.text("Your long purple hair is bound in a braid."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, princess braid"),
+            description = ccb.content.text("Your long red hair is bound in a braid."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, princess braid"),
+            description = ccb.content.text("Your long white hair is bound in a braid."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_puff",
+    name = ccb.content.text("Artificial hair: puffs"),
+    points = 0,
+    description = ccb.content.text("Hair tied into two puffs."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, puffs"),
+            description = ccb.content.text("Black hair tied into two puffs."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, puffs"),
+            description = ccb.content.text("Blond hair tied into two puffs."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, puffs"),
+            description = ccb.content.text("Blue hair tied into two puffs."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, puffs"),
+            description = ccb.content.text("Brown hair tied into two puffs."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, puffs"),
+            description = ccb.content.text("Gray hair tied into two puffs."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, puffs"),
+            description = ccb.content.text("Green hair tied into two puffs."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, puffs"),
+            description = ccb.content.text("Pink hair tied into two puffs."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, puffs"),
+            description = ccb.content.text("Purple hair tied into two puffs."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, puffs"),
+            description = ccb.content.text("Red hair tied into two puffs."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, puffs"),
+            description = ccb.content.text("White hair tied into two puffs."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_beaded",
+    name = ccb.content.text("Artificial hair: beaded hair"),
+    points = 0,
+    description = ccb.content.text("Hair threaded with beads."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, beaded"),
+            description = ccb.content.text("Black hair threaded with beads."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, beaded"),
+            description = ccb.content.text("Blond hair threaded with beads."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, beaded"),
+            description = ccb.content.text("Blue hair threaded with beads."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, beaded"),
+            description = ccb.content.text("Brown hair threaded with beads."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, beaded"),
+            description = ccb.content.text("Gray hair threaded with beads."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, beaded"),
+            description = ccb.content.text("Green hair threaded with beads."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, beaded"),
+            description = ccb.content.text("Pink hair threaded with beads."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, beaded"),
+            description = ccb.content.text("Purple hair threaded with beads."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, beaded"),
+            description = ccb.content.text("Red hair threaded with beads."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, beaded"),
+            description = ccb.content.text("White hair threaded with beads."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_twintails",
+    name = ccb.content.text("Artificial hair: twin tails"),
+    points = 0,
+    description = ccb.content.text("Two very long braids."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, twin tails"),
+            description = ccb.content.text("Two very long black braids."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, twin tails"),
+            description = ccb.content.text("Two very long blond braids."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, twin tails"),
+            description = ccb.content.text("Two very long blue braids."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, twin tails"),
+            description = ccb.content.text("Two very long brown braids."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, twin tails"),
+            description = ccb.content.text("Two very long gray braids."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, twin tails"),
+            description = ccb.content.text("Two very long green braids."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, twin tails"),
+            description = ccb.content.text("Two very long pink braids."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, twin tails"),
+            description = ccb.content.text("Two very long purple braids."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, twin tails"),
+            description = ccb.content.text("Two very long red braids."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, twin tails"),
+            description = ccb.content.text("Two very long white braids."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_super_princess",
+    name = ccb.content.text("Artificial hair: super princess"),
+    points = 0,
+    description = ccb.content.text("Hair for the better princess."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, super princess"),
+            description = ccb.content.text("Black hair for the better princess."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, super princess"),
+            description = ccb.content.text("Blond hair for the better princess."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, super princess"),
+            description = ccb.content.text("Blue hair for the better princess."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, super princess"),
+            description = ccb.content.text("Brown hair for the better princess."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, super princess"),
+            description = ccb.content.text("Gray hair for the better princess."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, super princess"),
+            description = ccb.content.text("Green hair for the better princess."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, super princess"),
+            description = ccb.content.text("Pink hair for the better princess."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, super princess"),
+            description = ccb.content.text("Purple hair for the better princess."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, super princess"),
+            description = ccb.content.text("Red hair for the better princess."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, super princess"),
+            description = ccb.content.text("White hair for the better princess."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "artificial_hair_detective",
+    name = ccb.content.text("Artificial hair: detective"),
+    points = 0,
+    description = ccb.content.text("Hair for lawyers and crime solvers."),
+    starting_trait = false,
+    valid = false,
+    player_display = true,
+    vanity = true,
+    variants = {
+        {
+            id = "black",
+            name = ccb.content.text("Artificial hair: black, detective"),
+            description = ccb.content.text("Black hair for lawyers and crime solvers."),
+            weight = 1,
+        },
+        {
+            id = "blond",
+            name = ccb.content.text("Artificial hair: blond, detective"),
+            description = ccb.content.text("Blond hair for lawyers and crime solvers."),
+            weight = 1,
+        },
+        {
+            id = "blue",
+            name = ccb.content.text("Artificial hair: blue, detective"),
+            description = ccb.content.text("Blue hair for lawyers and crime solvers."),
+            weight = 1,
+        },
+        {
+            id = "brown",
+            name = ccb.content.text("Artificial hair: brown, detective"),
+            description = ccb.content.text("Brown hair for lawyers and crime solvers."),
+            weight = 1,
+        },
+        {
+            id = "gray",
+            name = ccb.content.text("Artificial hair: gray, detective"),
+            description = ccb.content.text("Gray hair for lawyers and crime solvers."),
+            weight = 1,
+        },
+        {
+            id = "green",
+            name = ccb.content.text("Artificial hair: green, detective"),
+            description = ccb.content.text("Green hair for lawyers and crime solvers."),
+            weight = 1,
+        },
+        {
+            id = "pink",
+            name = ccb.content.text("Artificial hair: pink, detective"),
+            description = ccb.content.text("Pink hair for lawyers and crime solvers."),
+            weight = 1,
+        },
+        {
+            id = "purple",
+            name = ccb.content.text("Artificial hair: purple, detective"),
+            description = ccb.content.text("Purple hair for lawyers and crime solvers."),
+            weight = 1,
+        },
+        {
+            id = "red",
+            name = ccb.content.text("Artificial hair: red, detective"),
+            description = ccb.content.text("Red hair for lawyers and crime solvers."),
+            weight = 1,
+        },
+        {
+            id = "white",
+            name = ccb.content.text("Artificial hair: white, detective"),
+            description = ccb.content.text("White hair for lawyers and crime solvers."),
+            weight = 1,
+        },
+    },
+    types = { "artificial_hair_style" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_NONE",
+    name = ccb.content.text_without_extraction("Artificial facial hair: none"),
+    description = ccb.content.text_without_extraction("You have no hair on your face, it is shaven or simply untouched by the presence of hair."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = false,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_GOATEE",
+    name = ccb.content.text("Artificial facial hair: goatee"),
+    description = ccb.content.text("You have a short beard at the tip of your chin."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_CIRCLE",
+    name = ccb.content.text("Artificial facial hair: circle beard"),
+    description = ccb.content.text("You have a mustache and a short beard, that both form a circle around your lips."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_ROYALE",
+    name = ccb.content.text("Artificial facial hair: royale beard"),
+    description = ccb.content.text("You have a mustache and a short beard forming a patch under your lips."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_ANCHOR",
+    name = ccb.content.text("Artificial facial hair: anchor beard"),
+    description = ccb.content.text("You have a mustache and a beard starting with a strip going down from the bottom lip, then tracing the jaw lines.  It looks a bit like an anchor, thus the name."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_SHORTBOXED",
+    name = ccb.content.text("Artificial facial hair: short boxed beard"),
+    description = ccb.content.text("You have a mustache and a short beard with trimmed sides.  Thin patches connect them both, forming a 'box' around the lips, thus the name."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_CHEVRON",
+    name = ccb.content.text("Artificial facial hair: chevron mustache"),
+    description = ccb.content.text("You have a mustache that covers your entire top lip."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_3DAYSTUBBLE",
+    name = ccb.content.text("Artificial facial hair: 3-day stubble"),
+    description = ccb.content.text("You have a short trimmed mustache and beard imitating a 3-day stubble."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_HORSESHOE",
+    name = ccb.content.text("Artificial facial hair: horseshoe"),
+    description = ccb.content.text("You have a mustache with patches going down the chin from both ends, thus the name."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_MUSTACHE",
+    name = ccb.content.text("Artificial facial hair: original mustache"),
+    description = ccb.content.text("You have a mustache with shortened ends, that covers only the skin above your upper lip."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_MUTTONCHOPS",
+    name = ccb.content.text("Artificial facial hair: mutton chops beard"),
+    description = ccb.content.text("You have long sideburns that connect to your mustache, with the tip of the chin shaven clean."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_GUNSLINGER",
+    name = ccb.content.text("Artificial facial hair: gunslinger beard"),
+    description = ccb.content.text("You have a horseshoe mustache and disconnected sideburns."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_CHIN_STRIP",
+    name = ccb.content.text("Artificial facial hair: chin strip"),
+    description = ccb.content.text("You have a short beard in a form of a vertical patch under your bottom lip."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_CHIN_CURTAIN",
+    name = ccb.content.text("Artificial facial hair: chin curtain"),
+    description = ccb.content.text("You have a full beard without a mustache, restricted to the chin, sometimes called a 'lion's mane'. Much like Abraham Lincoln's beard."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_CHIN_STRAP",
+    name = ccb.content.text("Artificial facial hair: chin strap"),
+    description = ccb.content.text("You have a beard along the jaw lines, circling the chin, and no mustache."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_BEARD",
+    name = ccb.content.text("Artificial facial hair: beard"),
+    description = ccb.content.text("You have a mustache and a long beard, both formed by allowing free growth of hair, with no particular styling."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_HANDLEBAR",
+    name = ccb.content.text("Artificial facial hair: handlebar mustache"),
+    description = ccb.content.text("You have a mustache with long flared out ends."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_NECKBEARD",
+    name = ccb.content.text("Artificial facial hair: neckbeard"),
+    description = ccb.content.text("You have a beard formed from hair grown on neck below the chin line.  No mustache included."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_PENCIL",
+    name = ccb.content.text("Artificial facial hair: pencil mustache"),
+    description = ccb.content.text("You have a very thin mustache just above the line of the upper lip."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_SHENANDOAH",
+    name = ccb.content.text("Artificial facial hair: shenandoah"),
+    description = ccb.content.text("Long full beard with no mustache, popular among Amish community, often with two pointed ends."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_SIDEBURNS",
+    name = ccb.content.text("Artificial facial hair: sideburns"),
+    description = ccb.content.text("You have patches of hair in front of your ears, that normally would connect your hair with the beard, but they are here by themselves."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_SOUL_PATCH",
+    name = ccb.content.text("Artificial facial hair: soul patch"),
+    description = ccb.content.text("You have a little bit of hair in the dip under your lower lip, and no other facial hair whatsoever."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_TOOTHBRUSH",
+    name = ccb.content.text("Artificial facial hair: toothbrush mustache"),
+    description = ccb.content.text("Charlie Chaplin used to have this short patch of hair just under the nose, but then that other guy used it as a characteristic, and it became unwelcome."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_VANDYKE",
+    name = ccb.content.text("Artificial facial hair: Van Dyke"),
+    description = ccb.content.text("You have a handlebar mustache with a chin strip or a small goatee."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_WALRUS",
+    name = ccb.content.text("Artificial facial hair: walrus"),
+    description = ccb.content.text("You have a long thick mustache, overshadowing your lips, that somewhat resembles the facial hair of a walrus."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_ZAPPA",
+    name = ccb.content.text("Artificial facial hair: The Zappa"),
+    description = ccb.content.text("You have a wide soul patch and a full mustache that extends a bit downwards at the corners of your lips."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_BEARD_LONG",
+    name = ccb.content.text("Artificial facial hair: long beard"),
+    description = ccb.content.text("You have a long beard, that goes down to your chest.  Somewhat reminiscent of Santa's mustache."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
+
+ccb.content.define_mutation {
+    id = "ARTIFICIAL_FACIAL_HAIR_BEARD_VERY_LONG",
+    name = ccb.content.text("Artificial facial hair: very long beard"),
+    description = ccb.content.text("You have a very long beard, that goes down to your waist, like wise old mentors have."),
+    points = 0,
+    valid = false,
+    starting_trait = false,
+    player_display = true,
+    vanity = true,
+    types = { "artificial_facial_hair" },
+}
