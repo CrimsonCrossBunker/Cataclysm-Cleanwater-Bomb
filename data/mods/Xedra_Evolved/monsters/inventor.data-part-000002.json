@@ -1,0 +1,29 @@
+[
+  {
+    "id": "mon_shotgunbot",
+    "type": "MONSTER",
+    "name": { "str": "shotgun bot" },
+    "description": "A heavy, but quick two-legged drone that holds a massive shotgun system above himself.  Effectively a machinegun with legs.",
+    "copy-from": "mon_sniperbot",
+    "species": [ "ROBOT" ],
+    "categories": [ "XE_CLASSIC" ],
+    "tracking_distance": 4,
+    "revert_to_itype": "bot_shotgunbot",
+    "starting_ammo": { "shot_00": 240 },
+    "special_attacks": [
+      {
+        "type": "gun",
+        "cooldown": 1,
+        "move_cost": 50,
+        "gun_type": "inventor_shotgun",
+        "ammo_type": "shot_00",
+        "fake_skills": [ [ "gun", 8 ], [ "shotgun", 8 ] ],
+        "require_targeting_npc": false,
+        "require_targeting_monster": false,
+        "fake_dex": 12,
+        "ranges": [ [ 0, 10, "DEFAULT" ] ],
+        "no_ammo_sound": "chk-chk!"
+      }
+    ]
+  }
+]
