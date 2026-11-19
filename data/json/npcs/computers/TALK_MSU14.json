@@ -3,20 +3,5 @@
     "id": "EOC_MSU14_COMPUTER",
     "type": "effect_on_condition",
     "effect": [ "open_dialogue" ]
-  },
-  {
-    "type": "talk_topic",
-    "id": [ "MSU14_START", "MSU14_lOGIN_FAILED" ],
-    "dynamic_line": "&<color_light_blue>Cyma Interface [version 0.85.1004]\n************************************************\n*  Copyright (c) Cyma Enterprise Systems 2023  *\n************************************************</color>\n\nLogin:\n\n",
-    "responses": [
-      { "text": "Attempt a login", "topic": "MSU14_lOGIN_FAILED" },
-      {
-        "text": "Login using the scribbled credentials",
-        "topic": "MSU14_MAIN",
-        "condition": { "u_has_item": "msu14_password" }
-      },
-      { "text": "Login with Hub 01 credentials", "topic": "MSU14_MAIN", "condition": { "u_has_mission": "RD_1" } },
-      { "text": "Shut down", "topic": "TALK_DONE" }
-    ]
   }
 ]

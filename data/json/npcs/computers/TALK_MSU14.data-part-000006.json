@@ -1,0 +1,17 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "MSU14_DOCS_SUCCESS",
+    "dynamic_line": "&Printing…",
+    "responses": [
+      {
+        "text": "Return.",
+        "topic": "MSU14_MAIN",
+        "effect": [
+          { "u_spawn_item": "schematics_secubot", "count": 1 },
+          { "u_add_var": "computer_hacking_msu14_printed_docs", "value": "yes" }
+        ]
+      }
+    ]
+  }
+]
