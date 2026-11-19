@@ -17,3 +17,5 @@ require("effect_types")
 require("poise_spells")
 
 require("insight")
+
+require("technique_predicates")
