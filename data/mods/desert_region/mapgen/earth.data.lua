@@ -591,3 +591,126 @@ ccb.content.define_mapgen {
         flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
     },
 }
+
+-- z0
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_edge_ground",
+    layout = {
+        fallback_predecessor_mapgen = "field",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_edge_v1" } } },
+        palettes = { "canyon_edge_parameters" },
+    },
+}
+
+-- z-1
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_edge",
+    layout = {
+        predecessor_mapgen = "open_air",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_edge_v1" } } },
+        palettes = { "canyon_edge_parameters" },
+    },
+}
+
+-- z-2
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_edge_bottom",
+    layout = {
+        predecessor_mapgen = "field",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_edge_v1" } } },
+        palettes = { "canyon_edge_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_corner_ground",
+    layout = {
+        fallback_predecessor_mapgen = "field",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_corner_v1" } } },
+        palettes = { "canyon_corner_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_corner",
+    layout = {
+        predecessor_mapgen = "open_air",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_corner_v1" } } },
+        palettes = { "canyon_corner_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_corner_bottom",
+    layout = {
+        predecessor_mapgen = "field",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_corner_v1" } } },
+        palettes = { "canyon_corner_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_2way_ground",
+    layout = {
+        fallback_predecessor_mapgen = "field",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_2way_v1" } } },
+        palettes = { "canyon_2way_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_2way",
+    layout = {
+        predecessor_mapgen = "open_air",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_2way_v1" } } },
+        palettes = { "canyon_2way_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_2way_bottom",
+    layout = {
+        predecessor_mapgen = "field",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_2way_v1" } } },
+        palettes = { "canyon_2way_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_3way_ground",
+    layout = {
+        fallback_predecessor_mapgen = "field",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_3way_v1" } } },
+        palettes = { "canyon_3way_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_3way",
+    layout = {
+        predecessor_mapgen = "open_air",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_3way_v1" } } },
+        palettes = { "canyon_3way_parameters" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "canyon_3way_bottom",
+    layout = {
+        predecessor_mapgen = "field",
+        nested = { { x = 0, y = 0, id = { parameter = "variant", fallback = "24x24_canyon_3way_v1" } } },
+        palettes = { "canyon_3way_parameters" },
+    },
+}
