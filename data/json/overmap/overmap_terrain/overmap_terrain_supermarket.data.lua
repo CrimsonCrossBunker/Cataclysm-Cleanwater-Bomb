@@ -1,0 +1,16 @@
+local ccb = require("ccb")
+
+ccb.content.define_overmap_terrain {
+    id = {
+        "supermarket_x0_y0_z0", "supermarket_x0_y1_z0", "supermarket_x0_y2_z0", "supermarket_x1_y0_z0",
+        "supermarket_x1_y1_z0", "supermarket_x1_y2_z0", "supermarket_x2_y0_z0", "supermarket_x2_y1_z0",
+        "supermarket_x2_y2_z0", "supermarket_x0_y0_z1", "supermarket_x0_y1_z1", "supermarket_x0_y2_z1",
+        "supermarket_x1_y0_z1", "supermarket_x1_y1_z1", "supermarket_x1_y2_z1", "supermarket_x2_y0_z1",
+        "supermarket_x2_y1_z1", "supermarket_x2_y2_z1",
+    },
+    vision_levels = "large_building",
+    name = ccb.content.text("supermarket"),
+    symbol = "=",
+    color = "yellow",
+    see_cost = "full_high",
+}
