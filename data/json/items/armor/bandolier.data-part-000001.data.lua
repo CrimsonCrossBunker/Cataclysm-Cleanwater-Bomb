@@ -1,0 +1,65 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "grenadebandolier",
+    name = ccb.content.plural_text("large grenade pouch", "large grenade pouches"),
+    description = ccb.content.text("A pouch for holding up to four full-sized grenades of various types, with straps for attaching it to your belt or other webbing."),
+    mass = "600 g",
+    volume = "1250 ml",
+    price = "30 USD",
+    survival_price = "12 USD 50 cent",
+    materials = { "nylon" },
+    symbol = "[",
+    looks_like = "leather_belt",
+    color = "dark_gray",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "750 ml",
+            mass_limit = "2 kg",
+            moves = 30,
+            allowed_flags = { "GRENADE" },
+            max_item_length = "180 mm",
+            volume_encumbrance = 0.3,
+        },
+        {
+            kind = "CONTAINER",
+            capacity = "750 ml",
+            mass_limit = "2 kg",
+            moves = 30,
+            allowed_flags = { "GRENADE" },
+            max_item_length = "180 mm",
+            volume_encumbrance = 0.3,
+        },
+        {
+            kind = "CONTAINER",
+            capacity = "750 ml",
+            mass_limit = "2 kg",
+            moves = 30,
+            allowed_flags = { "GRENADE" },
+            max_item_length = "180 mm",
+            volume_encumbrance = 0.3,
+        },
+        {
+            kind = "CONTAINER",
+            capacity = "750 ml",
+            mass_limit = "2 kg",
+            moves = 30,
+            allowed_flags = { "GRENADE" },
+            max_item_length = "180 mm",
+            volume_encumbrance = 0.3,
+        },
+    },
+    flags = { "WATER_FRIENDLY", "BELTED", "PALS_LARGE" },
+    armor = {
+        thickness = 2,
+        portions = { { coverage = 25, covers = { "torso" }, subparts = { "torso_upper" } } },
+    },
+    use_actions = {
+        {
+            kind = "holster",
+            prompt = ccb.content.text("Stash grenades"),
+            message = ccb.content.text("You stash your %s."),
+        },
+    },
+}
