@@ -32,46 +32,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_w_2",
-    "//": "Broken Console, closed gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        ",,,,,,||",
-        ",,,,,,..",
-        ",,,,,,..",
-        ",,,,,,..",
-        ",,,,,,..",
-        ",,,,,,..",
-        ",,,,,,..",
-        ",,,,%,||"
-      ],
-      "palettes": [ "arcology_exterior" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_w_3",
-    "//": "Broken Console, open gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        ",,,,,,||",
-        ",,,,,,OO",
-        ",,,,,,OO",
-        ",,,,,,OO",
-        ",,,,,,OO",
-        ",,,,,,OO",
-        ",,,,,,OO",
-        ",,,,%,||"
-      ],
-      "palettes": [ "arcology_exterior" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "arcology_8x8_gate_w_4",
     "//": "Working Console, open gate",
     "object": {
@@ -195,48 +155,6 @@
           "failures": [ { "action": "damage" }, { "action": "shutdown" } ]
         }
       }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_s_2",
-    "//": "Broken Console, closed gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "________",
-        "________",
-        "6_______",
-        "|......|",
-        "|......|",
-        ",,,,,,,%",
-        ",,,,,,,,",
-        ",,,,,,,,"
-      ],
-      "palettes": [ "arcology_exterior" ],
-      "nested": { "6": { "chunks": [ [ "arcology_1x1_gate", 50 ], [ "arcology_1x1_gate_broken", 50 ] ] } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_s_3",
-    "//": "Broken Console, open gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "________",
-        "________",
-        "6_______",
-        "|OOOOOO|",
-        "|OOOOOO|",
-        ",,,,,,,%",
-        ",,,,,,,,",
-        ",,,,,,,,"
-      ],
-      "palettes": [ "arcology_exterior" ],
-      "nested": { "6": { "chunks": [ [ "arcology_1x1_gate", 50 ], [ "arcology_1x1_gate_broken", 50 ] ] } }
     }
   },
   {
@@ -371,48 +289,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_e_2",
-    "//": "Broken Console, closed gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "__||,%,,",
-        "__..,,,,",
-        "__..,,,,",
-        "__..,,,,",
-        "__..,,,,",
-        "__..,,,,",
-        "__..,,,,",
-        "_6||,,,,"
-      ],
-      "palettes": [ "arcology_exterior" ],
-      "nested": { "6": { "chunks": [ [ "arcology_1x1_gate", 50 ], [ "arcology_1x1_gate_broken", 50 ] ] } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_e_3",
-    "//": "Broken Console, open gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "__||,%,,",
-        "__OO,,,,",
-        "__OO,,,,",
-        "__OO,,,,",
-        "__OO,,,,",
-        "__OO,,,,",
-        "__OO,,,,",
-        "_6||,,,,"
-      ],
-      "palettes": [ "arcology_exterior" ],
-      "nested": { "6": { "chunks": [ [ "arcology_1x1_gate", 50 ], [ "arcology_1x1_gate_broken", 50 ] ] } }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "arcology_8x8_gate_e_4",
     "//": "Working Console, open gate",
     "object": {
@@ -543,48 +419,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_n_2",
-    "//": "Broken Console, closed gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        ",,,,,,,,",
-        "%,,,,,,,",
-        ",,,,,,,,",
-        "|......|",
-        "|......|",
-        "_______6",
-        "________",
-        "________"
-      ],
-      "palettes": [ "arcology_exterior" ],
-      "nested": { "6": { "chunks": [ [ "arcology_1x1_gate", 50 ], [ "arcology_1x1_gate_broken", 50 ] ] } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "arcology_8x8_gate_n_3",
-    "//": "Broken Console, open gate",
-    "object": {
-      "mapgensize": [ 8, 8 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        ",,,,,,,,",
-        "%,,,,,,,",
-        ",,,,,,,,",
-        "|OOOOOO|",
-        "|OOOOOO|",
-        "_______6",
-        "________",
-        "________"
-      ],
-      "palettes": [ "arcology_exterior" ],
-      "nested": { "6": { "chunks": [ [ "arcology_1x1_gate", 50 ], [ "arcology_1x1_gate_broken", 50 ] ] } }
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "arcology_8x8_gate_n_4",
     "//": "Working Console, open gate",
     "object": {
@@ -697,11 +531,5 @@
         }
       }
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "arcology_1x1_gate_broken",
-    "//": "Broken Console",
-    "object": { "mapgensize": [ 1, 1 ], "rows": [ "%" ], "palettes": [ "arcology_exterior" ] }
   }
 ]
