@@ -249,20 +249,6 @@
     ]
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "nest_robofac_add_free_merchant_camp",
-    "object": {
-      "place_nested": [ { "chunks": [ "robofac_hq_surface_freemerchant_camp" ], "x": 0, "y": 0 } ],
-      "//": "migration from older saved games - remove existing NPCs",
-      "remove_npcs": [
-        { "class": "roabofac_free_merchant", "x": 0, "y": 0 },
-        { "class": "guard", "x": 0, "y": 0 },
-        { "class": "NC_ROBOFAC_FREE_MERCHANT", "x": 0, "y": 0 },
-        { "class": "NC_BOUNTY_HUNTER", "x": 0, "y": 0 }
-      ]
-    }
-  },
-  {
     "id": "TALK_ROBOFAC_INTERCOM",
     "type": "talk_topic",
     "dynamic_line": {

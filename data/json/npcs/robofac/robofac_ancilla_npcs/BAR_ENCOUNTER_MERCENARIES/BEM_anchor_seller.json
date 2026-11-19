@@ -69,10 +69,5 @@
     "type": "effect_on_condition",
     "id": "EOC_BEM_ANCHOR_SELLER_GONE",
     "effect": [ { "mapgen_update": "nest_ancilla_bar_remove_BEM_anchor_seller" } ]
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "nest_ancilla_bar_remove_BEM_anchor_seller",
-    "object": { "remove_npcs": [ { "class": "BEM_anchor_seller", "x": 0, "y": 0 } ] }
   }
 ]

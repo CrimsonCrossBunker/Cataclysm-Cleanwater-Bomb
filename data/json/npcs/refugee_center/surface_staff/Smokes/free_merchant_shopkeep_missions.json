@@ -29,20 +29,6 @@
     }
   },
   {
-    "type": "mapgen",
-    "update_mapgen_id": "smokes_take_down_back_bay_barricade",
-    "object": {
-      "set": [
-        { "square": "furniture", "id": "f_clear", "x": 6, "y": 3, "x2": 17, "y2": 3 },
-        { "square": "furniture", "id": "f_clear", "x": 3, "y": 4, "x2": 20, "y2": 14 },
-        { "square": "furniture", "id": "f_clear", "x": 4, "y": 15, "x2": 20, "y2": 15 },
-        { "square": "furniture", "id": "f_clear", "x": 5, "y": 16, "x2": 18, "y2": 16 },
-        { "square": "item_remove", "x": 3, "y": 3, "x2": 20, "y2": 16 },
-        { "square": "item_remove", "x": 21, "y": 12, "x2": 23, "y2": 15 }
-      ]
-    }
-  },
-  {
     "id": "MISSION_FREE_MERCHANTS_EVAC_1",
     "type": "mission_definition",
     "name": { "str": "Clear Back Bay" },

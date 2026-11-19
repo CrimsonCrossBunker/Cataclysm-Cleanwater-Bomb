@@ -889,15 +889,6 @@
     }
   },
   {
-    "//": "For MISSION_PYROMANIAC. Will spawn fire on tile where PC is standing.",
-    "type": "mapgen",
-    "update_mapgen_id": "MISSION_PYROMANIAC_BURN",
-    "object": {
-      "place_liquids": [ { "liquid": "gasoline", "x": [ 5, 20 ], "y": [ 5, 20 ], "amount": 5, "repeat": 40 } ],
-      "place_fields": [ { "field": "fd_fire", "x": [ 5, 20 ], "y": [ 5, 20 ], "repeat": 40 } ]
-    }
-  },
-  {
     "id": "MISSION_INVESTIGATE_PORTAL_DUNGEON",
     "type": "mission_definition",
     "name": { "str": "Investigate Strange Location" },

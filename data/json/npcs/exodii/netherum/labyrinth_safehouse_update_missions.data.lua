@@ -1,0 +1,48 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "labyrinth_nl_entry_boiler",
+    layout = {
+        rows = {
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvv..vv....vv..vvvvvv",
+            "vvvvvv.Lvv....vvL.vvvvvv",
+            "vvvvvvvvvv(..(vvvvvvvvvv",
+            "......vvv||++||vvv......",
+            "........(|L..(|(........",
+            ".........+..?.+.........",
+            ".........+.A..+.........",
+            "........(|(..L|(........",
+            "......vvv||++||vvv......",
+            "vvvvvvvvvv(..(vvvvvvvvvv",
+            "vvvvvv.Lvv....vvL.vvvvvv",
+            "vvvvvv..vv....vv..vvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+            "vvvvvvvvv......vvvvvvvvv",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        nested_glyphs = {
+            ["1"] = { id = "ls_12x12hall4way_basic" },
+            ["2"] = { id = "ls_ew_6x6hall_basic" },
+            ["3"] = { id = "ls_ns_6x6hall_basic" },
+        },
+        palettes = { "labyrinthine_base_palette" },
+        terrain = {
+            ["?"] = "t_nl_obelisk_mission_boiler",
+            A = "t_nl_catwalk",
+            L = "t_nl_catwalk",
+            ["("] = "t_nl_catwalk",
+            v = "t_nl_chasm_no_trap",
+        },
+    },
+}

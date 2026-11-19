@@ -795,10 +795,5 @@
       "success_lie": "…",
       "failure": "Not that surprising."
     }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "LMOE_unlock_door",
-    "object": { "place_ter_furn_transforms": [ { "transform": "unlock_door", "x": 11, "y": 12 } ] }
   }
 ]
