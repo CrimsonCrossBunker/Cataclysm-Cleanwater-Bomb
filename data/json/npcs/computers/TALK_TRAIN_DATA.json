@@ -3,19 +3,5 @@
     "id": "EOC_TRAIN_DATA_COMPUTER",
     "type": "effect_on_condition",
     "effect": [ "open_dialogue" ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "COMP_TRAIN_DATA_MAIN",
-    "dynamic_line": "The computer awaits input…",
-    "responses": [
-      { "text": "Request Monorail", "topic": "COMP_TRAIN_DATA_MONRAIL_REQUEST" },
-      {
-        "text": "Download Train Data",
-        "topic": "COMP_TRAIN_DATA_DOWNLOAD",
-        "condition": { "u_has_mission": "MISSION_SCIENCE_REP_5" }
-      },
-      { "text": "Power off.", "topic": "TALK_DONE" }
-    ]
   }
 ]
