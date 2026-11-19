@@ -129,39 +129,5 @@
       ],
       "items": { "Z": { "chance": 40, "item": "SUS_trash_trashcan_public" } }
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ [ "BotanicalGarden_1a_roof", "BotanicalGarden_1b_roof" ] ],
-    "object": {
-      "fill_ter": "t_glass_roof",
-      "rows": [
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "                                                ",
-        "           oooooooooooooooooooooooooo           ",
-        "           oooooooooooooooooooooooooo           ",
-        "           oooooooooooooooooooooooooo           ",
-        "           oooooooooooooooooooooooooo           ",
-        "           oooooooooooooooooooooooooo           ",
-        "           oooooooooooooooooooooooooo           ",
-        "           oooooooooooooooooooooooooo           ",
-        "           oooooooooooooooooooooooooo           ",
-        "           oooooooooooooooooooooooooo           ",
-        "           oooooooooooooooooooooooooo           ",
-        "                                                ",
-        "                                                ",
-        "                                                "
-      ],
-      "palettes": [ "roof_palette" ]
-    }
   }
 ]

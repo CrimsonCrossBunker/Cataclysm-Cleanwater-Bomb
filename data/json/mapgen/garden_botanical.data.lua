@@ -1,0 +1,36 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { { "BotanicalGarden_1a_roof", "BotanicalGarden_1b_roof" } },
+    layout = {
+        rows = {
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+            "           oooooooooooooooooooooooooo           ",
+            "           oooooooooooooooooooooooooo           ",
+            "           oooooooooooooooooooooooooo           ",
+            "           oooooooooooooooooooooooooo           ",
+            "           oooooooooooooooooooooooooo           ",
+            "           oooooooooooooooooooooooooo           ",
+            "           oooooooooooooooooooooooooo           ",
+            "           oooooooooooooooooooooooooo           ",
+            "           oooooooooooooooooooooooooo           ",
+            "           oooooooooooooooooooooooooo           ",
+            "                                                ",
+            "                                                ",
+            "                                                ",
+        },
+        palettes = { "roof_palette" },
+        fill_terrain = "t_glass_roof",
+    },
+}
