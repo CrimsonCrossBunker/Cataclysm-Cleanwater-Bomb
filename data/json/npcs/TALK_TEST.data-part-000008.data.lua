@@ -1,37 +1,35 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_TEST_TAGS",
+    id = "TALK_TEST_VARS",
     line = ccb.content.text("This is a test conversation that shouldn't appear in the game."),
     replies = {
+        { text = ccb.content.text("This is a basic test response."), next_topic = "TALK_DONE" },
         {
-            text = ccb.content.text("Avatar tag is set to <u_val:test_var>."),
+            text = ccb.content.text("This is a u_add_var test response."),
             next_topic = "TALK_DONE",
+            actions = { actions.set_actor_value("speaker", "test_var_test_test", "beer") },
+            when = predicates.negate(predicates.any_equal({ "beer", { scope = "speaker", key = "test_var_test_test" } })),
         },
         {
-            text = ccb.content.text("NPC tag is set to <npc_val:test_var>."),
+            text = ccb.content.text("This is an npc_add_var test response."),
             next_topic = "TALK_DONE",
+            actions = { actions.set_actor_value("interlocutor", "test_var_test_test", "reeb") },
+            when = predicates.negate(predicates.any_equal({ "beer", { scope = "speaker", key = "test_var_test_test" } })),
         },
         {
-            text = ccb.content.text("Global tag is set to <global_val:test_var>."),
+            text = ccb.content.text("This is a compare_string, u_remove_var test response."),
             next_topic = "TALK_DONE",
-        },
-        { text = ccb.content.text("Item name is <item_name:test_rock>."), next_topic = "TALK_DONE" },
-        {
-            text = ccb.content.text("Item description is <item_description:test_rock>"),
-            next_topic = "TALK_DONE",
+            when = predicates.any_equal({ "beer", { scope = "speaker", key = "test_var_test_test" } }),
+            actions = { actions.clear_actor_value("speaker", "test_var_test_test") },
         },
         {
-            text = ccb.content.text("Trait name is <trait_name:TEST_ENCH_MUTATION>."),
+            text = ccb.content.text("This is a compare_string, npc_remove_var test response."),
             next_topic = "TALK_DONE",
-        },
-        {
-            text = ccb.content.text("Trait description is <trait_description:TEST_ENCH_MUTATION>"),
-            next_topic = "TALK_DONE",
-        },
-        {
-            text = ccb.content.text("Context tag is set to <context_val:test_var>."),
-            next_topic = "TALK_DONE",
+            when = predicates.any_equal({ "reeb", { scope = "interlocutor", key = "test_var_test_test" } }),
+            actions = { actions.clear_actor_value("interlocutor", "test_var_test_test") },
         },
     },
 }
