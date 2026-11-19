@@ -441,7 +441,7 @@ TEST_CASE( "zzip_corruption_recovery", "[.][zzip]" )
 
 TEST_CASE( "zzip_repeated_entries_preserve_latest_content", "[zzip][save][regression]" )
 {
-    const std::filesystem::path name( "map.json" );
+    const std::filesystem::path name = std::filesystem::u8path( "map.json" );
     std::shared_ptr<mmap_file> memory = mmap_file::map_writeable_memory( 4096 );
     std::optional<zzip> archive = zzip::load( memory );
     REQUIRE( archive );
