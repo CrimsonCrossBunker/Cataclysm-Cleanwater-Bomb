@@ -82,41 +82,6 @@
     "type": "mapgen"
   },
   {
-    "type": "mapgen",
-    "om_terrain": "paintball_field_roof",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        " .........              ",
-        " .........              ",
-        " .........              ",
-        " .........              ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "     ....               ",
-        "     ....               ",
-        "     ....               ",
-        "     ....               ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
-    }
-  },
-  {
     "object": {
       "fill_ter": "t_floor",
       "place_item": [
@@ -203,40 +168,5 @@
     },
     "om_terrain": "paintball_field_1",
     "type": "mapgen"
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "paintball_field_roof_1",
-    "object": {
-      "fill_ter": "t_tar_flat_roof",
-      "rows": [
-        "                        ",
-        "               ........ ",
-        "               ........ ",
-        "               ........ ",
-        "               ........ ",
-        "               ........ ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "        .......         ",
-        "        .......         ",
-        "        .......         ",
-        "        .......         ",
-        "        .......         ",
-        "        .......         ",
-        "        .......         ",
-        "        .......         ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
-    }
   }
 ]
