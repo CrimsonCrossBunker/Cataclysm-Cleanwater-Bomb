@@ -1,0 +1,178 @@
+local ccb = require("ccb")
+
+ccb.content.define_overmap_terrain {
+    id = "exo_safehouse_stone_0",
+    vision_levels = "isolated_building",
+    name = ccb.content.text("unusual stone barn"),
+    symbol = "^",
+    color = "brown",
+    see_cost = "high",
+    flags = { "KNOWN_UP" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "exo_safehouse_stone_1",
+    copy_from = "exo_safehouse_stone_0",
+    flags = { "KNOWN_UP", "KNOWN_DOWN" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "exo_safehouse_stone_2",
+    vision_levels = "roof_or_air",
+    name = ccb.content.text("unusual stone barn roof"),
+    copy_from = "exo_safehouse_stone_0",
+    flags = { "KNOWN_DOWN" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "exo_warehouse_1",
+    vision_levels = "isolated_building",
+    name = ccb.content.text("strange warehouse"),
+    symbol = "#",
+    color = "light_gray",
+    see_cost = "high",
+    flags = { "KNOWN_UP" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "exo_warehouse_2",
+    copy_from = "exo_warehouse_1",
+    flags = { "KNOWN_DOWN" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "slimepit_z0",
+    name = ccb.content.text("slime pit"),
+    symbol = "~",
+    color = "light_green",
+    see_cost = "all_clear",
+    vision_levels = "natural_depression",
+    flags = { "KNOWN_DOWN", "REQUIRES_PREDECESSOR" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "slimepit_z-1",
+    copy_from = "slimepit_z0",
+    vision_levels = "underground_dirt",
+    flags = { "KNOWN_UP", "KNOWN_DOWN" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "slimepit_z-2",
+    copy_from = "slimepit_z-1",
+    flags = { "KNOWN_UP" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "exodii_base_x0y0z0",
+    vision_levels = "large_outcropping",
+    name = ccb.content.text("rocky butte"),
+    symbol = "%",
+    color = "light_gray",
+    see_cost = "full_high",
+    monster_density = 2,
+}
+
+ccb.content.define_overmap_terrain {
+    id = "exodii_base_x0y3z0",
+    vision_levels = "large_outcropping",
+    name = ccb.content.text("ground-level entrance"),
+    symbol = "?",
+    color = "white",
+    see_cost = "full_high",
+    monster_density = 2,
+}
+
+ccb.content.define_overmap_terrain {
+    id = {
+        "exodii_base_x1y0z0", "exodii_base_x2y0z0", "exodii_base_x3y0z0", "exodii_base_x0y1z0",
+        "exodii_base_x1y1z0", "exodii_base_x2y1z0", "exodii_base_x3y1z0", "exodii_base_x0y2z0",
+        "exodii_base_x1y2z0", "exodii_base_x2y2z0", "exodii_base_x3y2z0", "exodii_base_x1y3z0",
+        "exodii_base_x2y3z0", "exodii_base_x3y3z0",
+    },
+    copy_from = "exodii_base_x0y0z0",
+}
+
+ccb.content.define_overmap_terrain {
+    id = "exodii_base_x0y0z1",
+    vision_levels = "large_outcropping",
+    name = ccb.content.text("scrap metal encampment"),
+    symbol = "%",
+    color = "light_gray",
+    see_cost = "full_high",
+    monster_density = 2,
+}
+
+ccb.content.define_overmap_terrain {
+    id = {
+        "exodii_base_x1y0z1", "exodii_base_x2y0z1", "exodii_base_x3y0z1", "exodii_base_x0y1z1",
+        "exodii_base_x1y1z1", "exodii_base_x2y1z1", "exodii_base_x3y1z1", "exodii_base_x0y2z1",
+        "exodii_base_x1y2z1", "exodii_base_x2y2z1", "exodii_base_x3y2z1", "exodii_base_x0y3z1",
+        "exodii_base_x1y3z1", "exodii_base_x2y3z1", "exodii_base_x3y3z1", "exodii_base_x0y0z2",
+        "exodii_base_x1y0z2", "exodii_base_x2y0z2", "exodii_base_x3y0z2", "exodii_base_x0y1z2",
+        "exodii_base_x1y1z2", "exodii_base_x2y1z2", "exodii_base_x3y1z2", "exodii_base_x0y2z2",
+        "exodii_base_x1y2z2", "exodii_base_x2y2z2", "exodii_base_x3y2z2", "exodii_base_x0y3z2",
+        "exodii_base_x1y3z2", "exodii_base_x2y3z2", "exodii_base_x3y3z2", "exodii_base_x0y0z3",
+        "exodii_base_x1y0z3", "exodii_base_x2y0z3", "exodii_base_x3y0z3", "exodii_base_x0y1z3",
+        "exodii_base_x1y1z3", "exodii_base_x2y1z3", "exodii_base_x3y1z3", "exodii_base_x0y2z3",
+        "exodii_base_x1y2z3", "exodii_base_x2y2z3", "exodii_base_x3y2z3", "exodii_base_x0y3z3",
+        "exodii_base_x1y3z3", "exodii_base_x2y3z3", "exodii_base_x3y3z3", "exodii_base_x0y0z4",
+        "exodii_base_x1y0z4", "exodii_base_x2y0z4", "exodii_base_x3y0z4", "exodii_base_x0y1z4",
+        "exodii_base_x1y1z4", "exodii_base_x2y1z4", "exodii_base_x3y1z4", "exodii_base_x0y2z4",
+        "exodii_base_x1y2z4", "exodii_base_x2y2z4", "exodii_base_x3y2z4", "exodii_base_x0y3z4",
+        "exodii_base_x1y3z4", "exodii_base_x2y3z4", "exodii_base_x3y3z4",
+    },
+    copy_from = "exodii_base_x0y0z1",
+}
+
+ccb.content.define_overmap_terrain {
+    id = "exo_base_safehouse_stone_0",
+    vision_levels = "isolated_building",
+    name = ccb.content.text("unusual stone barn"),
+    symbol = "^",
+    color = "brown",
+    see_cost = "high",
+    flags = { "KNOWN_UP" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "exo_base_safehouse_stone_1",
+    copy_from = "exo_safehouse_stone_0",
+    flags = { "KNOWN_UP", "KNOWN_DOWN" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "exo_base_safehouse_stone_2",
+    vision_levels = "roof_or_air",
+    name = ccb.content.text("unusual stone barn roof"),
+    copy_from = "exo_safehouse_stone_0",
+    flags = { "KNOWN_DOWN" },
+}
+
+ccb.content.define_overmap_terrain {
+    abstract = "alien_meadow",
+    copy_from = "generic_open_land",
+    name = ccb.content.text("alien meadow"),
+    symbol = ",",
+    color = "red",
+    travel_cost = "field",
+    spawns = { group = "GROUP_ALIEN_MEADOW", population = { 0, 1 }, chance = 13 },
+    flags = { "REQUIRES_PREDECESSOR" },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "alien_meadow_core",
+    copy_from = "alien_meadow",
+    extend = { flags = { "NO_ROTATE" } },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "alien_meadow_join",
+    copy_from = "alien_meadow",
+    extend = { flags = { "NO_ROTATE" } },
+}
+
+ccb.content.define_overmap_terrain {
+    id = "alien_meadow_end",
+    copy_from = "alien_meadow",
+}
