@@ -1,0 +1,20 @@
+[
+  {
+    "id": "mon_shabriri_blind_spell_reduce_anger",
+    "type": "SPELL",
+    "name": { "str": "Shabriri Blinding Spell Reduce Anger", "//~": "NO_I18N" },
+    "description": { "str": "After we blind a target we're less annoyed at them.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "flags": [ "NO_PROJECTILE", "NO_HANDS", "NO_LEGS" ],
+    "valid_targets": [ "self" ],
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_SHABRIRI_REDUCE_ANGER",
+    "shape": "blast"
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_SHABRIRI_REDUCE_ANGER",
+    "effect": [ { "math": [ "u_val('anger') -=50" ] }, { "math": [ "u_val('morale') -=30" ] } ]
+  }
+]
