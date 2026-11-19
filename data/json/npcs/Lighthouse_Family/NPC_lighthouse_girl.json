@@ -71,16 +71,5 @@
         "switch": true
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": [ "TALK_lighthouse_girl_1", "TALK_lighthouse_girl_Background" ],
-    "dynamic_line": "How are you today?",
-    "responses": [
-      { "text": "About that job…", "condition": "has_assigned_mission", "topic": "TALK_MISSION_INQUIRE" },
-      { "text": "<BGSS_intro_question>", "topic": "TALK_lighthouse_girl_Background" },
-      { "text": "Do you need any help?", "topic": "TALK_MISSION_LIST" },
-      { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
-    ]
   }
 ]
