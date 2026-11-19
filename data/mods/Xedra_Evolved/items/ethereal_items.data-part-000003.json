@@ -1,23 +1,5 @@
 [
   {
-    "id": "aura_drunken_master",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR", "ARTIFACT" ],
-    "name": "Drunken Master aura",
-    "description": "Hey I thought this was America…",
-    "weight": "1 g",
-    "volume": "1 ml",
-    "price": "36 USD 46 cent",
-    "symbol": "o",
-    "color": "white",
-    "material": [ "dreamstuff" ],
-    "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE" ],
-    "max_worn": 1,
-    "passive_effects": [
-      { "id": "ITEM_ENCH_Xedra_Evolved_aura_drunken_master_0" }
-    ]
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARTIFACT" ],
     "id": "xe_oneiric_hammer",
