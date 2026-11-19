@@ -123,32 +123,5 @@
     "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "green_pen_ink": 100 }, "watertight": true, "rigid": true } ],
     "use_action": [ { "type": "inscribe", "verb": "Write", "gerund": "Written", "on_terrain": false, "material_restricted": false } ],
     "flags": [ "FRAGILE_MELEE", "WRITE_MESSAGE", "NO_RELOAD", "ALLOWS_BODY_BLOCK" ]
-  },
-  {
-    "id": "leather_journal",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "leather journal" },
-    "looks_like": "book_nonf_soft_psych_cggamers",
-    "description": "A leather-back journal for preserving notes and maps, has a strap to keep loose pages contained.",
-    "volume": "300 ml",
-    "weight": "80 g",
-    "flags": [ "TRADER_AVOID" ],
-    "material": [ "leather" ],
-    "symbol": "*",
-    "color": "brown",
-    "pocket_data": [
-      {
-        "//": "Binding",
-        "pocket_type": "CONTAINER",
-        "rigid": false,
-        "max_contains_weight": "2 kg",
-        "max_contains_volume": "2500 ml",
-        "max_item_length": "300 mm",
-        "moves": 150,
-        "flag_restriction": [ "PAPER_SHAPED" ]
-      }
-    ]
   }
 ]
