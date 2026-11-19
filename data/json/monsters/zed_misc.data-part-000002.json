@@ -1,0 +1,157 @@
+[
+  {
+    "id": "mon_zombie_brute",
+    "type": "MONSTER",
+    "name": { "str": "zombie brute" },
+    "description": "This zombie's entire body bulges with distended muscles and swollen, festering wounds.",
+    "species": [ "ZOMBIE" ],
+    "copy-from": "mon_zombie_base",
+    "diff": 2,
+    "hp": 120,
+    "speed": 105,
+    "volume": "100 L",
+    "weight": "135 kg",
+    "color": "red",
+    "scents_tracked": [ "sc_human", "sc_fetid" ],
+    "melee_dice": 2,
+    "melee_dice_sides": 10,
+    "melee_damage": [ { "damage_type": "bash", "amount": 6, "armor_penetration": 6 } ],
+    "bleed_rate": 50,
+    "vision_night": 4,
+    "grab_strength": 30,
+    "burn_into": "mon_zombie_scorched_brute",
+    "upgrades": { "half_life": 168, "into_group": "GROUP_ZOMBIE_BRUTE" },
+    "fungalize_into": "mon_zombie_brute_dusted",
+    "armor": { "bash": 4, "cut": 6, "bullet": 5, "electric": 2 },
+    "extend": {
+      "flags": [ "SMELLS", "PUSH_VEH" ],
+      "weakpoint_sets": [ "wps_humanoid_head_small" ],
+      "special_attacks": [
+        { "id": "staggering_blow" },
+        {
+          "id": "smash",
+          "throw_strength": 72,
+          "cooldown": 30,
+          "condition": { "and": [ { "u_has_flag": "GRAB_FILTER" }, { "npc_has_flag": "GRAB" }, { "math": [ "n_val('size') <= 4" ] } ] }
+        }
+      ]
+    },
+    "delete": { "flags": [ "STUMBLES" ] },
+    "revive_forms": [
+      {
+        "condition": { "map_terrain_with_flag": "FUNGUS", "loc": { "context_val": "loc" } },
+        "monster": "mon_fungal_mound_large"
+      }
+    ]
+  },
+  {
+    "id": "mon_zombie_brute_grappler",
+    "type": "MONSTER",
+    "name": { "str": "zombie wrestler" },
+    "description": "A slab of festering muscle the size of a well-toned bodybuilder.  With popping and cracking sounds its arm muscles constantly lengthen and contract as it reaches out with deformed muscular hands the size of dinner plates.",
+    "copy-from": "mon_zombie_brute",
+    "species": [ "ZOMBIE" ],
+    "diff": 3,
+    "volume": "108500 ml",
+    "weight": "94500 g",
+    "hp": 220,
+    "speed": 95,
+    "color": "red_white",
+    "melee_skill": 7,
+    "dodge": 3,
+    "harvest": "zombie_grabber",
+    "grab_strength": 37,
+    "special_attacks": [
+      { "id": "staggering_blow" },
+      {
+        "id": "smash",
+        "throw_strength": 72,
+        "cooldown": 30,
+        "condition": { "and": [ { "u_has_flag": "GRAB_FILTER" }, { "npc_has_flag": "GRAB" }, { "math": [ "n_val('size') <= 4" ] } ] }
+      },
+      { "id": "grab", "cooldown": 11 },
+      { "id": "grab_3", "cooldown": 12 },
+      { "id": "ranged_pull", "cooldown": 20, "grab_data": { "pull_weight_ratio": 1.5 } },
+      { "id": "bite_humanoid" },
+      { "id": "grab_drag", "grab_data": { "drag_distance": 1, "drag_deviation": 1, "drag_movecost_mod": 1.5 } },
+      { "id": "drag_followup", "grab_data": { "drag_distance": 1, "drag_deviation": 1, "drag_movecost_mod": 1.5 } }
+    ],
+    "upgrades": false,
+    "armor": { "bash": 10, "cut": 14, "stab": 8, "bullet": 8, "electric": 2 },
+    "extend": { "flags": [ "RANGED_ATTACKER" ] }
+  },
+  {
+    "id": "mon_zombie_brute_ninja",
+    "type": "MONSTER",
+    "name": { "str": "zombie nightstalker" },
+    "description": "Somehow, this brute hides in the dark like some kind of boogeyman.  Very agile for such a large zombie.",
+    "copy-from": "mon_zombie_brute",
+    "hp": 200,
+    "speed": 90,
+    "color": "dark_gray_red",
+    "melee_skill": 5,
+    "melee_dice": 4,
+    "melee_dice_sides": 5,
+    "melee_damage": [ { "damage_type": "cut", "amount": 4 }, { "damage_type": "bash", "amount": 6, "armor_penetration": 6 } ],
+    "dodge": 4,
+    "bleed_rate": 0,
+    "vision_day": 5,
+    "vision_night": 40,
+    "harvest": "zombie_humanoid_shadow",
+    "special_attacks": [
+      { "id": "staggering_blow" },
+      {
+        "id": "smash",
+        "throw_strength": 48,
+        "cooldown": 40,
+        "condition": { "and": [ { "u_has_flag": "GRAB_FILTER" }, { "npc_has_flag": "GRAB" }, { "math": [ "n_val('size') <= 4" ] } ] }
+      },
+      { "id": "stretch_attack", "cooldown": 40 },
+      { "id": "longswipe" },
+      { "id": "cut_throat" }
+    ],
+    "upgrades": false,
+    "armor": { "bash": 8, "cut": 5, "bullet": 4, "electric": 2 },
+    "extend": { "flags": [ "NIGHT_INVISIBILITY" ] }
+  },
+  {
+    "id": "mon_zombie_grue",
+    "type": "MONSTER",
+    "name": { "str": "zombie prowler" },
+    "description": "Enveloped in darkness is the outline of what used to be a person, quick and spindly - and nigh invisible in the shadows.  Even with the unnatural camouflage hiding its features you can make out large teeth and even larger claws.",
+    "copy-from": "mon_zombie_base",
+    "species": [ "ZOMBIE" ],
+    "looks_like": "mon_zombie_brute_ninja",
+    "diff": 2,
+    "hp": 160,
+    "speed": 115,
+    "move_skills": { "climb": 7 },
+    "color": "dark_gray_red",
+    "scents_tracked": [ "sc_human", "sc_fetid" ],
+    "melee_skill": 8,
+    "melee_dice": 4,
+    "melee_dice_sides": 4,
+    "melee_damage": [ { "damage_type": "cut", "amount": 3 } ],
+    "dodge": 7,
+    "weakpoints": [
+      { "name": "the head", "is_head": true, "armor_mult": { "physical": 0.5 }, "coverage": 3 },
+      { "name": "the eye", "is_head": true, "armor_mult": { "physical": 0 }, "coverage": 1 }
+    ],
+    "weakpoint_sets": [  ],
+    "bleed_rate": 0,
+    "vision_day": 6,
+    "vision_night": 40,
+    "harvest": "zombie_humanoid_shadow",
+    "grab_strength": 75,
+    "special_attacks": [
+      { "id": "bite_humanoid", "damage_max_instance": [ { "damage_type": "stab", "amount": 10, "armor_multiplier": 0.2 } ] },
+      { "id": "impale", "condition": { "not": { "u_has_flag": "GRAB_FILTER" } } },
+      { "id": "scratch_humanoid", "damage_max_instance": [ { "damage_type": "cut", "amount": 15 } ] },
+      { "id": "grab_drag" },
+      { "id": "drag_followup" }
+    ],
+    "upgrades": false,
+    "armor": { "bash": 5, "cut": 5, "bullet": 4, "electric": 1 },
+    "extend": { "flags": [ "SMELLS", "NIGHT_INVISIBILITY" ] }
+  }
+]

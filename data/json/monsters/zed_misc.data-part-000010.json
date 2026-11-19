@@ -1,0 +1,38 @@
+[
+  {
+    "id": "mon_smoker_brute",
+    "type": "MONSTER",
+    "name": { "str": "ashen brawler" },
+    "description": "A gigantic, twisted human frame with a menacing stance and rapid movements.  Thick clouds of smoke pour from violent-looking eviscerations spread across its muscular body, and its arms appear to have elongated massively.",
+    "copy-from": "mon_zombie_brute",
+    "hp": 150,
+    "speed": 110,
+    "color": "light_gray",
+    "melee_skill": 5,
+    "melee_dice_sides": 6,
+    "melee_damage": [ { "damage_type": "cut", "amount": 1 } ],
+    "dodge": 7,
+    "vision_day": 30,
+    "emit_fields": [ { "emit_id": "emit_smoke_stream", "delay": "1 s" } ],
+    "death_function": { "effect": { "id": "death_smokeburst", "hit_self": true }, "message": "The %s explodes!" },
+    "grab_strength": 35,
+    "special_attacks": [
+      { "id": "grab", "cooldown": 15 },
+      {
+        "id": "smash",
+        "throw_strength": 48,
+        "cooldown": 30,
+        "condition": { "and": [ { "u_has_flag": "GRAB_FILTER" }, { "npc_has_flag": "GRAB" }, { "math": [ "n_val('size') <= 4" ] } ] }
+      },
+      { "id": "bite_humanoid", "cooldown": 5 },
+      { "id": "scratch_humanoid", "cooldown": 15 },
+      { "id": "ranged_pull", "cooldown": 20, "grab_data": { "pull_weight_ratio": 1.2 } },
+      { "id": "grab_drag" },
+      { "id": "drag_followup" }
+    ],
+    "upgrades": false,
+    "armor": { "bash": 2, "cut": 8, "stab": 8, "heat": 5, "bullet": 10, "electric": 2 },
+    "extend": { "flags": [ "HARDTOSHOOT", "RANGED_ATTACKER" ] },
+    "delete": { "flags": [ "SMELLS" ] }
+  }
+]
