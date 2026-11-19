@@ -2,6 +2,58 @@ local ccb = require("ccb")
 
 ccb.content.define_mapgen {
     kind = "overmap",
+    id = { "municipal_reactor" },
+    layout = {
+        rows = {
+            ",,,,,,,,,,,,,,,,,,,,,,,,",
+            ",,,,,,############,,,,,,",
+            ",,,,,##############,,,,,",
+            ",,,##################,,,",
+            ",,####################,,",
+            ",,####################,,",
+            ",,####################,,",
+            ",,####################,,",
+            ",,####################,,",
+            ",,####################,,",
+            ",,####################,,",
+            ",,####################,,",
+            ",--##################,,,",
+            ",=hd################,,,,",
+            ",= dh #############,,,,,",
+            ",-    -----------------,",
+            ",-BB-2- &-ll h- i&-  h-,",
+            ",---- 2 i-  dd-2--- d6-,",
+            ",-t   ----4(((-   2   -,",
+            ",-a  Ydh -        -----,",
+            ",-a   d  -         2eE-,",
+            ",-^      4         2ee-,",
+            ",-=[[==---------55-----,",
+            "ssssssssssssssssssssssss",
+        },
+        item_groups = {
+            B = { { group = "textbooks", chance = 50 }, { group = "manuals", chance = 50 } },
+            i = { group = "cleaning", chance = 50 },
+            l = { group = "cop_armory", chance = 90 },
+            t = { group = "magazines", chance = 90 },
+        },
+        monster_group_placements = { { group = "AFS_GROUP_ROBOT_MODERATE_RISK", chance = 2, x = { 2, 21 }, y = { 2, 21 } } },
+        fill_terrain = "t_floor",
+        palettes = { "general_jc" },
+        terrain = {
+            ["-"] = "t_wall_metal",
+            ["#"] = "t_rock",
+            G = "t_card_science",
+            R = "t_nuclear_reactor",
+            e = "t_elevator",
+            E = "t_elevator_control",
+            Y = "t_utility_light",
+        },
+        item_group_placements = {},
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
     id = { "municipal_reactor_ware" },
     layout = {
         rows = {
