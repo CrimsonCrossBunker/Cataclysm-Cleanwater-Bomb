@@ -28,62 +28,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "bloodthorne_druid_safehouse_bathroom_roof",
-    "object": {
-      "mapgensize": [ 4, 4 ],
-      "rotation": [ 0, 0 ],
-      "rows": [
-        "    ",
-        "    ",
-        "    ",
-        "    "
-      ],
-      "terrain": { "T": "t_wood_stairs_down" },
-      "place_nested": [ { "chunks": [ "bloodthorne_druid_safehouse_bathroom_roof_z1" ], "x": 0, "y": 0, "z": 1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "bloodthorne_druid_safehouse_bathroom_roof_z1",
-    "object": {
-      "mapgensize": [ 4, 4 ],
-      "rotation": [ 0, 0 ],
-      "rows": [
-        "----",
-        "...-",
-        "...-",
-        "...-"
-      ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_tar_flat_roof" }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "bloodthorne_druid_11x11_basement_stairs",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 0 ],
-      "rows": [
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "        T  ",
-        "           "
-      ],
-      "terrain": { "T": "t_wood_stairs_down" },
-      "place_nested": [ { "chunks": [ "bloodthorne_druid_11x11_basement" ], "x": 0, "y": 0, "z": -1 } ]
-    }
-  },
-  {
-    "type": "mapgen",
     "nested_mapgen_id": "bloodthorne_druid_11x11_basement",
     "object": {
       "mapgensize": [ 11, 11 ],
