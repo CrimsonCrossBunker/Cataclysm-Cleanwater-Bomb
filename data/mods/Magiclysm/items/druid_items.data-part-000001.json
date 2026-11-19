@@ -1,17 +1,5 @@
 [
   {
-    "abstract": "mag_wildwood",
-    "type": "ITEM",
-    "name": "abstract wildwood doodad",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "description": { "str": "A generic wildwood doodad used" },
-    "warmth": 0,
-    "material": [ "wood", "veggy" ],
-    "symbol": "x",
-    "color": "light_green",
-    "max_worn": 1
-  },
-  {
     "id": "mag_pseudo_weaver",
     "copy-from": "fake_item",
     "type": "ITEM",

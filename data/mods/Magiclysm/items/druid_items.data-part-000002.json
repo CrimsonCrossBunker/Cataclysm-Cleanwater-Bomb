@@ -196,22 +196,5 @@
     "weight": "50 g",
     "volume": "125 ml",
     "flags": [ "TRADER_AVOID" ]
-  },
-  {
-    "id": "rune_wildwood",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "COMESTIBLE" ],
-    "name": { "str": "wildwood rune" },
-    "description": "A small druid rune wrapped in a leaf.  It appears to be made of some kind of resin, and is very sticky.",
-    "price": "0 USD",
-    "weight": "40 g",
-    "volume": "50 ml",
-    "quench": 1,
-    "calories": 350,
-    "symbol": ",",
-    "color": "green",
-    "comestible_type": "INVALID",
-    "use_action": [ "PETFOOD" ],
-    "petfood": [ "rune_wildwood" ]
   }
 ]
