@@ -98,11 +98,6 @@
     }
   },
   {
-    "type": "monstergroup",
-    "id": "GROUP_DRUID_TOWER_DRUID_HEAD",
-    "monsters": [ { "monster": "mon_feral_druid", "weight": 150 }, { "monster": "mon_feral_druid_enhanced", "weight": 850 } ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "druid_ritual_home_z0" ],
     "//": "This is common areas and eating places.",

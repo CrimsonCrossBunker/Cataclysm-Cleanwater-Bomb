@@ -144,3 +144,5 @@ require("spell_traps")
 require("spell_proficiencies")
 require("druid_spells")
 require("druid_forms")
+
+require("monster_groups")
