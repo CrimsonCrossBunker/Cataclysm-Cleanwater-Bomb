@@ -101,11 +101,6 @@
     "flags": [ "NO_ROTATE" ]
   },
   {
-    "type": "ter_furn_transform",
-    "id": "perk_closetland_regenerate_light_if_broken",
-    "terrain": [ { "result": [ "t_closetland_floor_olight" ], "valid_terrain": [ "t_closetland_floor" ], "message": "" } ]
-  },
-  {
     "type": "terrain",
     "id": "t_closetland_floor_olight",
     "looks_like": "t_floor_olight",
