@@ -15,57 +15,6 @@
   },
   {
     "type": "mapgen",
-    "nested_mapgen_id": "fbmf_2",
-    "object": {
-      "mapgensize": [ 24, 24 ],
-      "rows": [
-        ";;;;;;;;;;;;;;;;;;;;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        ";                  ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        ";                  ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        ";                  ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        ";                  ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        ";                 ;;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        ";                  ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        ";                  ;    ",
-        "; ;;;;;;;;;;;;;;;; ;    ",
-        ";;;;;;;;;;;;;;;;;;;;    ",
-        "                        "
-      ],
-      "flags": [ "ALLOW_TERRAIN_UNDER_OTHER_DATA" ],
-      "palettes": [ "fbmf_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "faction_base_farm_2_0",
-    "object": { "place_nested": [ { "chunks": [ "fbmf_2" ], "x": 0, "y": 0 } ] }
-  },
-  {
-    "//": "Dummy map to add recipes to preexisting farm extensions as a fallback",
-    "type": "mapgen",
-    "nested_mapgen_id": "fbmf_2_fallback_recipe_1",
-    "object": { "mapgensize": [ 1, 1 ], "rows": [ " " ], "palettes": [ "fbmf_2_common_palette" ] }
-  },
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "fbmf_2_fallback_recipe_1",
-    "object": { "place_nested": [ { "chunks": [ "fbmf_2_fallback_recipe_1" ], "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbmf_2_plot_1",
     "object": { "set": [ { "line": "terrain", "id": "t_dirtmound", "x": 2, "x2": 17, "y": 21, "y2": 21 } ] }
   },
