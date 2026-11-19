@@ -61,53 +61,5 @@
       { "text": "What would it cost to hire you?", "topic": "TALK_SCAVENGER_MERC_HIRE" },
       { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "TALK_SCAVENGER_MERC_NEW",
-    "type": "talk_topic",
-    "dynamic_line": "I'm just a hired hand.  Someone pays me and I do what needs to be done.",
-    "responses": [ { "text": "…", "topic": "TALK_SCAVENGER_MERC" } ]
-  },
-  {
-    "id": "TALK_SCAVENGER_MERC_TIPS",
-    "type": "talk_topic",
-    "dynamic_line": "If you have to fight your way out of an ambush, the only thing that is going to save you is having a party that can return fire.  People who work alone are easy pickings for monsters and bandits.",
-    "responses": [ { "text": "I suppose I should hire a party then?", "topic": "TALK_SCAVENGER_MERC" } ]
-  },
-  {
-    "id": "TALK_SCAVENGER_MERC_HIRE",
-    "type": "talk_topic",
-    "dynamic_line": "I'm currently waiting for a customer to return… I'll make you a deal though, 750 merch will cover my expenses if I get a small cut of the loot.",
-    "responses": [
-      { "text": "What the heck is a merch?", "topic": "TALK_SCAVENGER_MERC_MERCH" },
-      { "text": "I might be back.", "topic": "TALK_SCAVENGER_MERC" },
-      {
-        "text": "[750 merch] You have a deal.",
-        "topic": "TALK_SCAVENGER_MERC_HIRE_SUCCESS",
-        "condition": { "u_has_items": { "item": "FMCNote", "count": 750 } },
-        "effect": { "u_consume_item": "FMCNote", "count": 750, "popup": true }
-      }
-    ]
-  },
-  {
-    "id": "TALK_SCAVENGER_MERC_MERCH",
-    "type": "talk_topic",
-    "dynamic_line": "Merch is what they call dollar bills around here.  Free Merchant Credit Notes or something.  If you want to buy stuff around here and you don't want to barter away your guns, you need merch.",
-    "responses": [
-      { "text": "I see.  Let's try this again from the start.", "topic": "TALK_SCAVENGER_MERC" },
-      { "text": "Okay, how much merch do I need?", "topic": "TALK_SCAVENGER_MERC_HIRE" },
-      { "text": "Well, thanks for the info.  <end_talking_bye>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_SCAVENGER_MERC_HIRE_SUCCESS",
-    "type": "talk_topic",
-    "dynamic_line": "I guess you're the boss.",
-    "responses": [
-      {
-        "text": "Glad to have you aboard.",
-        "success": { "effect": "follow", "opinion": { "trust": 1, "value": 1 }, "topic": "TALK_DONE" }
-      }
-    ]
   }
 ]
