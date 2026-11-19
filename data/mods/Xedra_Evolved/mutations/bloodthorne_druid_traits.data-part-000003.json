@@ -1,0 +1,19 @@
+[
+  {
+    "type": "mutation",
+    "id": "BLOODTHORNE_DRUID_AURA_OF_VINES",
+    "name": { "str": "Entanglement of Vines" },
+    "points": 2,
+    "description": "Your heartvines have grown enough that you can extend numerous vines around you.  These vines will retaliate against attackers, defend you, assist you in casting magicks if your hands are full, allow you to descend buildings by grasping handholds, and alert you to nearby dangers.",
+    "purifiable": false,
+    "valid": false,
+    "active": true,
+    "activated_is_setup": true,
+    "mana": true,
+    "cost": 1,
+    "time": 3,
+    "activation_msg": "A multitude of vines burst from your flesh!",
+    "activated_eocs": [ "EOC_BLOODTHORNE_DRUID_AURA_OF_VINES" ],
+    "deactivated_eocs": [ "EOC_BLOODTHORNE_DRUID_AURA_OF_VINES" ]
+  }
+]
