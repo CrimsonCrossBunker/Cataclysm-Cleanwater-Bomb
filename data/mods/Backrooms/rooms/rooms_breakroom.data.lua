@@ -1,0 +1,672 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "----?-?----",
+            "-$   n  $ -",
+            "-    h    -",
+            "-  J h bB -",
+            "-  J h bB -",
+            "D         d",
+            "d         d",
+            "--CFFEEE  -",
+            "-H,;,;,G  -",
+            "-n,,,,,-AA-",
+            "-----------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "-----?-----",
+            "-CFE- JJJA-",
+            "-n;E-     -",
+            "-l,F- hhh -",
+            "-H,E-     -",
+            "--D--    m-",
+            "D         ?",
+            "-i$    $  -",
+            "-i        -",
+            "-jAp   pAj-",
+            "-----D-----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "-d-------D-",
+            "- -jHnlj- -",
+            "- G     G -",
+            "- EFECEFE -",
+            "?         ?",
+            "-   pnp   -",
+            "--  ---  --",
+            "-A   b    -",
+            "-$  bZb $ -",
+            "-    b n  -",
+            "-----------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "-----------",
+            "-$ $ -$ $ -",
+            "-    -    -",
+            "-    -    -",
+            "d         d",
+            "-ii nljA  -",
+            "--------- -",
+            "-ZbEHCFE- -",
+            "-Zb,;,,,D -",
+            "-ZbnbZZb- -",
+            "---------D-",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "---------d-",
+            "-EEFECEZ  -",
+            "- b       -",
+            "-   $    j-",
+            "D         d",
+            "-         -",
+            "-  bbbb  p-",
+            "- bBBBBb  -",
+            "- bBBBBb$ -",
+            "-n AA    j-",
+            "-----?-----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "-d-------d-",
+            "-  A      -",
+            "- hhhhhhh -",
+            "- h     h -",
+            "-   JJJ   -",
+            "d   njn   D",
+            "-   III   -",
+            "- h     h -",
+            "- hhhhhhh -",
+            "-j     A p-",
+            "-----------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "-----d-----",
+            "-h     hh -",
+            "-h J h II -",
+            "-h       n-",
+            "-    h   l-",
+            "D    Ib  C-",
+            "-   hhh  F-",
+            "-        E-",
+            "- $ A- $  -",
+            "-   A-A   -",
+            "-d-------d-",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "--d-----?--",
+            "-j b n bb -",
+            "- bBb bBBb-",
+            "-E b   bb -",
+            "-E, b  $  -",
+            "-F,ZZZb   -",
+            "-C;ZZZb$  -",
+            "-E,ZZZb  A-",
+            "-F, b  ----",
+            "d         D",
+            "-----d-----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "-----------",
+            "-EjEHnHElE-",
+            "-E,;,,,;,F-",
+            "-EGECCEEFF-",
+            "D         D",
+            "-bBBb bBBb-",
+            "-bBBb bBBb-",
+            "-bBBb bBBb-",
+            "-bBBb bBBb-",
+            "-bBBb bBBb-",
+            "-----d-----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "---?-?-?---",
+            "-K,,K,K,,K-",
+            "-K;,K,K,;K-",
+            "-K;,K,K,;K-",
+            "-K,,K,K,,K-",
+            "d         d",
+            "D         D",
+            "-jbBBb   m-",
+            "-$ bb   Ih-",
+            "-     p hh-",
+            "-----?-----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 11, height = 11 },
+        rows = {
+            "-----d-----",
+            "-j b    EC-",
+            "- bBb    E-",
+            "- bBb     -",
+            "- bBb   $ -",
+            "- bBb     -",
+            "- bBb   $ -",
+            "-  b      -",
+            "d         D",
+            "-jpnl  bZZ-",
+            "-----d-----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "--------",
+            "-$ $ $ -",
+            "-      -",
+            "?      D",
+            "?      d",
+            "-$ $ $ -",
+            "-      -",
+            "--------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "--------",
+            "-FFHlnj-",
+            "-,;,,;,-",
+            "-,,,,,,-",
+            "-GEEECE-",
+            "- bZZb -",
+            "D      D",
+            "--------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "--------",
+            "-$ -BBB-",
+            "-  -bbb-",
+            "D      D",
+            "d      d",
+            "-bbb-  -",
+            "-ZZZ-AA-",
+            "--------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "--------",
+            "-     A-",
+            "- ---- -",
+            "D  $   D",
+            "- -  - -",
+            "- ---- -",
+            "-      -",
+            "--------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "--------",
+            "d   J h-",
+            "-m  J h-",
+            "-p  J h-",
+            "-p    A-",
+            "-n  I h-",
+            "D   I h-",
+            "--------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "-D----d-",
+            "-   A  -",
+            "- KKKK -",
+            "?  $   ?",
+            "-      -",
+            "- KKKK -",
+            "-      -",
+            "-d----d-",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "-d----D-",
+            "- gggg -",
+            "- BBBB -",
+            "-      -",
+            "-  b  E-",
+            "- bBb C-",
+            "- nbAlF-",
+            "-d------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "----?---",
+            "-jb  EC-",
+            "-bZZb E-",
+            "-nZZ  F-",
+            "- b   H-",
+            "-     E-",
+            "D  ii  D",
+            "--------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_big_breakroom",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "----d---",
+            "-hhh JJ-",
+            "-hih hh-",
+            "d      D",
+            "-      -",
+            "-$ hihA-",
+            "-  hhhn-",
+            "--?-----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "----",
+            "D$ -",
+            "-  -",
+            "----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "----",
+            "D  d",
+            "-HC-",
+            "----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "-d--",
+            "D h-",
+            "-hh-",
+            "----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "-d--",
+            "D E-",
+            "-EF-",
+            "----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "-d--",
+            "D B-",
+            "-BA-",
+            "----",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "------",
+            "-CEEH-",
+            "-E  b-",
+            "-F   -",
+            "-Zb  d",
+            "----D-",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "------",
+            "-bBBb-",
+            "- bb -",
+            "-    -",
+            "-n  l-",
+            "--Dd--",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "--d---",
+            "D   p-",
+            "-   h-",
+            "-   h-",
+            "-EEFE-",
+            "------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "--Dd--",
+            "-h  J-",
+            "-h  J-",
+            "-p  l-",
+            "-p  n-",
+            "--dd--",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "------",
+            "-K  K-",
+            "-K  K-",
+            "-K  K-",
+            "D    D",
+            "------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "------",
+            "-ECEF-",
+            "-E  H-",
+            "-F  A-",
+            "D    D",
+            "------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mx_backroom_small_breakroom",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "------",
+            "-bB$ -",
+            "-bB  -",
+            "-   n-",
+            "D    D",
+            "------",
+        },
+        palettes = { "backrooms_palette", "backrooms_breakroom_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+    },
+}
