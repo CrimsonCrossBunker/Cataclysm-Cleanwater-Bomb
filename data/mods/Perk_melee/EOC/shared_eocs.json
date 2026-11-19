@@ -1,8 +1,0 @@
-[
-  {
-    "id": "EOC_PERK_TEMPO_MANUAL",
-    "type": "effect_on_condition",
-    "condition": { "u_has_trait": "MELEE_PERK_TEMPO" },
-    "effect": { "u_add_effect": "mabuff:buff_perk_tempo", "duration": "2 seconds" }
-  }
-]

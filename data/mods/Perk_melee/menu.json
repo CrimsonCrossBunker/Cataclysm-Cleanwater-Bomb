@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_open_ma_perk_menu",
-    "effect": [ { "open_dialogue": { "topic": "TALK_MA_PERK_MENU_MAIN" } } ]
-  }
-]
