@@ -31,34 +31,5 @@
       { "skill": "electronics", "bonus": { "rng": [ 0, 2 ] } },
       { "skill": "speech", "bonus": { "rng": [ 3, 5 ] } }
     ]
-  },
-  {
-    "id": "TALK_ROBOFAC_FREE_MERCHANT",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "u_is_wearing": "badge_marshal",
-      "yes": [
-        "Still plenty of outlaws in the roads, perhaps you should tend to your job, marshal…",
-        "You see anything you want, marshal?",
-        "Oh, a U.S. marshal, how quaint."
-      ],
-      "no": [ "Welcome…", "Here to trade, I hope?", "Safe travels, scavenger." ]
-    },
-    "responses": [
-      { "text": "Let's trade.", "effect": "start_trade", "topic": "TALK_ROBOFAC_FREE_MERCHANT" },
-      { "text": "When is the next shipment?", "topic": "TALK_ROBOFAC_FREE_MERCHANT_INTERVAL" },
-      { "text": "What are you doing here?", "topic": "TALK_ROBOFAC_FREE_MERCHANT_DOING" },
-      { "text": "<end_talking_bye>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_ROBOFAC_FREE_MERCHANT_DOING",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "u_is_wearing": "badge_marshal",
-      "yes": "I keep to my own business, and you keep to yours, marshal.  Seems like a fair deal?",
-      "no": "We have been supplying this lab here with food from a few hunting and farming communities nearby.  The roads are tough and dangerous, but it makes good money, and beats scavenging the cities for scraps."
-    },
-    "responses": [ { "text": "Keep safe, then.", "topic": "TALK_ROBOFAC_FREE_MERCHANT" } ]
   }
 ]
