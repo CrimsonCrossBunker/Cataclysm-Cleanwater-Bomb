@@ -127,23 +127,5 @@
         "topic": "TALK_DONE"
       }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_GODCO_Tom_Firstmeet",
-    "dynamic_line": "Was it difficult to find us?  We haven't seen a single soul out there for so long, I'm starting to lose my hope.  So, tell me about yourself.",
-    "responses": [
-      {
-        "text": "I'm just a curious traveler.  What about you, how are you doing?",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_meeting_godco_joinee" } ] } },
-        "topic": "TALK_GODCO_Tom_Firstmeet2"
-      },
-      {
-        "text": "I'm seeking asylum here.  What about you, how are you doing?",
-        "condition": { "compare_string": [ "yes", { "u_val": "general_meeting_godco_joinee" } ] },
-        "topic": "TALK_GODCO_Tom_Firstmeet2"
-      },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
-    ]
   }
 ]
