@@ -1,13 +1,5 @@
 [
   {
-    "type": "monstergroup",
-    "id": "GROUP_ZOMBIE_SEWER",
-    "monsters": [
-      { "monster": "mon_zombie_technician", "weight": 850, "cost_multiplier": 3 },
-      { "monster": "mon_zombie_static", "weight": 150, "cost_multiplier": 5 }
-    ]
-  },
-  {
     "type": "vehicle",
     "id": "oa_work_light",
     "name": "work light",

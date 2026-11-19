@@ -5,25 +5,6 @@
     "vehicles": [ [ "animalctrl", 300 ] ]
   },
   {
-    "id": "GROUP_ANIMALSHELTER_DOGS",
-    "type": "monstergroup",
-    "monsters": [
-      { "monster": "mon_zombie_dog", "weight": 200, "cost_multiplier": 0 },
-      { "monster": "mon_dog_zombie_rot", "weight": 100, "cost_multiplier": 0 },
-      { "group": "GROUP_STRAY_DOGS", "weight": 700, "cost_multiplier": 0 }
-    ]
-  },
-  {
-    "id": "GROUP_ANIMALSHELTER_OTHER",
-    "type": "monstergroup",
-    "monsters": [
-      { "monster": "mon_null", "weight": 5 },
-      { "monster": "mon_ferret", "weight": 2, "cost_multiplier": 0 },
-      { "monster": "mon_chicken", "weight": 1, "cost_multiplier": 0 },
-      { "monster": "mon_rabbit", "weight": 3, "cost_multiplier": 0 }
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "animalshelter" ],
     "weight": 300,

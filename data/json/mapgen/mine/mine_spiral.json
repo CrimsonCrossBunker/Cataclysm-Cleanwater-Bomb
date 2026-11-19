@@ -1,10 +1,5 @@
 [
   {
-    "type": "monstergroup",
-    "id": "GROUP_MINER",
-    "monsters": [ { "monster": "mon_zombie_miner" } ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ [ "mine_spiral_west", "mine_spiral_central", "mine_spiral_east" ] ],
     "object": {

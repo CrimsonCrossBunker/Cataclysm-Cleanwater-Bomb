@@ -1,38 +1,5 @@
 [
   {
-    "id": "GROUP_ANIMALPOUND_CATS",
-    "type": "monstergroup",
-    "monsters": [
-      { "monster": "mon_null", "weight": 580 },
-      { "monster": "mon_cat", "weight": 100, "cost_multiplier": 0 },
-      { "monster": "mon_cat_tabby", "weight": 200, "cost_multiplier": 0 },
-      { "monster": "mon_cat_longhair", "weight": 100, "cost_multiplier": 0 },
-      { "monster": "mon_cat_black", "weight": 100, "cost_multiplier": 0 },
-      { "monster": "mon_cat_calico", "weight": 100, "cost_multiplier": 0 },
-      { "monster": "mon_cat_maine_coon", "weight": 50, "cost_multiplier": 0 },
-      { "monster": "mon_cat_siamese", "weight": 50, "cost_multiplier": 0 },
-      { "monster": "mon_cat_persian", "weight": 50, "cost_multiplier": 0 },
-      { "monster": "mon_cat_bengal", "weight": 50, "cost_multiplier": 0 },
-      { "monster": "mon_cat_devon_rex", "weight": 50, "cost_multiplier": 0 },
-      { "monster": "mon_cat_sphynx", "weight": 10, "cost_multiplier": 0 },
-      { "monster": "mon_cat_chonker", "weight": 10, "cost_multiplier": 0 }
-    ]
-  },
-  {
-    "id": "GROUP_ANIMALPOUND_DOGS",
-    "type": "monstergroup",
-    "monsters": [
-      { "monster": "mon_zombie_dog", "weight": 250, "cost_multiplier": 0 },
-      { "monster": "mon_dog_zombie_rot", "weight": 375, "cost_multiplier": 0 },
-      { "monster": "mon_dog", "weight": 75, "cost_multiplier": 0 },
-      { "monster": "mon_dog_bull", "weight": 75, "cost_multiplier": 0 },
-      { "monster": "mon_dog_pitbullmix", "weight": 100, "cost_multiplier": 0 },
-      { "monster": "mon_dog_chihuahua", "weight": 75, "cost_multiplier": 0 },
-      { "monster": "mon_dog_gshepherd", "weight": 35, "cost_multiplier": 0 },
-      { "monster": "mon_dog_samoyed", "weight": 15, "cost_multiplier": 0 }
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "animalpound" ],
     "object": {

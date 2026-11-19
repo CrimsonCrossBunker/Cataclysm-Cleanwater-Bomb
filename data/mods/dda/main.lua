@@ -504,3 +504,5 @@ require("dimension_orbs")
 require("vitrification_return")
 
 require("terrain_transforms")
+
+require("monster_groups")

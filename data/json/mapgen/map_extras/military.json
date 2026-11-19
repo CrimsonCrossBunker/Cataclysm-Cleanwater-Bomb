@@ -10,11 +10,6 @@
     }
   },
   {
-    "id": "GROUP_MIL_EXTRA",
-    "type": "monstergroup",
-    "monsters": [ { "monster": "mon_zombie_soldier", "weight": 76 }, { "monster": "mon_feral_soldier", "weight": 20 } ]
-  },
-  {
     "type": "mapgen",
     "update_mapgen_id": "mx_military",
     "object": {

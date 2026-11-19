@@ -225,48 +225,6 @@
     "copy-from": "mon_civilian_panic"
   },
   {
-    "id": "GROUP_CIVILIANS_UPGRADE",
-    "type": "monstergroup",
-    "monsters": [
-      { "monster": "mon_zombie", "weight": 264, "cost_multiplier": 0 },
-      { "monster": "mon_zombie_fat", "weight": 266, "cost_multiplier": 0 },
-      { "monster": "mon_zombie_tough", "weight": 100, "cost_multiplier": 0 },
-      { "monster": "mon_zombie_crawler", "weight": 66, "cost_multiplier": 0 },
-      { "monster": "mon_zombie_brainless", "weight": 30, "cost_multiplier": 0 },
-      { "group": "GROUP_FERAL", "weight": 180, "cost_multiplier": 0 }
-    ]
-  },
-  {
-    "id": "GROUP_CIVILIANS_STANDARD",
-    "//": "Used for deduplication only, so one does not have to repeat the same standard ratio over and over again",
-    "type": "monstergroup",
-    "monsters": [
-      { "monster": "mon_civilian_stationary", "weight": 30, "cost_multiplier": 0, "ends": "12 days" },
-      { "monster": "mon_civilian_zombiefighter", "weight": 16, "cost_multiplier": 0, "ends": "12 days" },
-      { "monster": "mon_civilian_zombiegunner", "weight": 12, "cost_multiplier": 0, "ends": "12 days" },
-      { "monster": "mon_civilian_police_rifle", "weight": 4, "cost_multiplier": 3, "ends": "12 days" },
-      { "monster": "mon_civilian_police", "weight": 4, "cost_multiplier": 3, "ends": "12 days" },
-      {
-        "monster": "mon_civilian_parent",
-        "weight": 20,
-        "cost_multiplier": 0,
-        "ends": "8 days",
-        "pack_size": [ 1, 2 ]
-      },
-      { "monster": "mon_civilian_parent", "weight": 20, "cost_multiplier": 0, "starts": "8 days", "ends": "16 days" },
-      { "monster": "mon_civilian_panic", "weight": 40, "cost_multiplier": 0, "ends": "8 days", "pack_size": [ 1, 5 ] },
-      {
-        "monster": "mon_civilian_panic",
-        "weight": 60,
-        "cost_multiplier": 0,
-        "starts": "8 days",
-        "ends": "16 days",
-        "pack_size": [ 1, 2 ]
-      },
-      { "monster": "mon_civilian_panic", "weight": 60, "cost_multiplier": 0, "starts": "16 days", "ends": "24 days" }
-    ]
-  },
-  {
     "id": "mon_civilian_panic_robofac_chop_shop",
     "type": "MONSTER",
     "name": { "str": "panicked person" },

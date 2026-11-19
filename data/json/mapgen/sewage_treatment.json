@@ -120,21 +120,6 @@
     "vehicles": { "Ł": { "vehicle": "hand_truck", "chance": 75 } }
   },
   {
-    "type": "monstergroup",
-    "id": "GROUP_SEWAGE_TREATMENT",
-    "is_animal": true,
-    "monsters": [
-      { "monster": "mon_sewer_fish", "weight": 300, "cost_multiplier": 0, "pack_size": [ 2, 6 ] },
-      { "monster": "mon_sewer_snake", "weight": 240, "cost_multiplier": 0 },
-      { "monster": "mon_sewer_rat", "weight": 310, "cost_multiplier": 0 },
-      { "monster": "mon_sewer_rat", "weight": 100, "cost_multiplier": 0, "pack_size": [ 3, 6 ] },
-      { "monster": "mon_albino_penguin", "weight": 5, "cost_multiplier": 5, "pack_size": [ 3, 9 ] },
-      { "group": "GROUP_FROGS_SEWER", "weight": 250 },
-      { "monster": "mon_zombullfrog", "weight": 10, "cost_multiplier": 2 },
-      { "monster": "mon_frog_mother", "weight": 5, "cost_multiplier": 3 }
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ [ "sewage_treatment_0_0_0", "sewage_treatment_1_0_0" ], [ "sewage_treatment_0_1_0", "sewage_treatment_1_1_0" ] ],
     "object": {

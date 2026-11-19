@@ -181,15 +181,6 @@
     ]
   },
   {
-    "id": "GROUP_AMALGAMATIONS_SPAWNED",
-    "type": "monstergroup",
-    "monsters": [
-      { "monster": "mon_amalgamation_swarmer", "weight": 20 },
-      { "monster": "mon_amalgamation_corroder", "weight": 4 },
-      { "monster": "mon_amalgamation_soldier", "weight": 1 }
-    ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_LIEUTENANT_ACTIVATE_SHADOW",
     "recurrence": "1 second",
