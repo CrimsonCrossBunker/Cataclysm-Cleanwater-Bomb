@@ -8077,6 +8077,15 @@ void install_item_api(
         }, shuffled, current_runtime_generation(), current_world_generation() );
     } );
     inventory.set_function(
+        "carried_items",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle &character ) {
+        require_read();
+        return inventory_matching_items( lua_state, character, []( const Character &, const item & ) {
+            return true;
+        }, false, current_runtime_generation(), current_world_generation() );
+    } );
+    inventory.set_function(
         "items_with_flag",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle &character, const script_game_id &flag ) {

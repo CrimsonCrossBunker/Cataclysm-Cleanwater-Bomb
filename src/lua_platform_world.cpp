@@ -341,6 +341,7 @@ struct location_search_options {
     bool z_override = false;
     bool outdoor_only = false;
     bool passable_only = false;
+    bool allow_unloaded_candidates = false;
 };
 
 int checked_scale_up_axis( int coordinate, int factor, int maximum_offset,
@@ -1373,6 +1374,8 @@ location_search_options read_location_search_options(
             result.outdoor_only = read_location_bool( value, key );
         } else if( key == "passable_only" ) {
             result.passable_only = read_location_bool( value, key );
+        } else if( key == "allow_unloaded_candidates" ) {
+            result.allow_unloaded_candidates = read_location_bool( value, key );
         } else {
             throw std::invalid_argument(
                 "services.world.find_location received unknown option '" +
@@ -1757,7 +1760,7 @@ sol::table find_world_location(
                          options.max_radius ), 0 );
             if( rl_dist( anchor, candidate ) <
                 options.min_radius ||
-                !here.inbounds( candidate ) ) {
+                ( !options.allow_unloaded_candidates && !here.inbounds( candidate ) ) ) {
                 continue;
             }
             const tripoint_bub_ms local =

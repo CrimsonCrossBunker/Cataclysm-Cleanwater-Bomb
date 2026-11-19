@@ -1120,7 +1120,7 @@
         "namespace": "global",
         "source": {
           "path": "src/lua_platform_world.cpp",
-          "line": 3899
+          "line": 3902
         },
         "direct_roots": [
           "MapTileToken"
@@ -13895,7 +13895,7 @@
       "registration_name": "MapTileToken",
       "registration": {
         "path": "src/lua_platform_world.cpp",
-        "line": 3907,
+        "line": 3910,
         "installer": "shared.install_map_api",
         "namespace": "global"
       },
@@ -13933,7 +13933,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3933
+                "line": 3936
               }
             ]
           },
@@ -13950,7 +13950,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3931
+                "line": 3934
               }
             ]
           },
@@ -13965,7 +13965,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3922
+                "line": 3925
               }
             ]
           },
@@ -13982,7 +13982,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3920
+                "line": 3923
               }
             ]
           },
@@ -13997,7 +13997,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3909
+                "line": 3912
               }
             ]
           },
@@ -14014,7 +14014,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3916
+                "line": 3919
               }
             ]
           },
@@ -14031,7 +14031,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3918
+                "line": 3921
               }
             ]
           }

@@ -416,6 +416,7 @@ function CcbWorldApi.points_nearby(origin, options) end
 ---@field distance_origin? TripointCoord Absolute map-square position used for the selector's minimum-distance exclusion; defaults to origin. Does not move the search area or random-placement anchor.
 ---@field outdoor_only? boolean Require an outdoor random-placement result.
 ---@field passable_only? boolean Require a passable random-placement result.
+---@field allow_unloaded_candidates? boolean Allow random positions beyond the selected map's bounds. Defaults to false.
 
 ---@class CcbWorldFindLocationResult
 ---@field found boolean Whether a location was found.
@@ -14985,6 +14986,12 @@ function CcbInventoryApi.contains(character, item) end
 ---@param shuffle? boolean Shuffle the matches with the native shared game RNG inside a writable callback.
 ---@return CcbResult result value is a dense array of live item handles.
 function CcbInventoryApi.items_of_type(character, item_type, shuffle) end
+
+---Return the Character's complete native inventory selection in traversal order.
+---Includes the physical wielded item, worn items, and their nested contents.
+---@param character GameHandle Exact live Character.
+---@return CcbResult result `value` is a dense array of exact item handles.
+function CcbInventoryApi.carried_items(character) end
 
 ---Capture all carried items with the effective native flag, in native traversal order.
 ---@param character GameHandle Exact live Character.
