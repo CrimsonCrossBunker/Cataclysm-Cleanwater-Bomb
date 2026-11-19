@@ -1,0 +1,22 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_CARAVAN_MERCHANT_PREDATORY_Trade",
+    "dynamic_line": "Heh, always good to do business.",
+    "responses": [
+      {
+        "text": "Actually, I had a little more to trade still.",
+        "topic": "TALK_CARAVAN_MERCHANT_PREDATORY_Trade",
+        "effect": "start_trade"
+      },
+      { "text": "You got anything else?", "topic": "TALK_CARAVAN_MERCHANT_PREDATORY_askinterval" },
+      {
+        "text": "Your prices seem awfully high.",
+        "topic": "TALK_CARAVAN_MERCHANT_PREDATORY_Price",
+        "condition": { "not": { "compare_string": [ "yes", { "npc_val": "general_meeting_u_paidoff" } ] } }
+      },
+      { "text": "Thanks.  What were we talking about before?", "topic": "TALK_NONE" },
+      { "text": "Thanks for that.  <end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]

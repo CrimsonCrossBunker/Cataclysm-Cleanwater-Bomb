@@ -1,0 +1,50 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_CARAVAN_MERCHANT_PREDATORY_Price",
+    "dynamic_line": {
+      "gendered_line": "Like I said, I'm a businessman and business is my job.  Those other yahoos you've been talkin' to don't know what they're doing.",
+      "relevant_genders": [ "npc" ]
+    },
+    "speaker_effect": { "effect": { "u_add_var": "general_trade_u_think_suspicious_price", "value": "yes" } },
+    "responses": [
+      {
+        "text": "Alright.  I'd like to buy something.",
+        "topic": "TALK_CARAVAN_MERCHANT_PREDATORY_Trade",
+        "effect": "start_trade"
+      },
+      {
+        "text": "I think you're full of shit.  I know you're gouging for your own benefit, and wouldn't it be a shame if this information were to get out?",
+        "trial": { "type": "PERSUADE", "difficulty": 5, "mod": [ [ "INTIMIDATE", 4 ] ] },
+        "success": { "topic": "TALK_CARAVAN_MERCHANT_PREDATORY_Pricegouge_Win" },
+        "failure": { "topic": "TALK_CARAVAN_MERCHANT_PREDATORY_Pricegouge_Lose" }
+      },
+      { "text": "Alright.  What were we talking about before?", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_CARAVAN_MERCHANT_PREDATORY_Pricegouge_Win",
+    "dynamic_line": "Woah woah woah, cool your jets.  I can't let this spread about me, so name your price and keep quiet, and I might give you a discount.",
+    "speaker_effect": { "effect": { "npc_add_var": "general_meeting_u_paidoff", "value": "yes" } },
+    "responses": [
+      { "text": "50 merch and you have a deal.", "effect": { "u_spawn_item": "FMCNote", "count": 50 }, "topic": "TALK_DONE" },
+      {
+        "text": "You know what, I don't want your <freaking> dirty money.  Go fuck yourself.",
+        "topic": "TALK_DONE",
+        "effect": "hostile"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_CARAVAN_MERCHANT_PREDATORY_Pricegouge_Lose",
+    "dynamic_line": "What proof do you have <name_b>?  Nothing is what you got, and your the only one here who's full of shit.",
+    "speaker_effect": { "effect": { "npc_first_topic": "TALK_CARAVAN_MERCHANT_PREDATORY_NoTalk" } },
+    "responses": [
+      { "text": "If you don't wanna cooperate, I'll stop this by force.", "topic": "TALK_DONE", "effect": "hostile" },
+      { "text": "…", "topic": "TALK_DONE" }
+    ]
+  }
+]
