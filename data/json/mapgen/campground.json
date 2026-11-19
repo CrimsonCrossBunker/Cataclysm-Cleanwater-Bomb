@@ -74,39 +74,5 @@
         { "vehicle": "campground_vehicles", "chance": 25, "rotation": 90, "x": 35, "y": 43 }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": [ "campground_roof" ],
-    "object": {
-      "fill_ter": "t_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                5------ ",
-        "                -.....- ",
-        "                -.....- ",
-        "              ..-.....- ",
-        "              ..-.....- ",
-        "              ..-.....- ",
-        "                ------5 ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ]
-    }
   }
 ]
