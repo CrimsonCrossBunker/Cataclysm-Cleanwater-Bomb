@@ -1,0 +1,43 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_cafe_a1_floor_2",
+    layout = {
+        rows = {
+            "                        ",
+            "               [[[[[[[  ",
+            "              [[.....[[ ",
+            "              [.......[ ",
+            "              [.....1.[ ",
+            "              [.2.....[ ",
+            "              [.....1.[ ",
+            "              [.......[ ",
+            "              [.2.....[ ",
+            "              [.......[ ",
+            "              [.......[ ",
+            "              [.......[ ",
+            "              [.....3.[ ",
+            "              [.....3.[ ",
+            "              [.....3.[ ",
+            "              [.......[ ",
+            "              [.....3.[ ",
+            "              [.444.3.[ ",
+            "              [.444.3.[ ",
+            "              [.......[ ",
+            "              [.......[ ",
+            "              [[.....[[ ",
+            "               [[[[[[[  ",
+            "                        ",
+        },
+        palettes = { "afs_habitat_structure" },
+        terrain = { [" "] = "t_open_air" },
+        furniture = {
+            ["1"] = "f_roof_turbine_vent",
+            ["2"] = "f_small_satellite_dish",
+            ["3"] = "f_vent_pipe",
+            ["4"] = "f_solar_unit",
+        },
+        fill_terrain = "t_metal_floor",
+    },
+}
