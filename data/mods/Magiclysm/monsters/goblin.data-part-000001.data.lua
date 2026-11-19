@@ -1,0 +1,57 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster { id = "mon_troll_goblin_tamed", copy_from = "mon_troll", default_faction = "goblin" }
+
+ccb.content.define_monster {
+    id = "mon_wolf_goblin",
+    name = ccb.content.plural_text("warg", "wargs"),
+    description = ccb.content.text("An enormous wolf, a meter and a half high at the shoulder, as large as a young horse.  Tamed wargs were common as pets before the Cataclysm, but this one looks anything but tame."),
+    default_faction = "goblin",
+    body_type = "dog",
+    categories = { "WILDLIFE" },
+    species = { "WARG" },
+    volume = "200000 ml",
+    mass = "200000 g",
+    hp = 175,
+    speed = 140,
+    materials = { "flesh" },
+    symbol = "W",
+    color = "light_gray",
+    looks_like = "mon_direwolf",
+    scents_tracked = { "sc_human", "sc_fetid" },
+    aggression = 30,
+    morale = 70,
+    melee_skill = 7,
+    melee_dice = 2,
+    melee_sides = 10,
+    melee_damage = { { type = "cut", amount = 6 } },
+    dodge = 2,
+    bleed_rate = 60,
+    vision_day = 50,
+    vision_night = 5,
+    harvest = "mammal_large_fur",
+    dissect = "dissect_lupine_sample_large",
+    families = { "prof_gross_anatomy", "prof_intro_biology", "prof_physiology" },
+    pathing = { max_distance = 10 },
+    attacks = {
+        {
+            cooldown = 5,
+            damage = { { type = "stab", amount = 15, penetration = 10 } },
+            kind = "bite",
+        },
+        { reference = "SHRIEK", cooldown = 12 },
+        { reference = "EAT_FOOD", cooldown = 60 },
+    },
+    pet = {
+        food = { "WARG_FOOD" },
+        feed_message = ccb.content.text("The %s approaches you, acknowledging your ancient bond, and eats the meat you offer."),
+        pet_message = ccb.content.text("The %s happily wags its tail while you pat its head."),
+    },
+    anger_triggers = { "STALK", "FRIEND_ATTACKED", "FRIEND_DIED", "PLAYER_WEAK", "PLAYER_CLOSE" },
+    zombify_into = "mon_zombie_dog_fungus",
+    flags = {
+        "SEES", "HEARS", "SMELLS", "ANIMAL", "PET_MOUNTABLE", "COMBAT_MOUNT", "CANPLAY",
+        "PATH_AVOID_DANGER", "WARM", "KEENNOSE", "EATS",
+    },
+    armor = { bash = 8, cut = 10, electric = 1 },
+}
