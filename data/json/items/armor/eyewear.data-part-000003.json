@@ -1,0 +1,24 @@
+[
+  {
+    "id": "glasses_reading",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str_sp": "reading glasses" },
+    "description": "A pair of glasses for the far-sighted.  Useless for anyone else.  You can use them to focus sunlight.",
+    "ascii_picture": "glasses_reading",
+    "weight": "30 g",
+    "volume": "250 ml",
+    "price": "20 USD",
+    "price_postapoc": "5 USD",
+    "material": [ "glass", "plastic" ],
+    "symbol": "[",
+    "looks_like": "glasses_eye",
+    "color": "cyan",
+    "material_thickness": 1,
+    "environmental_protection": 1,
+    "//COMMENT": "Best case scenario: ~37 seconds. This video actually involves them lighting a cigarette, so that's about as good as it gets short of some scientific study. https://youtu.be/z51-ruPsupE?t=110",
+    "use_action": { "type": "firestarter", "moves": 3700, "moves_slow": 25000, "need_sunlight": true },
+    "flags": [ "WATER_FRIENDLY", "FIRESTARTER", "FIX_FARSIGHT", "FRAGILE", "SKINTIGHT" ],
+    "armor": [ { "coverage": 75, "covers": [ "eyes" ], "rigid_layer_only": true } ]
+  }
+]
