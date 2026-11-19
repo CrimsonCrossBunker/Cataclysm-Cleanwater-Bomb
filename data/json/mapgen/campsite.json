@@ -182,39 +182,6 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ "campsite_cabin_incomplete_roof" ],
-    "object": {
-      "rows": [
-        "                        ",
-        "                        ",
-        "               ------   ",
-        "               .....-   ",
-        "                 ...-   ",
-        "                  ..-   ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "palettes": [ "roof_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
     "om_terrain": [ "campsite_field_biker" ],
     "object": {
       "predecessor_mapgen": "field",
