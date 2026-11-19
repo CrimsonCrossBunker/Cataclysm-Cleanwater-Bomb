@@ -129,40 +129,6 @@
     }
   },
   {
-    "type": "mapgen",
-    "om_terrain": "moonshine_still_roof",
-    "object": {
-      "fill_ter": "t_thatch_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "           .......      ",
-        "           .......      ",
-        "           .......      ",
-        "           .......      ",
-        "           .......      ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { ".": "t_thatch_roof", " ": "t_open_air" }
-    }
-  },
-  {
     "om_terrain": "moonshine_still_1",
     "type": "mapgen",
     "object": {
@@ -204,40 +170,6 @@
     }
   },
   {
-    "type": "mapgen",
-    "om_terrain": "moonshine_still_roof_1",
-    "object": {
-      "fill_ter": "t_thatch_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "           .....        ",
-        "           .....        ",
-        "           .....        ",
-        "           .....        ",
-        "           .....        ",
-        "           .....        ",
-        "           .....        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { ".": "t_thatch_roof", " ": "t_open_air" }
-    }
-  },
-  {
     "om_terrain": "moonshine_still_2",
     "type": "mapgen",
     "object": {
@@ -271,40 +203,6 @@
       "palettes": [ "moonshine_palette" ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "place_item": [ { "item": "stepladder", "x": 4, "y": 4 } ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "moonshine_still_roof_2",
-    "object": {
-      "fill_ter": "t_thatch_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "           ......       ",
-        "           ......       ",
-        "           ......       ",
-        "           ......       ",
-        "           ......       ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        "
-      ],
-      "terrain": { ".": "t_thatch_roof", " ": "t_open_air" }
     }
   }
 ]
