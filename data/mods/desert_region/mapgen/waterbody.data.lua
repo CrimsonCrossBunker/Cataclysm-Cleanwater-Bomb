@@ -1,5 +1,41 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "desert_shore_palette",
+    layout = {
+        terrain = {
+            _ = "t_region_groundcover",
+            [","] = { { id = "t_region_groundcover", copies = 5 }, { id = "t_null", copies = 3 } },
+            ["."] = { { id = "t_region_groundcover" }, { id = "t_null", copies = 5 } },
+            [" "] = "t_null",
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "bridge_ground_palette",
+    layout = {
+        terrain = {
+            [","] = "t_region_soil",
+            s = "t_mudcrack",
+            ["~"] = "t_mudcrack",
+            ["."] = "t_pavement",
+            [":"] = "t_pavement_y",
+            _ = "t_sidewalk",
+            ["="] = "t_guardrail",
+            u = "t_ramp_up_low",
+            U = "t_ramp_up_high",
+            d = "t_ramp_down_high",
+            D = "t_ramp_down_low",
+            W = "t_sidewalk_ramp_down_high",
+            [">"] = "t_sidewalk_ramp_down_low",
+            ["<"] = "t_sidewalk_ramp_up_high",
+            w = "t_sidewalk_ramp_up_low",
+            ["#"] = "t_concrete_wall",
+        },
+    },
+}
+
 -- Weight should be removed if/when lake_shore and river (or their weights) are unhardcoded
 ccb.content.define_mapgen {
     kind = "overmap",

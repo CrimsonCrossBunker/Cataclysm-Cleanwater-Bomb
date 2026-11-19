@@ -1,5 +1,83 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "canyon_edge_parameters",
+    layout = {
+        parameters = {
+            variant = {
+                value_type = "nested_mapgen",
+                default = { weighted = { "24x24_canyon_edge_v1", "24x24_canyon_edge_v2" } },
+                scope = "map_stack",
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "canyon",
+    layout = {
+        nested_glyphs = {
+            ["#"] = { levels = { 0 }, otherwise = { "1x1_sandstone" } },
+            [" "] = { levels = { 0 }, id = "1x1_open_air" },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "canyon_corner_parameters",
+    layout = {
+        parameters = {
+            variant = {
+                value_type = "nested_mapgen",
+                default = { weighted = { "24x24_canyon_corner_v1", "24x24_canyon_corner_v2" } },
+                scope = "map_stack",
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "canyon_2way_parameters",
+    layout = {
+        parameters = {
+            variant = {
+                value_type = "nested_mapgen",
+                default = { weighted = { "24x24_canyon_2way_v1", "24x24_canyon_2way_v2" } },
+                scope = "map_stack",
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "canyon_3way_parameters",
+    layout = {
+        parameters = {
+            variant = {
+                value_type = "nested_mapgen",
+                default = { weighted = { "24x24_canyon_3way_v1", "24x24_canyon_3way_v2" } },
+                scope = "map_stack",
+            },
+        },
+    },
+}
+
+-- Number indicates number of tiles from center
+ccb.content.define_mapgen_palette {
+    id = "trail_width_palette",
+    layout = {
+        nested_glyphs = {
+            ["0"] = { id = "1x1_trail" },
+            ["1"] = { choices = { { id = "1x1_trail", weight = 1 }, { id = "null", weight = 1 } } },
+            ["2"] = { choices = { { id = "1x1_trail", weight = 0 }, { id = "null", weight = 1 } } },
+            ["3"] = { choices = { { id = "1x1_trail", weight = 0 }, { id = "null", weight = 1 } } },
+            ["4"] = { choices = { { id = "1x1_trail", weight = 0 }, { id = "null", weight = 1 } } },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette { id = "trail_path_palette", layout = { terrain = { ["."] = "t_railroad_rubble" } } }
+
 ccb.content.define_mapgen {
     kind = "overmap",
     id = "mesa",
