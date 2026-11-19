@@ -9,11 +9,5 @@
     "mission": "GUARD_PATROL",
     "chat": "TALK_UICA_GROUND_SOLDIER",
     "faction": "UICA"
-  },
-  {
-    "id": "TALK_UICA_GROUND_SOLDIER",
-    "type": "talk_topic",
-    "dynamic_line": [ "Keep it civil, salvor.", "Just on watch, move along.", { "u_male": [ "Sir." ], "no": [ "Ma'am" ] } ],
-    "responses": [ { "text": "…", "topic": "TALK_DONE" } ]
   }
 ]
