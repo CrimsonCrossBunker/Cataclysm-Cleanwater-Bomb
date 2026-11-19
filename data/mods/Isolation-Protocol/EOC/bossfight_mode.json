@@ -23,10 +23,5 @@
     "type": "effect_on_condition",
     "id": "EOC_ISO_OPEN_BOSSFIGHT_DOORS",
     "effect": [ { "u_transform_radius": 60, "ter_furn_transform": "iso_open_bossfight" } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "iso_open_bossfight",
-    "terrain": [ { "result": "t_metal_floor", "valid_terrain": [ "t_iso_bossfight_door" ] } ]
   }
 ]
