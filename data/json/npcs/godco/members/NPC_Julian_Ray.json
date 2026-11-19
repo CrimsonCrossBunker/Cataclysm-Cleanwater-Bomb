@@ -144,15 +144,5 @@
       },
       { "text": "Hello, Julian.  <end_talking_leave>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_GODCO_Julian_2",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "general_meeting_godco_joinee" } ],
-      "yes": [ "If you have complaints, please don't tell anyone.", "You're still staying here, joinee?", "Need anything, joinee?" ],
-      "no": [ "Need anything?", "Go on…" ]
-    },
-    "responses": [ { "text": "<end_talking_leave>", "topic": "TALK_DONE" } ]
   }
 ]

@@ -1,0 +1,9 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_GODCO_Julian_Joinee",
+    "dynamic_line": "Your name is now on the books.  Here's your blanket, joinee.  Those two beds next to the window, you can choose one of them.  It's safe, don't worry.  I'm armed.  By the way, if you're hungry you can go bug Simon for a meal, up to one in a day.",
+    "speaker_effect": { "effect": [ { "u_spawn_item": "blanket" }, { "u_add_var": "general_meeting_godco_joinee", "value": "yes" } ] },
+    "responses": [ { "text": "Thank you.  See you around, Julian.", "topic": "TALK_DONE" } ]
+  }
+]
