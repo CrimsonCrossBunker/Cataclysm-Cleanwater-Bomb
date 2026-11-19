@@ -1,7 +1,0 @@
-[
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "remove_balthazar_intercom",
-    "object": { "remove_npcs": [ { "class": "balthazar_intercom", "x": 20, "y": 13 } ] }
-  }
-]

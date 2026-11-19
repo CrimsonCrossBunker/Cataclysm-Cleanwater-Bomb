@@ -313,3 +313,11 @@ ccb.content.define_mapgen {
         npc_glyphs = { Q = { id = "balthazar_intercom" } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "remove_balthazar_intercom",
+    layout = {
+        npc_removals = { { id = "balthazar_intercom", x = 20, y = 13 } },
+    },
+}
