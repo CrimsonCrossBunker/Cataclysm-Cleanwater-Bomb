@@ -239,7 +239,13 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 305> migrated_character_tasks = {{
+const std::array<character_task_migration, 308> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_GOBLIN_FRUIT_STOP_RAIN" ),
+          "end_goblin_fruit_drizzle", nullptr },
+        { effect_on_condition_id( "EOC_GOBLIN_FRUIT_ANIMAL_IGNORE_REMOVE" ),
+          "end_goblin_fruit_animal_ignore", nullptr },
+        { effect_on_condition_id( "EOC_GOBLIN_FRUIT_MUSIC_REMOVE" ),
+          "end_goblin_fruit_song", nullptr },
         { effect_on_condition_id( "EOC_GOBLIN_FRUIT_GIANT_GROWTH_REMOVE" ),
           "end_goblin_fruit_giant_growth", nullptr },
         { effect_on_condition_id( "EOC_GOBLIN_FRUIT_NUMB_REMOVE" ),

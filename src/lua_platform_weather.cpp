@@ -1549,6 +1549,11 @@ void install_weather_api(
         return refresh_weather(
                    state );
     } );
+    weather.set_function( "request_update", [require_write]() {
+        require_write();
+        require_active_game( "services.weather.request_update" );
+        get_weather().set_nextweather( calendar::turn );
+    } );
     weather.set_function(
         "activate_lightning",
         [require_write](

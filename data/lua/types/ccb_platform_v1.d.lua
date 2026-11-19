@@ -13444,6 +13444,9 @@ function CcbWeatherApi.clear_overrides() end
 ---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
 function CcbWeatherApi.refresh() end
 
+---Make the normal weather update due this turn without immediately recomputing weather.
+function CcbWeatherApi.request_update() end
+
 ---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
 function CcbWeatherApi.activate_lightning() end
 
