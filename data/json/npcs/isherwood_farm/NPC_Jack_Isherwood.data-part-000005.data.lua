@@ -1,26 +1,39 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ISHERWOOD_JACK_RESOURCES",
-    line = ccb.content.text("Excellent.  What've you brought us?"),
-    repeat_replies = {
-        {
-            items = {
-                "log", "2x4", "wood_panel", "wood_sheet", "material_sand", "clay_lump", "nail",
-                "lc_wire", "rock", "lc_steel_chunk", "mc_steel_chunk", "hc_steel_chunk",
-                "ch_steel_chunk", "qt_steel_chunk", "lc_steel_lump", "mc_steel_lump", "hc_steel_lump",
-                "ch_steel_lump", "qt_steel_lump",
-            },
-            reply = { text = ccb.content.text("Delivering <topic_item>."), next_topic = "TALK_DELIVER_ASK" },
-        },
-    },
+    id = "TALK_ISHERWOOD_JACK_TOPICS",
+    line = ccb.content.text("Go on…"),
     replies = {
         {
-            text = ccb.content.text("That's all for now.  <done_conversation_section>"),
-            next_topic = "TALK_NONE",
+            text = ccb.content.text("I'm here to deliver some resources."),
+            next_topic = "TALK_ISHERWOOD_JACK_RESOURCES",
+            when = predicates.all({ predicates.negate(predicates.wears("speaker", "badge_marshal")), predicates.any_equal({ "yes", { scope = "speaker", key = "u_scavenge_for_Jack_Isherwood" } }) }),
         },
         {
-            text = ccb.content.text("That's all for now.  <end_talking_leave>"),
+            text = ccb.content.text("A farm must be a pretty safe place these days."),
+            next_topic = "TALK_JACK_FARM",
+        },
+        {
+            text = ccb.content.text("Tell me about your wife, is she around?"),
+            next_topic = "TALK_JACK_WIFE",
+        },
+        {
+            text = ccb.content.text("Your daughter lives down the road?"),
+            next_topic = "TALK_JACK_DAUGHTER",
+        },
+        {
+            text = ccb.content.text("Where is your brother's place?"),
+            next_topic = "TALK_JACK_BROTHER",
+        },
+        {
+            text = ccb.content.text("Let's trade items."),
+            next_topic = "TALK_ISHERWOOD_JACK",
+            native_actions = { "start_trade" },
+        },
+        { text = ccb.content.text("Can I do anything for you?"), next_topic = "TALK_MISSION_LIST" },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_leave>"),
             next_topic = "TALK_DONE",
         },
     },

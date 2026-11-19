@@ -1,60 +1,65 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_ISHERWOOD_JACK_RESTOCK",
-    line = ccb.content.text("Around <restock_time_point>."),
-    replies = { { text = ccb.content.text("Alright then, bye."), next_topic = "TALK_DONE" } },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ISHERWOOD_JACK_TALK1",
-    line = ccb.content.text("I live here with my wife, this is our family's land.  My daughter's family and son live down the road."),
-    replies = {
-        {
-            text = ccb.content.text("Your whole family survived?"),
-            next_topic = "TALK_ISHERWOOD_JACK2",
-        },
-        {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_ISHERWOOD_JACK_TOPICS",
-        },
-        {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
-            next_topic = "TALK_DONE",
-        },
+    id = "TALK_ISHERWOOD_JACK",
+    line = {
+        when = predicates.wears("speaker", "badge_marshal"),
+        yes = ccb.content.text("Is that a U.S. Marshal's badge you're wearing?"),
+        no = ccb.content.gendered_line("Hello traveler, what brings you here?", { "speaker" }),
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_ISHERWOOD_JACK2",
-    line = ccb.content.text("We've had our losses… now we stay close to home, preparing for trouble.  We've always taken disaster preparedness seriously, but we didn't expect anything like this though."),
     replies = {
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            text = ccb.content.text("Yes, I'm a marshal."),
+            next_topic = "TALK_LEAVE_NOW_MARSHAL_JACK",
+            actions = { "hostile" },
+            opinion = { trust = -20, value = -20 },
+            when = predicates.wears("speaker", "badge_marshal"),
+        },
+        {
+            text = ccb.content.text("…"),
+            next_topic = "TALK_LEAVE_NOW_MARSHAL_JACK",
+            opinion = { trust = -20, value = -20 },
+            when = predicates.wears("speaker", "badge_marshal"),
+        },
+        {
+            text = ccb.content.text("I'm here to deliver some resources."),
+            next_topic = "TALK_ISHERWOOD_JACK_RESOURCES",
+            when = predicates.all({ predicates.negate(predicates.wears("speaker", "badge_marshal")), predicates.any_equal({ "yes", { scope = "speaker", key = "u_scavenge_for_Jack_Isherwood" } }) }),
+        },
+        {
+            text = ccb.content.text("This is a lot of land, you been here since the collapse?"),
+            next_topic = "TALK_ISHERWOOD_JACK_TALK1",
+            actions = {
+                actions.set_actor_value("speaker", "u_met_Jack_Isherwood", "yes"),
+                actions.set_actor_value("speaker", "u_met_an_isherwood", "yes"),
+            },
+        },
+        {
+            text = ccb.content.text("Hey, good to see you again."),
             next_topic = "TALK_ISHERWOOD_JACK_TOPICS",
+            when = predicates.all({ predicates.negate(predicates.wears("speaker", "badge_marshal")), predicates.any_equal({ "yes", { scope = "speaker", key = "u_met_Jack_Isherwood" } }) }),
+        },
+        {
+            text = ccb.content.text("Can I do anything for you?"),
+            next_topic = "TALK_MISSION_LIST",
+            when = predicates.negate(predicates.wears("speaker", "badge_marshal")),
+        },
+        {
+            text = ccb.content.text("Have anything to trade?"),
+            next_topic = "TALK_ISHERWOOD_JACK",
+            actions = { "start_trade" },
+            when = predicates.negate(predicates.wears("speaker", "badge_marshal")),
+        },
+        {
+            text = ccb.content.text("Hey, when would more of this stuff be ready?"),
+            next_topic = "TALK_ISHERWOOD_JACK_RESTOCK",
         },
         {
             text = ccb.content.text_without_extraction("<end_talking_leave>"),
             next_topic = "TALK_DONE",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_JACK_FARM",
-    line = ccb.content.text("Even out here we've had some attacks and seen… other things.  We have been working on our defenses, but it takes time.  We've been able to keep up with the crops and animals though so we won't have to risk our necks for supplies."),
-    replies = {
-        {
-            text = ccb.content.text("What sort of defenses do you want?"),
-            next_topic = "TALK_FARM_DEFENSE",
-        },
-        {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_ISHERWOOD_JACK_TOPICS",
-        },
-        {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
-            next_topic = "TALK_DONE",
+            when = predicates.negate(predicates.wears("speaker", "badge_marshal")),
         },
     },
 }
