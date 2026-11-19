@@ -1,0 +1,117 @@
+local ccb = require("ccb")
+
+ccb.content.define_terrain {
+    id = "t_druid_leaves",
+    looks_like = "t_triffid_leaves",
+    name = ccb.content.text("branches with leaves"),
+    description = ccb.content.text("Thin branches emerge here, covered with thick, large leaves."),
+    symbol = "#",
+    color = "green",
+    move_cost = 8,
+    coverage = 40,
+    flags = { "TRANSPARENT", "TRANSPARENT_FLOOR", "FLAMMABLE_ASH" },
+    bash = {
+        minimum_strength = 4,
+        maximum_strength = 60,
+        sound = ccb.content.text("crunch."),
+        failure_sound = ccb.content.text("poof!"),
+        terrain = "t_null",
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_druid_wood_wall",
+    looks_like = "t_triffid_wood_wall",
+    name = ccb.content.text("solid wood wall"),
+    description = ccb.content.text("A solid wall of naturally grown wood.  Likely very flammable."),
+    symbol = "#",
+    color = "brown",
+    move_cost = 0,
+    coverage = 100,
+    roof = "t_barkfloor",
+    connect_groups = "WALL",
+    connects_to = "WALL",
+    flags = {
+        "FLAMMABLE",
+        "NOITEM",
+        "SUPPORTS_ROOF",
+        "WALL",
+        "NO_SCENT",
+        "AUTO_WALL_SYMBOL",
+        "MINEABLE",
+        "BLOCK_WIND",
+    },
+    bash = {
+        minimum_strength = 80,
+        maximum_strength = 180,
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_heartwood_floor",
+        drops = { { item = "splinter", count = { 20, 25 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_heartwood_floor",
+    looks_like = "t_barkfloor",
+    name = ccb.content.text("sapwood floor"),
+    description = ccb.content.text("The living wood of the tree."),
+    symbol = ".",
+    color = "brown",
+    move_cost = 2,
+    roof = "t_heartwood_floor",
+    connect_groups = "INDOORFLOOR",
+    flags = { "FLAMMABLE_HARD", "TRANSPARENT", "SUPPORTS_ROOF", "COLLAPSES", "INDOORS", "FLAT", "ROAD" },
+    bash = {
+        sound = ccb.content.text("SMASH!"),
+        terrain = "t_open_air",
+        minimum_strength = 200,
+        maximum_strength = 600,
+        minimum_strength_supported = 100,
+        drops = { { item = "splinter", count = { 20, 80 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+ccb.content.define_terrain {
+    id = "t_druid_root_floor",
+    looks_like = "t_root_floor",
+    name = ccb.content.text("root floor"),
+    description = ccb.content.text("A dirt floor covered with roots."),
+    symbol = "#",
+    color = "brown",
+    move_cost = 2,
+    roof = "t_root_floor",
+    connect_groups = "WALL",
+    connects_to = "WALL",
+    flags = { "SUPPORTS_ROOF", "WALL", "NO_SCENT" },
+    bash = {
+        minimum_strength = 12,
+        maximum_strength = 150,
+        sound = ccb.content.text("crunch!"),
+        failure_sound = ccb.content.text("whump!"),
+        terrain = "t_dirt",
+        drops = { { item = "splinter", count = { 2, 5 } } },
+        hit_field = { "fd_dust", 2 },
+        destroyed_field = { "fd_splinters", 1 },
+    },
+}
+
+-- Exists to prevent spamming the fountain of the depths spell and only having one tile transform back.
+ccb.content.define_terrain {
+    id = "t_water_moving_sh_druid",
+    name = ccb.content.text("flowing shallow water"),
+    description = ccb.content.text("The streaming water isn't too deep here.  With a watertight container, you could gather fresh water from here.  Not safe to drink as is, although probably safer than stagnant water."),
+    looks_like = "t_water_moving_sh",
+    symbol = "~",
+    color = "light_blue",
+    move_cost = 6,
+    flags = { "TRANSPARENT", "LIQUID", "NO_SCENT", "SWIMMABLE", "FISHABLE", "CURRENT", "SHALLOW_WATER" },
+    connect_groups = "WATER",
+    connects_to = "WATER",
+    liquid_source = { item = "water" },
+    builtin_examine = "water_source",
+}
