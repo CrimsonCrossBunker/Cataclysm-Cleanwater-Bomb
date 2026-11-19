@@ -286,3 +286,25 @@ ccb.runtime.handler("examine_f_piano", function(ctx)
         message(ctx, text, "neutral", false)
     end
 end)
+
+ccb.runtime.handler("examine_f_bulletin_evac", function(ctx)
+    local actor = ctx.character
+    local senses = checked(services.characters.snapshot(actor)).senses
+    local can_read = senses.can_see
+        and (checked(services.creatures.has_flag_text(actor, "READ_IN_DARKNESS"))
+            or senses.fine_detail_vision_legacy <= 4)
+    if not can_read then
+        message(ctx, ccb.services.translate("It's too dark to read."), "neutral", false)
+        return
+    end
+    if checked(services.missions.has_active(actor, id("mission", "MISSION_REACH_REFUGEE_CENTER"))) then
+        message(ctx,
+            ccb.services.translate("You study the board.  It shows a similar set of directions to the ones you already have.  You cross-reference them and don't learn anything new."),
+            "neutral", true)
+    else
+        message(ctx,
+            ccb.services.translate("You study the board.  One of the pages has a map and address for a nearby refugee center alongside minutia you no longer need trouble yourself with now that society has collapsed, like 'operating hours' and 'acceptable forms of ID'.  You take careful note of the map on the board and mark down the coordinates."),
+            "neutral", true)
+        assign_mission(actor, "MISSION_REACH_REFUGEE_CENTER")
+    end
+end)

@@ -67,3 +67,5 @@ require("contagion.effect_types")
 require("effect_types")
 
 require("monster_groups")
+
+require("classic_events")
