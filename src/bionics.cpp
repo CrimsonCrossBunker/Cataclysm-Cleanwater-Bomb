@@ -1,4 +1,3 @@
-#include "radio_car_control.h"
 #include <flat_set.h>
 #include <magic.h>
 #include <translation.h>
@@ -24,21 +23,17 @@
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "avatar_action.h"
-#include "ballistics.h"
-#include "bionics.h"
 #include "bionic_activation.h"
-#include "item_disposition.h"
 #include "bionic_water_activity.h"
 #include "bionic_world_effects.h"
-#include "character_action_guard.h"
-#include "mp_inventory_activity.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
-#include "color.h"
 #include "condition.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -46,7 +41,6 @@
 #include "debug.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
-#include "dispersion.h"
 #include "effect.h"
 #include "effect_on_condition.h"
 #include "effect_source.h"
@@ -59,9 +53,11 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "generic_factory.h"
-#include "handle_liquid.h"
 #include "item.h"
+#include "item_disposition.h"
 #include "item_location.h"
+#include "item_source.h"
+#include "item_uid.h"
 #include "itype.h"
 #include "json.h"
 #include "lua_platform_content.h"
@@ -70,9 +66,11 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "mapdata.h"
+#include "martial_style_selection.h"
 #include "material.h"
 #include "messages.h"
 #include "monster.h"
+#include "mp_inventory_activity.h"
 #include "mutation.h"
 #include "npc.h"
 #include "options.h"
@@ -80,14 +78,14 @@
 #include "overmap_ui.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
+#include "player_activity.h"
 #include "pocket_type.h"
 #include "point.h"
-#include "projectile.h"
+#include "radio_car_control.h"
 #include "requirements.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "safe_reference.h"
-#include "sounds.h"
 #include "string_formatter.h"
 #include "talker.h"
 #include "teleport.h"
@@ -786,7 +784,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         // Target selection may pump input/network updates; re-resolve the CBM.
         return selected && current && activate_bionic( **current, eff_only, close_bionics_ui, &*selected );
     }
-    const auto initial_activity = activity.identity_generation();
+    const std::uint64_t initial_activity = activity.identity_generation();
     const safe_reference<Creature> character_reference = get_safe_reference();
     const bionic_uid activation_uid = initial_bio.get_uid();
     const bool mounted = is_mounted();

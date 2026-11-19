@@ -75,11 +75,13 @@
 #include "overmap_ui.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
+#include "player_activity.h"
 #include "point.h"
 #include "proficiency.h"
 #include "rng.h"
 #include "simple_pathfinding.h"
 #include "skill.h"
+#include "talker.h"
 #include "trade_ui.h"
 #include "translation.h"
 #include "translations.h"
@@ -208,7 +210,7 @@ bool start_training_request( Character &teacher, const std::vector<Character *> 
                              dialogue *conversation = nullptr, Character *explicit_patron = nullptr );
 void request_remote_seminar( dialogue &conversation, npc &teacher, Character &payer,
                              const talk_function::teach_domain &domain );
-}
+} // namespace
 
 namespace mission_dialogue
 {

@@ -128,7 +128,7 @@ class native_callback_value final
         native_callback_value( native_callback_id value ) : value_( std::move( value ) ) {}
         native_callback_value( std::vector<std::string> value ) : value_( std::move( value ) ) {}
         native_callback_value( native_callback_talker value ) : value_( std::move( value ) ) {}
-        native_callback_value( native_callback_mission value ) : value_( std::move( value ) ) {}
+        native_callback_value( native_callback_mission value ) : value_( value ) {}
 
         native_callback_value( const Character *value );
         native_callback_value( const Creature *value );
@@ -155,9 +155,8 @@ template<std::size_t... Index>
 constexpr bool native_callback_storage_has_no_pointers(
     std::index_sequence<Index...> )
 {
-    return ( ... &&
-             !std::is_pointer_v<std::variant_alternative_t<
-             Index, native_callback_value::storage_type >> );
+    return !std::disjunction_v<std::is_pointer<std::variant_alternative_t<
+           Index, native_callback_value::storage_type >>...>;
 }
 
 static_assert( native_callback_storage_has_no_pointers( std::make_index_sequence <
