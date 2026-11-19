@@ -1,14 +1,5 @@
 [
   {
-    "type": "overmap_terrain",
-    "id": [ "radiosphere_radio_tower_top" ],
-    "vision_levels": "isolated_tower",
-    "name": "radio tower",
-    "sym": ".",
-    "color": "light_gray",
-    "see_cost": "all_clear"
-  },
-  {
     "type": "mapgen",
     "om_terrain": "radiosphere_radio_tower_top",
     "object": {
@@ -161,14 +152,6 @@
     "light_emitted": 50,
     "move_cost": 4,
     "flags": [ "TRANSPARENT", "NO_SCENT", "DESTROY_ITEM" ]
-  },
-  {
-    "type": "overmap_terrain",
-    "id": [ "radiosphere_deletion_plane" ],
-    "name": "vanishing plane",
-    "sym": "~",
-    "color": "cyan",
-    "see_cost": "all_clear"
   },
   {
     "type": "mapgen",
