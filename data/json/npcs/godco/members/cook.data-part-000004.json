@@ -1,0 +1,15 @@
+[
+  {
+    "id": "TALK_GODCO_chef_get_food_joinee",
+    "type": "talk_topic",
+    "dynamic_line": "They can, but we're limited on the portions for now.  Hope you enjoy it, and come back tomorrow for another.",
+    "speaker_effect": {
+      "effect": [
+        { "u_spawn_item": "macaroni_helper", "container": "can_food" },
+        { "u_spawn_item": "toast" },
+        { "npc_add_effect": "u_got_meal", "duration": "12 h" }
+      ]
+    },
+    "responses": [ { "text": "Thanks.", "topic": "TALK_DONE" } ]
+  }
+]
