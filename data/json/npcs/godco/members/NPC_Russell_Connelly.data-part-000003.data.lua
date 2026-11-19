@@ -1,50 +1,65 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_GODCO_Russell_Mood",
-    line = ccb.content.text("Oh it's nothing new to me.  Livin' off the land, far from everyone - it's just what I'm adjusted to.  I've kept in touch with the church folks, and that was enough.  I had a loyal companion back home, Betsey, my rottweiler.  Things have been very different since she passed away, though."),
+    id = "TALK_GODCO_Russell_Story",
+    line = ccb.content.text("Who cares what's up with me?  You're the new one here.  Let me put it another way: what have you seen out there?  I'm talking about the monsters that lurk deep in the woods.  Have you witnessed them with your very own eyes?"),
     replies = {
-        { text = ccb.content.text("What do you do now?"), next_topic = "TALK_GODCO_Russell_Mood1" },
         {
-            text = ccb.content.text("Could you tell me more about Betsey?"),
-            next_topic = "TALK_GODCO_Russell_Betsey",
+            text = ccb.content.text("I wouldn't be here if I saw one.  Why do you ask?"),
+            next_topic = "TALK_GODCO_Russell_Trophy",
         },
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
-        },
-        {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
-            next_topic = "TALK_DONE",
+            text = ccb.content.text("I've seen too many things out there.  Why do you ask?"),
+            next_topic = "TALK_GODCO_Russell_Trophy",
         },
     },
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_GODCO_Russell_Mood1",
-    line = ccb.content.text("I hunt with most of my time these days.  Whatever game I spot, I bag and donate.  Thing is, it's getting harder and harder.  Have you also noticed how corruption is slowly overtaking the natural wildlife in this God-given planet?  They think the flesh is just rotten.  No, it's mutated, become something else."),
+    id = "TALK_GODCO_Russell_StoryB",
+    line = ccb.content.text("I won't let you leave just yet.  You're the new one here, I have so much to ask.  Let me put it another way: what have you seen out there?  I'm talking about the monsters that lurk deep in the woods.  Have you witnessed them with your very own eyes?"),
     replies = {
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_NONE",
+            text = ccb.content.text("I wouldn't be here if I saw one.  Why do you ask?"),
+            next_topic = "TALK_GODCO_Russell_Trophy",
         },
         {
-            text = ccb.content.text_without_extraction("<end_talking_leave>"),
-            next_topic = "TALK_DONE",
+            text = ccb.content.text("I've seen too much out there.  Why do you ask?"),
+            next_topic = "TALK_GODCO_Russell_Trophy",
         },
     },
 }
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_GODCO_Russell_Betsey",
-    line = ccb.content.text("&Russel's expression becomes somber, and he briefly stares at the wall.  \"She was my dog, had her for seventeen years.  We used to go duck-hunting, she'd swim out and get anything I shot.  She helped me track many a deer through the woods…   When <the_cataclysm> hit, she saved me from some <zombies> when we were skippin' town, but she died…  Then she came back, wasn't herself…  I had to put her down.\""),
+    id = "TALK_GODCO_Russell_Trophy",
+    line = ccb.content.text("Well, let's just say I'm interested in rare game.  I've heard stories, rumors and some tall tales about otherworldly beings out there in the wasteland.  That's where you come in.  I want to see the evidence, something physical I can collect as a trophy collection.  You seem to have experience, I was hoping you could help me."),
     replies = {
         {
-            text = ccb.content.text("I'm sorry for your loss.  Let's change the subject."),
+            text = ccb.content.text("Let's talk about getting you those trophies."),
+            next_topic = "TALK_MISSION_LIST",
+        },
+        {
+            text = ccb.content.text("Go and hunt them yourself.  You have a gun after all."),
+            next_topic = "TALK_GODCO_Russell_Trophy3",
+        },
+        {
+            text = ccb.content.text("I've got other things to deal with.  Do you really need these trophies?"),
+            next_topic = "TALK_GODCO_Russell_Trophy2",
+        },
+        {
+            text = ccb.content.text("I can help.  Anyway, how are things?"),
             next_topic = "TALK_GODCO_Russell_2",
         },
+        { text = ccb.content.text("Find somebody else, dude."), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_GODCO_Russell_2",
+    line = ccb.content.text("I've been better.  Having a hellish time keeping up with strange wildlife that suddenly want us dead… hey, let's forget the world while we're talking.  How's life treatin' ya?"),
+    replies = {
         {
-            text = ccb.content.text("I'm sorry for your loss.  <end_talking_leave>"),
+            text = ccb.content.text_without_extraction("<end_talking_leave>"),
             next_topic = "TALK_DONE",
         },
     },
