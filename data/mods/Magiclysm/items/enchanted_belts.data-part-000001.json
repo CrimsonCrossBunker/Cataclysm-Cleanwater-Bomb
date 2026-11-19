@@ -1,0 +1,26 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "copy-from": "mbelt_leather",
+    "id": "mbelt_haste",
+    "name": { "str": "Belt of Haste", "str_pl": "Belts of Haste" },
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_mbelt_haste_0" } ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
+    "copy-from": "mbelt_leather",
+    "id": "mbelt_thor",
+    "name": { "str_sp": "Megingjörð" },
+    "price_postapoc": "9500 USD",
+    "description": "The mythical belt of Thor, god of thunder.  Or at least so it appears.  It doubles the wearer's base strength.",
+    "material": [ "superalloy" ],
+    "material_thickness": 10,
+    "environmental_protection": 20,
+    "extend": { "flags": [ "PADDED" ] },
+    "passive_effects": [
+      { "id": "ITEM_ENCH_Magiclysm_mbelt_thor_0" }
+    ]
+  }
+]
