@@ -37,11 +37,6 @@
   },
   {
     "type": "mapgen",
-    "update_mapgen_id": "faction_base_livestock_2_0",
-    "object": { "place_nested": [ { "chunks": [ "fbml_2" ], "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "mapgen",
     "update_mapgen_id": "fbml_2_coop_yard",
     "object": {
       "set": [
@@ -58,75 +53,6 @@
         { "point": "terrain", "id": "t_chickenwire_fence", "x": 18, "y": 13 },
         { "line": "terrain", "id": "t_chickenwire_fence", "x": 19, "x2": 19, "y": 8, "y2": 13 }
       ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbml_2_stall_1",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "F  ",
-        "g  ",
-        "Fbb"
-      ],
-      "palettes": [ "fbml_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbml_2_stall_bench",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rows": [
-        "F    ",
-        "g    ",
-        "Fb   ",
-        " b   ",
-        " b   "
-      ],
-      "palettes": [ "fbml_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbml_2_stall_3",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "F  ",
-        "g  ",
-        "F  "
-      ],
-      "palettes": [ "fbml_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbml_2_stall_5",
-    "object": {
-      "mapgensize": [ 5, 5 ],
-      "rows": [
-        "g    ",
-        "Fb   ",
-        " b   ",
-        "Fb   ",
-        "g    "
-      ],
-      "palettes": [ "fbml_2_common_palette" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "fbml_2_shack_furniture",
-    "object": {
-      "mapgensize": [ 3, 3 ],
-      "rows": [
-        "rrr",
-        "  t",
-        "  w"
-      ],
-      "palettes": [ "fbml_2_common_palette" ]
     }
   },
   {
