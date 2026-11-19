@@ -1,0 +1,71 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_RANCH_CROP_OVERSEER_FIELD",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "npc_val": "dialogue_tacoma_ranch_purchased_field_1" } ],
+      "yes": "Back to check on your field?  What can I help you with?",
+      "no": {
+        "npc_has_trait": "NPC_CONSTRUCTION_LEV_1",
+        "yes": "Back to check on your field?  What can I help you with?",
+        "no": "There's a field on the other side of the house that isn't being used for anything right now.  We're willing to let you purchase it for your own agricultural enterprises if you're interested."
+      }
+    },
+    "responses": [
+      {
+        "text": "Tell me more about this field.",
+        "topic": "TALK_RANCH_CROP_OVERSEER_FIELD_ASK_PURCHASE",
+        "condition": {
+          "and": [
+            { "not": { "npc_has_trait": "NPC_CONSTRUCTION_LEV_1" } },
+            { "not": { "compare_string": [ "yes", { "npc_val": "dialogue_tacoma_ranch_purchased_field_1" } ] } }
+          ]
+        }
+      },
+      {
+        "text": "Can you build a fence around my field?",
+        "topic": "TALK_RANCH_CROP_OVERSEER_FIELD_ASK_UPGRADE_FENCE",
+        "condition": {
+          "or": [
+            { "and": [ { "npc_has_trait": "NPC_CONSTRUCTION_LEV_1" }, { "not": { "npc_has_trait": "NPC_CONSTRUCTION_LEV_2" } } ] },
+            {
+              "and": [
+                { "compare_string": [ "yes", { "npc_val": "dialogue_tacoma_ranch_purchased_field_1" } ] },
+                {
+                  "not": { "compare_string": [ "yes", { "npc_val": "dialogue_tacoma_ranch_purchased_field_1_fence" } ] }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "text": "I'm looking to expand my field…",
+        "topic": "TALK_RANCH_CROP_OVERSEER_FIELD_ASK_CONVERT_FIELD",
+        "condition": { "npc_has_any_trait": [ "NPC_CONSTRUCTION_LEV_1", "NPC_CONSTRUCTION_LEV_2" ] }
+      },
+      {
+        "text": "I'd like to plant some seeds…",
+        "topic": "TALK_RANCH_CROP_OVERSEER_FIELD_PLANT_SEEDS",
+        "condition": {
+          "or": [
+            { "npc_has_trait": "NPC_CONSTRUCTION_LEV_1" },
+            { "compare_string": [ "yes", { "npc_val": "dialogue_tacoma_ranch_purchased_field_1" } ] }
+          ]
+        }
+      },
+      {
+        "text": "I'd like to harvest some plants…",
+        "topic": "TALK_RANCH_CROP_OVERSEER_FIELD_HARVEST_PLANTS",
+        "condition": {
+          "or": [
+            { "npc_has_trait": "NPC_CONSTRUCTION_LEV_1" },
+            { "compare_string": [ "yes", { "npc_val": "dialogue_tacoma_ranch_purchased_field_1" } ] }
+          ]
+        }
+      },
+      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
+      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+    ]
+  }
+]
