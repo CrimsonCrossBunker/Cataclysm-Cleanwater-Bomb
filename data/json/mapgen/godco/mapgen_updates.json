@@ -1,7 +1,0 @@
-[
-  {
-    "type": "mapgen",
-    "update_mapgen_id": "theresa_remove",
-    "object": { "remove_npcs": [ { "class": "godco_theresa", "x": 0, "y": 0 } ] }
-  }
-]

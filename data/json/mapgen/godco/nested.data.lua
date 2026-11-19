@@ -528,3 +528,41 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kostas_herb_garden",
+    layout = {
+        size = { width = 7, height = 7 },
+        rows = {
+            "y yy y ",
+            "y yy y ",
+            "y yy y ",
+            "y yy y ",
+            "y yy y ",
+            "y yy y ",
+            "y yy y ",
+        },
+        terrain = {},
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        sealed_item_glyphs = {
+            y = { item = { id = "seed_wild_herbs" }, furniture = "f_planter_seedling", chance = 100 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "godco_permanent_trader_predatory_remove",
+    layout = {
+        size = { width = 5, height = 5 },
+        npc_removals = {
+            { id = "FM_caravan_merchant_godco_predatory", x = 0, y = 1 },
+            { id = "FM_caravan_guard_predatory", x = 2, y = 3 },
+        },
+        npc_placements = {
+            { id = "FM_godco_merchant_random", x = 0, y = 1 },
+            { id = "FM_caravan_guard_B", x = 2, y = 3 },
+        },
+    },
+}

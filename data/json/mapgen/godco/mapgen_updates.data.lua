@@ -135,3 +135,11 @@ ccb.content.define_mapgen {
         nested = { { id = "godco_permanent_trader_predatory", x = 1, y = 8 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "update",
+    id = "theresa_remove",
+    layout = {
+        npc_removals = { { id = "godco_theresa", x = 0, y = 0 } },
+    },
+}
