@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_GOLBIN_FRUIT_ADRENALINE",
-    "effect": [ { "u_add_effect": "adrenaline", "duration": "20 minutes" } ]
-  }
-]

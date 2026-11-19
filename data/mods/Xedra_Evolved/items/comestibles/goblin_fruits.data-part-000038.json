@@ -1,10 +1,5 @@
 [
   {
-    "type": "effect_on_condition",
-    "id": "EOC_GOBLIN_FRUIT_CARRY_BOOST",
-    "effect": [ { "u_add_effect": "goblin_fruit_carry_boost", "duration": { "math": [ "8000 + rand(8000)" ] } } ]
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "goblin_fruit_mood_clear",

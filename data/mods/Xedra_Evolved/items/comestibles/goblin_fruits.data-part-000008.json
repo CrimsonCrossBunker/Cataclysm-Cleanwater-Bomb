@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_GOBLIN_FRUIT_AWAKE",
-    "effect": [ { "math": [ "u_val('sleepiness') -= 25" ] } ]
-  }
-]

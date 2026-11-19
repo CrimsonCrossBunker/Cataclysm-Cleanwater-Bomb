@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_GOBLIN_FRUIT_BLIND_FLASH",
-    "effect": [ { "u_cast_spell": { "id": "goblin_fruit_blind_flash", "min_level": 0, "max_level": 0 } } ]
-  }
-]

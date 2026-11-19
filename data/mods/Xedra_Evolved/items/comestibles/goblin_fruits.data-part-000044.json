@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_GOBLIN_FRUIT_COLD_RESIST",
-    "effect": [ { "u_add_effect": "effect_goblin_fruit_cold_resist", "duration": { "math": [ "2500 + rand(3000)" ] } } ]
-  }
-]

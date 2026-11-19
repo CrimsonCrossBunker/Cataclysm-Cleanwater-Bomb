@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_GOBLIN_FRUIT_PAIN",
-    "effect": [ { "math": [ "u_pain() -= 5" ] } ]
-  }
-]

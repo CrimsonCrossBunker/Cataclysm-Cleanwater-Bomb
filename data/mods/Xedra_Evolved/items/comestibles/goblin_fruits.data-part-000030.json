@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_GOBLIN_FRUIT_MAP",
-    "effect": [ { "u_cast_spell": { "id": "goblin_fruit_map_reveal" } } ]
-  }
-]

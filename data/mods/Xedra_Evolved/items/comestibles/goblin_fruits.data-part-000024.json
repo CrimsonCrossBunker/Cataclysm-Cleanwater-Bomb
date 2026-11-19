@@ -1,15 +1,5 @@
 [
   {
-    "type": "effect_on_condition",
-    "id": "EOC_GOBLIN_FRUIT_SOOTHING",
-    "effect": [
-      { "math": [ "goblin_fruit_soothe_duration = (10000 + rand(5000))" ] },
-      { "u_add_effect": "took_xanax", "duration": { "math": [ "goblin_fruit_soothe_duration" ] } },
-      { "u_add_effect": "took_prozac", "duration": { "math": [ "goblin_fruit_soothe_duration" ] } },
-      { "u_add_effect": "took_thorazine", "duration": { "math": [ "goblin_fruit_soothe_duration" ] } }
-    ]
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "goblin_fruit_music",

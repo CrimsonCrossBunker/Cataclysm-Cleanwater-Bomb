@@ -1,10 +1,5 @@
 [
   {
-    "type": "effect_on_condition",
-    "id": "EOC_GOLBIN_FRUIT_FOCUS_BOOST",
-    "effect": [ { "u_add_effect": "effect_goblin_fruit_focus_boost", "duration": { "math": [ "15000 + rand(5000)" ] } } ]
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "goblin_fruit_spawn_more_fruits",

@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_GOBLIN_FRUIT_HEAT_BLAST",
-    "effect": [ { "u_cast_spell": { "id": "goblin_fruit_heat_blasts", "min_level": 0, "max_level": 0 } } ]
-  }
-]

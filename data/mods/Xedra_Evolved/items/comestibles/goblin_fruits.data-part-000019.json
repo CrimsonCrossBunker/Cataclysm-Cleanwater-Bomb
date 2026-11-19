@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_GOBLIN_FRUIT_WATER_BREATHING",
-    "effect": [ { "u_add_effect": "effect_goblin_fruit_water_breathing", "duration": { "math": [ "500 + rand(5000)" ] } } ]
-  }
-]

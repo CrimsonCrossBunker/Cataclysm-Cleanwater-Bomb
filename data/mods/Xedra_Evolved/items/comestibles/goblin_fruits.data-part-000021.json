@@ -1,7 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_GOBLIN_FRUIT_MANA",
-    "effect": [ { "u_cast_spell": { "id": "potion_recover_mana_xe", "min_level": 4, "max_level": 6 } } ]
-  }
-]
