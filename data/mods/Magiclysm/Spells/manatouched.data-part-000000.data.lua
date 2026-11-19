@@ -1,0 +1,31 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "manatouched_crystal",
+    name = ccb.content.text("Crystallize Mana"),
+    description = ccb.content.text("Crystallizes mana into solid form.  Your physiological changes have made this spell much more efficient and easier to cast."),
+    valid_targets = { "self" },
+    spell_class = "MANA_CRYST_MANA",
+    flags = {
+        "CONJURATION_SPELL",
+        "PERMANENT",
+        "NO_LEGS",
+        "CONCENTRATE",
+        "NO_HANDS",
+        "MUST_HAVE_CLASS_TO_LEARN",
+    },
+    max_level = 5,
+    difficulty = 3,
+    min_damage = 4,
+    max_damage = 4,
+    duration_increment = 1,
+    effect = "spawn_item",
+    effect_data = "crystallized_mana",
+    shape = "blast",
+    magic_type = "magiclysm_conjuration_magic",
+    base_energy_cost = 1000,
+    final_energy_cost = 1000,
+    base_casting_time = 600000,
+    final_casting_time = 600000,
+    extra_spells = { { spell = "mana_fatigue" } },
+}

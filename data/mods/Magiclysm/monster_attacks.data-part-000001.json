@@ -1,0 +1,38 @@
+[
+  {
+    "type": "monster_attack",
+    "attack_type": "melee",
+    "id": "flaming_whip",
+    "cooldown": 20,
+    "move_cost": 500,
+    "range": 15,
+    "damage_max_instance": [ { "damage_type": "heat", "amount": 30, "armor_penetration": 3, "armor_multiplier": 0.5 } ],
+    "body_part_types": [ [ "leg", 4 ], [ "head", 2 ], [ "tail", 3 ], [ "wing", 3 ], [ "arm", 4 ], [ "torso", 6 ] ],
+    "effects": [ { "id": "onfire", "duration": 1, "chance": 10, "affect_hit_bp": true } ],
+    "hit_dmg_u": "%1$s lashes you with its flaming whip!",
+    "hit_dmg_npc": "%1$s lashes <npcname> with its flaming whip!",
+    "miss_msg_u": "%1$s lashes you with its flaming whip, but you dodge!",
+    "miss_msg_npc": "%1$s lashes <npcname> with its flaming whip, but they dodge!",
+    "no_dmg_msg_u": "%1$s lashes you with its flaming whip, but fails to penetrate your armor!",
+    "no_dmg_msg_npc": "%1$s lashes <npcname> with its flaming whip, but fails to penetrate their armor!",
+    "dodgeable": true,
+    "no_adjacent": true
+  },
+  {
+    "type": "monster_attack",
+    "attack_type": "melee",
+    "id": "shock_punch",
+    "cooldown": 1,
+    "move_cost": 80,
+    "damage_max_instance": [ { "damage_type": "electric", "amount": 40, "armor_penetration": 8, "armor_multiplier": 2.5 } ],
+    "hitsize_min": 4,
+    "effects": [ { "id": "stunned", "duration": 5 } ],
+    "hit_dmg_u": "Electric current stream through your body!",
+    "hit_dmg_npc": "Electric current stream through <npcname>!",
+    "miss_msg_u": "The %1$s tries to hit you, but you dodge!",
+    "miss_msg_npc": "The %1$s tries to hit <npcname>, but they dodge!",
+    "no_dmg_msg_u": "The %1$s tries to hit you, but fails to penetrate your armor!",
+    "no_dmg_msg_npc": "The %1$s tries to hit <npcname>, but fails to penetrate their armor!",
+    "dodgeable": true
+  }
+]

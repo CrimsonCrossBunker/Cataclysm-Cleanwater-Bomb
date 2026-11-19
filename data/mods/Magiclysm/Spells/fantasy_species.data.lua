@@ -1,0 +1,33 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "goblin_tame_warg_spell",
+    name = ccb.content.text("Warg-Friend"),
+    description = ccb.content.text("Goblins and wargs have had an innate bond from time immemorial, and even wild wargs will easily heel when a goblin calls…as long as the goblin has some raw meat to feed them with."),
+    message = ccb.content.text("You feed some meat to the warg and it seems friendly."),
+    teachable = false,
+    valid_targets = { "hostile", "ally" },
+    flags = {
+        "NON_MAGICAL",
+        "NO_FAIL",
+        "CHARM_PET",
+        "RECHARM",
+        "RANDOM_DURATION",
+        "SILENT",
+        "NO_HANDS",
+        "NO_LEGS",
+    },
+    max_level = 1,
+    spell_class = "GOBLIN_BUILD",
+    effect = "charm_monster",
+    min_damage = 500,
+    max_damage = 500,
+    components = "spell_components_goblin_warg_taming",
+    shape = "blast",
+    min_duration = 120960000,
+    max_duration = 967680000,
+    min_range = 1,
+    max_range = 1,
+    base_casting_time = 10,
+    targeted_species = { "WARG" },
+}
