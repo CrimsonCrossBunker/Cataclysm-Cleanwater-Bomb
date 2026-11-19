@@ -1,0 +1,186 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "javelin_bag",
+    name = ccb.content.plural_text("javelin bag", "javelin bags"),
+    description = ccb.content.text("An open medieval-looking bag, designed to store javelins within easy reach."),
+    mass = "900 g",
+    volume = "1250 ml",
+    price = "60 USD",
+    survival_price = "10 USD",
+    materials = { "leather" },
+    symbol = "[",
+    looks_like = "quiver",
+    color = "brown",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            min_item_volume = "250 ml",
+            capacity = "1250 ml",
+            mass_limit = "2 kg",
+            moves = 60,
+            allowed_flags = { "JAVELIN" },
+            max_item_length = "150 cm",
+            volume_encumbrance = 0.3,
+        },
+        {
+            kind = "CONTAINER",
+            min_item_volume = "250 ml",
+            capacity = "1250 ml",
+            mass_limit = "2 kg",
+            moves = 60,
+            allowed_flags = { "JAVELIN" },
+            max_item_length = "150 cm",
+            volume_encumbrance = 0.3,
+        },
+        {
+            kind = "CONTAINER",
+            min_item_volume = "250 ml",
+            capacity = "1250 ml",
+            mass_limit = "2 kg",
+            moves = 60,
+            allowed_flags = { "JAVELIN" },
+            max_item_length = "150 cm",
+            volume_encumbrance = 0.3,
+        },
+        {
+            kind = "CONTAINER",
+            min_item_volume = "250 ml",
+            capacity = "1250 ml",
+            mass_limit = "2 kg",
+            moves = 60,
+            allowed_flags = { "JAVELIN" },
+            max_item_length = "150 cm",
+            volume_encumbrance = 0.3,
+        },
+        {
+            kind = "CONTAINER",
+            min_item_volume = "250 ml",
+            capacity = "1250 ml",
+            mass_limit = "2 kg",
+            moves = 60,
+            allowed_flags = { "JAVELIN" },
+            max_item_length = "150 cm",
+            volume_encumbrance = 0.3,
+        },
+    },
+    flags = { "WATER_FRIENDLY", "OVERSIZE", "BELTED" },
+    armor = {
+        thickness = 2,
+        portions = {
+            {
+                encumbrance = 5,
+                coverage = 60,
+                covers = { "torso" },
+                subparts = { "torso_hanging_back" },
+            },
+        },
+    },
+    use_actions = {
+        {
+            kind = "holster",
+            prompt = ccb.content.text("Stash javelins"),
+            message = ccb.content.text("You stash your %s."),
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "legpouch",
+    name = ccb.content.plural_text("ankle ammo pouch", "ankle ammo pouches"),
+    description = ccb.content.text("A small fabric ammo pouch that can be strapped to your ankle and hold a single small magazine close at hand."),
+    volume = "250 ml",
+    mass = "60 g",
+    price = "20 USD",
+    survival_price = "2 USD",
+    materials = { "nylon" },
+    symbol = "[",
+    looks_like = "ragpouch",
+    color = "dark_gray",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            max_item_length = "240 mm",
+            capacity = "250 ml",
+            mass_limit = "2 kg",
+            moves = 40,
+            allowed_flags = { "MAG_COMPACT" },
+        },
+    },
+    flags = { "WATER_FRIENDLY", "BELTED", "OVERSIZE", "ALLOWS_NATURAL_ATTACKS", "PALS_SMALL" },
+    armor = {
+        sided = true,
+        thickness = 2,
+        portions = {
+            {
+                materials = { { id = "nylon", coverage = 100, thickness = 2 } },
+                covers = { "foot_l", "foot_r" },
+                subparts = { "foot_ankle_l", "foot_ankle_r" },
+                coverage = 25,
+                encumbrance = 1,
+                layers = { "BELTED" },
+            },
+        },
+    },
+    use_actions = {
+        {
+            kind = "holster",
+            prompt = ccb.content.text("Stash ammo"),
+            message = ccb.content.text("You stash your %s."),
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "legpouch_large",
+    name = ccb.content.plural_text("leg ammo pouch", "leg ammo pouches"),
+    description = ccb.content.text("A fabric ammo pouch that can be strapped to your leg and hold two magazines close at hand."),
+    mass = "120 g",
+    volume = "250 ml",
+    price = "20 USD",
+    survival_price = "4 USD",
+    materials = { "nylon" },
+    symbol = "[",
+    looks_like = "ammo_satchel",
+    color = "dark_gray",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            max_item_length = "240 mm",
+            capacity = "500 ml",
+            mass_limit = "2 kg",
+            moves = 40,
+            allowed_flags = { "MAG_COMPACT" },
+            volume_encumbrance = 0.3,
+        },
+        {
+            kind = "CONTAINER",
+            max_item_length = "240 mm",
+            capacity = "500 ml",
+            mass_limit = "2 kg",
+            moves = 40,
+            allowed_flags = { "MAG_COMPACT" },
+            volume_encumbrance = 0.3,
+        },
+    },
+    flags = { "WATER_FRIENDLY", "BELTED", "OVERSIZE", "PALS_MEDIUM" },
+    armor = {
+        sided = true,
+        thickness = 2,
+        portions = {
+            {
+                encumbrance = 1,
+                coverage = 38,
+                covers = { "leg_l", "leg_r" },
+                subparts = { "leg_upper_l", "leg_upper_r" },
+            },
+        },
+    },
+    use_actions = {
+        {
+            kind = "holster",
+            prompt = ccb.content.text("Stash ammo"),
+            message = ccb.content.text("You stash your %s."),
+        },
+    },
+}
