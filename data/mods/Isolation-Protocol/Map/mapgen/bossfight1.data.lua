@@ -71,3 +71,17 @@ ccb.content.define_mapgen {
         nested_glyphs = { ["9"] = { id = "bossfight1" } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "bossfight1",
+    layout = {
+        size = { width = 24, height = 24 },
+        flags = { "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
+        monster_placements = {
+            { id = "mon_zombie_necro_boomer", x = 2, y = 2 },
+            { id = "mon_zombie_necro_boss", x = 2, y = 3 },
+            { id = "mon_zombie_rot", x = 5, y = 5, repetitions = { 6, 8 } },
+        },
+    },
+}
