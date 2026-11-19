@@ -239,3 +239,18 @@ ccb.content.define_mapgen {
         nested = { { id = "lmoe_exit_roof_n", x = 0, y = 0, z = 1 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lmoe_prepperquest_sign",
+    layout = {
+        size = { width = 1, height = 1 },
+        sign_placements = {
+            {
+                text = ccb.content.text("PRIVATE PROPERTY!\nNO SOLICITING!\n\nATTEMPT TO ENTER\nAND YOU WILL BE SHOT!"),
+                x = 0,
+                y = 0,
+            },
+        },
+    },
+}

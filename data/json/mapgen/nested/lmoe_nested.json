@@ -7,13 +7,5 @@
       "mapgensize": [ 1, 1 ],
       "place_computers": [ { "x": 0, "y": 0, "name": "Personal Computer: User", "eocs": [ "EOC_PREPPER_1_COMPUTER" ] } ]
     }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "lmoe_prepperquest_sign",
-    "object": {
-      "mapgensize": [ 1, 1 ],
-      "place_signs": [ { "signage": "PRIVATE PROPERTY!\nNO SOLICITING!\n\nATTEMPT TO ENTER\nAND YOU WILL BE SHOT!", "x": 0, "y": 0 } ]
-    }
   }
 ]

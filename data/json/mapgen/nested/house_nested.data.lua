@@ -2827,3 +2827,285 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kitchen_5x5_N_1",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "123FO",
+            "     ",
+            " 161 ",
+            "     ",
+            "     ",
+        },
+        terrain = { ["2"] = "t_linoleum_white" },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_kitchen" },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_linoleum_white",
+                x = 0,
+                y = 0,
+                end_x = 4,
+                end_y = 2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kitchen_5x5_N_1",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "FOwww",
+            "     ",
+            "12334",
+            "     ",
+            "     ",
+        },
+        terrain = { ["2"] = "t_linoleum_white" },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_kitchen" },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_linoleum_white",
+                x = 0,
+                y = 0,
+                end_x = 4,
+                end_y = 2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kitchen_5x5_N_1A",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "123 4",
+            "     ",
+            "O154F",
+            "     ",
+            "     ",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_kitchen" },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_linoleum_white",
+                x = 0,
+                y = 0,
+                end_x = 4,
+                end_y = 2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kitchen_5x5_N_1A",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "1O1 F",
+            "     ",
+            "7234w",
+            "     ",
+            "     ",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_kitchen" },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_linoleum_white",
+                x = 0,
+                y = 0,
+                end_x = 4,
+                end_y = 2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kitchen_5x5_N_1B",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "1  14",
+            "5    ",
+            "7OF32",
+            "     ",
+            "     ",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_kitchen" },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_linoleum_white",
+                x = 0,
+                y = 0,
+                end_x = 4,
+                end_y = 2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kitchen_5x5_N_1C",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "123 2",
+            "    5",
+            "FOnY3",
+            "     ",
+            "     ",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_kitchen" },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_linoleum_white",
+                x = 0,
+                y = 0,
+                end_x = 4,
+                end_y = 2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kitchen_5x5_N_2",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "OF157",
+            "     ",
+            "4 123",
+            "  AAA",
+            "     ",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_kitchen" },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_linoleum_white",
+                x = 0,
+                y = 0,
+                end_x = 4,
+                end_y = 2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kitchen_5x5_N_2",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "wFO4n",
+            "w    ",
+            "w 123",
+            "  AAA",
+            "     ",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_kitchen" },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_linoleum_white",
+                x = 0,
+                y = 0,
+                end_x = 4,
+                end_y = 2,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kitchen_5x5_N_3",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "nOFww",
+            "    w",
+            " ss  ",
+            "    4",
+            "341 2",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_kitchen" },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_linoleum_white",
+                x = 0,
+                y = 0,
+                end_x = 4,
+                end_y = 4,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "kitchen_5x5_N_3",
+    layout = {
+        size = { width = 5, height = 5 },
+        rows = {
+            "wwFww",
+            "     ",
+            " nO1 ",
+            "     ",
+            "74 23",
+        },
+        palettes = { "standard_domestic_palette", "standard_domestic_lino_kitchen" },
+        rotation = { 0, 3 },
+        tile_edits = {
+            {
+                shape = "rectangle",
+                operation = "terrain",
+                id = "t_linoleum_white",
+                x = 0,
+                y = 0,
+                end_x = 4,
+                end_y = 4,
+            },
+        },
+    },
+}

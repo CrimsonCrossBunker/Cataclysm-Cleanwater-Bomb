@@ -561,3 +561,22 @@ ccb.content.define_mapgen {
         loot_placements = { { group = "boxed_primers_full", x = { 1, 2 }, y = 3, repetitions = { 0, 6 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "gunstore_looted_floor",
+    layout = {
+        size = { width = 1, height = 1 },
+        item_group_placements = {
+            { group = "casings", x = 0, y = 0, chance = 40 },
+            { group = "SUS_trash_floor", x = 0, y = 0, chance = 30 },
+            { group = "ammo_common_loose", x = 0, y = 0, chance = 5 },
+        },
+        item_placements = {
+            { id = "glass_shard", x = 0, y = 0, chance = 15, repetitions = { 1, 8 } },
+            { id = "cardboard", x = 0, y = 0, chance = 10, repetitions = { 1, 3 } },
+            { id = "paper", x = 0, y = 0, chance = 5 },
+        },
+        field_placements = { { id = "fd_blood", x = 0, y = 0, intensity = 2, age_turns = 10, chance = 20 } },
+    },
+}

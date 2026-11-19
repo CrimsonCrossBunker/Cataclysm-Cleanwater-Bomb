@@ -1284,3 +1284,12 @@ ccb.content.define_mapgen {
         vehicle_placements = { { id = "cars_only", x = 1, y = 3, rotation = 270, status = 0 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "NC_FARMER_spawn",
+    layout = {
+        size = { width = 1, height = 1 },
+        npc_placements = { { id = "farmer", x = 0, y = 0 } },
+    },
+}

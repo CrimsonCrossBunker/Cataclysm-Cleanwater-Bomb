@@ -360,3 +360,294 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_gutter_horizontal",
+    layout = {
+        size = { width = 24, height = 24 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_gutter",
+                x = 0,
+                y = 0,
+                end_x = 23,
+                end_y = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "24x24_gutter_vertical",
+    layout = {
+        size = { width = 24, height = 24 },
+        tile_edits = {
+            {
+                shape = "line",
+                operation = "terrain",
+                id = "t_gutter",
+                x = 0,
+                y = 0,
+                end_x = 0,
+                end_y = 23,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_4x4_survivor",
+    layout = {
+        size = { width = 4, height = 4 },
+        furniture_placements = { { id = "f_camp_chair", x = 0, y = 0 }, { id = "f_makeshift_bed", x = 2, y = 0 } },
+        loot_placements = {
+            { group = "cannedfood", x = 1, y = 0, repetitions = { 2, 3 } },
+            { group = "camping", x = { 0, 3 }, y = { 0, 3 }, chance = 50, repetitions = { 2, 3 } },
+            { id = "blanket", x = 2, y = 0, chance = 50, repetitions = { 1, 2 } },
+            { id = "can_drink", x = 1, y = 1, chance = 30, repetitions = { 2, 3 } },
+            { id = "can_food", x = 1, y = 1, chance = 40, repetitions = { 2, 3 } },
+            { id = "can_food", x = 1, y = 1, chance = 40, repetitions = { 2, 3 } },
+            { id = "sleeping_bag", x = 3, y = 1, chance = 40 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_2x2_infrastructure",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = { { id = "f_vent_pipe", x = 0, y = 0 }, { id = "f_roof_turbine_vent", x = 0, y = 1 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_2x2_infrastructure_1",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = {
+            { id = "f_small_satellite_dish", x = 1, y = 0 },
+            { id = "f_cellphone_booster", x = 0, y = 1 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_2x2_infrastructure_2",
+    layout = {
+        size = { width = 2, height = 2 },
+        flags = { "ALLOW_TERRAIN_UNDER_FURNITURE" },
+        terrain_placements = { { id = "t_switchgear_s", x = 0, y = 0 }, { id = "t_sai_box", x = 0, y = 1 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_2x2_utilities_b",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = {
+            { id = "f_water_heater_family", x = 0, y = 0 },
+            { id = "f_water_purifier", x = 0, y = 1 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_2x2_utilities_c",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = { { id = "f_water_heater", x = 0, y = 0 }, { id = "f_solar_unit", x = 0, y = 1 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_2x2_utilities_d",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = { { id = "f_water_heater", x = 0, y = 0 }, { id = "f_air_conditioner", x = 0, y = 1 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_3x3_wine",
+    layout = {
+        size = { width = 3, height = 3 },
+        furniture_placements = {
+            { id = "f_camp_chair", x = 0, y = 0 },
+            { id = "f_camp_chair", x = 2, y = 0 },
+            { id = "f_tourist_table", x = 1, y = 0 },
+        },
+        loot_placements = {
+            { group = "wines_worthy", x = 1, y = 0 },
+            { id = "glass", x = 1, y = 0, repetitions = 2 },
+            { id = "survivor_scope", x = 0, y = 2, chance = 20 },
+            { id = "diamond_ring", x = 0, y = 0, chance = 10 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_2x2_utilities",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = {
+            { id = "f_water_heater", x = 0, y = 0 },
+            { id = "f_air_conditioner", x = 1, y = 0 },
+            { id = "f_solar_unit", x = 0, y = 1 },
+            { id = "f_water_purifier", x = 1, y = 1 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "roof_6x6_survivor",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "..AA..",
+            "......",
+            "..a...",
+            ".o..o.",
+            "......",
+            "....A.",
+        },
+        furniture = { o = "f_camp_chair", a = "f_brazier", A = "f_tourist_table" },
+        rotation = { 0, 3 },
+        loot_placements = {
+            { group = "cannedfood", x = { 2, 3 }, y = 0, repetitions = { 2, 3 } },
+            { group = "camping", x = { 0, 5 }, y = { 0, 3 }, chance = 50, repetitions = { 2, 3 } },
+            { group = "stash_wood", x = 1, y = 2, repetitions = { 2, 3 } },
+            { group = "bed", x = 5, y = 5, chance = 50, repetitions = { 1, 2 } },
+            { group = "bed", x = 3, y = 5, chance = 50, repetitions = { 1, 2 } },
+            { id = "jug_plastic", x = 0, y = 0 },
+            { id = "can_drink", x = { 0, 5 }, y = { 0, 5 }, chance = 30, repetitions = { 2, 3 } },
+            { id = "can_food", x = { 0, 5 }, y = { 0, 5 }, chance = 40, repetitions = { 2, 3 } },
+        },
+        tile_edits = {
+            { shape = "point", operation = "trap", id = "tr_funnel", x = 0, y = 0 },
+            { shape = "point", operation = "trap", id = "tr_cot", x = 5, y = 5 },
+            { shape = "point", operation = "trap", id = "tr_cot", x = 3, y = 5 },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "residential_2x2_solar",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = { { id = "f_solar_unit", x = { 0, 1 }, y = { 0, 1 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "residential_1x2_solar",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = { { id = "f_solar_unit", x = 0, y = { 0, 1 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "residential_1x3_solar",
+    layout = {
+        size = { width = 3, height = 3 },
+        furniture_placements = { { id = "f_solar_unit", x = 0, y = { 0, 2 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "residential_3x3_solar",
+    layout = {
+        size = { width = 3, height = 3 },
+        furniture_placements = { { id = "f_solar_unit", x = { 0, 2 }, y = { 0, 2 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "industrial_1x5_solar",
+    layout = {
+        size = { width = 5, height = 5 },
+        furniture_placements = { { id = "f_solar_unit", x = { 0, 4 }, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "industrial_1x1_solar",
+    layout = {
+        size = { width = 1, height = 1 },
+        furniture_placements = { { id = "f_solar_unit", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "residential_2x2_solar_v2",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = { { id = "f_solar_unit_v2", x = { 0, 1 }, y = { 0, 1 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "residential_1x2_solar_v2",
+    layout = {
+        size = { width = 2, height = 2 },
+        furniture_placements = { { id = "f_solar_unit_v2", x = 0, y = { 0, 1 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "residential_1x3_solar_v2",
+    layout = {
+        size = { width = 3, height = 3 },
+        furniture_placements = { { id = "f_solar_unit_v2", x = 0, y = { 0, 2 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "residential_3x3_solar_v2",
+    layout = {
+        size = { width = 3, height = 3 },
+        furniture_placements = { { id = "f_solar_unit_v2", x = { 0, 2 }, y = { 0, 2 } } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "industrial_1x5_solar_v2",
+    layout = {
+        size = { width = 5, height = 5 },
+        furniture_placements = { { id = "f_solar_unit_v2", x = { 0, 4 }, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "industrial_1x1_solar_v2",
+    layout = {
+        size = { width = 1, height = 1 },
+        furniture_placements = { { id = "f_solar_unit_v2", x = 0, y = 0 } },
+    },
+}

@@ -66,3 +66,21 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "shelter_graffiti",
+    layout = {
+        size = { width = 1, height = 1 },
+        graffiti_placements = { { x = 0, y = 0, snippet = "shelter_graffiti_snippets" } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "general_graffiti",
+    layout = {
+        size = { width = 1, height = 1 },
+        graffiti_placements = { { x = 0, y = 0, snippet = "general_graffiti_snippets" } },
+    },
+}

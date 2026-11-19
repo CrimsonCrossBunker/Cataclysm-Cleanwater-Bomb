@@ -329,3 +329,89 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mine_sinkhole",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        terrain_placements = { { id = "t_rock_floor", x = 0, y = 0 } },
+        trap_placements = { { id = "tr_sinkhole", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mine_toxic_gas",
+    layout = {
+        size = { width = 1, height = 1 },
+        field_placements = { { id = "fd_gas_vent", x = 0, y = 0, intensity = 2, age_turns = 20 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mine_wreckage",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        furniture_placements = { { id = "f_wreckage", x = 0, y = 0 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mine_minerals_equipment",
+    layout = {
+        size = { width = 1, height = 1 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = {
+            {
+                group = {
+                    entries = {
+                        { item = "coal_lump", probability = 20, count = { 2, 20 } },
+                        { item = "rock", probability = 40, count = { 1, 10 } },
+                        { item = "rock_large", probability = 10, count = { 1, 10 } },
+                        { item = "rock_flaking", probability = 20, count = { 1, 10 } },
+                        { item = "material_shrd_limestone", probability = 40, count = { 1, 10 } },
+                        { item = "material_limestone", probability = 40, count = { 1, 10 } },
+                        { item = "material_niter", probability = 5, count = { 1, 10 } },
+                        { item = "material_sand", probability = 50, charges = { 10, 500 } },
+                        { item = "material_soil", probability = 50, charges = { 5, 30 } },
+                        { item = "chunk_sulfur", probability = 5, count = { 1, 10 } },
+                        { item = "material_rocksalt", probability = 5, count = { 1, 10 } },
+                        { item = "material_rhodonite", probability = 5, count = { 1, 10 } },
+                        { item = "material_zincite", probability = 5, count = { 1, 10 } },
+                    },
+                },
+                repetitions = { 1, 3 },
+                chance = 50,
+                x = 0,
+                y = 0,
+            },
+            {
+                group = {
+                    entries = { { group = "mine_equipment" }, { item = "corpse", damage = 4 } },
+                    kind = "collection",
+                },
+                chance = 10,
+                x = 0,
+                y = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "mine_the_thing_victims",
+    layout = {
+        size = { width = 3, height = 3 },
+        item_group_placements = { { group = "the_thing_victim", x = { 0, 2 }, y = { 0, 2 }, chance = 100 } },
+        field_placements = {
+            { id = "fd_blood", x = { 0, 2 }, y = { 0, 2 } },
+            { id = "fd_gibs_flesh", x = { 0, 2 }, y = { 0, 2 } },
+        },
+    },
+}

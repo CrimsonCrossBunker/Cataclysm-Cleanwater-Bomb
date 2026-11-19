@@ -131,3 +131,94 @@ ccb.content.define_mapgen {
         vehicle_placements = { { fuel = 10, rotation = 145, status = 1, id = "cars_only", x = 4, y = 4 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "carcrash_8x8_straight_bloodcorpse",
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "    m   ",
+            "    mmmm",
+            "    mhhm",
+            "    mmm ",
+            "     m  ",
+            "     m  ",
+            "    mm  ",
+            "    mm  ",
+        },
+        palettes = { "struc_damage" },
+        item_group_placements = { { group = "corpses_verydead", x = { 6, 7 }, y = { 1, 2 }, chance = 100 } },
+        field_placements = {
+            {
+                id = "fd_gibs_flesh",
+                x = { 6, 7 },
+                y = { 1, 2 },
+                intensity = { 1, 2 },
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "carcrash_10x10_diag_fromleft_bloodcorpse",
+    layout = {
+        size = { width = 10, height = 10 },
+        rows = {
+            "mm        ",
+            "hhmm      ",
+            "mmmmmmmmm ",
+            "       mm ",
+            "       mm ",
+            "          ",
+            "          ",
+            "          ",
+            "          ",
+            "          ",
+        },
+        palettes = { "struc_damage" },
+        item_group_placements = { { group = "corpses_verydead", x = { 0, 1 }, y = { 0, 1 }, chance = 100 } },
+        field_placements = {
+            {
+                id = "fd_gibs_flesh",
+                x = { 0, 1 },
+                y = { 0, 1 },
+                intensity = { 1, 2 },
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "carcrash_10x10_diag_fromright_bloodcorpse",
+    layout = {
+        size = { width = 10, height = 10 },
+        rows = {
+            "        mm",
+            "      mhhm",
+            " mmmmmmmhm",
+            " mm       ",
+            " mm       ",
+            "          ",
+            "          ",
+            "          ",
+            "          ",
+            "          ",
+        },
+        palettes = { "struc_damage" },
+        item_group_placements = { { group = "corpses_verydead", x = { 8, 9 }, y = { 0, 1 }, chance = 100 } },
+        field_placements = {
+            {
+                id = "fd_gibs_flesh",
+                x = { 8, 9 },
+                y = { 0, 1 },
+                intensity = { 1, 2 },
+                repetitions = { 1, 3 },
+            },
+        },
+    },
+}

@@ -734,3 +734,410 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- Survivor holdout camp
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_camp",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "C_b_",
+            "N!N_",
+            "NnNg",
+            "NNN_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = 1, y = 2, repetitions = { 1, 3 } },
+            { chance = 60, group = "cannedfood", x = 0, y = 0, repetitions = { 2, 6 } },
+            { chance = 60, group = "pasta_ingredients", x = 0, y = 0, repetitions = { 2, 4 } },
+            { chance = 60, group = "snacks", x = 0, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 0, 1 }, repetitions = { 2, 5 } },
+        },
+        npc_placements = { { id = "RURAL_HOLDOUT_FRIENDLY", x = 1, y = 2 } },
+    },
+}
+
+-- Survivor holdout camp
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_camp",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "C_b_",
+            "N!N_",
+            "NnNg",
+            "NNN_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = 1, y = 2, repetitions = { 1, 3 } },
+            { chance = 60, group = "cannedfood", x = 0, y = 0, repetitions = { 2, 6 } },
+            { chance = 60, group = "pasta_ingredients", x = 0, y = 0, repetitions = { 2, 4 } },
+            { chance = 60, group = "snacks", x = 0, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 0, 1 }, repetitions = { 2, 5 } },
+        },
+        npc_placements = { { id = "RURAL_HOLDOUT_HOSTILE", x = 1, y = 2 } },
+    },
+}
+
+-- Survivor holdout camp
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_camp",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "C_b_",
+            "N!N_",
+            "NnNg",
+            "NNN_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = 1, y = 2, repetitions = { 1, 3 } },
+            { chance = 60, group = "cannedfood", x = 0, y = 0, repetitions = { 2, 6 } },
+            { chance = 60, group = "pasta_ingredients", x = 0, y = 0, repetitions = { 2, 4 } },
+            { chance = 60, group = "snacks", x = 0, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 0, 1 }, repetitions = { 2, 5 } },
+        },
+        npc_placements = { { id = "RURAL_HOLDOUT_NIHILIST", x = 1, y = 2 } },
+    },
+}
+
+-- Survivor holdout camp
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_camp",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "C_b_",
+            "N!N_",
+            "NnNg",
+            "NNN_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = 1, y = 2, repetitions = { 1, 3 } },
+            { chance = 60, group = "cannedfood", x = 0, y = 0, repetitions = { 2, 6 } },
+            { chance = 60, group = "pasta_ingredients", x = 0, y = 0, repetitions = { 2, 4 } },
+            { chance = 60, group = "snacks", x = 0, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 0, 1 }, repetitions = { 2, 5 } },
+        },
+        npc_placements = { { id = "RURAL_HOLDOUT_TRADER", x = 1, y = 2 } },
+    },
+}
+
+-- Single bandit camp
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_camp",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "C_b_",
+            "N!N_",
+            "NnNg",
+            "NNN_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = 1, y = 2, repetitions = { 1, 3 } },
+            { chance = 60, group = "cannedfood", x = 0, y = 0, repetitions = { 2, 6 } },
+            { chance = 60, group = "pasta_ingredients", x = 0, y = 0, repetitions = { 2, 4 } },
+            { chance = 60, group = "snacks", x = 0, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 0, 1 }, repetitions = { 2, 5 } },
+            { chance = 30, group = "guns_rifle_common", x = 3, y = 3 },
+            { chance = 50, group = "ammo_common_boxed", x = 3, y = 3, repetitions = { 2, 4 } },
+            { chance = 40, group = "mags_common", x = 3, y = 3, repetitions = { 1, 2 } },
+        },
+        npc_placements = { { id = "bandit", x = 1, y = 2 } },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_camp",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "^___",
+            "N!N_",
+            "NnN^",
+            "NNN^",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        item_group_placements = {
+            { chance = 40, group = "bed", x = 1, y = 2, repetitions = { 1, 3 } },
+            { chance = 30, group = "cannedfood", x = 0, y = 3, repetitions = { 2, 6 } },
+            { chance = 20, group = "pasta_ingredients", x = 0, y = 3, repetitions = { 2, 4 } },
+            { chance = 20, group = "snacks", x = 0, y = 3, repetitions = { 1, 3 } },
+            { chance = 30, group = "stash_wood", x = 3, y = { 0, 3 }, repetitions = { 2, 5 } },
+        },
+        npc_placements = { { id = "derelict_dweller", x = 2, y = 0 } },
+    },
+}
+
+-- A friendly NPC holdout lives here.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_NPCs",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "CC_b",
+            "AA__",
+            "hhh_",
+            "CCC_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = { 0, 1 }, y = 1, repetitions = { 2, 4 } },
+            { chance = 60, group = "cannedfood", x = { 0, 1 }, y = 0, repetitions = { 2, 6 } },
+            {
+                chance = 60,
+                group = "pasta_ingredients",
+                x = { 0, 1 },
+                y = 0,
+                repetitions = { 2, 4 },
+            },
+            { chance = 60, group = "snacks", x = { 0, 1 }, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 1, 3 }, repetitions = { 2, 4 } },
+            { chance = 60, group = "lumberyard", x = 3, y = { 1, 3 }, repetitions = { 3, 6 } },
+            { chance = 60, group = "camping", x = { 0, 2 }, y = 3, repetitions = { 3, 6 } },
+        },
+        npc_placements = { { id = "RURAL_HOLDOUT_FRIENDLY", x = 1, y = 2 } },
+    },
+}
+
+-- A less-than-friendly NPC holdout lives here.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_NPCs",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "CC_b",
+            "AA__",
+            "hhh_",
+            "CCC_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = { 0, 1 }, y = 1, repetitions = { 2, 4 } },
+            { chance = 60, group = "cannedfood", x = { 0, 1 }, y = 0, repetitions = { 2, 6 } },
+            {
+                chance = 60,
+                group = "pasta_ingredients",
+                x = { 0, 1 },
+                y = 0,
+                repetitions = { 2, 4 },
+            },
+            { chance = 60, group = "snacks", x = { 0, 1 }, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 1, 3 }, repetitions = { 2, 4 } },
+            { chance = 60, group = "lumberyard", x = 3, y = { 1, 3 }, repetitions = { 3, 6 } },
+            { chance = 60, group = "camping", x = { 0, 2 }, y = 3, repetitions = { 3, 6 } },
+        },
+        npc_placements = { { id = "RURAL_HOLDOUT_HOSTILE", x = 1, y = 2 } },
+    },
+}
+
+-- A depressed NPC holdout lives here.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_NPCs",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "CC_b",
+            "AA__",
+            "hhh_",
+            "CCC_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = { 0, 1 }, y = 1, repetitions = { 2, 4 } },
+            { chance = 60, group = "cannedfood", x = { 0, 1 }, y = 0, repetitions = { 2, 6 } },
+            {
+                chance = 60,
+                group = "pasta_ingredients",
+                x = { 0, 1 },
+                y = 0,
+                repetitions = { 2, 4 },
+            },
+            { chance = 60, group = "snacks", x = { 0, 1 }, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 1, 3 }, repetitions = { 2, 4 } },
+            { chance = 60, group = "lumberyard", x = 3, y = { 1, 3 }, repetitions = { 3, 6 } },
+            { chance = 60, group = "camping", x = { 0, 2 }, y = 3, repetitions = { 3, 6 } },
+        },
+        npc_placements = { { id = "RURAL_HOLDOUT_NIHILIST", x = 1, y = 2 } },
+    },
+}
+
+-- A friendly NPC trader holdout lives here.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_NPCs",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "CC_b",
+            "AA__",
+            "hhh_",
+            "CCC_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = { 0, 1 }, y = 1, repetitions = { 2, 4 } },
+            { chance = 60, group = "cannedfood", x = { 0, 1 }, y = 0, repetitions = { 2, 6 } },
+            {
+                chance = 60,
+                group = "pasta_ingredients",
+                x = { 0, 1 },
+                y = 0,
+                repetitions = { 2, 4 },
+            },
+            { chance = 60, group = "snacks", x = { 0, 1 }, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 1, 3 }, repetitions = { 2, 4 } },
+            { chance = 60, group = "lumberyard", x = 3, y = { 1, 3 }, repetitions = { 3, 6 } },
+            { chance = 60, group = "camping", x = { 0, 2 }, y = 3, repetitions = { 3, 6 } },
+        },
+        npc_placements = { { id = "RURAL_HOLDOUT_TRADER", x = 1, y = 2 } },
+    },
+}
+
+-- An angry crazed hermit lives in this place.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_NPCs",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "CC_b",
+            "AA__",
+            "hhh_",
+            "CCC_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = { 0, 1 }, y = 1, repetitions = { 2, 4 } },
+            { chance = 60, group = "cannedfood", x = { 0, 1 }, y = 0, repetitions = { 2, 6 } },
+            {
+                chance = 60,
+                group = "pasta_ingredients",
+                x = { 0, 1 },
+                y = 0,
+                repetitions = { 2, 4 },
+            },
+            { chance = 60, group = "snacks", x = { 0, 1 }, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 1, 3 }, repetitions = { 2, 4 } },
+            { chance = 60, group = "lumberyard", x = 3, y = { 1, 3 }, repetitions = { 3, 6 } },
+            { chance = 60, group = "camping", x = { 0, 2 }, y = 3, repetitions = { 3, 6 } },
+        },
+        npc_placements = { { id = "derelict_dweller", x = 1, y = 2 } },
+    },
+}
+
+-- A friendly pair of survivors lives here.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_NPCs",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "CC_b",
+            "AA__",
+            "AA__",
+            "CCC_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = { 0, 1 }, y = { 1, 2 }, repetitions = { 3, 6 } },
+            { chance = 60, group = "cannedfood", x = { 0, 1 }, y = 0, repetitions = { 2, 6 } },
+            {
+                chance = 60,
+                group = "pasta_ingredients",
+                x = { 0, 1 },
+                y = 0,
+                repetitions = { 2, 4 },
+            },
+            { chance = 60, group = "snacks", x = { 0, 1 }, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 1, 3 }, repetitions = { 2, 4 } },
+            { chance = 60, group = "lumberyard", x = 3, y = { 1, 3 }, repetitions = { 3, 6 } },
+            { chance = 60, group = "camping", x = { 0, 2 }, y = 3, repetitions = { 3, 6 } },
+        },
+        npc_placements = { { id = "rural_holdout_solo", x = 2, y = 1 }, { id = "rural_holdout_solo", x = 1, y = 2 } },
+    },
+}
+
+-- A group of bandits lives here.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ruins_4x4_NPCs",
+    layout = {
+        size = { width = 4, height = 4 },
+        rows = {
+            "CC_b",
+            "AA__",
+            "AA__",
+            "CCC_",
+        },
+        palettes = { "desolatebarn_palette" },
+        rotation = { 0, 3 },
+        item_group_placements = {
+            { chance = 70, group = "bed", x = { 0, 1 }, y = { 1, 2 }, repetitions = { 3, 6 } },
+            {
+                chance = 60,
+                group = "ammo_common_boxed",
+                x = { 0, 1 },
+                y = { 1, 2 },
+                repetitions = { 2, 8 },
+            },
+            {
+                chance = 40,
+                group = "mags_common",
+                x = { 0, 1 },
+                y = { 1, 2 },
+                repetitions = { 2, 4 },
+            },
+            { chance = 60, group = "cannedfood", x = { 0, 1 }, y = 0, repetitions = { 2, 6 } },
+            {
+                chance = 60,
+                group = "pasta_ingredients",
+                x = { 0, 1 },
+                y = 0,
+                repetitions = { 2, 4 },
+            },
+            { chance = 60, group = "snacks", x = { 0, 1 }, y = 0, repetitions = { 1, 3 } },
+            { chance = 70, group = "stash_wood", x = 3, y = { 1, 3 }, repetitions = { 2, 4 } },
+            { chance = 60, group = "lumberyard", x = 3, y = { 1, 3 }, repetitions = { 3, 6 } },
+            { chance = 60, group = "camping", x = { 0, 2 }, y = 3, repetitions = { 3, 6 } },
+        },
+        npc_placements = {
+            { id = "bandit", x = 2, y = 1 },
+            { id = "bandit", x = 0, y = 2 },
+            { id = "thug", x = 3, y = 4 },
+        },
+    },
+}
