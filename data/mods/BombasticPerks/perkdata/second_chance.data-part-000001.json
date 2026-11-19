@@ -1,15 +1,5 @@
 [
   {
-    "type": "mutation",
-    "id": "perk_second_chance_limiter",
-    "name": "Second Chance Limiter",
-    "points": 0,
-    "purifiable": false,
-    "valid": false,
-    "player_display": false,
-    "description": "You used up your second chance perk and it won't work again."
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PERK_SECOND_CHANCE_PREVENTION",
     "eoc_type": "PREVENT_DEATH",
