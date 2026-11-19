@@ -1,5 +1,96 @@
 local ccb = require("ccb")
 
+ccb.content.define_mapgen_palette {
+    id = "long_grass_meadow_palette",
+    layout = {
+        terrain = {
+            ["."] = { { id = "t_region_groundcover", copies = 10 }, { id = "t_grass_long" } },
+            [","] = { { id = "t_region_groundcover", copies = 4 }, { id = "t_grass_long" } },
+            [";"] = { { id = "t_region_groundcover" }, { id = "t_grass_long", copies = 2 } },
+            ["|"] = { { id = "t_region_groundcover" }, { id = "t_grass_long", copies = 10 } },
+        },
+        furniture = {
+            ["."] = {
+                { id = "f_null", copies = 2000 },
+                { id = "f_region_plain", copies = 20 },
+                { id = "f_boulder_small", copies = 6 },
+                { id = "f_boulder_medium" },
+                { id = "f_boulder_large" },
+            },
+            [","] = {
+                { id = "f_null", copies = 2000 },
+                { id = "f_region_plain", copies = 40 },
+                { id = "f_boulder_small", copies = 6 },
+                { id = "f_boulder_medium" },
+                { id = "f_boulder_large" },
+            },
+            [";"] = {
+                { id = "f_null", copies = 2000 },
+                { id = "f_region_plain", copies = 50 },
+                { id = "f_boulder_small", copies = 6 },
+                { id = "f_boulder_medium" },
+                { id = "f_boulder_large" },
+            },
+            ["|"] = {
+                { id = "f_null", copies = 2000 },
+                { id = "f_region_plain", copies = 60 },
+                { id = "f_boulder_small", copies = 6 },
+                { id = "f_boulder_medium" },
+                { id = "f_boulder_large" },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen_palette {
+    id = "copse_trees_palette",
+    layout = {
+        terrain = {
+            ["."] = {
+                { id = "t_region_groundcover", copies = 60 },
+                { id = "t_region_tree" },
+                { id = "t_region_shrub" },
+            },
+            [","] = {
+                { id = "t_region_groundcover", copies = 30 },
+                { id = "t_region_groundcover_forest", copies = 8 },
+                { id = "t_region_tree", copies = 2 },
+                { id = "t_region_shrub" },
+            },
+            [";"] = {
+                { id = "t_region_groundcover", copies = 10 },
+                { id = "t_region_groundcover_forest", copies = 8 },
+                { id = "t_region_tree", copies = 6 },
+                { id = "t_region_shrub" },
+            },
+            ["|"] = { { id = "t_region_groundcover_forest", copies = 7 }, { id = "t_puddle" } },
+        },
+        furniture = {
+            ["."] = {
+                { id = "f_null", copies = 2000 },
+                { id = "f_region_plain", copies = 20 },
+                { id = "f_boulder_small", copies = 6 },
+                { id = "f_boulder_medium" },
+                { id = "f_boulder_large" },
+            },
+            [","] = {
+                { id = "f_null", copies = 2000 },
+                { id = "f_region_plain", copies = 40 },
+                { id = "f_boulder_small", copies = 6 },
+                { id = "f_boulder_medium", copies = 2 },
+                { id = "f_boulder_large" },
+            },
+            [";"] = {
+                { id = "f_null", copies = 2000 },
+                { id = "f_region_plain", copies = 60 },
+                { id = "f_boulder_small", copies = 6 },
+                { id = "f_boulder_medium", copies = 2 },
+                { id = "f_boulder_large" },
+            },
+        },
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "mx_grass_map",
