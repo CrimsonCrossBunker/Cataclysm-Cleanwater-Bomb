@@ -1,15 +1,17 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_REFUGEE_John_Situation",
+    "id": "TALK_REFUGEE_John_1",
     "dynamic_line": {
-      "math": [ "u_counter_refugee_center_refugee_happiness >= 7" ],
-      "yes": "I reckon I've done my job here.  Goan' be time to ride out into the sunset soon, if'n you catch m'drift.\"  He tilts his hat melodramatically.  \"Folks're comin' around to this here new world we live in.",
-      "no": "Folks don't like bein' kept from the blue sky for too long.  Cooped up like cattle in a barn… we need pastures to run free, if'n y'get my drift.  'Til we got 'em, it's gonna be tense in here."
+      "gendered_line": "*turns to look at you, lifting an enormous cowboy hat off his eyes.  He appears to be in the process of growing out a set of bushy muttonchops and a handlebar mustache.  Bright blue eyes peer out from his wrinkled face.  \"Howdy, pardner.  They call me Clemens.  John Clemens.  I'm an ol' cowhand.\"",
+      "relevant_genders": [ "u" ]
+    },
+    "speaker_effect": {
+      "effect": [ { "u_add_var": "general_meeting_u_met_John_Clemens", "value": "yes" }, { "npc_first_topic": "TALK_REFUGEE_John_1a" } ]
     },
     "responses": [
-      { "text": "<done_conversation_section>", "topic": "TALK_NONE" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+      { "text": "Nice to meet you, John.", "topic": "TALK_REFUGEE_John_1_firstmeet" },
+      { "text": "Hi John, nice to meet you.  <end_talking_leave>", "topic": "TALK_DONE" }
     ]
   }
 ]
