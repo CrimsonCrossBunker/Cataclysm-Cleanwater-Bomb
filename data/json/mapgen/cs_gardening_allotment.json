@@ -86,39 +86,5 @@
         { "item": "shovel", "x": 14, "y": 21, "chance": 20 }
       ]
     }
-  },
-  {
-    "type": "mapgen",
-    "om_terrain": "cs_gardening_allotment_roof",
-    "object": {
-      "fill_ter": "t_shingle_flat_roof",
-      "rows": [
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "                        ",
-        "          ............. ",
-        "          ............. ",
-        "          ............. ",
-        "          ............. ",
-        "          ............. ",
-        "                        "
-      ],
-      "terrain": { ".": "t_shingle_flat_roof", " ": "t_open_air" }
-    }
   }
 ]

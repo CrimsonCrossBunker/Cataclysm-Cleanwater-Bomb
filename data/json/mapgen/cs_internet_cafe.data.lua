@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "cs_internet_cafe_upper_roof",
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "    ............        ",
+            "    ............        ",
+            "    ........X...        ",
+            "    ............        ",
+            "    ............        ",
+            "    ............        ",
+            "    ............        ",
+            "    ...:........        ",
+            "    ............        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "roof_palette" },
+        terrain = { ["."] = "t_tar_flat_roof", X = "t_tar_flat_roof", [":"] = "t_tar_flat_roof" },
+        fill_terrain = "t_tar_flat_roof",
+    },
+}

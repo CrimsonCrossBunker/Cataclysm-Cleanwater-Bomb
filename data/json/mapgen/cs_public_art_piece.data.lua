@@ -1,0 +1,47 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "cs_public_art_piece" },
+    layout = {
+        rows = {
+            "           ss           ",
+            "           ss           ",
+            "           ss           ",
+            "           ss           ",
+            "           ss           ",
+            "           ss           ",
+            "           ss           ",
+            "       ssssssssss       ",
+            "       sOXOXOXOXs       ",
+            "     c sXOXOXOXOs c     ",
+            "     b sOXOXOXOXs b     ",
+            "     b sXOXOXOXOs b     ",
+            "     b sOXOXOXOXs b     ",
+            "     b sXOXOXOXOs b     ",
+            "     c sOXOXOXOXs c     ",
+            "       sXOXOXOXOs       ",
+            "       ssssssssss       ",
+            "                        ",
+            "         cbbbbc         ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        terrain = {
+            [" "] = "t_region_groundcover_urban",
+            s = "t_sidewalk",
+            X = "t_pavement",
+            O = "t_concrete",
+        },
+        furniture = { b = "f_bench", c = "f_trashcan" },
+        fill_terrain = "t_region_groundcover_urban",
+        item_spawns = { X = { id = "rock", chance = 20 }, O = { id = "rock", chance = 20 } },
+        item_groups = {
+            c = { group = "SUS_trash_trashcan", chance = 30 },
+            b = { group = "oa_discarded_news", chance = 5 },
+        },
+    },
+}
