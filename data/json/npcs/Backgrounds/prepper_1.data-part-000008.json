@@ -1,0 +1,44 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_PREPPER_1_MAKE_MISSION",
+    "//": "Assigns the mission through an EOC to avoid having to bring the NPC along with the player.",
+    "effect": [
+      { "assign_mission": "directions_prepper_1_SHELTER" },
+      { "u_add_var": "mission_BGSS_prepper_1_started_quest", "value": "yes" }
+    ]
+  },
+  {
+    "id": "directions_prepper_1_SHELTER",
+    "type": "mission_definition",
+    "name": { "str": "Check out that LMOE shelter" },
+    "description": "Maybe there's something left in that LMOE shelter you heard about.",
+    "goal": "MGOAL_GO_TO",
+    "difficulty": 2,
+    "value": 0,
+    "start": { "assign_mission_target": { "om_special": "Locked LMOE Shelter", "om_terrain": "lmoe", "reveal_radius": 3 } },
+    "end": {
+      "effect": [
+        {
+          "u_message": "You approach the LMOE and do as you were told, prying back a thin piece of metal atop the doorframe, revealing an opening.  You reach inside and grab a handle attached to a wire, pull hard on it, and hear a heavy metal *clunk*.  The door is open.",
+          "type": "good",
+          "popup": true
+        },
+        { "mapgen_update": "LMOE_unlock_door", "om_terrain": "lmoe" },
+        { "u_add_var": "mission_BGSS_prepper_1_finished_quest", "value": "yes" }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "…",
+      "offer": "…",
+      "accepted": "…",
+      "rejected": "…",
+      "advice": "…",
+      "inquire": "Any luck finding the LMOE shelter?",
+      "success": "Damn, can't believe we finally made it.  I was smart enough not to store anything that might rot, so as long as nobody else already broke in, I bet there's at least two weeks of good food just sitting there.  Pristine workshop down there, too.  It cost me a pretty penny to get built.  I could tell you all about it sometime if you ever wanted.  Anyway, thanks for helping me get back here.  It sure ain't safe to travel on your own anymore.",
+      "success_lie": "…",
+      "failure": "Not that surprising."
+    }
+  }
+]

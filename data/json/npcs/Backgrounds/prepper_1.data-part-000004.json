@@ -1,0 +1,66 @@
+[
+  {
+    "id": "BGSS_PREPPER_1_FOUND_LMOE2_BENICE",
+    "type": "talk_topic",
+    "dynamic_line": [
+      {
+        "math": [ "time_since('cataclysm', 'unit':'days') >= 14" ],
+        "no": {
+          "gendered_line": "That's pretty presumptive of you, considering it hasn't been that long since shit went down.  What made you assume I was dead?",
+          "relevant_genders": [ "npc", "u" ]
+        },
+        "yes": {
+          "gendered_line": "The door was open?  Was there anyone inside?  Why would you assume I was dead?",
+          "relevant_genders": [ "npc", "u" ]
+        }
+      }
+    ],
+    "responses": [
+      {
+        "text": "There was a dead guy inside.  It didn't take much to make that connection.",
+        "trial": { "type": "LIE", "difficulty": 40, "mod": [ [ "TRUST", 3 ] ] },
+        "success": { "topic": "BGSS_PREPPER_1_FOUND_LMOE4" },
+        "failure": { "topic": "BGSS_PREPPER_1_FOUND_LMOE4_FAILLIE", "opinion": { "trust": -1 } }
+      },
+      {
+        "text": "The whole front door had been blown off and everything had been looted.  Nothing left.  It seemed like something major had happened, that's all.",
+        "trial": { "type": "LIE", "difficulty": -10, "mod": [ [ "TRUST", 2 ] ] },
+        "success": { "topic": "BGSS_PREPPER_1_FOUND_LMOE4" },
+        "failure": { "topic": "BGSS_PREPPER_1_FOUND_LMOE4_FAILLIE", "opinion": { "trust": -1 } }
+      },
+      {
+        "text": "I had no idea.  It's <the_cataclysm>.  I was just trying to survive.",
+        "topic": "BGSS_PREPPER_1_FOUND_LMOE4_BEHONEST"
+      }
+    ]
+  },
+  {
+    "id": "BGSS_PREPPER_1_FOUND_LMOE2_BEMEAN",
+    "type": "talk_topic",
+    "dynamic_line": [
+      {
+        "math": [ "time_since('cataclysm', 'unit':'days') >= 14" ],
+        "no": {
+          "gendered_line": "Well, that's one way to say 'fuck you'!  How…  Why…  I was still trying to get back there, surviving and struggling just like you!  How would you feel if I came and stole all YOUR stuff right when you needed it most?!",
+          "relevant_genders": [ "npc" ]
+        },
+        "yes": {
+          "gendered_line": "Well, that's one way to say 'fuck you'!  I know it's been a while since shit went down, but I didn't lock that door and put up that sign for no reason!  How would you feel if I came and stole all the stuff that YOU locked away for safe keeping?!",
+          "relevant_genders": [ "npc" ]
+        }
+      }
+    ],
+    "responses": [
+      {
+        "text": "Finders, keepers.",
+        "topic": "BGSS_PREPPER_1_FOUND_LMOE3_BEMEAN",
+        "opinion": { "anger": 4, "value": -5, "trust": -2 }
+      },
+      {
+        "text": "C'mon, you would do the same!  It's life or death out here!",
+        "topic": "BGSS_PREPPER_1_FOUND_LMOE3_BENICE",
+        "opinion": { "anger": 1, "value": -1, "trust": 1 }
+      }
+    ]
+  }
+]
