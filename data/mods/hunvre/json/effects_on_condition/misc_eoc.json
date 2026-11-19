@@ -76,21 +76,6 @@
     ]
   },
   {
-    "type": "ter_furn_transform",
-    "id": "furn_to_bed",
-    "furniture": [ { "result": "f_bed_retractable", "valid_furniture": [ "f_null", "f_shower_retractable", "f_bed_retractable" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "furn_to_shower",
-    "furniture": [ { "result": "f_shower_retractable", "valid_furniture": [ "f_null", "f_shower_retractable", "f_bed_retractable" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "furn_to_null",
-    "furniture": [ { "result": "f_null", "valid_furniture": [ "f_null", "f_shower_retractable", "f_bed_retractable" ] } ]
-  },
-  {
     "id": "EOC_INTERACT_AIRLOCK",
     "type": "effect_on_condition",
     "effect": [
