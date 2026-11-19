@@ -311,3 +311,312 @@ ccb.content.define_mapgen {
         loot_placements = { { id = "canister_empty", x = 3, y = 2, chance = 100 } },
     },
 }
+
+-- A nested map for lab common research areas.  Includes cold fields.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_6x6",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "qq..qq",
+            "......",
+            ".qqqq.",
+            ".qqqq.",
+            "..^...",
+            "qq..qq",
+        },
+        palettes = { "lab_common_palette" },
+        furniture = {
+            ["^"] = { { id = "f_vent_cold_air2_stream", copies = 70 }, { id = "f_null", copies = 30 } },
+        },
+        rotation = { 0, 3 },
+        item_groups = { q = { { group = "supplies_reagents_lab", chance = 50 } } },
+    },
+}
+
+-- A nested map for lab common research areas.  Includes hot fields.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_6x6",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "qq..qq",
+            "......",
+            ".Af...",
+            "..f.A.",
+            "..^...",
+            "qq..qq",
+        },
+        palettes = { "lab_mutagen_palette" },
+        furniture = {
+            ["^"] = {
+                { id = "f_vent_hot_air2_blast", copies = 30 },
+                { id = "f_vent_hot_air2_stream", copies = 30 },
+            },
+        },
+        rotation = { 0, 3 },
+        item_groups = { q = { { group = "supplies_reagents_lab", chance = 50 } } },
+    },
+}
+
+-- A nested map for lab common research areas.  Includes toxic fields.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_6x6",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "qn...k",
+            "w.Ac.l",
+            "...c..",
+            "..^d..",
+            ".o....",
+            "ef..fe",
+        },
+        palettes = { "lab_common_palette" },
+        furniture = { ["^"] = "f_vent_toxic_leak" },
+        rotation = { 0, 3 },
+        item_groups = { F = { { group = "goo", chance = 50 } } },
+    },
+}
+
+-- A nested map for lab common research areas. Classic goo trap room.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_6x6",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            ".....F",
+            "......",
+            "......",
+            "..^...",
+            "......",
+            "......",
+        },
+        palettes = { "lab_common_palette" },
+        rotation = { 0, 3 },
+        trap_placements = { { id = "tr_goo", x = { 0, 5 }, y = { 0, 5 }, repetitions = { 1, 10 } } },
+        item_groups = { F = { { group = "goo", chance = 50 } } },
+    },
+}
+
+-- A nested map for lab common research areas. Radiation room.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_6x6",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "......",
+            ".    .",
+            ". ^^ .",
+            ". ^^ .",
+            ".   ɱ.",
+            "......",
+        },
+        palettes = { "lab_common_palette" },
+        terrain = { [" "] = "t_floor_green" },
+        furniture = { ["^"] = "f_vent_rad_leak" },
+        rotation = { 0, 3 },
+        monster_placements = { { id = "mon_hazmatbot", x = 3, y = 3, chance = 100 } },
+        liquid_placements = { { id = "plut_slurry", x = { 1, 4 }, y = { 1, 3 }, amount = { 1, 2 } } },
+    },
+}
+
+-- A nested map for lab common research areas.  Includes freezing fields.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_6x6",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "......",
+            ".****.",
+            ".*^.*.",
+            "...^*.",
+            ".****.",
+            "......",
+        },
+        palettes = { "lab_common_palette" },
+        furniture = { ["^"] = "f_vent_cold_air2_blast" },
+        rotation = { 0, 3 },
+        item_groups = { ["*"] = { { group = "cloning_vat", chance = 50 } } },
+    },
+}
+
+-- A nested map for lab common research areas.  Includes freezing fields.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_6x6",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "**..**",
+            "......",
+            ".AJb..",
+            "..ab..",
+            "^...A.",
+            "**..**",
+        },
+        palettes = { "lab_common_palette" },
+        furniture = { ["^"] = "f_vent_cold_air2_blast" },
+        rotation = { 0, 3 },
+        item_groups = {
+            ["*"] = { group = "cloning_vat", chance = 50 },
+            J = { group = "dissection", chance = 50 },
+        },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on east wall.  This is a small library.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_9x9_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "RR RR|   ",
+            "R    X   ",
+            "REI  X   ",
+            "R IE |   ",
+            "R    -   ",
+            "REI  |   ",
+            "R IE X   ",
+            "R    X   ",
+            "RR RR|   ",
+        },
+        palettes = { "lab_common_palette" },
+        item_groups = { R = { { group = "lab_bookshelves", chance = 70, repetitions = { 1, 3 } } } },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on west wall.  This is a small library.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_9x9_W",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "   |RR RR",
+            "   X    R",
+            "   X IE R",
+            "   |EI  R",
+            "   -    R",
+            "   |EI  R",
+            "   X IE R",
+            "   X    R",
+            "   |RR RR",
+        },
+        palettes = { "lab_common_palette" },
+        item_groups = { R = { { group = "lab_bookshelves", chance = 70, repetitions = { 1, 3 } } } },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on west wall.  This is a small armory for emergent situations.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_9x9_W",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "   |∞∞∞∞∞",
+            "   |Q    ",
+            "   |Q j L",
+            "  6|  j L",
+            "   =    L",
+            "   ||Y  L",
+            "   ||||||",
+            "   |UUUUU",
+            "   +    U",
+        },
+        palettes = { "lab_common_palette" },
+        item_groups = {
+            L = {
+                { group = "clothing_soldier_set_pristine", chance = 30 },
+                { group = "book_military", chance = 33 },
+                { group = "snacks", chance = 10 },
+            },
+            ["∞"] = {
+                { group = "ammo_milspec", chance = 30 },
+                { group = "mags_milspec", chance = 30 },
+                { group = "mags_flamethrower_xedra", chance = 15 },
+            },
+            j = { { group = "gear_soldier_sidearm", chance = 33 } },
+            U = { { group = "cleaning", chance = 33 } },
+            Q = {
+                { group = "guns_milspec", chance = 66, repetitions = { 1, 3 } },
+                { group = "guns_launcher_flame_xedra", chance = 50, repetitions = { 0, 1 } },
+            },
+        },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Magazine Entrance"),
+                security = 6,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 7,
+                    },
+                },
+                failures = { "damage", "shutdown" },
+            },
+        },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on east wall. This is a small armory for emergent situations.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_common_9x9_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "∞∞∞∞∞|   ",
+            "    Q|   ",
+            "L   Q|   ",
+            "L j  |6  ",
+            "L j  =   ",
+            "L   Y|   ",
+            "||||||   ",
+            "UUUUU|   ",
+            "U    +   ",
+        },
+        palettes = { "lab_common_palette" },
+        item_groups = {
+            L = {
+                { group = "clothing_soldier_set_pristine", chance = 30 },
+                { group = "book_military", chance = 33 },
+                { group = "snacks", chance = 10 },
+            },
+            ["∞"] = {
+                { group = "ammo_milspec", chance = 30 },
+                { group = "mags_milspec", chance = 30 },
+                { group = "mags_flamethrower_xedra", chance = 15 },
+            },
+            j = { { group = "gear_soldier_sidearm", chance = 33 } },
+            U = { { group = "cleaning", chance = 33 } },
+            Q = {
+                { group = "guns_milspec", chance = 66, repetitions = { 1, 3 } },
+                { group = "guns_launcher_flame_xedra", chance = 50, repetitions = { 0, 1 } },
+            },
+        },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Magazine Entrance"),
+                security = 6,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 7,
+                    },
+                },
+                failures = { "damage", "shutdown" },
+            },
+        },
+    },
+}

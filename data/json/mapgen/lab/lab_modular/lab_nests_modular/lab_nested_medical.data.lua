@@ -314,3 +314,59 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+-- A nested map for a 6x6 medical room.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_medical_6x6_open",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "......",
+            ".7A...",
+            ".oւ..Q",
+            "...ë.V",
+            "......",
+            "5...Y.",
+        },
+        palettes = { "lab_common_palette", "lab_medical_palette" },
+        vehicle_glyphs = { ["ւ"] = { id = "hospital_bed", rotation = 270 } },
+    },
+}
+
+-- A nested map for a 6x6 medical room.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_medical_6x6_open",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "......",
+            ".|||..",
+            ".J|J.Q",
+            ".J|k.Q",
+            ".|||..",
+            "......",
+        },
+        palettes = { "lab_common_palette", "lab_medical_palette" },
+    },
+}
+
+-- A nested map for a 6x6 medical room.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_medical_6x6_open",
+    layout = {
+        size = { width = 6, height = 6 },
+        rows = {
+            "QQ..qq",
+            "......",
+            ".J6e.a",
+            "..ëA..",
+            ".3JJY.",
+            ".A....",
+        },
+        palettes = { "lab_common_palette", "lab_medical_palette" },
+        computer_glyphs = { ["6"] = {} },
+    },
+}

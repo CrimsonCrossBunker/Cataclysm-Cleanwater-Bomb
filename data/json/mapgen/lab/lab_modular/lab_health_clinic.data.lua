@@ -193,3 +193,51 @@ ccb.content.define_mapgen {
         vehicle_glyphs = { ["ƃ"] = { id = "wheelchair", rotation = 90 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lab_health_z-2_B",
+    layout = {
+        rows = {
+            "||||||||||||||||||||||||",
+            "|aVVVVa|oւ4|9|5ւ.|9|4ւ.|",
+            "|..ë...|...+.|o..+.+...|",
+            "||||#|||.ë.|t|.ë.|t|.ëo|",
+            "|......|ppp|||ppp|||ppp|",
+            "|..ë..A|h...S|E..S|S..5|",
+            "||JɤJJJ|]⁸]|||]⁸]|||]⁸]|",
+            "|......................|",
+            "...ë.......ë.......ë..ƃ±",
+            "........||||||||+|||||||",
+            "|||||o..|yHHs|.h..|QQQQ|",
+            "|UUU|ƃ..⁸....|hfh.|Që.Q|",
+            "|Uë.+...]..ë.|hfh.|Q..Q|",
+            "|||||...|.HHT|.h.Y|Q..Q|",
+            "........||||||||+||||=||",
+            "...ë.......ë.......ë..6±",
+            "|......................|",
+            "||JɤJJJ|]⁸]|||]⁸]|||]⁸]|",
+            "|...A..|h...S|E..S|S..5|",
+            "|..ë...|ppp|||ppp|||ppp|",
+            "||||#|||.ë.|9|.ë.|9|.ë.|",
+            "|o.ë...|...+.|...+.+...|",
+            "|aVVVVa|oГ.|t|oГ.|t|.Гo|",
+            "||||||||||||||||||||||||",
+        },
+        palettes = { "lab_common_palette", "lab_medical_palette" },
+        fill_terrain = "t_linoleum_white",
+        vehicle_glyphs = {
+            ["ƃ"] = { id = "wheelchair", rotation = 90 },
+            ["Г"] = { id = "hospital_bed", rotation = 90 },
+            ["ւ"] = { id = "hospital_bed", rotation = 270 },
+        },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Pharmacy"),
+                security = 3,
+                menu = { { label = ccb.content.text("UNLOCK ENTRANCE"), action = "unlock", security = 3 } },
+                failures = { "damage", "shutdown" },
+            },
+        },
+    },
+}

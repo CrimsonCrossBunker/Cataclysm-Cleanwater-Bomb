@@ -969,3 +969,1087 @@ ccb.content.define_mapgen {
         tile_edits = { { shape = "point", operation = "bash", x = { 1, 15 }, y = 1 } },
     },
 }
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_east",
+    weight = 100,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|mmmmmm|",
+            "||    m|",
+            " = JJJm|",
+            "θ| JJJm|",
+            "||    m|",
+            "|mmmmmm|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette" },
+        terrain = { ["|"] = "t_wall_metal" },
+        rotation = { 0, 3 },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("Bio-Sample Storage"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks", "shutdown" },
+            },
+        },
+        item_groups = { m = { { group = "mutagen_kits", chance = 30 } } },
+        loot_placements = {
+            { group = "tools_mutation", x = { 3, 5 }, y = 3, chance = 70 },
+            { group = "rare_mutation_books", x = { 3, 5 }, y = 4, chance = 70 },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_east",
+    weight = 100,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|mmmmmm|",
+            "||    m|",
+            " = JJJm|",
+            "θ| JJJm|",
+            "||    m|",
+            "|mmmmmm|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette" },
+        terrain = { ["|"] = "t_wall_metal" },
+        rotation = { 0, 3 },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("Bio-Sample Storage"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks", "shutdown" },
+            },
+        },
+        item_groups = { m = { { group = "mutagen_kits", chance = 20 } } },
+        loot_placements = {
+            { group = "tools_mutation", x = { 3, 5 }, y = 3, chance = 70 },
+            { group = "common_mutation_books", x = { 3, 5 }, y = 4, chance = 70 },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_east",
+    weight = 50,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|mmmmmm|",
+            "||    m|",
+            " = JJJm|",
+            "θ| JJJm|",
+            "||    m|",
+            "|mmmmmm|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette" },
+        terrain = { ["|"] = "t_wall_metal" },
+        rotation = { 0, 3 },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("Alien-Sample Storage"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks", "shutdown" },
+            },
+        },
+        item_spawns = {
+            m = {
+                { id = "alien_pod_resin", chance = 50, repetitions = { 2, 5 } },
+                { id = "fetid_goop", chance = 40, repetitions = { 2, 5 } },
+            },
+        },
+        loot_placements = {
+            { group = "tools_mutation", x = { 3, 5 }, y = 3, chance = 70 },
+            { group = "common_mutation_books", x = { 3, 5 }, y = 4, chance = 70 },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_west",
+    weight = 75,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|mmmmmm|",
+            "|m    ||",
+            "|m JJ = ",
+            "|m JJ |θ",
+            "|m    ||",
+            "|mmmmmm|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette" },
+        terrain = { ["|"] = "t_wall_metal" },
+        rotation = { 0, 3 },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("Bio-Sample Storage"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "secubots", "shutdown" },
+            },
+        },
+        item_groups = { m = { { group = "mutagen_kits", chance = 10 } } },
+        loot_placements = {
+            { group = "tools_mutation", x = { 3, 4 }, y = 3, chance = 70 },
+            { group = "rare_mutation_books", x = { 1, 3 }, y = 4, chance = 70 },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_west",
+    weight = 100,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|mmmmmm|",
+            "|m  A ||",
+            "|m JJ = ",
+            "|m JJ |θ",
+            "|m A  ||",
+            "|mmmmmm|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette" },
+        terrain = { ["|"] = "t_wall_metal" },
+        rotation = { 0, 3 },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("Bio-Sample Storage"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks", "shutdown" },
+            },
+        },
+        item_groups = { m = { { group = "mutagen_kits", chance = 20 } } },
+        loot_placements = {
+            { group = "tools_mutation", x = { 3, 4 }, y = 3, chance = 70 },
+            { group = "common_mutation_books", x = { 1, 3 }, y = 4, chance = 70 },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_west",
+    weight = 20,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|JJJXs^|",
+            "|%A X-||",
+            "|%    = ",
+            "|%    |θ",
+            "|%  X-||",
+            "|JJJXs^|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette", "lab_vent_palette" },
+        terrain = { ["|"] = "t_wall_metal" },
+        furniture = { ["%"] = "f_standing_tank" },
+        rotation = { 0, 3 },
+        liquid_glyphs = { ["%"] = { id = "purifier", amount = { 2, 20 } } },
+        loot_placements = {
+            { group = "tools_mutation", x = { 1, 3 }, y = 1, chance = 70 },
+            { id = "recipe_labchem", x = { 1, 3 }, y = 1, chance = 70 },
+            { id = "purifier_smart_shot", x = 5, y = 1, chance = 100 },
+            { id = "purifier_smart_shot", x = 5, y = 6, chance = 100 },
+        },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("Bio-Sample Storage"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks", "shutdown" },
+            },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_west",
+    weight = 20,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|JJJXs^|",
+            "|%A X-||",
+            "|ŏ    = ",
+            "|ō    |θ",
+            "|!  X-||",
+            "|JJJXs^|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette", "lab_vent_palette" },
+        terrain = { ["|"] = "t_wall_metal" },
+        furniture = {
+            ["%"] = "f_standing_tank",
+            ["!"] = "f_standing_tank",
+            ["ō"] = "f_standing_tank",
+            ["ŏ"] = "f_standing_tank",
+        },
+        rotation = { 0, 3 },
+        liquid_glyphs = {
+            ["%"] = { id = "purifier", amount = { 2, 20 } },
+            ["!"] = { id = "mutagen_bird", amount = { 2, 20 } },
+            ["ō"] = { id = "mutagen_slime", amount = { 2, 20 } },
+            ["ŏ"] = { id = "mutagen_plant", amount = { 2, 20 } },
+        },
+        loot_placements = {
+            { group = "tools_mutation", x = { 1, 3 }, y = 1, chance = 70 },
+            { id = "recipe_alpha", x = { 1, 3 }, y = 1, chance = 70 },
+            { id = "iv_mutagen_alpha", x = 5, y = 1, chance = 100 },
+            { id = "iv_mutagen_alpha", x = 5, y = 6, chance = 100 },
+        },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("PE050 Storage"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks", "shutdown" },
+            },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design. This one is MIGO themed
+-- A bit higher weighted since their are fewer MIGO themed rewards
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_west",
+    weight = 50,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|JJJX!^|",
+            "|7A X!||",
+            "|2ւ - = ",
+            "|4  - |θ",
+            "|5  X!||",
+            "|JōJX!^|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette", "lab_vent_palette" },
+        terrain = { ["|"] = "t_wall_metal" },
+        furniture = { ["!"] = "f_chair", ["ō"] = "f_glass_fridge" },
+        rotation = { 0, 3 },
+        vehicle_glyphs = { ["ւ"] = { id = "hospital_bed", rotation = 270 } },
+        monster_glyphs = { ["ւ"] = { id = "mon_mi_go_captured" } },
+        item_spawns = {
+            ["ō"] = {
+                { id = "migo_plate_overgrown", chance = 100, repetitions = 2 },
+                { id = "migo_sideplate_overgrown", chance = 100, repetitions = 2 },
+            },
+        },
+        loot_placements = { { id = "recipe_migo_plate", x = { 1, 3 }, y = 1, chance = 100 } },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("Specimen Processing"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks", "shutdown" },
+            },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design. This one is MIGO themed
+-- A bit higher weighted since their are fewer MIGO themed rewards
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_west",
+    weight = 50,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|ÆÇÆX!^|",
+            "|ւÇÇX!||",
+            "|ŏÇÇ- = ",
+            "|ւÇÇ- |θ",
+            "|ÀÇÇX!||",
+            "|ÆōÆX!^|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette", "lab_vent_palette" },
+        terrain = {
+            ["|"] = "t_wall_metal",
+            ["ւ"] = "t_floor_resin",
+            ["À"] = "t_floor_resin",
+            ["ŏ"] = "t_floor_resin",
+            ["Æ"] = "t_floor_resin",
+            ["Ç"] = "t_floor_resin",
+        },
+        furniture = {
+            ["!"] = "f_chair",
+            ["ō"] = "f_glass_fridge",
+            ["ŏ"] = "f_sink",
+            ["ւ"] = "f_alien_pod",
+            ["À"] = "f_alien_gasper",
+            ["Æ"] = "f_alien_pod_resin",
+        },
+        rotation = { 0, 3 },
+        item_spawns = {
+            ["ŏ"] = {
+                { id = "migo_skin_off", chance = 100 },
+                { id = "blood", chance = 100 },
+                { id = "feeding_kit", chance = 100 },
+                { id = "corpse_half_beheaded", chance = 100 },
+            },
+            ["ō"] = { id = "blood", chance = 100, repetitions = { 2, 5 } },
+        },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("Storage for Gary"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks", "shutdown" },
+            },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_west",
+    weight = 20,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|JJJXs^|",
+            "|%A X-||",
+            "|ŏ    = ",
+            "|ō    |θ",
+            "|!  X-||",
+            "|JJJXs^|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette", "lab_vent_palette" },
+        terrain = { ["|"] = "t_wall_metal" },
+        furniture = {
+            ["%"] = "f_standing_tank",
+            ["!"] = "f_standing_tank",
+            ["ō"] = "f_standing_tank",
+            ["ŏ"] = "f_standing_tank",
+        },
+        rotation = { 0, 3 },
+        liquid_glyphs = {
+            ["%"] = { id = "mutagen_cattle", amount = { 2, 20 } },
+            ["!"] = { id = "mutagen_bird", amount = { 2, 20 } },
+            ["ō"] = { id = "mutagen_lizard", amount = { 2, 20 } },
+            ["ŏ"] = { id = "mutagen_beast", amount = { 2, 20 } },
+        },
+        loot_placements = {
+            { group = "tools_mutation", x = { 1, 3 }, y = 1, chance = 70 },
+            { id = "recipe_chimera", x = { 1, 3 }, y = 1, chance = 70 },
+            { id = "iv_mutagen_chimera", x = 5, y = 1, chance = 100 },
+            { id = "iv_mutagen_chimera", x = 5, y = 6, chance = 100 },
+        },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("PE065 Storage"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks", "shutdown" },
+            },
+        },
+    },
+}
+
+-- A nested map for lab mutagen research areas. Center of room design.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_8x8_vault_west",
+    weight = 20,
+    layout = {
+        size = { width = 8, height = 8 },
+        rows = {
+            "||||||||",
+            "|JJJXs^|",
+            "|%A X-||",
+            "|!    = ",
+            "|ō    |θ",
+            "|%  X-||",
+            "|JJJXs^|",
+            "||||||||",
+        },
+        palettes = { "lab_mutagen_palette", "lab_vent_palette" },
+        terrain = { ["|"] = "t_wall_metal" },
+        furniture = { ["%"] = "f_standing_tank", ["!"] = "f_standing_tank", ["ō"] = "f_standing_tank" },
+        rotation = { 0, 3 },
+        liquid_glyphs = {
+            ["%"] = { id = "purifier", amount = { 2, 20 } },
+            ["!"] = { id = "mutagen_bird", amount = { 2, 20 } },
+            ["ō"] = { id = "mutagen_lizard", amount = { 2, 20 } },
+        },
+        loot_placements = {
+            { group = "tools_mutation", x = { 1, 3 }, y = 1, chance = 70 },
+            { id = "recipe_raptor", x = { 1, 3 }, y = 1, chance = 70 },
+            { id = "iv_mutagen_raptor", x = 5, y = 1, chance = 100 },
+            { id = "iv_mutagen_raptor", x = 5, y = 6, chance = 100 },
+        },
+        computer_glyphs = {
+            ["θ"] = {
+                name = ccb.content.text("PE070 Storage"),
+                security = 3,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks", "shutdown" },
+            },
+        },
+    },
+}
+
+-- A nested map for mutagen research areas.  Rats for cages.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_alpha_rat_1x1",
+    layout = {
+        size = { width = 1, height = 1 },
+        rotation = { 0, 3 },
+        liquid_placements = {
+            { id = "iv_mutagen_alpha", x = 0, y = 0, one_in = 50 },
+            { id = "blood", x = 0, y = 0, one_in = 50 },
+        },
+        monster_placements = { { id = "mon_zap_rat", x = 0, y = 0, chance = 50 } },
+    },
+}
+
+-- A nested map for mutagen research areas.  Rats for cages.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_alpha_rat_1x1",
+    layout = {
+        size = { width = 1, height = 1 },
+        rotation = { 0, 3 },
+        liquid_placements = {
+            { id = "iv_mutagen_alpha", x = 0, y = 0, one_in = 50 },
+            { id = "blood", x = 0, y = 0, one_in = 50 },
+        },
+        monster_placements = { { id = "mon_tunnel_rat", x = 0, y = 0, chance = 50 } },
+    },
+}
+
+-- A nested map for mutagen lab variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "mmm",
+            "   ",
+            "www",
+        },
+        palettes = { "lab_common_palette" },
+        item_groups = {
+            m = { { group = "lab_mutagen_ingredients_fridge", chance = 30 } },
+            w = { { group = "lab_mutagen_ingredients", chance = 30 } },
+        },
+    },
+}
+
+-- A nested map for mutagen lab variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "rrP",
+            " h ",
+            "TNN",
+        },
+        palettes = { "lab_mutagen_palette" },
+    },
+}
+
+-- A nested map for mutagen lab variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "yPP",
+            " h ",
+            "TNN",
+        },
+        palettes = { "lab_mutagen_palette" },
+    },
+}
+
+-- A nested map for mutagen lab variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "mmm",
+            " ^ ",
+            "mmm",
+        },
+        palettes = { "lab_common_palette", "lab_vent_palette" },
+        loot_placements = {
+            { id = "meat", x = { 0, 2 }, y = 0, chance = 70, repetitions = { 1, 3 } },
+            { id = "tallow", x = { 0, 5 }, y = 0, chance = 70, repetitions = { 1, 3 } },
+            { id = "meat_tainted", x = { 0, 2 }, y = 2, chance = 70, repetitions = { 1, 3 } },
+            { id = "tallow_tainted", x = { 0, 5 }, y = 2, chance = 70, repetitions = { 1, 3 } },
+        },
+    },
+}
+
+-- Pet food closet.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "qqq",
+            "   ",
+            "qqq",
+        },
+        palettes = { "lab_common_palette" },
+        loot_placements = {
+            { group = "petstore_shelves", x = { 0, 2 }, y = 0, chance = 70, repetitions = { 1, 3 } },
+            { group = "petstore_misc", x = { 0, 2 }, y = 0, chance = 70, repetitions = { 1, 3 } },
+            { id = "cattlefodder", x = { 0, 2 }, y = 2, chance = 70, repetitions = { 1, 3 } },
+            { id = "straw_pile", x = { 0, 2 }, y = 2, chance = 70, repetitions = { 1, 3 } },
+        },
+    },
+}
+
+-- A nested map for mutagen research area variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "mmm",
+            " ^ ",
+            "mmm",
+        },
+        palettes = { "lab_common_palette", "lab_vent_palette" },
+        loot_placements = {
+            { id = "meat", x = { 0, 2 }, y = 0, chance = 70, repetitions = { 1, 3 } },
+            { id = "meat_tainted", x = { 0, 2 }, y = 2, chance = 70, repetitions = { 1, 3 } },
+        },
+    },
+}
+
+-- A nested map for walls variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "   ",
+            " % ",
+            "   ",
+        },
+        furniture = { ["%"] = "f_standing_tank" },
+        liquid_glyphs = { ["%"] = { id = "water_clean", amount = { 2, 100 } } },
+    },
+}
+
+-- A nested map for walls variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "   ",
+            " % ",
+            "   ",
+        },
+        furniture = { ["%"] = "f_standing_tank" },
+        liquid_glyphs = { ["%"] = { id = "bleach", amount = { 2, 100 } } },
+    },
+}
+
+-- A nested map for walls variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    weight = 30,
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "   ",
+            " % ",
+            "   ",
+        },
+        furniture = { ["%"] = "f_standing_tank" },
+        liquid_glyphs = { ["%"] = { id = "mutagen", amount = { 2, 20 } } },
+    },
+}
+
+-- A nested map for walls variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    weight = 30,
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "   ",
+            " % ",
+            "   ",
+        },
+        furniture = { ["%"] = "f_standing_tank" },
+        liquid_glyphs = { ["%"] = { id = "purifier", amount = { 2, 20 } } },
+    },
+}
+
+-- A nested map for walls variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "JJJ",
+            " A ",
+            "JJJ",
+        },
+        palettes = { "lab_mutagen_palette" },
+    },
+}
+
+-- A nested map for walls variety.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_3x3_EW_open",
+    layout = {
+        size = { width = 3, height = 3 },
+        rows = {
+            "RRR",
+            "   ",
+            "RRR",
+        },
+        palettes = { "lab_mutagen_palette" },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on east wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "JJ 5e|   ",
+            " Ac  X   ",
+            "a cA X   ",
+            "q    |   ",
+            "qQQQ -   ",
+            "q    |   ",
+            "a cA X   ",
+            " Ac  X   ",
+            "JJ 6e|   ",
+        },
+        palettes = { "lab_common_palette" },
+        item_groups = {
+            a = {
+                { group = "lab_mutagen_ingredients_fridge", chance = 50 },
+                { group = "virology_lab_fridge", chance = 50 },
+            },
+            c = { { group = "mut_lab", chance = 30 } },
+            J = { { group = "mut_lab", chance = 30 } },
+            Q = { { group = "lab_glassware", chance = 30 } },
+            q = { { group = "lab_mutagen_ingredients", chance = 40 } },
+        },
+        computer_glyphs = {
+            ["5"] = {
+                name = ccb.content.text("Mutations Terminal"),
+                menu = {
+                    {
+                        label = ccb.content.text("List mutation categories"),
+                        action = "list_mutations",
+                    },
+                },
+                failures = { "alarm" },
+            },
+            ["6"] = {},
+        },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on west wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_W",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "   |JJ 5e",
+            "   X Ac  ",
+            "   X  cAa",
+            "   |    q",
+            "   - QQQq",
+            "   |    q",
+            "   X Ac a",
+            "   X  cA ",
+            "   |e6 JJ",
+        },
+        palettes = { "lab_common_palette" },
+        item_groups = {
+            a = {
+                { group = "lab_mutagen_ingredients_fridge", chance = 50 },
+                { group = "virology_lab_fridge", chance = 50 },
+            },
+            c = { { group = "mut_lab", chance = 30 } },
+            J = { { group = "mut_lab", chance = 30 } },
+            Q = { { group = "lab_glassware", chance = 30 } },
+            q = { { group = "lab_mutagen_ingredients", chance = 40 } },
+        },
+        computer_glyphs = {
+            ["5"] = {
+                name = ccb.content.text("Mutations Terminal"),
+                menu = {
+                    {
+                        label = ccb.content.text("List mutation categories"),
+                        action = "list_mutations",
+                    },
+                },
+                failures = { "alarm" },
+            },
+            ["6"] = {},
+        },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on east wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            " 71  |   ",
+            "  b  +   ",
+            "     |   ",
+            "|XXX||   ",
+            "JZJJY|   ",
+            " A   -   ",
+            "   5 X   ",
+            "₸ h  X   ",
+            "₸ IIy|   ",
+        },
+        palettes = { "lab_mutagen_palette" },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on west wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_W",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "   |  27 ",
+            "   +  b  ",
+            "   |   o ",
+            "   ||XXX|",
+            "   |YJJJJ",
+            "   -  A  ",
+            "   X     ",
+            "   X   h₸",
+            "   |y II₸",
+        },
+        palettes = { "lab_mutagen_palette" },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on east wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "s@p@s|   ",
+            "o@p@ |   ",
+            "  p A|   ",
+            "ppppp|   ",
+            "     -   ",
+            "V 3o |   ",
+            "VAc  X   ",
+            "J c JX   ",
+            "JY 7J|   ",
+        },
+        palettes = { "lab_mutagen_palette" },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on west wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_W",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "   |s@p@s",
+            "   |o@p@ ",
+            "   |A p A",
+            "   |ppppp",
+            "   -     ",
+            "   |o 3 V",
+            "   X  cAV",
+            "   XJ c J",
+            "   |J7 YJ",
+        },
+        palettes = { "lab_mutagen_palette" },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on east wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_E",
+    weight = 50,
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            " @  t|6  ",
+            " @ |||66 ",
+            "    S|6  ",
+            "¢¢ȣ¢¢| 6 ",
+            "o    -   ",
+            "     |   ",
+            " III X   ",
+            "P h JX   ",
+            "LY  J|   ",
+        },
+        palettes = { "lab_mutagen_palette" },
+        furniture = { ["6"] = "f_rubble" },
+        monster_placements = { { id = "mon_zombie_brute", x = 2, y = 2, chance = 100 } },
+        tile_edits = { { shape = "point", operation = "bash", x = 5, y = { 0, 3 }, repetitions = { 1, 2 } } },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on east wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            " @  t|   ",
+            " @ |||   ",
+            "    S|   ",
+            "¢¢ȣ¢¢|   ",
+            "o    -   ",
+            "     |   ",
+            " III X   ",
+            "P h JX   ",
+            "LY  J|   ",
+        },
+        palettes = { "lab_mutagen_palette" },
+        monster_placements = { { id = "mon_zombie_brute", x = 2, y = 2, chance = 40 } },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on West wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_W",
+    weight = 50,
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "  6|t  @ ",
+            " 66||| @ ",
+            "  6|S    ",
+            "6  |¢¢ȣ¢¢",
+            "   -   o ",
+            "   |     ",
+            "   X III ",
+            "   XJ  h ",
+            "   |JP YL",
+        },
+        palettes = { "lab_mutagen_palette" },
+        furniture = { ["6"] = "f_rubble" },
+        monster_placements = { { id = "mon_zombie_brute", x = 2, y = 2, chance = 100 } },
+        tile_edits = {
+            {
+                shape = "point",
+                operation = "terrain",
+                id = "t_ov_smreb_cage",
+                x = 3,
+                y = { 0, 3 },
+                repetitions = { 1, 2 },
+            },
+        },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on West wall.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_W",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "   |t  @ ",
+            "   ||| @ ",
+            "   |S    ",
+            "   |¢¢ȣ¢¢",
+            "   -   o ",
+            "   |     ",
+            "   X III ",
+            "   XJ  h ",
+            "   |JP YL",
+        },
+        palettes = { "lab_mutagen_palette" },
+        monster_placements = { { id = "mon_zombie_brute", x = 2, y = 2, chance = 40 } },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on east wall.  This is a small library with a better chance for mutation recipes.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_E",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "RR RR|   ",
+            "R    X   ",
+            "REI  X   ",
+            "R IE |   ",
+            "E    -   ",
+            "REI  |   ",
+            "R IE X   ",
+            "R    X   ",
+            "RR RR|   ",
+        },
+        palettes = { "lab_mutagen_palette" },
+        item_groups = { R = { { group = "lab_bookshelves", chance = 70, repetitions = { 1, 3 } } } },
+    },
+}
+
+-- A nested map for a 5x9 room, includes door on west wall.  This is a small library with a better chance for mutation recipes.
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "lab_mutagen_9x9_W",
+    layout = {
+        size = { width = 9, height = 9 },
+        rows = {
+            "   |RR RR",
+            "   X E  R",
+            "   X II R",
+            "   |  E R",
+            "   -    E",
+            "   | E  R",
+            "   X II R",
+            "   X  E R",
+            "   |RR RR",
+        },
+        palettes = { "lab_mutagen_palette" },
+        item_groups = { R = { { group = "lab_bookshelves", chance = 70, repetitions = { 1, 3 } } } },
+    },
+}

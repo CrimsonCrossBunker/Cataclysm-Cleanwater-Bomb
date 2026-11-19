@@ -357,3 +357,181 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lab_security_z0",
+    layout = {
+        rows = {
+            "|||+||+|||||||||||||ƶ==|",
+            "|34.|P.P..+..h.|;;;;;;;;",
+            "X...|....h|I6II:;;;;;;è;",
+            "XH..:J..II|::::|;;|#||||",
+            "XH..:Jh...=;;;;;;;|;|PPT",
+            "-...:J..II|;è;;;;ɜ|;:.h.",
+            "XH..|Y..h.|;;;|||||;:.rr",
+            "XH..||:||||;;;|;;;|è|h.h",
+            "XH..=..ɛ|.|;;;|;è;+;||+|",
+            "|y..¥...|.|;è;|;;;|;;;;;",
+            "|||||..||||;;;|||||||;;;",
+            "|>ë.:..122|;;;+;Z|>;ƶ;;i",
+            "|...#..-22|;;;|WW|>;=;èi",
+            "|||||..||||;;;|||||||;;;",
+            "|y..¥...|.|;è;|;;;|;;;;;",
+            "XH..=..ɛ|.|;;;|;è;+;||+|",
+            "XH..||:||||;;;|;;;|è|h.h",
+            "XH..|Y...h|;;;|||||;:.rr",
+            "-...:J..II|;è;;;;ɜ|;:.h.",
+            "XH..:Jh...=;;;;;;;|;|yPP",
+            "XH..:J..II|::::|;;|#||||",
+            "X...|...h.|I6II:;;;;;;è;",
+            "|34.|P.P..+..h.|;;;;;;;;",
+            "|||+||+|||||||||||||ƶ==|",
+        },
+        palettes = { "lab_common_palette", "lab_security_palette" },
+        terrain = {
+            ["ɜ"] = "t_thconc_floor",
+            ["¥"] = "t_card_science_visitor",
+            ["ƶ"] = "t_card_science_security_yellow",
+            i = "t_thconc_floor",
+        },
+        fill_terrain = "t_linoleum_white",
+        nested = {
+            {
+                choices = {
+                    { id = "lab_security_3x3_EW", weight = 50 },
+                    { id = "lab_generic_3x3_EW_open", weight = 50 },
+                },
+                x = 15,
+                y = 7,
+            },
+            {
+                choices = {
+                    { id = "lab_security_3x3_EW", weight = 50 },
+                    { id = "lab_generic_3x3_EW_open", weight = 50 },
+                },
+                x = 15,
+                y = 14,
+            },
+        },
+        loot_placements = {
+            { id = "id_science_security_yellow", x = 13, y = 21, chance = 10 },
+            { id = "id_science_security_yellow", x = 13, y = 2, chance = 10 },
+            { id = "id_science_security_yellow", x = 22, y = 4, chance = 100 },
+            { id = "id_science_maintenance_green", x = 16, y = 12, chance = 100 },
+        },
+        monster_group_placements = { { group = "GROUP_LAB_BASIC_SECURITY", x = { 19, 23 }, y = { 5, 18 }, density = 0.2 } },
+        monster_placements = {
+            { id = "mon_flashbang_hack", x = 9, y = 8, chance = 100 },
+            { id = "mon_gasbomb_hack", x = 9, y = 9, chance = 100 },
+            { id = "mon_skitterbot", x = 9, y = 14, chance = 100 },
+            { id = "mon_grenade_hack", x = 9, y = 15, chance = 100 },
+        },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Security Public Relations Zone"),
+                security = 5,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 5,
+                    },
+                },
+                failures = { "damage", "manhacks" },
+            },
+        },
+    },
+}
+
+-- variant for a 6 floor lab (removed stairs down)
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "lab_security_z-6_final_flr",
+    layout = {
+        rows = {
+            "||||||||||||||||||||||||",
+            "|@@∞|,|∞@@|`````|```î```",
+            "|r,,+,+,hr|`````#```````",
+            "|rh,|,|,,r|``|##||||||||",
+            "|||||ê|||||``|`<||||||||",
+            "|@@∞|,|∞@@|``|||||QQQQ||",
+            "|r,,+,+,hr|``|||||,,,Q||",
+            "|rh,|,|,,r|``||||||¥=|||",
+            "|||||,|||||``||qqqq,,q||",
+            "|9,S|ê,,,,|``||,,,,,,q||",
+            "|9,,|,hfh,#``=,,ê≠≠≠≠≠||",
+            "|||+|,hfh,#``=,,,≠≠≠≠≠||",
+            "|t+,#,hfh,|`6||,,,,ɜ,q||",
+            "|||,|,hfh,|``||qqqq,,q||",
+            "|t+,|ê,,,,|``||||||¥=|||",
+            "|||||,|||||``||,$,êA,N||",
+            "|@@∞|,|∞@@|``||,$,NNYN||",
+            "|r,,+,+,,r|``|||||||$|||",
+            "|rh,|,|,hr|``|||||,,,V||",
+            "|||||ê|||||``|`<||||||||",
+            "|@@∞|,|∞@@|``|##||||||||",
+            "|r,,+,+,,r|`````#```````",
+            "|rh,|,|,hr|`````|```î```",
+            "||||||||||||||||||||||||",
+        },
+        palettes = { "lab_common_palette", "lab_security_palette" },
+        terrain = { ["¥"] = "t_card_science_security_black", ["ƶ"] = "t_card_science_security_magenta" },
+        fill_terrain = "t_linoleum_gray",
+        nested = { { id = "power_armor_roulette", x = 18, y = 18 } },
+        furniture_placements = { { id = "f_mannequin", x = 18, y = 18 } },
+        monster_group_placements = {
+            {
+                group = "GROUP_LAB_MILITARY",
+                x = { 1, 12 },
+                y = { 1, 22 },
+                chance = 100,
+                repetitions = { 3, 8 },
+            },
+            {
+                group = "GROUP_LAB_MILITARY",
+                x = { 16, 20 },
+                y = { 8, 12 },
+                chance = 100,
+                repetitions = { 1, 3 },
+            },
+        },
+        loot_placements = { { id = "huge_atomic_battery_cell", x = 21, y = { 15, 16 }, chance = 85 } },
+        monster_placements = {
+            {
+                choices = { "mon_mech_recon", "mon_mech_combat" },
+                x = 15,
+                y = { 15, 16 },
+                chance = 85,
+            },
+        },
+        item_groups = {
+            q = { group = "guns_milspec", chance = 40, repetitions = { 1, 2 } },
+            Q = {
+                { group = "SUS_rivtech_loot", chance = 80 },
+                { group = "SUS_electromagnetic_loot", chance = 8 },
+            },
+            V = { group = "UPS_power", chance = 100, repetitions = { 1, 2 } },
+            r = { group = "tools_gunsmith", chance = 10 },
+            N = { { group = "tools_gunsmith", chance = 100 }, { group = "mechanics", chance = 50 } },
+            ["≠"] = {
+                { group = "ammo_milspec", chance = 70, repetitions = { 1, 2 } },
+                { group = "mags_milspec", chance = 40, repetitions = { 1, 2 } },
+            },
+        },
+        computer_glyphs = {
+            ["6"] = {
+                name = ccb.content.text("Magazine Entrance"),
+                security = 6,
+                menu = {
+                    {
+                        label = ccb.content.text("UNLOCK ENTRANCE"),
+                        action = "unlock_disarm",
+                        security = 4,
+                    },
+                },
+                failures = { "damage", "shutdown" },
+            },
+        },
+    },
+}
