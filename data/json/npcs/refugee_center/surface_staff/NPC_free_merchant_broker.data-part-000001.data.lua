@@ -1,98 +1,67 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
-ccb.content.define_dialogue_topic { id = "TALK_FREE_MERCHANT_STOCKS", line = ccb.content.text("What can I help you with?") }
-
+-- table of contents - these options will appear in the listed dialogue topics
 ccb.content.define_dialogue_topic {
-    id = "TALK_FREE_MERCHANT_STOCKS_DELIVER",
-    line = ccb.content.text("Excellent.  What've you brought us?"),
-    repeat_replies = {
-        {
-            items = {
-                "jerky", "meat_smoked", "fish_smoked", "dry_meat", "dry_veggy", "dry_fruit",
-                "cooking_oil", "cornmeal", "flour", "fruit_wine", "beer", "sugar", "salt", "vinegar",
-            },
-            reply = { text = ccb.content.text("Delivering <topic_item>."), next_topic = "TALK_DELIVER_ASK" },
-        },
+    id = {
+        "TALK_FREE_MERCHANT_STOCKS", "TALK_FREE_MERCHANT_STOCKS_NEW", "TALK_FREE_MERCHANT_STOCKS_ALL",
+        "TALK_FREE_MERCHANT_STOCKS_BACKGROUND", "TALK_FREE_MERCHANT_STOCKS_FMCN",
+        "TALK_FREE_MERCHANT_STOCKS_REFUGEES", "TALK_FREE_MERCHANT_STOCKS_BEGGARS",
+        "TALK_FREE_MERCHANT_STOCKS_SEALED1", "TALK_FREE_MERCHANT_STOCKS_SEALED2",
+        "TALK_FREE_MERCHANT_STOCKS_RANCH", "TALK_FREE_MERCHANT_STOCKS_Boris_Mission_1",
     },
     replies = {
         {
-            text = ccb.content.text("That's all for now.  <done_conversation_section>"),
-            next_topic = "TALK_NONE",
+            text = ccb.content.text("I'm here to deliver some food supplies."),
+            next_topic = "TALK_FREE_MERCHANT_STOCKS_DELIVER",
         },
         {
-            text = ccb.content.text("That's all for now.  <end_talking_leave>"),
+            text = ccb.content.text("I'm trying to put a cleanup crew together to tidy up the back room.  Can you offer any help?"),
+            when = predicates.all({ predicates.has_mission("MISSION_REFUGEE_Boris_CLEANUP"), predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "mission_Boris_mission_1_cleanup_asked" } })) }),
+            next_topic = "TALK_FREE_MERCHANT_STOCKS_Boris_Mission_1",
+        },
+        {
+            text = ccb.content.text("Are you able to buy some canning supplies?"),
+            next_topic = "TALK_FREE_MERCHANT_STOCKS_JARS",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "mission_flag_FMBroker_Mission1" } }),
+        },
+        {
+            text = ccb.content.text("I was told you had work for me?"),
+            next_topic = "TALK_MISSION_LIST",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "mission_flag_FMShopkeep_Mission5" } }),
+        },
+        { text = ccb.content.text("Who are you?"), next_topic = "TALK_FREE_MERCHANT_STOCKS_NEW" },
+        {
+            text = ccb.content.text("What's the deal with this written-on paper money you guys use?"),
+            next_topic = "TALK_FREE_MERCHANT_STOCKS_FMCN",
+        },
+        {
+            text = ccb.content.text("The refugees stuck up here seem a bit disgruntled."),
+            next_topic = "TALK_FREE_MERCHANT_STOCKS_REFUGEES",
+        },
+        {
+            text = ccb.content.text("Do you know about those beggars in the lobby?"),
+            next_topic = "TALK_FREE_MERCHANT_STOCKS_BEGGARS",
+        },
+        {
+            text = ccb.content.text("What's the deal with the closed-off areas of the building?"),
+            next_topic = "TALK_FREE_MERCHANT_STOCKS_SEALED1",
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "mission_flag_FMShopkeep_Mission1" } })),
+        },
+        {
+            text = ccb.content.text("What are you going to do with that back bay area now that I've cleaned it out for you?"),
+            next_topic = "TALK_FREE_MERCHANT_STOCKS_SEALED2",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "mission_flag_FMShopkeep_Mission1" } }),
+        },
+        {
+            text = ccb.content.text("Tell me more about that ranch of yours."),
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "knowledge_flag_tacoma_started" } }),
+            next_topic = "TALK_FREE_MERCHANT_STOCKS_RANCH",
+        },
+        { text = ccb.content.text("What were you saying before that?"), next_topic = "TALK_NONE" },
+        {
+            text = ccb.content.text("<end_talking_leave>  <end_talking_bye>"),
             next_topic = "TALK_DONE",
         },
     },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_FREE_MERCHANT_STOCKS_JARS",
-    line = ccb.content.text("Yes, I can buy 500 mL or 3 L glass jars at the moment."),
-    repeat_replies = {
-        {
-            items = { "jar_glass_sealed", "jar_3l_glass_sealed" },
-            reply = { text = ccb.content.text("Delivering <topic_item>."), next_topic = "TALK_DELIVER_ASK" },
-        },
-    },
-    replies = {
-        {
-            text = ccb.content.text("That's all for now.  <done_conversation_section>"),
-            next_topic = "TALK_NONE",
-        },
-        {
-            text = ccb.content.text("That's all for now.  <end_talking_leave>"),
-            next_topic = "TALK_DONE",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_FREE_MERCHANT_STOCKS_NEW",
-    line = ccb.content.gendered_line("I oversee the food stocks for the center.  There was significant looting during the panic when we first arrived so most of our food was carried away.  I manage what we have left and do everything I can to increase our supplies.  We've got a few growing sources of fresh meats and vegetables, so I prioritize non-perishable food, such as cornmeal, jerky, and fruit wine.", { "interlocutor" }),
-    replies = {
-        {
-            text = ccb.content.text("Why cornmeal, jerky, and fruit wine?"),
-            next_topic = "TALK_FREE_MERCHANT_STOCKS_WHY",
-        },
-        {
-            text = ccb.content.text("Okay, but I meant \"who are you\", like, \"what's your story?\""),
-            next_topic = "TALK_FREE_MERCHANT_STOCKS_BACKGROUND",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_FREE_MERCHANT_STOCKS_WHY",
-    line = ccb.content.text("All three are easy to locally produce in significant quantities and are non-perishable.  We have a local farmer or two and a few hunter types that have been making attempts to provide us with the nutritious supplies.  We do always need more suppliers though.  This stuff is rather cheap in bulk, so I can pay a premium for any you have on you.  Canned food and other edibles are handled by the merchant in the front in trade."),
-    replies = {
-        {
-            text = ccb.content.text("Are you looking to buy anything else?"),
-            next_topic = "TALK_FREE_MERCHANT_STOCKS_ALL",
-        },
-        {
-            text = ccb.content.text("Very well… let's talk about something else."),
-            next_topic = "TALK_FREE_MERCHANT_STOCKS",
-        },
-    },
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_FREE_MERCHANT_STOCKS_BACKGROUND",
-    line = ccb.content.text("I'm sorry, but I'm not here to make friends, I've got a job to do."),
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_FREE_MERCHANT_STOCKS_ALL",
-    line = ccb.content.text("I'm actually accepting a number of different foodstuffs: beer, sugar, flour, smoked meat, smoked fish, dried fruit and vegetables, cooking oil, preservatives like salt and vinegar; and as mentioned before, jerky, cornmeal, and fruit wine."),
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_FREE_MERCHANT_STOCKS_FMCN",
-    line = ccb.content.text("We call them \"Free Merchant Certified Notes\".  We started signing money almost as soon as we got here as a way of showing it represented actual goods and services we had to trade.  Within a few days we'd organized the system, and now it's been evolving into a form of cash.  Internally they're traded for labor and services in exchange for food rations and other trade goods, but we've been using them with suppliers we regularly trade with as well, those that have faith in us."),
-}
-
-ccb.content.define_dialogue_topic {
-    id = "TALK_FREE_MERCHANT_STOCKS_REFUGEES",
-    line = ccb.content.text("Yeah, it's a tough situation.  When we started out here nobody was really in charge, and we let more in than we really had capacity to feed and support.  When the dust settled and we'd established a little order, there were still all these people upstairs waiting for a place to live, and no space.  We've set up a little space for them, but it's not ideal."),
 }

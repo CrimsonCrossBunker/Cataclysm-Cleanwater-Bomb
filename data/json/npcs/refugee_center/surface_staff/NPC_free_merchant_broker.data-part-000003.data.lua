@@ -1,12 +1,11 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_FREE_MERCHANT_STOCKS_SEALED1",
-    line = ccb.content.gendered_line("Well, there's the downstairs section, we can't fit more people down there so it's out of bounds.  Then there's the second bay that we were using as a staging area at first.  Things went… wrong.  I hear the shopkeeper is offering a reward to clear it out, if you're feeling suicidal.", { "interlocutor" }),
-    replies = {
-        {
-            text = ccb.content.text("What went wrong with your staging area?"),
-            next_topic = "TALK_FREE_MERCHANT_STOCKS_SEALED1wrong",
-        },
+    id = "TALK_FREE_MERCHANT_STOCKS_BEGGARS",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "general_recruit_beggars_recruited" } }),
+        yes = ccb.content.text("I do.  I don't know what you did to convince them to move out, but our supply chain and I both thank you.  I hope it wasn't too unseemly."),
+        no = ccb.content.text("Even once we got things sorted out, there weren't enough beds for everyone, and definitely not enough supplies.  These are harsh times.  We're doing what we can for those folks… at least they've got shelter."),
     },
 }
