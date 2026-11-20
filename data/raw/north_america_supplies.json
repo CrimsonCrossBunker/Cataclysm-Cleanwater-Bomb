@@ -14,10 +14,41 @@
     "commercial_canned_meals",
     "commercial_sauces_dressings",
     "commercial_bread_specialty",
+    "baked_goods",
+    "commercial_deli",
     "coats_unisex"
   ],
+  "regional_dishes": {
+    "baked_goods": {
+      "regional_nanaimo_bar": [ "CA-BC" ],
+      "regional_blueberry_grunt": [ "CA-NS", "CA-NB", "CA-PE", "CA-NL" ],
+      "regional_upper_peninsula_pasty": [ "US-MI" ]
+    },
+    "commercial_deli": {
+      "regional_tourtiere": [ "CA-QC" ],
+      "regional_cochinita_pibil": [ "MX-YUC", "MX-CAM", "MX-ROO" ],
+      "regional_birria": [ "MX-JAL", "MX-NAY", "MX-COL" ],
+      "regional_chicken_mole_poblano": [ "MX-PUE" ],
+      "regional_green_chile_stew": [ "US-NM" ],
+      "regional_louisiana_gumbo": [ "US-LA" ]
+    },
+    "dry_goods": {
+      "regional_sonoran_machaca": [ "MX-SON", "MX-CHH" ]
+    }
+  },
   "atlas_map_groups": [
     "roadmap_stock"
+  ],
+  "service_apparel_groups": [
+    "clothing_military",
+    "clothing_military_distribution",
+    "clothing_military_winter",
+    "clothing_navy",
+    "military_ballistic_vest",
+    "military_ballistic_vest_pristine",
+    "swat_ballistic_vest",
+    "swat_ballistic_vest_pristine",
+    "cop_armor"
   ],
   "service_groups": [
     "police_armory_any_pistol",
@@ -191,23 +222,23 @@
       "police_pistols": [ "police_armory_glock_17", "police_armory_glock_19" ],
       "police_longarms": [ "police_armory_patrolrifle_stanag", "police_armory_mp5" ],
       "police_field_sidearm": [ "glock_17", "glock17_17", "field_glock_17" ],
-      "police_field_rifle": [ "modular_m4_carbine", "stanag30", "field_ar15_223" ],
+      "police_field_rifle": [ "c8a3", "stanag30", "field_ar15_223" ],
       "shotgun": "remington_870",
       "sidearm": [ "m17", "p320mag_17rd_9x19mm", "ammo_can_9mm_any_full" ],
-      "rifle": [ "modular_m16_auto_rifle", "stanag30", "ammo_can_223_any_full" ],
-      "secondary": [ "modular_m4_carbine", "stanag30", "ammo_can_223_any_full" ],
-      "support": [ "m249", "belt223", "ammo_can_223_mg_any_full" ],
-      "medium_support": [ "m240", "belt308", "ammo_can_308_mg_any_full" ],
+      "rifle": [ "c7a2", "stanag30", "ammo_can_223_any_full" ],
+      "secondary": [ "c8a3", "stanag30", "ammo_can_223_any_full" ],
+      "support": [ "c9a2", "belt223", "ammo_can_223_mg_any_full" ],
+      "medium_support": [ "c6a1", "belt308", "ammo_can_308_mg_any_full" ],
       "sniper": [ "steyr_scout", "steyr_scout_mag", "ammo_can_308_any_full" ]
     },
     "MX": {
       "police_pistols": [ "police_armory_m9", "police_armory_glock_17" ],
       "police_longarms": [ "police_armory_mp5", "police_armory_patrolrifle_stanag" ],
       "police_field_sidearm": [ "m9", "m9mag", "field_m9" ],
-      "police_field_rifle": [ "bren2_556", "stanag30", "field_ar15_223" ],
+      "police_field_rifle": [ "fx05_patrol", "stanag30", "field_ar15_223" ],
       "shotgun": "mossberg_590",
       "sidearm": [ "m9", "m9mag", "ammo_can_9mm_any_full" ],
-      "rifle": [ "bren2_556", "stanag30", "ammo_can_223_any_full" ],
+      "rifle": [ "fx05", "stanag30", "ammo_can_223_any_full" ],
       "secondary": [ "hk_g3", "g3mag", "ammo_can_308_any_full" ],
       "support": [ "m240", "belt308", "ammo_can_308_mg_any_full" ],
       "sniper": [ "steyr_scout", "steyr_scout_mag", "ammo_can_308_any_full" ]

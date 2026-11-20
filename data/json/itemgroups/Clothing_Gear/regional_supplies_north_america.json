@@ -1049,5 +1049,365 @@
       { "item": "coat_winter", "prob": 25 },
       { "item": "coat_fur", "prob": 25 }
     ]
+  },
+  {
+    "id": "clothing_military-CA",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [
+      { "group": "clothing_soldier_shirt" },
+      {
+        "distribution": [ { "item": "regional_ca_blouse", "prob": 50 }, { "item": "regional_ca_shirt", "prob": 50 } ]
+      },
+      { "item": "regional_ca_trousers" },
+      { "group": "loaded_webbing_belt" },
+      { "distribution": [ { "item": "socks", "prob": 95 }, { "item": "socks_wool", "prob": 5 } ] },
+      { "item": "boots_combat" },
+      {
+        "distribution": [
+          { "collection": [ { "item": "sports_bra" }, { "item": "boy_shorts" } ] },
+          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "clothing_military_distribution-CA",
+    "type": "item_group",
+    "subtype": "distribution",
+    "items": [
+      { "group": "clothing_soldier_shirt" },
+      {
+        "distribution": [ { "item": "regional_ca_blouse", "prob": 50 }, { "item": "regional_ca_shirt", "prob": 50 } ]
+      },
+      { "item": "regional_ca_trousers" },
+      { "group": "loaded_webbing_belt" },
+      { "distribution": [ { "item": "socks", "prob": 95 }, { "item": "socks_wool", "prob": 5 } ] },
+      { "item": "boots_combat" },
+      {
+        "distribution": [
+          { "collection": [ { "item": "sports_bra" }, { "item": "boy_shorts" } ] },
+          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "clothing_military_winter-CA",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [
+      { "group": "clothing_soldier_shirt" },
+      { "item": "regional_ca_winter_coat" },
+      { "item": "regional_ca_winter_trousers" },
+      { "group": "loaded_webbing_belt" },
+      { "distribution": [ { "item": "socks", "prob": 10 }, { "item": "socks_wool", "prob": 90 } ] },
+      { "item": "boots_combat" },
+      {
+        "collection": [
+          {
+            "distribution": [ { "item": "balclava", "variant": "black", "prob": 90 }, { "item": "balaclava_cut_resistant", "prob": 10 } ]
+          }
+        ],
+        "prob": 25
+      },
+      {
+        "distribution": [
+          { "collection": [ { "item": "sports_bra" }, { "item": "boy_shorts" } ] },
+          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "clothing_navy-CA",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [
+      { "group": "clothing_soldier_shirt" },
+      {
+        "distribution": [ { "item": "regional_ca_blouse", "prob": 50 }, { "item": "regional_ca_shirt", "prob": 50 } ]
+      },
+      { "distribution": [ { "item": "socks", "prob": 30 }, { "item": "nomex_socks", "prob": 70 } ] },
+      {
+        "distribution": [
+          { "collection": [ { "item": "sports_bra" }, { "item": "boy_shorts" } ] },
+          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "military_ballistic_vest-CA",
+    "type": "item_group",
+    "subtype": "distribution",
+    "entries": [
+      {
+        "distribution": [
+          { "item": "regional_ca_plate_carrier", "contents-group": "used_kitted_medium_vest", "prob": 100 },
+          {
+            "collection": [ { "item": "regional_ca_plate_carrier", "contents-group": "some_esapi_plates" }, { "group": "loaded_lbv" } ],
+            "prob": 50
+          }
+        ],
+        "prob": 40
+      },
+      {
+        "collection": [
+          { "item": "level_3_vest", "variant": "national_guard_armor_vest", "contents-group": "some_esapi_front_plates" },
+          { "group": "loaded_lbv" }
+        ],
+        "prob": 50
+      },
+      { "group": "military_ballistic_vest_light", "prob": 10 },
+      { "group": "military_ballistic_vest_heavy", "prob": 5 }
+    ]
+  },
+  {
+    "id": "military_ballistic_vest_pristine-CA",
+    "type": "item_group",
+    "subtype": "collection",
+    "entries": [
+      {
+        "distribution": [
+          { "item": "regional_ca_plate_carrier", "contents-group": "kitted_medium_vest", "prob": 100 },
+          {
+            "collection": [ { "item": "regional_ca_plate_carrier", "contents-group": "pristine_esapi_plates" }, { "group": "loaded_lbv" } ],
+            "prob": 50
+          }
+        ],
+        "prob": 40
+      },
+      {
+        "collection": [
+          { "item": "level_3_vest", "variant": "national_guard_armor_vest", "contents-group": "pristine_esapi_front_plates" },
+          { "group": "loaded_lbv" }
+        ],
+        "prob": 50
+      },
+      { "group": "military_ballistic_vest_light_pristine", "prob": 10 },
+      { "group": "military_ballistic_vest_heavy_pristine", "prob": 5 }
+    ]
+  },
+  {
+    "id": "swat_ballistic_vest-CA",
+    "type": "item_group",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "regional_ca_tactical_carrier", "contents-group": "used_kitted_medium_vest", "prob": 7 },
+      {
+        "collection": [ { "item": "regional_ca_tactical_carrier", "contents-group": "some_esapi_plates" }, { "item": "tacvest" } ],
+        "prob": 2
+      },
+      {
+        "collection": [
+          { "item": "regional_ca_tactical_carrier", "contents-group": "some_esapi_plates" },
+          {
+            "item": "heavy_load_bearing_vest_breacher",
+            "contents-group": "custom_light_lbv",
+            "contents-item": "mossberg_590_shockwave"
+          }
+        ],
+        "prob": 1
+      }
+    ]
+  },
+  {
+    "id": "swat_ballistic_vest_pristine-CA",
+    "type": "item_group",
+    "subtype": "distribution",
+    "entries": [ { "item": "regional_ca_tactical_carrier", "contents-group": "kitted_medium_vest" } ]
+  },
+  {
+    "type": "item_group",
+    "id": "cop_armor-CA",
+    "items": [
+      [ "armor_riot", 65 ],
+      [ "armor_riot_arm", 5 ],
+      [ "armor_riot_leg", 5 ],
+      [ "armor_riot_torso", 10 ],
+      [ "kevlar", 100 ],
+      { "item": "regional_ca_patrol_vest", "contents-group": "some_steel_front_plates", "prob": 75 }
+    ]
+  },
+  {
+    "id": "clothing_military-MX",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [
+      { "group": "clothing_soldier_shirt" },
+      {
+        "distribution": [ { "item": "regional_mx_blouse", "prob": 50 }, { "item": "regional_mx_shirt", "prob": 50 } ]
+      },
+      { "item": "regional_mx_trousers" },
+      { "group": "loaded_webbing_belt" },
+      { "distribution": [ { "item": "socks", "prob": 95 }, { "item": "socks_wool", "prob": 5 } ] },
+      { "item": "boots_combat" },
+      {
+        "distribution": [
+          { "collection": [ { "item": "sports_bra" }, { "item": "boy_shorts" } ] },
+          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "clothing_military_distribution-MX",
+    "type": "item_group",
+    "subtype": "distribution",
+    "items": [
+      { "group": "clothing_soldier_shirt" },
+      {
+        "distribution": [ { "item": "regional_mx_blouse", "prob": 50 }, { "item": "regional_mx_shirt", "prob": 50 } ]
+      },
+      { "item": "regional_mx_trousers" },
+      { "group": "loaded_webbing_belt" },
+      { "distribution": [ { "item": "socks", "prob": 95 }, { "item": "socks_wool", "prob": 5 } ] },
+      { "item": "boots_combat" },
+      {
+        "distribution": [
+          { "collection": [ { "item": "sports_bra" }, { "item": "boy_shorts" } ] },
+          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "clothing_military_winter-MX",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [
+      { "group": "clothing_soldier_shirt" },
+      { "item": "regional_mx_winter_coat" },
+      { "item": "regional_mx_winter_trousers" },
+      { "group": "loaded_webbing_belt" },
+      { "distribution": [ { "item": "socks", "prob": 10 }, { "item": "socks_wool", "prob": 90 } ] },
+      { "item": "boots_combat" },
+      {
+        "collection": [
+          {
+            "distribution": [ { "item": "balclava", "variant": "black", "prob": 90 }, { "item": "balaclava_cut_resistant", "prob": 10 } ]
+          }
+        ],
+        "prob": 25
+      },
+      {
+        "distribution": [
+          { "collection": [ { "item": "sports_bra" }, { "item": "boy_shorts" } ] },
+          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "clothing_navy-MX",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [
+      { "group": "clothing_soldier_shirt" },
+      {
+        "distribution": [ { "item": "regional_mx_blouse", "prob": 50 }, { "item": "regional_mx_shirt", "prob": 50 } ]
+      },
+      { "distribution": [ { "item": "socks", "prob": 30 }, { "item": "nomex_socks", "prob": 70 } ] },
+      {
+        "distribution": [
+          { "collection": [ { "item": "sports_bra" }, { "item": "boy_shorts" } ] },
+          { "distribution": [ { "item": "briefs" }, { "item": "boxer_briefs" }, { "item": "boxer_shorts" } ] }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "military_ballistic_vest-MX",
+    "type": "item_group",
+    "subtype": "distribution",
+    "entries": [
+      {
+        "distribution": [
+          { "item": "regional_mx_plate_carrier", "contents-group": "used_kitted_medium_vest", "prob": 100 },
+          {
+            "collection": [ { "item": "regional_mx_plate_carrier", "contents-group": "some_esapi_plates" }, { "group": "loaded_lbv" } ],
+            "prob": 50
+          }
+        ],
+        "prob": 40
+      },
+      {
+        "collection": [
+          { "item": "level_3_vest", "variant": "national_guard_armor_vest", "contents-group": "some_esapi_front_plates" },
+          { "group": "loaded_lbv" }
+        ],
+        "prob": 50
+      },
+      { "group": "military_ballistic_vest_light", "prob": 10 },
+      { "group": "military_ballistic_vest_heavy", "prob": 5 }
+    ]
+  },
+  {
+    "id": "military_ballistic_vest_pristine-MX",
+    "type": "item_group",
+    "subtype": "collection",
+    "entries": [
+      {
+        "distribution": [
+          { "item": "regional_mx_plate_carrier", "contents-group": "kitted_medium_vest", "prob": 100 },
+          {
+            "collection": [ { "item": "regional_mx_plate_carrier", "contents-group": "pristine_esapi_plates" }, { "group": "loaded_lbv" } ],
+            "prob": 50
+          }
+        ],
+        "prob": 40
+      },
+      {
+        "collection": [
+          { "item": "level_3_vest", "variant": "national_guard_armor_vest", "contents-group": "pristine_esapi_front_plates" },
+          { "group": "loaded_lbv" }
+        ],
+        "prob": 50
+      },
+      { "group": "military_ballistic_vest_light_pristine", "prob": 10 },
+      { "group": "military_ballistic_vest_heavy_pristine", "prob": 5 }
+    ]
+  },
+  {
+    "id": "swat_ballistic_vest-MX",
+    "type": "item_group",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "regional_mx_tactical_carrier", "contents-group": "used_kitted_medium_vest", "prob": 7 },
+      {
+        "collection": [ { "item": "regional_mx_tactical_carrier", "contents-group": "some_esapi_plates" }, { "item": "tacvest" } ],
+        "prob": 2
+      },
+      {
+        "collection": [
+          { "item": "regional_mx_tactical_carrier", "contents-group": "some_esapi_plates" },
+          {
+            "item": "heavy_load_bearing_vest_breacher",
+            "contents-group": "custom_light_lbv",
+            "contents-item": "mossberg_590_shockwave"
+          }
+        ],
+        "prob": 1
+      }
+    ]
+  },
+  {
+    "id": "swat_ballistic_vest_pristine-MX",
+    "type": "item_group",
+    "subtype": "distribution",
+    "entries": [ { "item": "regional_mx_tactical_carrier", "contents-group": "kitted_medium_vest" } ]
+  },
+  {
+    "type": "item_group",
+    "id": "cop_armor-MX",
+    "items": [
+      [ "armor_riot", 65 ],
+      [ "armor_riot_arm", 5 ],
+      [ "armor_riot_leg", 5 ],
+      [ "armor_riot_torso", 10 ],
+      [ "kevlar", 100 ],
+      { "item": "regional_mx_patrol_vest", "contents-group": "some_steel_front_plates", "prob": 75 }
+    ]
   }
 ]

@@ -1476,6 +1476,28 @@ bool overmap::is_far_from_city( const tripoint_om_omt &p ) const
     } );
 }
 
+std::vector<tripoint_om_omt> overmap::place_atlas_start_special( const overmap_special &special,
+        const tripoint_om_omt &site, om_direction::type rotation )
+{
+    const auto footprint = special.required_locations();
+    const auto blocks_placement = [&]( const overmap_special_locations &tile ) {
+        const tripoint_om_omt p = site + om_direction::rotate( tile.p, rotation );
+        if( !inbounds( p, 2 ) || overmap_special_placements.count( p ) ) {
+            return true;
+        }
+        const oter_id &terrain = ter( p );
+        return terrain->is_road() || terrain->is_highway_reserved() ||
+               ( !tile.can_be_placed_on( terrain ) &&
+                 ( p.z() == 0 || terrain != get_default_terrain( p.z() ) ) );
+    };
+    if( !inbounds( site, 2 ) || std::any_of( footprint.begin(), footprint.end(), blocks_placement ) ||
+        special.score_rotation_at( *this, site, rotation ) < 0 ||
+        !can_place_special( special, site, rotation, true ) ) {
+        return {};
+    }
+    return place_special( special, site, rotation, get_nearest_city( site ), true, false );
+}
+
 tripoint_om_omt overmap::place_outskirts_shelter()
 {
     if( !overmap_special_Evac_Shelter.is_valid() ) {

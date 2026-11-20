@@ -984,9 +984,12 @@ bool game::start_game()
             u.world_origin = u.starting_city->pos_om;
         }
         const point_abs_om origin = u.world_origin.value_or( point_abs_om() );
+        const bool atlas_start = north_america::active();
+        const city *selected_city = u.starting_city ? &*u.starting_city : nullptr;
         if( u.start_outskirts ) {
-            std::tie( omtstart, associated_parameters ) =
-                start_loc.find_player_initial_location_on_outskirts( origin );
+            std::tie( omtstart, associated_parameters ) = atlas_start ?
+                    start_loc.find_atlas_start( origin, selected_city, true ) :
+                    start_loc.find_player_initial_location_on_outskirts( origin );
             if( omtstart.is_invalid() ) {
                 if( !query_yn(
                         _( "No valid far-outskirts start was found for %s. Use the regular starting location?" ),
@@ -997,9 +1000,14 @@ bool game::start_game()
             }
         }
         if( !u.start_outskirts ) {
-            std::tie( omtstart, associated_parameters ) = use_legacy_city ?
-                    start_loc.find_player_initial_location( *u.starting_city ) :
-                    start_loc.find_player_initial_location( origin );
+            if( atlas_start ) {
+                std::tie( omtstart, associated_parameters ) =
+                    start_loc.find_atlas_start( origin, selected_city, false );
+            } else {
+                std::tie( omtstart, associated_parameters ) = use_legacy_city ?
+                        start_loc.find_player_initial_location( *u.starting_city ) :
+                        start_loc.find_player_initial_location( origin );
+            }
         }
         if( omtstart.is_invalid() ) {
 
