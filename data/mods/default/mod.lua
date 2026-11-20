@@ -1,0 +1,11 @@
+local ccb = require("ccb")
+
+return ccb.ModDefinition {
+    id = "dev:default",
+    name = ccb.content.text("default"),
+    description = ccb.content.text("contains all the mods recommended by the developers"),
+    -- Not really obsolete! Marked as such to prevent it from showing in the main list
+    obsolete = true,
+    dependencies = { "ccb", "no_npc_food", "personal_portal_storms" },
+    ordered_data_files = true,
+}

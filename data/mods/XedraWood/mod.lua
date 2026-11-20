@@ -1,6 +1,14 @@
 local ccb = require("ccb")
 
 return ccb.ModDefinition {
+    id = "xedra_evolved_innawoods",
+    name = ccb.content.text("XedraWood: Stone and Sorcery"),
+    authors = { "StandingStorm" },
+    maintainers = { "StandingStorm" },
+    description = ccb.content.text("Expands on connection between Xedra Evolved and Innawood, turning it into a full-fledged neolithic sword and sorcery setting."),
+    category = "total_conversion",
+    dependencies = { "ccb", "xedra_evolved", "innawood" },
+    conflicts = { "magiclysm", "generic_guns", "MA" },
     ordered_data_files = true,
     world_options = {
         -- Sets the latitude used for sunrise/sunset times.  Set to Raleigh.

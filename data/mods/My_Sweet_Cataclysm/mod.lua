@@ -1,5 +1,12 @@
 local ccb = require("ccb")
 
 return ccb.ModDefinition {
+    id = "my_sweet_cataclysm",
+    name = ccb.content.text("My Sweet Cataclysm"),
+    authors = { "Fris0uman" },
+    description = ccb.content.text("In the wake of the Cataclysm, sweets and snacks are coming to life.  You could be one of them and walk through the Cataclysm as a human shaped piece of sugar with your pet necco wafer, or you could just hunt them for some sweet treats."),
+    category = "misc_additions",
+    dependencies = { "ccb" },
+    loading_images = { "msc.png" },
     ordered_data_files = true,
 }

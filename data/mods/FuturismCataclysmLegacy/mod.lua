@@ -1,6 +1,14 @@
 local ccb = require("ccb")
 
 return ccb.ModDefinition {
+    id = "catalegacy_future",
+    name = ccb.content.text("Futurism Cataclysm: Legacy"),
+    authors = { "LunaGlaze" },
+    maintainers = { "LunaGlaze" },
+    description = ccb.content.text("Brings back the nostalgic classic Cataclysm lore and deleted near-future elements, packed with even more content and enhancements.  Atomic technology goes commercial, the US and China engage in an arms race over CBM technologies, and AI is fully deployed in police robotics…  Plus, plenty of other ultra-cool, near-future sci-fi gear awaits you!"),
+    category = "content",
+    dependencies = { "ccb" },
+    conflicts = { "aftershock_exoplanet" },
     ordered_data_files = true,
     entry = "lua/main.lua",
 }
