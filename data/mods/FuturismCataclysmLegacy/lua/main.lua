@@ -46,3 +46,4 @@ require("monster_groups")
 
 require("lua.migrations")
 require("lua.damage_types")
+require("lua.bionics")

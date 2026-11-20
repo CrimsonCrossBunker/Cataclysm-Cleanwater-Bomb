@@ -62,3 +62,4 @@ ccb.content.add(ccb.content.EffectType {
     description = "",
     rating = "good",
 })
+require("mod_interactions.xedra_evolved.bionics")

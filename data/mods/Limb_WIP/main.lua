@@ -22,3 +22,4 @@ require("item_group_changes")
 require("effect_types")
 
 require("attack_vectors")
+require("bionics")

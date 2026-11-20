@@ -41,3 +41,4 @@ require("monster_groups")
 
 require("immortal_snail")
 require("map_extras")
+require("bionics")
