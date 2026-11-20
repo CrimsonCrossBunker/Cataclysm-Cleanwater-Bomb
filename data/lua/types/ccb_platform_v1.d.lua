@@ -8896,7 +8896,7 @@ function CcbPlatformContent.Item(options) end
 
 ---@class StaticItemMaterial
 ---@field id string Native material ID.
----@field portions? integer Relative material contribution.
+---@field portions? number Relative material contribution. The native item factory truncates each weight to an integer.
 
 ---@class StaticArmorMaterial
 ---@field id string Native material ID.
@@ -9228,6 +9228,7 @@ function CcbPlatformContent.Item(options) end
 ---@field integral_length? string Installed length with a native unit.
 ---@field snippet_category? string
 ---@field revert_to? string
+---@field transform_into? StaticItemTransformation Countdown transformation.
 ---@field stackable? boolean
 ---@field expand_snippets? boolean
 ---@field sealed_container? boolean
@@ -18998,22 +18999,24 @@ function CcbPlatformContent.set_martial_art_handler(id, phase, handler_id) end
 ---@field id string Native item action ID.
 ---@field ammo_scale integer Native ammunition use multiplier.
 
----@class StaticOrderedTransformAction
----@field kind 'transform'
----@field ammo_scale? integer
+---@class StaticItemTransformation
 ---@field target? string
 ---@field target_group? string
 ---@field variant_kind? string
 ---@field container? string
 ---@field target_ammo? string
----@field target_timer? string
+---@field target_timer? string|integer
 ---@field target_charges? integer
+---@field random_charges? integer[]
+---@field sealed? boolean
+
+---@class StaticOrderedTransformOptions: StaticItemTransformation
+---@field ammo_scale? integer
 ---@field sound_volume? integer
 ---@field moves? integer
 ---@field chance? integer
 ---@field need_fire? integer
 ---@field need_charges? integer
----@field sealed? boolean
 ---@field set_timer? boolean
 ---@field need_worn? boolean
 ---@field need_wielding? boolean
@@ -19024,6 +19027,91 @@ function CcbPlatformContent.set_martial_art_handler(id, phase, handler_id) end
 ---@field damage_failure? string|LocalizedText
 ---@field need_charges_message? string|LocalizedText
 ---@field need_fire_message? string|LocalizedText
+
+---@class StaticOrderedTransformAction: StaticOrderedTransformOptions
+---@field kind "transform"
+
+---@class StaticOrderedRepairAction
+---@field kind "repair_item"
+---@field ammo_scale? integer
+---@field id string
+---@field materials string[]
+---@field cost_scaling number
+---@field skill? string
+---@field tool_quality? integer
+---@field move_cost? integer
+---@field trains_skill_to? integer
+
+---@class StaticOrderedPlaceMonsterAction
+---@field kind "place_monster"
+---@field ammo_scale? integer
+---@field monster string
+---@field skills? string[]
+---@field friendly_message? string|LocalizedText
+---@field hostile_message? string|LocalizedText
+---@field difficulty? integer
+---@field moves? integer
+---@field need_charges? integer
+---@field place_randomly? boolean
+---@field is_pet? boolean
+
+---@class StaticOrderedFirestarterAction
+---@field kind "firestarter"
+---@field ammo_scale? integer
+---@field moves? integer
+---@field slow_moves? integer
+---@field need_sunlight? boolean
+---@field qualities? table<string, integer>
+
+---@class StaticOrderedMusicPlayerAction
+---@field kind "mp3"
+---@field ammo_scale? integer
+---@field target string
+---@field activate boolean
+---@field message string|LocalizedText
+
+---@class StaticOrderedSoundAction
+---@field kind "sound"
+---@field ammo_scale? integer
+---@field menu_text? string|LocalizedText
+---@field message? string|LocalizedText
+---@field volume? integer
+---@field sound_id? string
+---@field sound_variant? string
+---@field sound_type? string
+
+---@class StaticOrderedInscribeAction
+---@field kind "inscribe"
+---@field ammo_scale? integer
+---@field verb? string|LocalizedText
+---@field gerund? string|LocalizedText
+---@field cost? integer
+---@field on_items? boolean
+---@field on_terrain? boolean
+---@field material_restricted? boolean
+---@field materials? string[]
+
+---@class StaticOrderedCableAction
+---@field kind "link_up"
+---@field ammo_scale? integer
+---@field cable_length? integer
+---@field charge_rate? string
+---@field efficiency? number
+---@field move_cost? integer
+---@field menu_text? string|LocalizedText
+---@field targets? string[]
+---@field can_extend? string[]
+
+---@class StaticOrderedEmitAction
+---@field kind "emit_actor"
+---@field ammo_scale? integer
+---@field emissions? string[]
+---@field scale_quantity? boolean
+
+---@class StaticOrderedDelayedTransformAction: StaticOrderedTransformOptions
+---@field kind "delayed_transform"
+---@field age integer Minimum age in turns.
+---@field not_ready_message string|LocalizedText
 
 ---@class StaticOrderedDrugVitamin
 ---@field id string
@@ -19083,7 +19171,7 @@ function CcbPlatformContent.set_martial_art_handler(id, phase, handler_id) end
 ---@field need_wielding? boolean
 ---@field mundane? boolean
 
----@alias StaticOrderedItemAction string|StaticOrderedNamedAction|StaticOrderedTransformAction|StaticOrderedDrugAction|StaticOrderedHolsterAction|StaticOrderedMessageAction|StaticOrderedMolleAttachAction|StaticOrderedMolleDetachAction|StaticOrderedCastSpellAction
+---@alias StaticOrderedItemAction string|StaticOrderedNamedAction|StaticOrderedTransformAction|StaticOrderedDrugAction|StaticOrderedHolsterAction|StaticOrderedMessageAction|StaticOrderedMolleAttachAction|StaticOrderedMolleDetachAction|StaticOrderedCastSpellAction|StaticOrderedDelayedTransformAction|StaticOrderedRepairAction|StaticOrderedPlaceMonsterAction|StaticOrderedFirestarterAction|StaticOrderedMusicPlayerAction|StaticOrderedSoundAction|StaticOrderedInscribeAction|StaticOrderedCableAction|StaticOrderedEmitAction
 
 ---@class StaticOrderedCountedId
 ---@field id string

@@ -1858,7 +1858,7 @@ void write_item_materials( JsonOut &json, const sol::table &values, bool armor )
             write_item_fields<int>( json, material, { { "coverage", "covered_by_mat" } } );
             write_item_fields<bool>( json, material, { { "ignore_sheet_thickness", "ignore_sheet_thickness" } } );
         } else {
-            write_item_fields<int>( json, material, { { "portions", "portion" } } );
+            write_item_fields<double>( json, material, { { "portions", "portion" } } );
         }
         json.end_object();
     }
@@ -2620,19 +2620,42 @@ void write_item_seed( JsonOut &json, const sol::table &seed )
     }
 }
 
-void write_item_transform_action( JsonOut &json, const sol::table &options )
+void write_item_transformation( JsonOut &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "target", "target" }, { "target_group", "target_group" }, { "variant_kind", "variant_type" },
-        { "container", "container" }, { "target_ammo", "target_ammo" }, { "target_timer", "target_timer" }
+        { "container", "container" }, { "target_ammo", "target_ammo" }
     } );
+    write_placement_member<int>( json, options, "target_charges", "target_charges" );
+    write_placement_member<bool>( json, options, "sealed", "sealed" );
+    const sol::object timer = options.raw_get<sol::object>( "target_timer" );
+    if( timer.get_type() == sol::type::number ) {
+        json.member( "target_timer", timer.as<int>() );
+    } else {
+        write_placement_member<std::string>( json, options, "target_timer", "target_timer" );
+    }
+    if( const auto charges = options.get<sol::optional<sol::table>>( "random_charges" ) ) {
+        const std::size_t count = checked_dense_array_size( *charges, "random_charges",
+                                  std::numeric_limits<std::size_t>::max() );
+        json.member( "rand_target_charges" );
+        json.start_array();
+        for( std::size_t i = 1; i <= count; ++i ) {
+            json.write( charges->raw_get<int>( i ) );
+        }
+        json.end_array();
+    }
+}
+
+void write_item_transform_action( JsonOut &json, const sol::table &options )
+{
+    write_item_transformation( json, options );
     write_item_fields<int>( json, options, {
-        { "target_charges", "target_charges" }, { "sound_volume", "sound_volume" },
+        { "sound_volume", "sound_volume" },
         { "moves", "moves" }, { "chance", "chance" }, { "need_fire", "need_fire" },
         { "need_charges", "need_charges" }
     } );
     write_item_fields<bool>( json, options, {
-        { "sealed", "sealed" }, { "set_timer", "set_timer" }, { "need_worn", "need_worn" },
+        { "set_timer", "set_timer" }, { "need_worn", "need_worn" },
         { "need_wielding", "need_wielding" }, { "need_empty", "need_empty" }
     } );
     if( const auto qualities = options.get<sol::optional<sol::table>>( "qualities" ) ) {
@@ -2725,10 +2748,78 @@ void write_item_native_action( JsonOut &json, const sol::object &action )
     json.start_object();
     json.member( "type", kind );
     write_placement_member<int>( json, options, "ammo_scale", "ammo_scale" );
-    if( kind == "transform" ) {
+    if( kind == "transform" || kind == "delayed_transform" ) {
         write_item_transform_action( json, options );
+        if( kind == "delayed_transform" ) {
+            json.member( "transform_age", options.get<int>( "age" ) );
+            write_item_text( json, "not_ready_msg", options.raw_get<sol::object>( "not_ready_message" ), false );
+        }
     } else if( kind == "consume_drug" ) {
         write_item_drug_action( json, options );
+    } else if( kind == "repair_item" ) {
+        write_item_fields<std::string>( json, options, {
+            { "id", "item_action_type" }, { "skill", "skill" }
+        } );
+        write_item_fields<int>( json, options, {
+            { "tool_quality", "tool_quality" }, { "move_cost", "move_cost" },
+            { "trains_skill_to", "trains_skill_to" }
+        } );
+        write_placement_member<double>( json, options, "cost_scaling", "cost_scaling" );
+        write_item_ids( json, options, { { "materials", "materials" } } );
+    } else if( kind == "place_monster" ) {
+        write_placement_member<std::string>( json, options, "monster", "monster_id" );
+        write_item_fields<int>( json, options, {
+            { "difficulty", "difficulty" }, { "moves", "moves" },
+            { "need_charges", "need_charges" }
+        } );
+        write_item_fields<bool>( json, options, {
+            { "place_randomly", "place_randomly" }, { "is_pet", "is_pet" }
+        } );
+        write_item_ids( json, options, { { "skills", "skills" } } );
+        write_item_text( json, "friendly_msg", options.raw_get<sol::object>( "friendly_message" ), false );
+        write_item_text( json, "hostile_msg", options.raw_get<sol::object>( "hostile_message" ), false );
+    } else if( kind == "firestarter" ) {
+        write_item_fields<int>( json, options, {
+            { "moves", "moves" }, { "slow_moves", "moves_slow" }
+        } );
+        write_placement_member<bool>( json, options, "need_sunlight", "need_sunlight" );
+        if( const auto values = options.get<sol::optional<sol::table>>( "qualities" ) ) {
+            write_item_keyed_values<int>( json, "qualities_needed", *values );
+        }
+    } else if( kind == "mp3" ) {
+        write_placement_member<std::string>( json, options, "target", "transform" );
+        write_placement_member<bool>( json, options, "activate", "activate" );
+        write_item_text( json, "message", options.raw_get<sol::object>( "message" ), false );
+    } else if( kind == "sound" ) {
+        write_item_fields<std::string>( json, options, {
+            { "sound_id", "sound_id" }, { "sound_variant", "sound_variant" },
+            { "sound_type", "sound_type" }
+        } );
+        write_placement_member<int>( json, options, "volume", "sound_volume" );
+        write_item_text( json, "name", options.raw_get<sol::object>( "menu_text" ), false );
+        write_item_text( json, "sound_message", options.raw_get<sol::object>( "message" ), false );
+    } else if( kind == "inscribe" ) {
+        write_placement_member<int>( json, options, "cost", "cost" );
+        write_item_fields<bool>( json, options, {
+            { "on_items", "on_items" }, { "on_terrain", "on_terrain" },
+            { "material_restricted", "material_restricted" }
+        } );
+        write_item_ids( json, options, { { "materials", "material_whitelist" } } );
+        write_item_text( json, "verb", options.raw_get<sol::object>( "verb" ), false );
+        write_item_text( json, "gerund", options.raw_get<sol::object>( "gerund" ), false );
+    } else if( kind == "link_up" ) {
+        write_placement_member<std::string>( json, options, "charge_rate", "charge_rate" );
+        write_item_fields<int>( json, options, {
+            { "cable_length", "cable_length" }, { "move_cost", "move_cost" }
+        } );
+        write_placement_member<double>( json, options, "efficiency", "efficiency" );
+        write_item_ids( json, options, {
+            { "targets", "targets" }, { "can_extend", "can_extend" }
+        } );
+        write_item_text( json, "menu_text", options.raw_get<sol::object>( "menu_text" ), false );
+    } else if( kind == "emit_actor" ) {
+        write_placement_member<bool>( json, options, "scale_quantity", "scale_qty" );
+        write_item_ids( json, options, { { "emissions", "emits" } } );
     } else if( kind == "holster" ) {
         write_item_text( json, "holster_prompt", options.raw_get<sol::object>( "prompt" ), false );
         write_item_text( json, "holster_msg", options.raw_get<sol::object>( "message" ), false );
@@ -2935,6 +3026,12 @@ void load_static_item( const sol::table &options, const std::string &source )
     }
     for( const slot_type *slot : slots ) {
         slot->write( json, options.get<sol::table>( slot->field ) );
+    }
+    if( const auto transformation = options.get<sol::optional<sol::table>>( "transform_into" ) ) {
+        json.member( "transform_into" );
+        json.start_object();
+        write_item_transformation( json, *transformation );
+        json.end_object();
     }
     write_item_action_list( json, options, "use_actions", "use_action" );
     write_item_action_list( json, options, "tick_actions", "tick_action" );
