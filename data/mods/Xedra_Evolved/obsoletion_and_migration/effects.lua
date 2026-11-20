@@ -200,3 +200,5 @@ content.add(content.EffectType {
     :modifier("pain", "maximum_value", { base = 15 })
     :modifier("pain", "tick", { base = 120 })
     :limb_score("breathing", { multiplier = 0.95 }))
+
+require("obsoletion_and_migration.save_updates")

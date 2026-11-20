@@ -244,7 +244,9 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 489> migrated_character_tasks = {{
+const std::array<character_task_migration, 490> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_VAMPIRE_TORPOR_RECOVER" ),
+          "recover_old_vampire_torpor", nullptr },
         { effect_on_condition_id( "EOC_PARACLESIAN_ARVORE_GAIN_TRAIT_FROM_PASSIVE_POWER_CHECKER" ),
           "arvore_passive_mutation", "arvore_passive_mutation" },
         { effect_on_condition_id( "EOC_PARACLESIAN_HOMULLUS_GAIN_TRAIT_FROM_PASSIVE_POWER_CHECKER" ),
