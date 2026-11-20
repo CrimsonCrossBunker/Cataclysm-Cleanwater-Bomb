@@ -35,3 +35,7 @@ require("sauropod_control")
 require("sauropod_death")
 
 require("monster_groups")
+
+require("species")
+require("dreams")
+require("mutation_categories")

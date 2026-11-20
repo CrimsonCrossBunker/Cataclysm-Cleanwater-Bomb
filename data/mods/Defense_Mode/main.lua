@@ -13,3 +13,5 @@ require("item_group_changes")
 require("generic_items")
 
 require("monster_groups")
+
+require("species")

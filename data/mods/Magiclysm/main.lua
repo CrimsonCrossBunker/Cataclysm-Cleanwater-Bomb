@@ -153,3 +153,10 @@ require("consumable_effects")
 require("technique_predicates")
 
 require("technique_actions")
+
+require("skills")
+require("species")
+require("dreams")
+require("attack_vectors")
+require("overlay_orders")
+require("mutation_categories")

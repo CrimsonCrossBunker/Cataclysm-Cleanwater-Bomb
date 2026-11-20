@@ -229,3 +229,7 @@ require("monster_groups")
 require("tile_interactions")
 
 require("help_topics")
+
+require("skills")
+require("species")
+require("disease_types")

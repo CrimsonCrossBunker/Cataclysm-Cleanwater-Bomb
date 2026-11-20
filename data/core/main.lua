@@ -181,3 +181,8 @@ ccb.content.add(ccb.content.SubBodyPart {
     name = "Null sub_body_part, if you see this please report it",
     plural_name = "",
 })
+
+ccb.content.add(ccb.content.AttackVector {
+    id = "vector_null",
+    weapon = true,
+})

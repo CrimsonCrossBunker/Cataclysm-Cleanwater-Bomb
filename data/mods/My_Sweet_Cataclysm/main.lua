@@ -15,3 +15,8 @@ require("book_items")
 require("effect_types")
 
 require("monster_groups")
+
+require("species")
+require("mutation_categories")
+require("scent_types")
+require("overlay_orders")

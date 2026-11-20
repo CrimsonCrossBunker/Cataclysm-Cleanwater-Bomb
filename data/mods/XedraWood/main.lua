@@ -108,3 +108,5 @@ require("effect_types")
 require("terrain_transforms")
 
 require("monster_groups")
+
+require("species")

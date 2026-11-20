@@ -1,0 +1,31 @@
+local ccb = require("ccb")
+local content = ccb.content
+
+-- Native global mutation-overlay ordering
+do
+local definition = content.OverlayOrder()
+definition:mutation("SYLPH_EYES", 250)
+definition:mutation("UNDINE_EYES", 250)
+definition:mutation("IERDE_SKIN_1", 1500)
+definition:mutation("IERDE_SKIN_2", 1500)
+definition:mutation("IERDE_SKIN_3", 1500)
+definition:mutation("ARVORE_SKIN_1", 1500)
+definition:mutation("ARVORE_SKIN_2", 1500)
+definition:mutation("ARVORE_SKIN_3", 1500)
+definition:mutation("HOMULLUS_SKIN_1", 1500)
+definition:mutation("HOMULLUS_SKIN_2", 1500)
+definition:mutation("HOMULLUS_SKIN_3", 1500)
+definition:mutation("UNDINE_SKIN_1", 1500)
+definition:mutation("UNDINE_SKIN_2", 1500)
+definition:mutation("UNDINE_SKIN_3", 1500)
+definition:mutation("SALAMANDER_SKIN_1", 1500)
+definition:mutation("SALAMANDER_SKIN_2", 1500)
+definition:mutation("SALAMANDER_SKIN_3", 1500)
+definition:mutation("SYLPH_SKIN_1", 1500)
+definition:mutation("SYLPH_SKIN_2", 1500)
+definition:mutation("SYLPH_SKIN_3", 1500)
+definition:mutation("SHADE_SKIN", 1500)
+definition:mutation("STRIX_SKIN", 1500)
+definition:mutation("VAMPIRE2", 7500)
+content.add(definition)
+end

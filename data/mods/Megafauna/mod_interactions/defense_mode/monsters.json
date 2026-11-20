@@ -1,8 +1,0 @@
-[
-  {
-    "type": "SPECIES",
-    "id": "MEGAFAUNA_DM",
-    "flags": [ "ALL_SEEING", "NEMESIS" ],
-    "bleeds": "fd_blood"
-  }
-]

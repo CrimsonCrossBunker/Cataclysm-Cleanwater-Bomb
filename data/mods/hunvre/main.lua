@@ -44,3 +44,5 @@ require("retractable_furniture")
 require("map_weights")
 
 require("ship_systems")
+
+require("species")

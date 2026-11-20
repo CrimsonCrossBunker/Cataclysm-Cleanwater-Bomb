@@ -262,3 +262,12 @@ require("technique_predicates")
 require("technique_actions")
 
 require("help_topics")
+
+require("skills")
+require("species")
+require("mutation_categories")
+require("connect_groups")
+require("attack_vectors")
+require("scent_types")
+require("disease_types")
+require("overlay_orders")

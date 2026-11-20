@@ -140,3 +140,8 @@ require("map_weights")
 
 require("help_topics")
 require("mood_faces")
+
+require("skills")
+require("species")
+require("dreams")
+require("mutation_categories")
