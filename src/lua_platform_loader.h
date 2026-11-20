@@ -41,6 +41,7 @@ struct mod_definition {
     std::string name;
     std::string version;
     std::string entry = "main.lua";
+    std::string data_path;
     std::vector<std::string> dependencies;
     std::vector<std::string> authors;
     std::string description;

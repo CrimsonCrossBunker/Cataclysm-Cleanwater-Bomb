@@ -2267,6 +2267,7 @@ talk_predicate dialogue_data::actor_state( std::string_view state, bool is_npc )
         { "has_weapon", conditional_fun::f_has_weapon },
         { "outside", conditional_fun::f_is_outside },
         { "is_avatar", conditional_fun::f_is_avatar },
+        { "is_character", conditional_fun::f_is_character },
         { "is_npc", conditional_fun::f_is_npc },
     };
     const auto operation = states.find( state );
@@ -2281,6 +2282,7 @@ talk_predicate dialogue_data::conversation_state( std::string_view state )
     using factory = talk_predicate( * )();
     static const std::map<std::string_view, factory> states = {
         { "daylight", conditional_fun::f_is_day },
+        { "has_speaker", conditional_fun::f_has_alpha },
         { "radio", conditional_fun::f_is_by_radio },
         { "has_reason", conditional_fun::f_has_reason },
         { "mission_offers_generic_rewards", conditional_fun::f_mission_has_generic_rewards },

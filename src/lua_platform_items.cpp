@@ -4072,10 +4072,10 @@ sol::table inventory_wielded_matches(
         "services.inventory.wielded_matches";
     const std::string &kind = criterion.kind();
     if( kind != "json_flag" && kind != "weapon_category" &&
-        kind != "skill" && kind != "ammunition" ) {
+        kind != "skill" && kind != "ammunition" && kind != "material" ) {
         throw std::invalid_argument(
             std::string( api_name ) +
-            " requires GameId<json_flag|weapon_category|skill|ammunition>" );
+            " requires GameId<json_flag|weapon_category|skill|ammunition|material>" );
     }
     if( !criterion.is_valid() ) {
         throw std::invalid_argument(
@@ -4098,6 +4098,8 @@ sol::table inventory_wielded_matches(
         if( kind == "json_flag" ) {
             matches = entry.has_flag(
                           flag_id( criterion.value() ) );
+        } else if( kind == "material" ) {
+            matches = entry.made_of( material_id( criterion.value() ) ) > 0;
         } else if( kind == "weapon_category" ) {
             matches = entry.typeId()->weapon_category.count(
                           weapon_category_id( criterion.value() ) ) > 0;

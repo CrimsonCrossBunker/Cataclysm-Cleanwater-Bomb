@@ -257,7 +257,7 @@ struct mission_type {
         static void finalize_all();
         static void check_consistency();
 
-        bool parse_funcs( const JsonObject &jo, std::string_view src,
+        bool parse_funcs( const JsonObject &jo, std::string_view src, std::string_view phase,
                           std::function<void( mission *, Character & )> &phase_func );
         bool load( const JsonObject &jo, std::string_view src );
 

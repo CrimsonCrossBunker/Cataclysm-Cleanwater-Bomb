@@ -607,7 +607,16 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
         }
     }
 
+    const fs::path data_path = fs::u8path( definition.data_path );
+    if( data_path.has_root_path() || definition.data_path.find( '\0' ) != std::string::npos ) {
+        record_rejection( "Mod data_path must be relative to the Mod directory" );
+        return;
+    }
+
     const auto apply_metadata = [&]( MOD_INFORMATION & mod ) {
+        if( !data_path.empty() ) {
+            mod.path = root / data_path;
+        }
         if( definition.name_set ) {
             mod.name_ = definition.localized_name.value_or( no_translation( definition.name ) );
         }
@@ -731,8 +740,8 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     mod.category = category.value_or( std::make_pair(
                                           static_cast<int>( default_category ),
                                           get_mod_list_categories()[default_category].second ) );
-    apply_metadata( mod );
     mod.path = root;
+    apply_metadata( mod );
     mod.mod_root_path = root;
     mod.lua_platform_entry = std::move( entry );
     mod.lua_load_with_data = definition.load_with_data;

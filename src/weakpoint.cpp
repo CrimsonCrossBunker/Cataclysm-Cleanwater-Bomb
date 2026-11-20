@@ -691,25 +691,31 @@ bool weakpoints_reader::do_delete( const JsonObject &jo, const std::string_view 
 void weakpoints::load( const JsonArray &ja )
 {
     for( const JsonObject jo : ja ) {
-        weakpoint tmp;
-        tmp.load( jo );
-
-        if( tmp.id.empty() ) {
-            default_weakpoint = tmp;
-            continue;
-        }
-
-        // Ensure that every weakpoint has a unique ID
-        auto it = std::find_if( weakpoint_list.begin(), weakpoint_list.end(),
-        [&]( const weakpoint & wp ) {
-            return wp.id == tmp.id;
-        } );
-        if( it != weakpoint_list.end() ) {
-            weakpoint_list.erase( it );
-        }
-
-        weakpoint_list.push_back( std::move( tmp ) );
+        weakpoint point;
+        point.load( jo );
+        add_point( std::move( point ) );
     }
+    sort_by_coverage();
+}
+
+void weakpoints::add_point( weakpoint point )
+{
+    if( point.id.empty() ) {
+        default_weakpoint = std::move( point );
+        return;
+    }
+    const auto existing = std::find_if( weakpoint_list.begin(), weakpoint_list.end(),
+    [&]( const weakpoint & other ) {
+        return other.id == point.id;
+    } );
+    if( existing != weakpoint_list.end() ) {
+        weakpoint_list.erase( existing );
+    }
+    weakpoint_list.push_back( std::move( point ) );
+}
+
+void weakpoints::sort_by_coverage()
+{
     // Prioritizes weakpoints based on their coverage.
     std::sort( weakpoint_list.begin(), weakpoint_list.end(),
     []( const weakpoint & a, const weakpoint & b ) {

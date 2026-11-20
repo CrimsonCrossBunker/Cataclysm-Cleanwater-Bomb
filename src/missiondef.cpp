@@ -175,26 +175,26 @@ bool mission_type::load( const JsonObject &jo, const std::string_view src )
     mandatory( jo, was_loaded, "goal", goal, enum_flags_reader<mission_goal> { "mission_goal" } );
 
     assign_function( jo, "place", place, tripoint_function_map );
-    const auto parse_phase = [&]( const std::string & phase,
+    const auto parse_phase = [&]( const std::string & phase, std::string_view callback_phase,
     std::function<void( mission *, Character & )> &phase_func ) {
         if( jo.has_string( phase ) ) {
             assign_function( jo, phase, phase_func, mission_function_map );
         } else if( jo.has_member( phase ) ) {
             JsonObject j_start = jo.get_object( phase );
-            if( !parse_funcs( j_start, src, phase_func ) ) {
+            if( !parse_funcs( j_start, src, callback_phase, phase_func ) ) {
                 j_start.allow_omitted_members();
                 return false;
             }
         }
         return true;
     };
-    if( !parse_phase( "start", start ) ) {
+    if( !parse_phase( "start", "start", start ) ) {
         return false;
     }
-    if( !parse_phase( "end", end ) ) {
+    if( !parse_phase( "end", "success", end ) ) {
         return false;
     }
-    if( !parse_phase( "fail", fail ) ) {
+    if( !parse_phase( "fail", "failure", fail ) ) {
         return false;
     }
 

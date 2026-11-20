@@ -1271,6 +1271,14 @@ void mtype::load( const JsonObject &jo, const std::string_view src )
 
     optional( jo, was_loaded, "speed_description", speed_desc, speed_description_DEFAULT );
     optional( jo, was_loaded, "death_function", mdeath_effect );
+    if( const auto handler = jo.get_member_opt( "//ccb_lua_monster_death_handler" ) ) {
+        if( handler->has_source_file() ) {
+            handler->throw_error( "Monster death handler metadata is reserved for ordered Lua definitions" );
+        }
+        mdeath_effect.eoc.reset();
+        mdeath_effect.lua_platform_mod = std::string( src );
+        mdeath_effect.lua_platform_handler = handler->get_string();
+    }
 
     optional( jo, was_loaded, "emit_fields", emit_fields, named_pair_reader<emit_id, time_duration> {"emit_id", "delay"} );
 
@@ -1832,6 +1840,10 @@ void monster_death_effect::load( const JsonObject &jo )
     optional( jo, was_loaded, "effect", sp );
     optional( jo, was_loaded, "corpse_type", corpse_type, mdeath_type::NORMAL );
     optional( jo, was_loaded, "eoc", eoc );
+    if( !was_loaded || jo.has_member( "eoc" ) ) {
+        lua_platform_mod.clear();
+        lua_platform_handler.clear();
+    }
 }
 
 void monster_death_effect::deserialize( const JsonObject &data )

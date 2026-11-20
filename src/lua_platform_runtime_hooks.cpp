@@ -3694,6 +3694,8 @@ void invoke_weakpoint_effect_handler(
     payload["set_id"] = std::string( set_id );
     payload["weakpoint_id"] = std::string( weakpoint_id );
     payload["target"] = platform_creature_handle( *owner, target );
+    payload["target_position"] = script_tripoint_coord::from_native(
+                                     coords::origin::abs, coords::scale::map_square, target.pos_abs().raw() );
     if( attack.source != nullptr ) {
         payload["source"] = platform_creature_handle( *owner, *attack.source );
     } else {
@@ -3710,6 +3712,27 @@ void invoke_weakpoint_effect_handler(
     payload["accuracy"] = attack.accuracy;
     payload["is_critical"] = attack.is_crit;
     payload["weakpoint_skill"] = attack.wp_skill;
+    // HP has already been reduced at this point; a lethal hit invalidates the
+    // public creature handle before native weakpoint effects have finished.
+    const auto struck = std::make_shared<safe_reference<Creature>>( target.get_safe_reference() );
+    payload.set_function( "add_target_effect", [weak = std::weak_ptr<safe_reference<Creature>>( struck )](
+                              const script_game_id &id, const script_time_duration &duration,
+                              sol::optional<bool> permanent ) {
+        const auto reference = weak.lock();
+        Creature *subject = reference ? reference->get() : nullptr;
+        if( !subject ) {
+            throw std::runtime_error( "weakpoint target effects require an active hit callback" );
+        }
+        if( id.kind() != "effect" || !id.is_valid() ) {
+            throw std::invalid_argument( "weakpoint target effect requires a valid effect id" );
+        }
+        if( duration.turns() < std::numeric_limits<int>::min() ||
+            duration.turns() > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument( "weakpoint effect duration exceeds the native turn range" );
+        }
+        subject->add_effect( efftype_id( id.value() ), time_duration::from_turns(
+                                 static_cast<int>( duration.turns() ) ), permanent.value_or( false ) );
+    } );
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( *owner );
     const sol::protected_function_result result = callback( payload );

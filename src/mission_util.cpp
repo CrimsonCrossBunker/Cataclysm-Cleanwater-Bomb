@@ -22,6 +22,7 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "generic_factory.h"
+#include "lua_platform_runtime_internal.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "mapgen_functions.h"
@@ -520,9 +521,23 @@ bool mission_util::load_funcs( const JsonObject &jo,
 }
 
 bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
+                                [[maybe_unused]] std::string_view phase,
                                 std::function<void( mission *, Character & )> &phase_func )
 {
     std::vector<std::function<void( mission *, Character & )>> funcs;
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    if( const auto callback = jo.get_member_opt( "//ccb_lua_mission_handler" ) ) {
+        if( callback->has_source_file() ) {
+            callback->throw_error( "mission callback metadata is reserved for ordered Lua definitions" );
+        }
+        const std::string handler = callback->get_string();
+        funcs.emplace_back( [owner = std::string( src ), phase_name = std::string( phase ), handler](
+        mission * miss, Character & who ) {
+            cata::lua_platform::detail::invoke_mission_phase_handler(
+                owner, miss->get_type().id.str(), phase_name, handler, miss, who );
+        } );
+    }
+#endif
     if( !mission_util::load_funcs( jo, funcs ) ) {
         return false;
     }

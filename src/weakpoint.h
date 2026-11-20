@@ -210,6 +210,8 @@ struct weakpoints {
     void clear();
     // load inline definition
     void load( const JsonArray &ja );
+    void add_point( weakpoint point );
+    void sort_by_coverage();
     void remove( const JsonArray &ja );
     void finalize();
     void check() const;

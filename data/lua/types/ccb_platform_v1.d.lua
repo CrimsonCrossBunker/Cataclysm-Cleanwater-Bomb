@@ -651,6 +651,7 @@ local CcbHandlesApi = {}
 function CcbHandlesApi.avatar() end
 
 ---@class ModDefinitionOptions
+---@field data_path? string Native and ordered content directory relative to the Mod root. The entry and its modules resolve from the Mod root.
 ---@field id? string Stable 1-256-byte Mod id without `#`; defaults to the root directory name when omitted.
 ---@field name? string|LocalizedText 1-512-byte display name; defaults to the resolved Mod id.
 ---@field version? string 1-128-byte author-defined Mod version.
@@ -671,6 +672,7 @@ function CcbHandlesApi.avatar() end
 ---@field interaction_world_options? table<string, table<string, boolean|number|string>> Options keyed by active companion Mod id; applied after the JSON for that companion in native interaction order.
 
 ---@class ModDefinition
+---@field data_path string
 ---@field load_with_data boolean
 ---@field ordered_data_files boolean
 ---@field id string
@@ -7374,6 +7376,65 @@ function CcbPlatformContent.define_city_building(options) end
 ---@param options StaticFixedOvermapSpecialOptions
 function CcbPlatformContent.define_fixed_overmap_special(options) end
 
+---@class StaticWeakpointAttackValues
+---@field all? number
+---@field melee? number
+---@field broad? number
+---@field point? number
+---@field bash? number
+---@field cut? number
+---@field stab? number
+---@field ranged? number
+
+---@class StaticWeakpointHit
+---@field target GameHandle
+---@field target_position TripointCoord Absolute map-square position at the time of the hit.
+---@field add_target_effect fun(effect:GameId, duration:TimeDuration, permanent?:boolean) Applies during this callback, including on lethal hits.
+---@field source? GameHandle
+---@field set_id string
+---@field weakpoint_id string
+---@field weapon_id? string
+---@field attack_type 'none'|'melee_bash'|'melee_cut'|'melee_stab'|'projectile'
+---@field total_damage integer
+---@field accuracy number
+---@field is_thrown boolean
+---@field is_critical boolean
+---@field weakpoint_skill number
+
+---@class StaticWeakpointEffect
+---@field on_hit? string Registered handler receiving StaticWeakpointHit after the effect passes its chance and damage checks.
+---@field effect? string
+---@field chance? number
+---@field permanent? boolean
+---@field duration? string|integer|[string|integer, string|integer]
+---@field intensity? integer|[integer, integer]
+---@field damage_percent? number|[number, number] Damage as a percentage of the target's maximum HP.
+---@field death_chance? integer|[integer, integer]
+---@field message? string|LocalizedText
+
+---@class StaticWeakpoint
+---@field id string An empty ID defines the fallback hit.
+---@field name? string|LocalizedText
+---@field coverage? number
+---@field good? boolean
+---@field head? boolean
+---@field armor_multiplier? table<string, number>
+---@field armor_penalty? table<string, number>
+---@field damage_multiplier? table<string, number>
+---@field critical_multiplier? table<string, number>
+---@field attack_coverage? StaticWeakpointAttackValues
+---@field difficulty? StaticWeakpointAttackValues
+---@field when? StaticDialoguePredicate The attacker is the speaker and the target is the interlocutor.
+---@field effects? StaticWeakpointEffect[]
+
+---@class StaticWeakpointSetOptions
+---@field id string
+---@field points StaticWeakpoint[]
+
+---Define a weakpoint set at its position during ordered data loading.
+---@param options StaticWeakpointSetOptions
+function CcbPlatformContent.define_weakpoint_set(options) end
+
 ---@class StaticMonsterFactionRelations
 ---@field by_mood? string|string[]
 ---@field neutral? string|string[]
@@ -7625,6 +7686,122 @@ function CcbPlatformContent.define_construction(options) end
 ---@field damage? integer|[integer, integer]
 ---@field distribution? StaticTileDrop[]
 ---@field collection? StaticTileDrop[]
+
+---@class StaticFieldImmunityResistance
+---@field part string
+---@field minimum integer
+
+---@class StaticFieldImmunityWornFlag
+---@field part string
+---@field flag string
+
+---@class StaticFieldImmunity
+---@field flags? string[]
+---@field resistances? StaticFieldImmunityResistance[]
+---@field worn_flags? StaticFieldImmunityWornFlag[]
+---@field any_worn_flags? StaticFieldImmunityWornFlag[]
+
+---@class StaticFieldContactEffect
+---@field effect string
+---@field body_part? string
+---@field message_type? string
+---@field intensity? integer
+---@field chance_in_vehicle? integer
+---@field chance_inside_vehicle? integer
+---@field chance_outside_vehicle? integer
+---@field environmental? boolean
+---@field immune_in_vehicle? boolean
+---@field immune_inside_vehicle? boolean
+---@field immune_outside_vehicle? boolean
+---@field min_duration? integer|string
+---@field max_duration? integer|string
+---@field message? string|LocalizedText
+---@field npc_message? string|LocalizedText
+---@field immunity? StaticFieldImmunity
+
+---@class StaticFieldLevel
+---@field symbol? string
+---@field color? string
+---@field monster_spawn_group? string
+---@field move_cost? integer
+---@field extra_radiation_min? integer
+---@field extra_radiation_max? integer
+---@field radiation_hurt_damage_min? integer
+---@field radiation_hurt_damage_max? integer
+---@field intensity_upgrade_chance? integer
+---@field monster_spawn_chance? integer
+---@field monster_spawn_count? integer
+---@field monster_spawn_radius? integer
+---@field concentration? integer
+---@field convection_temperature_mod? integer
+---@field scent_neutralization? integer
+---@field light_emitted? number
+---@field light_override? number
+---@field translucency? number
+---@field transparent? boolean
+---@field dangerous? boolean
+---@field intensity_upgrade_duration? integer|string
+---@field name? string|LocalizedText
+---@field radiation_hurt_message? string|LocalizedText
+---@field light_color? [integer, integer, integer] RGB components.
+---@field effects? StaticFieldContactEffect[] Omit to inherit the previous level. An empty list clears effects.
+
+---@class StaticFieldComplaint
+---@field issue? string
+---@field chance? integer
+---@field duration? integer|string
+---@field speech? string|LocalizedText
+
+---@class StaticFieldFireReaction
+---@field degrade_at? integer
+---@field clear_at? integer
+---@field interval? integer|string
+
+---@class StaticFieldBash: StaticTileBash
+---@field success_message? string|LocalizedText
+
+---@class StaticFieldTypeOptions
+---@field copy_from? string
+---@field looks_like? string
+---@field phase? string
+---@field description_affix? string
+---@field wandering_field? string
+---@field legacy_enum_id? integer
+---@field decay_amount_factor? integer
+---@field percent_spread? integer
+---@field apply_slime_factor? integer
+---@field priority? integer
+---@field splattering? boolean
+---@field dirty_transparency_cache? boolean
+---@field has_fire? boolean
+---@field has_acid? boolean
+---@field has_elec? boolean
+---@field has_fume? boolean
+---@field moppable? boolean
+---@field linear_half_life? boolean
+---@field indestructible? boolean
+---@field accelerated_decay? boolean
+---@field display_items? boolean
+---@field display_field? boolean
+---@field legacy_make_rubble? boolean
+---@field mopsafe? boolean
+---@field decrease_intensity_on_contact? boolean
+---@field half_life? integer|string
+---@field underwater_age_speedup? integer|string
+---@field outdoor_age_speedup? integer|string
+---@field gas_absorption_factor? integer|string
+---@field immune_monsters? string[]
+---@field blocked_monsters? string[]
+---@field id string
+---@field levels? StaticFieldLevel[]
+---@field immunity? StaticFieldImmunity
+---@field complaint? StaticFieldComplaint
+---@field fire_reaction? StaticFieldFireReaction
+---@field bash? StaticFieldBash
+
+---Define a field at its position during ordered data loading.
+---@param options StaticFieldTypeOptions
+function CcbPlatformContent.define_field_type(options) end
 
 ---@class StaticTileBash
 ---@field minimum_strength? integer
@@ -7926,6 +8103,60 @@ function CcbPlatformContent.define_start_location(options) end
 ---Define a profession or hobby at its ordered position during native content loading.
 ---@param options StaticProfessionOptions
 function CcbPlatformContent.define_profession(options) end
+
+---@class StaticMissionTarget
+---@field terrain? string Overmap terrain ID to locate.
+---@field special? string
+---@field match? string Native overmap terrain match type.
+---@field replace_terrain? string
+---@field reveal_radius? integer
+---@field min_distance? integer
+---@field search_range? integer
+---@field z? integer
+---@field random? boolean
+---@field must_see? boolean
+---@field cant_see? boolean
+---@field global_position? string Global coordinate variable supplying the target position.
+
+---@class StaticMissionPhase
+---@field handler? string Registered mission callback invoked before resolving this phase's map target.
+---@field target? StaticMissionTarget Exclusive with reveal_terrain.
+---@field reveal_terrain? string|string[] Native reveal operation. A list chooses a terrain at random.
+
+---@class StaticMissionOptions
+---@field id? string
+---@field abstract? string
+---@field copy_from? string
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field dialogue? table<'describe'|'offer'|'accepted'|'rejected'|'advice'|'inquire'|'success'|'success_lie'|'failure', string|LocalizedText>
+---@field difficulty? integer
+---@field value? integer
+---@field goal? string Native mission goal enum.
+---@field origins? string[] Native mission origin enums.
+---@field urgent? boolean
+---@field generic_rewards? boolean
+---@field invisible_on_complete? boolean
+---@field item? string
+---@field item_group? string
+---@field item_count? integer
+---@field required_container? string
+---@field remove_container? boolean
+---@field empty_container? string
+---@field monster_type? string
+---@field monster_species? string
+---@field monster_kill_goal? integer
+---@field destination? string
+---@field followup? string
+---@field deadline? string|string[] Fixed duration or a minimum/maximum duration pair.
+---@field place? 'always'|'never'|'near_town'
+---@field start? StaticMissionPhase|string Named native mission function, or Lua phase rules.
+---@field finish? StaticMissionPhase|string
+---@field failure? StaticMissionPhase|string
+
+---Load a mission type at its position in native content order.
+---@param options StaticMissionOptions
+function CcbPlatformContent.define_mission(options) end
 
 ---@class StaticScenarioDate
 ---@field hour? integer
@@ -8738,7 +8969,7 @@ function CcbPlatformContent.define_item(options) end
 
 ---@alias StaticDialogueActorState 'male'|'female'|'available'|'following'|'friendly'|'hostile'
 ---| 'offers_skill_training'|'offers_style_training'|'offers_spell_training'
----| 'mission_complete'|'mission_incomplete'|'mission_failed'|'has_activity'|'has_weapon'|'outside'|'is_avatar'|'is_npc'
+---| 'mission_complete'|'mission_incomplete'|'mission_failed'|'has_activity'|'has_weapon'|'outside'|'is_avatar'|'is_npc'|'is_character'
 
 ---@class StaticDialoguePredicates
 local StaticDialoguePredicates = {}
@@ -8813,7 +9044,7 @@ function StaticDialoguePredicates.has_mission(id) end
 ---@return StaticDialoguePredicate
 function StaticDialoguePredicates.actor_state(role, state) end
 
----@param state 'daylight'|'radio'|'has_reason'|'mission_offers_generic_rewards'
+---@param state 'daylight'|'has_speaker'|'radio'|'has_reason'|'mission_offers_generic_rewards'
 ---@return StaticDialoguePredicate
 function StaticDialoguePredicates.conversation_state(state) end
 
@@ -9368,6 +9599,7 @@ function CcbPlatformContent.define_mutation(options) end
 ---@field npc_message? string|LocalizedText
 
 ---@class StaticMonsterDeathOutcome
+---@field on_death? string Registered handler receiving the monster, killer and death position before corpse creation.
 ---@field corpse? 'NORMAL'|'SPLATTER'|'BROKEN'|'NO_CORPSE'
 ---@field message? string|LocalizedText
 ---@field spell? StaticMonsterSpellCast
@@ -15222,7 +15454,7 @@ function CcbInventoryApi.category_count(character, category) end
 ---@return CcbResult
 function CcbInventoryApi.item_radiation(character, flag, aggregate) end
 ---@param character GameHandle Exact live Character handle.
----@param criterion GameId
+---@param criterion GameId A json_flag, weapon_category, skill, ammunition, or material. Material matches a positive native material portion.
 ---@return CcbResult
 function CcbInventoryApi.wielded_matches(character, criterion) end
 ---Search the holder's native inventory dump and test each item with

@@ -44,6 +44,7 @@ extern "C" {
     #pragma GCC diagnostic pop
 #endif
 
+#include "lua_platform_content.h"
 #include "lua_platform_content_text.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
@@ -57,6 +58,7 @@ extern "C" {
 #include "dialogue.h"
 #include "native_file_path.h"
 #include "fault.h"
+#include "field_type.h"
 #include "generic_factory.h"
 #include "harvest.h"
 #include "item_action.h"
@@ -69,6 +71,8 @@ extern "C" {
 #include "mapdata.h"
 #include "mapgen.h"
 #include "mod_manager.h"
+#include "mod_tracker.h"
+#include "mission.h"
 #include "monfaction.h"
 #include "monstergenerator.h"
 #include "mutation.h"
@@ -85,6 +89,7 @@ extern "C" {
 #include "trap.h"
 #include "veh_type.h"
 #include "vehicle_group.h"
+#include "weakpoint.h"
 #include "widget.h"
 #include "worldfactory.h"
 #include <functional>
@@ -353,6 +358,9 @@ mod_definition make_mod_definition( const sol::table &values )
                   result.name, result.localized_name, result.name_set );
     set_optional_field( values, "version", result.version, result.version_set );
     set_optional_field( values, "entry", result.entry, result.entry_set );
+    if( const auto path = values.get<sol::optional<std::string>>( "data_path" ) ) {
+        result.data_path = *path;
+    }
     set_mod_text( values.raw_get<sol::object>( "description" ), "ModDefinition description",
                   result.description, result.localized_description, result.description_set );
     set_optional_field( values, "category", result.category, result.category_set );
@@ -423,6 +431,7 @@ void install_mod_definition( sol::table &ccb )
         definition.version = std::move( value );
         definition.version_set = true;
     } ),
+    "data_path", &mod_definition::data_path,
     "entry", sol::property(
     []( const mod_definition & definition ) {
         return definition.entry;
@@ -3949,6 +3958,12 @@ void write_static_monster_death( JsonOut &json, const sol::table &death )
     write_item_text( json, "message", outcome->raw_get<sol::object>( "message" ), false );
     write_static_monster_spell( json, *outcome, "spell", "effect" );
     json.end_object();
+    if( const auto handler = outcome->get<sol::optional<std::string>>( "on_death" ) ) {
+        if( handler->empty() ) {
+            throw std::invalid_argument( "monster on_death requires a named runtime handler" );
+        }
+        json.member( "//ccb_lua_monster_death_handler", *handler );
+    }
 }
 
 void write_static_monster_lifecycle( JsonOut &json, const sol::table &options )
@@ -4397,6 +4412,112 @@ void write_static_trait_group( JsonOut &json, const sol::table &options )
     }
     json.member( "subtype", kind );
     write_static_catalog_array( json, options, "entries", "traits", write_static_trait_group_entry );
+}
+
+template<typename Number>
+void write_static_weakpoint_range( JsonOut &json, const sol::table &options, const char *field,
+                                   const char *native, bool duration = false )
+{
+    const sol::object range = options.raw_get<sol::object>( field );
+    if( range.get_type() == sol::type::nil ) {
+        return;
+    }
+    const auto write_endpoint = [&]( const sol::object &value ) {
+        if( duration && value.get_type() == sol::type::string ) {
+            json.write( value.as<std::string>() );
+        } else {
+            json.write( value.as<Number>() );
+        }
+    };
+    json.member( native );
+    if( range.get_type() == sol::type::table ) {
+        const sol::table endpoints = range.as<sol::table>();
+        if( checked_dense_array_size( endpoints, field, 2 ) != 2 ) {
+            throw std::invalid_argument( std::string( field ) + " requires two endpoints" );
+        }
+        json.start_array();
+        write_endpoint( endpoints.raw_get<sol::object>( 1 ) );
+        write_endpoint( endpoints.raw_get<sol::object>( 2 ) );
+        json.end_array();
+    } else {
+        write_endpoint( range );
+    }
+}
+
+void write_static_weakpoint_effect( JsonOut &json, const sol::table &entry )
+{
+    json.start_object();
+    write_placement_member<std::string>( json, entry, "effect", "effect" );
+    write_placement_member<double>( json, entry, "chance", "chance" );
+    write_placement_member<bool>( json, entry, "permanent", "permanent" );
+    write_item_text( json, "message", entry.raw_get<sol::object>( "message" ), false );
+    write_static_weakpoint_range<int>( json, entry, "duration", "duration", true );
+    write_static_weakpoint_range<int>( json, entry, "intensity", "intensity" );
+    write_static_weakpoint_range<double>( json, entry, "damage_percent", "damage_required" );
+    write_static_weakpoint_range<int>( json, entry, "death_chance", "instant_death_chance" );
+    json.end_object();
+}
+
+weakpoint read_static_weakpoint( const sol::table &entry, const std::string &source,
+                                 const std::string &set_id )
+{
+    std::ostringstream serialized;
+    JsonOut json( serialized );
+    serialized << std::defaultfloat << std::setprecision( std::numeric_limits<double>::max_digits10 );
+    json.start_object();
+    json.member( "id", entry.get<std::string>( "id" ) );
+    write_item_text( json, "name", entry.raw_get<sol::object>( "name" ), false );
+    write_placement_member<double>( json, entry, "coverage", "coverage" );
+    write_item_fields<bool>( json, entry, { { "good", "is_good" }, { "head", "is_head" } } );
+    for( const auto &[field, native] : {
+             item_field{ "armor_multiplier", "armor_mult" }, { "armor_penalty", "armor_penalty" },
+             { "damage_multiplier", "damage_mult" }, { "critical_multiplier", "crit_mult" },
+             { "attack_coverage", "coverage_mult" }, { "difficulty", "difficulty" }
+         } ) {
+        if( const auto values = entry.get<sol::optional<sol::table>>( field ) ) {
+            write_item_keyed_values<double>( json, native, *values );
+        }
+    }
+    write_static_catalog_array( json, entry, "effects", "effects", write_static_weakpoint_effect );
+    json.end_object();
+    weakpoint point;
+    point.load( json_loader::from_string( serialized.str() ).get_object() );
+    if( const auto predicate = entry.get<sol::optional<static_dialogue_predicate>>( "when" ) ) {
+        point.condition = predicate->test;
+        point.has_condition = true;
+    }
+    if( const auto effects = entry.get<sol::optional<sol::table>>( "effects" ) ) {
+        for( std::size_t i = 0; i < point.effects.size(); ++i ) {
+            const sol::table options = effects->raw_get<sol::table>( i + 1 );
+            if( const auto handler = options.get<sol::optional<std::string>>( "on_hit" ) ) {
+                if( handler->empty() ) {
+                    throw std::invalid_argument( "weakpoint on_hit requires a named runtime handler" );
+                }
+                weakpoint_effect &effect = point.effects[i];
+                effect.lua_platform_set_id = set_id;
+                effect.lua_platform_weakpoint_id = point.id;
+                effect.lua_platform_mod = source;
+                effect.lua_platform_handler = *handler;
+            }
+        }
+    }
+    return point;
+}
+
+void load_static_weakpoint_set( const sol::table &options, const std::string &source )
+{
+    weakpoints definition;
+    definition.id = weakpoints_id( options.get<std::string>( "id" ) );
+    mod_tracker::assign_src( definition, source );
+    const sol::table entries = options.get<sol::table>( "points" );
+    const std::size_t count = checked_dense_array_size( entries, "weakpoints",
+                              std::numeric_limits<std::size_t>::max() );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        definition.add_point( read_static_weakpoint( entries.raw_get<sol::table>( index ), source,
+                              definition.id.str() ) );
+    }
+    definition.sort_by_coverage();
+    detail::weakpoint_set_registry().insert( definition );
 }
 
 void write_static_monster_faction_relations( JsonOut &json, const sol::table &options )
@@ -4983,9 +5104,8 @@ void write_static_tile_drops( JsonOut &json, const sol::table &options, const ch
     }
 }
 
-void write_static_tile_bash( JsonOut &json, const sol::table &options )
+void write_static_bash_fields( JsonOut &json, const sol::table &options )
 {
-    json.start_object();
     write_item_fields<std::string>( json, options, {
         { "profile", "profile" }, { "terrain", "ter_set" },
         { "terrain_from_above", "ter_set_bashed_from_above" }, { "furniture", "furn_set" }
@@ -5010,7 +5130,161 @@ void write_static_tile_bash( JsonOut &json, const sol::table &options )
     write_static_tile_field( json, options, "hit_field", "hit_field" );
     write_static_tile_field( json, options, "destroyed_field", "destroyed_field" );
     write_static_tile_drops( json, options, "drops", "items" );
+}
+
+void write_static_tile_bash( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_static_bash_fields( json, options );
     json.end_object();
+}
+
+void write_static_field_immunity( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_ids( json, options, { { "flags", "flags" } } );
+    write_static_catalog_array( json, options, "resistances", "body_part_env_resistance",
+    []( JsonOut & out, const sol::table & entry ) {
+        out.start_array();
+        out.write( entry.get<std::string>( "part" ) );
+        out.write( entry.get<int>( "minimum" ) );
+        out.end_array();
+    } );
+    for( const auto &[field, native] : { item_field{ "worn_flags", "immunity_flags_worn" },
+                                        { "any_worn_flags", "immunity_flags_worn_any" } } ) {
+        write_static_catalog_array( json, options, field, native,
+        []( JsonOut & out, const sol::table & entry ) {
+            out.start_array();
+            out.write( entry.get<std::string>( "part" ) );
+            out.write( entry.get<std::string>( "flag" ) );
+            out.end_array();
+        } );
+    }
+    json.end_object();
+}
+
+void write_static_field_effect( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "effect", "effect_id" }, { "body_part", "body_part" }, { "message_type", "message_type" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "intensity", "intensity" }, { "chance_in_vehicle", "chance_in_vehicle" },
+        { "chance_inside_vehicle", "chance_inside_vehicle" },
+        { "chance_outside_vehicle", "chance_outside_vehicle" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "environmental", "is_environmental" }, { "immune_in_vehicle", "immune_in_vehicle" },
+        { "immune_inside_vehicle", "immune_inside_vehicle" },
+        { "immune_outside_vehicle", "immune_outside_vehicle" }
+    } );
+    write_static_tile_unit( json, options, "min_duration", "min_duration" );
+    write_static_tile_unit( json, options, "max_duration", "max_duration" );
+    write_item_text( json, "message", options.raw_get<sol::object>( "message" ), false );
+    write_item_text( json, "message_npc", options.raw_get<sol::object>( "npc_message" ), false );
+    write_static_tile_object( json, options, "immunity", "immunity_data", write_static_field_immunity );
+    json.end_object();
+}
+
+void write_static_field_level( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "symbol", "sym" }, { "color", "color" }, { "monster_spawn_group", "monster_spawn_group" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "move_cost", "move_cost" }, { "extra_radiation_min", "extra_radiation_min" },
+        { "extra_radiation_max", "extra_radiation_max" },
+        { "radiation_hurt_damage_min", "radiation_hurt_damage_min" },
+        { "radiation_hurt_damage_max", "radiation_hurt_damage_max" },
+        { "intensity_upgrade_chance", "intensity_upgrade_chance" },
+        { "monster_spawn_chance", "monster_spawn_chance" },
+        { "monster_spawn_count", "monster_spawn_count" },
+        { "monster_spawn_radius", "monster_spawn_radius" }, { "concentration", "concentration" },
+        { "convection_temperature_mod", "convection_temperature_mod" },
+        { "scent_neutralization", "scent_neutralization" }
+    } );
+    write_item_fields<double>( json, options, {
+        { "light_emitted", "light_emitted" }, { "light_override", "light_override" },
+        { "translucency", "translucency" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "transparent", "transparent" }, { "dangerous", "dangerous" }
+    } );
+    write_static_tile_unit( json, options, "intensity_upgrade_duration", "intensity_upgrade_duration" );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "radiation_hurt_message", options.raw_get<sol::object>( "radiation_hurt_message" ), false );
+    write_static_int_triplet( json, options, "light_color" );
+    write_static_catalog_array( json, options, "effects", "effects", write_static_field_effect );
+    json.end_object();
+}
+
+void write_static_field_complaint( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, options, {
+        { "issue", "issue" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "chance", "chance" }
+    } );
+    write_static_tile_unit( json, options, "duration", "duration" );
+    write_item_text( json, "speech", options.raw_get<sol::object>( "speech" ), false );
+    json.end_object();
+}
+
+void write_static_field_fire_reaction( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<int>( json, options, {
+        { "degrade_at", "degrade_at" }, { "clear_at", "clear_at" }
+    } );
+    write_static_tile_unit( json, options, "interval", "interval" );
+    json.end_object();
+}
+
+void write_static_field_bash( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_static_bash_fields( json, options );
+    write_item_text( json, "msg_success", options.raw_get<sol::object>( "success_message" ), false );
+    json.end_object();
+}
+
+void write_static_field_type( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "looks_like", "looks_like" }, { "phase", "phase" },
+        { "description_affix", "description_affix" }, { "wandering_field", "wandering_field" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "legacy_enum_id", "legacy_enum_id" }, { "decay_amount_factor", "decay_amount_factor" },
+        { "percent_spread", "percent_spread" }, { "apply_slime_factor", "apply_slime_factor" },
+        { "priority", "priority" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "splattering", "is_splattering" }, { "dirty_transparency_cache", "dirty_transparency_cache" },
+        { "has_fire", "has_fire" }, { "has_acid", "has_acid" }, { "has_elec", "has_elec" },
+        { "has_fume", "has_fume" }, { "moppable", "moppable" },
+        { "linear_half_life", "linear_half_life" }, { "indestructible", "indestructible" },
+        { "accelerated_decay", "accelerated_decay" }, { "display_items", "display_items" },
+        { "display_field", "display_field" }, { "legacy_make_rubble", "legacy_make_rubble" },
+        { "mopsafe", "mopsafe" }, { "decrease_intensity_on_contact", "decrease_intensity_on_contact" }
+    } );
+    write_static_tile_unit( json, options, "half_life", "half_life" );
+    write_static_tile_unit( json, options, "underwater_age_speedup", "underwater_age_speedup" );
+    write_static_tile_unit( json, options, "outdoor_age_speedup", "outdoor_age_speedup" );
+    write_static_tile_unit( json, options, "gas_absorption_factor", "gas_absorption_factor" );
+    write_item_ids( json, options, {
+        { "immune_monsters", "immune_mtypes" }, { "blocked_monsters", "block_mtypes" }
+    } );
+    write_static_catalog_array( json, options, "levels", "intensity_levels", write_static_field_level );
+    write_static_tile_object( json, options, "immunity", "immunity_data", write_static_field_immunity );
+    write_static_tile_object( json, options, "complaint", "npc_complain", write_static_field_complaint );
+    write_static_tile_object( json, options, "fire_reaction", "fire_reaction", write_static_field_fire_reaction );
+    write_static_tile_object( json, options, "bash", "bash", write_static_field_bash );
 }
 
 void write_static_tile_practice( JsonOut &json, const sol::table &options )
@@ -5520,6 +5794,85 @@ void write_static_profession_skill( JsonOut &json, const sol::table &skill )
     json.member( "name", skill.get<std::string>( "id" ) );
     json.member( "level", skill.get<int>( "level" ) );
     json.end_object();
+}
+
+void write_static_mission_phase( JsonOut &json, const sol::table &options, const char *field,
+                                 const char *native )
+{
+    const sol::object phase = options.raw_get<sol::object>( field );
+    if( phase.get_type() == sol::type::nil ) {
+        return;
+    }
+    if( phase.get_type() == sol::type::string ) {
+        json.member( native, phase.as<std::string>() );
+        return;
+    }
+    const sol::table rules = phase.as<sol::table>();
+    json.member( native );
+    json.start_object();
+    write_placement_member<std::string>( json, rules, "handler", "//ccb_lua_mission_handler" );
+    write_static_string_or_ids( json, rules, "reveal_terrain", "reveal_om_ter" );
+    if( const auto target = rules.get<sol::optional<sol::table>>( "target" ) ) {
+        if( rules.raw_get<sol::object>( "reveal_terrain" ).get_type() != sol::type::nil ) {
+            throw std::invalid_argument( "mission phase cannot both reveal terrain and assign a target" );
+        }
+        json.member( "assign_mission_target" );
+        json.start_object();
+        write_item_fields<std::string>( json, *target, {
+            { "terrain", "om_terrain" }, { "match", "om_terrain_match_type" },
+            { "special", "om_special" }, { "replace_terrain", "om_terrain_replace" }
+        } );
+        write_item_fields<int>( json, *target, {
+            { "reveal_radius", "reveal_radius" }, { "min_distance", "min_distance" },
+            { "search_range", "search_range" }, { "z", "z" }
+        } );
+        write_item_fields<bool>( json, *target, {
+            { "random", "random" }, { "must_see", "must_see" }, { "cant_see", "cant_see" }
+        } );
+        if( const auto position = target->get<sol::optional<std::string>>( "global_position" ) ) {
+            json.member( "var" );
+            json.start_object();
+            json.member( "global_val", *position );
+            json.end_object();
+        }
+        json.end_object();
+    }
+    json.end_object();
+}
+
+void write_static_mission( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" }, { "goal", "goal" },
+        { "item", "item" }, { "item_group", "item_group" }, { "required_container", "required_container" },
+        { "empty_container", "empty_container" }, { "monster_type", "monster_type" },
+        { "monster_species", "monster_species" }, { "destination", "destination" },
+        { "followup", "followup" }, { "place", "place" }
+    } );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    write_item_fields<int>( json, options, {
+        { "difficulty", "difficulty" }, { "value", "value" }, { "item_count", "count" },
+        { "monster_kill_goal", "monster_kill_goal" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "urgent", "urgent" }, { "generic_rewards", "has_generic_rewards" },
+        { "invisible_on_complete", "invisible_on_complete" }, { "remove_container", "remove_container" }
+    } );
+    write_item_ids( json, options, { { "origins", "origins" } } );
+    if( const auto lines = options.get<sol::optional<sol::table>>( "dialogue" ) ) {
+        json.member( "dialogue" );
+        json.start_object();
+        for( const char *line : { "describe", "offer", "accepted", "rejected", "advice", "inquire",
+                                  "success", "success_lie", "failure" } ) {
+            write_item_text( json, line, lines->raw_get<sol::object>( line ), false );
+        }
+        json.end_object();
+    }
+    write_static_string_or_ids( json, options, "deadline", "deadline" );
+    write_static_mission_phase( json, options, "start", "start" );
+    write_static_mission_phase( json, options, "finish", "end" );
+    write_static_mission_phase( json, options, "failure", "fail" );
 }
 
 void write_static_scenario_lists( JsonOut &json, const sol::table &options )
@@ -6433,6 +6786,9 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_fixed_overmap_special", static_catalog_definition(
                               resolved.id, "overmap_special", write_static_fixed_overmap_special,
                               overmap_specials::load ) );
+    content.set_function( "define_weakpoint_set", [&resolved]( const sol::table & options ) {
+        load_static_weakpoint_set( options, resolved.id );
+    } );
     content.set_function( "define_monster_faction", static_catalog_definition(
                               resolved.id, "MONSTER_FACTION", write_static_monster_faction,
                               monfactions::load_monster_faction ) );
@@ -6455,6 +6811,8 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "harvest", write_static_harvest, harvest_list::load_harvest_list ) );
     content.set_function( "define_widget", static_catalog_definition(
                               resolved.id, "widget", write_static_widget, widget::load_widget ) );
+    content.set_function( "define_field_type", static_catalog_definition(
+                              resolved.id, "field_type", write_static_field_type, field_types::load ) );
     content.set_function( "define_terrain", static_catalog_definition(
                               resolved.id, "terrain", write_static_tile_terrain, load_terrain ) );
     content.set_function( "define_furniture", static_catalog_definition(
@@ -6473,6 +6831,8 @@ void load_mod_content_with_data( const mod_source &source,
     } ) );
     content.set_function( "define_start_location", static_catalog_definition(
                               resolved.id, "start_location", write_static_start_location, start_locations::load ) );
+    content.set_function( "define_mission", static_catalog_definition(
+                              resolved.id, "mission_definition", write_static_mission, mission_type::load_mission_type ) );
     content.set_function( "define_scenario", static_catalog_definition(
                               resolved.id, "scenario", write_static_scenario, scenario::load_scenario ) );
     content.set_function( "define_profession", static_catalog_definition(
