@@ -16,8 +16,12 @@
           }
         ]
       },
-      { "//": "repeat last entry" },
-      { "//": "repeat last entry" }
+      {
+        "//": "repeat last entry"
+      },
+      {
+        "//": "repeat last entry"
+      }
     ],
     "decay_amount_factor": 5,
     "gas_absorption_factor": 15,
@@ -47,8 +51,12 @@
           }
         ]
       },
-      { "//": "repeat last entry" },
-      { "//": "repeat last entry" }
+      {
+        "//": "repeat last entry"
+      },
+      {
+        "//": "repeat last entry"
+      }
     ],
     "decay_amount_factor": 5,
     "gas_absorption_factor": 15,
@@ -67,11 +75,22 @@
         "sym": "5",
         "color": "light_green",
         "dangerous": false,
-        "effects": [ { "effect_id": "alkahest", "intensity": 1, "immune_in_vehicle": true, "is_environmental": false } ]
+        "effects": [
+          {
+            "effect_id": "alkahest",
+            "intensity": 1,
+            "immune_in_vehicle": true,
+            "is_environmental": false
+          }
+        ]
       }
     ],
     "description_affix": "covered_in",
-    "immunity_data": { "flags": [ "ALKAHEST_IMMUNE" ] },
+    "immunity_data": {
+      "flags": [
+        "ALKAHEST_IMMUNE"
+      ]
+    },
     "underwater_age_speedup": "8 h",
     "priority": 2,
     "half_life": "8 h",
@@ -82,7 +101,15 @@
   {
     "id": "fd_eshaper_dust",
     "type": "field_type",
-    "intensity_levels": [ { "name": "dust", "sym": "~", "dangerous": false, "transparent": false, "translucency": 14 } ],
+    "intensity_levels": [
+      {
+        "name": "dust",
+        "sym": "~",
+        "dangerous": false,
+        "transparent": false,
+        "translucency": 14
+      }
+    ],
     "decay_amount_factor": 15,
     "gas_absorption_factor": 5,
     "percent_spread": 30,
@@ -106,24 +133,49 @@
         "sym": "S",
         "color": "blue",
         "dangerous": false,
-        "effects": [ { "effect_id": "ice_energy", "intensity": 1, "immune_in_vehicle": true, "is_environmental": false } ]
+        "effects": [
+          {
+            "effect_id": "ice_energy",
+            "intensity": 1,
+            "immune_in_vehicle": true,
+            "is_environmental": false
+          }
+        ]
       },
       {
         "name": "Ice mist",
         "sym": "S",
         "color": "blue",
         "dangerous": false,
-        "effects": [ { "effect_id": "ice_energy", "intensity": 2, "immune_in_vehicle": true, "is_environmental": false } ]
+        "effects": [
+          {
+            "effect_id": "ice_energy",
+            "intensity": 2,
+            "immune_in_vehicle": true,
+            "is_environmental": false
+          }
+        ]
       },
       {
         "name": "Ice fog",
         "sym": "S",
         "color": "blue",
         "dangerous": false,
-        "effects": [ { "effect_id": "ice_energy", "intensity": 3, "immune_in_vehicle": true, "is_environmental": false } ]
+        "effects": [
+          {
+            "effect_id": "ice_energy",
+            "intensity": 3,
+            "immune_in_vehicle": true,
+            "is_environmental": false
+          }
+        ]
       }
     ],
-    "immunity_data": { "flags": [ "COLD_ENERGY_IMMUNE" ] },
+    "immunity_data": {
+      "flags": [
+        "COLD_ENERGY_IMMUNE"
+      ]
+    },
     "half_life": "3 seconds"
   },
   {
@@ -134,40 +186,16 @@
     "looks_like": "fd_fog"
   },
   {
-    "id": "fd_kelvinist_warmth",
-    "type": "field_type",
-    "intensity_levels": [
-      { "name": "heated air", "sym": "&", "convection_temperature_mod": 7 },
-      { "color": "yellow", "convection_temperature_mod": 15 },
-      { "color": "red", "convection_temperature_mod": 30 }
-    ],
-    "decay_amount_factor": 5,
-    "percent_spread": 50,
-    "outdoor_age_speedup": "15 minutes",
-    "priority": 7,
-    "half_life": "30 minutes",
-    "phase": "gas"
-  },
-  {
-    "id": "fd_kelvinist_cold",
-    "type": "field_type",
-    "intensity_levels": [
-      { "name": "chill air", "sym": "&", "convection_temperature_mod": -7 },
-      { "color": "blue", "convection_temperature_mod": -15 },
-      { "color": "cyan", "convection_temperature_mod": -30 }
-    ],
-    "decay_amount_factor": 5,
-    "percent_spread": 50,
-    "outdoor_age_speedup": "15 minutes",
-    "priority": 7,
-    "half_life": "30 minutes",
-    "phase": "gas"
-  },
-  {
     "id": "fd_rad_mage_aura",
     "type": "field_type",
     "intensity_levels": [
-      { "name": "hazy cloud", "sym": "8", "dangerous": true, "translucency": 10, "extra_radiation_max": 10 },
+      {
+        "name": "hazy cloud",
+        "sym": "8",
+        "dangerous": true,
+        "translucency": 10,
+        "extra_radiation_max": 10
+      },
       {
         "name": "radioactive gas",
         "color": "light_green",
@@ -211,8 +239,18 @@
         "color": "light_gray",
         "scent_neutralization": 3
       },
-      { "name": "very thick fog", "translucency": 12, "color": "light_gray", "scent_neutralization": 6 },
-      { "name": "impenetrable fog", "translucency": 0, "color": "dark_gray", "scent_neutralization": 9 }
+      {
+        "name": "very thick fog",
+        "translucency": 12,
+        "color": "light_gray",
+        "scent_neutralization": 6
+      },
+      {
+        "name": "impenetrable fog",
+        "translucency": 0,
+        "color": "dark_gray",
+        "scent_neutralization": 9
+      }
     ],
     "decay_amount_factor": 15,
     "gas_absorption_factor": 5,
@@ -283,10 +321,26 @@
           }
         ]
       },
-      { "//": "repeat last entry" }
+      {
+        "//": "repeat last entry"
+      }
     ],
     "description_affix": "illuminated_by",
-    "immunity_data": { "immunity_flags_worn_any": [ [ "sensor", "FLASH_PROTECTION" ], [ "sensor", "BLIND" ] ], "flags": [ "BLIND" ] },
+    "immunity_data": {
+      "immunity_flags_worn_any": [
+        [
+          "sensor",
+          "FLASH_PROTECTION"
+        ],
+        [
+          "sensor",
+          "BLIND"
+        ]
+      ],
+      "flags": [
+        "BLIND"
+      ]
+    },
     "priority": 4,
     "half_life": "1 turns",
     "phase": "plasma",

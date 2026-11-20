@@ -42,3 +42,4 @@ require("tile_interactions")
 
 require("recipe_categories")
 require("jmath")
+require("field_types")
