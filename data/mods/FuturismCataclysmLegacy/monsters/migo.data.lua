@@ -1,0 +1,40 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "fcl_mon_migoturret",
+    name = ccb.content.plural_text("brain blaster", "brain blasters"),
+    description = ccb.content.text("The mi-go have set up some defenses here.  This horrifying techno-organic amalgamation appears to use brains in jars as their operating system.  On the plus side it looks like an easy headshot."),
+    default_faction = "mi-go",
+    species = { "ROBOT" },
+    difficulty_adjustment = 20,
+    volume = "30000 ml",
+    mass = "40750 g",
+    hp = 45,
+    speed = 100,
+    materials = { "alien_resin" },
+    symbol = "2",
+    color = "green",
+    aggression = 50,
+    morale = 100,
+    vision_day = 50,
+    starting_ammo = { acidic_bore = 500 },
+    revert_item = "bot_migoturret",
+    attacks = {
+        { reference = "PARROT", cooldown = 0 },
+        {
+            cooldown = 1,
+            kind = "gun",
+            gun = {
+                weapon = "vibrating_blaster",
+                skills = { { id = "gun", level = 2 }, { id = "rifle", level = 3 } },
+                ranges = { { minimum = 0, maximum = 20, mode = "DEFAULT" } },
+                lock_npc = true,
+                lock_monster = true,
+                target_moving_vehicles = true,
+            },
+        },
+    },
+    flags = { "SEES", "ELECTRONIC", "IMMOBILE", "NO_BREATHE" },
+    armor = { bash = 14, cut = 16 },
+    death = { drops = {}, outcome = { corpse = "BROKEN" } },
+}

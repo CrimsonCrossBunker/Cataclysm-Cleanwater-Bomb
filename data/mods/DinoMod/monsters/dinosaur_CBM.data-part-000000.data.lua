@@ -1,0 +1,56 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_spinosaurus_bio_op",
+    name = ccb.content.plural_text("spinosaurus bio-operator", "spinosaurus bio-operators"),
+    copy_from = "mon_spinosaurus",
+    difficulty_adjustment = 5,
+    aggression = 99,
+    flags = {
+        "ELECTRIC", "NO_BREATHE", "SEES", "SMELLS", "HEARS", "ANIMAL", "BASHES", "DESTROYS", "WARM",
+        "SWIMS", "INTERIOR_AMMO",
+    },
+    melee_damage = { { type = "electric", amount = 4 } },
+    vision_day = 100,
+    vision_night = 100,
+    luminance = 1,
+    starting_ammo = { battery = 10 },
+    attacks = {
+        { id = "bio_op_takedown", cooldown = 20 },
+        {
+            cooldown = 7,
+            move_cost = 10,
+            kind = "gun",
+            gun = {
+                weapon = "laser_rifle_dino2",
+                skills = { { id = "gun", level = 2 }, { id = "rifle", level = 1 } },
+                dexterity = 1,
+                ranges = { { minimum = 0, maximum = 30, mode = "DEFAULT" } },
+                lock_npc = true,
+                lock_monster = true,
+                target_moving_vehicles = true,
+                laser_lock = false,
+                targeting_cost = 1,
+                targeting_extension = -1,
+                targeting_sound = ccb.content.text("\"TARGET ACQUIRED.\""),
+                targeting_volume = 70,
+                ammo = "battery",
+                empty_sound = ccb.content.text("TARGET ACQUIRED.  *beeeeeeeeep*.  OUT OF AMMO."),
+            },
+        },
+    },
+    zombify_into = "mon_zpinosaurus_bio_op",
+    description = ccb.content.text("A massive theropod with a huge fin on its back and a crocodile-like snout.  It is silver from armor plating and cybernetics crackle all over its body.  There seems to be a laser rifle mounted to its head.  It scans endlessly for its next target."),
+    defense = { id = "ZAPBACK", chance = 10 },
+    dissect = "dissect_CBM_DINO",
+    inheritance = {
+        scale = { hp = 1.2, speed = 1.15 },
+        offset = {
+            morale = 50,
+            melee_skill = 2,
+            melee_dice = 1,
+            dodge = 2,
+            armor = { bash = 3, cut = 3, bullet = 3 },
+        },
+    },
+}

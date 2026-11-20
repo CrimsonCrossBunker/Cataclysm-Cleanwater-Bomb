@@ -3961,13 +3961,67 @@ void write_static_monster_effect_list( JsonOut &json, const sol::table &options,
     }
 }
 
+void write_monster_gun_attack( JsonOut &json, const sol::table &gun )
+{
+    write_item_fields<std::string>( json, gun, { { "weapon", "gun_type" }, { "ammo", "ammo_type" } } );
+    write_item_fields<int>( json, gun, {
+        { "strength", "fake_str" }, { "dexterity", "fake_dex" }, { "intelligence", "fake_int" },
+        { "perception", "fake_per" }, { "max_ammo", "max_ammo" }, { "targeting_cost", "targeting_cost" },
+        { "targeting_timeout", "targeting_timeout" }, { "targeting_extension", "targeting_timeout_extend" },
+        { "targeting_volume", "targeting_volume" }
+    } );
+    write_item_fields<bool>( json, gun, {
+        { "lock_player", "require_targeting_player" }, { "lock_npc", "require_targeting_npc" },
+        { "lock_monster", "require_targeting_monster" }, { "laser_lock", "laser_lock" },
+        { "target_moving_vehicles", "target_moving_vehicles" }, { "require_sunlight", "require_sunlight" }
+    } );
+    for( const auto &[field, native] : { item_field{ "description", "description" },
+             { "failure_message", "failure_msg" }, { "empty_sound", "no_ammo_sound" },
+             { "targeting_sound", "targeting_sound" }
+         } ) {
+        write_item_text( json, native, gun.raw_get<sol::object>( field ), false );
+    }
+    if( const auto skills = gun.get<sol::optional<sol::table>>( "skills" ) ) {
+        json.member( "fake_skills" );
+        json.start_array();
+        const std::size_t count = checked_dense_array_size( *skills, "monster gun skills",
+                                  std::numeric_limits<std::size_t>::max() );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::table skill = skills->raw_get<sol::table>( index );
+            json.start_array();
+            json.write( skill.get<std::string>( "id" ) );
+            json.write( skill.get<int>( "level" ) );
+            json.end_array();
+        }
+        json.end_array();
+    }
+    if( const auto ranges = gun.get<sol::optional<sol::table>>( "ranges" ) ) {
+        json.member( "ranges" );
+        json.start_array();
+        const std::size_t count = checked_dense_array_size( *ranges, "monster gun ranges",
+                                  std::numeric_limits<std::size_t>::max() );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::table range = ranges->raw_get<sol::table>( index );
+            json.start_array();
+            json.write( range.get<int>( "minimum" ) );
+            json.write( range.get<int>( "maximum" ) );
+            if( const auto mode = range.get<sol::optional<std::string>>( "mode" ) ) {
+                json.write( *mode );
+            }
+            json.end_array();
+        }
+        json.end_array();
+    }
+}
+
 void write_static_monster_attack_fields( JsonOut &json, const sol::table &attack, const char *kind_field )
 {
     const auto kind = attack.get<sol::optional<std::string>>( "kind" );
     if( kind ) {
         if( *kind == "scripted" ) {
             json.member( "//ccb_lua_attack_action", attack.get<std::string>( "action" ) );
-        } else if( *kind != "leap" && *kind != "spell" && *kind != "melee" && *kind != "bite" ) {
+        } else if( *kind != "leap" && *kind != "spell" && *kind != "melee" && *kind != "bite" &&
+                   *kind != "gun" && *kind != "polymorph_special" ) {
             throw std::invalid_argument( "unknown monster attack kind: " + *kind );
         }
         json.member( kind_field, *kind );
@@ -3975,6 +4029,13 @@ void write_static_monster_attack_fields( JsonOut &json, const sol::table &attack
     } else {
         json.member( "id", attack.get<std::string>( "id" ) );
     }
+    if( const auto gun = attack.get<sol::optional<sol::table>>( "gun" ) ) {
+        write_monster_gun_attack( json, *gun );
+    }
+    write_placement_member<std::string>( json, attack, "form", "mon_id" );
+    write_item_fields<bool>( json, attack, {
+        { "keep_speed", "poly_keep_speed" }, { "keep_hp", "poly_keep_hp" }, { "keep_anger", "poly_keep_anger" }
+    } );
     write_item_fields<int>( json, attack, {
         { "move_cost", "move_cost" }, { "accuracy", "accuracy" }, { "range", "range" },
         { "minimum_hit_size", "hitsize_min" }, { "maximum_hit_size", "hitsize_max" },

@@ -9832,9 +9832,39 @@ function CcbPlatformContent.define_mutation(options) end
 ---@field respect_seatbelts? boolean
 ---@field effect? string
 
+---@class StaticMonsterGunAttack
+---@field weapon? string Native item ID of the gun.
+---@field ammo? string
+---@field skills? {id:string,level:integer}[] Native skill levels of the simulated gunner.
+---@field ranges? {minimum:integer,maximum:integer,mode?:string}[] Native engagement bands with optional firing mode.
+---@field strength? integer
+---@field dexterity? integer
+---@field intelligence? integer
+---@field perception? integer
+---@field max_ammo? integer
+---@field targeting_cost? integer
+---@field targeting_timeout? integer
+---@field targeting_extension? integer
+---@field targeting_volume? integer
+---@field lock_player? boolean
+---@field lock_npc? boolean
+---@field lock_monster? boolean
+---@field laser_lock? boolean
+---@field target_moving_vehicles? boolean
+---@field require_sunlight? boolean
+---@field description? string|LocalizedText
+---@field failure_message? string|LocalizedText
+---@field empty_sound? string|LocalizedText
+---@field targeting_sound? string|LocalizedText
+
 ---@class StaticMonsterAttackOverride
 ---@field id? string Native attack ID. Required when configuring a registered attack with no kind.
----@field kind? 'leap'|'spell'|'melee'|'bite'|'scripted' Native attack actor type.
+---@field kind? 'leap'|'spell'|'melee'|'bite'|'scripted'|'gun'|'polymorph_special' Native attack actor type.
+---@field gun? StaticMonsterGunAttack
+---@field form? string Native monster ID for a polymorph attack.
+---@field keep_speed? boolean
+---@field keep_hp? boolean
+---@field keep_anger? boolean
 ---@field action? string Named handler required for scripted attacks. Return true to consume the attack.
 ---@field cooldown? number Cooldown in turns. Required for an inline actor without inherited defaults.
 ---@field move_cost? integer
