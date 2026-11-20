@@ -562,7 +562,8 @@ bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
         for( JsonObject reward : rewards->get_array() ) {
             talk_effects.effects.push_back( dialogue_action::mission_item_reward(
                                                 reward.get_string( "id" ), reward.get_int( "count", 1 ),
-                                                reward.get_string( "container", "" ), reward.get_bool( "group" ) ) );
+                                                reward.get_string( "container", "" ), reward.get_bool( "group" ),
+                                                reward.get_bool( "preview", true ) ) );
         }
     }
 #endif

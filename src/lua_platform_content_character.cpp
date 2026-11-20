@@ -7443,6 +7443,8 @@ void character_content_transaction::impl::apply_magic_type()
         }
         native.failure_cost_percent = source.failure_cost_fraction;
         native.failure_exp_percent = source.failure_experience_fraction;
+        native.lua_failure_mod = this->owner;
+        native.lua_failure_handler = source.failure_handler;
         detail::magic_type_registry().insert( native );
     }
     if( !this->magic_types.empty() ) {
@@ -8560,8 +8562,6 @@ bool character_content_transaction::find_magic_type_handler(
         handler_id = definition.failure_cost_handler;
     } else if( phase == "failure_experience" ) {
         handler_id = definition.failure_experience_handler;
-    } else if( phase == "on_failure" ) {
-        handler_id = definition.failure_handler;
     } else {
         handler_id.clear();
     }

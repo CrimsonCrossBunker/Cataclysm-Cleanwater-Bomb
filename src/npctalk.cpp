@@ -9422,7 +9422,7 @@ talk_effect_fun_t::func f_trigger_event( const JsonObject &jo, std::string_view 
 } // namespace talk_effect_fun
 
 talk_effect_fun_t dialogue_action::mission_item_reward( const std::string &id, int count,
-        const std::string &container, bool group )
+        const std::string &container, bool group, bool preview )
 {
     talk_effect_fun_t reward( [id, count, container, group]( dialogue & d ) {
         const tripoint_abs_ms pos = d.actor( false )->pos_abs();
@@ -9433,7 +9433,9 @@ talk_effect_fun_t dialogue_action::mission_item_reward( const std::string &id, i
                                           pos );
         }
     } );
-    reward.get_likely_rewards().emplace_back( dbl_or_var( count ), str_or_var( id ) );
+    if( preview ) {
+        reward.get_likely_rewards().emplace_back( dbl_or_var( count ), str_or_var( id ) );
+    }
     return reward;
 }
 

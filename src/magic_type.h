@@ -64,6 +64,8 @@ class magic_type
         dbl_or_var failure_cost_percent;
         dbl_or_var failure_exp_percent;
         std::vector<effect_on_condition_id> failure_eocs;
+        std::string lua_failure_mod; // NOLINT(cata-serialize)
+        std::string lua_failure_handler; // NOLINT(cata-serialize)
 
         static const std::vector<magic_type> &get_all();
         static void check_consistency();

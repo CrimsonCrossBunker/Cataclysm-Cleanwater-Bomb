@@ -7486,6 +7486,25 @@ function CcbPlatformContent.define_region_terrain_furniture(options) end
 function CcbPlatformContent.define_region_settings_map_extras(options) end
 
 
+---@class OrderedMagicType
+---@field id? string Set id or abstract.
+---@field abstract? string
+---@field copy_from? string Parent magic type or abstract id.
+---@field get_level_formula? string Native one-argument experience-to-level formula, paired with exp_for_level_formula.
+---@field exp_for_level_formula? string Native one-argument level-to-experience formula.
+---@field casting_xp_formula? string Native zero-argument casting experience formula.
+---@field failure_chance_formula? string Native zero-argument casting failure formula.
+---@field energy_source? string|StaticSpellEnergy
+---@field cannot_cast_flags? string|string[] Native blocking Character flags, added to inherited flags.
+---@field cannot_cast_message? string|LocalizedText
+---@field max_book_level? integer
+---@field failure_cost_fraction? number Fraction of the casting cost paid on failure. Defaults to 0.
+---@field failure_experience_fraction? number Fraction of casting experience gained on failure. Defaults to 0.2.
+---@field on_failure? string Handler for a new magic type. Children inherit it with its defining Mod.
+
+---@param options OrderedMagicType
+function CcbPlatformContent.define_magic_type(options) end
+
 ---@class StaticForestBiomeComponent
 ---@field id string
 ---@field copy_from? string Parent component; an existing id may override itself.
@@ -8398,12 +8417,14 @@ function CcbPlatformContent.define_profession(options) end
 ---@field layout? StaticOvermapMapgenLayout Inline mapgen update using the active mission.
 
 ---@class StaticMissionItemReward
+---@field preview? boolean Show this item in the native mission reward list. Defaults to true.
 ---@field item? string Item type to deliver, in place of group.
 ---@field group? string Spawn one native loot group, in place of item.
 ---@field count? integer Item count or charges, default one.
 ---@field container? string Optional container for an item reward.
 
 ---@class StaticMissionPhase
+---@field native_actions? StaticDialogueNativeAction[] Run built-in conversation operations on the original mission participants after before_rewards and before item delivery.
 ---@field before_rewards? string|string[] Registered mission callbacks invoked in order before item delivery.
 ---@field item_rewards? StaticMissionItemReward[] Grant in order before the phase callback. Use native item delivery, giver popups, and mission reward previews.
 ---@field map_updates? StaticMissionMapUpdate[] Apply in order after the handler and target assignment.

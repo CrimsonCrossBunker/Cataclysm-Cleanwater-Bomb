@@ -4825,47 +4825,37 @@ std::optional<double> invoke_magic_type_number_handler(
     return std::nullopt;
 }
 
-void invoke_magic_type_failure_handler( const std::string_view magic_type_id,
+void invoke_magic_type_failure_handler( const std::string_view magic_type_id_value,
                                         const std::string_view spell_id,
                                         Character &caster )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin();
-         iterator != detail::active_runtime_values().rend(); ++iterator ) {
-        const std::shared_ptr<runtime> &owner = *iterator;
-        if( !owner ) {
-            continue;
-        }
-        std::string handler_id;
-        if( !owner->content.find_magic_type_handler(
-                magic_type_id, "on_failure", handler_id ) ) {
-            continue;
-        }
-        if( handler_id.empty() || !owner->world_is_ready ) {
-            return;
-        }
-        const auto handler = owner->handlers.find( handler_id );
-        if( handler == owner->handlers.end() ) {
-            DebugLog( D_ERROR, D_MAIN ) << "Lua-first magic-type failure handler '"
-                                        << owner->mod_id << ':' << handler_id
-                                        << "' is no longer registered";
-            return;
-        }
-        if( owner->callback_depth >= 16 ) {
-            DebugLog( D_ERROR, D_MAIN ) << "Lua-first magic-type failure handler recursion limit reached for '"
-                                        << owner->mod_id << ':' << handler_id << "'";
-            return;
-        }
-        sol::table payload = owner->lua->create_table();
-        payload["magic_type_id"] = std::string( magic_type_id );
-        payload["spell_id"] = std::string( spell_id );
-        payload["caster"] = platform_creature_handle( *owner, caster );
-        sol::protected_function callback = handler->second.callback;
-        callback_scope scope( *owner, &caster );
-        const sol::protected_function_result result = callback( payload );
-        if( !result.valid() ) {
-            report_callback_error( *owner, handler_id, result );
-        }
+    const magic_type_id id( magic_type_id_value );
+    if( !id.is_valid() ) {
         return;
+    }
+    const std::string handler_id = id->lua_failure_handler;
+    if( handler_id.empty() ) {
+        return;
+    }
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( id->lua_failure_mod );
+    if( !owner || !owner->world_is_ready ) {
+        return;
+    }
+    const auto handler = owner->handlers.find( handler_id );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first magic-type failure handler unavailable for '"
+                                    << owner->mod_id << ':' << handler_id << "'";
+        return;
+    }
+    sol::table payload = owner->lua->create_table();
+    payload["magic_type_id"] = id.str();
+    payload["spell_id"] = std::string( spell_id );
+    payload["caster"] = platform_creature_handle( *owner, caster );
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner, &caster );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
     }
 }
 

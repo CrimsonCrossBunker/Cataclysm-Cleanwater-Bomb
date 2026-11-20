@@ -3311,17 +3311,23 @@ talk_response_rules read_static_dialogue_rules( const sol::table &reply, const s
     return rules;
 }
 
-void write_static_dialogue_outcome( JsonOut &json, const sol::table &outcome )
+void write_static_dialogue_native_actions( JsonOut &json, const sol::table &options,
+        const char *context )
 {
-    write_placement_member<std::string>( json, outcome, "next_topic", "topic" );
-    if( const auto actions = outcome.get<sol::optional<sol::table>>( "native_actions" ) ) {
+    if( const auto actions = options.get<sol::optional<sol::table>>( "native_actions" ) ) {
         const auto names = bounded_string_array( *actions, "native_actions",
-                           std::numeric_limits<std::size_t>::max(), "dialogue reply" );
+                           std::numeric_limits<std::size_t>::max(), context );
         for( const std::string &name : names ) {
             validate_builtin_dialogue_action( name );
         }
         json.member( "effect", names );
     }
+}
+
+void write_static_dialogue_outcome( JsonOut &json, const sol::table &outcome )
+{
+    write_placement_member<std::string>( json, outcome, "next_topic", "topic" );
+    write_static_dialogue_native_actions( json, outcome, "dialogue reply" );
     for( const char *field : { "opinion", "mission_opinion" } ) {
         if( const auto opinion = outcome.get<sol::optional<sol::table>>( field ) ) {
             json.member( field );
@@ -6228,6 +6234,7 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
     const sol::table rules = phase.as<sol::table>();
     json.member( native );
     json.start_object();
+    write_static_dialogue_native_actions( json, rules, "mission phase" );
     write_static_string_or_ids( json, rules, "before_rewards", "//ccb_lua_mission_before_rewards" );
     write_static_string_or_ids( json, rules, "handler", "//ccb_lua_mission_handler" );
     write_static_catalog_array( json, rules, "item_rewards", "//ccb_lua_mission_item_rewards",
@@ -6241,6 +6248,7 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
         out.start_object();
         out.member( "id", item ? *item : *group );
         out.member( "group", group.has_value() );
+        write_placement_member<bool>( out, reward, "preview", "preview" );
         if( container ) {
             out.member( "container", *container );
         }
@@ -7008,6 +7016,38 @@ void write_static_technique( JsonOut &json, const sol::table &options )
     } );
 }
 
+void write_static_spell_energy( JsonOut &json, const sol::table &options )
+{
+    const sol::object energy = options.raw_get<sol::object>( "energy_source" );
+    if( energy.is<std::string>() ) {
+        json.member( "energy_source", energy.as<std::string>() );
+    } else if( energy.get_type() != sol::type::nil ) {
+        json.member( "energy_source" );
+        json.start_object();
+        const sol::table source = energy.as<sol::table>();
+        json.member( "type", source.get<std::string>( "source" ) );
+        write_item_fields<std::string>( json, source, { { "vitamin", "vitamin" }, { "color", "color" } } );
+        json.end_object();
+    }
+}
+
+void write_static_magic_type( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
+        { "get_level_formula", "get_level_formula_id" }, { "exp_for_level_formula", "exp_for_level_formula_id" },
+        { "casting_xp_formula", "casting_xp_formula_id" }, { "failure_chance_formula", "failure_chance_formula_id" },
+        { "on_failure", "//ccb_lua_magic_type_failure" }
+    } );
+    write_static_spell_energy( json, options );
+    write_static_string_or_ids( json, options, "cannot_cast_flags", "cannot_cast_flags" );
+    write_static_native_text( json, options, "cannot_cast_message", "cannot_cast_message" );
+    write_placement_member<int>( json, options, "max_book_level", "max_book_level" );
+    write_item_fields<double>( json, options, {
+        { "failure_cost_fraction", "failure_cost_percent" }, { "failure_experience_fraction", "failure_exp_percent" }
+    } );
+}
+
 void write_static_spell( JsonOut &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
@@ -7099,17 +7139,7 @@ void write_static_spell( JsonOut &json, const sol::table &options )
                      std::numeric_limits<std::size_t>::max(), "static spell" ) );
         json.end_object();
     }
-    const sol::object energy = options.raw_get<sol::object>( "energy_source" );
-    if( energy.is<std::string>() ) {
-        json.member( "energy_source", energy.as<std::string>() );
-    } else if( energy.get_type() != sol::type::nil ) {
-        json.member( "energy_source" );
-        json.start_object();
-        const sol::table source = energy.as<sol::table>();
-        json.member( "type", source.get<std::string>( "source" ) );
-        write_item_fields<std::string>( json, source, { { "vitamin", "vitamin" }, { "color", "color" } } );
-        json.end_object();
-    }
+    write_static_spell_energy( json, options );
     if( const auto channel = options.get<sol::optional<sol::table>>( "channel" ) ) {
         json.member( "channel_data" );
         json.start_object();
@@ -7297,6 +7327,8 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_region_settings_map_extras", static_catalog_definition(
                               resolved.id, "region_settings_map_extras", write_static_region_settings_map_extras,
                               region_settings_map_extras::load_region_settings_map_extras ) );
+    content.set_function( "define_magic_type", static_catalog_definition(
+                              resolved.id, "magic_type", write_static_magic_type, magic_type::load_magic_type ) );
     content.set_function( "define_forest_biome_component", static_catalog_definition(
                               resolved.id, "forest_biome_component", write_static_forest_biome_component,
                               forest_biome_component::load_forest_biome_feature ) );

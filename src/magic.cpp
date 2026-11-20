@@ -589,6 +589,7 @@ void spell_type::load( const JsonObject &jo, std::string_view src )
     load_stat( "max_level", max_level, max_level_default );
     load_stat( "base_casting_time", base_casting_time, base_casting_time_default );
     load_stat( "final_casting_time", final_casting_time, base_casting_time );
+    load_stat( "max_damage", max_damage, max_damage_default );
     load_stat( "casting_time_increment", casting_time_increment, casting_time_increment_default );
 
     for( const JsonMember member : jo.get_object( "learn_spells" ) ) {

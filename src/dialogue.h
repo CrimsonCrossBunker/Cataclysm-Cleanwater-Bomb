@@ -170,7 +170,7 @@ struct talk_effect_t {
 namespace dialogue_action
 {
 talk_effect_fun_t mission_item_reward( const std::string &id, int count,
-                                       const std::string &container, bool group );
+                                       const std::string &container, bool group, bool preview );
 talk_effect_fun_t::func set_actor_value( bool is_npc, std::string key,
         std::vector<std::string> choices );
 talk_effect_fun_t::func record_turn( bool is_npc, std::string key );

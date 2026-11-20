@@ -83,6 +83,16 @@ void magic_type::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "failure_exp_percent", failure_exp_percent, 0.2f );
 
     if( !was_loaded ) {
+        if( const auto handler = jo.get_member_opt( "//ccb_lua_magic_type_failure" ) ) {
+            if( handler->has_source_file() ) {
+                handler->throw_error( "Lua magic type metadata is reserved for ordered Lua definitions" );
+            }
+            lua_failure_handler = handler->get_string();
+            if( lua_failure_handler.empty() || lua_failure_handler.find( '\0' ) != std::string::npos ) {
+                handler->throw_error( "A magic type requires a nonempty failure handler name" );
+            }
+            lua_failure_mod = src;
+        }
         for( JsonValue jv : jo.get_array( "failure_eocs" ) ) {
             failure_eocs.emplace_back( effect_on_conditions::load_inline_eoc( jv, src ) );
         }
