@@ -3667,6 +3667,10 @@ function SpeechPoolDefinition:line(sound, volume) end
 ---@class EndScreenConditionPayload
 ---@field end_screen_id string
 ---@field character GameHandle Generation-checked character handle.
+---@field alive boolean Whether the character is alive at end-screen evaluation.
+---@field traits table<string, boolean> Set of trait/mutation ids currently present on the character.
+---@field effects table<string, boolean> Set of active effect type ids currently present on the character.
+---@field items table<string, boolean> Set of carried item type ids with positive count/charges.
 
 ---@class EndScreenDefinition
 ---@field id string
@@ -4520,6 +4524,7 @@ function TraitGroupDefinition:group(group_id, weight) end
 ---@field id string Stable shopkeeper rule id.
 ---@field message? string|LocalizedText Override message shown when entries match.
 ---@field default_rate? integer Default consumption rate.
+---@field junk_threshold_cents? integer Minimum item value in cents before a shopkeeper treats it as junk; defaults to 1.
 ---@field predicate? string Named boolean handler for a dynamic whitelist; receives a detached ShopkeeperWhitelistPayload.
 
 ---@class ShopkeeperWhitelistPayload
@@ -4534,8 +4539,9 @@ local ShopkeeperDefinition = {}
 ---@param category string Item-category id matched by this entry.
 ---@param item_group string Item-group id matched by this entry.
 ---@param message string|LocalizedText Message shown when the entry matches.
+---@param rate? integer Optional consumption rate override for ShopkeeperConsumptionRates entries.
 ---@return ShopkeeperDefinition self
-function ShopkeeperDefinition:entry(item, category, item_group, message) end
+function ShopkeeperDefinition:entry(item, category, item_group, message, rate) end
 
 ---@class MagicTypeDefinitionOptions
 ---@field id string Stable magic-system id.

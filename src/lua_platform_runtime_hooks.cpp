@@ -4480,6 +4480,26 @@ std::optional<bool> invoke_end_screen_handler(
         sol::table payload = owner->lua->create_table();
         payload["end_screen_id"] = std::string( end_screen_id_value );
         payload["character"] = platform_creature_handle( *owner, character );
+        payload["alive"] = !character.is_dead_state();
+        sol::table traits = owner->lua->create_table();
+        for( const trait_id &trait : character.get_mutations() ) {
+            traits[trait.str()] = true;
+        }
+        payload["traits"] = std::move( traits );
+        sol::table effects = owner->lua->create_table();
+        for( const effect &entry : character.get_effects() ) {
+            effects[entry.get_id().str()] = true;
+        }
+        payload["effects"] = std::move( effects );
+        sol::table items = owner->lua->create_table();
+        character.visit_items( [&items]( item *it, item * ) {
+            if( it != nullptr && !it->is_null() &&
+                ( !it->count_by_charges() || it->charges > 0 ) ) {
+                items[it->typeId().str()] = true;
+            }
+            return VisitResponse::NEXT;
+        } );
+        payload["items"] = std::move( items );
         sol::protected_function callback = handler->second.callback;
         callback_scope scope( *owner );
         const sol::protected_function_result result = callback( payload );

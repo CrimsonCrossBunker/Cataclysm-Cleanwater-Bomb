@@ -2997,6 +2997,7 @@ struct shopkeeper_entry_definition_data {
     std::string category;
     std::string item_group;
     detail::authored_text message;
+    std::int64_t rate = 0;
 };
 
 struct shopkeeper_blacklist_definition_data {
@@ -3006,6 +3007,7 @@ struct shopkeeper_blacklist_definition_data {
     detail::authored_text message;
     std::string predicate;
     std::int64_t default_rate = 0;
+    std::int64_t junk_threshold_cents = 1;
     bool registered = false;
 };
 
@@ -3164,11 +3166,13 @@ struct shopkeeper_definition_handle {
 
     shopkeeper_definition_handle &entry(
         const std::string &item, const std::string &category,
-        const std::string &item_group, const sol::object &message ) {
+        const std::string &item_group, const sol::object &message,
+        const sol::optional<std::int64_t> &rate ) {
         require_building_handle( token, *definition, "shopkeeper entry" );
         definition->entries.push_back( shopkeeper_entry_definition_data{
             item, category, item_group,
-            detail::read_singular_text( message, {}, "shopkeeper entry message" )
+            detail::read_singular_text( message, {}, "shopkeeper entry message" ),
+            rate.value_or( 0 )
         } );
         return *this;
     }
@@ -5062,7 +5066,10 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         definition->message = detail::read_singular_text( options["message"], {}, "shopkeeper message" );
         definition->predicate = options.get_or( "predicate", std::string() );
-        definition->default_rate = options.get_or<std::int64_t>( "default_rate", 0 );
+        definition->default_rate = options.get_or<std::int64_t>(
+                                       "default_rate", kind == "consumption" ? -1 : 0 );
+        definition->junk_threshold_cents = options.get_or<std::int64_t>(
+                                               "junk_threshold_cents", 1 );
         return shopkeeper_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -7377,6 +7384,20 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "shopkeeper rule '" + definition.id +
                                           "' has a duplicate registration" );
             }
+            if( definition.default_rate < std::numeric_limits<int>::min() ||
+                definition.default_rate > std::numeric_limits<int>::max() ||
+                definition.junk_threshold_cents < 0 ||
+                definition.junk_threshold_cents > std::numeric_limits<int>::max() ) {
+                throw std::runtime_error( "shopkeeper rule '" + definition.id +
+                                          "' has an out-of-range consumption rate or junk threshold" );
+            }
+            for( const shopkeeper_entry_definition_data &rule : definition.entries ) {
+                if( rule.rate < std::numeric_limits<int>::min() ||
+                    rule.rate > std::numeric_limits<int>::max() ) {
+                    throw std::runtime_error( "shopkeeper rule '" + definition.id +
+                                              "' entry has an out-of-range rate" );
+                }
+            }
         }
 
         std::set<std::string> construction_category_ids;
@@ -9599,6 +9620,8 @@ bool content_transaction::apply( std::string &error )
                 shopkeeper_cons_rates native;
                 native.id = shopkeeper_cons_rates_id( source.id );
                 native.default_rate = static_cast<int>( source.default_rate );
+                native.junk_threshold = units::from_cent<std::int64_t>(
+                                            source.junk_threshold_cents );
                 for( const shopkeeper_entry_definition_data &entry_data :
                      source.entries ) {
                     shopkeeper_cons_rate_entry native_entry;
@@ -9614,6 +9637,7 @@ bool content_transaction::apply( std::string &error )
                     if( !entry_data.message.empty() ) {
                         native_entry.message = entry_data.message.native();
                     }
+                    native_entry.rate = static_cast<int>( entry_data.rate );
                     native.rates.push_back( native_entry );
                 }
                 native.was_loaded = true;
@@ -12391,11 +12415,13 @@ std::string content_transaction::fingerprint() const
         hash_part( state, value.message );
         hash_part( state, value.predicate );
         hash_part( state, std::to_string( value.default_rate ) );
+        hash_part( state, std::to_string( value.junk_threshold_cents ) );
         for( const shopkeeper_entry_definition_data &rule : value.entries ) {
             hash_part( state, rule.item );
             hash_part( state, rule.category );
             hash_part( state, rule.item_group );
             hash_part( state, rule.message );
+            hash_part( state, std::to_string( rule.rate ) );
         }
     }
     pimpl_->presentation.append_fingerprint( state );
