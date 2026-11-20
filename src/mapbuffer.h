@@ -91,6 +91,11 @@ class mapbuffer
         // Changes when resident content is added, removed, or cleared. Consumers
         // can use this to invalidate negative lookup caches after mapgen or eviction.
         uint64_t content_revision() const;
+        // Release a submap just read by a renderer without saving its unchanged data.
+        // Fails when the resident map still references it.
+        bool evict_unmodified_submap( const tripoint_abs_sm &p, const map &resident );
+        // Persist and release a generated OMT column that no resident map references.
+        bool save_and_evict_omt_column( const tripoint_abs_omt &p, const map &resident );
         // Cheaper version of the above for when you only care about whether the
         // submap exists or not.
         bool submap_exists( const tripoint_abs_sm &p );

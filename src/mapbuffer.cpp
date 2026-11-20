@@ -197,6 +197,59 @@ submap *mapbuffer::get_submap_if_loaded( const tripoint_abs_sm &p )
     return iter == submaps.end() ? nullptr : iter->second.get();
 }
 
+bool mapbuffer::evict_unmodified_submap( const tripoint_abs_sm &p, const map &resident )
+{
+    std::scoped_lock lk( submaps_mutex_ );
+    if( resident.has_loaded_submap( p ) ) {
+        return false;
+    }
+    const auto iter = submaps.find( p );
+    if( iter == submaps.end() ) {
+        return false;
+    }
+    submaps.erase( iter );
+    ++content_revision_;
+    return true;
+}
+
+bool mapbuffer::save_and_evict_omt_column( const tripoint_abs_omt &p, const map &resident )
+{
+    scoped_prefetch_pause prefetch_pause( prefetcher_ );
+    std::scoped_lock lk( submaps_mutex_ );
+    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+        const tripoint_abs_sm base = project_to<coords::sm>( tripoint_abs_omt( p.xy(), z ) );
+        for( int dx = 0; dx <= 1; ++dx ) {
+            for( int dy = 0; dy <= 1; ++dy ) {
+                if( resident.has_loaded_submap( base + point_rel_sm( dx, dy ) ) ) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    std::list<tripoint_abs_sm> submaps_to_delete;
+    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+        const tripoint_abs_omt om_addr( p.xy(), z );
+        const tripoint_abs_sm base = project_to<coords::sm>( om_addr );
+        bool any_loaded = false;
+        for( int dx = 0; dx <= 1; ++dx ) {
+            for( int dy = 0; dy <= 1; ++dy ) {
+                any_loaded = any_loaded || submaps.count( base + point_rel_sm( dx, dy ) ) != 0;
+            }
+        }
+        if( any_loaded ) {
+            const cata_path dirname = find_dirname( om_addr );
+            save_quad( dirname, dirname / quad_file_name( om_addr ),
+                       om_addr, submaps_to_delete, true );
+        }
+    }
+    for( const tripoint_abs_sm &addr : submaps_to_delete ) {
+        remove_submap( addr );
+    }
+    zzip_listing_cache.clear();
+    return true;
+}
+
 submap *mapbuffer::lookup_submap( const tripoint_abs_sm &p )
 {
     return lookup_submap( p, true );

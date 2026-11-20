@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <filesystem>
 #include <exception>
 #include <fstream>
@@ -124,6 +125,17 @@ constexpr int NEAR_DRAW_INSTANCES = VIEW_SIZE * VIEW_SIZE * 6 +
                                     REGION_SIZE * REGION_SIZE * 6 * ( OVERMAP_DEPTH + OVERMAP_HEIGHT );
 constexpr int INITIAL_DRAW_INSTANCES = NEAR_DRAW_INSTANCES + INITIAL_FAR_LOD_INSTANCES;
 constexpr int MAX_DRAW_INSTANCES = NEAR_DRAW_INSTANCES + FAR_LOD_MAX_INSTANCES;
+// Full submaps include entities and items. Distant rendering retains only the
+// terrain ids needed by the structural LOD, with bounded LRU storage.
+constexpr size_t FAR_TERRAIN_CACHE_MAX_SUBMAPS = 32768;
+constexpr size_t FAR_SOURCE_WORK_PER_FRAME = 4;
+
+struct distant_terrain_snapshot {
+    std::array<ter_id, SEEX * SEEY> terrain{};
+    std::pair<uint64_t, uint64_t> geometry_stamp{};
+    uint64_t last_used = 0;
+    bool open_air = false;
+};
 // float3 pos + float3 scale + float2 uv0 + float2 uv1 + float4 color + float flags + float pad
 constexpr int INSTANCE_STRIDE = 64;
 
@@ -5314,8 +5326,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const bool far_profile = profiling_enabled();
         const Uint64 far_begin = profile_ticks( far_profile );
         const int far_count_start = count;
-        // Generated-map structural LOD beyond the live radius. MAPBUFFER owns all
-        // submaps; pointers are borrowed for this gather only and never retained.
+        // Distant structure reads copy terrain ids into bounded snapshots. Full
+        // submaps are borrowed only while refreshing a snapshot, never retained.
         // On or above the surface, include every upper building level. Underground
         // keeps the original single-level far pass. These are absolute Z levels:
         // distant ground must not move with the loaded map's vertical origin.
@@ -5324,13 +5336,85 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                               ( upos.z() >= 0 ? OVERMAP_HEIGHT : far_z_min );
         const tripoint_abs_ms center_abs = here.get_abs( center );
         const tripoint_abs_sm center_sm = project_to<coords::sm>( center_abs );
+        static uint64_t far_frame = 0;
+        ++far_frame;
+        static const WORLD *far_cache_world = nullptr;
+        static std::string far_cache_dimension;
+        static std::unordered_map<tripoint_abs_sm, distant_terrain_snapshot> far_cache;
+        static std::deque<tripoint_abs_sm> far_pending;
+        static std::unordered_set<tripoint_abs_sm> far_pending_set;
         static std::unordered_set<tripoint_abs_sm> far_missing;
         static uint64_t far_missing_revision = 0;
+        static tripoint_abs_sm far_queue_center;
+        static bool far_queue_center_valid = false;
+        if( far_cache_world != current_world || far_cache_dimension != current_dimension ) {
+            far_cache_world = current_world;
+            far_cache_dimension = current_dimension;
+            far_cache.clear();
+            far_pending.clear();
+            far_pending_set.clear();
+            far_missing.clear();
+            far_missing_revision = 0;
+            far_queue_center_valid = false;
+        }
         const uint64_t buffer_revision = MAPBUFFER.content_revision();
         if( far_missing_revision != buffer_revision ) {
             far_missing_revision = buffer_revision;
             far_missing.clear();
         }
+        auto capture_snapshot = [&]( const tripoint_abs_sm & p,
+        const submap & sm ) -> const distant_terrain_snapshot * {
+            auto existing = far_cache.find( p );
+            const std::pair<uint64_t, uint64_t> stamp = sm.geometry_stamp();
+            if( existing != far_cache.end() && existing->second.geometry_stamp == stamp ) {
+                existing->second.last_used = far_frame;
+                return &existing->second;
+            }
+            if( existing == far_cache.end() && far_cache.size() >= FAR_TERRAIN_CACHE_MAX_SUBMAPS ) {
+                const auto oldest = std::min_element( far_cache.begin(), far_cache.end(),
+                []( const auto & a, const auto & b ) {
+                    return a.second.last_used < b.second.last_used;
+                } );
+                if( oldest == far_cache.end() || oldest->second.last_used == far_frame ) {
+                    return nullptr;
+                }
+                far_cache.erase( oldest );
+            }
+            distant_terrain_snapshot snapshot;
+            snapshot.geometry_stamp = stamp;
+            snapshot.last_used = far_frame;
+            if( sm.is_uniform() ) {
+                const ter_id uniform = sm.get_ter( point_sm_ms::zero );
+                snapshot.open_air = uniform && uniform->has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
+            }
+            for( int y = 0; y < SEEY; ++y ) {
+                for( int x = 0; x < SEEX; ++x ) {
+                    snapshot.terrain[y * SEEX + x] = sm.get_ter( point_sm_ms( x, y ) );
+                }
+            }
+            const auto inserted = far_cache.insert_or_assign( p, std::move( snapshot ) );
+            far_missing.erase( p );
+            return &inserted.first->second;
+        };
+        auto snapshot_for = [&]( const tripoint_abs_sm & p ) -> const distant_terrain_snapshot * {
+            const submap *resident = MAPBUFFER.get_submap_if_loaded( p );
+            const auto cached = far_cache.find( p );
+            if( resident && ( cached == far_cache.end() ||
+                              cached->second.geometry_stamp != resident->geometry_stamp() ) ) {
+                return capture_snapshot( p, *resident );
+            }
+            if( cached != far_cache.end() ) {
+                cached->second.last_used = far_frame;
+                return &cached->second;
+            }
+            return nullptr;
+        };
+        auto queue_source = [&]( const tripoint_abs_sm & p ) {
+            if( far_cache.count( p ) == 0 && far_missing.count( p ) == 0 &&
+                far_pending_set.insert( p ).second ) {
+                far_pending.push_back( p );
+            }
+        };
         const bool memory_visible = you.should_show_map_memory();
         constexpr int far_radius_sm = ( FAR_SUBMAP_RADIUS + SEEX - 1 ) / SEEX;
         for( int smy = -far_radius_sm; smy <= far_radius_sm; ++smy ) {
@@ -5404,55 +5488,14 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     const float wz = ( zlev - cz ) * LEVEL_HEIGHT;
                     const tripoint_abs_sm sm_pos( column_pos.x(), column_pos.y(), zlev );
                     const tripoint_abs_ms sm_abs = project_to<coords::ms>( sm_pos );
-                    const submap *sm = nullptr;
-                    if( gray_visible ) {
-                        sm = MAPBUFFER.get_submap_if_loaded( sm_pos );
-                        if( !sm && far_missing.count( sm_pos ) == 0 ) {
-                            // Complete the visible set synchronously. A frame budget leaves
-                            // the frontier permanently incomplete while the player keeps moving.
-                            sm = MAPBUFFER.lookup_saved_submap( sm_pos );
-                            const tripoint_abs_omt om_addr = project_to<coords::omt>( sm_pos );
-                            if( !sm && zlev == 0 ) {
-                                const oter_id &om_ter = overmap_buffer.ter_existing( om_addr );
-                                if( om_ter->has_uniform_terrain() ) {
-                                    // Saving omits regenerable uniform quads. Reconstruct only
-                                    // that declared terrain, never non-uniform distant mapgen.
-                                    MAPBUFFER.generate_uniform_omt( sm_pos, om_ter );
-                                    sm = MAPBUFFER.get_submap_if_loaded( sm_pos );
-                                }
-                                if( !sm && !here.inbounds( om_addr ) ) {
-                                    // The forward frontier has no saved terrain yet. Use the
-                                    // same real OMT generation entry as map::loadn, without
-                                    // actualizing distant entities or touching the loaded bubble.
-                                    smallmap tmp_map;
-                                    {
-                                        swap_map swap( *tmp_map.cast_to_map() );
-                                        tmp_map.main_cleanup_override( false );
-                                        tmp_map.generate( om_addr, calendar::turn, true );
-                                    }
-                                    sm = MAPBUFFER.get_submap_if_loaded( sm_pos );
-                                }
-                            }
-                            // Loading can advance the revision even when the requested submap
-                            // is absent. Adopt it here so new data does not clear this frame's
-                            // negative results and repeatedly retry the first absent upper level.
-                            far_missing_revision = MAPBUFFER.content_revision();
-                            if( !sm ) {
-                                far_missing.insert( sm_pos );
-                            }
-                        }
+                    const distant_terrain_snapshot *snapshot = snapshot_for( sm_pos );
+                    if( !snapshot && gray_visible ) {
+                        queue_source( sm_pos );
                     }
-                    const bool uniform_submap = sm && sm->is_uniform();
-                    ter_id uniform_ter;
-                    bool uniform_open_air = false;
-                    if( uniform_submap ) {
-                        uniform_ter = sm->get_ter( point_sm_ms( 0, 0 ) );
-                        uniform_open_air = uniform_ter &&
-                                           uniform_ter->has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
-                    }
+                    const bool uniform_open_air = snapshot && snapshot->open_air;
                     const bool has_memory = memory_visible && memory_possible && you.has_map_memory_in_region(
                                                 sm_abs, sm_abs + point_rel_ms( SEEX - 1, SEEY - 1 ) );
-                    if( ( !sm || uniform_open_air ) && !has_memory ) {
+                    if( ( !snapshot || uniform_open_air ) && !has_memory ) {
                         continue;
                     }
                     for( int ly = 0; ly < SEEY; ++ly ) {
@@ -5475,9 +5518,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                     continue;
                                 }
                             }
-                            if( gray_visible && sm && !uniform_open_air ) {
-                                const ter_id t = uniform_submap ? uniform_ter :
-                                                 sm->get_ter( point_sm_ms( lx, ly ) );
+                            if( gray_visible && snapshot && !uniform_open_air ) {
+                                const ter_id t = snapshot->terrain[ly * SEEX + lx];
                                 if( t ) {
                                     gather_structure_tile( t.obj(), here.get_bub( abs_p ), d, wz );
                                 }
@@ -5487,6 +5529,140 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 }
             }
         }
+        // Completed snapshots survive movement, so a bounded queue keeps making
+        // progress without repeating the first unfinished frontier every frame.
+        if( !far_queue_center_valid || far_queue_center != center_sm ) {
+            far_queue_center = center_sm;
+            far_queue_center_valid = true;
+            for( auto it = far_pending.begin(); it != far_pending.end(); ) {
+                const tripoint_abs_ms abs = project_to<coords::ms>( *it );
+                const point d( abs.x() - center_abs.x(), abs.y() - center_abs.y() );
+                const int range2 = d.x * d.x + d.y * d.y;
+                if( far_cache.count( *it ) != 0 || far_missing.count( *it ) != 0 ||
+                    it->z() < far_z_min || it->z() > far_z_max ||
+                    range2 <= VIEW_RADIUS * VIEW_RADIUS ||
+                    range2 > FAR_SUBMAP_RADIUS * FAR_SUBMAP_RADIUS ) {
+                    far_pending_set.erase( *it );
+                    it = far_pending.erase( it );
+                } else {
+                    ++it;
+                }
+            }
+            const auto queue_distance = [&]( const tripoint_abs_sm & p ) {
+                const tripoint_abs_ms abs = project_to<coords::ms>( p );
+                const point d( abs.x() - center_abs.x(), abs.y() - center_abs.y() );
+                return d.x * d.x + d.y * d.y;
+            };
+            std::sort( far_pending.begin(), far_pending.end(),
+            [&]( const tripoint_abs_sm & a, const tripoint_abs_sm & b ) {
+                const int a_distance = queue_distance( a );
+                const int b_distance = queue_distance( b );
+                if( a_distance != b_distance ) {
+                    return a_distance < b_distance;
+                }
+                if( ( a.z() == 0 ) != ( b.z() == 0 ) ) {
+                    return a.z() == 0;
+                }
+                if( a.z() != b.z() ) {
+                    return a.z() < b.z();
+                }
+                if( a.x() != b.x() ) {
+                    return a.x() < b.x();
+                }
+                return a.y() < b.y();
+            } );
+        }
+        size_t source_work = 0;
+        for( auto next = far_pending.begin();
+             next != far_pending.end() && source_work < FAR_SOURCE_WORK_PER_FRAME; ) {
+            const tripoint_abs_sm sm_pos = *next;
+            next = far_pending.erase( next );
+            far_pending_set.erase( sm_pos );
+            if( far_cache.count( sm_pos ) != 0 || far_missing.count( sm_pos ) != 0 ) {
+                continue;
+            }
+            const tripoint_abs_ms sm_abs = project_to<coords::ms>( sm_pos );
+            const point smd( sm_abs.x() - center_abs.x(), sm_abs.y() - center_abs.y() );
+            const int range2 = smd.x * smd.x + smd.y * smd.y;
+            const float wz = ( sm_pos.z() - cz ) * LEVEL_HEIGHT;
+            if( sm_pos.z() < far_z_min || sm_pos.z() > far_z_max ||
+                range2 <= VIEW_RADIUS * VIEW_RADIUS ||
+                range2 > FAR_SUBMAP_RADIUS * FAR_SUBMAP_RADIUS ||
+                !bounds_in_frustum( frustum, static_cast<float>( smd.x ),
+                                    static_cast<float>( smd.y ),
+                                    static_cast<float>( smd.x + SEEX ),
+                                    static_cast<float>( smd.y + SEEY ), wz ) ||
+                !gray_los_visible( sm_abs + point_rel_ms( SEEX / 2, SEEY / 2 ) ) ) {
+                continue;
+            }
+
+            const submap *resident = MAPBUFFER.get_submap_if_loaded( sm_pos );
+            if( resident ) {
+                capture_snapshot( sm_pos, *resident );
+                ++source_work;
+                continue;
+            }
+
+            const tripoint_abs_omt om_addr = project_to<coords::omt>( sm_pos );
+            const tripoint_abs_sm quad_base = project_to<coords::sm>( om_addr );
+            std::array<bool, 4> was_loaded{};
+            for( int i = 0; i < 4; ++i ) {
+                const tripoint_abs_sm pos = quad_base + point_rel_sm( i % 2, i / 2 );
+                was_loaded[i] = MAPBUFFER.get_submap_if_loaded( pos ) != nullptr;
+            }
+            const submap *sm = MAPBUFFER.lookup_saved_submap( sm_pos );
+            bool generated = false;
+            if( !sm && sm_pos.z() == 0 ) {
+                const oter_id &om_ter = overmap_buffer.ter_existing( om_addr );
+                if( om_ter->has_uniform_terrain() ) {
+                    MAPBUFFER.generate_uniform_omt( sm_pos, om_ter );
+                    sm = MAPBUFFER.get_submap_if_loaded( sm_pos );
+                }
+                if( !sm && !here.inbounds( om_addr ) ) {
+                    // Generate the real OMT, snapshot every level, then persist and
+                    // release the full entity-bearing submaps as one column.
+                    smallmap tmp_map;
+                    {
+                        swap_map swap( *tmp_map.cast_to_map() );
+                        tmp_map.main_cleanup_override( false );
+                        tmp_map.generate( om_addr, calendar::turn, true );
+                    }
+                    generated = true;
+                    sm = MAPBUFFER.get_submap_if_loaded( sm_pos );
+                }
+            }
+            const bool source_found = sm != nullptr;
+            if( generated ) {
+                for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+                    for( int dx = 0; dx <= 1; ++dx ) {
+                        for( int dy = 0; dy <= 1; ++dy ) {
+                            const tripoint_abs_sm pos = quad_base + tripoint_rel_sm( dx, dy, z );
+                            if( const submap *loaded = MAPBUFFER.get_submap_if_loaded( pos ) ) {
+                                capture_snapshot( pos, *loaded );
+                            }
+                        }
+                    }
+                }
+                MAPBUFFER.save_and_evict_omt_column( om_addr, here );
+                // One non-uniform OMT is already a substantial unit of mapgen work.
+                source_work = FAR_SOURCE_WORK_PER_FRAME;
+            } else {
+                for( int i = 0; i < 4; ++i ) {
+                    const tripoint_abs_sm pos = quad_base + point_rel_sm( i % 2, i / 2 );
+                    if( const submap *loaded = MAPBUFFER.get_submap_if_loaded( pos ) ) {
+                        capture_snapshot( pos, *loaded );
+                    }
+                    if( !was_loaded[i] ) {
+                        MAPBUFFER.evict_unmodified_submap( pos, here );
+                    }
+                }
+                ++source_work;
+            }
+            if( !source_found ) {
+                far_missing.insert( sm_pos );
+            }
+        }
+        far_missing_revision = MAPBUFFER.content_revision();
         g_profile.far_instances = count - far_count_start;
         if( far_profile ) {
             g_profile.far_ms = profile_ms( far_begin, profile_ticks( true ) );
