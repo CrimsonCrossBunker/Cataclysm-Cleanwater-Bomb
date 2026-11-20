@@ -467,6 +467,9 @@ std::shared_ptr<parsed_flexbuffer> flexbuffer_cache::parse( std::filesystem::pat
         throw std::runtime_error( "Failed to mmap " + json_source_path_string );
     }
 
+    if( offset >= json_source->len() ) {
+        throw std::runtime_error( "JSON offset is outside " + json_source_path_string );
+    }
     const char *json_text = reinterpret_cast<const char *>( json_source->base() ) + offset;
 
     std::vector<uint8_t> fb = parse_json_to_flexbuffer_( json_text, json_source_path_string.c_str() );
@@ -490,7 +493,7 @@ std::shared_ptr<parsed_flexbuffer> flexbuffer_cache::parse_and_cache(
 {
 
     // Is our cache potentially stale?
-    if( disk_cache_ ) {
+    if( disk_cache_ && offset == 0 ) {
         std::shared_ptr<flexbuffer_mmap_storage> cached_storage = disk_cache_->load_flexbuffer_if_not_stale(
                     lexically_normal_json_source_path );
         if( cached_storage ) {
@@ -512,10 +515,13 @@ std::shared_ptr<parsed_flexbuffer> flexbuffer_cache::parse_and_cache(
     }
     std::string &json_source = *json_file_contents;
 
+    if( offset >= json_source.size() ) {
+        throw std::runtime_error( "JSON offset is outside " + json_source_path_string );
+    }
     const char *json_text = reinterpret_cast<const char *>( json_source.c_str() ) + offset;
     std::vector<uint8_t> fb = parse_json_to_flexbuffer_( json_text, json_source_path_string.c_str() );
 
-    if( disk_cache_ ) {
+    if( disk_cache_ && offset == 0 ) {
         disk_cache_->save_to_disk( lexically_normal_json_source_path, fb );
     }
 
@@ -548,7 +554,7 @@ JsonValue json_from_owned_buffer( std::shared_ptr<const char[]> buffer )
     std::vector<uint8_t> fb = parse_json_to_flexbuffer_( buffer.get(), nullptr );
     auto storage = std::make_shared<flexbuffer_vector_storage>( std::move( fb ) );
     auto parsed = std::make_shared<owned_buffer_flexbuffer>( std::move( storage ),
-        std::move( buffer ) );
+                  std::move( buffer ) );
     flexbuffers::Reference root = flexbuffer_root_from_storage( parsed->get_storage() );
     return JsonValue( std::move( parsed ), root, nullptr, 0 );
 }

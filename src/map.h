@@ -51,6 +51,7 @@
 #include "vpart_position.h"
 
 struct scent_block;
+struct graded_surface;
 struct terrain_growth_state;
 
 namespace vision_preparation
@@ -939,7 +940,8 @@ class map
 
         // Actually moves the vehicle
         // Unlike displace_vehicle, this one handles collisions
-        vehicle *move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tileray &facing );
+        vehicle *move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tileray &facing,
+                               bool cleared_flight_path = false );
 
         // Furniture
         void set( const tripoint_bub_ms &p, const ter_id &new_terrain, const furn_id &new_furniture );
@@ -995,6 +997,9 @@ class map
 
         int get_map_damage( const tripoint_bub_ms &p ) const;
         void set_map_damage( const tripoint_bub_ms &p, int dmg );
+
+        const graded_surface *get_surface_grade( const tripoint_bub_ms &p ) const;
+        void set_surface_grade( const tripoint_bub_ms &p, graded_surface grade );
 
         const terrain_growth_state *get_terrain_growth( const tripoint_bub_ms &p ) const;
         void set_terrain_growth( const tripoint_bub_ms &p, const terrain_growth_state &state );
@@ -2476,6 +2481,8 @@ class map
 
         // The observer belongs to this map's seen cache, not to the process.
         std::optional < std::pair < tripoint_abs_ms, int>> previous_visibility_observer;
+        std::vector<std::pair<const vehicle *, std::uint64_t>>
+                vehicle_overlay_versions_; // NOLINT(cata-serialize)
         friend class scoped_map_viewpoint;
         std::optional < map_viewpoint > viewpoint_;
         const map_viewpoint *viewpoint_for( const Creature &observer ) const;

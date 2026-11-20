@@ -69,6 +69,10 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
+        printf '%s\tpriority:%d\n' \
+          'https://archive.ubuntu.com/ubuntu/' 1 \
+          'https://security.ubuntu.com/ubuntu/' 2 \
+          | sudo tee /etc/apt/apt-mirrors.txt
         apt_options=(
           -o DPkg::Lock::Timeout=120
           -o Acquire::Retries=3

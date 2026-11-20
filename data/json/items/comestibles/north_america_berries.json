@@ -4,10 +4,7 @@
     "subtypes": [ "COMESTIBLE" ],
     "id": "atlas_cloudberry",
     "copy-from": "blueberries",
-    "name": {
-      "str": "handful of cloudberries",
-      "str_pl": "handfuls of cloudberries"
-    },
+    "name": { "str": "handful of cloudberries", "str_pl": "handfuls of cloudberries" },
     "description": "Soft amber-colored berries with a tart, floral taste.",
     "color": "yellow",
     "weight": "100 g",
@@ -21,10 +18,7 @@
     "subtypes": [ "COMESTIBLE" ],
     "id": "atlas_lingonberry",
     "copy-from": "blueberries",
-    "name": {
-      "str": "handful of lingonberries",
-      "str_pl": "handfuls of lingonberries"
-    },
+    "name": { "str": "handful of lingonberries", "str_pl": "handfuls of lingonberries" },
     "description": "Firm red berries with a sharp, tart taste.",
     "color": "red",
     "weight": "100 g",

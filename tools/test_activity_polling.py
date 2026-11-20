@@ -46,8 +46,11 @@ std::chrono::steady_clock::time_point clock_now() {
         std::chrono::milliseconds(elapsed));
 }
 struct avatar;
+enum activity_id { ACT_OTHER, ACT_MOUNTED_CHARGE };
 struct Activity {
     bool active=true;
+    activity_id type=ACT_OTHER;
+    activity_id id() const { return type; }
     explicit operator bool() const { return active; }
     void do_turn(avatar &u);
 };
@@ -80,6 +83,15 @@ int main() {
     player.moves=25; calls=0; elapsed+=100; cancel=true;
     process_avatar_activity(player);
     assert(calls==0 && player.moves==25 && !player.activity);
+    player.moves=100; player.activity.active=true;
+    player.activity.type=ACT_MOUNTED_CHARGE;
+    calls=0; polls=0; cancel=true; spend_moves=false;
+    process_avatar_activity(player);
+    assert(calls==0 && polls==1 && player.moves==100 && !player.activity);
+    player.activity.active=true;
+    calls=0; polls=0; cancel=false; spend_moves=true;
+    process_avatar_activity(player);
+    assert(calls==4 && polls==4 && player.moves==0);
 }
 '''
 if __name__ == '__main__':

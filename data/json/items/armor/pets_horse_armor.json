@@ -16,6 +16,21 @@
   {
     "type": "ITEM",
     "subtypes": [ "PET_ARMOR" ],
+    "id": "padded_armor_horse",
+    "copy-from": "horse_armor",
+    "name": { "str": "padded horse barding" },
+    "description": "A quilted cloth covering with leather straps, fitted to protect a horse from bites and glancing blows.  It offers little protection against powerful attacks.",
+    "color": "light_gray",
+    "price": "120 USD",
+    "price_postapoc": "25 USD",
+    "material": [ "cotton", "leather" ],
+    "weight": "8 kg",
+    "volume": "20 L",
+    "material_thickness": 4
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "PET_ARMOR" ],
     "id": "kevlar_armor_horse",
     "copy-from": "horse_armor",
     "color": "yellow",

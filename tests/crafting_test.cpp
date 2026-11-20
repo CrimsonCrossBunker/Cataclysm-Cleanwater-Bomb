@@ -335,6 +335,7 @@ TEST_CASE( "available_recipes", "[recipes]" )
 {
     const recipe *r = &recipe_magazine_battery_light_mod.obj();
     avatar dummy;
+    dummy.set_body();
 
     REQUIRE( static_cast<int>( dummy.get_skill_level( r->skill_used ) ) == 0 );
     REQUIRE_FALSE( dummy.knows_recipe( r ) );

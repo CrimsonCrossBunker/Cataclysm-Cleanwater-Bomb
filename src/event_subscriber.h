@@ -18,6 +18,9 @@ class event_subscriber
         event_subscriber( const event_subscriber & ) = delete;
         event_subscriber &operator=( const event_subscriber & ) = delete;
         virtual ~event_subscriber();
+        virtual bool needs_talker() const {
+            return true;
+        }
         virtual void notify( const cata::event & ) = 0;
         virtual void notify( const cata::event &, std::unique_ptr<talker>, std::unique_ptr<talker> );
     private:

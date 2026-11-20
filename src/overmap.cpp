@@ -2519,69 +2519,17 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
         }
     }
 
-    const oter_id road_ns( "road_ns" );
-    const oter_id road_ew( "road_ew" );
-    for( const bool north_south : {
-             true, false
-         } ) {
-        const int length = north_south ? OMAPY : OMAPX;
-        const int columns = north_south ? OMAPX : OMAPY;
-        const auto at = [north_south]( int across, int along ) {
-            return north_south ? tripoint_om_omt( across, along, 0 ) :
-                   tripoint_om_omt( along, across, 0 );
-        };
-        const oter_id flank = north_america::avenue_flank( north_south );
-        const oter_id &spine = north_south ? road_ns : road_ew;
-        const auto width_at = [&]( int across, int along ) {
-            const tripoint_om_omt p = at( across, along );
-            if( ter( p ) != spine ) {
-                return 1;
-            }
-            const auto &tile = network[p.y() * OMAPX + p.x()];
-            const bool mapped_highway = tile.mapped_connections != 0 && tile.lanes >= 4 &&
-                                        ( settings->place_roads || settings->overmap_highway );
-            const int width = mapped_highway ? static_cast<int>( tile.lanes / 2 ) :
-                              generate_city_streets && tile.street == north_america::urban_road::arterial ? 2 : 1;
-            const int first = -( width - 1 ) / 2;
-            for( int offset = first; offset < first + width; ++offset ) {
-                if( offset == 0 ) {
-                    continue;
+    const bool mapped_highways = settings->place_roads || settings->overmap_highway.has_value();
+    if( mapped_highways || generate_city_streets ) {
+        const auto footprint = north_america::wide_highway_footprint( origin, OMAPX, OMAPY,
+                               mapped_highways, generate_city_streets );
+        for( int row = 0; row < OMAPY; ++row ) {
+            for( int column = 0; column < OMAPX; ++column ) {
+                const unsigned char cell = footprint[row * OMAPX + column];
+                const tripoint_om_omt position( column, row, 0 );
+                if( cell && !ter( position )->is_road() && can_build_street( position ) ) {
+                    ter_set( position, north_america::wide_highway_flank( cell % 2 != 0 ) );
                 }
-                const tripoint_om_omt side = at( across + offset, along );
-                if( !inbounds( side ) || network[side.y() * OMAPX + side.x()].connections ||
-                    north_america::is_avenue_flank( ter( side ) ) || !can_build_street( side ) ||
-                    ( !mapped_highway && !north_america::in_urban_footprint( origin + side.xy().raw() ) ) ) {
-                    return 1;
-                }
-            }
-            return width;
-        };
-        // Stay single-width through bends, junctions and obstacles. Require a
-        // straight run long enough for a taper at both ends.
-        for( int across = 0; across < columns; ++across ) {
-            for( int begin = 0; begin < length; ) {
-                const int width = width_at( across, begin );
-                if( width == 1 ) {
-                    ++begin;
-                    continue;
-                }
-                int end = begin + 1;
-                while( end < length && width_at( across, end ) == width ) {
-                    ++end;
-                }
-                const int minimum = width >= 3 ? north_america::min_wide_highway_run :
-                                    north_america::min_wide_road_run;
-                if( end - begin >= minimum || ( width >= 3 && ( begin == 0 || end == length ) ) ) {
-                    const int first = -( width - 1 ) / 2;
-                    for( int along = begin; along < end; ++along ) {
-                        for( int offset = first; offset < first + width; ++offset ) {
-                            if( offset != 0 ) {
-                                ter_set( at( across + offset, along ), flank );
-                            }
-                        }
-                    }
-                }
-                begin = end;
             }
         }
     }

@@ -786,6 +786,7 @@ void game::reset_game_state()
     npc_lifetimes_ptr->reset();
     new_game = true;
     north_america_world = false;
+    save_loading_failed = false;
     dimension_checkpoint_pending = false;
 
     next_npc_id = character_id( 1 );
@@ -814,6 +815,7 @@ void game::reset_game_state()
     sounds::reset_sounds();
     clear_zombies();
     critter_tracker->clear_npcs();
+    overmap_buffer.clear_npcs();
     faction_manager_ptr->clear();
     power_networks_ptr->clear();
     mission::clear_all();
@@ -909,7 +911,7 @@ void game::legacy_migrate_npctalk_var_prefix( global_variables::impl_t &map_of_v
     const std::string prefix = "npctalk_var_";
     for( auto i = map_of_vars.begin(); i != map_of_vars.end(); ) {
         if( i->first.rfind( prefix, 0 ) == 0 ) {
-            auto extracted =  map_of_vars.extract( i++ );
+            global_variables::impl_t::node_type extracted = map_of_vars.extract( i++ );
             std::string new_key = extracted.key().substr( prefix.size() );
             extracted.key() = new_key;
             map_of_vars.insert( std::move( extracted ) );
@@ -934,9 +936,6 @@ bool game::start_game()
     get_safemode().load_global();
 
     init_autosave();
-    //Needs to be explicitly reset so a previously loaded world state doesn't leak into the new game
-    dimension_prefix = dimension_world_default;
-    overmap_buffer.init_region_layout();
 
     background_pane background;
     static_popup popup;
@@ -944,7 +943,6 @@ bool game::start_game()
     ui_manager::redraw();
     refresh_display();
 
-    load_master();
     if( north_america::offer_starting_city() ) {
         north_america_world = true;
     }
@@ -972,6 +970,7 @@ bool game::start_game()
 #endif
     std::unordered_map<std::string, std::string> associated_parameters;
     const bool select_starting_city = get_option<bool>( "SELECT_STARTING_CITY" );
+    const overmap_global_state starting_overmap_state = overmap_buffer.global_state;
     do {
 #ifdef MP_ENABLED
         if( !omtstart.is_invalid() ) {
@@ -1006,6 +1005,7 @@ bool game::start_game()
 
             MAPBUFFER.clear();
             overmap_buffer.clear();
+            overmap_buffer.global_state = starting_overmap_state;
             overmap_buffer.init_region_layout();
 
             if( !query_yn(
@@ -2321,7 +2321,7 @@ int game::inventory_item_menu( item_location locThisItem,
                     popup_width = std::max( popup_width, ImGui::CalcTextSize( text.c_str() ).x );
                     // The char is used as retval from the uilist *and* as hotkey.
                     action_menu.addentry( key, true, key, text );
-                    auto &entry = action_menu.entries.back();
+                    uilist_entry &entry = action_menu.entries.back();
                     switch( hint ) {
                         case hint_rating::cant:
                             entry.text_color = c_light_gray;
@@ -8556,6 +8556,23 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     const tripoint_bub_ms pos = who.pos_bub( here );
 
     const tripoint_abs_ms dest_loc_abs = here.get_abs( dest_loc );
+    int climb_cost = 0;
+    const bool flying_mount = who.mounted_creature && who.mounted_creature->flies();
+    if( !via_ramp && !flying_mount && !who.has_flag( json_flag_CLIMB_FLYING ) &&
+        north_america::sheer_slope( here, pos, dest_loc ) ) {
+        const bool anchor = here.has_flag( ter_furn_flag::TFLAG_CLIMBABLE, pos ) ||
+                            here.has_flag( ter_furn_flag::TFLAG_CLIMBABLE, dest_loc );
+        const double grade = std::abs( north_america::grade_between( here, pos, dest_loc ) );
+        const bool rope = who.has_amount( itype_rope_30, 1 );
+        if( who.is_mounted() || who.get_grab_type() != object_type::NONE ||
+            who.get_working_arm_count() < 2 ||
+            ( !rope && !anchor && !who.has_flag( json_flag_CLIMB_NO_LADDER ) ) ||
+            grade > north_america::rope_grade_limit ) {
+            who.add_msg_if_player( m_info, _( "That slope is too steep to cross on foot." ) );
+            return false;
+        }
+        climb_cost = static_cast<int>( 100 * grade );
+    }
 
     if( here.has_flag_ter( ter_furn_flag::TFLAG_SMALL_PASSAGE, dest_loc ) ) {
         if( who.get_size() > creature_size::medium ) {
@@ -8877,7 +8894,7 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
         who.mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );
         crit->use_mech_power( who.current_movement_mode()->mech_power_use() );
     } else {
-        who.mod_moves( -who.run_cost( mcost, diag, dest_loc ) );
+        who.mod_moves( -who.run_cost( mcost, diag, dest_loc ) - climb_cost );
         /**
         TODO:
         This should really use the mounted creatures stamina, if mounted.
@@ -11271,7 +11288,17 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     if( !save_maps() || !save_dimension_data() ) {
         return false;
     }
-    player.save_map_memory();
+    bool saved_memory = false;
+    try {
+        saved_memory = player.save_map_memory();
+    } catch( const std::exception &err ) {
+        debugmsg( "Failed to save map memory before dimension travel: %s", err.what() );
+    }
+    if( !saved_memory ) {
+        save_loading_failed = true;
+        uquit = QUIT_NOSAVED;
+        return false;
+    }
     for( int z = here.min_z(); z <= here.max_z(); z++ ) {
         here.clear_vehicle_list( z );
     }
@@ -11283,7 +11310,11 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     // Clear the previous dimension before loading the destination's global state.
     overmap_buffer.clear();
     // Load in data specific to the dimension (like weather)
-    load_dimension_data();
+    load_dimension_data( true );
+    if( save_loading_failed ) {
+        uquit = QUIT_NOSAVED;
+        return false;
+    }
 
     // Clear the immediate game area around the player
     MAPBUFFER.clear();

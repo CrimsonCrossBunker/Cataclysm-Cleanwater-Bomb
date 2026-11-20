@@ -57,6 +57,11 @@ struct spawn_point {
         mission_id( MIS ), friendly( F ), name( N ), data( SD ) {}
 };
 
+struct graded_surface {
+    int centimetres = 0;
+    int built_at = 0;
+};
+
 struct terrain_growth_state {
     time_point fertilized_at = calendar::turn_zero;
 };
@@ -149,6 +154,16 @@ class submap
 
         void set_map_damage( const point_sm_ms &p, int dmg ) {
             ephemeral_data[p] = { dmg };
+        }
+
+        const graded_surface *get_grade( const point_sm_ms &p ) const {
+            const auto it = surface_grades.find( p );
+            return it != surface_grades.end() ? &it->second : nullptr;
+        }
+
+        void set_grade( const point_sm_ms &p, graded_surface grade ) {
+            ensure_nonuniform();
+            surface_grades.insert_or_assign( p, grade );
         }
 
         const terrain_growth_state *get_terrain_growth( const point_sm_ms &p ) const {
@@ -404,6 +419,7 @@ class submap
         };
         std::map<point_sm_ms, tile_data> ephemeral_data;
         std::map<point_sm_ms, terrain_growth_state> terrain_growth;
+        std::map<point_sm_ms, graded_surface> surface_grades;
         // Liquid belonging to finite source terrain is map state, not a
         // ground item.  Keeping it separate prevents item sprites and pickup
         // rules from leaking through the water surface.

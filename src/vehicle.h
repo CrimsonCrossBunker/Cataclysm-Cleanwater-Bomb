@@ -1926,6 +1926,7 @@ class vehicle
 
         int get_z_change() const;
         bool is_flying_in_air() const;
+        std::optional<double> flight_altitude() const;
         void set_flying( bool new_flying_value );
         // True only for genuine rotorcraft: rotors providing enough lift to fly
         bool is_rotorcraft( map &here ) const;
@@ -2674,6 +2675,11 @@ class vehicle
         mutable bool in_water = false;
         // is the vehicle currently flying
         mutable bool is_flying = false;
+        std::optional<double> flight_altitude_m;
+        vehicle *move_atlas_aircraft( map &here, tripoint_rel_ms dp, const tileray &facing,
+                                      Character *pilot );
+        bool change_speed_on_grade( map &here, const tripoint_bub_ms &from,
+                                    const tripoint_bub_ms &to, float traction );
         bool flyable = true;
         int requested_z_change = 0;
 
@@ -2704,6 +2710,7 @@ class vehicle
         bool check_environmental_effects = false; // NOLINT(cata-serialize)
         // "inside" flags are outdated and need refreshing
         bool insides_dirty = true; // NOLINT(cata-serialize)
+        std::uint64_t map_cache_revision = 0; // NOLINT(cata-serialize)
         // Is the vehicle hanging in the air and expected to fall down in the next turn?
         bool is_falling = false;
         // zone_data positions are outdated and need refreshing

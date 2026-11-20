@@ -1364,3 +1364,33 @@ TEST_CASE( "power_network_multiple_independent_grids", "[vehicle][power][grid]" 
     CHECK( lamp1_net->id == net1->id );
     CHECK( lamp2_net->id == net2->id );
 }
+
+TEST_CASE( "power_settlement_reads_live_charge_and_drops_topology_between_calls", "[vehicle][power]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    Character &you = get_player_character();
+    const tripoint_bub_ms battery_pos( 60, 60, 0 );
+    const tripoint_bub_ms lamp_pos( 62, 60, 0 );
+    std::optional<item> battery_item( itype_test_storage_battery );
+    std::optional<item> lamp_item( itype_test_high_drain_lamp );
+    place_appliance( here, battery_pos, vpart_ap_test_storage_battery, you, battery_item );
+    place_appliance( here, lamp_pos, vpart_ap_test_high_drain_lamp, you, lamp_item );
+    connect_power_cord( battery_pos, lamp_pos );
+    vehicle &battery = here.veh_at( battery_pos )->vehicle();
+    vehicle &lamp = here.veh_at( lamp_pos )->vehicle();
+    battery.charge_battery( here, 1000, false );
+    const int consumer = find_consumer_part_idx( lamp );
+    REQUIRE( consumer >= 0 );
+    lamp.part( consumer ).enabled = true;
+    const auto before = battery.battery_left( here, false );
+    lamp.power_parts( here );
+    CHECK( battery.battery_left( here, false ) <= before );
+    battery.discharge_battery( here, 100000000, false );
+    REQUIRE( battery.battery_left( here, false ) == 0 );
+    lamp.power_parts( here );
+    CHECK_FALSE( lamp.part( consumer ).enabled );
+    battery.charge_battery( here, 1000, false );
+    CHECK( lamp.battery_left( here, false ) > 0 );
+}

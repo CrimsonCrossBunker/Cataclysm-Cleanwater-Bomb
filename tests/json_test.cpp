@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <array>
+#include <cstdint>
+#include <limits>
 #include <functional>
 #include <iterator>
 #include <list>
@@ -64,10 +66,33 @@ static void test_serialization( const T &val, const std::string &s )
     {
         INFO( "test_deserialization" );
         JsonValue jsin = json_loader::from_string( s );
-        T read_val;
+        T read_val{};
         CHECK( jsin.read( read_val ) );
         CHECK( val == read_val );
     }
+}
+
+TEST_CASE( "json_uint64_preserves_the_full_range", "[json]" )
+{
+    for( const uint64_t value : {
+             uint64_t( 0 ), uint64_t( 1 ),
+             uint64_t( std::numeric_limits<int64_t>::max() ),
+             uint64_t( std::numeric_limits<int64_t>::max() ) + 1,
+             std::numeric_limits<uint64_t>::max()
+         } ) {
+        test_serialization( value, std::to_string( value ) );
+    }
+    const JsonObject nested = json_loader::from_string(
+                                  R"({"values":[0,9223372036854775808,18446744073709551615]})" ).get_object();
+    const JsonArray values = nested.get_array( "values" );
+    CHECK( values[0].get_uint64() == 0 );
+    CHECK( values[1].get_uint64() == uint64_t( std::numeric_limits<int64_t>::max() ) + 1 );
+    CHECK( values[2].get_uint64() == std::numeric_limits<uint64_t>::max() );
+    const JsonValue negative = json_loader::from_string( "-1" );
+    uint64_t unchanged = 42;
+    CHECK_THROWS_AS( negative.read( unchanged ), JsonError );
+    CHECK( unchanged == 42 );
+    CHECK_THROWS_AS( negative.get_uint64(), JsonError );
 }
 
 TEST_CASE( "avoid_serializing_default_values", "[json]" )

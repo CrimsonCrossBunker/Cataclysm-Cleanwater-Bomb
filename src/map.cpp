@@ -1591,6 +1591,18 @@ bool map::vehproceed( std::vector<safe_reference<vehicle>> &vehicle_list,
         return false;
     }
 
+    const bool flying = ( *cur_veh )->is_flying_in_air();
+    if( ( flying || ( *cur_veh )->is_falling ) && north_america::elevation_active() ) {
+        const tripoint_bub_ms current = ( *cur_veh )->pos_bub( *this );
+        const int ahead = current.z() <= min_z() + 1 ? -2 :
+                          flying && current.z() >= max_z() - 1 ? 2 : 0;
+        if( ahead != 0 ) {
+            ensure_z_in_window( current + tripoint( 0, 0, ahead ) );
+            if( !*cur_veh ) {
+                return true;
+            }
+        }
+    }
     vehicle *const moved = ( *cur_veh )->act_on_map( *this );
     if( moved ) {
         *cur_veh = moved->get_safe_reference();
@@ -1618,7 +1630,8 @@ static bool sees_veh( const Creature &c, vehicle &veh, bool force_recalc )
     } );
 }
 
-vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tileray &facing )
+vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tileray &facing,
+                            bool cleared_flight_path )
 {
     if( dp == tripoint_rel_ms::zero ) {
         debugmsg( "Empty displacement vector" );
@@ -1628,23 +1641,26 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         return &veh;
     }
     // Split the movement into horizontal and vertical for easier processing
-    if( dp.xy() != point_rel_ms::zero && dp.z() != 0 ) {
+    if( !cleared_flight_path && dp.xy() != point_rel_ms::zero && dp.z() != 0 ) {
         vehicle *const new_pointer = move_vehicle( veh, tripoint_rel_ms( dp.xy(), 0 ), facing );
         if( !new_pointer ) {
             return nullptr;
         }
 
+        const bool falling = dp.z() < 0 && new_pointer->vertical_velocity < 0;
         vehicle *const result = move_vehicle( *new_pointer, tripoint_rel_ms( 0, 0, dp.z() ), facing );
         if( !result ) {
             return nullptr;
         }
 
-        result->is_falling = false;
+        if( !falling ) {
+            result->is_falling = false;
+        }
         return result;
     }
     const bool vertical = dp.z() != 0;
     // Ensured by the splitting above
-    cata_assert( vertical == ( dp.xy() == point_rel_ms::zero ) );
+    cata_assert( cleared_flight_path || vertical == ( dp.xy() == point_rel_ms::zero ) );
 
     const int target_z = dp.z() + veh.sm_pos.z();
     // limit vehicles to at most max_z() - 1; this mitigates getting to zlevel 10 easily
@@ -1678,7 +1694,9 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
     size_t collision_attempts = 10;
     do {
         collisions.clear();
-        veh.collision( *this, collisions, dp1, false );
+        if( !cleared_flight_path ) {
+            veh.collision( *this, collisions, dp1, false );
+        }
 #ifdef MP_ENABLED
         if( cata_mp::is_hosting() && !collisions.empty() ) {
             for( const veh_collision &c : collisions ) {
@@ -1739,10 +1757,20 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
              sgn( coll_velocity ) == sgn( velocity_before ) &&
              !collisions.empty() && !veh_veh_coll_flag );
 
+    const bool falling_step = dp.z() < 0 && velocity_before < 0 && !cleared_flight_path;
     const int velocity_after = coll_velocity;
     bool can_move = velocity_after != 0 && sgn( velocity_after ) == sgn( velocity_before );
-    if( dp.z() != 0 && veh.is_aircraft( *this ) ) {
+    if( cleared_flight_path || ( vertical && !falling_step && veh.is_aircraft( *this ) ) ) {
         can_move = true;
+    }
+    if( falling_step && !collisions.empty() && !veh_veh_coll_flag ) {
+        // Damage can remove the blocker. Only advance if the entire downwards
+        // move is now clear, including the floor directly underneath the craft.
+        std::vector<veh_collision> remaining;
+        if( !can_move || veh.collision( *this, remaining, dp1, true ) ) {
+            can_move = false;
+            veh.vertical_velocity = 0;
+        }
     }
     if( vertical ) {
         veh.check_falling_or_floating(); // fix for vehicle falling into floor
@@ -1793,7 +1821,7 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
     Character &player_character = get_player_character();
     const bool seen = sees_veh( player_character, veh, false );
 
-    if( can_move || ( vertical && veh.is_falling ) ) {
+    if( can_move || ( vertical && veh.is_falling && !falling_step ) ) {
         // Accept new direction
         if( veh.skidding ) {
             veh.face.init( veh.turn_dir );
@@ -1834,7 +1862,7 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         }
     }
     // Now we're gonna handle traps we're standing on (if we're still moving).
-    if( !vertical && can_move ) {
+    if( !vertical && can_move && !cleared_flight_path ) {
         const auto wheel_indices = veh.wheelcache; // Don't use a reference here, it causes a crash.
 
         // Values to deal with crushing items.
@@ -1842,10 +1870,19 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         const float vehicle_grounded_wheel_area = static_cast<int>( vehicle_wheel_traction( veh, true ) );
         const float weight_to_damage_factor = 0.05f; // Nobody likes a magic number.
         const float vehicle_mass_kg = to_kilogram( veh.total_mass( *this ) );
+        const bool can_bump_on_rails = !veh.is_flying_in_air() && !veh.can_use_rails( *this );
+        bool bumped_on_rails = false;
 
         for( const int vp_wheel_idx : wheel_indices ) {
             vehicle_part &vp_wheel = veh.part( vp_wheel_idx );
             const tripoint_bub_ms wheel_p = veh.bub_part_pos( *this, vp_wheel );
+            const ter_t &wheel_terrain = ter( wheel_p ).obj();
+            if( can_bump_on_rails && wheel_terrain.has_flag( ter_furn_flag::TFLAG_RAIL ) &&
+                !wheel_terrain.has_flag( ter_furn_flag::TFLAG_NOCOLLIDE ) &&
+                !wheel_terrain.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) &&
+                !wheel_terrain.has_flag( ter_furn_flag::TFLAG_DEEP_WATER ) ) {
+                bumped_on_rails = true;
+            }
             if( one_in( 2 ) && displace_water( wheel_p ) ) {
                 sounds::sound( wheel_p, 4, sounds::sound_t::movement, _( "splash!" ), false,
                                "environment", "splash" );
@@ -1866,6 +1903,10 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
                 smash_items( wheel_p, wheel_damage, string_format( _( "weight of %1$s" ), veh.disp_name() ),
                              &vp_wheel, &veh );
             }
+        }
+        if( bumped_on_rails ) {
+            sounds::sound( veh.pos_bub( *this ), std::clamp( std::abs( veh.velocity ) / 400, 2, 12 ),
+                           sounds::sound_t::movement, _( "thump-thump!" ) );
         }
     }
     if( veh.is_towing() ) {
@@ -2398,7 +2439,8 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
     const tripoint_bub_ms src = veh.pos_bub( *this );
     // handle vehicle ramps
     int ramp_offset = 0;
-    if( adjust_pos ) {
+    const bool in_flight = veh.flight_altitude() && north_america::elevation_active();
+    if( adjust_pos && !in_flight ) {
         if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp ) ) {
             ramp_offset += 1;
             veh.is_on_ramp = true;
@@ -2516,9 +2558,9 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
             }
             const tripoint_bub_ms chassis_point = src + dp + next_pos -
                                                   tripoint( 0, 0, veh_part.mount_level );
-            if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
+            if( !in_flight && has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
                 psg_offset_z += 1;
-            } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {
+            } else if( !in_flight && has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {
                 psg_offset_z -= 1;
             }
 
@@ -2556,17 +2598,17 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
         src_submap->vehicles.erase( src_submap_veh_it );
         invalidate_max_populated_zlev( dst.z() );
     }
-    if( need_update ) {
-        g->update_map( player_character );
-    }
     cache_vehicle_parts( veh );
+    if( need_update ) {
+        if( z_change ) {
+            // update_map uses the bubble's z when repositioning the avatar.
+            // Set it to the new seat level before refreshing the map.
+            g->vertical_shift( player_character.posz() );
+        }
+        g->update_map( player_character, z_change != 0 );
+    }
 
     if( z_change || src.z() != dst.z() ) {
-        if( z_change ) {
-            g->vertical_move( z_change, true );
-            // vertical moves can flush the caches, so make sure we're still in the cache
-            cache_vehicle_parts( veh );
-        }
         update_vehicle_list( dst_submap, dst.z() );
         // delete the vehicle from the source z-level vehicle cache set if it is no longer on
         // that z-level
@@ -3017,6 +3059,27 @@ void map::set_map_damage( const tripoint_bub_ms &p, int dmg )
         return;
     }
     current_submap->set_map_damage( l, dmg );
+}
+
+const graded_surface *map::get_surface_grade( const tripoint_bub_ms &p ) const
+{
+    if( !inbounds( p ) ) {
+        return nullptr;
+    }
+    point_sm_ms offset;
+    const submap *sm = unsafe_get_submap_at( p, offset );
+    return sm ? sm->get_grade( offset ) : nullptr;
+}
+
+void map::set_surface_grade( const tripoint_bub_ms &p, graded_surface grade )
+{
+    if( !inbounds( p ) ) {
+        return;
+    }
+    point_sm_ms offset;
+    if( submap *sm = unsafe_get_submap_at( p, offset ) ) {
+        sm->set_grade( offset, grade );
+    }
 }
 
 const terrain_growth_state *map::get_terrain_growth( const tripoint_bub_ms &p ) const
@@ -5890,9 +5953,12 @@ ter_str_id map::get_roof( const tripoint_bub_ms &p, const bool allow_air ) const
     // Just use t_dirt instead
     cata_assert( zlevels );
 
-    if( p.z() <= min_z() ) {
+    if( p.z() <= min_z() && z_origin() == 0 ) {
         // Could be magma/"void" instead
         return ter_t_rock_floor;
+    }
+    if( p.z() < min_z() ) {
+        return ter_t_open_air;
     }
 
     const ter_t &ter_there = ter( p ).obj();
@@ -12251,14 +12317,18 @@ void map::add_tree_tops( const tripoint_rel_sm &grid )
         return;
     }
 
+    const bool check_tree_tops = grid.z() > min_z();
+    if( !check_tree_tops && z_origin() != 0 ) {
+        // The bottom of a shifted window is not the bottom of the world.
+        return;
+    }
+
     submap *const sub_here = get_submap_at_grid( grid );
     if( sub_here == nullptr ) {
         debugmsg( "Tried to add tree tops on null submap on %d,%d,%d",
                   grid.x(), grid.y(), grid.z() );
         return;
     }
-
-    bool check_tree_tops = grid.z() > min_z();
 
     submap *const sub_below = check_tree_tops ? get_submap_at_grid( grid + tripoint_rel_sm::below ) :
                               nullptr;
@@ -12918,6 +12988,7 @@ void map::build_outside_cache( const int zlev )
         return;
     }
     level_cache &ch = *ch_lazy;
+    ch.vehicle_overlay_dirty = true;
 
     // Make a bigger cache to avoid bounds checking
     // We will later copy it to our regular cache
@@ -12929,6 +13000,7 @@ void map::build_outside_cache( const int zlev )
     if( zlev < 0 ) {
         std::uninitialized_fill_n(
             &outside_cache[0][0], MAPSIZE_X * MAPSIZE_Y, false );
+        ch.outside_cache_dirty = false;
         return;
     }
 
@@ -13078,6 +13150,7 @@ bool map::build_floor_cache( const int zlev )
         return false;
     }
     level_cache &ch = *ch_lazy;
+    ch.vehicle_overlay_dirty = true;
 
     auto &floor_cache = ch.floor_cache;
     std::uninitialized_fill_n(
@@ -13195,17 +13268,45 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
     const int maxz = zlevels ? max_z() : zlev;
     bool seen_cache_dirty = false;
     bool camera_cache_dirty = false;
+    bool vehicle_overlay_dirty = false;
+    std::size_t vehicle_index = 0;
     for( int z = minz; z <= maxz; z++ ) {
+        if( const level_cache *cache = get_cache_lazy( z ) ) {
+            vehicle_overlay_dirty |= cache->vehicle_overlay_dirty ||
+                                     cache->outside_cache_dirty || cache->floor_cache_dirty ||
+                                     cache->transparency_cache_dirty.any();
+            for( const vehicle *veh : cache->vehicle_list ) {
+                const auto version = std::make_pair( veh, veh->map_cache_revision );
+                if( vehicle_index == vehicle_overlay_versions_.size() ) {
+                    vehicle_overlay_versions_.push_back( version );
+                    vehicle_overlay_dirty = true;
+                } else if( vehicle_overlay_versions_[vehicle_index] != version ) {
+                    vehicle_overlay_versions_[vehicle_index] = version;
+                    vehicle_overlay_dirty = true;
+                }
+                vehicle_overlay_dirty |= veh->map_cache_revision == UINT64_MAX;
+                ++vehicle_index;
+            }
+        } else {
+            vehicle_overlay_dirty = true;
+        }
         build_outside_cache( z );
         build_transparency_cache( z );
         bool floor_cache_was_dirty = build_floor_cache( z );
+        vehicle_overlay_dirty |= get_cache( z ).vehicle_overlay_dirty;
         seen_cache_dirty |= floor_cache_was_dirty;
         seen_cache_dirty |= get_cache( z ).seen_cache_dirty;
     }
-    // needs a separate pass as it changes the caches on neighbour z-levels (e.g. floor_cache);
-    // otherwise such changes might be overwritten by main cache-building logic
-    for( int z = minz; z <= maxz; z++ ) {
-        do_vehicle_caching( z );
+    vehicle_overlay_dirty |= vehicle_index != vehicle_overlay_versions_.size();
+    vehicle_overlay_versions_.resize( vehicle_index );
+    // Reapply overlays after all terrain caches, including floors on adjacent levels.
+    if( vehicle_overlay_dirty ) {
+        for( int z = minz; z <= maxz; z++ ) {
+            do_vehicle_caching( z );
+        }
+        for( int z = minz; z <= maxz; z++ ) {
+            get_cache( z ).vehicle_overlay_dirty = false;
+        }
     }
     for( int z = minz; z <= maxz; z++ ) {
         seen_cache_dirty |= build_vision_transparency_cache( z );

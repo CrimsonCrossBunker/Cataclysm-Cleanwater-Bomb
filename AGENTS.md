@@ -2,6 +2,16 @@
 
 Read the nearest nested `AGENTS.md` before editing a subsystem; nested files add local rules without replacing this file.
 
+## Required development skill
+
+Before starting work in this repository, read and apply the installed
+`ccb-dev-rules` skill at `$CODEX_HOME/skills/ccb-dev-rules/SKILL.md`
+(`~/.codex/skills/ccb-dev-rules/SKILL.md` when `CODEX_HOME` is unset).
+Use it on every development task in this directory and its subdirectories,
+and read its task-specific references as directed by the skill. Follow the
+applicable `AGENTS.md` files as well. If the skill is missing, report that
+before proceeding rather than silently skipping it.
+
 ## Sources of truth
 
 - Runtime behaviour: C++/Java/Lua source (and `tests/` where present).

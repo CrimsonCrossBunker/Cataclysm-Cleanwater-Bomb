@@ -1727,6 +1727,11 @@ TEST_CASE( "failed_horde_placement_preserves_entity", "[monster][hordes]" )
         REQUIRE( entity != nullptr );
         REQUIRE( entity->monster_data != nullptr );
 
+        for( const tripoint_bub_ms &position : here.points_in_radius( local_pos, 1 ) ) {
+            if( position != local_pos ) {
+                here.ter_set( position, ter_t_palisade );
+            }
+        }
         // Block center with another monster so critter_tracker::add fails.
         monster *blocker = g->place_critter_at( mon_test_zombie, local_pos );
         REQUIRE( blocker != nullptr );

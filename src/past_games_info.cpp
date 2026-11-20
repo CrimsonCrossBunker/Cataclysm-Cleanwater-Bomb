@@ -1,6 +1,9 @@
 #include "past_games_info.h"
 
+#include <cata_variant.h>
+#include <type_id.h>
 #include <algorithm>
+#include <exception>
 #include <filesystem>
 #include <map>
 #include <stdexcept>
@@ -39,8 +42,7 @@ class too_old_memorial_file_error : std::runtime_error
 
 past_game_info::past_game_info( const JsonObject &jo )
 {
-    int version;
-    jo.read( "memorial_version", version );
+    const int version = jo.get_int( "memorial_version" );
     if( version == 0 || version == 1 ) {
         jo.read( "log", log_ );
         stats_ = std::make_unique<stats_tracker>();
@@ -157,10 +159,10 @@ void past_games_info::ensure_loaded( bool show_popup )
         try {
             JsonValue jsin = json_loader::from_path( filename );
             info_.emplace_back( jsin.get_object() );
-        } catch( const JsonError &err ) {
-            debugmsg( "Error reading memorial file %s: %s", filename.generic_u8string(), err.what() );
         } catch( const too_old_memorial_file_error & ) {
             // do nothing
+        } catch( const std::exception &err ) {
+            debugmsg( "Error reading memorial file %s: %s", filename.generic_u8string(), err.what() );
         }
     }
 
@@ -176,12 +178,17 @@ void past_games_info::ensure_loaded( bool show_popup )
                 debugmsg( "Missing field in memorial achievement data" );
                 continue;
             }
-            if( !enabled_it->second.get<bool>() ) {
-                continue;
-            }
-            if( game.is_legacy_achievements() ) {
-                const achievement_id ach = ach_it->second.get<achievement_id>();
-                legacy_achievements_[ach].games_completed.push_back( &game );
+            try {
+                if( !enabled_it->second.get<bool>() ) {
+                    continue;
+                }
+                if( game.is_legacy_achievements() ) {
+                    const achievement_id ach = ach_it->second.get<achievement_id>();
+                    legacy_achievements_[ach].games_completed.push_back( &game );
+                }
+            } catch( const std::exception &err ) {
+                debugmsg( "Error reading achievement data in memorial for %s: %s",
+                          game.avatar_name(), err.what() );
             }
         }
         inp_mngr.pump_events();

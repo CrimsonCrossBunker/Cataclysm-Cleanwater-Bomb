@@ -449,7 +449,7 @@ void refresh_mouse_config()
 static bool only_spirv_shader_artifacts_present()
 {
     namespace fs = std::filesystem;
-    const fs::path shaders_dir = fs::path( PATH_INFO::datadir() ) / "shaders";
+    const fs::path shaders_dir = fs::u8path( PATH_INFO::datadir() ) / fs::u8path( "shaders" );
     std::error_code ec;
     if( !fs::is_directory( shaders_dir, ec ) ) {
         return false;
@@ -2491,7 +2491,7 @@ recipe_result renderer_resource_coordinator::recipe_device_lost()
         return { recipe_outcome::failure };
     }
     if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
-        vp->release_gpu_resources();
+        vp->release_gpu_resources( true );
     }
     if( check_pause_abort() ) {
         return { recipe_outcome::failure };
@@ -4106,6 +4106,11 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
                     draw_from_id_string( note_name, TILE_CATEGORY::OVERMAP_NOTE,
                                          "overmap_note", omp, 0, 0, lit_level::LIT, false );
                 }
+            }
+
+            if( draw_overlays && overmap_buffer.has_tracked_pet( omp ) ) {
+                draw_from_id_string( "note_h_light_green", TILE_CATEGORY::OVERMAP_NOTE,
+                                     "overmap_note", omp, 0, 0, lit_level::LIT, false );
             }
 
             if( draw_overlays && uistate.overmap_show_map_notes ) {

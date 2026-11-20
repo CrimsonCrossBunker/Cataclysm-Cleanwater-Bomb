@@ -1,13 +1,59 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <avatar.h>
+#include <basecamp.h>
+#include <calendar.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <inventory.h>
+#include <item.h>
+#include <item_location.h>
+#include <item_uid.h>
+#include <json.h>
+#include <json_loader.h>
+#include <lua_platform_camps.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_items.h>
+#include <npc.h>
+#include <overmap.h>
+#include <pimpl.h>
+#include <point.h>
+#include <recipe.h>
+#include <type_id.h>
+#include <visitable.h>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "cata_catch.h"
+#include "flexbuffer_json.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_test_support.h"
 
+static const faction_id faction_your_followers( "your_followers" );
+
+static const itype_id itype_knife_combat( "knife_combat" );
+static const itype_id itype_rock( "rock" );
+static const itype_id itype_stick( "stick" );
+static const itype_id itype_tinder( "tinder" );
+
+static const recipe_id recipe_tinder( "tinder" );
+
+static const skill_id skill_survival( "survival" );
 TEST_CASE( "lua_platform_recipe_item_staging_is_atomic_and_rejects_double_spend",
            "[lua][platform][camp][tasks][recipe_work][items]" )
 {
     avatar source;
     source.normalize();
     source.setID( character_id( 99501 ), true );
-    item charge_stack( itype_id( "tinder" ), calendar::turn_zero );
+    item charge_stack( itype_tinder, calendar::turn_zero );
     charge_stack.charges = 8;
     item &added_stack = source.inv->add_item(
                             std::move( charge_stack ), false, false, false );
@@ -17,7 +63,8 @@ TEST_CASE( "lua_platform_recipe_item_staging_is_atomic_and_rejects_double_spend"
     REQUIRE( live_stack != nullptr );
     const std::int64_t stack_uid = live_stack->uid().get_value();
 
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 95 );
     const cata::lua_platform::game_handle character_handle =
         cata::lua_platform::game_handle::from_creature(
@@ -48,7 +95,7 @@ TEST_CASE( "lua_platform_recipe_item_staging_is_atomic_and_rejects_double_spend"
 
     const std::optional<cata::lua_platform::game_handle_error> staged_error =
         cata::lua_platform::stage_platform_recipe_items(
-            { request }, runtime, 1, staged, transaction );
+    { request }, runtime, 1, staged, transaction );
     CHECK_FALSE( staged_error );
     REQUIRE( staged.size() == 1 );
     CHECK( staged.front().stable_uid > 0 );
@@ -66,7 +113,7 @@ TEST_CASE( "lua_platform_recipe_work_staging_keeps_nonconsumed_tools_whole",
     source.normalize();
     source.setID( character_id( 99502 ), true );
     item &added_tool = source.inv->add_item(
-                           item( itype_id( "rock" ), calendar::turn_zero ),
+                           item( itype_rock, calendar::turn_zero ),
                            false, false, false );
     item_location location( source, &added_tool );
     REQUIRE( static_cast<bool>( location ) );
@@ -74,7 +121,8 @@ TEST_CASE( "lua_platform_recipe_work_staging_keeps_nonconsumed_tools_whole",
     REQUIRE( live_tool != nullptr );
     const std::int64_t tool_uid = live_tool->uid().get_value();
 
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 96 );
     const cata::lua_platform::game_handle character_handle =
         cata::lua_platform::game_handle::from_creature(
@@ -90,7 +138,7 @@ TEST_CASE( "lua_platform_recipe_work_staging_keeps_nonconsumed_tools_whole",
     std::vector<basecamp_platform_recipe_escrow_item> staged;
     cata::lua_platform::platform_recipe_item_transaction transaction;
     CHECK_FALSE( cata::lua_platform::stage_platform_recipe_items(
-                     { request }, runtime, 1, staged, transaction ) );
+    { request }, runtime, 1, staged, transaction ) );
     REQUIRE( staged.size() == 1 );
     CHECK( staged.front().stable_uid == tool_uid );
     CHECK( staged.front().charges == 1 );
@@ -99,7 +147,7 @@ TEST_CASE( "lua_platform_recipe_work_staging_keeps_nonconsumed_tools_whole",
 
     bool restored = false;
     std::vector<std::int64_t> restored_uids;
-    source.inv->visit_items( [&restored, &restored_uids, tool_uid]( item *candidate, item * ) {
+    source.inv->visit_items( [&restored, &restored_uids, tool_uid]( item * candidate, item * ) {
         if( candidate != nullptr ) {
             restored_uids.push_back( candidate->uid().get_value() );
         }
@@ -139,7 +187,7 @@ TEST_CASE( "lua_platform_recipe_work_rejects_invalid_descriptor_and_escrow",
     REQUIRE( fixture.camp.platform_create_task( fixture.task, error ) );
     const basecamp_platform_task pending = fixture.camp.platform_task_snapshot().front();
     const auto rejected_escrow = [&](
-        const std::vector<basecamp_platform_recipe_escrow_item> &candidate ) {
+    const std::vector<basecamp_platform_recipe_escrow_item> &candidate ) {
         error.clear();
         CHECK_FALSE( fixture.camp.platform_start_task(
                          pending.task_id, pending.identity_generation, fixture.worker,
@@ -181,7 +229,8 @@ TEST_CASE( "lua_platform_recipe_work_refund_pending_rejects_stale_holder_and_rec
     const std::vector<basecamp_platform_recipe_escrow_item> original_escrow =
         running.recipe_escrow;
 
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 97 );
     constexpr std::size_t world_generation = 1;
     cata::lua_platform::register_camp_handle_identity( fixture.camp );
@@ -195,8 +244,8 @@ TEST_CASE( "lua_platform_recipe_work_refund_pending_rejects_stale_holder_and_rec
     const cata::lua_platform::game_handle worker_handle =
         cata::lua_platform::game_handle::from_creature(
             *fixture.worker,
-            { "npc", fixture.worker->getID().get_value(), 0, 0, 0, {} }, runtime,
-            world_generation );
+    { "npc", fixture.worker->getID().get_value(), 0, 0, 0, {} }, runtime,
+    world_generation );
     const cata::lua_platform::camp_task_token old_token(
         running.task_id, running.identity_generation, camp_handle, manager_handle,
         worker_handle, running.manager_identity_generation,
@@ -237,20 +286,28 @@ TEST_CASE( "lua_platform_recipe_work_refund_pending_rejects_stale_holder_and_rec
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; },
-        []() { return world_generation; }, []() {} );
+    lua, services, [runtime]() {
+        return runtime;
+    },
+    []() {
+        return world_generation;
+    }, []() {} );
     cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; },
-    []() { return world_generation; }, []() {}, []() {} );
+    services, [runtime]() {
+        return runtime;
+    },
+    []() {
+        return world_generation;
+    }, []() {}, []() {} );
     const sol::protected_function resolve = services["camps"]["tasks"]["resolve"];
     const sol::table invalid_destination = make_platform_recipe_holder_table(
-                                               lua, cata::lua_platform::game_handle{} );
+            lua, cata::lua_platform::game_handle{} );
     const cata::lua_platform::camp_task_token pending_token(
         pending.task_id, pending.identity_generation, camp_handle, manager_handle,
         worker_handle, pending.manager_identity_generation,
         pending.worker_identity_generation, runtime, world_generation );
     const sol::protected_function_result failed = resolve(
-            camp_handle, manager_handle, worker_handle, pending_token, invalid_destination );
+                camp_handle, manager_handle, worker_handle, pending_token, invalid_destination );
     REQUIRE( failed.valid() );
     const sol::table failed_envelope = failed.get<sol::table>();
     CHECK_FALSE( failed_envelope["ok"].get<bool>() );
@@ -269,9 +326,9 @@ TEST_CASE( "lua_platform_recipe_work_refund_pending_rejects_stale_holder_and_rec
             fallback, { "character", fallback.getID().get_value(), 0, 0, 0, {} },
             runtime, world_generation );
     const sol::table fallback_destination = make_platform_recipe_holder_table(
-                                                lua, fallback_handle );
+            lua, fallback_handle );
     const sol::protected_function_result recovered = resolve(
-            camp_handle, manager_handle, worker_handle, pending_token, fallback_destination );
+                camp_handle, manager_handle, worker_handle, pending_token, fallback_destination );
     REQUIRE( recovered.valid() );
     const sol::table recovered_envelope = recovered.get<sol::table>();
     std::string recovered_error_code;
@@ -290,7 +347,7 @@ TEST_CASE( "lua_platform_recipe_work_refund_pending_rejects_stale_holder_and_rec
 
     bool found_fallback_item = false;
     const std::int64_t recovered_uid = original_escrow.front().stable_uid;
-    fallback.visit_items( [&found_fallback_item, recovered_uid]( item *candidate, item * ) {
+    fallback.visit_items( [&found_fallback_item, recovered_uid]( item * candidate, item * ) {
         if( candidate != nullptr && candidate->uid().get_value() == recovered_uid ) {
             found_fallback_item = true;
             return VisitResponse::ABORT;
@@ -329,9 +386,9 @@ TEST_CASE( "lua_platform_recipe_work_completion_is_authoritative_and_not_repeate
                  error ) );
     REQUIRE( !settled.empty() );
     CHECK( std::any_of( settled.begin(), settled.end(), [&original_escrow](
-    const basecamp_platform_recipe_escrow_item &candidate ) {
+    const basecamp_platform_recipe_escrow_item & candidate ) {
         return std::none_of( original_escrow.begin(), original_escrow.end(),
-        [&candidate]( const basecamp_platform_recipe_escrow_item &original ) {
+        [&candidate]( const basecamp_platform_recipe_escrow_item & original ) {
             return original.stable_uid == candidate.stable_uid;
         } );
     } ) );
@@ -368,7 +425,7 @@ TEST_CASE( "lua_platform_recipe_work_save_load_preserves_valid_and_isolates_inva
     const basecamp_platform_task running = fixture.camp.platform_task_snapshot().front();
     REQUIRE( !running.recipe_escrow.empty() );
 
-    const auto serialize_camp = []( const basecamp &camp ) {
+    const auto serialize_camp = []( const basecamp & camp ) {
         std::ostringstream saved;
         JsonOut json( saved );
         camp.serialize( json );
@@ -438,14 +495,16 @@ TEST_CASE( "lua_platform_recipe_work_tokens_reject_stale_actor_camp_and_task_con
                      running.task_id, running.identity_generation, replacement, refund, error ) );
     CHECK( error.find( "exact live worker" ) != std::string::npos );
 
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 98 );
     const cata::lua_platform::game_handle_runtime other_runtime( other_runtime_owner, 98 );
     const cata::lua_platform::game_handle worker_handle =
         cata::lua_platform::game_handle::from_creature(
             *fixture.worker,
-            { "npc", fixture.worker->getID().get_value(), 0, 0, 0, {} }, runtime, 2 );
+    { "npc", fixture.worker->getID().get_value(), 0, 0, 0, {} }, runtime, 2 );
     std::optional<cata::lua_platform::game_handle_error> handle_error =
         worker_handle.validation_error( runtime, 3 );
     REQUIRE( handle_error );
@@ -474,7 +533,7 @@ TEST_CASE( "lua_platform_recipe_work_tokens_reject_stale_actor_camp_and_task_con
 TEST_CASE( "lua_platform_recipe_work_escrow_refuses_camp_removal_and_clear_until_claimed",
            "[lua][platform][camp][tasks][recipe_work][lifecycle]" )
 {
-    const faction_id owner( "your_followers" );
+    const faction_id &owner = faction_your_followers;
     const tripoint_abs_omt position{ 117, 117, 0 };
     const std::unique_ptr<overmap> local_overmap =
         std::make_unique<overmap>( project_to<coords::om>( position.xy() ) );
@@ -487,11 +546,11 @@ TEST_CASE( "lua_platform_recipe_work_escrow_refuses_camp_removal_and_clear_until
     REQUIRE( camp != nullptr );
     const npc_ptr worker = make_platform_test_npc(
                                character_id( 99509 ), owner, position );
-    worker->set_skill_level( skill_id( "survival" ), 10 );
-    const recipe &making = recipe_id( "tinder" ).obj();
+    worker->set_skill_level( skill_survival, 10 );
+    const recipe &making = recipe_tinder.obj();
     worker->learn_recipe( &making, true );
     const basecamp_platform_recipe_holder holder = make_platform_recipe_holder(
-        worker->getID(), worker->platform_identity_generation() );
+                worker->getID(), worker->platform_identity_generation() );
     const std::int64_t duration_turns = to_turns<std::int64_t>(
                                             making.batch_duration( *worker,
                                                     crafting_cost_context::for_recipe( *worker, making ), 1 ) );
@@ -502,9 +561,9 @@ TEST_CASE( "lua_platform_recipe_work_escrow_refuses_camp_removal_and_clear_until
     task.recipe_work->destination_holder = holder;
     const std::vector<basecamp_platform_recipe_escrow_item> escrow = {
         make_platform_recipe_escrow_test_item(
-            item( itype_id( "stick" ), calendar::turn_zero ), holder ),
+            item( itype_stick, calendar::turn_zero ), holder ),
         make_platform_recipe_escrow_test_item(
-            item( itype_id( "knife_combat" ), calendar::turn_zero ), holder, true )
+            item( itype_knife_combat, calendar::turn_zero ), holder, true )
     };
     std::string error;
     REQUIRE( camp->platform_create_task( task, error ) );

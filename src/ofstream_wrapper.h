@@ -14,8 +14,8 @@
  * Use @ref stream (or the implicit conversion) to access the output stream and to write
  * to it.
  *
- * @note: The stream is closed in the destructor, but no exception is throw from it. To
- * ensure all errors get reported correctly, you should always call `close` explicitly.
+ * @note: The destructor discards any uncommitted temporary file. Call `close` explicitly
+ * to commit the write and report errors.
  *
  * @note: This uses exclusive I/O.
  */
