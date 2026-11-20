@@ -7292,6 +7292,37 @@ function CcbPlatformContent.plural_text(singular, plural, context) end
 ---@return LocalizedText
 function CcbPlatformContent.text_without_extraction(singular, plural, context) end
 
+---@class ExternalOptionDefinitionOptions
+---@field id string
+---@field kind "bool"|"int"|"float"|"string"|"string_input"
+---@field value boolean|number|string
+
+---Set the initial value and native type of an external option during ordered data loading.
+---@param options ExternalOptionDefinitionOptions
+function CcbPlatformContent.define_external_option(options) end
+
+---@class ModMigrationDefinitionOptions
+---@field id string Old Mod ID in a saved world.
+---@field replace_with? string Successor Mod ID.
+---@field removal_reason? string|LocalizedText Shown on removal when there is no successor.
+
+---@param options ModMigrationDefinitionOptions
+function CcbPlatformContent.define_mod_migration(options) end
+
+---Monthly normals are low °C, high °C, precipitation mm, wet days and the rain system.
+---@alias ClimateMonthlyNormal [number, number, number, number, "frontal"|"monsoon"|"convective"|"trade_wind"]
+
+---@class ClimateStationOptions
+---@field id string
+---@field name string Station name as published by the data source.
+---@field source_station string
+---@field latitude number Degrees north.
+---@field longitude number Degrees east.
+---@field months ClimateMonthlyNormal[] Twelve entries, starting in January.
+
+---@param options ClimateStationOptions
+function CcbPlatformContent.define_climate_station(options) end
+
 ---@class StaticAsciiArtOptions
 ---@field id string
 ---@field lines string[] Ordered rows with spacing and color tags preserved.
@@ -7383,6 +7414,70 @@ function CcbPlatformContent.define_mutation_type(options) end
 ---Append a trait group definition in file order during ordered data loading.
 ---@param options StaticTraitGroupOptions
 function CcbPlatformContent.define_trait_group(options) end
+
+---@class StaticFaultDamageModifier
+---@field damage_type string
+---@field add? integer
+---@field multiply? number
+
+---@class StaticFaultOptions
+---@field id string
+---@field copy_from? string
+---@field name? string|LocalizedText Required unless inherited.
+---@field description? string|LocalizedText Required unless inherited.
+---@field item_prefix? string|LocalizedText
+---@field item_suffix? string|LocalizedText
+---@field message? string|LocalizedText
+---@field fault_type? string
+---@field severity? "none"|"minor"|"major"|"critical"
+---@field color? string
+---@field flags? string[]
+---@field blocks? string[]
+---@field price_modifier? number
+---@field degradation_mod? integer
+---@field instant_damage? integer
+---@field affected_by_degradation? boolean
+---@field encumbrance_add? integer
+---@field encumbrance_mult? number
+---@field contact_area_mod? number
+---@field rolling_resistance_mod? number
+---@field vehicle_move_penalty_mod? integer
+---@field melee_damage? StaticFaultDamageModifier[]
+---@field armor? StaticFaultDamageModifier[]
+
+---Define a fault at its position during ordered data loading.
+---@param options StaticFaultOptions
+function CcbPlatformContent.define_fault(options) end
+
+---@class StaticFaultFixRequirementRef
+---@field id string
+---@field count integer
+
+---@class StaticFaultFixInlineRequirement
+---@field components? StaticConstructionRequirement[][]
+---@field tools? (string|StaticConstructionRequirement)[][]
+---@field qualities? (StaticConstructionQuality|StaticConstructionQuality[])[]
+
+---@class StaticFaultFixOptions
+---@field id string
+---@field copy_from? string
+---@field name? string|LocalizedText Required unless inherited.
+---@field success_message? string|LocalizedText
+---@field duration? string
+---@field removes? string[]
+---@field adds? string[]
+---@field skills? table<string, integer>
+---@field mod_damage? integer
+---@field mod_degradation? integer
+---@field set_variables? table<string, string|number|boolean>
+---@field multiply_variables? table<string, number>
+---@field proficiency_time_factors? table<string, number>
+---@field flag_time_factors? table<string, number>
+---@field requirements? (StaticFaultFixRequirementRef|StaticFaultFixInlineRequirement)[]
+
+---Define a repair at its position during ordered data loading.
+---@param options StaticFaultFixOptions
+function CcbPlatformContent.define_fault_fix(options) end
 
 ---@class StaticVehicleGroupEntry
 ---@field id string Vehicle prototype ID.
@@ -7831,6 +7926,50 @@ function CcbPlatformContent.define_start_location(options) end
 ---Define a profession or hobby at its ordered position during native content loading.
 ---@param options StaticProfessionOptions
 function CcbPlatformContent.define_profession(options) end
+
+---@class StaticScenarioDate
+---@field hour? integer
+---@field day? integer
+---@field season? 'spring'|'summer'|'autumn'|'winter'
+---@field year? integer
+
+---@class StaticScenarioLists
+---@field professions? string[]
+---@field hobbies? string[]
+---@field traits? string[]
+---@field forced_traits? string[]
+---@field forbidden_traits? string[]
+---@field locations? string[]
+---@field flags? string[]
+---@field missions? string[]
+
+---@class StaticScenarioOptions: StaticScenarioLists
+---@field id? string Stable scenario ID.
+---@field abstract? string Abstract ID in place of id.
+---@field copy_from? string Scenario to inherit, including Mod overrides of the same ID.
+---@field name? string Native gender-specific scenario name contexts.
+---@field description? string Native gender-specific scenario description contexts.
+---@field start_name? string Localized starting location label.
+---@field points? integer
+---@field blacklist_professions? boolean
+---@field add_professions? boolean
+---@field whitelist_hobbies? boolean
+---@field requirement? string Achievement ID.
+---@field hard_requirement? boolean
+---@field reveal_locale? boolean
+---@field initial_visibility? integer
+---@field map_extra? string
+---@field vehicle? string
+---@field origin_offset? {x: integer, y: integer}
+---@field start_of_cataclysm? StaticScenarioDate
+---@field start_of_game? StaticScenarioDate
+---@field surround_groups? {group: string, expected_points: number}[]
+---@field extend? StaticScenarioLists
+---@field delete? StaticScenarioLists
+
+---Load a scenario at its original position among core or Mod definitions.
+---@param options StaticScenarioOptions
+function CcbPlatformContent.define_scenario(options) end
 
 ---@class StaticVehiclePartWork
 ---@field duration? string Work time with its unit.
@@ -18057,6 +18196,41 @@ function CcbPlatformContent.define_spell(options) end
 ---Load a martial technique with native rules at this definition's position in Mod data order.
 ---@param options StaticTechniqueOptions
 function CcbPlatformContent.define_technique(options) end
+
+---@class StaticAchievementTarget
+---@field type string Native event statistic value type, e.g. 'trait_id'.
+---@field value string Serialized value of that type.
+
+---@class StaticAchievementRequirement
+---@field statistic string Event statistic ID.
+---@field comparison '=='|'<='|'>='|'anything'
+---@field target? integer|boolean|StaticAchievementTarget Required for comparisons other than 'anything'.
+---@field visibility? 'always'|'never'|'when_requirement_completed'|'when_achievement_completed'
+---@field description? string|LocalizedText
+
+---@class StaticAchievementTimeLimit
+---@field since 'cataclysm'|'game_start'
+---@field comparison '=='|'<='|'>='
+---@field duration string Native duration such as '1 day'.
+
+---@class StaticAchievementOptions
+---@field id? string Stable achievement or conduct ID.
+---@field abstract? string Abstract ID in place of id.
+---@field copy_from? string Base definition to inherit.
+---@field name? string|LocalizedText Required without inheritance.
+---@field description? string|LocalizedText
+---@field hidden_by? string[]
+---@field manual? boolean Award through gameplay code instead of automatic tracking.
+---@field time_limit? StaticAchievementTimeLimit
+---@field requirements? StaticAchievementRequirement[] Required without inheritance, including an empty list for manually granted achievements.
+
+---Load a tracked achievement at its position in Mod data order.
+---@param options StaticAchievementOptions
+function CcbPlatformContent.define_achievement(options) end
+
+---Load a tracked conduct at its position in Mod data order.
+---@param options StaticAchievementOptions
+function CcbPlatformContent.define_conduct(options) end
 
 ---Set one lifecycle callback on an already loaded style from an ordered data file.
 ---After native effects for the phase, invoke the named handler from this Mod's runtime.

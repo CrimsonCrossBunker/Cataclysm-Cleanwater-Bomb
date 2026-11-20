@@ -689,7 +689,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 590
+          "line": 596
         },
         "direct_roots": [
           "StaticDialogueAction",
@@ -702,7 +702,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 391
+          "line": 397
         },
         "direct_roots": [
           "LocalizedText",
@@ -1158,7 +1158,7 @@
         "callee": "platform_v1.install_mod_definition",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 607
+          "line": 613
         },
         "surfaces": [
           "platform_v1"
@@ -1169,7 +1169,7 @@
         "callee": "platform_v1.install_runtime_api",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 614
+          "line": 620
         },
         "surfaces": [
           "platform_v1"
@@ -13441,7 +13441,7 @@
       "registration_name": "LocalizedText",
       "registration": {
         "path": "src/lua_platform_loader.cpp",
-        "line": 393,
+        "line": 399,
         "installer": "platform_v1.install_mod_definition",
         "namespace": "ccb"
       },
@@ -15480,7 +15480,7 @@
       "registration_name": "_ModDefinitionNative",
       "registration": {
         "path": "src/lua_platform_loader.cpp",
-        "line": 394,
+        "line": 400,
         "installer": "platform_v1.install_mod_definition",
         "namespace": "ccb"
       },
@@ -15515,7 +15515,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 436
+                "line": 442
               }
             ]
           },
@@ -15530,7 +15530,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 452
+                "line": 458
               }
             ]
           },
@@ -15545,7 +15545,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 468
+                "line": 474
               }
             ]
           },
@@ -15560,7 +15560,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 460
+                "line": 466
               }
             ]
           },
@@ -15575,7 +15575,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 428
+                "line": 434
               }
             ]
           },
@@ -15590,7 +15590,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 444
+                "line": 450
               }
             ]
           },
@@ -15605,7 +15605,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 489
+                "line": 495
               }
             ]
           },
@@ -15620,7 +15620,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 420
+                "line": 426
               }
             ]
           },
@@ -15635,7 +15635,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 396
+                "line": 402
               }
             ]
           },
@@ -15650,7 +15650,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 512
+                "line": 518
               }
             ]
           },
@@ -15667,7 +15667,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 503
+                "line": 509
               }
             ]
           },
@@ -15682,7 +15682,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 482
+                "line": 488
               }
             ]
           },
@@ -15697,7 +15697,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 475
+                "line": 481
               }
             ]
           },
@@ -15712,7 +15712,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 404
+                "line": 410
               }
             ]
           },
@@ -15829,7 +15829,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 496
+                "line": 502
               }
             ]
           },
@@ -15846,7 +15846,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 504
+                "line": 510
               }
             ]
           },
@@ -15861,7 +15861,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 412
+                "line": 418
               }
             ]
           },
@@ -15876,7 +15876,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 505
+                "line": 511
               }
             ]
           }
@@ -29457,7 +29457,7 @@
       "registration_name": "StaticDialogueAction",
       "registration": {
         "path": "src/lua_platform_loader.cpp",
-        "line": 609,
+        "line": 615,
         "installer": "platform_v1.initialize_state",
         "namespace": "ccb"
       },
@@ -29489,7 +29489,7 @@
       "registration_name": "StaticDialoguePredicate",
       "registration": {
         "path": "src/lua_platform_loader.cpp",
-        "line": 608,
+        "line": 614,
         "installer": "platform_v1.initialize_state",
         "namespace": "ccb"
       },

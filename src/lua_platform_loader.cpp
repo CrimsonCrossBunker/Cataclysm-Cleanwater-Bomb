@@ -48,6 +48,7 @@ extern "C" {
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
+#include "achievement.h"
 #include "ascii_art.h"
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
@@ -55,6 +56,7 @@ extern "C" {
 #include "construction.h"
 #include "dialogue.h"
 #include "native_file_path.h"
+#include "fault.h"
 #include "generic_factory.h"
 #include "harvest.h"
 #include "item_action.h"
@@ -66,6 +68,7 @@ extern "C" {
 #include "martialarts.h"
 #include "mapdata.h"
 #include "mapgen.h"
+#include "mod_manager.h"
 #include "monfaction.h"
 #include "monstergenerator.h"
 #include "mutation.h"
@@ -76,11 +79,14 @@ extern "C" {
 #include "profession.h"
 #include "proficiency.h"
 #include "recipe_dictionary.h"
+#include "scenario.h"
+#include "regional_climate.h"
 #include "start_location.h"
 #include "trap.h"
 #include "veh_type.h"
 #include "vehicle_group.h"
 #include "widget.h"
+#include "worldfactory.h"
 #include <functional>
 
 namespace cata::lua_platform
@@ -4490,6 +4496,52 @@ void write_static_fixed_overmap_special( JsonOut &json, const sol::table &option
     write_placement_member<int>( json, options, "priority", "priority" );
 }
 
+void write_static_external_option( JsonOut &json, const sol::table &options )
+{
+    json.member( "name", options.get<std::string>( "id" ) );
+    const std::string kind = options.get<std::string>( "kind" );
+    json.member( "stype", kind );
+    if( kind == "int" ) {
+        json.member( "value", options.get<int>( "value" ) );
+    } else if( kind == "float" ) {
+        json.member( "value", options.get<double>( "value" ) );
+    } else if( kind == "bool" ) {
+        json.member( "value", options.get<bool>( "value" ) );
+    } else if( kind == "string" || kind == "string_input" ) {
+        json.member( "value", options.get<std::string>( "value" ) );
+    } else {
+        throw std::runtime_error( "Unknown external option kind: " + kind );
+    }
+}
+
+void write_static_mod_migration( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_placement_member<std::string>( json, options, "replace_with", "new_id" );
+    write_item_text( json, "removal_reason", options.raw_get<sol::object>( "removal_reason" ), false );
+}
+
+void write_static_climate_station( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    json.member( "name", options.get<std::string>( "name" ) );
+    json.member( "source_station", options.get<std::string>( "source_station" ) );
+    json.member( "latitude", options.get<double>( "latitude" ) );
+    json.member( "longitude", options.get<double>( "longitude" ) );
+    write_static_catalog_array( json, options, "months", "months",
+    []( JsonOut & out, const sol::table & month ) {
+        if( checked_dense_array_size( month, "climate monthly normal", 5 ) != 5 ) {
+            throw std::runtime_error( "A climate monthly normal requires five entries" );
+        }
+        out.start_array();
+        for( int i = 1; i <= 4; ++i ) {
+            out.write( month.get<double>( i ) );
+        }
+        out.write( month.get<std::string>( 5 ) );
+        out.end_array();
+    } );
+}
+
 void write_static_ascii_art( JsonOut &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
@@ -4672,6 +4724,132 @@ void write_static_construction_byproduct( JsonOut &json, const sol::table &optio
     json.end_object();
 }
 
+void write_static_requirement_groups( JsonOut &json, const sol::table &options )
+{
+    for( const char *field : {
+             "components", "tools", "qualities"
+         } ) {
+        const auto groups = options.get<sol::optional<sol::table>>( field );
+        if( !groups ) {
+            continue;
+        }
+        const bool quality = std::string_view( field ) == "qualities";
+        json.member( field );
+        write_static_values<sol::table>( json, *groups, field,
+        [quality, field]( JsonOut & out, const sol::table & group ) {
+            if( quality && group.raw_get<sol::object>( "id" ).get_type() == sol::type::string ) {
+                write_static_construction_quality( out, group );
+                return;
+            }
+            write_static_values<sol::object>( out, group, field,
+            [quality]( JsonOut & dest, const sol::object & choice ) {
+                if( quality ) {
+                    write_static_construction_quality( dest, choice.as<sol::table>() );
+                } else if( choice.get_type() == sol::type::string ) {
+                    dest.write( choice.as<std::string>() );
+                } else {
+                    write_static_construction_requirement( dest, choice.as<sol::table>() );
+                }
+            } );
+        } );
+    }
+}
+
+void write_static_fault_modifier( JsonOut &json, const sol::table &entry )
+{
+    json.start_object();
+    json.member( "damage_id", entry.get<std::string>( "damage_type" ) );
+    write_placement_member<int>( json, entry, "add", "add" );
+    write_placement_member<double>( json, entry, "multiply", "multiply" );
+    json.end_object();
+}
+
+void write_static_fault( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "fault_type", "fault_type" }, { "severity", "severity" },
+        { "color", "color" }
+    } );
+    for( const char *field : { "name", "description", "message", "item_prefix", "item_suffix" } ) {
+        write_item_text( json, field, options.raw_get<sol::object>( field ), false );
+    }
+    write_item_ids( json, options, { { "flags", "flags" }, { "blocks", "block_faults" } } );
+    write_item_fields<int>( json, options, {
+        { "degradation_mod", "degradation_mod" }, { "instant_damage", "instant_damage" },
+        { "encumbrance_add", "encumbrance_add" }, { "vehicle_move_penalty_mod", "vehicle_move_penalty_mod" }
+    } );
+    write_item_fields<double>( json, options, {
+        { "price_modifier", "price_modifier" }, { "encumbrance_mult", "encumbrance_mult" },
+        { "contact_area_mod", "contact_area_mod" }, { "rolling_resistance_mod", "rolling_resistance_mod" }
+    } );
+    write_placement_member<bool>( json, options, "affected_by_degradation", "affected_by_degradation" );
+    write_static_catalog_array( json, options, "melee_damage", "melee_damage_mod",
+                                write_static_fault_modifier );
+    write_static_catalog_array( json, options, "armor", "armor_mod", write_static_fault_modifier );
+}
+
+void write_static_fault_fix_requirement( JsonOut &json, const sol::table &entry )
+{
+    if( const auto ref = entry.get<sol::optional<std::string>>( "id" ) ) {
+        json.start_array();
+        json.write( *ref );
+        json.write( entry.get<int>( "count" ) );
+        json.end_array();
+    } else {
+        json.start_object();
+        write_static_requirement_groups( json, entry );
+        json.end_object();
+    }
+}
+
+void write_static_fault_fix( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "duration", "time" }
+    } );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "success_msg", options.raw_get<sol::object>( "success_message" ), false );
+    write_item_ids( json, options, { { "removes", "faults_removed" }, { "adds", "faults_added" } } );
+    write_item_fields<int>( json, options, {
+        { "mod_damage", "mod_damage" }, { "mod_degradation", "mod_degradation" }
+    } );
+    if( const auto skills = options.get<sol::optional<sol::table>>( "skills" ) ) {
+        write_item_keyed_values<int>( json, "skills", *skills );
+    }
+    for( const auto &[field, native] : { item_field{ "proficiency_time_factors", "time_save_profs" },
+                                        { "flag_time_factors", "time_save_flags" },
+                                        { "multiply_variables", "adjust_variables_multiply" } } ) {
+        if( const auto values = options.get<sol::optional<sol::table>>( field ) ) {
+            write_item_keyed_values<double>( json, native, *values );
+        }
+    }
+    if( const auto variables = options.get<sol::optional<sol::table>>( "set_variables" ) ) {
+        json.member( "set_variables" );
+        json.start_object();
+        for( const auto &[key, value] : *variables ) {
+            const std::string name = key.as<std::string>();
+            switch( value.get_type() ) {
+                case sol::type::boolean:
+                    json.member( name, value.as<bool>() );
+                    break;
+                case sol::type::number:
+                    json.member( name, value.as<double>() );
+                    break;
+                case sol::type::string:
+                    json.member( name, value.as<std::string>() );
+                    break;
+                default:
+                    throw std::invalid_argument( "fault fix variable must be a string, number or boolean" );
+            }
+        }
+        json.end_object();
+    }
+    write_static_catalog_array( json, options, "requirements", "requirements",
+                                write_static_fault_fix_requirement );
+}
+
 void write_static_construction( JsonOut &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
@@ -4723,33 +4901,7 @@ void write_static_construction( JsonOut &json, const sol::table &options )
                                     write_static_construction_byproduct );
     }
 
-    for( const char *field : {
-             "components", "tools", "qualities"
-         } ) {
-        const auto groups = options.get<sol::optional<sol::table>>( field );
-        if( !groups ) {
-            continue;
-        }
-        const bool quality = std::string_view( field ) == "qualities";
-        json.member( field );
-        write_static_values<sol::table>( json, *groups, field,
-        [quality, field]( JsonOut & out, const sol::table & group ) {
-            if( quality && group.raw_get<sol::object>( "id" ).get_type() == sol::type::string ) {
-                write_static_construction_quality( out, group );
-                return;
-            }
-            write_static_values<sol::object>( out, group, field,
-            [quality]( JsonOut & dest, const sol::object & choice ) {
-                if( quality ) {
-                    write_static_construction_quality( dest, choice.as<sol::table>() );
-                } else if( choice.get_type() == sol::type::string ) {
-                    dest.write( choice.as<std::string>() );
-                } else {
-                    write_static_construction_requirement( dest, choice.as<sol::table>() );
-                }
-            } );
-        } );
-    }
+    write_static_requirement_groups( json, options );
 }
 
 template<typename Writer>
@@ -5370,6 +5522,64 @@ void write_static_profession_skill( JsonOut &json, const sol::table &skill )
     json.end_object();
 }
 
+void write_static_scenario_lists( JsonOut &json, const sol::table &options )
+{
+    write_item_ids( json, options, {
+        { "professions", "professions" }, { "hobbies", "hobbies" }, { "traits", "traits" },
+        { "forced_traits", "forced_traits" }, { "forbidden_traits", "forbidden_traits" },
+        { "locations", "allowed_locs" }, { "flags", "flags" }, { "missions", "missions" }
+    } );
+}
+
+void write_static_scenario( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
+        { "name", "name" }, { "description", "description" }, { "start_name", "start_name" },
+        { "map_extra", "map_extra" }, { "vehicle", "vehicle" }, { "requirement", "requirement" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "blacklist_professions", "blacklist_professions" }, { "add_professions", "add_professions" },
+        { "whitelist_hobbies", "whitelist_hobbies" }, { "hard_requirement", "hard_requirement" },
+        { "reveal_locale", "reveal_locale" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "points", "points" }, { "initial_visibility", "distance_initial_visibility" }
+    } );
+    write_static_scenario_lists( json, options );
+    for( const char *operation : { "extend", "delete" } ) {
+        if( const auto lists = options.get<sol::optional<sol::table>>( operation ) ) {
+            json.member( operation );
+            json.start_object();
+            write_static_scenario_lists( json, *lists );
+            json.end_object();
+        }
+    }
+    for( const char *field : { "start_of_cataclysm", "start_of_game" } ) {
+        if( const auto date = options.get<sol::optional<sol::table>>( field ) ) {
+            json.member( field );
+            json.start_object();
+            write_item_fields<int>( json, *date, { { "hour", "hour" }, { "day", "day" }, { "year", "year" } } );
+            write_placement_member<std::string>( json, *date, "season", "season" );
+            json.end_object();
+        }
+    }
+    if( const auto offset = options.get<sol::optional<sol::table>>( "origin_offset" ) ) {
+        json.member( "origin_offset" );
+        json.start_array();
+        json.write( offset->get<int>( "x" ) );
+        json.write( offset->get<int>( "y" ) );
+        json.end_array();
+    }
+    write_static_catalog_array( json, options, "surround_groups", "surround_groups",
+    []( JsonOut & out, const sol::table & group ) {
+        out.start_array();
+        out.write( group.get<std::string>( "group" ) );
+        out.write( group.get<double>( "expected_points" ) );
+        out.end_array();
+    } );
+}
+
 void write_static_profession( JsonOut &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
@@ -5865,6 +6075,51 @@ void write_static_npc_class( JsonOut &json, const sol::table &options, const std
     } );
 }
 
+void write_static_achievement( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" }
+    } );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    write_item_ids( json, options, { { "hidden_by", "hidden_by" } } );
+    write_placement_member<bool>( json, options, "manual", "manually_given" );
+    if( const auto limit = options.get<sol::optional<sol::table>>( "time_limit" ) ) {
+        json.member( "time_constraint" );
+        json.start_object();
+        json.member( "since", limit->get<std::string>( "since" ) );
+        json.member( "is", limit->get<std::string>( "comparison" ) );
+        json.member( "target", limit->get<std::string>( "duration" ) );
+        json.end_object();
+    }
+    write_static_catalog_array( json, options, "requirements", "requirements",
+    []( JsonOut & out, const sol::table & requirement ) {
+        out.start_object();
+        out.member( "event_statistic", requirement.get<std::string>( "statistic" ) );
+        out.member( "is", requirement.get<std::string>( "comparison" ) );
+        write_placement_member<std::string>( out, requirement, "visibility", "visible" );
+        write_item_text( out, "description", requirement.raw_get<sol::object>( "description" ), false );
+
+        const sol::object target = requirement.raw_get<sol::object>( "target" );
+        if( target.get_type() == sol::type::table ) {
+            const sol::table value = target.as<sol::table>();
+            out.member( "target" );
+            out.start_array();
+            out.write( value.get<std::string>( "type" ) );
+            out.write( value.get<std::string>( "value" ) );
+            out.end_array();
+        } else if( target.get_type() == sol::type::boolean ) {
+            out.member( "target", target.as<bool>() );
+        } else if( target.get_type() != sol::type::nil ) {
+            if( !target.is<int>() ) {
+                throw std::invalid_argument( "achievement target requires an integer, boolean, or typed value" );
+            }
+            out.member( "target", target.as<int>() );
+        }
+        out.end_object();
+    } );
+}
+
 void write_static_technique( JsonOut &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
@@ -6162,6 +6417,13 @@ void load_mod_content_with_data( const mod_source &source,
         return selected_mod_ids.count( id ) != 0;
     } );
     content.set_function( "define_mapgen", load_static_mapgen );
+    content.set_function( "define_external_option", static_catalog_definition(
+                              resolved.id, "EXTERNAL_OPTION", write_static_external_option, load_external_option ) );
+    content.set_function( "define_mod_migration", static_catalog_definition(
+                              resolved.id, "mod_migration", write_static_mod_migration, mod_migrations::load ) );
+    content.set_function( "define_climate_station", static_catalog_definition(
+                              resolved.id, "regional_climate_station", write_static_climate_station,
+                              regional_climate::load_station ) );
     content.set_function( "define_ascii_art", static_catalog_definition(
                               resolved.id, "ascii_art", write_static_ascii_art,
                               ascii_art::load_ascii_art ) );
@@ -6180,6 +6442,10 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_trait_group", static_catalog_definition(
                               resolved.id, "trait_group", write_static_trait_group,
                               static_cast<void ( * )( const JsonObject & )>( mutation_branch::load_trait_group ) ) );
+    content.set_function( "define_fault", static_catalog_definition(
+                              resolved.id, "fault", write_static_fault, faults::load_fault ) );
+    content.set_function( "define_fault_fix", static_catalog_definition(
+                              resolved.id, "fault_fix", write_static_fault_fix, faults::load_fix ) );
     content.set_function( "define_vehicle_group", static_catalog_definition(
                               resolved.id, "vehicle_group", write_static_vehicle_group,
                               VehicleGroup::load ) );
@@ -6207,6 +6473,8 @@ void load_mod_content_with_data( const mod_source &source,
     } ) );
     content.set_function( "define_start_location", static_catalog_definition(
                               resolved.id, "start_location", write_static_start_location, start_locations::load ) );
+    content.set_function( "define_scenario", static_catalog_definition(
+                              resolved.id, "scenario", write_static_scenario, scenario::load_scenario ) );
     content.set_function( "define_profession", static_catalog_definition(
                               resolved.id, "profession", write_static_profession, profession::load_profession ) );
     content.set_function( "define_vehicle_part", static_catalog_definition(
@@ -6217,6 +6485,10 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "SPELL", write_static_spell, spell_type::load_spell ) );
     content.set_function( "define_technique", static_catalog_definition(
                               resolved.id, "technique", write_static_technique, load_technique ) );
+    content.set_function( "define_achievement", static_catalog_definition(
+                              resolved.id, "achievement", write_static_achievement, achievement::load_achievement ) );
+    content.set_function( "define_conduct", static_catalog_definition(
+                              resolved.id, "conduct", write_static_achievement, achievement::load_achievement ) );
     content.set_function( "set_martial_art_handler",
     [&resolved]( const std::string & id, const std::string & phase, const std::string & handler ) {
         set_ordered_martial_art_handler( matype_id( id ), phase, resolved.id, handler );
