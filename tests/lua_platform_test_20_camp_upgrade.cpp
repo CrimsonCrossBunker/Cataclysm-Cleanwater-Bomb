@@ -224,13 +224,13 @@ TEST_CASE( "lua_platform_upgrade_rejects_unsafe_mapgen_operator",
     const auto check_rejection = [&]( const bool cancel_on_collision,
                                       const bool mirror_horizontal,
                                       const int rotation,
-                                      const char *expected_code ) {
+    const char *expected_code ) {
         platform_mapgen_transaction_report rejection_report;
         const ret_val<void> rejection = run_mapgen_update_func_transactional(
-                                             safe_operator, position, {}, nullptr,
-                                             cancel_on_collision, mirror_horizontal,
-                                             false, rotation, std::nullopt,
-                                             std::nullopt, &rejection_report );
+                                            safe_operator, position, {}, nullptr,
+                                            cancel_on_collision, mirror_horizontal,
+                                            false, rotation, std::nullopt,
+                                            std::nullopt, &rejection_report );
         CHECK_FALSE( rejection.success() );
         CHECK( rejection_report.state == platform_mapgen_transaction_state::rejected );
         CHECK( rejection_report.code == expected_code );
