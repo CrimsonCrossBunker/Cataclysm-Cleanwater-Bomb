@@ -1,14 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_WEREWOLF_GET_MANA_ON_NETHER_KILLS",
-    "eoc_type": "EVENT",
-    "required_event": "character_kills_monster",
-    "condition": { "and": [ { "not": "u_has_weapon" }, { "test_eoc": "EOC_CONDITIONS_WEREWOLF_HUNT_TARGETS" } ] },
-    "effect": [ { "math": [ "u_val('mana') += 25" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_WEREWOLF_SILVER_CLAWS_ON",
     "condition": { "u_has_trait": "WEREWOLF_HYBRID_FORM_TRAITS" },
     "effect": [
@@ -27,20 +19,6 @@
     "type": "effect_on_condition",
     "id": "EOC_WEREWOLF_SILVER_CLAWS_OFF",
     "effect": [ { "u_lose_trait": "WEREWOLF_SILVER_CLAWS_ACTIVE" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_WEREWOLF_THRILL_OF_THE_HUNT_KILLS",
-    "eoc_type": "EVENT",
-    "required_event": "character_kills_monster",
-    "condition": {
-      "and": [
-        { "u_has_trait": "WEREWOLF_MANA_BONUS_AFTER_KILL" },
-        { "not": "u_has_weapon" },
-        { "test_eoc": "EOC_CONDITIONS_WEREWOLF_HUNT_TARGETS" }
-      ]
-    },
-    "effect": [ { "math": [ "u_val('mana') += 50" ] } ]
   },
   {
     "type": "effect_on_condition",
