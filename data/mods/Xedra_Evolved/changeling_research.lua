@@ -262,6 +262,7 @@ for _, season in ipairs(seasons) do
 end
 
 require("changeling_milestones")
+require("changeling_glamours")
 require("changeling_dreams")
 
 local function character_target(handle)

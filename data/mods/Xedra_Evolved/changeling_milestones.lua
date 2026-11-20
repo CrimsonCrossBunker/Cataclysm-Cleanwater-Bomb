@@ -238,3 +238,56 @@ runtime.handler("record_arvore_wilderness", function(event)
     if checked(services.effects.has(character, tracker, bp, 24)) then award(character, milestone) end
 end)
 runtime.on("game:avatar_enters_omt", "record_arvore_wilderness")
+
+local homebody_locations = {
+    "FACTION_CAMP_ANY", "mansion_e1", "mansion_boarded_e1", "mansion_e2",
+    "mansion_+1", "mansion_+1d", "mansion_+1u", "mansion_+1_roof",
+    "mansion_+2", "mansion_+2d", "mansion_+2u", "mansion_+2_roof",
+    "mansion_+3", "mansion_+3u", "mansion_+3_roof", "mansion_+4",
+    "mansion_+4d", "mansion_+4u", "mansion_+4_roof", "mansion_boarded_c1",
+    "mansion_c1", "mansion_c1d", "mansion_boarded_c1u", "mansion_c1u",
+    "mansion_c1_roof", "mansion_boarded_c2", "mansion_c2", "mansion_c2d",
+    "mansion_boarded_c2u", "mansion_c2u", "mansion_c2_roof", "mansion_boarded_c3",
+    "mansion_c3", "mansion_c3d", "mansion_boarded_c3u", "mansion_c3u",
+    "mansion_c3_roof", "mansion_boarded_c4", "mansion_c4", "mansion_c4d",
+    "mansion_boarded_c4u", "mansion_c4u", "mansion_c4_roof", "mansion_c5",
+    "mansion_c5d", "mansion_c5u", "mansion_c5_roof", "mansion_e1d",
+    "mansion_boarded_e1u", "mansion_e1u", "mansion_e1_roof", "mansion_e2d",
+    "mansion_e2u", "mansion_e2_roof", "mansion_t1", "mansion_t1d",
+    "mansion_t1u", "mansion_t1_roof", "mansion_boarded_t2", "mansion_boarded_t2_start",
+    "mansion_t2", "mansion_boarded_t2d", "mansion_boarded_t2d_start", "mansion_t2d",
+    "mansion_boarded_t2u", "mansion_t2u", "mansion_t2_roof", "mansion_boarded_t4",
+    "mansion_t4", "mansion_t4d", "mansion_boarded_t4u", "mansion_t4u",
+    "mansion_t4_roof", "mansion_t5", "mansion_t5d", "mansion_t5u",
+    "mansion_t5_roof", "mansion_t6", "mansion_t6d", "mansion_t6u",
+    "mansion_t6_roof", "mansion_t7", "mansion_t7d", "mansion_t7u",
+    "mansion_t7_roof",
+}
+
+runtime.handler("brownie_leave_home", function(event)
+    local character = actor(event)
+    local speed = number(character, "brownie_homebody_speed_bonus")
+    if speed <= 0 then return end
+    local position = checked(services.creatures.snapshot(character)).position
+    if not services.gameplay.environment.is_outside(position) then return end
+    local omt = position:project_to("omt")
+    for _, location in ipairs(homebody_locations) do
+        if services.overmap.matches_location(omt, location) then return end
+    end
+    set(character, "brownie_homebody_speed_bonus", speed - 1)
+    set(character, "brownie_sense_intruders", 0)
+end)
+runtime.on("game:avatar_enters_omt", "brownie_leave_home")
+
+local brownie_recipes = {
+    BROWNIE_MAKE_CHEESE_AND_BUTTER = { "cheese_hard_brownie", "butter_brownie" },
+    BROWNIE_THRESH_CORN_AND_WHEAT = { "cornmeal_brownie", "flour_brownie" },
+}
+runtime.handler("learn_brownie_recipes", function(event)
+    local recipes = brownie_recipes[event.data.trait]
+    if recipes then
+        local character = actor(event)
+        for _, recipe in ipairs(recipes) do checked(services.recipes.learn(character, id("recipe", recipe))) end
+    end
+end)
+runtime.on("game:gains_mutation", "learn_brownie_recipes")
