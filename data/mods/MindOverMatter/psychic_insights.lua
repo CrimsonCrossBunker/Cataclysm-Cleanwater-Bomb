@@ -84,7 +84,7 @@ local function try_insight(character, rule)
     checked(services.recipes.learn(character, recipe))
     if character.subtype == "avatar" then
         local text = rule.message()
-        services.presentation.notice(text)
+        ccb.presentation.notice(text)
         services.activities.offer_interruption("")
         services.messages.add(text, "neutral")
     end

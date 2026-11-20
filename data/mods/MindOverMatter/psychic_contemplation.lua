@@ -59,7 +59,7 @@ local function message(character, text_value, level)
 end
 
 local function show_contemplation_notice(text_value)
-    services.presentation.notice(text_value)
+    ccb.presentation.notice(text_value)
     services.activities.offer_interruption("")
     services.messages.add(text_value, "neutral")
 end
@@ -79,7 +79,7 @@ local function start_contemplating(character, new_power)
         return
     end
     if vitamin(character, "vitamin_maintained_powers") > 0 then
-        local release = character.subtype ~= "avatar" or services.presentation.confirm(services.translate(
+        local release = character.subtype ~= "avatar" or ccb.presentation.confirm(services.translate(
             "Would you like to end concentration on your powers before you begin to meditate?"
         ))
         if release then

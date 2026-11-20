@@ -203,7 +203,7 @@ end
 local function research_succeeded(character)
     if character.subtype ~= "npc" then
         local text = ccb.services.translate("You learn a new blood gift.")
-        services.presentation.notice(text)
+        ccb.presentation.notice(text)
         services.activities.offer_interruption("")
         services.messages.add(text, "neutral")
     end

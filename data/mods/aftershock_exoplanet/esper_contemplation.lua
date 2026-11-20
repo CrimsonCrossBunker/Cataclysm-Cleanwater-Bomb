@@ -173,7 +173,7 @@ ccb.runtime.handler("esper_study_exhausted", function(event)
             local notice = services.translate(
                 "You're so exhausted you can barely think straight, and certainly can't concentrate on studying your powers."
             )
-            services.presentation.notice(notice)
+            ccb.presentation.notice(notice)
             services.activities.offer_interruption("")
             services.messages.add(notice, "neutral")
         end
