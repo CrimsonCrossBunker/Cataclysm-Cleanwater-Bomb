@@ -111,3 +111,14 @@ end)
 ccb.runtime.handler("deliver_anesthetic_3000_items", function(context)
     services.inventory.consume_by_type(context.character, id("item", "anesthetic"), 3000, 0)
 end)
+
+delivery("complete_mission_godco_corrie_machine1", "deliver_mission_godco_corrie_machine1", {
+    { item = id("item", "ground_solar_panel"), amount = 1 },
+    { item = id("item", "ground_solar_panel_v2"), amount = 1 },
+    { item = id("item", "solar_panel"), amount = 4 },
+    { item = id("item", "solar_panel_v2"), amount = 4 },
+})
+
+ccb.runtime.handler("deliver_gasoline_200_items", function(context)
+    services.inventory.consume_by_type(context.character, id("item", "gasoline"), 200, 0)
+end)

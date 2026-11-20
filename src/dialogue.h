@@ -181,6 +181,8 @@ std::function<bool( dialogue & )> purchase_pet( str_or_var monster_type, dbl_or_
         dbl_or_var count, bool pacified, translation_or_var name );
 std::function<bool( dialogue & )> transfer_items( str_or_var item_name, dbl_or_var count,
         dbl_or_var cost );
+talk_effect_fun_t::func update_map( str_or_var update_id, str_or_var terrain );
+talk_effect_fun_t::func record_time( var_info target );
 talk_effect_fun_t::func set_actor_value( bool is_npc, std::string key,
         std::vector<std::string> choices );
 talk_effect_fun_t::func record_turn( bool is_npc, std::string key );
@@ -190,6 +192,7 @@ talk_effect_fun_t::func set_string( var_info target, std::vector<str_or_var> val
 talk_effect_fun_t::func set_translated_string( var_info target,
         std::vector<translation_or_var> values, bool expand_tags );
 talk_effect_fun_t::func assign_mission( str_or_var mission, dbl_or_var deadline );
+talk_effect_fun_t::func offer_mission( str_or_var mission_id );
 talk_effect_fun_t::func finish_mission( str_or_var mission, bool success, std::optional<int> step );
 talk_effect_fun_t::func set_first_topic( str_or_var topic );
 talk_effect_fun_t::func adjust_faction_trust( dbl_or_var amount );

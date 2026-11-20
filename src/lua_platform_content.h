@@ -385,7 +385,9 @@ generic_factory<achievement> &achievement_registry();
 generic_factory<magic_type> &magic_type_registry();
 generic_factory<spell_type> &spell_registry();
 generic_factory<mission_type> &mission_type_registry();
-std::size_t stage_mission_actions( talk_effect_t actions );
+// Each handler runs before the native action at its index, or at the end.
+using mission_phase_handlers = std::vector<std::pair<std::size_t, std::string>>;
+std::size_t stage_mission_actions( talk_effect_t actions, mission_phase_handlers handlers );
 void clear_staged_mission_actions();
 generic_factory<mutation_branch> &mutation_registry();
 void refresh_mutation_registry_cache();

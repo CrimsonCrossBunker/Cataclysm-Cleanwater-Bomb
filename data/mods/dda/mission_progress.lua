@@ -134,3 +134,8 @@ ccb.runtime.handler("lose_robofac_trust_for_riot_gear", function()
 end)
 track("mission_flag_Alonso_pants")
 set_state("set_mission_flag_Doctor_rewarded_to_no", "mission_flag_Doctor_rewarded", "no")
+
+ccb.runtime.handler("advance_world_dave_castle_stage_by_1", function()
+    local stage = checked(variables.get_global_number("dave_castle_stage", { strict = true })).value or 0
+    checked(variables.set_global("dave_castle_stage", stage + 1, { include_before = false }))
+end)

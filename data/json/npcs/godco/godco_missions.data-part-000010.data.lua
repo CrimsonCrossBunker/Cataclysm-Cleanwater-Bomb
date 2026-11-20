@@ -1,30 +1,35 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_GODCO_FELICITY_1",
-    name = ccb.content.text("Writers' Will"),
-    description = ccb.content.text("Get 800 sheets of paper for Felicity Powell."),
-    goal = "MGOAL_FIND_ITEM",
-    item = "paper",
-    item_count = 800,
-    difficulty = 3,
+    id = "MISSION_GODCO_CORRIE_MACHINE1",
+    name = ccb.content.text("Renewable Energy"),
+    description = ccb.content.text("Find a solar panel array or 4 solar panels of either regular or advanced variant for Corrie."),
+    goal = "MGOAL_CONDITION",
+    difficulty = 1,
     value = 0,
-    -- Native mission phases did not apply the giver opinion (trust +3, value +2).
-    finish = { item_rewards = { { item = "icon", count = 8 } } },
-    -- Native mission phases did not apply the giver opinion (anger +2).
-    failure = {},
+    item_count = 1,
     origins = { "ORIGIN_SECONDARY" },
-    followup = "MISSION_GODCO_FELICITY_2",
     generic_rewards = false,
     dialogue = {
-        describe = ccb.content.text("Get some paper."),
-        offer = ccb.content.text("Since <the_cataclysm> happened, I've had a surprising amount of free time.  I want to start writing, but there's very little paper around here.  For the time being, eight hundred sheets should do; I'll pay if you can get it for me."),
-        accepted = ccb.content.text("Thanks, you'll be the first to see my writing."),
-        rejected = ccb.content.text("I can understand that.  The offer's still available if you reconsider."),
-        advice = ccb.content.text("A bookstore or office supply should have tons of it."),
-        inquire = ccb.content.text("Have you found the paper?"),
-        success = ccb.content.text("I appreciate it.  I'll get to work on my manuscript."),
-        success_lie = ccb.content.text("What good is this?"),
-        failure = ccb.content.text("How unfortunate…"),
+        describe = ccb.content.text("I have a plan…"),
+        offer = ccb.content.text("Okay, great.  We're gonna create a charger and a generator all in one.  Here's the battle plan.  Zack could create the framework, you'll get me a solar panel, the rest I can craft or repurpose from the bus.  Helena's promised us a reward if this thing lives up to her standards."),
+        accepted = ccb.content.text("With my brains and your brawn we'll make an excellent team.  A regular solar panel will do just fine."),
+        rejected = ccb.content.text("No electricity for us then."),
+        advice = ccb.content.text("All you need is a good wrench and a solar car."),
+        inquire = ccb.content.text("Do you have the solar panel?"),
+        success = ccb.content.text("The great work is now complete.  Are you good with words, by the way?  I was thinking, maybe you should be the one to negotiate with Helena.  But whatever you do, don't accept their icons.  Our work is worth a lot more than their valueless currency."),
+        success_lie = ccb.content.text("Thanks for trying… I guess."),
+        failure = ccb.content.text("No electricity for us then."),
     },
+    -- Native mission phases did not apply the giver opinion (trust +1, value +1).
+    finish = {
+        actions = {
+            { handler = "deliver_mission_godco_corrie_machine1" },
+            ccb.content.dialogue_actions.set_actor_value("speaker", "mission_completed_godco_corrie_machine", "in-progress"),
+            ccb.content.dialogue_actions.update_map("place_solar_farm", "godco_1"),
+        },
+    },
+    -- Native mission phases did not apply the giver opinion (anger +1).
+    failure = {},
+    complete_when = "complete_mission_godco_corrie_machine1",
 }

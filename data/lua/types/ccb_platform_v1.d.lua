@@ -8425,8 +8425,11 @@ function CcbPlatformContent.define_profession(options) end
 ---@field count? integer Item count or charges, default one.
 ---@field container? string Optional container for an item reward.
 
+---@class StaticMissionHandlerStep
+---@field handler string Registered mission callback.
+
 ---@class StaticMissionPhase
----@field actions? (StaticDialogueNativeAction|StaticDialogueAction|StaticMissionItemReward)[] Execute participant operations and item grants in order. Supply either actions or native_actions.
+---@field actions? (StaticDialogueNativeAction|StaticDialogueAction|StaticMissionItemReward|StaticMissionHandlerStep)[] Execute participant operations, callbacks and item grants in order. Supply either actions or native_actions.
 ---@field native_actions? StaticDialogueNativeAction[] Run built-in conversation operations on the original mission participants after before_rewards and before item delivery.
 ---@field before_rewards? string|string[] Registered mission callbacks invoked in order before item delivery.
 ---@field item_rewards? StaticMissionItemReward[] Grant in order before the phase callback. Use native item delivery, giver popups, and mission reward previews.
@@ -9434,6 +9437,18 @@ function CcbPlatformContent.gendered_line(text, participants) end
 ---@class StaticDialogueActions
 local StaticDialogueActions = {}
 
+---Run a named native mapgen update at the speaker's terrain or the nearest matching terrain.
+---Uses the participants' selected mission and refreshes the affected map cache.
+---@param id StaticDialogueStringValue
+---@param terrain? StaticDialogueStringValue
+---@return StaticDialogueAction
+function StaticDialogueActions.update_map(id, terrain) end
+
+---Write the current game turn as a number in the selected variable.
+---@param target StaticDialogueVariable
+---@return StaticDialogueAction
+function StaticDialogueActions.record_time(target) end
+
 ---Set an actor variable and emit the native variable-change event. An array selects a value at random.
 ---@param role StaticDialogueParticipant
 ---@param key string
@@ -9470,6 +9485,10 @@ function StaticDialogueActions.set_translated_string(target, values, expand_tags
 ---@param deadline? number Absolute turn measured from turn zero. Zero uses the mission's own deadline.
 ---@return StaticDialogueAction
 function StaticDialogueActions.assign_mission(id, deadline) end
+
+---@param id StaticDialogueStringValue
+---@return StaticDialogueAction
+function StaticDialogueActions.offer_mission(id) end
 
 ---@param id StaticDialogueStringValue
 ---@param result StaticDialogueMissionResult

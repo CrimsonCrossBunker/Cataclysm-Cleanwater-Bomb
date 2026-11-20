@@ -53,3 +53,7 @@ require("map_weights")
 require("migrations")
 require("materials")
 require("mission_goals")
+
+ccb.runtime.handler("deliver_tinder_1_items", function(context)
+    ccb.services.inventory.consume_by_type(context.character, ccb.services.types.id("item", "tinder"), 1, 0)
+end)

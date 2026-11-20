@@ -3152,6 +3152,14 @@ void validate_builtin_dialogue_action( const std::string &name )
 void install_static_dialogue_actions( sol::state &lua, sol::table &content )
 {
     sol::table actions = lua.create_table();
+    actions.set_function( "update_map", []( const sol::object & id, const sol::optional<sol::object> & terrain ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::update_map(
+                    read_dialogue_string_value( id ), terrain ? read_dialogue_string_value( *terrain ) : str_or_var{} ) ) };
+    } );
+    actions.set_function( "record_time", []( const sol::table & target ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::record_time(
+                    read_dialogue_variable( target ) ) ) };
+    } );
     actions.set_function( "set_actor_value", []( const std::string & role, const std::string & key,
     const sol::object & value ) {
         std::vector<std::string> choices = value.get_type() == sol::type::string ?
@@ -3203,6 +3211,10 @@ void install_static_dialogue_actions( sol::state &lua, sol::table &content )
     sol::optional<double> deadline ) {
         return static_dialogue_action{ talk_effect_fun_t( dialogue_action::assign_mission(
                     read_dialogue_string_value( id ), dbl_or_var( deadline.value_or( 0.0 ) ) ) ) };
+    } );
+    actions.set_function( "offer_mission", []( const sol::object & id ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::offer_mission(
+                    read_dialogue_string_value( id ) ) ) };
     } );
     actions.set_function( "finish_mission", []( const sol::object & id, const sol::table & result ) {
         const auto success = result.get<sol::optional<bool>>( "success" );
@@ -3286,7 +3298,7 @@ talk_effect_fun_t read_static_mission_reward( const sol::table &reward )
 }
 
 std::optional<talk_effect_t> read_static_dialogue_actions( const sol::table &outcome,
-        const std::string &source, bool mission_phase = false )
+        const std::string &source, detail::mission_phase_handlers *handlers = nullptr )
 {
     const auto actions = outcome.get<sol::optional<sol::table>>( "actions" );
     if( !actions ) {
@@ -3305,8 +3317,16 @@ std::optional<talk_effect_t> read_static_dialogue_actions( const sol::table &out
             const std::string name = action.as<std::string>();
             validate_builtin_dialogue_action( name );
             result.parse_string_effect( name, empty, source );
-        } else if( mission_phase && action.get_type() == sol::type::table ) {
-            result.set_effect( read_static_mission_reward( action.as<sol::table>() ) );
+        } else if( handlers && action.get_type() == sol::type::table ) {
+            const sol::table step = action.as<sol::table>();
+            if( const auto handler = step.get<sol::optional<std::string>>( "handler" ) ) {
+                if( handler->empty() || std::distance( step.begin(), step.end() ) != 1 ) {
+                    throw std::invalid_argument( "mission callback step requires a single nonempty handler" );
+                }
+                handlers->emplace_back( result.effects.size(), *handler );
+            } else {
+                result.set_effect( read_static_mission_reward( step ) );
+            }
         } else {
             result.set_effect( action.as<const static_dialogue_action &>().effect );
         }
@@ -6287,7 +6307,8 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
     const sol::table rules = phase.as<sol::table>();
     json.member( native );
     json.start_object();
-    auto actions = read_static_dialogue_actions( rules, source, true );
+    detail::mission_phase_handlers handlers;
+    auto actions = read_static_dialogue_actions( rules, source, &handlers );
     if( !actions ) {
         write_static_dialogue_native_actions( json, rules, "mission phase" );
     }
@@ -6302,7 +6323,8 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
         }
     }
     if( actions ) {
-        json.member( "//ccb_lua_mission_actions", detail::stage_mission_actions( std::move( *actions ) ) );
+        json.member( "//ccb_lua_mission_actions", detail::stage_mission_actions( std::move( *actions ),
+                     std::move( handlers ) ) );
     }
     write_static_string_or_ids( json, rules, "before_rewards", "//ccb_lua_mission_before_rewards" );
     write_static_string_or_ids( json, rules, "handler", "//ccb_lua_mission_handler" );

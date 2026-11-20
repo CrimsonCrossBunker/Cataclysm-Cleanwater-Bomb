@@ -4106,6 +4106,14 @@ talk_effect_fun_t::func dialogue_action::assign_mission( str_or_var mission_name
     };
 }
 
+talk_effect_fun_t::func dialogue_action::offer_mission( str_or_var mission_id )
+{
+    return [mission_id]( dialogue & d ) {
+        mission_dialogue::add_mission_for_dialogue(
+            d, mission_type_id( mission_id.evaluate( d ) ) );
+    };
+}
+
 talk_effect_fun_t::func dialogue_action::finish_mission( str_or_var mission_name, bool success,
         std::optional<int> step )
 {
@@ -4273,6 +4281,60 @@ std::function<bool( dialogue & )> dialogue_action::transfer_items( str_or_var it
         }
         d.actor( true )->add_debt( cost.evaluate( d ) );
         return true;
+    };
+}
+
+static talk_effect_fun_t::func apply_dialogue_map_update( mission_target_params target_params,
+        std::vector<str_or_var> update_ids, std::optional<var_info> target_var,
+        duration_or_var dov_time_in_future, str_or_var key )
+{
+    return [target_params, update_ids, target_var, dov_time_in_future, key]( dialogue & d ) {
+        tripoint_abs_omt omt_pos;
+        if( target_var.has_value() ) {
+            const tripoint_abs_ms abs_ms = read_var_value( *target_var, d ).tripoint();
+            omt_pos = project_to < coords::omt > ( abs_ms );
+        } else {
+            mission_target_params update_params = target_params;
+            if( d.has_beta ) {
+                update_params.guy = d.actor( true )->get_npc();
+            }
+            omt_pos = mission_util::get_om_terrain_pos( update_params, d );
+        }
+        time_duration future = dov_time_in_future.evaluate( d );
+        if( future > 0_seconds ) {
+            time_point tif = calendar::turn + future + 1_seconds;
+            //Timed events happen before the player turn and eocs are during so we add a second here to sync them up using the same variable
+            for( const str_or_var &mapgen_update_id : update_ids ) {
+                get_timed_events().add( timed_event_type::UPDATE_MAPGEN, tif, -1,
+                                        project_to < coords::ms > ( omt_pos ),
+                                        0, mapgen_update_id.evaluate( d ), key.evaluate( d ) );
+            }
+
+        } else {
+            for( const str_or_var &mapgen_update_id : update_ids ) {
+                run_mapgen_update_func( update_mapgen_id( mapgen_update_id.evaluate( d ) ), omt_pos, {},
+                                        d.actor( d.has_beta )->selected_mission() );
+                set_queued_points();
+            }
+            reality_bubble().invalidate_map_cache( omt_pos.z() );
+        }
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::update_map( str_or_var update_id, str_or_var terrain )
+{
+    mission_target_params target;
+    target.overmap_terrain = std::move( terrain );
+    target.search_range = OMAPX * 3;
+    return apply_dialogue_map_update( std::move( target ), { std::move( update_id ) },
+                                      std::nullopt, duration_or_var( 0_turns ), {} );
+}
+
+talk_effect_fun_t::func dialogue_action::record_time( var_info target )
+{
+    return [target = std::move( target )]( dialogue & d ) {
+        write_var_value( target.type, target.name, &d,
+                         to_turns<double>( calendar::turn - calendar::turn_zero ) );
     };
 }
 
@@ -5934,37 +5996,8 @@ talk_effect_fun_t::func f_mapgen_update( const JsonObject &jo, std::string_view 
     str_or_var key;
     optional( jo, false, "key", key );
 
-    return [target_params, update_ids, target_var, dov_time_in_future, key]( dialogue & d ) {
-        tripoint_abs_omt omt_pos;
-        if( target_var.has_value() ) {
-            const tripoint_abs_ms abs_ms = read_var_value( *target_var, d ).tripoint();
-            omt_pos = project_to < coords::omt > ( abs_ms );
-        } else {
-            mission_target_params update_params = target_params;
-            if( d.has_beta ) {
-                update_params.guy = d.actor( true )->get_npc();
-            }
-            omt_pos = mission_util::get_om_terrain_pos( update_params, d );
-        }
-        time_duration future = dov_time_in_future.evaluate( d );
-        if( future > 0_seconds ) {
-            time_point tif = calendar::turn + future + 1_seconds;
-            //Timed events happen before the player turn and eocs are during so we add a second here to sync them up using the same variable
-            for( const str_or_var &mapgen_update_id : update_ids ) {
-                get_timed_events().add( timed_event_type::UPDATE_MAPGEN, tif, -1,
-                                        project_to < coords::ms > ( omt_pos ),
-                                        0, mapgen_update_id.evaluate( d ), key.evaluate( d ) );
-            }
-
-        } else {
-            for( const str_or_var &mapgen_update_id : update_ids ) {
-                run_mapgen_update_func( update_mapgen_id( mapgen_update_id.evaluate( d ) ), omt_pos, {},
-                                        d.actor( d.has_beta )->selected_mission() );
-                set_queued_points();
-            }
-            reality_bubble().invalidate_map_cache( omt_pos.z() );
-        }
-    };
+    return apply_dialogue_map_update( std::move( target_params ), std::move( update_ids ),
+                                      std::move( target_var ), std::move( dov_time_in_future ), std::move( key ) );
 }
 
 talk_effect_fun_t::func f_alter_timed_events( const JsonObject &jo, std::string_view member,
@@ -6315,10 +6348,7 @@ talk_effect_fun_t::func f_add_mission( const JsonObject &jo, std::string_view me
                                        std::string_view )
 {
     str_or_var mission_id = get_str_or_var( jo.get_member( member ), member, true );
-    return [mission_id]( dialogue & d ) {
-        mission_dialogue::add_mission_for_dialogue(
-            d, mission_type_id( mission_id.evaluate( d ) ) );
-    };
+    return dialogue_action::offer_mission( std::move( mission_id ) );
 }
 
 talk_effect_fun_t::func f_u_buy_monster( const JsonObject &jo, std::string_view member,

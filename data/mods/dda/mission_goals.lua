@@ -147,3 +147,17 @@ ccb.runtime.handler("complete_mission_ranch_doctor_medical_anesthetic", function
         and services.variables.get_string(context.speaker, "mission_tacoma_ranch_doctor_anesthetic_scavengers_helped").value.value == "yes"
         and services.variables.get_string(context.speaker, "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped").value.value == "yes"
 end)
+
+ccb.runtime.handler("complete_mission_beggar_2_permission", function(context)
+    return services.variables.get_string(context.speaker, "mission_Dave_Permission").value.value == "yes"
+end)
+
+ccb.runtime.handler("complete_mission_lighthouse_man_5", function(context)
+    return services.variables.get_string(context.speaker, "global_safe_space_lighthouse_fixed").value.value == "ready"
+end)
+
+ccb.runtime.handler("complete_mission_refugee_boris_cleanup", function(context)
+    local result = services.variables.get_number(context.speaker, "mission_cleanup_promises_Boris_mission_1", { strict = true })
+    if not result.ok then error(result.error.message) end
+    return (result.value.value or 0) >= 5
+end)

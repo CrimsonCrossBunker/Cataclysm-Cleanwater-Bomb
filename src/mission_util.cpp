@@ -523,11 +523,16 @@ bool mission_util::load_funcs( const JsonObject &jo,
 
 // The factory can defer a Lua mission until a copy-from parent has loaded.
 // Keep its native operations available until the factory finishes resolving them.
-static std::vector<talk_effect_t> staged_mission_actions;
+struct ordered_mission_phase {
+    talk_effect_t actions;
+    cata::lua_platform::detail::mission_phase_handlers handlers;
+};
+static std::vector<ordered_mission_phase> staged_mission_actions;
 
-std::size_t cata::lua_platform::detail::stage_mission_actions( talk_effect_t actions )
+std::size_t cata::lua_platform::detail::stage_mission_actions( talk_effect_t actions,
+        mission_phase_handlers handlers )
 {
-    staged_mission_actions.push_back( std::move( actions ) );
+    staged_mission_actions.push_back( { std::move( actions ), std::move( handlers ) } );
     return staged_mission_actions.size() - 1;
 }
 
@@ -540,47 +545,73 @@ bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
                                 [[maybe_unused]] std::string_view phase,
                                 std::function<void( mission *, Character & )> &phase_func )
 {
-    std::vector<std::function<void( mission *, Character & )>> funcs;
-    std::size_t before_rewards = 0;
+    std::vector<std::function<void( mission *, Character & )>> map_actions;
+    if( !mission_util::load_funcs( jo, map_actions ) ) {
+        return false;
+    }
+    std::vector<std::function<void( mission *, Character &, ::dialogue & )>> steps;
+    const auto append_effect = [&]( talk_effect_fun_t effect ) {
+        const auto &rewards = effect.get_likely_rewards();
+        likely_rewards.insert( likely_rewards.end(), rewards.begin(), rewards.end() );
+        steps.emplace_back( [effect = std::move( effect )]( mission *, Character &, ::dialogue & d ) {
+            effect( d );
+        } );
+    };
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    const auto append_handler = [&]( const std::string &handler ) {
+        steps.emplace_back( [owner = std::string( src ), phase_name = std::string( phase ), handler](
+        mission * miss, Character & who, ::dialogue & ) {
+            cata::lua_platform::detail::invoke_mission_phase_handler(
+                owner, miss->get_type().id.str(), phase_name, handler, miss, who );
+        } );
+    };
     const auto append_handlers = [&]( const char *field ) {
         if( const auto callback = jo.get_member_opt( field ) ) {
             if( callback->has_source_file() ) {
                 callback->throw_error( "mission callback metadata is reserved for ordered Lua definitions" );
             }
             for( const std::string &handler : jo.get_as_string_array( field ) ) {
-                funcs.emplace_back( [owner = std::string( src ), phase_name = std::string( phase ), handler](
-                mission * miss, Character & who ) {
-                    cata::lua_platform::detail::invoke_mission_phase_handler(
-                        owner, miss->get_type().id.str(), phase_name, handler, miss, who );
-                } );
+                append_handler( handler );
             }
         }
     };
     append_handlers( "//ccb_lua_mission_before_rewards" );
-    before_rewards = funcs.size();
-    append_handlers( "//ccb_lua_mission_handler" );
 #endif
-    if( !mission_util::load_funcs( jo, funcs ) ) {
-        return false;
-    }
-
-    /* this is a kind of gross hijack of the dialogue responses effect system, but I don't want to
-     * write that code in two places so here it goes.
-     */
     talk_effect_t talk_effects;
     talk_effects.load_effect( jo, "effect", src );
+    for( const talk_effect_fun_t &effect : talk_effects.effects ) {
+        append_effect( effect );
+    }
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     if( const auto actions = jo.get_member_opt( "//ccb_lua_mission_actions" ) ) {
         if( actions->has_source_file() ) {
             actions->throw_error( "mission action metadata is reserved for ordered Lua definitions" );
         }
-        talk_effects.append_actions( staged_mission_actions.at( actions->get_uint64() ) );
+        const ordered_mission_phase &staged = staged_mission_actions.at( actions->get_uint64() );
+        auto effect = staged.actions.effects.begin();
+        for( const auto &[index, handler] : staged.handlers ) {
+            const auto before = staged.actions.effects.begin() + index;
+            for( ; effect != before; ++effect ) {
+                append_effect( *effect );
+            }
+            append_handler( handler );
+        }
+        for( ; effect != staged.actions.effects.end(); ++effect ) {
+            append_effect( *effect );
+        }
     }
+    append_handlers( "//ccb_lua_mission_handler" );
 #endif
-    phase_func = [ funcs, talk_effects, before_rewards ]( mission * miss, Character & who ) {
+    for( auto &map_action : map_actions ) {
+        steps.emplace_back( [run = std::move( map_action )]( mission * miss, Character & who, ::dialogue & ) {
+            run( miss, who );
+        } );
+    }
+    phase_func = [steps = std::move( steps )]( mission * miss, Character & who ) {
         const int mission_id = miss->get_id();
         const std::size_t generation = miss->identity_generation();
+        const character_id assigned_owner = miss->get_assigned_player_id();
+        const bool was_active = miss->in_progress();
         const character_action_guard owner( who );
         npc *beta_npc = g->find_npc( miss->get_npc_id() );
         std::optional<character_action_guard> giver;
@@ -592,36 +623,17 @@ bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
         }
         const auto live = [&]() {
             return owner && ( !giver || *giver ) && mission::find( mission_id, true ) == miss &&
-                   miss->identity_generation() == generation;
+                   miss->identity_generation() == generation && miss->get_assigned_player_id() == assigned_owner &&
+                   miss->in_progress() == was_active;
         };
         ::dialogue d( get_talker_for( who ),
                       beta_npc == nullptr ? nullptr : get_talker_for( beta_npc ) );
-        for( std::size_t i = 0; i < before_rewards; ++i ) {
+        for( const auto &step : steps ) {
             if( !live() ) {
                 return;
             }
-            funcs[i]( miss, who );
-        }
-        for( const talk_effect_fun_t &effect : talk_effects.effects ) {
-            if( !live() ) {
-                return;
-            }
-            effect( d );
-        }
-        for( std::size_t i = before_rewards; i < funcs.size(); ++i ) {
-            if( !live() ) {
-                return;
-            }
-            funcs[i]( miss, who );
+            step( miss, who, d );
         }
     };
-
-    for( talk_effect_fun_t &effect : talk_effects.effects ) {
-        talk_effect_fun_t::likely_rewards_t rewards = effect.get_likely_rewards();
-        if( !rewards.empty() ) {
-            likely_rewards.insert( likely_rewards.end(), rewards.begin(), rewards.end() );
-        }
-    }
-
     return true;
 }
