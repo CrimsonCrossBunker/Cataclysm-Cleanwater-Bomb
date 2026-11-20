@@ -15,7 +15,6 @@
     "type": "effect_on_condition",
     "id": "DEFENSE_MODE_WAVE_SPECIAL_DECIDER",
     "global": true,
-    "//": "This is used to decide for special waves, like shadow spawns and ultimate victory.",
     "condition": {
       "and": [
         { "math": [ "special_waves_allowed == 0" ] },
@@ -23,8 +22,7 @@
           "or": [
             { "math": [ "wave_number == 5" ] },
             { "math": [ "wave_number == 15" ] },
-            { "math": [ "wave_number == 30" ] },
-            { "math": [ "wave_number == 50" ] }
+            { "math": [ "wave_number == 30" ] }
           ]
         }
       ]
@@ -34,8 +32,7 @@
         "run_eocs": [
           "DEFENSE_MODE_WAVE_SPECIAL_FERALS",
           "DEFENSE_MODE_WAVE_SPECIAL_RATKIN",
-          "DEFENSE_MODE_WAVE_SPECIAL_MILITARY",
-          "DEFENSE_MODE_WAVE_SPECIAL_SHADOW"
+          "DEFENSE_MODE_WAVE_SPECIAL_MILITARY"
         ]
       }
     ],
@@ -221,19 +218,6 @@
       },
       {
         "u_message": "You hear crazed, half-pronounced orders screamed from afar.  The tamping of boots and off-beat shouts of two-three-four sound like the signs of an approaching army, but all the footfall is out of tune.",
-        "type": "bad",
-        "popup": true
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "DEFENSE_MODE_WAVE_SPECIAL_SHADOW",
-    "condition": { "math": [ "wave_number == 50" ] },
-    "effect": [
-      { "u_spawn_monster": "mon_boss_shadow", "real_count": 1, "outdoor_only": true, "min_radius": 20, "max_radius": 40 },
-      {
-        "u_message": "Your vision flickers with black, blob-like creatures for a moment.  An intense feeling of paranoia washes over you, as if the world itself is now out to kill you, the night itself reaching for your mind to rip it apart.  Somethings wicked comes this way, and it wants you dead.",
         "type": "bad",
         "popup": true
       }
