@@ -124,3 +124,13 @@ track("general_mission_NC_SEER_MISSION_1")
 set_world_progress("set_world_godco_has_canningpots_to_1", "godco_has_canningpots", 1)
 set_world_progress("set_world_godco_met_merchants_to_0", "godco_met_merchants", 0)
 track("u_saved_barry_isherwood")
+
+ccb.runtime.handler("lose_exodii_trust_for_riot_gear", function()
+    checked(ccb.services.factions.modify_reputation(ccb.services.types.id("faction", "exodii"), { trusts = -20 }))
+end)
+
+ccb.runtime.handler("lose_robofac_trust_for_riot_gear", function()
+    checked(ccb.services.factions.modify_reputation(ccb.services.types.id("faction", "robofac"), { trusts = -20 }))
+end)
+track("mission_flag_Alonso_pants")
+set_state("set_mission_flag_Doctor_rewarded_to_no", "mission_flag_Doctor_rewarded", "no")

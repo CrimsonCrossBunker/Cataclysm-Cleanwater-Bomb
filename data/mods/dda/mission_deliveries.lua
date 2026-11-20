@@ -107,3 +107,7 @@ end)
 ccb.runtime.handler("deliver_paper_500_items", function(context)
     services.inventory.consume_by_type(context.character, id("item", "paper"), 500, 0)
 end)
+
+ccb.runtime.handler("deliver_anesthetic_3000_items", function(context)
+    services.inventory.consume_by_type(context.character, id("item", "anesthetic"), 3000, 0)
+end)

@@ -4143,6 +4143,139 @@ talk_effect_fun_t::func dialogue_action::add_effect( bool is_npc, str_or_var new
     };
 }
 
+talk_effect_fun_t::func dialogue_action::remove_effects( bool is_npc, std::vector<str_or_var> old_effects,
+        str_or_var target )
+{
+    return [is_npc, old_effects, target]( dialogue const & d ) {
+        if( target.evaluate( d ) == "ALL" ) {
+            std::vector < bodypart_id > all_bprts = d.actor( is_npc )->get_all_body_parts(
+                    get_body_part_flags::none );
+            all_bprts.emplace_back( "bp_null" );
+            for( const str_or_var &old_effect : old_effects ) {
+                for( bodypart_id bp : all_bprts ) {
+                    d.actor( is_npc )->remove_effect( efftype_id( old_effect.evaluate( d ) ), bp.id().c_str() );
+                }
+            }
+        } else {
+            for( const str_or_var &old_effect : old_effects ) {
+                d.actor( is_npc )->remove_effect( efftype_id( old_effect.evaluate( d ) ), target.evaluate( d ) );
+            }
+        }
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::replace_mutation( bool is_npc, str_or_var new_trait,
+        str_or_var new_variant )
+{
+    return [is_npc, new_trait, new_variant]( dialogue const & d ) {
+        const trait_id trait = trait_id( new_trait.evaluate( d ) );
+        const mutation_variant *variant = trait->variant( new_variant.evaluate( d ) );
+
+        Character *guy = d.actor( is_npc )->get_character();
+        if( !guy ) {
+            debugmsg( "f_add_trait: No valid character." );
+            return;
+        }
+
+        const auto &new_types = trait->types;
+
+        for( const trait_id &existing : guy->get_mutations() ) {
+            if( existing == trait ) {
+                continue;
+            }
+            const auto &existing_types = existing->types;
+            for( const std::string &t : existing_types ) {
+                bool match = false;
+                if constexpr( std::is_same_v < decltype( new_types ), const std::set < std::string> & > ) {
+                    match = new_types.count( t ) > 0;
+                } else {
+                    match = new_types.find( t ) != new_types.end();
+                }
+                if( match ) {
+                    guy->unset_mutation( existing );
+                    break;
+                }
+            }
+        }
+
+        d.actor( is_npc )->set_mutation( trait, variant );
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::remove_items( bool is_npc, str_or_var item_name )
+{
+    return [is_npc, item_name]( dialogue const & d ) {
+        itype_id item_id = itype_id( item_name.evaluate( d ) );
+        d.actor( is_npc )->remove_items_with( [item_id]( const item & it ) {
+            return it.typeId() == item_id;
+        } );
+    };
+}
+
+talk_effect_fun_t::func dialogue_action::set_ally_rule( str_or_var rule, bool enabled )
+{
+    return [rule = std::move( rule ), enabled]( dialogue const & d ) {
+        if( enabled ) {
+            d.actor( true )->set_ai_rule( "ally_rule", rule.evaluate( d ) );
+        } else {
+            d.actor( true )->clear_ai_rule( "ally_rule", rule.evaluate( d ) );
+        }
+    };
+}
+
+std::function<bool( dialogue & )> dialogue_action::purchase_pet( str_or_var monster_type, dbl_or_var cost,
+        dbl_or_var count, bool pacified, translation_or_var name )
+{
+    return [monster_type, cost, count, pacified, name]( dialogue & d ) {
+        const mtype_id type( monster_type.evaluate( d ) );
+        const translation pet_name = no_translation( name.evaluate( d ).translated() );
+        return d.actor( false )->buy_monster( *d.actor( true ), type, cost.evaluate( d ),
+                count.evaluate( d ), pacified, pet_name );
+    };
+}
+
+std::function<bool( dialogue & )> dialogue_action::transfer_items( str_or_var item_name, dbl_or_var count,
+        dbl_or_var cost )
+{
+    return [item_name, cost, count]( dialogue & d ) {
+        int current_count = count.evaluate( d );
+        itype_id current_item_name = itype_id( item_name.evaluate( d ) );
+        const bool is_local_avatar =
+            mission_dialogue::resolve_dialogue_character( d, false ) == &get_avatar();
+        if( item::count_by_charges( current_item_name ) &&
+            d.actor( false )->has_charges( current_item_name, current_count ) ) {
+            for( item &it : d.actor( false )->use_charges( current_item_name, current_count ) ) {
+                it.set_owner( d.actor( true )->get_faction()->id );
+                d.actor( true )->i_add( it );
+            }
+        } else if( d.actor( false )->has_amount( current_item_name, current_count ) ) {
+            for( item &it : d.actor( false )->use_amount( current_item_name, current_count ) ) {
+                it.set_owner( d.actor( true )->get_faction()->id );
+                d.actor( true )->i_add( it );
+            }
+        } else {
+            if( is_local_avatar ) {
+                //~ %1$s is a translated item name
+                popup( _( "You don't have a %1$s!" ), item::nname( current_item_name ) );
+            }
+            return false;
+        }
+        if( is_local_avatar ) {
+            if( current_count == 1 ) {
+                //~ %1%s is the NPC name, %2$s is an item
+                popup( _( "You give %1$s a %2$s." ), d.actor( true )->disp_name(),
+                       item::nname( current_item_name ) );
+            } else {
+                //~ %1%s is the NPC name, %2$d is a number of items, %3$s are items
+                popup( _( "You give %1$s %2$d %3$s." ), d.actor( true )->disp_name(),
+                       current_count, item::nname( current_item_name, current_count ) );
+            }
+        }
+        d.actor( true )->add_debt( cost.evaluate( d ) );
+        return true;
+    };
+}
+
 talk_effect_fun_t::func dialogue_action::set_actor_value( bool is_npc, std::string key,
         std::vector<std::string> choices )
 {
@@ -4255,22 +4388,7 @@ talk_effect_fun_t::func f_remove_effect( const JsonObject &jo, std::string_view 
     str_or_var target;
     optional( jo, false, "target_part", target, "bp_null" );
 
-    return [is_npc, old_effects, target]( dialogue const & d ) {
-        if( target.evaluate( d ) == "ALL" ) {
-            std::vector < bodypart_id > all_bprts = d.actor( is_npc )->get_all_body_parts(
-                    get_body_part_flags::none );
-            all_bprts.emplace_back( "bp_null" );
-            for( const str_or_var &old_effect : old_effects ) {
-                for( bodypart_id bp : all_bprts ) {
-                    d.actor( is_npc )->remove_effect( efftype_id( old_effect.evaluate( d ) ), bp.id().c_str() );
-                }
-            }
-        } else {
-            for( const str_or_var &old_effect : old_effects ) {
-                d.actor( is_npc )->remove_effect( efftype_id( old_effect.evaluate( d ) ), target.evaluate( d ) );
-            }
-        }
-    };
+    return dialogue_action::remove_effects( is_npc, std::move( old_effects ), std::move( target ) );
 }
 
 talk_effect_fun_t::func f_add_trait( const JsonObject &jo, std::string_view member,
@@ -4281,39 +4399,7 @@ talk_effect_fun_t::func f_add_trait( const JsonObject &jo, std::string_view memb
 
     optional( jo, false, "variant", new_variant );
 
-    return [is_npc, new_trait, new_variant]( dialogue const & d ) {
-        const trait_id trait = trait_id( new_trait.evaluate( d ) );
-        const mutation_variant *variant = trait->variant( new_variant.evaluate( d ) );
-
-        Character *guy = d.actor( is_npc )->get_character();
-        if( !guy ) {
-            debugmsg( "f_add_trait: No valid character." );
-            return;
-        }
-
-        const auto &new_types = trait->types;
-
-        for( const trait_id &existing : guy->get_mutations() ) {
-            if( existing == trait ) {
-                continue;
-            }
-            const auto &existing_types = existing->types;
-            for( const std::string &t : existing_types ) {
-                bool match = false;
-                if constexpr( std::is_same_v < decltype( new_types ), const std::set < std::string> & > ) {
-                    match = new_types.count( t ) > 0;
-                } else {
-                    match = new_types.find( t ) != new_types.end();
-                }
-                if( match ) {
-                    guy->unset_mutation( existing );
-                    break;
-                }
-            }
-        }
-
-        d.actor( is_npc )->set_mutation( trait, variant );
-    };
+    return dialogue_action::replace_mutation( is_npc, std::move( new_trait ), std::move( new_variant ) );
 }
 
 talk_effect_fun_t::func f_activate_trait( const JsonObject &jo, std::string_view member,
@@ -4950,43 +5036,9 @@ talk_effect_fun_t::func f_u_sell_item( const JsonObject &jo, std::string_view me
     dbl_or_var count;
     optional( jo, false, "count", count, 1 );
     str_or_var item_name = get_str_or_var( jo.get_member( member ), member, true );
-    return [item_name, cost, count, true_eocs, false_eocs]( dialogue & d ) {
-        int current_count = count.evaluate( d );
-        itype_id current_item_name = itype_id( item_name.evaluate( d ) );
-        const bool is_local_avatar =
-            mission_dialogue::resolve_dialogue_character( d, false ) == &get_avatar();
-        if( item::count_by_charges( current_item_name ) &&
-            d.actor( false )->has_charges( current_item_name, current_count ) ) {
-            for( item &it : d.actor( false )->use_charges( current_item_name, current_count ) ) {
-                it.set_owner( d.actor( true )->get_faction()->id );
-                d.actor( true )->i_add( it );
-            }
-        } else if( d.actor( false )->has_amount( current_item_name, current_count ) ) {
-            for( item &it : d.actor( false )->use_amount( current_item_name, current_count ) ) {
-                it.set_owner( d.actor( true )->get_faction()->id );
-                d.actor( true )->i_add( it );
-            }
-        } else {
-            if( is_local_avatar ) {
-                //~ %1$s is a translated item name
-                popup( _( "You don't have a %1$s!" ), item::nname( current_item_name ) );
-            }
-            run_eoc_vector( false_eocs, d );
-            return;
-        }
-        if( is_local_avatar ) {
-            if( current_count == 1 ) {
-                //~ %1%s is the NPC name, %2$s is an item
-                popup( _( "You give %1$s a %2$s." ), d.actor( true )->disp_name(),
-                       item::nname( current_item_name ) );
-            } else {
-                //~ %1%s is the NPC name, %2$d is a number of items, %3$s are items
-                popup( _( "You give %1$s %2$d %3$s." ), d.actor( true )->disp_name(),
-                       current_count, item::nname( current_item_name, current_count ) );
-            }
-        }
-        d.actor( true )->add_debt( cost.evaluate( d ) );
-        run_eoc_vector( true_eocs, d );
+    return [give = dialogue_action::transfer_items( std::move( item_name ), std::move( count ),
+                   std::move( cost ) ), true_eocs, false_eocs]( dialogue & d ) {
+        run_eoc_vector( give( d ) ? true_eocs : false_eocs, d );
     };
 }
 
@@ -5101,12 +5153,7 @@ talk_effect_fun_t::func f_remove_item_with( const JsonObject &jo, std::string_vi
         std::string_view, bool is_npc )
 {
     str_or_var item_name = get_str_or_var( jo.get_member( member ), member, true );
-    return [is_npc, item_name]( dialogue const & d ) {
-        itype_id item_id = itype_id( item_name.evaluate( d ) );
-        d.actor( is_npc )->remove_items_with( [item_id]( const item & it ) {
-            return it.typeId() == item_id;
-        } );
-    };
+    return dialogue_action::remove_items( is_npc, std::move( item_name ) );
 }
 
 talk_effect_fun_t::func f_u_spend_cash( const JsonObject &jo, std::string_view member,
@@ -5195,18 +5242,14 @@ talk_effect_fun_t::func f_set_npc_rule( const JsonObject &jo, std::string_view m
                                         std::string_view )
 {
     str_or_var rule = get_str_or_var( jo.get_member( member ), member, true );
-    return [rule]( dialogue const & d ) {
-        d.actor( true )->set_ai_rule( "ally_rule", rule.evaluate( d ) );
-    };
+    return dialogue_action::set_ally_rule( std::move( rule ), true );
 }
 
 talk_effect_fun_t::func f_clear_npc_rule( const JsonObject &jo, std::string_view member,
         std::string_view )
 {
     str_or_var rule = get_str_or_var( jo.get_member( member ), member, true );
-    return [rule]( dialogue const & d ) {
-        d.actor( true )->clear_ai_rule( "ally_rule", rule.evaluate( d ) );
-    };
+    return dialogue_action::set_ally_rule( std::move( rule ), false );
 }
 
 talk_effect_fun_t::func f_npc_engagement_rule( const JsonObject &jo,
@@ -6290,16 +6333,9 @@ talk_effect_fun_t::func f_u_buy_monster( const JsonObject &jo, std::string_view 
 
     std::vector < effect_on_condition_id > true_eocs = load_eoc_vector( jo, "true_eocs", src );
     std::vector < effect_on_condition_id > false_eocs = load_eoc_vector( jo, "false_eocs", src );
-    return [monster_type_id, cost, count, pacified, name, true_eocs,
-                     false_eocs]( dialogue & d ) {
-        const mtype_id mtype( monster_type_id.evaluate( d ) );
-        translation translated_name = no_translation( name.evaluate( d ).translated() );
-        if( d.actor( false )->buy_monster( *d.actor( true ), mtype, cost.evaluate( d ), count.evaluate( d ),
-                                           pacified, translated_name ) ) {
-            run_eoc_vector( true_eocs, d );
-        } else {
-            run_eoc_vector( false_eocs, d );
-        }
+    return [buy = dialogue_action::purchase_pet( std::move( monster_type_id ), std::move( cost ),
+                  std::move( count ), pacified, std::move( name ) ), true_eocs, false_eocs]( dialogue & d ) {
+        run_eoc_vector( buy( d ) ? true_eocs : false_eocs, d );
     };
 }
 

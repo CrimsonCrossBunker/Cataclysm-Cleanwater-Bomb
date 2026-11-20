@@ -1,66 +1,29 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_GODCO_THERESA_1",
-    name = ccb.content.text("Get some oxycodone"),
-    description = ccb.content.text("Find seven oxycodone pills for Theresa."),
+    id = "MISSION_GODCO_GEMMA_SEEDS",
+    name = ccb.content.text("Find cactus seeds"),
+    description = ccb.content.text("Find ten cactus seeds for Gemma."),
     goal = "MGOAL_FIND_ITEM",
-    item = "oxycodone",
-    item_count = 7,
+    item = "seed_cactus",
+    item_count = 10,
     difficulty = 1,
     value = 0,
-    -- Native mission phases did not apply the giver opinion (trust +4, value +4).
-    finish = {
-        handler = "mark_general_completed_theresa_going_away",
-        item_rewards = {
-            { item = "icon", count = 25 },
-            { item = "cane" },
-            { item = "silver_ring" },
-            { item = "gold_necklace" },
-            { item = "glasses_reading" },
-            { item = "knitting_needles" },
-        },
-    },
-    -- Native mission phases did not apply the giver opinion (anger +6).
+    -- Native mission phases did not apply the giver opinion (trust +1, value +1).
+    finish = { item_rewards = { { item = "icon", count = 5 } } },
+    -- Native mission phases did not apply the giver opinion (anger +1).
     failure = {},
     origins = { "ORIGIN_SECONDARY" },
     generic_rewards = false,
     dialogue = {
-        describe = ccb.content.text("Get some pills."),
-        offer = ccb.content.text("I've got an idea to solve my problem.  I'll pay you if you can find seven oxycodone pills for me; the ones they used to prescribe after a surgery."),
-        accepted = ccb.content.text("Thank you, <granny_name_g>.  I'm glad the youngsters still help the elderly."),
-        rejected = ccb.content.text("I can understand your hesitation <granny_name_g>.  I wouldn't worry about it too much."),
-        advice = ccb.content.text("An old doctors office should have some.  They have those fancy autodocs upstairs."),
-        inquire = ccb.content.text("Have you found my painkillers?"),
-        success = ccb.content.text("I want you to have these few things of mine, I won't be needing them anymore.  I think I'll take a walk in the woods, get some fresh air for these old bones…"),
-        success_lie = ccb.content.text("Deceitful rogue, you…"),
-        failure = ccb.content.text("How unfortunate…"),
-    },
-}
-
-ccb.content.define_mission {
-    id = "MISSION_GODCO_JEREMIAH_1",
-    name = ccb.content.text("Dinner for Two"),
-    description = ccb.content.text("Get a candle for Jeremiah."),
-    goal = "MGOAL_FIND_ITEM",
-    item = "candle",
-    difficulty = 1,
-    value = 0,
-    -- Native mission phases did not apply the giver opinion (trust +2, value +3).
-    finish = { item_rewards = { { item = "icon", count = 1 } } },
-    -- Native mission phases did not apply the giver opinion (anger +3).
-    failure = {},
-    origins = { "ORIGIN_SECONDARY" },
-    generic_rewards = false,
-    dialogue = {
-        describe = ccb.content.text("Get a candle."),
-        offer = ccb.content.text("Have you met Chloe?  She's the girl with the butcher knife, came here with Sonia.  This may sound silly, but I want to ask her out on a date, have a picnic some time.  The only thing I need to get this plan to come together is a candle.  If you happen to find one, I'll pay you for it."),
-        accepted = ccb.content.text("Thanks, <name_g>."),
-        rejected = ccb.content.text("Please?  The dating scene isn't that big around here."),
-        advice = ccb.content.text("Someone's house might have one."),
-        inquire = ccb.content.text("Have you found the candle?"),
-        success = ccb.content.text("I appreciate it."),
+        describe = ccb.content.text("Get some cactus seeds."),
+        offer = ccb.content.text("I'm wanting to try growing some new plants.  I've never tried growing cactus; if you could find some seeds for me, I'd pay you."),
+        accepted = ccb.content.text("Thank you."),
+        rejected = ccb.content.text("I suppose more local fauna could work."),
+        advice = ccb.content.text("I'd try a gardening store or a home supply store would have some."),
+        inquire = ccb.content.text("Have you found any cactus seeds?"),
+        success = ccb.content.text("I appreciate that, here's your money.  Parts of the cactus, such as the fruit, are edible.  I'll have to ask Simon if he can experiment with some of them."),
         success_lie = ccb.content.text("What good is this?"),
-        failure = ccb.content.text("That's too bad…"),
+        failure = ccb.content.text("How unfortunate…"),
     },
 }

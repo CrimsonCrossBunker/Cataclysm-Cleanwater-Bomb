@@ -1,22 +1,34 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_GET_CITY_COP_MOMENTO",
-    name = ccb.content.text("Break into armory to retrieve family photo"),
+    id = "MISSION_RECOVER_PRIEST_DIARY",
+    name = ccb.content.text("Recover Priest's Diary"),
+    description = ccb.content.text("Find something that may reveal what the church's stance is on these events.  Something like <color_yellow>a priest's diary</color> would suffice."),
     goal = "MGOAL_FIND_ITEM",
     difficulty = 2,
-    value = 800,
-    item = "family_photo",
+    value = 70000,
+    item = "priest_diary",
+    start = {
+        target = { terrain = "house", match = "PREFIX", min_distance = 5, random = true, z = 0 },
+        map_updates = {
+            {
+                layout = {
+                    item_placements = { { id = "priest_diary", x = { 3, 21 }, y = { 6, 21 }, amount = 1 } },
+                },
+            },
+        },
+    },
     origins = { "ORIGIN_SECONDARY" },
+    followup = "MISSION_INVESTIGATE_CULT",
     dialogue = {
-        describe = ccb.content.text("I need you to get my family photo from the armory safe."),
-        offer = ccb.content.text("I left the only photo I have from my family in the armory.  I don't have the code, can you get in?"),
-        accepted = ccb.content.text("Thanks, it's great to see someone willing to help a out."),
-        rejected = ccb.content.text("Well, I'll find someone else to do it for me, real shame with all those guns locked up too…"),
-        advice = ccb.content.text("You look like a resourceful sort, maybe you can hack it or something."),
-        inquire = ccb.content.text("Got the photo?  Should've been in my gun safe."),
-        success = ccb.content.text("Thanks!  I'll be sure to put in a good word for you around town."),
-        success_lie = ccb.content.text("OK, then hand it over."),
-        failure = ccb.content.text("Shit happens."),
+        describe = ccb.content.text("St. Michael the archangel defend me in battle…"),
+        offer = ccb.content.text("From what I understand, the creatures you encountered surrounding this relic were unlike anything I've heard of.  It is laughable that I now consider the living dead to be part of our ordinary reality.  Never-the-less, the church must have some explanation for these events.  I have located the residence of a local clergy man, could you go to this address and recover any items that may reveal what the church's stance is on these events?"),
+        accepted = ccb.content.text("I wish you the best of luck, may whatever god you please guide your path."),
+        rejected = ccb.content.text("Ya, I guess the stress may just be getting to me…"),
+        advice = ccb.content.text("If the information is confidential the priest must have it hidden within his own home."),
+        inquire = ccb.content.text("Any luck?"),
+        success = ccb.content.text("Thank you, a diary is exactly what I was looking for."),
+        success_lie = ccb.content.text("What good does this do us?"),
+        failure = ccb.content.text("It was a lost cause anyways…"),
     },
 }

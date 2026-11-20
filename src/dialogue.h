@@ -171,6 +171,16 @@ namespace dialogue_action
 {
 talk_effect_fun_t mission_item_reward( const std::string &id, int count,
                                        const std::string &container, bool group, bool preview );
+talk_effect_fun_t::func remove_effects( bool is_npc, std::vector<str_or_var> old_effects,
+        str_or_var target );
+talk_effect_fun_t::func replace_mutation( bool is_npc, str_or_var new_trait,
+        str_or_var new_variant );
+talk_effect_fun_t::func remove_items( bool is_npc, str_or_var item_name );
+talk_effect_fun_t::func set_ally_rule( str_or_var rule, bool enabled );
+std::function<bool( dialogue & )> purchase_pet( str_or_var monster_type, dbl_or_var cost,
+        dbl_or_var count, bool pacified, translation_or_var name );
+std::function<bool( dialogue & )> transfer_items( str_or_var item_name, dbl_or_var count,
+        dbl_or_var cost );
 talk_effect_fun_t::func set_actor_value( bool is_npc, std::string key,
         std::vector<std::string> choices );
 talk_effect_fun_t::func record_turn( bool is_npc, std::string key );

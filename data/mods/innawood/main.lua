@@ -52,3 +52,4 @@ require("map_weights")
 
 require("migrations")
 require("materials")
+require("mission_goals")

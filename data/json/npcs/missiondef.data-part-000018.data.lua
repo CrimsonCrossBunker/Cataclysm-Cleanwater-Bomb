@@ -1,30 +1,29 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_PROVE_YOUR_WORTH",
-    name = ccb.content.text("Prove your worth to Foodperson"),
-    description = ccb.content.text("Prove your dedication to the Foodperson and Foodplace as a whole by finding <color_yellow>10 Foodplace loyalty cards</color>."),
-    goal = "MGOAL_FIND_ITEM",
-    item = "fp_loyalty_card",
-    item_count = 10,
-    difficulty = 1,
-    value = 0,
-    finish = {
-        item_rewards = { { item = "badge_foodkid" } },
-        actions = {
-            ccb.content.dialogue_actions.set_actor_value("interlocutor", "dialogue_foodperson_npc_foodperson_impressed", "yes"),
+    id = "MISSION_RECRUIT_TRACKER",
+    name = ccb.content.text("Recruit Tracker"),
+    description = ccb.content.text("Go to the cabin in the woods where the Tracker is camping and <color_yellow>recruit them</color>."),
+    goal = "MGOAL_RECRUIT_NPC",
+    difficulty = 5,
+    value = 70000,
+    start = {
+        target = { terrain = "cabin", special = "Cabin", reveal_radius = 2 },
+        map_updates = {
+            { layout = { npc_placements = { { id = "tracker_gunslinger", x = 11, y = 11, target = true } } } },
         },
+        native_actions = { "follow" },
     },
     origins = { "ORIGIN_SECONDARY" },
     dialogue = {
-        describe = ccb.content.text("Prove your dedication to Foodplace."),
-        offer = ccb.content.text("Show me the proof of your loyalty to the great Foodplace, and I'll consider you worthy of my friendship.  Ten loyalty cards should be enough, I'm sure you already have much more than that waiting for you at home, right?"),
-        accepted = ccb.content.text("That's the spirit!  Good luck kid."),
-        rejected = ccb.content.text("That's alright not everyone is cutout for this."),
-        advice = ccb.content.text("Those are very precious, people would probably keep them on their person or in bank vaults.  And definitely not throw them in the trash!"),
-        inquire = ccb.content.text("How is it going?  Do you have them?"),
-        success = ccb.content.text("YES!  I knew you could do it!  You proved your worth and I'm proud to call you a friend."),
-        success_lie = ccb.content.text("Well… where are they?"),
-        failure = ccb.content.text("I'm so disappointed in you kid…"),
+        describe = ccb.content.text("You seem to know this new world better than most…"),
+        offer = ccb.content.text("We've got another problem to deal with but I don't think we can handle it on our own.  So, I sent word out and found us a volunteer… of sorts.  He's vain as hell but has a little skill with firearms.  He was supposed to collect whatever he had of value and is going to meet us at a cabin in the woods.  Wasn't sure how long we were going to be so I told him to just camp there until we picked him up."),
+        accepted = ccb.content.text("Roger, if he's a no-show then any other gunslinger will do… but I doubt he'll quit before we even begin."),
+        rejected = ccb.content.text("Hey, I know I wouldn't volunteer for it either… but then I remember that most of us survivors won't make it unless someone decides to take the initiative."),
+        advice = ccb.content.text("I hope the bastard is packing heat… else we'll need to grab him a gun before we hit our next target."),
+        inquire = ccb.content.text("Found a gunslinger?"),
+        success = ccb.content.text("Great, just let me know when you are ready to wade knee-deep in an ocean of blood."),
+        success_lie = ccb.content.text("I don't think so…"),
+        failure = ccb.content.text("Quitting already?"),
     },
 }

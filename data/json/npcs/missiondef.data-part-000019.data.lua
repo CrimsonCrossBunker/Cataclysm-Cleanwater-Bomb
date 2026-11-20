@@ -1,24 +1,34 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_PROVE_YOU_ARE_A_SURVIVOR",
-    name = ccb.content.text("Prove You're A Survivor"),
-    description = ccb.content.text("Prove you're a survivor by surviving for 10 days after the Cataclysm, and then returning to the person who gave you this mission."),
-    goal = "MGOAL_CONDITION",
-    difficulty = 1,
-    value = 0,
-    origins = { "ORIGIN_OPENER_NPC" },
-    finish = { native_actions = { "follow" } },
-    dialogue = {
-        describe = ccb.content.text("It's hard to tell who actually has the skills to survive these days…"),
-        offer = ccb.content.text("It's hard surviving out here on our own, and we'd probably have a better chance working together.  Problem is, I don't really know you and what you're capable of.  You might have what it takes, or you might not.  Either way, I'm going to need some proof.  Come back in a few days and I'll gladly follow you.  It's basically a win-win for me: either you come back and I'll know you've got what it takes, or you don't and I'll know that I was right not to follow you."),
-        accepted = ccb.content.text("I'll see you then… or I won't, and then I'll know I made the right decision."),
-        rejected = ccb.content.text("Ya, it was a long shot I admit."),
-        advice = ccb.content.text("Don't die.  If you're asking me for advice, that doesn't bode well for you."),
-        inquire = ccb.content.text("Well, you're not dead… yet."),
-        success = ccb.content.text("I'll be honest, I wasn't really expecting to see you again.  A promise is a promise, I'll follow you now!"),
-        success_lie = ccb.content.text("I know time is relative and all that."),
-        failure = ccb.content.text("I'm not quite sure how you failed to survive AND are talking to me."),
+    id = "MISSION_RESCUE_DOG",
+    name = ccb.content.text("Find Lost Dog"),
+    goal = "MGOAL_FIND_MONSTER",
+    difficulty = 3,
+    value = 100000,
+    start = {
+        target = { terrain = "house", replace_terrain = "field", match = "PREFIX", random = true, z = 0 },
+        map_updates = {
+            {
+                layout = {
+                    monster_placements = {
+                        { id = "mon_dog", x = { 3, 21 }, y = { 6, 21 }, friendly = true, target = true },
+                    },
+                },
+            },
+        },
+        item_rewards = { { item = "dog_whistle" } },
     },
-    complete_when = "complete_mission_prove_you_are_a_survivor",
+    origins = { "ORIGIN_OPENER_NPC" },
+    dialogue = {
+        describe = ccb.content.text("Oh, my poor puppy…"),
+        offer = ccb.content.text("I left my poor dog in a house, not far from here.  Can you retrieve it?"),
+        accepted = ccb.content.text("Thank you!  Please hurry back!"),
+        rejected = ccb.content.text("Please, think of my poor little puppy!"),
+        advice = ccb.content.text("Take my dog whistle; if the dog starts running off, blow it and he'll return to your side."),
+        inquire = ccb.content.text("Have you found my dog yet?"),
+        success = ccb.content.text("Thank you so much for finding him!"),
+        success_lie = ccb.content.text("What?!  You're lying, I can tell!  Ugh, forget it!"),
+        failure = ccb.content.text("Oh no!  My poor puppy…"),
+    },
 }

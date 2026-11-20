@@ -137,3 +137,13 @@ ccb.runtime.handler("complete_mission_ranch_doctor_supplies", function(context)
     return services.inventory.has_items(context.speaker, id("item", "book_binder"), 10, 0).value
         and services.inventory.has_items(context.speaker, id("item", "paper"), 500, 0).value
 end)
+
+ccb.runtime.handler("complete_mission_get_inhaler_inhaler", function(context)
+    return has_item(context.speaker, "inhaler")
+end)
+
+ccb.runtime.handler("complete_mission_ranch_doctor_medical_anesthetic", function(context)
+    return services.inventory.has_items(context.speaker, id("item", "anesthetic"), 3000, 0).value
+        and services.variables.get_string(context.speaker, "mission_tacoma_ranch_doctor_anesthetic_scavengers_helped").value.value == "yes"
+        and services.variables.get_string(context.speaker, "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped").value.value == "yes"
+end)

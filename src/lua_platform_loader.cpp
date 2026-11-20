@@ -3132,7 +3132,7 @@ void validate_builtin_dialogue_action( const std::string &name )
 {
     static const std::set<std::string_view> available = {
         "assign_mission", "mission_success", "mission_failure", "clear_mission", "mission_reward",
-        "start_trade", "assign_guard", "stop_guard", "wake_up", "reveal_stats", "end_conversation",
+        "start_trade", "assign_guard", "stop_guard", "npc_die", "wake_up", "reveal_stats", "end_conversation",
         "insult_combat", "give_equipment", "give_aid", "give_all_aid", "bionic_install",
         "bionic_remove", "follow", "follow_only", "deny_follow", "deny_lead", "deny_equipment",
         "deny_train", "deny_personal_info", "hostile", "flee", "leave", "stop_following",
@@ -3237,11 +3237,56 @@ void install_static_dialogue_actions( sol::state &lua, sol::table &content )
                     permanent, options.get_or( "force", false ),
                     dbl_or_var( options.get_or( "intensity", 0.0 ) ) ) ) };
     } );
+    actions.set_function( "remove_effects", []( const std::string & role, const sol::table & ids,
+    const sol::optional<sol::object> & body_part ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::remove_effects(
+                    dialogue_participant_is_interlocutor( role ), read_dialogue_string_values( ids ),
+                    body_part ? read_dialogue_string_value( *body_part ) : str_or_var( "bp_null" ) ) ) };
+    } );
+    actions.set_function( "replace_mutation", []( const std::string & role, const sol::object & id,
+    const sol::optional<sol::object> & variant ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::replace_mutation(
+                    dialogue_participant_is_interlocutor( role ), read_dialogue_string_value( id ),
+                    variant ? read_dialogue_string_value( *variant ) : str_or_var{} ) ) };
+    } );
+    actions.set_function( "remove_items", []( const std::string & role, const sol::object & id ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::remove_items(
+                    dialogue_participant_is_interlocutor( role ), read_dialogue_string_value( id ) ) ) };
+    } );
+    actions.set_function( "set_ally_rule", []( const sol::object & rule, bool enabled ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::set_ally_rule(
+                    read_dialogue_string_value( rule ), enabled ) ) };
+    } );
+    actions.set_function( "purchase_pet", []( const sol::object & id, const sol::table & options ) {
+        const auto name = options.get<sol::optional<sol::object>>( "name" );
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::purchase_pet(
+                    read_dialogue_string_value( id ), dbl_or_var( options.get_or( "cost", 0 ) ),
+                    dbl_or_var( options.get_or( "count", 1 ) ), options.get_or( "pacified", false ),
+                    name ? read_dialogue_translation_value( *name ) : translation_or_var{} ) ) };
+    } );
+    actions.set_function( "transfer_items", []( const sol::object & id, sol::optional<int> count,
+    sol::optional<int> debt ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::transfer_items(
+                    read_dialogue_string_value( id ), dbl_or_var( count.value_or( 1 ) ),
+                    dbl_or_var( debt.value_or( 0 ) ) ) ) };
+    } );
     content["dialogue_actions"] = actions;
 }
 
+talk_effect_fun_t read_static_mission_reward( const sol::table &reward )
+{
+    const auto item = reward.get<sol::optional<std::string>>( "item" );
+    const auto group = reward.get<sol::optional<std::string>>( "group" );
+    const auto container = reward.get<sol::optional<std::string>>( "container" );
+    if( item.has_value() == group.has_value() || ( group && container ) ) {
+        throw std::invalid_argument( "mission reward requires an item with optional container, or a group" );
+    }
+    return dialogue_action::mission_item_reward( item ? *item : *group, reward.get_or( "count", 1 ),
+            container.value_or( "" ), group.has_value(), reward.get_or( "preview", true ) );
+}
+
 std::optional<talk_effect_t> read_static_dialogue_actions( const sol::table &outcome,
-        const std::string &source )
+        const std::string &source, bool mission_phase = false )
 {
     const auto actions = outcome.get<sol::optional<sol::table>>( "actions" );
     if( !actions ) {
@@ -3260,6 +3305,8 @@ std::optional<talk_effect_t> read_static_dialogue_actions( const sol::table &out
             const std::string name = action.as<std::string>();
             validate_builtin_dialogue_action( name );
             result.parse_string_effect( name, empty, source );
+        } else if( mission_phase && action.get_type() == sol::type::table ) {
+            result.set_effect( read_static_mission_reward( action.as<sol::table>() ) );
         } else {
             result.set_effect( action.as<const static_dialogue_action &>().effect );
         }
@@ -6238,31 +6285,25 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
     const sol::table rules = phase.as<sol::table>();
     json.member( native );
     json.start_object();
-    if( auto actions = read_static_dialogue_actions( rules, source ) ) {
-        json.member( "//ccb_lua_mission_actions", detail::stage_mission_actions( std::move( *actions ) ) );
-    } else {
+    auto actions = read_static_dialogue_actions( rules, source, true );
+    if( !actions ) {
         write_static_dialogue_native_actions( json, rules, "mission phase" );
+    }
+    if( const auto rewards = rules.get<sol::optional<sol::table>>( "item_rewards" ) ) {
+        if( !actions ) {
+            actions.emplace();
+        }
+        const std::size_t count = checked_dense_array_size( *rewards, "mission item rewards",
+                                  std::numeric_limits<std::size_t>::max() );
+        for( std::size_t i = 1; i <= count; ++i ) {
+            actions->set_effect( read_static_mission_reward( rewards->raw_get<sol::table>( i ) ) );
+        }
+    }
+    if( actions ) {
+        json.member( "//ccb_lua_mission_actions", detail::stage_mission_actions( std::move( *actions ) ) );
     }
     write_static_string_or_ids( json, rules, "before_rewards", "//ccb_lua_mission_before_rewards" );
     write_static_string_or_ids( json, rules, "handler", "//ccb_lua_mission_handler" );
-    write_static_catalog_array( json, rules, "item_rewards", "//ccb_lua_mission_item_rewards",
-    []( JsonOut & out, const sol::table & reward ) {
-        const auto item = reward.get<sol::optional<std::string>>( "item" );
-        const auto group = reward.get<sol::optional<std::string>>( "group" );
-        const auto container = reward.get<sol::optional<std::string>>( "container" );
-        if( item.has_value() == group.has_value() || ( group && container ) ) {
-            throw std::invalid_argument( "mission reward requires an item with optional container, or a group" );
-        }
-        out.start_object();
-        out.member( "id", item ? *item : *group );
-        out.member( "group", group.has_value() );
-        write_placement_member<bool>( out, reward, "preview", "preview" );
-        if( container ) {
-            out.member( "container", *container );
-        }
-        write_placement_member<int>( out, reward, "count", "count" );
-        out.end_object();
-    } );
     write_static_string_or_ids( json, rules, "reveal_terrain", "reveal_om_ter" );
     if( const auto target = rules.get<sol::optional<sol::table>>( "target" ) ) {
         if( rules.raw_get<sol::object>( "reveal_terrain" ).get_type() != sol::type::nil ) {

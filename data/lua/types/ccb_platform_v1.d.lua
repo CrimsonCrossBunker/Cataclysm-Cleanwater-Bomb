@@ -8426,7 +8426,7 @@ function CcbPlatformContent.define_profession(options) end
 ---@field container? string Optional container for an item reward.
 
 ---@class StaticMissionPhase
----@field actions? (StaticDialogueNativeAction|StaticDialogueAction)[] Ordered participant operations before item delivery. Supply either actions or native_actions.
+---@field actions? (StaticDialogueNativeAction|StaticDialogueAction|StaticMissionItemReward)[] Execute participant operations and item grants in order. Supply either actions or native_actions.
 ---@field native_actions? StaticDialogueNativeAction[] Run built-in conversation operations on the original mission participants after before_rewards and before item delivery.
 ---@field before_rewards? string|string[] Registered mission callbacks invoked in order before item delivery.
 ---@field item_rewards? StaticMissionItemReward[] Grant in order before the phase callback. Use native item delivery, giver popups, and mission reward previews.
@@ -9407,7 +9407,7 @@ function CcbPlatformContent.gendered_line(text, participants) end
 
 ---@alias StaticDialogueNativeAction
 ---| 'assign_mission'|'mission_success'|'mission_failure'|'clear_mission'|'mission_reward'
----| 'start_trade'|'assign_guard'|'stop_guard'|'wake_up'|'reveal_stats'|'end_conversation'
+---| 'start_trade'|'assign_guard'|'stop_guard'|'npc_die'|'wake_up'|'reveal_stats'|'end_conversation'
 ---| 'insult_combat'|'give_equipment'|'give_aid'|'give_all_aid'|'bionic_install'|'bionic_remove'
 ---| 'follow'|'follow_only'|'deny_follow'|'deny_lead'|'deny_equipment'|'deny_train'|'deny_personal_info'
 ---| 'hostile'|'flee'|'leave'|'stop_following'|'goto_location'|'stranger_neutral'|'start_mugging'
@@ -9490,6 +9490,47 @@ function StaticDialogueActions.adjust_faction_trust(amount) end
 ---@param options StaticDialogueEffectOptions
 ---@return StaticDialogueAction
 function StaticDialogueActions.add_effect(role, id, options) end
+
+---@param role StaticDialogueParticipant
+---@param ids StaticDialogueStringValue[]
+---@param body_part? StaticDialogueStringValue A specific part, bp_null (default), or ALL.
+---@return StaticDialogueAction
+function StaticDialogueActions.remove_effects(role, ids, body_part) end
+
+---@param role StaticDialogueParticipant
+---@param id StaticDialogueStringValue
+---@param variant? StaticDialogueStringValue
+---@return StaticDialogueAction
+function StaticDialogueActions.replace_mutation(role, id, variant) end
+
+---Remove all matching items from this participant's inventory.
+---@param role StaticDialogueParticipant
+---@param id StaticDialogueStringValue
+---@return StaticDialogueAction
+function StaticDialogueActions.remove_items(role, id) end
+
+---@param rule StaticDialogueStringValue
+---@param enabled boolean
+---@return StaticDialogueAction
+function StaticDialogueActions.set_ally_rule(rule, enabled) end
+
+---@class StaticDialoguePetOptions
+---@field cost? integer
+---@field count? integer
+---@field pacified? boolean
+---@field name? string|LocalizedText|StaticDialogueLocalizedVariable
+
+---@param id StaticDialogueStringValue
+---@param options StaticDialoguePetOptions
+---@return StaticDialogueAction
+function StaticDialogueActions.purchase_pet(id, options) end
+
+---Transfer items or charges from the speaker to the interlocutor, including ownership and feedback.
+---@param id StaticDialogueStringValue
+---@param count? integer Default one.
+---@param debt? integer Add this amount to the interlocutor's debt on success.
+---@return StaticDialogueAction
+function StaticDialogueActions.transfer_items(id, count, debt) end
 
 ---@class StaticDialogueOpinion
 ---@field trust? integer

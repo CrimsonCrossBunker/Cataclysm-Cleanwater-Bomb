@@ -1,40 +1,5 @@
 [
   {
-    "id": "MISSION_REFUGEE_Alonso_pants",
-    "type": "mission_definition",
-    "name": { "str": "Alonso must have his special pants" },
-    "description": "Find Alonso's leather pants in the 'toy shop' Alonso has marked on your map.",
-    "goal": "MGOAL_FIND_ITEM",
-    "difficulty": 2,
-    "value": 1000,
-    "item": "pants_leather",
-    "start": {
-      "assign_mission_target": { "om_terrain": "cs_sex_shop", "reveal_radius": 1, "random": true, "search_range": 240 },
-      "update_mapgen": { "om_terrain": "cs_sex_shop", "place_item": [ { "item": "pants_leather", "x": 19, "y": 20 } ] },
-      "effect": { "u_add_var": "mission_flag_Alonso_pants", "value": "in_progress" }
-    },
-    "end": {
-      "effect": [
-        { "u_add_var": "mission_flag_Alonso_pants", "value": "yes" },
-        { "math": [ "u_counter_refugee_center_refugee_happiness += 2" ] },
-        { "npc_add_effect": "Alonso_pants_restored", "duration": "PERMANENT" }
-      ]
-    },
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "has_generic_rewards": false,
-    "dialogue": {
-      "describe": "I think I might know where those special pants might be though…",
-      "offer": "This clown was into some of the different things, not the vanilla, you understand me?  Yes.  I think you will find my valuables in a toy shop not so far.",
-      "accepted": "You make me so happy I could give you little kisses, and some big kisses, and then something else maybe.",
-      "rejected": "I know that you cannot resist me long.  I will wait, and perhaps some other pretty thing will help me instead?",
-      "advice": "It may be crowded no?  A popular place before, maybe is better to visit at night.  Sounds like Alonso's apartment no?  Ah, and if something strange grabs you and another pair of leather pants comes to you, maybe Alonso is even happier?",
-      "inquire": "Have you found what it is that you seek?  There may be something in it for you no?  Something big, but we take it slow yes?",
-      "success": "This is the best news since those lonely teachers asked me to be a nude model at the college for the blind.  Alas, the special condoms have all been used.  This is not a surprise, few could resist this seductive clown.  You find a condom, I find a use for it.  Safety, she was never more important than now, in *so* many ways.",
-      "success_lie": "You give me confidence.  I trust you.  I do not know why this is.",
-      "failure": "Disaster, but I thank you for to try.  You want a backrub some time, it will happen for sure.  And maybe you give me a rub too?"
-    }
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_REFUGEE_Alonso_Pretty_Action",
     "dynamic_line": {
