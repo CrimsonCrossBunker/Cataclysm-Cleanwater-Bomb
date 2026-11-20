@@ -54,6 +54,7 @@ extern "C" {
 #include "ascii_art.h"
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
+#include "character_modifier.h"
 #include "condition.h"
 #include "construction.h"
 #include "dialogue.h"
@@ -4645,6 +4646,64 @@ void write_static_external_option( JsonOut &json, const sol::table &options )
     }
 }
 
+template<typename Weight>
+void write_static_weighted_ids( JsonOut &json, const char *field, const sol::table &entries )
+{
+    checked_dense_array_size( entries, field, std::numeric_limits<std::size_t>::max() );
+    write_mapgen_weighted_choices<Weight, false>( json, field, entries );
+}
+
+void write_modifier_operation( JsonOut &json, const char *field, const std::string &operation )
+{
+    if( operation == "multiply" ) {
+        json.member( field, "MULT" );
+    } else if( operation == "add" ) {
+        json.member( field, "ADD" );
+    } else if( operation == "none" ) {
+        json.member( field, "" );
+    } else {
+        throw std::invalid_argument( "modifier operation must be add, multiply or none" );
+    }
+}
+
+void write_static_character_modifier( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    write_modifier_operation( json, "mod_type", options.get<std::string>( "operation" ) );
+    json.member( "value" );
+    json.start_object();
+    if( const auto builtin = options.get<sol::optional<std::string>>( "builtin" ) ) {
+        json.member( "builtin", *builtin );
+    } else {
+        const sol::object scores = options.raw_get<sol::object>( "scores" );
+        if( scores.get_type() == sol::type::string ) {
+            json.member( "limb_score", scores.as<std::string>() );
+        } else {
+            write_static_weighted_ids<double>( json, "limb_score", scores.as<sol::table>() );
+        }
+        if( const auto combine = options.get<sol::optional<std::string>>( "combine" ) ) {
+            write_modifier_operation( json, "limb_score_op", *combine );
+        }
+        write_placement_member<std::string>( json, options, "limb_type", "limb_type" );
+        write_item_fields<bool>( json, options, {
+            { "override_encumbrance", "override_encumb" }, { "override_wounds", "override_wounds" }
+        } );
+        write_item_fields<double>( json, options, {
+            { "numerator", "nominator" }, { "denominator", "denominator" }, { "subtract", "subtract" }
+        } );
+        for( const char *bound : { "min", "max" } ) {
+            const sol::object value = options.raw_get<sol::object>( bound );
+            if( value.get_type() == sol::type::string ) {
+                json.member( bound, value.as<std::string>() );
+            } else if( value.get_type() != sol::type::nil ) {
+                json.member( bound, value.as<double>() );
+            }
+        }
+    }
+    json.end_object();
+}
+
 void write_static_ammunition_type( JsonOut &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
@@ -4658,6 +4717,55 @@ void write_static_vehicle_part_location( JsonOut &json, const sol::table &option
     write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
     write_item_text( json, "desc", options.raw_get<sol::object>( "description" ), false );
     write_item_fields<int>( json, options, { { "z_order", "z_order" }, { "list_order", "list_order" } } );
+}
+
+void write_forest_weights( JsonOut &json, const sol::table &options, const char *field )
+{
+    if( const auto entries = options.get<sol::optional<sol::table>>( field ) ) {
+        write_static_weighted_ids<int>( json, field, *entries );
+    }
+}
+
+void write_static_forest_biome_component( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
+    write_item_fields<int>( json, options, { { "chance", "chance" }, { "sequence", "sequence" } } );
+    write_forest_weights( json, options, "types" );
+}
+
+void write_static_forest_biome_mapgen( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "item_group", "item_group" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "sparseness_adjacency_factor", "sparseness_adjacency_factor" },
+        { "item_group_chance", "item_group_chance" }, { "item_spawn_iterations", "item_spawn_iterations" }
+    } );
+    write_mapgen_string_array( json, options, "terrains", "terrains" );
+    write_mapgen_string_array( json, options, "components", "components" );
+    write_forest_weights( json, options, "groundcover" );
+    if( const auto placements = options.get<sol::optional<sol::table>>( "terrain_furniture" ) ) {
+        json.member( "terrain_furniture" );
+        json.start_object();
+        for( const auto &entry : *placements ) {
+            json.member( entry.first.as<std::string>() );
+            json.start_object();
+            const auto placement = entry.second.as<sol::table>();
+            write_placement_member<int>( json, placement, "chance", "chance" );
+            write_forest_weights( json, placement, "furniture" );
+            json.end_object();
+        }
+        json.end_object();
+    }
+    if( options.get<sol::optional<sol::table>>( "extend_terrains" ) ) {
+        json.member( "extend" );
+        json.start_object();
+        write_mapgen_string_array( json, options, "extend_terrains", "terrains" );
+        json.end_object();
+    }
 }
 
 void write_static_map_extra( JsonOut &json, const sol::table &options )
@@ -5958,7 +6066,7 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
     const sol::table rules = phase.as<sol::table>();
     json.member( native );
     json.start_object();
-    write_placement_member<std::string>( json, rules, "handler", "//ccb_lua_mission_handler" );
+    write_static_string_or_ids( json, rules, "handler", "//ccb_lua_mission_handler" );
     write_static_catalog_array( json, rules, "item_rewards", "//ccb_lua_mission_item_rewards",
     []( JsonOut & out, const sol::table & reward ) {
         const auto item = reward.get<sol::optional<std::string>>( "item" );
@@ -6953,12 +7061,21 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_mapgen", load_static_mapgen );
     content.set_function( "define_external_option", static_catalog_definition(
                               resolved.id, "EXTERNAL_OPTION", write_static_external_option, load_external_option ) );
+    content.set_function( "define_character_modifier", static_catalog_definition(
+                              resolved.id, "character_mod", write_static_character_modifier,
+                              character_modifier::load_character_modifiers ) );
     content.set_function( "define_ammunition_type", static_catalog_definition(
                               resolved.id, "ammunition_type", write_static_ammunition_type,
                               ammunition_type::load_ammunition_type ) );
     content.set_function( "define_vehicle_part_location", static_catalog_definition(
                               resolved.id, "vehicle_part_location", write_static_vehicle_part_location,
                               vpart_location::load_vehicle_part_locations ) );
+    content.set_function( "define_forest_biome_component", static_catalog_definition(
+                              resolved.id, "forest_biome_component", write_static_forest_biome_component,
+                              forest_biome_component::load_forest_biome_feature ) );
+    content.set_function( "define_forest_biome_mapgen", static_catalog_definition(
+                              resolved.id, "forest_biome_mapgen", write_static_forest_biome_mapgen,
+                              forest_biome_mapgen::load_forest_biome_mapgen ) );
     content.set_function( "define_map_extra", static_catalog_definition(
                               resolved.id, "map_extra", write_static_map_extra, MapExtras::load ) );
     content.set_function( "define_map_extra_collection", static_catalog_definition(

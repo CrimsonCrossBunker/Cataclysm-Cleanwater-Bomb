@@ -530,12 +530,13 @@ bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
         if( callback->has_source_file() ) {
             callback->throw_error( "mission callback metadata is reserved for ordered Lua definitions" );
         }
-        const std::string handler = callback->get_string();
-        funcs.emplace_back( [owner = std::string( src ), phase_name = std::string( phase ), handler](
-        mission * miss, Character & who ) {
-            cata::lua_platform::detail::invoke_mission_phase_handler(
-                owner, miss->get_type().id.str(), phase_name, handler, miss, who );
-        } );
+        for( const std::string &handler : jo.get_as_string_array( "//ccb_lua_mission_handler" ) ) {
+            funcs.emplace_back( [owner = std::string( src ), phase_name = std::string( phase ), handler](
+            mission * miss, Character & who ) {
+                cata::lua_platform::detail::invoke_mission_phase_handler(
+                    owner, miss->get_type().id.str(), phase_name, handler, miss, who );
+            } );
+        }
     }
 #endif
     if( !mission_util::load_funcs( jo, funcs ) ) {

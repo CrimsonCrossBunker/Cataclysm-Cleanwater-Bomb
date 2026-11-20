@@ -4277,7 +4277,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return add_platform_field_area( absolute, field_id, options );
     } );
     environment.set_function( "field_exists", [require_read](
-    const cata::lua_platform::script_tripoint_coord & position, const std::string & field_id ) {
+    const cata::lua_platform::script_tripoint_coord & position, const std::string & field_id,
+    const sol::optional<bool> &alive_only ) {
         require_read();
         if( field_id.empty() || field_id.size() > 256 || field_id.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -4290,8 +4291,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         map &here = get_map();
         const tripoint_abs_ms absolute( position.to_native() );
-        return !!here.field_at( here.get_bub( absolute ) ).find_field(
-                   field_type_id( field_id ) );
+        return here.field_at( here.get_bub( absolute ) ).find_field(
+                   field_type_id( field_id ), alive_only.value_or( true ) ) != nullptr;
     } );
     environment.set_function( "terrain_has_flag", [require_read](
     const cata::lua_platform::script_tripoint_coord & position, const std::string & flag ) {

@@ -7303,6 +7303,25 @@ function CcbPlatformContent.text_without_extraction(singular, plural, context) e
 ---@param options ExternalOptionDefinitionOptions
 function CcbPlatformContent.define_external_option(options) end
 
+---@class NativeCharacterModifierOptions
+---@field id string
+---@field description string|LocalizedText
+---@field operation 'add'|'multiply'|'none'
+---@field builtin? string Native calculation to use in place of limb scores.
+---@field scores? string|(string|{id:string,weight:number})[] Limb scores evaluated by the native modifier.
+---@field combine? 'add'|'multiply' How to combine limb scores. Defaults to multiply.
+---@field limb_type? string
+---@field override_encumbrance? boolean
+---@field override_wounds? boolean
+---@field min? number|'max_move_cost'
+---@field max? number|'max_move_cost'
+---@field numerator? number
+---@field denominator? number
+---@field subtract? number
+
+---@param options NativeCharacterModifierOptions
+function CcbPlatformContent.define_character_modifier(options) end
+
 ---@class OrderedAmmunitionTypeOptions
 ---@field id string
 ---@field name? string|LocalizedText
@@ -7340,6 +7359,34 @@ function CcbPlatformContent.define_vehicle_part_location(options) end
 
 ---@param options OrderedMapExtraOptions
 function CcbPlatformContent.define_map_extra(options) end
+
+---@alias ForestBiomeWeight string|{id:string,weight:integer}
+
+---@class StaticForestBiomeComponent
+---@field id string
+---@field copy_from? string Parent component; an existing id may override itself.
+---@field chance? integer Native one-in placement chance.
+---@field sequence? integer Native component sequence value.
+---@field types? ForestBiomeWeight[] Terrain and furniture choices in native weighted-list order.
+
+---@param options StaticForestBiomeComponent
+function CcbPlatformContent.define_forest_biome_component(options) end
+
+---@class StaticForestBiomeMapgen
+---@field id string
+---@field copy_from? string Parent biome, including a previous definition of this id.
+---@field terrains? string[] Replace the overmap terrain set.
+---@field extend_terrains? string[] Extend the inherited set using native factory order.
+---@field components? string[]
+---@field sparseness_adjacency_factor? integer
+---@field item_group? string
+---@field item_group_chance? integer
+---@field item_spawn_iterations? integer
+---@field groundcover? ForestBiomeWeight[] Weighted terrain IDs.
+---@field terrain_furniture? table<string,{chance:integer,furniture:ForestBiomeWeight[]}> Furniture choices by terrain ID.
+
+---@param options StaticForestBiomeMapgen
+function CcbPlatformContent.define_forest_biome_mapgen(options) end
 
 ---@class WeightedMapExtra
 ---@field extra string
@@ -8235,7 +8282,7 @@ function CcbPlatformContent.define_profession(options) end
 ---@class StaticMissionPhase
 ---@field item_rewards? StaticMissionItemReward[] Grant in order before the phase callback. Use native item delivery, giver popups, and mission reward previews.
 ---@field map_updates? StaticMissionMapUpdate[] Apply in order after the handler and target assignment.
----@field handler? string Registered mission callback invoked before resolving this phase's map target.
+---@field handler? string|string[] Registered mission callbacks, invoked in order before target assignment. Each step rechecks the mission and its participants.
 ---@field target? StaticMissionTarget Exclusive with reveal_terrain.
 ---@field reveal_terrain? string|string[] Native reveal operation. A list chooses a terrain at random.
 
@@ -17784,8 +17831,9 @@ function CcbPlatformEnvironmentQueries.add_field_area(position, field_id, option
 
 ---@param position TripointCoord Absolute map-square coordinate.
 ---@param field_id string Bounded non-empty field type id.
+---@param alive_only? boolean Defaults to true. Pass false to also inspect entries awaiting field cleanup.
 ---@return boolean
-function CcbPlatformEnvironmentQueries.field_exists(position, field_id) end
+function CcbPlatformEnvironmentQueries.field_exists(position, field_id, alive_only) end
 
 ---@param position TripointCoord Absolute map-square coordinate.
 ---@param flag string Bounded non-empty terrain flag id.
