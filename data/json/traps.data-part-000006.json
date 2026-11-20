@@ -1,0 +1,21 @@
+[
+  {
+    "type": "trap",
+    "id": "tr_swirling_vortex",
+    "name": "swirling vortex",
+    "color": "green",
+    "symbol": "#",
+    "visibility": -1,
+    "avoidance": 99,
+    "difficulty": 99,
+    "trap_radius": 2,
+    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
+    "action": "eocs",
+    "eocs": [ "EOC_SWIRLING_VORTEX" ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_SWIRLING_VORTEX",
+    "effect": [ { "u_teleport": { "global_val": "nether_dungeon_door" }, "success_message": "How did you get here?" } ]
+  }
+]
