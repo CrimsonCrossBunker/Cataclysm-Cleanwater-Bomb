@@ -2418,7 +2418,7 @@ struct event_transformation_definition_handle {
             return std::to_string( value.as<std::int64_t>() );
         }
         if( value.is<bool>() ) {
-            return value.as<bool>() ? "true" : "false";
+            return value.as<bool>() ? "1" : "0";
         }
         throw std::runtime_error( "event constraint values must be strings, integers, or booleans" );
     }
