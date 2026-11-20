@@ -1,29 +1,33 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_GODCO_FELICITY_1",
-    name = ccb.content.text("Writers' Will"),
-    description = ccb.content.text("Get 800 sheets of paper for Felicity Powell."),
+    id = "MISSION_GODCO_JANE_PILLS",
+    name = ccb.content.text("Retrieve Thorazine"),
+    description = ccb.content.text("Get 75 anti-psychotics for Jane."),
     goal = "MGOAL_FIND_ITEM",
-    item = "paper",
-    item_count = 800,
+    item = "thorazine",
+    item_count = 75,
     difficulty = 3,
     value = 0,
-    -- Native mission phases did not apply the giver opinion (trust +3, value +2).
-    finish = { item_rewards = { { item = "icon", count = 8 } } },
-    -- Native mission phases did not apply the giver opinion (anger +2).
+    -- Native mission phases did not apply the giver opinion (trust +3, value +3).
+    finish = {
+        actions = {
+            { item = "icon", count = 150 },
+            ccb.content.dialogue_actions.set_actor_value("interlocutor", "mission_meeting_jane_willing_to_follow", "yes"),
+        },
+    },
+    -- Native mission phases did not apply the giver opinion (anger +3).
     failure = {},
     origins = { "ORIGIN_SECONDARY" },
-    followup = "MISSION_GODCO_FELICITY_2",
     generic_rewards = false,
     dialogue = {
-        describe = ccb.content.text("Get some paper."),
-        offer = ccb.content.text("Since <the_cataclysm> happened, I've had a surprising amount of free time.  I want to start writing, but there's very little paper around here.  For the time being, eight hundred sheets should do; I'll pay if you can get it for me."),
-        accepted = ccb.content.text("Thanks, you'll be the first to see my writing."),
-        rejected = ccb.content.text("I can understand that.  The offer's still available if you reconsider."),
-        advice = ccb.content.text("A bookstore or office supply should have tons of it."),
-        inquire = ccb.content.text("Have you found the paper?"),
-        success = ccb.content.text("I appreciate it.  I'll get to work on my manuscript."),
+        describe = ccb.content.text("Get some antipsychotics."),
+        offer = ccb.content.text("I'm running out of antipsychotics, and Arturo is starting to see things again.  I'd pay for seventy-five antipsychotic pills, and be eternally grateful."),
+        accepted = ccb.content.text("Thank you.  Arturo will be happy to get these."),
+        rejected = ccb.content.text("Would you please reconsider?  Arturo's had some bad hallucinations before, he'll go crazy without them."),
+        advice = ccb.content.text("The storage room of a pharmacy should have them."),
+        inquire = ccb.content.text("Have you found the antipsychotics?"),
+        success = ccb.content.text("God bless you, <name_g>.  Arturo shouldn't have to worry about his hallucinations for a long time."),
         success_lie = ccb.content.text("What good is this?"),
         failure = ccb.content.text("How unfortunate…"),
     },

@@ -1809,6 +1809,9 @@ void invoke_mission_phase_handler(
     } );
     const game_handle character_handle = platform_creature_handle( *owner, character );
     payload["character"] = character_handle;
+    if( npc *giver = g->find_npc( active_mission->get_npc_id() ) ) {
+        payload["giver"] = platform_creature_handle( *owner, *giver );
+    }
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner, character_handle );
     const sol::protected_function_result result = callback( payload );

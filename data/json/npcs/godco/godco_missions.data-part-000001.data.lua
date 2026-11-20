@@ -1,122 +1,29 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_GODCO_GET_GUITAR_STRING",
-    name = ccb.content.text("Obtain a guitar string"),
-    description = ccb.content.text("Find a length of tempered steel wire to be used as a guitar string."),
+    id = "MISSION_GODCO_FOOD_GUARD_BETTER_FOOD_STORAGE",
+    name = ccb.content.text("Store Up Your Grain"),
+    description = ccb.content.text("Find 5,398 pounds of sheet metal (408 units) to help Eddie build a warehouse."),
     goal = "MGOAL_FIND_ITEM",
-    difficulty = 1,
+    difficulty = 5,
     value = 0,
-    item = "qt_wire",
-    item_count = 1,
-    origins = { "ORIGIN_SECONDARY" },
-    dialogue = {
-        describe = ccb.content.text("I need a new guitar string."),
-        offer = ccb.content.text("One of my guitar strings busted from where I smacked a zombie.  If you could get me a new string, I can fix my guitar."),
-        accepted = ccb.content.text("Thanks.  I'll give you a performance when you get back with it."),
-        rejected = ccb.content.text("I guess I'll just skip that note."),
-        advice = ccb.content.text("I read that musical wire is made of tempered steel.  Music shops should have some, or you could take apart a piano."),
-        inquire = ccb.content.text("Do you have it?"),
-        success = ccb.content.text("Thank you so much!  This should last for a while."),
-        success_lie = ccb.content.text("Thanks for trying… I guess."),
-        failure = ccb.content.text("Don't worry about it, I'll do it myself."),
-    },
-    -- Native mission phases did not apply the giver opinion (trust +1, value +1).
-    finish = {
-        item_rewards = { { item = "icon", count = 1 } },
-        actions = {
-            ccb.content.dialogue_actions.set_actor_value("interlocutor", "mission_completed_sonia_guitar_fixed", "yes"),
-        },
-    },
-    -- Native mission phases did not apply the giver opinion (anger +1).
-    failure = {},
-}
-
-ccb.content.define_mission {
-    id = "MISSION_GODCO_DARRYL_WELL1",
-    name = ccb.content.text("Well Construction"),
-    description = ccb.content.text("Find eight pipes for Darryl Johnson."),
-    goal = "MGOAL_FIND_ITEM",
-    difficulty = 1,
-    value = 0,
-    item = "pipe",
-    item_count = 8,
+    item = "sheet_metal",
+    item_count = 408,
     origins = { "ORIGIN_SECONDARY" },
     generic_rewards = false,
-    followup = "MISSION_GODCO_DARRYL_WELL2",
     dialogue = {
-        describe = ccb.content.text("I need eight pipes to start construction."),
-        offer = ccb.content.text("Now that's some enthusiasm, pal.  Ever since our water supply shut off, we've been using the nearby river for most of our water needs.  Who knows how many bloated corpses have decayed in that.  I want to construct a well, but I'm missing some building materials - eight pipes to be exact."),
-        accepted = ccb.content.text("I wish you the best, pal.  I appreciate it."),
-        rejected = ccb.content.text("Come back when you get a chance."),
-        advice = ccb.content.text("Try disassembling some lockers.  Just don't destroy our furniture, we'll be needing it."),
-        inquire = ccb.content.text("Well, do you have them?"),
-        success = ccb.content.text("Great, I can finally start constructing this thing."),
-        success_lie = ccb.content.text("What good does this do us?"),
-        failure = ccb.content.text("I guess it was just a pipe dream."),
+        describe = ccb.content.text("I'd like to have better food storage."),
+        offer = ccb.content.text("I've been drawing up some plans to expand our food storage around here.  Now that we won't starve to death anytime soon, our old crates just aren't cutting it, so we're going to build a small warehouse to store everything, and I've gathered a crew to build it.  We've got most of the materials covered, but we don't have enough sheet metal to make the shelves.  If you could get us about 5,000 pounds of the stuff, I'll pay you handsomely with what we have.  How does that sound?"),
+        accepted = ccb.content.text("Just bring it to me when you have it."),
+        rejected = ccb.content.text("Alright, I'll find someone else."),
+        advice = ccb.content.text("If you can find a steel mill, I'd look there."),
+        inquire = ccb.content.text("Do you have the sheet metal?"),
+        success = ccb.content.text("I can't thank you enough, here's the pay for it.  Here in a while, we'll have a spot to put all of our food."),
+        success_lie = ccb.content.text("Alright, where's it all at?"),
+        failure = ccb.content.text("Sorry, I had to find someone else since you didn't come through."),
     },
-    -- Native mission phases did not apply the giver opinion (trust +1, value +1).
-    finish = {
-        map_updates = {
-            {
-                terrain = "godco_5",
-                layout = {
-                    tile_edits = {
-                        { shape = "point", operation = "furniture", id = "f_null", x = 15, y = 23 },
-                        { shape = "point", operation = "terrain", id = "t_covered_well", x = 15, y = 23 },
-                    },
-                },
-            },
-        },
-        item_rewards = { { item = "icon", count = 3 } },
-        actions = {
-            ccb.content.dialogue_actions.set_actor_value("interlocutor", "mission_completed_godco_darryl_mission1", "in-progress"),
-        },
-    },
-    -- Native mission phases did not apply the giver opinion (anger +1).
-    failure = {},
-}
-
-ccb.content.define_mission {
-    id = "MISSION_GODCO_DARRYL_WELL2",
-    name = ccb.content.text("Water Pump Construction"),
-    description = ccb.content.text("Find a mechanical pump for Darryl Johnson."),
-    goal = "MGOAL_FIND_ITEM",
-    difficulty = 1,
-    value = 0,
-    item = "well_pump",
-    item_count = 1,
-    origins = { "ORIGIN_SECONDARY" },
-    generic_rewards = false,
-    followup = "MISSION_GODCO_DARRYL_COOP1",
-    dialogue = {
-        describe = ccb.content.text("I need a mechanical pump to finish construction."),
-        offer = ccb.content.text("It's less like a well, and more like a covered pit currently.  I'll need you to find a mechanical pump, one that will make this <freaking> thing work."),
-        accepted = ccb.content.text("Take care of yourself out there."),
-        rejected = ccb.content.text("Come back when you get a chance.  We need skilled survivors."),
-        advice = ccb.content.text("Try disassembling another well."),
-        inquire = ccb.content.text("Managed to find that pump?"),
-        success = ccb.content.text("Much obliged, survivor.  Thanks to you, we don't need to worry about where our water's gonna come from.  Here, take this as a token of our gratitude."),
-        success_lie = ccb.content.text("What good does this do us?"),
-        failure = ccb.content.text("It was a lost cause anyways…"),
-    },
-    -- Native mission phases did not apply the giver opinion (trust +1, value +1).
-    finish = {
-        map_updates = {
-            {
-                terrain = "godco_5",
-                layout = {
-                    tile_edits = {
-                        { shape = "point", operation = "terrain", id = "t_water_pump", x = 15, y = 23 },
-                    },
-                },
-            },
-        },
-        item_rewards = { { item = "icon", count = 5 } },
-        actions = {
-            ccb.content.dialogue_actions.set_actor_value("interlocutor", "mission_completed_godco_darryl_mission1", "yes"),
-        },
-    },
-    -- Native mission phases did not apply the giver opinion (anger +1).
+    -- Native mission phases did not apply the giver opinion (trust +7, value +6, anger -3).
+    finish = { actions = { { handler = "start_godco_warehouse" }, { item = "icon", count = 175 } } },
+    -- Native mission phases did not apply the giver opinion (anger +3).
     failure = {},
 }

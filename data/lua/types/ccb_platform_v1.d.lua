@@ -6475,6 +6475,7 @@ local MathFunctionDefinition = {}
 ---@field mission_type GameId GameId<mission_type>.
 ---@field phase 'start'|'success'|'failure'
 ---@field character GameHandle Exact Character supplied by the native mission phase.
+---@field giver? GameHandle NPC that issued this mission, when present at this phase.
 
 ---@class MissionDefinition
 ---@field complete_when any
@@ -12912,6 +12913,7 @@ function MapgenPatch:stamp(layout, x, y, options) end
 
 ---@class CcbMapgenRunOptions
 ---@field mission? MissionToken Exact active mission used by mission-target mapgen placements.
+---@field mission_source? GameHandle Use this Character's current dialogue mission for placements. Mutually exclusive with mission.
 ---@field cancel_on_collision? boolean Native collision cancellation, enabled by default.
 
 ---@class CcbMapgenApi

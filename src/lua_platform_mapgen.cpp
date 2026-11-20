@@ -45,6 +45,7 @@ extern "C" {
 #include "npc.h"
 #include "omdata.h"
 #include "point.h"
+#include "talker.h"
 #include "timed_event.h"
 #include "trap.h"
 #include "type_id.h"
@@ -620,6 +621,19 @@ sol::table run_mapgen_update(
             const std::string key = entry.first.as<std::string>();
             if( key == "cancel_on_collision" && entry.second.is<bool>() ) {
                 cancel_on_collision = entry.second.as<bool>();
+            } else if( key == "mission_source" && entry.second.is<game_handle>() ) {
+                if( options["mission"].valid() ) {
+                    return make_game_error_result( state, {
+                        "invalid_options", "Specify either mission or mission_source"
+                    } );
+                }
+                std::optional<game_handle_error> error;
+                Character *actor = resolve_exact_character( entry.second.as<const game_handle &>(),
+                                   runtime_generation, world_generation, error );
+                if( !actor ) {
+                    return make_game_error_result( state, *error );
+                }
+                active_mission = get_talker_for( *actor )->selected_mission();
             } else if( key == "mission" && entry.second.is<mission_token>() ) {
                 std::optional<game_handle_error> error;
                 active_mission = resolve_mission( entry.second.as<const mission_token &>(),

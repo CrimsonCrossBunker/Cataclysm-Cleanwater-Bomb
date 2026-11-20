@@ -224,6 +224,7 @@ struct character_task_migration {
     const char *mod = "xedra_evolved";
     const char *payload_key = nullptr;
     cata::lua_platform::script_persistent_value payload_value = cata::lua_platform::script_null_value{};
+    const char *target_context = nullptr;
 };
 
 character_task_migration psychic_learning_migration( const char *id, const char *spell )
@@ -243,8 +244,16 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
              false, "mindovermatter", "crystal", std::string( crystal ) };
 }
 
+character_task_migration saved_location_task( const char *id, const char *handler,
+        const char *context_key )
+{
+    character_task_migration entry{ effect_on_condition_id( id ), handler, nullptr, false, "ccb" };
+    entry.target_context = context_key;
+    return entry;
+}
+
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 506> migrated_character_tasks = {{
+const std::array<character_task_migration, 512> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_CHANGELING_DISGUISE_AS_NATURE_END" ),
           "end_changeling_nature_disguise", nullptr },
         { effect_on_condition_id( "EOC_XEDRA_CHRONOMANCER_REVERSE_ENTROPY_INV_SCANNER" ),
@@ -762,8 +771,15 @@ const std::array<character_task_migration, 506> migrated_character_tasks = {{
           "portal_reverberation_enter_due", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_CABIN_DAY_CYCLE_OR_KILL_CYCLE" ),
           "portal_cabin_light_due", nullptr, true, "ccb" },
-        { effect_on_condition_id( "EOC_YRAX_WARP_IN" ),
-          "portal_yrax_visit_due", nullptr, false, "ccb" },
+        saved_location_task( "EOC_YRAX_WARP_IN", "portal_yrax_visit_due", "tar" ),
+        saved_location_task( "godco_place_coop_new", "finish_godco_coop", "search_locale" ),
+        saved_location_task( "godco_place_herb_garden_new", "finish_godco_garden", "search_locale" ),
+        saved_location_task( "godco_place_wall_new", "finish_godco_wall", "search_locale" ),
+        saved_location_task( "godco_place_warehouse_new", "finish_godco_warehouse", "search_locale" ),
+        { effect_on_condition_id( "isherwood_mission_wall_finished" ),
+          "finish_isherwood_wall", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_LUKE_RETRIEVE_TRUCK_END" ),
+          "collect_isherwood_truck", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_PORTAL_EFFECTS_PASSIVE" ),
           "portal_passive_effects_due", nullptr, true, "ccb" },
         { effect_on_condition_id( "EOC_PORTAL_EFFECTS_IRE" ),
@@ -1070,9 +1086,8 @@ static void process_new_eocs( queued_eocs &eoc_queue,
         }
         if( const character_task_migration *migration = find_migrated_task( entry.eoc, global_queue ) ) {
             global_variables::impl_t task_data;
-            if( entry.eoc == effect_on_condition_id( "EOC_YRAX_WARP_IN" ) ) {
-                // A later failed location search retains this delayed visit's previous target.
-                const auto target = entry.context.find( "tar" );
+            if( migration->target_context ) {
+                const auto target = entry.context.find( migration->target_context );
                 if( target != entry.context.end() ) {
                     std::ostringstream serialized;
                     JsonOut json( serialized );

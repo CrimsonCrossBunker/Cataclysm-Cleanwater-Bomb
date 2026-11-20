@@ -1,63 +1,36 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_GODCO_JULIAN_RINGS",
-    name = ccb.content.text("The Honeymooners"),
-    description = ccb.content.text("Get two wedding rings for Julian."),
+    id = "MISSION_GODCO_RUSSELL_TROPHY3",
+    name = ccb.content.text("Trophy Hunt III"),
+    description = ccb.content.text("Bring one last trophy to Russell Connelly.  Harvest a sting from a bee."),
     goal = "MGOAL_FIND_ITEM",
-    item = "ring_wedding",
-    difficulty = 7,
-    item_count = 2,
+    difficulty = 3,
     value = 0,
-    -- Native mission phases did not apply the giver opinion (trust +4, value +4).
-    finish = {
-        item_rewards = { { item = "icon", count = 20 } },
-        handler = "set_world_godco_julian_wedding_to_1",
-    },
-    -- Native mission phases did not apply the giver opinion (anger +4).
-    failure = {},
-    origins = { "ORIGIN_SECONDARY" },
-    followup = "MISSION_GODCO_JULIAN_DRESS",
-    generic_rewards = false,
-    dialogue = {
-        describe = ccb.content.text("Get two wedding rings."),
-        offer = ccb.content.text("Olwen and I have been dating for a while now, and I was planning on asking her to marry me.  I never got the chance to buy our rings before <the_cataclysm>, but I think I'll surprise her with some in a few days.  If you could get me two of them, I'll pay a fair price: $50 in icons."),
-        accepted = ccb.content.text("Thanks <name_g>, I'm counting on you."),
-        rejected = ccb.content.text("I'd mean so much to the both of us, and there's a lot of money involved."),
-        advice = ccb.content.text("A jewelry store should have a pair.  If not, I'd check a wedding venue."),
-        inquire = ccb.content.text("Have you found the rings?"),
-        success = ccb.content.text("Here's the money, as per our terms.  I really do appreciate this."),
-        success_lie = ccb.content.text("What good is this?"),
-        failure = ccb.content.text("I'll have to look for them myself…"),
-    },
-}
-
-ccb.content.define_mission {
-    id = "MISSION_GODCO_JULIAN_DRESS",
-    name = ccb.content.text("The Wedding"),
-    description = ccb.content.text("Get a wedding dress for Julian's wedding with Olwen."),
-    goal = "MGOAL_FIND_ITEM",
-    item = "dress_wedding",
-    difficulty = 7,
-    value = 0,
-    -- Native mission phases did not apply the giver opinion (trust +4, value +4).
-    finish = {
-        item_rewards = { { item = "icon", count = 25 } },
-        handler = "set_world_godco_julian_wedding_to_2",
-    },
-    -- Native mission phases did not apply the giver opinion (anger +4).
-    failure = {},
+    start = { target = { terrain = "hive", special = "Bee Hive", reveal_radius = 3 } },
+    item = "bee_sting",
+    item_count = 1,
     origins = { "ORIGIN_SECONDARY" },
     generic_rewards = false,
     dialogue = {
-        describe = ccb.content.text("Get a wedding dress."),
-        offer = ccb.content.text("Olwen said yes!  I can't thank you enough <name_g>, she was delighted.  I now want to give her a proper wedding like the ones before <the_cataclysm>, but I can't find a good enough dress for her in here.  If you could get me a proper wedding dress, I'll reward you handsomely."),
-        accepted = ccb.content.text("Thanks <name_g>, I knew I could count on you."),
-        rejected = ccb.content.text("Please!  I only want to give her a beautiful day like she deserves, and if you help me I can pay you like before."),
-        advice = ccb.content.text("A mall should have some in exhibition.  If not, I'd check a wedding venue or clothing store."),
-        inquire = ccb.content.text("Have you found the dress?"),
-        success = ccb.content.text("It's beautiful!  Thank you, she will love it, You are definitely invited to the wedding <name_g>!  I hope to see you there!"),
-        success_lie = ccb.content.text("Why would you do this?!"),
-        failure = ccb.content.text("Well, thanks for trying…"),
+        describe = ccb.content.text("I need your help…"),
+        offer = ccb.content.text("It feels like I'm doing this for revenge.  I have one last mission for you.  Ever seen those ginormous bee hives?  Well, I can tell you where the closest one is.  Just kill off one stray bee, harvest its stinger and bring it to me."),
+        accepted = ccb.content.text("I wish you the best of luck, may God guide your path."),
+        rejected = ccb.content.text("This passion of mine may just be getting to me…"),
+        advice = ccb.content.text("If I were you, I'd bring a gun and a butcher knife.  I don't think bug spray work anymore."),
+        inquire = ccb.content.text("How is the hunt going, survivor?  Any luck?"),
+        success = ccb.content.text("Well, partner, this might just be the end of the road.  I hope you enjoyed it as much as I have.  In the meantime… here's your reward, a handful of icons, that's all I have left.  Spend them all, I think you've deserved it."),
+        success_lie = ccb.content.text("You liar!"),
+        failure = ccb.content.text("You give up now?  This country fell apart because no one could find a good man to rely on… might as well give up, I guess."),
     },
+    -- Native mission phases did not apply the giver opinion (trust +1, value +1).
+    finish = {
+        actions = {
+            { item = "270win_jsp", count = 16 },
+            { item = "icon", count = 8 },
+            ccb.content.dialogue_actions.add_effect("interlocutor", "hunt_godco_russell", { permanent = true }),
+        },
+    },
+    -- Native mission phases did not apply the giver opinion (anger +1).
+    failure = {},
 }
