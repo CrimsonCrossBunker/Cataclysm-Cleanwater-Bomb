@@ -2,10 +2,11 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
--- Great, I'll put that in the dictionary.  Here's a token of my gratitude for your explanation.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Talk_Intro6",
-    line = ccb.content.text("Right so, us'n'll write it in the dicky.  Here, a shiny brass farthing for crossin' the nation."),
+    line = ccb.content.text(
+        --~ Great, I'll put that in the dictionary.  Here's a token of my gratitude for your explanation.
+        "Right so, us'n'll write it in the dicky.  Here, a shiny brass farthing for crossin' the nation."),
     on_enter = {
         {
             actions = { actions.set_actor_value("speaker", "dialogue_completed_rubik_intro", "yes") },

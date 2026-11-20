@@ -1,9 +1,10 @@
 local ccb = require("ccb")
 
--- No, I'm not calling you jaryi.  Jaryi is my mother's mother.  It's a King's Landing word for a grandmother, I'm making a little joke at you.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_jaryi",
-    line = ccb.content.text("Ha, not callin' y'me jaryi.  Jaryi be the mother-twice.  'Tis but a King's Landing assert f'r a grandmother, Rubik's makin' a chestnut at ye."),
+    line = ccb.content.text(
+        --~ No, I'm not calling you jaryi.  Jaryi is my mother's mother.  It's a King's Landing word for a grandmother, I'm making a little joke at you.
+        "Ha, not callin' y'me jaryi.  Jaryi be the mother-twice.  'Tis but a King's Landing assert f'r a grandmother, Rubik's makin' a chestnut at ye."),
     replies = {
         {
             text = ccb.content.text("That word doesn't sound like any of the other Anglic words you've used, though.  What's it from?"),

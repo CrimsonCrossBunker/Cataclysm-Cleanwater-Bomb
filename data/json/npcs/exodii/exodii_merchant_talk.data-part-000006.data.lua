@@ -1,10 +1,11 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 
--- Of course, what can I do for you?
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_DoSomething",
-    line = ccb.content.text("Sure as can,\" the gravelly voice takes on an unmistakeable 'customer service' tone.  \"What'll ye tass this'n for?"),
+    line = ccb.content.text(
+        --~ Of course, what can I do for you?
+        "Sure as can,\" the gravelly voice takes on an unmistakeable 'customer service' tone.  \"What'll ye tass this'n for?"),
     replies = {
         {
             text = ccb.content.text("What've you got for trade?"),

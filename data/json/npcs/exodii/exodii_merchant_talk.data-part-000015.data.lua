@@ -1,10 +1,11 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 
--- We've got to leave the old world before it gets too worn out, you see, and find a nice fresh one on the other side.  Your deadland is as fresh as it gets.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Talk_Intro3",
-    line = ccb.content.text("Us gotta leave the old world afore it's worn right to the gums, an y'ken, and find a nice twitchy one on t'other side.  Your deadland be a brand shiny"),
+    line = ccb.content.text(
+        --~ We've got to leave the old world before it gets too worn out, you see, and find a nice fresh one on the other side.  Your deadland is as fresh as it gets.
+        "Us gotta leave the old world afore it's worn right to the gums, an y'ken, and find a nice twitchy one on t'other side.  Your deadland be a brand shiny"),
     replies = {
         {
             text = ccb.content.text("I'm not following that at all."),

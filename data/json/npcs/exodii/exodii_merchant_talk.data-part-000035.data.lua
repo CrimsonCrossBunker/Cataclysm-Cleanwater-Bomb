@@ -1,10 +1,11 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 
--- Same as you, I'd guess.  The Enemy.  The dead.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Exodus2",
-    line = ccb.content.text("Same as you will be, an I'm ken.  The Enemy.  The dead."),
+    line = ccb.content.text(
+        --~ Same as you, I'd guess.  The Enemy.  The dead.
+        "Same as you will be, an I'm ken.  The Enemy.  The dead."),
     replies = {
         {
             when = predicates.any_equal({ "yes", { scope = "speaker", key = "knowledge_exodii_transdimensional_u_knows_exodiilore" } }),

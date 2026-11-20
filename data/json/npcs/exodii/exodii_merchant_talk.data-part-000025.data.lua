@@ -2,10 +2,11 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
--- I realized that it was a no-brainer question.  There was only one other option, you see, if I didn't join the Exodii.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Metal",
-    line = ccb.content.text("Us'n saw this were a pidgeon's road, I'd razz.  Only one way, I'm ken, if I'm not to join the rank an' file."),
+    line = ccb.content.text(
+        --~ I realized that it was a no-brainer question.  There was only one other option, you see, if I didn't join the Exodii.
+        "Us'n saw this were a pidgeon's road, I'd razz.  Only one way, I'm ken, if I'm not to join the rank an' file."),
     replies = {
         {
             text = ccb.content.text("I think I know what you mean.  The only way to survive is to… \"upgrade\".  Can you help me with that?"),

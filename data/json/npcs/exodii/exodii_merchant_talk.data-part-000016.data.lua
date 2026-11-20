@@ -1,9 +1,10 @@
 local ccb = require("ccb")
 
--- No worries.  I mean, the Enemy is new here, and we have a bit of safe time ahead of us before we have to jump away again.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Talk_Intro3a",
-    line = ccb.content.text("Neverken.  Right and so, the Enemy is new here, and us'n have a few good hours in the sun beforenext the jump."),
+    line = ccb.content.text(
+        --~ No worries.  I mean, the Enemy is new here, and we have a bit of safe time ahead of us before we have to jump away again.
+        "Neverken.  Right and so, the Enemy is new here, and us'n have a few good hours in the sun beforenext the jump."),
     replies = {
         {
             text = ccb.content.text("Oh, you mean you got here early in the Cataclysm.  Why is that so good?"),

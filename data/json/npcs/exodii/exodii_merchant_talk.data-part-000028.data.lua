@@ -2,10 +2,11 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
--- To understand how, you've gotta think eleven-dimensionally.  We'll open up a gate and teleport out, the same as we came.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Base2",
-    line = ccb.content.text("For an' how, ye be needin' to think wi' them elevens o' directions, kennit?  Us'll open a gate an' wibble-an-wobble.  Same as us came."),
+    line = ccb.content.text(
+        --~ To understand how, you've gotta think eleven-dimensionally.  We'll open up a gate and teleport out, the same as we came.
+        "For an' how, ye be needin' to think wi' them elevens o' directions, kennit?  Us'll open a gate an' wibble-an-wobble.  Same as us came."),
     on_enter = {
         {
             actions = {

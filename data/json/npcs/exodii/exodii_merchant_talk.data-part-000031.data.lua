@@ -1,9 +1,10 @@
 local ccb = require("ccb")
 
--- Ah, you found another node - another community of Exodii.  Tell me what you saw?
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_String_Dimension_Exodii",
-    line = ccb.content.text("Ahh, mayhaps ye've found another node - kin o' us'n Exodii.  Tell ol' Rubik:  what'd ye escolt there?  Exodii alive?  Trade?  Stompers?  Manufactory?"),
+    line = ccb.content.text(
+        --~ Ah, you found another node - another community of Exodii.  Tell me what you saw?
+        "Ahh, mayhaps ye've found another node - kin o' us'n Exodii.  Tell ol' Rubik:  what'd ye escolt there?  Exodii alive?  Trade?  Stompers?  Manufactory?"),
     replies = {
         {
             text = ccb.content.text("It was a large domed structure, with some towers around it.  The entire thing looked like it was made of metal - a lot like your castle.  Looked like it was a ruin, or abandoned.  If there was anyone alive, I didn't find them."),

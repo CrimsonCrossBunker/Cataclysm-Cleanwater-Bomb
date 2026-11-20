@@ -1,10 +1,11 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 
--- Sure, that word is fine, I think.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Talk_IntroBenzete3",
-    line = ccb.content.text("Sure an' that's a fine enough word, an I'm ken."),
+    line = ccb.content.text(
+        --~ Sure, that word is fine, I think.
+        "Sure an' that's a fine enough word, an I'm ken."),
     replies = {
         {
             text = ccb.content.text("You said this was an especially good jump?"),

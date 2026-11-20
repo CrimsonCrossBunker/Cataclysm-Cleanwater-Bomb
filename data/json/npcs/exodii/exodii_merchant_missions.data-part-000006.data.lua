@@ -1,9 +1,10 @@
 local ccb = require("ccb")
 
--- No, my friend, no!  Don't make contact, understand?  This is a covert op.  If you see that it's safe you can go in closer and look around, but for goodness' sake, don't talk to anyone and don't linger.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_mission_1_intro2",
-    line = ccb.content.text("No, me fruit gum, no!  Make no contact, y'ken?  This be covert.  If ye kennit be safe, traipse along an' for a kennabout, but upon the chimes, speak none and tarry little."),
+    line = ccb.content.text(
+        --~ No, my friend, no!  Don't make contact, understand?  This is a covert op.  If you see that it's safe you can go in closer and look around, but for goodness' sake, don't talk to anyone and don't linger.
+        "No, me fruit gum, no!  Make no contact, y'ken?  This be covert.  If ye kennit be safe, traipse along an' for a kennabout, but upon the chimes, speak none and tarry little."),
     replies = {
         {
             text = ccb.content.text("I get the impression this is important, but I don't know what you mean."),
@@ -51,10 +52,11 @@ ccb.content.define_dialogue_topic {
     },
 }
 
--- Our scouts have seen people who look like you wandering in the area safely.  If the scavengers can make it in and out, you should be fine.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_mission_1_intro3",
-    line = ccb.content.text("Them as we've escolted seems a fair kin, an' we've eyed a scav or two wanderin' the premise unscathed.  If'n the scavs o' the dust can make it in an' out, so should ye be."),
+    line = ccb.content.text(
+        --~ Our scouts have seen people who look like you wandering in the area safely.  If the scavengers can make it in and out, you should be fine.
+        "Them as we've escolted seems a fair kin, an' we've eyed a scav or two wanderin' the premise unscathed.  If'n the scavs o' the dust can make it in an' out, so should ye be."),
     replies = {
         {
             text = ccb.content.text("So you want me to go there, see what's inside the walls, look around a little, and then let you know if I see anything, but if someone tries to talk to me, not mention you or your people?"),

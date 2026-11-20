@@ -1,9 +1,10 @@
 local ccb = require("ccb")
 
--- As I recall, we were talking about Benzete and how this is a great jump for their first time.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Talk_Intro2a",
-    line = ccb.content.text("So 'twere an I recalt, us're yarkin' of Benzete an' their great first jump."),
+    line = ccb.content.text(
+        --~ As I recall, we were talking about Benzete and how this is a great jump for their first time.
+        "So 'twere an I recalt, us're yarkin' of Benzete an' their great first jump."),
     replies = {
         {
             text = ccb.content.text("What makes it such a good jump?"),

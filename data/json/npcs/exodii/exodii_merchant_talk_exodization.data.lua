@@ -11,10 +11,11 @@ ccb.content.define_dialogue_topic {
     },
 }
 
--- Yes, it's done.  Don't waste time thinking about what's different.  You're still there, just inside a tough steel case.  It won't be easy to adapt, but keep a stiff upper lip - or be brave - as you might say.  Try to keep everything intact, but if you get any damage, come back here.  Venn'll do repairs in exchange for materials.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Exodize_Cyberframe_done2",
-    line = ccb.content.text("Aye, done'n'done.  Don' tarry on what's left.  Yer still there, just tougher'n steelies, now.  Time fer the stiff upper lip, as might be y'assert.\"  Rubik chuckles.  \"Anyhow, try'ta keep'er intact, but Ven'll keep ya' fixed up fer trade.  Got it?"),
+    line = ccb.content.text(
+        --~ Yes, it's done.  Don't waste time thinking about what's different.  You're still there, just inside a tough steel case.  It won't be easy to adapt, but keep a stiff upper lip - or be brave - as you might say.  Try to keep everything intact, but if you get any damage, come back here.  Venn'll do repairs in exchange for materials.
+        "Aye, done'n'done.  Don' tarry on what's left.  Yer still there, just tougher'n steelies, now.  Time fer the stiff upper lip, as might be y'assert.\"  Rubik chuckles.  \"Anyhow, try'ta keep'er intact, but Ven'll keep ya' fixed up fer trade.  Got it?"),
     replies = {
         {
             text = ccb.content.text("I guess so.  I'll come talk to Venn if I need repairs.  Guess I'll be seeing you around, Rubik."),

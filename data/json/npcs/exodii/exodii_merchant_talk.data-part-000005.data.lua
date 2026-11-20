@@ -2,14 +2,16 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
--- You can surely try.  I'm not the greatest speaker, and I won't just chat forever for free, you know.
--- Hey, can I ask you something first?
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Talk",
     line = {
         when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_started_rubik_intro" } }),
-        yes = ccb.content.text("Sure as you c'n try.  Us're not the greatest yarker, nor do it all for gratis, kennit."),
-        no = ccb.content.text("Oy, c'n I bark you summat first?"),
+        yes = ccb.content.text(
+            --~ You can surely try.  I'm not the greatest speaker, and I won't just chat forever for free, you know.
+            "Sure as you c'n try.  Us're not the greatest yarker, nor do it all for gratis, kennit."),
+        no = ccb.content.text(
+            --~ Hey, can I ask you something first?
+            "Oy, c'n I bark you summat first?"),
     },
     on_enter = { { actions = { actions.set_actor_value("speaker", "dialogue_started_rubik_intro", "yes") } } },
     replies = {

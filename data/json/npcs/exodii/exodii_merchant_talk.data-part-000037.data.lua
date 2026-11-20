@@ -2,11 +2,12 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
--- Spread, yes, through the portals, but we don't know how.  After the world is down to dust, I'm long gone.  Once or twice we've send back a probe to the deadlands we left behind, but none have returned.  As far as I know, there's only one way it goes from here.
 -- The probes don't return variable is not yet used but we should store it for when players might be offered the option to try going to previous deadlands, so they can object if they want.
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_Talk_CataclysmTimeline2",
-    line = ccb.content.text("Spread, aye, through the wibbles, but we ain't ken on how.  After the green an' brown be to grey and black, so t'speak, Rubik be long gone.  On a moment, we folk've sent back a lover's robe or so t'the deadlands what left, but narry have returned.  An I'm ken, there be only one course from here."),
+    line = ccb.content.text(
+        --~ Spread, yes, through the portals, but we don't know how.  After the world is down to dust, I'm long gone.  Once or twice we've send back a probe to the deadlands we left behind, but none have returned.  As far as I know, there's only one way it goes from here.
+        "Spread, aye, through the wibbles, but we ain't ken on how.  After the green an' brown be to grey and black, so t'speak, Rubik be long gone.  On a moment, we folk've sent back a lover's robe or so t'the deadlands what left, but narry have returned.  An I'm ken, there be only one course from here."),
     on_enter = {
         {
             actions = {
