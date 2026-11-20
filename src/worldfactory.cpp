@@ -2643,6 +2643,12 @@ static std::string get_opt_slider( int width, int current, int max, bool no_colo
 
 int worldfactory::show_worldgen_basic( WORLD *world )
 {
+    static const std::string map_generation_id = "WORLD_MAP_GENERATION";
+    const auto reset_preset_options = [world]() {
+        const std::string map_mode = world->WORLD_OPTIONS.at( map_generation_id ).getValue();
+        world->WORLD_OPTIONS = get_options().get_world_defaults();
+        world->WORLD_OPTIONS.at( map_generation_id ).setValue( map_mode );
+    };
 #if defined(__ANDROID__)
     if( android_ui_mode::is_new_ui_build() ) {
         std::vector<option_slider_id> adaptive_sliders;
@@ -2667,7 +2673,11 @@ int worldfactory::show_worldgen_basic( WORLD *world )
             adaptive_worldgen_snapshot snapshot;
             snapshot.world_name = worldname;
             snapshot.custom_options = custom_options;
-            snapshot.sliders.reserve( adaptive_sliders.size() );
+            snapshot.sliders.reserve( adaptive_sliders.size() + 1 );
+            const options_manager::cOpt &map_mode = world->WORLD_OPTIONS.at( map_generation_id );
+            snapshot.sliders.push_back( {
+                map_mode.getMenuText(), map_mode.getValueName(), map_mode.getTooltip(), true
+            } );
             for( size_t index = 0; index < adaptive_sliders.size(); ++index ) {
                 const option_slider &slider = *adaptive_sliders[index];
                 snapshot.sliders.push_back( {
@@ -2720,7 +2730,18 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                     break;
                 case adaptive_worldgen_action_type::previous_value:
                 case adaptive_worldgen_action_type::next_value: {
-                    const int index = ui_action->index;
+                    const bool previous =
+                        ui_action->type == adaptive_worldgen_action_type::previous_value;
+                    if( ui_action->index == 0 ) {
+                        options_manager::cOpt &map_mode = world->WORLD_OPTIONS.at( map_generation_id );
+                        if( previous ) {
+                            map_mode.setPrev();
+                        } else {
+                            map_mode.setNext();
+                        }
+                        break;
+                    }
+                    const int index = ui_action->index - 1;
                     if( index < 0 || static_cast<size_t>( index ) >= adaptive_sliders.size() ) {
                         break;
                     }
@@ -2728,15 +2749,14 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                         if( confirm( _( "Reset advanced options" ),
                                      _( "Currently using customized advanced options. Reset world options to defaults?" ),
                                      _( "Reset" ), true ) ) {
-                            world->WORLD_OPTIONS = get_options().get_world_defaults();
+                            reset_preset_options();
                             adaptive_levels = default_levels;
                             custom_options = false;
                         }
                         break;
                     }
                     const option_slider &slider = *adaptive_sliders[index];
-                    const int delta = ui_action->type == adaptive_worldgen_action_type::previous_value ?
-                                      -1 : 1;
+                    const int delta = previous ? -1 : 1;
                     adaptive_levels[index] = clamp( adaptive_levels[index] + delta, 0,
                                                     slider.count() - 1 );
                     slider.apply_opts( adaptive_levels[index], world->WORLD_OPTIONS );
@@ -2779,7 +2799,7 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                                                     _( "Randomize" ), true ) ) {
                         break;
                     }
-                    world->WORLD_OPTIONS = get_options().get_world_defaults();
+                    reset_preset_options();
                     custom_options = false;
                     for( size_t index = 0; index < adaptive_sliders.size(); ++index ) {
                         adaptive_levels[index] = adaptive_sliders[index]->random_level();
@@ -2875,6 +2895,7 @@ int worldfactory::show_worldgen_basic( WORLD *world )
         }
     }
     const std::vector<int> wg_slvl_default = wg_slevels; // save default slider levels
+    const int option_count = static_cast<int>( wg_sliders.size() ) + 1;
 
     ui.on_redraw( [&]( const ui_adaptor & ) {
         slider_inc_map.clear();
@@ -2883,10 +2904,10 @@ int worldfactory::show_worldgen_basic( WORLD *world )
 
         int start = top_opt == 0 ? 0 : ( 2 + ( top_opt - 1 ) * 3 );
         int sel_y = sel_opt == 0 ? 0 :
-                    ( sel_opt <= static_cast<int>( wg_sliders.size() ) ?
-                      ( 2 + ( sel_opt - 1 ) * 3 ) : ( 2 + wg_sliders.size() * 3 ) );
+                    ( sel_opt <= option_count ?
+                      ( 2 + ( sel_opt - 1 ) * 3 ) : ( 2 + option_count * 3 ) );
         if( recalc_startpos ) {
-            calcStartPos( start, sel_y, content_height, wg_sliders.size() * 3 + 4 );
+            calcStartPos( start, sel_y, content_height, option_count * 3 + 4 );
         }
         top_opt = start < 2 ? 0 : start / 3 + 1;
 
@@ -2912,31 +2933,44 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                              namebar_pos + point( name_txt_width, 0 ) ) );
         }
 
-        // Slider options
+        // Map generation and preset options
         int y = namebar_pos.y + ( top_opt == 0 ? 2 : 0 );
-        bool all_sliders_drawn = false;
+        bool all_options_drawn = false;
+        const options_manager::cOpt &map_mode = world->WORLD_OPTIONS.at( map_generation_id );
         for( int i = top_opt == 0 ? 0 : top_opt - 1;
-             i < static_cast<int>( wg_sliders.size() ) && y < content_height - 2; i++, y++ ) {
-            std::string sl_txt = get_opt_slider( win_width / 2 - 2, wg_slevels[i],
-                                                 wg_sliders[i]->count() - 1,
-                                                 i == sel_opt - 1, custom_opts );
+             i < option_count && y < content_height - 2; i++, y++ ) {
+            const bool selected = i == sel_opt - 1;
+            const bool is_map_mode = i == 0;
+            const int slider_idx = i - 1;
             trim_and_print( w_confirmation, point( 3, y++ ), win_width,
-                            c_white, wg_sliders[i]->name().translated() );
-            trim_and_print( w_confirmation, point( 3, y ), win_width,
-                            i == sel_opt - 1 ? hilite( c_white ) : c_white, sl_txt );
-            if( i == sel_opt - 1 ) {
-                mvwputch( w_confirmation, point( 1, y ), hilite( c_yellow ), '<' );
-                mvwputch( w_confirmation, point( 2 + win_width / 2, y ), hilite( c_yellow ), '>' );
+                            c_white, is_map_mode ? map_mode.getMenuText() :
+                            wg_sliders[slider_idx]->name().translated() );
+            const std::string value = is_map_mode ? map_mode.getValueName() :
+                                      get_opt_slider( win_width / 2 - 2, wg_slevels[slider_idx],
+                                              wg_sliders[slider_idx]->count() - 1, selected, custom_opts );
+            const int right_arrow = is_map_mode ? std::min( win_width, 4 + utf8_width( value ) ) :
+                                    2 + win_width / 2;
+            trim_and_print( w_confirmation, point( 3, y ), right_arrow - 3,
+                            selected ? hilite( c_white ) : c_white, value );
+            if( selected || is_map_mode ) {
+                const nc_color arrow_color = selected ? hilite( c_yellow ) : c_yellow;
+                mvwputch( w_confirmation, point( 1, y ), arrow_color, '<' );
+                mvwputch( w_confirmation, point( right_arrow, y ), arrow_color, '>' );
             }
             slider_inc_map.emplace( i * 2, inclusive_rectangle<point>( point( 1, y ), point( 1, y ) ) );
-            slider_inc_map.emplace( i * 2 + 1, inclusive_rectangle<point>( point( 2 + win_width / 2, y ),
-                                    point( 2 + win_width / 2, y ) ) );
-            mvwprintz( w_confirmation, point( 5 + win_width / 2, y++ ), c_white,
-                       custom_opts ? _( "Custom" ) : wg_sliders[i]->level_name( wg_slevels[i] ).translated() );
+            slider_inc_map.emplace( i * 2 + 1, inclusive_rectangle<point>( point( right_arrow, y ),
+                                    point( right_arrow, y ) ) );
             btn_map.emplace( 1 + i,
-                             inclusive_rectangle<point>( point( 1, y - 1 ), point( 2 + win_width / 2, y - 1 ) ) );
-            if( i == static_cast<int>( wg_sliders.size() ) - 1 ) {
-                all_sliders_drawn = true;
+                             inclusive_rectangle<point>( point( 1, y - ( is_map_mode ? 1 : 0 ) ),
+                                     point( right_arrow, y ) ) );
+            if( !is_map_mode ) {
+                mvwprintz( w_confirmation, point( 5 + win_width / 2, y ), c_white,
+                           custom_opts ? _( "Custom" ) :
+                           wg_sliders[slider_idx]->level_name( wg_slevels[slider_idx] ).translated() );
+            }
+            y++;
+            if( i == option_count - 1 ) {
+                all_options_drawn = true;
             }
         }
 
@@ -2944,8 +2978,8 @@ int worldfactory::show_worldgen_basic( WORLD *world )
             return hi ? hilite( base ) : base;
         };
 
-        if( all_sliders_drawn && y <= content_height ) {
-            int opt_num = wg_sliders.size() + 1;
+        if( all_options_drawn && y <= content_height ) {
+            int opt_num = option_count + 1;
             nc_color acc_clr;
             nc_color acc_clr2;
             nc_color base_clr;
@@ -2974,7 +3008,7 @@ int worldfactory::show_worldgen_basic( WORLD *world )
         .border_color( BORDER_COLOR )
         .offset_x( 0 )
         .offset_y( 1 )
-        .content_size( wg_sliders.size() * 3 + 3 )
+        .content_size( option_count * 3 + 3 )
         .viewport_pos( top_opt * 3 )
         .viewport_size( content_height )
         .apply( w_confirmation );
@@ -2994,8 +3028,10 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                               "Press [<color_yellow>%s</color>] to see additional control information." ),
                            ctxt.get_desc( "PICK_RANDOM_WORLDNAME", 1U ), ctxt.get_desc( "CONFIRM", 1U ),
                            ctxt.get_desc( "HELP_KEYBINDINGS", 1U ) );
-        if( !custom_opts && sel_opt > 0 && sel_opt <= static_cast<int>( wg_sliders.size() ) ) {
-            hint_txt = wg_sliders[sel_opt - 1]->level_desc( wg_slevels[sel_opt - 1] ).translated();
+        if( sel_opt == 1 ) {
+            hint_txt = map_mode.getTooltip();
+        } else if( !custom_opts && sel_opt > 1 && sel_opt <= option_count ) {
+            hint_txt = wg_sliders[sel_opt - 2]->level_desc( wg_slevels[sel_opt - 2] ).translated();
         }
         y += fold_and_print( w_confirmation, point( 2, win_height - 9 ),
                              win_width - 1, c_light_gray, hint_txt ) + 1;
@@ -3006,14 +3042,14 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                                            ctxt.get_desc( "ADVANCED_SETTINGS", 1U ) );
         mvwprintz( w_confirmation, point( 2, win_height - 4 ), c_light_gray, _( "Advanced settings:" ) );
         print_colored_text( w_confirmation, point( 2, win_height - 3 ), dummy, c_light_gray, sctxt );
-        btn_map.emplace( static_cast<int>( wg_sliders.size() + 4 ),
+        btn_map.emplace( option_count + 4,
                          inclusive_rectangle<point>(
                              point( 2, win_height - 3 ),
                              point( 2 + utf8_width( sctxt, true ), win_height - 3 ) ) );
         sctxt = string_format( _( "[<color_yellow>%s</color>] - Open mod manager" ),
                                ctxt.get_desc( "PICK_MODS", 1U ) );
         print_colored_text( w_confirmation, point( 2, win_height - 2 ), dummy, c_light_gray, sctxt );
-        btn_map.emplace( static_cast<int>( wg_sliders.size() + 5 ),
+        btn_map.emplace( option_count + 5,
                          inclusive_rectangle<point>(
                              point( 2, win_height - 2 ),
                              point( 2 + utf8_width( sctxt, true ), win_height - 2 ) ) );
@@ -3035,9 +3071,9 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                     sel_opt = p.first;
                 } ) > 0;
                 if( found && action == "SELECT" ) {
-                    if( sel_opt == static_cast<int>( wg_sliders.size() + 4 ) ) {
+                    if( sel_opt == option_count + 4 ) {
                         action = "ADVANCED_SETTINGS";
-                    } else if( sel_opt == static_cast<int>( wg_sliders.size() + 5 ) ) {
+                    } else if( sel_opt == option_count + 5 ) {
                         action = "PICK_MODS";
                     } else {
                         action = "CONFIRM";
@@ -3047,7 +3083,7 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                         } );
                     }
                 }
-                if( sel_opt > static_cast<int>( wg_sliders.size() + 3 ) ) {
+                if( sel_opt > option_count + 3 ) {
                     sel_opt = orig_opt;
                 }
             }
@@ -3056,15 +3092,15 @@ int worldfactory::show_worldgen_basic( WORLD *world )
         // Button shortcuts
         if( action == "FINALIZE" ) {
             action = "CONFIRM";
-            sel_opt = wg_sliders.size() + 1;
+            sel_opt = option_count + 1;
             ui_manager::redraw();
         } else if( action == "RESET" ) {
             action = "CONFIRM";
-            sel_opt = wg_sliders.size() + 2;
+            sel_opt = option_count + 2;
             ui_manager::redraw();
         } else if( action == "RANDOMIZE" ) {
             action = "CONFIRM";
-            sel_opt = wg_sliders.size() + 3;
+            sel_opt = option_count + 3;
             // no confirmation prompt, no need to redraw the ui
         }
 
@@ -3076,7 +3112,9 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                 if( !ret.value_or( "" ).empty() ) {
                     world->world_name = worldname = ret.value();
                 }
-            } else if( sel_opt == static_cast<int>( wg_sliders.size() + 1 ) ) {
+            } else if( sel_opt == 1 ) {
+                world->WORLD_OPTIONS.at( map_generation_id ).setNext();
+            } else if( sel_opt == option_count + 1 ) {
                 // finish
                 if( worldname.empty() ) {
                     noname = true;
@@ -3096,7 +3134,7 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                     world->world_name = worldname;
                     return 1;
                 }
-            } else if( sel_opt == static_cast<int>( wg_sliders.size() + 2 ) &&
+            } else if( sel_opt == option_count + 2 &&
                        query_yn( _( "Are you sure you want to reset this world?" ) ) ) {
                 // reset
                 world->WORLD_OPTIONS = get_options().get_world_defaults();
@@ -3104,32 +3142,40 @@ int worldfactory::show_worldgen_basic( WORLD *world )
                 world->active_mod_order = world_generator->get_mod_manager().get_default_mods();
                 wg_slevels = wg_slvl_default;
                 custom_opts = false;
-            } else if( sel_opt == static_cast<int>( wg_sliders.size() + 3 ) ) {
+            } else if( sel_opt == option_count + 3 ) {
                 // randomize
                 for( int i = 0; i < static_cast<int>( wg_sliders.size() ); i++ ) {
                     wg_slevels[i] = wg_sliders[i]->random_level();
                 }
             }
-        } else if( navigate_ui_list( action, sel_opt, 1, wg_sliders.size() + 2, true ) ) {
+        } else if( navigate_ui_list( action, sel_opt, 1, option_count + 2, true ) ) {
             recalc_startpos = true;
         } else if( action == "LEFT" || action == "RIGHT" ) {
-            if( sel_opt > 0 && sel_opt <= static_cast<int>( wg_sliders.size() ) ) {
+            if( sel_opt == 1 ) {
+                options_manager::cOpt &map_mode = world->WORLD_OPTIONS.at( map_generation_id );
+                if( action == "LEFT" ) {
+                    map_mode.setPrev();
+                } else {
+                    map_mode.setNext();
+                }
+            } else if( sel_opt > 1 && sel_opt <= option_count ) {
                 if( custom_opts && query_yn( _( "Currently using customized advanced options.  "
                                                 "Reset world options to defaults?" ) ) ) {
-                    world->WORLD_OPTIONS = get_options().get_world_defaults();
+                    reset_preset_options();
                     wg_slevels = wg_slvl_default;
                     custom_opts = false;
                     continue;
                 } else if( custom_opts ) {
                     continue;
                 }
-                int lvl = wg_slevels[sel_opt - 1] + ( action == "LEFT" ? -1 : 1 );
-                wg_slevels[sel_opt - 1] = clamp<int>( lvl, 0, wg_sliders[sel_opt - 1]->count() - 1 );
-                wg_sliders[sel_opt - 1]->apply_opts( wg_slevels[sel_opt - 1], world->WORLD_OPTIONS );
-            } else if( sel_opt > static_cast<int>( wg_sliders.size() ) ) {
-                if( action == "LEFT" && sel_opt > static_cast<int>( wg_sliders.size() + 1 ) ) {
+                const int slider_idx = sel_opt - 2;
+                const int lvl = wg_slevels[slider_idx] + ( action == "LEFT" ? -1 : 1 );
+                wg_slevels[slider_idx] = clamp<int>( lvl, 0, wg_sliders[slider_idx]->count() - 1 );
+                wg_sliders[slider_idx]->apply_opts( wg_slevels[slider_idx], world->WORLD_OPTIONS );
+            } else if( sel_opt > option_count ) {
+                if( action == "LEFT" && sel_opt > option_count + 1 ) {
                     sel_opt--;
-                } else if( action == "RIGHT" && sel_opt < static_cast<int>( wg_sliders.size() + 3 ) ) {
+                } else if( action == "RIGHT" && sel_opt < option_count + 3 ) {
                     sel_opt++;
                 }
             }

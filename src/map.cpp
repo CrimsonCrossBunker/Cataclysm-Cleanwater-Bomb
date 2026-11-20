@@ -5828,9 +5828,12 @@ ter_str_id map::get_roof( const tripoint_bub_ms &p, const bool allow_air ) const
     // Just use t_dirt instead
     cata_assert( zlevels );
 
-    if( p.z() <= min_z() ) {
+    if( p.z() <= min_z() && z_origin() == 0 ) {
         // Could be magma/"void" instead
         return ter_t_rock_floor;
+    }
+    if( p.z() < min_z() ) {
+        return ter_t_open_air;
     }
 
     const ter_t &ter_there = ter( p ).obj();
@@ -12189,14 +12192,18 @@ void map::add_tree_tops( const tripoint_rel_sm &grid )
         return;
     }
 
+    const bool check_tree_tops = grid.z() > min_z();
+    if( !check_tree_tops && z_origin() != 0 ) {
+        // The bottom of a shifted window is not the bottom of the world.
+        return;
+    }
+
     submap *const sub_here = get_submap_at_grid( grid );
     if( sub_here == nullptr ) {
         debugmsg( "Tried to add tree tops on null submap on %d,%d,%d",
                   grid.x(), grid.y(), grid.z() );
         return;
     }
-
-    bool check_tree_tops = grid.z() > min_z();
 
     submap *const sub_below = check_tree_tops ? get_submap_at_grid( grid + tripoint_rel_sm::below ) :
                               nullptr;
