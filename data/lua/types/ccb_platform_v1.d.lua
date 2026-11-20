@@ -9187,6 +9187,21 @@ function CcbPlatformContent.Item(options) end
 ---@field id string Native tool quality ID.
 ---@field level integer
 
+---@class StaticItemFermentation
+---@field duration? string|integer Native duration or turns.
+---@field products? (string|{item:string, count:integer?, variant:string?})[] Result item IDs or counted variants.
+
+---@class StaticItemPetEquipment
+---@field slots? string[] Equipment slots. Required for a new pet equipment definition.
+---@field passive_effects? string[]
+---@field install_qualities? StaticItemQuality[]
+---@field mount_threshold_delta? integer
+---@field melee_hit_multiplier? number
+---@field melee_damage_multiplier? number
+---@field fear_multiplier? number
+---@field spook_multiplier? number
+---@field mounted_move_cost_multiplier? number
+
 ---@class StaticItemOptions
 ---@field id string Stable item ID or abstract template ID.
 ---@field abstract? boolean Register an inheritance template.
@@ -9251,6 +9266,10 @@ function CcbPlatformContent.Item(options) end
 ---@field artifact? StaticOrderedArtifact
 ---@field tool? StaticOrderedTool
 ---@field pet_armor? StaticOrderedPetArmor
+---@field pet_equipment? StaticItemPetEquipment
+---@field engine? {displacement:integer?}
+---@field brewing? StaticItemFermentation
+---@field composting? StaticItemFermentation
 ---@field seed? StaticOrderedSeed
 ---@field milling? StaticOrderedMilling
 ---@field bionic? StaticOrderedBionicItem

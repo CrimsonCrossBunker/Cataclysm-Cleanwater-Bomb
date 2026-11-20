@@ -1,40 +1,51 @@
 [
   {
-    "id": "saddlebag",
     "type": "ITEM",
-    "subtypes": [ "ARMOR", "PET_EQUIPMENT" ],
-    "name": { "str_sp": "saddle bags (pair)" },
-    "description": "A pair of covered pouches laid across the back of a horse behind the saddle.",
-    "weight": "1 kg",
-    "volume": "7500 ml",
-    "price": "150 USD",
-    "price_postapoc": "25 USD",
-    "material": [ "leather" ],
-    "symbol": "[",
-    "looks_like": "dump_pouch",
+    "subtypes": [ "PET_ARMOR" ],
+    "id": "leather_armor_horse",
+    "copy-from": "horse_armor",
     "color": "green",
-    "warmth": 10,
-    "material_thickness": 2,
-    "flags": [ "BELTED", "WATER_FRIENDLY", "SADDLE_BAG" ],
-    "pet_slots": [ "saddlebag" ],
-    "pet_passive_effects": [ "has_bag" ],
-    "//": "each 15 L bag is ~ 60 x 25 x 10 cm",
-    "pocket_data": [
+    "name": { "str": "boiled leather horse barding with caparison", "str_pl": "boiled leather horse bardings with caparison" },
+    "description": "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts a battle between a monstrous dragon and regal griffin.  You could put this on a friendly horse.",
+    "price": "300 USD",
+    "price_postapoc": "30 USD",
+    "material": [ "cotton", "leather" ],
+    "weight": "15 kg",
+    "volume": "150 L",
+    "material_thickness": 6,
+    "snippet_category": [
       {
-        "pocket_type": "CONTAINER",
-        "max_contains_volume": "15 L",
-        "max_contains_weight": "20 kg",
-        "max_item_length": "60 cm",
-        "moves": 200
+        "id": "battle",
+        "text": "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts a battle between a monstrous dragon and regal griffin.  You could put this on a friendly horse."
       },
       {
-        "pocket_type": "CONTAINER",
-        "max_contains_volume": "15 L",
-        "max_contains_weight": "20 kg",
-        "max_item_length": "60 cm",
-        "moves": 200
+        "id": "ancientdragon",
+        "text": "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts a red dragon breathing fire on cities.  You could put this on a friendly horse."
+      },
+      {
+        "id": "criticalbear",
+        "text": "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts a bear standing on its hind legs, forelegs outstretched in a menacing manner.  You could put this on a friendly horse."
+      },
+      {
+        "id": "orange",
+        "text": "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts an assortment of fruits and vegetables with a very large orange featured in the foreground.  You could put this on a friendly horse."
+      },
+      {
+        "id": "vulture",
+        "text": "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts a massive vulture perched on a mountain.  You could put this on a friendly horse."
+      },
+      {
+        "id": "direboar",
+        "text": "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts the mythical Erymanthian boar in various artistic forms.  You could put this on a friendly horse."
+      },
+      {
+        "id": "rycon",
+        "text": "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison seems to be sponsored by Rycon Construction, with a tag line of \"From down under to your home, we play all the roles from start to finish!\".  You could put this on a friendly horse."
+      },
+      {
+        "id": "coregentech",
+        "text": "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison seems to be sponsored by Core Generator Tech, with a tag line of \"Providing power solutions from culinary to graphic design, we have the magic touch for your problems!\".  You could put this on a friendly horse."
       }
-    ],
-    "armor": [ { "encumbrance": 30, "coverage": 50, "covers": [ "hand_l", "hand_r" ] } ]
+    ]
   }
 ]

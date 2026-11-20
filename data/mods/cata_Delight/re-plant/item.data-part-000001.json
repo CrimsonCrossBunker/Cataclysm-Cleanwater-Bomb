@@ -1,0 +1,21 @@
+[
+  {
+    "type": "ITEM",
+    "id": "tsow_compost_bin_fermenting",
+    "subtypes": [ "GENERIC" ],
+    "category": "other",
+    "name": { "str": "Compost Bin Fermenting" },
+    "description": "A compost bin filled with humus while its organic matter ferments inside.  In about seven days, the humus will become fertile soil, and the bin can be reused.",
+    "weight": "7000 g",
+    "volume": "12000 ml",
+    "longest_side": "30 cm",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "material": [ "wood", "soil" ],
+    "symbol": ")",
+    "color": "yellow_green",
+    "countdown_interval": "7 days",
+    "transform_into": { "target": "tsow_fertile_soil", "container": "tsow_compost_bin_empty", "target_charges": 20 },
+    "flags": [ "SPAWN_ACTIVE", "TRADER_AVOID" ]
+  }
+]

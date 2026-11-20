@@ -1,26 +1,24 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
-    id = "soaking_dandelion_active",
-    looks_like = "dandelion",
-    name = ccb.content.plural_text("soaking dandelion", "soaking dandelion"),
-    mass = "274 g",
+    id = "malted_grain",
+    name = ccb.content.plural_text("malted grain", "malted grain"),
+    mass = "336 g",
     color = "brown",
     symbol = ",",
-    description = ccb.content.text("Soaked dandelions that can be used for brewing."),
+    description = ccb.content.text("Grainy cereal used for malting.  A staple of brewing everywhere.  It can also be ground into flour."),
     display_type = "BY_WEIGHT",
     price = "20 cent",
     survival_price = "2 USD 50 cent",
     materials = { "veggy" },
-    volume = "250 ml",
-    flags = { "EDIBLE_FROZEN", "RAW", "SPAWN_ACTIVE" },
-    revert_to = "soaked_dandelion",
+    volume = "1 L",
+    flags = { "EDIBLE_FROZEN", "RAW" },
     stackable = true,
-    subtype_order = { "comestible", "tool" },
     comestible = {
+        shelf_life = "7 days",
         kind = "FOOD",
         quench = -10,
-        calories = 41,
+        calories = 743,
         vitamins = {
             { id = "calcium", amount = 6 },
             { id = "iron", amount = 29 },
@@ -28,6 +26,4 @@ ccb.content.define_item {
         },
         fun = -15,
     },
-    tool = {},
-    countdown_interval = "2 hours",
 }

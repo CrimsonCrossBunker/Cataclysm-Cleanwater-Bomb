@@ -1,0 +1,14 @@
+[
+  {
+    "id": "qt_spear_steel",
+    "copy-from": "spear_steel",
+    "looks_like": "spear_steel",
+    "type": "ITEM",
+    "name": { "str": "tempered steel spear" },
+    "description": "A stout wooden pole tipped with a hand-forged tempered steel spearhead.  Masterfully tempered and quenched, the bluish steel coalesces in a needle-fine point.  The shaft has been lined with a spiraling leather riser, improving control during deadly thrusts.  The king of all weapons.",
+    "proportional": { "price": 1.2, "price_postapoc": 1.2 },
+    "replace_materials": { "mc_steel": "qt_steel" },
+    "extend": { "material": [ "leather" ] },
+    "relative": { "melee_damage": { "stab": 5, "bash": 2 } }
+  }
+]

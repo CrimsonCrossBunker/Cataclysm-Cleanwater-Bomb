@@ -2412,9 +2412,9 @@ void write_item_faults( JsonOut &json, const sol::table &faults )
     json.end_array();
 }
 
-void write_item_qualities( JsonOut &json, const sol::table &qualities )
+void write_item_qualities( JsonOut &json, const sol::table &qualities, const char *field = "qualities" )
 {
-    json.member( "qualities" );
+    json.member( field );
     json.start_array();
     const std::size_t count = qualities.size();
     for( std::size_t i = 1; i <= count; ++i ) {
@@ -2523,6 +2523,54 @@ void write_item_pet_armor( JsonOut &json, const sol::table &armor )
         { "body_type", "pet_bodytype" }
     } );
     write_placement_member<bool>( json, armor, "power_armor", "power_armor" );
+}
+
+void write_item_pet_equipment( JsonOut &json, const sol::table &gear )
+{
+    write_item_ids( json, gear, {
+        { "slots", "pet_slots" }, { "passive_effects", "pet_passive_effects" }
+    } );
+    if( const auto qualities = gear.get<sol::optional<sol::table>>( "install_qualities" ) ) {
+        write_item_qualities( json, *qualities, "pet_install_qualities" );
+    }
+    write_placement_member<int>( json, gear, "mount_threshold_delta", "pet_mount_threshold_delta" );
+    write_item_fields<double>( json, gear, {
+        { "melee_hit_multiplier", "pet_melee_hit_multiplier" },
+        { "melee_damage_multiplier", "pet_melee_damage_multiplier" },
+        { "fear_multiplier", "pet_fear_multiplier" }, { "spook_multiplier", "pet_spook_multiplier" },
+        { "mounted_move_cost_multiplier", "pet_mounted_move_cost_multiplier" }
+    } );
+}
+
+void write_item_fermentation( JsonOut &json, const sol::table &recipe, const char *time_field,
+                              const char *result_field )
+{
+    const sol::object duration = recipe.raw_get<sol::object>( "duration" );
+    if( duration.get_type() == sol::type::number ) {
+        json.member( time_field, duration.as<int>() );
+    } else {
+        write_placement_member<std::string>( json, recipe, "duration", time_field );
+    }
+    if( const auto products = recipe.get<sol::optional<sol::table>>( "products" ) ) {
+        const std::size_t count = checked_dense_array_size( *products, "fermentation products",
+                                  std::numeric_limits<std::size_t>::max() );
+        json.member( result_field );
+        json.start_array();
+        for( std::size_t i = 1; i <= count; ++i ) {
+            const sol::object product = products->raw_get<sol::object>( i );
+            if( product.get_type() == sol::type::string ) {
+                json.write( product.as<std::string>() );
+            } else {
+                const sol::table entry = product.as<sol::table>();
+                json.start_object();
+                json.member( "item", entry.get<std::string>( "item" ) );
+                write_placement_member<std::string>( json, entry, "variant", "variant" );
+                write_placement_member<int>( json, entry, "count", "count" );
+                json.end_object();
+            }
+        }
+        json.end_array();
+    }
 }
 
 void write_item_milling( JsonOut &json, const sol::table &milling )
@@ -2730,6 +2778,19 @@ void load_static_item( const sol::table &options, const std::string &source )
         { "tool", "TOOL", write_item_tool },
         { "armor", "ARMOR", write_item_armor },
         { "pet_armor", "PET_ARMOR", write_item_pet_armor },
+        { "pet_equipment", "PET_EQUIPMENT", write_item_pet_equipment },
+        { "engine", "ENGINE", []( JsonOut & out, const sol::table & engine ) {
+                write_placement_member<int>( out, engine, "displacement", "displacement" );
+            }
+        },
+        { "brewing", "BREWABLE", []( JsonOut & out, const sol::table & recipe ) {
+                write_item_fermentation( out, recipe, "brew_time", "brew_results" );
+            }
+        },
+        { "composting", "COMPOSTABLE", []( JsonOut & out, const sol::table & recipe ) {
+                write_item_fermentation( out, recipe, "compost_time", "compost_results" );
+            }
+        },
         { "seed", "SEED", write_item_seed },
         { "milling", "MILLING", write_item_milling },
         { "comestible", "COMESTIBLE", write_item_comestible },

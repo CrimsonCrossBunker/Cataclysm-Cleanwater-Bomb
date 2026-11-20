@@ -1,14 +1,14 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
-    id = "fermented_fertilizer_liquid",
-    name = ccb.content.plural_text("fermented fertilizer liquid", "fermented fertilizer liquid"),
-    volume = "500 ml",
-    mass = "400 g",
-    description = ccb.content.text("A mixture of fermented biomass, will become liquid fertilizer after simple treatment."),
-    copy_from = "fertilizer_liquid",
-    price = "0 cent",
-    survival_price = "0 cent",
-    flags = { "NUTRIENT_OVERRIDE", "TRADER_AVOID" },
-    comestible = { servings = 1 },
+    id = "fermentable_fish_mixture_active",
+    name = ccb.content.plural_text("fermentable fish mixture", "fermentable fish mixture"),
+    description = ccb.content.text("A mixture of fish, sugars, and water.  Wait about two months for them to be fermented in an open tank."),
+    copy_from = "fermentable_liquid_mixture",
+    revert_to = "fermented_fertilizer_liquid",
+    inheritance = { add = { flags = { "SPAWN_ACTIVE" } } },
+    subtype_order = { "comestible", "tool" },
+    comestible = {},
+    tool = {},
+    countdown_interval = "50 days",
 }
