@@ -928,7 +928,7 @@ bool game::save_external_options_record()
         fout << "# This includes the values of all options, including externals, at the exact time of saving.  The purpose of this is to store a record of the game state as it existed."
              << std::endl;
 
-        fout << "# Externals 'forced on' by mods or user edits to data/core/external_options.json would not normally be visible in the save."
+        fout << "# Externals 'forced on' by mods or user edits to data/core/external_options.data.lua would not normally be visible in the save."
              << std::endl;
 
         jout.start_array();
