@@ -121,6 +121,7 @@
 #include "move_mode.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "north_america_elevation.h"
 #include "npc.h"
 #include "omdata.h"
 #include "options.h"
@@ -152,6 +153,7 @@
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_power_connection.h"
 #include "vehicle_selector.h"
 #include "viewer.h"
 #include "vitamin.h"
@@ -721,7 +723,13 @@ int Character::count_threshold_substitute_traits() const
 
 int Character::get_oxygen_max() const
 {
-    return 30 + ( has_bionic( bio_synlungs ) ? 30 : 2 * get_str() );
+    const int capacity = 30 + ( has_bionic( bio_synlungs ) ? 30 : 2 * get_str() );
+    if( !north_america::elevation_active() || !get_map().inbounds( pos_bub() ) ) {
+        return capacity;
+    }
+    const double altitude = north_america::occupant_altitude( get_map(), pos_bub() );
+    return std::max( 1, static_cast<int>( std::lround( capacity *
+                                          std::min( 1.2, north_america::pressure_ratio_at_height( altitude ) ) ) ) );
 }
 
 void Character::randomize_heartrate()
@@ -2401,8 +2409,10 @@ double Character::mount_speed() const
         return mounted_creature->get_speed();
     }
     const riding_config &config = get_riding_config();
+    const double load_ratio = static_cast<double>( mounted_creature->get_load_weight().value() ) /
+                              std::max( 1_gram, mounted_creature->weight_capacity() ).value();
     return mounted_creature->get_speed() * ( is_running() ? config.animal_trot_speed_multiplier :
-            config.animal_walk_speed_multiplier );
+            config.animal_walk_speed_multiplier ) / std::max( 1.0, load_ratio );
 }
 
 void Character::set_player_movement_mode( const move_mode_id &new_mode )
@@ -5459,16 +5469,27 @@ void Character::recalculate_bodyparts()
 void Character::recalculate_enchantment_cache( bool update_body )
 {
     enchantment_cache->clear();
+    std::optional<const_dialogue> context;
+    const auto add_enchantment = [this, &context]( const enchantment & ench ) {
+        if( !context ) {
+            context.emplace( get_const_talker_for( *this ), nullptr );
+        }
+        enchantment_cache->force_add_with_dialogue( ench, *context );
+    };
 
-    cache_visit_items_with( "is_relic", &item::is_relic, [this]( const item_location & it ) {
+    cache_visit_items_with( "is_relic", &item::is_relic, [this,
+    &add_enchantment]( const item_location & it ) {
+        if( !has_item( *it ) ) {
+            return;
+        }
         for( const enchant_cache &ench : it->get_proc_enchantments() ) {
-            if( ench.is_active( *this, *it ) ) {
+            if( ench.is_active_for_owned_item( *this, *it ) ) {
                 enchantment_cache->force_add( ench );
             }
         }
         for( const enchantment &ench : it->get_defined_enchantments() ) {
-            if( ench.is_active( *this, *it ) ) {
-                enchantment_cache->force_add( ench, *this );
+            if( ench.is_active_for_owned_item( *this, *it ) ) {
+                add_enchantment( ench );
             }
         }
     } );
@@ -5481,7 +5502,7 @@ void Character::recalculate_enchantment_cache( bool update_body )
             const enchantment &ench = ench_id.obj();
             if( ench.is_active( *this, bio.powered &&
                                 bid->has_flag( json_flag_BIONIC_TOGGLED ) ) ) {
-                enchantment_cache->force_add( ench, *this );
+                add_enchantment( ench );
             }
         }
     }
@@ -5490,7 +5511,7 @@ void Character::recalculate_enchantment_cache( bool update_body )
         for( const enchantment_id &ench_id : elem.first->enchantments ) {
             const enchantment &ench = ench_id.obj();
             if( ench.is_active( *this, true ) ) {
-                enchantment_cache->force_add( ench, *this );
+                add_enchantment( ench );
             }
         }
     }
@@ -5516,7 +5537,7 @@ void Character::recalculate_enchantment_cache( bool update_body )
             for( const enchantment_id &ench_id : mut.enchantments ) {
                 const enchantment &ench = ench_id.obj();
                 if( ench.is_active( *this, mut.activated && mut_map.second.powered ) ) {
-                    enchantment_cache->force_add( ench, *this );
+                    add_enchantment( ench );
                 }
             }
         }
@@ -6810,6 +6831,9 @@ std::vector < run_cost_effect > Character::run_cost_effects( float &movecost,
 
     if( water_walking ) {
         movecost = 100;
+    } else if( destination && north_america::elevation_active() ) {
+        const double grade = north_america::grade_between( here, pos_bub(), *destination );
+        run_cost_effect_mul( north_america::grade_move_multiplier( grade ), _( "Slope" ) );
     }
 
     if( movecost > 105 ) {

@@ -380,15 +380,6 @@
   },
   {
     "type": "ITEM",
-    "id": "shadow_singularity_piece",
-    "copy-from": "rock",
-    "name": { "str": "piece of the darkest shadow", "str_pl": "pieces of the darkest shadow" },
-    "color": "black",
-    "material": [ "monolith" ],
-    "description": "A chunk of darkness, torn from a powerful shadow.  It is so dark that no light reflect from it."
-  },
-  {
-    "type": "ITEM",
     "id": "skull_march_lord",
     "name": { "str": "march lord skull" },
     "description": "The skull of a march lord.  You can feel its lingering power as you touch it.",

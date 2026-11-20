@@ -1351,6 +1351,9 @@ $(ODIR)/lua/%.o: $(SRC_DIR)/lua/%.c
 $(ODIR)/%.o: $(SRC_DIR)/%.cpp $(PCH_P)
 	$(COMPILE.cc) $(OUTPUT_OPTION) $(PCHFLAGS) -MMD -MP $<
 
+# Some GCC/PCH dependency files omit this header; keep route callers in sync.
+$(addprefix $(ODIR)/,game.o lua_platform_overmap.o mission_start.o mission_util.o npctalk.o overmapbuffer.o): $(SRC_DIR)/overmapbuffer.h
+
 $(ODIR)/%.o: $(SRC_DIR)/%.c
 	$(COMPILE.c) $(OUTPUT_OPTION) -x c $(CFLAGS) -MMD -MP $<
 

@@ -4337,9 +4337,10 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         ingame = false;
     }
 
-    const auto show_option = [ingame]( const std::string & name ) {
-        // The map mode is fixed once the world starts generating terrain.
-        return !( ingame && name == "WORLD_MAP_GENERATION" ) &&
+    const auto show_option = [ingame, world_options_only, with_tabs]( const std::string & name ) {
+        // The basic creation screen has its own selector; an existing world cannot change modes.
+        return !( name == "WORLD_MAP_GENERATION" &&
+                  ( ingame || ( world_options_only && !with_tabs ) ) ) &&
                !get_options().get_option( name ).is_hidden();
     };
 

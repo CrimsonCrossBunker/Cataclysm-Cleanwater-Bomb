@@ -3,6 +3,7 @@
 * See savegame.cpp for game component IO
 */
 
+#include <weather.h>
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -37,7 +38,6 @@
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catacharset.h"
-#include "lua_platform_loader.h"
 #include "char_validity_check.h"
 #include "character.h"
 #include "character_id.h"
@@ -62,17 +62,18 @@
 #include "item.h"
 #include "json.h"
 #include "loading_ui.h"
+#include "lua_platform_loader.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_simulation_regions.h"
 #include "mapbuffer.h"
-#include "mp_world_session.h"
 #include "memorial_logger.h"
 #include "messages.h"
 #include "mod_id_compat.h"
 #include "mod_manager.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_world_session.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -80,6 +81,7 @@
 #include "perf.h"
 #include "pimpl.h"
 #include "popup.h"
+#include "rng.h"
 #include "safemode_ui.h"
 #include "save_snapshot.h"
 #if defined(TILES)
@@ -339,21 +341,110 @@ void game::move_save_to_graveyard()
     }
 }
 
-void game::load_master()
+static bool world_has_save_data( const cata_path &worldpath )
 {
-    const cata_path datafile = PATH_INFO::world_base_save_path() / SAVE_MASTER;
-    read_from_file_optional( datafile, [this, &datafile]( std::istream & is ) {
-        unserialize_master( datafile, is );
-    } );
+    if( !std::filesystem::exists( worldpath.get_unrelative_path() ) ) {
+        return false;
+    }
+    if( !dir_exist( worldpath.get_unrelative_path() ) ) {
+        return true;
+    }
+    for( const std::filesystem::directory_entry &entry :
+         std::filesystem::directory_iterator( worldpath.get_unrelative_path() ) ) {
+        const std::string filename = entry.path().filename().u8string();
+        const std::string extension = entry.path().extension().u8string();
+        if( extension == ".gsav" || extension == SAVE_EXTENSION || extension == zzip_suffix ||
+            extension == ".pt" || filename.compare( 0, 2, "o." ) == 0 ) {
+            return true;
+        }
+        if( filename == "maps" || filename == "overmaps" || filename == "dimensions" ||
+            filename == "snapshots" ) {
+            if( !entry.is_directory() || !std::filesystem::is_empty( entry.path() ) ) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
-bool game::load_dimension_data()
+bool game::load_new_character_world()
 {
-    const cata_path datafile = PATH_INFO::current_dimension_save_path() / SAVE_DIMENSION_DATA;
-    // If dimension_data.gsav doesn't exist, return false
-    return read_from_file_optional( datafile, [this, &datafile]( std::istream & is ) {
+    restore_on_out_of_scope restore_version( savegame_loading_version );
+    on_out_of_scope mark_failed( [this]() {
+        save_loading_failed = true;
+    } );
+    overmap_buffer.clear();
+    const bool master_exists = file_exist( PATH_INFO::world_base_save_path() / SAVE_MASTER );
+    if( !load_master() ) {
+        return false;
+    }
+    if( !master_exists ) {
+        seed = rng_bits();
+    }
+    dimension_prefix = dimension_world_default;
+    load_dimension_data( !master_exists );
+    if( save_loading_failed ) {
+        return false;
+    }
+    overmap_buffer.init_region_layout();
+    mark_failed.cancel();
+    return true;
+}
+
+bool game::load_master()
+{
+    const cata_path worldpath = PATH_INFO::world_base_save_path();
+    const cata_path datafile = worldpath / SAVE_MASTER;
+    if( !file_exist( datafile ) ) {
+        if( world_generator->active_world->world_saves.empty() && !world_has_save_data( worldpath ) ) {
+            return true;
+        }
+        debugmsg( "Missing master save %s", datafile.generic_u8string() );
+        save_loading_failed = true;
+        return false;
+    }
+    const bool loaded = read_from_file( datafile, [this, &datafile]( std::istream & is ) {
+        unserialize_master( datafile, is );
+    } );
+    if( !loaded ) {
+        save_loading_failed = true;
+    }
+    return loaded;
+}
+
+bool game::load_dimension_data( bool allow_new_dimension )
+{
+    const cata_path dimensionpath = PATH_INFO::current_dimension_save_path();
+    const cata_path datafile = dimensionpath / SAVE_DIMENSION_DATA;
+    const bool exists = file_exist( datafile );
+    if( !exists && allow_new_dimension && !world_has_save_data( dimensionpath ) ) {
+        return false;
+    }
+    const bool previous_failure = save_loading_failed;
+    save_loading_failed = true;
+    if( !exists ) {
+        const cata_path masterfile = PATH_INFO::world_base_save_path() / SAVE_MASTER;
+        if( dimension_prefix == dimension_world_default && file_exist( masterfile ) ) {
+            bool legacy_loaded = false;
+            const bool loaded = read_from_file( masterfile, [this, &masterfile, &legacy_loaded](
+            std::istream & is ) {
+                legacy_loaded = unserialize_legacy_dimension_data( masterfile, is );
+            } );
+            if( loaded && legacy_loaded ) {
+                save_loading_failed = previous_failure;
+                return true;
+            }
+        }
+        debugmsg( "Missing dimension save %s", datafile.generic_u8string() );
+        return false;
+    }
+    const bool loaded = read_from_file( datafile, [this, &datafile]( std::istream & is ) {
         unserialize_dimension_data( datafile, is );
     } );
+    if( loaded ) {
+        save_loading_failed = previous_failure;
+    }
+    return loaded;
 }
 
 bool game::load( const std::string &world )
@@ -373,17 +464,19 @@ bool game::load( const std::string &world )
         if( !g->setup() ) {
             return false;
         }
-        g->load( wptr->world_saves.front() );
+        return g->load( wptr->world_saves.front() );
     } catch( const std::exception &err ) {
         debugmsg( "cannot load world '%s': %s", world, err.what() );
         return false;
     }
-
-    return true;
 }
 
 bool game::load( const save_t &name )
 {
+    save_loading_failed = false;
+    on_out_of_scope mark_failed( [this]() {
+        save_loading_failed = true;
+    } );
     map &here = get_map();
 
     const cata_path worldpath = PATH_INFO::world_base_save_path();
@@ -409,14 +502,7 @@ bool game::load( const save_t &name )
                 _( "Master save" ), [&]()
                 {
                     // Now load up the master game data; factions (and more?)
-                    load_master();
-                }
-            },
-            {
-                _( "Dimension data" ), [&]()
-                {
-                    // Load up dimension specific data (ie; weather, overmapstate)
-                    load_dimension_data();
+                    abort = !load_master();
                 }
             },
             {
@@ -591,6 +677,7 @@ bool game::load( const save_t &name )
         add_msg( m_warning,
                  _( "Interrupted dimension travel was recovered from the pre-travel rollback save." ) );
     }
+    mark_failed.cancel();
     return true;
 }
 
@@ -672,6 +759,9 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
 //Saves all factions and missions and npcs.
 bool game::save_factions_missions_npcs()
 {
+    if( save_loading_failed ) {
+        return false;
+    }
     cata_path masterfile = PATH_INFO::world_base_save_path() / SAVE_MASTER;
     return write_to_file( masterfile, [&]( std::ostream & fout ) {
         serialize_master( fout );
@@ -680,6 +770,9 @@ bool game::save_factions_missions_npcs()
 //Saves per-dimension data like Weather and overmapbuffer state
 bool game::save_dimension_data()
 {
+    if( save_loading_failed ) {
+        return false;
+    }
     cata_path data_file = PATH_INFO::current_dimension_save_path() / SAVE_DIMENSION_DATA;
     return write_to_file( data_file, [&]( std::ostream & fout ) {
         serialize_dimension_data( fout );
@@ -687,9 +780,12 @@ bool game::save_dimension_data()
 }
 bool game::save_maps()
 {
+    if( save_loading_failed ) {
+        return false;
+    }
     try {
         map &primary = reality_bubble();
-        auto &session = multiplayer_session();
+        cata_mp::world_session &session = multiplayer_session();
         std::vector<std::reference_wrapper<const map>> resident{ std::cref( primary ) };
         if( session.has_regions() ) {
             const map_simulation_regions regions = session.simulation_regions( primary );
@@ -713,6 +809,9 @@ bool game::save_maps()
 
 bool game::save_player_data()
 {
+    if( save_loading_failed ) {
+        return false;
+    }
     const cata_path playerfile = PATH_INFO::player_base_save_path();
 
     bool saved_data;
@@ -725,6 +824,7 @@ bool game::save_player_data()
         tmp_path.concat( ".tmp" ); // NOLINT(cata-u8-path)
         std::optional<zzip> z = zzip::load( save_path );
         if( !z ) {
+            debugmsg( "Failed to open compressed player save %s", save_path.generic_u8string() );
             return false;
         }
         saved_data = z->add_file( ( playerfile + SAVE_EXTENSION ).get_unrelative_path().filename(),
@@ -733,10 +833,17 @@ bool game::save_player_data()
             z.reset();
             saved_data = rename_file( tmp_path, save_path );
         }
+        if( !saved_data ) {
+            debugmsg( "Failed to write compressed player save %s", save_path.generic_u8string() );
+            return false;
+        }
     } else {
         saved_data = write_to_file( playerfile + SAVE_EXTENSION, [&]( std::ostream & fout ) {
             serialize_json( fout );
         }, _( "player data" ) );
+    }
+    if( !saved_data ) {
+        return false;
     }
     const bool saved_map_memory = u.save_map_memory();
     const bool saved_log = write_to_file( playerfile + SAVE_EXTENSION_LOG, [&](
@@ -759,6 +866,9 @@ bool game::save_player_data()
 
 bool game::save_achievements()
 {
+    if( save_loading_failed ) {
+        return false;
+    }
     const std::string &achievement_dir = PATH_INFO::achievementdir();
 
     //Check if achievement dir exists
@@ -853,7 +963,7 @@ static bool save_in_progress = false;
 
 bool game::save()
 {
-    if( save_in_progress ) {
+    if( save_in_progress || save_loading_failed ) {
         return false;
     }
     restore_on_out_of_scope restore_saving( save_in_progress );
@@ -948,11 +1058,11 @@ bool game::save()
             }
             return true;
         }
-    } catch( std::ios::failure & ) {
+    } catch( const std::exception &err ) {
         if constexpr( cata::lua_platform::is_enabled() ) {
-            cata::lua_platform::after_save( false, "I/O failure while saving game" );
+            cata::lua_platform::after_save( false, err.what() );
         }
-        popup( _( "Failed to save game data" ) );
+        debugmsg( "Failed to save game data: %s", err.what() );
         return false;
     }
 }
@@ -1069,7 +1179,8 @@ void game::quicksave( bool automatic )
     // Only save a running session, never a half-loaded avatar/map or a save
     // already in progress. Check this here so every quicksave caller is safe.
     if( !world_generator || !world_generator->active_world || new_game ||
-        !should_draw || uquit != QUIT_NO || save_in_progress || quicksave_in_progress ) {
+        !should_draw || uquit != QUIT_NO || save_loading_failed || save_in_progress ||
+        quicksave_in_progress ) {
         return;
     }
     restore_on_out_of_scope restore_quicksaving( quicksave_in_progress );
@@ -1286,7 +1397,7 @@ void game::quit_to_last_snapshot()
 void game::save_pending_dimension_checkpoint()
 {
     if( !dimension_checkpoint_pending || !world_generator || !world_generator->active_world ||
-        new_game || !should_draw || uquit != QUIT_NO || save_in_progress ||
+        new_game || !should_draw || uquit != QUIT_NO || save_loading_failed || save_in_progress ||
         cata_mp::is_client_mode() || u.is_dead_state() ) {
         return;
     }

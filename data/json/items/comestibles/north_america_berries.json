@@ -1,0 +1,30 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "atlas_cloudberry",
+    "copy-from": "blueberries",
+    "name": { "str": "handful of cloudberries", "str_pl": "handfuls of cloudberries" },
+    "description": "Soft amber-colored berries with a tart, floral taste.",
+    "color": "yellow",
+    "weight": "100 g",
+    "volume": "170 ml",
+    "calories": 51,
+    "spoils_in": "2 days",
+    "vitamins": [ [ "vitC", "95000 μg" ], [ "fruit_allergen", 1 ] ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "atlas_lingonberry",
+    "copy-from": "blueberries",
+    "name": { "str": "handful of lingonberries", "str_pl": "handfuls of lingonberries" },
+    "description": "Firm red berries with a sharp, tart taste.",
+    "color": "red",
+    "weight": "100 g",
+    "volume": "170 ml",
+    "calories": 44,
+    "spoils_in": "5 days",
+    "vitamins": [ [ "vitC", "8000 μg" ], [ "fruit_allergen", 1 ] ]
+  }
+]

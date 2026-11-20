@@ -616,16 +616,16 @@ struct advanced_inv_sorter {
                 }
                 break;
             case SORTBY_DAMAGE: {
-                const double dam1 = d1.items.front()->average_dps( get_player_character() );
-                const double dam2 = d2.items.front()->average_dps( get_player_character() );
+                const double dam1 = d1.sort_value;
+                const double dam2 = d2.sort_value;
                 if( dam1 != dam2 ) {
                     return dam1 > dam2;
                 }
                 break;
             }
             case SORTBY_AMMO: {
-                const std::string a1 = d1.items.front()->ammo_sort_name();
-                const std::string a2 = d2.items.front()->ammo_sort_name();
+                const std::string &a1 = d1.sort_ammo_name;
+                const std::string &a2 = d2.sort_ammo_name;
                 // There are many items with "false" ammo types (e.g.
                 // scrap metal has "components") that actually is not
                 // used as ammo, so we consider them as non-ammo.
@@ -662,35 +662,29 @@ struct advanced_inv_sorter {
             }
             break;
             case SORTBY_SPOILAGE: {
-                const float mult1 = d1.items.front().spoil_multiplier();
-                const float mult2 = d2.items.front().spoil_multiplier();
-                const int order1 = d1.items.front()->spoilage_sort_order( mult1 );
-                const int order2 = d2.items.front()->spoilage_sort_order( mult2 );
+                const double order1 = d1.sort_value;
+                const double order2 = d2.sort_value;
                 if( order1 != order2 ) {
                     return order1 < order2;
                 }
             }
             break;
             case SORTBY_PRICE:
-                if( d1.items.front()->price( true ) != d2.items.front()->price( true ) ) {
-                    return d1.items.front()->price( true ) > d2.items.front()->price( true );
+                if( d1.sort_value != d2.sort_value ) {
+                    return d1.sort_value > d2.sort_value;
                 }
                 break;
             case SORTBY_PRICEPERVOLUME: {
-                const double price_density1 = static_cast<double>( d1.items.front()->price( true ) ) /
-                                              static_cast<double>( std::max( 1, d1.items.front()->volume().value() ) );
-                const double price_density2 = static_cast<double>( d2.items.front()->price( true ) ) /
-                                              static_cast<double>( std::max( 1, d2.items.front()->volume().value() ) );
+                const double price_density1 = d1.sort_value;
+                const double price_density2 = d2.sort_value;
                 if( price_density1 != price_density2 ) {
                     return price_density1 > price_density2;
                 }
                 break;
             }
             case SORTBY_PRICEPERWEIGHT: {
-                const double price_density1 = static_cast<double>( d1.items.front()->price( true ) ) /
-                                              static_cast<double>( std::max<std::int64_t>( 1, d1.items.front()->weight().value() ) );
-                const double price_density2 = static_cast<double>( d2.items.front()->price( true ) ) /
-                                              static_cast<double>( std::max<std::int64_t>( 1, d2.items.front()->weight().value() ) );
+                const double price_density1 = d1.sort_value;
+                const double price_density2 = d2.sort_value;
                 if( price_density1 != price_density2 ) {
                     return price_density1 > price_density2;
                 }
@@ -820,7 +814,36 @@ void advanced_inventory::recalc_pane( side p )
         pane.add_items_from_area( squares[pane.get_area()] );
     }
 
-    // Sort all items
+    // Sorting can compare the same item many times; evaluate expensive keys once.
+    if( pane.items.size() > 1 ) {
+        for( advanced_inv_listitem &entry : pane.items ) {
+            switch( pane.sortby ) {
+                case SORTBY_DAMAGE:
+                    entry.sort_value = entry.items.front()->average_dps( player_character );
+                    break;
+                case SORTBY_AMMO:
+                    entry.sort_ammo_name = entry.items.front()->ammo_sort_name();
+                    break;
+                case SORTBY_SPOILAGE:
+                    entry.sort_value = entry.items.front()->spoilage_sort_order(
+                                           entry.items.front().spoil_multiplier() );
+                    break;
+                case SORTBY_PRICE:
+                    entry.sort_value = entry.items.front()->price( true );
+                    break;
+                case SORTBY_PRICEPERVOLUME:
+                    entry.sort_value = static_cast<double>( entry.items.front()->price( true ) ) /
+                                       std::max( 1, entry.items.front()->volume().value() );
+                    break;
+                case SORTBY_PRICEPERWEIGHT:
+                    entry.sort_value = static_cast<double>( entry.items.front()->price( true ) ) /
+                                       std::max<std::int64_t>( 1, entry.items.front()->weight().value() );
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
     std::stable_sort( pane.items.begin(), pane.items.end(), advanced_inv_sorter( pane.sortby ) );
 
     // Attempt to move to the target item if there is one.

@@ -88,7 +88,9 @@ class start_location
          * in the world.
          */
         std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
-                find_player_initial_location( const point_abs_om &origin, bool outskirts = false ) const;
+                find_player_initial_location( const point_abs_om &origin ) const;
+        std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
+                find_player_initial_location_on_outskirts( const point_abs_om &origin ) const;
         /**
          * Find a suitable start location on the overmap in specific city.
          * @return Global, absolute overmap terrain coordinates where the player should spawn.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import nturl2path
 import os
 import shutil
 import subprocess
@@ -10,7 +11,9 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
+from urllib.parse import unquote
 
 try:
     from . import mod_sdk
@@ -32,6 +35,40 @@ return ccb
 
 
 class ModSdkTest(unittest.TestCase):
+    def test_windows_diagnostic_paths(self):
+        cases = {
+            "file:///c%3A/Mod%20Files/invalid.lua":
+                r"C:\Mod Files\invalid.lua",
+            "file:///c%3a/Mod%2520Files/invalid.lua":
+                r"C:\Mod%20Files\invalid.lua",
+            "file:///c:/Mods/invalid.lua": r"C:\Mods\invalid.lua",
+            "file://localhost/c%3A/Mods/invalid.lua":
+                r"C:\Mods\invalid.lua",
+            "file://server/share/Mod%20Files/invalid.lua":
+                r"\\server\share\Mod Files\invalid.lua",
+        }
+        with patch.object(mod_sdk.os, "name", "nt"), patch.object(
+                mod_sdk, "url2pathname", nturl2path.url2pathname):
+            for uri, expected in cases.items():
+                with self.subTest(uri=uri):
+                    self.assertEqual(mod_sdk.diagnostic_path(uri), expected)
+
+    def test_posix_diagnostic_paths(self):
+        cases = {
+            "file:///home/Mod%20Files/invalid.lua":
+                "/home/Mod Files/invalid.lua",
+            "file:///home/Mod%2520Files/invalid.lua":
+                "/home/Mod%20Files/invalid.lua",
+            "file://localhost/home/invalid.lua": "/home/invalid.lua",
+            "file:///c%3A/invalid.lua": "/c:/invalid.lua",
+            "untitled:invalid.lua": "untitled:invalid.lua",
+        }
+        with patch.object(mod_sdk.os, "name", "posix"), patch.object(
+                mod_sdk, "url2pathname", unquote):
+            for uri, expected in cases.items():
+                with self.subTest(uri=uri):
+                    self.assertEqual(mod_sdk.diagnostic_path(uri), expected)
+
     def make_sdk(
         self, root: Path, name: str, text: str = DECLARATIONS,
     ) -> Path:
@@ -254,6 +291,30 @@ class ModSdkTest(unittest.TestCase):
                             ValueError, "LuaLS report for"):
                         mod_sdk.check_mod(mod, "luals")
 
+    def test_encoded_windows_drive_preserves_path_escaping(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.make_sdk(Path(directory), "example")
+
+            def diagnose(command, **kwargs):
+                log = next(part.split("=", 1)[1] for part in command
+                           if part.startswith("--logpath="))
+                uri = "file:///C%3A/path%20with%20spaces/percent%2520.lua"
+                report = {uri: [{
+                    "range": {"start": {"line": 1, "character": 2}},
+                    "code": "undefined-global", "message": "test"}]}
+                (Path(log) / "check.json").write_text(
+                    json.dumps(report), encoding="utf-8")
+                return subprocess.CompletedProcess(command, 0, "", "")
+
+            with (
+                patch.object(mod_sdk.subprocess, "run", side_effect=diagnose),
+                patch.object(mod_sdk, "url2pathname", nturl2path.url2pathname),
+                patch.object(mod_sdk, "os", SimpleNamespace(name="nt")),
+            ):
+                self.assertEqual(mod_sdk.check_mod(mod, "luals"), [
+                    "C:\\path with spaces\\percent%20.lua:2:3: "
+                    "undefined-global: test"])
+
     def test_checker_crash_is_not_a_clean_report(self):
         with tempfile.TemporaryDirectory() as directory:
             mod = self.make_sdk(Path(directory), "example")
@@ -472,12 +533,14 @@ ccb.runtime.handler()
             report = "\n".join(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"])
             )
-            self.assertIn(str(invalid) + ":2:", report)
+            filename = os.path.normcase(str(invalid))
+            locations = os.path.normcase(report)
+            self.assertIn(filename + ":2:", locations)
             self.assertIn("param-type-mismatch", report)
             self.assertIn("fun(payload: any):any", report)
-            self.assertIn(str(invalid) + ":3:", report)
+            self.assertIn(filename + ":3:", locations)
             self.assertIn("nonexistent_api", report)
-            self.assertIn(str(invalid) + ":5:", report)
+            self.assertIn(filename + ":5:", locations)
             self.assertIn("missing-parameter", report)
             result = subprocess.run(
                 [sys.executable, str(ROOT / "tools/lua_api/mod_sdk.py"),

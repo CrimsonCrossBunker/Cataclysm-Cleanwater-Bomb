@@ -2,6 +2,8 @@
 #ifndef CATA_SRC_MP_INVENTORY_ACTIVITY_H
 #define CATA_SRC_MP_INVENTORY_ACTIVITY_H
 
+#include <mp_item_source.h>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -10,91 +12,90 @@
 #include <vector>
 
 #include "character_id.h"
-#include "mp_peek.h"
 #include "coordinates.h"
 #include "item_source.h"
+#include "mp_peek.h"
 #include "type_id.h"
 #include "walking.h"
 
-struct appliance_connection_selection;
-struct deployed_furniture_selection;
-struct terrain_examine_selection;
-struct safe_interaction;
-struct fireplace_selection;
-struct appliance_conversion_selection;
-struct grab_selection;
-struct hauling_selection;
-struct insert_selection;
-struct item_move_selection;
-struct ground_food_target;
-struct construction_selection;
 class Character;
-struct walk_move_choices;
-struct vertical_move_selection;
-struct sleep_selection;
-struct wait_selection;
-struct vertical_move_prompt;
-struct bionic;
-struct bionic_activation_choices;
-struct butchery_selection;
-struct disassembly_selection;
-struct item_activation_choices;
-struct martial_style_choice;
-struct vehicle_control_selection;
-class craft_command;
-class item;
-class item_location;
 class JsonObject;
 class JsonOut;
+class craft_command;
+class dialogue_window;
+class item;
+class item_location;
 class map;
 class player_activity;
 class repair_activity_actor;
-struct spell_casting_prompt;
-class dialogue_window;
 class talker;
-
-enum class zone_scope;
 class zone_edit_session;
-struct zone_edit_batch;
+enum class zone_scope;
+struct appliance_connection_selection;
+struct appliance_conversion_selection;
+struct bionic;
+struct bionic_activation_choices;
+struct butchery_selection;
+struct construction_selection;
+struct deployed_furniture_selection;
+struct disassembly_selection;
 struct farming_command;
+struct fireplace_selection;
+struct grab_selection;
+struct ground_food_target;
+struct hauling_selection;
+struct insert_selection;
+struct item_activation_choices;
+struct item_move_selection;
+struct martial_style_choice;
+struct safe_interaction;
+struct sleep_selection;
+struct spell_casting_prompt;
+struct terrain_examine_selection;
+struct vehicle_control_selection;
+struct vertical_move_prompt;
+struct vertical_move_selection;
+struct wait_selection;
+struct zone_edit_batch;
+
 namespace charcoal_kiln
 {
 struct command;
-}
+} // namespace charcoal_kiln
 
 namespace smoking_rack
 {
 struct command;
-}
+} // namespace smoking_rack
 
 namespace fermentation_vessel
 {
 struct command;
-}
+} // namespace fermentation_vessel
 namespace keg
 {
 struct command;
-}
+} // namespace keg
 namespace furniture_reload
 {
 struct command;
-}
+} // namespace furniture_reload
 namespace arc_furnace
 {
 struct completion;
-}
+} // namespace arc_furnace
 namespace stook
 {
 struct command;
-}
+} // namespace stook
 namespace autoclave
 {
 struct command;
-}
+} // namespace autoclave
 namespace mill
 {
 struct command;
-}
+} // namespace mill
 
 namespace item_repair
 {
@@ -104,11 +105,12 @@ struct repair_target;
 
 namespace cata_mp
 {
-struct pickup_host_state;
 struct equipment_intent;
-struct unload_intent;
-struct owned_dialogue_session;
 struct npc_trade_prompt;
+struct owned_dialogue_session;
+struct pickup_host_state;
+struct unload_intent;
+
 struct dialogue_view_option {
     std::string text;
     std::string color;
@@ -260,7 +262,7 @@ void client_start_mending( const item_location &target, item_repair::mending_sel
 bool client_start_selected_repair( const item_location &tool, const std::string &method,
                                    const item_repair::repair_target &target );
 void client_start_item_move( const item_move_selection &selection );
-void client_start_smash( const tripoint_bub_ms &target );
+void client_start_smash( const tripoint_bub_ms &position );
 void client_start_owned_wear( const std::vector<equipment_intent> &selection );
 bool client_start_read( const item_location &book, const item_location &ereader,
                         bool continuous = false, int learner_id = -1 );

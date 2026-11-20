@@ -1,21 +1,22 @@
 #include "iuse_actor.h"
 
-#include <cstdint>
-
-#include "item_activation.h"
-#include "item_source.h"
-#include "inventory_ui.h"
-
+#include <cached_options.h>
+#include <cata_scope_helpers.h>
 #include <color.h>
+#include <craft_command.h>
 #include <imgui/imgui.h>
+#include <item_uid.h>
 #include <iuse.h>
 #include <ret_val.h>
+#include <tool_activity_target.h>
 #include <translation.h>
 #include <units.h>
+#include <vehicle_power_connection.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -35,10 +36,8 @@
 #include "cata_imgui.h"
 #include "character.h"
 #include "character_action_guard.h"
-#include "charcoal_kiln.h"
-#include "smoking_rack.h"
-#include "repair_activity.h"
 #include "character_id.h"
+#include "charcoal_kiln.h"
 #include "clothing_mod.h"
 #include "clzones.h"
 #include "condition.h"
@@ -64,23 +63,22 @@
 #include "game_inventory.h"
 #include "generic_factory.h"
 #include "hsv_color.h"
-#include "iexamine.h"
 #include "input_popup.h"
+#include "inventory_ui.h"
 #include "item.h"
-#include "item_healing.h"
+#include "item_activation.h"
 #include "item_components.h"
 #include "item_contents.h"
+#include "item_healing.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_source.h"
 #include "item_transformation.h"
 #include "itype.h"
 #include "localized_comparator.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
-#include "north_america.h"
-#include "mp_gamestate.h"
-#include "mp_client_conn.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "map_selector.h"
@@ -89,9 +87,11 @@
 #include "memory_fast.h"
 #include "messages.h"
 #include "monster.h"
+#include "mp_client_conn.h"
 #include "mtype.h"
 #include "music.h"
 #include "mutation.h"
+#include "north_america.h"
 #include "npc.h"
 #include "options.h"
 #include "output.h"
@@ -105,9 +105,11 @@
 #include "projectile.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
+#include "repair_activity.h"
 #include "requirements.h"
 #include "rng.h"
 #include "safe_reference.h"
+#include "smoking_rack.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "talker.h"
@@ -1960,7 +1962,7 @@ bool firestarter_actor::query_fire_choices( Character &who, const item &tool, ma
     choices = {};
     const character_action_guard lifetime( who );
     const auto context = here.get_context_reference();
-    const auto origin = who.pos_abs();
+    const tripoint_abs_ms origin = who.pos_abs();
     const bool needs_tinder = tool.has_flag( flag_REQUIRES_TINDER );
     if( !can_use( who, tool, &here, position ).success() ||
         prep_firestarter_use( who, &here, position, true ) == start_type::NONE ||
@@ -2188,11 +2190,11 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
     }
 
     // Multi-turn activity.
-    item_location tool_loc( who, &tool );
+    item_location tool_loc = form_loc_recursive( who, tool );
     who.assign_activity( fire_start_activity_actor(
                              here.get_abs( fire_pos ), tool_loc,
                              potential_skill_gain, moves, tinder_consumed ) );
-    return true;
+    return static_cast<bool>( who.activity );
 }
 
 void salvage_actor::load( const JsonObject &obj, const std::string & )
@@ -2593,7 +2595,7 @@ bool salvage_actor::cut_up( Character &p, item &cutter, item_location &cut ) con
     const auto context = here.get_context_reference();
     const auto tool = cutter.get_safe_reference();
     const itype_id cutter_type = cutter.typeId();
-    const auto origin = p.pos_abs();
+    const tripoint_abs_ms origin = p.pos_abs();
     const uint64_t generation = p.activity.identity_generation();
     const item_source source = capture_item_source( p, cut );
     if( resolve_item_source( p, here, source ) != cut ) {
@@ -3745,7 +3747,7 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
     std::vector<item_comp> comps;
     for( const itype_id &component_id : valid_entries ) {
         if( item::count_by_charges( component_id ) ) {
-            if( crafting_inv.has_charges( component_id, items_needed ) ) {
+            if( crafting_inv.has_charges( component_id, items_needed, filter ) ) {
                 comps.emplace_back( component_id, items_needed );
             }
         } else if( crafting_inv.has_amount( component_id, items_needed, false, filter ) ) {
@@ -3761,8 +3763,8 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
                                       _( "You don't have enough clean \"%1$s\" to do that.  Have: %2$d, need: %3$d" ),
                                       item::nname( mat_comp, 2 ),
                                       item::find_type( mat_comp )->count_by_charges() ?
-                                      crafting_inv.charges_of( mat_comp, items_needed ) :
-                                      crafting_inv.amount_of( mat_comp, false ),
+                                      crafting_inv.charges_of( mat_comp, items_needed, filter ) :
+                                      crafting_inv.amount_of( mat_comp, false, std::numeric_limits<int>::max(), filter ),
                                       items_needed );
             }
         }
@@ -4110,11 +4112,12 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
 
     if( roll == SUCCESS && ( action == RT_REPAIR || action == RT_REFIT ||
                              action == RT_DOWNSIZING || action == RT_UPSIZING ) ) {
-        if( !handle_components( pl, *fix, false, false, true, material ) || !lifetime || !fix ) {
+        if( !handle_components( pl, *fix, false, true, true, material ) || !lifetime || !fix ) {
             return AS_CANT;
         }
     }
 
+    // Consuming components can spill and relocate the workpiece, so apply the repair first.
     if( action == RT_REPAIR ) {
         if( roll == SUCCESS ) {
             const std::string startdurability = fix->durability_indicator( true );
@@ -4129,7 +4132,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                 pl.add_msg_if_player( m_good, _( "You repair your %s completely!  ( %s-> %s)" ),
                                       fix->tname( 1, false ), startdurability, resultdurability );
             }
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
 
         return AS_RETRY;
@@ -4144,7 +4147,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
 
                 pl.calc_encumbrance();
             }
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
 
         return AS_RETRY;
@@ -4157,7 +4160,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->set_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
         return AS_RETRY;
     }
@@ -4169,7 +4172,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->unset_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
         return AS_RETRY;
     }
@@ -5216,7 +5219,8 @@ void molle_detach_actor::load( const JsonObject &jo, const std::string & )
 std::optional<int> install_bionic_actor::use( Character *p, item &it,
         map *, const tripoint_bub_ms & ) const
 {
-    if( p->can_install_bionics( *it.type, *p, false ) ) {
+    const auto source = it.get_safe_reference();
+    if( p->can_install_bionics( *it.type, *p, false ) && source ) {
         if( !p->has_trait( trait_DEBUG_BIONICS ) && !p->has_flag( json_flag_MANUAL_CBM_INSTALLATION ) ) {
             p->consume_installation_requirement( it.type->bionic->id );
             p->consume_anesth_requirement( *it.type, *p );
@@ -6148,7 +6152,7 @@ std::optional<prepared_cable_extension> prepare_cable_extension( Character &who,
 bool link_up_actor::confirm_cable_extension( Character &who, item_location cable,
         item_location selected, bool &allow_spill ) const
 {
-    const auto work = prepare_cable_extension( who, *this, cable, selected );
+    const auto work = prepare_cable_extension( who, *this, std::move( cable ), std::move( selected ) );
     if( !work ) {
         return false;
     }
@@ -6162,7 +6166,7 @@ bool link_up_actor::confirm_cable_extension( Character &who, item_location cable
 std::optional<int> link_up_actor::extend_cable( Character &who, map &here, item_location cable,
         item_location selected, bool allow_spill ) const
 {
-    const auto work = prepare_cable_extension( who, *this, cable, selected );
+    const auto work = prepare_cable_extension( who, *this, std::move( cable ), std::move( selected ) );
     if( !work || ( work->needs_spill && !allow_spill ) ) {
         return std::nullopt;
     }

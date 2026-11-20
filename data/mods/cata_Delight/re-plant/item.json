@@ -176,7 +176,7 @@
     "id": "tsow_humus",
     "subtypes": [ "GENERIC" ],
     "category": "spare_parts",
-    "name": { "str": "Humus" },
+    "name": { "str_sp": "Humus" },
     "description": "A rich organic humus made by mixing earthworms, soil, and straw piles, ideal for making fertile soil.",
     "weight": "250 g",
     "volume": "250 ml",

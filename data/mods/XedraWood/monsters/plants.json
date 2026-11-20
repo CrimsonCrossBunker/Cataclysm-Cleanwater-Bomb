@@ -54,7 +54,7 @@
     ],
     "dodge": 2,
     "death_function": { "message": "The %s collapses into a heap of wood and leaves.", "corpse_type": "NO_CORPSE" },
-    "flags": [ "HEARS", "GOODHEARING", "IMMOBILE", "NOHEAD", "HARDTOSHOOT", "GRABS", "PLASTIC", "BULLETPROOF" ],
+    "flags": [ "HEARS", "GOODHEARING", "IMMOBILE", "NOHEAD", "HARDTOSHOOT", "GRABS", "PLASTIC", "BULLETPROOF", "NO_FUNG_DMG" ],
     "armor": { "bash": 18, "stab": 10, "electric": 3 },
     "death_drops": "tanglevine_death_drops"
   }

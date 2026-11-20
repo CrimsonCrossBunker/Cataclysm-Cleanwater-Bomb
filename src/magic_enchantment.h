@@ -200,6 +200,8 @@ class enchantment
 
         // this enchantment has a valid condition and is in the right location
         bool is_active( const Character &guy, const item &parent ) const;
+        // The caller has already established ownership of this item.
+        bool is_active_for_owned_item( const Character &guy, const item &parent ) const;
 
         // this enchantment has a valid item independent conditions
         // @active means the container for the enchantment is active, for comparison to active flag.

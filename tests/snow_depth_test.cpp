@@ -1,6 +1,8 @@
-#include "cata_catch.h"
+#include <string>
+#include <unordered_map>
 
 #include "calendar.h"
+#include "cata_catch.h"
 #include "character.h"
 #include "coordinates.h"
 #include "map.h"
@@ -10,6 +12,7 @@
 #include "type_id.h"
 #include "weather.h"
 
+static const weather_type_id weather_sunny( "sunny" );
 TEST_CASE( "snowpack_accumulates_settles_and_loses_water", "[snow][weather]" )
 {
     omt_snow_state pack;
@@ -54,17 +57,17 @@ TEST_CASE( "snow_is_queried_per_ground_weather_cell", "[snow][weather]" )
 {
     weather_manager &weather = get_weather();
     weather.snow_depth_map.clear();
-    weather.weather_id = weather_type_id( "sunny" );
-    const tripoint_abs_omt near( -1, 0, 0 );
+    weather.weather_id = weather_sunny;
+    const tripoint_abs_omt near_cell( -1, 0, 0 );
     const tripoint_abs_omt same_cell( -2, 0, 0 );
     const tripoint_abs_omt other_cell( 0, 0, 0 );
-    REQUIRE( snow_climate_cell( near ) == snow_climate_cell( same_cell ) );
-    REQUIRE( snow_climate_cell( near ) != snow_climate_cell( other_cell ) );
-    weather.snow_depth_map[snow_climate_cell( near )] = { 550, calendar::turn };
+    REQUIRE( snow_climate_cell( near_cell ) == snow_climate_cell( same_cell ) );
+    REQUIRE( snow_climate_cell( near_cell ) != snow_climate_cell( other_cell ) );
+    weather.snow_depth_map[snow_climate_cell( near_cell )] = { 550, calendar::turn };
     weather.snow_depth_map[snow_climate_cell( other_cell )] = { 50, calendar::turn };
     CHECK( weather.get_snow_depth_mm( same_cell ) == 550 );
     CHECK( weather.get_snow_depth_mm( other_cell ) == 50 );
-    CHECK( weather.get_snow_depth_mm( near + tripoint::below ) == 0 );
+    CHECK( weather.get_snow_depth_mm( near_cell + tripoint::below ) == 0 );
     weather.snow_depth_map.clear();
 }
 
@@ -74,7 +77,7 @@ TEST_CASE( "snow_movement_penalty", "[snow][movement]" )
     clear_character( get_player_character() );
     weather_manager &weather = get_weather();
     weather.snow_depth_map.clear();
-    weather.weather_id = weather_type_id( "sunny" );
+    weather.weather_id = weather_sunny;
 
     Character &player = get_player_character();
     map &here = get_map();

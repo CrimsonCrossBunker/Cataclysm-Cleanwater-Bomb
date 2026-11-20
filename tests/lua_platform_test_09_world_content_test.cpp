@@ -5,7 +5,6 @@
 #include <debug.h>
 #include <dialogue.h>
 #include <enums.h>
-#include "flexbuffer_json.h"
 #include <game.h>
 #include <item.h>
 #include <item_uid.h>
@@ -18,6 +17,7 @@
 #include <lua_platform_world.h>
 #include <lua_platform_world_content.h>
 #include <map.h>
+#include <map_helpers.h>
 #include <mapbuffer.h>
 #include <math_parser_diag_value.h>
 #include <overmap_ui.h>
@@ -47,10 +47,12 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "global_vars.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_test_map_support.h"
 #include "map_scale_constants.h"
+#include "player_helpers.h"
 
 using cata::lua_platform::test::platform_overmap_travel_fixture;
 #include "lua_platform_test_support.h"
@@ -765,8 +767,23 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
     // submap-copy acceptance does not generate several unrelated overmaps.
     const tripoint_abs_omt source = fixture.source_omt + tripoint( 20, 20, 0 );
     const tripoint_abs_omt destination = source + tripoint( 19, -7, 0 );
-    const tripoint_abs_omt missing_source = source + tripoint( 40, 41, 0 );
-    const tripoint_abs_omt missing_destination = missing_source + tripoint( 13, 17, 0 );
+    const auto has_submaps = []( const tripoint_abs_omt & position ) {
+        const tripoint_abs_sm base = project_to<coords::sm>( position );
+        for( int x = 0; x < 2; ++x ) {
+            for( int y = 0; y < 2; ++y ) {
+                if( MAPBUFFER.submap_exists( base + point( x, y ) ) ) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    tripoint_abs_omt missing_source = source + tripoint( 40, 41, 0 );
+    tripoint_abs_omt missing_destination = missing_source + tripoint( 13, 17, 0 );
+    while( has_submaps( missing_source ) || has_submaps( missing_destination ) ) {
+        missing_source += tripoint::east;
+        missing_destination += tripoint::east;
+    }
     const tripoint_abs_sm source_base = project_to<coords::sm>( source );
     const tripoint_abs_ms source_position = project_to<coords::ms>( source );
     const tripoint_abs_ms destination_position = project_to<coords::ms>( destination );
@@ -1376,7 +1393,8 @@ TEST_CASE( "lua_platform_weather_write_controls_apply_valid_overrides",
         weather_manager_ref.windspeed_override = saved_windspeed_override;
         weather_manager_ref.nextweather = saved_nextweather;
         weather_manager_ref.temperature_cache = saved_temperature_cache;
-        if constexpr( weather_precise_copyable ) {
+        if constexpr( std::is_copy_constructible_v<weather_precise_type> &&
+                      std::is_copy_assignable_v<weather_precise_type> ) {
             *weather_manager_ref.weather_precise = *saved_weather_precise;
         }
     } );
@@ -1465,6 +1483,8 @@ TEST_CASE( "lua_platform_world_spawn_item_matches_native_direct_item_initializat
            "[lua][platform][world][spawn_item]" )
 {
     REQUIRE( g != nullptr );
+    clear_avatar();
+    clear_map_without_vision();
     platform_world_spawn_contract_fixture fixture;
     map &here = get_map();
     const tripoint_abs_ms position = get_avatar().pos_abs();
@@ -1519,6 +1539,7 @@ TEST_CASE( "lua_platform_world_spawn_item_matches_native_direct_item_initializat
     native_flyer.preserve_location( position );
     item &native_flyer_added = here.add_item_or_charges(
                                    local, std::move( native_flyer ) );
+    REQUIRE_FALSE( native_flyer_added.is_null() );
     const std::int64_t native_flyer_uid = native_flyer_added.uid().get_value();
     spawned_uids.push_back( native_flyer_uid );
 

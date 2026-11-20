@@ -2,9 +2,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 namespace android_imgui_touch
 {
+
+bool should_capture( bool new_ui, bool window_shown, std::string_view input_scene )
+{
+    return new_ui && window_shown && input_scene != "gameplay.choose_direction";
+}
 
 namespace
 {

@@ -118,15 +118,18 @@ class TransifexInstallTest(unittest.TestCase):
             binary_dir = path / "bin"
             binary_dir.mkdir()
             sudo = binary_dir / "sudo"
-            sudo.write_text("""#!/usr/bin/env python3
-import os, sys
-args = sys.argv[1:]
-assert args[0] == "tar"
-assert args[args.index("-C") + 1] == "/usr/bin"
-args[args.index("-C") + 1] = os.environ["TEST_INSTALL_DIR"]
-os.execvp(args[0], args)
+            sudo.write_text("""#!/bin/sh
+if [ "$#" -ne 6 ] || [ "$1" != tar ] || [ "$2" != -xzf ] ||
+   [ "$4" != -C ] || [ "$5" != /usr/bin ] || [ "$6" != tx ]; then
+    exit 1
+fi
+exec tar -xzf "$3" -C "$TEST_INSTALL_DIR" tx
 """)
             sudo.chmod(0o755)
+            shell_path = subprocess.run(
+                ["bash", "-c", 'cd "$1" && pwd -P', "bash", path.as_posix()],
+                capture_output=True, text=True, check=True,
+            ).stdout.strip()
             server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
@@ -138,8 +141,8 @@ os.execvp(args[0], args)
                 )
                 env = dict(os.environ)
                 env.update(
-                    RUNNER_TEMP=str(path),
-                    TEST_INSTALL_DIR=str(install_dir),
+                    RUNNER_TEMP=shell_path,
+                    TEST_INSTALL_DIR=shell_path + "/installed",
                     PATH=str(binary_dir) + os.pathsep + os.environ["PATH"],
                 )
                 result = subprocess.run(

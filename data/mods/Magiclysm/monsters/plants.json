@@ -61,6 +61,7 @@
     "id": "mon_tanglevine_triffid",
     "copy-from": "mon_tanglevine",
     "species": [ "PLANT", "SUMMONED_CREATURE" ],
-    "default_faction": "triffid"
+    "default_faction": "triffid",
+    "extend": { "flags": [ "NO_FUNG_DMG" ] }
   }
 ]

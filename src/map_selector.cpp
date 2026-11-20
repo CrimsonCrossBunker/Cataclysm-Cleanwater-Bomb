@@ -5,9 +5,11 @@
 #include <optional>
 #include <vector>
 
+#include "coordinates.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "point.h"
 #include "rng.h"
 
 class game;
@@ -27,8 +29,8 @@ map_selector::map_selector( const tripoint_bub_ms &pos, int radius, bool accessi
 tripoint_range<tripoint_bub_ms> points_in_range_bub( const map &m )
 {
     return tripoint_range<tripoint_bub_ms>(
-               tripoint_bub_ms( 0, 0, -OVERMAP_DEPTH ),
-               tripoint_bub_ms( SEEX * m.getmapsize() - 1, SEEY * m.getmapsize() - 1, OVERMAP_HEIGHT ) );
+               tripoint_bub_ms( 0, 0, m.min_z() ),
+               tripoint_bub_ms( SEEX * m.getmapsize() - 1, SEEY * m.getmapsize() - 1, m.max_z() ) );
 }
 
 tripoint_range<tripoint_bub_ms> points_in_level_range( const map &m, const int z )

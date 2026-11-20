@@ -191,6 +191,26 @@
   },
   {
     "type": "mapgen",
+    "nested_mapgen_id": "24x24_road_straight_vehicles_city_ew",
+    "object": {
+      "mapgensize": [ 24, 24 ],
+      "place_nested": [
+        {
+          "chunks": [
+            [ "24x24_road_vehicles_city_wrecks_east", 132 ],
+            [ "24x24_road_vehicles_city_wrecks_west", 132 ],
+            [ "24x24_road_vehicles_city_parked_east", 264 ],
+            [ "24x24_road_vehicles_city_parked_west", 264 ],
+            [ "24x24_road_vehicles_special", 12 ]
+          ],
+          "x": 0,
+          "y": 0
+        }
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
     "nested_mapgen_id": "24x24_road_curved_vehicles",
     "object": {
       "mapgensize": [ 24, 24 ],

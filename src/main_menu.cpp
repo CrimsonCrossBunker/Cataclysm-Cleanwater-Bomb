@@ -17,6 +17,7 @@
 #include <functional>
 #include <initializer_list>
 #include <istream>
+#include <iterator>
 #include <locale>
 #include <map>
 #include <memory>
@@ -67,7 +68,6 @@
 #include "overmapbuffer.h"
 #include "path_info.h"
 #include "popup.h"
-#include "rng.h"
 #include "safemode_ui.h"
 #include "save_snapshot.h"
 #include "scenario.h"
@@ -86,7 +86,7 @@
 #include "worldfactory.h"
 
 static const mod_id MOD_INFORMATION_ccb( "ccb" );
-static const mod_id MOD_INFORMATION_ccb_tutorial( "dda_tutorial" );
+static const mod_id MOD_INFORMATION_dda_tutorial( "dda_tutorial" );
 
 namespace
 {
@@ -730,10 +730,9 @@ void main_menu::display_sub_menu( int sel, const point &bottom_left, int sel_lin
     // bottom_left is the horizontal center of the selected menu button.
     // Center the submenu window on it and keep the window fully inside the
     // terminal, so it lines up with the button at any display scale.
-    const int win_x = std::clamp( bottom_left.x - window_width / 2, 0,
-                                  std::max( 0, TERMX - window_width ) );
-    const int win_y = std::max( 0, bottom_left.y - ( window_height - 1 ) );
-    point top_left( win_x, win_y );
+    const point top_left( std::clamp( bottom_left.x - window_width / 2, 0,
+                                      std::max( 0, TERMX - window_width ) ),
+                          std::max( 0, bottom_left.y - ( window_height - 1 ) ) );
 
     if( static_cast<size_t>( height ) != sub_opts.size() ) {
         if( sel2 < sub_opt_off ) {
@@ -1200,7 +1199,7 @@ bool main_menu::start_tutorial()
     }
     world->active_mod_order.clear();
     world->active_mod_order.emplace_back( MOD_INFORMATION_ccb );
-    world->active_mod_order.emplace_back( MOD_INFORMATION_ccb_tutorial );
+    world->active_mod_order.emplace_back( MOD_INFORMATION_dda_tutorial );
     world_generator->set_active_world( world );
     try {
         g->setup();
@@ -2078,15 +2077,8 @@ bool main_menu::new_character_tab()
                 }
 
                 world_generator->set_active_world( world );
-                // Roll the world seed before character creation: the
-                // character creator may touch the overmap, and everything
-                // this world generates must share one seed.  Worlds with
-                // saves instead restore their seed from the master save.
-                if( world->world_saves.empty() ) {
-                    g->set_seed( rng_bits() );
-                }
                 try {
-                    if( !g->setup() ) {
+                    if( !g->setup() || !g->load_new_character_world() ) {
                         continue;
                     }
                 } catch( const std::exception &err ) {
@@ -2133,15 +2125,8 @@ bool main_menu::new_character_tab()
             return false;
         }
         world_generator->set_active_world( world );
-        // Roll the world seed before character creation: the
-        // character creator may touch the overmap, and everything
-        // this world generates must share one seed.  Worlds with
-        // saves instead restore their seed from the master save.
-        if( world->world_saves.empty() ) {
-            g->set_seed( rng_bits() );
-        }
         try {
-            if( !g->setup() ) {
+            if( !g->setup() || !g->load_new_character_world() ) {
                 return false;
             }
         } catch( const std::exception &err ) {
@@ -2403,9 +2388,10 @@ void main_menu::world_tab( const std::string &worldname )
     };
 
     auto clear_world = [this, &worldname]( bool do_delete ) {
-        // NOLINTNEXTLINE(cata-use-localized-sorting)
-        const bool shift_last_world_pos = last_world_pos > 0 &&
-                                          worldname <= world_generator->all_worldnames()[last_world_pos];
+        const std::vector<std::string> world_names = world_generator->all_worldnames();
+        const auto removed_world = std::find( world_names.begin(), world_names.end(), worldname );
+        const bool shift_last_world_pos = last_world_pos > 0 && removed_world != world_names.end() &&
+                                          static_cast<size_t>( std::distance( world_names.begin(), removed_world ) ) <= last_world_pos;
 
         // Release save and map resources before removing the directory.  Windows
         // will otherwise keep the world folder alive while one of these resources

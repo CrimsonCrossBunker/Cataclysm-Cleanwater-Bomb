@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "coordinates.h"
+#include "type_id.h"
 
 class mapgendata;
 
@@ -23,10 +24,13 @@ int named_city_size( int population );
 struct urban_district {
     point_abs_omt center;
     std::size_t city_index;
+    unsigned open_edges = 0;
 };
 
 const std::vector<urban_district> &urban_districts_in( point_abs_om pos );
-bool in_urban_footprint( point_abs_omt pos );
+bool in_urban_footprint( point_abs_omt pos, int margin = 0 );
+// Development density within a populated atlas district, from 0 to 100.
+int urban_density( const urban_district &district, point_abs_omt pos );
 int urban_district_size();
 
 inline constexpr int minimum_zoned_population = 100'000;
@@ -41,6 +45,8 @@ struct city_zone_center {
 
 const std::array<city_zone_center, 4> &city_zone_centers( std::size_t city_index );
 std::string ecoregion_code( point_abs_omt pos );
+oter_id wilderness_terrain( point_abs_omt pos, const oter_id &original );
+bool draw_native_habitat( mapgendata &dat );
 void place_native_vegetation( mapgendata &dat );
 } // namespace north_america
 

@@ -17,6 +17,7 @@ runs:
       env:
         SDL3_PREFIX: ${{ inputs.prefix }}
       run: |
+        sudo port -v sync
         # SDL_mixer VENDORED=OFF pulls every mixer codec from a system lib.
         # The macOS artifact is universal, so each (plus libiconv, a
         # transitive dep of flac/wavpack) must be +universal.

@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "avatar.h"
 #include "cata_catch.h"
 #include "creature_tracker.h"
 #include "line.h"
@@ -68,6 +69,7 @@ TEST_CASE( "monster_group_bash_matches_uncached_rays", "[monster][group_bash]" )
 {
     clear_avatar();
     clear_map_without_vision();
+    get_avatar().setpos( get_map(), tripoint_bub_ms( 40, 40, 0 ) );
     creature_tracker &tracker = get_creature_tracker();
     for( int x = 50; x <= 62; ++x ) {
         for( int y = 50; y <= 62; ++y ) {

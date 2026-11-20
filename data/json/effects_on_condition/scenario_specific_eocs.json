@@ -69,11 +69,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_BANISH_SELF",
-    "effect": [ { "u_cast_spell": { "id": "BEGONE_SHADOW" } } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_BANISH_MANSION_MONSTERS",
     "//": "Banish half the mapgen monsters from the mansion to make room for special scenario ferals",
     "effect": [

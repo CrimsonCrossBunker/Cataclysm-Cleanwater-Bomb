@@ -22,6 +22,8 @@
 #include "game_constants.h"
 #include "json_loader.h"
 #include "map_memory.h"
+
+#include "map.h"
 #include "map_scale_constants.h"
 #include "mdarray.h"
 #include "memory_fast.h"
@@ -325,7 +327,7 @@ bool map_memory::prepare_region( const tripoint_abs_ms &p1, const tripoint_abs_m
     tripoint_abs_sm sm_pos = sm_p1;
     point_rel_sm sm_size = sm_p2.xy() - sm_p1.xy();
 
-    if( sm_pos.z() == cache_pos.z() ) {
+    if( sm_pos.z() == cache_pos.z() && first_cached_z == get_map().min_z() ) {
         inclusive_rectangle<point_abs_sm> rect(
             point_abs_sm( cache_pos.xy() ),
             point_abs_sm( cache_pos.xy() + cache_size ) );
@@ -344,10 +346,11 @@ bool map_memory::prepare_region( const tripoint_abs_ms &p1, const tripoint_abs_m
     // Build off to the side: an allocation/read failure must not publish a
     // partly populated region or retire the previous usable view.
     region_cache prepared;
-    // Loop through each z-level in vision range
-    for( int z = std::max( sm_pos.z() - fov_3d_z_range, -OVERMAP_DEPTH );
-         z <= std::min( sm_pos.z() + fov_3d_z_range, OVERMAP_HEIGHT ); z++ ) {
-        auto &level = prepared[z + OVERMAP_DEPTH];
+    const int min_z = get_map().min_z();
+    const int max_z = get_map().max_z();
+    for( int z = std::max( sm_pos.z() - fov_3d_z_range, min_z );
+         z <= std::min( sm_pos.z() + fov_3d_z_range, max_z ); z++ ) {
+        auto &level = prepared[z - min_z];
         level.reserve( static_cast<std::size_t>( sm_size.x() ) * sm_size.y() );
         for( int dy = 0; dy < sm_size.y(); dy++ ) {
             for( int dx = 0; dx < sm_size.x(); dx++ ) {
@@ -358,6 +361,7 @@ bool map_memory::prepare_region( const tripoint_abs_ms &p1, const tripoint_abs_m
         }
     }
     cached = std::move( prepared );
+    first_cached_z = min_z;
     cache_pos = sm_pos;
     cache_size = sm_size.raw();
     return true;
@@ -479,11 +483,11 @@ static const tripoint_abs_sm invalid_cache_pos = tripoint_abs_sm::invalid;
 
 mm_submap *map_memory::cached_submap( const tripoint_abs_sm &sm_pos ) const
 {
-    if( !is_valid() || sm_pos.z() < -OVERMAP_DEPTH || sm_pos.z() > OVERMAP_HEIGHT ) {
+    if( !is_valid() || sm_pos.z() < first_cached_z || sm_pos.z() >= first_cached_z + OVERMAP_LAYERS ) {
         return nullptr;
     }
     const point_rel_sm idx = ( sm_pos - cache_pos ).xy();
-    const auto &level = cached[sm_pos.z() + OVERMAP_DEPTH];
+    const auto &level = cached[sm_pos.z() - first_cached_z];
     // The north/west padding is not a writable memorization region. Keep the
     // existing interior policy; every missing/outside query is a read-only miss.
     if( idx.x() > 0 && idx.y() > 0 && idx.x() < cache_size.x && idx.y() < cache_size.y &&

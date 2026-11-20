@@ -596,6 +596,7 @@ class monster : public Creature
         double pet_equipment_mounted_move_cost_multiplier() const;
 
         units::mass get_carried_weight() const;
+        units::mass get_load_weight( const Character *rider = nullptr ) const;
         units::volume get_carried_volume() const;
         void move_special_item_to_inv( cata::value_ptr<item> &it );
 

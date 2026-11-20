@@ -826,7 +826,7 @@ Creature *Creature::auto_find_hostile_target( int range, int &boo_hoo, int area 
         // TODO: what about g->u?
         return false;
     } );
-    for( Creature*&m : targets ) {
+    for( Creature *&m : targets ) {
         if( !sees( here, *m ) ) {
             // can't see nor sense it
             if( is_fake() && in_veh ) {
@@ -1029,15 +1029,27 @@ int Creature::deal_melee_attack( Creature *source, int hitroll )
 
 void Creature::deal_melee_hit( Creature *source, int hit_spread, bool critical_hit,
                                damage_instance dam, dealt_damage_instance &dealt_dam,
-                               const weakpoint_attack &attack, const bodypart_id *bp )
+                               const weakpoint_attack &attack, const bodypart_id *bp,
+                               Creature *damage_source, safe_reference<Creature> *hit_target )
 {
     map &here = get_map();
+    const auto context = here.get_context_reference();
+    const safe_reference<Creature> target_reference = get_safe_reference();
+    if( hit_target != nullptr ) {
+        *hit_target = target_reference;
+    }
 
     if( source == nullptr || source->is_hallucination() ) {
         dealt_dam.bp_hit = anatomy_human_anatomy->random_body_part();
         return;
     }
 
+    const safe_reference<Creature> source_reference = source->get_safe_reference();
+    const safe_reference<Creature> damage_reference = damage_source != nullptr ?
+            damage_source->get_safe_reference() : source_reference;
+    const auto participants_exist = [&]() {
+        return context && target_reference && source_reference && damage_reference;
+    };
     dam = source->modify_damage_dealt_with_enchantments( dam );
 
     // If carrying a rider, there is a chance the hits may hit rider instead.
@@ -1047,7 +1059,17 @@ void Creature::deal_melee_hit( Creature *source, int hit_spread, bool critical_h
         if( mons && mons->mounted_player ) {
             if( !mons->has_flag( mon_flag_MECH_DEFENSIVE ) &&
                 one_in( std::max( 2, mons->get_size() - mons->mounted_player->get_size() ) ) ) {
-                mons->mounted_player->deal_melee_hit( source, hit_spread, critical_hit, dam, dealt_dam, attack );
+                Character *const rider = mons->mounted_player;
+                if( npc *person = rider->as_npc(); person != nullptr && damage_source != nullptr &&
+                    damage_source != source ) {
+                    const safe_reference<Creature> rider_reference = rider->get_safe_reference();
+                    person->on_attacked( *damage_source );
+                    if( !participants_exist() || !rider_reference || rider->is_dead_state() ) {
+                        return;
+                    }
+                }
+                rider->deal_melee_hit( source, hit_spread, critical_hit, dam, dealt_dam,
+                                       attack, nullptr, damage_source, hit_target );
                 return;
             }
         }
@@ -1056,14 +1078,26 @@ void Creature::deal_melee_hit( Creature *source, int hit_spread, bool critical_h
     bodypart_id bp_hit = bp == nullptr ? select_body_part( -1, -1, source->can_attack_high(),
                          hit_spread ) : *bp;
     block_hit( source, bp_hit, d );
+    if( !participants_exist() ) {
+        return;
+    }
 
     weakpoint_attack attack_copy = attack;
     attack_copy.is_crit = critical_hit;
     attack_copy.type = weakpoint_attack::type_of_melee_attack( d );
 
     on_hit( &here, source, bp_hit ); // trigger on-gethit events
+    if( !participants_exist() ) {
+        return;
+    }
     dam.onhit_effects( source, this ); // on-hit effects for inflicted damage types
-    dealt_dam = deal_damage( source, bp_hit, d, attack_copy );
+    if( !participants_exist() ) {
+        return;
+    }
+    dealt_dam = deal_damage( damage_reference.get(), bp_hit, d, attack_copy );
+    if( !participants_exist() ) {
+        return;
+    }
     dealt_dam.bp_hit = bp_hit;
     if( Character *character = as_character() ) {
         character->check_mounted_balance( dealt_dam.total_damage() );

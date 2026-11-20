@@ -16,6 +16,7 @@
 #include "coordinates.h"
 #include "craft_reservation.h"
 #include "enums.h"
+#include "faction.h"
 #include "finite_water.h"
 #include "flag.h"
 #include "iexamine.h"
@@ -116,6 +117,7 @@ temp_crafting_inventory::temp_crafting_inventory( const temp_crafting_inventory 
         add_item_copy( *it );
     }
     items_loc = v.items_loc;
+    map_crafter_faction = v.map_crafter_faction;
     max_empty_liq_cont = v.max_empty_liq_cont;
 }
 
@@ -130,6 +132,7 @@ temp_crafting_inventory &temp_crafting_inventory::operator=( const temp_crafting
         add_item_copy( *it );
     }
     items_loc = v.items_loc;
+    map_crafter_faction = v.map_crafter_faction;
     max_empty_liq_cont = v.max_empty_liq_cont;
     return *this;
 }
@@ -144,6 +147,7 @@ void temp_crafting_inventory::clear()
     invalidate_query_cache();
     items.clear();
     items_loc.clear();
+    map_crafter_faction.reset();
     item_copies.clear();
     temp_owned_items.clear();
     max_empty_liq_cont.clear();
@@ -314,6 +318,10 @@ void temp_crafting_inventory::form_from_map( map &m, std::vector<tripoint_bub_ms
         const Character *pl )
 {
     clear();
+    if( pl ) {
+        const faction *owner = pl->get_faction();
+        map_crafter_faction = owner ? owner->id : faction_id::NULL_ID();
+    }
 
     std::set<vehicle *> vehicles_found;
     std::set<tripoint_abs_ms> finite_liquid_tiles_seen;

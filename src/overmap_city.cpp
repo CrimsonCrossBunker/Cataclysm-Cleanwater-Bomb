@@ -23,6 +23,7 @@
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "north_america.h"
+#include "north_america_elevation.h"
 #include "north_america_ecology.h"
 #include "north_america_transport.h"
 #include "omdata.h"
@@ -562,8 +563,8 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
         }
         const overmap_special_id regional_house = north_america::regional_house_for(
                     north_america::jurisdiction_at( project_to<coords::ms>( origin + local_center.xy().raw() ) ) );
-        for( int y = std::max( start.y, 1 ); y < std::min( stop.y, OMAPY - 1 ); ++y ) {
-            for( int x = std::max( start.x, 1 ); x < std::min( stop.x, OMAPX - 1 ); ++x ) {
+        for( int y = std::max( start.y, 0 ); y < std::min( stop.y, OMAPY ); ++y ) {
+            for( int x = std::max( start.x, 0 ); x < std::min( stop.x, OMAPX ); ++x ) {
                 const tripoint_om_omt p( x, y, 0 );
                 const oter_id existing = ter( p );
                 if( road.has( existing ) || north_america::is_avenue_flank( existing ) ) {
@@ -574,10 +575,17 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                     overmap_special_placements.count( p ) ) {
                     continue;
                 }
-                owners[urban_cell( p.xy() )] = &owner;
                 const point_abs_omt absolute = origin + p.xy().raw();
+                const int development = north_america::urban_density( district, absolute );
+                if( development == 0 ) {
+                    continue;
+                }
+                owners[urban_cell( p.xy() )] = &owner;
+                if( development < 100 && rng( 1, 100 ) > development ) {
+                    continue;
+                }
                 atlas_lot lot{ p, &town, regional_house, urban_zone::housing };
-                lot.dense = north_america::population_band( absolute ) >= 5;
+                lot.dense = development >= 75 && north_america::population_band( absolute ) >= 5;
                 bool near_arterial = false;
                 for( om_direction::type dir : om_direction::all ) {
                     const point_rel_omt delta = om_direction::displace( dir );
@@ -636,19 +644,42 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                 footprint->second.push_back( entry.p );
             }
         }
+        const bool use_elevation = north_america::elevation_active();
+        double low = 0;
+        double high = 0;
+        if( use_elevation ) {
+            low = high = north_america::surface_elevation(
+                             project_to<coords::ms>( origin + lot.pos.xy().raw() ) + point( SEEX, SEEY ) );
+        }
+        // A building confined to one column cannot straddle an overmap seam.
+        const bool single_column = !footprint->second.empty() &&
+                                   std::all_of( footprint->second.begin(), footprint->second.end(),
+        []( const tripoint_rel_omt & p ) {
+            return p.xy().raw() == point::zero;
+        } );
+        const int margin = single_column ? 0 : 1;
         for( const tripoint_rel_omt &offset : footprint->second ) {
             const tripoint_om_omt tile = lot.pos + om_direction::rotate( offset, direction );
-            if( !inbounds( tile, 1 ) || overmap_special_placements.count( tile ) ||
+            if( !inbounds( tile, margin ) || overmap_special_placements.count( tile ) ||
                 ( offset.z() == 0 && ( city_tiles.count( tile.xy() ) ||
                                        owners[urban_cell( tile.xy() )] != owners[urban_cell( lot.pos.xy() )] ) ) ) {
                 return false;
             }
+            if( use_elevation && offset.z() == 0 && tile != lot.pos ) {
+                const double height = north_america::surface_elevation(
+                                          project_to<coords::ms>( origin + tile.xy().raw() ) + point( SEEX, SEEY ) );
+                low = std::min( low, height );
+                high = std::max( high, height );
+                if( high - low > north_america::floor_height_m ) {
+                    return false;
+                }
+            }
         }
-        if( !can_place_special( special, lot.pos, direction, false ) ) {
+        if( !can_place_special( special, lot.pos, direction, false, margin ) ) {
             return false;
         }
         for( const tripoint_om_omt &used : place_special( special, lot.pos, direction,
-                *lot.town, false, false ) ) {
+                *lot.town, false, false, margin ) ) {
             city_tiles.insert( used.xy() );
         }
         if( city_unique ) {

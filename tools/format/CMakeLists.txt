@@ -12,4 +12,3 @@ target_link_libraries(json_formatter PRIVATE flatbuffers)
 add_definitions(-DCATA_IN_TOOL)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
-

@@ -82,6 +82,7 @@
 #include "map_scale_constants.h"
 #include "mapbuffer.h"
 #include "mapdata.h"
+#include "north_america_elevation.h"
 #include "material.h"
 #include "math_defines.h"
 #include "math_parser_diag_value.h"
@@ -118,6 +119,35 @@
 #include "weather_type.h"
 
 class Skill;
+
+namespace
+{
+struct scoped_power_graph;
+thread_local scoped_power_graph *current_power_graph = nullptr;
+
+struct scoped_power_graph {
+    const map *terrain;
+    const vehicle *root;
+    std::map<const vehicle *, float> distances;
+    bool ready = false;
+    scoped_power_graph *previous;
+
+    scoped_power_graph( const map &here, const vehicle &veh ) :
+        terrain( &here ), root( &veh ), previous( current_power_graph ) {
+        current_power_graph = this;
+    }
+    ~scoped_power_graph() {
+        current_power_graph = previous;
+    }
+};
+
+void invalidate_power_graphs()
+{
+    for( scoped_power_graph *scope = current_power_graph; scope; scope = scope->previous ) {
+        scope->ready = false;
+    }
+}
+} // namespace
 
 static const activity_id ACT_VEHICLE( "ACT_VEHICLE" );
 
@@ -332,7 +362,10 @@ void vehicle::apply_color_palette( const vehicle_prototype &proto )
     }
 }
 
-vehicle::~vehicle() = default;
+vehicle::~vehicle()
+{
+    invalidate_power_graphs();
+}
 
 turret_cpu::~turret_cpu() = default;
 
@@ -5209,6 +5242,9 @@ bool vehicle::is_flying_in_air() const
 void vehicle::set_flying( bool new_flying_value )
 {
     is_flying = new_flying_value;
+    if( !is_flying ) {
+        flight_altitude_m.reset();
+    }
 }
 
 bool vehicle::is_watercraft() const
@@ -6157,6 +6193,7 @@ void vehicle::update_alternator_load( map &here )
 
 void vehicle::power_parts( map &here )
 {
+    scoped_power_graph graph( here, *this );
     update_alternator_load( here );
     // Things that drain energy: engines and accessories.
     units::power engine_epower = total_engine_epower();
@@ -6340,6 +6377,15 @@ vehicle *vehicle::find_vehicle_using_parts( const map &here,  const tripoint_abs
 template < typename Vehicle > // Templated to support const and non-const vehicle*
 std::map < Vehicle *, float > vehicle::search_connected_vehicles( const map &here, Vehicle *start )
 {
+    scoped_power_graph *scope = current_power_graph;
+    const bool cacheable = scope && scope->terrain == &here && scope->root == start;
+    if( cacheable && scope->ready ) {
+        std::map<Vehicle *, float> result;
+        for( const auto &entry : scope->distances ) {
+            result.emplace( const_cast<Vehicle *>( entry.first ), entry.second );
+        }
+        return result;
+    }
     std::map < Vehicle *, float > distances; // distance represents sum of cable losses
     std::vector < Vehicle * > queue;
 
@@ -6376,11 +6422,17 @@ std::map < Vehicle *, float > vehicle::search_connected_vehicles( const map &her
             }
         }
     }
+    if( cacheable && distances.size() > 1 ) {
+        scope->distances.clear();
+        scope->distances.insert( distances.begin(), distances.end() );
+        scope->ready = true;
+    }
     return distances;
 }
 
 void vehicle::translate_cables( const tripoint_rel_ms &offset )
 {
+    invalidate_power_graphs();
     for( const int part_idx : loose_parts ) {
         vehicle_part &vp = part( part_idx );
         const vpart_info &vpi = vp.info();
@@ -7267,6 +7319,10 @@ void vehicle::refresh( const bool remove_fakes )
         return;
     }
 
+    invalidate_power_graphs();
+    if( map_cache_revision != UINT64_MAX ) {
+        ++map_cache_revision;
+    }
     alternators.clear();
     engines.clear();
     reactors.clear();
@@ -9663,6 +9719,7 @@ std::set < int > vehicle::advance_precalc_mounts( const point_sm_ms &new_pos,
     // can get split across the z-levels and continue moving, enough though large parts of the
     // vehicle are unsupported.  In that case, move the unsupported parts down until they are
     // supported.
+    const bool in_flight = flight_altitude() && north_america::elevation_active();
     int index = -1;
     for( vehicle_part &prt : parts ) {
         index += 1;
@@ -9680,9 +9737,9 @@ std::set < int > vehicle::advance_precalc_mounts( const point_sm_ms &new_pos,
         }
         const tripoint_bub_ms chassis_point = src + dp + prt.precalc[0] -
                                               tripoint( 0, 0, prt.mount_level );
-        if( here->has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
+        if( !in_flight && here->has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
             prt.precalc[0].z() += 1;
-        } else if( here->has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {
+        } else if( !in_flight && here->has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {
             prt.precalc[0].z() -= 1;
         }
         prt.precalc[0].z() -= ramp_offset;

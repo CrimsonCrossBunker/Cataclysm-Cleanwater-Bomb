@@ -1,3 +1,4 @@
+#include <lua_platform_state.h>
 #include <cstddef>
 #include <functional>
 #include <list>
@@ -23,8 +24,8 @@
 #include "item_location.h"
 #include "itype.h"
 #include "magic.h"
-#include "map_helpers.h"
 #include "map.h"
+#include "map_helpers.h"
 #include "npc.h"
 #include "pimpl.h"
 #include "player_activity.h"
@@ -120,8 +121,13 @@ void clear_character( Character &dummy, bool skip_nutrition )
     dummy._skills->clear();
     *dummy.martial_arts_data = character_martial_arts();
     dummy.clear_morale();
-    dummy.activity.set_to_null();
+    dummy.activity = player_activity();
     dummy.backlog.clear();
+    dummy.clear_destination();
+    dummy.mounted_creature = nullptr;
+    dummy.mounted_creature_id = 0;
+    dummy.in_vehicle = false;
+    dummy.controlling_vehicle = false;
     // Reset age/height before stored kcal since get_healthy_kcal()
     // depends on height.
     dummy.reset_chargen_attributes();
@@ -235,6 +241,7 @@ void clear_avatar()
     avatar.clear_identified();
     avatar.clear_nutrition();
     avatar.reset_all_missions();
+    avatar.zone_sort_viewport = {};
     // Records outlive the items they claim.
     clear_reservations();
 }
