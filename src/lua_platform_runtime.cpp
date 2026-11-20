@@ -6161,6 +6161,20 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "overmap location" );
         }
 
+        std::set<std::string> map_extra_ids;
+        for( const map_extra_registration &entry : pimpl_->map_extras ) {
+            const map_extra_definition_data &definition = *entry.definition;
+            require_valid_id( definition.id, "map extra" );
+            if( definition.name.empty() ||
+                !map_extra_ids.insert( definition.id ).second ) {
+                throw std::runtime_error( "map extra '" + definition.id +
+                                          "' requires a name and one registration per transaction" );
+            }
+            validate_operation( entry.operation,
+                                map_extra_id( definition.id ).is_valid(),
+                                definition.id, "map extra" );
+        }
+
         std::set<std::string> map_extra_collection_ids;
         for( const map_extra_collection_registration &entry : pimpl_->map_extra_collections ) {
             const map_extra_collection_definition_data &definition = *entry.definition;
@@ -6176,7 +6190,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
             for( const auto &[extra, weight] : definition.entries ) {
                 if( !extras.insert( extra ).second || weight <= 0 ||
                     weight > std::numeric_limits<int>::max() ||
-                    ( check_engine_state && !map_extra_id( extra ).is_valid() ) ) {
+                    ( check_engine_state && map_extra_ids.count( extra ) == 0 &&
+                      !map_extra_id( extra ).is_valid() ) ) {
                     throw std::runtime_error( "map-extra collection '" + definition.id +
                                               "' has an unknown, duplicate, or invalidly weighted entry '" +
                                               extra + "'" );
@@ -6798,7 +6813,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     !native_int( value.minimum_level ) || !native_int( value.maximum_level ) ||
                     value.minimum_level > value.maximum_level ||
                     !io::enum_is_valid<enchantment::has>( value.has ) ||
-                    ( check_engine_state && !spell_id( value.spell ).is_valid() ) ) {
+                    ( check_engine_state && !pimpl_->character.defines_spell( value.spell ) &&
+                      !spell_id( value.spell ).is_valid() ) ) {
                     throw std::runtime_error( "relic procgen '" + definition.id +
                                               "' has an invalid active spell value" );
                 }
@@ -7245,20 +7261,6 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 // MONSTER_BLACKLIST starts empty) and must stay valid.
                 throw std::runtime_error( "blacklist has an invalid kind" );
             }
-        }
-
-        std::set<std::string> map_extra_ids;
-        for( const map_extra_registration &entry : pimpl_->map_extras ) {
-            const map_extra_definition_data &definition = *entry.definition;
-            require_valid_id( definition.id, "map extra" );
-            if( definition.name.empty() ||
-                !map_extra_ids.insert( definition.id ).second ) {
-                throw std::runtime_error( "map extra '" + definition.id +
-                                          "' requires a name and one registration per transaction" );
-            }
-            validate_operation( entry.operation,
-                                map_extra_id( definition.id ).is_valid(),
-                                definition.id, "map extra" );
         }
 
         std::set<std::string> weather_generator_ids;
