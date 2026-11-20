@@ -518,7 +518,6 @@
       ]
     },
     "//2": "Despawn the Anathema, adjust var for later to bring them back.",
-    "//3": "Reuses the Shadow's EOC as they are identical in effect.",
     "effect": [
       { "math": [ "Anathema_Ready = 1" ] },
       { "u_add_effect": "blind_no_msg", "duration": "0 second" },
@@ -529,7 +528,7 @@
         "target_min_radius": 0,
         "target_max_radius": 60
       },
-      { "run_eocs": "EOC_KILL_SHADOW", "beta_loc": { "global_val": "Vampire_Anathema" } },
+      { "run_eocs": "EOC_BANISH_TARGET_MONSTER", "beta_loc": { "global_val": "Vampire_Anathema" } },
       { "u_message": "…but they will come back.", "type": "bad" }
     ]
   },
