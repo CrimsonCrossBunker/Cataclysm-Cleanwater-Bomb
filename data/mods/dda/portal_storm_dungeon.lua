@@ -184,15 +184,19 @@ ccb.runtime.handler("portal_dungeon_reward_item_due", function(payload)
     M.reward_item(payload.character)
 end)
 
+function M.enter_vortex(creature)
+    local moved = state.checked(services.relocation.teleport_creature(creature, state.point("nether_dungeon_door")))
+    if moved.accepted then state.message(moved.handle, ccb.services.translate("How did you get here?")) end
+    return moved.handle
+end
+ccb.runtime.handler("enter_swirling_vortex", M.enter_vortex)
+
 local function trigger_vortex(payload)
     if not payload.creature or payload.creature.subtype ~= "avatar" then return nil end
     -- Consume the captured trap before travel; its original map must own cleanup.
     local origin = services.coords.tripoint_abs_ms(payload.position.x, payload.position.y, payload.position.z)
     environment.set_trap_area(origin, "tr_null", 0, false)
-    -- Native trap inheritance appends the dungeon action after the base vortex.
-    local vortex = state.checked(services.relocation.teleport_character(payload.creature, state.point("nether_dungeon_door")))
-    if vortex.accepted then state.message(vortex.handle, services.translate("How did you get here?")) end
-    return vortex.handle
+    return M.enter_vortex(payload.creature)
 end
 
 ccb.runtime.handler("portal_dungeon_entrance_trigger", function(payload)
