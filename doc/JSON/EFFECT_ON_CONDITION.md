@@ -67,7 +67,7 @@ An effect_on_condition is an object allowing the combination of dialog condition
 
 Talker, in context of effect on condition, is any entity, that can use specific effect or be checked against specific condition. Some effects and conditions don't have talker whatsoever, so any entity can use it (like `mapgen_update` effect can be used no matter is it used by player, NPC, monster or item), other has only one talker (aka alpha talker, aka `u_`) - the entity that call the effect or check (like `u_know_recipe` or `u_has_mission`), and the third has two talkers - alpha and beta (aka `u_` and `npc_`), which allow to check both you and your interlocutor (or enemy, depending on context)
 
-For example, `{ "npc_has_effect": "Shadow_Reveal" }`, used by shadow lieutenant, check the player as beta talker, despite the id imply it should be `npc_`; This is a legacy of dialogue system, from which EoC was extended, and won't be fixed, since dialogues still use it fully
+In a monster attack EOC, `{ "npc_has_effect": "stunned" }` checks whether the attack's victim (the beta talker) is stunned. The `npc_` prefix identifies the beta talker, which need not be an NPC.
 
 ### Typical Alpha and Beta Talkers by cases
 
@@ -2706,33 +2706,35 @@ Monsters run EoCs, provided by this effect; only works inside reality bubble
 
 ##### Examples
 
-Run EOC_KILL_SHADOW on half the monsters in a 36 range around u_mansion_centre
+Stun half the monsters within 36 tiles of the beta talker for 10 seconds. Each selected monster becomes the alpha talker of the inline EOC.
 ```jsonc
-  { "run_eocs": "EOC_BANISH_MANSION_MONSTERS", "beta_loc": { "u_val": "mansion_centre" } },
-```
-...
-```jsonc
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_BANISH_MANSION_MONSTERS",
-    "//": "Banish half the mapgen monsters from the mansion to make room for special scenario ferals",
-    "eoc_type": "ACTIVATION",
-    "effect": [
-      {
-        "npc_run_monster_eocs": [ { "id": "EOC_BANISH_MONSTERS_AROUND_MANSION_CENTER", "condition": { "math": [ "rand(1) == 0" ] }, "effect": { "run_eocs": "EOC_KILL_SHADOW" } } ],
-        "monster_range": 36
-      }
-    ]
-  },
+{
+  "type": "effect_on_condition",
+  "id": "EOC_STUN_MONSTERS_NEAR_BETA",
+  "effect": [
+    {
+      "npc_run_monster_eocs": [
+        {
+          "id": "EOC_STUN_NEARBY_MONSTER",
+          "condition": { "math": [ "rand(1) == 0" ] },
+          "effect": { "u_add_effect": "stunned", "duration": "10 seconds" }
+        }
+      ],
+      "monster_range": 36
+    }
+  ]
+}
 ```
 
-Run EOC_KILL_SHADOW on any mon_zombie_dog, mon_dog_zombie_cop or mon_dog_zombie_rot in a 12 range around the alpha talker
+Stun any `mon_zombie_dog`, `mon_dog_zombie_cop` or `mon_dog_zombie_rot` within 12 tiles of the alpha talker for 10 seconds.
 ```jsonc
-  {
-    "u_run_monster_eocs": [ { "id": "EOC_BANISH_ZOMBIE_DOGS_AROUND_PLAYER", "effect": { "run_eocs": "EOC_KILL_SHADOW" } } ],
-    "mtype_ids": [ "mon_zombie_dog", "mon_dog_zombie_cop", "mon_dog_zombie_rot" ]
-    "monster_range": 12
-  }
+{
+  "u_run_monster_eocs": [
+    { "id": "EOC_STUN_ZOMBIE_DOGS_AROUND_PLAYER", "effect": { "u_add_effect": "stunned", "duration": "10 seconds" } }
+  ],
+  "mtype_ids": [ "mon_zombie_dog", "mon_dog_zombie_cop", "mon_dog_zombie_rot" ],
+  "monster_range": 12
+}
 ```
 
 #### `u_run_inv_eocs`, `npc_run_inv_eocs`
