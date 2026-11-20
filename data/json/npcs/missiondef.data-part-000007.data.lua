@@ -1,11 +1,10 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_REACH_SAFETY",
-    name = ccb.content.text("Reach Safety"),
-    goal = "MGOAL_GO_TO",
-    difficulty = 1,
+    id = "MISSION_NULL",
+    name = ccb.content.text("Null mission"),
+    goal = "MGOAL_NULL",
+    difficulty = 0,
     value = 0,
-    start = "find_safety",
-    origins = { "ORIGIN_NULL" },
+    place = "never",
 }

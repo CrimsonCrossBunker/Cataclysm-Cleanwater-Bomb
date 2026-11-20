@@ -1,48 +1,5 @@
 [
   {
-    "id": "MISSION_LUMBERMILL_GET_6800_NAILS",
-    "type": "mission_definition",
-    "name": "Get 6,800 Nails",
-    "description": "Obtain 6,800 nails in exchange for credit with the loggers.",
-    "//": "170 wood walls * 40 nails per wall",
-    "followup": "MISSION_LUMBERMILL_GET_6_BLANKETS",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "nail",
-    "count": 6800,
-    "difficulty": 32,
-    "value": 2000000,
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "end": {
-      "update_mapgen": [
-        { "om_terrain": "lumbermill_0_0_ocu", "place_nested": [ { "chunks": [ "occupied_lum_wall_0_0" ], "x": 0, "y": 0 } ] },
-        {
-          "om_terrain": "lumbermill_0_1_ocu",
-          "place_nested": [ { "chunks": [ "occupied_lum_wall_0_1" ], "x": 0, "y": 0 } ]
-        },
-        {
-          "om_terrain": "lumbermill_1_0_ocu",
-          "place_nested": [ { "chunks": [ "occupied_lum_wall_1_0" ], "x": 0, "y": 0 } ]
-        },
-        {
-          "om_terrain": "lumbermill_1_1_ocu",
-          "place_nested": [ { "chunks": [ "occupied_lum_wall_1_1" ], "x": 0, "y": 0 } ]
-        }
-      ]
-    },
-    "has_generic_rewards": true,
-    "dialogue": {
-      "describe": "I need 6,800 nails.",
-      "offer": "While fairly sturdy, the metal fence around this place won't hold out for long.  So, we've decided to replace it with a wall.  However, the nails we had were used to repair our existing structures, and they weren't nearly enough.  After some calculations, we need 6,800 nails to do it.  That may seem like a lot, but we're willing to give you a TON of credit for it.",
-      "advice": "You might have to do more than just scrapping a bunch of furniture.  Dismantling a building somewhere in town could get you what you need.",
-      "accepted": "I'll be here when you get back.  Good luck!",
-      "rejected": "Well, I suppose that's reasonable.",
-      "inquire": "Do you have the nails?",
-      "success": "That's absolutely amazing!  I can't thank you enough for this!",
-      "success_lie": "You're a fucking scammer, <name_b>!",
-      "failure": "That's unfortunate.  I guess we'll have to find someone else to do it."
-    }
-  },
-  {
     "id": "MISSION_LUMBERMILL_GET_6_BLANKETS",
     "type": "mission_definition",
     "name": "Find 6 Blankets",

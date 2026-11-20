@@ -1,0 +1,85 @@
+[
+  {
+    "id": "MISSION_RANCH_FOREMAN_2",
+    "type": "mission_definition",
+    "name": { "str": "Find 25 Blankets" },
+    "goal": "MGOAL_CONDITION",
+    "goal_condition": {
+      "u_has_items_sum": [
+        { "item": "blanket", "amount": 25 },
+        { "item": "fur_blanket", "amount": 25 },
+        { "item": "down_blanket", "amount": 25 },
+        { "item": "blanket_weighted", "amount": 25 },
+        { "item": "electric_blanket", "amount": 25 }
+      ]
+    },
+    "difficulty": 5,
+    "value": 50000,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "followup": "MISSION_RANCH_FOREMAN_3",
+    "dialogue": {
+      "describe": "We need help…",
+      "offer": "With the barn entrances enclosed, the refugees moving in there should feel safer, but the weather can be bitter here.  We're going to need to build makeshift beds in the stalls to ward off disease and frostbite.  We can take care of the frames, but will need your help looting blankets.  We'd need 25 blankets to provide the most basic sleeping accommodations.",
+      "accepted": "I'd start with looting hotels or you could sew them together… but that would be a last resort.",
+      "rejected": "Come back when you get a chance.  We need skilled survivors.",
+      "advice": "Avoid destroying the furniture here, we'll be needing it.",
+      "inquire": "Do you have them?",
+      "success": "Your assistance is always appreciated.",
+      "success_lie": "What good does this do us?",
+      "failure": "It was a lost cause anyways…"
+    },
+    "end": {
+      "update_mapgen": [
+        {
+          "om_terrain": "ranch_camp_65",
+          "//": "Beds in the barn",
+          "place_nested": [
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 18, "y": 1 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 18, "y": 5 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 18, "y": 7 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 18, "y": 11 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 18, "y": 13 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 18, "y": 17 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 18, "y": 19 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 18, "y": 23 }
+          ]
+        },
+        {
+          "om_terrain": "ranch_camp_66",
+          "//": "Beds in the barn",
+          "place_nested": [
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 19, "y": 1 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 19, "y": 5 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 19, "y": 7 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 19, "y": 11 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 19, "y": 13 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 19, "y": 17 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 19, "y": 19 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 19, "y": 23 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 9, "y": 1 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 9, "y": 5 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 9, "y": 19 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 9, "y": 23 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 4, "y": 1 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 4, "y": 5 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 4, "y": 19 },
+            { "chunks": [ "tacoma_commune_makeshift_bed" ], "x": 4, "y": 23 }
+          ],
+          "place_npcs": [ { "class": "ranch_construction_2", "x": 19, "y": 8 } ]
+        }
+      ],
+      "effect": [
+        {
+          "u_consume_item_sum": [
+            { "item": "blanket", "amount": 25 },
+            { "item": "fur_blanket", "amount": 25 },
+            { "item": "down_blanket", "amount": 25 },
+            { "item": "blanket_weighted", "amount": 25 },
+            { "item": "electric_blanket", "amount": 25 }
+          ]
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "MISSION_HUNT_ANTS",
+    "type": "mission_definition",
+    "name": "Arthropod Hunting",
+    "description": "Kill some ants and bring back ten slices of their meat in exchange for credit with some of the traders.",
+    "goal": "MGOAL_FIND_ITEM",
+    "item": "mutant_meat",
+    "count": 10,
+    "difficulty": 1,
+    "value": 4000,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "followup": "MISSION_BUILD_CAMP_1",
+    "start": {
+      "assign_mission_target": { "om_terrain": "field", "reveal_radius": 1, "random": true, "search_range": 15 },
+      "update_mapgen": { "place_monster": [ { "monster": "mon_ant", "pack_size": [ 2, 2 ], "x": 8, "y": 8, "target": true } ] }
+    },
+    "end": { "effect": [ { "npc_add_var": "dialogue_trade_ant_meat_tradeable", "value": "yes" } ] },
+    "has_generic_rewards": true,
+    "dialogue": {
+      "describe": "I need some help.",
+      "offer": "The last time we went out scouting we found some gargantuan ants crawling around.  We thought we might see how they taste, if they could be cooked and whatnot.  I want you to go kill one and bring back some of its meat.",
+      "advice": "A shotgun of some sort might work well.",
+      "accepted": "I'll be here when you get back.",
+      "rejected": "Alright, I can understand that.",
+      "inquire": "Do you have the meat?",
+      "success": "Nice.  I'll get these cooked up.  Who knows, we might want some more in the future.",
+      "success_lie": "You sure?  I don't see my meat anywhere.",
+      "failure": "Ah, well.  It's no big deal."
+    }
+  }
+]

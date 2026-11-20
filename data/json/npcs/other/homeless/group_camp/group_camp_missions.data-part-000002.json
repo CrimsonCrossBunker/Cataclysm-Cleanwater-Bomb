@@ -1,0 +1,62 @@
+[
+  {
+    "id": "MISSION_BUILD_CAMP_3",
+    "type": "mission_definition",
+    "name": "Refurbishments Pt. III",
+    "description": "Obtain 6 ropes.",
+    "//": "TO-DO - Dynamic response dialogs would be more natural to accept so many alternate items here and everywhere else these conditional item accept conditions appear.",
+    "goal": "MGOAL_CONDITION",
+    "goal_condition": {
+      "or": [
+        { "u_has_items": { "item": "rope_6", "count": 6 } },
+        { "u_has_items": { "item": "rope_30", "count": 6 } },
+        { "u_has_items": { "item": "rope_makeshift_6", "count": 6 } },
+        { "u_has_items": { "item": "rope_makeshift_30", "count": 6 } }
+      ]
+    },
+    "difficulty": 1,
+    "value": 2500,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "followup": "MISSION_BUILD_CAMP_4",
+    "end": {
+      "update_mapgen": { "om_terrain": "homelesscamp_npc", "place_nested": [ { "chunks": [ "homeless_camp_refurb_3" ], "x": 0, "y": 0 } ] }
+    },
+    "has_generic_rewards": true,
+    "dialogue": {
+      "describe": "I need some help.",
+      "offer": "Our entrance is wide open so we're building a gate over it.  Problem is we don't have any ropes.  If you could find some for us, we'll pay you.",
+      "advice": "If you can't find any rope around, one of our books should have something on rope-making.  Most plants can be woven into a halfway decent rope.",
+      "accepted": "Thank you.  We'll be sure to compensate your efforts.",
+      "rejected": "Alright, I can understand that.  I guess I'll have to get it myself.",
+      "inquire": "Do you have my ropes?",
+      "success": "Thank you.  We'll start right away.",
+      "success_lie": "I can tell you're lying.  I don't see shit.",
+      "failure": "Ah, well.  It's no big deal."
+    }
+  },
+  {
+    "id": "MISSION_BUILD_CAMP_4",
+    "type": "mission_definition",
+    "name": "Refurbishments Pt. IV",
+    "description": "Obtain a wood saw.",
+    "//": "TO-DO - Dynamic response dialogs would be more natural to accept so many alternate items here and everywhere else these conditional item accept conditions appear.",
+    "goal": "MGOAL_CONDITION",
+    "goal_condition": { "or": [ { "u_has_item": "saw" }, { "u_has_item": "bow_saw" }, { "u_has_item": "misc_repairkit" } ] },
+    "difficulty": 1,
+    "value": 2500,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "followup": "MISSION_BUILD_CAMP_5",
+    "has_generic_rewards": true,
+    "dialogue": {
+      "describe": "I need some help.",
+      "offer": "We appreciate all of your help but we can't rely on everyone else to do things for us.  I'd be willing to buy a wood saw of some kind from you so we can cut our own wood as needed.",
+      "advice": "A hardware store or lumbermill should have one.",
+      "accepted": "Thank you.  We'll be sure to compensate your efforts.",
+      "rejected": "Alright, I can understand that.  I guess I'll have to get it myself.",
+      "inquire": "Do you have my saw?",
+      "success": "Thank you.  Pick what you want from our stash.",
+      "success_lie": "I can tell you're lying.  I don't see shit.",
+      "failure": "Ah, well.  It's no big deal."
+    }
+  }
+]

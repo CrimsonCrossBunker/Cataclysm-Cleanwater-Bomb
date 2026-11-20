@@ -1,0 +1,106 @@
+[
+  {
+    "id": "MISSION_ROBOFAC_INTERCOM_IVAS",
+    "type": "mission_definition",
+    "name": { "str": "Augmented Reality" },
+    "description": "The intercom has asked me to retrieve something called a <color_yellow>Military Visual Augmentation System</color>, which looks like a VR headset.  They're sending me to an in-town office to fetch it.  Use the <color_yellow>ID card</color> to gain access.",
+    "goal": "MGOAL_NULL",
+    "destination": "office_warehouse_anduril",
+    "difficulty": 5,
+    "value": 0,
+    "start": {
+      "assign_mission_target": {
+        "om_terrain": "office_warehouse_anduril",
+        "om_special": "office_warehouse_anduril",
+        "reveal_radius": 2,
+        "random": false
+      }
+    },
+    "end": {
+      "effect": [
+        { "u_spawn_item": "RobofacCoin", "count": 4 },
+        { "u_add_var": "dialogue_intercom_completed_robofac_intercom_ivas", "value": "yes" },
+        { "math": [ "u_hub01_completed_missions++" ] }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "…",
+      "offer": "…",
+      "accepted": "…",
+      "rejected": "…",
+      "advice": "…",
+      "inquire": "…",
+      "success": "…",
+      "success_lie": "…",
+      "failure": "…"
+    }
+  },
+  {
+    "id": "MISSION_ROBOFAC_INTERCOM_CHOP_SHOP",
+    "type": "mission_definition",
+    "name": { "str": "Post-Apocalyptic IRB" },
+    "description": "The intercom has asked me to <color_yellow>kill a rogue scientist named Dr. Harlow</color>, who they say is performing unethical experiments on live humans.  I am also authorized to use lethal force against anyone who resists, and to pillage the site.",
+    "goal": "MGOAL_NULL",
+    "destination": "robofac_strip_mall_x1y0",
+    "difficulty": 5,
+    "value": 0,
+    "start": {
+      "assign_mission_target": { "om_terrain": "robofac_strip_mall_x1y0", "om_special": "robofac_strip_mall", "reveal_radius": 4, "random": false },
+      "effect": { "math": [ "robofac_chop_shop_scientist_1_kill_orders = 1" ] }
+    },
+    "end": {
+      "effect": [
+        { "u_spawn_item": "RobofacCoin", "count": 4 },
+        { "u_add_var": "dialogue_intercom_completed_robofac_intercom_chop_shop", "value": "yes" },
+        { "math": [ "u_hub01_completed_missions++" ] },
+        { "run_eocs": "EOC_ROBOFAC_CHOP_SHOP_CLEAN_UP_MERCS" }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "…",
+      "offer": "…",
+      "accepted": "…",
+      "rejected": "…",
+      "advice": "…",
+      "inquire": "…",
+      "success": "…",
+      "success_lie": "…",
+      "failure": "…"
+    }
+  },
+  {
+    "id": "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI",
+    "type": "mission_definition",
+    "name": { "str": "Circuit Safari" },
+    "description": "The intercom has asked me to bring them the remains of an <color_yellow>Exodii worker</color>.  They said I can use any violent means necessary to take it down.",
+    "goal": "MGOAL_NULL",
+    "difficulty": 5,
+    "value": 0,
+    "end": {
+      "effect": [
+        { "u_spawn_item": "RobofacCoin", "count": 4 },
+        { "u_add_var": "dialogue_intercom_completed_robofac_intercom_circuit_safari", "value": "yes" },
+        { "math": [ "u_hub01_completed_missions++" ] },
+        { "math": [ "hub01_has_cbm_interface_tech = 1" ] },
+        { "run_eocs": "EOC_ROBOFAC_HQ_FORCE_PLACE_ANCILLA_AUTODOC", "time_in_future": "14 days" }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "…",
+      "offer": "…",
+      "accepted": "…",
+      "rejected": "…",
+      "advice": "…",
+      "inquire": "…",
+      "success": "…",
+      "success_lie": "…",
+      "failure": "…"
+    }
+  }
+]

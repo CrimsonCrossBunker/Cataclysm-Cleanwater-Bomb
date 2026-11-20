@@ -1,0 +1,29 @@
+local ccb = require("ccb")
+
+ccb.runtime.handler("mark_dialogue_bem_completed_bem_jabberwock", function(context)
+    ccb.services.variables.set_string_notifying(context.character, "dialogue_bem_completed_bem_jabberwock", "yes")
+end)
+
+ccb.runtime.handler("mark_proven_worth_to_old_guard_representative", function(context)
+    ccb.services.variables.set_string_notifying(context.character, "proven_worth_to_old_guard_representative", "yes")
+end)
+
+local function morale_reward(handler, bonus, duration_hours, decay_hours)
+    ccb.runtime.handler(handler, function(context)
+        ccb.services.morale.add(context.character, ccb.services.types.id("morale", "morale_feeling_good"),
+            bonus, 50, { duration = ccb.services.time.duration(duration_hours, "hour"),
+                decay_start = ccb.services.time.duration(decay_hours, "hour") })
+    end)
+end
+
+morale_reward("morale_mission_assassin_convict_prison", 20, 4, 2)
+morale_reward("morale_mission_assassin_convict_prison_island1", 30, 6, 3)
+morale_reward("morale_mission_assassin_convict_prison_island2", 40, 6, 3)
+morale_reward("morale_mission_assassination", 20, 6, 3)
+morale_reward("morale_mission_dog_lover", 10, 3, 2)
+morale_reward("morale_mission_helicopter_pilot", 10, 2, 1)
+morale_reward("morale_mission_helicopter_refuel", 20, 6, 3)
+morale_reward("morale_mission_hunter", 25, 8, 6)
+morale_reward("morale_mission_mafia_boss", 20, 8, 6)
+morale_reward("morale_mission_ninja", 20, 8, 4)
+morale_reward("morale_mission_otaku", 30, 24, 12)

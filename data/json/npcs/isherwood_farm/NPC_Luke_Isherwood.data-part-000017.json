@@ -1,36 +1,5 @@
 [
   {
-    "id": "MISSION_ISHERWOOD_LUKE_1",
-    "type": "mission_definition",
-    "name": { "str": "Find The Art of Glassblowing book" },
-    "goal": "MGOAL_FIND_ITEM",
-    "difficulty": 5,
-    "value": 50000,
-    "item": "glassblowing_book",
-    "count": 1,
-    "end": {
-      "update_mapgen": [
-        {
-          "om_terrain": "rural_outbuilding",
-          "place_item": [ { "item": "glassblowing_book", "x": 5, "y": 9, "faction": "isherwood_family" } ]
-        }
-      ]
-    },
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "followup": "MISSION_ISHERWOOD_LUKE_2",
-    "dialogue": {
-      "describe": "I need more knowledge to get the glass blowing started.",
-      "offer": "I could really use a book on glass blowing.  With the internet gone, I don't have any handy references.",
-      "accepted": "Fantastic, I'm not supposed to leave our land.",
-      "rejected": "Oh well, figured I'd have to do a lot of practice anyway.",
-      "advice": "A library, bookstore or a glass blower's studio should have one.",
-      "inquire": "Do you have the book?",
-      "success": "I appreciate it, this will make my life so much easier.",
-      "success_lie": "I don't see a book…?",
-      "failure": "At least you escaped with your life…"
-    }
-  },
-  {
     "id": "MISSION_ISHERWOOD_LUKE_2",
     "type": "mission_definition",
     "name": { "str": "Find a copy of DIY Compendium" },
