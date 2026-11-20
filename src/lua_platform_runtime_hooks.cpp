@@ -224,6 +224,9 @@ Character *platform_event_character( const character_id &id )
 
 static bool platform_event_contract_exists( const std::string_view name )
 {
+    if( name == "befor_installs_cbm" ) {
+        return true;
+    }
     for( int raw = 0; raw < static_cast<int>( event_type::num_event_types ); ++raw ) {
         if( io::enum_to_string( static_cast<event_type>( raw ) ) == name ) {
             return true;
@@ -335,20 +338,21 @@ static sol::table event_to_lua( runtime &owner, const cata::event &event,
     return result;
 }
 
-static void dispatch_event_handler( runtime &owner, const std::string &name,
-                                    const std::string &handler_id, const sol::object &payload )
+static bool dispatch_event_handler( runtime &owner, const std::string &name,
+                                    const std::string &handler_id, const sol::object &payload,
+                                    const bool cancellable = false )
 {
     if( owner.callback_depth >= 16 ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first event recursion limit reached for '"
                                     << owner.mod_id << ':' << name << "'";
-        return;
+        return true;
     }
     const auto handler = owner.handlers.find( handler_id );
     if( handler == owner.handlers.end() ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first event '" << name
                                     << "' references missing handler '"
                                     << owner.mod_id << ":" << handler_id << "'";
-        return;
+        return true;
     }
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( owner );
@@ -364,7 +368,21 @@ static void dispatch_event_handler( runtime &owner, const std::string &name,
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( owner, handler_id, result, "event " + name );
+        return true;
     }
+    if( !cancellable || result.return_count() == 0 ) {
+        return true;
+    }
+    const sol::object returned = result.get<sol::object>();
+    if( returned.get_type() == sol::type::boolean ) {
+        return returned.as<bool>();
+    }
+    if( returned.get_type() != sol::type::nil ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first cancellable event '" << name
+                                    << "' handler '" << owner.mod_id << ':' << handler_id
+                                    << "' must return nil or boolean";
+    }
+    return true;
 }
 
 // Own the payload reference throughout callbacks that may mutate Lua state.
@@ -1612,6 +1630,68 @@ using detail::platform_item_handle;
 using detail::platform_talker_to_lua;
 using detail::platform_vehicle_handle;
 using detail::report_callback_error;
+
+bool dispatch_befor_installs_cbm( const Character &character, const Character &installer,
+                                  const std::string_view bionic, const bool autodoc )
+{
+    const std::string event_name = "game:befor_installs_cbm";
+    if( detail::current_platform_event_dispatch_depth() >= 16 ) {
+        DebugLog( D_WARNING, D_MAIN ) << "Lua-first global event recursion limit reached for '"
+                                      << event_name << "'";
+        return true;
+    }
+    detail::platform_event_dispatch_scope event_scope;
+    struct pending_callback {
+        std::shared_ptr<runtime> owner;
+        std::string handler_id;
+        sol::object payload;
+    };
+    std::vector<pending_callback> pending;
+    for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
+        if( !owner || !owner->world_is_ready ) {
+            continue;
+        }
+        const auto subscription = owner->subscriptions.find( event_name );
+        if( subscription == owner->subscriptions.end() ) {
+            continue;
+        }
+        for( const std::string &handler_id : subscription->second ) {
+            try {
+                sol::table payload = owner->lua->create_table();
+                payload["type"] = "befor_installs_cbm";
+                payload["turn"] = to_turn<std::int64_t>( calendar::turn );
+                sol::table data = owner->lua->create_table();
+                data["character"] = character.getID().get_value();
+                data["installer"] = installer.getID().get_value();
+                data["bionic"] = std::string( bionic );
+                data["autodoc"] = autodoc;
+                payload["data"] = std::move( data );
+                sol::table data_types = owner->lua->create_table();
+                data_types["character"] = "character_id";
+                data_types["installer"] = "character_id";
+                data_types["bionic"] = "bionic_id";
+                data_types["autodoc"] = "bool";
+                payload["data_types"] = std::move( data_types );
+                sol::table actors = owner->lua->create_table();
+                actors["character"] = platform_creature_handle( *owner, character );
+                actors["installer"] = platform_creature_handle( *owner, installer );
+                payload["actors"] = std::move( actors );
+                pending.push_back( { owner, handler_id, sol::make_object( *owner->lua, payload ) } );
+            } catch( const std::exception &exception ) {
+                DebugLog( D_ERROR, D_MAIN ) << "Lua-first event payload for '"
+                                            << owner->mod_id << ':' << event_name << ':'
+                                            << handler_id << "' failed: " << exception.what();
+            }
+        }
+    }
+    for( const pending_callback &callback : pending ) {
+        if( !detail::dispatch_event_handler( *callback.owner, event_name, callback.handler_id,
+                                             callback.payload, true ) ) {
+            return false;
+        }
+    }
+    return true;
+}
 
 bool has_runtime_hook( const std::string_view name )
 {

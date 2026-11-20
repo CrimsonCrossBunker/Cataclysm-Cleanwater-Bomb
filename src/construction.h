@@ -13,28 +13,29 @@
 #include <utility>
 #include <vector>
 
-#include "coords_fwd.h"
 #include "coordinates.h"
 #include "craft_command.h"
 #include "game_constants.h"
 #include "item.h"
+#include "point.h"
+#include "requirements.h"
+#include "translation.h"
+#include "type_id.h"
 
 namespace cata::lua_platform
 {
 class content_transaction;
 } // namespace cata::lua_platform
-#include "translation.h"
-#include "type_id.h"
 
 class Character;
 class temp_crafting_inventory;
-struct point;
 
 namespace catacurses
 {
 class window;
 } // namespace catacurses
 class JsonObject;
+class JsonOut;
 class nc_color;
 
 struct partial_con {

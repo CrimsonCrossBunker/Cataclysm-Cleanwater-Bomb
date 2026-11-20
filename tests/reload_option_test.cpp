@@ -32,6 +32,7 @@ static const itype_id itype_water_clean( "water_clean" );
 TEST_CASE( "revolver_reload_option", "[reload] [reload_option] [gun]" )
 {
     avatar dummy;
+    dummy.set_body();
     dummy.worn.wear_item( dummy, item( itype_backpack ), false, false );
 
     item_location gun = dummy.i_add( item( itype_sw_619, calendar::turn_zero, 0 ) );
@@ -60,6 +61,7 @@ TEST_CASE( "revolver_reload_option", "[reload] [reload_option] [gun]" )
 TEST_CASE( "magazine_reload_option", "[reload] [reload_option] [gun]" )
 {
     avatar dummy;
+    dummy.set_body();
     dummy.worn.wear_item( dummy, item( itype_backpack ), false, false );
 
     item_location magazine = dummy.i_add( item( itype_glockmag, calendar::turn_zero, 0 ) );
@@ -107,6 +109,7 @@ TEST_CASE( "belt_reload_option", "[reload] [reload_option] [gun]" )
 TEST_CASE( "canteen_reload_option", "[reload] [reload_option] [liquid]" )
 {
     avatar dummy;
+    dummy.set_body();
     dummy.worn.wear_item( dummy, item( itype_backpack ), false, false );
 
     item plastic_bottle( itype_bottle_plastic );

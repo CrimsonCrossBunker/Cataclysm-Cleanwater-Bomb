@@ -381,6 +381,37 @@ void mapbuffer::save_quad(
     bool reverted_to_uniform = false;
     bool file_exists = false;
 
+    for( point_rel_sm &offsets_offset : offsets ) {
+        tripoint_abs_sm submap_addr = project_to<coords::sm>( om_addr );
+        submap_addr += offsets_offset.raw(); // TODO: Make += etc. available to relative parameters as well.
+        submap_addrs.push_back( submap_addr );
+        const auto existing = submaps.find( submap_addr );
+        submap *sm = existing == submaps.end() ? nullptr : existing->second.get();
+        if( sm != nullptr ) {
+            if( !sm->is_uniform() ) {
+                all_uniform = false;
+            } else if( sm->reverted ) {
+                reverted_to_uniform = true;
+            }
+        }
+    }
+
+    // An explicit storage owner may have no overmap terrain resolver. In that
+    // case even uniform submaps must be persisted, because they cannot be
+    // reconstructed after eviction or reload.
+    const bool regenerable_uniform = all_uniform && static_cast<bool>( uniform_terrain_ );
+    if( regenerable_uniform && !reverted_to_uniform ) {
+        if( delete_after_save ) {
+            for( const tripoint_abs_sm &addr : submap_addrs ) {
+                const auto existing = submaps.find( addr );
+                if( existing != submaps.end() && existing->second ) {
+                    submaps_to_delete.push_back( addr );
+                }
+            }
+        }
+        return;
+    }
+
     std::optional<zzip> z;
     cata_path zzip_name = dirname;
     zzip_name += zzip_suffix;
@@ -399,25 +430,7 @@ void mapbuffer::save_quad(
         file_exists = std::filesystem::exists( filename.get_unrelative_path() );
     }
 
-    for( point_rel_sm &offsets_offset : offsets ) {
-        tripoint_abs_sm submap_addr = project_to<coords::sm>( om_addr );
-        submap_addr += offsets_offset.raw(); // TODO: Make += etc. available to relative parameters as well.
-        submap_addrs.push_back( submap_addr );
-        const auto existing = submaps.find( submap_addr );
-        submap *sm = existing == submaps.end() ? nullptr : existing->second.get();
-        if( sm != nullptr ) {
-            if( !sm->is_uniform() ) {
-                all_uniform = false;
-            } else if( sm->reverted ) {
-                reverted_to_uniform = file_exists;
-            }
-        }
-    }
-
-    // An explicit storage owner may have no overmap terrain resolver. In that
-    // case even uniform submaps must be persisted, because they cannot be
-    // reconstructed after eviction or reload.
-    const bool regenerable_uniform = all_uniform && static_cast<bool>( uniform_terrain_ );
+    reverted_to_uniform = reverted_to_uniform && file_exists;
     if( regenerable_uniform ) {
         // Nothing to save - this quad will be regenerated faster than it would be re-read
         if( delete_after_save ) {

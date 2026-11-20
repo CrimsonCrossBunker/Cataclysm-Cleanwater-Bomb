@@ -1,0 +1,12 @@
+[
+  {
+    "type": "harvest",
+    "id": "atlas_cloudberry_harvest",
+    "entries": [ { "drop": "atlas_cloudberry", "base_num": [ 1, 3 ] } ]
+  },
+  {
+    "type": "harvest",
+    "id": "atlas_lingonberry_harvest",
+    "entries": [ { "drop": "atlas_lingonberry", "base_num": [ 1, 3 ] } ]
+  }
+]

@@ -38,6 +38,7 @@ void wishskill( Character *you, bool change_theory = false );
 void wishproficiency( Character *you );
 
 void debug();
+bool teleport_to_overmap( tripoint_abs_omt where );
 void execute_action( debug_menu_index action );
 void open_console();
 

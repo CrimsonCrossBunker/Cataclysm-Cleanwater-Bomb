@@ -1,4 +1,6 @@
+#include <point.h>
 #include <chrono>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -84,6 +86,7 @@ TEST_CASE( "prefetch_transfers_owned_bytes_without_world_or_parser_access", "[pr
     prefetch_fixture fixture;
     byte_budget budget( 8192 );
     submap_prefetcher prefetch( budget, 8 );
+    const std::size_t idle_bytes = budget.used();
     const std::string text = "[1,2,3]";
     const submap_prefetcher::request_t request = fixture.plain( 0, text );
     REQUIRE( prefetch.request( request, 0 ) );
@@ -93,13 +96,13 @@ TEST_CASE( "prefetch_transfers_owned_bytes_without_world_or_parser_access", "[pr
     CHECK( std::string( data->bytes.get(), data->size ) == text );
     prefetch.clear();
     const std::size_t retained = budget.used();
-    CHECK( retained >= text.size() + 1 );
+    CHECK( retained >= idle_bytes + text.size() + 1 );
     std::optional<JsonValue> parsed = json_from_owned_buffer( data->bytes );
     data.reset();
     CHECK( parsed->get_array().size() == 3 );
     CHECK( budget.used() == retained );
     parsed.reset();
-    CHECK( budget.used() == 0 );
+    CHECK( budget.used() == idle_bytes );
 }
 
 TEST_CASE( "prefetch_prioritizes_near_work_with_bounded_pending_and_ready_entries", "[prefetch]" )
@@ -107,6 +110,7 @@ TEST_CASE( "prefetch_prioritizes_near_work_with_bounded_pending_and_ready_entrie
     prefetch_fixture fixture;
     byte_budget budget( 8192 );
     submap_prefetcher prefetch( budget, 2 );
+    const std::size_t idle_bytes = budget.used();
     const submap_prefetcher::request_t distant_request = fixture.plain( 30, "far" );
     const submap_prefetcher::request_t middle = fixture.plain( 20, "middle" );
     const submap_prefetcher::request_t nearby_request = fixture.plain( 0, "near" );
@@ -131,7 +135,7 @@ TEST_CASE( "prefetch_prioritizes_near_work_with_bounded_pending_and_ready_entrie
     REQUIRE( prefetch.take( closer.om ) );
     REQUIRE( prefetch.take( nearby_request.om ) );
     prefetch.clear();
-    CHECK( budget.used() == 0 );
+    CHECK( budget.used() == idle_bytes );
 }
 
 TEST_CASE( "prefetch_pause_invalidates_old_bytes_before_owner_writes", "[prefetch][save]" )
@@ -140,6 +144,7 @@ TEST_CASE( "prefetch_pause_invalidates_old_bytes_before_owner_writes", "[prefetc
     prefetch_fixture fixture;
     byte_budget budget( 4 * 1024 * 1024 );
     submap_prefetcher prefetch( budget, 8 );
+    const std::size_t idle_bytes = budget.used();
     const auto write = [&]( const std::string & text ) {
         return compressed ? fixture.compressed( 0, text ) : fixture.plain( 0, text );
     };
@@ -162,40 +167,43 @@ TEST_CASE( "prefetch_pause_invalidates_old_bytes_before_owner_writes", "[prefetc
         CHECK( std::string( result->bytes.get(), result->size ) == "new" );
     }
     prefetch.clear();
-    CHECK( budget.used() == 0 );
+    CHECK( budget.used() == idle_bytes );
 }
 
 TEST_CASE( "prefetch_budget_failure_is_a_retryable_cache_miss", "[prefetch]" )
 {
     prefetch_fixture fixture;
-    byte_budget budget( 1024 );
+    byte_budget budget( 4096 );
     submap_prefetcher prefetch( budget, 4 );
+    const std::size_t idle_bytes = budget.used();
     const submap_prefetcher::request_t small = fixture.plain( 0, "small" );
-    REQUIRE( budget.acquire( budget.limit() ) );
+    const std::size_t available_bytes = budget.limit() - idle_bytes;
+    REQUIRE( budget.acquire( available_bytes ) );
     CHECK_FALSE( prefetch.request( small, 0 ) );
     CHECK( prefetch.inspect().pending == 0 );
     CHECK( prefetch.inspect().queued == 0 );
-    budget.release( budget.limit() );
+    budget.release( available_bytes );
 
-    REQUIRE( prefetch.request( fixture.plain( 1, std::string( 2048, 'x' ) ), 0 ) );
+    REQUIRE( prefetch.request( fixture.plain( 1, std::string( budget.limit() * 2, 'x' ) ), 0 ) );
     wait_until_idle( prefetch );
     CHECK_FALSE( prefetch.take( tripoint_abs_omt( 1, 0, 0 ) ) );
     REQUIRE( prefetch.request( small, 0 ) );
     wait_until_idle( prefetch );
     REQUIRE( prefetch.take( small.om ) );
     prefetch.clear();
-    CHECK( budget.used() == 0 );
+    CHECK( budget.used() == idle_bytes );
 }
 
 TEST_CASE( "prefetch_failed_result_publication_does_not_terminate_worker", "[prefetch]" )
 {
     prefetch_fixture fixture;
-    byte_budget budget( 1024 );
+    byte_budget budget( 4096 );
     submap_prefetcher prefetch( budget, 4 );
+    const std::size_t idle_bytes = budget.used();
     // Sweep payload sizes near the quota. Some leave room for decoding and
     // ownership, but not for the larger completed-map node. This injects real
     // allocation failures at publication without any test hook in the worker.
-    for( std::size_t size = 600; size < 1024; size += 8 ) {
+    for( std::size_t size = budget.limit() * 3 / 4; size < budget.limit(); size += 8 ) {
         const submap_prefetcher::request_t request = fixture.plain( 0, std::string( size, 'x' ) );
         REQUIRE( prefetch.request( request, 0 ) );
         wait_until_idle( prefetch );
@@ -212,7 +220,7 @@ TEST_CASE( "prefetch_failed_result_publication_does_not_terminate_worker", "[pre
         CHECK( std::string( result->bytes.get(), result->size ) == "recovered" );
     }
     prefetch.clear();
-    CHECK( budget.used() == 0 );
+    CHECK( budget.used() == idle_bytes );
 }
 
 TEST_CASE( "prefetch_cancel_and_reissue_do_not_publish_old_request_bytes", "[prefetch]" )
@@ -220,6 +228,7 @@ TEST_CASE( "prefetch_cancel_and_reissue_do_not_publish_old_request_bytes", "[pre
     prefetch_fixture fixture;
     byte_budget budget( 16 * 1024 * 1024 );
     submap_prefetcher prefetch( budget, 8 );
+    const std::size_t idle_bytes = budget.used();
     const submap_prefetcher::request_t old =
         fixture.plain( 0, std::string( 8 * 1024 * 1024, 'o' ) );
     submap_prefetcher::request_t current = fixture.plain( 1, "current" );
@@ -238,7 +247,7 @@ TEST_CASE( "prefetch_cancel_and_reissue_do_not_publish_old_request_bytes", "[pre
         CHECK( std::string( result->bytes.get(), result->size ) == "current" );
     }
     prefetch.clear();
-    CHECK( budget.used() == 0 );
+    CHECK( budget.used() == idle_bytes );
 }
 
 TEST_CASE( "prefetch_clear_joins_active_work_and_lazy_restart_preserves_pause", "[prefetch]" )
@@ -246,12 +255,13 @@ TEST_CASE( "prefetch_clear_joins_active_work_and_lazy_restart_preserves_pause", 
     prefetch_fixture fixture;
     byte_budget budget( 4 * 1024 * 1024 );
     submap_prefetcher prefetch( budget, 8 );
+    const std::size_t idle_bytes = budget.used();
     const submap_prefetcher::request_t request =
         fixture.compressed( 0, std::string( 1024 * 1024, 'a' ) );
     for( int i = 0; i < 8; ++i ) {
         REQUIRE( prefetch.request( request, 0 ) );
         prefetch.clear();
-        CHECK( budget.used() == 0 );
+        CHECK( budget.used() == idle_bytes );
         CHECK( prefetch.inspect().pending == 0 );
     }
     prefetch.pause();
@@ -262,6 +272,23 @@ TEST_CASE( "prefetch_clear_joins_active_work_and_lazy_restart_preserves_pause", 
     wait_until_idle( prefetch );
     REQUIRE( prefetch.take( request.om ) );
     prefetch.clear();
+    CHECK( budget.used() == idle_bytes );
+}
+
+TEST_CASE( "prefetch_destruction_releases_all_budgeted_allocations", "[prefetch]" )
+{
+    const bool compressed = GENERATE( false, true );
+    prefetch_fixture fixture;
+    byte_budget budget( 4 * 1024 * 1024 );
+    {
+        submap_prefetcher prefetch( budget, 8 );
+        const submap_prefetcher::request_t request = compressed ? fixture.compressed( 0, "[1]" ) :
+                fixture.plain( 0, "[1]" );
+        REQUIRE( prefetch.request( request, 0 ) );
+        wait_until_idle( prefetch );
+        REQUIRE( prefetch.inspect().ready == 1 );
+        CHECK( budget.used() > 0 );
+    }
     CHECK( budget.used() == 0 );
 }
 

@@ -92,6 +92,7 @@
 #include "npc_opinion.h"
 #include "npctalk.h"
 #include "omdata.h"
+#include "north_america_elevation.h"
 #include "overmap_location.h"
 #include "overmapbuffer.h"
 #include "pathfinding.h"
@@ -209,6 +210,7 @@ static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
+static const json_character_flag json_flag_CLIMB_FLYING( "CLIMB_FLYING" );
 
 static const npc_class_id NC_EVAC_SHOPKEEP( "NC_EVAC_SHOPKEEP" );
 
@@ -2906,7 +2908,8 @@ npc_action npc::method_of_fleeing()
 npc_action npc::autonomous_needs_action()
 {
     if( !is_player_ally() || attitude != NPCATT_FOLLOW || activity || in_sleep_state() ||
-        in_vehicle || !is_safe() || is_hallucination() ||
+        in_vehicle || goto_to_this_pos || !ai_cache.committed_goal.empty() ||
+        !is_safe() || is_hallucination() ||
         sees_dangerous_field( pos_bub() ) || !ai_cache.dangerous_explosives.empty() ) {
         return npc_undecided;
     }
@@ -2951,15 +2954,6 @@ npc_action npc::autonomous_needs_action()
                 autonomy.reason = _( "Using carried supplies before rejoining the team." );
                 return npc_noop;
             }
-        }
-        if( leader && !rules.has_flag( ally_rule::hold_the_line ) &&
-            rules.engagement != combat_engagement::NO_MOVE &&
-            rules.engagement != combat_engagement::FREE_FIRE ) {
-            autonomy.reason = _( "Rejoining the team before searching for more supplies." );
-            if( !sees( get_map(), *leader ) ) {
-                return npc_look_for_player;
-            }
-            return leader->in_vehicle ? npc_follow_embarked : npc_follow_player;
         }
         return npc_undecided;
     }
@@ -4338,6 +4332,8 @@ bool npc::can_move_to( const tripoint_bub_ms &p, bool no_bashing ) const
     // Allow moving into any bashable spots, but penalize them during pathing
     // Doors are not passable for hallucinations
     return( rl_dist( pos_bub(), p ) <= 1 && here.has_floor_or_water( p ) &&
+            ( has_flag( json_flag_CLIMB_FLYING ) ||
+              !north_america::sheer_slope( here, pos_bub(), p ) ) &&
             !g->is_dangerous_tile( p ) &&
             ( here.passable_through( p ) || ( can_open_door( p, !here.is_outside( pos_bub() ) ) &&
                     !is_hallucination() ) ||
@@ -4355,6 +4351,13 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
     tripoint_bub_ms p = pt;
     map &here = get_map();
     const tripoint_bub_ms pos = pos_bub( here );
+    if( !has_flag( json_flag_CLIMB_FLYING ) && north_america::sheer_slope( here, pos, p ) ) {
+        if( !path.empty() ) {
+            path.clear();
+        }
+        move_pause();
+        return;
+    }
 
     const bool has_npc_try_move =
         cata::lua_platform::has_native_hook( "on_npc_try_move" );
@@ -8358,6 +8361,11 @@ npc::need_result npc::execute_go_to_sleep()
     const tripoint_bub_ms target_bub = here.get_bub( plan.target );
     const Character &player_character = get_player_character();
 
+    if( !low_danger ) {
+        plan.last_result = need_result::deferred;
+        return need_result::deferred;
+    }
+
     // At target: perform the sleep action.
     if( pos_bub() == target_bub ) {
         autonomous_announce( "sleep", _( "I need to rest here for a while." ) );
@@ -8389,10 +8397,6 @@ npc::need_result npc::execute_go_to_sleep()
     }
 
     // Not at target: move toward it.
-    if( !low_danger && square_dist( pos_bub(), target_bub ) > 1 ) {
-        plan.last_result = need_result::deferred;
-        return need_result::deferred;
-    }
     if( move_to_and_verify( target_bub, true ) ) {
         plan.last_result = need_result::progressed;
         plan.no_progress_turns = 0;

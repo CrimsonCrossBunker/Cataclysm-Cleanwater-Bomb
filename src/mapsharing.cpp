@@ -153,7 +153,7 @@ void ofstream_wrapper::close()
     file_stream.flush();
     bool failed = file_stream.fail();
     file_stream.close();
-    if( failed ) {
+    if( failed || file_stream.fail() ) {
         // Remove the incomplete or otherwise faulty file (if possible).
         // Failures from it are ignored as we can't really do anything about them.
         std::error_code ec;

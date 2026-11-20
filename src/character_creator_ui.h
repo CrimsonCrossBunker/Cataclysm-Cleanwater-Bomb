@@ -234,7 +234,7 @@ void draw_blood( const Character &you );
 void draw_scenario_profession( const avatar &you );
 void draw_time_cataclysm_start();
 void draw_time_game_start();
-void draw_location( const avatar &you );
+void draw_location( avatar &you );
 void draw_starting_city( const avatar &you );
 std::string get_gender_string( bool male );
 

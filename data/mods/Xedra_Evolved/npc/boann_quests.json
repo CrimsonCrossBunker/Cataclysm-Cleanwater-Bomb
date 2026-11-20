@@ -239,29 +239,6 @@
     }
   },
   {
-    "id": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN",
-    "type": "mission_definition",
-    "name": { "str": "Bring me a piece of the darkest shadow" },
-    "goal": "MGOAL_CONDITION",
-    "difficulty": 8,
-    "value": 0,
-    "item": "shadow_singularity_piece",
-    "end": { "opinion": { "trust": 2, "value": 2 } },
-    "has_generic_rewards": false,
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "dialogue": {
-      "describe": "Kill a great beast in my honor and I'll reward you.",
-      "offer": "There's a shadow that haunts the night.  Bring me proof that you killed it and I'll grant you the right to bear my banner.",
-      "accepted": "I had no doubts in you.",
-      "rejected": "You may change your mind at a later date.",
-      "advice": "To encounter it, stand alone or accompanied by at most two allies in a field or a forest at night.  It might take multiple nights for it to show itself so prepare something to do while you wait.  Light massively weaken it so ensure the battlefield is well lit.  Separate it from its minions, as it can create more than you'll manage to kill and heal its wounds over time.  It is also particularly resilient against bullets so engage in melee if you manage to get close enough.",
-      "inquire": "Have you slain the shadow?",
-      "success": "I am honored to give you this banner.  Wear it with pride, as you more than earned that right.",
-      "success_lie": "I don't think so…",
-      "failure": "Quitting already?"
-    }
-  },
-  {
     "id": "MISSION_KILL_STAR_CROWN_HOUND_FOR_BOANN",
     "type": "mission_definition",
     "name": { "str": "Kill a star-crowned hound in my name" },

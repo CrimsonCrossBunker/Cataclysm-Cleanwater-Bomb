@@ -6703,6 +6703,21 @@ function CcbPlatformContent.edit_forest_biome_mapgen(id) end
 ---compatibility aliases are added.
 ---@field actors table<string, CcbDialogueParticipant|CcbDetachedDialogueParticipant>
 
+---@class CcbPlatformBeforInstallsCbmData
+---@field character integer Patient character id.
+---@field installer integer Installer character id.
+---@field bionic string Bionic id being considered for installation.
+---@field autodoc boolean Whether this is an autodoc installation.
+
+---@class CcbPlatformBeforInstallsCbmActors
+---@field character GameHandle Patient Character.
+---@field installer GameHandle Installer Character; may be the same as the patient.
+
+---@class CcbPlatformBeforInstallsCbmEvent: CcbPlatformNativeEvent
+---@field type 'befor_installs_cbm' Lua-only synchronous installation permission request.
+---@field data CcbPlatformBeforInstallsCbmData
+---@field actors CcbPlatformBeforInstallsCbmActors
+
 ---@class CcbDetachedDialogueParticipant
 ---@field kind 'computer'|'zone'|'topic'|'talker'|'item' Detached participant kind.
 ---@field name string Bounded display name snapshot.
@@ -6768,7 +6783,12 @@ function CcbPlatformRuntime.character_recurring(effect_handler, interval_handler
 ---@field due_turn? integer Absolute due turn when an effect is running.
 ---@field overdue_turns integer Non-negative lateness at invocation.
 
----@param event_name string `world_ready`, `before_save`, `after_save`, `shutdown`, or `game:<event>`.
+---`game:befor_installs_cbm` receives CcbPlatformBeforInstallsCbmEvent before
+---installation costs or surgery. Returning false cancels the attempt; true, nil,
+---or no return allows native checks to continue. The first false stops dispatch.
+---Errors and invalid return types are logged and ignored. Other event returns
+---are ignored. The permission is not rechecked during an ongoing operation.
+---@param event_name string `world_ready`, `before_save`, `after_save`, `shutdown`, `game:befor_installs_cbm`, or `game:<event>`.
 ---@param handler_id string
 function CcbPlatformRuntime.on(event_name, handler_id) end
 

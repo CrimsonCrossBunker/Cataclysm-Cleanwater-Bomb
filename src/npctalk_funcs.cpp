@@ -75,11 +75,13 @@
 #include "overmap_ui.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
+#include "player_activity.h"
 #include "point.h"
 #include "proficiency.h"
 #include "rng.h"
 #include "simple_pathfinding.h"
 #include "skill.h"
+#include "talker.h"
 #include "trade_ui.h"
 #include "translation.h"
 #include "translations.h"
@@ -208,7 +210,7 @@ bool start_training_request( Character &teacher, const std::vector<Character *> 
                              dialogue *conversation = nullptr, Character *explicit_patron = nullptr );
 void request_remote_seminar( dialogue &conversation, npc &teacher, Character &payer,
                              const talk_function::teach_domain &domain );
-}
+} // namespace
 
 namespace mission_dialogue
 {
@@ -2026,10 +2028,14 @@ static void bionic_install_common( npc &p, Character &patron, Character &patient
         return;
     }
 
+    const itype &it = *bionic.get_item()->type;
+    //Makes the doctor awesome at installing but not perfect
+    if( !patient.can_install_bionics( it, p, false, 20 ) || !bionic ) {
+        return;
+    }
+
     item *tmp = bionic.get_item();
     tmp->set_var( VAR_TRADE_IGNORE, 1 );
-    const itype &it = *tmp->type;
-
     signed int price = npc_trading::bionic_install_price( p, patient, bionic );
     bool const ret = npc_trading::pay_npc( p, price );
     tmp->erase_var( VAR_TRADE_IGNORE );
@@ -2037,19 +2043,16 @@ static void bionic_install_common( npc &p, Character &patron, Character &patient
         return;
     }
 
-    //Makes the doctor awesome at installing but not perfect
-    if( patient.can_install_bionics( it, p, false, 20 ) ) {
-        std::optional<item> source_item = *bionic.get_item();
-        // The patient paid the purchase price for this CBM (see bionic_install_price):
-        // transfer ownership to the payer, otherwise the salvaged module dropped on
-        // uninstall would still belong to the doctor's faction and picking it up would
-        // be treated as theft.
-        if( !source_item->is_owned_by( patient ) ) {
-            source_item->set_owner( patron );
-        }
-        bionic.remove_item();
-        patient.install_bionics( it, p, false, 20, source_item );
+    std::optional<item> source_item = *bionic.get_item();
+    // The patient paid the purchase price for this CBM (see bionic_install_price):
+    // transfer ownership to the payer, otherwise the salvaged module dropped on
+    // uninstall would still belong to the doctor's faction and picking it up would
+    // be treated as theft.
+    if( !source_item->is_owned_by( patient ) ) {
+        source_item->set_owner( patron );
     }
+    bionic.remove_item();
+    patient.install_bionics( it, p, false, 20, source_item );
 }
 
 void talk_function::bionic_install( npc &p )

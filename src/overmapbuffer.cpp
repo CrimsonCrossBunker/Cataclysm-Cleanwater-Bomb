@@ -2,6 +2,7 @@
 
 #include <cata_path.h>
 #include <map_scale_constants.h>
+#include <math_parser_diag_value.h>
 #include <monster_uid.h>
 #include <type_id.h>
 #include <algorithm>
@@ -16,7 +17,9 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
+#include "avatar.h"
 #include "basecamp.h"
 #include "calendar.h"
 #include "cata_assert.h"
@@ -37,6 +40,7 @@
 #include "imgui/imgui.h"
 #include "json.h"
 #include "line.h"
+#include "lua_platform_handle.h"
 #include "map.h"
 #include "mapgendata.h"
 #include "memory_fast.h"
@@ -46,6 +50,7 @@
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
+#include "north_america_elevation.h"
 #include "npc.h"
 #include "npc_lifetime.h"
 #include "omdata.h"
@@ -63,6 +68,9 @@
 #include "worldfactory.h"
 
 enum class ot_match_type : int;
+
+static const oter_str_id oter_deep_rock( "deep_rock" );
+static const oter_str_id oter_open_air( "open_air" );
 
 static const oter_type_str_id oter_type_bridgehead_ground( "bridgehead_ground" );
 static const oter_type_str_id oter_type_bridgehead_ramp( "bridgehead_ramp" );
@@ -301,8 +309,63 @@ void overmap_global_state::clear()
     unique_special_decks.clear();
     highway_intersections.clear();
     placed_regions.clear();
+    tracked_pets.clear();
     overmap_count = 0;
     major_river_count = 0;
+}
+
+void overmapbuffer::update_tracked_pet( monster &pet, const Character &observer,
+                                        bool claim_ownership )
+{
+    pet.ensure_uid();
+    const int64_t uid = pet.uid().get_value();
+    if( pet.friendly != -1 || pet.is_dead() || !pet.has_flag( mon_flag_PET_MOUNTABLE ) ||
+        pet.get_value( "hide_overmap_marker" ).str() == "yes" ) {
+        remove_tracked_pet( uid );
+        return;
+    }
+    std::vector<overmap_tracked_pet> &pets = global_state.tracked_pets;
+    const auto found = std::find_if( pets.begin(),
+    pets.end(), [uid]( const overmap_tracked_pet & entry ) {
+        return entry.uid == uid;
+    } );
+    if( found == pets.end() ) {
+        pets.push_back( { uid, observer.getID(), pet.pos_abs_omt(), pet.get_name() } );
+    } else {
+        if( claim_ownership ) {
+            found->owner = observer.getID();
+        }
+        found->position = pet.pos_abs_omt();
+        found->name = pet.get_name();
+    }
+}
+
+void overmapbuffer::remove_tracked_pet( int64_t uid )
+{
+    std::vector<overmap_tracked_pet> &pets = global_state.tracked_pets;
+    pets.erase( std::remove_if( pets.begin(), pets.end(), [uid]( const overmap_tracked_pet & entry ) {
+        return entry.uid == uid;
+    } ), pets.end() );
+}
+
+bool overmapbuffer::has_tracked_pet( const tripoint_abs_omt &p ) const
+{
+    const character_id owner = get_avatar().getID();
+    return std::any_of( global_state.tracked_pets.begin(), global_state.tracked_pets.end(),
+    [&p, owner]( const overmap_tracked_pet & entry ) {
+        return entry.owner == owner && entry.position == p;
+    } );
+}
+
+std::vector<overmap_tracked_pet> overmapbuffer::get_tracked_pets( const tripoint_abs_omt &p ) const
+{
+    std::vector<overmap_tracked_pet> result;
+    for( const overmap_tracked_pet &entry : global_state.tracked_pets ) {
+        if( entry.owner == get_avatar().getID() && entry.position == p ) {
+            result.push_back( entry );
+        }
+    }
+    return result;
 }
 
 const region_settings &overmapbuffer::get_settings( const tripoint_abs_omt &p )
@@ -936,8 +999,31 @@ void overmapbuffer::add_camp( const basecamp &camp )
     om_loc.om->add_camp( omt, camp );
 }
 
+static const oter_id *atlas_outlying_terrain( int z )
+{
+    if( ( z >= -OVERMAP_DEPTH && z <= OVERMAP_HEIGHT ) || !north_america::elevation_active() ) {
+        return nullptr;
+    }
+    // Resolve string IDs again after a data reload. The returned reference has
+    // the same lifetime as other overmap terrain lookups on the owning thread.
+    static thread_local oter_id rock_id; // NOLINT(cata-static-int_id-constants)
+    static thread_local oter_id air_id; // NOLINT(cata-static-int_id-constants)
+    if( z < 0 ) {
+        rock_id = oter_deep_rock.id();
+        return &rock_id;
+    }
+    air_id = oter_open_air.id();
+    return &air_id;
+}
+
 om_vision_level overmapbuffer::seen( const tripoint_abs_omt &p )
 {
+    if( atlas_outlying_terrain( p.z() ) ) {
+        if( get_map().inbounds( p ) ) {
+            return om_vision_level::full;
+        }
+        return seen( tripoint_abs_omt( p.xy(), 0 ) );
+    }
     if( const overmap_with_local_coords om_loc = get_existing_om_global( p ) ) {
         return om_loc.om->seen( om_loc.local );
     }
@@ -946,6 +1032,9 @@ om_vision_level overmapbuffer::seen( const tripoint_abs_omt &p )
 
 void overmapbuffer::set_seen( const tripoint_abs_omt &p, om_vision_level seen )
 {
+    if( atlas_outlying_terrain( p.z() ) ) {
+        return;
+    }
     const overmap_with_local_coords om_loc = get_om_global( p );
     om_loc.om->set_seen( om_loc.local, seen );
 }
@@ -960,12 +1049,18 @@ bool overmapbuffer::seen_more_than( const tripoint_abs_omt &p, om_vision_level t
 
 const oter_id &overmapbuffer::ter( const tripoint_abs_omt &p )
 {
+    if( const oter_id *terrain = atlas_outlying_terrain( p.z() ) ) {
+        return *terrain;
+    }
     const overmap_with_local_coords om_loc = get_om_global( p );
     return om_loc.om->ter( om_loc.local );
 }
 
 const oter_id &overmapbuffer::ter_existing( const tripoint_abs_omt &p )
 {
+    if( const oter_id *terrain = atlas_outlying_terrain( p.z() ) ) {
+        return *terrain;
+    }
     static const oter_id ot_null;
     const overmap_with_local_coords om_loc = get_existing_om_global( p );
     if( !om_loc.om ) {
@@ -990,6 +1085,18 @@ std::vector<pp_resolved_generator> *overmapbuffer::pp_decisions( const tripoint_
 {
     const overmap_with_local_coords om_loc = get_om_global( p );
     return om_loc.om->pp_decisions( om_loc.local );
+}
+
+bool overmapbuffer::has_riot_damage( const tripoint_abs_omt &p )
+{
+    const overmap_with_local_coords om_loc = get_om_global( p );
+    return om_loc.om->has_riot_damage( om_loc.local );
+}
+
+void overmapbuffer::set_riot_damage( const tripoint_abs_omt &p )
+{
+    const overmap_with_local_coords om_loc = get_om_global( p );
+    om_loc.om->set_riot_damage( om_loc.local );
 }
 
 std::string *overmapbuffer::join_used_at( const std::pair<tripoint_abs_omt, cube_direction> &p )
@@ -1731,6 +1838,20 @@ void overmapbuffer::populate_followers_vec( std::vector<npc *> &followers,
     }
 }
 
+void overmapbuffer::clear_npcs()
+{
+    for( auto &entry : overmaps ) {
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+        for( const auto &survivor : entry.second->npcs ) {
+            cata::lua_platform::retire_npc_handle_identity( *survivor );
+        }
+#endif
+        entry.second->npcs.clear();
+    }
+    platform_npc_index_.clear();
+    platform_authoritative_missing_npcs_.clear();
+}
+
 void overmapbuffer::foreach_npc( const std::function<void( npc & )> &callback )
 {
     for( auto &it : overmaps ) {
@@ -2239,6 +2360,9 @@ std::string overmapbuffer::get_description_at( const tripoint_abs_sm &where, boo
         ter_name = colorize( blended.name, ter_color );
     }
 
+    if( vision >= om_vision_level::details && has_riot_damage( project_to<coords::omt>( where ) ) ) {
+        ter_name = string_format( _( "%s (riot damaged)" ), ter_name );
+    }
     if( where.z() != 0 ) {
         return draw_origin ? ter_name + "\n" + get_origin( oter->get_type_id()->src ) : ter_name;
     }
@@ -2315,6 +2439,9 @@ void overmapbuffer::display_description_at( const tripoint_abs_sm &where, bool d
         ter_name = colorize( blended.name, ter_color );
     }
 
+    if( vision >= om_vision_level::details && has_riot_damage( project_to<coords::omt>( where ) ) ) {
+        ter_name = string_format( _( "%s (riot damaged)" ), ter_name );
+    }
     if( where.z() != 0 ) {
         cataimgui::TextColoredParagraph( ter_color, ter_name );
         draw_origin_line();
@@ -2501,6 +2628,9 @@ horde_entity &overmapbuffer::spawn_monster( const tripoint_abs_ms &p, mtype_id i
 overmapbuffer::t_notes_vector overmapbuffer::get_notes( int z, std::string_view pattern )
 {
     t_notes_vector result;
+    if( z < -OVERMAP_DEPTH || z > OVERMAP_HEIGHT ) {
+        return result;
+    }
     for( auto &it : overmaps ) {
         const overmap &om = *it.second;
         for( int i = 0; i < OMAPX; i++ ) {
@@ -2527,6 +2657,9 @@ overmapbuffer::t_notes_vector overmapbuffer::get_notes( int z, std::string_view 
 overmapbuffer::t_extras_vector overmapbuffer::get_extras( int z, std::string_view pattern )
 {
     overmapbuffer::t_extras_vector result;
+    if( z < -OVERMAP_DEPTH || z > OVERMAP_HEIGHT ) {
+        return result;
+    }
     for( auto &it : overmaps ) {
         const overmap &om = *it.second;
         for( int i = 0; i < OMAPX; i++ ) {

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import tempfile
@@ -204,6 +205,20 @@ def compare_declarations(old_metadata: dict, old_text: str,
     }
 
 
+def diagnostic_path(uri: str) -> str:
+    if not uri.startswith("file:"):
+        return uri
+    parsed = urlparse(uri)
+    host = parsed.netloc if parsed.netloc != "localhost" else ""
+    path = parsed.path
+    if os.name == "nt" and not host:
+        path = re.sub(
+            r"^/([A-Za-z])(?::|%3[aA])(?=/)",
+            lambda match: "/" + match[1].upper() + ":", path,
+        )
+    return url2pathname(("//" + host if host else "") + path)
+
+
 def check_mod(mod: Path, language_server: str) -> list[str]:
     """Use the author's pinned SDK/config; never run the game or Mod entry."""
     mod = mod.resolve()
@@ -255,13 +270,7 @@ def check_mod(mod: Path, language_server: str) -> list[str]:
                        isinstance(start[key], bool) or start[key] < 0
                        for key in ("line", "character")):
                     raise ValueError(f"{location}: invalid start position")
-            path = uri
-            if uri.startswith("file:"):
-                parsed = urlparse(uri)
-                host = parsed.netloc if parsed.netloc != "localhost" else ""
-                path = url2pathname(
-                    ("//" + host if host else "") + parsed.path
-                )
+            path = diagnostic_path(uri)
             for entry in sorted(entries, key=lambda e: (
                 e["range"]["start"]["line"],
                 e["range"]["start"]["character"], str(e.get("code", "")),

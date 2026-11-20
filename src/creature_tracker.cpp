@@ -625,10 +625,10 @@ void creature_tracker::rebuild_passability_bitmap()
 
 void creature_tracker::fill_passability_bitmap( const map &terrain, passability_grid &bitmap )
 {
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
+    for( int z = terrain.min_z(); z <= terrain.max_z(); z++ ) {
         const level_cache &cache = terrain.get_cache_ref( z );
         const auto &transparent_wo_fields = cache.transparent_cache_wo_fields;
-        auto &layer = bitmap[z + OVERMAP_DEPTH];
+        auto &layer = bitmap[terrain.layer_for_z( z )];
         for( int x = 0; x < MAPSIZE_X; x++ ) {
             for( int y = 0; y < MAPSIZE_Y; y++ ) {
                 tripoint_bub_ms loc( x, y, z );
@@ -731,7 +731,8 @@ void creature_tracker::flood_fill_zone( const Creature &origin, map &here,
             // still available. Do not catch exceptions from the flood itself.
         }
     }
-    const ai_reachability::output *prepared = regional ? nullptr : prepare_reachability_geometry();
+    const ai_reachability::output *prepared = regional || here.z_origin() != 0 ?
+            nullptr : prepare_reachability_geometry();
     std::optional<ai_reachability::geometry_view> geometry;
     if( prepared ) {
         geometry.emplace( here, *reachability_state_->preparation->captured() );
@@ -745,10 +746,10 @@ void creature_tracker::flood_fill_zone( const Creature &origin, map &here,
         // Keep the per-cell check inline even when scratch is passed by reference.
         CATA_FORCEINLINE bool operator()( const tripoint_bub_ms &loc, int direction ) const {
             if( direction == 0 ) {
-                return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
+                return here.inbounds_z( loc.z() ) &&
                        loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
                        loc.x() >= 0 && loc.x() < MAPSIZE_X &&
-                       bitmap[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+                       bitmap[here.layer_for_z( loc.z() )][loc.x()][loc.y()];
             }
 
             if( prepared && geometry->matches_at( loc, direction ) ) {
@@ -816,10 +817,19 @@ void creature_tracker::flood_fill_zone( const Creature &origin, map &here,
             }
         }
     };
+    const tripoint offset( 0, 0, here.z_origin() );
+    const auto test = [&]( const tripoint_bub_ms & p, int dir ) {
+        return passable( p + offset, dir );
+    };
+    const auto visit_absolute_level = [&]( const tripoint_bub_ms & p ) {
+        visit( p + offset );
+    };
+    const tripoint_bub_ms start_level = start_position - offset;
     if( reachability_state_ ) {
-        ff::flood_fill_visit_10_connected( start_position, passable, visit, reachability_state_->flood );
+        ff::flood_fill_visit_10_connected( start_level, test, visit_absolute_level,
+                                           reachability_state_->flood );
     } else {
-        ff::flood_fill_visit_10_connected( start_position, passable, visit );
+        ff::flood_fill_visit_10_connected( start_level, test, visit_absolute_level );
     }
     if( regional ) {
         ++regional->next_zone;

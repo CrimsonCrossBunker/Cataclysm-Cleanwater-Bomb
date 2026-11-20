@@ -1,5 +1,7 @@
 #include <functional>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "basecamp.h"
 #include "cata_catch.h"
@@ -87,4 +89,3 @@ TEST_CASE( "automatic_food_distribution_uses_an_accessible_camp", "[camp][npc]" 
         CHECK( trader.get_faction()->food_supply().kcal() == 0 );
     }
 }
-

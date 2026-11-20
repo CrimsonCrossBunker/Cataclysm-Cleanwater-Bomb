@@ -26065,25 +26065,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             for todo in avatar_result.todos
         ))
 
-        monster_eocs = migrate_lua_first.load_objects([
-            REPOSITORY_ROOT / "data/json/monsters/singularities.json"
-        ])
-        monster_eoc = next(
-            source for source in monster_eocs
-            if source.value.get("id") == "EOC_LIEUTENANT_SHADOW_CATCHUP"
-        )
-        monster_teleport = next(
-            effect for effect in monster_eoc.value["effect"]
-            if isinstance(effect, dict) and "npc_teleport" in effect
-        )
-        self.assertEqual(monster_teleport.get("force"), True)
-        self.assertIn("success_message", monster_teleport)
-        self.assertIsNone(
-            migrate_lua_first.render_static_teleport_effect(
-                monster_teleport, monster_actor_proven=True,
-            )
-        )
-
         talk_sources = migrate_lua_first.load_objects([
             REPOSITORY_ROOT / "data/json/npcs/exodii/exodii_merchant_talk.json"
         ])

@@ -1,12 +1,21 @@
+#include <character_id.h>
+#include <coordinates.h>
+#include <point.h>
 #include <array>
+#include <cstdint>
+#include <functional>
+#include <map>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "avatar.h"
-#include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "debug.h"
 #include "event.h"
 #include "flexbuffer_json.h"
 #include "game.h"
@@ -20,11 +29,14 @@
 #include "mp_client_conn.h"
 #include "npc.h"
 #include "player_helpers.h"
-#include "rng.h"
+#include "rng_helpers.h"
 #include "type_id.h"
 
+static const mission_type_id mission_TEST_MISSION_GENERIC_REWARD( "TEST_MISSION_GENERIC_REWARD" );
+
 static const mtype_id mon_zombie( "mon_zombie" );
-static const mission_type_id test_mission( "TEST_MISSION_GENERIC_REWARD" );
+
+static const species_id species_ZOMBIE( "ZOMBIE" );
 
 TEST_CASE( "kill_credit_separates_remote_players_from_native_followers", "[mission][multiplayer]" )
 {
@@ -96,7 +108,7 @@ TEST_CASE( "kill_mission_thresholds_and_progress_use_the_assigned_character",
         mission::clear_all();
         clear_npcs();
     } );
-    mission_type &definition = const_cast<mission_type &>( test_mission.obj() );
+    mission_type &definition = const_cast<mission_type &>( mission_TEST_MISSION_GENERIC_REWARD.obj() );
     const restore_on_out_of_scope restore_goal( definition.goal );
     const restore_on_out_of_scope restore_count( definition.monster_kill_goal );
     const restore_on_out_of_scope restore_type( definition.monster_type );
@@ -104,7 +116,7 @@ TEST_CASE( "kill_mission_thresholds_and_progress_use_the_assigned_character",
     definition.goal = GENERATE( MGOAL_KILL_MONSTER_TYPE, MGOAL_KILL_MONSTER_SPEC );
     definition.monster_kill_goal = 2;
     definition.monster_type = mon_zombie;
-    definition.monster_species = species_id( "ZOMBIE" );
+    definition.monster_species = species_ZOMBIE;
     host.get_kill_statistics().reset( { { mon_zombie, 7 } }, {} );
     remote.get_kill_statistics().reset( { { mon_zombie, 1 } }, {} );
     mission *host_task = mission::reserve_new( definition.id, character_id() );
@@ -138,16 +150,19 @@ TEST_CASE( "kill_history_load_replaces_records_without_replaying_rewards", "[sav
     owner.serialize( out );
     npc restored;
     restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
-    restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
+    const std::string reload_diagnostic = capture_debugmsg_during( [&]() {
+        restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
+    } );
+    CHECK( reload_diagnostic.empty() );
     CHECK( restored.get_kill_statistics().kill_count( mon_zombie ) == 4 );
     CHECK( restored.get_kill_statistics().npc_kill_count() == 2 );
     CHECK( restored.kill_xp == 45 );
-    const auto rng_before = rng_get_engine();
+    const std::string rng_before = capture_rng_state();
     std::ostringstream portable;
     JsonOut portable_out( portable );
     owner.store_player_state( portable_out );
     restored.load_player_state( json_loader::from_string( portable.str() ).get_object() );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
     CHECK( restored.get_kill_statistics().kill_count( mon_zombie ) == 4 );
     CHECK( restored.kill_xp == 45 );
     kill_statistics old_save;
@@ -157,7 +172,7 @@ TEST_CASE( "kill_history_load_replaces_records_without_replaying_rewards", "[sav
     old_save.deserialize( legacy );
     CHECK( old_save.kill_count( mon_zombie ) == 9 );
     CHECK( old_save.npc_kill_count() == 1 );
-    const auto revision = old_save.revision();
+    const std::uint64_t revision = old_save.revision();
     CHECK_THROWS_AS( old_save.deserialize( json_loader::from_string(
             R"({ "kills": { "mon_zombie": 100 }, "npc_kills": 3 })" ).get_object() ), JsonError );
     CHECK( old_save.kill_count( mon_zombie ) == 9 );

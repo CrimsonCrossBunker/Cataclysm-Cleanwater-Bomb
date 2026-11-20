@@ -247,7 +247,7 @@ Poor vision: 20 (cat night vision, Exodii quadruped night vision, wretched hatch
 
 Normal vision : 40 (default day vision; zombie, feral, mi-go, black bear, Atlantic cod )
 
-Very strong vision: 50 (supernatural or specialized; hound of Tindalos, mi-go, kreck, zombie master, turkey, A Shadow? )
+Very strong vision: 50 (supernatural or specialized; hound of Tindalos, mi-go, kreck, zombie master, turkey )
 
 Maximum vision: 60 (highest for balance purposes; spasming lump; flesh wall )
 

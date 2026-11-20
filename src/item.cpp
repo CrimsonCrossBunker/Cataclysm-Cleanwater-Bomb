@@ -4351,6 +4351,12 @@ bool item::needs_processing() const
     return processing_speed() != NO_PROCESSING;
 }
 
+bool item::has_processing_work() const
+{
+    return active || ethereal || wetness > 0 || link_ || relic_data ||
+           has_item_vars_ || !faults.empty() || !contents.empty_with_no_mods();
+}
+
 int item::processing_speed() const
 {
     if( is_corpse() || is_comestible() ) {
@@ -4909,6 +4915,9 @@ void item::actualize_scheduled( item_wakeup_kind kind, time_point now,
 bool item::process( map &here, Character *carrier, const tripoint_bub_ms &pos, float insulation,
                     temperature_flag flag, float spoil_multiplier_parent, bool watertight_container, bool recursive )
 {
+    if( !has_processing_work() ) {
+        return false;
+    }
     process_relic( carrier, pos );
     if( recursive ) {
         contents.process( here, carrier, pos, insulation, flag,

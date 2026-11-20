@@ -1,6 +1,7 @@
 #include "melee.h"
 
 #include <mounted_charge.h>
+#include <safe_reference.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -1974,6 +1975,9 @@ std::vector<matec_id> Character::active_techniques( const bool include_unavailab
     if( wielded && wielded->has_technique( tec_mounted_charge ) ) {
         candidates.push_back( tec_mounted_charge );
     }
+    if( is_mounted() ) {
+        candidates.push_back( tec_wild_charge );
+    }
     for( const matec_id &id : candidates ) {
         if( !id.is_valid() || !id->can_activate() || !seen.insert( id ).second ) {
             continue;
@@ -2010,7 +2014,20 @@ ret_val<void> Character::active_technique_availability( const matec_id &techniqu
         ( is_mounted() && mounted_creature && mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) ) {
         return ret_val<void>::make_failure( _( "You cannot attack right now." ) );
     }
-    const time_duration remaining = martial_arts_data->technique_cooldown_remaining( technique );
+    time_duration remaining = martial_arts_data->technique_cooldown_remaining( technique );
+    if( technique == tec_mounted_charge || technique == tec_wild_charge ) {
+        remaining = std::max( remaining, martial_arts_data->technique_cooldown_remaining(
+                                  technique == tec_mounted_charge ? tec_wild_charge : tec_mounted_charge ) );
+        if( !is_mounted() || !mounted_creature || mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) {
+            return ret_val<void>::make_failure( _( "Requires an animal mount." ) );
+        }
+        if( mounted_creature->get_load_weight() > mounted_creature->weight_capacity() ) {
+            return ret_val<void>::make_failure( _( "The mount is overloaded." ) );
+        }
+        if( technique == tec_wild_charge && !is_running() ) {
+            return ret_val<void>::make_failure( _( "The mount must be trotting to charge." ) );
+        }
+    }
     if( remaining > 0_turns ) {
         return ret_val<void>::make_failure( _( "Cooldown: %s" ), to_string( remaining ) );
     }
@@ -2296,6 +2313,7 @@ bool Character::use_active_technique( const tripoint_bub_ms &position,
 bool Character::use_active_technique( Creature &target, const matec_id &technique )
 {
     if( !technique.is_valid() || technique->targets_position() || technique == tec_mounted_charge ||
+        technique == tec_wild_charge ||
         !technique->can_activate() || !technique->activation_allowed( *this, "start" ) ||
         &target == this || target.is_dead_state() ||
         !technique->activation_allowed( *this, "target", &target ) ||

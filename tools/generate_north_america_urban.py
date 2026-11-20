@@ -10,7 +10,9 @@ from pyproj import CRS, Transformer
 from shapely import STRtree
 from shapely.geometry import Point
 
-from generate_north_america import LATITUDE, LONGITUDE, RADIUS, projected_features
+from generate_north_america import (
+    LATITUDE, LONGITUDE, RADIUS, projected_features,
+)
 
 DISTRICT_SIZE = 48
 METRES_PER_OMT = 24
@@ -21,7 +23,8 @@ def districts(urban_areas, atlas):
     project = Transformer.from_crs(
         "EPSG:4326",
         CRS.from_proj4(
-            f"+proj=aeqd +lat_0={LATITUDE} +lon_0={LONGITUDE} +R={RADIUS} +units=m"
+            f"+proj=aeqd +lat_0={LATITUDE} +lon_0={LONGITUDE} "
+            f"+R={RADIUS} +units=m"
         ),
         always_xy=True,
     )
@@ -45,14 +48,25 @@ def districts(urban_areas, atlas):
                 center = Point((col + 0.5) * metres, -(row + 0.5) * metres)
                 if not polygon.covers(center):
                     continue
-                closest = min(nearby, key=lambda candidate: centers[candidate][1].distance(center))
+                closest = min(
+                    nearby,
+                    key=lambda candidate: centers[candidate][1].distance(
+                        center
+                    ),
+                )
                 sampled[col, row] = centers[closest][0]
     return [[x, y, city] for (x, y), city in sorted(sampled.items())]
 
 
 def render(urban_areas, atlas):
-    entries = ",\n".join("    " + json.dumps(district) for district in districts(urban_areas, atlas))
-    return f'{{\n  "version": 1,\n  "district_size": {DISTRICT_SIZE},\n  "districts": [\n{entries}\n  ]\n}}\n'
+    entries = ",\n".join(
+        "    " + json.dumps(district)
+        for district in districts(urban_areas, atlas)
+    )
+    return (
+        f'{{\n  "version": 1,\n  "district_size": {DISTRICT_SIZE},\n'
+        f'  "districts": [\n{entries}\n  ]\n}}\n'
+    )
 
 
 def main():

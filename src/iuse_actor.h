@@ -24,19 +24,20 @@
 #include "units.h"
 
 class Character;
-struct item_comp;
-template<typename T> struct comp_selection;
 class JsonObject;
 class item;
 class item_location;
 class map;
-class vpart_position;
 class npc;
 class npc_template;
-struct furn_t;
-
+class vpart_position;
 enum class link_state : int;
 enum class ot_match_type : int;
+struct furn_t;
+struct item_activation_choices;
+struct item_comp;
+template<typename T> struct comp_selection;
+
 namespace sounds
 {
 enum class sound_t : int;
@@ -567,8 +568,8 @@ class firestarter_actor : public iuse_actor
         bool valid_activation_choices( const item_activation_choices &choices ) const override;
         bool query_fire_choices( Character &who, const item &tool, map &here,
                                  tripoint_bub_ms &position, item_activation_choices &choices ) const;
-        std::optional<int> use_with_choices( Character *who, item &tool, map *here,
-                                             const tripoint_bub_ms &position,
+        std::optional<int> use_with_choices( Character *, item &, map *here,
+                                             const tripoint_bub_ms &,
                                              const item_activation_choices &choices ) const override;
         std::optional<int> use_with_tool( Character &who, const item_location &tool, map &here,
                                           const tripoint_bub_ms &position,
@@ -592,8 +593,8 @@ class firestarter_actor : public iuse_actor
                              const tripoint_bub_ms &fire_pos ) const;
 
     private:
-        std::optional<int> use_firestarter( Character *who, item &tool, map *here,
-                                            const tripoint_bub_ms &position,
+        std::optional<int> use_firestarter( Character *, item &, map *here,
+                                            const tripoint_bub_ms &,
                                             const item_activation_choices &choices,
                                             const item_location &exact_tool ) const;
 };
@@ -630,8 +631,8 @@ class salvage_actor : public iuse_actor
         bool confirm_salvage_choices( Character &who, const item &tool,
                                       const std::vector<item_location> &targets, bool bulk,
                                       item_activation_choices &choices ) const;
-        std::optional<int> use_with_choices( Character *who, item &tool, map *here,
-                                             const tripoint_bub_ms &position,
+        std::optional<int> use_with_choices( Character *, item &cutter, map *here,
+                                             const tripoint_bub_ms &,
                                              const item_activation_choices &choices ) const override;
 
         ~salvage_actor() override = default;

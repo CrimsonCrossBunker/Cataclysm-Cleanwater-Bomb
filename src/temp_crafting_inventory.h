@@ -109,6 +109,7 @@ class temp_crafting_inventory : public read_only_visitable
         cata::colony<item *> items;
         // list of all items in this crafting inventory that know their parent
         cata::colony<item_location> items_loc;
+        std::optional<faction_id> map_crafter_faction;
         // copies of "owned" items added by `add_item_copy`
         cata::colony<item *> item_copies;
         // this is only walked in visitable for tool qualities!
