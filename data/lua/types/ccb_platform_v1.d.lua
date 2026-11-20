@@ -13777,12 +13777,19 @@ function CcbSpellsApi.set_level(character, spell, level) end
 ---@return CcbResult result value is the number of spells whose native setter was invoked.
 function CcbSpellsApi.adjust_school_levels(character, school, amount) end
 
----Set the experience of a known spell through native rules; unknown spells return not_known.
+---Set experience. The default requires a known spell and accepts 0..1000000000.
 ---@param character GameHandle Exact live Character handle.
 ---@param spell GameId GameId<spell>.
----@param experience integer Native experience from zero through 1000000000.
----@return CcbResult result `value` contains before and after spell snapshots.
-function CcbSpellsApi.set_experience(character, spell, experience) end
+---@param experience integer
+---@param native_assignment? boolean True uses native signed-int assignment. Nonnegative experience can learn an unknown spell and negative experience forgets a known spell.
+---@return CcbResult result Before and after snapshots are absent when the spell is unknown at that point.
+function CcbSpellsApi.set_experience(character, spell, experience, native_assignment) end
+
+---Calculate the native spell-specific experience threshold at the supplied level.
+---@param spell GameId GameId<spell>.
+---@param level integer Native signed-int spell level.
+---@return integer Native experience threshold saturated to the signed-int range.
+function CcbSpellsApi.experience_for_level(spell, level) end
 
 ---Forget a known spell through native level removal.
 ---@param character GameHandle Exact live Character handle.

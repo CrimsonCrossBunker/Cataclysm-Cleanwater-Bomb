@@ -943,7 +943,7 @@ sol::table adjust_spell(
     const script_game_id &requested_id, const int amount,
     const spell_adjustment adjustment,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation, const bool native_experience = false )
 {
     const std::string api_name =
         adjustment == spell_adjustment::set_experience ?
@@ -964,7 +964,8 @@ sol::table adjust_spell(
         maximum_spell_gain;
     const int minimum =
         setting_experience || setting_level ? 0 : 1;
-    if( !setting_level && ( amount < minimum || amount > maximum ) ) {
+    const bool native_assignment = setting_level || ( setting_experience && native_experience );
+    if( !native_assignment && ( amount < minimum || amount > maximum ) ) {
         throw std::invalid_argument(
             api_name + " amount is outside its limit" );
     }
@@ -978,7 +979,7 @@ sol::table adjust_spell(
     }
     const spell_id id( requested_id.value() );
     known_magic &magic = *character->magic;
-    if( !setting_level && !magic.knows_spell( id ) ) {
+    if( !native_assignment && !magic.knows_spell( id ) ) {
         return make_game_error_result(
         state, game_handle_error{
             "not_known",
@@ -1183,10 +1184,6 @@ int spell_experience_for_level(
 {
     require_spell_id(
         requested_id, "services.spells.experience_for_level" );
-    if( level < 0 || level > maximum_spell_level ) {
-        throw std::invalid_argument(
-            "services.spells.experience_for_level level is outside its limit" );
-    }
     return spell_id( requested_id.value() )->exp_for_level( level );
 }
 
@@ -1861,13 +1858,13 @@ void install_magic_api(
         "set_experience",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const script_game_id & id, const int amount ) {
+    const script_game_id & id, const int amount, const sol::optional<bool> &native_assignment ) {
         require_write();
         return adjust_spell(
                    lua_state, handle, id, amount,
                    spell_adjustment::set_experience,
                    current_runtime_generation(),
-                   current_world_generation() );
+                   current_world_generation(), native_assignment.value_or( false ) );
     } );
     spells.set_function(
         "gain_experience",

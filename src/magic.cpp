@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <ostream>
 #include <set>
@@ -2182,16 +2183,23 @@ int spell_type::exp_for_level( int level ) const
                 cata::lua_platform::invoke_magic_type_number_handler(
                     magic_type->str(), "experience_for_level", id.str(), nullptr,
                     static_cast<double>( level ) ) ) {
+            // The handler validates that its result is finite and in the native int range.
             return static_cast<int>( std::ceil( *value ) );
         }
     }
-    std::optional<jmath_func_id> func_id = overall_exp_for_level_formula_id();
-    if( func_id.has_value() ) {
-        std::vector<double> params = { static_cast<double>( level ) };
-        return std::ceil( func_id.value()->eval( dialogue( std::make_unique<talker>(),
-                          nullptr ), params ) );
+    double xp;
+    if( const std::optional<jmath_func_id> func_id = overall_exp_for_level_formula_id() ) {
+        const std::vector<double> params = { static_cast<double>( level ) };
+        xp = std::ceil( ( *func_id )->eval( dialogue( std::make_unique<talker>(), nullptr ), params ) );
+        if( std::isnan( xp ) ) {
+            debugmsg( "Spell %s experience formula returned NaN for level %d", id.str(), level );
+            return 0;
+        }
+    } else {
+        xp = std::ceil( std::exp( ( level - c ) * b ) ) - a;
     }
-    return std::ceil( std::exp( ( level - c ) * b ) ) - a;
+    return static_cast<int>( std::clamp( xp, static_cast<double>( std::numeric_limits<int>::min() ),
+                                        static_cast<double>( std::numeric_limits<int>::max() ) ) );
 }
 
 int spell::exp_to_next_level() const

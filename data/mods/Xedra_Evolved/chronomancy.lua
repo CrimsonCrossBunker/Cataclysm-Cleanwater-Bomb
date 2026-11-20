@@ -32,7 +32,8 @@ end
 local function add_insight(character, amount)
     local insight = id("vitamin", "xedra_chronomancer_insight")
     local old = checked(services.needs.get_vitamin(character, insight))
-    checked(services.needs.set_vitamin(character, insight, math.modf(old + amount)))
+    local total = math.modf(old + amount)
+    checked(services.needs.set_vitamin(character, insight, total))
 end
 
 local function show_insight(character)
@@ -129,12 +130,57 @@ runtime.handler("observe_chronomantic_paradox", function(impact)
     end
 end)
 
+local entropy_spell = "xedra_chronomancer_reverse_entropy"
 local toggles = {
+    [entropy_spell] = "effect_xedra_chronomancer_reverse_entropy",
     xedra_chronomancer_stable_loop = "effect_xedra_chronomancer_stable_timeloop",
     xedra_chronomancer_chronal_acceleration = "effect_xedra_chronomancer_chronal_accel",
     xedra_chronomancer_destabilizing_strikes = "effect_xedra_chronomancer_destabilizing_strikes",
     xedra_chronomancer_stabilize_timeline = "effect_xedra_chronomancer_stabilize_timeline",
 }
+
+local function recharge_inventory(character, strength)
+    local batteries = {}
+    for _, item in ipairs(checked(services.inventory.carried_items(character))) do
+        if checked(services.items.snapshot(item, 0)).resources.chargeable then batteries[#batteries + 1] = item end
+    end
+    -- Native battery quantities are nonnegative integers and clamp the result at zero.
+    local charges = math.floor(strength)
+    for _, item in ipairs(batteries) do
+        if item:is_valid() then checked(services.items.modify_battery_charges(item, charges)) end
+    end
+end
+
+local function repair_inventory(character, strength, burn_repair)
+    for _, item in ipairs(checked(services.inventory.carried_items(character))) do
+        local snapshot = checked(services.items.snapshot(item, 0))
+        local condition = snapshot.condition
+        local hp = condition.max_damage - condition.damage
+        local wanted = condition.max_damage - math.modf(hp + strength)
+        local updates = { damage = math.max(0, math.min(wanted, condition.max_damage)) }
+        if snapshot.goes_bad and snapshot.relative_rot >= 0 then
+            local minutes = math.max(0, snapshot.rot.turns) / 60
+            local turns = math.modf((minutes - math.min(minutes, strength)) * 60)
+            updates.rot = services.time.duration_from_turns(turns)
+        end
+        if condition.burnt_percent ~= nil and condition.burnt > 0 then
+            updates.burnt = math.modf(condition.burnt - math.max(1, math.min(condition.burnt, burn_repair)))
+        end
+        checked(services.items.update(item, updates))
+    end
+end
+
+local function entropy_pulse(character)
+    if not has_effect(character, toggles[entropy_spell]) then return end
+    local scale = runtime.call_number("attribute_scaling", intelligence(character))
+    local spell_level = level(character, entropy_spell)
+    local interval = math.max((60 - spell_level * 2) * scale, 1)
+    ccb.tasks.after_character_turn(character, math.modf(interval), "renew_reversed_entropy")
+    local strength = (spell_level * 0.1 + 1) * scale
+    recharge_inventory(character, strength)
+    repair_inventory(character, strength, strength)
+end
+runtime.handler("renew_reversed_entropy", function(task) entropy_pulse(task.character) end)
 
 runtime.handler("toggle_chronomantic_field", function(impact)
     local target = impact.target_creature
@@ -144,6 +190,7 @@ runtime.handler("toggle_chronomantic_field", function(impact)
         remove(target, effect)
     else
         apply(target, effect, 1, { permanent = true })
+        if impact.spell.value == entropy_spell and is_character(target) then entropy_pulse(target) end
     end
 end)
 runtime.handler("chronomantic_toggle_cost", function(context)
@@ -172,3 +219,82 @@ runtime.handler("cement_chronomantic_effects", function(impact)
         end
     end
 end)
+
+runtime.handler("chronomantic_meditation_cast_time", function(context)
+    return math.max(200 - 5 * level(context.speaker, context.spell.value), 50)
+end)
+
+local function register_meditation(subject)
+    local wound = subject == "wound"
+    local spell_name = "xedra_chronomancer_rewrite_" .. subject .. "_causality"
+    local effect = "effect_xedra_rewrite_" .. subject .. "_causality"
+    local spell = id("spell", spell_name)
+    local mana_handler = "sustain_chronomantic_" .. subject
+    local xp_handler = "practice_chronomantic_" .. subject
+    local repair_handler = "restore_chronomantic_equipment"
+
+    local function delay(character, handler)
+        local current = level(character, spell_name)
+        local turns = handler == mana_handler and 180 + 12 * current or 900 - 12 * current
+        ccb.tasks.after_character_turn(character, turns, handler)
+    end
+
+    runtime.handler("begin_chronomantic_" .. subject, function(impact)
+        local character = impact.target_creature
+        if not is_character(character) then return end
+        local assigned = services.activities.assign_timed(character, id("activity", "ACT_XEDRA_CHRONOMANCER_MEDITATE"),
+            services.time.duration(200, "day"))
+        if not assigned.ok and assigned.error.code ~= "assignment_rejected" then checked(assigned) end
+        apply(character, effect, 1, { permanent = true })
+        if not wound then delay(character, repair_handler) end
+        delay(character, mana_handler)
+        delay(character, xp_handler)
+    end)
+
+    runtime.handler(mana_handler, function(task)
+        local character = task.character
+        if has_effect(character, effect) then
+            local mana = checked(services.spells.mana(character)).current
+            if mana >= 20 then
+                local body = wound and checked(services.creatures.snapshot(character))
+                if not wound or body.hp < body.hp_max then
+                    checked(services.spells.set_mana_raw(character, mana - 20))
+                    delay(character, mana_handler)
+                    return
+                end
+            end
+        end
+        checked(services.activities.cancel(character))
+    end)
+
+    runtime.handler(xp_handler, function(task)
+        local character = task.character
+        if not has_effect(character, effect) then return end
+        local known = services.spells.get(character, spell)
+        local experience = not known.ok and known.error.code == "not_known" and -1 or checked(known).experience
+        local current = level(character, spell_name)
+        local delta = services.spells.experience_for_level(spell, current + 1) - services.spells.experience_for_level(spell, current)
+        checked(services.spells.set_experience(character, spell, math.modf(experience + delta / 20), true))
+        delay(character, xp_handler)
+    end)
+
+    if not wound then
+        runtime.handler(repair_handler, function(task)
+            local character = task.character
+            if not has_effect(character, effect) then return end
+            local strength = scaled(character, spell_name, 10)
+            -- Burn damage uses Reverse Entropy mastery even during equipment meditation.
+            repair_inventory(character, strength, scaled(character, entropy_spell, 10))
+            for _, item in ipairs(checked(services.inventory.carried_items(character))) do
+                local condition = checked(services.items.snapshot(item, 0)).condition
+                local degradation = math.max(0, math.min(condition.max_damage, math.modf(condition.degradation - strength)))
+                checked(services.items.update(item, { degradation = degradation }))
+            end
+            recharge_inventory(character, strength)
+            delay(character, repair_handler)
+        end)
+    end
+end
+
+register_meditation("wound")
+register_meditation("equipment")

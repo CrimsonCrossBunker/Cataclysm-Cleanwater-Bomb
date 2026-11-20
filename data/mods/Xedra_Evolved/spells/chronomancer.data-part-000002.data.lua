@@ -203,3 +203,57 @@ ccb.content.define_spell {
     base_casting_time = { handler = "chronomantic_toggle_cost", fallback = 0 },
     impact_handler = "toggle_chronomantic_field",
 }
+
+ccb.content.define_spell {
+    id = "xedra_chronomancer_reverse_entropy",
+    name = ccb.content.text("Reverse Entropy (T)"),
+    description = ccb.content.text("Reverse the entropy on your equipment, repairing any damage it has taken or energy it has spent over time.  This power will remain active until toggled off."),
+    teachable = false,
+    valid_targets = { "self" },
+    spell_class = "XEDRA_CHRONOMANCER",
+    skill = "deduction",
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "MUST_HAVE_CLASS_TO_LEARN" },
+    difficulty = 3,
+    max_level = { handler = "chronomancy_level_limit", fallback = 0 },
+    shape = "blast",
+    magic_type = "xedra_chronomancy_magic",
+    base_energy_cost = { handler = "chronomantic_toggle_cost", fallback = 0 },
+    base_casting_time = { handler = "chronomantic_toggle_cost", fallback = 0 },
+    impact_handler = "toggle_chronomantic_field",
+}
+
+ccb.content.define_spell {
+    id = "xedra_chronomancer_rewrite_wound_causality",
+    name = ccb.content.text("Rewrite Wound Causality (M)"),
+    description = ccb.content.text("Sink into a mediative trance where you steadily rewrite the causality of your current wounds, effectively healing yourself of injury.  This power will remain active until you run out of mana or your wounds are healed."),
+    teachable = false,
+    valid_targets = { "self" },
+    spell_class = "XEDRA_CHRONOMANCER",
+    skill = "deduction",
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "MUST_HAVE_CLASS_TO_LEARN" },
+    difficulty = 6,
+    max_level = { handler = "chronomancy_level_limit", fallback = 0 },
+    shape = "blast",
+    magic_type = "xedra_chronomancy_magic",
+    base_energy_cost = 20,
+    base_casting_time = { handler = "chronomantic_meditation_cast_time", fallback = 0 },
+    impact_handler = "begin_chronomantic_wound",
+}
+
+ccb.content.define_spell {
+    id = "xedra_chronomancer_rewrite_equipment_causality",
+    name = ccb.content.text("Rewrite Equipment Causality (M)"),
+    description = ccb.content.text("Sink into a mediative trance where you steadily rewrite the causality of your carried items, efficiently repairing any faults they may have.  This power will remain active until you run out of mana or your wounds are healed."),
+    teachable = false,
+    valid_targets = { "self" },
+    spell_class = "XEDRA_CHRONOMANCER",
+    skill = "deduction",
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "MUST_HAVE_CLASS_TO_LEARN" },
+    difficulty = 6,
+    max_level = { handler = "chronomancy_level_limit", fallback = 0 },
+    shape = "blast",
+    magic_type = "xedra_chronomancy_magic",
+    base_energy_cost = 20,
+    base_casting_time = { handler = "chronomantic_meditation_cast_time", fallback = 0 },
+    impact_handler = "begin_chronomantic_equipment",
+}

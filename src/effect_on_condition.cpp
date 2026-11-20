@@ -244,7 +244,19 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 498> migrated_character_tasks = {{
+const std::array<character_task_migration, 504> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_XEDRA_CHRONOMANCER_REVERSE_ENTROPY_INV_SCANNER" ),
+          "renew_reversed_entropy", nullptr },
+        { effect_on_condition_id( "EOC_XEDRA_CHRONOMANCER_REWRITE_WOUND_CAUSALITY_ONGOING_EXPERIENCE" ),
+          "practice_chronomantic_wound", nullptr },
+        { effect_on_condition_id( "EOC_XEDRA_CHRONOMANCER_REWRITE_WOUND_CAUSALITY_ONGOING_MANA" ),
+          "sustain_chronomantic_wound", nullptr },
+        { effect_on_condition_id( "EOC_XEDRA_CHRONOMANCER_REWRITE_EQUIPMENT_CAUSALITY_ONGOING_EXPERIENCE" ),
+          "practice_chronomantic_equipment", nullptr },
+        { effect_on_condition_id( "EOC_XEDRA_CHRONOMANCER_REWRITE_EQUIPMENT_CAUSALITY_ONGOING_MANA" ),
+          "sustain_chronomantic_equipment", nullptr },
+        { effect_on_condition_id( "EOC_XEDRA_CHRONOMANCER_REWRITE_EQUIPMENT_CAUSALITY_ONGOING_REPAIR" ),
+          "restore_chronomantic_equipment", nullptr },
         { effect_on_condition_id( "EOC_MOM_GRANT_GROUNDING_MEDITATION_TO_PSIONS" ),
           "grant_grounding_meditation", "grant_grounding_meditation", false, "mindovermatter" },
         { effect_on_condition_id( "EOC_MOM_GAME_ONGOING_GRANT_CRAFTING_PROFICIENICES" ),
