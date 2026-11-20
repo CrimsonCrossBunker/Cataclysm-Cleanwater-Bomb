@@ -81,13 +81,14 @@ ccb.runtime.handler("zenit_control", function(hit)
         write(actor, "timer_zenit_smoke", 0)
     end
     local me = checked(services.creatures.snapshot(actor))
-    local other = checked(services.creatures.snapshot(target, actor))
-    if other.distance >= 25 then
+    local other = checked(services.creatures.snapshot(target))
+    local distance = me.position:game_distance(other.position)
+    if distance >= 25 then
         smoke(actor, other.position)
         defend(actor, target)
-    elseif other.distance >= 12 then
+    elseif distance >= 12 then
         defend(actor, target)
-    elseif other.distance >= 6 then
+    elseif distance >= 6 then
         cast(actor, "timer_zenit_shock_att", 12, "spell_electric_chain_2", other.position,
             ccb.services.translate("The Zenit emits an explosion of arcing electricity."))
     else

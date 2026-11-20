@@ -593,6 +593,7 @@ require("trap_triggers")
 require("trap_portals")
 require("lixa_elevator_ledge")
 require("void_spider_lair")
+require("void_spider_control")
 require("mission_goals")
 require("mission_deliveries")
 

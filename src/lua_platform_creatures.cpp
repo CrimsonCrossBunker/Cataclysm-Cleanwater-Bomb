@@ -419,7 +419,7 @@ sol::table snapshot_creature(
 }
 
 sol::table creature_snapshot_result(
-    sol::this_state lua, const game_handle &handle, const sol::optional<game_handle> &observer,
+    sol::this_state lua, const game_handle &handle,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
@@ -429,18 +429,9 @@ sol::table creature_snapshot_result(
     if( !resolved ) {
         return make_game_error_result( state, *resolved.error );
     }
-    Creature *viewer = nullptr;
-    if( observer ) {
-        const native_handle_result<Creature> observed_by = observer->resolve_creature(
-                    runtime_generation, world_generation );
-        if( !observed_by ) {
-            return make_game_error_result( state, *observed_by.error );
-        }
-        viewer = observed_by.value;
-    }
     return make_game_value_result(
                state, sol::make_object(
-                   state, snapshot_creature( state, *resolved.value, viewer ) ) );
+                   state, snapshot_creature( state, *resolved.value ) ) );
 }
 
 sol::table creature_has_species(
@@ -4559,10 +4550,10 @@ void install_creature_api(
     creatures.set_function(
         "snapshot",
         [current_runtime_generation, current_world_generation, require_read](
-    sol::this_state lua_state, const game_handle & handle, const sol::optional<game_handle> & observer ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         return creature_snapshot_result(
-                   lua_state, handle, observer, current_runtime_generation(),
+                   lua_state, handle, current_runtime_generation(),
                    current_world_generation() );
     } );
     creatures.set_function(
@@ -4770,6 +4761,22 @@ void install_creature_api(
         require_read();
         return monsters_seeing_position(
                    lua_state, position, radius, current_runtime_generation(), current_world_generation() );
+    } );
+    monsters.set_function( "set_hp", [current_runtime_generation, current_world_generation,
+    require_write]( sol::this_state lua, const game_handle & handle, const std::int64_t hp ) {
+        require_write();
+        if( hp < std::numeric_limits<int>::min() || hp > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument( "services.monsters.set_hp requires a native integer" );
+        }
+        sol::state_view state( lua );
+        std::optional<game_handle_error> error;
+        monster *entry = resolve_exact_monster( handle, current_runtime_generation(),
+                                               current_world_generation(), error );
+        if( !entry ) {
+            return make_game_error_result( state, *error );
+        }
+        entry->set_hp( static_cast<int>( hp ) );
+        return make_game_value_result( state, sol::make_object( state, entry->get_hp() ) );
     } );
     monsters.set_function(
         "set_disposition",

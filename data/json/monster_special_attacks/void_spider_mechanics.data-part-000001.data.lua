@@ -1,6 +1,14 @@
 local ccb = require("ccb")
 
 ccb.content.define_monster_attack {
+    id = "void_spider_control",
+    kind = "scripted",
+    cooldown = 1,
+    range = 35,
+    action = "void_spider_control",
+}
+
+ccb.content.define_monster_attack {
     kind = "melee",
     id = "void_spider_bite",
     cooldown = 1,
