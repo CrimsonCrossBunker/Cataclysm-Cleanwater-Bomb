@@ -68,12 +68,16 @@ class DynamicDataLoader
          */
         using deferred_json = std::list<std::pair<JsonObject, std::string>>;
 
+        using lua_data_loader = std::function<void( const std::string &, const cata_path & )>;
+
         void set_mod_load_order( const std::vector<mod_id> &mods );
         std::tuple<int, std::size_t, std::string_view> source_load_order( std::string_view source ) const;
 
     private:
         std::vector<mod_id> mod_load_order;
         bool finalized = false;
+        void load_data_files( const cata_path &path, const std::string &src,
+                              const lua_data_loader &load_ordered_lua, bool exclude_interactions );
 
         struct cached_streams;
 
@@ -148,8 +152,8 @@ class DynamicDataLoader
          * @throws std::exception on all kind of errors.
          */
         /*@{*/
-        void load_data_from_path( const cata_path &path, const std::string &src );
-        using lua_data_loader = std::function<void( const std::string &, const cata_path & )>;
+        void load_data_from_path( const cata_path &path, const std::string &src,
+                                  const lua_data_loader &load_ordered_lua = {} );
 
         /**
          * Load native data recursively, excluding mod_interactions.

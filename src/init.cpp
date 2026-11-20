@@ -541,59 +541,34 @@ void DynamicDataLoader::initialize()
 #endif
 }
 
-void DynamicDataLoader::load_data_from_path( const cata_path &path, const std::string &src )
+void DynamicDataLoader::load_data_from_path( const cata_path &path, const std::string &src,
+        const lua_data_loader &load_ordered_lua )
 {
-    cata_assert( !finalized &&
-                 "Can't load additional data after finalization.  Must be unloaded first." );
-    // We assume that each folder is consistent in itself,
-    // and all the previously loaded folders.
-    // E.g. the core might provide a vpart "frame-x"
-    // the first loaded mode might provide a vehicle that uses that frame
-    // But not the other way round.
-
-    std::vector<cata_path> files;
-    if( dir_exist( path.get_unrelative_path() ) ) {
-        const std::vector<cata_path> dir_files = get_files_from_path( ".json", path, true, true );
-        files.insert( files.end(), dir_files.begin(), dir_files.end() );
-    } else if( file_exist( path.get_unrelative_path() ) ) {
-        files.emplace_back( path );
-    }
-
-    // iterate over each file
-    for( const cata_path &file : files ) {
-        scoped_debug_error_source error_source( get_mod_error_source( src ) );
-        try {
-            // parse it
-            JsonValue jsin = json_loader::from_path( file );
-            load_all_from_json( jsin, src, path, file );
-        } catch( const JsonError &err ) {
-            throw std::runtime_error( add_debug_error_source( err.what() ) );
-        } catch( const std::exception &err ) {
-            throw std::runtime_error( add_debug_error_source( err.what() ) );
-        }
-    }
+    load_data_files( path, src, load_ordered_lua, false );
 }
 
 void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const std::string &src,
         const lua_data_loader &load_ordered_lua )
 {
+    MonsterGroupManager::RecordPlatformMonsterGroupSource( src );
+    load_data_files( path, src, load_ordered_lua, true );
+}
+
+void DynamicDataLoader::load_data_files( const cata_path &path, const std::string &src,
+        const lua_data_loader &load_ordered_lua, bool exclude_interactions )
+{
     cata_assert( !finalized &&
                  "Can't load additional data after finalization.  Must be unloaded first." );
-    MonsterGroupManager::RecordPlatformMonsterGroupSource( src );
-    // We assume that each folder is consistent in itself,
-    // and all the previously loaded folders.
-    // E.g. the core might provide a vpart "frame-x"
-    // the first loaded mode might provide a vehicle that uses that frame
-    // But not the other way round.
 
     std::vector<cata_path> files;
-    // if give path is a directory
     if( dir_exist( path.get_unrelative_path() ) ) {
-        const std::vector<cata_path> dir_files = load_ordered_lua
-            ? get_ordered_mod_data_files( path, true )
-            : get_files_from_path_with_path_exclusion( ".json", "mod_interactions", path, true, true );
-        files.insert( files.end(), dir_files.begin(), dir_files.end() );
-        // if given path is an individual file
+        if( load_ordered_lua ) {
+            files = get_ordered_mod_data_files( path, exclude_interactions );
+        } else if( exclude_interactions ) {
+            files = get_files_from_path_with_path_exclusion( ".json", "mod_interactions", path, true, true );
+        } else {
+            files = get_files_from_path( ".json", path, true, true );
+        }
     } else if( file_exist( path.get_unrelative_path() ) ) {
         files.emplace_back( path );
     }

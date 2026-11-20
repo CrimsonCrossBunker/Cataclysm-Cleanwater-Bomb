@@ -326,7 +326,13 @@ void game::load_core_data()
     get_options().restore_mod_world_options();
 
     const cata_path core_path = PATH_INFO::jsondir();
-    load_data_from_dir( core_path, "core" );
+    DynamicDataLoader::get_instance().load_data_from_path( core_path, "core",
+    [&core_path]( const std::string & source, const cata_path & entry ) {
+        cata::lua_platform::load_mod_content_with_data( {
+            source, core_path.get_unrelative_path(), entry.get_unrelative_path(),
+            cata::lua_platform::mod_source_type::core_content
+        }, {} );
+    } );
     cata::lua_platform::load_core_content( core_path.get_unrelative_path() );
 }
 
