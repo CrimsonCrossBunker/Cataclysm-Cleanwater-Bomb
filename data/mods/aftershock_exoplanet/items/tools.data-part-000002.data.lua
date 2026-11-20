@@ -1,65 +1,38 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
-    id = "UPS_OFF",
-    copy_from = "UPS_OFF",
-    description = ccb.content.text("This is a unified power supply, or UPS.  It is a device developed jointly by military and scientific interests for use in combat and the field.  The UPS is designed to power armor and some guns, but drains batteries quickly.  It can be worn strapped to either leg for ease of access, and it's been waterproofed to protect the delicate electronics.  Has its own custom battery, rechargeable and with higher capacity, but not removable."),
-    price = "1300 USD",
-    survival_price = "1300 USD",
-    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { battery = 1500 } } },
-    flags = {
-        "RECHARGE",
-        "BELTED",
-        "NO_UNLOAD",
-        "NO_RELOAD",
-        "FRAGILE",
-        "OVERSIZE",
-        "WATERPROOF",
-        "IS_UPS",
-    },
-    materials = { "aluminum", "plastic" },
-    subtype_order = { "tool", "armor" },
-    tool = { ammo_types = { "battery" } },
-    armor = {
-        sided = true,
-        portions = {
-            {
-                encumbrance = 2,
-                coverage = 13,
-                covers = { "leg_l", "leg_r" },
-                subparts = { "leg_upper_l", "leg_upper_r" },
-            },
+    id = "afs_motion_sensor",
+    name = ccb.content.plural_text("motion scanner", "motion scanners"),
+    description = ccb.content.text("A handheld motion scanner normally used for pest control within spaceships.  This model features an integrated screen to highlight the location of detected motion.  It must be activated to function."),
+    mass = "680 g",
+    volume = "650 ml",
+    price = "6 kUSD",
+    length = "20 cm",
+    materials = { "plastic", "steel" },
+    symbol = "(",
+    color = "yellow",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            rigid = true,
+            allowed_flags = { "BATTERY_MEDIUM" },
+            default_magazine = "medium_battery_cell",
         },
     },
-}
-
-ccb.content.define_item {
-    id = "UPS_ON",
-    copy_from = "UPS_ON",
-    description = ccb.content.text("This is a unified power supply, or UPS.  It is a device developed jointly by military and scientific interests for use in combat and the field.  The UPS is designed to power armor and some guns, but drains batteries quickly.  It can be worn strapped to either leg for ease of access, and it's been waterproofed to protect the delicate electronics.  Has its own custom battery, rechargeable and with higher capacity, but not removable."),
-    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { battery = 1500 } } },
-    flags = {
-        "RECHARGE",
-        "BELTED",
-        "NO_UNLOAD",
-        "NO_RELOAD",
-        "FRAGILE",
-        "OVERSIZE",
-        "WATERPROOF",
-        "IS_UPS",
+    flags = { "BELT_CLIP", "MUNDANE" },
+    melee_damage = { bash = 6 },
+    subtype_order = { "tool", "artifact" },
+    tool = { charges_per_use = 1, ammo_types = { "battery" }, power_draw = "600 mW" },
+    artifact = {
+        enchantments = { "afs_motion_sensor_wield", "ITEM_ENCH_aftershock_exoplanet_afs_motion_sensor_1" },
     },
-    materials = { "aluminum", "plastic" },
-    subtype_order = { "tool", "armor" },
-    tool = { ammo_types = { "battery" } },
-    armor = {
-        sided = true,
-        portions = {
-            {
-                encumbrance = 2,
-                coverage = 13,
-                covers = { "leg_l", "leg_r" },
-                subparts = { "leg_upper_l", "leg_upper_r" },
-            },
+    use_actions = {
+        {
+            kind = "transform",
+            menu_text = ccb.content.text("Activate"),
+            target = "afs_motion_sensor_on",
+            need_charges = 1,
+            message = ccb.content.text("The %s screen flashes on."),
         },
     },
 }

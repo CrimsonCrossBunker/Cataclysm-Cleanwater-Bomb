@@ -1,0 +1,20 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "id": "revenant_effigy",
+    "name": { "str_sp": "revenant's effigy" },
+    "color": "magenta",
+    "use_action": {
+      "type": "effect_on_conditions",
+      "consume": true,
+      "description": "Complete the ritual.",
+      "effect_on_conditions": [ "EOC_CHECK_TO_SUMMON_REVENANT" ],
+      "//": "until the day EoCs can be affected with need_wielding, they won't have it to allow the game to start"
+    },
+    "volume": "72500 ml",
+    "weight": "91500 g",
+    "symbol": "%",
+    "description": "A macabre effigy made of meat and bone, with a heart filled with glass and faewild dust.  When the full moon will shine upon it, you will be able to use it to summon the Luna-attuned revenant."
+  }
+]
