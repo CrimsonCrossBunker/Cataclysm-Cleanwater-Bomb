@@ -1,21 +1,14 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_HELICOPTER_CRASH",
-    name = ccb.content.text("Return to base"),
-    description = ccb.content.text("Your helicopter was crashed to the ground, communications were lost with ground base, and the rest of your team died while landing, at least you still know the way back to the base."),
-    goal = "MGOAL_GO_TO_TYPE",
-    destination = "helipad_nw",
+    id = "MISSION_NINJA",
+    name = ccb.content.text("Kill your rivals"),
+    description = ccb.content.text("As a real ninja, you can't allow competitors for the night.  Kill 10 shady zombies and demonstrate who is the real ninja here."),
+    goal = "MGOAL_KILL_MONSTER_TYPE",
+    monster_type = "mon_zombie_shady",
+    monster_kill_goal = 10,
     difficulty = 4,
     value = 0,
-    start = {
-        target = {
-            terrain = "helipad_nw",
-            reveal_radius = 10,
-            special = "military helipad",
-            min_distance = 25,
-            z = 0,
-        },
-    },
+    finish = { handler = "morale_mission_ninja" },
     origins = { "ORIGIN_GAME_START" },
 }

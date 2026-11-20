@@ -1,13 +1,14 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
-    id = "MISSION_LAST_DELIVERY",
-    name = ccb.content.text("Deliver Your Cargo"),
-    description = ccb.content.text("You're not sure who orders takeout when the world's ending, but that doesn't matter.  Evacuation doesn't matter.  Nothing, indeed, matters, save for safely delivering your precious cargo to its destination: a remote mansion."),
+    id = "MISSION_HELICOPTER_REFUEL",
+    name = ccb.content.text("Refuel your helicopter."),
+    description = ccb.content.text("You were flying towards a nearby private airport before your forced landing.  You could still reach it by ground, and scavenge it for fuel."),
     goal = "MGOAL_GO_TO_TYPE",
-    destination = "mansion_c3",
+    destination = "s_air_hangars",
     difficulty = 1,
     value = 0,
-    start = { target = { terrain = "mansion_c3", special = "Mansion_Road" } },
+    start = { target = { terrain = "s_air_hangars", reveal_radius = 5, special = "o_airport" } },
+    finish = { handler = "morale_mission_helicopter_refuel" },
     origins = { "ORIGIN_GAME_START" },
 }
