@@ -8023,3 +8023,5 @@ content.patch_overmap_terrain {
     color = "yellow",
     name = ccb.content.text("veterans of foreign wars center roof"),
 }
+
+require("overmap_visions")

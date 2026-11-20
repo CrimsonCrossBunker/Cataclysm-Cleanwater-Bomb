@@ -110,3 +110,7 @@ require("terrain_transforms")
 require("monster_groups")
 
 require("species")
+
+require("overmap_visions")
+require("blacklists")
+require("monster_adjustments")

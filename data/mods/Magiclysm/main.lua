@@ -163,3 +163,5 @@ require("mutation_categories")
 
 require("recipe_categories")
 require("scores")
+
+require("blacklists")

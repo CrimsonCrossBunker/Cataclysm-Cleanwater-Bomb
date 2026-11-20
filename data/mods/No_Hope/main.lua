@@ -35,3 +35,6 @@ require("effect_types")
 require("monster_groups")
 
 require("help_topics")
+
+require("vehicle_placements")
+require("vehicle_spawns")

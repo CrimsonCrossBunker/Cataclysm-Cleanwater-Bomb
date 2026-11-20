@@ -28,3 +28,5 @@ content.add(definition)
 require("attribute_scaling")
 
 require("scenario_filters")
+
+require("blacklists")

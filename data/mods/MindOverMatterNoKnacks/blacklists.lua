@@ -1,0 +1,50 @@
+local ccb = require("ccb")
+local content = ccb.content
+
+-- Native profession blacklists
+do
+local definition = content.Blacklist {
+    kind = "profession",
+    whitelist = false,
+}
+definition:entry("psi_new_psychic")
+definition:entry("psi_biokinetic_athlete")
+definition:entry("psi_clairsentient_doomseer")
+definition:entry("psi_electrokinetic_engineer")
+definition:entry("psi_photokinetic_magician")
+definition:entry("psi_pyrokinetic_firestarter")
+definition:entry("psi_telekinetic_testsubject")
+definition:entry("psi_telepath_interrogater")
+definition:entry("psi_teleporter_slider")
+definition:entry("psi_vitakinetic_healer")
+definition:entry("psi_fifth_sun_cuauhpilli_special_forces")
+definition:entry("newly_biokinetic")
+definition:entry("mid_biokinetic")
+definition:entry("late_biokinetic")
+definition:entry("newly_clairsentient")
+definition:entry("mid_clairsentient")
+definition:entry("late_clairsentient")
+definition:entry("newly_electrokinetic")
+definition:entry("mid_electrokinetic")
+definition:entry("late_electrokinetic")
+definition:entry("newly_photokinetic")
+definition:entry("mid_photokinetic")
+definition:entry("late_photokinetic")
+definition:entry("newly_pyrokinetic")
+definition:entry("mid_pyrokinetic")
+definition:entry("late_pyrokinetic")
+definition:entry("newly_telekinetic")
+definition:entry("mid_telekinetic")
+definition:entry("late_telekinetic")
+definition:entry("newly_telepath")
+definition:entry("mid_telepath")
+definition:entry("late_telepath")
+definition:entry("newly_teleporter")
+definition:entry("mid_teleporter")
+definition:entry("late_teleporter")
+definition:entry("gateway_teleporter")
+definition:entry("newly_vitakinetic")
+definition:entry("mid_vitakinetic")
+definition:entry("late_vitakinetic")
+content.add(definition)
+end

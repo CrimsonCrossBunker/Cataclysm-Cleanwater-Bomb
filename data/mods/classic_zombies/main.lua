@@ -73,3 +73,5 @@ require("classic_events")
 require("species")
 
 require("recipe_groups")
+
+require("monster_adjustments")

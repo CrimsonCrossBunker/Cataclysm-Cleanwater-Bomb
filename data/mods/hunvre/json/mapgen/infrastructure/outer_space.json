@@ -1,7 +1,0 @@
-[
-  {
-    "type": "overmap_connection",
-    "id": "local_road",
-    "subtypes": [ { "terrain": "road", "locations": [ "space" ], "basic_cost": 0 } ]
-  }
-]

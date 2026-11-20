@@ -46,3 +46,7 @@ require("map_weights")
 require("ship_systems")
 
 require("species")
+
+require("overmap_connections")
+require("post_process_generators")
+require("blacklists")

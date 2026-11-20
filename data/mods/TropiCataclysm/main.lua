@@ -166,3 +166,5 @@ require("item_group_changes")
 require("effect_types")
 
 require("monster_groups")
+
+require("overmap_connections")
