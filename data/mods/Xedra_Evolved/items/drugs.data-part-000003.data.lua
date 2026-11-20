@@ -1,28 +1,18 @@
 local ccb = require("ccb")
 
+-- NO_I18N
 ccb.content.define_item {
-    id = "anathema_blood_catalyst_unready",
-    category = "drug",
-    looks_like = "vampire_blood",
-    name = ccb.content.plural_text("churning vampire blood mixture", "churning vampire blood mixture"),
-    description = ccb.content.text("Vampire blood mixed with blood none would consume and different toxic substances.  The hostile environment is already driving the vampire blood to devour itself.  It will be ready to consume in a few days."),
-    materials = { "vampire_blood" },
-    phase = "liquid",
-    mass = "5360 g",
-    color = "red",
-    flags = { "TRADER_AVOID", "INEDIBLE" },
+    id = "elemental_mana_draught",
+    name = ccb.content.plural_text("elemental mana draught", "elemental mana draughts"),
+    description = ccb.content.text_without_extraction("Converting"),
+    mass = "245 g",
+    volume = "250ml",
     symbol = "~",
-    price = "0 cent",
-    volume = "6000 ml",
-    comestible = { kind = "DRINK", servings = 1 },
-    use_actions = {
-        {
-            kind = "delayed_transform",
-            target = "anathema_blood_catalyst",
-            message = ccb.content.text("The vampire blood has completely devoured itself, leaving a small dose of very potent vampire blood behind."),
-            moves = 50,
-            age = 345600,
-            not_ready_message = ccb.content.text("The vampire blood is still devouring itself."),
-        },
-    },
+    default_container = "flask_glass",
+    color = "light_blue",
+    flags = { "EATEN_COLD", "NO_AUTO_CONSUME", "NUTRIENT_OVERRIDE" },
+    phase = "liquid",
+    price = "25 USD",
+    comestible = { quench = 1, calories = 0, servings = 1, fun = -1, kind = "DRINK", freezing_point = 4 },
+    use_actions = { { kind = "cast_spell", spell = "potion_recover_mana_xe", no_fail = true, level = 0 } },
 }
