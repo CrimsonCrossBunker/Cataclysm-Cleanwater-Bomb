@@ -92,6 +92,7 @@
 #include "npc_opinion.h"
 #include "npctalk.h"
 #include "omdata.h"
+#include "north_america_elevation.h"
 #include "overmap_location.h"
 #include "overmapbuffer.h"
 #include "pathfinding.h"
@@ -209,6 +210,7 @@ static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
+static const json_character_flag json_flag_CLIMB_FLYING( "CLIMB_FLYING" );
 
 static const npc_class_id NC_EVAC_SHOPKEEP( "NC_EVAC_SHOPKEEP" );
 
@@ -4330,6 +4332,8 @@ bool npc::can_move_to( const tripoint_bub_ms &p, bool no_bashing ) const
     // Allow moving into any bashable spots, but penalize them during pathing
     // Doors are not passable for hallucinations
     return( rl_dist( pos_bub(), p ) <= 1 && here.has_floor_or_water( p ) &&
+            ( has_flag( json_flag_CLIMB_FLYING ) ||
+              !north_america::sheer_slope( here, pos_bub(), p ) ) &&
             !g->is_dangerous_tile( p ) &&
             ( here.passable_through( p ) || ( can_open_door( p, !here.is_outside( pos_bub() ) ) &&
                     !is_hallucination() ) ||
@@ -4347,6 +4351,13 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
     tripoint_bub_ms p = pt;
     map &here = get_map();
     const tripoint_bub_ms pos = pos_bub( here );
+    if( !has_flag( json_flag_CLIMB_FLYING ) && north_america::sheer_slope( here, pos, p ) ) {
+        if( !path.empty() ) {
+            path.clear();
+        }
+        move_pause();
+        return;
+    }
 
     const bool has_npc_try_move =
         cata::lua_platform::has_native_hook( "on_npc_try_move" );

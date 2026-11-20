@@ -85,6 +85,7 @@
 #include "mongroup.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
+#include "north_america_elevation.h"
 #include "north_america_soil.h"
 #include "north_america_transport.h"
 #include "plant_climate.h"
@@ -6961,6 +6962,7 @@ void map::draw_map( mapgendata &dat )
     north_america::place_wide_highway_surface( dat );
     north_america::place_native_vegetation( dat );
     north_america::place_native_soil( dat );
+    north_america::grade_generated_surface( dat );
     // End of draw_map
 }
 

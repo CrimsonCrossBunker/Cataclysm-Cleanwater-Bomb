@@ -8556,6 +8556,23 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     const tripoint_bub_ms pos = who.pos_bub( here );
 
     const tripoint_abs_ms dest_loc_abs = here.get_abs( dest_loc );
+    int climb_cost = 0;
+    const bool flying_mount = who.mounted_creature && who.mounted_creature->flies();
+    if( !via_ramp && !flying_mount && !who.has_flag( json_flag_CLIMB_FLYING ) &&
+        north_america::sheer_slope( here, pos, dest_loc ) ) {
+        const bool anchor = here.has_flag( ter_furn_flag::TFLAG_CLIMBABLE, pos ) ||
+                            here.has_flag( ter_furn_flag::TFLAG_CLIMBABLE, dest_loc );
+        const double grade = std::abs( north_america::grade_between( here, pos, dest_loc ) );
+        const bool rope = who.has_amount( itype_rope_30, 1 );
+        if( who.is_mounted() || who.get_grab_type() != object_type::NONE ||
+            who.get_working_arm_count() < 2 ||
+            ( !rope && !anchor && !who.has_flag( json_flag_CLIMB_NO_LADDER ) ) ||
+            grade > north_america::rope_grade_limit ) {
+            who.add_msg_if_player( m_info, _( "That slope is too steep to cross on foot." ) );
+            return false;
+        }
+        climb_cost = static_cast<int>( 100 * grade );
+    }
 
     if( here.has_flag_ter( ter_furn_flag::TFLAG_SMALL_PASSAGE, dest_loc ) ) {
         if( who.get_size() > creature_size::medium ) {
@@ -8877,7 +8894,7 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
         who.mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );
         crit->use_mech_power( who.current_movement_mode()->mech_power_use() );
     } else {
-        who.mod_moves( -who.run_cost( mcost, diag, dest_loc ) );
+        who.mod_moves( -who.run_cost( mcost, diag, dest_loc ) - climb_cost );
         /**
         TODO:
         This should really use the mounted creatures stamina, if mounted.

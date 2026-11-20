@@ -1410,7 +1410,7 @@ std::string widget::color_text_function_string( const avatar &ava, unsigned int 
         case widget_var::overmap_loc_text:
             desc.first = display::overmap_position_text( ava.pos_abs_omt(),
                          north_america::elevation_active() ?
-                         std::optional<double>( north_america::altitude_at( get_map(), ava.pos_bub() ) ) :
+                         std::optional<double>( north_america::occupant_altitude( get_map(), ava.pos_bub() ) ) :
                          std::nullopt );
             break;
         case widget_var::overmap_text:
