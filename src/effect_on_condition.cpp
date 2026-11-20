@@ -244,7 +244,9 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 504> migrated_character_tasks = {{
+const std::array<character_task_migration, 505> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_CHANGELING_DISGUISE_AS_NATURE_END" ),
+          "end_changeling_nature_disguise", nullptr },
         { effect_on_condition_id( "EOC_XEDRA_CHRONOMANCER_REVERSE_ENTROPY_INV_SCANNER" ),
           "renew_reversed_entropy", nullptr },
         { effect_on_condition_id( "EOC_XEDRA_CHRONOMANCER_REWRITE_WOUND_CAUSALITY_ONGOING_EXPERIENCE" ),

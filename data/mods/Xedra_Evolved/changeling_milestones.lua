@@ -268,9 +268,9 @@ runtime.handler("brownie_leave_home", function(event)
     local character = actor(event)
     local speed = number(character, "brownie_homebody_speed_bonus")
     if speed <= 0 then return end
-    local position = checked(services.creatures.snapshot(character)).position
-    if not services.gameplay.environment.is_outside(position) then return end
-    local omt = position:project_to("omt")
+    local creature = checked(services.creatures.snapshot(character))
+    if not creature.outside then return end
+    local omt = creature.position:project_to("omt")
     for _, location in ipairs(homebody_locations) do
         if services.overmap.matches_location(omt, location) then return end
     end
