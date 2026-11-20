@@ -1,20 +1,27 @@
 local ccb = require("ccb")
 
--- 8 oz canister of butane - 227g butane
+-- Use of %s not currently supported.
 ccb.content.define_item {
-    id = "butane_can",
-    name = ccb.content.plural_text("can of butane", "cans of butane"),
-    description = ccb.content.text("A non-refillable can of butane with an adapter for refilling lighters.  It could be useful as a fuel, but also as a solvent or chemical reagent."),
-    symbol = "!",
-    color = "dark_gray",
-    looks_like = "spray_can",
-    mass = "364 g",
-    volume = "500 ml",
-    price = "15 USD",
-    survival_price = "2 USD 50 cent",
-    pockets = { { kind = "MAGAZINE", watertight = true, rigid = true, ammunition = { butane = 400 } } },
-    materials = { "aluminum" },
-    flags = { "NO_RELOAD", "GAS_TANK" },
-    explode_in_fire = true,
-    tool = { charges_per_use = 1 },
+    id = "airhorn",
+    name = ccb.content.plural_text("compressed air horn", "compressed air horns"),
+    description = ccb.content.text("A small can of compressed air attached to a plastic horn.  Pressing the button on top causes it to emit a loud honking sound."),
+    mass = "467 g",
+    volume = "250 ml",
+    price = "5 USD",
+    survival_price = "50 cent",
+    materials = { "plastic", "aluminum" },
+    symbol = ";",
+    color = "red",
+    tool = { initial_charges = 50, max_charges = 50, charges_per_use = 1 },
+    use_actions = {
+        {
+            kind = "manualnoise",
+            moves = 100,
+            volume = 110,
+            sound_message = ccb.content.text("HOOOOONK!"),
+            sound_id = "misc",
+            sound_variant = "airhorn",
+            message = ccb.content.text("You honk your airhorn."),
+        },
+    },
 }

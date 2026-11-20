@@ -1,26 +1,20 @@
 local ccb = require("ccb")
 
+-- 8 oz canister of butane - 227g butane
 ccb.content.define_item {
-    id = "permanent_marker",
-    name = ccb.content.plural_text("permanent marker", "permanent markers"),
-    description = ccb.content.text("A King Size™ industrial-strength permanent marker, about halfway between a typical marker and a can of spray paint in size.  Activate it to write something down.  However, writing \"Elbereth\" probably won't help you."),
-    mass = "28 g",
-    volume = "50 ml",
-    price = "5 USD",
-    survival_price = "10 cent",
-    materials = { "plastic" },
-    symbol = ",",
+    id = "butane_can",
+    name = ccb.content.plural_text("can of butane", "cans of butane"),
+    description = ccb.content.text("A non-refillable can of butane with an adapter for refilling lighters.  It could be useful as a fuel, but also as a solvent or chemical reagent."),
+    symbol = "!",
     color = "dark_gray",
-    pockets = { { kind = "MAGAZINE", ammunition = { permanent_ink = 500 }, watertight = true, rigid = true } },
-    flags = { "WRITE_MESSAGE", "NO_RELOAD", "NO_UNLOAD" },
+    looks_like = "spray_can",
+    mass = "364 g",
+    volume = "500 ml",
+    price = "15 USD",
+    survival_price = "2 USD 50 cent",
+    pockets = { { kind = "MAGAZINE", watertight = true, rigid = true, ammunition = { butane = 400 } } },
+    materials = { "aluminum" },
+    flags = { "NO_RELOAD", "GAS_TANK" },
+    explode_in_fire = true,
     tool = { charges_per_use = 1 },
-    use_actions = {
-        {
-            kind = "inscribe",
-            verb = ccb.content.text("Write"),
-            gerund = ccb.content.text("Written"),
-            on_terrain = true,
-            material_restricted = false,
-        },
-    },
 }

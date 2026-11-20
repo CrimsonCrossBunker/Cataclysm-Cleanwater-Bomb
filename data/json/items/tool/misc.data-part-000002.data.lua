@@ -1,16 +1,28 @@
 local ccb = require("ccb")
 
+-- Use of %s not currently supported.
 ccb.content.define_item {
-    id = "pocketwatch",
-    name = ccb.content.plural_text("pocket watch", "pocket watches"),
-    description = ccb.content.text("An old-fashioned pocket watch.  Tells the time and looks good doing it.  Can also be disassembled into some useful parts."),
-    mass = "65 g",
-    volume = "25 ml",
-    price = "250 USD",
-    survival_price = "1 USD",
-    materials = { "gold", "glass" },
-    symbol = ",",
+    id = "horn_bicycle",
+    category = "veh_parts",
+    name = ccb.content.plural_text("bicycle horn", "bicycle horns"),
+    description = ccb.content.text("A simple bulb horn found on many bicycles.  Activate it to honk.  Honk honk."),
+    mass = "170 g",
+    volume = "500 ml",
+    price = "4 USD",
+    survival_price = "10 cent",
+    materials = { "plastic", "aluminum" },
+    symbol = ";",
     color = "light_gray",
-    flags = { "WATCH" },
     tool = {},
+    use_actions = {
+        {
+            kind = "manualnoise",
+            moves = 100,
+            volume = 15,
+            sound_message = ccb.content.text("honk."),
+            sound_id = "misc",
+            sound_variant = "horn_bicycle",
+            message = ccb.content.text("You honk the bicycle horn."),
+        },
+    },
 }

@@ -1,0 +1,112 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "small_repairkit",
+    name = ccb.content.plural_text("firearm repair kit", "firearm repair kits"),
+    description = ccb.content.text("A portable tool kit made to repair damaged firearms.  Powered by standard batteries, it is a vital tool for long-term firearms maintenance.  It requires one charge of battery power per use."),
+    mass = "2420 g",
+    volume = "1500 ml",
+    length = "32 cm",
+    price = "15 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { "steel", "plastic" },
+    symbol = ";",
+    color = "light_gray",
+    qualities = {
+        { id = "HAMMER_FINE", level = 1 },
+        { id = "HAMMER", level = 3 },
+        { id = "PRY", level = 1 },
+        { id = "SAW_M_FINE", level = 1 },
+        { id = "SAW_M", level = 2 },
+        { id = "SAW_W", level = 1 },
+        { id = "WRENCH_FINE", level = 1 },
+        { id = "WRENCH", level = 2 },
+        { id = "SCREW_FINE", level = 1 },
+        { id = "SCREW", level = 1 },
+        { id = "CHISEL", level = 3 },
+        { id = "CHISEL_WOOD", level = 3 },
+        { id = "PRYING_NAIL", level = 1 },
+    },
+    flags = { "ALLOWS_REMOTE_USE" },
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            rigid = true,
+            allowed_flags = { "BATTERY_MEDIUM" },
+            default_magazine = "medium_battery_cell",
+        },
+    },
+    tool = { charges_per_use = 1, ammo_types = { "battery" } },
+    use_actions = {
+        "GUN_REPAIR",
+        { kind = "native", id = "CROWBAR", ammo_scale = 0 },
+        { kind = "native", id = "HACKSAW", ammo_scale = 0 },
+        {
+            kind = "repair_item",
+            id = "repair_metal",
+            materials = { "plastic", "lead", "tin", "zinc" },
+            skill = "fabrication",
+            cost_scaling = 0.1,
+            move_cost = 1500,
+        },
+        { kind = "link_up", cable_length = 3, charge_rate = "70 W" },
+    },
+}
+
+ccb.content.define_item {
+    id = "soldering_iron",
+    name = ccb.content.plural_text("soldering iron", "soldering irons"),
+    description = ccb.content.text("A device with a metal tip that can get very hot.  It is necessary for advanced electronics crafting.  Has a short cable that you can plug to your grid."),
+    mass = "90 g",
+    volume = "120 ml",
+    length = "22 cm",
+    price = "10 USD",
+    survival_price = "1 USD",
+    materials = { { id = "plastic", portions = 75 }, { id = "copper", portions = 25 } },
+    symbol = ",",
+    color = "light_gray",
+    flags = { "BELT_CLIP", "ALLOWS_REMOTE_USE", "WATER_BREAK" },
+    accuracy = { grip = "solid", length = "hand", surface = "point", balance = "neutral" },
+    melee_damage = { stab = 2 },
+    tool = { charges_per_use = 1, ammo_types = { "battery" } },
+    use_actions = {
+        {
+            kind = "repair_item",
+            id = "repair_metal",
+            materials = { "plastic", "lead", "tin", "zinc" },
+            skill = "fabrication",
+            cost_scaling = 0.1,
+            move_cost = 1500,
+        },
+        { kind = "link_up", cable_length = 3, charge_rate = "70 W" },
+    },
+}
+
+ccb.content.define_item {
+    id = "soldering_iron_portable",
+    copy_from = "soldering_iron",
+    name = ccb.content.plural_text("portable soldering iron", "portable soldering irons"),
+    description = ccb.content.text("A device with a metal tip that can get very hot.  It is necessary for advanced electronics crafting.  This one is a portable version, and contains a slot for a battery."),
+    symbol = ",",
+    color = "light_gray",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            allowed_flags = { "BATTERY_MEDIUM" },
+            default_magazine = "medium_battery_cell",
+        },
+    },
+    accuracy = { grip = "solid", length = "hand", surface = "point", balance = "neutral" },
+    melee_damage = { stab = 2 },
+    tool = {},
+    use_actions = {
+        {
+            kind = "repair_item",
+            id = "repair_metal",
+            materials = { "plastic", "lead", "tin", "zinc" },
+            skill = "fabrication",
+            cost_scaling = 0.1,
+            move_cost = 1500,
+        },
+    },
+}
