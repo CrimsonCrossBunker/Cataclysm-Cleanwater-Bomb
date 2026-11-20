@@ -310,6 +310,7 @@ const std::unordered_map<std::string, regional_loot_table> &regional_loot_tables
             const JsonArray state_groups = root.get_array( "regional_groups" );
             const JsonArray map_groups = root.get_array( "atlas_map_groups" );
             const JsonArray service_groups = root.get_array( "service_groups" );
+            const JsonArray service_apparel = root.get_array( "service_apparel_groups" );
             const JsonObject flags = root.get_object( "civic_flags" );
             for( const JsonValue row : root.get_array( "jurisdictions" ) ) {
                 const std::string code = row.get_array().get_string( 0 );
@@ -320,6 +321,7 @@ const std::unordered_map<std::string, regional_loot_table> &regional_loot_tables
                 if( flags.has_string( country ) ) {
                     table.civic_flag = flags.get_string( country );
                     table.add_groups( service_groups, country );
+                    table.add_groups( service_apparel, country );
                 }
             }
             root.allow_omitted_members();

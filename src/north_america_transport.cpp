@@ -969,7 +969,9 @@ bool draw_mapped_road( mapgendata &dat )
     const std::size_t links = dat.terrain_type()->get_line();
     const bool boulevard = cell.street == urban_road::arterial && cell.lanes <= 4;
     const bool collector = cell.street == urban_road::collector && cell.lanes < 4;
-    if( cell.lanes < 4 && !boulevard && !collector && !on_bridge ) {
+    // Wide routes are drawn by the wide surface pass. A regular road tile without
+    // that footprint should use stock street mapgen, including its intersections.
+    if( !on_bridge && ( cell.lanes >= 6 || ( cell.lanes < 4 && !boulevard && !collector ) ) ) {
         return false;
     }
 
@@ -993,8 +995,7 @@ bool draw_mapped_road( mapgendata &dat )
     constexpr int center = SEEX;
     const int lane_width = boulevard ? 4 : cell.lanes == 12 ? 2 : 3;
     const int maximum_width = on_bridge ? center - 3 : center;
-    const int half_width = cell.lanes >= 6 && !on_bridge ? 8 :
-                           std::min( width_for( cell ), maximum_width );
+    const int half_width = std::min( width_for( cell ), maximum_width );
     const int sidewalk_width = on_bridge ? 2 : boulevard || collector ? 3 : 0;
     std::array<int, 4> edge_width{};
     for( const auto dir : om_direction::all ) {
@@ -1008,7 +1009,7 @@ bool draw_mapped_road( mapgendata &dat )
             width = std::min( { half_width, width_for( other ), center - 3 } );
         } else if( !on_bridge && adjacent->get_type_id() == oter_type_road &&
                    cell.street == urban_road::none && other.street == urban_road::none &&
-                   cell.lanes >= 4 && other.lanes >= 4 ) {
+                   cell.lanes >= 4 && other.lanes == 4 ) {
             width = std::min( half_width, width_for( other ) );
         }
         edge_width[static_cast<int>( dir )] = width;

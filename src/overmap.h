@@ -485,6 +485,8 @@ class overmap
                                          std::optional<city> target_city = std::nullopt ) const;
         bool is_far_from_city( const tripoint_om_omt &p ) const;
         tripoint_om_omt place_outskirts_shelter();
+        std::vector<tripoint_om_omt> place_atlas_start_special( const overmap_special &special,
+                const tripoint_om_omt &site, om_direction::type rotation );
         tripoint_om_omt find_random_omt( const std::string &omt_base_type,
                                          ot_match_type match_type = ot_match_type::type,
                                          std::optional<city> target_city = std::nullopt ) const {

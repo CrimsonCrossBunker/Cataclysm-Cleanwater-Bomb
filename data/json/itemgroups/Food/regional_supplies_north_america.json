@@ -242,6 +242,25 @@
     ]
   },
   {
+    "id": "regional_supply_original_baked_goods",
+    "type": "item_group",
+    "subtype": "distribution",
+    "entries": [
+      { "prob": 17, "group": "cookies_box_snack_4" },
+      { "item": "cake2", "prob": 15, "count": 12 },
+      { "item": "cake3", "prob": 10, "count": 12 },
+      { "prob": 10, "group": "biscuit_box_small_10" },
+      { "item": "jihelucake", "prob": 10, "count": 12 },
+      { "prob": 20, "group": "brownie_box_small_4" }
+    ]
+  },
+  {
+    "id": "regional_supply_original_commercial_deli",
+    "type": "item_group",
+    "subtype": "distribution",
+    "items": [ [ "froglegs", 1 ], [ "gastropod_purged", 1 ] ]
+  },
+  {
     "type": "item_group",
     "id": "produce-CA-AB",
     "subtype": "distribution",
@@ -394,6 +413,12 @@
       { "group": "regional_supply_original_commercial_bread_specialty", "prob": 60 },
       { "item": "tortilla_flour", "prob": 40 }
     ]
+  },
+  {
+    "type": "item_group",
+    "id": "baked_goods-CA-BC",
+    "subtype": "distribution",
+    "entries": [ { "group": "regional_supply_original_baked_goods", "prob": 60 }, { "item": "regional_nanaimo_bar", "prob": 12 } ]
   },
   {
     "type": "item_group",
@@ -551,6 +576,12 @@
   },
   {
     "type": "item_group",
+    "id": "baked_goods-CA-NB",
+    "subtype": "distribution",
+    "entries": [ { "group": "regional_supply_original_baked_goods", "prob": 60 }, { "item": "regional_blueberry_grunt", "prob": 12 } ]
+  },
+  {
+    "type": "item_group",
     "id": "produce-CA-NL",
     "subtype": "distribution",
     "entries": [
@@ -628,6 +659,12 @@
   },
   {
     "type": "item_group",
+    "id": "baked_goods-CA-NL",
+    "subtype": "distribution",
+    "entries": [ { "group": "regional_supply_original_baked_goods", "prob": 60 }, { "item": "regional_blueberry_grunt", "prob": 12 } ]
+  },
+  {
+    "type": "item_group",
     "id": "produce-CA-NS",
     "subtype": "distribution",
     "entries": [
@@ -702,6 +739,12 @@
       { "group": "regional_supply_original_commercial_bread_specialty", "prob": 60 },
       { "item": "tortilla_flour", "prob": 40 }
     ]
+  },
+  {
+    "type": "item_group",
+    "id": "baked_goods-CA-NS",
+    "subtype": "distribution",
+    "entries": [ { "group": "regional_supply_original_baked_goods", "prob": 60 }, { "item": "regional_blueberry_grunt", "prob": 12 } ]
   },
   {
     "type": "item_group",
@@ -1013,6 +1056,12 @@
   },
   {
     "type": "item_group",
+    "id": "baked_goods-CA-PE",
+    "subtype": "distribution",
+    "entries": [ { "group": "regional_supply_original_baked_goods", "prob": 60 }, { "item": "regional_blueberry_grunt", "prob": 12 } ]
+  },
+  {
+    "type": "item_group",
     "id": "produce-CA-QC",
     "subtype": "distribution",
     "entries": [
@@ -1087,6 +1136,12 @@
       { "group": "regional_supply_original_commercial_bread_specialty", "prob": 60 },
       { "item": "tortilla_flour", "prob": 40 }
     ]
+  },
+  {
+    "type": "item_group",
+    "id": "commercial_deli-CA-QC",
+    "subtype": "distribution",
+    "entries": [ { "group": "regional_supply_original_commercial_deli", "prob": 60 }, { "item": "regional_tourtiere", "prob": 12 } ]
   },
   {
     "type": "item_group",
@@ -1558,6 +1613,15 @@
   },
   {
     "type": "item_group",
+    "id": "commercial_deli-MX-CAM",
+    "subtype": "distribution",
+    "entries": [
+      { "group": "regional_supply_original_commercial_deli", "prob": 60 },
+      { "item": "regional_cochinita_pibil", "prob": 12 }
+    ]
+  },
+  {
+    "type": "item_group",
     "id": "produce-MX-CHH",
     "subtype": "distribution",
     "entries": [
@@ -1598,7 +1662,11 @@
     "type": "item_group",
     "id": "dry_goods-MX-CHH",
     "subtype": "distribution",
-    "entries": [ { "group": "regional_supply_original_dry_goods", "prob": 60 }, { "group": "dry_beans_bag_plastic_full", "prob": 35 } ]
+    "entries": [
+      { "group": "regional_supply_original_dry_goods", "prob": 60 },
+      { "group": "dry_beans_bag_plastic_full", "prob": 35 },
+      { "item": "regional_sonoran_machaca", "prob": 12 }
+    ]
   },
   {
     "type": "item_group",
@@ -1949,6 +2017,12 @@
       { "group": "regional_supply_original_commercial_bread_specialty", "prob": 60 },
       { "item": "tortilla_corn", "prob": 40 }
     ]
+  },
+  {
+    "type": "item_group",
+    "id": "commercial_deli-MX-COL",
+    "subtype": "distribution",
+    "entries": [ { "group": "regional_supply_original_commercial_deli", "prob": 60 }, { "item": "regional_birria", "prob": 12 } ]
   },
   {
     "type": "item_group",
@@ -2343,6 +2417,12 @@
   },
   {
     "type": "item_group",
+    "id": "commercial_deli-MX-JAL",
+    "subtype": "distribution",
+    "entries": [ { "group": "regional_supply_original_commercial_deli", "prob": 60 }, { "item": "regional_birria", "prob": 12 } ]
+  },
+  {
+    "type": "item_group",
     "id": "produce-MX-MEX",
     "subtype": "distribution",
     "entries": [
@@ -2654,6 +2734,12 @@
   },
   {
     "type": "item_group",
+    "id": "commercial_deli-MX-NAY",
+    "subtype": "distribution",
+    "entries": [ { "group": "regional_supply_original_commercial_deli", "prob": 60 }, { "item": "regional_birria", "prob": 12 } ]
+  },
+  {
+    "type": "item_group",
     "id": "produce-MX-NLE",
     "subtype": "distribution",
     "entries": [
@@ -2888,6 +2974,15 @@
   },
   {
     "type": "item_group",
+    "id": "commercial_deli-MX-PUE",
+    "subtype": "distribution",
+    "entries": [
+      { "group": "regional_supply_original_commercial_deli", "prob": 60 },
+      { "item": "regional_chicken_mole_poblano", "prob": 12 }
+    ]
+  },
+  {
+    "type": "item_group",
     "id": "produce-MX-QUE",
     "subtype": "distribution",
     "entries": [
@@ -3038,6 +3133,15 @@
     "entries": [
       { "group": "regional_supply_original_commercial_bread_specialty", "prob": 60 },
       { "item": "tortilla_corn", "prob": 40 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "commercial_deli-MX-ROO",
+    "subtype": "distribution",
+    "entries": [
+      { "group": "regional_supply_original_commercial_deli", "prob": 60 },
+      { "item": "regional_cochinita_pibil", "prob": 12 }
     ]
   },
   {
@@ -3239,7 +3343,11 @@
     "type": "item_group",
     "id": "dry_goods-MX-SON",
     "subtype": "distribution",
-    "entries": [ { "group": "regional_supply_original_dry_goods", "prob": 60 }, { "group": "dry_beans_bag_plastic_full", "prob": 35 } ]
+    "entries": [
+      { "group": "regional_supply_original_dry_goods", "prob": 60 },
+      { "group": "dry_beans_bag_plastic_full", "prob": 35 },
+      { "item": "regional_sonoran_machaca", "prob": 12 }
+    ]
   },
   {
     "type": "item_group",
@@ -3660,6 +3768,15 @@
     "entries": [
       { "group": "regional_supply_original_commercial_bread_specialty", "prob": 60 },
       { "item": "tortilla_corn", "prob": 40 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "commercial_deli-MX-YUC",
+    "subtype": "distribution",
+    "entries": [
+      { "group": "regional_supply_original_commercial_deli", "prob": 60 },
+      { "item": "regional_cochinita_pibil", "prob": 12 }
     ]
   },
   {
@@ -5210,6 +5327,15 @@
   },
   {
     "type": "item_group",
+    "id": "commercial_deli-US-LA",
+    "subtype": "distribution",
+    "entries": [
+      { "group": "regional_supply_original_commercial_deli", "prob": 60 },
+      { "item": "regional_louisiana_gumbo", "prob": 12 }
+    ]
+  },
+  {
+    "type": "item_group",
     "id": "produce-US-MA",
     "subtype": "distribution",
     "entries": [
@@ -5514,6 +5640,15 @@
     "entries": [
       { "group": "regional_supply_original_commercial_bread_specialty", "prob": 60 },
       { "item": "tortilla_flour", "prob": 40 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "baked_goods-US-MI",
+    "subtype": "distribution",
+    "entries": [
+      { "group": "regional_supply_original_baked_goods", "prob": 60 },
+      { "item": "regional_upper_peninsula_pasty", "prob": 12 }
     ]
   },
   {
@@ -6287,6 +6422,15 @@
     "entries": [
       { "group": "regional_supply_original_commercial_bread_specialty", "prob": 60 },
       { "item": "tortilla_corn", "prob": 40 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "commercial_deli-US-NM",
+    "subtype": "distribution",
+    "entries": [
+      { "group": "regional_supply_original_commercial_deli", "prob": 60 },
+      { "item": "regional_green_chile_stew", "prob": 12 }
     ]
   },
   {
