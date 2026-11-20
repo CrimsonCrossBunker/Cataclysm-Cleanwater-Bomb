@@ -43,3 +43,5 @@ require("active_items")
 require("lua.effect_types")
 
 require("monster_groups")
+
+require("lua.migrations")

@@ -49,3 +49,5 @@ require("item_group_changes")
 require("generic_items")
 
 require("map_weights")
+
+require("migrations")

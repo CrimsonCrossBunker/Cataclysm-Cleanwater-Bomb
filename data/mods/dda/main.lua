@@ -573,3 +573,5 @@ require("vehicle_part_locations")
 require("road_vehicles")
 require("profession_groups")
 require("blacklists")
+
+require("migrations")

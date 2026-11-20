@@ -168,3 +168,5 @@ require("effect_types")
 require("monster_groups")
 
 require("overmap_connections")
+
+require("migrations")

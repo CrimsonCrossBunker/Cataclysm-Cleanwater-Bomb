@@ -151,3 +151,5 @@ require("fault_groups")
 require("overmap_connections")
 require("post_process_generators")
 require("profession_groups")
+
+require("migrations")

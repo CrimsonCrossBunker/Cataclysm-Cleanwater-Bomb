@@ -274,3 +274,5 @@ require("overlay_orders")
 
 require("recipe_categories")
 require("relic_procgen")
+
+require("migrations")

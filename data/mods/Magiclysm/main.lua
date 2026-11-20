@@ -165,3 +165,5 @@ require("recipe_categories")
 require("scores")
 
 require("blacklists")
+
+require("migrations")
