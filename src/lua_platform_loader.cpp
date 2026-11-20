@@ -2671,6 +2671,32 @@ void write_item_transform_action( JsonOut &json, const sol::table &options )
     write_item_text( json, "need_fire_msg", options.raw_get<sol::object>( "need_fire_message" ), false );
 }
 
+void write_item_action_effects( JsonOut &json, const sol::table &options )
+{
+    if( const auto effects = options.get<sol::optional<sol::table>>( "effects" ) ) {
+        json.member( "effects" );
+        json.start_array();
+        const std::size_t count = checked_dense_array_size( *effects, "effects",
+                                  std::numeric_limits<std::size_t>::max() );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::table effect = effects->raw_get<sol::table>( index );
+            json.start_object();
+            json.member( "id", effect.get<std::string>( "id" ) );
+            const sol::object duration = effect.raw_get<sol::object>( "duration" );
+            if( duration.get_type() == sol::type::string ) {
+                json.member( "duration", duration.as<std::string>() );
+            } else {
+                write_placement_member<int>( json, effect, "duration", "duration" );
+            }
+            write_placement_member<std::string>( json, effect, "bodypart", "bp" );
+            write_placement_member<bool>( json, effect, "permanent", "permanent" );
+            write_placement_member<int>( json, effect, "intensity", "intensity" );
+            json.end_object();
+        }
+        json.end_array();
+    }
+}
+
 void write_item_drug_action( JsonOut &json, const sol::table &options )
 {
     write_item_text( json, "activation_message", options.raw_get<sol::object>( "message" ), false );
@@ -2701,29 +2727,111 @@ void write_item_drug_action( JsonOut &json, const sol::table &options )
         }
         json.end_array();
     }
-    if( const auto effects = options.get<sol::optional<sol::table>>( "effects" ) ) {
-        json.member( "effects" );
-        json.start_array();
-        const std::size_t count = checked_dense_array_size( *effects, "effects",
-                                  std::numeric_limits<std::size_t>::max() );
-        for( std::size_t index = 1; index <= count; ++index ) {
-            const sol::table effect = effects->raw_get<sol::table>( index );
+    write_item_action_effects( json, options );
+}
+
+void write_item_blast( JsonOut &json, const sol::table &options )
+{
+    if( const auto blast = options.get<sol::optional<sol::table>>( "blast" ) ) {
+        json.member( "explosion" );
+        json.start_object();
+        json.member( "power", blast->get<double>( "power" ) );
+        write_placement_member<double>( json, *blast, "distance_factor", "distance_factor" );
+        write_placement_member<int>( json, *blast, "max_noise", "max_noise" );
+        write_placement_member<bool>( json, *blast, "fire", "fire" );
+        write_placement_member<std::string>( json, *blast, "light_effect", "light_effect" );
+        const sol::object shrapnel = blast->raw_get<sol::object>( "shrapnel" );
+        if( shrapnel.get_type() == sol::type::number ) {
+            json.member( "shrapnel", shrapnel.as<int>() );
+        } else if( shrapnel.get_type() != sol::type::nil ) {
+            const sol::table fragments = shrapnel.as<sol::table>();
+            json.member( "shrapnel" );
             json.start_object();
-            json.member( "id", effect.get<std::string>( "id" ) );
-            const sol::object duration = effect.raw_get<sol::object>( "duration" );
-            if( duration.get_type() == sol::type::string ) {
-                json.member( "duration", duration.as<std::string>() );
-            } else {
-                write_placement_member<int>( json, effect, "duration", "duration" );
-            }
-            write_placement_member<std::string>( json, effect, "bodypart", "bp" );
-            write_placement_member<bool>( json, effect, "permanent", "permanent" );
-            write_placement_member<int>( json, effect, "intensity", "intensity" );
+            json.member( "casing_mass", fragments.get<int>( "casing_mass" ) );
+            write_placement_member<double>( json, fragments, "fragment_mass", "fragment_mass" );
+            write_placement_member<int>( json, fragments, "recovery", "recovery" );
+            write_placement_member<std::string>( json, fragments, "drop", "drop" );
             json.end_object();
         }
-        json.end_array();
+        json.end_object();
     }
 }
+
+void write_item_explosion_action( JsonOut &json, const sol::table &options )
+{
+    write_item_blast( json, options );
+    write_item_ids( json, options, { { "ammo_effects", "effects" } } );
+    write_item_fields<int>( json, options, {
+        { "draw_radius", "draw_explosion_radius" }, { "field_radius", "fields_radius" },
+        { "field_minimum", "fields_min_intensity" }, { "field_maximum", "fields_max_intensity" },
+        { "emp_radius", "emp_blast_radius" }, { "scrambler_radius", "scrambler_blast_radius" }
+    } );
+    write_item_fields<std::string>( json, options, {
+        { "draw_color", "draw_explosion_color" }, { "field", "fields_type" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "flash", "do_flashbang" }, { "flash_immune", "flashbang_player_immune" }
+    } );
+}
+
+void write_item_heal_action( JsonOut &json, const sol::table &options )
+{
+    json.member( "move_cost", options.get<int>( "moves" ) );
+    write_placement_member<int>( json, options, "bleed", "bleed" );
+    for( const char *field : {
+             "limb_power", "head_power", "torso_power", "limb_scaling", "head_scaling",
+             "torso_scaling", "bandages_power", "bandages_scaling", "disinfectant_power",
+             "disinfectant_scaling", "bite", "infect"
+         } ) {
+        write_placement_member<double>( json, options, field, field );
+    }
+    write_item_action_effects( json, options );
+    const sol::object byproduct = options.raw_get<sol::object>( "byproduct" );
+    if( byproduct.get_type() == sol::type::string ) {
+        json.member( "used_up_item", byproduct.as<std::string>() );
+    } else if( byproduct.get_type() != sol::type::nil ) {
+        const sol::table replacement = byproduct.as<sol::table>();
+        json.member( "used_up_item" );
+        json.start_object();
+        json.member( "id", replacement.get<std::string>( "id" ) );
+        write_item_fields<int>( json, replacement, {
+            { "quantity", "quantity" }, { "charges", "charges" }
+        } );
+        write_item_ids( json, replacement, { { "flags", "flags" } } );
+        json.end_object();
+    }
+}
+
+void write_item_instrument_action( JsonOut &json, const sol::table &options )
+{
+    json.member( "volume", options.get<int>( "volume" ) );
+    json.member( "fun", options.get<int>( "fun" ) );
+    write_item_fields<int>( json, options, {
+        { "fun_bonus", "fun_bonus" }, { "speed_penalty", "speed_penalty" }
+    } );
+    const sol::object interval = options.raw_get<sol::object>( "description_interval" );
+    if( interval.get_type() == sol::type::number ) {
+        json.member( "description_frequency", interval.as<int>() );
+    } else {
+        json.member( "description_frequency", interval.as<std::string>() );
+    }
+    for( const auto &[field, native] : {
+             item_field{ "player_messages", "player_descriptions" },
+             item_field{ "npc_messages", "npc_descriptions" }
+         } ) {
+        if( const auto messages = options.get<sol::optional<sol::table>>( field ) ) {
+            json.member( native );
+            json.start_array();
+            const std::size_t count = checked_dense_array_size( *messages, field,
+                std::numeric_limits<std::size_t>::max() );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                write_item_text_value( json, field, messages->raw_get<sol::object>( index ), false );
+            }
+            json.end_array();
+        }
+    }
+}
+
 
 void write_item_native_action( JsonOut &json, const sol::object &action )
 {
@@ -2759,6 +2867,19 @@ void write_item_native_action( JsonOut &json, const sol::object &action )
         }
     } else if( kind == "consume_drug" ) {
         write_item_drug_action( json, options );
+    } else if( kind == "heal" ) {
+        write_item_heal_action( json, options );
+    } else if( kind == "explosion" ) {
+        write_item_explosion_action( json, options );
+    } else if( kind == "musical_instrument" ) {
+        write_item_instrument_action( json, options );
+    } else if( kind == "manualnoise" ) {
+        write_item_fields<int>( json, options, { { "volume", "noise" }, { "moves", "moves" } } );
+        write_item_fields<std::string>( json, options, {
+            { "sound_id", "noise_id" }, { "sound_variant", "noise_variant" }
+        } );
+        write_item_text( json, "use_message", options.raw_get<sol::object>( "message" ), false );
+        write_item_text( json, "noise_message", options.raw_get<sol::object>( "sound_message" ), false );
     } else if( kind == "repair_item" ) {
         write_item_fields<std::string>( json, options, {
             { "id", "item_action_type" }, { "skill", "skill" }
@@ -2841,7 +2962,7 @@ void write_item_native_action( JsonOut &json, const sol::object &action )
         write_item_fields<bool>( json, options, {
             { "need_worn", "need_worn" }, { "need_wielding", "need_wielding" }, { "mundane", "mundane" }
         } );
-    } else {
+    } else if( kind != "play_instrument" ) {
         throw std::invalid_argument( "unsupported ordered item action: " + kind );
     }
     json.end_object();
@@ -3036,6 +3157,7 @@ void load_static_item( const sol::table &options, const std::string &source )
         write_item_transformation( json, *transformation );
         json.end_object();
     }
+    write_item_blast( json, options );
     write_item_action_list( json, options, "use_actions", "use_action" );
     write_item_action_list( json, options, "tick_actions", "tick_action" );
     for( const char *field : { "countdown_action", "drop_action" } ) {

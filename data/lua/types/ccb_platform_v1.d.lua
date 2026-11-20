@@ -9294,6 +9294,7 @@ function CcbPlatformContent.Item(options) end
 ---@field bionic? StaticOrderedBionicItem
 ---@field wheel? StaticOrderedWheel
 ---@field subtype_order? string[] List all configured subtype fields in native loading order when using multiple subtypes.
+---@field blast? StaticItemBlast Special explosion profile of the item itself.
 ---@field use_actions? StaticOrderedItemAction[]
 ---@field tick_actions? StaticOrderedItemAction[]
 ---@field countdown_action? StaticOrderedItemAction
@@ -19069,6 +19070,87 @@ function CcbPlatformContent.set_martial_art_handler(id, phase, handler_id) end
 ---@class StaticOrderedTransformAction: StaticOrderedTransformOptions
 ---@field kind "transform"
 
+---@class StaticItemShrapnel
+---@field casing_mass integer
+---@field fragment_mass? number
+---@field recovery? integer
+---@field drop? string
+
+---@class StaticItemBlast
+---@field power number
+---@field distance_factor? number
+---@field max_noise? integer
+---@field fire? boolean
+---@field light_effect? string
+---@field shrapnel? integer|StaticItemShrapnel
+
+---@class StaticOrderedExplosionAction
+---@field kind "explosion"
+---@field ammo_scale? integer
+---@field blast? StaticItemBlast
+---@field ammo_effects? string[]
+---@field field? string Field type, required when field_radius is positive.
+---@field field_radius? integer
+---@field field_minimum? integer
+---@field field_maximum? integer
+---@field flash? boolean
+---@field flash_immune? boolean
+---@field draw_radius? integer
+---@field draw_color? string
+---@field emp_radius? integer
+---@field scrambler_radius? integer
+
+---@class StaticHealingByproduct
+---@field id string
+---@field quantity? integer
+---@field charges? integer
+---@field flags? string[]
+
+---@class StaticOrderedHealingAction
+---@field kind "heal"
+---@field ammo_scale? integer
+---@field moves integer
+---@field limb_power? number
+---@field head_power? number
+---@field torso_power? number
+---@field limb_scaling? number
+---@field head_scaling? number
+---@field torso_scaling? number
+---@field bandages_power? number
+---@field bandages_scaling? number
+---@field disinfectant_power? number
+---@field disinfectant_scaling? number
+---@field bleed? integer
+---@field bite? number
+---@field infect? number
+---@field effects? StaticOrderedDrugEffect[]
+---@field byproduct? string|StaticHealingByproduct
+
+---@class StaticOrderedInstrumentAction
+---@field kind "musical_instrument"
+---@field ammo_scale? integer
+---@field volume integer
+---@field fun integer
+---@field fun_bonus? integer
+---@field speed_penalty? integer
+---@field description_interval integer|string Turns or a native duration.
+---@field player_messages? (string|LocalizedText)[]
+---@field npc_messages? (string|LocalizedText)[]
+
+---@class StaticOrderedPlayInstrumentAction
+---@field kind "play_instrument"
+---@field ammo_scale? integer
+
+---@class StaticOrderedManualSoundAction
+---@field kind "manualnoise"
+---@field ammo_scale? integer
+---@field volume? integer
+---@field moves? integer
+---@field sound_id? string
+---@field sound_variant? string
+---@field message? string|LocalizedText
+---@field sound_message? string|LocalizedText
+
 ---@class StaticOrderedRepairAction
 ---@field kind "repair_item"
 ---@field ammo_scale? integer
@@ -19209,7 +19291,7 @@ function CcbPlatformContent.set_martial_art_handler(id, phase, handler_id) end
 ---@field need_wielding? boolean
 ---@field mundane? boolean
 
----@alias StaticOrderedItemAction string|StaticOrderedNamedAction|StaticOrderedTransformAction|StaticOrderedDrugAction|StaticOrderedHolsterAction|StaticOrderedMessageAction|StaticOrderedMolleAttachAction|StaticOrderedMolleDetachAction|StaticOrderedCastSpellAction|StaticOrderedDelayedTransformAction|StaticOrderedRepairAction|StaticOrderedPlaceMonsterAction|StaticOrderedFirestarterAction|StaticOrderedMusicPlayerAction|StaticOrderedSoundAction|StaticOrderedInscribeAction|StaticOrderedCableAction|StaticOrderedEmitAction
+---@alias StaticOrderedItemAction string|StaticOrderedNamedAction|StaticOrderedTransformAction|StaticOrderedDrugAction|StaticOrderedHolsterAction|StaticOrderedMessageAction|StaticOrderedMolleAttachAction|StaticOrderedMolleDetachAction|StaticOrderedCastSpellAction|StaticOrderedDelayedTransformAction|StaticOrderedRepairAction|StaticOrderedPlaceMonsterAction|StaticOrderedFirestarterAction|StaticOrderedMusicPlayerAction|StaticOrderedSoundAction|StaticOrderedInscribeAction|StaticOrderedCableAction|StaticOrderedEmitAction|StaticOrderedExplosionAction|StaticOrderedHealingAction|StaticOrderedInstrumentAction|StaticOrderedPlayInstrumentAction|StaticOrderedManualSoundAction
 
 ---@class StaticOrderedCountedId
 ---@field id string
