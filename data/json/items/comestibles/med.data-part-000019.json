@@ -1,0 +1,22 @@
+[
+  {
+    "id": "strong_antibiotic",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "comestible_type": "MED",
+    "name": { "str_sp": "broad-spectrum antibiotics" },
+    "description": "A broad-spectrum antibacterial medication designed to prevent or stop the spread of infection.  It contains nearly toxic levels of antibiotics, but can treat any bacterial infections you may encounter.  One dose lasts twelve hours.",
+    "material": [ "drug_filler" ],
+    "weight": "611 mg",
+    "volume": "1 ml",
+    "price": "75 cent",
+    "price_postapoc": "3 USD",
+    "symbol": "!",
+    "color": "white",
+    "container": "bottle_plastic_pill_prescription",
+    "healthy": -10,
+    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
+    "use_action": { "type": "STRONG_ANTIBIOTIC" },
+    "stackable": true
+  }
+]
