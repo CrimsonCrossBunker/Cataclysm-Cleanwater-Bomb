@@ -1705,12 +1705,6 @@
   },
   {
     "type": "MONSTER",
-    "id": "mon_lieutenant_shadow",
-    "copy-from": "mon_lieutenant_shadow",
-    "extend": { "armor": { "light": -40, "nether": 14 } }
-  },
-  {
-    "type": "MONSTER",
     "id": "mon_frog_mother",
     "copy-from": "mon_frog_mother",
     "extend": { "armor": { "nether": 14, "necrotic": -20, "poison": 14 } }
