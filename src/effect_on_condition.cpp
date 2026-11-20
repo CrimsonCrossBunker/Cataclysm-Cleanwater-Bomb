@@ -244,7 +244,23 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 490> migrated_character_tasks = {{
+const std::array<character_task_migration, 498> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_MOM_GRANT_GROUNDING_MEDITATION_TO_PSIONS" ),
+          "grant_grounding_meditation", "grant_grounding_meditation", false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_MOM_GAME_ONGOING_GRANT_CRAFTING_PROFICIENICES" ),
+          "grant_psionic_crafting_basics", "grant_psionic_crafting_basics", false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_MOM_GAME_ONGOING_GRANT_BIOKINETIC_CRAFTING_PROFICIENCY" ),
+          "grant_psionic_crafting_biokinesis", "grant_psionic_crafting_biokinesis", false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_MOM_GAME_ONGOING_GRANT_PYROKINETIC_CRAFTING_PROFICIENCY" ),
+          "grant_psionic_crafting_pyrokinesis", "grant_psionic_crafting_pyrokinesis", false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_MOM_GAME_ONGOING_GRANT_TELEPORTATION_CRAFTING_PROFICIENCY" ),
+          "grant_psionic_crafting_teleportation", "grant_psionic_crafting_teleportation", false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_MOM_GAME_ONGOING_GRANT_VITAKINETIC_CRAFTING_PROFICIENCY" ),
+          "grant_psionic_crafting_vitakinesis", "grant_psionic_crafting_vitakinesis", false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_PSI_RESEARCH_LEARN_EXTENDED_CHANNELING_TRIGGER" ),
+          "discover_extended_channeling", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_PSI_RESEARCH_LEARN_TORRENTIAL_CHANNELING_TRIGGER" ),
+          "discover_torrential_channeling", nullptr, false, "mindovermatter" },
         { effect_on_condition_id( "EOC_VAMPIRE_TORPOR_RECOVER" ),
           "recover_old_vampire_torpor", nullptr },
         { effect_on_condition_id( "EOC_PARACLESIAN_ARVORE_GAIN_TRAIT_FROM_PASSIVE_POWER_CHECKER" ),
