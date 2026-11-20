@@ -6324,7 +6324,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                           "' references an unknown salvage item" );
             }
             for( const std::string &rep : definition.repaired_with ) {
-                if( !known_item( rep ) ) {
+                if( rep != "null" && !known_item( rep ) ) {
                     throw std::runtime_error( "material '" + definition.id +
                                               "' references an unknown repair item '" + rep + "'" );
                 }
@@ -7967,7 +7967,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native._salvaged_into = itype_id( source.salvaged_into );
                     }
                     if( !source.repaired_with.empty() ) {
-                        native._repaired_with = { itype_id::NULL_ID() };
+                        native._repaired_with.clear();
                         for( const std::string &rep : source.repaired_with ) {
                             native._repaired_with.insert( itype_id( rep ) );
                         }

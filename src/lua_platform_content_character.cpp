@@ -4852,7 +4852,6 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 definition.deactivation_energy_millijoules < 0 ||
                 definition.over_time_energy_millijoules < 0 ||
                 definition.trigger_energy_millijoules < 0 ||
-                definition.capacity_energy_millijoules < 0 ||
                 definition.charge_time_turns < 0 ||
                 !fits_native_int( definition.charge_time_turns ) ) {
                 throw std::runtime_error( "bionic '" + definition.id +

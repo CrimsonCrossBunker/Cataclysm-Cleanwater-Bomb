@@ -9480,11 +9480,10 @@ bool content_transaction::apply( std::string &error )
             native.generator_method = source.generator_method;
             native.visibility = source.visibility;
             native.min_max_zlevel_ = source.z_levels;
-            if( !source.symbol.empty() ) {
-                native.symbol = UTF8_getch( source.symbol );
-            }
-            native.color = color_from_string( source.color,
-                                              report_color_error::no );
+            native.symbol = source.symbol.empty() ? NULL_UNICODE : UTF8_getch( source.symbol );
+            native.color = source.color.empty()
+                           ? c_white
+                           : color_from_string( source.color, report_color_error::no );
             for( const std::string &flag : source.flags ) {
                 native.flags_.insert( flag );
             }
