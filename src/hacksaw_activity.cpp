@@ -78,11 +78,11 @@ bool query_hacksaw_work( Character &who, const item &tool, const tripoint_abs_ms
         if( tool.uses_firing_requirements() ) {
             const int per_turn = std::max( 1, static_cast<int>( who.get_speed() * weariness ) );
             const int first = std::min( remaining, std::max( 1,
-                static_cast<int>( who.get_moves() * weariness ) ) );
+                                        static_cast<int>( who.get_moves() * weariness ) ) );
             const int rest = std::max( 0, remaining - first );
             const int turns = 1 + ( rest + per_turn - 1 ) / per_turn;
             const std::string req = tool.format_consumption_requirements( "HACKSAW", gun_mode_id( "DEFAULT" ),
-                turns );
+                                    turns );
             if( !req.empty() ) {
                 query += "\n" + string_format( _( "This will require: %s." ), req );
             }

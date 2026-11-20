@@ -1048,7 +1048,8 @@ std::optional<int> iuse::inhaler( Character *p, item *it, const tripoint_bub_ms 
 std::optional<int> iuse::oxygen_bottle( Character *p, item *it, const tripoint_bub_ms & )
 {
     if( !it->activation_success() ) {
-        p->add_msg_if_player( m_bad, _( "You try to take a deep breath from your %s, but something blocks the flow." ),
+        p->add_msg_if_player( m_bad,
+                              _( "You try to take a deep breath from your %s, but something blocks the flow." ),
                               it->tname() );
         return std::nullopt;
     }

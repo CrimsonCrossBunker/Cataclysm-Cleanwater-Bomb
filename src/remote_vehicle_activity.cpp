@@ -47,7 +47,8 @@ bool settle_security( Character &who, item &controller, vehicle &target, int rol
     const auto generation = who.activity.identity_generation();
     const int64_t target_id = target.uid().get_value();
     const bool carried = who.has_item( controller );
-    const item_location source = carried ? form_loc_recursive<Character>( who, controller ) : item_location();
+    const item_location source = carried ? form_loc_recursive<Character>( who,
+                                 controller ) : item_location();
     int effort = 0;
     bool success = false;
     if( roll < -20 ) {
