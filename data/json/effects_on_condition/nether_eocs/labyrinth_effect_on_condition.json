@@ -690,32 +690,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_LS_SD_tunnel_portal",
-    "condition": { "and": [ { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" }, { "not": "u_driving" } ] },
-    "effect": [
-      { "u_message": "Zworunk.", "popup": true },
-      { "u_add_var": "traveled_string_dimension_to_labyrinth", "value": "yes" },
-      {
-        "u_travel_to_dimension": "string_dimension",
-        "npc_travel_radius": 0,
-        "npc_travel_filter": "none",
-        "fail_message": "You feel a prickle at the edge of your senses.",
-        "success_message": "Your surroundings warp and fold into the recesses of another world."
-      },
-      {
-        "u_location_variable": { "context_val": "string_dimension_floor_portal_enclosure" },
-        "target_params": { "om_terrain": "string_dimension_dome_x1y1z-2", "om_special": "string_dimension_dome" },
-        "furniture": "f_exodii_floor_portal_enclosure",
-        "target_max_radius": 100
-      },
-      { "u_teleport": { "context_val": "string_dimension_floor_portal_enclosure" } },
-      { "custom_light_level": 125, "length": "9999 days", "key": "string_dimension_lights_on" },
-      { "clear_dimension": "netherum_labyrinth" }
-    ],
-    "false_effect": [ { "u_message": "You feel a prickle at the edge of your senses." } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_LS_SD_enter_tunnel",
     "effect": [
       {
@@ -737,85 +711,6 @@
       },
       { "u_teleport": { "context_val": "string_dimension_tunnel" } }
     ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_LS_stairs_1_to_2",
-    "effect": [
-      {
-        "u_travel_to_dimension": "netherum_labyrinth2",
-        "npc_travel_radius": 0,
-        "npc_travel_filter": "none",
-        "fail_message": "Nope!",
-        "success_message": "You experience brief vertigo and the mist before you fades away."
-      },
-      {
-        "u_location_variable": { "global_val": "labyrinth_nl_new_loc" },
-        "target_params": { "om_terrain": "labyrinth2" },
-        "terrain": "t_nl_scrap_floor",
-        "target_max_radius": 50
-      },
-      { "mapgen_update": "labyrinth_stairs_2_to_1", "target_var": { "global_val": "labyrinth_nl_new_loc" } },
-      {
-        "u_location_variable": { "context_val": "player_teleport_loc" },
-        "target_params": { "om_terrain": "labyrinth2" },
-        "terrain": "t_nl_archway",
-        "target_max_radius": 1000
-      },
-      { "u_teleport": { "context_val": "player_teleport_loc" }, "fail_message": "Nope!", "force": true },
-      { "clear_dimension": "netherum_labyrinth" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_LS_stairs_2_to_1",
-    "effect": [
-      {
-        "u_travel_to_dimension": "netherum_labyrinth",
-        "npc_travel_radius": 0,
-        "npc_travel_filter": "none",
-        "fail_message": "Nope!",
-        "success_message": "You experience brief vertigo and the mist before you fades away."
-      },
-      {
-        "u_location_variable": { "global_val": "labyrinth_nl_new_loc" },
-        "target_params": { "om_terrain": "labyrinth_hall", "om_special": "labyrinthine_structure", "z": 0 }
-      },
-      { "mapgen_update": "labyrinth_stairs_1_to_2", "target_var": { "global_val": "labyrinth_nl_new_loc" } },
-      {
-        "u_location_variable": { "context_val": "player_teleport_loc" },
-        "target_params": { "om_terrain": "labyrinth_hall", "om_special": "labyrinthine_structure" },
-        "terrain": "t_nl_archway",
-        "target_max_radius": 1000
-      },
-      { "u_teleport": { "context_val": "player_teleport_loc" }, "fail_message": "Nope!", "force": true },
-      { "clear_dimension": "netherum_labyrinth2" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_LS_to_scarlet_portal",
-    "condition": { "and": [ { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" }, { "not": "u_driving" } ] },
-    "effect": [
-      { "u_add_var": "stuck_in_labyrinth", "value": "yes" },
-      { "u_add_var": "player_location_temp_labyrinth_return_dimension", "value": "netherum_labyrinth2" },
-      {
-        "u_travel_to_dimension": "scarlet",
-        "npc_travel_radius": 0,
-        "npc_travel_filter": "none",
-        "fail_message": "You feel a prickle at the edge of your senses.",
-        "success_message": "You experience brief vertigo."
-      },
-      {
-        "u_location_variable": { "context_val": "scarlet_archway" },
-        "target_params": { "om_terrain": "scarlet_scrap_metal_spire", "om_special": "scarlet_scrap_metal_spire" },
-        "terrain": "t_nl_archway",
-        "target_max_radius": 100
-      },
-      { "u_teleport": { "context_val": "scarlet_archway" } },
-      { "clear_dimension": "netherum_labyrinth2" }
-    ],
-    "false_effect": [ { "u_message": "You feel a prickle at the edge of your senses." } ]
   },
   {
     "type": "effect_on_condition",

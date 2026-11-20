@@ -244,7 +244,7 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 480> migrated_character_tasks = {{
+const std::array<character_task_migration, 481> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_CHANGELING_TURN_DREAMDROSS_INTO_DREAMSPARKS_PROCESS" ),
           "process_changeling_spark_extraction", nullptr },
         { effect_on_condition_id( "EOC_CHANGELING_CHECK_INVENTORY_FOR_EXTRA_DREAMSPARKS" ),
@@ -668,6 +668,8 @@ const std::array<character_task_migration, 480> migrated_character_tasks = {{
           "sky_raid_horde_signal", nullptr, false, "skyisland" },
         { effect_on_condition_id( "EOC_return_OM_teleport" ),
           "sky_return_home_due", nullptr, false, "skyisland" },
+        { effect_on_condition_id( "EOC_IN_VOID_SPIDER_LAIR" ),
+          "void_spider_lair_tick", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_VOID_SPIDER_KILLED" ),
           "void_spider_killed_due", nullptr, true, "ccb" },
         { effect_on_condition_id( "EOC_DISSOLVE_VOID_SPIDER_LAIR" ),

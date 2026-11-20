@@ -1,61 +1,5 @@
 [
   {
-    "id": "void_spider_test_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str_sp": "void weaver effigy" },
-    "description": "The severed leg of a void weaver, turned into some macabre ornament.",
-    "weight": "1 g",
-    "volume": "250 ml",
-    "price": "30 USD",
-    "price_postapoc": "100 USD",
-    "symbol": "!",
-    "color": "light_red",
-    "use_action": {
-      "type": "effect_on_conditions",
-      "description": "Touch the effigy.",
-      "effect_on_conditions": [ "EOC_VOID_SPIDER_RESET_VARS", "EOC_SPIDER_DIMENSION_TELEPORT" ]
-    }
-  },
-  {
-    "type": "trap",
-    "id": "tr_void_spider_entry",
-    "name": "",
-    "color": "green",
-    "symbol": "#",
-    "visibility": 99,
-    "always_invisible": true,
-    "avoidance": 99,
-    "difficulty": 99,
-    "trap_radius": 0,
-    "flags": [ "UNDODGEABLE", "AVATAR_ONLY" ],
-    "action": "eocs",
-    "eocs": [ "EOC_SPIDER_DIMENSION_TELEPORT" ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_SPIDER_DIMENSION_TELEPORT",
-    "condition": { "math": [ "void_spider_killed != 1" ] },
-    "global": true,
-    "effect": [
-      {
-        "u_travel_to_dimension": "spider_dimension",
-        "npc_travel_radius": 0,
-        "npc_travel_filter": "none",
-        "fail_message": "Nothing happens.",
-        "success_message": "The abyss opens up around you."
-      },
-      {
-        "u_location_variable": { "context_val": "spider_map" },
-        "target_params": { "om_terrain": "void_spider_lair", "z": -1 },
-        "terrain": "t_nether_glass_floor_basalt",
-        "target_max_radius": 26
-      },
-      { "u_teleport": { "context_val": "spider_map" } },
-      { "run_eocs": "EOC_IN_VOID_SPIDER_LAIR", "time_in_future": "1 seconds" }
-    ]
-  },
-  {
     "type": "monster_attack",
     "id": "void_spider_control",
     "attack_type": "eoc",
@@ -79,67 +23,6 @@
     "no_dmg_msg_u": "%1$s's hanging limbs try to bite your %2$s, but fails to penetrate your armor!",
     "no_dmg_msg_npc": "%1$s's hanging limbs try to bite <npcname>, but fails to penetrate their armor!",
     "condition": { "or": [ { "npc_has_effect": "WEBBED" }, { "npc_has_effect": "GRABBED" } ] }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_IN_VOID_SPIDER_LAIR",
-    "condition": { "or": [ { "u_at_om_location": "void_spider_lair" } ] },
-    "deactivate_condition": { "not": { "or": [ { "u_at_om_location": "void_spider_lair" } ] } },
-    "effect": [
-      { "run_eocs": "EOC_IN_VOID_SPIDER_LAIR", "time_in_future": "1 seconds" },
-      {
-        "run_eocs": [
-          {
-            "id": "webbed_place_void_spider",
-            "condition": {
-              "and": [
-                { "u_has_effect": "webbed" },
-                { "one_in_chance": 6 },
-                { "math": [ "u_monsters_nearby('mon_void_spider') < 1" ] },
-                { "math": [ "void_spider_killed != 1" ] }
-              ]
-            },
-            "effect": [
-              { "u_message": "The emptiness shifts unnervingly, something is nearby.", "popup": true },
-              { "u_cast_spell": { "id": "place_void_spider", "hit_self": true } }
-            ]
-          },
-          {
-            "id": "time_place_void_spider",
-            "condition": {
-              "and": [
-                { "one_in_chance": 120 },
-                { "math": [ "u_monsters_nearby('mon_void_spider') < 1" ] },
-                { "math": [ "void_spider_killed != 1" ] }
-              ]
-            },
-            "effect": [
-              { "u_message": "The emptiness shifts unnervingly, something is nearby.", "popup": true },
-              { "u_cast_spell": { "id": "place_void_spider", "hit_self": true } }
-            ]
-          },
-          {
-            "id": "webbed_place_void_maw",
-            "condition": {
-              "and": [
-                { "or": [ { "u_has_effect": "webbed" }, { "u_has_effect": "grabbed" } ] },
-                { "math": [ "u_monsters_nearby('mon_void_spider') == 1" ] },
-                { "math": [ "u_monsters_nearby('mon_void_spider_maw') < 4" ] }
-              ]
-            },
-            "effect": [
-              {
-                "u_spawn_monster": "mon_void_spider_maw",
-                "real_count": 1,
-                "min_radius": 2,
-                "max_radius": 4,
-                "lifespan": [ "15 seconds", "25 seconds" ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
   },
   {
     "type": "effect_on_condition",
@@ -298,17 +181,6 @@
       { "u_location_variable": { "global_val": "void_spider_chaos_point_player" }, "min_radius": 25, "max_radius": 30 },
       { "u_teleport": { "global_val": "void_spider_chaos_point_player" } },
       { "u_message": "The cavern shifts under unseen pressure." }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_VOID_SPIDER_RESET_VARS",
-    "global": true,
-    "//": "Reset vars for debugging.",
-    "effect": [
-      { "math": [ "void_spider_killed = 0" ] },
-      { "math": [ "void_spider_nest_eggs_spawned = 0" ] },
-      { "math": [ "void_spider_nest_corpses_spawned = 0" ] }
     ]
   }
 ]

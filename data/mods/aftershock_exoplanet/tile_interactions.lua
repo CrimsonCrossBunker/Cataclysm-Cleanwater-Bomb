@@ -105,3 +105,30 @@ ccb.runtime.handler("examine_t_landing_stair_control", function(ctx)
         store_ship_setting("your_ship_stairs_up", 1)
     end
 end)
+
+local function launch_escape_pod(actor)
+    local origin = checked(services.creatures.snapshot(actor)).position
+    local ship = services.overmap.find_target(origin:project_to("omt"), "crashing_ship_4", { z = -10 })
+    local crate = services.world.find_location(ship:project_to("ms"), { kind = "terrain", id = id("terrain", "t_escape_pod_floor") },
+        { target_max_radius = 24, distance_origin = origin }).position or services.coords.tripoint_abs_ms(0, 0, 0)
+    local function landing_site()
+        return checked(services.variables.get_global_tripoint("new_map")).value or services.coords.tripoint_abs_ms(0, 0, 0)
+    end
+    for _, cargo in ipairs(checked(services.items.on_map(crate, 0, 0))) do
+        if cargo:is_valid() then checked(services.relocation.teleport_item(cargo, landing_site())) end
+    end
+    if actor.subtype == "avatar" then
+        local text = ccb.services.translate("You make sure that all equipment is strapped down and loose items are put away to avoid projectiles during launch before you strap yourself into the escape pod seat and press the launch button.  With an incredibly loud roar and a massive acceleration that presses you into the seat, the escape pod fires from the ship, plummeting towards the planet below.")
+        ccb.presentation.notice(text)
+        services.activities.offer_interruption("")
+        services.messages.add(text)
+    end
+    checked(services.relocation.teleport_creature(actor, landing_site(), { force = true }))
+end
+
+ccb.runtime.handler("launch_escape_pod_from_seat", function(hit)
+    if not hit.creature then return true end
+    launch_escape_pod(hit.creature)
+    return false
+end)
+ccb.runtime.handler("examine_escape_pod_guidance", function(ctx) launch_escape_pod(ctx.character) end)

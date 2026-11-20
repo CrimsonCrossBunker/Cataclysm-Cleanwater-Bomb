@@ -1,18 +1,18 @@
 local ccb = require("ccb")
 
+-- Needs to be AVATAR_ONLY, otherwise the summoned monsters trigger the trap again.
 ccb.content.define_trap {
-    id = "tr_inner_cabins_void",
-    name = ccb.content.text("fluid void"),
-    color = "black",
-    memorial_male = ccb.content.text("Lost to a pool of darkness.", "memorial_male"),
-    memorial_female = ccb.content.text("Lost to a pool of darkness.", "memorial_female"),
-    symbol = "~",
-    visibility = 1000,
-    avoidance = 99,
+    id = "tr_alien_tree_trap_roots",
+    name = ccb.content.text("alien roots"),
+    color = "dark_gray",
+    symbol = "/",
+    visibility = 12,
+    avoidance = 10,
     difficulty = 99,
-    vehicle = { damage = 5000 },
-    flags = { "UNDODGEABLE", "CONSUME_ON_TRIGGER" },
+    flags = { "UNDODGEABLE", "AVATAR_ONLY", "CONSUME_ON_TRIGGER" },
     action = "none",
-    always_invisible = true,
-    trigger_handler = "inner_cabins_void_trap",
+    trigger_weight = "50000 g",
+    avatar_message = ccb.content.text("As you step on the roots, they twitch slightly."),
+    npc_message = ccb.content.text("As <npcname> steps on the roots, they twitch slightly."),
+    trigger_handler = "disturb_alien_roots",
 }

@@ -184,36 +184,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_INNER_CABINS_PORTAL_EXIT_TO_SMEAR",
-    "condition": { "and": [ { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" }, { "not": "u_driving" } ] },
-    "effect": [
-      {
-        "u_location_variable": { "global_val": "inner_cabins_exit_loc" },
-        "target_params": { "om_terrain": "inner_cabins_warped_cabin_1", "om_special": "inner_cabins_warped_cabin" },
-        "terrain": "t_floor",
-        "target_max_radius": 20
-      },
-      { "u_teleport": { "global_val": "inner_cabins_exit_loc" }, "fail_message": "Nope!", "force": true },
-      {
-        "u_message": "You step through the swirling vortex and into a cabin, which quickly unfolds itself in space and time, dizzying your senses.  Then, you find your footing.",
-        "popup": true
-      }
-    ],
-    "false_effect": { "u_message": "Something tickles at the edge of your senses." }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_INNER_CABINS_PORTAL_LOOK",
-    "condition": { "current_dimension": "inner_cabins" },
-    "effect": [
-      {
-        "u_message": "You see the inside of a cabin, not unlike the ones you've seen before.  It's so clear that you think you could walk to it, through this thing, like a door.",
-        "popup": true
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_INNER_CABINS_INTERSTICE_COUNTER",
     "condition": { "current_dimension": "inner_cabins" },
     "effect": [
