@@ -103,7 +103,10 @@ add_custom_command(
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py
                 --source ${CMAKE_SOURCE_DIR}/data/mods
                 --output ${BUILTIN_MODS_HEADER}
-        DEPENDS ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py ${BUILTIN_MOD_SOURCES}
+        DEPENDS ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py
+                ${CMAKE_SOURCE_DIR}/tools/bundled_mod_metadata.py
+                ${CMAKE_SOURCE_DIR}/tools/lua_api/extract_translations.py
+                ${BUILTIN_MOD_SOURCES}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         VERBATIM)
 add_custom_target(builtin_mod_manifest DEPENDS ${BUILTIN_MODS_HEADER})

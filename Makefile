@@ -1371,7 +1371,7 @@ check-builtin-mod-manifest:
 	mkdir -p $(dir $(BUILTIN_MODS_HEADER))
 	python3 tools/generate_builtin_mods.py --source data/mods --output $(BUILTIN_MODS_HEADER)
 
-$(BUILTIN_MODS_HEADER): tools/generate_builtin_mods.py $(BUILTIN_MOD_SOURCES) | check-builtin-mod-manifest
+$(BUILTIN_MODS_HEADER): tools/generate_builtin_mods.py tools/bundled_mod_metadata.py tools/lua_api/extract_translations.py $(BUILTIN_MOD_SOURCES) | check-builtin-mod-manifest
 	@:
 
 $(ODIR)/mod_manager.o: $(BUILTIN_MODS_HEADER)

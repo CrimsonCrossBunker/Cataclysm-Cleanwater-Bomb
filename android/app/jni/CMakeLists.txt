@@ -66,7 +66,10 @@ add_custom_command(
   COMMAND ${Python3_EXECUTABLE} ${CATA_REPO_ROOT}/tools/generate_builtin_mods.py
           --source ${CATA_REPO_ROOT}/data/mods
           --output ${BUILTIN_MODS_HEADER}
-  DEPENDS ${CATA_REPO_ROOT}/tools/generate_builtin_mods.py ${BUILTIN_MOD_SOURCES}
+  DEPENDS ${CATA_REPO_ROOT}/tools/generate_builtin_mods.py
+                ${CATA_REPO_ROOT}/tools/bundled_mod_metadata.py
+                ${CATA_REPO_ROOT}/tools/lua_api/extract_translations.py
+                ${BUILTIN_MOD_SOURCES}
   WORKING_DIRECTORY ${CATA_REPO_ROOT}
   VERBATIM)
 add_custom_target(builtin_mod_manifest DEPENDS ${BUILTIN_MODS_HEADER})

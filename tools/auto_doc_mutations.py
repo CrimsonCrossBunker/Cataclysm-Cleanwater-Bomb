@@ -9,38 +9,27 @@ from typing import Generator
 import click
 import orjson
 
+from bundled_mod_metadata import literal_metadata
+
 
 def find_files(
     paths: list[Path], extensions: tuple[str], include_mods=False
 ) -> Generator[str, None, None]:
     """Recursively search :paths: for files that have :extensions:.
 
-    If :include_mods: is False (the default), ignore all files that are in a
-    subdirectory of a directory containing a modinfo.json file. If
-    :include_mods: is True, yield modinfo.json before all other files,
-    if it exists.
+    Skip mod directories unless requested. Yield their metadata before data files.
     """
     for path in paths:
         if os.path.isdir(path):
             for dirpath, dirnames, filenames in os.walk(path):
-                # Ignore all subdirectories and files inside a mod.
-                if not include_mods and "modinfo.json" in filenames:
-                    dirnames.clear()
-                    filenames.clear()
-
-                # Yield modinfo.json before all other files, if it exists.
-                if include_mods and "modinfo.json" in filenames:
-                    # More than one modinfo.json is not allowed
-                    if filenames.count("modinfo.json") > 1:
+                metadata = next((name for name in ("modinfo.json", "mod.lua")
+                                 if name in filenames), None)
+                if metadata:
+                    if not include_mods:
                         dirnames.clear()
-                        filenames.clear()
-                        click.echo(
-                            f"More than one modinfo.json found in {dirpath}.",
-                            err=True,
-                        )
-                    else:
-                        filenames.remove("modinfo.json")
-                        yield os.path.join(dirpath, "modinfo.json")
+                        continue
+                    filenames.remove(metadata)
+                    yield os.path.join(dirpath, metadata)
 
                 for filename in filenames:
                     _, ext = os.path.splitext(filename)
@@ -218,7 +207,7 @@ def cli(paths, outfile, include_mods) -> None:
                 return move_stack(file, mod_stack[:-1])
 
         for file in find_files(paths, (".json",), include_mods=True):
-            if os.path.basename(file) != "modinfo.json":
+            if os.path.basename(file) not in ("modinfo.json", "mod.lua"):
                 # Move mods who we have recursed out of off the stack.
                 mod_stack = move_stack(file, mod_stack)
                 mod_stack[-1][0].mutations.extend(
@@ -230,21 +219,17 @@ def cli(paths, outfile, include_mods) -> None:
                 continue
             else:
                 # Add a new mod to the stack.
-                with open(file, "rb") as fd:
-                    jfile = orjson.loads(fd.read())
-
-                # modinfo.json supports two formats:
-                # - An array containing at least one object, the first of which
-                # contains info about the mod.
-                # - A single top-level object.
-                if isinstance(jfile, list) and len(jfile) > 0:
-                    mod_info = jfile[0]
+                if Path(file).name == "mod.lua":
+                    mod_info = literal_metadata(Path(file))
+                    mod_info.setdefault("id", Path(file).parent.name)
+                    mod_info.setdefault("dependencies", [])
                 else:
-                    mod_info = jfile
+                    with open(file, "rb") as fd:
+                        jfile = orjson.loads(fd.read())
+                    mod_info = jfile[0] if isinstance(jfile, list) and jfile else jfile
 
-                if isinstance(mod_info, dict) and all(
-                    (mod_info.get("id"), mod_info.get("dependencies"))
-                ):
+                if (isinstance(mod_info, dict) and mod_info.get("id")
+                        and isinstance(mod_info.get("dependencies"), list)):
                     new_mod = Mod(mod_info["id"], [], [
                         "ccb" if dep == "dda" else dep
                         for dep in mod_info["dependencies"]
@@ -252,7 +237,7 @@ def cli(paths, outfile, include_mods) -> None:
                     mod_stack.append((new_mod, Path(os.path.dirname(file))))
                     mods[new_mod.id_] = new_mod
                 else:
-                    click.echo(f"{file} is an invalid modinfo.json file.")
+                    click.echo(f"{file} has invalid Mod metadata.")
                     sys.exit()
 
         # Resolve mutations which use copy-from.

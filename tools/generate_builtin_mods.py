@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import sys
 
+from bundled_mod_metadata import literal_metadata
+
 
 def strip_jsonc_comments(text: str) -> str:
     """Remove // and /* */ comments while preserving quoted strings."""
@@ -197,6 +199,10 @@ def main() -> int:
                 strip_trailing_commas(strip_jsonc_comments(text))
             )
             mod_ids.update(find_mod_ids(value, modinfo))
+        for metadata in args.source.glob("*/mod.lua"):
+            mod_id = literal_metadata(metadata).get("id")
+            if mod_id:
+                mod_ids.add(mod_id)
         current = write_header(
             args.output,
             True,

@@ -14,13 +14,11 @@ find web_bundle -name ".DS_Store" -type f -exec rm {} \;
 
 # Remove obsolete mods.
 echo "Removing obsolete mods..."
-for MOD_DIR in $DATA_DIR/mods/*/ ; do
-    if [[ -f "${MOD_DIR}modinfo.json" ]] &&
-            jq -e '.[] | select(.type == "MOD_INFO") | .obsolete' "${MOD_DIR}modinfo.json" >/dev/null; then
-        echo "$MOD_DIR is obsolete, excluding from web_bundle..."
-        rm -rf $MOD_DIR
-    fi
-done
+python3 tools/bundled_mod_metadata.py "$DATA_DIR/mods" |
+    while IFS= read -r -d '' mod_dir; do
+        echo "$mod_dir is obsolete, excluding from web_bundle..."
+        rm -rf -- "$mod_dir"
+    done
 
 echo "Removing MA mod..."
 rm -rf $DATA_DIR/mods/MA
