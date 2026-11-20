@@ -1,108 +1,112 @@
 local ccb = require("ccb")
 
--- NO_I18N
--- NO_I18N
--- Based on my own cash card that I measured with a ruler. Yes I'm professional like that. 8.4cm x 5.3cm x 0.1cm. Really it's slightly less than 5ml but we don't do volume lower than 1ml.
+-- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
 ccb.content.define_item {
-    id = "card_plastic_abstract",
-    abstract = true,
-    symbol = ",",
-    color = "cyan",
-    name = ccb.content.text_without_extraction("abstract plastic card"),
-    description = ccb.content.text_without_extraction("A generic plastic card item template with numbers based off a credit card."),
-    price = "0 cent",
-    survival_price = "0 cent",
-    materials = { "plastic" },
-    mass = "5 g",
-    volume = "5 ml",
-    length = "84 mm",
-    flags = { "CREDIT_CARD_SHAPED" },
-    accuracy = { grip = "bad", length = "hand", surface = "any", balance = "neutral" },
-    tool = {},
-}
-
-ccb.content.define_item {
-    id = "cash_card",
-    category = "currency",
-    copy_from = "card_plastic_abstract",
-    symbol = "$",
-    color = "yellow",
-    name = ccb.content.plural_text("cash card", "cash cards"),
-    ascii_picture = "cashcard",
-    description = ccb.content.text("A yellow plastic card used to electronically store money.  It holds up to 2 million dollars."),
-    price = "10 USD",
-    pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { money = 200000000 } } },
-    inheritance = { add = { flags = { "NO_UNLOAD", "NO_RELOAD", "TRADER_AVOID" } } },
-    tool = { ammo_types = { "money" } },
-}
-
-ccb.content.define_item {
-    id = "wallet_travel",
-    category = "clothing",
-    symbol = ";",
-    color = "dark_gray",
-    name = ccb.content.plural_text("travel wallet", "travel wallets"),
-    description = ccb.content.text("A flat case with a neck strap, used to carry items such as currency, identification documents, laminated cards, and other small items."),
-    price = "150 USD",
-    survival_price = "2 USD 50 cent",
-    materials = { "plastic", "leather" },
-    flags = {
-        "OVERSIZE",
-        "BELTED",
-        "ALLOWS_NATURAL_ATTACKS",
-        "TARDIS",
-        "COLLAPSE_CONTENTS",
-        "POWERARMOR_COMPATIBLE",
-    },
-    mass = "708 g",
-    volume = "500 ml",
-    pockets = {
-        {
-            kind = "CONTAINER",
-            rigid = true,
-            mass_limit = "600 g",
-            capacity = "500 ml",
-            moves = 400,
-            allowed_flags = { "BANK_NOTE_SHAPED", "CREDIT_CARD_SHAPED" },
+    id = "cigar_lit",
+    name = ccb.content.plural_text("cigar", "cigars"),
+    color = "brown",
+    symbol = "!",
+    description = ccb.content.text("The smoke billowing from this cigar has a sweet, musty odor."),
+    mass = "9 g",
+    volume = "15 ml",
+    category = "drugs",
+    emissions = { "emit_tobacco_trail" },
+    revert_to = "cigar_butt",
+    materials = { "paper" },
+    light = 8,
+    flags = { "LITCIG", "TOBACCO", "TRADER_AVOID", "FIRESTARTER", "FRAGILE", "OVERSIZE", "SPAWN_ACTIVE" },
+    armor = {
+        warmth = 6,
+        portions = {
+            {
+                materials = { { id = "paper", coverage = 100, thickness = 0.1 } },
+                encumbrance = 25,
+                coverage = 70,
+                covers = { "mouth" },
+            },
         },
     },
-    subtype_order = { "tool", "armor" },
-    tool = {},
-    armor = {
-        thickness = 2,
-        portions = { { encumbrance = 2, coverage = 100, covers = { "torso" }, subparts = { "torso_neck" } } },
+    use_actions = {
+        { kind = "firestarter", moves = 500, slow_moves = 6000 },
+        {
+            kind = "transform",
+            target = "cigar_butt",
+            message = ccb.content.text("You extinguish the cigar."),
+            menu_text = ccb.content.text("Extinguish"),
+        },
     },
 }
 
+-- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
 ccb.content.define_item {
-    id = "lanyard",
-    category = "clothing",
-    symbol = "[",
+    id = "cig_lit",
+    name = ccb.content.plural_text("cigarette", "cigarettes"),
     color = "white",
-    name = ccb.content.plural_text("lanyard", "lanyards"),
-    description = ccb.content.text("A flat, clear plastic sleeve for identification documents, laminated cards, and other small items.  It has a neck strap attached."),
-    price = "10 cent",
-    survival_price = "1 cent",
-    materials = { "plastic" },
-    flags = { "OVERSIZE", "BELTED", "ALLOWS_NATURAL_ATTACKS", "POWERARMOR_COMPATIBLE", "PADDED" },
-    mass = "250 g",
-    volume = "250 ml",
-    length = "5 cm",
-    pockets = {
-        {
-            kind = "CONTAINER",
-            rigid = false,
-            mass_limit = "60 g",
-            capacity = "150 ml",
-            max_item_length = "85 mm",
-            moves = 100,
-            allowed_flags = { "BANK_NOTE_SHAPED", "CREDIT_CARD_SHAPED" },
+    symbol = "!",
+    description = ccb.content.text("Smoke swirls from the lit end of this cigarette, filling the air with the thrilling smell of burning chemicals."),
+    mass = "1 g",
+    volume = "4 ml",
+    category = "drugs",
+    emissions = { "emit_tobacco_trail" },
+    revert_to = "cig_butt",
+    materials = { "paper" },
+    light = 2,
+    flags = { "LITCIG", "TOBACCO", "TRADER_AVOID", "FIRESTARTER", "FRAGILE", "OVERSIZE", "SPAWN_ACTIVE" },
+    armor = {
+        warmth = 3,
+        portions = {
+            {
+                materials = { { id = "paper", coverage = 100, thickness = 0.1 } },
+                encumbrance = 15,
+                coverage = 25,
+                covers = { "mouth" },
+            },
         },
     },
-    subtype_order = { "tool", "armor" },
-    tool = {},
+    use_actions = {
+        { kind = "firestarter", moves = 500, slow_moves = 6000 },
+        {
+            kind = "transform",
+            target = "cig_butt",
+            message = ccb.content.text("You extinguish the cigarette."),
+            menu_text = ccb.content.text("Extinguish"),
+        },
+    },
+}
+
+-- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
+ccb.content.define_item {
+    id = "joint_lit",
+    name = ccb.content.plural_text("joint", "joints"),
+    color = "light_green",
+    symbol = "!",
+    description = ccb.content.text("The smell of skunk permeates the air as a thin trail of smoke floats off of this joint."),
+    mass = "1 g",
+    volume = "4 ml",
+    category = "drugs",
+    emissions = { "emit_joint_trail" },
+    revert_to = "joint_roach",
+    materials = { "paper" },
+    light = 2,
+    flags = { "LITCIG", "TRADER_AVOID", "FIRESTARTER", "FRAGILE", "OVERSIZE", "SPAWN_ACTIVE" },
     armor = {
-        thickness = 1,
-        portions = { { encumbrance = 0, covers = { "torso" }, subparts = { "torso_neck" } } },
+        warmth = 3,
+        portions = {
+            {
+                materials = { { id = "paper", coverage = 100, thickness = 0.1 } },
+                encumbrance = 15,
+                coverage = 25,
+                covers = { "mouth" },
+            },
+        },
+    },
+    use_actions = {
+        { kind = "firestarter", moves = 500, slow_moves = 6000 },
+        {
+            kind = "transform",
+            target = "joint_roach",
+            message = ccb.content.text("You extinguish the joint."),
+            menu_text = ccb.content.text("Extinguish"),
+        },
     },
 }
