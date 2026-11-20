@@ -1,0 +1,108 @@
+local ccb = require("ccb")
+
+-- Legs are important to this monster as he needs them to climb and leap.
+ccb.content.define_monster {
+    id = "mon_zombie_hunter",
+    name = ccb.content.plural_text("zombie hunter", "zombie hunters"),
+    description = ccb.content.text("You're barely able to believe this thing was ever human; it scrambles about on all fours, its nails and teeth sharpened into dangerous-looking spikes."),
+    copy_from = "mon_zombie_base",
+    species = { "ZOMBIE" },
+    hp = 90,
+    speed = 110,
+    color = "brown",
+    scents_tracked = { "sc_human", "sc_fetid" },
+    melee_sides = 4,
+    melee_damage = { { type = "cut", amount = 2 } },
+    dodge = 3,
+    bleed_rate = 50,
+    vision_night = 5,
+    weakpoints = {
+        {
+            name = ccb.content.text("the head"),
+            head = true,
+            armor_multiplier = { physical = 0.5 },
+            coverage = 3,
+            id = "the head",
+        },
+        {
+            name = ccb.content.text("the eye"),
+            head = true,
+            armor_multiplier = { physical = 0 },
+            coverage = 1,
+            id = "the eye",
+        },
+        {
+            name = ccb.content.text("the leg"),
+            armor_multiplier = { physical = 0.75 },
+            coverage = 3,
+            id = "the leg",
+        },
+    },
+    weakpoint_sets = {},
+    attacks = {
+        { id = "scratch", damage = { { type = "cut", amount = 12 } } },
+        { cooldown = 5, maximum_range = 3, kind = "leap" },
+        {
+            cooldown = 10,
+            damage = { { type = "stab", amount = 12, armor_multiplier = 0.7 } },
+            kind = "bite",
+        },
+    },
+    upgrade = { half_life = 168, monster = "mon_zombie_predator" },
+    inheritance = { add = { move_skills = { climb = 8 }, flags = { "SMELLS" } } },
+}
+
+ccb.content.define_monster {
+    id = "mon_zombie_mancroc",
+    name = ccb.content.plural_text("zombie snapper", "zombie snappers"),
+    description = ccb.content.text("With a crocodile-like snout and rows of protruding teeth, this swimwear-clad zombie lurks in the water."),
+    copy_from = "mon_zombie_base",
+    species = { "ZOMBIE" },
+    hp = 120,
+    speed = 100,
+    move_skills = { swim = 8 },
+    color = "light_green_cyan",
+    scents_tracked = { "sc_human", "sc_fetid" },
+    melee_dice = 3,
+    melee_sides = 5,
+    melee_damage = { { type = "cut", amount = 6 } },
+    dodge = 2,
+    weakpoints = {
+        {
+            name = ccb.content.text("the inside of its mouth"),
+            head = true,
+            armor_multiplier = { physical = 0.5 },
+            coverage = 3,
+            id = "the inside of its mouth",
+        },
+        {
+            name = ccb.content.text("the eye"),
+            head = true,
+            armor_multiplier = { physical = 0 },
+            coverage = 1,
+            id = "the eye",
+        },
+    },
+    weakpoint_sets = {},
+    bleed_rate = 0,
+    vision_day = 25,
+    vision_night = 5,
+    grab_strength = 50,
+    attacks = {
+        {
+            id = "bite_grab",
+            cooldown = 10,
+            accuracy = 6,
+            damage = {
+                { type = "stab", amount = 8, armor_multiplier = 0.3 },
+                { type = "bash", amount = 16, armor_multiplier = 0.3 },
+            },
+        },
+        { id = "drag_followup" },
+    },
+    burn_into = "mon_zombie_scorched",
+    upgrade = false,
+    armor = { bash = 8, cut = 10, bullet = 8, electric = 1 },
+    inheritance = { add = { flags = { "SMELLS", "WATER_CAMOUFLAGE" } } },
+    death = { drops = "mon_zombie_swimmer_death_drops" },
+}

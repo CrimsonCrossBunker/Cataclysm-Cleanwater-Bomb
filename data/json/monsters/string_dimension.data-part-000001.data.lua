@@ -1,0 +1,50 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_zomborg_boss_string_dimension",
+    species = { "CYBORG", "ZOMBIE" },
+    name = ccb.content.plural_text("frostbitten zomborg hulk", "frostbitten zomborg hulks"),
+    description = ccb.content.text("A dead, staggering creature, more cyborg than human.  Robotic components cover most of its body, with only a few bands of black flesh, frostbitten by long exposure to cold, wrapped around them, tugging and pulling them in awkward directions.  It staggers about, its awkward limbs clanking against armored torso."),
+    copy_from = "mon_zombie_base",
+    body_type = "human",
+    materials = { "qt_steel", "flesh", "exodii_ceramic" },
+    difficulty_adjustment = 20,
+    hp = 140,
+    speed = 90,
+    color = "red",
+    melee_skill = 8,
+    melee_dice = 3,
+    melee_sides = 8,
+    attacks = {
+        { id = "slam", cooldown = 12, damage = { { type = "bash", amount = 35 } } },
+        { id = "longswipe" },
+        { id = "cut_throat" },
+        { id = "smash", throw_strength = 72 },
+        { id = "hulk_wide_swing", accuracy = 9 },
+    },
+    weakpoint_sets = { "wps_humanoid_full_helmet" },
+    weakpoints = {
+        {
+            name = ccb.content.text("a crack in the armor"),
+            armor_multiplier = { bullet = 0.5, cut = 0.5, stab = 0.25, bash = 0.25 },
+            coverage = 4,
+            attack_coverage = { broad = 0.75 },
+            difficulty = { ranged = 7, melee = 5 },
+            id = "a crack in the armor",
+        },
+    },
+    bleed_rate = 0,
+    vision_day = 30,
+    harvest = "mon_zomborg",
+    dissect = "dissect_mon_zomborg",
+    upgrade = false,
+    armor = { bash = 18, cut = 28, acid = 28, heat = 8, bullet = 12, electric = 0 },
+    inheritance = {
+        add = { families = { "prof_wp_syn_armored", "prof_wp_cyborg" }, flags = { "PULP_PRYING" } },
+        remove = {
+            flags = { "GRABS", "PUSH_MON" },
+            attacks = { "bite_humanoid", "scratch_humanoid", "grab" },
+        },
+    },
+    death = { drops = "mon_zomborg_boss_string_dimension_death_drops" },
+}

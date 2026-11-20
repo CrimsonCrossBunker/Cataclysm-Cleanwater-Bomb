@@ -1,22 +1,106 @@
 local ccb = require("ccb")
 
 ccb.content.define_monster {
-    id = "mon_spider_cellar_mom",
-    name = ccb.content.plural_text("mommy long-legs", "mommy long legs"),
-    description = ccb.content.text("This surprisingly shy giant cellar spider holds a head-sized ball of crawling spiderlings of different ages in its mandibles, carefully balancing on her long legs not to drop the precious cargo.  She seems uninterested in you."),
+    id = "mon_spider_cellar_mega",
+    name = ccb.content.plural_text("warehouse spider", "warehouse spiders"),
+    description = ccb.content.text("A tangle of branching chitinous legs operating seemingly independently, somehow still managing to carry a cow-sized central body.  A number of malformed, twitching legs hang from the cephalothorax, but the head -and especially the mandibles- still seem to be in working order."),
     copy_from = "mon_spider_cellar_giant",
-    speed = 85,
-    aggression = -15,
-    morale = 10,
-    attacks = { { id = "grab", cooldown = 25, when = "monster_attack_intact_legs" } },
-    inheritance = {
-        add = { flags = { "STUMBLES" } },
-        remove = { flags = { "HARDTOSHOOT" }, anger_triggers = { "PLAYER_WEAK" } },
-    },
-    death = {
-        outcome = {
-            message = ccb.content.text("The spiderlings fall to the ground!"),
-            spell = { id = "death_spider_cellar_mom", hit_self = true },
+    morale = 50,
+    melee_dice = 3,
+    melee_skill = 7,
+    grab_strength = 75,
+    attacks = {
+        { id = "grab", cooldown = 5, when = "monster_attack_intact_legs" },
+        {
+            id = "grab_drag",
+            grab_settings = { move_cost_multiplier = 0.5, drag_deviation = 1 },
+            when = "allow_centipede_mega_grab_drag",
         },
+        {
+            id = "drag_followup",
+            grab_settings = { move_cost_multiplier = 0.5, drag_deviation = 1 },
+            when = "allow_centipede_mega_drag_followup",
+        },
+        {
+            move_cost = 120,
+            damage = { { type = "cut", amount = 10 }, { type = "stab", amount = 8 } },
+            cooldown = 3,
+            effects = { { id = "venom_pain", chance = 50, duration = 350, affect_hit_body_part = true } },
+            kind = "bite",
+            when = "monster_attack_intact_mandibles",
+        },
+        {
+            spell = { id = "cellar_spider_leg_detach", min_level = 1 },
+            casting_message = ccb.content.text("The maimed legs start twitching erratically!"),
+            cooldown = 15,
+            kind = "spell",
+            when = "allow_spider_cellar_mega_spell",
+        },
+    },
+    dodge = 6,
+    weakpoints = {
+        {
+            id = "leg",
+            name = ccb.content.text("a leg"),
+            damage_multiplier = { all = 0.4 },
+            critical_multiplier = { all = 0.4 },
+            attack_coverage = { point = 0.75 },
+            effects = {
+                {
+                    effect = "staggered",
+                    chance = 5,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 10, 30 },
+                },
+                {
+                    effect = "staggered",
+                    chance = 15,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 30, 100 },
+                },
+            },
+            coverage = 25,
+        },
+        {
+            id = "leg_joint",
+            name = ccb.content.text("a joint"),
+            damage_multiplier = { all = 0.4 },
+            critical_multiplier = { all = 0.4 },
+            armor_multiplier = { all = 0.5 },
+            attack_coverage = { point = 0.75 },
+            effects = {
+                {
+                    effect = "maimed_leg",
+                    chance = 25,
+                    duration = { "15 seconds", "50 seconds" },
+                    message = ccb.content.text("One of the %s's legs falls limp!"),
+                    damage_percent = { 1, 10 },
+                },
+                {
+                    effect = "maimed_leg",
+                    chance = 50,
+                    duration = { "25 seconds", "100 seconds" },
+                    message = ccb.content.text("One of the %s's legs falls limp!"),
+                    damage_percent = { 11, 24 },
+                },
+                {
+                    effect = "maimed_leg",
+                    chance = 100,
+                    duration = 86400,
+                    message = ccb.content.text("One of the %s's legs is disabled!"),
+                    damage_percent = { 24, 100 },
+                },
+            },
+            coverage = 5,
+        },
+    },
+    bleed_rate = 60,
+    upgrade = false,
+    zombify_into = "mon_meat_cocoon_med",
+    dissect = "dissect_spider_sample_large",
+    armor = { bullet = 2, bash = 5, cut = 7, stab = 7, acid = 5, electric = 3 },
+    inheritance = {
+        add = { anger_triggers = { "HOSTILE_SEEN" }, flags = { "BASHES" } },
+        scale = { hp = 7, mass = 5, volume = 5, speed = 1.2, attack_cost = 1.2 },
     },
 }

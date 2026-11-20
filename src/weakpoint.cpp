@@ -465,6 +465,14 @@ void weakpoint::load( const JsonObject &jo )
         read_condition( jo, "condition", condition, false );
         has_condition = true;
     }
+    if( const auto field = jo.get_member_opt( "//ccb_lua_weakpoint_target_effect" ) ) {
+        if( field->has_source_file() || has_condition ) {
+            field->throw_error( "Weakpoint target effect metadata requires an ordered Lua weakpoint" );
+        }
+        condition = dialogue_data::has_effect( str_or_var( field->get_string() ), dbl_or_var( -1 ),
+                    str_or_var( std::string() ), true );
+        has_condition = true;
+    }
     optional( jo, false, "effects", effects );
     optional( jo, false, "coverage_mult", coverage_mult, weakpoint_difficulty( 1.f ) );
     optional( jo, false, "difficulty", difficulty, weakpoint_difficulty( -100.f ) );

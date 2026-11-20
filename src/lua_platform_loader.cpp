@@ -4371,10 +4371,30 @@ void write_static_monster_traits( JsonOut &json, const sol::table &options )
 {
     write_item_ids( json, options, {
         { "flags", "flags" }, { "species", "species" }, { "categories", "categories" },
-        { "families", "families" }, { "weakpoint_sets", "weakpoint_sets" },
+        { "weakpoint_sets", "weakpoint_sets" },
         { "anger_triggers", "anger_triggers" }, { "fear_triggers", "fear_triggers" },
         { "placate_triggers", "placate_triggers" },
     } );
+    if( const auto families = options.get<sol::optional<sol::table>>( "families" ) ) {
+        json.member( "families" );
+        json.start_array();
+        const std::size_t count = checked_dense_array_size( *families, "weakpoint families",
+                                  std::numeric_limits<std::size_t>::max() );
+        for( std::size_t i = 1; i <= count; ++i ) {
+            const sol::object value = families->raw_get<sol::object>( i );
+            if( value.get_type() == sol::type::string ) {
+                json.write( value.as<std::string>() );
+            } else {
+                const sol::table family = value.as<sol::table>();
+                json.start_object();
+                json.member( "proficiency", family.get<std::string>( "proficiency" ) );
+                write_placement_member<std::string>( json, family, "id", "id" );
+                write_item_fields<double>( json, family, { { "bonus", "bonus" }, { "penalty", "penalty" } } );
+                json.end_object();
+            }
+        }
+        json.end_array();
+    }
     if( const auto skills = options.get<sol::optional<sol::table>>( "move_skills" ) ) {
         json.member( "move_skills" );
         json.start_object();
@@ -4421,12 +4441,15 @@ void write_static_monster_stat_changes( JsonOut &json, const sol::table &change 
     write_item_damage( json, change, "melee_damage", "melee_damage" );
 }
 
+void write_inline_monster_weakpoints( JsonOut &json, const sol::table &options );
+
 void write_static_monster_inheritance( JsonOut &json, const sol::table &inheritance )
 {
     if( const auto add = inheritance.get<sol::optional<sol::table>>( "add" ) ) {
         json.member( "extend" );
         json.start_object();
         write_static_monster_traits( json, *add );
+        write_inline_monster_weakpoints( json, *add );
         write_static_monster_attacks( json, *add );
         if( const auto armor = add->get<sol::optional<sol::table>>( "armor" ) ) {
             write_item_keyed_values<double>( json, "armor", *armor );
@@ -4437,9 +4460,18 @@ void write_static_monster_inheritance( JsonOut &json, const sol::table &inherita
         json.member( "delete" );
         json.start_object();
         write_static_monster_traits( json, *remove );
-        write_item_ids( json, *remove, {
-            { "attacks", "special_attacks" }, { "weakpoints", "weakpoints" },
-        } );
+        write_item_ids( json, *remove, { { "attacks", "special_attacks" } } );
+        if( const auto ids = remove->get<sol::optional<sol::table>>( "weakpoints" ) ) {
+            json.member( "weakpoints" );
+            json.start_array();
+            for( const std::string &id : bounded_string_array( *ids, "weakpoints",
+                    std::numeric_limits<std::size_t>::max(), "monster inheritance" ) ) {
+                json.start_object();
+                json.member( "id", id );
+                json.end_object();
+            }
+            json.end_array();
+        }
         json.end_object();
     }
     if( const auto scale = inheritance.get<sol::optional<sol::table>>( "scale" ) ) {
@@ -4505,6 +4537,7 @@ void load_static_monster( const sol::table &options, const std::string &source )
         { "aggressive_to_characters", "aggro_character" },
     } );
     write_static_monster_traits( json, options );
+    write_inline_monster_weakpoints( json, options );
     write_item_ids( json, options, {
         { "trap_avoids", "trap_avoids" }, { "absorb_materials", "absorb_material" },
         { "ignored_absorb_materials", "no_absorb_material" },
@@ -4804,13 +4837,8 @@ void write_static_weakpoint_effect( JsonOut &json, const sol::table &entry )
     json.end_object();
 }
 
-weakpoint read_static_weakpoint( const sol::table &entry, const std::string &source,
-                                 const std::string &set_id )
+void write_weakpoint_members( JsonOut &json, const sol::table &entry )
 {
-    std::ostringstream serialized;
-    JsonOut json( serialized );
-    serialized << std::defaultfloat << std::setprecision( std::numeric_limits<double>::max_digits10 );
-    json.start_object();
     json.member( "id", entry.get<std::string>( "id" ) );
     write_item_text( json, "name", entry.raw_get<sol::object>( "name" ), false );
     write_placement_member<double>( json, entry, "coverage", "coverage" );
@@ -4825,6 +4853,27 @@ weakpoint read_static_weakpoint( const sol::table &entry, const std::string &sou
         }
     }
     write_static_catalog_array( json, entry, "effects", "effects", write_static_weakpoint_effect );
+}
+
+void write_inline_monster_weakpoints( JsonOut &json, const sol::table &options )
+{
+    write_static_catalog_array( json, options, "weakpoints", "weakpoints",
+    []( JsonOut & out, const sol::table & entry ) {
+        out.start_object();
+        write_weakpoint_members( out, entry );
+        write_placement_member<std::string>( out, entry, "target_effect", "//ccb_lua_weakpoint_target_effect" );
+        out.end_object();
+    } );
+}
+
+weakpoint read_static_weakpoint( const sol::table &entry, const std::string &source,
+                                 const std::string &set_id )
+{
+    std::ostringstream serialized;
+    JsonOut json( serialized );
+    serialized << std::defaultfloat << std::setprecision( std::numeric_limits<double>::max_digits10 );
+    json.start_object();
+    write_weakpoint_members( json, entry );
     json.end_object();
     weakpoint point;
     point.load( json_loader::from_string( serialized.str() ).get_object() );

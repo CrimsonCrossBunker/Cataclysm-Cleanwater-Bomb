@@ -168,3 +168,11 @@ end)
 ccb.runtime.handler("monster_attack_intact_mandibles", function(attack)
     return intensity(attack.attacker, "maimed_mandible") == nil
 end)
+
+ccb.runtime.handler("allow_dermatik_juvenile_flightless_mon_juv_dermatik_wingmolt", function()
+    return services.random.native_int(0, 2) == 0
+end)
+
+ccb.runtime.handler("allow_spider_cellar_mega_spell", function(attack)
+    return intensity(attack.attacker, "maimed_leg") ~= nil
+end)

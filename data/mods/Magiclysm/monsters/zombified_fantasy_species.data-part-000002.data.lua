@@ -1,0 +1,65 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_zombie_ravenfolk",
+    name = ccb.content.plural_text("zombie ravenfolk", "zombie ravenfolk"),
+    copy_from = "mon_zombie",
+    description = ccb.content.text("With bedraggled wings, dull eyes, and beak hanging open, this ravenfolk body still walks, a slight sway as it moves."),
+    body_type = "angel",
+    species = { "RAVENFOLK", "ZOMBIE" },
+    volume = "62500 ml",
+    weakpoint_sets = { "wps_humanoid_body", "wps_vital_organs", "wps_eyes" },
+    weakpoints = {
+        {
+            id = "wing",
+            name = ccb.content.text("the wings"),
+            critical_multiplier = { all = 0.75 },
+            difficulty = { ranged = 2, melee = 1 },
+            attack_coverage = { point = 0.25 },
+            effects = {
+                {
+                    effect = "staggered",
+                    chance = 15,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 10, 100 },
+                },
+            },
+            coverage = 12,
+        },
+    },
+    families = { "prof_gross_anatomy", "prof_intro_biology", "prof_wp_demihuman", "prof_wp_basic_bird" },
+    harvest = "zombie_ravenfolk",
+    attacks = {
+        { reference = "SHRIEK_ALERT", cooldown = 15 },
+        {
+            id = "feral_ravenfolk_peck",
+            cooldown = 15,
+            move_cost = 100,
+            damage = { { type = "stab", amount = 12, penetration = 8 } },
+            minimum_hit_size = 4,
+            avatar_hit = ccb.content.text("%1$s buries its beak in your %2$s!"),
+            npc_hit = ccb.content.text("%1$s buries its beak in <npcname>!"),
+            avatar_miss = ccb.content.text("%1$s tries to peck you, but you dodge!"),
+            npc_miss = ccb.content.text("%1$s tries to peck <npcname>, but they dodge!"),
+            avatar_no_damage = ccb.content.text("%1$s tries to peck your %2$s, but fails to penetrate your armor."),
+            npc_no_damage = ccb.content.text("%1$s tries to peck <npcname>, but fails to penetrate their armor."),
+            kind = "melee",
+        },
+        {
+            id = "scratch",
+            attack_upper = true,
+            cooldown = 2,
+            damage = { { type = "cut", amount = 8 } },
+        },
+        {
+            cooldown = 15,
+            maximum_range = 6,
+            message = ccb.content.text_without_extraction("%1$s leaps with a flutter of wings!"),
+            kind = "leap",
+        },
+    },
+    vision_day = 35,
+    upgrade = { half_life = 120, monster_group = "GROUP_ZOMBIE_RAVENFOLK_UPGRADE" },
+    inheritance = { scale = { hp = 0.6, speed = 1.1, mass = 0.75 } },
+    death = { drops = "feral_ravenfolk_death_drops" },
+}

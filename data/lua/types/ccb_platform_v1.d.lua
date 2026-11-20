@@ -7665,8 +7665,7 @@ function CcbPlatformContent.define_fixed_overmap_special(options) end
 ---@field is_critical boolean
 ---@field weakpoint_skill number
 
----@class StaticWeakpointEffect
----@field on_hit? string Registered handler receiving StaticWeakpointHit after the effect passes its chance and damage checks.
+---@class StaticWeakpointEffectFields
 ---@field effect? string
 ---@field chance? number
 ---@field permanent? boolean
@@ -7676,7 +7675,10 @@ function CcbPlatformContent.define_fixed_overmap_special(options) end
 ---@field death_chance? integer|[integer, integer]
 ---@field message? string|LocalizedText
 
----@class StaticWeakpoint
+---@class StaticWeakpointEffect : StaticWeakpointEffectFields
+---@field on_hit? string Registered handler receiving StaticWeakpointHit after the effect passes its chance and damage checks.
+
+---@class StaticWeakpointFields
 ---@field id string An empty ID defines the fallback hit.
 ---@field name? string|LocalizedText
 ---@field coverage? number
@@ -7688,6 +7690,12 @@ function CcbPlatformContent.define_fixed_overmap_special(options) end
 ---@field critical_multiplier? table<string, number>
 ---@field attack_coverage? StaticWeakpointAttackValues
 ---@field difficulty? StaticWeakpointAttackValues
+
+---@class StaticMonsterWeakpoint : StaticWeakpointFields
+---@field target_effect? string Requires that the struck creature has this whole-body effect.
+---@field effects? StaticWeakpointEffectFields[]
+
+---@class StaticWeakpoint : StaticWeakpointFields
 ---@field when? StaticDialoguePredicate The attacker is the speaker and the target is the interlocutor.
 ---@field effects? StaticWeakpointEffect[]
 
@@ -9950,11 +9958,17 @@ function CcbPlatformContent.define_monster_attack(options) end
 ---@field swim? integer
 ---@field dig? integer
 
+---@class StaticMonsterWeakpointFamily
+---@field proficiency string
+---@field id? string Defaults to the proficiency ID.
+---@field bonus? number
+---@field penalty? number
+
 ---@class StaticMonsterTraits
 ---@field flags? string[]
 ---@field species? string[]
 ---@field categories? string[]
----@field families? string[]
+---@field families? (string|StaticMonsterWeakpointFamily)[]
 ---@field weakpoint_sets? string[]
 ---@field anger_triggers? string[]
 ---@field fear_triggers? string[]
@@ -9962,6 +9976,7 @@ function CcbPlatformContent.define_monster_attack(options) end
 ---@field move_skills? StaticMonsterMoveSkills
 
 ---@class StaticMonsterAdditions : StaticMonsterTraits
+---@field weakpoints? StaticMonsterWeakpoint[]
 ---@field attacks? StaticMonsterAttack[]
 ---@field armor? table<string, number>
 
@@ -10102,6 +10117,7 @@ function CcbPlatformContent.define_monster_attack(options) end
 ---@field volume_ratio? number
 
 ---@class StaticMonsterOptions : StaticMonsterTraits
+---@field weakpoints? StaticMonsterWeakpoint[]
 ---@field id string Stable monster or abstract template ID.
 ---@field abstract? boolean Register an inheritance template.
 ---@field copy_from? string An existing or deferred monster or template.

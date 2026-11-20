@@ -3,7 +3,7 @@ local ccb = require("ccb")
 -- Zombie faction so they don't attack a clear prop
 -- ahh! it sees you!
 ccb.content.define_monster {
-    id = "mon_poly_special_test",
+    id = "mon_dragon_dummy",
     name = ccb.content.plural_text("ancient red dragon", "ancient red dragons"),
     description = ccb.content.text("A towering, hulking dragon, with tremendous, curving horns and shining red scales, its glowing maw peeled back in a hateful grimace as its eyes bore into yours."),
     body_type = "dog",
@@ -21,17 +21,6 @@ ccb.content.define_monster {
     vision_day = 50,
     vision_night = 50,
     harvest = "exempt",
-    attacks = {
-        {
-            id = "debug_self_poly",
-            cooldown = 50,
-            kind = "polymorph_special",
-            form = "mon_fungaloid",
-            keep_speed = true,
-            keep_hp = true,
-            keep_anger = true,
-        },
-    },
     flags = { "SEES" },
     death = {
         drops = "mon_dragon_dummy_drops",
