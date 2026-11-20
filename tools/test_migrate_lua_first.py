@@ -13,7 +13,9 @@ import migrate_lua_first
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
-    def test_game_start_avatar_proof_tracks_the_canonical_sender_set(self) -> None:
+    def test_game_start_avatar_proof_tracks_the_canonical_sender_set(
+        self,
+    ) -> None:
         self.assertEqual(
             migrate_lua_first.game_start_sender_sites(),
             migrate_lua_first.EXPECTED_GAME_START_SENDER_SITES,
@@ -37,6 +39,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
 
     def test_game_start_avatar_proof_rejects_additional_senders(self) -> None:
         self.addCleanup(migrate_lua_first.game_start_sender_sites.cache_clear)
+        is_proven = migrate_lua_first.game_start_avatar_actor_is_proven
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / "src").mkdir()
@@ -49,16 +52,16 @@ class LuaFirstMigrationTest(unittest.TestCase):
                         f"events.{constructor}<event_type::game_start>();\n",
                         encoding="utf-8",
                     )
-                    with patch.object(migrate_lua_first, "REPOSITORY_ROOT", root):
+                    with patch.object(
+                        migrate_lua_first, "REPOSITORY_ROOT", root
+                    ):
                         migrate_lua_first.game_start_sender_sites.cache_clear()
                         self.assertEqual(
                             migrate_lua_first.game_start_sender_sites(),
                             (("src/game.cpp", "send"),
                              ("src/other.cpp", constructor)),
                         )
-                        self.assertFalse(
-                            migrate_lua_first.game_start_avatar_actor_is_proven(False)
-                        )
+                        self.assertFalse(is_proven(False))
 
     def test_directory_discovery_prunes_build_caches(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -73,9 +76,13 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
 
             objects = migrate_lua_first.load_objects([root])
-            self.assertEqual([entry.value["id"] for entry in objects], ["kept"])
+            self.assertEqual(
+                [entry.value["id"] for entry in objects], ["kept"]
+            )
 
-    def test_loader_accepts_game_json_comments_and_trailing_commas(self) -> None:
+    def test_loader_accepts_game_json_comments_and_trailing_commas(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -87,9 +94,13 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 encoding="utf-8",
             )
             objects = migrate_lua_first.load_objects([source])
-            self.assertEqual([entry.value["id"] for entry in objects], ["kept"])
+            self.assertEqual(
+                [entry.value["id"] for entry in objects], ["kept"]
+            )
 
-    def test_mod_info_and_literal_item_shapes_are_audited_as_bounded(self) -> None:
+    def test_mod_info_and_literal_item_shapes_are_audited_as_bounded(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -136,20 +147,30 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 files={Path("main.lua"): "return true\n"}
             )
             self.assertFalse(
-                migrate_lua_first.write_result(result, root, force=False, check=True)
+                migrate_lua_first.write_result(
+                    result, root, force=False, check=True
+                )
             )
             self.assertFalse((root / "main.lua").exists())
             self.assertTrue(
-                migrate_lua_first.write_result(result, root, force=False, check=False)
+                migrate_lua_first.write_result(
+                    result, root, force=False, check=False
+                )
             )
             self.assertTrue(
-                migrate_lua_first.write_result(result, root, force=False, check=True)
+                migrate_lua_first.write_result(
+                    result, root, force=False, check=True
+                )
             )
 
-    def test_refusal_to_overwrite_is_preflighted_before_any_write(self) -> None:
+    def test_refusal_to_overwrite_is_preflighted_before_any_write(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            (root / "z-existing.lua").write_text("author data\n", encoding="utf-8")
+            (root / "z-existing.lua").write_text(
+                "author data\n", encoding="utf-8"
+            )
             result = migrate_lua_first.MigrationResult(
                 files={
                     Path("a-new.lua"): "new\n",
@@ -218,7 +239,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 (output / "b.lua").read_text(encoding="utf-8"), "old b\n"
             )
 
-    def test_unconverted_eoc_guards_stop_effects_before_execution(self) -> None:
+    def test_unconverted_eoc_guards_stop_effects_before_execution(
+        self,
+    ) -> None:
         for gate, raw_gate in (
             ("condition", "unsupported_native_condition"),
             ("deactivate_condition", "unsupported_native_condition"),
