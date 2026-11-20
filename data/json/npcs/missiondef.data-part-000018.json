@@ -1,0 +1,31 @@
+[
+  {
+    "id": "MISSION_PROVE_YOUR_WORTH",
+    "type": "mission_definition",
+    "name": { "str": "Prove your worth to Foodperson" },
+    "description": "Prove your dedication to the Foodperson and Foodplace as a whole by finding <color_yellow>10 Foodplace loyalty cards</color>.",
+    "goal": "MGOAL_FIND_ITEM",
+    "item": "fp_loyalty_card",
+    "count": 10,
+    "difficulty": 1,
+    "value": 0,
+    "end": {
+      "effect": [
+        { "npc_add_var": "dialogue_foodperson_npc_foodperson_impressed", "value": "yes" },
+        { "u_spawn_item": "badge_foodkid" }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "Prove your dedication to Foodplace.",
+      "offer": "Show me the proof of your loyalty to the great Foodplace, and I'll consider you worthy of my friendship.  Ten loyalty cards should be enough, I'm sure you already have much more than that waiting for you at home, right?",
+      "accepted": "That's the spirit!  Good luck kid.",
+      "rejected": "That's alright not everyone is cutout for this.",
+      "advice": "Those are very precious, people would probably keep them on their person or in bank vaults.  And definitely not throw them in the trash!",
+      "inquire": "How is it going?  Do you have them?",
+      "success": "YES!  I knew you could do it!  You proved your worth and I'm proud to call you a friend.",
+      "success_lie": "Well… where are they?",
+      "failure": "I'm so disappointed in you kid…"
+    }
+  }
+]

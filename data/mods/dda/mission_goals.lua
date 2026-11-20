@@ -128,3 +128,7 @@ ccb.runtime.handler("complete_mission_science_rep_1", function(context)
     return has_item(context.speaker, "microcentrifuge")
         or has_item(context.speaker, "centrifuge")
 end)
+
+ccb.runtime.handler("complete_mission_prove_you_are_a_survivor", function()
+    return services.time.snapshot().turns_since_cataclysm >= services.time.duration(10, "day").turns
+end)
