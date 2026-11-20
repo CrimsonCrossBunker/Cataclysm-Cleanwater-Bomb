@@ -1,0 +1,542 @@
+local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_weakpoint_set {
+    id = "wps_arthropod",
+    points = {
+        { id = "abdomen", name = ccb.content.text("abdomen"), coverage = 25 },
+        {
+            id = "leg",
+            name = ccb.content.text("a leg"),
+            difficulty = { melee = 3, ranged = 3 },
+            damage_multiplier = { all = 0.66 },
+            critical_multiplier = { all = 0.66 },
+            attack_coverage = { point = 0.75 },
+            effects = {
+                {
+                    effect = "staggered",
+                    chance = 5,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 10, 30 },
+                },
+                {
+                    effect = "staggered",
+                    chance = 15,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 30, 100 },
+                },
+            },
+            coverage = 10,
+        },
+        {
+            id = "leg_joint",
+            name = ccb.content.text("a joint"),
+            damage_multiplier = { all = 0.66 },
+            critical_multiplier = { all = 0.66 },
+            armor_multiplier = { all = 0.5 },
+            attack_coverage = { point = 0.75 },
+            effects = {
+                {
+                    effect = "staggered",
+                    chance = 25,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 5, 20 },
+                },
+                {
+                    effect = "staggered",
+                    chance = 40,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 21, 100 },
+                },
+                {
+                    effect = "maimed_leg",
+                    chance = 10,
+                    duration = { "5 seconds", "25 seconds" },
+                    message = ccb.content.text("The %s's leg falls limp!"),
+                    damage_percent = { 1, 10 },
+                },
+                {
+                    effect = "maimed_leg",
+                    chance = 25,
+                    duration = { "15 seconds", "50 seconds" },
+                    message = ccb.content.text("The %s's leg falls limp!"),
+                    damage_percent = { 11, 30 },
+                },
+                {
+                    effect = "maimed_leg",
+                    chance = 25,
+                    duration = 86400,
+                    message = ccb.content.text("The %s's leg is disabled!"),
+                    damage_percent = { 31, 100 },
+                },
+            },
+            coverage = 2,
+        },
+        {
+            id = "body_joint",
+            name = ccb.content.text("a gap in the exoskeleton"),
+            armor_multiplier = { all = 0.5 },
+            critical_multiplier = { all = 1.25 },
+            attack_coverage = { broad = 0.25, ranged = 0.5 },
+            difficulty = { melee = 4, ranged = 7 },
+            coverage = 5,
+        },
+        {
+            id = "armor_thick",
+            name = ccb.content.text("a thick part of the exoskeleton"),
+            good = false,
+            armor_multiplier = { all = 1.5 },
+            critical_multiplier = { all = 0.75 },
+            attack_coverage = { cut = 1.5 },
+            coverage = 5,
+        },
+        {
+            id = "antenna",
+            name = ccb.content.text("the antennae"),
+            difficulty = { melee = 4, ranged = 8 },
+            damage_multiplier = { all = 0.5 },
+            armor_multiplier = { all = 0.5 },
+            effects = {
+                {
+                    effect = "stunned",
+                    duration = { "1 seconds", "3 seconds" },
+                    chance = 25,
+                    message = ccb.content.text("The %s is stunned!"),
+                    damage_percent = { 0, 20 },
+                },
+                {
+                    effect = "stunned",
+                    duration = { "1 seconds", "6 seconds" },
+                    chance = 50,
+                    message = ccb.content.text("The %s is stunned!"),
+                    damage_percent = { 21, 100 },
+                },
+            },
+            coverage = 3,
+            attack_coverage = { point = 0.5 },
+        },
+        {
+            id = "head",
+            name = ccb.content.text("the head"),
+            head = true,
+            damage_multiplier = { all = 1.1 },
+            critical_multiplier = { all = 1.1 },
+            armor_multiplier = { physical = 0.75 },
+            difficulty = { melee = 3, ranged = 5 },
+            effects = {
+                {
+                    effect = "stunned",
+                    duration = 1,
+                    chance = 5,
+                    message = ccb.content.text("The %s is stunned!"),
+                    damage_percent = { 30, 50 },
+                },
+                {
+                    effect = "stunned",
+                    duration = { "1 seconds", "2 seconds" },
+                    chance = 33,
+                    message = ccb.content.text("The %s is stunned!"),
+                    damage_percent = { 51, 100 },
+                },
+            },
+            coverage = 3,
+        },
+        {
+            id = "eye",
+            name = ccb.content.text("the eye"),
+            head = true,
+            armor_multiplier = { physical = 0.4 },
+            critical_multiplier = { all = 1.25 },
+            difficulty = { ranged = 8, melee = 6 },
+            effects = {
+                {
+                    effect = "blind",
+                    duration = 86400,
+                    chance = 20,
+                    message = ccb.content.text("The %s's eyes are obliterated!"),
+                    damage_percent = { 35, 100 },
+                },
+            },
+            coverage = 2,
+        },
+        {
+            id = "mandible",
+            name = ccb.content.text("the mandibles"),
+            head = true,
+            critical_multiplier = { all = 1.25 },
+            difficulty = { ranged = 5, melee = 3 },
+            effects = {
+                {
+                    effect = "maimed_mandible",
+                    chance = 25,
+                    duration = { "1 seconds", "10 seconds" },
+                    message = ccb.content.text("The %s's mandibles are maimed!"),
+                    damage_percent = { 1, 20 },
+                },
+                {
+                    effect = "maimed_mandible",
+                    chance = 50,
+                    duration = { "5 seconds", "25 seconds" },
+                    message = ccb.content.text("The %s's mandibles are maimed!"),
+                    damage_percent = { 21, 40 },
+                },
+                {
+                    effect = "maimed_mandible",
+                    chance = 50,
+                    duration = 86400,
+                    message = ccb.content.text("The %s's mandibles are destroyed!"),
+                    damage_percent = { 41, 100 },
+                },
+            },
+            coverage = 2,
+        },
+    },
+}
+
+ccb.content.define_weakpoint_set {
+    id = "wps_arthropod_centipede",
+    points = {
+        {
+            id = "abdomen",
+            name = ccb.content.text("the underbelly"),
+            critical_multiplier = { all = 1.5 },
+            difficulty = { melee = 2 },
+            armor_multiplier = { physical = 0.35 },
+            attack_coverage = { ranged = 0 },
+            coverage = 15,
+        },
+        {
+            id = "antenna",
+            name = ccb.content.text("the antennae"),
+            difficulty = { melee = 4, ranged = 8 },
+            damage_multiplier = { all = 0.5 },
+            armor_multiplier = { all = 0.5 },
+            effects = {
+                {
+                    effect = "stunned",
+                    duration = { "1 seconds", "2 seconds" },
+                    chance = 25,
+                    message = ccb.content.text("The %s is stunned!"),
+                    damage_percent = { 0, 20 },
+                },
+                {
+                    effect = "stunned",
+                    duration = { "1 seconds", "3 seconds" },
+                    chance = 50,
+                    message = ccb.content.text("The %s is stunned!"),
+                    damage_percent = { 21, 100 },
+                },
+            },
+            coverage = 8,
+            attack_coverage = { point = 0.5 },
+        },
+        {
+            id = "mandible",
+            name = ccb.content.text("the mandibles"),
+            head = true,
+            critical_multiplier = { all = 1.25 },
+            difficulty = { ranged = 5, melee = 3 },
+            effects = {
+                {
+                    effect = "maimed_mandible",
+                    chance = 25,
+                    duration = { "1 seconds", "10 seconds" },
+                    message = ccb.content.text("The %s's mandibles are maimed!"),
+                    damage_percent = { 1, 15 },
+                },
+                {
+                    effect = "maimed_mandible",
+                    chance = 50,
+                    duration = { "5 seconds", "25 seconds" },
+                    message = ccb.content.text("The %s's mandibles are maimed!"),
+                    damage_percent = { 16, 30 },
+                },
+                {
+                    effect = "maimed_mandible",
+                    chance = 50,
+                    duration = 86400,
+                    message = ccb.content.text("The %s's mandibles are destroyed!"),
+                    damage_percent = { 31, 100 },
+                },
+            },
+            coverage = 5,
+        },
+    },
+}
+
+ccb.content.define_weakpoint_set {
+    id = "wps_arthropod_hymenoptera",
+    points = {
+        {
+            id = "petiole",
+            name = ccb.content.text("the waist"),
+            critical_multiplier = { all = 2 },
+            difficulty = { melee = 5, ranged = 8 },
+            attack_coverage = { stab = 0.1, ranged = 0.33 },
+            coverage = 5,
+        },
+        {
+            id = "abdomen",
+            name = ccb.content.text("the abdomen"),
+            coverage = 30,
+            effects = {
+                {
+                    effect = "maimed_stinger",
+                    chance = 100,
+                    duration = { "5 seconds", "30 seconds" },
+                    message = ccb.content.text("The %s retracts its stinger!"),
+                },
+            },
+        },
+        {
+            id = "stinger",
+            name = ccb.content.text("the stinger"),
+            difficulty = { melee = 8, ranged = 12 },
+            attack_coverage = { broad = 2 },
+            coverage = 5,
+            effects = {
+                {
+                    effect = "maimed_stinger",
+                    chance = 25,
+                    duration = 86400,
+                    message = ccb.content.text("The %s's stinger is disabled!"),
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_weakpoint_set {
+    id = "wps_arthropod_flying",
+    points = {
+        {
+            id = "wings_stagger",
+            name = ccb.content.text("the wings"),
+            damage_multiplier = { all = 0.2 },
+            critical_multiplier = { all = 0.2 },
+            armor_multiplier = { physical = 0.2 },
+            difficulty = { ranged = 7, melee = 2 },
+            attack_coverage = { point = 0.75 },
+            effects = {
+                {
+                    effect = "staggered",
+                    chance = 25,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 0, 20 },
+                },
+                {
+                    effect = "staggered",
+                    chance = 50,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 21, 100 },
+                },
+                {
+                    effect = "maimed_wings",
+                    duration = { "5 seconds", "10 seconds" },
+                    chance = 5,
+                    message = ccb.content.text("The %s's wings flutter uselessly"),
+                    damage_percent = { 21, 100 },
+                },
+            },
+            coverage = 10,
+        },
+        {
+            id = "wings_down",
+            name = ccb.content.text("the wings"),
+            damage_multiplier = { all = 0.2 },
+            critical_multiplier = { all = 0.2 },
+            armor_multiplier = { physical = 0.2 },
+            difficulty = { ranged = 7, melee = 2 },
+            attack_coverage = { point = 0.75 },
+            when = predicates.has_effect("interlocutor", "staggered"),
+            effects = {
+                {
+                    effect = "downed",
+                    chance = 25,
+                    message = ccb.content.text("The %s is knocked down!"),
+                    damage_percent = { 1, 100 },
+                },
+                {
+                    effect = "maimed_wings",
+                    chance = 20,
+                    duration = 86400,
+                    message = ccb.content.text("The %s's wings are disabled!"),
+                    damage_percent = { 25, 100 },
+                },
+            },
+            coverage = 10,
+        },
+    },
+}
+
+ccb.content.define_weakpoint_set {
+    id = "wps_arthropod_beetle",
+    points = {
+        {
+            id = "armor_thick",
+            name = ccb.content.text("a thick part of its armor"),
+            good = false,
+            armor_multiplier = { all = 1.5 },
+            critical_multiplier = { all = 0.75 },
+            attack_coverage = { cut = 1.5 },
+            coverage = 20,
+            effects = {
+                {
+                    effect = "maimed_armor",
+                    chance = 15,
+                    duration = 86400,
+                    message = ccb.content.text("The %s's armor cracks!"),
+                    damage_percent = { 10, 30 },
+                },
+                {
+                    effect = "maimed_armor",
+                    chance = 50,
+                    duration = 86400,
+                    message = ccb.content.text("The %s's armor cracks!"),
+                    damage_percent = { 31, 100 },
+                },
+            },
+        },
+        {
+            id = "armor_cracked",
+            name = ccb.content.text("a crack in the armor"),
+            armor_multiplier = { all = 0.33 },
+            critical_multiplier = { all = 1.2 },
+            coverage = 15,
+            when = predicates.has_effect("interlocutor", "maimed_armor"),
+        },
+        {
+            id = "abdomen",
+            name = ccb.content.text("the underside"),
+            armor_multiplier = { all = 0.25 },
+            critical_multiplier = { all = 1.2 },
+            difficulty = { melee = 5 },
+            attack_coverage = { ranged = 0 },
+            coverage = 5,
+        },
+    },
+}
+
+-- TODO: When webweavers get the spinneret attack add a disabling WP
+ccb.content.define_weakpoint_set {
+    id = "wps_arthropod_spider",
+    points = {
+        {
+            id = "leg",
+            name = ccb.content.text("a leg"),
+            damage_multiplier = { all = 0.66 },
+            critical_multiplier = { all = 0.66 },
+            attack_coverage = { point = 0.75 },
+            effects = {
+                {
+                    effect = "staggered",
+                    chance = 5,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 10, 30 },
+                },
+                {
+                    effect = "staggered",
+                    chance = 15,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 30, 100 },
+                },
+            },
+            coverage = 15,
+        },
+        {
+            id = "leg_joint",
+            name = ccb.content.text("a joint"),
+            damage_multiplier = { all = 0.66 },
+            critical_multiplier = { all = 0.66 },
+            armor_multiplier = { all = 0.5 },
+            attack_coverage = { point = 0.75 },
+            effects = {
+                {
+                    effect = "staggered",
+                    chance = 25,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 5, 20 },
+                },
+                {
+                    effect = "staggered",
+                    chance = 40,
+                    message = ccb.content.text("The %s is knocked off-balance!"),
+                    damage_percent = { 21, 100 },
+                },
+                {
+                    effect = "maimed_leg",
+                    chance = 10,
+                    duration = { "5 seconds", "25 seconds" },
+                    message = ccb.content.text("The %s's leg falls limp!"),
+                    damage_percent = { 1, 10 },
+                },
+                {
+                    effect = "maimed_leg",
+                    chance = 25,
+                    duration = { "15 seconds", "50 seconds" },
+                    message = ccb.content.text("The %s's leg falls limp!"),
+                    damage_percent = { 11, 30 },
+                },
+                {
+                    effect = "maimed_leg",
+                    chance = 25,
+                    duration = 86400,
+                    message = ccb.content.text("The %s's leg is disabled!"),
+                    damage_percent = { 31, 100 },
+                },
+            },
+            coverage = 5,
+        },
+        { id = "antenna", coverage = 0 },
+        {
+            id = "eye",
+            name = ccb.content.text("the eye"),
+            head = true,
+            armor_multiplier = { physical = 0.4 },
+            critical_multiplier = { all = 1.25 },
+            difficulty = { ranged = 8, melee = 6 },
+            effects = {
+                {
+                    effect = "blind",
+                    duration = 86400,
+                    chance = 20,
+                    message = ccb.content.text("The %s's eyes are obliterated!"),
+                    damage_percent = { 35, 100 },
+                },
+            },
+            coverage = 3,
+        },
+        {
+            id = "mandible",
+            name = ccb.content.text("the mandibles"),
+            head = true,
+            critical_multiplier = { all = 1.25 },
+            difficulty = { ranged = 5, melee = 3 },
+            effects = {
+                {
+                    effect = "maimed_mandible",
+                    chance = 25,
+                    duration = { "1 seconds", "10 seconds" },
+                    message = ccb.content.text("The %s's mandibles are maimed!"),
+                    damage_percent = { 1, 20 },
+                },
+                {
+                    effect = "maimed_mandible",
+                    chance = 50,
+                    duration = { "5 seconds", "25 seconds" },
+                    message = ccb.content.text("The %s's mandibles are maimed!"),
+                    damage_percent = { 21, 40 },
+                },
+                {
+                    effect = "maimed_mandible",
+                    chance = 50,
+                    duration = 86400,
+                    message = ccb.content.text("The %s's mandibles are destroyed!"),
+                    damage_percent = { 41, 100 },
+                },
+            },
+            coverage = 4,
+        },
+        { id = "abdomen", name = ccb.content.text("the abdomen"), coverage = 35 },
+    },
+}

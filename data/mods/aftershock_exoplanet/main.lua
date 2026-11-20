@@ -43,6 +43,7 @@ require("speech")
 require("ammunition_types")
 
 require("ammo_effects")
+require("monster_weakpoints")
 
 require("tool_qualities")
 
