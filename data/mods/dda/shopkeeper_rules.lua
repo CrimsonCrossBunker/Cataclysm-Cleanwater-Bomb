@@ -90,3 +90,35 @@ definition:entry("", "", "SUS_oven", ccb.content.text("The Hub has no interest i
 definition:entry("", "", "garden_shed", ccb.content.text("The Hub has no interest in this"))
 content.add(definition)
 end
+do
+local definition = content.ShopkeeperConsumptionRates {
+    id = "basic_shop_rates",
+    default_rate = 5,
+    junk_threshold_cents = 10,
+}
+definition:entry("", "currency", "", "", 10)
+definition:entry("", "spare_parts", "", "", 100)
+content.add(definition)
+end
+do
+local definition = content.ShopkeeperConsumptionRates {
+    id = "elvira_shop_rates",
+    default_rate = 5,
+    junk_threshold_cents = 10,
+}
+definition:entry("", "currency", "", "", 10)
+definition:entry("", "spare_parts", "", "", 100)
+definition:entry("FMCNote", "", "", "", -1)
+content.add(definition)
+end
+do
+local definition = content.ShopkeeperConsumptionRates {
+    id = "smokes_shop_rates",
+    default_rate = 5,
+    junk_threshold_cents = 10,
+}
+definition:entry("", "currency", "", "", 10)
+definition:entry("", "spare_parts", "", "", 100)
+definition:entry("FMCNote", "", "", "", -1)
+content.add(definition)
+end
