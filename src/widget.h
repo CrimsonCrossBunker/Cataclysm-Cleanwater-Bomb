@@ -3,6 +3,7 @@
 #define CATA_SRC_WIDGET_H
 
 #include <climits>
+#include <cstddef>
 #include <functional>
 #include <optional>
 #include <set>
@@ -235,7 +236,9 @@ struct widget_clause {
                 int thresh_val = INT_MIN, bool skip_condition = false );
 
     public:
-        void load( const JsonObject &jo );
+        using predicate = std::function<bool( const const_dialogue & )>;
+        static std::size_t stage_condition( predicate condition );
+        void load( const JsonObject &jo, std::string_view source, const widget_id &widget_name );
 
         /**
          * Static accessors:
@@ -407,6 +410,10 @@ class widget
         widget_alignment _text_align;
         // Alignment of the widget label, if any (Default = LEFT)
         widget_alignment _label_align;
+
+        using reading = std::function<double( const const_dialogue & )>;
+        static reading make_reading( const std::string &name, const std::optional<std::string> &argument );
+        void set_platform_custom_handler( const std::string &owner, const std::string &handler );
 
         // Load JSON data for a widget (uses generic factory widget_factory)
         static void load_widget( const JsonObject &jo, const std::string &src );

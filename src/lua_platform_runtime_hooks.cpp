@@ -748,9 +748,11 @@ std::optional<widget_custom_handler_result> invoke_widget_custom_handler(
         value.normal_minimum = read_integer( "normal_minimum", value.minimum );
         value.normal_maximum = read_integer( "normal_maximum", value.normal_minimum );
         value.maximum = read_integer( "maximum", std::numeric_limits<int>::max() );
-        if( value.minimum > value.normal_minimum ||
-            value.normal_minimum > value.normal_maximum ||
-            value.normal_maximum > value.maximum ) {
+        const bool no_normal_band = value.normal_minimum == std::numeric_limits<int>::min() &&
+                                    value.normal_maximum == std::numeric_limits<int>::max();
+        if( value.minimum > value.maximum || ( !no_normal_band &&
+                ( value.minimum > value.normal_minimum || value.normal_minimum > value.normal_maximum ||
+                  value.normal_maximum > value.maximum ) ) ) {
             throw std::runtime_error( "custom widget range must be monotonically increasing" );
         }
         return value;

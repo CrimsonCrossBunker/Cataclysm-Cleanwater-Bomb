@@ -7267,6 +7267,7 @@ function CcbPlatformTilesetApi.limits() end
 ---@return any
 function CcbPlatformTilesetApi.register(descriptor) end
 ---@class CcbPlatformContent
+---@field widget_conditions StaticWidgetConditions Only available while loading ordered data.
 ---@field dialogue_predicates StaticDialoguePredicates Only available while loading ordered data.
 ---@field dialogue_actions StaticDialogueActions Only available while loading ordered data.
 local CcbPlatformContent = {}
@@ -7815,7 +7816,14 @@ function CcbPlatformContent.define_fault_fix(options) end
 ---@param options StaticVehicleGroupOptions
 function CcbPlatformContent.define_vehicle_group(options) end
 
+---@alias WidgetReading "activity_level"|"bmi_permil"|"body_temp"|"body_temp_delta"|"bodypart_health"|"fine_detail_vision_mod"|"health"|"instant_thirst"|"mana_max"|"moon_phase"|"pain"|"power_max"|"power_percentage"|"sleepiness"|"bodypart_effect_intensity"|"effect_intensity"|"item_radiation"|"spell_level"|"vitamin"|"character_variable"|"global_variable"
+---@alias WidgetState "controlling_vehicle"|"has_bionics"|"oxygen_not_full"|"movement_mode"|"safe_mode_trigger"|"terrain_type"|"visible_monsters"|"wielded_flag"|"worn_flag"
+---@class StaticWidgetConditions
+---@field compare fun(reading:WidgetReading, operator:"=="|"!="|">"|">="|"<"|"<=", threshold:number, argument?:string):StaticDialoguePredicate Item radiation takes a flag, vitamins, spells and effects take an ID, and variables take a key. Body-part readings use the displayed body part.
+---@field test fun(state:WidgetState, argument?:string):StaticDialoguePredicate Direction, movement, equipment and terrain checks take their direction, ID or flag.
+
 ---@class StaticWidgetClause
+---@field when? StaticDialoguePredicate|string Native predicate or registered widget condition callback.
 ---@field id? string
 ---@field text? string|LocalizedText
 ---@field symbol? string
@@ -7840,6 +7848,7 @@ function CcbPlatformContent.define_vehicle_group(options) end
 ---@field label_align? string
 ---@field separator? string
 ---@field variable? string Built-in widget variable.
+---@field custom_handler? string Registered handler returning value, minimum, maximum and optional normal_minimum/normal_maximum. Use INT_MIN and INT_MAX together for a range without a normal band.
 ---@field bodypart? string
 ---@field bodyparts? string[]
 ---@field width? integer
@@ -7858,7 +7867,7 @@ function CcbPlatformContent.define_vehicle_group(options) end
 ---@field extend? StaticWidgetChildren
 ---@field delete? StaticWidgetChildren
 
----Define a widget with native display variables and unconditional clauses in ordered data.
+---Define a widget with display variables and conditional clauses in ordered data.
 ---@param options StaticWidgetOptions
 function CcbPlatformContent.define_widget(options) end
 

@@ -106,8 +106,6 @@ using detail::invoke_spell_condition_handler;
 using detail::invoke_spell_effect_handler;
 using detail::invoke_spell_stat_handler;
 using detail::invoke_widget_condition_handler;
-using detail::invoke_widget_custom_handler;
-using detail::widget_custom_handler_result;
 
 namespace
 {
@@ -6460,24 +6458,7 @@ void character_content_transaction::impl::apply_widget()
             native._default_clause = make_clause( *source.default_clause );
         }
         if( !source.custom_handler.empty() ) {
-            const std::string owner = this->owner;
-            const std::string widget_name = source.id;
-            const std::string handler = source.custom_handler;
-            native.platform_custom_value = [owner, widget_name, handler]( const avatar & subject ) {
-                const std::optional < widget_custom_handler_result > value =
-                    invoke_widget_custom_handler( owner, widget_name, handler, subject );
-                return value ? value->value : 0;
-            };
-            native.platform_custom_range = [owner, widget_name, handler](
-            const avatar & subject, widget & target ) {
-                const std::optional < widget_custom_handler_result > value =
-                    invoke_widget_custom_handler( owner, widget_name, handler, subject );
-                if( value ) {
-                    target._var_min = value->minimum;
-                    target._var_norm = { value->normal_minimum, value->normal_maximum };
-                    target._var_max = value->maximum;
-                }
-            };
+            native.set_platform_custom_handler( this->owner, source.custom_handler );
         }
         native._label_width = native._label.empty() ||
                               native._flags.count( json_flag_W_LABEL_NONE ) != 0 ?

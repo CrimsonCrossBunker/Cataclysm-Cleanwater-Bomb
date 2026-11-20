@@ -69,6 +69,7 @@ extern "C" {
 #include "json.h"
 #include "json_loader.h"
 #include "magic.h"
+#include "math_parser_type.h"
 #include "martialarts.h"
 #include "map_extras.h"
 #include "mapdata.h"
@@ -5376,6 +5377,68 @@ void write_static_string_or_ids( JsonOut &json, const sol::table &options, const
     }
 }
 
+void install_static_widget_conditions( sol::state &lua, sol::table &content )
+{
+    sol::table predicates = lua.create_table();
+    const auto compare = []( const std::string & name, const std::string & op, double threshold,
+    const sol::optional<std::string> &arg ) {
+        using comparison = bool ( * )( double, double );
+        static const std::map<std::string, comparison> comparisons = {
+            { "==", []( double a, double b )
+                {
+                    return a == b;
+                }
+            },
+            { "!=", []( double a, double b )
+                {
+                    return a != b;
+                }
+            },
+            { ">", []( double a, double b )
+                {
+                    return a > b;
+                }
+            },
+            { ">=", []( double a, double b )
+                {
+                    return a >= b;
+                }
+            },
+            { "<", []( double a, double b )
+                {
+                    return a < b;
+                }
+            },
+            { "<=", []( double a, double b )
+                {
+                    return a <= b;
+                }
+            },
+        };
+        const auto it = comparisons.find( op );
+        if( it == comparisons.end() ) {
+            throw std::invalid_argument( "unknown widget comparison '" + op + "'" );
+        }
+        const auto read = widget::make_reading( name,
+                                                arg ? std::optional<std::string>( *arg ) : std::nullopt );
+        return static_dialogue_predicate{ [read, test = it->second, threshold]( const const_dialogue & d )
+        {
+            try {
+                return test( read( d ), threshold );
+            } catch( const math::exception &error ) {
+                debugmsg( "Cannot read sidebar widget value: %s", error.what() );
+                return false;
+            }
+        } };
+    };
+    predicates.set_function( "compare", compare );
+    predicates.set_function( "test", [compare]( const std::string & name,
+    sol::optional<std::string> arg ) {
+        return compare( name, "!=", 0, arg );
+    } );
+    content["widget_conditions"] = std::move( predicates );
+}
+
 void write_static_widget_clause( JsonOut &json, const sol::table &options )
 {
     json.start_object();
@@ -5385,6 +5448,19 @@ void write_static_widget_clause( JsonOut &json, const sol::table &options )
     write_item_text( json, "text", options.raw_get<sol::object>( "text" ), false );
     write_placement_member<int>( json, options, "value", "value" );
     write_placement_member<bool>( json, options, "parse_tags", "parse_tags" );
+    const sol::object when = options.raw_get<sol::object>( "when" );
+    if( when.is<static_dialogue_predicate>() ) {
+        json.member( "//ccb_lua_widget_when", widget_clause::stage_condition(
+                         when.as<const static_dialogue_predicate &>().test ) );
+    } else if( when.get_type() == sol::type::string ) {
+        const std::string handler = when.as<std::string>();
+        if( handler.empty() ) {
+            throw std::invalid_argument( "widget condition handler must have a name" );
+        }
+        json.member( "//ccb_lua_widget_when", handler );
+    } else if( when.get_type() != sol::type::nil ) {
+        throw std::invalid_argument( "widget clause requires a predicate or named callback" );
+    }
     write_static_string_or_ids( json, options, "widgets", "widgets" );
     json.end_object();
 }
@@ -5421,6 +5497,19 @@ void write_static_widget( JsonOut &json, const sol::table &options )
         json.member( "description", description.as<const detail::localized_text &>().singular );
     } else {
         write_placement_member<std::string>( json, options, "description", "description" );
+    }
+    if( const auto handler = options.get<sol::optional<std::string>>( "custom_handler" ) ) {
+        if( handler->empty() ) {
+            throw std::invalid_argument( "widget custom handler must have a name" );
+        }
+        const auto variable = options.get<sol::optional<std::string>>( "variable" );
+        if( variable && *variable != "custom" ) {
+            throw std::invalid_argument( "widget custom_handler requires a custom variable" );
+        }
+        if( !variable ) {
+            json.member( "var", "custom" );
+        }
+        json.member( "//ccb_lua_widget_custom", *handler );
     }
     write_static_catalog_array( json, options, "clauses", "clauses", write_static_widget_clause );
     if( const auto fallback = options.get<sol::optional<sol::table>>( "default_clause" ) ) {
@@ -7754,6 +7843,7 @@ void load_mod_content_with_data( const mod_source &source,
         write_static_npc_class( json, options, resolved.id );
     }, npc_class::load_npc_class ) );
     install_static_dialogue_predicates( lua, content );
+    install_static_widget_conditions( lua, content );
     install_static_dialogue_actions( lua, content );
     content.set_function( "gendered_line", static_gendered_dialogue_line );
     content.set_function( "define_dialogue_topic", [&resolved]( const sol::table &options ) {

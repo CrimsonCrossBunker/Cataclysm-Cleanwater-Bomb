@@ -9,9 +9,11 @@
 #include <cstddef>
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string_view>
 
 #include "avatar.h"
+#include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -25,15 +27,22 @@
 #include "debug.h"
 #include "dialogue.h"
 #include "display.h"
+#include "effect.h"
 #include "enum_conversions.h"
+#include "enums.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "init.h"
 #include "lua_platform_content.h"
+#include "lua_platform_runtime_internal.h"
 #include "magic.h"
 #include "magic_enchantment.h"
+#include "map.h"
+#include "math_parser_diag_value.h"
 #include "npc.h"
 #include "output.h"
+#include "overmap.h"
+#include "overmapbuffer.h"
 #include "panels.h"
 #include "pimpl.h"
 #include "point.h"
@@ -41,6 +50,7 @@
 #include "talker.h"
 #include "translations.h"
 #include "units.h"
+#include "vpart_position.h"
 
 const static flag_id json_flag_W_DISABLED_BY_DEFAULT( "W_DISABLED_BY_DEFAULT" );
 const static flag_id json_flag_W_DISABLED_WHEN_EMPTY( "W_DISABLED_WHEN_EMPTY" );
@@ -55,6 +65,8 @@ const static std::string default_separator = ": ";
 namespace
 {
 generic_factory<widget> widget_factory( "widgets" );
+// Generic factory copy-from may defer a definition until the entire data load finishes.
+std::vector<widget_clause::predicate> staged_widget_conditions;
 thread_local int hud_layout_render_depth = 0;
 
 class scoped_hud_layout_render
@@ -176,6 +188,7 @@ void widget::load_widget( const JsonObject &jo, const std::string &src )
 void widget::reset()
 {
     widget_factory.reset();
+    staged_widget_conditions.clear();
 }
 
 const std::vector<widget> &widget::get_all()
@@ -426,7 +439,14 @@ std::string enum_to_string<widget_alignment>( widget_alignment align )
 }
 } // namespace io
 
-void widget_clause::load( const JsonObject &jo )
+std::size_t widget_clause::stage_condition( predicate condition )
+{
+    staged_widget_conditions.push_back( std::move( condition ) );
+    return staged_widget_conditions.size() - 1;
+}
+
+void widget_clause::load( const JsonObject &jo, const std::string_view source,
+                          const widget_id &widget_name )
 {
     optional( jo, false, "id", id );
     optional( jo, false, "text", text );
@@ -441,6 +461,26 @@ void widget_clause::load( const JsonObject &jo )
         read_condition( jo, "condition", condition, false );
         has_condition = true;
     }
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    if( const auto when = jo.get_member_opt( "//ccb_lua_widget_when" ) ) {
+        if( when->has_source_file() ) {
+            when->throw_error( "widget predicates are reserved for ordered Lua definitions" );
+        }
+        if( when->test_string() ) {
+            condition = [owner = std::string( source ), widget_name = widget_name.str(), clause = id,
+                         handler = when->get_string()]( const const_dialogue & d ) {
+                return cata::lua_platform::detail::invoke_widget_condition_handler(
+                           owner, widget_name, clause, handler, d.reason ).value_or( false );
+            };
+        } else {
+            condition = staged_widget_conditions.at( when->get_uint64() );
+        }
+        has_condition = true;
+    }
+#else
+    static_cast<void>( source );
+    static_cast<void>( widget_name );
+#endif
     if( jo.has_bool( "parse_tags" ) ) {
         should_parse_tags = jo.get_bool( "parse_tags" );
     }
@@ -617,8 +657,18 @@ void widget::load( const JsonObject &jo, const std::string_view source )
         _var = io::string_to_enum<widget_var>( jo.get_string( "var" ) );
     }
 
-    if( _var == widget_var::custom ) {
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    if( const auto custom = jo.get_member_opt( "//ccb_lua_widget_custom" ) ) {
+        if( custom->has_source_file() || _var != widget_var::custom ) {
+            custom->throw_error( "widget custom callbacks require an ordered custom widget" );
+        }
+        set_platform_custom_handler( std::string( source ), custom->get_string() );
+    }
+#endif
+    if( _var == widget_var::custom && ( !platform_custom_value || jo.has_member( "custom_var" ) ) ) {
         mandatory( jo, was_loaded, "custom_var", _custom_var );
+        platform_custom_value = {};
+        platform_custom_range = {};
     }
 
     if( jo.has_string( "bodypart" ) ) {
@@ -657,13 +707,13 @@ void widget::load( const JsonObject &jo, const std::string_view source )
         _clauses.clear();
         for( JsonObject jobj : jo.get_array( "clauses" ) ) {
             widget_clause phs;
-            phs.load( jobj );
+            phs.load( jobj, source, id );
             _clauses.emplace_back( phs );
         }
     }
 
     if( jo.has_object( "default_clause" ) ) {
-        _default_clause.load( jo.get_object( "default_clause" ) );
+        _default_clause.load( jo.get_object( "default_clause" ), source, id );
     }
     if( _style == "text" && _clauses.empty() && _var == widget_var::last ) {
         mandatory( jo, was_loaded, "string", _string );
@@ -697,6 +747,153 @@ void widget::load( const JsonObject &jo, const std::string_view source )
         child_list_edits.push_back( std::move( edit ) );
     }
 }
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+widget::reading widget::make_reading( const std::string &name,
+                                      const std::optional<std::string> &argument )
+{
+    using actor_getter = int ( const_talker::* )() const;
+    static const std::map<std::string, actor_getter> attributes = {
+        { "activity_level", &const_talker::get_activity_level },
+        { "bmi_permil", &const_talker::get_bmi_permil },
+        { "fine_detail_vision_mod", &const_talker::get_fine_detail_vision_mod },
+        { "health", &const_talker::get_health },
+        { "instant_thirst", &const_talker::get_instant_thirst },
+        { "mana_max", &const_talker::mana_max },
+        { "pain", &const_talker::pain_cur },
+        { "sleepiness", &const_talker::get_sleepiness },
+    };
+    if( !argument ) {
+        if( const auto it = attributes.find( name ); it != attributes.end() ) {
+            return [get = it->second]( const const_dialogue & d ) {
+                return ( d.const_actor( false )->*get )();
+            };
+        }
+        if( name == "moon_phase" ) {
+            return []( const const_dialogue & ) {
+                return static_cast<int>( get_moon_phase( calendar::turn ) );
+            };
+        }
+        if( name == "bodypart_health" ) {
+            return []( const const_dialogue & d ) {
+                return d.const_actor( false )->get_cur_hp( bodypart_id( d.reason ) );
+            };
+        }
+        if( name == "oxygen_not_full" ) {
+            return []( const const_dialogue & d ) {
+                const const_talker *actor = d.const_actor( false );
+                return actor->get_oxygen() != actor->get_oxygen_max();
+            };
+        }
+        if( name == "has_bionics" ) {
+            return []( const const_dialogue & d ) {
+                const const_talker *actor = d.const_actor( false );
+                return actor->num_bionics() > 0 || actor->has_max_power();
+            };
+        }
+        if( name == "controlling_vehicle" ) {
+            return []( const const_dialogue & d ) {
+                const map &here = get_map();
+                const const_talker *actor = d.const_actor( false );
+                const optional_vpart_position vp = here.veh_at( actor->pos_bub( here ) );
+                return vp && actor->is_in_control_of( vp->vehicle() );
+            };
+        }
+        if( name == "body_temp" || name == "body_temp_delta" || name == "power_max" ||
+            name == "power_percentage" ) {
+            return [name]( const const_dialogue & d ) {
+                return conditional_t::get_legacy_dbl( d, name, 'u' );
+            };
+        }
+    } else {
+        if( name == "global_variable" || name == "character_variable" ) {
+            return [var = var_info( name == "global_variable" ? var_type::global : var_type::u, *argument )](
+            const const_dialogue & d ) {
+                const diag_value *value = maybe_read_var_value( var, d );
+                return value ? value->dbl( d ) : 0.0;
+            };
+        }
+        if( name == "effect_intensity" || name == "bodypart_effect_intensity" ) {
+            return [id = efftype_id( *argument ), use_part = name == "bodypart_effect_intensity"](
+            const const_dialogue & d ) {
+                const bodypart_id bp = use_part && !d.reason.empty() ? bodypart_id( d.reason ) :
+                                       bodypart_str_id::NULL_ID().id();
+                const effect value = d.const_actor( false )->get_effect( id, bp );
+                return value.is_null() ? -1 : value.get_intensity();
+            };
+        }
+        if( name == "vitamin" ) {
+            return [id = vitamin_id( *argument )]( const const_dialogue & ) {
+                return get_avatar().vitamin_get( id );
+            };
+        }
+        if( name == "spell_level" ) {
+            return [id = spell_id( *argument )]( const const_dialogue & d ) {
+                return d.const_actor( false )->get_spell_level( id );
+            };
+        }
+        if( name == "item_radiation" ) {
+            return [id = flag_id( *argument )]( const const_dialogue & d ) {
+                return d.const_actor( false )->item_rads( id, aggregate_type::MIN );
+            };
+        }
+        if( name == "movement_mode" ) {
+            return [id = move_mode_id( *argument )]( const const_dialogue & d ) {
+                return d.const_actor( false )->get_move_mode() == id;
+            };
+        }
+        if( name == "safe_mode_trigger" || name == "visible_monsters" ) {
+            const auto direction = static_cast<std::size_t>( io::string_to_enum<cardinal_direction>
+                ( *argument ) );
+            if( name == "safe_mode_trigger" &&
+                direction >= static_cast<std::size_t>( cardinal_direction::LOCAL ) ) {
+                throw std::invalid_argument( "safe mode triggers require a compass direction" );
+            }
+            return [direction, danger = name == "safe_mode_trigger"]( const const_dialogue & ) {
+                const auto &visible = get_avatar().get_mon_visible();
+                return danger ? visible.dangerous[direction] : !visible.unique_mons[direction].empty();
+            };
+        }
+        if( name == "wielded_flag" ) {
+            return [id = flag_id( *argument )]( const const_dialogue & d ) {
+                return d.const_actor( false )->wielded_with_flag( id );
+            };
+        }
+        if( name == "worn_flag" ) {
+            return [id = flag_id( *argument )]( const const_dialogue & d ) {
+                const bodypart_str_id bp( d.reason );
+                return d.const_actor( false )->worn_with_flag( id,
+                        bp.is_valid() ? bp.id() : bodypart_str_id::NULL_ID().id() );
+            };
+        }
+        if( name == "terrain_type" ) {
+            return [terrain = *argument]( const const_dialogue & d ) {
+                return oter_no_dir_or_connections( overmap_buffer.ter( d.const_actor( false )->pos_abs_omt() ) ) ==
+                       terrain;
+            };
+        }
+    }
+    throw std::invalid_argument( "unknown widget reading or incorrect argument for '" + name + "'" );
+}
+
+void widget::set_platform_custom_handler( const std::string &owner, const std::string &handler )
+{
+    const auto read = [owner, name = id.str(), handler]( const avatar & subject ) {
+        return cata::lua_platform::detail::invoke_widget_custom_handler( owner, name, handler, subject );
+    };
+    platform_custom_value = [read]( const avatar & subject ) {
+        const auto result = read( subject );
+        return result ? result->value : 0;
+    };
+    platform_custom_range = [read]( const avatar & subject, widget & target ) {
+        if( const auto result = read( subject ) ) {
+            target._var_min = result->minimum;
+            target._var_norm = { result->normal_minimum, result->normal_maximum };
+            target._var_max = result->maximum;
+        }
+    };
+}
+#endif
 
 void widget::append_sidebar_children( const std::string &source,
                                       const std::vector<widget_id> &children )
@@ -805,6 +1002,7 @@ void widget::finalize_inherited_fields_recursive( const widget_id &id,
 void widget::finalize_all()
 {
     widget_factory.finalize();
+    staged_widget_conditions.clear();
 }
 
 // finalize functions are allowed to mutate data, even if this one doesn't
