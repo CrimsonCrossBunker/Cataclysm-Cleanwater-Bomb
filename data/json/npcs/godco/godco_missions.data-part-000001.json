@@ -1,0 +1,176 @@
+[
+  {
+    "id": "MISSION_GODCO_FOOD_GUARD_BETTER_FOOD_STORAGE",
+    "type": "mission_definition",
+    "name": { "str": "Store Up Your Grain" },
+    "description": "Find 5,398 pounds of sheet metal (408 units) to help Eddie build a warehouse.",
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 5,
+    "value": 0,
+    "item": "sheet_metal",
+    "count": 408,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "I'd like to have better food storage.",
+      "offer": "I've been drawing up some plans to expand our food storage around here.  Now that we won't starve to death anytime soon, our old crates just aren't cutting it, so we're going to build a small warehouse to store everything, and I've gathered a crew to build it.  We've got most of the materials covered, but we don't have enough sheet metal to make the shelves.  If you could get us about 5,000 pounds of the stuff, I'll pay you handsomely with what we have.  How does that sound?",
+      "accepted": "Just bring it to me when you have it.",
+      "rejected": "Alright, I'll find someone else.",
+      "advice": "If you can find a steel mill, I'd look there.",
+      "inquire": "Do you have the sheet metal?",
+      "success": "I can't thank you enough, here's the pay for it.  Here in a while, we'll have a spot to put all of our food.",
+      "success_lie": "Alright, where's it all at?",
+      "failure": "Sorry, I had to find someone else since you didn't come through."
+    },
+    "end": {
+      "effect": [
+        { "npc_location_variable": { "context_val": "search_locale" } },
+        {
+          "run_eocs": "godco_place_warehouse_new",
+          "time_in_future": "336 hours",
+          "variables": { "search_locale": { "context_val": "search_locale" } }
+        },
+        { "u_spawn_item": "icon", "count": 175 }
+      ],
+      "opinion": { "trust": 7, "value": 6, "anger": -3 }
+    },
+    "fail": { "opinion": { "anger": 3 } }
+  },
+  {
+    "id": "MISSION_GODCO_GET_GUITAR_STRING",
+    "type": "mission_definition",
+    "name": { "str": "Obtain a guitar string" },
+    "description": "Find a length of tempered steel wire to be used as a guitar string.",
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 1,
+    "value": 0,
+    "item": "qt_wire",
+    "count": 1,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "I need a new guitar string.",
+      "offer": "One of my guitar strings busted from where I smacked a zombie.  If you could get me a new string, I can fix my guitar.",
+      "accepted": "Thanks.  I'll give you a performance when you get back with it.",
+      "rejected": "I guess I'll just skip that note.",
+      "advice": "I read that musical wire is made of tempered steel.  Music shops should have some, or you could take apart a piano.",
+      "inquire": "Do you have it?",
+      "success": "Thank you so much!  This should last for a while.",
+      "success_lie": "Thanks for trying… I guess.",
+      "failure": "Don't worry about it, I'll do it myself."
+    },
+    "end": {
+      "effect": [ { "npc_add_var": "mission_completed_sonia_guitar_fixed", "value": "yes" }, { "u_spawn_item": "icon", "count": 1 } ],
+      "opinion": { "trust": 1, "value": 1 }
+    },
+    "fail": { "opinion": { "anger": 1 } }
+  },
+  {
+    "id": "MISSION_GODCO_DARRYL_WELL1",
+    "type": "mission_definition",
+    "name": { "str": "Well Construction" },
+    "description": "Find eight pipes for Darryl Johnson.",
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 1,
+    "value": 0,
+    "item": "pipe",
+    "count": 8,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "followup": "MISSION_GODCO_DARRYL_WELL2",
+    "dialogue": {
+      "describe": "I need eight pipes to start construction.",
+      "offer": "Now that's some enthusiasm, pal.  Ever since our water supply shut off, we've been using the nearby river for most of our water needs.  Who knows how many bloated corpses have decayed in that.  I want to construct a well, but I'm missing some building materials - eight pipes to be exact.",
+      "accepted": "I wish you the best, pal.  I appreciate it.",
+      "rejected": "Come back when you get a chance.",
+      "advice": "Try disassembling some lockers.  Just don't destroy our furniture, we'll be needing it.",
+      "inquire": "Well, do you have them?",
+      "success": "Great, I can finally start constructing this thing.",
+      "success_lie": "What good does this do us?",
+      "failure": "I guess it was just a pipe dream."
+    },
+    "end": {
+      "effect": [
+        { "npc_add_var": "mission_completed_godco_darryl_mission1", "value": "in-progress" },
+        { "u_spawn_item": "icon", "count": 3 }
+      ],
+      "update_mapgen": {
+        "om_terrain": "godco_5",
+        "set": [
+          { "point": "furniture", "id": "f_null", "x": 15, "y": 23 },
+          { "point": "terrain", "id": "t_covered_well", "x": 15, "y": 23 }
+        ]
+      },
+      "opinion": { "trust": 1, "value": 1 }
+    },
+    "fail": { "opinion": { "anger": 1 } }
+  },
+  {
+    "id": "MISSION_GODCO_DARRYL_WELL2",
+    "type": "mission_definition",
+    "name": { "str": "Water Pump Construction" },
+    "description": "Find a mechanical pump for Darryl Johnson.",
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 1,
+    "value": 0,
+    "item": "well_pump",
+    "count": 1,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "followup": "MISSION_GODCO_DARRYL_COOP1",
+    "dialogue": {
+      "describe": "I need a mechanical pump to finish construction.",
+      "offer": "It's less like a well, and more like a covered pit currently.  I'll need you to find a mechanical pump, one that will make this <freaking> thing work.",
+      "accepted": "Take care of yourself out there.",
+      "rejected": "Come back when you get a chance.  We need skilled survivors.",
+      "advice": "Try disassembling another well.",
+      "inquire": "Managed to find that pump?",
+      "success": "Much obliged, survivor.  Thanks to you, we don't need to worry about where our water's gonna come from.  Here, take this as a token of our gratitude.",
+      "success_lie": "What good does this do us?",
+      "failure": "It was a lost cause anyways…"
+    },
+    "end": {
+      "effect": [ { "npc_add_var": "mission_completed_godco_darryl_mission1", "value": "yes" }, { "u_spawn_item": "icon", "count": 5 } ],
+      "update_mapgen": { "om_terrain": "godco_5", "set": [ { "point": "terrain", "id": "t_water_pump", "x": 15, "y": 23 } ] },
+      "opinion": { "trust": 1, "value": 1 }
+    },
+    "fail": { "opinion": { "anger": 1 } }
+  },
+  {
+    "id": "MISSION_GODCO_DARRYL_COOP1",
+    "type": "mission_definition",
+    "name": { "str": "Chicken Coop Construction" },
+    "description": "Get 150 nails for Darryl.",
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 1,
+    "value": 0,
+    "item": "nail",
+    "count": 150,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "I need nails to build a chicken coop",
+      "offer": "Now that we've got a steady supply of water, I've been thinking about raising some livestock.  I'm starting with some chickens I found on a farm the other day, but I don't have a coop for them.  If you can get me 150 nails, I can start building one.",
+      "accepted": "Take care of yourself out there.",
+      "rejected": "Its a simple job.",
+      "advice": "You could take apart some furniture in town, or make them yourself.",
+      "inquire": "Got the nails?",
+      "success": "Thank you.  I should have some eggs in a week, once I finish the coop.  Come back and buy some!",
+      "success_lie": "What good does this do us?",
+      "failure": "It was a lost cause anyways…"
+    },
+    "end": {
+      "effect": [
+        { "npc_location_variable": { "context_val": "search_locale" } },
+        { "math": [ "darryl_building_coop = 1" ] },
+        {
+          "run_eocs": "godco_place_coop_new",
+          "time_in_future": "7 days",
+          "variables": { "search_locale": { "context_val": "search_locale" } }
+        },
+        { "u_spawn_item": "icon", "count": 5 }
+      ],
+      "opinion": { "trust": 2, "value": 2 }
+    },
+    "fail": { "opinion": { "anger": 2 } }
+  }
+]

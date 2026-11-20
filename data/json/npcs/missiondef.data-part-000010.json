@@ -1,53 +1,48 @@
 [
   {
-    "id": "MISSION_RECRUIT_TRACKER",
+    "id": "MISSION_REACH_FARM_HOUSE",
     "type": "mission_definition",
-    "name": { "str": "Recruit Tracker" },
-    "description": "Go to the cabin in the woods where the Tracker is camping and <color_yellow>recruit them</color>.",
-    "goal": "MGOAL_RECRUIT_NPC",
-    "difficulty": 5,
-    "value": 70000,
-    "start": {
-      "assign_mission_target": { "om_terrain": "cabin", "om_special": "Cabin", "reveal_radius": 2 },
-      "effect": "follow",
-      "update_mapgen": { "place_npcs": [ { "class": "tracker_gunslinger", "x": 11, "y": 11, "target": true } ] }
-    },
+    "name": { "str": "Reach Farm House" },
+    "goal": "MGOAL_GO_TO_TYPE",
+    "difficulty": 2,
+    "value": 60000,
+    "start": { "effect": "follow_only" },
+    "end": { "effect": "stop_following" },
     "origins": [ "ORIGIN_SECONDARY" ],
+    "destination": "farm_2",
     "dialogue": {
-      "describe": "You seem to know this new world better than most…",
-      "offer": "We've got another problem to deal with but I don't think we can handle it on our own.  So, I sent word out and found us a volunteer… of sorts.  He's vain as hell but has a little skill with firearms.  He was supposed to collect whatever he had of value and is going to meet us at a cabin in the woods.  Wasn't sure how long we were going to be so I told him to just camp there until we picked him up.",
-      "accepted": "Roger, if he's a no-show then any other gunslinger will do… but I doubt he'll quit before we even begin.",
-      "rejected": "Hey, I know I wouldn't volunteer for it either… but then I remember that most of us survivors won't make it unless someone decides to take the initiative.",
-      "advice": "I hope the bastard is packing heat… else we'll need to grab him a gun before we hit our next target.",
-      "inquire": "Found a gunslinger?",
-      "success": "Great, just let me know when you are ready to wade knee-deep in an ocean of blood.",
-      "success_lie": "I don't think so…",
-      "failure": "Quitting already?"
+      "describe": "I just need a place to start over…",
+      "offer": "I've accepted that everyone I used to know is dead… one way or another.  I really wish I could have done something to save my brother but he was one of the first to go.  I'd like to start over, just rebuild at one of the farms in the countryside.  Can you help me secure one?",
+      "accepted": "Thank you, let's find a remote one so we don't have to worry about many zombies.",
+      "rejected": "Please, I just don't know what to do otherwise.",
+      "advice": "Traveling the backroads would be a good way to search for one.",
+      "inquire": "Shall we keep looking for a farm house?",
+      "success": "Well, my adventuring days are over.  I can't thank you enough.  Trying to make this place self sustaining will take some work but the future is looking brighter.  At least it ought to be safe for now.  You'll always be welcome here.",
+      "success_lie": "Thanks for trying… I guess.",
+      "failure": "I guess it was just a pipe dream."
     }
   },
   {
-    "id": "MISSION_RESCUE_DOG",
+    "id": "MISSION_REACH_FEMA_CAMP",
     "type": "mission_definition",
-    "name": { "str": "Find Lost Dog" },
-    "goal": "MGOAL_FIND_MONSTER",
-    "difficulty": 3,
-    "value": 100000,
-    "start": {
-      "update_mapgen": { "place_monster": [ { "monster": "mon_dog", "x": [ 3, 21 ], "y": [ 6, 21 ], "friendly": true, "target": true } ] },
-      "effect": [ { "u_spawn_item": "dog_whistle" } ],
-      "assign_mission_target": { "om_terrain": "house", "om_terrain_replace": "field", "om_terrain_match_type": "PREFIX", "random": true, "z": 0 }
-    },
-    "origins": [ "ORIGIN_OPENER_NPC" ],
+    "name": { "str": "Reach FEMA Camp" },
+    "goal": "MGOAL_GO_TO_TYPE",
+    "difficulty": 2,
+    "value": 60000,
+    "start": { "effect": "follow_only" },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "followup": "MISSION_REACH_FARM_HOUSE",
+    "destination": "fema",
     "dialogue": {
-      "describe": "Oh, my poor puppy…",
-      "offer": "I left my poor dog in a house, not far from here.  Can you retrieve it?",
-      "accepted": "Thank you!  Please hurry back!",
-      "rejected": "Please, think of my poor little puppy!",
-      "advice": "Take my dog whistle; if the dog starts running off, blow it and he'll return to your side.",
-      "inquire": "Have you found my dog yet?",
-      "success": "Thank you so much for finding him!",
-      "success_lie": "What?!  You're lying, I can tell!  Ugh, forget it!",
-      "failure": "Oh no!  My poor puppy…"
+      "describe": "Maybe they escaped to one of the camps…",
+      "offer": "I can't thank you enough for bringing me the patient records but I do have another request.  You seem to know your way around… could you take me to one of the FEMA camps?  I know some were overrun but I don't want to believe all of them could have fallen.",
+      "accepted": "Thank you, just bring me to the camp… I just want to see.",
+      "rejected": "Please, I don't know what else to do.",
+      "advice": "We should go at night, if it is overrun then we can quickly make our escape.",
+      "inquire": "Any leads on where a camp might be?",
+      "success": "I guess this wasn't as bright an idea as I thought.",
+      "success_lie": "Thanks for trying… I guess.",
+      "failure": "I bet some of them are still out there…"
     }
   }
 ]

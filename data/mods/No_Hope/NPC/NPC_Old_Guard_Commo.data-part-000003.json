@@ -10,31 +10,5 @@
         "effect": [ { "u_spawn_item": "necropolis_freq" }, { "u_add_effect": "has_og_comm_freq", "duration": "PERMANENT" } ]
       }
     ]
-  },
-  {
-    "id": "MISSION_OLD_GUARD_NEC_COMMO_1",
-    "type": "mission_definition",
-    "name": { "str": "Fabricate Repeater Mod" },
-    "goal": "MGOAL_FIND_ITEM",
-    "difficulty": 2,
-    "value": 250000,
-    "item": "radio_repeater_mod",
-    "start": {
-      "effect": { "u_spawn_item": "repeater_mod_guide" },
-      "assign_mission_target": { "om_terrain": "necropolis_c_23", "om_special": "Necropolis", "reveal_radius": 3, "z": -2 }
-    },
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "followup": "MISSION_OLD_GUARD_NEC_COMMO_2",
-    "dialogue": {
-      "describe": "We need help…",
-      "offer": "My chief responsibility is to monitor radio traffic and locate potential targets to secure or rescue.  The majority of radio repeaters are down and those that are working have only emergency power.  If you have a basic understanding of electronics you should be able to fabricate the 'radio repeater mod' found in these plans.  When this mod is attached to a radio station's main terminal, all short range radio traffic on emergency channels is boosted so we can pick it up at much longer ranges.  I really need you make me one.",
-      "accepted": "Thanks, I know the labs on the other side of the complex have electronic parts sitting around.",
-      "rejected": "I don't know why you would bother wasting your time down here if you can't handle a few small tasks…",
-      "advice": "I'm sure the motorpool has a truck battery you could salvage.",
-      "inquire": "Have you had any luck fabricating it?",
-      "success": "Thanks, I'll see to installing this one.  It will be some time but I could use someone to position these around the region.",
-      "success_lie": "What good does this do us?",
-      "failure": "It was a lost cause anyways…"
-    }
   }
 ]

@@ -5895,6 +5895,23 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
     json.member( native );
     json.start_object();
     write_placement_member<std::string>( json, rules, "handler", "//ccb_lua_mission_handler" );
+    write_static_catalog_array( json, rules, "item_rewards", "//ccb_lua_mission_item_rewards",
+    []( JsonOut & out, const sol::table & reward ) {
+        const auto item = reward.get<sol::optional<std::string>>( "item" );
+        const auto group = reward.get<sol::optional<std::string>>( "group" );
+        const auto container = reward.get<sol::optional<std::string>>( "container" );
+        if( item.has_value() == group.has_value() || ( group && container ) ) {
+            throw std::invalid_argument( "mission reward requires an item with optional container, or a group" );
+        }
+        out.start_object();
+        out.member( "id", item ? *item : *group );
+        out.member( "group", group.has_value() );
+        if( container ) {
+            out.member( "container", *container );
+        }
+        write_placement_member<int>( out, reward, "count", "count" );
+        out.end_object();
+    } );
     write_static_string_or_ids( json, rules, "reveal_terrain", "reveal_om_ter" );
     if( const auto target = rules.get<sol::optional<sol::table>>( "target" ) ) {
         if( rules.raw_get<sol::object>( "reveal_terrain" ).get_type() != sol::type::nil ) {

@@ -1,0 +1,91 @@
+[
+  {
+    "id": "MISSION_GODCO_HELENA_4",
+    "type": "mission_definition",
+    "name": { "str": "Preservation of Sustenance" },
+    "description": "Find five canning pots for Helena Misinter.",
+    "goal": "MGOAL_FIND_ITEM",
+    "item": "pot_canning",
+    "count": 5,
+    "difficulty": 5,
+    "value": 0,
+    "end": {
+      "effect": [
+        { "math": [ "godco_has_canningpots = 1" ] },
+        { "u_spawn_item": "icon", "count": 30 },
+        { "u_spawn_item": "pickled_egg", "count": 10, "container": "jar_glass_sealed" }
+      ],
+      "opinion": { "trust": 1, "value": 1 }
+    },
+    "fail": { "opinion": { "anger": 1 } },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "Get five canning pots.",
+      "offer": "While we are blessed with a bountiful stock, we need a way to preserve our newer food, mainly those potatoes Darryl's growing.  Fortunately, he brought a book on canning things.  We need five canning pots to get the setup going in full fashion.",
+      "accepted": "May the Lord bless you.",
+      "rejected": "I'll find someone else, then.",
+      "advice": "An old factory might have one, or a hobby shop.",
+      "inquire": "Have you found the canning pots?",
+      "success": "Thank you.  You're welcome to some of our first batch, if you're interested.",
+      "success_lie": "What good is this?",
+      "failure": "As expected of such a person…"
+    }
+  },
+  {
+    "id": "MISSION_GODCO_HELENA_VISIT_MERCHANTS",
+    "type": "mission_definition",
+    "name": { "str": "Investigate the Center" },
+    "description": "Go to the location Helena told you about and see who's there.",
+    "goal": "MGOAL_CONDITION",
+    "difficulty": 1,
+    "goal_condition": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Gavin" } ] },
+    "value": 0,
+    "start": "reveal_refugee_center",
+    "end": {
+      "effect": [
+        { "math": [ "godco_met_merchants = 0" ] },
+        { "u_spawn_item": "icon", "count": 5 },
+        { "u_assign_activity": "ACT_WAIT_NPC", "duration": "30 minutes" }
+      ],
+      "opinion": { "trust": 1, "value": 1 }
+    },
+    "fail": { "opinion": { "anger": 1 } },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "See who's over there.",
+      "offer": ".",
+      "accepted": ".",
+      "rejected": ".",
+      "advice": ".",
+      "inquire": "What have you found out?",
+      "success": "This should be very useful to us.  Now we can truly begin our march of righteousness.",
+      "success_lie": ".",
+      "failure": "As expected of such a person…"
+    }
+  },
+  {
+    "id": "MISSION_INVESTIGATE_TRADER",
+    "type": "mission_definition",
+    "name": { "str": "Investigate the Trader" },
+    "description": "Find some proof that the representative near the New England Community Church is crooked.",
+    "goal": "MGOAL_CONDITION",
+    "difficulty": 1,
+    "goal_condition": { "math": [ "freemerch_godco_trader_investigated == 1" ] },
+    "value": 0,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "Find some proof about that merchant.",
+      "offer": ".",
+      "accepted": ".",
+      "rejected": ".",
+      "advice": ".",
+      "inquire": "What have you found out?",
+      "success": "Thanks, we'll take the needed initiative.",
+      "success_lie": ".",
+      "failure": "Of course, you have no evidence."
+    }
+  }
+]

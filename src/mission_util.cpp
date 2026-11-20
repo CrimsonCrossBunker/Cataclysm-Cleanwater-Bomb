@@ -547,6 +547,18 @@ bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
      */
     talk_effect_t talk_effects;
     talk_effects.load_effect( jo, "effect", src );
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    if( const auto rewards = jo.get_member_opt( "//ccb_lua_mission_item_rewards" ) ) {
+        if( rewards->has_source_file() ) {
+            rewards->throw_error( "mission reward metadata is reserved for ordered Lua definitions" );
+        }
+        for( JsonObject reward : rewards->get_array() ) {
+            talk_effects.effects.push_back( dialogue_action::mission_item_reward(
+                                                reward.get_string( "id" ), reward.get_int( "count", 1 ),
+                                                reward.get_string( "container", "" ), reward.get_bool( "group" ) ) );
+        }
+    }
+#endif
     phase_func = [ funcs, talk_effects ]( mission * miss, Character & who ) {
         const int mission_id = miss->get_id();
         const std::size_t generation = miss->identity_generation();

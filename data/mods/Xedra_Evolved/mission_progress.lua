@@ -1,5 +1,20 @@
 local ccb = require("ccb")
 
-ccb.runtime.handler("mark_mission_completed_antiparasitic", function(context)
-    ccb.services.variables.set_string_notifying(context.character, "mission_completed_antiparasitic", "yes")
-end)
+local function track(key)
+    ccb.runtime.handler("mark_" .. key, function(context)
+        ccb.services.variables.set_string_notifying(context.character, key, "yes")
+    end)
+end
+
+track("completed_hunter_kill_target")
+track("killed_armored_centipede_for_boann")
+track("killed_automaton_for_boann")
+track("killed_dogthing_for_boann")
+track("killed_five_mi_go_guards_for_boann")
+track("killed_lords_for_boann")
+track("killed_renfield_monster_for_hunters")
+track("killed_renfields_for_hunters")
+track("killed_star_crown_hound_for_boann")
+track("killed_strigoi_for_hunters")
+track("killed_titan_beetle_for_boann")
+track("mission_completed_antiparasitic")

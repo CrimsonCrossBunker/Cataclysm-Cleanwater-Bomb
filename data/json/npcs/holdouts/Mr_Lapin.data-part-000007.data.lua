@@ -1,0 +1,50 @@
+local ccb = require("ccb")
+
+ccb.content.define_mission {
+    id = "MISSION_Warrener_LOG_1",
+    name = ccb.content.text("Timber!"),
+    description = ccb.content.text("Bring five logs."),
+    goal = "MGOAL_FIND_ITEM",
+    difficulty = 1,
+    value = 0,
+    item = "log",
+    item_count = 5,
+    origins = { "ORIGIN_SECONDARY" },
+    followup = "MISSION_Warrener_FOOD_2",
+    dialogue = {
+        describe = ccb.content.text("I need 5 logs for fences."),
+        offer = ccb.content.text("I need to build fences and ditches around my rabbits.  Could you find about… five logs for me?"),
+        accepted = ccb.content.text("Don't forget to tell me when you have them."),
+        rejected = ccb.content.text("It's okay, I can do without them.  Just let me know if you reconsider."),
+        advice = ccb.content.text("There's a lot of places to look.  Trees are pretty common."),
+        inquire = ccb.content.text("How is the search going?  Have you found 'em?"),
+        success = ccb.content.text("I really appreciate your help.  Don't worry, you won't leave empty-handed."),
+        success_lie = ccb.content.text("Thanks for trying… I guess."),
+        failure = ccb.content.text("Don't worry about it, it's not that important."),
+    },
+    finish = { item_rewards = { { item = "cattlefodder", count = 2 } } },
+}
+
+ccb.content.define_mission {
+    id = "MISSION_Warrener_FOOD_2",
+    name = ccb.content.text("Sweets"),
+    description = ccb.content.text("Find 25 blackberries."),
+    goal = "MGOAL_FIND_ITEM",
+    difficulty = 2,
+    value = 0,
+    item = "blackberries",
+    item_count = 25,
+    origins = { "ORIGIN_SECONDARY" },
+    dialogue = {
+        describe = ccb.content.text("I need 25 blackberries."),
+        offer = ccb.content.text("Fruits would let me break the monotony of grains and meats."),
+        accepted = ccb.content.text("Thanks for accepting this task.  Otherwise I might kill a stranger for some oranges.  Just kidding."),
+        rejected = ccb.content.text("Just let me know if you change your mind."),
+        advice = ccb.content.text("Find someone growing berries or an orchard."),
+        inquire = ccb.content.text("Have you found the fruit?"),
+        success = ccb.content.text("Thank you for your help.  Here's your reward."),
+        success_lie = ccb.content.text("Thanks for trying… I guess."),
+        failure = ccb.content.text("It's not a big deal, it isn't that urgent."),
+    },
+    finish = { item_rewards = { { item = "petpack", count = 1 } } },
+}

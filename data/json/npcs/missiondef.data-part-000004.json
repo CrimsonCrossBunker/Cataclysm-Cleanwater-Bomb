@@ -1,35 +1,25 @@
 [
   {
-    "id": "MISSION_GET_SAFE_BOX",
+    "id": "MISSION_GET_HOLY_SYMBOL",
     "type": "mission_definition",
-    "name": { "str": "Retrieve Deposit Box" },
+    "name": { "str": "Find a Holy Symbol" },
     "goal": "MGOAL_FIND_ITEM",
     "difficulty": 2,
-    "value": 30000,
-    "item": "safe_box",
-    "start": {
-      "update_mapgen": { "place_item": [ { "item": "safe_box", "x": [ 18, 21 ], "y": [ 4, 6 ], "amount": 1 } ] },
-      "effect": "follow_only",
-      "assign_mission_target": { "om_terrain": "bank", "om_terrain_match_type": "PREFIX", "om_special": "bank", "random": true, "z": 0 }
-    },
-    "end": {
-      "effect": [
-        "stop_following",
-        { "weighted_list_eocs": [ [ "get_katana", 5 ], [ "get_deagle_44", 10 ], [ "get_m4_carbine", 6 ] ] }
-      ]
-    },
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "followup": "MISSION_GET_DEPUTY_BADGE",
+    "value": 100000,
+    "item": "holy_symbol",
+    "start": { "effect": [ { "npc_remove_item_with": "holy_symbol" } ], "reveal_om_ter": [ "church_1" ] },
+    "origins": [ "ORIGIN_OPENER_NPC", "ORIGIN_ANY_NPC" ],
+    "followup": "MISSION_GET_RELIC",
     "dialogue": {
-      "describe": "Those twisted snakes…",
-      "offer": "Now I don't mean to upset you but I'm not sure what I can do with the accounting ledger at the moment.  We do have a new lead though, the ledger has a safe deposit box under the regional manager's name.  Guess what, dumb sucker wrote down his combination.  Come with me to retrieve the box and you can keep any of the goodies in it that I can't use to press charges against these bastards.",
-      "accepted": "You may make a tidy profit from this.",
-      "rejected": "I know it isn't pressing but the world is going to be just as corrupt when we start rebuilding unless we take measure to stop those who seek to rule over us.",
-      "advice": "This shouldn't be hard unless we run into a horde.",
-      "inquire": "Any luck?",
-      "success": "Great, anything I can't use to prosecute the bastards is yours, as promised.",
-      "success_lie": "Thanks for trying… I guess.",
-      "failure": "The day of reckoning will come for the corporations if it hasn't already."
+      "describe": "Any variant is fine, I am not that choosy…",
+      "offer": "The sky has torn apart and creatures beyond our wildest imaginations lurk in the dark now.  I beg you, find me a holy symbol.  Maybe some faith can help me sleep better at night.",
+      "accepted": "May whatever god or spirits that now reign the world protect you.",
+      "rejected": "I guess the stress may just be getting to me…",
+      "advice": "A church must be full of them and who knows, maybe some of those <zombies> carry some.  But please, do not waste your time making one yourself.",
+      "inquire": "Any luck?  Please find me a holy symbol.  Any of them will do.",
+      "success": "Thank the heavens.",
+      "success_lie": "What good does this do me?",
+      "failure": "It was a lost cause anyways…"
     }
   }
 ]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "MISSION_ISHERWOOD_EDDIE_3",
+    "type": "mission_definition",
+    "name": { "str": "Gather 100 units of clay" },
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 3,
+    "value": 20000,
+    "item": "clay_lump",
+    "count": 100,
+    "end": {
+      "opinion": { "trust": 2, "value": 2 },
+      "effect": [
+        { "u_add_var": "u_did_eddie_missions", "value": "yes" },
+        { "u_spawn_item": "rope_6", "count": 1 },
+        { "u_buy_monster": "mon_cow", "count": 1, "name": "Daisy" },
+        { "u_spawn_item": "cattlefodder", "count": 3 }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "I do have some resource gathering I could use help if you have time.",
+      "offer": "Now that the clay kiln is set up, we could use 100 units of clay to get production going.",
+      "accepted": "Thank you.",
+      "rejected": "Oh well.  I'll try to find time to get it myself, thanks.",
+      "advice": "You can find it along river banks, or maybe look for deposits in the forest.",
+      "inquire": "How is the search going?",
+      "success": "Thanks, now Luke can get started making jugs, We'd like to give you a cow, Here's Daisy, take good care of her and she'll provide you with milk.",
+      "success_lie": "What good does this do us?",
+      "failure": "I wonder where all the sand went…"
+    }
+  }
+]

@@ -105,41 +105,5 @@
       ],
       "update_mapgen": [ { "om_terrain": "horse_farm_isherwood_4", "set": [ { "point": "furniture", "id": "f_anvil", "x": 6, "y": 12 } ] } ]
     }
-  },
-  {
-    "id": "MISSION_ISHERWOOD_CARLOS_2",
-    "type": "mission_definition",
-    "name": { "str": "Find Chris Isherwood" },
-    "goal": "MGOAL_TALK_TO_NPC",
-    "difficulty": 3,
-    "value": 20000,
-    "start": {
-      "assign_mission_target": {
-        "//": "om_special is a no-op here - we are already at 'Isherwood Farm Mutable'. I added it to suppress a linter false positive.",
-        "om_special": "Isherwood Farm Mutable",
-        "om_terrain": "cabin_isherwood",
-        "reveal_radius": 1,
-        "random": true,
-        "min_distance": 2
-      },
-      "update_mapgen": { "place_npcs": [ { "class": "isherwood_chris", "x": 8, "y": 17, "target": true } ] }
-    },
-    "end": {
-      "opinion": { "trust": 1, "value": 1 },
-      "effect": [ { "u_spawn_item": "chainmail_armor_horse", "count": 1 }, { "u_add_var": "u_found_chris_for_carlos", "value": "yes" } ]
-    },
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "has_generic_rewards": false,
-    "dialogue": {
-      "describe": "Chris hasn't come back from his latest search for Barry, I'm getting concerned.",
-      "offer": "Can you go find my son and tell him to check in with us.",
-      "accepted": "Thank you.",
-      "rejected": "Oh well.  I hope he turns up soon.",
-      "advice": "He might be on the property somewhere, maybe by that old cabin near the entrance, sometimes he camps there.",
-      "inquire": "How is the search going?",
-      "success": "Thanks, I was getting ready to go look myself.  Now that I have the anvil, I've been working on new armor for the horses, take this prototype I made.",
-      "success_lie": "What good does this do us?",
-      "failure": "I hope he didn't meet Barry's fate…"
-    }
   }
 ]

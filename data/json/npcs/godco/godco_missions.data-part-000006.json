@@ -1,0 +1,37 @@
+[
+  {
+    "id": "MISSION_GODCO_KATHERINE_1",
+    "type": "mission_definition",
+    "name": { "str": "Fishy Business" },
+    "description": "Find three cans of sardines, tuna, or salmon for Katherine.",
+    "goal": "MGOAL_CONDITION",
+    "goal_condition": {
+      "u_has_items_sum": [ { "item": "can_sardine", "amount": 3 }, { "item": "can_tuna", "amount": 3 }, { "item": "can_salmon", "amount": 3 } ]
+    },
+    "difficulty": 6,
+    "value": 0,
+    "end": {
+      "effect": [
+        { "u_spawn_item": "icon", "count": 6 },
+        {
+          "u_consume_item_sum": [ { "item": "can_sardine", "amount": 3 }, { "item": "can_tuna", "amount": 3 }, { "item": "can_salmon", "amount": 3 } ]
+        }
+      ],
+      "opinion": { "value": 1 }
+    },
+    "fail": { "opinion": { "anger": 1 } },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "Get some tuna.",
+      "offer": "I've had a craving for fish recently.  Could you find three cans of tuna for me?  I'll pay you for them.",
+      "accepted": "Thank you.",
+      "rejected": "Alright.  I'll do it myself.",
+      "advice": "A house or grocery store should have some.",
+      "inquire": "Have you found the fish?",
+      "success": "Thank you, here's your payment.",
+      "success_lie": "What good is this?",
+      "failure": "That's too bad…"
+    }
+  }
+]

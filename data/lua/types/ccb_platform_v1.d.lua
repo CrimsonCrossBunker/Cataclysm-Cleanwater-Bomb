@@ -8174,7 +8174,14 @@ function CcbPlatformContent.define_profession(options) end
 ---@field id? string Named mapgen update, in place of an inline layout.
 ---@field layout? StaticOvermapMapgenLayout Inline mapgen update using the active mission.
 
+---@class StaticMissionItemReward
+---@field item? string Item type to deliver, in place of group.
+---@field group? string Spawn one native loot group, in place of item.
+---@field count? integer Item count or charges, default one.
+---@field container? string Optional container for an item reward.
+
 ---@class StaticMissionPhase
+---@field item_rewards? StaticMissionItemReward[] Grant in order before the phase callback. Use native item delivery, giver popups, and mission reward previews.
 ---@field map_updates? StaticMissionMapUpdate[] Apply in order after the handler and target assignment.
 ---@field handler? string Registered mission callback invoked before resolving this phase's map target.
 ---@field target? StaticMissionTarget Exclusive with reveal_terrain.

@@ -1,76 +1,28 @@
 [
   {
-    "id": "MISSION_CAMP_LEADERSHIP_CHANGE",
+    "id": "MISSION_RECRUIT_TRACKER",
     "type": "mission_definition",
-    "name": { "str": "Faction succession" },
-    "goal": "MGOAL_CONDITION",
-    "description": "You have some time left until you can transfer control to your companions, provided you have <color_yellow>established a Basecamp</color> and <color_yellow>have at least 1 NPC companion</color>.",
-    "difficulty": 0,
-    "value": 0,
-    "deadline": { "math": [ "time_between_succession" ] },
-    "invisible_on_complete": true,
+    "name": { "str": "Recruit Tracker" },
+    "description": "Go to the cabin in the woods where the Tracker is camping and <color_yellow>recruit them</color>.",
+    "goal": "MGOAL_RECRUIT_NPC",
+    "difficulty": 5,
+    "value": 70000,
     "start": {
-      "effect": [ { "math": [ "u_timer_time_of_last_succession = time('now')" ] }, { "run_eocs": "EOC_FACTION_SUCCESSION_CHECK" } ]
-    }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FACTION_SUCCESSION_CHECK",
-    "recurrence": [ "5 minutes", "20 minutes" ],
-    "global": true,
-    "condition": { "math": [ "time_since(u_timer_time_of_last_succession) > time_between_succession" ] },
-    "effect": [ { "remove_active_mission": "MISSION_CAMP_LEADERSHIP_CHANGE" }, { "u_lose_var": "time_of_last_succession" } ],
-    "deactivate_condition": { "not": { "compare_string": [ "yes", { "u_val": "time_of_last_succession" } ] } }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FACTION_SUCCESSION_CHANGE_REINIT",
-    "eoc_type": "EVENT",
-    "required_event": "game_avatar_new",
-    "effect": [
-      { "remove_active_mission": "MISSION_CAMP_LEADERSHIP_CHANGE" },
-      {
-        "assign_mission": "MISSION_CAMP_LEADERSHIP_CHANGE",
-        "deadline": { "math": [ "time('now') + time_between_succession" ] }
-      }
-    ]
-  },
-  {
-    "//": "DUMB HACK ALERT! We need to check during both game_start and game_begin, because game_start runs first. If we only listen during game_begin then EOC_FACTION_SUCCESSION_CHANGE_INIT finds the variable doesn't exist when it runs during game_start, substituting a value of 0 turns. Double assigning the same value is harmless, just stupid. It shouldn't be necessary to make two EOCs for this. Oh well, what can you do",
-    "type": "effect_on_condition",
-    "id": "EOC_FACTION_SUCCESSION_COOLDOWN_GAMEBEGIN_CHECK",
-    "eoc_type": "EVENT",
-    "required_event": "game_begin",
-    "effect": [ { "run_eocs": "EOC_FACTION_SUCCESSION_COOLDOWN" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FACTION_SUCCESSION_COOLDOWN",
-    "effect": [ { "math": [ "time_between_succession = time(' 3 d')" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FACTION_SUCCESSION_IMMEDIATE",
-    "eoc_type": "EVENT",
-    "required_event": "broken_bone",
-    "//1": "Only run EOC if character is currently on succession cooldown!",
-    "condition": {
-      "and": [
-        "u_is_avatar",
-        { "math": [ "has_var(u_timer_time_of_last_succession)" ] },
-        { "math": [ "time_since(u_timer_time_of_last_succession) < time_between_succession" ] },
-        { "math": [ "u_hp('torso') != 0" ] },
-        { "math": [ "u_hp('head') != 0" ] }
-      ]
+      "assign_mission_target": { "om_terrain": "cabin", "om_special": "Cabin", "reveal_radius": 2 },
+      "effect": "follow",
+      "update_mapgen": { "place_npcs": [ { "class": "tracker_gunslinger", "x": 11, "y": 11, "target": true } ] }
     },
-    "//2": "Remove the mission tracking that you can't change char, push the timer back by [cooldown length] so changing is immediately available.",
-    "effect": [
-      { "remove_active_mission": "MISSION_CAMP_LEADERSHIP_CHANGE" },
-      {
-        "u_message": "You've been badly wounded.  It might be better to rest for a while and let someone else scavenge.  (Changing characters is now available at any camp board.)",
-        "type": "mixed"
-      },
-      { "math": [ "u_timer_time_of_last_succession -= time_between_succession" ] }
-    ]
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "You seem to know this new world better than most…",
+      "offer": "We've got another problem to deal with but I don't think we can handle it on our own.  So, I sent word out and found us a volunteer… of sorts.  He's vain as hell but has a little skill with firearms.  He was supposed to collect whatever he had of value and is going to meet us at a cabin in the woods.  Wasn't sure how long we were going to be so I told him to just camp there until we picked him up.",
+      "accepted": "Roger, if he's a no-show then any other gunslinger will do… but I doubt he'll quit before we even begin.",
+      "rejected": "Hey, I know I wouldn't volunteer for it either… but then I remember that most of us survivors won't make it unless someone decides to take the initiative.",
+      "advice": "I hope the bastard is packing heat… else we'll need to grab him a gun before we hit our next target.",
+      "inquire": "Found a gunslinger?",
+      "success": "Great, just let me know when you are ready to wade knee-deep in an ocean of blood.",
+      "success_lie": "I don't think so…",
+      "failure": "Quitting already?"
+    }
   }
 ]
