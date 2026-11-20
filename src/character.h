@@ -1950,6 +1950,12 @@ class Character : public Creature, public visitable
         int get_used_bionics_slots( const bodypart_id &bp ) const;
         int get_total_bionics_slots( const bodypart_id &bp ) const;
         int get_free_bionics_slots( const bodypart_id &bp ) const;
+        /** Slots granted by mutations that ignore body part limits. */
+        int get_universal_bionic_slots() const;
+        /** Universal slots already consumed by overfilled body parts. */
+        int get_used_universal_bionic_slots() const;
+        /** Universal slots still available for any body part. */
+        int get_free_universal_bionic_slots() const;
 
         /**Has enough anesthetic for surgery*/
         bool has_enough_anesth( const itype &cbm, Character &patient ) const;

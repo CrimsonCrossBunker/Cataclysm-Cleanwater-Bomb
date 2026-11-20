@@ -605,6 +605,8 @@ void mutation_branch::load( const JsonObject &jo, std::string_view src )
         bionic_slot_bonuses[bodypart_str_id( member.name() )] = member.get_int();
     }
 
+    optional( jo, was_loaded, "universal_bionic_slots", universal_bionic_slots, 0 );
+
     if( jo.has_array( "attacks" ) ) {
         for( JsonObject ao : jo.get_array( "attacks" ) ) {
             attacks_granted.emplace_back( load_mutation_attack( ao ) );
@@ -666,6 +668,16 @@ void mutation_branch::set_platform_bionic_slot_bonus( const bodypart_str_id &par
         const int amount )
 {
     bionic_slot_bonuses[part] = amount;
+}
+
+int mutation_branch::universal_bionic_slot_bonus() const
+{
+    return universal_bionic_slots;
+}
+
+void mutation_branch::set_platform_universal_bionic_slots( const int amount )
+{
+    universal_bionic_slots = amount;
 }
 
 std::string mutation_branch::spawn_item_message() const

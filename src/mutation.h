@@ -370,6 +370,7 @@ struct mutation_branch {
         initial_ma_styles; // Martial art styles that can be chosen upon character generation
     private:
         std::map<bodypart_str_id, int> bionic_slot_bonuses;
+        int universal_bionic_slots = 0;
         translation raw_name;
         translation raw_desc;
     public:
@@ -412,6 +413,11 @@ struct mutation_branch {
          * Returns bionic slot bonus on a given body part granted by this mutation
          */
         int bionic_slot_bonus( const bodypart_str_id &part ) const;
+        /**
+         * Returns the number of bionic slots this mutation grants anywhere on the body,
+         * independent of body part.
+         */
+        int universal_bionic_slot_bonus() const;
         void set_platform_text( const std::string &name, const std::string &description );
         void set_platform_text( translation name, translation description );
         void set_platform_spawn_item( const std::string &item, const std::string &message );
@@ -419,6 +425,7 @@ struct mutation_branch {
         void set_platform_ranged_mutation( const std::string &item, const std::string &message );
         void set_platform_ranged_mutation( const std::string &item, translation message );
         void set_platform_bionic_slot_bonus( const bodypart_str_id &part, int amount );
+        void set_platform_universal_bionic_slots( int amount );
         /**
          * All known mutations. Key is the mutation id, value is the mutation_branch that you would
          * also get by calling @ref get.

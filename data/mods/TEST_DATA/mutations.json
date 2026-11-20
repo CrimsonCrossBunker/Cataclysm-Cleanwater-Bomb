@@ -485,5 +485,16 @@
     "points": 0,
     "description": "Second test mutation granting one craftable quality with no item behind it.",
     "provided_qualities": { "TEST_RESERVE_A": 1 }
+  },
+  {
+    "//": "Bionic slot fixture: grants capacity that any body part may draw on.",
+    "type": "mutation",
+    "id": "TEST_UNIVERSAL_BIONIC_SLOTS",
+    "name": { "str": "Universal bionic mounts" },
+    "points": 0,
+    "valid": false,
+    "description": "Test mutation granting three bionic slots usable anywhere on the body.",
+    "category": [ "INST_TEST" ],
+    "universal_bionic_slots": 3
   }
 ]

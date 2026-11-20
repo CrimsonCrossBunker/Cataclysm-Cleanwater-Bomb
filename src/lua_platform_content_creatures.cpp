@@ -1100,6 +1100,7 @@ struct mutation_definition_data {
     std::vector<mutation_armor_definition_data> armor;
     std::vector<std::string> integrated_armor;
     std::vector<std::pair<std::string, std::int64_t>> bionic_slot_bonuses;
+    std::int64_t universal_bionic_slots = 0;
     std::vector<mutation_attack_definition_data> attacks;
     std::vector<std::vector<mutation_reflex_definition_data>> reflex_triggers;
     std::vector<mutation_comfort_definition_data> comfort;
@@ -2532,6 +2533,16 @@ struct mutation_definition_handle {
         return *this;
     }
 
+    mutation_definition_handle &integer_value( const std::string &kind,
+            const std::int64_t amount ) {
+        require_building_handle( token, *definition, "mutation" );
+        if( kind == "universal_bionic_slots" ) {
+            definition->universal_bionic_slots = amount;
+            return *this;
+        }
+        throw std::runtime_error( "unknown scalar mutation integer-value kind '" + kind + "'" );
+    }
+
     mutation_definition_handle &decimal_value( const std::string &kind,
             const std::string &id, const double amount ) {
         require_building_handle( token, *definition, "mutation" );
@@ -3017,7 +3028,16 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "transform", &mutation_definition_handle::transform,
         "personality", &mutation_definition_handle::personality,
         "relationship", &mutation_definition_handle::relationship,
-        "integer_value", &mutation_definition_handle::integer_value,
+        "integer_value", sol::overload(
+            []( mutation_definition_handle & self, const std::string & kind,
+                const std::string & id,
+        const std::int64_t amount ) -> mutation_definition_handle & {
+            return self.integer_value( kind, id, amount );
+        },
+        []( mutation_definition_handle & self, const std::string & kind,
+        const std::int64_t amount ) -> mutation_definition_handle & {
+            return self.integer_value( kind, amount );
+        } ),
         "decimal_value", &mutation_definition_handle::decimal_value,
         "vitamin_absorption", &mutation_definition_handle::vitamin_absorption,
         "wet_protection", &mutation_definition_handle::wet_protection,
@@ -3031,7 +3051,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
             throw std::runtime_error( "content transaction is no longer building" );
         }
     };
-    const auto each_string = [&require_building_transaction]( const sol::table & options,
+    const auto each_string = [require_building_transaction]( const sol::table & options,
     const char *key, const char *label, const auto & visitor ) {
         const sol::optional<sol::table> values =
             options.get<sol::optional<sol::table>>( key );
@@ -3048,7 +3068,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         require_building_transaction();
     };
-    const auto each_table = [&require_building_transaction]( const sol::table & options,
+    const auto each_table = [require_building_transaction]( const sol::table & options,
     const char *key, const char *label, const auto & visitor ) {
         const sol::optional<sol::table> values =
             options.get<sol::optional<sol::table>>( key );
@@ -5667,6 +5687,8 @@ void creatures_content_transaction::impl::apply_mutation()
             native.set_platform_bionic_slot_bonus(
                 bodypart_str_id( bodypart ), static_cast<int>( amount ) );
         }
+        native.set_platform_universal_bionic_slots(
+            static_cast<int>( source.universal_bionic_slots ) );
         const auto add_damage = []( damage_instance & target,
         const mutation_damage_definition_data & value ) {
             target.add_damage(
@@ -6954,6 +6976,7 @@ void creatures_content_transaction::append_fingerprint(
                 hash_part( state, id );
                 hash_number( amount );
             }
+            hash_number( value.universal_bionic_slots );
             for( const cata::lua_platform::mutation_attack_definition_data &attack : value.attacks ) {
                 hash_part( state, attack.player_message );
                 hash_part( state, attack.npc_message );
