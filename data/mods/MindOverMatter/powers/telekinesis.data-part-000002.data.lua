@@ -1,0 +1,27 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "telekinetic_slowfall",
+    name = ccb.content.text("[Ψ]Slowfall"),
+    description = ccb.content.text("Counteract the pull of gravity with telekinetic force, greatly reducing or even eliminating damage from falling and becoming much more buoyant."),
+    message = ccb.content.text("You feel lighter."),
+    teachable = false,
+    valid_targets = { "self" },
+    spell_class = "TELEKINETIC",
+    magic_type = "mom_psionics",
+    skill = "metaphysics",
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    difficulty = 3,
+    max_level = { handler = "scale_telekinetic_item_pull_real_max_level", fallback = 0 },
+    effect = "attack",
+    effect_data = "effect_telekinetic_slowfall",
+    shape = "blast",
+    min_duration = { handler = "scale_telekinetic_slowfall_min_duration", fallback = 0.0 },
+    max_duration = { handler = "scale_telekinetic_slowfall_max_duration", fallback = 0.0 },
+    base_energy_cost = 2250,
+    final_energy_cost = 650,
+    energy_increment = -85,
+    base_casting_time = 85,
+    final_casting_time = 25,
+    casting_time_increment = -4.5,
+}

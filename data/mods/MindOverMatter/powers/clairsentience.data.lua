@@ -1,0 +1,27 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "clair_omniscience",
+    name = ccb.content.text("[Ψ]Omniscence"),
+    description = ccb.content.text("Extend your senses to a supernal degree, perceiving everything within the nearby area.  Every creature, every object, every blade of grass, everything.  <color_red>EVERYTHING</color>."),
+    message = ccb.content.text("You can see forever."),
+    teachable = false,
+    valid_targets = { "self" },
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" },
+    difficulty = 10,
+    max_level = { handler = "scale_clair_sense_rads_outside_max_level", fallback = 0 },
+    spell_class = "CLAIRSENTIENT",
+    magic_type = "mom_psionics",
+    skill = "metaphysics",
+    effect = "attack",
+    effect_data = "effect_clair_omniscence",
+    shape = "blast",
+    min_duration = { handler = "scale_clair_omniscience_min_duration", fallback = 0.0 },
+    max_duration = { handler = "scale_clair_omniscience_max_duration", fallback = 0.0 },
+    base_energy_cost = 10000,
+    final_energy_cost = 7500,
+    energy_increment = -115,
+    base_casting_time = 75,
+    final_casting_time = 25,
+    casting_time_increment = -3.5,
+}

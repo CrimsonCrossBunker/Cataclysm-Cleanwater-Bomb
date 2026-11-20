@@ -1,0 +1,27 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "teleport_transpose",
+    name = ccb.content.text("[Ψ]Transposition"),
+    description = ccb.content.text("Entangle yourself with your target's position and, with a twist, swap places with them."),
+    message = ccb.content.text("There is a moment of darkness and terrible cold, and you are somewhere else, and so is your target."),
+    teachable = false,
+    valid_targets = { "hostile", "ally" },
+    spell_class = "TELEPORTER",
+    magic_type = "mom_psionics",
+    skill = "metaphysics",
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "SWAP_POS", "IGNORE_WALLS" },
+    difficulty = 4,
+    max_level = { handler = "scale_teleport_slow_max_level", fallback = 0 },
+    effect = "attack",
+    shape = "blast",
+    min_range = { handler = "scale_teleport_transpose_min_range", fallback = 0.0 },
+    max_range = 80,
+    base_energy_cost = 2750,
+    final_energy_cost = 1500,
+    energy_increment = -85,
+    base_casting_time = 75,
+    final_casting_time = 30,
+    casting_time_increment = -2.5,
+    ignored_species = { "PSI_NULL" },
+}

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "telepathic_network",
+    "type": "SPELL",
+    "name": "[Ψ]Network Effect",
+    "description": "Forge an unconscious telepathic network between you and nearby allies, allowing you all to send and receive information about nearby dangers and react more quickly in combat.  The network requires at least one ally nearby to be effective.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "TELEPATH",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" ],
+    "difficulty": 9,
+    "max_level": { "math": [ "mom_telepathy_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEPATH_NETWORK_ALLY_CHECK",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('telepathic_network') * 700) + 10000) * psionic_power_modifiers()" ] },
+    "max_duration": { "math": [ "( (u_spell_level('telepathic_network') * 3400) + 30000) * psionic_power_modifiers()" ] },
+    "base_energy_cost": 6500,
+    "final_energy_cost": 3750,
+    "energy_increment": -135,
+    "base_casting_time": 500,
+    "final_casting_time": 250,
+    "casting_time_increment": -9
+  }
+]

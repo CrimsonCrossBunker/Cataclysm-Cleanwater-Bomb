@@ -1,0 +1,32 @@
+[
+  {
+    "id": "telekinetic_momentum",
+    "type": "SPELL",
+    "name": "[Ψ]Momentum Alteration (C)",
+    "description": "Edit the momentum of yourself and nearby objects to your benefit, slowing damaging force and slightly increasing your speed.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "TELEKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" ],
+    "difficulty": 3,
+    "max_level": { "math": [ "mom_telekinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEKIN_MOMENTUM_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('telekinetic_momentum') * 1000) + 9000) * psionic_power_modifiers() " ] },
+    "max_duration": { "math": [ "( (u_spell_level('telekinetic_momentum') * 2000) + 60000) * psionic_power_modifiers() " ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_telekinetic_momentum') > -1 ? 0 : max((3500 - (u_spell_level('telekinetic_momentum') * 125)), 1750)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_telekinetic_momentum') > -1 ? 10 : max((300 -(u_spell_level('telekinetic_momentum') * 7.5)), 125)"
+      ]
+    }
+  }
+]

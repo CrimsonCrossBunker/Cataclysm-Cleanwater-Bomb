@@ -1,0 +1,62 @@
+[
+  {
+    "id": "telekinetic_vehicle_lift",
+    "type": "SPELL",
+    "name": "[Ψ]Lift Vehicle (C)",
+    "description": "Focus your powers to raise a vehicle just enough to change a tire or perform repairs.  As your powers increase, you will be able to lift heavier vehicles.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.  It is <color_red>canceled by engaging in combat</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "TELEKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 6,
+    "max_level": { "math": [ "mom_telekinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEKIN_SUMMON_JACKING_TOOL_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('telekinetic_vehicle_lift') * 19000) + 60000) * psionic_power_modifiers() " ] },
+    "max_duration": { "math": [ "( (u_spell_level('telekinetic_vehicle_lift') * 42000) + 150000) * psionic_power_modifiers() " ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_telekinetic_vehicle_lift') > -1 ? 0 : max((6500 - (u_spell_level('telekinetic_vehicle_lift') * 200)), 3250)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_telekinetic_vehicle_lift') > -1 ? 10 : max((250 -(u_spell_level('telekinetic_vehicle_lift') * 8)), 125)"
+      ]
+    }
+  },
+  {
+    "id": "telekinetic_shield",
+    "type": "SPELL",
+    "name": "[Ψ]Inertial Barrier (C)",
+    "description": "Create a telekinetic barrier around yourself to protect you from damage.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "TELEKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" ],
+    "difficulty": 6,
+    "max_level": { "math": [ "mom_telekinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEKIN_SHIELD_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('telekinetic_shield') * 1400) + 28000) * psionic_power_modifiers() " ] },
+    "max_duration": { "math": [ "( (u_spell_level('telekinetic_shield') * 3700) + 72000) * psionic_power_modifiers() " ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_telekinetic_armor') > -1 ? 0 : max((8000 - (u_spell_level('telekinetic_shield') * 185)), 3250)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_telekinetic_armor') > -1 ? 10 : max((250 -(u_spell_level('telekinetic_shield') * 8)), 65)"
+      ]
+    }
+  }
+]

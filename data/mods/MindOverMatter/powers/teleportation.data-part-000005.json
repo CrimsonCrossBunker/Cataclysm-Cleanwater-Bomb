@@ -1,0 +1,109 @@
+[
+  {
+    "id": "teleport_relocation",
+    "type": "SPELL",
+    "name": "[Ψ]Relocation",
+    "description": "Transport items in your hands through the Nether to an attuned location.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "TELEPORTER",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS" ],
+    "difficulty": 5,
+    "max_level": { "math": [ "mom_teleportation_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEPORT_RELOCATION_PRE_CHECK",
+    "shape": "blast",
+    "base_energy_cost": 6000,
+    "final_energy_cost": 3500,
+    "energy_increment": -100,
+    "base_casting_time": 200,
+    "final_casting_time": 75,
+    "casting_time_increment": -5.5
+  },
+  {
+    "id": "teleport_warped_strikes",
+    "type": "SPELL",
+    "name": "[Ψ]Warped Strikes (C)",
+    "description": "By warping space as you attack, you can allow your melee attacks to reach much further than normal.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "TELEPORTER",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 5,
+    "max_level": { "math": [ "mom_teleportation_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEPORT_WARPED_STRIKES_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( ( u_spell_level('teleport_warped_strikes') * 1000 ) + 3000 ) * psionic_power_modifiers()" ] },
+    "max_duration": { "math": [ "( ( u_spell_level('teleport_warped_strikes') * 3000 ) + 30000 ) * psionic_power_modifiers()" ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_teleport_warped_strikes') > -1 ? 0 : max( 4000 - ( u_spell_level('teleport_warped_strikes') * 100 ), 2000 )"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_teleport_warped_strikes') > -1 ? 10 : max( 80 - ( u_spell_level('teleport_warped_strikes') * 3 ), 20 )"
+      ]
+    }
+  },
+  {
+    "id": "teleport_ephemeral_walk",
+    "type": "SPELL",
+    "name": "[Ψ]Ephemeral Walk (C)",
+    "description": "By moving slightly into the void between dimensions, you can exist in a state that allows effortless travel through obstacles.",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "TELEPORTER",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 6,
+    "max_level": { "math": [ "mom_teleportation_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEPORT_EPHEMERAL_WALK_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('teleport_ephemeral_walk') * 1000) + 3000) * psionic_power_modifiers() " ] },
+    "max_duration": { "math": [ "( (u_spell_level('teleport_ephemeral_walk') * 3000) + 30000) * psionic_power_modifiers() " ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_teleport_ephemeral_walk') > -1 ? 0 : max((6500 - (u_spell_level('teleport_ephemeral_walk') * 225)), 2000)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_teleport_ephemeral_walk') > -1 ? 10 : max((85 -(u_spell_level('teleport_ephemeral_walk') * 7)), 25)"
+      ]
+    }
+  },
+  {
+    "id": "teleport_farstep",
+    "type": "SPELL",
+    "name": "[Ψ]Farstep",
+    "description": "Skating along the void between dimensions, move to a specific place nearby.\n\nThe power <color_red>will fail</color> if the volume of your carried gear is too great.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "TELEPORTER",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "TARGET_TELEPORT", "IGNORE_WALLS" ],
+    "difficulty": 6,
+    "max_level": { "math": [ "mom_teleportation_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEPORT_FARSTEP_INITIATE",
+    "shape": "blast",
+    "base_energy_cost": 6500,
+    "final_energy_cost": 2750,
+    "energy_increment": -105,
+    "base_casting_time": 75,
+    "final_casting_time": 30,
+    "casting_time_increment": -3
+  }
+]

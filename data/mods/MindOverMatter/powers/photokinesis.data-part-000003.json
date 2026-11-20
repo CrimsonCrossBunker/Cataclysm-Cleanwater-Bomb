@@ -1,0 +1,70 @@
+[
+  {
+    "id": "photokinetic_camouflage",
+    "type": "SPELL",
+    "name": { "//~": "Combination of chameleon and camouflage", "str": "[Ψ]Chameleoflage (C)" },
+    "description": "By blending the light reflecting from you with the light reflecting from nearby surfaces, you can make yourself much harder to spot from a distance.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "PHOTOKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 3,
+    "max_level": { "math": [ "mom_photokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_PHOTOKIN_CAMOUFLAGE_INITIATE",
+    "shape": "blast",
+    "min_duration": {
+      "math": [
+        "( ( (u_spell_level('photokinetic_camouflage') + u_spell_level('photokinetic_camouflage_knack') ) * 4800) + 69000) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( ( (u_spell_level('photokinetic_camouflage') + u_spell_level('photokinetic_camouflage_knack') ) * 11300) + 143000) * psionic_power_modifiers()"
+      ]
+    },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_photokin_camouflage') > -1 ? 0 : max((3500 - ( (u_spell_level('photokinetic_camouflage') + u_spell_level('photokinetic_camouflage_knack') ) * 75)), 1500)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_photokin_camouflage') > -1 ? 10 : max((150 -( (u_spell_level('photokinetic_camouflage') + u_spell_level('photokinetic_camouflage_knack') ) * 8)), 75)"
+      ]
+    }
+  },
+  {
+    "id": "photokinetic_rad_immunity",
+    "type": "SPELL",
+    "name": "[Ψ]Lucent Barrier (C)",
+    "description": "Create a barrier of light around yourself to protect against radiation and light damage.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "PHOTOKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 3,
+    "max_level": { "math": [ "mom_photokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_PHOTOKIN_RAD_IMMUNITY_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('photokinetic_rad_immunity') * 1800) + 37000) * psionic_power_modifiers()" ] },
+    "max_duration": { "math": [ "( (u_spell_level('photokinetic_rad_immunity') * 18200) + 81000) * psionic_power_modifiers()" ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_photokin_light_barrier') > -1 ? 0 : max((3000 - (u_spell_level('photokinetic_rad_immunity') * 125)), 800)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_photokin_light_barrier') > -1 ? 10 : max((250 -(u_spell_level('photokinetic_rad_immunity') * 4.5)), 100)"
+      ]
+    }
+  }
+]

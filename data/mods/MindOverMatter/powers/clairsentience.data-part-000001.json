@@ -1,0 +1,90 @@
+[
+  {
+    "id": "clair_ranged_enhance",
+    "type": "SPELL",
+    "name": "[Ψ]Marksman's Eye (C)",
+    "description": "With your enhanced senses, you can increase the effective range and accuracy of your ranged attacks.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "CLAIRSENTIENT",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 4,
+    "max_level": { "math": [ "mom_clairsentience_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_CLAIR_RANGED_ENHANCE_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('clair_ranged_enhance') * 800) + 21000) * psionic_power_modifiers()" ] },
+    "max_duration": { "math": [ "( (u_spell_level('clair_ranged_enhance') * 2500) + 64000) * psionic_power_modifiers()" ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_clair_ranged_enhance') > -1 ? 0 : max((4500 - (u_spell_level('clair_ranged_enhance') * 135)), 2250)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_clair_ranged_enhance') > -1 ? 10 : max((200 -(u_spell_level('clair_ranged_enhance') * 6)), 125)"
+      ]
+    }
+  },
+  {
+    "id": "clair_examine_item",
+    "type": "SPELL",
+    "name": "[Ψ]Psychometry",
+    "description": "You can examine an item and use your enhanced senses to determine its properties that may not be obvious to the eye.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "CLAIRSENTIENT",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "difficulty": 4,
+    "max_level": { "math": [ "mom_clairsentience_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_CLAIR_EXAMINE_ITEM_INITIATE",
+    "shape": "blast",
+    "base_energy_cost": 5000,
+    "base_casting_time": 30000
+  },
+  {
+    "id": "clair_sense_hostile_creatures",
+    "type": "SPELL",
+    "name": "[Ψ]Sense Hostility (C)",
+    "description": "You can sense the presence of the things that wish to do you harm.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "CLAIRSENTIENT",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 5,
+    "max_level": { "math": [ "mom_clairsentience_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_CLAIR_SENSE_HOSTILE_CREATURES_INITIATE",
+    "shape": "blast",
+    "min_duration": {
+      "math": [
+        "( ( (u_spell_level('clair_sense_hostile_creatures') + u_spell_level('clair_sense_hostile_creatures_knack') ) * 4500) + 12000) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( ( (u_spell_level('clair_sense_hostile_creatures') + u_spell_level('clair_sense_hostile_creatures_knack') ) * 7500) + 49000) * psionic_power_modifiers()"
+      ]
+    },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_clair_sense_hostile_creatures') > -1 ? 0 : max( (6500 - ( (u_spell_level('clair_sense_hostile_creatures') + u_spell_level('clair_sense_hostile_creatures_knack') ) * 120)), 3150)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_clair_sense_hostile_creatures') > -1 ? 10 : max( (85 - ( (u_spell_level('clair_sense_hostile_creatures') + u_spell_level('clair_sense_hostile_creatures_knack') ) * 7)), 25)"
+      ]
+    }
+  }
+]

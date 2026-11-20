@@ -1,0 +1,52 @@
+[
+  {
+    "id": "telekinetic_push",
+    "//": "power ID exists for legacy reasons",
+    "type": "SPELL",
+    "name": "[Ψ]Force Shove",
+    "description": "Shove a target away or pull it towards you with a burst of psionic force.  The distance the target can be moved depends on its weight versus your power level; heavier things will not go as far, and if your target is too heavy, you may not be able to move it at all.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ally", "hostile" ],
+    "spell_class": "TELEKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "RANDOM_DAMAGE", "NO_HANDS", "NO_LEGS", "NO_PROJECTILE", "NO_EXPLOSION_SFX" ],
+    "difficulty": 1,
+    "max_level": { "math": [ "mom_telekinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEKINETIC_FORCE_SHOVE_SELECTOR",
+    "shape": "blast",
+    "min_range": {
+      "math": [
+        "min( ( ( ( (u_spell_level('telekinetic_push') + u_spell_level('telekinetic_push_knack') ) * 0.9) + 2) * psionic_power_modifiers() ), 40)"
+      ]
+    },
+    "max_range": 40,
+    "base_energy_cost": 1750,
+    "final_energy_cost": 750,
+    "energy_increment": -80,
+    "base_casting_time": 150,
+    "final_casting_time": 65,
+    "casting_time_increment": -4,
+    "ignored_monster_species": [ "PSI_NULL" ]
+  },
+  {
+    "id": "telekinetic_force_shove_real",
+    "type": "SPELL",
+    "name": { "str": "[Ψ]Force Shove Push Real", "//~": "NO_I18N" },
+    "description": { "str": "The actual effect that causes the force shove away.  It's a bug if you have it.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ally", "hostile" ],
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "difficulty": 1,
+    "max_level": 30,
+    "effect": "directed_push",
+    "shape": "blast",
+    "min_damage": { "math": [ "u_telekinesis_shove_spell_level" ] },
+    "min_range": 50,
+    "max_range": 50
+  }
+]

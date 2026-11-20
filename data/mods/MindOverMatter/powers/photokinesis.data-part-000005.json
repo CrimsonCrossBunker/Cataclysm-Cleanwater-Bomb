@@ -1,0 +1,62 @@
+[
+  {
+    "id": "photokinetic_radio",
+    "type": "SPELL",
+    "name": "[Ψ]Radio Transception (C)",
+    "description": "Attune your senses to radio waves, allowing you to listen to transmissions and send them yourself.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.  It is <color_red>canceled by engaging in combat</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "PHOTOKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 5,
+    "max_level": { "math": [ "mom_photokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_PHOTOKIN_RADIO_INITIATE",
+    "shape": "blast",
+    "min_duration": {
+      "math": [
+        "( ( (u_spell_level('photokinetic_radio') + u_spell_level('photokinetic_radio_knack') ) * 12600) + 145600) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( ( (u_spell_level('photokinetic_radio') + u_spell_level('photokinetic_radio_knack') ) * 77200) + 522000) * psionic_power_modifiers()"
+      ]
+    },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_photokinetic_radio') > -1 ? 0 : max( (5000 - ( (u_spell_level('photokinetic_radio') + u_spell_level('photokinetic_radio_knack') ) * 100) ), 2250)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_photokinetic_radio') > -1 ? 10 : max( (250 - ( (u_spell_level('photokinetic_radio') + u_spell_level('photokinetic_radio_knack') ) * 10) ), 75)"
+      ]
+    }
+  },
+  {
+    "id": "photokinetic_sterilize_food",
+    "type": "SPELL",
+    "name": "[Ψ]Gamma Sterilization",
+    "description": "Use a focused emission of high-power radiation to eliminating microorganisms in food and allowing it to last much longer before rotting.  This power is <color_red>extremely taxing</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "PHOTOKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "NO_HANDS", "NO_LEGS", "SILENT", "RANDOM_DAMAGE" ],
+    "difficulty": 5,
+    "max_level": { "math": [ "mom_photokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_PHOTOKINETIC_STERILIZE_FOODS",
+    "shape": "blast",
+    "base_energy_cost": 7500,
+    "final_energy_cost": 4000,
+    "energy_increment": -200,
+    "base_casting_time": 1500
+  }
+]

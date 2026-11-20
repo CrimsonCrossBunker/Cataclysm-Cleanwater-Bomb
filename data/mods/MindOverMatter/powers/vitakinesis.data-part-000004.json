@@ -1,0 +1,24 @@
+[
+  {
+    "id": "vita_purge_rads",
+    "type": "SPELL",
+    "name": "[Ψ]Radiation Decontamination",
+    "description": "Use your powers to isolate and flush radiation from your body.  Depending on your level of contamination, this power may have serious side effects.",
+    "message": "You focus your powers on the corruption infusing your flesh.",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "VITAKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 6,
+    "max_level": { "math": [ "mom_vitakinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_VITAKIN_RAD_PURGE",
+    "shape": "blast",
+    "base_energy_cost": 7000,
+    "final_energy_cost": 4500,
+    "energy_increment": -135,
+    "base_casting_time": 6000
+  }
+]

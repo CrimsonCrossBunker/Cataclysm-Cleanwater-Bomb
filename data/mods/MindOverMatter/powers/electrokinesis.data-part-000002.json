@@ -1,0 +1,68 @@
+[
+  {
+    "id": "electrokinetic_pain_immune",
+    "type": "SPELL",
+    "name": "[Ψ]Analgesic Block",
+    "description": "By clamping down on all pain signals you can completely eliminate your ability to feel pain briefly.  This does not eliminate the source of pain, and when the power ends all of the original pain and more will return.\n\nAnalgesic Block is <color_red>incompatible</color> with Neuro-Acceleration.",
+    "message": "The pain just… disappears.",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "ELECTROKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 6,
+    "max_level": { "math": [ "mom_electrokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_ELECTROKIN_PAIN_IMMUNE_ON",
+    "shape": "blast",
+    "min_duration": {
+      "math": [
+        "( ( (u_spell_level('electrokinetic_pain_immune') + u_spell_level('electrokinetic_pain_immune_knack') ) * 800) + 6000) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( ( (u_spell_level('electrokinetic_pain_immune') + u_spell_level('electrokinetic_pain_immune_knack') ) * 1300) + 15000) * psionic_power_modifiers()"
+      ]
+    },
+    "base_energy_cost": 4500,
+    "final_energy_cost": 1750,
+    "energy_increment": -125,
+    "base_casting_time": 75,
+    "final_casting_time": 25,
+    "casting_time_increment": -4.5
+  },
+  {
+    "id": "electrokinetic_speed_boost",
+    "type": "SPELL",
+    "name": "[Ψ]Neuro-acceleration",
+    "description": "You can improve the efficiency of your or an ally's nervous system, allowing for much faster response times.  This also increases the target's ability to retain information.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.  Neuro-acceleration is <color_red>incompatible</color> with Analgesic Block.  When used on <color_green>allies</color>, the power has <color_yellow>one-half the normal duration</color>.",
+    "//": "This does not increase intelligence for balance reasons.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self", "ally" ],
+    "spell_class": "ELECTROKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 6,
+    "max_level": { "math": [ "mom_electrokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_ELECTROKIN_SPEED_BOOST_TARGET_CHECKER",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('electrokinetic_speed_boost') * 1800) + 8100) * psionic_power_modifiers()" ] },
+    "max_duration": { "math": [ "( (u_spell_level('electrokinetic_speed_boost') * 5700) + 28600) * psionic_power_modifiers()" ] },
+    "min_range": 1,
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_electrokinetic_speed_boost') > -1 ? 0 : max((6000 - (u_spell_level('electrokinetic_speed_boost') * 135)), 2750)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_electrokinetic_speed_boost') > -1 ? 10 : max((165 -(u_spell_level('electrokinetic_speed_boost') * 5.5)), 75)"
+      ]
+    }
+  }
+]

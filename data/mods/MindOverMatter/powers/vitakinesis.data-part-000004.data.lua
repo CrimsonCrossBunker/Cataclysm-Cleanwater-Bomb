@@ -1,0 +1,26 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "vita_blood_purge",
+    name = ccb.content.text("[Ψ]Blood Purge"),
+    description = ccb.content.text("You submerge your mind into your bloodstream and remove the impurities you find there."),
+    message = ccb.content.text("Your power flows through your veins, cleansing your blood."),
+    teachable = false,
+    valid_targets = { "self" },
+    spell_class = "VITAKINETIC",
+    magic_type = "mom_psionics",
+    skill = "metaphysics",
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" },
+    difficulty = 7,
+    max_level = { handler = "scale_vita_hurt_touch_max_level", fallback = 0 },
+    effect = "attack",
+    effect_data = "cureall",
+    extra_spells = { { spell = "vita_blood_purge_no_mutagens", self = true } },
+    shape = "blast",
+    base_energy_cost = 8500,
+    final_energy_cost = 4500,
+    energy_increment = -145,
+    base_casting_time = 250,
+    final_casting_time = 100,
+    casting_time_increment = -8,
+}

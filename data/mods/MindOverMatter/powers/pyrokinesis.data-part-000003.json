@@ -1,0 +1,59 @@
+[
+  {
+    "id": "pyrokinetic_lance",
+    "type": "SPELL",
+    "name": "[Ψ]Incandescent Lance (C)",
+    "description": "Concentrate heat into a thin, searing beam capable of cutting through solid metal or welding it together.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.  It is <color_red>canceled by engaging in combat</color>.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "PYROKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 5,
+    "max_level": { "math": [ "mom_pyrokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_PYROKIN_TORCH_WELD_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('pyrokinetic_lance') * 11400) + 20500) * psionic_power_modifiers()" ] },
+    "max_duration": { "math": [ "( (u_spell_level('pyrokinetic_lance') * 49200) + 246000) * psionic_power_modifiers()" ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_pyrokinetic_torch_weld') > -1 ? 0 : max((5000 - (u_spell_level('pyrokinetic_lance') * 125)), 2000)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_pyrokinetic_torch_weld') > -1 ? 10 : max((650 -(u_spell_level('pyrokinetic_lance') * 12)), 320)"
+      ]
+    }
+  },
+  {
+    "id": "pyrokinetic_thermogenesis",
+    "type": "SPELL",
+    "name": "[Ψ]Thermogenesis",
+    "description": "Heat the air nearby and maintain it, taking off the chill or turning winter to warm summer.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "PYROKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 6,
+    "max_level": { "math": [ "mom_pyrokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_SPELL_PYROKIN_THERMOGENESIS_SELECTOR",
+    "//": "No drain on the spell, it's all in the selector.",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('pyrokinetic_thermogenesis') * 15000) + 360000) * psionic_power_modifiers()" ] },
+    "max_duration": { "math": [ "( (u_spell_level('pyrokinetic_thermogenesis') * 30000) + 720000) * psionic_power_modifiers()" ] },
+    "base_energy_cost": 8000,
+    "final_energy_cost": 4000,
+    "energy_increment": -200,
+    "base_casting_time": 1500,
+    "final_casting_time": 1200,
+    "casting_time_increment": -10
+  }
+]

@@ -1,0 +1,93 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "telekinetic_aegis",
+    name = ccb.content.text("[Ψ]Aegis"),
+    description = ccb.content.text("Create a shield impenetrable to physical damage around yourself.  It will <color_yellow>only last a few moments</color>.  You will be <color_red>unable to move</color> while the power is in effect."),
+    message = ccb.content.text("The air around you becomes as hard as adamant."),
+    teachable = false,
+    valid_targets = { "self" },
+    spell_class = "TELEKINETIC",
+    magic_type = "mom_psionics",
+    skill = "metaphysics",
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    difficulty = 9,
+    max_level = { handler = "scale_telekinetic_item_pull_real_max_level", fallback = 0 },
+    effect = "attack",
+    effect_data = "effect_telekinetic_aegis",
+    shape = "blast",
+    min_duration = 100,
+    max_duration = { handler = "scale_telekinetic_aegis_max_duration", fallback = 0.0 },
+    base_energy_cost = 9500,
+    final_energy_cost = 5500,
+    energy_increment = -225,
+    base_casting_time = 125,
+    final_casting_time = 55,
+    casting_time_increment = -5,
+}
+
+ccb.content.define_spell {
+    id = "telekinetic_earthshaker",
+    name = ccb.content.text("[Ψ]Earthshaker"),
+    description = ccb.content.text("Seize the nearby earth with your powers and *wrench* it, toppling buildings and knocking everyone nearby off their feet."),
+    message = ccb.content.text("The earth shakes!"),
+    teachable = false,
+    valid_targets = { "hostile", "ground", "ally" },
+    spell_class = "TELEKINETIC",
+    magic_type = "mom_psionics",
+    skill = "metaphysics",
+    flags = { "PSIONIC", "LOUD", "NO_HANDS", "NO_LEGS", "NO_PROJECTILE", "IGNORE_WALLS", "RANDOM_DURATION" },
+    difficulty = 10,
+    max_level = { handler = "scale_telekinetic_item_pull_real_max_level", fallback = 0 },
+    effect = "attack",
+    effect_data = "downed",
+    extra_spells = {
+        { spell = "telekinetic_earthshaker_bash_terrain", self = false },
+        { spell = "telekinetic_earthshaker_spawn_rubble", self = false },
+    },
+    shape = "blast",
+    min_duration = { handler = "scale_telekinetic_earthshaker_min_duration", fallback = 0.0 },
+    max_duration = { handler = "scale_telekinetic_earthshaker_max_duration", fallback = 0.0 },
+    min_aoe = { handler = "scale_telekinetic_earthshaker_min_aoe", fallback = 0.0 },
+    max_aoe = 30,
+    base_energy_cost = 11500,
+    final_energy_cost = 7000,
+    base_casting_time = 150,
+    final_casting_time = 45,
+    casting_time_increment = -6,
+    sound_description = ccb.content.text("the ground shaking!"),
+    sound_id = "earth_spell",
+    sound_variant = "strong",
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "telekinetic_earthshaker_bash_terrain",
+    name = ccb.content.text_without_extraction("[Ψ]Earthshaker Bash Terrain"),
+    description = ccb.content.text_without_extraction("Destroy furniture and terrain nearby."),
+    valid_targets = { "hostile", "ground" },
+    teachable = false,
+    flags = { "SILENT", "NO_EXPLOSION_SFX", "IGNORE_WALLS", "RANDOM_DAMAGE" },
+    effect = "bash",
+    shape = "blast",
+    min_damage = { handler = "scale_telekinetic_earthshaker_bash_terrain_min_damage", fallback = 0.0 },
+    max_damage = { handler = "scale_telekinetic_earthshaker_bash_terrain_max_damage", fallback = 0.0 },
+    min_aoe = { handler = "scale_telekinetic_earthshaker_bash_terrain_min_aoe", fallback = 0.0 },
+    max_aoe = 35,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "telekinetic_earthshaker_spawn_rubble",
+    name = ccb.content.text_without_extraction("[Ψ]Earthshaker Rubble"),
+    description = ccb.content.text_without_extraction("Causes rubble to be spawned occasionally."),
+    valid_targets = { "hostile", "ground" },
+    flags = { "SILENT", "NO_EXPLOSION_SFX", "IGNORE_WALLS" },
+    effect = "ter_transform",
+    effect_data = "telekinetic_earthshaker_transform",
+    shape = "blast",
+    min_aoe = { handler = "scale_telekinetic_earthshaker_bash_terrain_min_aoe", fallback = 0.0 },
+    max_aoe = 35,
+}

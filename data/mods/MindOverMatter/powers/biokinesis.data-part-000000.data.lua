@@ -1,0 +1,31 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "biokin_sealed_system",
+    name = ccb.content.text("[Ψ]Sealed System"),
+    description = ccb.content.text("With a deep breath, you lock your body off from the outside world.  Gas, poison, blood, bile, electricity--nothing gets in, nothing gets out.\n\nSealed System <color_red>cannot be active</color> with either Temperature Adaptability or Oxygen Absorption."),
+    message = ccb.content.text("You take a deep breath and seal your lips."),
+    teachable = false,
+    valid_targets = { "self" },
+    spell_class = "BIOKINETIC",
+    magic_type = "mom_psionics",
+    skill = "metaphysics",
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" },
+    difficulty = 7,
+    max_level = { handler = "scale_biokin_sealed_system_max_level", fallback = 0 },
+    effect = "attack",
+    effect_data = "effect_biokin_sealed",
+    extra_spells = {
+        { spell = "biokin_sealed_remove_climate", self = true },
+        { spell = "biokin_sealed_remove_breathe_skin", self = true },
+    },
+    shape = "blast",
+    min_duration = { handler = "scale_biokin_sealed_system_min_duration", fallback = 0.0 },
+    max_duration = { handler = "scale_biokin_sealed_system_max_duration", fallback = 0.0 },
+    base_energy_cost = 5500,
+    final_energy_cost = 2750,
+    energy_increment = -175,
+    base_casting_time = 200,
+    final_casting_time = 100,
+    casting_time_increment = -7.5,
+}

@@ -2,15 +2,19 @@ local runtime = require("ccb").runtime
 local scaling = {}
 local weariness_factors = { 0.9, 0.75, 0.6, 0.45, 0.25, 0.25 }
 
-function scaling.weariness(ctx)
-    local effects = ctx.character_inputs.effect_intensities
+function scaling.weariness_from(intensity)
     local factor = 1
     for level, penalty in ipairs(weariness_factors) do
-        if effects["weary_" .. level] > -1 then
+        if intensity("weary_" .. level) > -1 then
             factor = factor * penalty
         end
     end
     return factor
+end
+
+function scaling.weariness(ctx)
+    local effects = ctx.character_inputs.effect_intensities
+    return scaling.weariness_from(function(effect) return effects[effect] end)
 end
 
 function scaling.power(ctx)

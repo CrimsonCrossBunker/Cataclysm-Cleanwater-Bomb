@@ -1,0 +1,41 @@
+[
+  {
+    "id": "telepathic_fear",
+    "type": "SPELL",
+    "name": "[Ψ]Primal Terror",
+    "description": "Use a target's own inner fears against them, paralyzing them with overwhelming terror.  The effect will not last long, but is completely immobilizing while it does, and it leaves a lingering horror behind in the target.",
+    "message": "You unleash your target's fears.",
+    "teachable": false,
+    "valid_targets": [ "hostile" ],
+    "spell_class": "TELEPATH",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DAMAGE", "NO_PROJECTILE", "IGNORE_WALLS" ],
+    "difficulty": 6,
+    "max_level": { "math": [ "mom_telepathy_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_TELEPATH_PRIMAL_TERROR",
+    "shape": "blast",
+    "min_range": { "math": [ "min( (( (u_spell_level('telepathic_fear') * 1.1) + 3) * psionic_power_modifiers()), 80)" ] },
+    "max_range": 80,
+    "min_aoe": { "math": [ "min( (( (u_spell_level('telepathic_fear') * 0.15) + 0) * psionic_power_modifiers()), 4)" ] },
+    "base_energy_cost": 6000,
+    "final_energy_cost": 3500,
+    "energy_increment": -100,
+    "base_casting_time": 125,
+    "final_casting_time": 50,
+    "casting_time_increment": -5,
+    "ignored_monster_species": [
+      "ZOMBIE",
+      "ROBOT",
+      "ROBOT_FLYING",
+      "NETHER",
+      "NETHER_EMANATION",
+      "LEECH_PLANT",
+      "WORM",
+      "FUNGUS",
+      "SLIME",
+      "PSI_NULL"
+    ]
+  }
+]

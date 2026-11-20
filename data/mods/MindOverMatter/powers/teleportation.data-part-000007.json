@@ -1,0 +1,26 @@
+[
+  {
+    "id": "teleport_reality_tear",
+    "type": "SPELL",
+    "name": "[Ψ]Reality Tear",
+    "description": "Make your own contribution to the Cataclysm by opening a rift in reality, allowing all manners of netherium creatures access to Earth.  The rift is temporary…hopefully.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "TELEPORTER",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DAMAGE", "NO_PROJECTILE" ],
+    "difficulty": 10,
+    "max_level": { "math": [ "mom_teleportation_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_REALITY_TEAR_CHECKER",
+    "shape": "blast",
+    "base_energy_cost": 10000,
+    "final_energy_cost": 5000,
+    "energy_increment": -250,
+    "base_casting_time": 250,
+    "final_casting_time": 100,
+    "casting_time_increment": -10
+  }
+]

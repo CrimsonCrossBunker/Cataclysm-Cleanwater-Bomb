@@ -1,0 +1,51 @@
+[
+  {
+    "id": "photokinetic_light_army",
+    "type": "SPELL",
+    "name": "[Ψ]Phantom Legion (C)",
+    "description": "Create a myriad of illusions around yourself to mislead and confuse your enemies.  The illusions will explode into blinding flashes if damaged.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.  It requires <color_yellow>even more concentration</color> than usual.  Concentration will <color_green>automatically end</color> if all illusions are destroyed.",
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "PHOTOKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "RANDOM_DURATION" ],
+    "difficulty": 9,
+    "max_level": { "math": [ "mom_photokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_PHOTOKIN_LIGHT_ARMY_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( ( u_spell_level('photokinetic_light_army') * 450) + 3740) * psionic_power_modifiers() " ] },
+    "max_duration": { "math": [ "( ( u_spell_level('photokinetic_light_army') * 1100) + 9650) * psionic_power_modifiers() " ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_photokin_light_army') > -1 ? 0 : max((10000 - (u_spell_level('photokinetic_light_army') * 255)), 5500)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_photokin_light_army') > -1 ? 10 : max((150 -(u_spell_level('photokinetic_light_army') * 4)), 90)"
+      ]
+    }
+  },
+  {
+    "id": "photokinetic_light_army_remove",
+    "type": "SPELL",
+    "name": { "str": "[Ψ]Phantom Legion Destruction", "//~": "NO_I18N" },
+    "description": { "str": "Removes all remaining illusions when the power ends.", "//~": "NO_I18N" },
+    "message": "",
+    "teachable": false,
+    "valid_targets": [ "ground", "hostile", "ally" ],
+    "spell_class": "PHOTOKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "IGNORE_WALLS" ],
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_PHOTOKIN_LIGHT_ARMY_DISAPPEAR_MONSTERS",
+    "shape": "blast",
+    "min_aoe": 70,
+    "max_aoe": 70,
+    "targeted_monster_ids": [ "mon_photokin_army_image" ]
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "electrokinetic_lightning_aura",
+    "type": "SPELL",
+    "name": "[Ψ]Galvanic Aura (C)",
+    "description": "Charge the air around you with power, unleashing blasts at anyone nearby.  This power does not discriminate between friend and foe.  It will also protect you from electricity while active.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>",
+    "message": "The air around you hums with power.",
+    "teachable": false,
+    "valid_targets": [ "self" ],
+    "spell_class": "ELECTROKINETIC",
+    "magic_type": "mom_psionics",
+    "skill": "metaphysics",
+    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "difficulty": 8,
+    "max_level": { "math": [ "mom_electrokinesis_max_power_formula()" ] },
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_ELECTROKIN_LIGHTNING_AURA_INITIATE",
+    "shape": "blast",
+    "min_duration": { "math": [ "( (u_spell_level('electrokinetic_lightning_aura') * 1500) + 6000) * psionic_power_modifiers()" ] },
+    "max_duration": { "math": [ "( (u_spell_level('electrokinetic_lightning_aura') * 2500) + 25000) * psionic_power_modifiers()" ] },
+    "base_energy_cost": {
+      "math": [
+        "u_effect_intensity('effect_electrokinetic_lightning_aura') > -1 ? 0 : max((9000 - (u_spell_level('electrokinetic_lightning_aura') * 200)), 4500)"
+      ]
+    },
+    "base_casting_time": {
+      "math": [
+        "u_effect_intensity('effect_electrokinetic_lightning_aura') > -1 ? 10 : max((150 -(u_spell_level('electrokinetic_lightning_aura') * 8.5)), 55)"
+      ]
+    }
+  }
+]

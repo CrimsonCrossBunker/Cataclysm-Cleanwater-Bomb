@@ -1,0 +1,27 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "photokinetic_light_arms",
+    name = ccb.content.text("[Ψ]Refracted Arms"),
+    description = ccb.content.text("Create the illusion of extra arms and wielded items to trick your enemies, forcing them off balance and rendering them open to attack."),
+    message = ccb.content.text("Light around your arms shimmers and refracts, creating the illusion of multiple arms."),
+    teachable = false,
+    valid_targets = { "self" },
+    spell_class = "PHOTOKINETIC",
+    magic_type = "mom_psionics",
+    skill = "metaphysics",
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "RANDOM_DURATION" },
+    difficulty = 4,
+    max_level = { handler = "scale_photokin_blinding_glare_attack_max_level", fallback = 0 },
+    effect = "attack",
+    effect_data = "effect_photokin_arms",
+    shape = "blast",
+    min_duration = { handler = "scale_photokinetic_light_arms_min_duration", fallback = 0.0 },
+    max_duration = { handler = "scale_photokinetic_light_arms_max_duration", fallback = 0.0 },
+    base_energy_cost = 4000,
+    final_energy_cost = 1500,
+    energy_increment = -125,
+    base_casting_time = 125,
+    final_casting_time = 25,
+    casting_time_increment = -7,
+}
