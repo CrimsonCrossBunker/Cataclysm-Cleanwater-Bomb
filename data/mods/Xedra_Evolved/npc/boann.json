@@ -194,11 +194,6 @@
         "topic": "TALK_KILL_TITAN_BEETLE_ADVICE"
       },
       {
-        "text": "I'd like some advice about the shadow and its piece.",
-        "condition": { "u_has_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" },
-        "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ADVICE"
-      },
-      {
         "text": "I'd like some advice about the star-crowned hound.",
         "condition": { "u_has_mission": "MISSION_KILL_STAR_CROWN_HOUND_FOR_BOANN" },
         "topic": "TALK_KILL_STAR_CROWN_HOUND_ADVICE"
@@ -298,20 +293,6 @@
           { "u_add_var": "completed_boann_kill_titan_beetle", "value": "yes" }
         ],
         "topic": "TALK_KILL_TITAN_BEETLE_COMPLETED"
-      },
-      {
-        "text": "I'm back and I killed the Shadow.  [Give her the piece of shadow]",
-        "condition": {
-          "and": [ { "u_has_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" }, { "u_has_item": "shadow_singularity_piece" } ]
-        },
-        "effect": [
-          { "u_consume_item": "shadow_singularity_piece", "count": 1, "popup": true },
-          { "u_spawn_item": "boann_banner", "count": 1 },
-          { "math": [ "Boann_Quests_Completed++" ] },
-          { "u_add_var": "completed_boann_bring_shadow_piece", "value": "yes" },
-          { "finish_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN", "success": true }
-        ],
-        "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_COMPLETED"
       },
       {
         "text": "I'm back and I killed the star-crowned hound.",
@@ -484,17 +465,6 @@
           ]
         },
         "topic": "TALK_KILL_TITAN_BEETLE_OFFER"
-      },
-      {
-        "text": "[Bring me back a piece of the darkest shadow]",
-        "condition": {
-          "and": [
-            { "not": { "u_has_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" } },
-            { "math": [ "Boann_Quests_Completed >= 6" ] },
-            { "not": { "compare_string": [ "yes", { "u_val": "completed_boann_bring_shadow_piece" } ] } }
-          ]
-        },
-        "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_OFFER"
       },
       {
         "text": "[Kill a star-crowned hound]",
@@ -914,55 +884,6 @@
     "id": [ "TALK_KILL_TITAN_BEETLE_COMPLETED" ],
     "type": "talk_topic",
     "dynamic_line": "I give you Väinämöinen's Kantele.  Take care of it, it's very precious.",
-    "responses": [
-      { "text": "Can I talk about something else?", "topic": "TALK_BOANN_1" },
-      { "text": "Thank you.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": [ "TALK_GET_SHADOW_SINGULARITY_PIECE_OFFER" ],
-    "type": "talk_topic",
-    "dynamic_line": "There is a shadow that haunts the night.  Bring me proof that you killed it and I'll grant you the right to bear my banner.",
-    "responses": [
-      {
-        "text": "I'll do it.",
-        "condition": { "not": { "u_has_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" } },
-        "effect": [ { "assign_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ACCEPTED"
-      },
-      { "text": "Do you have any advice?", "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ADVICE" },
-      { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_GET_SHADOW_SINGULARITY_PIECE_ADVICE",
-    "type": "talk_topic",
-    "dynamic_line": "To encounter it, stand alone or accompanied by at most two allies in a field or a forest at night.  It might take multiple nights for it to show itself so prepare something to do while you wait.  Light massively weaken it so ensure the battlefield is well lit.  Separate it from its minions, as it can create more than you'll manage to kill and heal its wounds over time.  It is also particularly resilient against bullets so engage in melee if you manage to get close enough.",
-    "responses": [
-      {
-        "text": "I'll do it.",
-        "condition": { "not": { "u_has_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" } },
-        "effect": [ { "assign_mission": "MISSION_GET_SHADOW_SINGULARITY_PIECE_FOR_BOANN" }, { "math": [ "Boann_Quests_Accepted++" ] } ],
-        "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ACCEPTED"
-      },
-      { "text": "Can I see the other quests first?", "topic": "TALK_QUEST_LIST" },
-      { "text": "I'm not sure if I want to do it.  See you.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_GET_SHADOW_SINGULARITY_PIECE_ACCEPTED",
-    "type": "talk_topic",
-    "dynamic_line": "I had no doubts in you.",
-    "responses": [
-      { "text": "Can I see the other quests?", "topic": "TALK_QUEST_LIST" },
-      { "text": "Do you have any advice?", "topic": "TALK_GET_SHADOW_SINGULARITY_PIECE_ADVICE" },
-      { "text": "I'm going to head on now.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": [ "TALK_GET_SHADOW_SINGULARITY_PIECE_COMPLETED" ],
-    "type": "talk_topic",
-    "dynamic_line": "I am honored to give you this banner.  Wear it with pride, as you more than earned that right.",
     "responses": [
       { "text": "Can I talk about something else?", "topic": "TALK_BOANN_1" },
       { "text": "Thank you.", "topic": "TALK_DONE" }
