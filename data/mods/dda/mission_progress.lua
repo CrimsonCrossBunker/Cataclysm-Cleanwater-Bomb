@@ -1,0 +1,20 @@
+local ccb = require("ccb")
+
+local function track(key)
+    ccb.runtime.handler("mark_" .. key, function(context)
+        ccb.services.variables.set_string_notifying(context.character, key, "yes")
+    end)
+end
+
+track("eoc_sample_item_transporter_set_coordinates")
+track("flag_death_lighthouse_girl_dead")
+track("flag_death_lighthouse_wife_dead")
+track("found_refugee_center")
+track("knows_xedra_field_station_1")
+track("knows_xedra_field_station_2")
+track("mission_BGSS_hospital_2_started_quest")
+track("mission_BGSS_rural_1_started_quest")
+track("mission_completed_anusfetick")
+track("mission_completed_exodii_mission_chop_shop")
+track("mission_completed_exodii_mission_meet_free_merchants")
+track("mission_completed_u_scouted_bunker")

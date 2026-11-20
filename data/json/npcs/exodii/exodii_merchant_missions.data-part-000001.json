@@ -1,0 +1,25 @@
+[
+  {
+    "id": "EXODII_MISSION_WAREHOUSE",
+    "name": { "str": "Find the lost Exodii warehouse and reboot its locator antenna." },
+    "type": "mission_definition",
+    "goal": "MGOAL_GO_TO_TYPE",
+    "destination": "exo_warehouse_1",
+    "start": { "effect": [ { "u_spawn_item": "warehouse_rebooter" }, { "math": [ "exodii_mission_wh_chance = 6" ] } ] },
+    "end": { "effect": [ { "u_add_var": "mission_completed_u_found_warehouse", "value": "yes" } ] },
+    "difficulty": 5,
+    "value": 2,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "",
+      "offer": "",
+      "accepted": "King's own luck!",
+      "rejected": "That be a choice an' you can tass.  Come back to this'n if you like.",
+      "advice": "What ye'r searching is safehouse-like, sand, stone, metal an' all.",
+      "inquire": "Us'n waits patient-like for that'.",
+      "success": "Fine an' fine.  We can pass it in when you like.",
+      "success_lie": "Fine an' fine.  We can pass it in when you like.",
+      "failure": "Fine an' fine.  Come back to this'n if you like to try again."
+    }
+  }
+]

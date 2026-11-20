@@ -1,23 +1,20 @@
 local ccb = require("ccb")
-local predicates = ccb.content.dialogue_predicates
-local actions = ccb.content.dialogue_actions
 
--- Have you seen our big stompy quads?  There's a lot of things we're good at, but sneaky and subtle we aren't.  If we want a meet cute, first we've got to lay out the hempen mats.
+-- Just because you asked, I think we can work something out.  Yes, the Scythean has been bugging me about something.  It's not something a cyborg like me can do, but a mercenary would probably fit the bill.
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_mission_1_explain",
-    line = ccb.content.text("Hat ye kennt our great clanks an' stompers?  There be many a thing we can do right good, but for the supple an' smooth, we b'ain't.  Wish'n we to make a meet-cute, must we first lay out the hempen mats."),
+    id = "TALK_EXODII_MERCHANT_mission_1_intro",
+    line = ccb.content.text("Them as offer as can, an it be so.  How'd ye be twigged by a quick an' round, a nice escoltin' out to a place sommat of curiosity?  Aye, there's summat the old Scythy been larkin' up Rubik's tailpipe.  B'ain't tass right for a clanker like this'n, but a pop-an-work like you'n, maybe well and suited."),
     replies = {
         {
-            text = ccb.content.text("Hold up, did you just say \"meet cute\"?"),
-            next_topic = "TALK_EXODII_MERCHANT_Meetcute",
+            text = ccb.content.text("What's \"the ol' Scythy\"?"),
+            next_topic = "TALK_EXODII_MERCHANT_Scythean",
         },
         {
-            text = ccb.content.text("I am guessing it doesn't matter, but what do you mean about hempen mats?"),
-            actions = { actions.set_actor_value("speaker", "rubik_personal_questions", "hempen_mats") },
-            next_topic = "TALK_EXODII_MERCHANT_Hempen1",
+            text = ccb.content.text("Why can't one of you do this?"),
+            next_topic = "TALK_EXODII_MERCHANT_mission_1_explain",
         },
         {
-            text = ccb.content.text("OK, fine.  Tell me more about this job that you can't do."),
+            text = ccb.content.text("Tell me more about this job that you can't do."),
             next_topic = "TALK_EXODII_MERCHANT_mission_1_intro1",
         },
         {

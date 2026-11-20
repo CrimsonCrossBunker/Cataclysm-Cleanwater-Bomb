@@ -1,0 +1,94 @@
+[
+  {
+    "id": "MISSION_LUMBERMILL_GET_6800_NAILS",
+    "type": "mission_definition",
+    "name": "Get 6,800 Nails",
+    "description": "Obtain 6,800 nails in exchange for credit with the loggers.",
+    "//": "170 wood walls * 40 nails per wall",
+    "followup": "MISSION_LUMBERMILL_GET_6_BLANKETS",
+    "goal": "MGOAL_FIND_ITEM",
+    "item": "nail",
+    "count": 6800,
+    "difficulty": 32,
+    "value": 2000000,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "end": {
+      "update_mapgen": [
+        { "om_terrain": "lumbermill_0_0_ocu", "place_nested": [ { "chunks": [ "occupied_lum_wall_0_0" ], "x": 0, "y": 0 } ] },
+        {
+          "om_terrain": "lumbermill_0_1_ocu",
+          "place_nested": [ { "chunks": [ "occupied_lum_wall_0_1" ], "x": 0, "y": 0 } ]
+        },
+        {
+          "om_terrain": "lumbermill_1_0_ocu",
+          "place_nested": [ { "chunks": [ "occupied_lum_wall_1_0" ], "x": 0, "y": 0 } ]
+        },
+        {
+          "om_terrain": "lumbermill_1_1_ocu",
+          "place_nested": [ { "chunks": [ "occupied_lum_wall_1_1" ], "x": 0, "y": 0 } ]
+        }
+      ]
+    },
+    "has_generic_rewards": true,
+    "dialogue": {
+      "describe": "I need 6,800 nails.",
+      "offer": "While fairly sturdy, the metal fence around this place won't hold out for long.  So, we've decided to replace it with a wall.  However, the nails we had were used to repair our existing structures, and they weren't nearly enough.  After some calculations, we need 6,800 nails to do it.  That may seem like a lot, but we're willing to give you a TON of credit for it.",
+      "advice": "You might have to do more than just scrapping a bunch of furniture.  Dismantling a building somewhere in town could get you what you need.",
+      "accepted": "I'll be here when you get back.  Good luck!",
+      "rejected": "Well, I suppose that's reasonable.",
+      "inquire": "Do you have the nails?",
+      "success": "That's absolutely amazing!  I can't thank you enough for this!",
+      "success_lie": "You're a fucking scammer, <name_b>!",
+      "failure": "That's unfortunate.  I guess we'll have to find someone else to do it."
+    }
+  },
+  {
+    "id": "MISSION_LUMBERMILL_GET_6_BLANKETS",
+    "type": "mission_definition",
+    "name": "Find 6 Blankets",
+    "description": "Obtain 6 blankets or quilts in exchange for credit with the loggers.",
+    "goal": "MGOAL_CONDITION",
+    "difficulty": 5,
+    "value": 4000,
+    "//": "Dynamic response dialogs would be more natural to accept so many alternate items here.",
+    "goal_condition": {
+      "u_has_items_sum": [
+        { "item": "blanket", "amount": 6 },
+        { "item": "fur_blanket", "amount": 6 },
+        { "item": "down_blanket", "amount": 6 },
+        { "item": "blanket_weighted", "amount": 6 },
+        { "item": "quilt", "amount": 6 },
+        { "item": "quilt_patchwork", "amount": 6 },
+        { "item": "electric_blanket", "amount": 6 }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "end": {
+      "update_mapgen": { "om_terrain": "lumbermill_1_1_ocu", "place_nested": [ { "chunks": [ "occupied_lum_hotel_1_1" ], "x": 0, "y": 0 } ] },
+      "effect": {
+        "u_consume_item_sum": [
+          { "item": "blanket", "amount": 6 },
+          { "item": "fur_blanket", "amount": 6 },
+          { "item": "down_blanket", "amount": 6 },
+          { "item": "blanket_weighted", "amount": 6 },
+          { "item": "quilt", "amount": 6 },
+          { "item": "quilt_patchwork", "amount": 6 },
+          { "item": "electric_blanket", "amount": 6 }
+        ]
+      }
+    },
+    "followup": "MISSION_LUMBERMILL_SET_TRADE_ROUTE",
+    "has_generic_rewards": true,
+    "dialogue": {
+      "describe": "I need 6 blankets.",
+      "offer": "Now that we should be safe from harm, I decided to start adding a few things to this place.  Right now, we don't have anywhere to comfortably sleep, so we're building a small sleeping quarter.  We just need 6 big, warm blankets or quilts to finish our project.",
+      "advice": "I figure any hotel or motel in town should have lots of blankets.",
+      "accepted": "I'll be here when you get back.  Good luck!",
+      "rejected": "Well, someone's got to do it.",
+      "inquire": "Did you find us some bedding yet?",
+      "success": "Thanks!  Feel free to sleep here if you want.  It's the least we can do for the help.",
+      "success_lie": "How is this supposed to help us?",
+      "failure": "That's unfortunate.  I guess we'll have to find someone else to do it."
+    }
+  }
+]

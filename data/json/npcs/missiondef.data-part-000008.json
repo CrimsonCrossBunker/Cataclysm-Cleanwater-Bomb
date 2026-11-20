@@ -1,0 +1,80 @@
+[
+  {
+    "id": "MISSION_RECOVER_PRIEST_DIARY",
+    "type": "mission_definition",
+    "name": { "str": "Recover Priest's Diary" },
+    "description": "Find something that may reveal what the church's stance is on these events.  Something like <color_yellow>a priest's diary</color> would suffice.",
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 2,
+    "value": 70000,
+    "item": "priest_diary",
+    "start": {
+      "update_mapgen": { "place_item": [ { "item": "priest_diary", "x": [ 3, 21 ], "y": [ 6, 21 ], "amount": 1 } ] },
+      "assign_mission_target": { "om_terrain": "house", "om_terrain_match_type": "PREFIX", "min_distance": 5, "random": true, "z": 0 }
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "followup": "MISSION_INVESTIGATE_CULT",
+    "dialogue": {
+      "describe": "St. Michael the archangel defend me in battle…",
+      "offer": "From what I understand, the creatures you encountered surrounding this relic were unlike anything I've heard of.  It is laughable that I now consider the living dead to be part of our ordinary reality.  Never-the-less, the church must have some explanation for these events.  I have located the residence of a local clergy man, could you go to this address and recover any items that may reveal what the church's stance is on these events?",
+      "accepted": "I wish you the best of luck, may whatever god you please guide your path.",
+      "rejected": "Ya, I guess the stress may just be getting to me…",
+      "advice": "If the information is confidential the priest must have it hidden within his own home.",
+      "inquire": "Any luck?",
+      "success": "Thank you, a diary is exactly what I was looking for.",
+      "success_lie": "What good does this do us?",
+      "failure": "It was a lost cause anyways…"
+    }
+  },
+  {
+    "id": "MISSION_RECRUIT_TRACKER",
+    "type": "mission_definition",
+    "name": { "str": "Recruit Tracker" },
+    "description": "Go to the cabin in the woods where the Tracker is camping and <color_yellow>recruit them</color>.",
+    "goal": "MGOAL_RECRUIT_NPC",
+    "difficulty": 5,
+    "value": 70000,
+    "start": {
+      "assign_mission_target": { "om_terrain": "cabin", "om_special": "Cabin", "reveal_radius": 2 },
+      "effect": "follow",
+      "update_mapgen": { "place_npcs": [ { "class": "tracker_gunslinger", "x": 11, "y": 11, "target": true } ] }
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "dialogue": {
+      "describe": "You seem to know this new world better than most…",
+      "offer": "We've got another problem to deal with but I don't think we can handle it on our own.  So, I sent word out and found us a volunteer… of sorts.  He's vain as hell but has a little skill with firearms.  He was supposed to collect whatever he had of value and is going to meet us at a cabin in the woods.  Wasn't sure how long we were going to be so I told him to just camp there until we picked him up.",
+      "accepted": "Roger, if he's a no-show then any other gunslinger will do… but I doubt he'll quit before we even begin.",
+      "rejected": "Hey, I know I wouldn't volunteer for it either… but then I remember that most of us survivors won't make it unless someone decides to take the initiative.",
+      "advice": "I hope the bastard is packing heat… else we'll need to grab him a gun before we hit our next target.",
+      "inquire": "Found a gunslinger?",
+      "success": "Great, just let me know when you are ready to wade knee-deep in an ocean of blood.",
+      "success_lie": "I don't think so…",
+      "failure": "Quitting already?"
+    }
+  },
+  {
+    "id": "MISSION_RESCUE_DOG",
+    "type": "mission_definition",
+    "name": { "str": "Find Lost Dog" },
+    "goal": "MGOAL_FIND_MONSTER",
+    "difficulty": 3,
+    "value": 100000,
+    "start": {
+      "update_mapgen": { "place_monster": [ { "monster": "mon_dog", "x": [ 3, 21 ], "y": [ 6, 21 ], "friendly": true, "target": true } ] },
+      "effect": [ { "u_spawn_item": "dog_whistle" } ],
+      "assign_mission_target": { "om_terrain": "house", "om_terrain_replace": "field", "om_terrain_match_type": "PREFIX", "random": true, "z": 0 }
+    },
+    "origins": [ "ORIGIN_OPENER_NPC" ],
+    "dialogue": {
+      "describe": "Oh, my poor puppy…",
+      "offer": "I left my poor dog in a house, not far from here.  Can you retrieve it?",
+      "accepted": "Thank you!  Please hurry back!",
+      "rejected": "Please, think of my poor little puppy!",
+      "advice": "Take my dog whistle; if the dog starts running off, blow it and he'll return to your side.",
+      "inquire": "Have you found my dog yet?",
+      "success": "Thank you so much for finding him!",
+      "success_lie": "What?!  You're lying, I can tell!  Ugh, forget it!",
+      "failure": "Oh no!  My poor puppy…"
+    }
+  }
+]

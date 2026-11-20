@@ -1,0 +1,48 @@
+[
+  {
+    "id": "MISSION_REACH_FARM_HOUSE",
+    "type": "mission_definition",
+    "name": { "str": "Reach Farm House" },
+    "goal": "MGOAL_GO_TO_TYPE",
+    "difficulty": 2,
+    "value": 60000,
+    "start": { "effect": "follow_only" },
+    "end": { "effect": "stop_following" },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "destination": "farm_2",
+    "dialogue": {
+      "describe": "I just need a place to start over…",
+      "offer": "I've accepted that everyone I used to know is dead… one way or another.  I really wish I could have done something to save my brother but he was one of the first to go.  I'd like to start over, just rebuild at one of the farms in the countryside.  Can you help me secure one?",
+      "accepted": "Thank you, let's find a remote one so we don't have to worry about many zombies.",
+      "rejected": "Please, I just don't know what to do otherwise.",
+      "advice": "Traveling the backroads would be a good way to search for one.",
+      "inquire": "Shall we keep looking for a farm house?",
+      "success": "Well, my adventuring days are over.  I can't thank you enough.  Trying to make this place self sustaining will take some work but the future is looking brighter.  At least it ought to be safe for now.  You'll always be welcome here.",
+      "success_lie": "Thanks for trying… I guess.",
+      "failure": "I guess it was just a pipe dream."
+    }
+  },
+  {
+    "id": "MISSION_REACH_FEMA_CAMP",
+    "type": "mission_definition",
+    "name": { "str": "Reach FEMA Camp" },
+    "goal": "MGOAL_GO_TO_TYPE",
+    "difficulty": 2,
+    "value": 60000,
+    "start": { "effect": "follow_only" },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "followup": "MISSION_REACH_FARM_HOUSE",
+    "destination": "fema",
+    "dialogue": {
+      "describe": "Maybe they escaped to one of the camps…",
+      "offer": "I can't thank you enough for bringing me the patient records but I do have another request.  You seem to know your way around… could you take me to one of the FEMA camps?  I know some were overrun but I don't want to believe all of them could have fallen.",
+      "accepted": "Thank you, just bring me to the camp… I just want to see.",
+      "rejected": "Please, I don't know what else to do.",
+      "advice": "We should go at night, if it is overrun then we can quickly make our escape.",
+      "inquire": "Any leads on where a camp might be?",
+      "success": "I guess this wasn't as bright an idea as I thought.",
+      "success_lie": "Thanks for trying… I guess.",
+      "failure": "I bet some of them are still out there…"
+    }
+  }
+]

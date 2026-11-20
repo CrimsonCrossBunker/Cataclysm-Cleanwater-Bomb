@@ -1,0 +1,29 @@
+[
+  {
+    "id": "MISSION_CABIN_CHEMIST_GET_60_chem_muriatic_acid",
+    "type": "mission_definition",
+    "name": "Find Some Hydrochloric Acid",
+    "description": "Obtain 15 liters of hydrochloric acid for the chemist.",
+    "//": "Hydrochloric acid is used for basically everything the chemist sells, so trading with them is gated behind this quest.",
+    "goal": "MGOAL_FIND_ITEM",
+    "item": "chem_muriatic_acid",
+    "count": 60,
+    "difficulty": 7,
+    "value": 10000,
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "end": { "effect": [ { "npc_add_var": "dialogue_trade_mass_chem_tradeable", "value": "yes" } ] },
+    "followup": "MISSION_CABIN_CHEMIST_GET_500_GAS",
+    "has_generic_rewards": true,
+    "dialogue": {
+      "describe": "I need 15 liters of hydrochloric acid.",
+      "offer": "The last thing I really need to get going is hydrochloric acid.  It's one of those chemicals that's just perfect for so many things.  An acidifying reagent, and one of the best.  With a large supply of hydrochloric acid, you and I are only a few steps removed from a stable source of antiseptic, fungicide, and even some light explosives!  As the only apparent health authority left, I do have to warn you not to get it on your skin, though.  Find this for me and I'll sell you whatever I can make.",
+      "advice": "You might find large quantities in a warehouse somewhere, but it often got sold as a household cleaner, did you know that?",
+      "accepted": "I'll be here when you get back.  Good luck!",
+      "rejected": "Well, someone's got to do it.",
+      "inquire": "Do you have the hydrochloric acid?",
+      "success": "Wonderful!  I'm sure this will be quite helpful.",
+      "success_lie": "Thanks for trying… I guess.",
+      "failure": "That's unfortunate.  I guess I'll have to find it myself."
+    }
+  }
+]
