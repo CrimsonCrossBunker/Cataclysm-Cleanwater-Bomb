@@ -14,6 +14,7 @@
 #include "generic_factory.h"
 #include "item.h"
 #include "lua_platform_content.h"
+#include "lua_platform_runtime_internal.h"
 #include "rng.h"
 
 static const std::map<std::string, std::function<void( mission *, Character & )>>
@@ -206,7 +207,18 @@ bool mission_type::load( const JsonObject &jo, const std::string_view src )
     optional( jo, was_loaded, "monster_kill_goal", monster_kill_goal, -1 );
     optional( jo, was_loaded, "destination", target_id );
 
-    // FIXME: reader for condition
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    if( const auto callback = jo.get_member_opt( "//ccb_lua_mission_goal" ) ) {
+        if( callback->has_source_file() ) {
+            callback->throw_error( "mission goal callbacks are reserved for ordered Lua definitions" );
+        }
+        goal_condition = [owner = std::string( src ), mission_id = id.str(),
+                          handler = callback->get_string()]( const const_dialogue & d ) {
+            return cata::lua_platform::detail::invoke_mission_condition_handler(
+                       owner, mission_id, "goal", handler, d ).value_or( false );
+        };
+    }
+#endif
     if( jo.has_member( "goal_condition" ) ) {
         read_condition( jo, "goal_condition", goal_condition, true );
     }

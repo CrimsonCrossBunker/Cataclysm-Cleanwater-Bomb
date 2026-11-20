@@ -8249,6 +8249,7 @@ function CcbPlatformContent.define_profession(options) end
 ---@field difficulty? integer
 ---@field value? integer
 ---@field goal? string Native mission goal enum.
+---@field complete_when? string Registered predicate for MGOAL_CONDITION. Receives the speaker and interlocutor of the native goal check.
 ---@field origins? string[] Native mission origin enums.
 ---@field urgent? boolean
 ---@field generic_rewards? boolean
@@ -18249,6 +18250,12 @@ local CcbMonstersApi = {}
 ---@param ids? GameId[] Dense array of at most 256 registered GameId<monster> values. Nil or empty matches all.
 ---@return CcbNearbyMonstersResult result
 function CcbMonstersApi.nearby(origin, radius, ids) end
+
+---Read a flag from the registered monster type, including after the individual monster's death.
+---@param monster_type GameId GameId<monster>.
+---@param flag GameId GameId<monster_flag>.
+---@return boolean
+function CcbMonstersApi.type_has_flag(monster_type, flag) end
 
 ---Cast a native fake spell from a live monster. With no target, use the caster's tile.
 ---@param monster GameHandle Exact live Monster.

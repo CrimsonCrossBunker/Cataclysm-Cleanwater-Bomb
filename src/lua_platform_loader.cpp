@@ -6028,7 +6028,7 @@ void write_static_mission( JsonOut &json, const sol::table &options )
         { "item", "item" }, { "item_group", "item_group" }, { "required_container", "required_container" },
         { "empty_container", "empty_container" }, { "monster_type", "monster_type" },
         { "monster_species", "monster_species" }, { "destination", "destination" },
-        { "followup", "followup" }, { "place", "place" }
+        { "followup", "followup" }, { "place", "place" }, { "complete_when", "//ccb_lua_mission_goal" }
     } );
     write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
     write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );

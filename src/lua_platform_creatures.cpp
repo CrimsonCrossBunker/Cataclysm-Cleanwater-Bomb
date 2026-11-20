@@ -4724,6 +4724,16 @@ void install_creature_api(
     services["creatures"] = std::move( creatures );
 
     sol::table monsters = lua.create_table();
+    monsters.set_function( "type_has_flag", [require_read]( const script_game_id &type,
+    const script_game_id &flag ) {
+        require_read();
+        if( type.kind() != "monster" || !type.is_valid() ||
+            flag.kind() != "monster_flag" || !flag.is_valid() ) {
+            throw std::invalid_argument(
+                "services.monsters.type_has_flag requires valid monster and monster_flag IDs" );
+        }
+        return mtype_id( type.value() )->has_flag( mon_flag_str_id( flag.value() ) );
+    } );
     monsters.set_function(
         "cast_spell",
         [current_runtime_generation, current_world_generation, require_write](
