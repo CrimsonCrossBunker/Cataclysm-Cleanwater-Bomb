@@ -1,25 +1,20 @@
 [
   {
-    "id": "molotov_lit",
+    "id": "mininuke_act",
+    "copy-from": "mininuke",
     "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "molotov",
-    "description": "A bottle of flammable liquid with a flaming rag stoppered in its neck.  Throwing it will shatter the bottle on impact and ignite a fireball.  Dropping it will set you on fire, so don't do that unless you want to burn to death.",
-    "use_action": { "type": "explosion", "explosion": { "power": 0 }, "effects": [ "MOLOTOV" ] },
-    "//": [
-      "2% chance per turn of going out harmlessly.",
-      "This is necessary to prevent a player from lighting a ton of molotovs and stuffing them in their backpack until pulling them out 6 weeks later."
-    ],
-    "tick_action": [ { "type": "transform", "ammo_scale": 0, "target": "molotov", "chance": 2, "msg": "Your lit Molotov goes out." } ],
-    "light": 15,
-    "flags": [
-      "DANGEROUS",
-      "NO_REPAIR",
-      "WATER_EXTINGUISH",
-      "DESTROY_ON_CHARGE_USE",
-      "SPAWN_ACTIVE",
-      "ACT_ON_RANGED_HIT",
-      "NO_MANUAL_ACTIVATION"
-    ]
+    "subtypes": [ "TOOL", "ARMOR" ],
+    "description": "The nuclear bomb looks no different from the outside, yet you know that the device is armed and counting down.  You should probably get far, far away from it.",
+    "use_action": { "type": "message", "message": "You've already activated the %s.  Get rid of it and clear out!" },
+    "countdown_interval": "60 seconds",
+    "countdown_action": {
+      "type": "explosion",
+      "fields_type": "fd_nuke_gas",
+      "fields_radius": 18,
+      "fields_min_intensity": 3,
+      "fields_max_intensity": 3,
+      "explosion": { "power": 9000000 }
+    },
+    "flags": [ "STURDY", "LEAK_DAM", "BELTED", "RADIOACTIVE", "DANGEROUS", "SPAWN_ACTIVE" ]
   }
 ]

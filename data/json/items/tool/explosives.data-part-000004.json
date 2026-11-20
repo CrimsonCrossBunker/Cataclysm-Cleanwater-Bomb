@@ -1,13 +1,13 @@
 [
   {
-    "id": "grenade_act",
+    "id": "flashbang_act",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
-    "copy-from": "grenade",
-    "description": "This fragmentation grenade is active, and will explode any second now.  Better throw it!",
+    "copy-from": "flashbang",
+    "description": "This flashbang is active, and will soon detonate with intense light and sound, blinding, deafening, and disorienting anyone nearby.  It may be a good idea to throw it!",
     "use_action": { "type": "message", "message": "You've already pulled the pin, try throwing it instead.", "name": "Pull pin" },
-    "countdown_action": { "type": "explosion", "explosion": { "power": 240, "shrapnel": { "casing_mass": 217, "fragment_mass": 0.02 } } },
-    "countdown_interval": "5 seconds",
+    "countdown_interval": "2 seconds",
+    "countdown_action": { "type": "explosion", "do_flashbang": true },
     "flags": [ "DANGEROUS", "SPAWN_ACTIVE" ]
   }
 ]

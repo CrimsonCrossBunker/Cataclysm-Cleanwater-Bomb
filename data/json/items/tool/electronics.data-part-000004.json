@@ -1,0 +1,35 @@
+[
+  {
+    "id": "exodii_wrist_computer_on",
+    "copy-from": "exodii_wrist_computer",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR" ],
+    "name": { "str": "Exodii wrist computer (on)", "str_pl": "Exodii wrist computers (on)" },
+    "looks_like": "exodii_wrist_computer",
+    "turns_per_charge": 360,
+    "revert_to": "exodii_wrist_computer",
+    "tick_action": { "type": "effect_on_conditions", "effect_on_conditions": [ "EOC_exodii_wrist_computer_record_labyrinth_location" ] },
+    "use_action": [
+      { "type": "link_up", "cable_length": 3, "charge_rate": "5 W" },
+      {
+        "type": "transform",
+        "ammo_scale": 0,
+        "menu_text": "Turn off",
+        "msg": "You tap the computer screen and switch off the scanner.",
+        "target": "exodii_wrist_computer"
+      }
+    ],
+    "flags": [
+      "BELTED",
+      "FRAGILE",
+      "ALLOWS_NATURAL_ATTACKS",
+      "OVERSIZE",
+      "NO_UNLOAD",
+      "WATER_BREAK",
+      "ELECTRONIC",
+      "TWO_WAY_RADIO",
+      "TRADER_AVOID",
+      "SPAWN_ACTIVE"
+    ]
+  }
+]

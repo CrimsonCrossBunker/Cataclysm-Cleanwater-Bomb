@@ -1,31 +1,21 @@
 [
   {
-    "id": "whistle_multitool",
+    "id": "spray_can",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "whistle multitool" },
-    "description": "A cheap gadget combining a whistle, thermometer, magnifying glass, and compass.",
-    "weight": "7 g",
-    "volume": "25 ml",
-    "price": "2 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "plastic" ],
+    "name": { "str": "spray can" },
+    "description": "An aerosol spray can filled with paint.  Activate it to make graffiti on the floor.",
+    "weight": "340 g",
+    "volume": "250 ml",
+    "longest_side": "21 cm",
+    "price": "5 USD",
+    "price_postapoc": "10 cent",
+    "material": [ "aluminum" ],
     "symbol": ";",
-    "color": "dark_gray",
-    "use_action": [
-      {
-        "type": "manualnoise",
-        "moves": 100,
-        "noise": 100,
-        "noise_message": "FWEEEET!",
-        "noise_id": "misc",
-        "noise_variant": "whistle",
-        "use_message": "You blow the whistle."
-      },
-      "WEATHER_TOOL",
-      { "type": "firestarter", "moves": 1000, "moves_slow": 25000, "need_sunlight": true }
-    ],
-    "flags": [ "FIRESTARTER", "THERMOMETER" ]
+    "color": "light_gray",
+    "charges_per_use": 1,
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "aerosol_paint": 10 }, "watertight": true, "rigid": true } ],
+    "use_action": [ "SPRAY_CAN", { "type": "paint_vehicle" } ],
+    "flags": [ "WRITE_MESSAGE", "NO_RELOAD", "NO_UNLOAD" ]
   }
 ]

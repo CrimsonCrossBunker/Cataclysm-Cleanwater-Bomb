@@ -1,0 +1,48 @@
+[
+  {
+    "id": "camping_multitool",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "camping multitool" },
+    "//": "The multitool is a bit more of a toolkit than a knife.",
+    "description": "A 'Hideman' brand multi-tool.  This model includes extra options for outdoors use such as a firestarting rod, awl, rescue whistle and a hammering surface.",
+    "looks_like": "multitool",
+    "weight": "212 g",
+    "volume": "70 ml",
+    "longest_side": "12 cm",
+    "price": "40 USD",
+    "price_postapoc": "7 USD",
+    "to_hit": { "grip": "solid", "length": "hand", "surface": "point", "balance": "neutral" },
+    "material": [ "steel" ],
+    "symbol": ";",
+    "color": "light_gray",
+    "initial_charges": 2000,
+    "max_charges": 2000,
+    "charges_per_use": 1,
+    "use_action": [
+      {
+        "type": "manualnoise",
+        "moves": 100,
+        "noise": 100,
+        "noise_message": "FWEEEET!",
+        "noise_id": "misc",
+        "noise_variant": "whistle",
+        "use_message": "You blow the whistle."
+      },
+      { "type": "firestarter", "moves": 1000, "moves_slow": 5000 }
+    ],
+    "qualities": [
+      [ "CUT", 2 ],
+      [ "SAW_W", 1 ],
+      [ "SAW_M", 1 ],
+      [ "WRENCH", 1 ],
+      [ "SCREW", 1 ],
+      [ "BUTCHER", 7 ],
+      [ "HAMMER", 1 ],
+      [ "LEATHER_AWL", 2 ]
+    ],
+    "flags": [ "SHEATH_KNIFE", "ALLOWS_BODY_BLOCK", "FIRESTARTER", "REQUIRES_TINDER" ],
+    "melee_damage": { "bash": 1, "stab": 4 },
+    "weapon_category": [ "SHIVS" ]
+  }
+]

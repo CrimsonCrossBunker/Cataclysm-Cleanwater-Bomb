@@ -1,34 +1,30 @@
 local ccb = require("ccb")
 
--- dimensions from pool_cue as least heavy ingredient from all
+-- Open flame or effectively so. ~5 seconds to transfer flame assuming optimal conditions, a minute at worst.
 ccb.content.define_item {
-    id = "torch",
-    name = ccb.content.plural_text("torch", "torches"),
-    description = ccb.content.text("A large stick wrapped in rags that are soaked with flammable material.  When lit, it produces a fair amount of light.  You'll need a lighter or matches to light it."),
-    mass = "623 g",
-    volume = "1089 ml",
-    length = "122 cm",
-    price = "0 cent",
-    survival_price = "50 cent",
-    accuracy = { grip = "solid", length = "long", surface = "any", balance = "clumsy" },
-    materials = {
-        { id = "wood", portions = 14 },
-        { id = "cotton", portions = 1 },
-        { id = "gasoline", portions = 1 },
+    id = "oil_lamp_on",
+    copy_from = "oil_lamp",
+    name = ccb.content.plural_text("kerosene lamp", "kerosene lamps"),
+    description = ccb.content.text("A kerosene-fueled lamp.  It does not provide much light, but it lasts a long time.  It is turned on.  Use it to turn it off."),
+    revert_to = "oil_lamp",
+    light = 10,
+    flags = {
+        "TRADER_AVOID",
+        "FIRE",
+        "ALLOWS_REMOTE_USE",
+        "WATER_EXTINGUISH",
+        "FIRESTARTER",
+        "SPAWN_ACTIVE",
     },
-    symbol = "/",
-    color = "brown",
-    techniques = { "WBLOCK_1" },
-    flags = { "BURNOUT" },
-    melee_damage = { bash = 8 },
-    tool = { initial_charges = 20, max_charges = 20 },
+    tool = { turns_per_charge = 240 },
     use_actions = {
         {
             kind = "transform",
-            target = "torch_lit",
-            message = ccb.content.text("You light the torch."),
-            need_fire = 1,
-            menu_text = ccb.content.text("Light", "verb"),
+            ammo_scale = 0,
+            target = "oil_lamp",
+            message = ccb.content.text("The lamp is extinguished."),
+            menu_text = ccb.content.text("Turn off"),
         },
+        { kind = "firestarter", moves = 500, slow_moves = 6000 },
     },
 }

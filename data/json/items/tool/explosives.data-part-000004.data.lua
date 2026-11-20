@@ -1,28 +1,28 @@
 local ccb = require("ccb")
 
--- Something this useful doesn't come cheap after the apocalypse
+-- Based off of the M67 grenade
 ccb.content.define_item {
-    id = "grenade_emp",
+    id = "grenade",
     category = "weapons",
-    name = ccb.content.plural_text("EMP grenade", "EMP grenades"),
-    description = ccb.content.text("A grenade that generates an electromagnetic pulse with a low-inductance capacitor bank discharged into a single-loop antenna.  It also produces a mild electric shock cloud.  Use this item to pull the pin and light the fuse, turning it into an active EMP grenade.  You will then have three seconds before it detonates, creating an EMP field that damages robots and drains bionic energy."),
-    mass = "400 g",
-    volume = "270 ml",
-    price = "60 USD",
-    survival_price = "40 USD",
+    name = ccb.content.plural_text("grenade", "grenades"),
+    description = ccb.content.text("A military-grade fragmentation hand grenade.  Use this item to pull the pin and start the fuse.  You will then have five seconds before it explodes; throwing it would be a good idea."),
+    mass = "397 g",
+    volume = "540 ml",
+    length = "110 mm",
+    price = "15 USD",
+    survival_price = "10 USD",
     accuracy = { grip = "none", length = "hand", surface = "any", balance = "uneven" },
     materials = { "steel", "plastic" },
     symbol = "*",
-    looks_like = "EMPbomb",
-    color = "cyan",
-    flags = { "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE", "WATER_BREAK" },
+    color = "green",
+    flags = { "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE" },
     melee_damage = { bash = 2 },
     tool = {},
     use_actions = {
         {
             kind = "transform",
             need_wielding = true,
-            target = "grenade_emp_act",
+            target = "grenade_act",
             message = ccb.content.text("You pull the pin on the %s."),
             menu_text = ccb.content.text("Pull pin"),
         },

@@ -1,85 +1,37 @@
 [
   {
-    "id": "exodii_wrist_computer",
+    "id": "smart_phone_locked",
+    "copy-from": "smart_phone",
     "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "category": "clothing",
-    "symbol": "[",
-    "color": "dark_gray",
-    "name": { "str": "Exodii wrist computer" },
-    "description": "A small device that resembles a wrist-mounted industrial computer.  It's operated with a pressure-activated resistance touchscreen, made annoyingly difficult to use by its thick plastic screen protector.  The alien glyphs on the analog screen mean nothing to you.  Thankfully, Rubik showed you how to use the two-way radio and the \"wobble door scanner\", which can locate entrances to so-called \"labyrinths\".",
-    "price": "12 USD",
-    "price_postapoc": "10 USD",
-    "material": [ "plastic", "aluminum" ],
-    "weight": "750 g",
-    "volume": "750 ml",
-    "charges_per_use": 1,
-    "sided": true,
-    "material_thickness": 0.1,
-    "faults": [ { "fault_group": "electronic_general" } ],
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "smartphone (locked)", "str_pl": "smartphones (locked)" },
+    "description": "A popular, fancy smartphone.  Sadly for you, its previous user used its security features, rendering you unable to use most of its qualities.  You are still able to check the time and use a flashlight.  Runs on a small, rechargeable power cell compatible with a Unified Power Supply.",
+    "etransfer_rate": "0 MB",
+    "e_port": "",
     "use_action": [
-      { "type": "link_up", "cable_length": 3, "charge_rate": "5 W" },
       {
-        "type": "transform",
-        "msg": "You tap the computer screen and switch on the scanner.",
-        "target": "exodii_wrist_computer_on",
+        "target": "smart_phone_locked_flashlight",
+        "msg": "You activate the flashlight app.",
+        "menu_text": "Turn on flashlight",
         "need_charges": 1,
-        "need_charges_msg": "The batteries are dead."
-      }
+        "need_charges_msg": "The batteries are dead.",
+        "type": "transform"
+      },
+      { "type": "link_up", "cable_length": 3, "charge_rate": "20 W" }
     ],
-    "flags": [
-      "BELTED",
-      "FRAGILE",
-      "ALLOWS_NATURAL_ATTACKS",
-      "OVERSIZE",
-      "NO_UNLOAD",
-      "WATER_BREAK",
-      "ELECTRONIC",
-      "TWO_WAY_RADIO",
-      "TRADER_AVOID"
-    ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 734 } } ],
-    "armor": [
+    "faults": [ { "fault_group": "electronic_general" } ],
+    "pocket_data": [
+      { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 56 } },
       {
-        "encumbrance": 10,
-        "coverage": 50,
-        "covers": [ "hand_l", "hand_r" ],
-        "specifically_covers": [ "hand_wrist_l", "hand_wrist_r" ]
+        "forbidden": true,
+        "//": "forbidden, so items still can spawn inside, but are not accessible by default.",
+        "pocket_type": "E_FILE_STORAGE",
+        "rigid": true,
+        "max_contains_volume": "1 ml",
+        "max_contains_weight": "1 g",
+        "weight_multiplier": 0.0,
+        "ememory_max": "256 GB"
       }
-    ],
-    "tool_ammo": "battery"
-  },
-  {
-    "id": "exodii_wrist_computer_on",
-    "copy-from": "exodii_wrist_computer",
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARMOR" ],
-    "name": { "str": "Exodii wrist computer (on)", "str_pl": "Exodii wrist computers (on)" },
-    "looks_like": "exodii_wrist_computer",
-    "turns_per_charge": 360,
-    "revert_to": "exodii_wrist_computer",
-    "tick_action": { "type": "effect_on_conditions", "effect_on_conditions": [ "EOC_exodii_wrist_computer_record_labyrinth_location" ] },
-    "use_action": [
-      { "type": "link_up", "cable_length": 3, "charge_rate": "5 W" },
-      {
-        "type": "transform",
-        "ammo_scale": 0,
-        "menu_text": "Turn off",
-        "msg": "You tap the computer screen and switch off the scanner.",
-        "target": "exodii_wrist_computer"
-      }
-    ],
-    "flags": [
-      "BELTED",
-      "FRAGILE",
-      "ALLOWS_NATURAL_ATTACKS",
-      "OVERSIZE",
-      "NO_UNLOAD",
-      "WATER_BREAK",
-      "ELECTRONIC",
-      "TWO_WAY_RADIO",
-      "TRADER_AVOID",
-      "SPAWN_ACTIVE"
     ]
   }
 ]

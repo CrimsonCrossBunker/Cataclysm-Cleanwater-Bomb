@@ -1,30 +1,33 @@
 local ccb = require("ccb")
 
--- Based on the M84 stun grenade
 ccb.content.define_item {
-    id = "flashbang",
-    category = "weapons",
-    name = ccb.content.plural_text("flashbang", "flashbangs"),
-    description = ccb.content.text("A military police-style flashbang.  Use this item to pull the pin and start the fuse.  You will then have two seconds before it detonates with intense light and sound, blinding, deafening, and disorienting anyone nearby."),
-    mass = "425 g",
-    volume = "207 ml",
-    length = "141 mm",
-    price = "20 USD",
-    survival_price = "2 USD 50 cent",
-    accuracy = { grip = "none", length = "hand", surface = "any", balance = "uneven" },
-    materials = { "steel", "plastic" },
-    symbol = "*",
-    color = "dark_gray",
-    flags = { "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE", "CYLINDER_GRENADE" },
-    melee_damage = { bash = 1 },
+    id = "firecracker_act",
+    copy_from = "firecracker",
+    description = ccb.content.text("A firecracker that has been lit; the fuse is hissing.  Throw it quickly before it explodes."),
+    flags = { "DANGEROUS", "SPAWN_ACTIVE" },
     tool = {},
     use_actions = {
         {
-            kind = "transform",
-            need_wielding = true,
-            target = "flashbang_act",
-            message = ccb.content.text("You pull the pin on the %s."),
-            menu_text = ccb.content.text("Pull pin"),
+            kind = "message",
+            message = ccb.content.text("You've already lit the fuse, try throwing it instead."),
+            menu_text = ccb.content.text_without_extraction("Light up"),
         },
     },
+    tick_actions = {
+        {
+            kind = "sound",
+            message = ccb.content.text("ssss…"),
+            volume = 0,
+            sound_id = "misc",
+            sound_variant = "lit_fuse",
+        },
+    },
+    countdown_action = {
+        kind = "sound",
+        message = ccb.content.text_without_extraction("Bang!"),
+        volume = 20,
+        sound_id = "explosion",
+        sound_variant = "small",
+    },
+    countdown_interval = "2 seconds",
 }
