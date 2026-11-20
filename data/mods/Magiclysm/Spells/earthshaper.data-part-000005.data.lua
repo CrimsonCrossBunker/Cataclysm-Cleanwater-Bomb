@@ -1,22 +1,19 @@
 local ccb = require("ccb")
 
+-- NO_I18N
+-- NO_I18N
 ccb.content.define_spell {
-    id = "earthshaper_harden_earth",
-    name = ccb.content.text("Harden Earth"),
-    description = ccb.content.text("Compress dirt together so it becomes as hard as rock.  A great way to turn makeshift barricades into a fortress."),
-    valid_targets = { "hostile", "ally", "ground", "self" },
-    flags = { "TRANSFORMATION_SPELL", "SOMATIC", "VERBAL" },
-    spell_class = "EARTHSHAPER",
-    difficulty = 4,
+    id = "eshaper_impalement_moves",
+    name = ccb.content.text_without_extraction("Impalement Moves Removing"),
+    description = ccb.content.text_without_extraction("Delete some random amount of moves from monster.  You can see it only in debug mode."),
+    valid_targets = { "hostile" },
+    flags = { "EVOCATION_SPELL", "SILENT", "RANDOM_DAMAGE", "NO_PROJECTILE", "NO_EXPLOSION_SFX" },
+    effect = "mod_moves",
+    shape = "blast",
     max_level = 20,
-    effect = "ter_transform",
-    effect_data = "ter_earthshaper_harden_earth",
-    extra_spells = { { spell = "eoc_transformation_setup", self = true } },
-    shape = "line",
-    min_range = 2,
-    max_range = 20,
-    range_increment = 1,
-    magic_type = "magiclysm_transformation_magic",
-    base_energy_cost = 200,
-    base_casting_time = 1500,
+    min_aoe = 1,
+    max_aoe = 7,
+    aoe_increment = 0.3,
+    min_damage = -1000,
+    max_damage = -1,
 }

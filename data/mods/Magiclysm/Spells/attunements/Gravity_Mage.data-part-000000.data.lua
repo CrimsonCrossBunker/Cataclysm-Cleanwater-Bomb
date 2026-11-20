@@ -1,0 +1,87 @@
+local ccb = require("ccb")
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "gravitymage_graviton_damage",
+    name = ccb.content.text_without_extraction("Graviton Polarization Damage"),
+    description = ccb.content.text_without_extraction("Handles the damage part of Graviton Polarization - if you see this, something went wrong."),
+    valid_targets = { "self", "ally", "hostile", "ground" },
+    effect = "attack",
+    shape = "blast",
+    max_level = 35,
+    min_damage = { handler = "scaled_gravitymage_graviton_damage_min_damage", fallback = 10.0 },
+    max_damage = { handler = "scaled_gravitymage_graviton_damage_max_damage", fallback = 17.0 },
+    damage_type = "gravity",
+    min_aoe = 2,
+    max_aoe = 7,
+    aoe_increment = 0.2,
+    min_range = 5,
+    max_range = 17,
+    range_increment = 0.5,
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "LOUD", "SPLIT_DAMAGE" },
+}
+
+ccb.content.define_spell {
+    id = "gravitymage_graviton",
+    spell_class = "GRAVITY_MAGE",
+    name = ccb.content.text("Graviton Polarization"),
+    description = ccb.content.text("Changes and amplifies gravitational pull towards a point you choose, even through walls.  Pulls in items and deals bashing damage in its center."),
+    valid_targets = { "self", "ally", "hostile", "ground", "item", "field" },
+    effect = "area_pull",
+    shape = "blast",
+    base_casting_time = 600,
+    base_energy_cost = 450,
+    magic_type = "magiclysm_evocation_magic",
+    difficulty = 10,
+    max_level = 35,
+    min_damage = { handler = "scaled_gravitymage_graviton_damage_min_damage", fallback = 10.0 },
+    max_damage = { handler = "scaled_gravitymage_graviton_damage_max_damage", fallback = 17.0 },
+    damage_type = "bash",
+    min_aoe = 4,
+    max_aoe = 9,
+    aoe_increment = 0.2,
+    min_range = 5,
+    max_range = 17,
+    range_increment = 0.5,
+    extra_spells = {
+        { spell = "gravitymage_graviton_damage" },
+        { spell = "gravitymage_graviton_centerdamage" },
+        { spell = "eoc_evocation_setup", self = true },
+    },
+    flags = {
+        "EVOCATION_SPELL",
+        "SOMATIC",
+        "VERBAL",
+        "RANDOM_DAMAGE",
+        "CONCENTRATE",
+        "NO_PROJECTILE",
+        "IGNORE_WALLS",
+        "LOUD",
+        "MUST_HAVE_CLASS_TO_LEARN",
+        "SPLIT_DAMAGE",
+    },
+    sound_description = ccb.content.text("a crack"),
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "gravitymage_graviton_centerdamage",
+    name = ccb.content.text_without_extraction("Graviton Polarization Center Damage"),
+    description = ccb.content.text_without_extraction("Handles damage in the extreme center of the Graviton."),
+    valid_targets = { "self", "ally", "hostile", "ground" },
+    effect = "attack",
+    shape = "blast",
+    max_level = 35,
+    min_damage = { handler = "scaled_gravitymage_graviton_centerdamage_min_damage", fallback = 14.0 },
+    max_damage = { handler = "scaled_gravitymage_graviton_centerdamage_max_damage", fallback = 26.0 },
+    damage_type = "gravity",
+    min_aoe = 0,
+    max_aoe = 2,
+    aoe_increment = 0.06,
+    min_range = 5,
+    max_range = 17,
+    range_increment = 0.5,
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "LOUD", "SPLIT_DAMAGE" },
+}

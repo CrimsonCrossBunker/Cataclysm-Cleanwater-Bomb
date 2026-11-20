@@ -94,23 +94,5 @@
       { "u_lose_trait": "MAG_STAG_BEETLE_BOND" },
       { "u_message": "Your bond with the stag beetle fades.  Another can answer the call now.", "type": "good" }
     ]
-  },
-  {
-    "id": "mag_summon_mushrooms",
-    "type": "SPELL",
-    "name": { "str": "Summon mushrooms", "//~": "NO_I18N" },
-    "description": { "str": "Summons some mushrooms, extra effect summons some morels", "//~": "NO_I18N" },
-    "valid_targets": [ "self" ],
-    "flags": [ "PERMANENT", "NO_LEGS", "NO_EXPLOSION_SFX", "NO_PROJECTILE", "SPAWN_GROUP", "RANDOM_DAMAGE" ],
-    "difficulty": 0,
-    "min_damage": { "math": [ "(u_spell_level('mag_summon_mushrooms')) + 3" ] },
-    "max_damage": { "math": [ "(u_spell_level('mag_summon_mushrooms')) + 8" ] },
-    "effect": "spawn_item",
-    "effect_str": "mushroom_collection",
-    "shape": "blast",
-    "base_energy_cost": 0,
-    "final_energy_cost": 0,
-    "base_casting_time": 0,
-    "final_casting_time": 0
   }
 ]

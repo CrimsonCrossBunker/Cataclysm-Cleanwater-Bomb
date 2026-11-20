@@ -1,0 +1,28 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "animist_do_psionic_damage_to_head",
+    name = ccb.content.text("Mind Crush"),
+    description = ccb.content.text("Directly assault the target's spirit, bypassing any physical protections they have."),
+    valid_targets = { "hostile" },
+    flags = { "EVOCATION_SPELL", "CONCENTRATE", "SILENT", "RANDOM_DAMAGE", "RANDOM_DURATION", "NO_LEGS" },
+    max_level = 15,
+    spell_class = "ANIMIST",
+    effect = "attack",
+    effect_data = "stunned",
+    damage_type = "psionic",
+    affected_bodyparts = { "head" },
+    extra_spells = { { spell = "eoc_evocation_setup", self = true } },
+    shape = "blast",
+    difficulty = 5,
+    min_damage = { handler = "scaled_animist_do_psionic_damage_to_head_min_damage", fallback = 10.0 },
+    max_damage = { handler = "scaled_animist_do_psionic_damage_to_head_max_damage", fallback = 25.0 },
+    min_duration = { handler = "scaled_animist_do_psionic_damage_to_head_min_duration", fallback = 150.0 },
+    max_duration = { handler = "scaled_animist_do_psionic_damage_to_head_max_duration", fallback = 250.0 },
+    min_range = 3,
+    max_range = 15,
+    range_increment = 0.9,
+    magic_type = "magiclysm_evocation_magic",
+    base_casting_time = 75,
+    base_energy_cost = 350,
+}

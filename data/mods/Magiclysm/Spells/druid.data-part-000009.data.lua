@@ -1,0 +1,27 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "druid_harvest_hunter",
+    name = ccb.content.text("Harvest of the Hunter"),
+    description = ccb.content.text("This spell creates a grouping of odd-looking but functional arrows out of forest detritus."),
+    valid_targets = { "none" },
+    flags = { "TRANSFORMATION_SPELL", "RANDOM_DAMAGE", "CONCENTRATE", "NO_HANDS", "VERBAL", "NO_LEGS" },
+    spell_class = "DRUID",
+    difficulty = 4,
+    max_level = 15,
+    effect = "spawn_item",
+    effect_data = "arrow_druid",
+    components = "spell_components_druid_arrow",
+    shape = "blast",
+    min_damage = { handler = "scaled_druid_harvest_hunter_min_damage", fallback = 2.0 },
+    max_damage = { handler = "scaled_druid_harvest_hunter_max_damage", fallback = 6.0 },
+    base_casting_time = 6000,
+    final_casting_time = 600,
+    casting_time_increment = -360,
+    magic_type = "magiclysm_transformation_magic",
+    base_energy_cost = 250,
+    min_duration = 180000,
+    max_duration = 1440000,
+    duration_increment = 84000,
+    extra_spells = { { spell = "eoc_transformation_setup", self = true } },
+}

@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "manatouched_seeker_bolts",
+    name = ccb.content.text("Seeker Bolts"),
+    effect = "attack",
+    shape = "blast",
+    description = ccb.content.text("Fires bolts of mana from your fingertips that home in on randomly selected targets in range."),
+    valid_targets = { "hostile" },
+    spell_class = "MANA_SEEKER_BOLTS",
+    min_damage = { handler = "scaled_manatouched_seeker_bolts_min_damage", fallback = 1.0 },
+    max_damage = { handler = "scaled_manatouched_seeker_bolts_max_damage", fallback = 3.0 },
+    max_level = 12,
+    min_range = 6,
+    max_range = 12,
+    range_increment = 0.5,
+    magic_type = "magiclysm_channeling_magic",
+    base_energy_cost = 250,
+    base_casting_time = 85,
+    final_casting_time = 85,
+    damage_type = "nether",
+    sound_description = ccb.content.text("a zing"),
+    flags = {
+        "CHANNELING_SPELL",
+        "RANDOM_DAMAGE",
+        "RANDOM_TARGET",
+        "SOMATIC",
+        "NO_LEGS",
+        "MUST_HAVE_CLASS_TO_LEARN",
+    },
+    extra_spells = {
+        { spell = "magic_missile" },
+        { spell = "magic_missile" },
+        { spell = "magic_missile" },
+        { spell = "magic_missile" },
+    },
+}

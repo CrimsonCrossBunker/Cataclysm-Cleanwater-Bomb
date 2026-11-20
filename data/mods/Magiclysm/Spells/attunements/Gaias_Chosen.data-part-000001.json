@@ -1,0 +1,20 @@
+[
+  {
+    "id": "dust_reborn",
+    "type": "SPELL",
+    "name": "Dust Reborn",
+    "description": "Create a cast of your own body and soul, hidden inside the earth's lines.  When the times come and your body is close to destruction, you can abandon it, transferring your consciousness into the cast.  But it brings with it a great price, and for your immortality, you pay with temporary bodily weakness.",
+    "valid_targets": [ "self" ],
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_DUST_REBORN_INITIAL",
+    "extra_effects": [ { "id": "eoc_channeling_setup", "hit_self": true } ],
+    "shape": "blast",
+    "base_casting_time": 2160000,
+    "base_energy_cost": 1000,
+    "magic_type": "magiclysm_channeling_magic",
+    "flags": [ "CHANNELING_SPELL", "SOMATIC", "VERBAL", "CONCENTRATE", "MUST_HAVE_CLASS_TO_LEARN" ],
+    "spell_class": "GAIAS_CHOSEN",
+    "difficulty": 0,
+    "max_level": 0
+  }
+]

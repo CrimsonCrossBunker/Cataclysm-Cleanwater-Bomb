@@ -1,9 +1,9 @@
 [
   {
-    "id": "summon_undead_swarm",
+    "id": "summon_undead",
     "type": "SPELL",
-    "name": "Summon Undead Swarm",
-    "description": "A group of undead animals rises from the depths of the earth to fight for you.  The type of undead you summon get deadlier with increasing spell level.",
+    "name": "Summon Undead",
+    "description": "An ethereal-looking undead rises from the depths of the earth to fight for you.  The type of undead you summon get deadlier with increasing spell level.",
     "valid_targets": [ "self" ],
     "min_damage": 1,
     "max_damage": 1,
@@ -11,11 +11,11 @@
     "difficulty": 3,
     "spell_class": "ANIMIST",
     "effect": "effect_on_condition",
-    "effect_str": "EOC_SUMMON_ZOMBIE_SWARM",
-    "components": "spell_components_rune_animist_3",
+    "effect_str": "EOC_SUMMON_ZOMBIE",
+    "components": "spell_components_rune_animist",
     "shape": "blast",
     "magic_type": "magiclysm_conjuration_magic",
-    "base_energy_cost": 600,
+    "base_energy_cost": 400,
     "base_casting_time": 3000,
     "flags": [ "CONJURATION_SPELL", "SOMATIC", "VERBAL", "CONCENTRATE", "CONSUMES_RUNES" ],
     "min_duration": 36000,
@@ -25,18 +25,16 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_SUMMON_ZOMBIE_SWARM",
+    "id": "EOC_SUMMON_ZOMBIE",
     "effect": {
-      "switch": { "math": [ "u_spell_level('summon_undead_swarm')" ] },
+      "switch": { "math": [ "u_spell_level('summon_undead')" ] },
       "cases": [
-        { "case": 0, "effect": { "u_cast_spell": { "id": "summon_zombie_dog" } } },
-        { "case": 5, "effect": { "u_cast_spell": { "id": "summon_dog_skeleton" } } },
-        { "case": 10, "effect": { "u_cast_spell": { "id": "summon_zougar" } } },
-        { "case": 15, "effect": { "u_cast_spell": { "id": "summon_wolf_skeleton" } } },
-        { "case": 20, "effect": { "u_cast_spell": { "id": "summon_dog_zombie_brute" } } },
-        { "case": 25, "effect": { "u_cast_spell": { "id": "summon_dog_skeleton_brute" } } },
-        { "case": 30, "effect": { "u_cast_spell": { "id": "summon_dog_zombie_hulk" } } },
-        { "case": 35, "effect": { "u_cast_spell": { "id": "summon_zougar_hunter" } } }
+        { "case": 0, "effect": { "u_cast_spell": { "id": "summon_zombie" } } },
+        { "case": 7, "effect": { "u_cast_spell": { "id": "summon_tough_zombie" } } },
+        { "case": 14, "effect": { "u_cast_spell": { "id": "summon_zombie_brute" } } },
+        { "case": 21, "effect": { "u_cast_spell": { "id": "summon_skeleton" } } },
+        { "case": 28, "effect": { "u_cast_spell": { "id": "summon_skeleton_brute" } } },
+        { "case": 35, "effect": { "u_cast_spell": { "id": "summon_skeleton_hulk" } } }
       ]
     }
   }

@@ -1,0 +1,25 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "cold_snap",
+    name = ccb.content.text("Cold Snap"),
+    description = ccb.content.text("With a snap of your fingers, the target takes cold damage and freezes in place."),
+    effect = "attack",
+    shape = "blast",
+    damage_type = "cold",
+    spell_class = "TUNDRA_MAGE",
+    max_level = 35,
+    min_damage = { handler = "scaled_cold_snap_min_damage", fallback = 8.0 },
+    max_damage = { handler = "scaled_cold_snap_max_damage", fallback = 14.0 },
+    min_range = 4,
+    max_range = 10,
+    range_increment = 0.2,
+    magic_type = "magiclysm_evocation_magic",
+    base_energy_cost = 100,
+    base_casting_time = 33,
+    difficulty = 7,
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "NO_LEGS", "MUST_HAVE_CLASS_TO_LEARN", "SPLIT_DAMAGE" },
+    sound_description = ccb.content.text("crack"),
+    valid_targets = { "hostile" },
+    extra_spells = { { spell = "cold_snap_freeze" }, { spell = "eoc_evocation_setup", self = true } },
+}

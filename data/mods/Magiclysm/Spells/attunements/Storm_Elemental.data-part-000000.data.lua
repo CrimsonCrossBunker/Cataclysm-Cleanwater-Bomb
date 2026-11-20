@@ -1,0 +1,108 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "storm_chain_master",
+    name = ccb.content.text("Storm Chain"),
+    description = ccb.content.text("You touch an unwilling subject and lightning dances from you to multiple nearby enemies."),
+    effect = "attack",
+    shape = "blast",
+    damage_type = "electric",
+    spell_class = "STORM_ELEMENTAL",
+    max_level = 35,
+    min_damage = { handler = "scaled_storm_chain_master_min_damage", fallback = 1.0 },
+    max_damage = { handler = "scaled_storm_chain_master_max_damage", fallback = 6.0 },
+    min_range = 1,
+    max_range = 1,
+    magic_type = "magiclysm_evocation_magic",
+    base_energy_cost = 500,
+    base_casting_time = 100,
+    difficulty = 4,
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "LOUD", "SOMATIC", "NO_LEGS", "MUST_HAVE_CLASS_TO_LEARN" },
+    sound_description = ccb.content.text("a crackle"),
+    valid_targets = { "hostile" },
+    extra_spells = {
+        { spell = "storm_chain_1" },
+        { spell = "storm_chain_1" },
+        { spell = "eoc_evocation_setup", self = true },
+    },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "storm_chain_1",
+    name = ccb.content.text_without_extraction("Storm Chain 1"),
+    description = ccb.content.text_without_extraction("#1 in the storm chain series of effects."),
+    effect = "attack",
+    shape = "line",
+    damage_type = "electric",
+    field = "fd_electricity",
+    min_field_intensity = 2,
+    max_field_intensity = 2,
+    field_chance = 1,
+    max_level = 35,
+    min_damage = { handler = "scaled_storm_chain_master_min_damage", fallback = 1.0 },
+    max_damage = { handler = "scaled_storm_chain_master_max_damage", fallback = 6.0 },
+    min_range = 13,
+    range_increment = 0.2,
+    max_range = 20,
+    min_aoe = 1,
+    max_aoe = 1,
+    sound_description = ccb.content.text("a crackle"),
+    valid_targets = { "hostile", "ground" },
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "LOUD", "RANDOM_TARGET", "RANDOM_CRITTER" },
+    extra_spells = { { spell = "storm_chain_2" }, { spell = "storm_chain_2" } },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "storm_chain_2",
+    name = ccb.content.text_without_extraction("Storm Chain 2"),
+    description = ccb.content.text_without_extraction("#2 in the storm chain series of effects."),
+    effect = "attack",
+    shape = "line",
+    damage_type = "electric",
+    field = "fd_electricity",
+    min_field_intensity = 2,
+    max_field_intensity = 2,
+    field_chance = 1,
+    max_level = 35,
+    min_damage = { handler = "scaled_storm_chain_master_min_damage", fallback = 1.0 },
+    max_damage = { handler = "scaled_storm_chain_master_max_damage", fallback = 6.0 },
+    min_range = 7,
+    range_increment = 0.2,
+    max_range = 14,
+    min_aoe = 1,
+    max_aoe = 1,
+    sound_description = ccb.content.text("a crackle"),
+    valid_targets = { "hostile", "ground" },
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "LOUD", "RANDOM_TARGET", "RANDOM_CRITTER" },
+    extra_spells = { { spell = "storm_chain_3" }, { spell = "storm_chain_3" } },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "storm_chain_3",
+    name = ccb.content.text_without_extraction("Storm Chain 3"),
+    description = ccb.content.text_without_extraction("#3 in the storm chain series of effects."),
+    effect = "attack",
+    shape = "line",
+    damage_type = "electric",
+    field = "fd_electricity",
+    min_field_intensity = 2,
+    max_field_intensity = 2,
+    field_chance = 1,
+    max_level = 35,
+    min_damage = { handler = "scaled_storm_chain_master_min_damage", fallback = 1.0 },
+    max_damage = { handler = "scaled_storm_chain_master_max_damage", fallback = 6.0 },
+    min_range = 0,
+    range_increment = 0.2,
+    max_range = 7,
+    min_aoe = 1,
+    max_aoe = 1,
+    sound_description = ccb.content.text("a crackle"),
+    valid_targets = { "hostile", "ground" },
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "LOUD", "RANDOM_TARGET", "RANDOM_CRITTER" },
+}

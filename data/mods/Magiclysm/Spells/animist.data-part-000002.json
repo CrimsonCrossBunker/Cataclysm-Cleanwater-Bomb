@@ -1,38 +1,43 @@
 [
   {
-    "id": "necrotic_gaze",
+    "id": "summon_undead_swarm",
     "type": "SPELL",
-    "name": "Necrotic Gaze",
-    "description": "Using the power of blood contained within a rune, you imbue necrotic energy into your gaze, damaging the target you look at.",
-    "valid_targets": [ "hostile" ],
-    "effect": "attack",
-    "shape": "line",
-    "spell_class": "ANIMIST",
-    "magic_type": "magiclysm_evocation_magic",
-    "flags": [
-      "EVOCATION_SPELL",
-      "NO_LEGS",
-      "CONCENTRATE",
-      "RANDOM_DAMAGE",
-      "SOMATIC",
-      "NO_PROJECTILE",
-      "NO_HANDS",
-      "CONSUMES_RUNES",
-      "SPLIT_DAMAGE"
-    ],
-    "components": "spell_components_rune_animist",
-    "min_damage": { "math": [ "(u_spell_level('necrotic_gaze') * 2) + 4" ] },
-    "max_damage": { "math": [ "(u_spell_level('necrotic_gaze') * 5) + 8" ] },
-    "min_range": 3,
-    "max_range": 5,
-    "range_increment": 0.1,
-    "max_level": 25,
+    "name": "Summon Undead Swarm",
+    "description": "A group of undead animals rises from the depths of the earth to fight for you.  The type of undead you summon get deadlier with increasing spell level.",
+    "valid_targets": [ "self" ],
+    "min_damage": 1,
+    "max_damage": 1,
+    "max_level": 35,
     "difficulty": 3,
-    "base_casting_time": 100,
-    "min_aoe": 1,
-    "max_aoe": 3,
-    "aoe_increment": 0.1,
-    "extra_effects": [ { "id": "eoc_evocation_setup", "hit_self": true } ],
-    "damage_type": "necrotic"
+    "spell_class": "ANIMIST",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_SUMMON_ZOMBIE_SWARM",
+    "components": "spell_components_rune_animist_3",
+    "shape": "blast",
+    "magic_type": "magiclysm_conjuration_magic",
+    "base_energy_cost": 600,
+    "base_casting_time": 3000,
+    "flags": [ "CONJURATION_SPELL", "SOMATIC", "VERBAL", "CONCENTRATE", "CONSUMES_RUNES" ],
+    "min_duration": 36000,
+    "max_duration": 1080000,
+    "duration_increment": 36000,
+    "extra_effects": [ { "id": "eoc_summon_setup", "hit_self": true } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_SUMMON_ZOMBIE_SWARM",
+    "effect": {
+      "switch": { "math": [ "u_spell_level('summon_undead_swarm')" ] },
+      "cases": [
+        { "case": 0, "effect": { "u_cast_spell": { "id": "summon_zombie_dog" } } },
+        { "case": 5, "effect": { "u_cast_spell": { "id": "summon_dog_skeleton" } } },
+        { "case": 10, "effect": { "u_cast_spell": { "id": "summon_zougar" } } },
+        { "case": 15, "effect": { "u_cast_spell": { "id": "summon_wolf_skeleton" } } },
+        { "case": 20, "effect": { "u_cast_spell": { "id": "summon_dog_zombie_brute" } } },
+        { "case": 25, "effect": { "u_cast_spell": { "id": "summon_dog_skeleton_brute" } } },
+        { "case": 30, "effect": { "u_cast_spell": { "id": "summon_dog_zombie_hulk" } } },
+        { "case": 35, "effect": { "u_cast_spell": { "id": "summon_zougar_hunter" } } }
+      ]
+    }
   }
 ]

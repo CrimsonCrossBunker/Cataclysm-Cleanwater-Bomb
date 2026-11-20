@@ -1,33 +1,34 @@
 [
   {
-    "id": "classless_clean_clothing_and_self",
+    "id": "create_atomic_light",
     "type": "SPELL",
-    "name": "Freshen Up",
-    "description": "Undoubtedly the single most common spell in the world before the Cataclysm, Freshen Up cleans your teeth, sweetens your breath, removes stains and sweat from your clothes, exfoliates you, and gives volume back to your hair.",
+    "name": "Orb of Light",
+    "description": "Creates an orb of magical light that floats nearby and lets out a soft glow.  Taking any damage will disrupt the enchantment.  Recast to cancel.",
     "valid_targets": [ "self" ],
-    "flags": [ "CHANNELING_SPELL", "CONCENTRATE", "VERBAL", "SOMATIC" ],
     "effect": "effect_on_condition",
-    "effect_str": "EOC_CLASSLESS_CLEAN_CLOTHING_AND_SELF",
-    "components": "spell_components_freshen_up",
+    "effect_str": "EOC_CLASSLESS_CREATE_ORB_OF_LIGHT",
     "shape": "blast",
-    "difficulty": 2,
-    "max_level": 15,
-    "magic_type": "magiclysm_channeling_magic",
-    "base_energy_cost": 75,
-    "extra_effects": [ { "id": "eoc_channeling_setup", "hit_self": true } ],
-    "base_casting_time": 3000
+    "magic_type": "magiclysm_conjuration_magic",
+    "flags": [ "CONJURATION_SPELL", "VERBAL", "NO_LEGS" ],
+    "difficulty": 1,
+    "max_level": 20,
+    "base_casting_time": 1000,
+    "extra_effects": [ { "id": "eoc_summon_setup", "hit_self": true } ],
+    "base_energy_cost": { "math": [ "u_effect_intensity('effect_classless_magic_light') > -1 ? 0 : 200" ] },
+    "min_duration": 100000,
+    "max_duration": 1000000,
+    "duration_increment": 45000
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_CLASSLESS_CLEAN_CLOTHING_AND_SELF",
+    "id": "EOC_CLASSLESS_CREATE_ORB_OF_LIGHT",
+    "condition": { "not": { "u_has_effect": "effect_classless_magic_light" } },
     "effect": [
-      { "u_lose_effect": [ "bile_irritant", "bile_stink", "boomered", "skunk_spray", "wet" ], "target_part": "ALL" },
-      { "u_lose_morale": "morale_bile" },
       {
-        "u_run_inv_eocs": "all",
-        "search_data": [ { "worn_only": true }, { "flags": [ "FILTHY" ] } ],
-        "true_eocs": [ { "id": "EOC_CLASSLESS_CLEAN_CLOTHING_AND_SELF_ITEMS", "effect": [ { "npc_unset_flag": "FILTHY" } ] } ]
+        "u_add_effect": "effect_classless_magic_light",
+        "duration": { "math": [ "( (u_spell_level('create_atomic_light') * 450.00) + 1000.00) * (summoning_proficiency_modifier())" ] }
       }
-    ]
+    ],
+    "false_effect": { "u_lose_effect": "effect_classless_magic_light" }
   }
 ]

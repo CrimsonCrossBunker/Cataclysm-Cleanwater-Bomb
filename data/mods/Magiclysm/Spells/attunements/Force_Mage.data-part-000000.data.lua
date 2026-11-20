@@ -1,38 +1,27 @@
 local ccb = require("ccb")
 
-ccb.content.define_item {
-    id = "force_magical_armor",
-    name = ccb.content.plural_text("Force Shield", "Force Shield"),
-    description = ccb.content.text("A shield of pure force that protects you from most types of physical damage."),
-    mass = "500 mg",
-    volume = "1 ml",
-    accuracy = -10,
-    symbol = "[",
-    color = "brown",
-    materials = { "magical_material" },
-    flags = {
-        "WATERPROOF",
-        "TRADER_AVOID",
-        "SEMITANGIBLE",
-        "OVERSIZE",
-        "AURA",
-        "UNBREAKABLE",
-        "ALLOWS_NATURAL_ATTACKS",
-    },
-    max_worn = 1,
-    subtype_order = { "armor", "artifact" },
-    armor = {
-        environmental_protection = 2,
-        portions = {
-            {
-                encumbrance = 0,
-                coverage = 100,
-                covers = {
-                    "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l",
-                    "foot_r", "mouth", "eyes",
-                },
-            },
-        },
-    },
-    artifact = { enchantments = { "ITEM_ENCH_Magiclysm_force_magical_armor_0" } },
+-- id retained for legacy reasons
+ccb.content.define_spell {
+    id = "force_blade",
+    name = ccb.content.text("Storm of Force"),
+    description = ccb.content.text("You shoot blasts of of concentrated force in a straight line, cutting everything in their path."),
+    valid_targets = { "hostile", "ground", "ally" },
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "SOMATIC", "NO_LEGS", "MUST_HAVE_CLASS_TO_LEARN" },
+    extra_spells = { { spell = "eoc_evocation_setup", self = true } },
+    effect = "attack",
+    shape = "line",
+    spell_class = "FORCE_MAGE",
+    magic_type = "magiclysm_evocation_magic",
+    base_casting_time = 250,
+    base_energy_cost = 350,
+    difficulty = 4,
+    max_level = 35,
+    min_damage = { handler = "scaled_force_blade_min_damage", fallback = 31.0 },
+    max_damage = { handler = "scaled_force_blade_max_damage", fallback = 49.0 },
+    damage_type = "cut",
+    min_aoe = 1,
+    max_aoe = 1,
+    min_range = 5,
+    max_range = 15,
+    range_increment = 1,
 }
