@@ -241,12 +241,16 @@ bool mapbuffer::save_and_evict_omt_column( const tripoint_abs_omt &p, const map 
             const cata_path dirname = find_dirname( om_addr );
             save_quad( dirname, dirname / quad_file_name( om_addr ),
                        om_addr, submaps_to_delete, true );
+            if( storage().compressed() ) {
+                cata_path zzip_name = dirname;
+                zzip_name += zzip_suffix;
+                zzip_listing_cache.erase( zzip_name.get_unrelative_path().generic_u8string() );
+            }
         }
     }
     for( const tripoint_abs_sm &addr : submaps_to_delete ) {
         remove_submap( addr );
     }
-    zzip_listing_cache.clear();
     return true;
 }
 

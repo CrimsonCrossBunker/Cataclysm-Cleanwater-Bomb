@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <deque>
 #include <filesystem>
 #include <exception>
 #include <fstream>
@@ -17,6 +16,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <limits>
+#include <list>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -129,12 +129,20 @@ constexpr int MAX_DRAW_INSTANCES = NEAR_DRAW_INSTANCES + FAR_LOD_MAX_INSTANCES;
 // terrain ids needed by the structural LOD, with bounded LRU storage.
 constexpr size_t FAR_TERRAIN_CACHE_MAX_SUBMAPS = 32768;
 constexpr size_t FAR_SOURCE_WORK_PER_FRAME = 4;
+constexpr double FAR_SOURCE_TIME_BUDGET_MS = 2.0;
 
+using distant_lru_list = std::list<tripoint_abs_sm>;
 struct distant_terrain_snapshot {
-    std::array<ter_id, SEEX * SEEY> terrain{};
+    std::vector<ter_id> terrain;
+    ter_id uniform_terrain;
     std::pair<uint64_t, uint64_t> geometry_stamp{};
+    distant_lru_list::iterator lru_order;
     uint64_t last_used = 0;
     bool open_air = false;
+
+    ter_id terrain_at( const int x, const int y ) const {
+        return terrain.empty() ? uniform_terrain : terrain[y * SEEX + x];
+    }
 };
 // float3 pos + float3 scale + float2 uv0 + float2 uv1 + float4 color + float flags + float pad
 constexpr int INSTANCE_STRIDE = 64;
@@ -728,6 +736,9 @@ struct frame_profile {
     uint64_t far_los_calls = 0;
     uint64_t far_los_hits = 0;
     uint64_t far_instances = 0;
+    uint64_t far_pending = 0;
+    uint64_t far_cache_size = 0;
+    double far_source_ms = 0.0;
     double far_ms = 0.0;
     double memory_ms = 0.0;
     double gather_ms = 0.0;
@@ -757,6 +768,9 @@ struct frame_profile {
         far_los_calls += other.far_los_calls;
         far_los_hits += other.far_los_hits;
         far_instances += other.far_instances;
+        far_pending += other.far_pending;
+        far_cache_size += other.far_cache_size;
+        far_source_ms += other.far_source_ms;
         far_ms += other.far_ms;
         memory_ms += other.memory_ms;
         gather_ms += other.gather_ms;
@@ -816,7 +830,10 @@ void publish_profile( const frame_profile &frame )
         << " far_tiles=" << avg( total.far_tiles )
         << " far_los=" << avg( total.far_los_calls )
         << " far_los_hits=" << avg( total.far_los_hits )
-        << " far_instances=" << avg( total.far_instances );
+        << " far_instances=" << avg( total.far_instances )
+        << " far_source=" << avg( total.far_source_ms )
+        << "ms far_queue=" << avg( total.far_pending )
+        << " far_cache=" << avg( total.far_cache_size );
     write_status( out.str() );
     total = frame_profile{};
     frames = 0;
@@ -5341,7 +5358,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         static const WORLD *far_cache_world = nullptr;
         static std::string far_cache_dimension;
         static std::unordered_map<tripoint_abs_sm, distant_terrain_snapshot> far_cache;
-        static std::deque<tripoint_abs_sm> far_pending;
+        static distant_lru_list far_lru;
+        static std::list<tripoint_abs_sm> far_pending;
         static std::unordered_set<tripoint_abs_sm> far_pending_set;
         static std::unordered_set<tripoint_abs_sm> far_missing;
         static uint64_t far_missing_revision = 0;
@@ -5351,6 +5369,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             far_cache_world = current_world;
             far_cache_dimension = current_dimension;
             far_cache.clear();
+            far_lru.clear();
             far_pending.clear();
             far_pending_set.clear();
             far_missing.clear();
@@ -5362,49 +5381,68 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             far_missing_revision = buffer_revision;
             far_missing.clear();
         }
+        auto touch_snapshot = [&]( auto entry ) {
+            entry->second.last_used = far_frame;
+            far_lru.splice( far_lru.end(), far_lru, entry->second.lru_order );
+        };
         auto capture_snapshot = [&]( const tripoint_abs_sm & p,
         const submap & sm ) -> const distant_terrain_snapshot * {
             auto existing = far_cache.find( p );
             const std::pair<uint64_t, uint64_t> stamp = sm.geometry_stamp();
             if( existing != far_cache.end() && existing->second.geometry_stamp == stamp ) {
-                existing->second.last_used = far_frame;
+                touch_snapshot( existing );
                 return &existing->second;
             }
             if( existing == far_cache.end() && far_cache.size() >= FAR_TERRAIN_CACHE_MAX_SUBMAPS ) {
-                const auto oldest = std::min_element( far_cache.begin(), far_cache.end(),
-                []( const auto & a, const auto & b ) {
-                    return a.second.last_used < b.second.last_used;
-                } );
-                if( oldest == far_cache.end() || oldest->second.last_used == far_frame ) {
+                const auto oldest = far_lru.begin();
+                if( oldest == far_lru.end() ) {
                     return nullptr;
                 }
-                far_cache.erase( oldest );
+                const auto cached = far_cache.find( *oldest );
+                if( cached == far_cache.end() || cached->second.last_used == far_frame ) {
+                    return nullptr;
+                }
+                far_cache.erase( cached );
+                far_lru.erase( oldest );
             }
-            distant_terrain_snapshot snapshot;
+            if( existing == far_cache.end() ) {
+                existing = far_cache.try_emplace( p ).first;
+                far_lru.push_back( p );
+                existing->second.lru_order = std::prev( far_lru.end() );
+            }
+            distant_terrain_snapshot &snapshot = existing->second;
             snapshot.geometry_stamp = stamp;
-            snapshot.last_used = far_frame;
+            snapshot.terrain.clear();
+            snapshot.open_air = false;
             if( sm.is_uniform() ) {
-                const ter_id uniform = sm.get_ter( point_sm_ms::zero );
-                snapshot.open_air = uniform && uniform->has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
-            }
-            for( int y = 0; y < SEEY; ++y ) {
-                for( int x = 0; x < SEEX; ++x ) {
-                    snapshot.terrain[y * SEEX + x] = sm.get_ter( point_sm_ms( x, y ) );
+                snapshot.uniform_terrain = sm.get_ter( point_sm_ms::zero );
+                snapshot.open_air = snapshot.uniform_terrain &&
+                                    snapshot.uniform_terrain->has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
+            } else {
+                snapshot.terrain.resize( SEEX * SEEY );
+                for( int y = 0; y < SEEY; ++y ) {
+                    for( int x = 0; x < SEEX; ++x ) {
+                        snapshot.terrain[y * SEEX + x] = sm.get_ter( point_sm_ms( x, y ) );
+                    }
                 }
             }
-            const auto inserted = far_cache.insert_or_assign( p, std::move( snapshot ) );
             far_missing.erase( p );
-            return &inserted.first->second;
+            touch_snapshot( existing );
+            return &snapshot;
         };
         auto snapshot_for = [&]( const tripoint_abs_sm & p ) -> const distant_terrain_snapshot * {
-            const submap *resident = MAPBUFFER.get_submap_if_loaded( p );
             const auto cached = far_cache.find( p );
+            if( cached != far_cache.end() && !here.has_loaded_submap( p ) ) {
+                touch_snapshot( cached );
+                return &cached->second;
+            }
+            const submap *resident = MAPBUFFER.get_submap_if_loaded( p );
             if( resident && ( cached == far_cache.end() ||
                               cached->second.geometry_stamp != resident->geometry_stamp() ) ) {
                 return capture_snapshot( p, *resident );
             }
             if( cached != far_cache.end() ) {
-                cached->second.last_used = far_frame;
+                touch_snapshot( cached );
                 return &cached->second;
             }
             return nullptr;
@@ -5519,7 +5557,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 }
                             }
                             if( gray_visible && snapshot && !uniform_open_air ) {
-                                const ter_id t = snapshot->terrain[ly * SEEX + lx];
+                                const ter_id t = snapshot->terrain_at( lx, ly );
                                 if( t ) {
                                     gather_structure_tile( t.obj(), here.get_bub( abs_p ), d, wz );
                                 }
@@ -5553,8 +5591,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 const point d( abs.x() - center_abs.x(), abs.y() - center_abs.y() );
                 return d.x * d.x + d.y * d.y;
             };
-            std::sort( far_pending.begin(), far_pending.end(),
-            [&]( const tripoint_abs_sm & a, const tripoint_abs_sm & b ) {
+            far_pending.sort( [&]( const tripoint_abs_sm & a, const tripoint_abs_sm & b ) {
                 const int a_distance = queue_distance( a );
                 const int b_distance = queue_distance( b );
                 if( a_distance != b_distance ) {
@@ -5573,8 +5610,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             } );
         }
         size_t source_work = 0;
+        const Uint64 source_begin = profile_ticks( true );
         for( auto next = far_pending.begin();
-             next != far_pending.end() && source_work < FAR_SOURCE_WORK_PER_FRAME; ) {
+             next != far_pending.end() && source_work < FAR_SOURCE_WORK_PER_FRAME &&
+             profile_ms( source_begin, profile_ticks( true ) ) < FAR_SOURCE_TIME_BUDGET_MS; ) {
             const tripoint_abs_sm sm_pos = *next;
             next = far_pending.erase( next );
             far_pending_set.erase( sm_pos );
@@ -5663,6 +5702,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             }
         }
         far_missing_revision = MAPBUFFER.content_revision();
+        g_profile.far_source_ms = profile_ms( source_begin, profile_ticks( true ) );
+        g_profile.far_pending = far_pending.size();
+        g_profile.far_cache_size = far_cache.size();
         g_profile.far_instances = count - far_count_start;
         if( far_profile ) {
             g_profile.far_ms = profile_ms( far_begin, profile_ticks( true ) );
