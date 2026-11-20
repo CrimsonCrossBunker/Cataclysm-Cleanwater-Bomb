@@ -135,17 +135,17 @@
       {
         "text": "How can I join your court?",
         "topic": "TALK_BOANN_JOIN",
-        "condition": { "math": [ "Boann_Quests_Completed < 10" ] }
+        "condition": { "math": [ "Boann_Quests_Completed < 9" ] }
       },
       {
         "text": "Is there anything I can do for you?",
         "topic": "TALK_QUEST_LIST",
-        "condition": { "math": [ "Boann_Quests_Completed < 10" ] }
+        "condition": { "math": [ "Boann_Quests_Completed < 9" ] }
       },
       {
         "text": "I've completed all your quests and am ready to join your court.",
         "topic": "TALK_JOIN_COURT_SUCCESS",
-        "condition": { "math": [ "Boann_Quests_Completed >= 10" ] },
+        "condition": { "math": [ "Boann_Quests_Completed >= 9" ] },
         "effect": { "u_add_effect": "march_baron", "duration": "PERMANENT" }
       },
       {
@@ -317,7 +317,7 @@
       {
         "text": "How can I join your court?",
         "topic": "TALK_BOANN_JOIN",
-        "condition": { "math": [ "Boann_Quests_Completed < 10" ] }
+        "condition": { "math": [ "Boann_Quests_Completed < 9" ] }
       },
       { "text": "Well those of us who aren't faeries have other places to be now.", "topic": "TALK_DONE" }
     ]
@@ -331,7 +331,7 @@
       {
         "text": "How can I join your court?  I want to leave here when you do!",
         "topic": "TALK_BOANN_JOIN",
-        "condition": { "math": [ "Boann_Quests_Completed < 10" ] }
+        "condition": { "math": [ "Boann_Quests_Completed < 9" ] }
       },
       { "text": "I'm going to head on now.", "topic": "TALK_DONE" }
     ]
@@ -344,7 +344,7 @@
       {
         "text": "Please take me away with you.",
         "topic": "TALK_BOANN_JOIN",
-        "condition": { "math": [ "Boann_Quests_Completed < 10" ] }
+        "condition": { "math": [ "Boann_Quests_Completed < 9" ] }
       },
       { "text": "I haven't decided if I believe you or not but I'll see you around.", "topic": "TALK_DONE" }
     ]
@@ -357,7 +357,7 @@
       {
         "text": "Do you have a quest for me now?",
         "topic": "TALK_QUEST_LIST",
-        "condition": { "math": [ "Boann_Quests_Completed < 10" ] }
+        "condition": { "math": [ "Boann_Quests_Completed < 9" ] }
       },
       { "text": "I'm going to head on now.", "topic": "TALK_DONE" }
     ]
@@ -366,7 +366,7 @@
     "type": "talk_topic",
     "id": "TALK_QUEST_LIST",
     "dynamic_line": {
-      "math": [ "Boann_Quests_Accepted == 10" ],
+      "math": [ "Boann_Quests_Accepted == 9" ],
       "yes": "I have no further quests for you.  Once you've completed them all, you'll become part of my court and be allowed to move offworld when you will wish so.",
       "no": {
         "math": [ "Boann_Quests_Completed >= 6" ],
