@@ -219,30 +219,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_CONDITION_ODDS_OF_RANDOM_NO_PREREQ_POWER_INSIGHT",
-    "condition": { "x_in_y_chance": { "x": 1, "y": 3 } },
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_CONDITION_ODDS_OF_RANDOM_TIER_ONE_POWER_INSIGHT",
-    "condition": { "x_in_y_chance": { "x": 1, "y": 20 } },
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_CONDITION_ODDS_OF_RANDOM_TIER_TWO_POWER_INSIGHT",
-    "condition": { "x_in_y_chance": { "x": 1, "y": 40 } },
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_CONDITION_ODDS_OF_RANDOM_TIER_THREE_POWER_INSIGHT",
-    "condition": { "x_in_y_chance": { "x": 1, "y": 80 } },
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_CONDITION_HAS_MIND",
     "//": "we will assume that all npcs have mind, but in case it won't hold for some npc, potential fix would be making it `and[ npc_is_npc, not:{npc_has_flag:foo} ]`",
     "condition": {

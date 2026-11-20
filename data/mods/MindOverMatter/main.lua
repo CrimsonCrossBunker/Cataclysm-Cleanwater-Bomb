@@ -196,6 +196,7 @@ require("contemplation_recipes.vitakinesis_practice")
 require("contemplation_recipes.obsolete_recipes")
 
 require("psychic_research")
+require("psychic_insights")
 require("noetic_detector")
 require("mental_engineering")
 
