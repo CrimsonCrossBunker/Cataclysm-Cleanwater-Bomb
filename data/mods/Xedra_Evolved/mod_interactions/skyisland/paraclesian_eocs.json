@@ -16,30 +16,5 @@
       ]
     },
     "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_ARVORE_FAE_BAN_SLEPT_IN_CITY",
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_IERDE_FAE_BAN_DIDNT_SLEEP_UNDERGROUND",
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_HOMULLUS_FAE_BAN_DIDNT_SLEEP_NEAR_HUMANS",
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_SYLPH_FAE_BAN_DIDNT_SLEEP_OUTSIDE",
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_UNDINE_FAE_BAN_SLEEP_ON_LAND",
-    "effect": [  ]
   }
 ]

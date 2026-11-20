@@ -50,18 +50,10 @@ local function practice_in_forest(character, location, omt)
         or terrain(location.position) == "t_barkfloor"
 end
 
-local settlements = {
-    { "evac_center_13", 3 }, { "evac_center_18", 6 }, { "isolated_road_field_0", 2 },
-    { "horse_farm_isherwood_9", 3 }, { "farm_isherwood_2", 3 }, { "dairy_farm_isherwood_SW", 3 },
-    { "lumbermill_0_0_ocu", 1 }, { "ranch_camp_41", 6 }, { "godco_5", 3 },
-    { "smallscrapyard_ocu", 1 }, { "robofachq_surface_entrance", 4 },
-}
+local near_settlement = require("paraclesian_settlements")
 
 local function practice_near_civilization(_, location, omt)
-    for _, settlement in ipairs(settlements) do
-        if near(omt, settlement[1], settlement[2]) then return true end
-    end
-    return on_sky_island(omt) or near(omt, "FACTION_CAMP_ANY", 2)
+    return near_settlement(omt) or on_sky_island(omt) or near(omt, "FACTION_CAMP_ANY", 2)
         or services.overmap.is_in_city(location.position)
 end
 
@@ -251,3 +243,5 @@ register_draught("arvore", "mutagen_plantkin",
     function() return ccb.services.translate("You drink the Arvore destiny draught.") end)
 register_draught("salamander", "mutagen_flamekin",
     function() return ccb.services.translate("You drink the Salamander destiny draught.") end)
+
+require("paraclesian_fae_bans")

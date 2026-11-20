@@ -244,7 +244,11 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 481> migrated_character_tasks = {{
+const std::array<character_task_migration, 483> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_PARACLESIAN_BROKE_FAE_BAN_PAIN" ),
+          "paraclesian_ban_pain", nullptr },
+        { effect_on_condition_id( "EOC_SYLPH_FAE_BAN_TOO_LONG_UNDERGROUND_APPLY_PENALTY" ),
+          "sylph_underground_ban", nullptr },
         { effect_on_condition_id( "EOC_CHANGELING_TURN_DREAMDROSS_INTO_DREAMSPARKS_PROCESS" ),
           "process_changeling_spark_extraction", nullptr },
         { effect_on_condition_id( "EOC_CHANGELING_CHECK_INVENTORY_FOR_EXTRA_DREAMSPARKS" ),
