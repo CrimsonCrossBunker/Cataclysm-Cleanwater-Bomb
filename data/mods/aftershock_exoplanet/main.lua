@@ -165,3 +165,5 @@ require("mission_outcomes")
 
 require("attack_conditions")
 require("zenit_control")
+
+require("monster_attack_predicates")

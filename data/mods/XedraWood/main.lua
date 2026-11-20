@@ -118,3 +118,5 @@ require("jmath")
 require("factions")
 require("bionics")
 require("damage_types")
+
+require("monster_attack_predicates")

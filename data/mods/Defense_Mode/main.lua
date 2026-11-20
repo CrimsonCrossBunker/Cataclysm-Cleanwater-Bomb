@@ -16,3 +16,5 @@ require("monster_groups")
 
 require("species")
 require("jmath")
+
+require("monster_attack_predicates")

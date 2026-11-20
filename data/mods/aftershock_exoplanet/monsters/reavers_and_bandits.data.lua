@@ -1,0 +1,72 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "afs_mon_reaver",
+    name = ccb.content.plural_text("skittish scavenger", "skittish scavengers"),
+    description = ccb.content.text("A scavenger willing to engage in violence to scavenge your remains.  Will run after a reasonable show of force from their would be victims."),
+    copy_from = "afs_mon_reaver_abstract",
+    aggression = 20,
+    morale = 60,
+    starting_ammo = { afs_10mm_caseless_JHP = 30 },
+    attacks = {
+        {
+            cooldown = 1,
+            move_cost = 150,
+            kind = "gun",
+            gun = {
+                weapon = "afs_seyfert_84K",
+                ammo = "afs_10mm_caseless_JHP",
+                skills = { { id = "gun", level = 1 }, { id = "pistol", level = 1 } },
+                dexterity = 3,
+                ranges = { { minimum = 0, maximum = 14, mode = "DEFAULT" } },
+                lock_npc = true,
+                lock_monster = true,
+                target_moving_vehicles = true,
+                laser_lock = false,
+                targeting_cost = 400,
+                targeting_extension = -1,
+                targeting_sound = ccb.content.text("\"Let's see what loot you are carrying!\""),
+                targeting_volume = 20,
+                empty_sound = ccb.content.text("a chk!"),
+            },
+            when = "monster_attack_armed",
+        },
+    },
+    armor = { bash = 8, cut = 10, bullet = 15 },
+}
+
+ccb.content.define_monster {
+    id = "afs_mon_reaver_rifle",
+    name = ccb.content.plural_text("opportunistic bandit", "opportunistic bandits"),
+    description = ccb.content.text("Armed with a rifle, this bandit seems to feel quite sure of their impending victory."),
+    copy_from = "afs_mon_reaver_abstract",
+    aggression = 30,
+    morale = 60,
+    starting_ammo = { ["afs_7.50mm_caseless"] = 30 },
+    color = "green_yellow",
+    attacks = {
+        {
+            cooldown = 1,
+            move_cost = 150,
+            kind = "gun",
+            gun = {
+                weapon = "afs_Accipitermg",
+                ammo = "afs_7.50mm_caseless",
+                skills = { { id = "gun", level = 1 }, { id = "rifle", level = 1 } },
+                dexterity = 3,
+                ranges = { { minimum = 0, maximum = 14, mode = "DEFAULT" } },
+                lock_npc = true,
+                lock_monster = true,
+                target_moving_vehicles = true,
+                laser_lock = false,
+                targeting_cost = 400,
+                targeting_extension = -10,
+                targeting_sound = ccb.content.text("\"I bet you're worth a pretty penny!\""),
+                targeting_volume = 20,
+                empty_sound = ccb.content.text("a chk!"),
+            },
+            when = "monster_attack_armed",
+        },
+    },
+    armor = { bash = 8, cut = 10, bullet = 15 },
+}

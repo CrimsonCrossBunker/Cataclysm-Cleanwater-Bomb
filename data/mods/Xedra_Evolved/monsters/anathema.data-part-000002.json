@@ -1,107 +1,45 @@
 [
   {
-    "type": "effect_on_condition",
-    "id": "EOC_ACTIVATE_ANATHEMA",
-    "recurrence": "1 day",
-    "global": true,
-    "run_for_npcs": false,
-    "condition": { "and": [ { "u_has_trait": "BLOOD_DRINKER" }, { "math": [ "Anathema_Activated < 1" ] } ] },
-    "effect": [ { "math": [ "Anathema_Ready = 1" ] }, { "math": [ "Anathema_Activated = 1" ] } ],
-    "deactivate_condition": { "math": [ "Anathema_Activated == 1" ] }
+    "id": "VAMPIRE_ANATHEMA_REACT_TO_HIT",
+    "type": "SPELL",
+    "name": { "str": "Anathema reacts", "//~": "NO_I18N" },
+    "description": { "str": "This gives the Anathema their buff effects without needing to wait for their turn.", "//~": "NO_I18N" },
+    "flags": [ "NO_EXPLOSION_SFX", "SILENT", "NO_FAIL", "NO_LEGS", "NO_HANDS" ],
+    "valid_targets": [ "self" ],
+    "shape": "blast",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_ANATHEMA_BUFF_ON_HIT",
+    "spell_class": "NONE",
+    "energy_source": "NONE",
+    "max_level": 1
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_ANATHEMA_WITHDRAWS_FOR_NOW",
-    "recurrence": "1 second",
-    "global": true,
-    "run_for_npcs": false,
-    "//0": "Cheap anathema-presence check first: and/or short-circuit, so the 60 u_near_om_location scans below only run while an Anathema is within 60 tiles.",
-    "//1": "Near holy ground, near vast water, the sun has risen, or you're about to outrun it (55 tiles away).",
-    "condition": {
-      "and": [
-        { "math": [ "u_monsters_nearby('mon_vampire_anathema', 'radius': 60) > 0" ] },
-        {
-          "or": [
-            { "u_near_om_location": "church_1", "range": 5 },
-            { "u_near_om_location": "church_2ndfloor_1", "range": 5 },
-            { "u_near_om_location": "church_3rdfloor_1", "range": 5 },
-            { "u_near_om_location": "church_roof_1", "range": 5 },
-            { "u_near_om_location": "rural_church_parking", "range": 5 },
-            { "u_near_om_location": "rural_church", "range": 5 },
-            { "u_near_om_location": "rural_church_basement", "range": 5 },
-            { "u_near_om_location": "rural_church_steeple", "range": 5 },
-            { "u_near_om_location": "rural_church_steeple_roof", "range": 5 },
-            { "u_near_om_location": "cathedral_7_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_7_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_6_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_6_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_5_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_5_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_4_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_4_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_7_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_7_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_6_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_6_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_5_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_5_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_4_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_4_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_3_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_3_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_3_SW", "range": 5 },
-            { "u_near_om_location": "cathedral_3_SE", "range": 5 },
-            { "u_near_om_location": "cathedral_2_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_2_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_2_SW", "range": 5 },
-            { "u_near_om_location": "cathedral_2_SE", "range": 5 },
-            { "u_near_om_location": "cathedral_1_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_1_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_1_SW", "range": 5 },
-            { "u_near_om_location": "cathedral_1_SE", "range": 5 },
-            { "u_near_om_location": "cathedral_b_NW", "range": 5 },
-            { "u_near_om_location": "cathedral_b_NE", "range": 5 },
-            { "u_near_om_location": "cathedral_b_SW", "range": 5 },
-            { "u_near_om_location": "cathedral_b_SE", "range": 5 },
-            { "u_near_om_location": "synagogue", "range": 5 },
-            { "u_near_om_location": "synagogue_roof", "range": 5 },
-            { "u_near_om_location": "synagogue_upper_roof", "range": 5 },
-            { "u_near_om_location": "generic_river_bank", "range": 3 },
-            { "u_near_om_location": "generic_river", "range": 3 },
-            { "u_near_om_location": "river_center", "range": 3 },
-            { "u_near_om_location": "river", "range": 3 },
-            { "u_near_om_location": "river_c_not_ne", "range": 3 },
-            { "u_near_om_location": "river_c_not_nw", "range": 3 },
-            { "u_near_om_location": "river_c_not_se", "range": 3 },
-            { "u_near_om_location": "river_c_not_sw", "range": 3 },
-            { "u_near_om_location": "lake_shore", "range": 3 },
-            { "u_near_om_location": "lake_surface", "range": 3 },
-            { "u_near_om_location": "ocean", "range": 3 },
-            { "u_near_om_location": "ocean_shore", "range": 3 },
-            { "u_near_om_location": "ocean_surface", "range": 3 },
-            { "u_near_om_location": "ocean_bed", "range": 3 },
-            { "u_near_om_location": "ocean_water_cube", "range": 3 },
-            { "u_near_om_location": "ocean_surface", "range": 3 },
-            "is_day",
-            { "math": [ "u_monsters_nearby('mon_vampire_anathema', 'radius': 55) == 0" ] }
-          ]
-        }
-      ]
-    },
-    "//2": "Despawn the Anathema, adjust var for later to bring them back.",
-    "//3": "Reuses the Shadow's EOC as they are identical in effect.",
+    "id": "EOC_ANATHEMA_BUFF_ON_HIT",
     "effect": [
-      { "math": [ "Anathema_Ready = 1" ] },
-      { "u_add_effect": "blind_no_msg", "duration": "0 second" },
-      { "u_message": "The Anathema vanishes in a fine mist", "type": "good" },
       {
-        "u_location_variable": { "global_val": "Vampire_Anathema" },
-        "monster": "mon_vampire_anathema",
-        "target_min_radius": 0,
-        "target_max_radius": 60
-      },
-      { "run_eocs": "EOC_KILL_SHADOW", "beta_loc": { "global_val": "Vampire_Anathema" } },
-      { "u_message": "…but they will come back.", "type": "bad" }
+        "run_eocs": [
+          {
+            "id": "EOC_ANATHEMA_CHECK_FOR_START",
+            "condition": { "and": [ { "not": { "u_has_effect": "effect_anathema_battle_started" } }, { "math": [ "u_hp('ALL') < 200" ] } ] },
+            "effect": [
+              { "u_cast_spell": { "id": "VAMPIRE_ANATHEMA_STARTS_BATTLE" } },
+              { "message": "The vampiric anathema's movements are much quicker now!", "type": "bad" }
+            ]
+          },
+          {
+            "id": "EOC_ANATHEMA_CHECK_FOR_LATER",
+            "condition": { "and": [ { "not": { "u_has_effect": "effect_anathema_final_form" } }, { "math": [ "u_hp('ALL') < 100" ] } ] },
+            "effect": [
+              { "u_cast_spell": { "id": "VAMPIRE_ANATHEMA_FINAL_FORM" } },
+              {
+                "message": "The vampiric anathema accelerates to the point your eyes struggle to follow and heal their wounds as shadows surround their body!",
+                "type": "bad"
+              }
+            ]
+          }
+        ]
+      }
     ]
   }
 ]
