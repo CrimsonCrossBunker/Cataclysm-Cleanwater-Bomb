@@ -3,11 +3,42 @@
     "id": "mag_pseudo_weaver",
     "copy-from": "fake_item",
     "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Wildwood Weaver" },
+    "subtypes": [
+      "TOOL"
+    ],
+    "name": {
+      "str": "Wildwood Weaver"
+    },
     "sub": "sewing_kit",
-    "qualities": [ [ "SEW", 4 ], [ "SEW_CURVED", 1 ], [ "KNIT", 1 ], [ "LEATHER_AWL", 2 ], [ "CUT", 2 ], [ "FABRIC_CUT", 2 ] ],
-    "tool_ammo": [ "mag_awakened_water" ],
+    "qualities": [
+      [
+        "SEW",
+        4
+      ],
+      [
+        "SEW_CURVED",
+        1
+      ],
+      [
+        "KNIT",
+        1
+      ],
+      [
+        "LEATHER_AWL",
+        2
+      ],
+      [
+        "CUT",
+        2
+      ],
+      [
+        "FABRIC_CUT",
+        2
+      ]
+    ],
+    "tool_ammo": [
+      "mag_awakened_water"
+    ],
     "charges_per_use": 1,
     "use_action": [
       {
@@ -34,14 +65,9 @@
         "cost_scaling": 0.1,
         "move_cost": 300
       },
-      [ "PLAY_GAME" ]
+      [
+        "PLAY_GAME"
+      ]
     ]
-  },
-  {
-    "type": "material",
-    "id": "mag_awakened_water",
-    "name": "Awakened Water",
-    "//": "Dilluted mana components mixed with water.  Enacted by a druid's rune.",
-    "copy-from": "water"
   }
 ]
