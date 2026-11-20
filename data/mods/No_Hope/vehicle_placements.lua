@@ -1,24 +1,29 @@
 local ccb = require("ccb")
 local content = ccb.content
 
--- Typed Platform world/content descriptors
+-- Native road vehicle placements
 do
-local definition = content.VehiclePlacement({ id = "road_wreck_t", locations = { { facing = { 90, 270 }, x = { 8, 11 }, y = { 10, 14 } } } })
+local definition = content.VehiclePlacement { id = "road_wreck_t" }
+definition:location({ x = { 8, 11 }, y = { 10, 14 }, facings = { 90, 270 } })
 content.add(definition)
 end
 do
-local definition = content.VehiclePlacement({ id = "road_wreck_b", locations = { { facing = { 90, 270 }, x = { 8, 11 }, y = { 5, 8 } } } })
+local definition = content.VehiclePlacement { id = "road_wreck_b" }
+definition:location({ x = { 8, 11 }, y = { 5, 8 }, facings = { 90, 270 } })
 content.add(definition)
 end
 do
-local definition = content.VehiclePlacement({ id = "road_wreck_l", locations = { { facing = { 90, 270 }, x = { 5, 8 }, y = { 8, 11 } } } })
+local definition = content.VehiclePlacement { id = "road_wreck_l" }
+definition:location({ x = { 5, 8 }, y = { 8, 11 }, facings = { 90, 270 } })
 content.add(definition)
 end
 do
-local definition = content.VehiclePlacement({ id = "road_wreck_r", locations = { { facing = { 90, 270 }, x = { 10, 14 }, y = { 8, 11 } } } })
+local definition = content.VehiclePlacement { id = "road_wreck_r" }
+definition:location({ x = { 10, 14 }, y = { 8, 11 }, facings = { 90, 270 } })
 content.add(definition)
 end
 do
-local definition = content.VehiclePlacement({ id = "road_wreck_c", locations = { { facing = { 90, 270 }, x = { 8, 11 }, y = { 8, 11 } } } })
+local definition = content.VehiclePlacement { id = "road_wreck_c" }
+definition:location({ x = { 8, 11 }, y = { 8, 11 }, facings = { 90, 270 } })
 content.add(definition)
 end

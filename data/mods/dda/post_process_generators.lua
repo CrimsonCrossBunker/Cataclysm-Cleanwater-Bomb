@@ -1,16 +1,26 @@
 local ccb = require("ccb")
 local content = ccb.content
 
--- Typed Platform world/content descriptors
+-- Native post-process generators
 do
-local definition = content.PostProcessGenerator({ id = "riot_damage", sub_generators = { { attempts = 250, chance = 10, max_intensity = 60, min_intensity = 6, type = "bash_damage" }, { attempts = 250, chance = 10, max_intensity = 3, type = "move_items" }, { attempts = 2, max_intensity = 3, min_intensity = 1, scaling_days_end = 14, type = "add_fire" }, { attempts = 1, max_intensity = 28, min_intensity = 6, scaling_days_end = 14, scaling_days_start = 3, scope = "overmap_special", type = "pre_burn" }, { attempts = 576, chance = 15, type = "place_blood" } } })
+local definition = content.PostProcessGenerator { id = "riot_damage" }
+definition:stage("bash_damage", { attempts = 250, chance = 10, min_intensity = 6, max_intensity = 60 })
+definition:stage("move_items", { attempts = 250, chance = 10, max_intensity = 3 })
+definition:stage("add_fire", { attempts = 2, min_intensity = 1, max_intensity = 3, scaling_days_end = 14 })
+definition:stage("pre_burn", { attempts = 1, min_intensity = 6, max_intensity = 28, scaling_days_start = 3, scaling_days_end = 14, scope = "overmap_special" })
+definition:stage("place_blood", { attempts = 576, chance = 15 })
 content.add(definition)
 end
 do
-local definition = content.PostProcessGenerator({ id = "riot_damage_road", sub_generators = { { attempts = 250, chance = 10, max_intensity = 60, min_intensity = 6, type = "bash_damage" }, { attempts = 250, chance = 10, max_intensity = 3, type = "move_items" }, { attempts = 2, max_intensity = 3, min_intensity = 1, scaling_days_end = 14, type = "add_fire" }, { attempts = 576, chance = 15, type = "place_blood" } } })
+local definition = content.PostProcessGenerator { id = "riot_damage_road" }
+definition:stage("bash_damage", { attempts = 250, chance = 10, min_intensity = 6, max_intensity = 60 })
+definition:stage("move_items", { attempts = 250, chance = 10, max_intensity = 3 })
+definition:stage("add_fire", { attempts = 2, min_intensity = 1, max_intensity = 3, scaling_days_end = 14 })
+definition:stage("place_blood", { attempts = 576, chance = 15 })
 content.add(definition)
 end
 do
-local definition = content.PostProcessGenerator({ id = "aftershock_ruin", sub_generators = { { type = "aftershock_ruin" } } })
+local definition = content.PostProcessGenerator { id = "aftershock_ruin" }
+definition:stage("aftershock_ruin")
 content.add(definition)
 end

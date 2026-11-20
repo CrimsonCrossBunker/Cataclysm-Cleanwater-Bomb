@@ -1,24 +1,33 @@
 local ccb = require("ccb")
 local content = ccb.content
 
--- Typed Platform world/content descriptors
+-- Native road vehicle placements and spawns
 do
-local definition = content.VehiclePlacement({ id = "highway", locations = { { facing = { 90, 270 }, x = { 10, 12 }, y = { 10, 12 } } } })
+local definition = content.VehiclePlacement { id = "highway" }
+definition:location({ x = { 10, 12 }, y = { 10, 12 }, facings = { 90, 270 } })
 content.add(definition)
 end
 do
-local definition = content.VehiclePlacement({ id = "subway_deadend", locations = { { facing = 270, x = 16, y = { 3, 13 } }, { facing = 90, x = 7, y = { 7, 17 } } } })
+local definition = content.VehiclePlacement { id = "subway_deadend" }
+definition:location({ x = 16, y = { 3, 13 }, facings = 270 })
+definition:location({ x = 7, y = { 7, 17 }, facings = 90 })
 content.add(definition)
 end
 do
-local definition = content.VehicleSpawn({ id = "default_bridge", spawn_types = { { ["//"] = "Clear section of bridge", vehicle_function = "no_vehicles", weight = 50 }, { ["//"] = "Unfueled Vehicle on the bridge", vehicle_json = { fuel = 0, number = 1, placement = "highway", status = -1, vehicle = "highway" }, weight = 30 }, { ["//"] = "Vehicle on the bridge", vehicle_json = { fuel = -1, number = 1, placement = "highway", status = -1, vehicle = "highway" }, weight = 20 } } })
+local definition = content.VehicleSpawn { id = "default_bridge" }
+definition:builtin("no_vehicles", 50)
+definition:vehicle("highway", 30, { placement = "highway", number = 1, fuel = 0, status = -1 })
+definition:vehicle("highway", 20, { placement = "highway", number = 1, fuel = -1, status = -1 })
 content.add(definition)
 end
 do
-local definition = content.VehicleSpawn({ id = "default_parkinglot", spawn_types = { { ["//"] = "Parking lot with vehicles", vehicle_function = "parkinglot", weight = 100 } } })
+local definition = content.VehicleSpawn { id = "default_parkinglot" }
+definition:builtin("parkinglot", 100)
 content.add(definition)
 end
 do
-local definition = content.VehicleSpawn({ id = "default_subway_deadend", spawn_types = { { ["//"] = "Clear section of subway", vehicle_function = "no_vehicles", weight = 100 }, { ["//"] = "Vehicle on the subway", vehicle_json = { fuel = -1, number = { 1, 2 }, placement = "subway_deadend", status = -1, vehicle = "trains_draisine" }, weight = 100 } } })
+local definition = content.VehicleSpawn { id = "default_subway_deadend" }
+definition:builtin("no_vehicles", 100)
+definition:vehicle("trains_draisine", 100, { placement = "subway_deadend", number = { 1, 2 }, fuel = -1, status = -1 })
 content.add(definition)
 end
