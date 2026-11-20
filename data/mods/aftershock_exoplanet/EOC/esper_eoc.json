@@ -39,18 +39,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_AFS_PSI_CHANNEL_FAILURE",
-    "condition": {
-      "and": [
-        { "not": { "u_has_trait": "NOPAIN" } },
-        { "not": { "u_has_flag": "PAIN_IMMUNE" } },
-        { "x_in_y_chance": { "x": 1, "y": { "math": [ "10 - u_vitamin('vitamin_afs_maintained_powers')" ] } } }
-      ]
-    },
-    "effect": [ { "math": [ "u_pain() += rand(2)" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_AFS_PSI_PRACTICE_FOCUS_MOD",
     "condition": { "math": [ "u_val('focus') >= 75" ] },
     "effect": [ { "math": [ "u_val('focus') -= 50" ] } ],

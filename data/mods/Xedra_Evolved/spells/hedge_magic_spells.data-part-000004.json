@@ -1,21 +1,21 @@
 [
   {
-    "id": "hedge_clairvoyance_cone",
+    "id": "hedge_stunning_spell",
     "type": "SPELL",
-    "name": "To See Beyond the Barriers",
-    "description": "Gain a brief vision of what lies beyond a wall or a doorway.",
-    "message": "You close your eyes and place the shards of glass over them and press, just slightly.  As the pain blooms and the blood trickles, you see beyond.",
+    "name": "To Befuddle As the Thunderstrike",
+    "description": "While outdoors, recite a quick charm to produce a flash of light like unto a thunderbolt, bedazzling anyone around you.",
+    "message": "You call out the words of the charm to the sky and there is a burst of light.",
     "flags": [ "VERBAL", "SOMATIC", "NO_FAIL" ],
     "magic_type": "xe_hedge_magick",
     "valid_targets": [ "self" ],
-    "difficulty": 40,
+    "difficulty": 80,
     "spell_class": "HEDGE_MAGIC",
     "skill": "survival",
     "effect": "effect_on_condition",
-    "effect_str": "EOC_HEDGE_CLAIRVOYANCE_CONE",
+    "effect_str": "EOC_HEDGE_STUNNING_SPELL",
     "shape": "blast",
-    "components": "spell_components_hedge_clairvoyance_cone",
+    "components": "spell_components_hedge_stunning_spell",
     "max_level": 1,
-    "base_casting_time": 1000
+    "base_casting_time": 150
   }
 ]

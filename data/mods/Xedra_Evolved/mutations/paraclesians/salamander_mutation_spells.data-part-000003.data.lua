@@ -3,33 +3,27 @@ local ccb = require("ccb")
 -- NO_I18N
 -- NO_I18N
 ccb.content.define_spell {
-    id = "salamander_explosion_trap_spell_activated",
-    name = ccb.content.text_without_extraction("Salamander Trap Explosion"),
-    description = ccb.content.text_without_extraction("This is the AoE used by Sigil of Detonation.  It's a bug if you have it directly."),
-    message = "",
-    valid_targets = { "hostile", "ground", "ally" },
+    id = "salamander_smoke_immunity_spell",
+    name = ccb.content.text_without_extraction("In a Cloud of Smoke Immunity"),
+    description = ccb.content.text_without_extraction("Makes the Salamander immune to smoke so they won't inhale tons of smoke when teleporting.  It's a bug if you have it directly."),
+    valid_targets = { "self" },
     skill = "deduction",
-    flags = {
-        "LOUD",
-        "NO_PROJECTILE",
-        "IGNITE_FLAMMABLE",
-        "RANDOM_AOE",
-        "RANDOM_DAMAGE",
-        "NO_HANDS",
-        "NO_LEGS",
-    },
     effect = "attack",
+    effect_data = "effect_salamander_smoke_immunity",
     shape = "blast",
-    damage_type = "heat",
-    min_damage = 20,
-    max_damage = 70,
-    min_aoe = 1,
-    max_aoe = 2,
-    aoe_increment = 1,
-    field = "fd_fire",
-    min_field_intensity = 1,
-    max_field_intensity = 2,
-    field_chance = 2,
-    sound_type = "combat",
-    sound_description = ccb.content.text("a crackle!"),
+    min_duration = 300,
+    max_duration = 300,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "salamander_smoke_teleport_spell_emit",
+    name = ccb.content.text_without_extraction("In a Cloud of Smoke Emit"),
+    description = ccb.content.text_without_extraction("Releases the smoke from casting In a Puff of Smoke.  It's a bug if you have it directly."),
+    skill = "deduction",
+    valid_targets = { "none" },
+    effect = "emit",
+    effect_data = "emit_smoke_stream",
+    shape = "blast",
 }

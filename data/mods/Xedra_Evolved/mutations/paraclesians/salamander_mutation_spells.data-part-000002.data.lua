@@ -3,27 +3,18 @@ local ccb = require("ccb")
 -- NO_I18N
 -- NO_I18N
 ccb.content.define_spell {
-    id = "salamander_smoke_immunity_spell",
-    name = ccb.content.text_without_extraction("In a Cloud of Smoke Immunity"),
-    description = ccb.content.text_without_extraction("Makes the Salamander immune to smoke so they won't inhale tons of smoke when teleporting.  It's a bug if you have it directly."),
-    valid_targets = { "self" },
+    id = "salamander_flame_punch_spell_push",
+    name = ccb.content.text_without_extraction("Blazing Blow Push"),
+    description = ccb.content.text_without_extraction("This is the push effect of the Blazing Blow spell.  It's a bug if you have it directly."),
+    message = "",
     skill = "deduction",
-    effect = "attack",
-    effect_data = "effect_salamander_smoke_immunity",
+    valid_targets = { "ally", "hostile", "item", "ground" },
+    flags = { "SILENT", "NO_EXPLOSION_SFX", "RANDOM_DAMAGE" },
+    effect = "directed_push",
     shape = "blast",
-    min_duration = 300,
-    max_duration = 300,
-}
-
--- NO_I18N
--- NO_I18N
-ccb.content.define_spell {
-    id = "salamander_smoke_teleport_spell_emit",
-    name = ccb.content.text_without_extraction("In a Cloud of Smoke Emit"),
-    description = ccb.content.text_without_extraction("Releases the smoke from casting In a Puff of Smoke.  It's a bug if you have it directly."),
-    skill = "deduction",
-    valid_targets = { "none" },
-    effect = "emit",
-    effect_data = "emit_smoke_stream",
-    shape = "blast",
+    max_level = 15,
+    min_damage = 1,
+    max_damage = 3,
+    min_range = 1,
+    max_range = 1,
 }

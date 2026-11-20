@@ -1,0 +1,86 @@
+[
+  {
+    "id": "changeling_summer_combat_prowess_powerful_buff_spell",
+    "type": "SPELL",
+    "name": "Ríastrad",
+    "description": "Enter a focused battle fury, vastly increasing your combat prowess.  When it fades, however, you will suffer a bout of weariness.  The weariness you suffer <color_yellow>is doubled</color> in winter.",
+    "message": "Your body warps and twists as you invoke the power of the Ríastrad.",
+    "flags": [ "NO_HANDS", "RANDOM_DURATION", "NO_LEGS" ],
+    "magic_type": "xe_fey_seasonal_magick_summer",
+    "spell_class": "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    "valid_targets": [ "self" ],
+    "caster_condition": { "not": { "u_has_effect": "effect_changeling_summer_combat_prowess_powerful_buff" } },
+    "caster_condition_fail_message": "You are already in the Ríastrad.",
+    "teachable": false,
+    "skill": "gramarye",
+    "max_level": 1,
+    "shape": "blast",
+    "difficulty": 9,
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_CHANGELING_SUMMER_COMBAT_PROWESS_POWERFUL_BUFF_INITIATE",
+    "components": "spell_components_changeling_dreamsparks_3",
+    "min_duration": {
+      "math": [ "( ( 3845 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 605) + (u_skill('gramarye') * 1285) ) )" ]
+    },
+    "max_duration": {
+      "math": [
+        "( ( 15315 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 1405) + (u_skill('gramarye') * 2354) ) )"
+      ]
+    },
+    "base_energy_cost": {
+      "math": [ "max( ( 800 - (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 6) - (u_skill('gramarye') * 9)), 550)" ]
+    },
+    "base_casting_time": 75
+  },
+  {
+    "id": "changeling_summer_powerful_sunlight_spell",
+    "type": "SPELL",
+    "name": "Helios's Wrath",
+    "description": "Blaze with the blinding light of the sun, blinding anyone nearby capable of seeing you.  This is real sunlight and affects creatures harmed by it accordingly.",
+    "message": "",
+    "flags": [ "VERBAL", "RANDOM_DURATION", "NO_LEGS" ],
+    "magic_type": "xe_fey_seasonal_magick_summer",
+    "spell_class": "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    "valid_targets": [ "self" ],
+    "teachable": false,
+    "skill": "gramarye",
+    "max_level": 1,
+    "shape": "blast",
+    "difficulty": 10,
+    "components": "spell_components_changeling_dreamsparks_4",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_CHANGELING_SUMMER_POWERFUL_SUNLIGHT_INITIATE",
+    "min_duration": {
+      "math": [ "( ( 595 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 152) + (u_skill('gramarye') * 251) ) )" ]
+    },
+    "max_duration": {
+      "math": [ "( ( 1520 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 382) + (u_skill('gramarye') * 601) ) )" ]
+    },
+    "base_energy_cost": {
+      "math": [ "max( ( 900 - (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 5) - (u_skill('gramarye') * 10)), 600)" ]
+    },
+    "base_casting_time": 50
+  },
+  {
+    "id": "changeling_summer_powerful_sunlight_spell_aura_effects",
+    "type": "SPELL",
+    "name": { "str": "Helios's Wrath Special effects", "//~": "NO_I18N" },
+    "description": {
+      "str": "Used because auras are not currently possible.  Blind targets are harms those who die in sunlight.",
+      "//~": "NO_I18N"
+    },
+    "message": "",
+    "flags": [ "SILENT", "NO_EXPLOSION_SFX", "NO_LEGS" ],
+    "magic_type": "xe_fey_seasonal_magick_summer",
+    "spell_class": "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    "valid_targets": [ "ally", "hostile" ],
+    "teachable": false,
+    "skill": "gramarye",
+    "max_level": 1,
+    "shape": "blast",
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_CHANGELING_SUMMER_POWERFUL_SUNLIGHT_AURA_EFFECTS",
+    "min_aoe": 45,
+    "max_aoe": 45
+  }
+]

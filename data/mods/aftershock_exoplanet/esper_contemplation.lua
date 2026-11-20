@@ -44,6 +44,17 @@ local function has_trait(character, trait)
     return checked(services.mutations.has(character, id("mutation", trait)))
 end
 
+ccb.runtime.handler("psi_channel_failure", function(ctx)
+    local caster = ctx.caster
+    if has_trait(caster, "NOPAIN") or checked(services.characters.has_flag(caster, id("json_flag", "PAIN_IMMUNE"))) then
+        return
+    end
+    local maintained = checked(services.needs.get_vitamin(caster, id("vitamin", "vitamin_afs_maintained_powers")))
+    if services.random.native_probability(1, 10 - maintained) then
+        checked(services.needs.modify_raw_pain(caster, services.random.native_int(0, 2)))
+    end
+end, 1)
+
 local function can_advance(character)
     return has_trait(character, "ESPER_ADVANCEMENT_OKAY") or has_trait(character, "ESPER_STARTER_ADVANCEMENT_OKAY")
 end

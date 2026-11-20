@@ -1,27 +1,14 @@
 local ccb = require("ccb")
 
-ccb.content.define_spell {
-    id = "changeling_spring_turn_target_into_tree_spell",
-    name = ccb.content.text("Branch of Yggdrasil"),
-    description = ccb.content.text("Transform yourself or an ally into a tree, greatly speeding their healing and allowing them to mend even serious wounds or broken bones with no other treatment, as well as attempting to cure more esoteric afflictions.  If necessary, you can reweave the glamour to return the target to their normal form.  The glamour will automatically fade when the target has fully healed.  The glamour has a <color_yellow>lower duration</color> in autumn."),
-    message = ccb.content.text("You chant the words of the glamour and the target's legs sink into the soil, their arms spread and begin to branch out, and they slowly turn into a tree."),
-    flags = { "VERBAL", "SOMATIC", "RANDOM_DURATION", "NO_LEGS" },
-    magic_type = "xe_fey_seasonal_magick_spring",
-    spell_class = "CHANGELING_SEASONAL_MAGIC_SPRING",
-    valid_targets = { "self", "ally" },
-    teachable = false,
-    skill = "gramarye",
-    max_level = 1,
-    shape = "blast",
-    difficulty = 9,
-    components = "spell_components_changeling_dreamsparks_5",
-    min_range = 1,
-    max_range = 1,
-    min_duration = { handler = "changeling_tree_min_duration", fallback = 17284861 },
-    max_duration = { handler = "changeling_tree_max_duration", fallback = 48384489 },
-    base_energy_cost = { handler = "changeling_tree_energy", fallback = 1800 },
-    base_casting_time = { handler = "changeling_tree_casting_time", fallback = 30000 },
-    caster_when = "changeling_tree_can_cast",
-    caster_condition_fail_message = ccb.content.text("You must be outside to weave this glamour."),
-    impact_handler = "changeling_tree_impact",
+-- Spring magic should focus on: plants, growth, healing, rain, creativity, and love.
+-- Make sure to add each new spell to the proper research EoC in the playable_changeling_seasonal_magic_research_eocs file.
+-- Seasonal magic can have direct damage spells, but they should always be relevantly themed to the season, accomplish some secondary effect (slowing, blinding, starting fires, terrain alteration, etc), have some limitation on targets, or otherwise be less efficient than 'Wizard casts fireball'
+ccb.content.define_magic_type {
+    id = "xe_fey_seasonal_magick_spring",
+    energy_source = "MANA",
+    cannot_cast_flags = { "NO_FEY_MAGIC", "NO_SPELLCASTING" },
+    cannot_cast_message = ccb.content.text("You can't use your glamours now!"),
+    failure_cost_fraction = 0.75,
+    max_book_level = 0,
+    failure_chance_formula = "xe_fey_seasonal_magick_spring_failure_chance",
 }

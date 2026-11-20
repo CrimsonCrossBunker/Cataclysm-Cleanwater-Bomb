@@ -1,75 +1,14 @@
 local ccb = require("ccb")
 
--- NO_I18N
--- NO_I18N
-ccb.content.define_spell {
-    id = "changeling_summer_lightning_bolt_from_storm_spell_ter_transform",
-    name = ccb.content.text_without_extraction("Fist of Taranis Ter Transform 1"),
-    description = ccb.content.text_without_extraction("The actual spell that casts the Fist of Taranis crater.  It's a bug if you have it directly."),
-    message = "",
-    teachable = false,
-    valid_targets = { "ground" },
-    flags = { "LOUD" },
-    effect = "ter_transform",
-    effect_data = "ter_sylph_massive_lightning",
-    shape = "blast",
-    min_range = 25,
-    max_range = 25,
-    min_aoe = 1,
-    max_aoe = 1,
-}
-
--- NO_I18N
--- NO_I18N
-ccb.content.define_spell {
-    id = "changeling_summer_lightning_bolt_from_storm_spell_ter_transform_center",
-    name = ccb.content.text_without_extraction("Fist of Taranis Ter Transform 2"),
-    description = ccb.content.text_without_extraction("The actual spell that casts the Fist of Taranis crater.  It's a bug if you have it directly."),
-    message = "",
-    teachable = false,
-    valid_targets = { "ground" },
-    flags = { "LOUD" },
-    effect = "ter_transform",
-    effect_data = "ter_sylph_massive_lightning",
-    shape = "blast",
-    min_range = 25,
-    max_range = 25,
-}
-
--- NO_I18N
--- NO_I18N
-ccb.content.define_spell {
-    id = "changeling_summer_lightning_bolt_from_storm_spell_start_fire",
-    name = ccb.content.text_without_extraction("Fist of Taranis Monster Start Fire"),
-    description = ccb.content.text_without_extraction("The actual spell that Starts a fire at the impact point.  It's a bug if you have it."),
-    message = "",
-    teachable = false,
-    valid_targets = { "ground" },
-    flags = { "NO_EXPLOSION_SFX" },
-    effect = "area_pull",
-    shape = "blast",
-    min_range = 25,
-    max_range = 25,
-    field = "fd_fire",
-    min_field_intensity = 3,
-    max_field_intensity = 3,
-    field_chance = 1,
-}
-
--- NO_I18N
--- NO_I18N
-ccb.content.define_spell {
-    id = "changeling_summer_lightning_bolt_from_storm_spell_push_enemies",
-    name = ccb.content.text_without_extraction("Fist of Taranis Monster Push"),
-    description = ccb.content.text_without_extraction("The actual spell that casts the Fist of Heaven's Fury shove.  It's a bug if you have it."),
-    message = "",
-    teachable = false,
-    valid_targets = { "ground", "hostile" },
-    flags = { "NO_EXPLOSION_SFX", "RANDOM_AOE" },
-    effect = "area_push",
-    shape = "blast",
-    min_range = 25,
-    max_range = 25,
-    min_aoe = 1,
-    max_aoe = 4,
+-- Summer magic should focus on: heat, light, athleticism, passionate/strong emotions, illusion, plenty.
+-- Make sure to add each new spell to the proper research EoC in the playable_changeling_seasonal_magic_research_eocs file.
+-- Seasonal magic can have direct damage spells, but they should always be relevantly themed to the season, accomplish some secondary effect (slowing, blinding, starting fires, terrain alteration, etc), have some limitation on targets, or otherwise be less efficient than 'Wizard casts fireball'
+ccb.content.define_magic_type {
+    id = "xe_fey_seasonal_magick_summer",
+    energy_source = "MANA",
+    cannot_cast_flags = { "NO_FEY_MAGIC", "NO_SPELLCASTING" },
+    cannot_cast_message = ccb.content.text("You can't use your glamours now!"),
+    failure_cost_fraction = 0.75,
+    max_book_level = 0,
+    failure_chance_formula = "xe_fey_seasonal_magick_summer_failure_chance",
 }

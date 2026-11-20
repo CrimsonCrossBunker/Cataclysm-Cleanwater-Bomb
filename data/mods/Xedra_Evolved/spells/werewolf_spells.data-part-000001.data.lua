@@ -1,22 +1,23 @@
 local ccb = require("ccb")
 
+-- NO_I18N
+-- NO_I18N
 ccb.content.define_spell {
-    id = "xe_werewolf_close_tear_in_reality_spell",
-    name = ccb.content.text("Mending Rent Veils"),
-    description = ccb.content.text("The world is falling apart but that is no reason to cease the hunt.  You can close a tear in reality, if you can get close enough to it and have enough time."),
-    message = "",
-    teachable = false,
-    valid_targets = { "ground" },
+    id = "xe_werewolf_argent_claws_damage",
+    name = ccb.content.text_without_extraction("Argent Claws Damage"),
+    description = ccb.content.text_without_extraction("The damage to Nether beings from argent claws.  Should not be visible"),
     spell_class = "WEREWOLF_SPELLS",
     magic_type = "xe_werewolf_powers",
     skill = "deduction",
-    effect = "ter_transform",
-    effect_data = "ter_werewolf_close_reality_tear",
+    flags = { "SILENT", "NO_EXPLOSION_SFX", "RANDOM_DAMAGE" },
+    valid_targets = { "ally", "hostile" },
+    difficulty = 0,
+    effect = "attack",
     shape = "blast",
-    flags = { "VERBAL", "NO_HANDS" },
-    difficulty = 10,
+    damage_type = "pure",
+    min_damage = 3,
+    max_damage = 12,
     min_range = 1,
-    max_range = 1,
-    base_energy_cost = 1000,
-    base_casting_time = 3000,
+    max_range = 2,
+    targeted_species = { "NETHER", "NETHER_EMANATION", "NETHER_BURROWING" },
 }

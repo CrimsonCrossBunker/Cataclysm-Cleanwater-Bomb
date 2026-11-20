@@ -1,313 +1,60 @@
 [
   {
-    "id": "salamander_cure_conditions",
+    "id": "salamander_flaming_whip_spell",
     "type": "SPELL",
-    "name": "Burning Away Your Impurities",
-    "description": "As fire burns dead wood, you can burn away poison or sickness in your target.  However, just as fire is dangerous to touch, it damages the target as well.",
-    "valid_targets": [ "self", "ally" ],
+    "name": "A Hundred Tongues of Flame",
+    "description": "Summon a flaming whip to scourge your enemies.",
+    "valid_targets": [ "none" ],
+    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS", "RANDOM_DURATION" ],
     "skill": "deduction",
     "teachable": false,
     "spell_class": "SALAMANDER",
-    "effect": "attack",
-    "effect_str": "effect_salamander_cure_conditions",
-    "affected_body_parts": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+    "effect": "spawn_item",
+    "effect_str": "salamander_flaming_summon_whip",
     "shape": "blast",
-    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS", "NO_HANDS" ],
-    "max_level": 15,
-    "difficulty": 6,
-    "min_range": 1,
-    "min_duration": 1000,
-    "max_duration": 3000,
-    "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": { "math": [ "max( (800 + (u_spell_count('school': 'SALAMANDER') * -10.9) + (u_skill('gramarye') * -13.1) ), 550)" ] },
-    "base_casting_time": 3000,
-    "learn_spells": { "salamander_rain_immunity": 5, "salamander_fire_dot_spell": 7 }
-  },
-  {
-    "id": "salamander_rain_immunity",
-    "type": "SPELL",
-    "name": "Steam Shell",
-    "description": "Protect yourself from rain by burning it to steam just before it strikes you.",
-    "message": "A thin layer of heat surrounds you.",
-    "valid_targets": [ "self" ],
-    "flags": [ "VERBAL", "SOMATIC", "NO_HANDS", "RANDOM_DURATION" ],
-    "effect": "attack",
-    "effect_str": "effect_salamander_rain_immunity",
-    "shape": "blast",
-    "teachable": false,
-    "spell_class": "SALAMANDER",
-    "difficulty": 4,
-    "max_level": 15,
-    "min_duration": {
-      "math": [
-        "( 23318 + (u_spell_count('school': 'SALAMANDER') * 6135) + (u_skill('gramarye') * 11436) ) * scaling_factor(u_val('perception') )"
-      ]
-    },
-    "max_duration": {
-      "math": [
-        "( 79425 + (u_spell_count('school': 'SALAMANDER') * 15512) + (u_skill('gramarye') * 23835) ) * scaling_factor(u_val('perception') )"
-      ]
-    },
-    "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": { "math": [ "max( (150 + (u_spell_count('school': 'SALAMANDER') * -3.9) + (u_skill('gramarye') * -4.7) ), 50)" ] },
-    "base_casting_time": 250
-  },
-  {
-    "id": "salamander_fire_dot_spell",
-    "type": "SPELL",
-    "name": "The Fire in the Marrow",
-    "description": "Kindle a flame within the target, slowly burning them from the inside.  This spell does damage only slowly, but there is little defense against being burned from the inside out.",
-    "valid_targets": [ "hostile" ],
-    "flags": [ "SOMATIC", "VERBAL", "RANDOM_DURATION", "NO_LEGS" ],
-    "skill": "deduction",
-    "teachable": false,
-    "spell_class": "SALAMANDER",
     "difficulty": 5,
     "max_level": 15,
-    "effect": "attack",
-    "effect_str": "effect_salamander_fire_dot",
-    "damage_type": "heat",
-    "shape": "blast",
-    "min_dot": 1,
-    "max_dot": 1,
-    "min_duration": {
-      "math": [
-        "( 1259 + (u_spell_count('school': 'SALAMANDER') * 26) + (u_skill('gramarye') * 112) ) * scaling_factor(u_val('dexterity') )"
-      ]
-    },
-    "max_duration": {
-      "math": [
-        "( 3482 + (u_spell_count('school': 'SALAMANDER') * 85) + (u_skill('gramarye') * 295) ) * scaling_factor(u_val('dexterity') )"
-      ]
-    },
-    "min_range": { "math": [ "min( (3 + (u_spell_count('school': 'SALAMANDER') * 0.6) + (u_skill('gramarye') * 1) ), 25)" ] },
-    "max_range": { "math": [ "min( (3 + (u_spell_count('school': 'SALAMANDER') * 0.6) + (u_skill('gramarye') * 1) ), 25)" ] },
-    "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": { "math": [ "max( (250 + (u_spell_count('school': 'SALAMANDER') * -6.9) + (u_skill('gramarye') * -8.6) ), 100)" ] },
-    "base_casting_time": { "math": [ "max( (1000 + (u_spell_count('school': 'SALAMANDER') * -8.2) + (u_skill('gramarye') * -12.6) ), 750)" ] }
-  },
-  {
-    "id": "salamander_increase_speed_spell",
-    "type": "SPELL",
-    "name": "Fanning the Spark",
-    "description": "You can infuse yourself or an ally with the blazing speed of fire.",
-    "valid_targets": [ "self", "ally" ],
-    "skill": "deduction",
-    "teachable": false,
-    "spell_class": "SALAMANDER",
-    "effect": "attack",
-    "effect_str": "effect_salamander_increase_speed",
-    "shape": "blast",
-    "flags": [ "SOMATIC", "VERBAL", "RANDOM_DURATION", "NO_LEGS", "NO_HANDS" ],
-    "max_level": 15,
-    "difficulty": 6,
-    "min_range": 1,
-    "min_duration": {
-      "math": [
-        "( 8952 + (u_spell_count('school': 'SALAMANDER') * 4284) + (u_skill('gramarye') * 9815) ) * scaling_factor(u_val('strength') )"
-      ]
-    },
-    "max_duration": {
-      "math": [
-        "( 32485 + (u_spell_count('school': 'SALAMANDER') * 9985) + (u_skill('gramarye') * 22815) ) * scaling_factor(u_val('strength') )"
-      ]
-    },
-    "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": { "math": [ "max( (550 + (u_spell_count('school': 'SALAMANDER') * -8.4) + (u_skill('gramarye') * -11.9) ), 250)" ] },
-    "base_casting_time": { "math": [ "max( (250 + (u_spell_count('school': 'SALAMANDER') * -5.9) + (u_skill('gramarye') * -7.9) ), 100)" ] }
-  },
-  {
-    "id": "salamander_emit_heat",
-    "type": "SPELL",
-    "name": "Stoking the Inner Furnace",
-    "description": "Like a bonfire, you can throw off large quantities of heat.",
-    "valid_targets": [ "self" ],
-    "skill": "deduction",
-    "teachable": false,
-    "spell_class": "SALAMANDER",
-    "effect": "attack",
-    "effect_str": "effect_salamander_emit_heat",
-    "shape": "blast",
-    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS", "NO_HANDS" ],
-    "max_level": 15,
-    "difficulty": 6,
-    "min_duration": {
-      "math": [
-        "( 11385 + (u_spell_count('school': 'SALAMANDER') * 1823) + (u_skill('gramarye') * 4552) ) * scaling_factor(u_val('strength') )"
-      ]
-    },
-    "max_duration": {
-      "math": [
-        "( 48135 + (u_spell_count('school': 'SALAMANDER') * 5842) + (u_skill('gramarye') * 11253) ) * scaling_factor(u_val('strength') )"
-      ]
-    },
-    "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": { "math": [ "max( (700 + (u_spell_count('school': 'SALAMANDER') * -14.4) + (u_skill('gramarye') * -16.5) ), 450)" ] },
-    "base_casting_time": { "math": [ "max( (500 + (u_spell_count('school': 'SALAMANDER') * -14.2) + (u_skill('gramarye') * -16.9) ), 150)" ] },
-    "learn_spells": { "salamander_rain_immunity": 4 }
-  },
-  {
-    "id": "salamander_summon_fire_spirit",
-    "type": "SPELL",
-    "name": "Calling the Children of the Inferno",
-    "description": "A lesser fire spirit is summoned to support you.",
-    "flags": [ "SOMATIC", "VERBAL", "SPAWN_GROUP" ],
-    "valid_targets": [ "ground" ],
-    "skill": "deduction",
-    "teachable": false,
-    "spell_class": "SALAMANDER",
-    "max_level": 15,
-    "difficulty": 3,
-    "effect": "summon",
-    "effect_str": "GROUP_GENIUS_SALAMANDER",
-    "shape": "blast",
-    "min_damage": { "math": [ "min( (1 + (u_spell_count('school': 'SALAMANDER') * 0.16) + (u_skill('gramarye') * 0.25) ), 8)" ] },
-    "max_damage": { "math": [ "min( (1 + (u_spell_count('school': 'SALAMANDER') * 0.16) + (u_skill('gramarye') * 0.25) ), 8)" ] },
-    "min_range": { "math": [ "min( (1 + (u_spell_count('school': 'SALAMANDER') * 0.22) + (u_skill('gramarye') * 0.4) ), 15)" ] },
-    "max_range": { "math": [ "min( (1 + (u_spell_count('school': 'SALAMANDER') * 0.22) + (u_skill('gramarye') * 0.4) ), 15)" ] },
-    "min_aoe": 2,
-    "max_aoe": 2,
-    "min_duration": {
-      "math": [
-        "( 22845 + (u_spell_count('school': 'SALAMANDER') * 2548) + (u_skill('gramarye') * 8165) ) * scaling_factor(u_val('intelligence') )"
-      ]
-    },
-    "max_duration": {
-      "math": [
-        "( 49285 + (u_spell_count('school': 'SALAMANDER') * 5942) + (u_skill('gramarye') * 14953) ) * scaling_factor(u_val('intelligence') )"
-      ]
-    },
-    "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": 200,
-    "base_casting_time": 3000
-  },
-  {
-    "id": "salamander_summon_firebird_spell",
-    "type": "SPELL",
-    "name": "Flame of the Firebird",
-    "description": "Summon a delicate bird made of pure flame.  The bird will last only a few moments, but if it sees an enemy it will eagerly dive upon them and erupt into a fireball.",
-    "flags": [ "SOMATIC", "VERBAL" ],
-    "valid_targets": [ "ground", "hostile" ],
-    "skill": "deduction",
-    "teachable": false,
-    "spell_class": "SALAMANDER",
-    "max_level": 15,
-    "difficulty": 4,
-    "effect": "summon",
-    "effect_str": "mon_salamander_firebird",
-    "shape": "blast",
     "min_damage": 1,
     "max_damage": 1,
-    "min_range": { "math": [ "min( (2 + (u_spell_count('school': 'SALAMANDER') * 0.42) + (u_skill('gramarye') * 0.65) ), 18)" ] },
-    "max_range": { "math": [ "min( (2 + (u_spell_count('school': 'SALAMANDER') * 0.42) + (u_skill('gramarye') * 0.65) ), 18)" ] },
-    "min_duration": 3000,
-    "max_duration": 3000,
+    "min_duration": {
+      "math": [
+        "( 23485 + (u_spell_count('school': 'SALAMANDER') * 9815) + (u_skill('gramarye') * 18553) ) * scaling_factor(u_val('dexterity') )"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( 51398 + (u_spell_count('school': 'SALAMANDER') * 24851) + (u_skill('gramarye') * 39915) ) * scaling_factor(u_val('dexterity') )"
+      ]
+    },
     "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": { "math": [ "max( (400 + (u_spell_count('school': 'SALAMANDER') * -14.4) + (u_skill('gramarye') * -16.5) ), 250)" ] },
-    "base_casting_time": { "math": [ "max( (300 + (u_spell_count('school': 'SALAMANDER') * -14.2) + (u_skill('gramarye') * -16.9) ), 75)" ] }
+    "base_energy_cost": { "math": [ "max( (250 + (u_spell_count('school': 'SALAMANDER') * -5.9) + (u_skill('gramarye') * -8.2) ), 100)" ] },
+    "base_casting_time": { "math": [ "max( (1000 + (u_spell_count('school': 'SALAMANDER') * -8.2) + (u_skill('gramarye') * -12.6) ), 750)" ] },
+    "learn_spells": { "salamander_fire_dot_spell": 6 }
   },
   {
-    "id": "salamander_ash_breath_spell",
+    "id": "salamander_smoke_teleport_spell",
     "type": "SPELL",
-    "name": "Exhalation of Ashes",
-    "description": "You can breathe out a cloud of thick smoke, concealing your presence or causing humans to choke.",
-    "valid_targets": [ "hostile", "ally", "ground" ],
+    "name": "In a Cloud of Smoke",
+    "description": "Like fire leaping over a firebreak, you can vanish and reappear somewhere nearby, leaving a thick cloud of smoke in your former location.",
+    "valid_targets": [ "none" ],
     "skill": "deduction",
     "teachable": false,
     "spell_class": "SALAMANDER",
-    "flags": [ "LOUD", "NO_PROJECTILE", "NO_HANDS", "NO_LEGS" ],
-    "effect": "attack",
-    "shape": "cone",
-    "difficulty": 2,
-    "max_level": 15,
-    "min_damage": 0,
-    "max_damage": 0,
-    "min_range": { "math": [ "min( (2 + (u_spell_count('school': 'SALAMANDER') * 0.75) + (u_skill('gramarye') * 1.25) ), 20)" ] },
-    "max_range": { "math": [ "min( (2 + (u_spell_count('school': 'SALAMANDER') * 0.75) + (u_skill('gramarye') * 1.25) ), 20)" ] },
-    "min_aoe": 60,
-    "max_aoe": 60,
-    "field_id": "fd_smoke",
-    "min_field_intensity": 3,
-    "max_field_intensity": 3,
-    "field_chance": 1,
-    "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": { "math": [ "max( (150 + (u_spell_count('school': 'SALAMANDER') * -3.5) + (u_skill('gramarye') * -4.9) ), 50)" ] },
-    "base_casting_time": { "math": [ "max( (100 + (u_spell_count('school': 'SALAMANDER') * -6.9) + (u_skill('gramarye') * -8.5) ), 50)" ] },
-    "learn_spells": { "salamander_rain_immunity": 8 }
-  },
-  {
-    "id": "salamander_fire_breath",
-    "type": "SPELL",
-    "name": "Breath of the Firedragon",
-    "description": "Like the legendary dragon, you can spray fire in a cone in front of you.",
-    "valid_targets": [ "hostile", "ground" ],
-    "skill": "deduction",
-    "teachable": false,
-    "spell_class": "SALAMANDER",
-    "flags": [ "LOUD", "NO_PROJECTILE", "IGNITE_FLAMMABLE", "RANDOM_DAMAGE", "NO_HANDS", "NO_LEGS" ],
-    "effect": "attack",
-    "shape": "cone",
-    "damage_type": "heat",
-    "difficulty": 5,
-    "max_level": 15,
-    "min_damage": { "math": [ "14 + (u_spell_count('school': 'SALAMANDER') * 1.5) + (u_skill('gramarye') * 5.6)" ] },
-    "max_damage": { "math": [ "27 + (u_spell_count('school': 'SALAMANDER') * 2.6) + (u_skill('gramarye') * 8.9)" ] },
-    "min_range": { "math": [ "min( (2 + (u_spell_count('school': 'SALAMANDER') * 0.15) + (u_skill('gramarye') * 0.4) ), 8)" ] },
-    "max_range": { "math": [ "min( (2 + (u_spell_count('school': 'SALAMANDER') * 0.15) + (u_skill('gramarye') * 0.4) ), 8)" ] },
-    "min_aoe": { "math": [ "min( (30 + (u_spell_count('school': 'SALAMANDER') * 3.6) + (u_skill('gramarye') * 5.5) ), 120)" ] },
-    "max_aoe": { "math": [ "min( (30 + (u_spell_count('school': 'SALAMANDER') * 3.6) + (u_skill('gramarye') * 5.5) ), 120)" ] },
-    "field_id": "fd_fire",
-    "min_field_intensity": 1,
-    "max_field_intensity": 2,
-    "field_chance": 3,
-    "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": { "math": [ "max( (350 + (u_spell_count('school': 'SALAMANDER') * -3.5) + (u_skill('gramarye') * -4.9) ), 250)" ] },
-    "base_casting_time": { "math": [ "max( (100 + (u_spell_count('school': 'SALAMANDER') * -6.9) + (u_skill('gramarye') * -8.5) ), 75)" ] },
-    "sound_type": "combat",
-    "sound_description": "a crackle!"
-  },
-  {
-    "id": "salamander_dash_boom_spell",
-    "type": "SPELL",
-    "name": { "str": "Fiery Charge" },
-    "description": "Hurl yourself forward in a burst of speed, causing an explosion at your arrival point.",
-    "valid_targets": [ "hostile", "ground" ],
-    "skill": "deduction",
-    "teachable": false,
-    "spell_class": "SALAMANDER",
-    "flags": [ "VERBAL", "NO_HANDS", "LOUD" ],
-    "difficulty": 4,
-    "max_level": 15,
-    "effect": "dash",
-    "extra_effects": [ { "id": "salamander_aoe_explosion", "hit_self": true, "max_level": 4 } ],
-    "shape": "cone",
-    "min_damage": 0,
-    "max_damage": 0,
-    "min_range": { "math": [ "min( (3 + (u_spell_count('school': 'SALAMANDER') * 0.29) + (u_skill('gramarye') * 0.46) ), 12)" ] },
-    "max_range": { "math": [ "min( (3 + (u_spell_count('school': 'SALAMANDER') * 0.29) + (u_skill('gramarye') * 0.46) ), 12)" ] },
-    "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": { "math": [ "max( (350 + (u_spell_count('school': 'SALAMANDER') * -4.2) + (u_skill('gramarye') * -6.4) ), 200)" ] },
-    "base_casting_time": { "math": [ "max( (200 + (u_spell_count('school': 'SALAMANDER') * -5.8) + (u_skill('gramarye') * -7.2) ), 50)" ] }
-  },
-  {
-    "id": "salamander_explosion_trap_spell",
-    "type": "SPELL",
-    "name": "Sigil of Detonation",
-    "description": "Place a magical rune on the ground that will explode when stepped on.",
-    "valid_targets": [ "hostile", "ground", "ally" ],
-    "flags": [ "SOMATIC", "NO_LEGS" ],
-    "skill": "deduction",
-    "teachable": false,
-    "spell_class": "SALAMANDER",
-    "max_level": 15,
-    "difficulty": 5,
-    "effect": "add_trap",
-    "effect_str": "tr_salamander_bomb",
+    "flags": [ "SILENT", "VERBAL", "SOMATIC", "NO_LEGS", "RANDOM_AOE", "EXTRA_EFFECTS_FIRST" ],
+    "effect": "short_range_teleport",
+    "extra_effects": [
+      { "id": "salamander_smoke_immunity_spell", "hit_self": true },
+      { "id": "salamander_smoke_teleport_spell_emit", "hit_self": true }
+    ],
     "shape": "blast",
-    "min_range": { "math": [ "min( (3 + (u_spell_count('school': 'SALAMANDER') * 0.52) + (u_skill('gramarye') * 0.85) ), 20)" ] },
-    "max_range": { "math": [ "min( (3 + (u_spell_count('school': 'SALAMANDER') * 0.52) + (u_skill('gramarye') * 0.85) ), 20)" ] },
+    "difficulty": 3,
+    "max_level": 15,
+    "min_aoe": 1,
+    "max_aoe": 5,
+    "min_range": 10,
+    "max_range": 10,
     "magic_type": "xedra_salamader_magick",
-    "base_energy_cost": { "math": [ "max( (200 + (u_spell_count('school': 'SALAMANDER') * -5.8) + (u_skill('gramarye') * -7.2) ), 50)" ] },
-    "base_casting_time": { "math": [ "max( (125 + (u_spell_count('school': 'SALAMANDER') * -2.6) + (u_skill('gramarye') * -3.2) ), 75)" ] }
+    "base_energy_cost": { "math": [ "max( (250 + (u_spell_count('school': 'SALAMANDER') * -4.3) + (u_skill('gramarye') * -6.0) ), 150)" ] },
+    "base_casting_time": 50
   }
 ]

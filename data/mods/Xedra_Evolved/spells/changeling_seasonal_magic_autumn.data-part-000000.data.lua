@@ -1,21 +1,14 @@
 local ccb = require("ccb")
 
--- NO_I18N
--- NO_I18N
-ccb.content.define_spell {
-    id = "changeling_autumn_freeze_in_place_remover",
-    name = ccb.content.text_without_extraction("Balor's Gaze Remover"),
-    description = ccb.content.text_without_extraction("Gets Rid of Balor's Gaze on the target."),
-    flags = { "NO_HANDS", "NO_LEGS" },
-    magic_type = "xe_fey_seasonal_magick_autumn",
-    spell_class = "CHANGELING_SEASONAL_MAGIC_AUTUMN",
-    valid_targets = { "hostile", "ally", "ground" },
-    teachable = false,
-    skill = "gramarye",
-    max_level = 1,
-    shape = "blast",
-    difficulty = 8,
-    effect = "remove_effect",
-    effect_data = "effect_changeling_autumn_freeze_in_place_target",
-    min_aoe = 12,
+-- Autumn magic should focus on: fear, decay, the harvest, preservation, fog, colors, home and the hearth.
+-- Make sure to add each new spell to the proper research EoC in the playable_changeling_seasonal_magic_research_eocs file.
+-- Seasonal magic can have direct damage spells, but they should always be relevantly themed to the season, accomplish some secondary effect (slowing, blinding, starting fires, terrain alteration, etc), have some limitation on targets, or otherwise be less efficient than 'Wizard casts fireball'
+ccb.content.define_magic_type {
+    id = "xe_fey_seasonal_magick_autumn",
+    energy_source = "MANA",
+    cannot_cast_flags = { "NO_FEY_MAGIC", "NO_SPELLCASTING" },
+    cannot_cast_message = ccb.content.text("You can't use your glamours now!"),
+    failure_cost_fraction = 0.75,
+    max_book_level = 0,
+    failure_chance_formula = "xe_fey_seasonal_magick_autumn_failure_chance",
 }

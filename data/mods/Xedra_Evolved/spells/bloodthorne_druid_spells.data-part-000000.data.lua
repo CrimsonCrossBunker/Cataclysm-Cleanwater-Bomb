@@ -1,21 +1,12 @@
 local ccb = require("ccb")
 
--- NO_I18N
--- NO_I18N
-ccb.content.define_spell {
-    id = "bloodthorne_druid_summon_whip",
-    name = ccb.content.text_without_extraction("Summon Heartvine Whip"),
-    description = ccb.content.text_without_extraction("Needed to summon the heartwhip and wield it."),
-    valid_targets = { "self" },
-    flags = { "SILENT" },
-    effect = "spawn_item",
-    effect_data = "heartvine_whip",
-    shape = "blast",
-    max_level = 0,
-    min_damage = 1,
-    max_damage = 1,
-    difficulty = 0,
-    spell_class = "NONE",
-    min_duration = 10000000,
-    max_duration = 10000000,
+-- Bloodthorne druid spells should deal with blood, thorns, the wilderness, and fighting vampires.  Their spells do not always have to affect vampires in some way, but they should generally be oriented toward combat against them--they can use Arvore magic as more generalist nature magic.
+ccb.content.define_magic_type {
+    id = "xedra_bloodthorne_sorcery",
+    energy_source = "MANA",
+    cannot_cast_flags = { "NO_THORNWITCHERY", "NO_SPELLCASTING" },
+    cannot_cast_message = ccb.content.text("Your thornwitchery will not come to your call!"),
+    failure_cost_fraction = 0.75,
+    max_book_level = 0,
+    failure_chance_formula = "xe_bloodthorne_sorcery_failure_chance",
 }
