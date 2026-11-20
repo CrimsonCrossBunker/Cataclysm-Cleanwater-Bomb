@@ -131,7 +131,7 @@ jobs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: msvc-full-features/vcpkg_installed
-        key: vcpkg-installed-sdl3-${{ hashFiles('msvc-full-features/vcpkg.json', '.github/vcpkg_triplets/x64-windows-static.cmake') }}-f6672d8e480ccdecddfad3fd1b838ba369ffe6cd
+        key: vcpkg-installed-sdl3-${{ hashFiles('msvc-full-features/vcpkg.json', 'msvc-full-features/vcpkg-configuration.json', '.github/vcpkg_overlay_ports/**', '.github/vcpkg_triplets/x64-windows-static.cmake') }}-f6672d8e480ccdecddfad3fd1b838ba369ffe6cd
 
     - name: Install vcpkg packages
       shell: pwsh
