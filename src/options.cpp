@@ -3535,8 +3535,8 @@ void options_manager::add_options_world_default()
        );
 
     add( "WORLD_MAP_GENERATION", "world_default", to_translation( "Map generation" ),
-         to_translation( "Choose the default surface map for a new world. North America uses real geography. "
-                         "Classic random generates terrain and settlements procedurally. "
+         to_translation( "Choose the default surface map for a new world.  North America uses real geography.  "
+                         "Classic random generates terrain and settlements procedurally.  "
     "Custom regions and pregenerated maps supplied by mods take precedence." ), {
         { "north_america", to_translation( "North America" ) },
         { "classic_random", to_translation( "Classic random" ) }
