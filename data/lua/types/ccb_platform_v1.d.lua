@@ -9479,6 +9479,17 @@ function StaticDialogueActions.update_map(id, terrain) end
 ---@return StaticDialogueAction
 function StaticDialogueActions.record_time(target) end
 
+---Show a translated popup to the player speaker, offer activity interruption, and log the message.
+---@param message string|LocalizedText|StaticDialogueLocalizedVariable
+---@param severity? string Native message type, default neutral.
+---@return StaticDialogueAction
+function StaticDialogueActions.notify_player(message, severity) end
+
+---Open a topic for the avatar speaker. An empty topic uses the current interlocutor.
+---@param topic StaticDialogueStringValue
+---@return StaticDialogueAction
+function StaticDialogueActions.open_conversation(topic) end
+
 ---Set an actor variable and emit the native variable-change event. An array selects a value at random.
 ---@param role StaticDialogueParticipant
 ---@param key string

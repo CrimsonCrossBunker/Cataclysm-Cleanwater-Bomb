@@ -139,3 +139,17 @@ ccb.runtime.handler("advance_world_dave_castle_stage_by_1", function()
     local stage = checked(variables.get_global_number("dave_castle_stage", { strict = true })).value or 0
     checked(variables.set_global("dave_castle_stage", stage + 1, { include_before = false }))
 end)
+
+advance_actor_progress("advance_favor_owed_to_u_robofac_merc_1_favor_by_1", "favor_owed_to_u_robofac_merc_1_favor", 1)
+
+ccb.runtime.handler("reward_robofac_merc_trust", function(context)
+    if context.giver then
+        checked(ccb.services.npcs.modify_opinion(context.giver, { trust = 2 }))
+    end
+end)
+
+ccb.runtime.handler("reward_robofac_merc_value", function(context)
+    if context.giver then
+        checked(ccb.services.npcs.modify_opinion(context.giver, { value = 2 }))
+    end
+end)

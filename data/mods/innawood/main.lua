@@ -57,3 +57,13 @@ require("mission_goals")
 ccb.runtime.handler("deliver_tinder_1_items", function(context)
     ccb.services.inventory.consume_by_type(context.character, ccb.services.types.id("item", "tinder"), 1, 0)
 end)
+
+ccb.runtime.handler("prepare_80_cattail_stalks", function(context)
+    local services = ccb.services
+    services.inventory.consume_by_type(context.giver or context.character,
+        services.types.id("item", "cattail_stalk"), 80, 0)
+end)
+
+ccb.runtime.handler("teach_cattail_jelly", function(context)
+    ccb.services.recipes.learn(context.character, ccb.services.types.id("recipe", "cattail_jelly"))
+end)

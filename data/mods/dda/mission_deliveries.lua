@@ -122,3 +122,17 @@ delivery("complete_mission_godco_corrie_machine1", "deliver_mission_godco_corrie
 ccb.runtime.handler("deliver_gasoline_200_items", function(context)
     services.inventory.consume_by_type(context.character, id("item", "gasoline"), 200, 0)
 end)
+
+ccb.runtime.handler("prepare_60_cattail_stalks", function(context)
+    local services = ccb.services
+    services.inventory.consume_by_type(context.giver or context.character,
+        services.types.id("item", "cattail_stalk"), 60, 0)
+end)
+
+ccb.runtime.handler("teach_cattail_jelly", function(context)
+    ccb.services.recipes.learn(context.character, ccb.services.types.id("recipe", "cattail_jelly"))
+end)
+
+ccb.runtime.handler("teach_cake2", function(context)
+    ccb.services.recipes.learn(context.character, ccb.services.types.id("recipe", "cake2"))
+end)

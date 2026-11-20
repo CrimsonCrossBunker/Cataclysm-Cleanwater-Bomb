@@ -1,36 +1,38 @@
 local ccb = require("ccb")
 
--- NPC will ask player to burn tagged forest tile. Will follow player after accepting mission.
--- Change first topic to do proper checks. MGOAL_GO_TO to check if player stands on tagged tile.
--- At the end of the mission, will place fire on tagged tile and NPC will join player faction.
 ccb.content.define_mission {
-    id = "MISSION_PYROMANIAC",
-    name = ccb.content.text("Angry pyromaniac"),
-    goal = "MGOAL_GO_TO",
-    difficulty = 0,
+    id = "MISSION_LEARN_ABOUT_CATTAIL_JELLY",
+    name = ccb.content.text("Gather cattail stalks to create cattail jelly"),
+    description = ccb.content.text("Gather <color_light_blue>80 cattail stalks</color> from the swamp and bring them back to <color_light_red>learn how to craft cattail jelly</color>.  Raise your <color_light_blue>survival skill to at least 1</color> by harvesting cattail stalks.  <color_light_blue>Bring back the provided bag</color> as well."),
+    goal = "MGOAL_CONDITION",
+    difficulty = 1,
     value = 0,
     generic_rewards = false,
+    origins = { "ORIGIN_OPENER_NPC", "ORIGIN_ANY_NPC" },
     start = {
-        target = { terrain = "forest", match = "PREFIX", search_range = 75, random = true, z = 0 },
-        actions = { "follow_only", ccb.content.dialogue_actions.set_first_topic("MISSION_PYROMANIAC") },
+        target = { terrain = "forest_water", reveal_radius = 3 },
+        actions = { { item = "backpack_leather" } },
     },
     finish = {
         actions = {
-            "follow",
-            { handler = "deliver_tinder_1_items" },
-            ccb.content.dialogue_actions.update_map("MISSION_PYROMANIAC_BURN_INNAWOOD"),
+            ccb.content.dialogue_actions.transfer_items("backpack_leather"),
+            ccb.content.dialogue_actions.transfer_items("cattail_stalk", 80),
+            { handler = "prepare_80_cattail_stalks" },
+            { handler = "teach_cattail_jelly" },
+            ccb.content.dialogue_actions.notify_player(ccb.content.text("You learn how to craft cattail jelly.")),
+            { item = "cattail_jelly", count = 7, container = "stomach_sealed" },
         },
     },
-    origins = { "ORIGIN_OPENER_NPC" },
     dialogue = {
-        describe = ccb.content.text("Oh man, I want to fucking burn it so bad…"),
-        offer = ccb.content.text("I'm so fucking infuriated!  I've got a tree that ruined my life, and now I want to get revenge!  I don't care about <the_cataclysm>, I just want to burn that tree!  Would you help me, <name_g>?"),
-        accepted = ccb.content.text("Good.  Let's go to the tree and goddamn burn it down!  Oh, bring some tinder so we can start the fire.  I can make the sparks."),
-        rejected = ccb.content.text("Seriously?  It's such an easy job…"),
-        advice = ccb.content.text("Maybe we can find a stick in the woods."),
-        inquire = ccb.content.text("Are you ready, <name_g>?"),
-        success = ccb.content.text("Sweet, sweet revenge!  Ah, smells so nice!  Feels like the smell of napalm in the morning!  It will all burn to ashes in a matter of minutes.  You helped me get my revenge, so I'll follow you to the end, <name_g>!"),
-        success_lie = ccb.content.text("What?!  You liar!"),
-        failure = ccb.content.text("Wow, you failed?  How…"),
+        describe = ccb.content.text("Medical services are a little sparse here, but people have been surviving using their wits and the bounty of Mother Nature for a long time.  Care to learn a little?"),
+        offer = ccb.content.text("Did you know that cattails are a source of a jelly that works as an antiseptic and analgesic?  Something like that is likely to be mighty helpful out here.  I want you to take this bag, head to the nearest swamp, collect 80 cattail stalks, and bring them back here.  In exchange, I'll show you how to harvest the jelly."),
+        accepted = ccb.content.text("Great!  This bag should be big enough to hold all of the stalks we'll need.  Don't forget to bring it back."),
+        rejected = ccb.content.text("Your loss."),
+        advice = ccb.content.text("The cattails grow in the fresh water in swamps.  You can't miss them."),
+        inquire = ccb.content.text("Got those cattail stalks yet?  Don't forget to bring back my bag and to work on improving your survival skill as well."),
+        success = ccb.content.text("Great!  Hand them over and I'll show you how this works."),
+        success_lie = ccb.content.text("OK, then hand them over."),
+        failure = ccb.content.text("Well, that's a shame."),
     },
+    complete_when = "complete_mission_learn_about_cattail_jelly_backpack_leather",
 }

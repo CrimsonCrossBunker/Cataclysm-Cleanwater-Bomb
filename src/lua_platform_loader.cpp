@@ -58,6 +58,8 @@ extern "C" {
 #include "condition.h"
 #include "construction.h"
 #include "dialogue.h"
+#include "enum_conversions.h"
+#include "enums.h"
 #include "native_file_path.h"
 #include "fault.h"
 #include "field_type.h"
@@ -3315,6 +3317,18 @@ void install_static_dialogue_actions( sol::state &lua, sol::table &content )
     actions.set_function( "update_map", []( const sol::object & id, const sol::optional<sol::object> & terrain ) {
         return static_dialogue_action{ talk_effect_fun_t( dialogue_action::update_map(
                     read_dialogue_string_value( id ), terrain ? read_dialogue_string_value( *terrain ) : str_or_var{} ) ) };
+    } );
+    actions.set_function( "notify_player", []( const sol::object & message, sol::optional<std::string> severity ) {
+        const auto type = io::string_to_enum_optional<game_message_type>( severity.value_or( "neutral" ) );
+        if( !type ) {
+            throw std::invalid_argument( "unknown dialogue message severity" );
+        }
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::notify_player(
+                    read_dialogue_translation_value( message ), *type ) ) };
+    } );
+    actions.set_function( "open_conversation", []( const sol::object & topic ) {
+        return static_dialogue_action{ talk_effect_fun_t( dialogue_action::open_conversation(
+                    read_dialogue_string_value( topic ) ) ) };
     } );
     actions.set_function( "record_time", []( const sol::table & target ) {
         return static_dialogue_action{ talk_effect_fun_t( dialogue_action::record_time(

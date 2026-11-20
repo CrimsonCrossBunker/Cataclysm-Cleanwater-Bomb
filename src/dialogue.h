@@ -43,6 +43,8 @@ class npc;
 struct dialogue;
 struct input_event;
 
+enum game_message_type : int;
+
 enum talk_trial_type : unsigned char {
     TALK_TRIAL_NONE, // No challenge here!
     TALK_TRIAL_LIE, // Straight up lying
@@ -183,6 +185,8 @@ std::function<bool( dialogue & )> transfer_items( str_or_var item_name, dbl_or_v
         dbl_or_var cost );
 talk_effect_fun_t::func update_map( str_or_var update_id, str_or_var terrain );
 talk_effect_fun_t::func record_time( var_info target );
+talk_effect_fun_t::func notify_player( translation_or_var message, game_message_type severity );
+std::function<bool( const dialogue & )> open_conversation( str_or_var topic );
 talk_effect_fun_t::func set_actor_value( bool is_npc, std::string key,
         std::vector<std::string> choices );
 talk_effect_fun_t::func record_turn( bool is_npc, std::string key );

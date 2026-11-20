@@ -4363,6 +4363,44 @@ static void expand_dialogue_variable_tags( std::string &text, const dialogue &d 
     parse_tags( text, alpha, beta, d );
 }
 
+static void popup_dialogue_message( const std::string &message, const PopupFlags flags )
+{
+    popup( message, flags );
+    g->cancel_activity_or_ignore_query( distraction_type::eoc, "" );
+}
+
+talk_effect_fun_t::func dialogue_action::notify_player( translation_or_var message,
+        game_message_type severity )
+{
+    return [message = std::move( message ), severity]( const dialogue &d ) {
+        Character *actor = d.actor( false )->get_character();
+        if( actor && !actor->is_npc() ) {
+            std::string text = message.evaluate( d ).translated();
+            expand_dialogue_variable_tags( text, d );
+            popup_dialogue_message( text, PF_NONE );
+            actor->add_msg_if_player( severity, text );
+        }
+    };
+}
+
+std::function<bool( const dialogue & )> dialogue_action::open_conversation( str_or_var topic )
+{
+    return [topic = std::move( topic )]( const dialogue &d ) {
+        const std::string actual_topic = topic.evaluate( d );
+        Character *speaker = d.actor( false )->get_character();
+        if( !speaker || !speaker->is_avatar() ) {
+            return false;
+        }
+        if( actual_topic.empty() ) {
+            get_avatar().talk_to( d.actor( true )->clone() );
+        } else {
+            get_avatar().talk_to( get_talker_for( std::vector<std::string>{ actual_topic } ),
+                                  false, false, true );
+        }
+        return true;
+    };
+}
+
 template<typename Value>
 static talk_effect_fun_t::func set_dialogue_string( var_info target, std::vector<Value> values,
         bool expand_tags )
@@ -6554,10 +6592,7 @@ talk_effect_fun_t::func f_message( const JsonObject &jo, std::string_view member
         } else {
             translated_message = message.evaluate( d ).translated();
         }
-        std::unique_ptr < talker > default_talker = get_talker_for( get_player_character() );
-        talker &alpha = d.has_alpha ? *d.actor( false ) : *default_talker;
-        talker &beta = d.has_beta ? *d.actor( true ) : *default_talker;
-        parse_tags( translated_message, alpha, beta, d );
+        expand_dialogue_variable_tags( translated_message, d );
         if( sound ) {
             bool display = false;
             map &here = get_map();
@@ -6573,8 +6608,7 @@ talk_effect_fun_t::func f_message( const JsonObject &jo, std::string_view member
             }
         }
         if( popup_msg ) {
-            popup( translated_message, popup_flag );
-            g->cancel_activity_or_ignore_query( distraction_type::eoc, "" );
+            popup_dialogue_message( translated_message, popup_flag );
         }
         if( popup_w_interrupt_query_msg ) {
             if( interrupt_type.evaluate( d ) == "portal_storm_popup" ) {
@@ -6640,30 +6674,16 @@ talk_effect_fun_t::func f_open_dialogue( const JsonObject &jo, std::string_view 
 {
     std::vector < effect_on_condition_id > true_eocs;
     std::vector < effect_on_condition_id > false_eocs;
-    str_or_var topic;
-    bool has_member = false;
+    str_or_var topic( "" );
     if( jo.has_object( member ) ) {
-        has_member = true;
         JsonObject innerJo = jo.get_object( member );
         true_eocs = load_eoc_vector( innerJo, "true_eocs", src );
         false_eocs = load_eoc_vector( innerJo, "false_eocs", src );
         topic = get_str_or_var( innerJo.get_member( "topic" ), "topic" );
     }
-    return [true_eocs, false_eocs, topic, has_member]( dialogue const & d ) {
-        std::string actual_topic;
-        if( has_member ) {
-            actual_topic = topic.evaluate( d );
-        }
-        if( !d.actor( false )->get_character()->is_avatar() ) { //only open a dialog if the avatar is alpha
-            run_eoc_vector( false_eocs, d );
-            return;
-        } else if( !actual_topic.empty() ) {
-            get_avatar().talk_to( get_talker_for( std::vector < std::string > { actual_topic } ), false, false,
-                                  true );
-        } else {
-            get_avatar().talk_to( d.actor( true )->clone() );
-        }
-        run_eoc_vector( true_eocs, d );
+    return [open = dialogue_action::open_conversation( std::move( topic ) ),
+                 true_eocs, false_eocs]( dialogue const &d ) {
+        run_eoc_vector( open( d ) ? true_eocs : false_eocs, d );
     };
 }
 

@@ -161,3 +161,9 @@ ccb.runtime.handler("complete_mission_refugee_boris_cleanup", function(context)
     if not result.ok then error(result.error.message) end
     return (result.value.value or 0) >= 5
 end)
+
+ccb.runtime.handler("complete_mission_learn_about_cattail_jelly_swag_bag", function(context)
+    return has_item(context.speaker, "swag_bag")
+        and services.inventory.has_items(context.speaker, services.types.id("item", "cattail_stalk"), 60, 0).value
+        and services.skills.level(context.speaker, "survival").value >= 1
+end)

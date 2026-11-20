@@ -1,37 +1,35 @@
 local ccb = require("ccb")
 
--- NPC will ask player to burn tagged house. Will follow player after accepting mission.
--- Change first topic to do proper checks. MGOAL_GO_TO to check if player stands on tagged tile.
--- At the end of the mission, will place fire on tagged tile and NPC will join player faction.
 ccb.content.define_mission {
-    id = "MISSION_PYROMANIAC",
-    name = ccb.content.text("Angry pyromaniac"),
-    description = ccb.content.text("Bring the pyromaniac to <color_light_blue>their rival's house</color> and don't forget to <color_yellow>bring at least 200 units of gasoline</color>.  After you got there, talk to the pyromaniac to start burning the house."),
-    goal = "MGOAL_GO_TO",
-    difficulty = 0,
+    id = "MISSION_LEARN_ABOUT_CATTAIL_JELLY",
+    name = ccb.content.text("Gather cattail stalks to create cattail jelly"),
+    description = ccb.content.text("Gather <color_yellow>60 cattail stalks</color> from the swamp and bring them back to <color_light_red>learn how to craft cattail jelly</color>.  Raise your <color_yellow>survival skill to at least 1</color> by harvesting cattail stalks.  <color_yellow>Bring back the provided bag with the 60 cattail stalks in them</color> as well."),
+    goal = "MGOAL_CONDITION",
+    difficulty = 1,
     value = 0,
     generic_rewards = false,
-    start = {
-        target = { terrain = "house", replace_terrain = "forest", match = "PREFIX", random = true, z = 0 },
-        actions = { "follow_only", ccb.content.dialogue_actions.set_first_topic("MISSION_PYROMANIAC") },
-    },
+    origins = { "ORIGIN_OPENER_NPC", "ORIGIN_ANY_NPC" },
+    start = { target = { terrain = "forest_water", reveal_radius = 3 }, actions = { { item = "swag_bag" } } },
     finish = {
         actions = {
-            "follow",
-            { handler = "deliver_gasoline_200_items" },
-            ccb.content.dialogue_actions.update_map("MISSION_PYROMANIAC_BURN"),
+            ccb.content.dialogue_actions.transfer_items("cattail_stalk", 60),
+            ccb.content.dialogue_actions.transfer_items("swag_bag"),
+            { handler = "prepare_60_cattail_stalks" },
+            { handler = "teach_cattail_jelly" },
+            ccb.content.dialogue_actions.notify_player(ccb.content.text("You learn how to craft cattail jelly.")),
+            { item = "cattail_jelly", count = 5, container = "bag_zipper" },
         },
     },
-    origins = { "ORIGIN_OPENER_NPC" },
     dialogue = {
-        describe = ccb.content.text("Oh man, I want to fucking burn it so bad…"),
-        offer = ccb.content.text("I'm so fucking infuriated!  I've got an enemy that ruined my life, and now I want to get revenge!  I don't care about <the_cataclysm>, I just want to burn his house!  Would you help me, <name_g>?"),
-        accepted = ccb.content.text("Good.  Let's go to his house and goddamn burn it down!  Oh, by the way, could you bring gasoline with you, <name_g>?  I was so angry I forgot to bring it with me…"),
-        rejected = ccb.content.text("Seriously?  It's such an easy job…"),
-        advice = ccb.content.text("Maybe we can find some gasoline at a gas station."),
-        inquire = ccb.content.text("Are you ready, <name_g>?"),
-        success = ccb.content.text("Sweet, sweet revenge!  Ah, smells so nice!  Feels like the smell of napalm in the morning!  All his stuff, and probably even that <name_b>, will burn to ashes in a matter of minutes.  You helped me get my revenge, so I'll follow you to the end, <name_g>!"),
-        success_lie = ccb.content.text("What?!  You liar!"),
-        failure = ccb.content.text("Wow, you failed?  How…"),
+        describe = ccb.content.text("Medical services are a little sparse following <the_cataclysm>, but people have been surviving using their wits and the bounty of Mother Nature for a long time.  Care to learn a little?"),
+        offer = ccb.content.text("Did you know that cattails are a source of a jelly that works as an antiseptic and analgesic?  Something like that is likely to be mighty helpful out here.  I want you to take this bag, head to the nearest swamp, collect 60 cattail stalks, and bring them back here.  In exchange, I'll show you how to harvest the jelly."),
+        accepted = ccb.content.text("Great!  <color_yellow>This bag should be big enough to hold all of the stalks we'll need.  Don't forget to bring it back.</color>"),
+        rejected = ccb.content.text("Your loss."),
+        advice = ccb.content.text("The cattails grow in the fresh water in swamps.  You can't miss them."),
+        inquire = ccb.content.text("Got those cattail stalks yet?  Don't forget to <color_yellow>bring back my bag with the stalks in them</color> and to work on improving your survival skill as well."),
+        success = ccb.content.text("Great!  Hand them over and I'll show you how this works."),
+        success_lie = ccb.content.text("OK, then hand them over."),
+        failure = ccb.content.text("Well, that's a shame."),
     },
+    complete_when = "complete_mission_learn_about_cattail_jelly_swag_bag",
 }
