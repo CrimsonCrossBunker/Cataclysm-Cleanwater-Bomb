@@ -1,0 +1,161 @@
+local ccb = require("ccb")
+
+ccb.content.define_field_type {
+    id = "fd_dust",
+    levels = {
+        {
+            name = ccb.content.text("dust"),
+            symbol = "%",
+            color = "brown",
+            transparent = true,
+            dangerous = false,
+            concentration = 1,
+        },
+        {
+            name = ccb.content.text("dust and grime"),
+            symbol = "%",
+            color = "brown",
+            transparent = true,
+            dangerous = false,
+            concentration = 1,
+        },
+    },
+    priority = 1,
+    dirty_transparency_cache = false,
+    display_items = true,
+    display_field = true,
+    description_affix = "covered_in",
+    mopsafe = true,
+    moppable = true,
+    percent_spread = 20,
+    phase = "gas",
+    looks_like = "t_open_air",
+}
+
+ccb.content.define_field_type {
+    id = "fd_splinters",
+    levels = {
+        {
+            name = ccb.content.text("wood debris"),
+            symbol = "%",
+            color = "brown",
+            transparent = true,
+            dangerous = false,
+            concentration = 1,
+        },
+    },
+    priority = 2,
+    dirty_transparency_cache = false,
+    display_items = true,
+    display_field = true,
+    description_affix = "covered_in",
+    mopsafe = true,
+    moppable = true,
+    percent_spread = 8,
+    phase = "gas",
+    looks_like = "fd_dust",
+}
+
+ccb.content.define_field_type {
+    id = "fd_spores",
+    levels = {
+        {
+            name = ccb.content.text("spore dust"),
+            symbol = "%",
+            color = "light_gray",
+            transparent = true,
+            dangerous = true,
+            concentration = 1,
+            effects = {
+                {
+                    effect = "spores",
+                    min_duration = "1 minutes",
+                    max_duration = "10 minutes",
+                    intensity = 1,
+                    message = ccb.content.text("You're covered in spores!"),
+                    npc_message = ccb.content.text("<npcname> is covered in spores!"),
+                    message_type = "bad",
+                    immunity = {
+                        flags = { "mycus" },
+                        resistances = {
+                            { part = "head", minimum = 15 },
+                            { part = "torso", minimum = 15 },
+                            { part = "arm", minimum = 15 },
+                            { part = "hand", minimum = 15 },
+                            { part = "leg", minimum = 15 },
+                            { part = "foot", minimum = 15 },
+                        },
+                    },
+                },
+            },
+        },
+        {
+            name = ccb.content.text("spore dust and grime"),
+            symbol = "%",
+            color = "light_gray",
+            transparent = true,
+            dangerous = true,
+            concentration = 1,
+            effects = {
+                {
+                    effect = "spores",
+                    min_duration = "1 minutes",
+                    max_duration = "10 minutes",
+                    intensity = 1,
+                    message = ccb.content.text("You're covered in spores!"),
+                    npc_message = ccb.content.text("<npcname> is covered in spores!"),
+                    message_type = "bad",
+                    immunity = {
+                        flags = { "mycus" },
+                        resistances = {
+                            { part = "head", minimum = 15 },
+                            { part = "torso", minimum = 15 },
+                            { part = "arm", minimum = 15 },
+                            { part = "hand", minimum = 15 },
+                            { part = "leg", minimum = 15 },
+                            { part = "foot", minimum = 15 },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    priority = 1,
+    dirty_transparency_cache = false,
+    display_items = true,
+    display_field = true,
+    description_affix = "covered_in",
+    mopsafe = true,
+    moppable = true,
+    percent_spread = 75,
+    fire_reaction = { degrade_at = 2, clear_at = 3, interval = "30 seconds" },
+    half_life = "6 hours",
+    phase = "gas",
+    has_fume = true,
+    looks_like = "t_open_air",
+}
+
+ccb.content.define_field_type {
+    id = "fd_fungal_splinters",
+    levels = {
+        {
+            name = ccb.content.text("fungal debris"),
+            symbol = "%",
+            color = "light_gray",
+            transparent = true,
+            concentration = 1,
+        },
+    },
+    priority = 2,
+    dirty_transparency_cache = false,
+    display_items = true,
+    display_field = true,
+    description_affix = "covered_in",
+    mopsafe = true,
+    moppable = true,
+    percent_spread = 50,
+    half_life = "6 hours",
+    phase = "gas",
+    has_fume = true,
+    looks_like = "fd_dust",
+}
