@@ -170,4 +170,3 @@ require("monster_groups")
 require("overmap_connections")
 
 require("migrations")
-require("region_components")

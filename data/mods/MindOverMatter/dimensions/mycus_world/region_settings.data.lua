@@ -1,5 +1,58 @@
 local ccb = require("ccb")
 
+ccb.content.define_region_settings_terrain_furniture {
+    id = "mom_mycus_world",
+    copy_from = "default",
+    replacements = {
+        "mom_mycus_world_t_region_groundcover",
+        "mom_mycus_world_t_region_groundcover_forest",
+        "mom_mycus_world_t_region_tree",
+        "mom_mycus_world_t_region_tree_nut",
+        "mom_mycus_world_t_region_tree_fruit",
+        "mom_mycus_world_t_region_tree_shade",
+        "mom_mycus_world_t_region_tree_evergreen",
+        "mom_mycus_world_t_region_shrub",
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "mom_mycus_world_t_region_groundcover",
+    terrain = "t_region_groundcover",
+    terrain_choices = {
+        { id = "t_fungus_floor_out", weight = 600 },
+        { id = "t_fungus", weight = 150 },
+        { id = "t_fungus_mound", weight = 1 },
+        { id = "t_dirt", weight = 20 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "mom_mycus_world_t_region_groundcover_forest",
+    terrain = "t_region_groundcover_forest",
+    terrain_choices = {
+        { id = "t_fungus_floor_out", weight = 300 },
+        { id = "t_fungus", weight = 150 },
+        { id = "t_fungus_mound", weight = 4 },
+        { id = "t_shrub_fungal", weight = 10 },
+        { id = "t_dirt", weight = 20 },
+    },
+}
+
+ccb.content.define_region_settings_forest_mapgen {
+    id = "mom_mycus_world",
+    copy_from = "default",
+    biomes = { "biome_forest_mom_mycus_world" },
+}
+
+ccb.content.define_region_settings_forest {
+    id = "mom_mycus_world",
+    copy_from = "default",
+    noise_threshold_forest = 0.45,
+    noise_threshold_forest_thick = 1,
+    noise_threshold_swamp_adjacent_water = 1,
+    noise_threshold_swamp_isolated = 1,
+}
+
 ccb.content.define_forest_biome_mapgen {
     id = "biome_forest_mom_mycus_world",
     copy_from = "biome_forest_default",
@@ -60,4 +113,44 @@ ccb.content.define_forest_biome_component {
     sequence = 3,
     chance = 512,
     types = { { id = "t_puddle", weight = 1 }, { id = "t_puddle_mycus", weight = 10 } },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "mom_mycus_world_t_region_tree",
+    terrain = "t_region_tree",
+    terrain_choices = { { id = "t_tree_fungal", weight = 128 }, { id = "t_tree_fungal_young", weight = 32 } },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "mom_mycus_world_t_region_tree_nut",
+    terrain = "t_region_tree",
+    terrain_choices = { { id = "t_tree_fungal", weight = 128 }, { id = "t_tree_fungal_young", weight = 32 } },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "mom_mycus_world_t_region_tree_fruit",
+    terrain = "t_region_tree",
+    terrain_choices = { { id = "t_tree_fungal", weight = 128 }, { id = "t_tree_fungal_young", weight = 32 } },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "mom_mycus_world_t_region_tree_shade",
+    terrain = "t_region_tree",
+    terrain_choices = { { id = "t_tree_fungal", weight = 128 }, { id = "t_tree_fungal_young", weight = 32 } },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "mom_mycus_world_t_region_tree_evergreen",
+    terrain = "t_region_tree",
+    terrain_choices = { { id = "t_tree_fungal", weight = 128 }, { id = "t_tree_fungal_young", weight = 32 } },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "mom_mycus_world_t_region_shrub",
+    terrain = "t_region_shrub",
+    terrain_choices = {
+        { id = "t_shrub_fungal", weight = 120 },
+        { id = "t_tree_fungal_young", weight = 10 },
+        { id = "t_marloss", weight = 1 },
+    },
 }

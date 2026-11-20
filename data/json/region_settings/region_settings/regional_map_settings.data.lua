@@ -1,5 +1,81 @@
 local ccb = require("ccb")
 
+ccb.content.define_region_settings_river {
+    id = "default",
+    river_scale = 1,
+    river_frequency = 1.5,
+    river_branch_chance = 64.0,
+    river_branch_remerge_chance = 2.0,
+    river_branch_scale_decrease = 1.0,
+}
+
+ccb.content.define_region_settings_lake {
+    id = "default",
+    noise_threshold_lake = 0.25,
+    lake_size_min = 20,
+    lake_depth = -5,
+    shore_terrains = { "forest", "forest_thick", "forest_water", "field" },
+    shore_aliases = {
+        { terrain = "island_forest", match = "TYPE", alias = "forest" },
+        { terrain = "island_forest_thick", match = "TYPE", alias = "forest_thick" },
+        { terrain = "island_forest_water", match = "TYPE", alias = "forest_water" },
+        { terrain = "island_field", match = "TYPE", alias = "field" },
+    },
+}
+
+ccb.content.define_region_settings_ocean {
+    id = "default",
+    noise_threshold_ocean = 0.25,
+    ocean_size_min = 100,
+    ocean_depth = -9,
+    sandy_beach_width = 6,
+    ocean_start_north = 500,
+    ocean_start_east = 10,
+    ocean_start_west = 1000,
+    ocean_start_south = false,
+}
+
+ccb.content.define_region_settings_ravine {
+    id = "default",
+    num_ravines = 0,
+    ravine_width = 3,
+    ravine_range = 45,
+    ravine_depth = -3,
+}
+
+ccb.content.define_region_settings_forest {
+    id = "default",
+    noise_threshold_forest = 0.2,
+    noise_threshold_forest_thick = 0.25,
+    noise_threshold_swamp_adjacent_water = 0.3,
+    noise_threshold_swamp_isolated = 0.6,
+    river_floodplain_buffer_distance_min = 3,
+    river_floodplain_buffer_distance_max = 15,
+    forest_threshold_increase = { 0.04, 0, 0, 0.02 },
+}
+
+ccb.content.define_region_settings_forest_trail {
+    id = "default",
+    chance = 2,
+    border_point_chance = 2,
+    minimum_forest_size = 100,
+    random_point_min = 4,
+    random_point_max = 50,
+    random_point_size_scalar = 100,
+    trailhead_chance = 1,
+    trailhead_road_distance = 6,
+    trailheads = {
+        { id = "trailhead_basic", weight = 1 },
+        { id = "trailhead_outhouse", weight = 1 },
+        { id = "trailhead_shack", weight = 1 },
+    },
+}
+
+ccb.content.define_region_settings_forest_mapgen {
+    id = "default",
+    biomes = { "biome_forest_default", "biome_forest_thick_default", "biome_forest_water_default" },
+}
+
 ccb.content.define_forest_biome_mapgen {
     id = "biome_forest_default",
     terrains = { "forest", "special_forest", "special_forest_isherwood" },
@@ -231,7 +307,6 @@ ccb.content.define_forest_biome_component {
         { id = "t_water_murky", weight = 12 },
     },
 }
-
 
 ccb.content.define_map_extra_collection {
     id = "forest",
@@ -556,5 +631,562 @@ ccb.content.define_map_extra_collection {
         { extra = "mx_military", weight = 4 },
         { extra = "mx_exocrash_1", weight = 5 },
         { extra = "mx_exocrash_2", weight = 5 },
+    },
+}
+
+ccb.content.define_region_settings_map_extras {
+    id = "default",
+    extras = {
+        "forest",
+        "forest_thick",
+        "forest_water",
+        "field",
+        "ocean_bed",
+        "ocean_shore",
+        "road",
+        "park",
+        "road_nesw_manhole",
+        "build",
+        "marloss",
+        "subway",
+        "lab_subway",
+        "research_facility_lot",
+        "research_facility_interior",
+        "river",
+        "lake_shore",
+        "agricultural",
+    },
+}
+
+ccb.content.define_region_settings_terrain_furniture {
+    id = "default",
+    replacements = {
+        "default_t_region_groundcover",
+        "default_t_region_groundcover_urban",
+        "default_t_region_groundcover_forest",
+        "default_t_region_groundcover_swamp",
+        "default_t_region_groundcover_barren",
+        "default_t_region_grass",
+        "default_t_region_soil",
+        "default_t_region_shrub_forest_dense",
+        "default_t_region_shrub_forest",
+        "default_t_region_shrub_plains",
+        "default_t_region_shrub_swamp",
+        "default_t_region_shrub_fruit",
+        "default_t_region_shrub_decorative",
+        "default_t_region_shrub",
+        "default_t_region_tree_forest_dense",
+        "default_t_region_tree_forest_other",
+        "default_t_region_tree_forest",
+        "default_t_region_tree",
+        "default_t_region_tree_shade",
+        "default_t_region_tree_fruit",
+        "default_t_region_tree_fruit_wild",
+        "default_t_region_tree_dead",
+        "default_t_region_tree_nut",
+        "default_t_region_tree_evergreen",
+        "default_f_region_flower",
+        "default_f_region_flower_decorative",
+        "default_f_region_weed",
+        "default_f_region_plain",
+        "default_f_region_forest",
+        "default_f_region_forest_dense",
+        "default_f_region_forest_water",
+        "default_f_region_water_plant",
+        "default_f_region_lake_bed",
+        "default_f_region_ocean_bed",
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_groundcover",
+    terrain = "t_region_groundcover",
+    terrain_choices = {
+        { id = "t_grass", weight = 12000 },
+        { id = "t_grass_dead", weight = 2000 },
+        { id = "t_dirt", weight = 1000 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_groundcover_urban",
+    terrain = "t_region_groundcover_urban",
+    terrain_choices = { { id = "t_grass", weight = 20 }, { id = "t_grass_dead", weight = 3 } },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_groundcover_forest",
+    terrain = "t_region_groundcover_forest",
+    terrain_choices = {
+        { id = "t_forestfloor", weight = 10 },
+        { id = "t_grass", weight = 1 },
+        { id = "t_grass_long", weight = 1 },
+        { id = "t_moss", weight = 1 },
+        { id = "t_grass_dead", weight = 1 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_groundcover_swamp",
+    terrain = "t_region_groundcover_swamp",
+    terrain_choices = {
+        { id = "t_grass_long", weight = 300 },
+        { id = "t_grass_tall", weight = 100 },
+        { id = "t_moss", weight = 200 },
+        { id = "t_dirt", weight = 200 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_groundcover_barren",
+    terrain = "t_region_groundcover_barren",
+    terrain_choices = {
+        { id = "t_dirt", weight = 30 },
+        { id = "t_grass_dead", weight = 2 },
+        { id = "t_railroad_rubble", weight = 1 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_grass",
+    terrain = "t_region_grass",
+    terrain_choices = { { id = "t_grass", weight = 1 } },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_soil",
+    terrain = "t_region_soil",
+    terrain_choices = { { id = "t_dirt", weight = 1 } },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_shrub_forest_dense",
+    terrain = "t_region_shrub_forest_dense",
+    terrain_choices = {
+        { id = "t_underbrush", weight = 450 },
+        { id = "t_shrub", weight = 150 },
+        { id = "t_fern", weight = 75 },
+        { id = "t_shrub_hobblebush", weight = 2 },
+        { id = "t_shrub_huckleberry", weight = 2 },
+        { id = "t_shrub_raspberry", weight = 1 },
+        { id = "t_shrub_blackberry", weight = 1 },
+        { id = "t_shrub_blueberry", weight = 1 },
+        { id = "t_shrub_strawberry", weight = 1 },
+        { id = "t_shrub_grape", weight = 1 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_shrub_forest",
+    terrain = "t_region_shrub_forest",
+    terrain_choices = {
+        { id = "t_region_shrub_forest_dense", weight = 350 },
+        { id = "t_shrub_rose", weight = 5 },
+        { id = "t_shrub_blackberry", weight = 5 },
+        { id = "t_shrub_autumn_olive", weight = 5 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_shrub_plains",
+    terrain = "t_region_shrub_plains",
+    terrain_choices = {
+        { id = "t_shrub", weight = 50 },
+        { id = "t_shrub_blueberry", weight = 2 },
+        { id = "t_shrub_autumn_olive", weight = 2 },
+        { id = "t_shrub_blackberry", weight = 2 },
+        { id = "t_shrub_rose", weight = 2 },
+        { id = "t_shrub_huckleberry", weight = 1 },
+        { id = "t_shrub_strawberry", weight = 1 },
+        { id = "t_shrub_grape", weight = 1 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_shrub_swamp",
+    terrain = "t_region_shrub_swamp",
+    terrain_choices = {
+        { id = "t_fern", weight = 2 },
+        { id = "t_shrub_hobblebush", weight = 2 },
+        { id = "t_shrub_raspberry", weight = 2 },
+        { id = "t_shrub_chokeberry", weight = 2 },
+        { id = "t_shrub_blueberry", weight = 2 },
+        { id = "t_shrub_huckleberry", weight = 1 },
+        { id = "t_shrub_spicebush", weight = 1 },
+        { id = "t_shrub_rose", weight = 1 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_shrub_fruit",
+    terrain = "t_region_shrub_fruit",
+    terrain_choices = {
+        { id = "t_shrub_blueberry", weight = 6 },
+        { id = "t_shrub_strawberry", weight = 6 },
+        { id = "t_shrub_raspberry", weight = 4 },
+        { id = "t_shrub_grape", weight = 4 },
+        { id = "t_shrub_hobblebush", weight = 2 },
+        { id = "t_shrub_blackberry", weight = 2 },
+        { id = "t_shrub_huckleberry", weight = 2 },
+        { id = "t_shrub_peanut", weight = 1 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_shrub_decorative",
+    terrain = "t_region_shrub_decorative",
+    terrain_choices = {
+        { id = "t_shrub", weight = 30 },
+        { id = "t_fern", weight = 5 },
+        { id = "t_shrub_rose", weight = 20 },
+        { id = "t_shrub_hydrangea", weight = 20 },
+        { id = "t_shrub_lilac", weight = 20 },
+        { id = "t_shrub_chokeberry", weight = 15 },
+        { id = "t_tree_nannyberry", weight = 15 },
+        { id = "t_shrub_hobblebush", weight = 5 },
+        { id = "t_bamboo_long", weight = 5 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_shrub",
+    terrain = "t_region_shrub",
+    terrain_choices = {
+        { id = "t_region_shrub_decorative", weight = 60 },
+        { id = "t_underbrush", weight = 10 },
+        { id = "t_region_shrub_fruit", weight = 30 },
+    },
+}
+
+-- Tree coverage data here: https://www.fs.usda.gov/nrs/pubs/rb/rb_nrs125.pdf
+-- Total acreage coverage data here: https://public.tableau.com/views/FIA_FiveYearReports_NE_Area_1/ForestTypeArea?:showVizHome=no
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_tree_forest_dense",
+    terrain = "t_region_tree_forest_dense",
+    terrain_choices = {
+        { id = "t_tree", weight = 18 },
+        { id = "t_tree_blackjack", weight = 10 },
+        { id = "t_tree_hickory", weight = 18 },
+        { id = "t_tree_pine", weight = 9 },
+        { id = "t_tree_maple", weight = 7 },
+        { id = "t_tree_birch", weight = 7 },
+        { id = "t_tree_beech", weight = 7 },
+        { id = "t_tree_cottonwood", weight = 4 },
+        { id = "t_tree_elm", weight = 4 },
+        { id = "t_tree_sassafras", weight = 1 },
+        { id = "t_region_tree_dead", weight = 5 },
+        { id = "t_region_tree_forest_other", weight = 5 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_tree_forest_other",
+    terrain = "t_region_tree_forest_other",
+    terrain_choices = {
+        { id = "t_tree_willow", weight = 15 },
+        { id = "t_tree_alder", weight = 15 },
+        { id = "t_tree_chestnut", weight = 10 },
+        { id = "t_tree_basswood", weight = 10 },
+        { id = "t_tree_hazelnut", weight = 10 },
+        { id = "t_region_tree_fruit_wild", weight = 20 },
+        { id = "t_tree_sassafras", weight = 2 },
+        { id = "t_tree_juniper", weight = 5 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_tree_forest",
+    terrain = "t_region_tree_forest",
+    terrain_choices = {
+        { id = "t_region_tree_forest_dense", weight = 2 },
+        { id = "t_region_tree_forest_other", weight = 1 },
+    },
+}
+
+-- t_tree_hickory remains separate here from t_region_tree_nut because hickory mixed in with oak trees are some of the most common tree stands in Massachusetts forests
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_tree",
+    terrain = "t_region_tree",
+    terrain_choices = {
+        { id = "t_tree", weight = 128 },
+        { id = "t_tree_young", weight = 128 },
+        { id = "t_tree_birch", weight = 16 },
+        { id = "t_tree_elm", weight = 16 },
+        { id = "t_tree_cottonwood", weight = 8 },
+        { id = "t_tree_basswood", weight = 16 },
+        { id = "t_tree_alder", weight = 16 },
+        { id = "t_tree_pine", weight = 64 },
+        { id = "t_tree_maple", weight = 32 },
+        { id = "t_tree_willow", weight = 32 },
+        { id = "t_tree_hickory", weight = 4 },
+        { id = "t_region_tree_nut", weight = 16 },
+        { id = "t_tree_spruce", weight = 8 },
+        { id = "t_tree_beech", weight = 2 },
+        { id = "t_tree_blackjack", weight = 8 },
+        { id = "t_region_tree_fruit_wild", weight = 4 },
+        { id = "t_tree_sassafras", weight = 3 },
+        { id = "t_region_tree_dead", weight = 48 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_tree_shade",
+    terrain = "t_region_tree_shade",
+    terrain_choices = {
+        { id = "t_tree", weight = 64 },
+        { id = "t_tree_young", weight = 32 },
+        { id = "t_tree_birch", weight = 16 },
+        { id = "t_tree_elm", weight = 16 },
+        { id = "t_tree_cottonwood", weight = 16 },
+        { id = "t_tree_basswood", weight = 16 },
+        { id = "t_tree_alder", weight = 16 },
+        { id = "t_tree_maple", weight = 32 },
+        { id = "t_tree_willow", weight = 32 },
+        { id = "t_tree_hickory", weight = 16 },
+        { id = "t_tree_chestnut", weight = 8 },
+        { id = "t_tree_blackjack", weight = 8 },
+        { id = "t_tree_elderberry", weight = 2 },
+        { id = "t_tree_mulberry", weight = 2 },
+        { id = "t_tree_sassafras", weight = 3 },
+        { id = "t_tree_dead", weight = 2 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_tree_fruit",
+    terrain = "t_region_tree_fruit",
+    terrain_choices = {
+        { id = "t_tree_young", weight = 4 },
+        { id = "t_tree_apple", weight = 2 },
+        { id = "t_tree_crabapple", weight = 1 },
+        { id = "t_tree_apricot", weight = 2 },
+        { id = "t_tree_cherry", weight = 2 },
+        { id = "t_tree_peach", weight = 2 },
+        { id = "t_tree_pear", weight = 2 },
+        { id = "t_tree_plum", weight = 2 },
+        { id = "t_tree_elderberry", weight = 2 },
+        { id = "t_tree_nannyberry", weight = 2 },
+        { id = "t_tree_mulberry", weight = 2 },
+        { id = "t_tree_dead", weight = 4 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_tree_fruit_wild",
+    terrain = "t_region_tree_fruit_wild",
+    terrain_choices = {
+        { id = "t_tree_young", weight = 4 },
+        { id = "t_tree_crabapple", weight = 2 },
+        { id = "t_tree_juniper", weight = 2 },
+        { id = "t_tree_elderberry", weight = 2 },
+        { id = "t_tree_nannyberry", weight = 2 },
+        { id = "t_tree_mulberry", weight = 2 },
+        { id = "t_tree_dead", weight = 4 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_tree_dead",
+    terrain = "t_region_tree_dead",
+    terrain_choices = {
+        { id = "t_tree_hickory_dead", weight = 8 },
+        { id = "t_tree_dead", weight = 7 },
+        { id = "t_tree_dead_warped", weight = 1 },
+        { id = "t_tree_deadpine", weight = 3 },
+        { id = "t_tree_deadpine_warped", weight = 1 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_tree_nut",
+    terrain = "t_region_tree_nut",
+    terrain_choices = {
+        { id = "t_tree_hickory", weight = 16 },
+        { id = "t_tree_hickory_dead", weight = 16 },
+        { id = "t_tree_walnut", weight = 8 },
+        { id = "t_tree_butternut", weight = 4 },
+        { id = "t_tree_chestnut", weight = 8 },
+        { id = "t_tree_young", weight = 4 },
+        { id = "t_tree_beech", weight = 2 },
+        { id = "t_tree_hazelnut", weight = 2 },
+        { id = "t_tree_dead", weight = 4 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_t_region_tree_evergreen",
+    terrain = "t_region_tree_evergreen",
+    terrain_choices = {
+        { id = "t_tree_pine", weight = 32 },
+        { id = "t_tree_juniper", weight = 16 },
+        { id = "t_tree_deadpine", weight = 2 },
+        { id = "t_tree_spruce", weight = 2 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_f_region_flower",
+    furniture = "f_region_flower",
+    furniture_choices = {
+        { id = "f_black_eyed_susan", weight = 100 },
+        { id = "f_lily", weight = 100 },
+        { id = "f_flower_tulip", weight = 100 },
+        { id = "f_flower_spurge", weight = 100 },
+        { id = "f_chamomile", weight = 100 },
+        { id = "f_dandelion", weight = 100 },
+        { id = "f_dahlia", weight = 100 },
+        { id = "f_bluebell", weight = 100 },
+        { id = "f_sunflower", weight = 100 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_f_region_flower_decorative",
+    furniture = "f_region_flower_decorative",
+    furniture_choices = {
+        { id = "f_lily", weight = 4 },
+        { id = "f_flower_tulip", weight = 4 },
+        { id = "f_black_eyed_susan", weight = 3 },
+        { id = "f_bluebell", weight = 2 },
+        { id = "f_maianthemum_stellatum", weight = 2 },
+        { id = "f_fireweed", weight = 1 },
+        { id = "f_flower_spurge", weight = 1 },
+        { id = "f_dahlia", weight = 1 },
+        { id = "f_salsify", weight = 1 },
+        { id = "f_chicory", weight = 1 },
+        { id = "f_sunflower", weight = 1 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_f_region_weed",
+    furniture = "f_region_weed",
+    furniture_choices = {
+        { id = "f_thistle", weight = 400 },
+        { id = "f_dandelion", weight = 400 },
+        { id = "f_burdock", weight = 400 },
+        { id = "f_chamomile", weight = 300 },
+        { id = "f_carrot_wild", weight = 300 },
+        { id = "f_asparagus_wild", weight = 300 },
+        { id = "f_salsify", weight = 300 },
+        { id = "f_datura", weight = 300 },
+        { id = "f_japanese_knotweed", weight = 300 },
+        { id = "f_bluebell", weight = 200 },
+        { id = "f_dahlia", weight = 100 },
+        { id = "f_lily", weight = 100 },
+        { id = "f_sunflower", weight = 100 },
+        { id = "f_mustard", weight = 100 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_f_region_plain",
+    furniture = "f_region_plain",
+    furniture_choices = {
+        { id = "f_dandelion", weight = 600 },
+        { id = "f_flower_spurge", weight = 400 },
+        { id = "f_chamomile", weight = 400 },
+        { id = "f_carrot_wild", weight = 300 },
+        { id = "f_asparagus_wild", weight = 300 },
+        { id = "f_salsify", weight = 300 },
+        { id = "f_datura", weight = 300 },
+        { id = "f_thistle", weight = 300 },
+        { id = "f_japanese_knotweed", weight = 200 },
+        { id = "f_dahlia", weight = 200 },
+        { id = "f_maianthemum_stellatum", weight = 200 },
+        { id = "f_mutpoppy", weight = 200 },
+        { id = "f_black_eyed_susan", weight = 100 },
+        { id = "f_flower_tulip", weight = 100 },
+        { id = "f_mustard", weight = 100 },
+        { id = "f_sunflower", weight = 100 },
+        { id = "f_fireweed", weight = 100 },
+        { id = "f_selfheal", weight = 100 },
+        { id = "f_jerusalem_artichoke", weight = 100 },
+        { id = "f_lily", weight = 100 },
+        { id = "f_chicory", weight = 100 },
+        { id = "f_dogbane", weight = 30 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_f_region_forest",
+    furniture = "f_region_forest",
+    furniture_choices = {
+        { id = "f_burdock", weight = 2000 },
+        { id = "f_bluebell", weight = 600 },
+        { id = "f_wild_sarsaparilla", weight = 600 },
+        { id = "f_lily", weight = 500 },
+        { id = "f_chamomile", weight = 500 },
+        { id = "f_japanese_knotweed", weight = 300 },
+        { id = "f_carrot_wild", weight = 300 },
+        { id = "f_asparagus_wild", weight = 300 },
+        { id = "f_salsify", weight = 300 },
+        { id = "f_dahlia", weight = 200 },
+        { id = "f_mutpoppy", weight = 100 },
+        { id = "f_maianthemum_stellatum", weight = 100 },
+        { id = "f_wintergreen", weight = 100 },
+        { id = "f_dogbane", weight = 80 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_f_region_forest_dense",
+    furniture = "f_region_forest_dense",
+    furniture_choices = {
+        { id = "f_burdock", weight = 2000 },
+        { id = "f_bluebell", weight = 800 },
+        { id = "f_lily", weight = 500 },
+        { id = "f_wild_sarsaparilla", weight = 400 },
+        { id = "f_salsify", weight = 300 },
+        { id = "f_wintergreen", weight = 200 },
+        { id = "f_dogbane", weight = 100 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_f_region_forest_water",
+    furniture = "f_region_forest_water",
+    furniture_choices = {
+        { id = "f_burdock", weight = 4 },
+        { id = "f_purple_loosestrife", weight = 3 },
+        { id = "f_japanese_knotweed", weight = 2 },
+        { id = "f_lily", weight = 1 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_f_region_water_plant",
+    furniture = "f_region_water_plant",
+    furniture_choices = {
+        { id = "f_cattails", weight = 15 },
+        { id = "f_purple_loosestrife", weight = 10 },
+        { id = "f_wild_rice", weight = 1 },
+        { id = "f_lilypad", weight = 1 },
+        { id = "f_lotus", weight = 5 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_f_region_lake_bed",
+    furniture = "f_region_lake_bed",
+    furniture_choices = {
+        { id = "f_boulder_small", weight = 8 },
+        { id = "f_boulder_medium", weight = 4 },
+        { id = "f_boulder_large", weight = 2 },
+    },
+}
+
+ccb.content.define_region_terrain_furniture {
+    id = "default_f_region_ocean_bed",
+    furniture = "f_region_ocean_bed",
+    furniture_choices = {
+        { id = "f_algae_red", weight = 4 },
+        { id = "f_algae_green", weight = 3 },
+        { id = "f_kelp_sugar", weight = 1 },
+        { id = "f_boulder_small", weight = 8 },
+        { id = "f_boulder_medium", weight = 4 },
+        { id = "f_boulder_large", weight = 2 },
+        { id = "f_sea_anemone", weight = 1 },
+        { id = "f_sea_sponge", weight = 1 },
     },
 }

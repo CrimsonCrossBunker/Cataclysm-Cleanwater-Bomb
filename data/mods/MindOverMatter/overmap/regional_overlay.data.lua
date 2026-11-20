@@ -1,5 +1,11 @@
 local ccb = require("ccb")
 
+ccb.content.define_region_settings_map_extras {
+    id = "default",
+    copy_from = "default",
+    add_extras = { "phavian_lab_lot", "phavian_lab_interior" },
+}
+
 ccb.content.define_map_extra_collection {
     id = "forest_water",
     copy_from = "forest_water",

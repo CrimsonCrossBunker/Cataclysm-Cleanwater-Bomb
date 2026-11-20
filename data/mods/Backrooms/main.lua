@@ -21,4 +21,3 @@ require("generic_items")
 require("inherited_items")
 
 require("monster_groups")
-require("region_components")

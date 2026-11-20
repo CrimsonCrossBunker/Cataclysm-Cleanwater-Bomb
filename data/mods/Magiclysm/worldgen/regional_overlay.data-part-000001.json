@@ -1,8 +1,0 @@
-[
-  {
-    "type": "region_settings_forest_mapgen",
-    "id": "default",
-    "copy-from": "default",
-    "extend": { "biomes": [ "biome_forest_thick_default" ] }
-  }
-]

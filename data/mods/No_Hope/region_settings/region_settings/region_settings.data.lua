@@ -87,3 +87,18 @@ ccb.content.define_map_extra_collection {
     copy_from = "subway",
     add_extras = { { extra = "mx_casings", weight = 10 }, { extra = "mx_bandits_ambush", weight = 5 } },
 }
+
+ccb.content.define_region_settings_map_extras {
+    id = "default_nohope",
+    copy_from = "default",
+    add_extras = {
+        "forest_nohope",
+        "forest_thick_nohope",
+        "forest_water_nohope",
+        "field_nohope",
+        "road_nohope",
+        "build_nohope",
+        "subway_nohope",
+    },
+    remove_extras = { "forest", "forest_thick", "forest_water", "field", "road", "build", "subway" },
+}
