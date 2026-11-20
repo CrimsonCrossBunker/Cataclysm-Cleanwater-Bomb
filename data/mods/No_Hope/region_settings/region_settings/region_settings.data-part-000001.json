@@ -1,0 +1,19 @@
+[
+  {
+    "type": "region_settings_map_extras",
+    "id": "default_nohope",
+    "copy-from": "default",
+    "delete": { "extras": [ "forest", "forest_thick", "forest_water", "field", "road", "build", "subway" ] },
+    "extend": {
+      "extras": [
+        "forest_nohope",
+        "forest_thick_nohope",
+        "forest_water_nohope",
+        "field_nohope",
+        "road_nohope",
+        "build_nohope",
+        "subway_nohope"
+      ]
+    }
+  }
+]
