@@ -1486,7 +1486,7 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
                     }
                     if( vision_preparation_->prepare( capture_floor_blocked ) &&
                         vision_preparation_->apply( seen_caches, request,
-                                capture_floor_blocked ? &floor_blocked_caches : nullptr ) ) {
+                                                    capture_floor_blocked ? &floor_blocked_caches : nullptr ) ) {
                         prepared = true;
                         vision_horizontal_cost_ms_ = vision_preparation_->horizontal_cost_ms();
                     }

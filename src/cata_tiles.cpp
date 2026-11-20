@@ -1238,7 +1238,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         invisible[i + 1] = np.y() < min_visible.y || np.y() > max_visible.y ||
                                            np.x() < min_visible.x || np.x() > max_visible.x ||
                                            here.get_visibility( here.apparent_light_on_wall_at( np, cache ),
-                                                   cache ) != visibility_type::CLEAR;
+                                                                cache ) != visibility_type::CLEAR;
                     }
                     const ter_id &cap_t = here.ter( pos );
                     int cap_subtile = 0;

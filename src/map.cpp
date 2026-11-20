@@ -3071,7 +3071,8 @@ bool map::has_wall_surface( const tripoint_bub_ms &p ) const
             t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR_DAMAGED ) ||
             t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR_REINFORCED ) ||
             ( t.has_flag( ter_furn_flag::TFLAG_LOCKED ) &&
-              !t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) ) ) {
+              !t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) ) )
+        {
             return true;
         }
         static const std::string broken_reinforced( "BARRICADABLE_DOOR_REINFORCED_DAMAGED" );
@@ -3083,12 +3084,13 @@ bool map::has_wall_surface( const tripoint_bub_ms &p ) const
         if( t.has_flag( ter_furn_flag::TFLAG_WINDOW ) ||
             t.has_flag( ter_furn_flag::TFLAG_DOOR ) || t.movecost <= 0 ||
             t.has_flag( ter_furn_flag::TFLAG_WALL ) ||
-            t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) || !joins_wall_line ) {
+            t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) || !joins_wall_line )
+        {
             return false;
         }
         return !t.close.is_null() ||
-               ( t.has_flag( ter_furn_flag::TFLAG_FLAT ) &&
-                 t.has_flag( ter_furn_flag::TFLAG_SUPPORTS_ROOF ) );
+        ( t.has_flag( ter_furn_flag::TFLAG_FLAT ) &&
+          t.has_flag( ter_furn_flag::TFLAG_SUPPORTS_ROOF ) );
     };
     const bool panel = door_or_window() || wall_opening();
     if( panel ) {
@@ -3107,9 +3109,10 @@ bool map::has_wall_surface( const tripoint_bub_ms &p ) const
             }
         };
         const std::string_view terrain_id( t.id.str() );
-        const bool flat = std::find( ground_ids.begin(), ground_ids.end(), terrain_id ) != ground_ids.end() ||
+        const bool flat = std::find( ground_ids.begin(), ground_ids.end(),
+                                     terrain_id ) != ground_ids.end() ||
                           ( p.z() > 0 && std::find( roof_ids.begin(), roof_ids.end(),
-                                                  terrain_id ) != roof_ids.end() );
+                                  terrain_id ) != roof_ids.end() );
         return !flat;
     }
     static constexpr std::array<std::string_view, 2> upright_equipment = {{

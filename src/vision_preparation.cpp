@@ -111,7 +111,8 @@ bool frame::prepare( const bool capture_floor_blocked )
             output &block = *outputs_[chunk];
             output *const floor_block = capture_floor_blocked ?
                                         floor_blocked_outputs_[chunk].get() : nullptr;
-            pending[submitted] = pool_->submit_returning( [this, &values, &block, floor_block, begin, end, chunk]() {
+            pending[submitted] = pool_->submit_returning( [this, &values, &block, floor_block, begin, end,
+            chunk]() {
                 CATA_PROFILE_SCOPE_NAMED( "vision.worker_compute" );
                 array_of_grids_of<float> out;
                 array_of_grids_of<float> floor_blocked;

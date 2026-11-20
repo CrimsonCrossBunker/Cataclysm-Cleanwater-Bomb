@@ -2736,11 +2736,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     const tripoint_bub_ms & p ) -> const structure_traits & {
         const ter_id id( t.id );
         const size_t index = static_cast<size_t>( id.to_i() );
-        if( index >= structure_traits_cache.size() ) {
+        if( index >= structure_traits_cache.size() )
+        {
             structure_traits_cache.resize( index + 1 );
         }
         std::optional<structure_traits> &cached = structure_traits_cache[index];
-        if( cached ) {
+        if( cached )
+        {
             return *cached;
         }
         structure_traits traits;
@@ -2752,7 +2754,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const bool is_fence = !is_panel && t.has_flag( "THIN_OBSTACLE" );
         const bool is_upright = upright_equipment_terrain( t );
         traits.is_wall = !traits.is_tree && !traits.is_shrub && !is_panel && !is_fence &&
-                         !is_upright && t.movecost == 0;
+        !is_upright && t.movecost == 0;
         const int subtile = traits.is_wall ? SUBTILE_EDGE : -1;
         const int rota = traits.is_wall ? 1 : 0;
         sprite_lookup_3d layers;
@@ -2764,7 +2766,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         traits.ground_sprite.u1 = traits.ground_sprite.gu1;
         traits.ground_sprite.v1 = traits.ground_sprite.gv1;
         traits.object_sprite = layers.fg;
-        const auto color_for = []( const sprite_info & spr ) {
+        const auto color_for = []( const sprite_info & spr )
+        {
             const float base = spr.atlas ? 1.0f : 0.45f;
             return std::array<float, 3> { base * 0.78f, base * 0.88f, base };
         };
@@ -5371,10 +5374,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         continue;
                     }
                     z_frustum[zlev - far_z_min] = bounds_fully_in_frustum(
-                                                          frustum, static_cast<float>( smd.x ),
-                                                          static_cast<float>( smd.y ),
-                                                          static_cast<float>( smd.x + SEEX ),
-                                                          static_cast<float>( smd.y + SEEY ), wz ) ? 2 : 1;
+                                                      frustum, static_cast<float>( smd.x ),
+                                                      static_cast<float>( smd.y ),
+                                                      static_cast<float>( smd.x + SEEX ),
+                                                      static_cast<float>( smd.y + SEEY ), wz ) ? 2 : 1;
                     any_in_frustum = true;
                 }
                 if( !any_in_frustum ) {
