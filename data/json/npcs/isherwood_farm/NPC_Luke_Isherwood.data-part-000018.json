@@ -1,0 +1,34 @@
+[
+  {
+    "id": "MISSION_LUKE_RETRIEVE_TRUCK",
+    "type": "mission_definition",
+    "name": { "str": "Retrieve the Truck for Luke Isherwood" },
+    "description": "Kill the two bandits for Luke Isherwood to get their truck.",
+    "goal": "MGOAL_ASSASSINATE",
+    "difficulty": 5,
+    "value": 0,
+    "start": {
+      "assign_mission_target": { "om_terrain": "trailhead_shack_z0", "om_special": "trailhead_shack", "reveal_radius": 1 },
+      "update_mapgen": {
+        "place_npcs": [ { "class": "bandit", "x": 5, "y": 8, "target": true }, { "class": "bandit", "x": 5, "y": 9, "target": true } ],
+        "place_vehicles": [
+          { "vehicle": "pickup", "chance": 100, "fuel": 100, "rotation": 0, "faction": "hells_raiders", "x": [ 5 ], "y": [ 8 ] }
+        ]
+      }
+    },
+    "end": { "effect": [ { "run_eocs": "EOC_LUKE_RETRIEVE_TRUCK_END", "time_in_future": 100 } ] },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "//": "Dialogue for this mission is handled externally.",
+    "dialogue": {
+      "describe": ".",
+      "offer": ".",
+      "accepted": ".",
+      "rejected": ".",
+      "advice": ".",
+      "inquire": ".",
+      "success": ".",
+      "success_lie": ".",
+      "failure": "."
+    }
+  }
+]

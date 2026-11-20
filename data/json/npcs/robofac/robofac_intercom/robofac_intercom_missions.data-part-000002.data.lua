@@ -1,0 +1,67 @@
+local ccb = require("ccb")
+
+-- This mission is assigned and completed using conditions in dialogue with the intercom. As such, we don't have any goal, which would make it auto-complete under certain circumstances.
+-- All dialogue for most of the intercom's missions is handled through talk_topics; we don't use these strings for those such missions
+ccb.content.define_mission {
+    id = "MISSION_ROBOFAC_INTERCOM_1",
+    name = ccb.content.text("Return Field Data"),
+    goal = "MGOAL_NULL",
+    description = ccb.content.text("Investigate a nearby field and return with Dr. Prado and the robot prototype she was testing.  Failing that, retrieve the I/O recorder stored within the robot.  If the robot remains operational, avoid direct confrontation and use EMP grenades to disable it."),
+    difficulty = 5,
+    value = 0,
+    start = {
+        target = { terrain = "field", reveal_radius = 2, random = true, search_range = 10 },
+        map_updates = {
+            {
+                layout = {
+                    rows = {
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "                        ",
+                        "          M             ",
+                        "            b b         ",
+                        "         b b b@bb       ",
+                        "             b b        ",
+                        "                        ",
+                        "                        ",
+                    },
+                    flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+                    field_glyphs = { b = { id = "fd_blood", intensity = { 1, 2 } } },
+                    item_groups = { ["@"] = { group = "NC_ROBOFAC_SCIENTIST_worn", chance = 100 } },
+                    item_spawns = { ["@"] = { { id = "corpse_generic_female" } } },
+                    monster_glyphs = { M = { id = "mon_robofac_prototype" } },
+                    terrain = { ["@"] = "t_grass", b = "t_dirt", M = "t_dirt" },
+                },
+            },
+        },
+    },
+    finish = { handler = "advance_hub01_completed_missions_by_1" },
+    origins = { "ORIGIN_SECONDARY" },
+    generic_rewards = false,
+    dialogue = {
+        describe = ccb.content.text("…"),
+        offer = ccb.content.text("…"),
+        accepted = ccb.content.text("…"),
+        rejected = ccb.content.text("…"),
+        advice = ccb.content.text("…"),
+        inquire = ccb.content.text("…"),
+        success = ccb.content.text("…"),
+        success_lie = ccb.content.text("…"),
+        failure = ccb.content.text("…"),
+    },
+}

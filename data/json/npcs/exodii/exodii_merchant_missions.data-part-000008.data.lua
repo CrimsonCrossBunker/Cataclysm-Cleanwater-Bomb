@@ -1,21 +1,38 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_EXODII_MERCHANT_mission_2_clarify",
+    id = "TALK_EXODII_MERCHANT_mission_1_pay_skeptic",
     line = ccb.content.text(
-        --~ A jut is a long, thin pole.  The warehouse is made of concrete and rusty iron, and atop it there's a glistening pole.  The pole is broken, turned off.  I got a tool for you to turn it back on.
-        "A jut be a long, thin post, kennit.  The store-cabin be made o' con-crete an' rusty iron, and atop it be a glintin' post.  The post be broken, I'd razz.  Turnt off.  Rubik's got a tool for you to pop, make it turnt on."),
+        --~ I didn't know you'd be such a hard bargain!  Tell ya what, when you come back, I'll let you in on some of these fancy knick-knacks.
+        "Rightly a trig barter, an I'm ken.  By ol' Rubik's word, on your saintly march home, for you'll have the pick of the bright and steelies roun' ol' Rubik's shop, choice o' your own finely.  What say?"),
     replies = {
         {
-            text = ccb.content.text("OK, got it.  A metal and concrete building with some kind of metal pole on top that you want me to fix"),
-            next_topic = "TALK_EXODII_MERCHANT_mission_2_intro1",
+            text = ccb.content.text("I'll go check it out."),
+            actions = { actions.assign_mission("EXODII_MISSION_CONTACT_HUB") },
+            next_topic = "TALK_DONE",
         },
         {
-            text = ccb.content.text_without_extraction("<done_conversation_section>"),
-            next_topic = "TALK_EXODII_MERCHANT_Talk",
+            text = ccb.content.text("I'm gonna need to think on this one.  See you later, Rubik."),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_EXODII_MERCHANT_mission_1_pay_nice",
+    line = ccb.content.text(
+        --~ That's quite the spirit!  For an exchange, I'll give you some of these shiny tools, whatever you want.  How's that sound?
+        "Ah, 'tis a fine spark.  F'r a switch an' clock, ol' Rubik can share y'like o' these bright and steelies roun' the shop, choice o' your finely.  What say?"),
+    replies = {
+        {
+            text = ccb.content.text("I'll go check it out.  Thanks, Rubik."),
+            actions = { actions.assign_mission("EXODII_MISSION_CONTACT_HUB") },
+            next_topic = "TALK_DONE",
         },
         {
-            text = ccb.content.text("<end_talking_leave>  See you later, Rubik."),
+            text = ccb.content.text("I'm gonna need to think on this one.  I'll see you later, Rubik."),
             next_topic = "TALK_DONE",
         },
     },

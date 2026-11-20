@@ -1,40 +1,5 @@
 [
   {
-    "id": "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1",
-    "type": "mission_definition",
-    "name": { "str": "Hazard Meteorology" },
-    "//": "This mission is completed when you first sell any piece of portal storm data.",
-    "goal": "MGOAL_NULL",
-    "description": "Use the NRE recorder to collect information during a portal storm event.  You'll need to <color_yellow>stay outside and carry the recorder for around 6 minutes until you hear a sharp beep</color> to collect sufficient data.  Generate a printout by activating the NRE recorder and offer it to Hub 01 to finish the mission.",
-    "difficulty": 5,
-    "value": 0,
-    "end": {
-      "update_mapgen": [
-        {
-          "om_terrain": "robofachq_surface_entrance",
-          "place_nested": [ { "chunks": [ "robofac_hq_surface_merc_2" ], "x": 1, "y": 9 } ]
-        }
-      ],
-      "effect": [
-        { "u_add_var": "dialogue_intercom_completed_robofac_intercom_portal_sm_1", "value": "yes" },
-        { "math": [ "u_hub01_completed_missions++" ] }
-      ]
-    },
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "has_generic_rewards": false,
-    "dialogue": {
-      "describe": "…",
-      "offer": "…",
-      "accepted": "…",
-      "rejected": "…",
-      "advice": "…",
-      "inquire": "…",
-      "success": "…",
-      "success_lie": "…",
-      "failure": "…"
-    }
-  },
-  {
     "id": [
       "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER",
       "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Recorder",

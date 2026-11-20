@@ -32,3 +32,89 @@ track("u_did_claire_missions")
 track("u_did_jack_missions")
 track("u_found_chris_for_carlos")
 track("dialogue_artisans_blacksmith_completed_quest")
+track("dialogue_intercom_accepted_robofac_intercom_mws_4")
+track("dialogue_intercom_completed_robofac_intercom_2")
+track("dialogue_intercom_completed_robofac_intercom_3")
+track("dialogue_intercom_completed_robofac_intercom_ivas")
+track("dialogue_intercom_completed_robofac_intercom_lixa_sm_1")
+track("dialogue_intercom_completed_robofac_intercom_mws_1")
+track("dialogue_intercom_completed_robofac_intercom_mws_2")
+track("dialogue_intercom_completed_robofac_intercom_mws_3")
+track("dialogue_intercom_completed_robofac_intercom_mws_4")
+track("dialogue_intercom_completed_robofac_intercom_mws_monster_corpse")
+track("dialogue_intercom_completed_robofac_intercom_portal_sm_1")
+track("dialogue_intercom_completed_robofac_intercom_robot_sm_1")
+track("general_mission_NC_REFUGEE_Draco_has_guitar")
+track("global_portal_storms_u_heard_of_portal_storms")
+track("knows_xedra_field_station_3")
+track("knows_xedra_field_station_3_passcode")
+track("mission_completed_Boris_mission_2")
+track("mission_completed_Boris_mission_3")
+track("mission_completed_Jenny_mission_2")
+track("mission_completed_u_found_warehouse")
+track("mission_flag_Fatima_Mission1")
+track("mission_flag_Uyen_Mission1")
+track("mission_flag_Uyen_Mission2")
+track("mission_flag_Uyen_Mission3")
+track("u_did_luke_missions")
+
+local variables = ccb.services.variables
+
+local function checked(result)
+    if not result.ok then error(result.error.message) end
+    return result.value
+end
+
+local function set_state(handler, key, value)
+    ccb.runtime.handler(handler, function(context)
+        variables.set_string_notifying(context.character, key, value)
+    end)
+end
+
+set_state("set_BOSS_mission_directions_to_Brigitte_LaCroix", "BOSS_mission_directions", "Brigitte_LaCroix")
+set_state("set_BOSS_mission_directions_to_chef", "BOSS_mission_directions", "chef")
+set_state("set_BOSS_mission_directions_to_farmer", "BOSS_mission_directions", "farmer")
+set_state("set_BOSS_mission_directions_to_lapin", "BOSS_mission_directions", "lapin")
+set_state("set_Jenny_pneumatics_to_mission_complete", "Jenny_pneumatics", "mission_complete")
+set_state("set_dialogue_intercom_completed_robofac_intercom_robot_sm_1_to_no", "dialogue_intercom_completed_robofac_intercom_robot_sm_1", "no")
+set_state("set_factional_questline_mission_oldguard-exodii_to_encountered_base", "factional_questline_mission_oldguard-exodii", "encountered_base")
+set_state("set_mission_flag_Bartender_rewarded_to_no", "mission_flag_Bartender_rewarded", "no")
+set_state("set_teamster_mission_directions_to_artisans", "teamster_mission_directions", "artisans")
+set_state("set_teamster_mission_directions_to_exodii", "teamster_mission_directions", "exodii")
+set_state("set_teamster_mission_directions_to_hub01", "teamster_mission_directions", "hub01")
+set_state("set_teamster_mission_directions_to_isherwood", "teamster_mission_directions", "isherwood")
+
+ccb.runtime.handler("record_timer_luke_isherwood_books", function(context)
+    checked(variables.set(context.character, "timer_luke_isherwood_books", ccb.services.time.now().turn, { include_before = false }))
+end)
+
+local function advance_actor_progress(handler, key, amount)
+    ccb.runtime.handler(handler, function(context)
+        local current = checked(variables.get_number(context.character, key, { strict = true })).value or 0
+        checked(variables.set(context.character, key, current + amount, { include_before = false }))
+    end)
+end
+
+advance_actor_progress("advance_counter_refugee_center_refugee_happiness_by_1", "counter_refugee_center_refugee_happiness", 1)
+advance_actor_progress("advance_counter_refugee_center_refugee_happiness_by_2", "counter_refugee_center_refugee_happiness", 2)
+advance_actor_progress("advance_counter_refugee_center_refugee_happiness_by_3", "counter_refugee_center_refugee_happiness", 3)
+advance_actor_progress("advance_hub01_completed_missions_by_1", "hub01_completed_missions", 1)
+
+local function set_world_progress(handler, key, value)
+    ccb.runtime.handler(handler, function()
+        checked(variables.set_global(key, value, { include_before = false }))
+    end)
+end
+
+set_world_progress("set_world_exodii_mission_wh_chance_to_6", "exodii_mission_wh_chance", 6)
+set_world_progress("set_world_free_merchants_hub_trade_route_to_1", "free_merchants_hub_trade_route", 1)
+set_world_progress("set_world_godco_julian_wedding_to_1", "godco_julian_wedding", 1)
+set_world_progress("set_world_godco_julian_wedding_to_2", "godco_julian_wedding", 2)
+set_world_progress("set_world_isherwood_barry_rescued_to_1", "isherwood_barry_rescued", 1)
+set_world_progress("set_world_isherwood_gear_status_to_1", "isherwood_gear_status", 1)
+set_world_progress("set_world_old_guard_rep_scouting_to_1", "old_guard_rep_scouting", 1)
+
+ccb.runtime.handler("advance_world_isherwood_luke_truck_coming_by_1", function()
+    local current = checked(variables.get_global_number("isherwood_luke_truck_coming", { strict = true })).value or 0
+    checked(variables.set_global("isherwood_luke_truck_coming", current + 1, { include_before = false }))
+end)

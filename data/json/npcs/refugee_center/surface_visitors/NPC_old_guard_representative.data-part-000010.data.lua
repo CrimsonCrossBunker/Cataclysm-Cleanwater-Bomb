@@ -1,25 +1,13 @@
 local ccb = require("ccb")
-local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
-    id = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_HUB",
-    line = ccb.content.text("I'm listening."),
+    id = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_0",
+    line = ccb.content.text("Wait.  Before you go, I got an offer for you if you're interested."),
     replies = {
         {
-            text = ccb.content.text("Tell me about it."),
-            when = predicates.negate(predicates.has_mission("MISSION_FIND_SUNKEN_HELICOPTER")),
+            text = ccb.content.text("What is it?"),
             next_topic = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_1",
         },
-        {
-            text = ccb.content.text("Anything else I should know?"),
-            when = predicates.has_mission("MISSION_FIND_SUNKEN_HELICOPTER"),
-            next_topic = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_DANGER",
-        },
-        {
-            text = ccb.content.text("Tell me about the cargo."),
-            when = predicates.has_mission("MISSION_FIND_SUNKEN_HELICOPTER"),
-            next_topic = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_CARGO_0",
-        },
-        { text = ccb.content.text("Never mind…"), next_topic = "TALK_NONE" },
+        { text = ccb.content.text("Maybe later."), next_topic = "TALK_DONE" },
     },
 }

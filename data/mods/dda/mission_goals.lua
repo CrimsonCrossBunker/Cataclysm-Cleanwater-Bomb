@@ -111,3 +111,11 @@ carries_any("complete_mission_urban_samurai", {
 ccb.runtime.handler("complete_mission_warrener_isherwood", function(context)
     return services.variables.get_string(context.speaker, "u_met_an_isherwood").value.value == "yes"
 end)
+
+ccb.runtime.handler("complete_mission_free_merchants_hub_delivery_1", function(context)
+    return services.variables.get_string(context.speaker, "dialogue_intercom_completed_free_merchants_hub_delivery_1").value.value == "yes"
+end)
+
+ccb.runtime.handler("complete_mission_old_guard_rep_3", function(context)
+    return services.variables.get_string(context.speaker, "missions_old_guard_u_scouted_exodii").value.value == "yes"
+end)

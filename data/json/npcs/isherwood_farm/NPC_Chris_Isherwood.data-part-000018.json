@@ -1,0 +1,30 @@
+[
+  {
+    "id": "MISSION_ISHERWOOD_CHRIS_1_GET_WALL_BAGS",
+    "type": "mission_definition",
+    "name": { "str": "Retrieve Canvas Bags for Chris" },
+    "goal": "MGOAL_NULL",
+    "difficulty": 1,
+    "value": 0,
+    "end": {
+      "effect": [
+        { "run_eocs": "isherwood_mission_wall_finished", "time_in_future": "24 hours" },
+        { "math": [ "isherwood_wall_status++" ] }
+      ]
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "//": "Dialogue for this mission is handled externally.",
+    "dialogue": {
+      "describe": ".",
+      "offer": ".",
+      "accepted": ".",
+      "rejected": ".",
+      "advice": ".",
+      "inquire": ".",
+      "success": ".",
+      "success_lie": ".",
+      "failure": "."
+    }
+  }
+]

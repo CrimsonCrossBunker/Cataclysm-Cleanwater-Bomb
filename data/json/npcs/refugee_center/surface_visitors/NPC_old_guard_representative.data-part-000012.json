@@ -1,39 +1,23 @@
 [
   {
-    "id": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_CARGO_0",
+    "id": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_1",
     "type": "talk_topic",
-    "dynamic_line": "The cargo?  That's the kind of optional information worth a small supplement.",
+    "dynamic_line": "A helicopter crashed in the region not long ago, at first I thought it was just a rumor, caravan guards talking about some crash nearby, but then I got a visit from a couple of Old Guard people looking for a lost helicopter, one of them got quite drunk one night and shared some interesting details, turns out it was an Old Guard heli coming back from way out west with quite the cargo, and I know where you can find it.  That's all you're getting for free though, I'd like to see some return on investment on that bottle you understand.",
     "responses": [
+      { "text": "I'm not buying anything without some proof.", "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_PROOF" },
       {
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "failed_representative_cargo_trial" } ] } },
-        "trial": { "type": "INTIMIDATE", "difficulty": 50, "mod": [ [ "FEAR", 2 ], [ "TRUST", -2 ] ] },
-        "text": "This wasn't the deal and you're starting to wear my nerves thin asshole, tell me or I'll make you pick your teeth off the floor.",
-        "success": { "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_CARGO_1" },
-        "failure": {
-          "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_CARGO_0_INTIMIDATE_FAILURE",
-          "effect": { "u_add_var": "failed_representative_cargo_trial", "value": "yes" },
-          "opinion": { "trust": -1 }
-        }
+        "text": "Why sell the info instead of retrieving the cargo yourself?  What happened to the old guard investigation?  How can you be sure that it wasn't looted already?  This sounds sketchy as hell.",
+        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_SKETCHY"
       },
       {
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "failed_representative_cargo_trial" } ] } },
-        "trial": { "type": "PERSUADE", "difficulty": 50, "mod": [ [ "FEAR", -2 ], [ "TRUST", 2 ] ] },
-        "text": "Come on, you already got what you wanted, are you really trying to fleece me?",
-        "success": { "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_CARGO_1" },
-        "failure": {
-          "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_CARGO_0_PERSUADE_FAILURE",
-          "effect": { "u_add_var": "failed_representative_cargo_trial", "value": "yes" }
-        }
-      },
-      {
-        "condition": { "u_has_items": { "item": "FMCNote", "count": 25 } },
-        "effect": { "u_sell_item": "FMCNote", "count": 25 },
-        "text": "[25 merch] This better be worth.",
-        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_CARGO_1",
+        "condition": { "u_has_items": { "item": "FMCNote", "count": 50 } },
+        "effect": [ { "u_sell_item": "FMCNote", "count": 50 }, { "assign_mission": "MISSION_FIND_SUNKEN_HELICOPTER" } ],
+        "text": "[50 merch] Fine.",
+        "topic": "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_2",
         "failure_explanation": "You don't have enough.",
         "failure_topic": "TALK_DONE"
       },
-      { "text": "Never mind…", "topic": "TALK_NONE" }
+      { "text": "Never mind…", "topic": "TALK_OLD_GUARD_REP" }
     ]
   }
 ]

@@ -1,0 +1,70 @@
+local ccb = require("ccb")
+
+ccb.content.define_mission {
+    id = "mission_best_friend_gamehunt1",
+    name = ccb.content.text("Help me find my favorite game.  Pathogen"),
+    description = ccb.content.text("Could you help me find my favorite game?  It's a board game called Pathogen.  At least the diseases in this game can be beaten."),
+    goal = "MGOAL_FIND_ITEM",
+    difficulty = 2,
+    item = "pandemic",
+    origins = { "ORIGIN_SECONDARY" },
+    value = 0,
+    dialogue = {
+        describe = ccb.content.text("I would love it if you could find my favorite game."),
+        offer = ccb.content.text("I know you are my friend and I don't want to push you but if you come across my favorite game I'd appreciate it if you brought it to me."),
+        accepted = ccb.content.text("Thank you!"),
+        rejected = ccb.content.text("Let me know if you change your mind."),
+        advice = ccb.content.text("Bookstores and gameshops are the most likely places to find it or just wandering through houses."),
+        inquire = ccb.content.text("Did you find it?"),
+        success = ccb.content.text("You've found it!"),
+        success_lie = ccb.content.text("This clearly isn't it."),
+        failure = ccb.content.text("Well thanks anyway."),
+    },
+    finish = { handler = { "gamehunt_morale", "mark_best_friend" } },
+}
+
+ccb.content.define_mission {
+    id = "mission_best_friend_gamehunt2",
+    name = ccb.content.text("Help me find my favorite game.  Steam Gears"),
+    description = ccb.content.text("Could you help me find my favorite game?  It's a board game called Steam Gears.  Alternate history is so much better than real history."),
+    goal = "MGOAL_FIND_ITEM",
+    difficulty = 2,
+    item = "scythe_game",
+    origins = { "ORIGIN_SECONDARY" },
+    value = 0,
+    dialogue = {
+        describe = ccb.content.text("I would love it if you could find my favorite game."),
+        offer = ccb.content.text("I know you are my friend and I don't want to push you but if you come across my favorite game I'd appreciate it if you brought it to me."),
+        accepted = ccb.content.text("Thank you!"),
+        rejected = ccb.content.text("Let me know if you change your mind."),
+        advice = ccb.content.text("Bookstores and gameshops are the most likely places to find it or just wandering through houses."),
+        inquire = ccb.content.text("Did you find it?"),
+        success = ccb.content.text("You've found it!"),
+        success_lie = ccb.content.text("This clearly isn't it."),
+        failure = ccb.content.text("Well thanks anyway."),
+    },
+    finish = { handler = { "gamehunt_morale", "mark_best_friend" } },
+}
+
+ccb.content.define_mission {
+    id = "mission_best_friend_gamehunt3",
+    name = ccb.content.text("Help me find my favorite game.  Terraforming Mercury"),
+    description = ccb.content.text("Could you help me find my favorite game?  It's a board game called Terraforming Mercury.  I guess terraforming anywhere is a pipe dream now."),
+    goal = "MGOAL_FIND_ITEM",
+    difficulty = 2,
+    item = "terraforming_mercury",
+    origins = { "ORIGIN_SECONDARY" },
+    value = 0,
+    dialogue = {
+        describe = ccb.content.text("I would love it if you could find my favorite game."),
+        offer = ccb.content.text("I know you are my friend and I don't want to push you but if you come across my favorite game I'd appreciate it if you brought it to me."),
+        accepted = ccb.content.text("Thank you!"),
+        rejected = ccb.content.text("Let me know if you change your mind."),
+        advice = ccb.content.text("Bookstores and gameshops are the most likely places to find it or just wandering through houses."),
+        inquire = ccb.content.text("Did you find it?"),
+        success = ccb.content.text("You've found it!"),
+        success_lie = ccb.content.text("This clearly isn't it."),
+        failure = ccb.content.text("Well thanks anyway."),
+    },
+    finish = { handler = { "gamehunt_morale", "mark_best_friend" } },
+}

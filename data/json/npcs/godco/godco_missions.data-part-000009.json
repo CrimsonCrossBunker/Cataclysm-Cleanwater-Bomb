@@ -1,77 +1,35 @@
 [
   {
-    "id": "MISSION_GODCO_HELENA_1",
+    "id": "MISSION_GODCO_OLWEN_2",
     "type": "mission_definition",
-    "name": { "str": "Plumbing Maintenance" },
-    "description": "Find 200 pipes for Helena Misinter.",
-    "goal": "MGOAL_CONDITION",
-    "goal_condition": {
-      "u_has_items_sum": [ { "item": "pipe_cpvc", "amount": 200 }, { "item": "pipe", "amount": 200 }, { "item": "cu_pipe", "amount": 200 } ]
-    },
-    "difficulty": 6,
+    "name": { "str": "Radio-active" },
+    "description": "Get six antennae for Olwen Powell.",
+    "goal": "MGOAL_FIND_ITEM",
+    "item": "antenna",
+    "count": 6,
+    "difficulty": 4,
     "value": 0,
     "end": {
       "effect": [
-        { "u_spawn_item": "icon", "count": 40 },
-        {
-          "u_consume_item_sum": [ { "item": "pipe_cpvc", "amount": 200 }, { "item": "pipe", "amount": 200 }, { "item": "cu_pipe", "amount": 200 } ]
-        }
+        { "u_spawn_item": "icon", "count": 6 },
+        { "mapgen_update": "olwen_radio_adapter", "om_terrain": "godco_1_2" },
+        { "u_add_var": "general_mission_godco_has_radio", "value": "yes" }
       ],
       "opinion": { "trust": 2, "value": 2 }
     },
     "fail": { "opinion": { "anger": 2 } },
-    "followup": "MISSION_GODCO_HELENA_2",
     "origins": [ "ORIGIN_SECONDARY" ],
     "has_generic_rewards": false,
     "dialogue": {
-      "describe": "Get 200 pipes.",
-      "offer": "We were in the process of refurbishing the retreat when <the_cataclysm> interrupted us.  Some of the plumbing around here was troublesome, and we need to fix that.  200 pipes should be all we need to finish it.",
-      "accepted": "May God protect you.",
-      "rejected": "I'll find someone else, then.",
-      "advice": "A public works or a craft shop should have some lying around.  If not, try a steel mill.",
-      "inquire": "Have you found the pipes?",
-      "success": "Thank you.",
+      "describe": "Get six antennae.",
+      "offer": "Corrie and I have been working on a way to get in touch with anyone who's still out there, and we've started rigging up an internet-to-radio broadcast.  The only thing we need are antennae, six of them specifically.",
+      "accepted": "This could give us a prosperous future, <name_g>.",
+      "rejected": "We've got to see how many people are out there.",
+      "advice": "A radio tower should have some lying around in storage.",
+      "inquire": "Have you found the antennae?",
+      "success": "Now we can get in touch with a lot more people, see what's out there.  Thank you, <name_g>.",
       "success_lie": "What good is this?",
-      "failure": "As expected of such a person…"
-    }
-  },
-  {
-    "id": "MISSION_GODCO_HELENA_2",
-    "type": "mission_definition",
-    "name": { "str": "Planning Planers" },
-    "description": "Find two planers for Helena Misinter.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "planer",
-    "count": 2,
-    "difficulty": 12,
-    "value": 0,
-    "end": {
-      "effect": [
-        { "mapgen_update": "helena_planer", "om_terrain": "godco_8" },
-        { "npc_location_variable": { "context_val": "search_locale" } },
-        {
-          "run_eocs": "godco_place_wall_new",
-          "time_in_future": "432 hours",
-          "variables": { "search_locale": { "context_val": "search_locale" } }
-        },
-        { "u_spawn_item": "icon", "count": 80 }
-      ],
-      "opinion": { "trust": 2, "value": 1 }
-    },
-    "fail": { "opinion": { "anger": 1 } },
-    "followup": "MISSION_GODCO_HELENA_3",
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "has_generic_rewards": false,
-    "dialogue": {
-      "describe": "Get two planers.",
-      "offer": "I'm looking to construct some fortifications around the church, should any of Satan's devils decide to run amok.  We have most of the material needed for such an undertaking, but processing our raw lumber is taking far too long.  I've heard a planer could do such in a fraction of the time; I'll pay for two of them.",
-      "accepted": "May God protect you.",
-      "rejected": "I'll find someone else, then.",
-      "advice": "I'd poke around any industrial sites for some.",
-      "inquire": "Have you found the planers?",
-      "success": "Thank you.",
-      "success_lie": "What good is this?",
-      "failure": "As expected of such a person…"
+      "failure": "That's too bad…"
     }
   }
 ]
