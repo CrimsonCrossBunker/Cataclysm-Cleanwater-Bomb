@@ -575,3 +575,4 @@ require("profession_groups")
 require("blacklists")
 
 require("migrations")
+require("jmath")

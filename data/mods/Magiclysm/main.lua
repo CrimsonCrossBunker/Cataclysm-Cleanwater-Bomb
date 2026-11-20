@@ -167,3 +167,4 @@ require("scores")
 require("blacklists")
 
 require("migrations")
+require("jmath")

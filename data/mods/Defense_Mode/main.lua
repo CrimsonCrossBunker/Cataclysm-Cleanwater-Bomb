@@ -15,3 +15,4 @@ require("generic_items")
 require("monster_groups")
 
 require("species")
+require("jmath")

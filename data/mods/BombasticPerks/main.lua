@@ -44,3 +44,4 @@ require("metamagic_casting")
 require("terrain_transforms")
 
 require("consumable_effects")
+require("jmath")

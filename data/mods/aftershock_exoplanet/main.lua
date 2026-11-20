@@ -153,3 +153,4 @@ require("post_process_generators")
 require("profession_groups")
 
 require("migrations")
+require("jmath")

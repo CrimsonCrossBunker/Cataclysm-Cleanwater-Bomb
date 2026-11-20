@@ -70,3 +70,4 @@ ccb.content.add(ccb.content.EffectType {
     name = "",
     description = "",
 })
+require("mod_interactions.bombastic_perks.jmath")
