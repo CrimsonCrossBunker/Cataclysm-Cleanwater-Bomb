@@ -271,3 +271,6 @@ require("attack_vectors")
 require("scent_types")
 require("disease_types")
 require("overlay_orders")
+
+require("recipe_categories")
+require("relic_procgen")

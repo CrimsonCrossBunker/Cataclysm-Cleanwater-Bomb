@@ -1,7 +1,0 @@
-[
-  {
-    "type": "recipe_category",
-    "id": "CC_OUROBOROS",
-    "recipe_subcategories": [ "CSC_ALL", "CSC_OUROBOROS_RANGED", "CSC_OUROBOROS_AMMO", "CSC_OUROBOROS_MAGAZINES" ]
-  }
-]

@@ -160,3 +160,6 @@ require("dreams")
 require("attack_vectors")
 require("overlay_orders")
 require("mutation_categories")
+
+require("recipe_categories")
+require("scores")

@@ -233,3 +233,6 @@ require("help_topics")
 require("skills")
 require("species")
 require("disease_types")
+
+require("recipe_categories")
+require("relic_procgen")

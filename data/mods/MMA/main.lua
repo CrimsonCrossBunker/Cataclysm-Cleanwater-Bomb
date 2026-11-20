@@ -46,3 +46,5 @@ require("item_group_changes")
 require("book_items")
 
 require("technique_predicates")
+
+require("weapon_categories")
