@@ -23,6 +23,7 @@
 #include <filesystem>
 #include <functional>
 #include <iterator>
+#include <map>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -1518,7 +1519,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         std::vector<row_sprite_entry> row_sprites;
         std::unordered_map<tripoint_abs_omt, snow_cover> snow_cover_for_cell;
         const weather_manager &weather = get_weather_const();
-        const auto ground_snow = [&]( const tripoint_bub_ms &pos ) {
+        const auto ground_snow = [&]( const tripoint_bub_ms & pos ) {
             if( !here.inbounds( pos ) ) {
                 return snow_cover::none;
             }
@@ -6854,6 +6855,28 @@ std::vector<options_manager::id_and_option> cata_tiles::build_renderer_list()
     }, enumeration_conjunction::none );
 
     return renderer_names.empty() ? default_renderer_names : renderer_names;
+}
+
+std::vector<options_manager::id_and_option> cata_tiles::build_gpu_backend_list()
+{
+    static const std::map<std::string, translation> known_names = {
+        { "direct3d12", to_translation( "GPU backend", "Direct3D 12" ) },
+        { "metal", to_translation( "GPU backend", "Metal" ) },
+        { "vulkan", to_translation( "GPU backend", "Vulkan" ) },
+    };
+    std::vector<options_manager::id_and_option> backends = {
+        { "auto", to_translation( "GPU backend", "Automatic" ) }
+    };
+    const int num_drivers = GetNumGPUDrivers();
+    for( int i = 0; i < num_drivers; i++ ) {
+        const std::string name = GetGPUDriverName( i );
+        if( name.empty() ) {
+            continue;
+        }
+        const auto known = known_names.find( name );
+        backends.emplace_back( name, known != known_names.end() ? known->second : no_translation( name ) );
+    }
+    return backends;
 }
 
 std::vector<options_manager::id_and_option> cata_tiles::build_display_list()

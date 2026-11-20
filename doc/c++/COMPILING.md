@@ -173,6 +173,11 @@ Dependencies:
 
 Install the SDL3 libraries from your package manager or build them from the upstream SDL release branches. `BUILD_SHADER_FORMATS` picks which shader artifacts get built: `spv` on Linux, `msl` on macOS, `dxil` on Windows by default. Put `shadercross` on `PATH` (or set `SDL_SHADERCROSS=/path/to/shadercross`) for formats that need it.
 
+Runtime graphics switches:
+
+  * `SDL_RENDER_DRIVER` selects the SDL renderer instead of the game's default driver list.
+  * `SDL_GPU_DRIVER` selects the graphics API under the GPU renderer, for example `vulkan` or `direct3d12`. It overrides the "GPU backend" option in Graphics settings.
+
 Install the shader compiler on Debian/Ubuntu:
 
     sudo apt-get install glslang-tools
