@@ -11,13 +11,21 @@ local function trait(name)
     return services.types.id("mutation", name)
 end
 
-local function limb(side, part, replacements)
+local function limb(side, part, replacements, targets)
     local prosthetics = {}
     for _, replacement in ipairs(replacements) do
         prosthetics[#prosthetics + 1] = trait(side .. "_" .. replacement)
     end
     local name = side .. "_" .. part
+    local suffix = side == "LEFT" and "l" or "r"
+    local parts = {}
+    for index, target in ipairs(targets) do
+        parts[index] = services.types.id("body_part", target .. "_" .. suffix)
+    end
     return {
+        name = name:lower(),
+        blocker = services.types.id("effect", "prosthetic_" .. part:lower() .. "_" .. suffix .. "_fake_blocker"),
+        targets = parts,
         missing = trait("NO_" .. name),
         present = trait("HAS_" .. name),
         marker = "traits_limbs_missing_" .. name:lower(),
@@ -27,8 +35,10 @@ end
 
 local arm_prosthetics = { "PROSTHETIC_ARM", "NEUROPROSTHETIC_ARM", "COSMETIC_PROSTHETIC_ARM" }
 local leg_prosthetics = { "PROSTHETIC_LEG", "PEG_LEG" }
-local arms = { limb("LEFT", "ARM", arm_prosthetics), limb("RIGHT", "ARM", arm_prosthetics) }
-local legs = { limb("LEFT", "LEG", leg_prosthetics), limb("RIGHT", "LEG", leg_prosthetics) }
+local arm_targets = { "arm_prosthetic", "arm_neuroprosthetic", "arm_prosthetic_cosmetic" }
+local leg_targets = { "leg_prosthetic", "leg_prosthetic" }
+local arms = { limb("LEFT", "ARM", arm_prosthetics, arm_targets), limb("RIGHT", "ARM", arm_prosthetics, arm_targets) }
+local legs = { limb("LEFT", "LEG", leg_prosthetics, leg_targets), limb("RIGHT", "LEG", leg_prosthetics, leg_targets) }
 
 local function has_any(character, traits)
     for _, mutation in ipairs(traits) do
@@ -75,3 +85,50 @@ ccb.runtime.handler("restore_mutated_limbs", function(event)
 end)
 ccb.runtime.on("game:gains_mutation", "restore_mutated_limbs")
 ccb.runtime.on("game:evolves_mutation", "restore_mutated_limbs")
+
+local blocker_order = { legs[2], legs[1], arms[2], arms[1] }
+local one_turn = services.time.duration(1, "turn")
+
+local function update_blocker(character, part)
+    for index, prosthetic in ipairs(part.prosthetics) do
+        if checked(mutations.has(character, prosthetic)) then
+            checked(services.effects.add(character, part.blocker, one_turn, {
+                permanent = true, body_part = part.targets[index],
+            }))
+            return
+        end
+    end
+    checked(services.effects.remove(character, part.blocker))
+end
+
+for _, part in ipairs(blocker_order) do
+    ccb.runtime.handler("wear_" .. part.name .. "_prosthetic", function(context)
+        local character = context.character
+        if checked(mutations.has(character, part.missing)) and has_any(character, part.prosthetics) then
+            checked(mutations.erase(character, part.missing))
+            checked(services.variables.set(character, part.marker, "yes", { include_before = false }))
+        end
+        for _, limb_part in ipairs(blocker_order) do update_blocker(character, limb_part) end
+    end)
+
+    local due = "check_missing_" .. part.name
+    ccb.runtime.handler(due, function(context)
+        local character = context.character
+        if not has_any(character, part.prosthetics)
+            and checked(services.variables.get_string(character, part.marker)).value == "yes" then
+            checked(mutations.replace(character, part.missing))
+        end
+        ccb.tasks.after_character_turn(character, 5, due)
+    end)
+end
+
+ccb.runtime.handler("schedule_missing_limbs", function(event)
+    local character = event.actors.character
+    for _, part in ipairs(blocker_order) do
+        local due = "check_missing_" .. part.name
+        if not ccb.tasks.has_character_turn(character, due) then
+            ccb.tasks.after_character_turn(character, 5, due)
+        end
+    end
+end)
+ccb.runtime.on("character_ready", "schedule_missing_limbs")

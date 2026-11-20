@@ -253,7 +253,7 @@ character_task_migration saved_location_task( const char *id, const char *handle
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 512> migrated_character_tasks = {{
+const std::array<character_task_migration, 516> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_CHANGELING_DISGUISE_AS_NATURE_END" ),
           "end_changeling_nature_disguise", nullptr },
         { effect_on_condition_id( "EOC_XEDRA_CHRONOMANCER_REVERSE_ENTROPY_INV_SCANNER" ),
@@ -575,6 +575,14 @@ const std::array<character_task_migration, 512> migrated_character_tasks = {{
           "martial_perks_insight_due", nullptr, false, "perk_melee_system" },
         { effect_on_condition_id( "EOC_PERK_CLEAR_INSIGHT" ),
           "martial_perks_clear_insight_due", "perk_clear_insight_timer", false, "perk_melee_system" },
+        { effect_on_condition_id( "EOC_PROSTHETIC_RIGHT_REMOVE" ),
+          "check_missing_right_leg", nullptr, false, "limb_wip" },
+        { effect_on_condition_id( "EOC_PROSTHETIC_LEFT_REMOVE" ),
+          "check_missing_left_leg", nullptr, false, "limb_wip" },
+        { effect_on_condition_id( "EOC_PROSTHETIC_RIGHT_ARM_REMOVE" ),
+          "check_missing_right_arm", nullptr, false, "limb_wip" },
+        { effect_on_condition_id( "EOC_PROSTHETIC_LEFT_ARM_REMOVE" ),
+          "check_missing_left_arm", nullptr, false, "limb_wip" },
         { effect_on_condition_id( "EOC_PERK_POISE_REGEN" ),
           "martial_perks_poise_regen_due", nullptr, false, "perk_melee_system" },
         { effect_on_condition_id( "EOC_PERK_PRESSURE_STRIKES_DEAL_DAMAGE" ),
