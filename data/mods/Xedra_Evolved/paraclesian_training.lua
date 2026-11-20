@@ -247,3 +247,4 @@ register_draught("salamander", "mutagen_flamekin",
 
 require("paraclesian_fae_bans")
 require("paraclesian_passive_traits")(profiles, can_practice_in_environment)
+require("paraclesian_spellcasting")
