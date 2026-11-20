@@ -79,6 +79,7 @@ extern "C" {
 #include "npc.h"
 #include "npc_class.h"
 #include "omdata.h"
+#include "overmap.h"
 #include "output.h"
 #include "profession.h"
 #include "proficiency.h"
@@ -1610,11 +1611,9 @@ void write_mapgen_palette_fields( JsonOut &json, const sol::table &layout,
     }
 }
 
-void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
-                                 std::size_t max_rows )
+void write_static_mapgen_layout_fields( JsonOut &json, const sol::table &layout,
+                                        std::size_t max_rows )
 {
-    json.member( "object" );
-    json.start_object();
     const sol::object fill = layout.raw_get<sol::object>( "fill_terrain" );
     if( fill.get_type() != sol::type::nil ) {
         write_mapgen_value_member( json, "fill_ter", fill );
@@ -1656,6 +1655,13 @@ void write_static_mapgen_layout( JsonOut &json, const sol::table &layout,
         }
         json.end_array();
     }
+}
+
+void write_static_mapgen_layout( JsonOut &json, const sol::table &layout, std::size_t max_rows )
+{
+    json.member( "object" );
+    json.start_object();
+    write_static_mapgen_layout_fields( json, layout, max_rows );
     json.end_object();
 }
 
@@ -4635,6 +4641,25 @@ void write_static_external_option( JsonOut &json, const sol::table &options )
     }
 }
 
+void write_static_trait_migration( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, {
+        { "trait", "trait" }, { "variant", "variant" }, { "proficiency", "proficiency" }
+    } );
+    write_placement_member<bool>( json, options, "remove", "remove" );
+}
+
+void write_static_camp_migration( JsonOut &json, const sol::table &options )
+{
+    json.member( "camp_migrations" );
+    json.start_object();
+    write_static_native_text( json, options, "name", "name" );
+    json.member( "overmap_terrain", options.get<std::string>( "terrain" ) );
+    json.member( "faction", options.get<std::string>( "faction" ) );
+    json.end_object();
+}
+
 void write_static_mod_migration( JsonOut &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
@@ -5591,6 +5616,38 @@ void write_static_tile_furniture( JsonOut &json, const sol::table &options )
     write_static_tile_object( json, options, "workbench", "workbench", write_static_tile_workbench );
 }
 
+void write_static_trap_vehicle( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    write_item_fields<bool>( json, options, {
+        { "explosion", "do_explosion" }, { "falling", "is_falling" }, { "remove_trap", "remove_trap" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "chance", "chance" }, { "damage", "damage" }, { "shrapnel", "shrapnel" },
+        { "sound_volume", "sound_volume" }
+    } );
+    write_item_fields<std::string>( json, options, {
+        { "sound_type", "sound_type" }, { "sound_variant", "sound_variant" }, { "set_trap", "set_trap" }
+    } );
+    write_item_text( json, "sound", options.raw_get<sol::object>( "sound" ), false );
+    if( const auto items = options.get<sol::optional<sol::table>>( "spawn_items" ) ) {
+        json.member( "spawn_items" );
+        write_static_values<sol::object>( json, *items, "spawn_items",
+        []( JsonOut & out, const sol::object & value ) {
+            if( value.get_type() == sol::type::string ) {
+                out.write( value.as<std::string>() );
+                return;
+            }
+            const sol::table item = value.as<sol::table>();
+            out.start_object();
+            out.member( "id", item.get<std::string>( "id" ) );
+            write_placement_member<double>( out, item, "chance", "chance" );
+            out.end_object();
+        } );
+    }
+    json.end_object();
+}
+
 void write_static_trap( JsonOut &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
@@ -5601,6 +5658,33 @@ void write_static_trap( JsonOut &json, const sol::table &options )
         { "visibility", "visibility" }, { "avoidance", "avoidance" },
         { "difficulty", "difficulty" }, { "trap_radius", "trap_radius" }
     } );
+    write_item_fields<int>( json, options, {
+        { "comfort", "comfort" }, { "floor_bedding_warmth", "floor_bedding_warmth" },
+        { "funnel_radius_mm", "funnel_radius" }
+    } );
+    write_static_tile_unit( json, options, "trigger_weight", "trigger_weight" );
+    for( const auto &[field, native] : {
+             item_field{ "memorial_male", "memorial_male" }, { "memorial_female", "memorial_female" },
+             { "avatar_message", "trigger_message_u" }, { "npc_message", "trigger_message_npc" }
+         } ) {
+        write_item_text( json, native, options.raw_get<sol::object>( field ), false );
+    }
+    if( const auto drops = options.get<sol::optional<sol::table>>( "drops" ) ) {
+        json.member( "drops" );
+        write_static_values<sol::object>( json, *drops, "trap drops",
+        []( JsonOut & out, const sol::object & value ) {
+            if( value.get_type() == sol::type::string ) {
+                out.write( value.as<std::string>() );
+                return;
+            }
+            const sol::table drop = value.as<sol::table>();
+            out.start_object();
+            out.member( "item", drop.get<std::string>( "item" ) );
+            write_item_fields<int>( out, drop, { { "quantity", "quantity" }, { "charges", "charges" } } );
+            out.end_object();
+        } );
+    }
+    write_static_tile_object( json, options, "vehicle", "vehicle_data", write_static_trap_vehicle );
     write_item_fields<bool>( json, options, {
         { "always_invisible", "always_invisible" }, { "benign", "benign" }
     } );
@@ -5837,6 +5921,22 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
         }
         json.end_object();
     }
+    write_static_catalog_array( json, rules, "map_updates", "update_mapgen",
+    []( JsonOut & out, const sol::table & update ) {
+        const auto layout = update.get<sol::optional<sol::table>>( "layout" );
+        const auto id = update.get<sol::optional<std::string>>( "id" );
+        if( layout.has_value() == id.has_value() ) {
+            throw std::invalid_argument( "mission map update requires exactly one of layout or id" );
+        }
+        out.start_object();
+        write_placement_member<std::string>( out, update, "terrain", "om_terrain" );
+        if( layout ) {
+            write_static_mapgen_layout_fields( out, *layout, std::numeric_limits<std::size_t>::max() );
+        } else {
+            out.member( "mapgen_update_id", *id );
+        }
+        out.end_object();
+    } );
     json.end_object();
 }
 
@@ -6772,6 +6872,10 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_mapgen", load_static_mapgen );
     content.set_function( "define_external_option", static_catalog_definition(
                               resolved.id, "EXTERNAL_OPTION", write_static_external_option, load_external_option ) );
+    content.set_function( "define_trait_migration", static_catalog_definition(
+                              resolved.id, "TRAIT_MIGRATION", write_static_trait_migration, mutation_branch::load_trait_migration ) );
+    content.set_function( "define_camp_migration", static_catalog_definition(
+                              resolved.id, "camp_migration", write_static_camp_migration, overmap::load_oter_id_camp_migration ) );
     content.set_function( "define_mod_migration", static_catalog_definition(
                               resolved.id, "mod_migration", write_static_mod_migration, mod_migrations::load ) );
     content.set_function( "define_climate_station", static_catalog_definition(

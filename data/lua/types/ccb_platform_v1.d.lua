@@ -7303,6 +7303,24 @@ function CcbPlatformContent.text_without_extraction(singular, plural, context) e
 ---@param options ExternalOptionDefinitionOptions
 function CcbPlatformContent.define_external_option(options) end
 
+---@class TraitMigrationOptions
+---@field id string Old trait ID in a save.
+---@field trait? string Replacement trait.
+---@field variant? string Variant of the replacement trait.
+---@field proficiency? string Proficiency replacing the old trait.
+---@field remove? boolean Remove the trait with no replacement.
+
+---@param options TraitMigrationOptions
+function CcbPlatformContent.define_trait_migration(options) end
+
+---@class CampMigrationOptions
+---@field terrain string Legacy overmap terrain that should have a camp.
+---@field name string|LocalizedText Camp name without a context or plural.
+---@field faction string Owner of the migrated camp.
+
+---@param options CampMigrationOptions
+function CcbPlatformContent.define_camp_migration(options) end
+
 ---@class ModMigrationDefinitionOptions
 ---@field id string Old Mod ID in a saved world.
 ---@field replace_with? string Successor Mod ID.
@@ -7938,6 +7956,29 @@ function CcbPlatformContent.define_field_type(options) end
 ---@field character GameHandle
 ---@field position {coordinate_space:"abs_ms",x:integer,y:integer,z:integer} Absolute map-square position being examined.
 
+---@class StaticTrapDrop
+---@field item string
+---@field quantity? integer
+---@field charges? integer
+
+---@class StaticTrapVehicleItem
+---@field id string
+---@field chance? number
+
+---@class StaticTrapVehicle
+---@field explosion? boolean
+---@field falling? boolean
+---@field remove_trap? boolean
+---@field set_trap? string
+---@field chance? integer
+---@field damage? integer
+---@field shrapnel? integer
+---@field sound_volume? integer
+---@field sound? string|LocalizedText
+---@field sound_type? string
+---@field sound_variant? string
+---@field spawn_items? (string|StaticTrapVehicleItem)[]
+
 ---@class StaticTrapOptions
 ---@field id string
 ---@field copy_from? string Native trap supplying inherited fields.
@@ -7949,6 +7990,16 @@ function CcbPlatformContent.define_field_type(options) end
 ---@field visibility? integer
 ---@field avoidance? integer
 ---@field difficulty? integer
+---@field comfort? integer
+---@field floor_bedding_warmth? integer Legacy body-part warmth units.
+---@field funnel_radius_mm? integer
+---@field trigger_weight? string|integer Native mass threshold.
+---@field avatar_message? string|LocalizedText
+---@field npc_message? string|LocalizedText
+---@field memorial_male? string|LocalizedText
+---@field memorial_female? string|LocalizedText
+---@field drops? (string|StaticTrapDrop)[]
+---@field vehicle? StaticTrapVehicle
 ---@field trap_radius? integer
 ---@field always_invisible? boolean
 ---@field benign? boolean
@@ -8118,7 +8169,13 @@ function CcbPlatformContent.define_profession(options) end
 ---@field cant_see? boolean
 ---@field global_position? string Global coordinate variable supplying the target position.
 
+---@class StaticMissionMapUpdate
+---@field terrain? string Reveal a terrain near the mission target (or owner if no target) and update that terrain.
+---@field id? string Named mapgen update, in place of an inline layout.
+---@field layout? StaticOvermapMapgenLayout Inline mapgen update using the active mission.
+
 ---@class StaticMissionPhase
+---@field map_updates? StaticMissionMapUpdate[] Apply in order after the handler and target assignment.
 ---@field handler? string Registered mission callback invoked before resolving this phase's map target.
 ---@field target? StaticMissionTarget Exclusive with reveal_terrain.
 ---@field reveal_terrain? string|string[] Native reveal operation. A list chooses a terrain at random.
