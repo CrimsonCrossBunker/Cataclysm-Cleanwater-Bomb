@@ -1,0 +1,31 @@
+[
+  {
+    "id": "point_blank",
+    "type": "SPELL",
+    "name": "Point Blank",
+    "description": "A straight hit with your arm.  Using additional energy you could probably break a wall with such a powerful strike.",
+    "teachable": false,
+    "valid_targets": [ "hostile", "ground" ],
+    "effect": "attack",
+    "shape": "blast",
+    "flags": [ "SILENT", "SOMATIC", "NO_EXPLOSION_SFX" ],
+    "magic_type": "xedra_dream_magic",
+    "spell_class": "EATER",
+    "skill": "deduction",
+    "difficulty": 4,
+    "base_casting_time": 125,
+    "casting_time_increment": -15,
+    "final_casting_time": 25,
+    "base_energy_cost": 350,
+    "energy_increment": -15,
+    "final_energy_cost": 100,
+    "damage_type": "bash",
+    "max_level": { "math": [ "eater_level(1)" ] },
+    "min_damage": 20,
+    "max_damage": 250,
+    "damage_increment": 6,
+    "min_bash_scaling": 2,
+    "min_range": 1,
+    "max_range": 1
+  }
+]

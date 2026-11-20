@@ -1,0 +1,23 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_XE_GETTING_HIT_WHILE_USING_NETHER_SORCERY_WIND_DODGE",
+    "eoc_type": "EVENT",
+    "required_event": "character_takes_damage",
+    "condition": { "u_has_effect": "effect_xe_nether_sorcery_wind_dodge_shell" },
+    "effect": [
+      {
+        "if": { "x_in_y_chance": { "x": 1, "y": 4 } },
+        "then": [
+          {
+            "u_spawn_monster": "mon_flying_polyp",
+            "real_count": 1,
+            "max_radius": 3,
+            "lifespan": [ "30 days", "60 days" ],
+            "spawn_message": "You hear a tuneless piping sound!"
+          }
+        ]
+      }
+    ]
+  }
+]
