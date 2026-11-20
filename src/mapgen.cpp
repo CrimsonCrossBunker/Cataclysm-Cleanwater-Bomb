@@ -3499,11 +3499,18 @@ class jmapgen_computer : public jmapgen_piece_with_has_vehicle_collision
         std::vector<std::string> chat_topics;
         std::vector<effect_on_condition_id> eocs;
         bool target;
+        bool dialogue_on_access = false;
         jmapgen_computer( const JsonObject &jsi, std::string_view/*context*/ ) {
             jsi.read( "name", name );
             jsi.read( "access_denied", access_denied );
             security = jsi.get_int( "security", 0 );
             target = jsi.get_bool( "target", false );
+            if( const auto open = jsi.get_member_opt( "//ccb_lua_computer_dialogue" ) ) {
+                if( open->has_source_file() ) {
+                    open->throw_error( "terminal access metadata is reserved for ordered Lua definitions" );
+                }
+                dialogue_on_access = open->get_bool();
+            }
             if( jsi.has_array( "options" ) ) {
                 for( JsonObject jo : jsi.get_array( "options" ) ) {
                     options.emplace_back( computer_option::from_json( jo ) );
@@ -3532,6 +3539,7 @@ class jmapgen_computer : public jmapgen_piece_with_has_vehicle_collision
             computer *cpu =
                 dat.m.add_computer( r, name.translated(),
                                     security );
+            cpu->dialogue_on_access = dialogue_on_access;
             for( const computer_option &opt : options ) {
                 cpu->add_option( opt );
             }

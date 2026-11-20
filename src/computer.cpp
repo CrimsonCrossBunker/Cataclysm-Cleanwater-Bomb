@@ -243,6 +243,9 @@ void computer::serialize( JsonOut &jout ) const
     jout.member( "access_denied", access_denied );
     jout.member( "eocs", eocs );
     jout.member( "chat_topics", chat_topics );
+    if( dialogue_on_access ) {
+        jout.member( "dialogue_on_access", true );
+    }
     if( has_platform_access_handler() ) {
         jout.member( "lua_platform_mod", lua_platform_mod );
         jout.member( "lua_platform_access_handler", lua_platform_access_handler );
@@ -268,6 +271,7 @@ void computer::deserialize( const JsonValue &jv )
         jo.read( "access_denied", access_denied );
         jo.read( "eocs", eocs );
         jo.read( "chat_topics", chat_topics );
+        dialogue_on_access = jo.get_bool( "dialogue_on_access", false );
         jo.read( "lua_platform_mod", lua_platform_mod );
         jo.read( "lua_platform_access_handler", lua_platform_access_handler );
         jo.read( "values", values );

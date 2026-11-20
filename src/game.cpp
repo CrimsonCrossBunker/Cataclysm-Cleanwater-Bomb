@@ -5006,13 +5006,24 @@ void game::use_computer( const tripoint_bub_ms &p )
         return;
     }
     if( used->eocs.empty() ) {
-        computer_session( *used ).use();
+        if( used->dialogue_on_access ) {
+            get_avatar().talk_to( get_talker_for( used ) );
+        } else {
+            computer_session( *used ).use();
+        }
     } else {
         dialogue d( get_talker_for( get_avatar() ), get_talker_for( used ) );
         // An EOC can unload this map (and the terminal) during dimension travel.
         const std::vector<effect_on_condition_id> eocs = used->eocs;
         for( const effect_on_condition_id &eoc : eocs ) {
-            eoc->activate( d );
+            // Terminals already present in older maps store their access actions in order.
+            if( eoc.str() == "eoc_mission_science_rep_computer" && !eoc.is_valid() ) {
+                if( terminal_reference ) {
+                    get_avatar().talk_to( d.actor( true )->clone() );
+                }
+            } else {
+                eoc->activate( d );
+            }
         }
     }
 }

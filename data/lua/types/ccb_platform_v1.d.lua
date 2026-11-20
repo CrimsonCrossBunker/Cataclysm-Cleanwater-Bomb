@@ -10332,6 +10332,7 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field security? integer Hacking difficulty to enter the console.
 ---@field mission_target? boolean Associate the console with the mapgen mission.
 ---@field chat_topics? string[] Native dialogue topic IDs in menu order.
+---@field dialogue_on_access? boolean Open a conversation with this terminal when used.
 ---@field menu? StaticMapgenComputerMenuOption[] Menu options in display order.
 ---@field failures? string[] Native computer failure action IDs in selection order.
 

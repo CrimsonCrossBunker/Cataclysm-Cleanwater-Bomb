@@ -176,6 +176,7 @@ class computer
         // Can be customized to for example warn the player of potentially lethal
         // consequences like secubots spawning.
         std::string access_denied;
+        bool dialogue_on_access = false;
         std::vector<std::string> chat_topics; // What it has to say.
         std::vector<effect_on_condition_id> eocs; // Effect on conditions to run when accessed.
         // Persisted symbolic ownership for Lua-first terminals.  Runtime pointers

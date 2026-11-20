@@ -1070,6 +1070,7 @@ void write_placement_computer( JsonOut &json, const sol::table &options )
                                 "mapgen computer denial text" );
     write_placement_member<int>( json, options, "security", "security" );
     write_placement_member<bool>( json, options, "mission_target", "target" );
+    write_placement_member<bool>( json, options, "dialogue_on_access", "//ccb_lua_computer_dialogue" );
     write_mapgen_string_array( json, options, "chat_topics", "chat_topics" );
     if( const auto menu = options.get<sol::optional<sol::table>>( "menu" ) ) {
         json.member( "options" );

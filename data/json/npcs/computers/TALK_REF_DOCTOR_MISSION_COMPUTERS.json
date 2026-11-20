@@ -1,7 +1,0 @@
-[
-  {
-    "id": "eoc_mission_science_rep_computer",
-    "type": "effect_on_condition",
-    "effect": [ "open_dialogue" ]
-  }
-]
