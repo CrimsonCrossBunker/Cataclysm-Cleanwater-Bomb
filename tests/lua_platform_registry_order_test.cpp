@@ -74,4 +74,28 @@ TEST_CASE( "lua_platform_registry_native_order_pages", "[lua][registry]" )
     }
 }
 
+TEST_CASE( "lua_platform_registry_item_book_skill", "[lua][registry]" )
+{
+    sol::state lua;
+    sol::table services = lua.create_table();
+    cata::lua_platform::install_value_type_api( lua, services, []() {} );
+    cata::lua_platform::install_registry_api( lua, services, []() {}, []() {} );
+
+    sol::protected_function get = services["registry"]["get"];
+    sol::protected_function_result book_call = get( "item", "textbook_chemistry" );
+    REQUIRE( book_call.valid() );
+    sol::table book = book_call;
+    CHECK( book["book_skill"].get<std::string>() == "chemistry" );
+
+    sol::protected_function_result item_call = get( "item", "rock" );
+    REQUIRE( item_call.valid() );
+    sol::table item = item_call;
+    CHECK( item["book_skill"].get_type() == sol::type::none );
+
+    sol::protected_function_result hymnal_call = get( "item", "holybook_bible1" );
+    REQUIRE( hymnal_call.valid() );
+    sol::table hymnal = hymnal_call;
+    CHECK( hymnal["book_skill"].get_type() == sol::type::none );
+}
+
 #endif
