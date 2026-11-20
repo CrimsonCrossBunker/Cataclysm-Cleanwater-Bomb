@@ -1,0 +1,585 @@
+local ccb = require("ccb")
+
+-- Unfortunately various individually-defined special attack entries means this has to be duplicated
+ccb.content.define_monster {
+    id = "mon_feral_human_pipe",
+    copy_from = "mon_feral_human_pipe",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "feral_dabbler_spell_picker",
+                    spell = { id = "feral_dabble_spell_selector_spell" },
+                    cooldown = 1,
+                    casting_message = "",
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_spell_picker",
+                },
+                {
+                    id = "feral_dabbler_sound_bomb",
+                    spell = { id = "sound_bomb", min_level = 5 },
+                    cooldown = 25,
+                    casting_message = ccb.content.text("%1$s points at %3$s and a loud noise erupts around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_sound_bomb",
+                },
+                {
+                    id = "feral_dabbler_cure_light_wounds",
+                    spell = { id = "light_healing", min_level = 5, hit_self = true },
+                    cooldown = 75,
+                    casting_message = ccb.content.text("%1$s chants and makes a gesture trailed by glowing green lights."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_cure_light_wounds",
+                },
+                {
+                    id = "feral_dabbler_light_target",
+                    spell = { id = "magus_light_target", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s screams words of magic and waves their hands toward %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_light_target",
+                },
+                {
+                    id = "feral_dabbler_summon_wisps",
+                    spell = { id = "summon_wisps_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s make several expansive gestures and eerie lights appear."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_summon_wisps",
+                },
+                {
+                    id = "feral_dabbler_windrunning",
+                    spell = { id = "windrun_monster", min_level = 5, hit_self = true },
+                    cooldown = 50,
+                    casting_message = ccb.content.text("%1$s whistles words of magic and a wind picks up around them."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_windrunning",
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_feral_human_crowbar",
+    copy_from = "mon_feral_human_crowbar",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "feral_dabbler_spell_picker",
+                    spell = { id = "feral_dabble_spell_selector_spell" },
+                    cooldown = 1,
+                    casting_message = "",
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_spell_picker",
+                },
+                {
+                    id = "feral_dabbler_sound_bomb",
+                    spell = { id = "sound_bomb", min_level = 5 },
+                    cooldown = 25,
+                    casting_message = ccb.content.text("%1$s points at %3$s and a loud noise erupts around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_sound_bomb",
+                },
+                {
+                    id = "feral_dabbler_cure_light_wounds",
+                    spell = { id = "light_healing", min_level = 5, hit_self = true },
+                    cooldown = 75,
+                    casting_message = ccb.content.text("%1$s chants and makes a gesture trailed by glowing green lights."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_cure_light_wounds",
+                },
+                {
+                    id = "feral_dabbler_light_target",
+                    spell = { id = "magus_light_target", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s screams words of magic and waves their hands toward %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_light_target",
+                },
+                {
+                    id = "feral_dabbler_summon_wisps",
+                    spell = { id = "summon_wisps_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s make several expansive gestures and eerie lights appear."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_summon_wisps",
+                },
+                {
+                    id = "feral_dabbler_windrunning",
+                    spell = { id = "windrun_monster", min_level = 5, hit_self = true },
+                    cooldown = 50,
+                    casting_message = ccb.content.text("%1$s whistles words of magic and a wind picks up around them."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_windrunning",
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_feral_human_axe",
+    copy_from = "mon_feral_human_axe",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "feral_dabbler_spell_picker",
+                    spell = { id = "feral_dabble_spell_selector_spell" },
+                    cooldown = 1,
+                    casting_message = "",
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_spell_picker",
+                },
+                {
+                    id = "feral_dabbler_sound_bomb",
+                    spell = { id = "sound_bomb", min_level = 5 },
+                    cooldown = 25,
+                    casting_message = ccb.content.text("%1$s points at %3$s and a loud noise erupts around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_sound_bomb",
+                },
+                {
+                    id = "feral_dabbler_cure_light_wounds",
+                    spell = { id = "light_healing", min_level = 5, hit_self = true },
+                    cooldown = 75,
+                    casting_message = ccb.content.text("%1$s chants and makes a gesture trailed by glowing green lights."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_cure_light_wounds",
+                },
+                {
+                    id = "feral_dabbler_light_target",
+                    spell = { id = "magus_light_target", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s screams words of magic and waves their hands toward %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_light_target",
+                },
+                {
+                    id = "feral_dabbler_summon_wisps",
+                    spell = { id = "summon_wisps_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s make several expansive gestures and eerie lights appear."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_summon_wisps",
+                },
+                {
+                    id = "feral_dabbler_windrunning",
+                    spell = { id = "windrun_monster", min_level = 5, hit_self = true },
+                    cooldown = 50,
+                    casting_message = ccb.content.text("%1$s whistles words of magic and a wind picks up around them."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_windrunning",
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_feral_human_tool",
+    copy_from = "mon_feral_human_tool",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "feral_dabbler_spell_picker",
+                    spell = { id = "feral_dabble_spell_selector_spell" },
+                    cooldown = 1,
+                    casting_message = "",
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_spell_picker",
+                },
+                {
+                    id = "feral_dabbler_sound_bomb",
+                    spell = { id = "sound_bomb", min_level = 5 },
+                    cooldown = 25,
+                    casting_message = ccb.content.text("%1$s points at %3$s and a loud noise erupts around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_sound_bomb",
+                },
+                {
+                    id = "feral_dabbler_cure_light_wounds",
+                    spell = { id = "light_healing", min_level = 5, hit_self = true },
+                    cooldown = 75,
+                    casting_message = ccb.content.text("%1$s chants and makes a gesture trailed by glowing green lights."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_cure_light_wounds",
+                },
+                {
+                    id = "feral_dabbler_light_target",
+                    spell = { id = "magus_light_target", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s screams words of magic and waves their hands toward %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_light_target",
+                },
+                {
+                    id = "feral_dabbler_summon_wisps",
+                    spell = { id = "summon_wisps_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s make several expansive gestures and eerie lights appear."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_summon_wisps",
+                },
+                {
+                    id = "feral_dabbler_windrunning",
+                    spell = { id = "windrun_monster", min_level = 5, hit_self = true },
+                    cooldown = 50,
+                    casting_message = ccb.content.text("%1$s whistles words of magic and a wind picks up around them."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_windrunning",
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_feral_scientist_scalpel",
+    copy_from = "mon_feral_scientist_scalpel",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "feral_dabbler_spell_picker",
+                    spell = { id = "feral_dabble_spell_selector_spell" },
+                    cooldown = 1,
+                    casting_message = "",
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_spell_picker",
+                },
+                {
+                    id = "feral_dabbler_sound_bomb",
+                    spell = { id = "sound_bomb", min_level = 5 },
+                    cooldown = 25,
+                    casting_message = ccb.content.text("%1$s points at %3$s and a loud noise erupts around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_sound_bomb",
+                },
+                {
+                    id = "feral_dabbler_cure_light_wounds",
+                    spell = { id = "light_healing", min_level = 5, hit_self = true },
+                    cooldown = 75,
+                    casting_message = ccb.content.text("%1$s chants and makes a gesture trailed by glowing green lights."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_cure_light_wounds",
+                },
+                {
+                    id = "feral_dabbler_light_target",
+                    spell = { id = "magus_light_target", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s screams words of magic and waves their hands toward %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_light_target",
+                },
+                {
+                    id = "feral_dabbler_summon_wisps",
+                    spell = { id = "summon_wisps_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s make several expansive gestures and eerie lights appear."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_summon_wisps",
+                },
+                {
+                    id = "feral_dabbler_windrunning",
+                    spell = { id = "windrun_monster", min_level = 5, hit_self = true },
+                    cooldown = 50,
+                    casting_message = ccb.content.text("%1$s whistles words of magic and a wind picks up around them."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_windrunning",
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_feral_labsecurity_9mm",
+    copy_from = "mon_feral_labsecurity_9mm",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "feral_dabbler_spell_picker",
+                    spell = { id = "feral_dabble_spell_selector_spell" },
+                    cooldown = 1,
+                    casting_message = "",
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_spell_picker",
+                },
+                {
+                    id = "feral_dabbler_sound_bomb",
+                    spell = { id = "sound_bomb", min_level = 5 },
+                    cooldown = 25,
+                    casting_message = ccb.content.text("%1$s points at %3$s and a loud noise erupts around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_sound_bomb",
+                },
+                {
+                    id = "feral_dabbler_cure_light_wounds",
+                    spell = { id = "light_healing", min_level = 5, hit_self = true },
+                    cooldown = 75,
+                    casting_message = ccb.content.text("%1$s chants and makes a gesture trailed by glowing green lights."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_cure_light_wounds",
+                },
+                {
+                    id = "feral_dabbler_light_target",
+                    spell = { id = "magus_light_target", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s screams words of magic and waves their hands toward %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_light_target",
+                },
+                {
+                    id = "feral_dabbler_summon_wisps",
+                    spell = { id = "summon_wisps_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s make several expansive gestures and eerie lights appear."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_summon_wisps",
+                },
+                {
+                    id = "feral_dabbler_windrunning",
+                    spell = { id = "windrun_monster", min_level = 5, hit_self = true },
+                    cooldown = 50,
+                    casting_message = ccb.content.text("%1$s whistles words of magic and a wind picks up around them."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_windrunning",
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_feral_labsecurity_flashlight",
+    copy_from = "mon_feral_labsecurity_flashlight",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "feral_dabbler_spell_picker",
+                    spell = { id = "feral_dabble_spell_selector_spell" },
+                    cooldown = 1,
+                    casting_message = "",
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_spell_picker",
+                },
+                {
+                    id = "feral_dabbler_sound_bomb",
+                    spell = { id = "sound_bomb", min_level = 5 },
+                    cooldown = 25,
+                    casting_message = ccb.content.text("%1$s points at %3$s and a loud noise erupts around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_sound_bomb",
+                },
+                {
+                    id = "feral_dabbler_cure_light_wounds",
+                    spell = { id = "light_healing", min_level = 5, hit_self = true },
+                    cooldown = 75,
+                    casting_message = ccb.content.text("%1$s chants and makes a gesture trailed by glowing green lights."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_cure_light_wounds",
+                },
+                {
+                    id = "feral_dabbler_light_target",
+                    spell = { id = "magus_light_target", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s screams words of magic and waves their hands toward %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_light_target",
+                },
+                {
+                    id = "feral_dabbler_summon_wisps",
+                    spell = { id = "summon_wisps_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s make several expansive gestures and eerie lights appear."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_summon_wisps",
+                },
+                {
+                    id = "feral_dabbler_windrunning",
+                    spell = { id = "windrun_monster", min_level = 5, hit_self = true },
+                    cooldown = 50,
+                    casting_message = ccb.content.text("%1$s whistles words of magic and a wind picks up around them."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_windrunning",
+                },
+            },
+        },
+    },
+}
+
+-- soldiers might have actually known some combat magic
+ccb.content.define_monster {
+    id = "mon_feral_cop",
+    copy_from = "mon_feral_cop",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "feral_dabbler_spell_picker",
+                    spell = { id = "feral_dabble_spell_selector_spell" },
+                    cooldown = 1,
+                    casting_message = "",
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_spell_picker",
+                },
+                {
+                    id = "feral_dabbler_sound_bomb",
+                    spell = { id = "sound_bomb", min_level = 5 },
+                    cooldown = 25,
+                    casting_message = ccb.content.text("%1$s points at %3$s and a loud noise erupts around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_sound_bomb",
+                },
+                {
+                    id = "feral_dabbler_cure_light_wounds",
+                    spell = { id = "light_healing", min_level = 5, hit_self = true },
+                    cooldown = 75,
+                    casting_message = ccb.content.text("%1$s chants and makes a gesture trailed by glowing green lights."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_cure_light_wounds",
+                },
+                {
+                    id = "feral_dabbler_light_target",
+                    spell = { id = "magus_light_target", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s screams words of magic and waves their hands toward %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_light_target",
+                },
+                {
+                    id = "feral_dabbler_summon_wisps",
+                    spell = { id = "summon_wisps_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s make several expansive gestures and eerie lights appear."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_summon_wisps",
+                },
+                {
+                    id = "feral_dabbler_windrunning",
+                    spell = { id = "windrun_monster", min_level = 5, hit_self = true },
+                    cooldown = 50,
+                    casting_message = ccb.content.text("%1$s whistles words of magic and a wind picks up around them."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_windrunning",
+                },
+                {
+                    id = "feral_dabbler_soldier_magicmissile",
+                    cooldown = 10,
+                    move_cost = 100,
+                    range = 12,
+                    damage = { { type = "nether", amount = 7 } },
+                    dodgeable = false,
+                    blockable = false,
+                    avatar_hit = ccb.content.text("%1$s screams words of magic and an eldritch bolt impacts your %2$s!"),
+                    npc_hit = ccb.content.text("%1$s screams words of magic and an eldritch bolt impacts <npcname>'s %2$s!"),
+                    avatar_miss = ccb.content.text("%1$s screams words of magic and you narrowly avoid an eldritch bolt!"),
+                    npc_miss = ccb.content.text("%1$s screams words of magic and <npcname> narrowly avoids an eldritch bolt!"),
+                    avatar_no_damage = ccb.content.text("%1$s screams words of magic and your %2$s is impacted by an eldritch bolt, but it does no damage."),
+                    npc_no_damage = ccb.content.text("%1$s screams words of magic and <npcname>'s %2$s is impacted by an eldritch bolt, but it does no damage."),
+                    kind = "melee",
+                    when = "allow_feral_cop_feral_dabbler_soldier_magicmissile",
+                },
+                {
+                    id = "feral_dabbler_ethereal_grasp",
+                    spell = { id = "ethereal_grasp_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s makes a grasping gesture and ethereal hands burst from the ground around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_cop_feral_dabbler_ethereal_grasp",
+                },
+            },
+        },
+    },
+}
+
+-- soldiers might have actually known some combat magic
+ccb.content.define_monster {
+    id = "mon_feral_soldier",
+    copy_from = "mon_feral_soldier",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "feral_dabbler_spell_picker",
+                    spell = { id = "feral_dabble_spell_selector_spell" },
+                    cooldown = 1,
+                    casting_message = "",
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_spell_picker",
+                },
+                {
+                    id = "feral_dabbler_sound_bomb",
+                    spell = { id = "sound_bomb", min_level = 5 },
+                    cooldown = 25,
+                    casting_message = ccb.content.text("%1$s points at %3$s and a loud noise erupts around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_sound_bomb",
+                },
+                {
+                    id = "feral_dabbler_cure_light_wounds",
+                    spell = { id = "light_healing", min_level = 5, hit_self = true },
+                    cooldown = 75,
+                    casting_message = ccb.content.text("%1$s chants and makes a gesture trailed by glowing green lights."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_cure_light_wounds",
+                },
+                {
+                    id = "feral_dabbler_light_target",
+                    spell = { id = "magus_light_target", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s screams words of magic and waves their hands toward %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_light_target",
+                },
+                {
+                    id = "feral_dabbler_summon_wisps",
+                    spell = { id = "summon_wisps_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s make several expansive gestures and eerie lights appear."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_summon_wisps",
+                },
+                {
+                    id = "feral_dabbler_windrunning",
+                    spell = { id = "windrun_monster", min_level = 5, hit_self = true },
+                    cooldown = 50,
+                    casting_message = ccb.content.text("%1$s whistles words of magic and a wind picks up around them."),
+                    kind = "spell",
+                    when = "allow_feral_human_pipe_feral_dabbler_windrunning",
+                },
+                {
+                    id = "feral_dabbler_soldier_magicmissile",
+                    cooldown = 10,
+                    move_cost = 100,
+                    range = 12,
+                    damage = { { type = "nether", amount = 7 } },
+                    dodgeable = false,
+                    blockable = false,
+                    avatar_hit = ccb.content.text("%1$s screams words of magic and an eldritch bolt impacts your %2$s!"),
+                    npc_hit = ccb.content.text("%1$s screams words of magic and an eldritch bolt impacts <npcname>'s %2$s!"),
+                    avatar_miss = ccb.content.text("%1$s screams words of magic and you narrowly avoid an eldritch bolt!"),
+                    npc_miss = ccb.content.text("%1$s screams words of magic and <npcname> narrowly avoids an eldritch bolt!"),
+                    avatar_no_damage = ccb.content.text("%1$s screams words of magic and your %2$s is impacted by an eldritch bolt, but it does no damage."),
+                    npc_no_damage = ccb.content.text("%1$s screams words of magic and <npcname>'s %2$s is impacted by an eldritch bolt, but it does no damage."),
+                    kind = "melee",
+                    when = "allow_feral_cop_feral_dabbler_soldier_magicmissile",
+                },
+                {
+                    id = "feral_dabbler_ethereal_grasp",
+                    spell = { id = "ethereal_grasp_monster", min_level = 5 },
+                    cooldown = 30,
+                    casting_message = ccb.content.text("%1$s makes a grasping gesture and ethereal hands burst from the ground around %3$s."),
+                    kind = "spell",
+                    when = "allow_feral_cop_feral_dabbler_ethereal_grasp",
+                },
+            },
+        },
+    },
+}

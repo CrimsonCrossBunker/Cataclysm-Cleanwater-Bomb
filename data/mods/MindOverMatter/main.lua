@@ -247,3 +247,5 @@ require("damage_types")
 require("field_types")
 require("trap_triggers")
 require("power_statistics")
+
+require("monster_attack_predicates")

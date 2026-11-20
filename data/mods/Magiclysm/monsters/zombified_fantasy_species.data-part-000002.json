@@ -1,0 +1,55 @@
+[
+  {
+    "id": "mon_zombie_ravenfolk",
+    "type": "MONSTER",
+    "name": { "str_sp": "zombie ravenfolk" },
+    "copy-from": "mon_zombie",
+    "description": "With bedraggled wings, dull eyes, and beak hanging open, this ravenfolk body still walks, a slight sway as it moves.",
+    "proportional": { "hp": 0.6, "speed": 1.1, "weight": 0.75 },
+    "bodytype": "angel",
+    "species": [ "RAVENFOLK", "ZOMBIE" ],
+    "volume": "62500 ml",
+    "weakpoint_sets": [ "wps_humanoid_body", "wps_vital_organs", "wps_eyes" ],
+    "weakpoints": [
+      {
+        "id": "wing",
+        "name": "the wings",
+        "crit_mult": { "all": 0.75 },
+        "difficulty": { "ranged": 2, "melee": 1 },
+        "coverage_mult": { "point": 0.25 },
+        "effects": [ { "effect": "staggered", "chance": 15, "message": "The %s is knocked off-balance!", "damage_required": [ 10, 100 ] } ],
+        "coverage": 12
+      }
+    ],
+    "families": [ "prof_gross_anatomy", "prof_intro_biology", "prof_wp_demihuman", "prof_wp_basic_bird" ],
+    "harvest": "zombie_ravenfolk",
+    "special_attacks": [
+      [ "SHRIEK_ALERT", 15 ],
+      {
+        "type": "monster_attack",
+        "attack_type": "melee",
+        "id": "feral_ravenfolk_peck",
+        "cooldown": 15,
+        "move_cost": 100,
+        "damage_max_instance": [ { "damage_type": "stab", "amount": 12, "armor_penetration": 8 } ],
+        "hitsize_min": 4,
+        "hit_dmg_u": "%1$s buries its beak in your %2$s!",
+        "hit_dmg_npc": "%1$s buries its beak in <npcname>!",
+        "miss_msg_u": "%1$s tries to peck you, but you dodge!",
+        "miss_msg_npc": "%1$s tries to peck <npcname>, but they dodge!",
+        "no_dmg_msg_u": "%1$s tries to peck your %2$s, but fails to penetrate your armor.",
+        "no_dmg_msg_npc": "%1$s tries to peck <npcname>, but fails to penetrate their armor."
+      },
+      {
+        "id": "scratch",
+        "attack_upper": true,
+        "cooldown": 2,
+        "damage_max_instance": [ { "damage_type": "cut", "amount": 8 } ]
+      },
+      { "type": "leap", "cooldown": 15, "max_range": 6, "message": "%1$s leaps with a flutter of wings!" }
+    ],
+    "vision_day": 35,
+    "death_drops": "feral_ravenfolk_death_drops",
+    "upgrades": { "half_life": 120, "into_group": "GROUP_ZOMBIE_RAVENFOLK_UPGRADE" }
+  }
+]
