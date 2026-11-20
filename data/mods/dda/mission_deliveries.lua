@@ -81,3 +81,21 @@ ccb.runtime.handler("complete_mission_ranch_scrapper_tools_for_scrap", function(
     return has_item(context.speaker, "angle_grinder")
         and has_item(context.speaker, "hacksaw")
 end)
+
+ccb.runtime.handler("become_prof_fed", function(context)
+    services.mutations.replace(context.character, id("mutation", "PROF_FED"))
+end)
+
+ccb.runtime.handler("become_seer_mark", function(context)
+    services.mutations.replace(context.character, id("mutation", "seer_mark"))
+end)
+
+ccb.runtime.handler("deliver_doctor_centrifuge", function(context)
+    local item = has_item(context.character, "centrifuge") and "centrifuge" or "microcentrifuge"
+    services.inventory.consume_by_type(context.character, id("item", item), 1, 0)
+end)
+
+ccb.runtime.handler("wait_half_hour", function(context)
+    services.activities.assign_timed(context.character, id("activity", "ACT_WAIT_NPC"),
+        services.time.duration(30, "minute"))
+end)

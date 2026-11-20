@@ -48,30 +48,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_SHADOW_LOOT",
-    "effect": [
-      { "u_message": "As the shadow dissipates, it leaves something behind.", "type": "good" },
-      { "u_spawn_item": "shadow_singularity_piece", "count": 1 }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_DREAM_DRAINER_LOOT",
-    "effect": [
-      { "u_message": "As the mosquito fades away, it leaves something behind.", "type": "good" },
-      { "u_spawn_item": "dream_drainer_heart", "count": 1 }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_LUNA_ATTUNED_LOOT",
-    "effect": [
-      { "u_message": "As the revenant decoheres, it leaves something behind.", "type": "good" },
-      { "u_spawn_item": "moonstruck_pearl", "count": 1 }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "CHARGE_STORMWROUGHT_BLOOD",
     "recurrence": "5 minutes",
     "global": true,

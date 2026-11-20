@@ -1,13 +1,71 @@
 local ccb = require("ccb")
 
-ccb.content.define_dialogue_topic {
-    id = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_0",
-    line = ccb.content.text("Wait.  Before you go, I got an offer for you if you're interested."),
-    replies = {
-        {
-            text = ccb.content.text("What is it?"),
-            next_topic = "TALK_OLD_GUARD_REP_SUNKEN_HELICOPTER_1",
+ccb.content.define_mission {
+    id = "MISSION_OLD_GUARD_REPEATER_BEGIN",
+    name = ccb.content.text("Install radio repeater mod"),
+    description = ccb.content.text("The Old Guard wishes to expand their range of communications to get in touch with other survivors in the Wasteland.  Find a Radio Station and install a repeater mod via its terminal."),
+    goal = "MGOAL_COMPUTER_TOGGLE",
+    difficulty = 5,
+    value = 5000,
+    origins = { "ORIGIN_SECONDARY" },
+    generic_rewards = false,
+    followup = "MISSION_OLD_GUARD_REPEATER",
+    dialogue = {
+        describe = ccb.content.text("I don't need anything major for now, Marshal.  Well, except…"),
+        offer = ccb.content.text("For now, the perimeter of the Refugee Center is free of threats.  That means we can afford to divert our attention to others in need of help.  However, our communication with the wasteland is lacking at best and nonexistent at worst.  We need to broaden our reach to intercept and send radio broadcasts.  Unfortunately Radio Towers are out of the question to widen our broadcasts, as the emergency grid for them is out of action.  However, Radio Stations in towns or urban areas should still have some juice left.  I want you to install something called a \"radio repeater mod\" in these stations that can broaden their reach and allow them to pick weaker signals.  Sadly, I have neither these devices nor a manual for them at my disposal.  You'll need to find instructions and assemble them yourself.  Are you up for this task?"),
+        accepted = ccb.content.text("As I said, I have no repeaters or manuals at my disposal.  But you might want to try you chances in Libraries or maybe other survivors.  Godspeed, Marshal."),
+        rejected = ccb.content.text("Come back when you get a chance Marshal.  We really need get in touch with rest of the region."),
+        advice = ccb.content.text("As I recommended, libraries would be a good start.  Or any place that sells books and manuals, really."),
+        inquire = ccb.content.text("Have you set up a repeater yet, Marshal?"),
+        success = ccb.content.text("Thank you for the good work, Marshal.  It's not much but please accept these supplies to compensate.  Come back to me if you are willing to install more."),
+        success_lie = ccb.content.text("Huh; that's weird, the boys at comms say that they didn't really see an improvement.  Well, if you want to try again, come to me.  Maybe this time it'll work."),
+        failure = ccb.content.text("That's a damn shame…  You can come back anytime if you want to try again."),
+    },
+    finish = {
+        item_rewards = {
+            { item = "jerky", count = 5, container = "bag_plastic" },
+            { item = "water_clean", count = 8, container = "bottle_twoliter" },
+            { item = "bandages", count = 5 },
+            { item = "9mmP", count = 15, container = "box_small" },
+            { item = "9mmfmj", count = 15, container = "box_small" },
+            { item = "9mm", count = 30, container = "box_small" },
+            { item = "556", count = 60, container = "box_small" },
+            { item = "FMCNote", count = 25 },
         },
-        { text = ccb.content.text("Maybe later."), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_mission {
+    id = "MISSION_OLD_GUARD_REPEATER",
+    name = ccb.content.text("Install radio repeater mod"),
+    description = ccb.content.text("The Old Guard wishes to expand their range of communications to get in touch with other survivors in the Wasteland.  Find a Radio Station and install a repeater mod via its terminal."),
+    goal = "MGOAL_COMPUTER_TOGGLE",
+    difficulty = 5,
+    value = 5000,
+    origins = { "ORIGIN_SECONDARY" },
+    generic_rewards = false,
+    followup = "MISSION_OLD_GUARD_REPEATER",
+    dialogue = {
+        describe = ccb.content.text("We need more help…"),
+        offer = ccb.content.text("We need more repeaters to expand our range and ability of our communications.  You know the drill Marshal, find or assemble a radio repeater mod and set it up in a Radio Station.  Radio Towers are still off the table."),
+        accepted = ccb.content.text("Stay safe, Marshal."),
+        rejected = ccb.content.text("Come back when you get a chance Marshal.  We really need get in touch with rest of the region."),
+        advice = ccb.content.text("You can find the Radio Stations in towns or urban centers.  I still have no repeater mod available Marshal.  However you can craft one yourself, if you find the manual.  Try libraries or bookstores if you still don't have one."),
+        inquire = ccb.content.text("Have you set up a repeater yet, Marshal?"),
+        success = ccb.content.text("Good work, Marshal.  Here's some supplies for your next venture.  Come back to me if you are willing to install more."),
+        success_lie = ccb.content.text("Huh, that's weird, the boys at comms say that they didn't really see an improvement.  Well, if you want to try again, come to me.  Maybe this time it'll work."),
+        failure = ccb.content.text("Oh well, you can try again anytime."),
+    },
+    finish = {
+        item_rewards = {
+            { item = "jerky", count = 5, container = "bag_plastic" },
+            { item = "water_clean", count = 8, container = "bottle_twoliter" },
+            { item = "bandages", count = 5 },
+            { item = "9mmP", count = 15, container = "box_small" },
+            { item = "9mmfmj", count = 15, container = "box_small" },
+            { item = "9mm", count = 30, container = "box_small" },
+            { item = "556", count = 60, container = "box_small" },
+            { item = "FMCNote", count = 25 },
+        },
     },
 }

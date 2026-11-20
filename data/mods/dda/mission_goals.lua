@@ -119,3 +119,12 @@ end)
 ccb.runtime.handler("complete_mission_old_guard_rep_3", function(context)
     return services.variables.get_string(context.speaker, "missions_old_guard_u_scouted_exodii").value.value == "yes"
 end)
+
+ccb.runtime.handler("complete_mission_godco_helena_visit_merchants", function(context)
+    return services.variables.get_string(context.speaker, "general_meeting_u_met_Gavin").value.value == "yes"
+end)
+
+ccb.runtime.handler("complete_mission_science_rep_1", function(context)
+    return has_item(context.speaker, "microcentrifuge")
+        or has_item(context.speaker, "centrifuge")
+end)
