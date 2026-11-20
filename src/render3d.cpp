@@ -2118,6 +2118,10 @@ struct instance_sink {
     }
 };
 
+constexpr int CREATURE_HOSTILE_FLAG = 1 << 11;
+constexpr int CREATURE_NEUTRAL_FLAG = 1 << 12;
+constexpr int CREATURE_FRIENDLY_FLAG = 1 << 13;
+
 void push_instance( instance_sink out, const float dx, const float dy,
                     const float z, const float sx, const float sy, const float sz,
                     const sprite_info &spr, const float r, const float g, const float b,
@@ -2125,7 +2129,7 @@ void push_instance( instance_sink out, const float dx, const float dy,
                     const bool side_strip = false, const float pad_value = -1.0f,
                     const bool ghost = false, const float saturation = 1.0f,
                     const bool memory = false, const bool soft_alpha = false,
-                    const bool edge_skirt = false )
+                    const bool edge_skirt = false, const int creature_relation = 0 )
 {
     out.data[0] = dx;
     out.data[1] = dy;
@@ -2156,11 +2160,13 @@ void push_instance( instance_sink out, const float dx, const float dy,
     // bit9: distant structural LOD — terrain3d stores a composite-only mask in
     // the offscreen alpha channel so tilt-shift never blurs detailed terrain
     // bit10: same-level wall — solid lower third, dithered fade, transparent top
+    // bit11-13: hostile / neutral / friendly creature outline for the composite
     // pad: side-strip v, or the run direction for MODE_LINEQUAD (0 = E-W)
     out.data[14] = ( spr.atlas ? 1.0f : 0.0f ) + ( no_discard ? 2.0f : 0.0f ) +
                    static_cast<float>( ( rota4 & 3 ) << 2 ) + ( side_strip ? 16.0f : 0.0f ) +
                    ( ghost ? 32.0f : 0.0f ) + ( memory ? 64.0f : 0.0f ) +
-                   ( soft_alpha ? 128.0f : 0.0f ) + ( edge_skirt ? 256.0f : 0.0f );
+                   ( soft_alpha ? 128.0f : 0.0f ) + ( edge_skirt ? 256.0f : 0.0f ) +
+                   static_cast<float>( creature_relation );
     out.data[15] = pad_value >= 0.0f ? pad_value
                    : ( side_strip ? spr.v1 - 0.02f * ( spr.v1 - spr.v0 ) : 0.0f );
 }
@@ -5196,11 +5202,23 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const float cw = ch * std::clamp( cspr.aspect, 0.4f, 2.5f );
         // canvas bottom of the body sprite, as the single-billboard path placed it
         const float zbase = wz - ch * cspr.base_drop;
+        int creature_relation = CREATURE_NEUTRAL_FLAG;
+        switch( critter.attitude_to( you ) ) {
+            case Creature::Attitude::HOSTILE:
+                creature_relation = CREATURE_HOSTILE_FLAG;
+                break;
+            case Creature::Attitude::FRIENDLY:
+                creature_relation = CREATURE_FRIENDLY_FLAG;
+                break;
+            default:
+                break;
+        }
         {
             std::vector<float> &v = bucket_for( MODE_BILLBOARD, ctex ? cspr.atlas : nullptr );
             push_instance( v, dx + 0.5f, dy + 0.5f, zbase, cw, ch, 1.0f, cspr,
                            tone.shade, tone.shade, tone.shade,
-                           false, 0, false, -1.0f, false, tone.sat );
+                           false, 0, false, -1.0f, false, tone.sat,
+                           false, false, false, creature_relation );
             ++count;
         }
         if( !ctex || cspr.px_h <= 0 || cspr.px_w <= 0 ) {
@@ -5251,7 +5269,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             std::vector<float> &v = bucket_for( MODE_BILLBOARD, ospr.atlas );
             push_instance( v, ax, ay, zbot, ow, oh, 1.0f, ospr,
                            tone.shade, tone.shade, tone.shade,
-                           false, 0, false, -1.0f, false, tone.sat );
+                           false, 0, false, -1.0f, false, tone.sat,
+                           false, false, false, creature_relation );
             ++count;
         }
         // TEMP paper-doll bring-up diagnostic: one line per base sprite

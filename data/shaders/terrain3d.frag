@@ -107,9 +107,19 @@ void main()
 
     bool textured = ( flags & 1 ) != 0;
     bool no_discard = ( flags & 2 ) != 0;
-    // Distant structural LOD alone is marked for the final tilt-shift pass.
-    // Alpha is an internal mask here; the composite restores full opacity.
-    float composite_alpha = ( flags & 512 ) != 0 ? 0.0 : 1.0;
+    // Alpha is an internal composite mask, not visible transparency. Distant
+    // structural LOD and creature relations use distinct, exactly representable
+    // values in the R8 offscreen target; the composite restores full opacity.
+    float composite_alpha = 1.0;
+    if( ( flags & 512 ) != 0 ) {
+        composite_alpha = 0.0;
+    } else if( ( flags & 2048 ) != 0 ) {
+        composite_alpha = 0.25;
+    } else if( ( flags & 4096 ) != 0 ) {
+        composite_alpha = 0.5;
+    } else if( ( flags & 8192 ) != 0 ) {
+        composite_alpha = 0.75;
+    }
     vec4 sampled = vec4( 1.0 );
     if( textured ) {
         sampled = texture( atlas_tex, v_uv );
