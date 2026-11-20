@@ -14,12 +14,33 @@
     "noise_threshold_lake": 0.25,
     "lake_size_min": 20,
     "lake_depth": -5,
-    "shore_extendable_overmap_terrain": [ "forest", "forest_thick", "forest_water", "field" ],
+    "shore_extendable_overmap_terrain": [
+      "forest",
+      "forest_thick",
+      "forest_water",
+      "field"
+    ],
     "shore_extendable_overmap_terrain_aliases": [
-      { "om_terrain": "island_forest", "om_terrain_match_type": "TYPE", "alias": "forest" },
-      { "om_terrain": "island_forest_thick", "om_terrain_match_type": "TYPE", "alias": "forest_thick" },
-      { "om_terrain": "island_forest_water", "om_terrain_match_type": "TYPE", "alias": "forest_water" },
-      { "om_terrain": "island_field", "om_terrain_match_type": "TYPE", "alias": "field" }
+      {
+        "om_terrain": "island_forest",
+        "om_terrain_match_type": "TYPE",
+        "alias": "forest"
+      },
+      {
+        "om_terrain": "island_forest_thick",
+        "om_terrain_match_type": "TYPE",
+        "alias": "forest_thick"
+      },
+      {
+        "om_terrain": "island_forest_water",
+        "om_terrain_match_type": "TYPE",
+        "alias": "forest_water"
+      },
+      {
+        "om_terrain": "island_field",
+        "om_terrain_match_type": "TYPE",
+        "alias": "field"
+      }
     ]
   },
   {
@@ -43,17 +64,46 @@
     "reserved_terrain_water_id": "hw_reserved_water",
     "segment_ramp_special": "highway_segment_ramp",
     "fallback_onramp_special": "Highway Fallback Onramp",
-    "four_way_intersections": [ [ "Highway Clover Leaf", 1 ] ],
+    "four_way_intersections": [
+      [
+        "Highway Clover Leaf",
+        1
+      ]
+    ],
     "fallback_four_way_intersection_special": "Highway Fallback Four-Way Intersection",
-    "three_way_intersections": [ [ "Highway Trumpet Interchange", 1 ] ],
+    "three_way_intersections": [
+      [
+        "Highway Trumpet Interchange",
+        1
+      ]
+    ],
     "fallback_three_way_intersection_special": "Highway Fallback Tee",
-    "bends": [ [ "Highway Bend", 1 ] ],
-    "interchanges": [ [ "Highway Diamond Interchange", 1 ] ],
+    "bends": [
+      [
+        "Highway Bend",
+        1
+      ]
+    ],
+    "interchanges": [
+      [
+        "Highway Diamond Interchange",
+        1
+      ]
+    ],
     "fallback_bend_special": "Highway Bend",
     "fallback_supports": "hw_fb_supports",
     "clockwise_slant_special": "Highway Slant Minor Clockwise",
     "counterclockwise_slant_special": "Highway Slant Minor Counterclockwise",
-    "road_connections": [ [ "Highway Diamond Interchange", 2 ], [ "Highway Rest Area Parking", 1 ] ],
+    "road_connections": [
+      [
+        "Highway Diamond Interchange",
+        2
+      ],
+      [
+        "Highway Rest Area Parking",
+        1
+      ]
+    ],
     "segment_flat_special": "highway_segment_flat",
     "segment_road_bridge_special": "highway_segment_road_bridge",
     "segment_bridge_special": "highway_segment_bridge",
@@ -73,7 +123,12 @@
     "id": "default",
     "noise_threshold_forest": 0.2,
     "noise_threshold_forest_thick": 0.25,
-    "forest_threshold_increase": [ 0.04, 0, 0, 0.02 ],
+    "forest_threshold_increase": [
+      0.04,
+      0,
+      0,
+      0.02
+    ],
     "noise_threshold_swamp_adjacent_water": 0.3,
     "noise_threshold_swamp_isolated": 0.6,
     "river_floodplain_buffer_distance_min": 3,
@@ -90,23 +145,54 @@
     "random_point_size_scalar": 100,
     "trailhead_chance": 1,
     "trailhead_road_distance": 6,
-    "trailheads": [ [ "trailhead_basic", 1 ], [ "trailhead_outhouse", 1 ], [ "trailhead_shack", 1 ] ]
+    "trailheads": [
+      [
+        "trailhead_basic",
+        1
+      ],
+      [
+        "trailhead_outhouse",
+        1
+      ],
+      [
+        "trailhead_shack",
+        1
+      ]
+    ]
   },
   {
     "type": "region_settings_forest_mapgen",
     "id": "default",
-    "biomes": [ "biome_forest_default", "biome_forest_thick_default", "biome_forest_water_default" ]
+    "biomes": [
+      "biome_forest_default",
+      "biome_forest_thick_default",
+      "biome_forest_water_default"
+    ]
   },
   {
     "type": "forest_biome_mapgen",
     "id": "biome_forest_default",
-    "terrains": [ "forest", "special_forest", "special_forest_isherwood" ],
+    "terrains": [
+      "forest",
+      "special_forest",
+      "special_forest_isherwood"
+    ],
     "sparseness_adjacency_factor": 3,
     "item_group": "forest",
     "item_group_chance": 60,
     "item_spawn_iterations": 30,
-    "groundcover": [ [ "t_region_groundcover_forest", 1 ] ],
-    "components": [ "trees_forest", "shrubs_and_flowers_forest", "clutter_forest", "water_forest" ]
+    "groundcover": [
+      [
+        "t_region_groundcover_forest",
+        1
+      ]
+    ],
+    "components": [
+      "trees_forest",
+      "shrubs_and_flowers_forest",
+      "clutter_forest",
+      "water_forest"
+    ]
   },
   {
     "type": "forest_biome_mapgen",
@@ -164,34 +250,88 @@
     "item_group": "forest",
     "item_group_chance": 60,
     "item_spawn_iterations": 100,
-    "groundcover": [ [ "t_region_groundcover_forest", 1 ] ],
-    "components": [ "trees_forest_thick", "shrubs_and_flowers_forest_thick", "clutter_forest_thick", "water_forest" ]
+    "groundcover": [
+      [
+        "t_region_groundcover_forest",
+        1
+      ]
+    ],
+    "components": [
+      "trees_forest_thick",
+      "shrubs_and_flowers_forest_thick",
+      "clutter_forest_thick",
+      "water_forest"
+    ]
   },
   {
     "type": "forest_biome_mapgen",
     "id": "biome_forest_water_default",
-    "terrains": [ "forest_water", "hunter_shack", "hunter_shack_1", "shipwreck_river_1", "shipwreck_river_2" ],
+    "terrains": [
+      "forest_water",
+      "hunter_shack",
+      "hunter_shack_1",
+      "shipwreck_river_1",
+      "shipwreck_river_2"
+    ],
     "sparseness_adjacency_factor": 2,
     "item_group": "forest",
     "item_group_chance": 60,
     "item_spawn_iterations": 1,
-    "groundcover": [ [ "t_region_groundcover_swamp", 1 ] ],
-    "components": [ "trees_forest_water", "shrubs_and_flowers_forest_water", "clutter_forest_water", "water_forest_water" ],
-    "terrain_furniture": { "t_water_murky": { "chance": 2, "furniture": [ [ "f_region_water_plant", 1 ] ] } }
+    "groundcover": [
+      [
+        "t_region_groundcover_swamp",
+        1
+      ]
+    ],
+    "components": [
+      "trees_forest_water",
+      "shrubs_and_flowers_forest_water",
+      "clutter_forest_water",
+      "water_forest_water"
+    ],
+    "terrain_furniture": {
+      "t_water_murky": {
+        "chance": 2,
+        "furniture": [
+          [
+            "f_region_water_plant",
+            1
+          ]
+        ]
+      }
+    }
   },
   {
     "type": "forest_biome_component",
     "id": "trees_forest",
     "sequence": 0,
     "chance": 12,
-    "types": [ [ "t_region_tree_forest", 128 ], [ "t_tree_young", 32 ] ]
+    "types": [
+      [
+        "t_region_tree_forest",
+        128
+      ],
+      [
+        "t_tree_young",
+        32
+      ]
+    ]
   },
   {
     "type": "forest_biome_component",
     "id": "shrubs_and_flowers_forest",
     "sequence": 1,
     "chance": 10,
-    "types": [ [ "t_region_shrub_forest", 120 ], [ "t_tree_young", 10 ] ]
+    "types": [
+      [
+        "t_region_shrub_forest",
+        120
+      ],
+      [
+        "t_tree_young",
+        10
+      ]
+    ]
   },
   {
     "type": "forest_biome_component",
@@ -199,14 +339,38 @@
     "sequence": 2,
     "chance": 80,
     "types": [
-      [ "t_trunk", 128 ],
-      [ "t_dirtmound", 128 ],
-      [ "f_boulder_small", 128 ],
-      [ "f_rubble_rock", 32 ],
-      [ "f_boulder_medium", 8 ],
-      [ "f_boulder_large", 1 ],
-      [ "t_pit", 1 ],
-      [ "t_pit_shallow", 1 ]
+      [
+        "t_trunk",
+        128
+      ],
+      [
+        "t_dirtmound",
+        128
+      ],
+      [
+        "f_boulder_small",
+        128
+      ],
+      [
+        "f_rubble_rock",
+        32
+      ],
+      [
+        "f_boulder_medium",
+        8
+      ],
+      [
+        "f_boulder_large",
+        1
+      ],
+      [
+        "t_pit",
+        1
+      ],
+      [
+        "t_pit_shallow",
+        1
+      ]
     ]
   },
   {
@@ -214,21 +378,44 @@
     "id": "water_forest",
     "sequence": 3,
     "chance": 512,
-    "types": [ [ "t_puddle", 1 ] ]
+    "types": [
+      [
+        "t_puddle",
+        1
+      ]
+    ]
   },
   {
     "type": "forest_biome_component",
     "id": "trees_forest_thick",
     "copy-from": "trees_forest",
     "chance": 5,
-    "types": [ [ "t_region_tree_forest_dense", 100 ], [ "t_tree_young", 5 ] ]
+    "types": [
+      [
+        "t_region_tree_forest_dense",
+        100
+      ],
+      [
+        "t_tree_young",
+        5
+      ]
+    ]
   },
   {
     "type": "forest_biome_component",
     "id": "shrubs_and_flowers_forest_thick",
     "copy-from": "shrubs_and_flowers_forest",
     "chance": 5,
-    "types": [ [ "t_region_shrub_forest_dense", 130 ], [ "t_tree_young", 10 ] ]
+    "types": [
+      [
+        "t_region_shrub_forest_dense",
+        130
+      ],
+      [
+        "t_tree_young",
+        10
+      ]
+    ]
   },
   {
     "type": "forest_biome_component",
@@ -236,14 +423,38 @@
     "copy-from": "clutter_forest",
     "chance": 64,
     "types": [
-      [ "t_trunk", 64 ],
-      [ "t_dirtmound", 64 ],
-      [ "f_boulder_small", 32 ],
-      [ "f_rubble_rock", 32 ],
-      [ "f_boulder_medium", 16 ],
-      [ "f_boulder_large", 4 ],
-      [ "t_pit", 1 ],
-      [ "t_pit_shallow", 1 ]
+      [
+        "t_trunk",
+        64
+      ],
+      [
+        "t_dirtmound",
+        64
+      ],
+      [
+        "f_boulder_small",
+        32
+      ],
+      [
+        "f_rubble_rock",
+        32
+      ],
+      [
+        "f_boulder_medium",
+        16
+      ],
+      [
+        "f_boulder_large",
+        4
+      ],
+      [
+        "t_pit",
+        1
+      ],
+      [
+        "t_pit_shallow",
+        1
+      ]
     ]
   },
   {
@@ -258,34 +469,118 @@
     "copy-from": "trees_forest",
     "chance": 45,
     "types": [
-      [ "t_tree", 40 ],
-      [ "t_tree_young", 80 ],
-      [ "t_tree_pine", 40 ],
-      [ "t_tree_birch", 20 ],
-      [ "t_tree_elm", 20 ],
-      [ "t_tree_cottonwood", 20 ],
-      [ "t_tree_alder", 80 ],
-      [ "t_tree_maple", 40 ],
-      [ "t_tree_willow", 40 ],
-      [ "t_tree_walnut", 8 ],
-      [ "t_tree_butternut", 8 ],
-      [ "t_tree_chestnut", 8 ],
-      [ "t_tree_hazelnut", 2 ],
-      [ "t_tree_beech", 2 ],
-      [ "t_tree_hickory", 8 ],
-      [ "t_tree_crabapple", 2 ],
-      [ "t_tree_apple", 1 ],
-      [ "t_tree_cherry", 1 ],
-      [ "t_tree_juniper", 2 ],
-      [ "t_tree_peach", 1 ],
-      [ "t_tree_pear", 1 ],
-      [ "t_tree_plum", 1 ],
-      [ "t_tree_elderberry", 2 ],
-      [ "t_tree_nannyberry", 10 ],
-      [ "t_tree_tupelo", 10 ],
-      [ "t_tree_mulberry", 2 ],
-      [ "t_tree_sassafras", 3 ],
-      [ "t_region_tree_dead", 90 ]
+      [
+        "t_tree",
+        40
+      ],
+      [
+        "t_tree_young",
+        80
+      ],
+      [
+        "t_tree_pine",
+        40
+      ],
+      [
+        "t_tree_birch",
+        20
+      ],
+      [
+        "t_tree_elm",
+        20
+      ],
+      [
+        "t_tree_cottonwood",
+        20
+      ],
+      [
+        "t_tree_alder",
+        80
+      ],
+      [
+        "t_tree_maple",
+        40
+      ],
+      [
+        "t_tree_willow",
+        40
+      ],
+      [
+        "t_tree_walnut",
+        8
+      ],
+      [
+        "t_tree_butternut",
+        8
+      ],
+      [
+        "t_tree_chestnut",
+        8
+      ],
+      [
+        "t_tree_hazelnut",
+        2
+      ],
+      [
+        "t_tree_beech",
+        2
+      ],
+      [
+        "t_tree_hickory",
+        8
+      ],
+      [
+        "t_tree_crabapple",
+        2
+      ],
+      [
+        "t_tree_apple",
+        1
+      ],
+      [
+        "t_tree_cherry",
+        1
+      ],
+      [
+        "t_tree_juniper",
+        2
+      ],
+      [
+        "t_tree_peach",
+        1
+      ],
+      [
+        "t_tree_pear",
+        1
+      ],
+      [
+        "t_tree_plum",
+        1
+      ],
+      [
+        "t_tree_elderberry",
+        2
+      ],
+      [
+        "t_tree_nannyberry",
+        10
+      ],
+      [
+        "t_tree_tupelo",
+        10
+      ],
+      [
+        "t_tree_mulberry",
+        2
+      ],
+      [
+        "t_tree_sassafras",
+        3
+      ],
+      [
+        "t_region_tree_dead",
+        90
+      ]
     ]
   },
   {
@@ -293,330 +588,55 @@
     "id": "shrubs_and_flowers_forest_water",
     "copy-from": "shrubs_and_flowers_forest",
     "chance": 15,
-    "types": [ [ "t_region_shrub_swamp", 80 ], [ "f_region_forest_water", 30 ] ]
+    "types": [
+      [
+        "t_region_shrub_swamp",
+        80
+      ],
+      [
+        "f_region_forest_water",
+        30
+      ]
+    ]
   },
   {
     "type": "forest_biome_component",
     "id": "clutter_forest_water",
     "copy-from": "clutter_forest",
     "chance": 75,
-    "types": [ [ "t_trunk", 1 ], [ "f_boulder_small", 2 ], [ "f_boulder_medium", 1 ] ]
+    "types": [
+      [
+        "t_trunk",
+        1
+      ],
+      [
+        "f_boulder_small",
+        2
+      ],
+      [
+        "f_boulder_medium",
+        1
+      ]
+    ]
   },
   {
     "type": "forest_biome_component",
     "id": "water_forest_water",
     "copy-from": "water_forest",
     "chance": 2,
-    "types": [ [ "t_water_sh", 6 ], [ "t_water_dp", 1 ], [ "t_water_murky", 12 ] ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "forest",
-    "chance": 40,
-    "extras": [
-      [ "mx_blackberry_patch", 450 ],
-      [ "mx_point_dead_vegetation", 500 ],
-      [ "mx_point_burned_ground", 500 ],
-      [ "mx_strawberry_patch", 180 ],
-      [ "mx_blueberry_patch", 180 ],
-      [ "mx_raspberry_patch", 180 ],
-      [ "mx_huckleberry_patch", 180 ],
-      [ "mx_hobblebush_patch", 180 ],
-      [ "mx_autumn_olive_patch", 180 ],
-      [ "mx_grove", 500 ],
-      [ "mx_shrubbery", 500 ],
-      [ "mx_spider", 200 ],
-      [ "mx_clearcut", 125 ],
-      [ "mx_pond", 125 ],
-      [ "mx_pond_forest", 125 ],
-      [ "mx_pond_forest_2", 125 ],
-      [ "mx_clay_deposit", 125 ],
-      [ "mx_knotweed_patch", 120 ],
-      [ "mx_nest_wasp", 50 ],
-      [ "mx_grass2", 40 ],
-      [ "mx_casings", 30 ],
-      [ "mx_fallen_shed", 30 ],
-      [ "mx_corpses", 30 ],
-      [ "mx_collegekids", 20 ],
-      [ "mx_grass", 20 ],
-      [ "mx_science", 5 ],
-      [ "mx_toxic_waste", 10 ],
-      [ "mx_military", 8 ],
-      [ "mx_drugdeal", 8 ],
-      [ "mx_mass_grave", 5 ],
-      [ "mx_portal", 3 ],
-      [ "mx_portal_in", 3 ],
-      [ "mx_helicopter", 1 ],
-      [ "mx_exocrash_1", 1 ],
-      [ "mx_beehive_natural", 20 ],
-      [ "mx_exocrash_2", 1 ]
-    ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "forest_thick",
-    "chance": 30,
-    "extras": [
-      [ "mx_blackberry_patch", 22500 ],
-      [ "mx_grove", 25000 ],
-      [ "mx_shrubbery", 25000 ],
-      [ "mx_point_dead_vegetation", 25000 ],
-      [ "mx_point_burned_ground", 25000 ],
-      [ "mx_strawberry_patch", 7500 ],
-      [ "mx_blueberry_patch", 7500 ],
-      [ "mx_raspberry_patch", 7500 ],
-      [ "mx_huckleberry_patch", 7500 ],
-      [ "mx_hobblebush_patch", 7500 ],
-      [ "mx_autumn_olive_patch", 7500 ],
-      [ "mx_clearcut", 6250 ],
-      [ "mx_pond", 6250 ],
-      [ "mx_pond_forest", 6250 ],
-      [ "mx_pond_forest_2", 6250 ],
-      [ "mx_clay_deposit", 6250 ],
-      [ "mx_knotweed_patch", 5000 ],
-      [ "mx_casings", 1500 ],
-      [ "mx_corpses", 1500 ],
-      [ "mx_beehive_natural", 1500 ],
-      [ "mx_nest_wasp", 1250 ],
-      [ "mx_spider", 1000 ],
-      [ "mx_collegekids", 1000 ],
-      [ "mx_drugdeal", 1000 ],
-      [ "mx_grass2", 1000 ],
-      [ "mx_fallen_shed", 1000 ],
-      [ "mx_toxic_waste", 750 ],
-      [ "mx_grass", 500 ],
-      [ "mx_military", 400 ],
-      [ "mx_science", 250 ],
-      [ "mx_mass_grave", 250 ],
-      [ "mx_mass_grave_jabberwock", 5 ],
-      [ "mx_portal", 150 ],
-      [ "mx_portal_in", 150 ],
-      [ "mx_exocrash_1", 50 ],
-      [ "mx_helicopter", 50 ],
-      [ "mx_exocrash_2", 50 ],
-      [ "mx_jabberwock", 1 ]
-    ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "forest_water",
-    "chance": 20,
-    "extras": [
-      [ "mx_pond", 240 ],
-      [ "mx_spider", 200 ],
-      [ "mx_clay_deposit", 140 ],
-      [ "mx_knotweed_patch", 140 ],
-      [ "mx_nest_dermatik", 75 ],
-      [ "mx_point_dead_vegetation", 60 ],
-      [ "mx_science", 15 ],
-      [ "mx_military", 25 ],
-      [ "mx_drugdeal", 20 ],
-      [ "mx_fallen_shed", 10 ],
-      [ "mx_casings", 60 ],
-      [ "mx_corpses", 80 ],
-      [ "mx_grass2", 20 ],
-      [ "mx_grass", 10 ],
-      [ "mx_toxic_waste", 10 ],
-      [ "mx_portal", 8 ],
-      [ "mx_portal_in", 7 ],
-      [ "mx_helicopter", 5 ],
-      [ "mx_exocrash_1", 1 ],
-      [ "mx_beehive_natural", 25 ],
-      [ "mx_exocrash_2", 1 ]
-    ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "field",
-    "chance": 6,
-    "extras": [
-      [ "mx_grass", 3500 ],
-      [ "mx_grass2", 3500 ],
-      [ "mx_trees2", 800 ],
-      [ "mx_point_burned_ground", 500 ],
-      [ "mx_point_dead_vegetation", 500 ],
-      [ "mx_trees", 500 ],
-      [ "mx_knotweed_patch", 250 ],
-      [ "mx_fallen_shed", 200 ],
-      [ "mx_sand_patch", 200 ],
-      [ "mx_casings", 200 ],
-      [ "mx_pond", 150 ],
-      [ "mx_nest_wasp", 50 ],
-      [ "mx_mass_grave", 50 ],
-      [ "mx_mass_grave_jabberwock", 1 ],
-      [ "mx_grave", 50 ],
-      [ "mx_supplydrop", 4 ],
-      [ "mx_Trapdoor_spider_den", 40 ],
-      [ "mx_collegekids", 30 ],
-      [ "mx_drugdeal", 30 ],
-      [ "mx_corpses", 30 ],
-      [ "mx_finalshowdown", 20 ],
-      [ "mx_dermatikvictim", 10 ],
-      [ "mx_worm_sign", 20 ],
-      [ "mx_toxic_waste", 10 ],
-      [ "mx_portal", 10 ],
-      [ "mx_portal_in", 10 ],
-      [ "mx_science", 10 ],
-      [ "mx_military", 4 ],
-      [ "mx_exocrash_1", 5 ],
-      [ "mx_exocrash_2", 5 ],
-      [ "mx_golden_monoliths", 1 ]
-    ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "ocean_bed",
-    "chance": 30,
-    "extras": [ [ "mx_kelp_patch", 1 ] ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "ocean_shore",
-    "chance": 1,
-    "extras": [ [ "mx_sandy_beach", 100 ], [ "mx_tidal_flat", 5 ] ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "road",
-    "chance": 100,
-    "extras": [
-      [ "mx_helicopter", 1 ],
-      [ "mx_military", 10 ],
-      [ "mx_science", 10 ],
-      [ "mx_collegekids", 500 ],
-      [ "mx_roadblock", 830 ],
-      [ "mx_roadblock_mil", 170 ],
-      [ "mx_bandits_block", 400 ],
-      [ "mx_drugdeal", 100 ],
-      [ "mx_supplydrop", 5 ],
-      [ "mx_portal", 50 ],
-      [ "mx_portal_in", 40 ],
-      [ "mx_roadworks", 1000 ],
-      [ "mx_mayhem", 500 ],
-      [ "mx_casings", 1000 ],
-      [ "mx_corpses", 300 ],
-      [ "mx_prison_bus", 150 ],
-      [ "mx_prison_van", 10 ],
-      [ "mx_exocrash_1", 5 ],
-      [ "mx_exocrash_2", 5 ],
-      [ "mx_XEDRA_serum_transport", 5 ]
-    ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "park",
-    "chance": 600,
-    "extras": [ [ "mx_fungal_zone", 100 ] ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "road_nesw_manhole",
-    "chance": 20,
-    "extras": [ [ "mx_city_trap", 1 ], [ "mx_laststand", 1 ] ]
-  },
-  {
-    "//CCB": "mx_city_trap 引用已恢复 — 撤销 PR #86231",
-    "type": "map_extra_collection",
-    "id": "build",
-    "chance": 90,
-    "extras": [
-      [ "mx_bugout", 10 ],
-      [ "mx_house_spider", 40 ],
-      [ "mx_house_wasp", 30 ],
-      [ "mx_military", 5 ],
-      [ "mx_science", 7 ],
-      [ "mx_collegekids", 15 ],
-      [ "mx_dormant", 30 ],
-      [ "mx_portal", 5 ],
-      [ "mx_portal_in", 3 ],
-      [ "mx_point_burned_ground", 5 ],
-      [ "mx_casings", 30 ],
-      [ "mx_looters", 10 ],
-      [ "mx_corpses", 30 ]
-    ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "marloss",
-    "chance": 60,
-    "extras": [ [ "mx_marloss_pilgrimage", 100 ] ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "subway",
-    "chance": 100,
-    "extras": [ [ "mx_military", 5 ], [ "mx_science", 12 ], [ "mx_drugdeal", 5 ], [ "mx_casings", 10 ], [ "mx_dormant", 10 ] ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "lab_subway",
-    "chance": 25,
-    "extras": [ [ "mx_military", 5 ], [ "mx_science", 15 ], [ "mx_portal", 3 ], [ "mx_portal_in", 3 ] ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "research_facility_lot",
-    "chance": 3,
-    "extras": [
-      [ "mx_helicopter", 15 ],
-      [ "mx_military", 65 ],
-      [ "mx_collegekids", 1 ],
-      [ "mx_portal", 200 ],
-      [ "mx_crater", 180 ],
-      [ "mx_portal_in", 30 ],
-      [ "mx_casings", 30 ],
-      [ "mx_exocrash_1", 1 ],
-      [ "mx_exocrash_2", 1 ]
-    ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "research_facility_interior",
-    "chance": 2,
-    "extras": [
-      [ "mx_crater", 15000 ],
-      [ "mx_portal", 5000 ],
-      [ "mx_portal_in", 2000 ],
-      [ "mx_casings", 1500 ],
-      [ "mx_military", 250 ],
-      [ "mx_jabberwock", 1 ]
-    ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "river",
-    "chance": 1,
-    "extras": [ [ "mx_null", 66 ], [ "mx_riverside_boat", 1 ], [ "mx_riverside_jetski", 1 ], [ "mx_reed", 33 ] ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "lake_shore",
-    "chance": 2,
-    "extras": [ [ "mx_reed", 100 ] ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "agricultural",
-    "chance": 38,
-    "extras": [
-      [ "mx_point_burned_ground", 500 ],
-      [ "mx_point_dead_vegetation", 500 ],
-      [ "mx_casings", 200 ],
-      [ "mx_nest_wasp", 50 ],
-      [ "mx_mass_grave", 50 ],
-      [ "mx_mass_grave_jabberwock", 2 ],
-      [ "mx_grave", 50 ],
-      [ "mx_supplydrop", 2 ],
-      [ "mx_Trapdoor_spider_den", 40 ],
-      [ "mx_collegekids", 30 ],
-      [ "mx_drugdeal", 30 ],
-      [ "mx_corpses", 30 ],
-      [ "mx_portal", 10 ],
-      [ "mx_portal_in", 10 ],
-      [ "mx_science", 5 ],
-      [ "mx_military", 4 ],
-      [ "mx_exocrash_1", 5 ],
-      [ "mx_exocrash_2", 5 ]
+    "types": [
+      [
+        "t_water_sh",
+        6
+      ],
+      [
+        "t_water_dp",
+        1
+      ],
+      [
+        "t_water_murky",
+        12
+      ]
     ]
   },
   {
@@ -687,59 +707,172 @@
     "type": "region_terrain_furniture",
     "id": "default_t_region_groundcover",
     "ter_id": "t_region_groundcover",
-    "replace_with_terrain": [ [ "t_grass", 12000 ], [ "t_grass_dead", 2000 ], [ "t_dirt", 1000 ] ]
+    "replace_with_terrain": [
+      [
+        "t_grass",
+        12000
+      ],
+      [
+        "t_grass_dead",
+        2000
+      ],
+      [
+        "t_dirt",
+        1000
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_t_region_groundcover_urban",
     "ter_id": "t_region_groundcover_urban",
-    "replace_with_terrain": [ [ "t_grass", 20 ], [ "t_grass_dead", 3 ] ]
+    "replace_with_terrain": [
+      [
+        "t_grass",
+        20
+      ],
+      [
+        "t_grass_dead",
+        3
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_t_region_groundcover_forest",
     "ter_id": "t_region_groundcover_forest",
-    "replace_with_terrain": [ [ "t_forestfloor", 10 ], [ "t_grass", 1 ], [ "t_grass_long", 1 ], [ "t_moss", 1 ], [ "t_grass_dead", 1 ] ]
+    "replace_with_terrain": [
+      [
+        "t_forestfloor",
+        10
+      ],
+      [
+        "t_grass",
+        1
+      ],
+      [
+        "t_grass_long",
+        1
+      ],
+      [
+        "t_moss",
+        1
+      ],
+      [
+        "t_grass_dead",
+        1
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_t_region_groundcover_swamp",
     "ter_id": "t_region_groundcover_swamp",
-    "replace_with_terrain": [ [ "t_grass_long", 300 ], [ "t_grass_tall", 100 ], [ "t_moss", 200 ], [ "t_dirt", 200 ] ]
+    "replace_with_terrain": [
+      [
+        "t_grass_long",
+        300
+      ],
+      [
+        "t_grass_tall",
+        100
+      ],
+      [
+        "t_moss",
+        200
+      ],
+      [
+        "t_dirt",
+        200
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_t_region_groundcover_barren",
     "ter_id": "t_region_groundcover_barren",
-    "replace_with_terrain": [ [ "t_dirt", 30 ], [ "t_grass_dead", 2 ], [ "t_railroad_rubble", 1 ] ]
+    "replace_with_terrain": [
+      [
+        "t_dirt",
+        30
+      ],
+      [
+        "t_grass_dead",
+        2
+      ],
+      [
+        "t_railroad_rubble",
+        1
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_t_region_grass",
     "ter_id": "t_region_grass",
-    "replace_with_terrain": [ [ "t_grass", 1 ] ]
+    "replace_with_terrain": [
+      [
+        "t_grass",
+        1
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_t_region_soil",
     "ter_id": "t_region_soil",
-    "replace_with_terrain": [ [ "t_dirt", 1 ] ]
+    "replace_with_terrain": [
+      [
+        "t_dirt",
+        1
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_t_region_shrub_forest_dense",
     "ter_id": "t_region_shrub_forest_dense",
     "replace_with_terrain": [
-      [ "t_underbrush", 450 ],
-      [ "t_shrub", 150 ],
-      [ "t_fern", 75 ],
-      [ "t_shrub_hobblebush", 2 ],
-      [ "t_shrub_huckleberry", 2 ],
-      [ "t_shrub_raspberry", 1 ],
-      [ "t_shrub_blackberry", 1 ],
-      [ "t_shrub_blueberry", 1 ],
-      [ "t_shrub_strawberry", 1 ],
-      [ "t_shrub_grape", 1 ]
+      [
+        "t_underbrush",
+        450
+      ],
+      [
+        "t_shrub",
+        150
+      ],
+      [
+        "t_fern",
+        75
+      ],
+      [
+        "t_shrub_hobblebush",
+        2
+      ],
+      [
+        "t_shrub_huckleberry",
+        2
+      ],
+      [
+        "t_shrub_raspberry",
+        1
+      ],
+      [
+        "t_shrub_blackberry",
+        1
+      ],
+      [
+        "t_shrub_blueberry",
+        1
+      ],
+      [
+        "t_shrub_strawberry",
+        1
+      ],
+      [
+        "t_shrub_grape",
+        1
+      ]
     ]
   },
   {
@@ -747,10 +880,22 @@
     "id": "default_t_region_shrub_forest",
     "ter_id": "t_region_shrub_forest",
     "replace_with_terrain": [
-      [ "t_region_shrub_forest_dense", 350 ],
-      [ "t_shrub_rose", 5 ],
-      [ "t_shrub_blackberry", 5 ],
-      [ "t_shrub_autumn_olive", 5 ]
+      [
+        "t_region_shrub_forest_dense",
+        350
+      ],
+      [
+        "t_shrub_rose",
+        5
+      ],
+      [
+        "t_shrub_blackberry",
+        5
+      ],
+      [
+        "t_shrub_autumn_olive",
+        5
+      ]
     ]
   },
   {
@@ -758,14 +903,38 @@
     "id": "default_t_region_shrub_plains",
     "ter_id": "t_region_shrub_plains",
     "replace_with_terrain": [
-      [ "t_shrub", 50 ],
-      [ "t_shrub_blueberry", 2 ],
-      [ "t_shrub_autumn_olive", 2 ],
-      [ "t_shrub_blackberry", 2 ],
-      [ "t_shrub_rose", 2 ],
-      [ "t_shrub_huckleberry", 1 ],
-      [ "t_shrub_strawberry", 1 ],
-      [ "t_shrub_grape", 1 ]
+      [
+        "t_shrub",
+        50
+      ],
+      [
+        "t_shrub_blueberry",
+        2
+      ],
+      [
+        "t_shrub_autumn_olive",
+        2
+      ],
+      [
+        "t_shrub_blackberry",
+        2
+      ],
+      [
+        "t_shrub_rose",
+        2
+      ],
+      [
+        "t_shrub_huckleberry",
+        1
+      ],
+      [
+        "t_shrub_strawberry",
+        1
+      ],
+      [
+        "t_shrub_grape",
+        1
+      ]
     ]
   },
   {
@@ -773,14 +942,38 @@
     "id": "default_t_region_shrub_swamp",
     "ter_id": "t_region_shrub_swamp",
     "replace_with_terrain": [
-      [ "t_fern", 2 ],
-      [ "t_shrub_hobblebush", 2 ],
-      [ "t_shrub_raspberry", 2 ],
-      [ "t_shrub_chokeberry", 2 ],
-      [ "t_shrub_blueberry", 2 ],
-      [ "t_shrub_huckleberry", 1 ],
-      [ "t_shrub_spicebush", 1 ],
-      [ "t_shrub_rose", 1 ]
+      [
+        "t_fern",
+        2
+      ],
+      [
+        "t_shrub_hobblebush",
+        2
+      ],
+      [
+        "t_shrub_raspberry",
+        2
+      ],
+      [
+        "t_shrub_chokeberry",
+        2
+      ],
+      [
+        "t_shrub_blueberry",
+        2
+      ],
+      [
+        "t_shrub_huckleberry",
+        1
+      ],
+      [
+        "t_shrub_spicebush",
+        1
+      ],
+      [
+        "t_shrub_rose",
+        1
+      ]
     ]
   },
   {
@@ -788,14 +981,38 @@
     "id": "default_t_region_shrub_fruit",
     "ter_id": "t_region_shrub_fruit",
     "replace_with_terrain": [
-      [ "t_shrub_blueberry", 6 ],
-      [ "t_shrub_strawberry", 6 ],
-      [ "t_shrub_raspberry", 4 ],
-      [ "t_shrub_grape", 4 ],
-      [ "t_shrub_hobblebush", 2 ],
-      [ "t_shrub_blackberry", 2 ],
-      [ "t_shrub_huckleberry", 2 ],
-      [ "t_shrub_peanut", 1 ]
+      [
+        "t_shrub_blueberry",
+        6
+      ],
+      [
+        "t_shrub_strawberry",
+        6
+      ],
+      [
+        "t_shrub_raspberry",
+        4
+      ],
+      [
+        "t_shrub_grape",
+        4
+      ],
+      [
+        "t_shrub_hobblebush",
+        2
+      ],
+      [
+        "t_shrub_blackberry",
+        2
+      ],
+      [
+        "t_shrub_huckleberry",
+        2
+      ],
+      [
+        "t_shrub_peanut",
+        1
+      ]
     ]
   },
   {
@@ -803,22 +1020,62 @@
     "id": "default_t_region_shrub_decorative",
     "ter_id": "t_region_shrub_decorative",
     "replace_with_terrain": [
-      [ "t_shrub", 30 ],
-      [ "t_fern", 5 ],
-      [ "t_shrub_rose", 20 ],
-      [ "t_shrub_hydrangea", 20 ],
-      [ "t_shrub_lilac", 20 ],
-      [ "t_shrub_chokeberry", 15 ],
-      [ "t_tree_nannyberry", 15 ],
-      [ "t_shrub_hobblebush", 5 ],
-      [ "t_bamboo_long", 5 ]
+      [
+        "t_shrub",
+        30
+      ],
+      [
+        "t_fern",
+        5
+      ],
+      [
+        "t_shrub_rose",
+        20
+      ],
+      [
+        "t_shrub_hydrangea",
+        20
+      ],
+      [
+        "t_shrub_lilac",
+        20
+      ],
+      [
+        "t_shrub_chokeberry",
+        15
+      ],
+      [
+        "t_tree_nannyberry",
+        15
+      ],
+      [
+        "t_shrub_hobblebush",
+        5
+      ],
+      [
+        "t_bamboo_long",
+        5
+      ]
     ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_t_region_shrub",
     "ter_id": "t_region_shrub",
-    "replace_with_terrain": [ [ "t_region_shrub_decorative", 60 ], [ "t_underbrush", 10 ], [ "t_region_shrub_fruit", 30 ] ]
+    "replace_with_terrain": [
+      [
+        "t_region_shrub_decorative",
+        60
+      ],
+      [
+        "t_underbrush",
+        10
+      ],
+      [
+        "t_region_shrub_fruit",
+        30
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
@@ -827,18 +1084,54 @@
     "//2": "Total acreage coverage data here: https://public.tableau.com/views/FIA_FiveYearReports_NE_Area_1/ForestTypeArea?:showVizHome=no",
     "ter_id": "t_region_tree_forest_dense",
     "replace_with_terrain": [
-      [ "t_tree", 18 ],
-      [ "t_tree_blackjack", 10 ],
-      [ "t_tree_hickory", 18 ],
-      [ "t_tree_pine", 9 ],
-      [ "t_tree_maple", 7 ],
-      [ "t_tree_birch", 7 ],
-      [ "t_tree_beech", 7 ],
-      [ "t_tree_cottonwood", 4 ],
-      [ "t_tree_elm", 4 ],
-      [ "t_tree_sassafras", 1 ],
-      [ "t_region_tree_dead", 5 ],
-      [ "t_region_tree_forest_other", 5 ]
+      [
+        "t_tree",
+        18
+      ],
+      [
+        "t_tree_blackjack",
+        10
+      ],
+      [
+        "t_tree_hickory",
+        18
+      ],
+      [
+        "t_tree_pine",
+        9
+      ],
+      [
+        "t_tree_maple",
+        7
+      ],
+      [
+        "t_tree_birch",
+        7
+      ],
+      [
+        "t_tree_beech",
+        7
+      ],
+      [
+        "t_tree_cottonwood",
+        4
+      ],
+      [
+        "t_tree_elm",
+        4
+      ],
+      [
+        "t_tree_sassafras",
+        1
+      ],
+      [
+        "t_region_tree_dead",
+        5
+      ],
+      [
+        "t_region_tree_forest_other",
+        5
+      ]
     ]
   },
   {
@@ -846,21 +1139,54 @@
     "id": "default_t_region_tree_forest_other",
     "ter_id": "t_region_tree_forest_other",
     "replace_with_terrain": [
-      [ "t_tree_willow", 15 ],
-      [ "t_tree_alder", 15 ],
-      [ "t_tree_chestnut", 10 ],
-      [ "t_tree_basswood", 10 ],
-      [ "t_tree_hazelnut", 10 ],
-      [ "t_region_tree_fruit_wild", 20 ],
-      [ "t_tree_sassafras", 2 ],
-      [ "t_tree_juniper", 5 ]
+      [
+        "t_tree_willow",
+        15
+      ],
+      [
+        "t_tree_alder",
+        15
+      ],
+      [
+        "t_tree_chestnut",
+        10
+      ],
+      [
+        "t_tree_basswood",
+        10
+      ],
+      [
+        "t_tree_hazelnut",
+        10
+      ],
+      [
+        "t_region_tree_fruit_wild",
+        20
+      ],
+      [
+        "t_tree_sassafras",
+        2
+      ],
+      [
+        "t_tree_juniper",
+        5
+      ]
     ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_t_region_tree_forest",
     "ter_id": "t_region_tree_forest",
-    "replace_with_terrain": [ [ "t_region_tree_forest_dense", 2 ], [ "t_region_tree_forest_other", 1 ] ]
+    "replace_with_terrain": [
+      [
+        "t_region_tree_forest_dense",
+        2
+      ],
+      [
+        "t_region_tree_forest_other",
+        1
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
@@ -868,24 +1194,78 @@
     "ter_id": "t_region_tree",
     "//": "t_tree_hickory remains separate here from t_region_tree_nut because hickory mixed in with oak trees are some of the most common tree stands in Massachusetts forests",
     "replace_with_terrain": [
-      [ "t_tree", 128 ],
-      [ "t_tree_young", 128 ],
-      [ "t_tree_birch", 16 ],
-      [ "t_tree_elm", 16 ],
-      [ "t_tree_cottonwood", 8 ],
-      [ "t_tree_basswood", 16 ],
-      [ "t_tree_alder", 16 ],
-      [ "t_tree_pine", 64 ],
-      [ "t_tree_maple", 32 ],
-      [ "t_tree_willow", 32 ],
-      [ "t_tree_hickory", 4 ],
-      [ "t_region_tree_nut", 16 ],
-      [ "t_tree_spruce", 8 ],
-      [ "t_tree_beech", 2 ],
-      [ "t_tree_blackjack", 8 ],
-      [ "t_region_tree_fruit_wild", 4 ],
-      [ "t_tree_sassafras", 3 ],
-      [ "t_region_tree_dead", 48 ]
+      [
+        "t_tree",
+        128
+      ],
+      [
+        "t_tree_young",
+        128
+      ],
+      [
+        "t_tree_birch",
+        16
+      ],
+      [
+        "t_tree_elm",
+        16
+      ],
+      [
+        "t_tree_cottonwood",
+        8
+      ],
+      [
+        "t_tree_basswood",
+        16
+      ],
+      [
+        "t_tree_alder",
+        16
+      ],
+      [
+        "t_tree_pine",
+        64
+      ],
+      [
+        "t_tree_maple",
+        32
+      ],
+      [
+        "t_tree_willow",
+        32
+      ],
+      [
+        "t_tree_hickory",
+        4
+      ],
+      [
+        "t_region_tree_nut",
+        16
+      ],
+      [
+        "t_tree_spruce",
+        8
+      ],
+      [
+        "t_tree_beech",
+        2
+      ],
+      [
+        "t_tree_blackjack",
+        8
+      ],
+      [
+        "t_region_tree_fruit_wild",
+        4
+      ],
+      [
+        "t_tree_sassafras",
+        3
+      ],
+      [
+        "t_region_tree_dead",
+        48
+      ]
     ]
   },
   {
@@ -893,22 +1273,70 @@
     "id": "default_t_region_tree_shade",
     "ter_id": "t_region_tree_shade",
     "replace_with_terrain": [
-      [ "t_tree", 64 ],
-      [ "t_tree_young", 32 ],
-      [ "t_tree_birch", 16 ],
-      [ "t_tree_elm", 16 ],
-      [ "t_tree_cottonwood", 16 ],
-      [ "t_tree_basswood", 16 ],
-      [ "t_tree_alder", 16 ],
-      [ "t_tree_maple", 32 ],
-      [ "t_tree_willow", 32 ],
-      [ "t_tree_hickory", 16 ],
-      [ "t_tree_chestnut", 8 ],
-      [ "t_tree_blackjack", 8 ],
-      [ "t_tree_elderberry", 2 ],
-      [ "t_tree_mulberry", 2 ],
-      [ "t_tree_sassafras", 3 ],
-      [ "t_tree_dead", 2 ]
+      [
+        "t_tree",
+        64
+      ],
+      [
+        "t_tree_young",
+        32
+      ],
+      [
+        "t_tree_birch",
+        16
+      ],
+      [
+        "t_tree_elm",
+        16
+      ],
+      [
+        "t_tree_cottonwood",
+        16
+      ],
+      [
+        "t_tree_basswood",
+        16
+      ],
+      [
+        "t_tree_alder",
+        16
+      ],
+      [
+        "t_tree_maple",
+        32
+      ],
+      [
+        "t_tree_willow",
+        32
+      ],
+      [
+        "t_tree_hickory",
+        16
+      ],
+      [
+        "t_tree_chestnut",
+        8
+      ],
+      [
+        "t_tree_blackjack",
+        8
+      ],
+      [
+        "t_tree_elderberry",
+        2
+      ],
+      [
+        "t_tree_mulberry",
+        2
+      ],
+      [
+        "t_tree_sassafras",
+        3
+      ],
+      [
+        "t_tree_dead",
+        2
+      ]
     ]
   },
   {
@@ -916,18 +1344,54 @@
     "id": "default_t_region_tree_fruit",
     "ter_id": "t_region_tree_fruit",
     "replace_with_terrain": [
-      [ "t_tree_young", 4 ],
-      [ "t_tree_apple", 2 ],
-      [ "t_tree_crabapple", 1 ],
-      [ "t_tree_apricot", 2 ],
-      [ "t_tree_cherry", 2 ],
-      [ "t_tree_peach", 2 ],
-      [ "t_tree_pear", 2 ],
-      [ "t_tree_plum", 2 ],
-      [ "t_tree_elderberry", 2 ],
-      [ "t_tree_nannyberry", 2 ],
-      [ "t_tree_mulberry", 2 ],
-      [ "t_tree_dead", 4 ]
+      [
+        "t_tree_young",
+        4
+      ],
+      [
+        "t_tree_apple",
+        2
+      ],
+      [
+        "t_tree_crabapple",
+        1
+      ],
+      [
+        "t_tree_apricot",
+        2
+      ],
+      [
+        "t_tree_cherry",
+        2
+      ],
+      [
+        "t_tree_peach",
+        2
+      ],
+      [
+        "t_tree_pear",
+        2
+      ],
+      [
+        "t_tree_plum",
+        2
+      ],
+      [
+        "t_tree_elderberry",
+        2
+      ],
+      [
+        "t_tree_nannyberry",
+        2
+      ],
+      [
+        "t_tree_mulberry",
+        2
+      ],
+      [
+        "t_tree_dead",
+        4
+      ]
     ]
   },
   {
@@ -935,13 +1399,34 @@
     "id": "default_t_region_tree_fruit_wild",
     "ter_id": "t_region_tree_fruit_wild",
     "replace_with_terrain": [
-      [ "t_tree_young", 4 ],
-      [ "t_tree_crabapple", 2 ],
-      [ "t_tree_juniper", 2 ],
-      [ "t_tree_elderberry", 2 ],
-      [ "t_tree_nannyberry", 2 ],
-      [ "t_tree_mulberry", 2 ],
-      [ "t_tree_dead", 4 ]
+      [
+        "t_tree_young",
+        4
+      ],
+      [
+        "t_tree_crabapple",
+        2
+      ],
+      [
+        "t_tree_juniper",
+        2
+      ],
+      [
+        "t_tree_elderberry",
+        2
+      ],
+      [
+        "t_tree_nannyberry",
+        2
+      ],
+      [
+        "t_tree_mulberry",
+        2
+      ],
+      [
+        "t_tree_dead",
+        4
+      ]
     ]
   },
   {
@@ -949,11 +1434,26 @@
     "id": "default_t_region_tree_dead",
     "ter_id": "t_region_tree_dead",
     "replace_with_terrain": [
-      [ "t_tree_hickory_dead", 8 ],
-      [ "t_tree_dead", 7 ],
-      [ "t_tree_dead_warped", 1 ],
-      [ "t_tree_deadpine", 3 ],
-      [ "t_tree_deadpine_warped", 1 ]
+      [
+        "t_tree_hickory_dead",
+        8
+      ],
+      [
+        "t_tree_dead",
+        7
+      ],
+      [
+        "t_tree_dead_warped",
+        1
+      ],
+      [
+        "t_tree_deadpine",
+        3
+      ],
+      [
+        "t_tree_deadpine_warped",
+        1
+      ]
     ]
   },
   {
@@ -961,37 +1461,108 @@
     "id": "default_t_region_tree_nut",
     "ter_id": "t_region_tree_nut",
     "replace_with_terrain": [
-      [ "t_tree_hickory", 16 ],
-      [ "t_tree_hickory_dead", 16 ],
-      [ "t_tree_walnut", 8 ],
-      [ "t_tree_butternut", 4 ],
-      [ "t_tree_chestnut", 8 ],
-      [ "t_tree_young", 4 ],
-      [ "t_tree_beech", 2 ],
-      [ "t_tree_hazelnut", 2 ],
-      [ "t_tree_dead", 4 ]
+      [
+        "t_tree_hickory",
+        16
+      ],
+      [
+        "t_tree_hickory_dead",
+        16
+      ],
+      [
+        "t_tree_walnut",
+        8
+      ],
+      [
+        "t_tree_butternut",
+        4
+      ],
+      [
+        "t_tree_chestnut",
+        8
+      ],
+      [
+        "t_tree_young",
+        4
+      ],
+      [
+        "t_tree_beech",
+        2
+      ],
+      [
+        "t_tree_hazelnut",
+        2
+      ],
+      [
+        "t_tree_dead",
+        4
+      ]
     ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_t_region_tree_evergreen",
     "ter_id": "t_region_tree_evergreen",
-    "replace_with_terrain": [ [ "t_tree_pine", 32 ], [ "t_tree_juniper", 16 ], [ "t_tree_deadpine", 2 ], [ "t_tree_spruce", 2 ] ]
+    "replace_with_terrain": [
+      [
+        "t_tree_pine",
+        32
+      ],
+      [
+        "t_tree_juniper",
+        16
+      ],
+      [
+        "t_tree_deadpine",
+        2
+      ],
+      [
+        "t_tree_spruce",
+        2
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_f_region_flower",
     "furn_id": "f_region_flower",
     "replace_with_furniture": [
-      [ "f_black_eyed_susan", 100 ],
-      [ "f_lily", 100 ],
-      [ "f_flower_tulip", 100 ],
-      [ "f_flower_spurge", 100 ],
-      [ "f_chamomile", 100 ],
-      [ "f_dandelion", 100 ],
-      [ "f_dahlia", 100 ],
-      [ "f_bluebell", 100 ],
-      [ "f_sunflower", 100 ]
+      [
+        "f_black_eyed_susan",
+        100
+      ],
+      [
+        "f_lily",
+        100
+      ],
+      [
+        "f_flower_tulip",
+        100
+      ],
+      [
+        "f_flower_spurge",
+        100
+      ],
+      [
+        "f_chamomile",
+        100
+      ],
+      [
+        "f_dandelion",
+        100
+      ],
+      [
+        "f_dahlia",
+        100
+      ],
+      [
+        "f_bluebell",
+        100
+      ],
+      [
+        "f_sunflower",
+        100
+      ]
     ]
   },
   {
@@ -999,17 +1570,50 @@
     "id": "default_f_region_flower_decorative",
     "furn_id": "f_region_flower_decorative",
     "replace_with_furniture": [
-      [ "f_lily", 4 ],
-      [ "f_flower_tulip", 4 ],
-      [ "f_black_eyed_susan", 3 ],
-      [ "f_bluebell", 2 ],
-      [ "f_maianthemum_stellatum", 2 ],
-      [ "f_fireweed", 1 ],
-      [ "f_flower_spurge", 1 ],
-      [ "f_dahlia", 1 ],
-      [ "f_salsify", 1 ],
-      [ "f_chicory", 1 ],
-      [ "f_sunflower", 1 ]
+      [
+        "f_lily",
+        4
+      ],
+      [
+        "f_flower_tulip",
+        4
+      ],
+      [
+        "f_black_eyed_susan",
+        3
+      ],
+      [
+        "f_bluebell",
+        2
+      ],
+      [
+        "f_maianthemum_stellatum",
+        2
+      ],
+      [
+        "f_fireweed",
+        1
+      ],
+      [
+        "f_flower_spurge",
+        1
+      ],
+      [
+        "f_dahlia",
+        1
+      ],
+      [
+        "f_salsify",
+        1
+      ],
+      [
+        "f_chicory",
+        1
+      ],
+      [
+        "f_sunflower",
+        1
+      ]
     ]
   },
   {
@@ -1017,20 +1621,62 @@
     "id": "default_f_region_weed",
     "furn_id": "f_region_weed",
     "replace_with_furniture": [
-      [ "f_thistle", 400 ],
-      [ "f_dandelion", 400 ],
-      [ "f_burdock", 400 ],
-      [ "f_chamomile", 300 ],
-      [ "f_carrot_wild", 300 ],
-      [ "f_asparagus_wild", 300 ],
-      [ "f_salsify", 300 ],
-      [ "f_datura", 300 ],
-      [ "f_japanese_knotweed", 300 ],
-      [ "f_bluebell", 200 ],
-      [ "f_dahlia", 100 ],
-      [ "f_lily", 100 ],
-      [ "f_sunflower", 100 ],
-      [ "f_mustard", 100 ]
+      [
+        "f_thistle",
+        400
+      ],
+      [
+        "f_dandelion",
+        400
+      ],
+      [
+        "f_burdock",
+        400
+      ],
+      [
+        "f_chamomile",
+        300
+      ],
+      [
+        "f_carrot_wild",
+        300
+      ],
+      [
+        "f_asparagus_wild",
+        300
+      ],
+      [
+        "f_salsify",
+        300
+      ],
+      [
+        "f_datura",
+        300
+      ],
+      [
+        "f_japanese_knotweed",
+        300
+      ],
+      [
+        "f_bluebell",
+        200
+      ],
+      [
+        "f_dahlia",
+        100
+      ],
+      [
+        "f_lily",
+        100
+      ],
+      [
+        "f_sunflower",
+        100
+      ],
+      [
+        "f_mustard",
+        100
+      ]
     ]
   },
   {
@@ -1038,28 +1684,94 @@
     "id": "default_f_region_plain",
     "furn_id": "f_region_plain",
     "replace_with_furniture": [
-      [ "f_dandelion", 600 ],
-      [ "f_flower_spurge", 400 ],
-      [ "f_chamomile", 400 ],
-      [ "f_carrot_wild", 300 ],
-      [ "f_asparagus_wild", 300 ],
-      [ "f_salsify", 300 ],
-      [ "f_datura", 300 ],
-      [ "f_thistle", 300 ],
-      [ "f_japanese_knotweed", 200 ],
-      [ "f_dahlia", 200 ],
-      [ "f_maianthemum_stellatum", 200 ],
-      [ "f_mutpoppy", 200 ],
-      [ "f_black_eyed_susan", 100 ],
-      [ "f_flower_tulip", 100 ],
-      [ "f_mustard", 100 ],
-      [ "f_sunflower", 100 ],
-      [ "f_fireweed", 100 ],
-      [ "f_selfheal", 100 ],
-      [ "f_jerusalem_artichoke", 100 ],
-      [ "f_lily", 100 ],
-      [ "f_chicory", 100 ],
-      [ "f_dogbane", 30 ]
+      [
+        "f_dandelion",
+        600
+      ],
+      [
+        "f_flower_spurge",
+        400
+      ],
+      [
+        "f_chamomile",
+        400
+      ],
+      [
+        "f_carrot_wild",
+        300
+      ],
+      [
+        "f_asparagus_wild",
+        300
+      ],
+      [
+        "f_salsify",
+        300
+      ],
+      [
+        "f_datura",
+        300
+      ],
+      [
+        "f_thistle",
+        300
+      ],
+      [
+        "f_japanese_knotweed",
+        200
+      ],
+      [
+        "f_dahlia",
+        200
+      ],
+      [
+        "f_maianthemum_stellatum",
+        200
+      ],
+      [
+        "f_mutpoppy",
+        200
+      ],
+      [
+        "f_black_eyed_susan",
+        100
+      ],
+      [
+        "f_flower_tulip",
+        100
+      ],
+      [
+        "f_mustard",
+        100
+      ],
+      [
+        "f_sunflower",
+        100
+      ],
+      [
+        "f_fireweed",
+        100
+      ],
+      [
+        "f_selfheal",
+        100
+      ],
+      [
+        "f_jerusalem_artichoke",
+        100
+      ],
+      [
+        "f_lily",
+        100
+      ],
+      [
+        "f_chicory",
+        100
+      ],
+      [
+        "f_dogbane",
+        30
+      ]
     ]
   },
   {
@@ -1067,20 +1779,62 @@
     "id": "default_f_region_forest",
     "furn_id": "f_region_forest",
     "replace_with_furniture": [
-      [ "f_burdock", 2000 ],
-      [ "f_bluebell", 600 ],
-      [ "f_wild_sarsaparilla", 600 ],
-      [ "f_lily", 500 ],
-      [ "f_chamomile", 500 ],
-      [ "f_japanese_knotweed", 300 ],
-      [ "f_carrot_wild", 300 ],
-      [ "f_asparagus_wild", 300 ],
-      [ "f_salsify", 300 ],
-      [ "f_dahlia", 200 ],
-      [ "f_mutpoppy", 100 ],
-      [ "f_maianthemum_stellatum", 100 ],
-      [ "f_wintergreen", 100 ],
-      [ "f_dogbane", 80 ]
+      [
+        "f_burdock",
+        2000
+      ],
+      [
+        "f_bluebell",
+        600
+      ],
+      [
+        "f_wild_sarsaparilla",
+        600
+      ],
+      [
+        "f_lily",
+        500
+      ],
+      [
+        "f_chamomile",
+        500
+      ],
+      [
+        "f_japanese_knotweed",
+        300
+      ],
+      [
+        "f_carrot_wild",
+        300
+      ],
+      [
+        "f_asparagus_wild",
+        300
+      ],
+      [
+        "f_salsify",
+        300
+      ],
+      [
+        "f_dahlia",
+        200
+      ],
+      [
+        "f_mutpoppy",
+        100
+      ],
+      [
+        "f_maianthemum_stellatum",
+        100
+      ],
+      [
+        "f_wintergreen",
+        100
+      ],
+      [
+        "f_dogbane",
+        80
+      ]
     ]
   },
   {
@@ -1088,46 +1842,142 @@
     "id": "default_f_region_forest_dense",
     "furn_id": "f_region_forest_dense",
     "replace_with_furniture": [
-      [ "f_burdock", 2000 ],
-      [ "f_bluebell", 800 ],
-      [ "f_lily", 500 ],
-      [ "f_wild_sarsaparilla", 400 ],
-      [ "f_salsify", 300 ],
-      [ "f_wintergreen", 200 ],
-      [ "f_dogbane", 100 ]
+      [
+        "f_burdock",
+        2000
+      ],
+      [
+        "f_bluebell",
+        800
+      ],
+      [
+        "f_lily",
+        500
+      ],
+      [
+        "f_wild_sarsaparilla",
+        400
+      ],
+      [
+        "f_salsify",
+        300
+      ],
+      [
+        "f_wintergreen",
+        200
+      ],
+      [
+        "f_dogbane",
+        100
+      ]
     ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_f_region_forest_water",
     "furn_id": "f_region_forest_water",
-    "replace_with_furniture": [ [ "f_burdock", 4 ], [ "f_purple_loosestrife", 3 ], [ "f_japanese_knotweed", 2 ], [ "f_lily", 1 ] ]
+    "replace_with_furniture": [
+      [
+        "f_burdock",
+        4
+      ],
+      [
+        "f_purple_loosestrife",
+        3
+      ],
+      [
+        "f_japanese_knotweed",
+        2
+      ],
+      [
+        "f_lily",
+        1
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_f_region_water_plant",
     "furn_id": "f_region_water_plant",
-    "replace_with_furniture": [ [ "f_cattails", 15 ], [ "f_purple_loosestrife", 10 ], [ "f_wild_rice", 1 ], [ "f_lilypad", 1 ], [ "f_lotus", 5 ] ]
+    "replace_with_furniture": [
+      [
+        "f_cattails",
+        15
+      ],
+      [
+        "f_purple_loosestrife",
+        10
+      ],
+      [
+        "f_wild_rice",
+        1
+      ],
+      [
+        "f_lilypad",
+        1
+      ],
+      [
+        "f_lotus",
+        5
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_f_region_lake_bed",
     "furn_id": "f_region_lake_bed",
-    "replace_with_furniture": [ [ "f_boulder_small", 8 ], [ "f_boulder_medium", 4 ], [ "f_boulder_large", 2 ] ]
+    "replace_with_furniture": [
+      [
+        "f_boulder_small",
+        8
+      ],
+      [
+        "f_boulder_medium",
+        4
+      ],
+      [
+        "f_boulder_large",
+        2
+      ]
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "default_f_region_ocean_bed",
     "furn_id": "f_region_ocean_bed",
     "replace_with_furniture": [
-      [ "f_algae_red", 4 ],
-      [ "f_algae_green", 3 ],
-      [ "f_kelp_sugar", 1 ],
-      [ "f_boulder_small", 8 ],
-      [ "f_boulder_medium", 4 ],
-      [ "f_boulder_large", 2 ],
-      [ "f_sea_anemone", 1 ],
-      [ "f_sea_sponge", 1 ]
+      [
+        "f_algae_red",
+        4
+      ],
+      [
+        "f_algae_green",
+        3
+      ],
+      [
+        "f_kelp_sugar",
+        1
+      ],
+      [
+        "f_boulder_small",
+        8
+      ],
+      [
+        "f_boulder_medium",
+        4
+      ],
+      [
+        "f_boulder_large",
+        2
+      ],
+      [
+        "f_sea_anemone",
+        1
+      ],
+      [
+        "f_sea_sponge",
+        1
+      ]
     ]
   }
 ]

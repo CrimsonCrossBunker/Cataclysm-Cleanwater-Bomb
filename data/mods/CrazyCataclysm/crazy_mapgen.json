@@ -1,48 +1,54 @@
 [
   {
-    "id": "mx_shia",
-    "type": "map_extra",
-    "name": { "str": "Shia LaBeouf" },
-    "description": "Cannibal is nearby.",
-    "generator": { "generator_method": "update_mapgen", "generator_id": "mx_shia" },
-    "min_max_zlevel": [ 0, 0 ],
-    "sym": "s",
-    "color": "red",
-    "autonote_visibility": "same_tile"
-  },
-  {
-    "id": "mx_jackson",
-    "type": "map_extra",
-    "name": { "str": "Jackson" },
-    "description": "It's close to midnight, and something evil's lurking in the dark.",
-    "generator": { "generator_method": "update_mapgen", "generator_id": "mx_jackson" },
-    "min_max_zlevel": [ 0, 0 ],
-    "sym": "j",
-    "color": "red",
-    "autonote_visibility": "same_tile"
-  },
-  {
     "type": "map_extra_collection",
     "id": "forest",
     "copy-from": "forest",
-    "extend": { "extras": [ [ "mx_shia", 1 ] ] }
+    "extend": {
+      "extras": [
+        [
+          "mx_shia",
+          1
+        ]
+      ]
+    }
   },
   {
     "type": "map_extra_collection",
     "id": "forest_thick",
     "copy-from": "forest_thick",
-    "extend": { "extras": [ [ "mx_shia", 1 ] ] }
+    "extend": {
+      "extras": [
+        [
+          "mx_shia",
+          1
+        ]
+      ]
+    }
   },
   {
     "type": "map_extra_collection",
     "id": "field",
     "copy-from": "field",
-    "extend": { "extras": [ [ "mx_shia", 1 ] ] }
+    "extend": {
+      "extras": [
+        [
+          "mx_shia",
+          1
+        ]
+      ]
+    }
   },
   {
     "type": "map_extra_collection",
     "id": "road",
     "copy-from": "road",
-    "extend": { "extras": [ [ "mx_jackson", 1 ] ] }
+    "extend": {
+      "extras": [
+        [
+          "mx_jackson",
+          1
+        ]
+      ]
+    }
   }
 ]

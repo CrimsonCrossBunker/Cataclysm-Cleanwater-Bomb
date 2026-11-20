@@ -3,12 +3,20 @@
     "type": "MOD_INFO",
     "id": "standard_combat_test",
     "name": "Standard combat test suite",
-    "authors": [ "Venera3" ],
-    "maintainers": [ "Venera3" ],
-    "conflicts": [ "hunvre" ],
+    "authors": [
+      "Venera3"
+    ],
+    "maintainers": [
+      "Venera3"
+    ],
+    "conflicts": [
+      "hunvre"
+    ],
     "description": "A set of standard character loadouts to facilitate objective monster testing.  Disables all but the test scenarios.",
     "category": "misc",
-    "dependencies": [ "ccb" ]
+    "dependencies": [
+      "ccb"
+    ]
   },
   {
     "type": "scenario",
@@ -16,11 +24,18 @@
     "name": "Evacuee",
     "points": 0,
     "description": "You have survived the initial wave of panic, and have achieved (relative) safety in one of the many government evac shelters.  You also took the time to cobble together some improvised weaponry!",
-    "allowed_locs": [ "sloc_shelter_safe" ],
+    "allowed_locs": [
+      "sloc_shelter_safe"
+    ],
     "start_name": "Evac Shelter",
-    "professions": [ "sct_day1" ],
+    "professions": [
+      "sct_day1"
+    ],
     "map_extra": "mx_sct_day1",
-    "flags": [ "CITY_START", "LONE_START" ]
+    "flags": [
+      "CITY_START",
+      "LONE_START"
+    ]
   },
   {
     "type": "scenario",
@@ -28,13 +43,30 @@
     "name": "Scavenger",
     "points": 0,
     "description": "You are getting by in the Apocalypse.  Your gear is still scavenged from the ruins of the old world, but you have gathered the skills to use it to good effect.  Midsummer start.",
-    "allowed_locs": [ "sloc_shelter_safe" ],
+    "allowed_locs": [
+      "sloc_shelter_safe"
+    ],
     "start_name": "Evac Shelter",
-    "professions": [ "sct_mid" ],
+    "professions": [
+      "sct_mid"
+    ],
     "map_extra": "mx_sct_mid",
-    "flags": [ "CITY_START", "LONE_START" ],
-    "start_of_cataclysm": { "hour": 0, "day": 56, "season": "spring", "year": 1 },
-    "start_of_game": { "hour": 8, "day": 45, "season": "summer", "year": 1 }
+    "flags": [
+      "CITY_START",
+      "LONE_START"
+    ],
+    "start_of_cataclysm": {
+      "hour": 0,
+      "day": 56,
+      "season": "spring",
+      "year": 1
+    },
+    "start_of_game": {
+      "hour": 8,
+      "day": 45,
+      "season": "summer",
+      "year": 1
+    }
   },
   {
     "type": "scenario",
@@ -42,36 +74,29 @@
     "name": "Survivor",
     "points": 0,
     "description": "You are as close to thriving as anybody can be these days.  Your gear is handcrafted with the threats of the new world in mind, and your skills are honed to perfection.  Mid-autumn start.",
-    "allowed_locs": [ "sloc_shelter_safe" ],
+    "allowed_locs": [
+      "sloc_shelter_safe"
+    ],
     "start_name": "Evac Shelter",
-    "professions": [ "sct_late" ],
+    "professions": [
+      "sct_late"
+    ],
     "map_extra": "mx_sct_late",
-    "flags": [ "CITY_START", "LONE_START" ],
-    "start_of_cataclysm": { "hour": 0, "day": 56, "season": "spring", "year": 1 },
-    "start_of_game": { "hour": 8, "day": 45, "season": "autumn", "year": 1 }
-  },
-  {
-    "id": "mx_sct_day1",
-    "type": "map_extra",
-    "name": { "str": "Standard early game combat test area" },
-    "description": "There are some improvised weapons nearby.",
-    "generator": { "generator_method": "update_mapgen", "generator_id": "mx_sct_day1" },
-    "min_max_zlevel": [ 0, 0 ]
-  },
-  {
-    "id": "mx_sct_mid",
-    "type": "map_extra",
-    "name": { "str": "Standard midgame combat test area" },
-    "description": "There are some scavenged weapons nearby.",
-    "generator": { "generator_method": "update_mapgen", "generator_id": "mx_sct_mid" },
-    "min_max_zlevel": [ 0, 0 ]
-  },
-  {
-    "id": "mx_sct_late",
-    "type": "map_extra",
-    "name": { "str": "Standard lategame combat test area" },
-    "description": "There are some survivor weapons nearby.",
-    "generator": { "generator_method": "update_mapgen", "generator_id": "mx_sct_late" },
-    "min_max_zlevel": [ 0, 0 ]
+    "flags": [
+      "CITY_START",
+      "LONE_START"
+    ],
+    "start_of_cataclysm": {
+      "hour": 0,
+      "day": 56,
+      "season": "spring",
+      "year": 1
+    },
+    "start_of_game": {
+      "hour": 8,
+      "day": 45,
+      "season": "autumn",
+      "year": 1
+    }
   }
 ]

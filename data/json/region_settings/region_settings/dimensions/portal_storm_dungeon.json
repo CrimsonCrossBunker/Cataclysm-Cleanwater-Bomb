@@ -12,23 +12,26 @@
     "type": "region_settings_terrain_furniture",
     "id": "default_portal_storm_dungeon",
     "copy-from": "default",
-    "ter_furn": [ "portal_storm_dungeon_t_region_groundcover" ]
+    "ter_furn": [
+      "portal_storm_dungeon_t_region_groundcover"
+    ]
   },
   {
     "type": "region_terrain_furniture",
     "id": "portal_storm_dungeon_t_region_groundcover",
     "ter_id": "t_region_groundcover",
-    "replace_with_terrain": [ [ "t_open_air", 1 ] ]
+    "replace_with_terrain": [
+      [
+        "t_open_air",
+        1
+      ]
+    ]
   },
   {
     "type": "region_settings_map_extras",
     "id": "portal_storm_dungeon_extras",
-    "extras": [ "default_portal_storm_dungeon_extras" ]
-  },
-  {
-    "type": "map_extra_collection",
-    "id": "default_portal_storm_dungeon_extras",
-    "chance": 15,
-    "extras": [ [ "mx_portal_cracked_mirror", 1 ], [ "mx_portal_ingress", 1 ], [ "mx_portal_distortion_item", 1 ] ]
+    "extras": [
+      "default_portal_storm_dungeon_extras"
+    ]
   }
 ]
