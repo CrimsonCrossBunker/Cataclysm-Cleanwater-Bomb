@@ -3051,7 +3051,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
             throw std::runtime_error( "content transaction is no longer building" );
         }
     };
-    const auto each_string = [&require_building_transaction]( const sol::table & options,
+    const auto each_string = [require_building_transaction]( const sol::table & options,
     const char *key, const char *label, const auto & visitor ) {
         const sol::optional<sol::table> values =
             options.get<sol::optional<sol::table>>( key );
@@ -3068,7 +3068,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         require_building_transaction();
     };
-    const auto each_table = [&require_building_transaction]( const sol::table & options,
+    const auto each_table = [require_building_transaction]( const sol::table & options,
     const char *key, const char *label, const auto & visitor ) {
         const sol::optional<sol::table> values =
             options.get<sol::optional<sol::table>>( key );
