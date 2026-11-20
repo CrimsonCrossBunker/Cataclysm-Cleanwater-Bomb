@@ -1,48 +1,19 @@
 [
   {
-    "id": "robofac_blacklist",
-    "type": "shopkeeper_blacklist",
-    "entries": [
-      { "group": "NC_ROBOFAC_gear", "message": "Will not buy back their own gear" },
-      { "category": "clothing", "message": "The Hub has no interest in this" },
-      { "group": "novels", "message": "The Hub has no interest in this" },
-      { "group": "novel_pulp", "message": "The Hub has no interest in this" },
-      { "group": "literature", "message": "The Hub has no interest in this" },
-      { "group": "cookbooks", "message": "The Hub has no interest in this" },
-      { "group": "religious_books", "message": "The Hub has no interest in this" },
-      { "group": "nonfiction_hardback_fluff", "message": "The Hub has no interest in this" },
-      { "group": "SUS_book_nonf_hard_homemk", "message": "The Hub has no interest in this" },
-      { "group": "SUS_book_nonf_soft", "message": "The Hub has no interest in this" },
-      { "group": "SUS_book_nonf_hard_dodge", "message": "The Hub has no interest in this" },
-      { "group": "SUS_book_fict_soft_ya", "message": "The Hub has no interest in this" },
-      { "group": "book_judaica_hardcover", "message": "The Hub has no interest in this" },
-      { "group": "book_judaica_softcover", "message": "The Hub has no interest in this" },
-      { "group": "theater_props", "message": "The Hub has no interest in this" },
-      { "group": "phonebook", "message": "The Hub has no interest in this" },
-      { "group": "boxing_books", "message": "The Hub has no interest in this" },
-      { "group": "games", "message": "The Hub has no interest in this" },
-      { "group": "SUS_bathroom_sink", "message": "The Hub has no interest in this" },
-      { "group": "SUS_bathroom_medicine", "message": "The Hub has no interest in this" },
-      { "group": "SUS_toilet", "message": "The Hub has no interest in this" },
-      { "group": "SUS_bathroom_cabinet", "message": "The Hub has no interest in this" },
-      { "group": "SUS_dishes", "message": "The Hub has no interest in this" },
-      { "group": "SUS_cookware", "message": "The Hub has no interest in this" },
-      { "group": "SUS_utensils", "message": "The Hub has no interest in this" },
-      { "group": "SUS_junk_drawer", "message": "The Hub has no interest in this" },
-      { "group": "SUS_kitchen_sink", "message": "The Hub has no interest in this" },
-      { "group": "stoner", "message": "The Hub has no interest in this" },
-      { "group": "SUS_oven", "message": "The Hub has no interest in this" },
-      { "group": "garden_shed", "message": "The Hub has no interest in this" }
-    ]
-  },
-  {
     "id": "TALK_ROBOFAC_INTERCOM",
     "type": "talk_topic",
     "dynamic_line": {
-      "math": [ "hub01_intercom_locked == 1" ],
+      "math": [
+        "hub01_intercom_locked == 1"
+      ],
       "yes": "&The intercom is dead.  No light, no static, nothing.",
       "no": {
-        "compare_string": [ "yes", { "u_val": "dialogue_intercom_completed_robofac_intercom_1" } ],
+        "compare_string": [
+          "yes",
+          {
+            "u_val": "dialogue_intercom_completed_robofac_intercom_1"
+          }
+        ],
         "yes": [
           "&The intercom is silent.",
           "&The intercom crackles on.",
@@ -50,20 +21,32 @@
           "&The intercom says something unintelligible."
         ],
         "no": {
-          "compare_string": [ "yes", { "u_val": "dialogue_intercom_u_discovered_robofac_intercom" } ],
+          "compare_string": [
+            "yes",
+            {
+              "u_val": "dialogue_intercom_u_discovered_robofac_intercom"
+            }
+          ],
           "yes": "&The intercom is silent.",
           "no": "&An intercom is embedded into the wall here, just next to the card reader.  It's a metal box about as big as a dinner plate, with a speaker shaped like a downwards curve and a large camera prominently featured in the center.  You see a single metal button with a dark LED next to it.  The intercom is silent."
         }
       }
     },
     "speaker_effect": {
-      "effect": { "u_add_var": "dialogue_intercom_u_discovered_robofac_intercom", "value": "yes" },
+      "effect": {
+        "u_add_var": "dialogue_intercom_u_discovered_robofac_intercom",
+        "value": "yes"
+      },
       "sentinel": "discovered_intercom"
     },
     "responses": [
       {
         "text": "[Leave the dead intercom.]",
-        "condition": { "math": [ "hub01_intercom_locked == 1" ] },
+        "condition": {
+          "math": [
+            "hub01_intercom_locked == 1"
+          ]
+        },
         "topic": "TALK_DONE"
       },
       {
@@ -72,20 +55,53 @@
           "and": [
             {
               "or": [
-                { "not": { "u_has_trait": "EXODII_CYBERFRAME_GENERIC" } },
+                {
+                  "not": {
+                    "u_has_trait": "EXODII_CYBERFRAME_GENERIC"
+                  }
+                },
                 {
                   "and": [
-                    { "u_has_trait": "EXODII_CYBERFRAME_GENERIC" },
-                    { "compare_string": [ "yes", { "u_val": "robofac_knows_about_u_cyberframe" } ] }
+                    {
+                      "u_has_trait": "EXODII_CYBERFRAME_GENERIC"
+                    },
+                    {
+                      "compare_string": [
+                        "yes",
+                        {
+                          "u_val": "robofac_knows_about_u_cyberframe"
+                        }
+                      ]
+                    }
                   ]
                 }
               ]
             },
-            { "not": { "math": [ "hub01_intercom_locked == 1" ] } },
+            {
+              "not": {
+                "math": [
+                  "hub01_intercom_locked == 1"
+                ]
+              }
+            },
             {
               "or": [
-                { "compare_string": [ "yes", { "global_val": "hub01_intercom_trade_unlocked" } ] },
-                { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_npc_intercom_trade" } ] }
+                {
+                  "compare_string": [
+                    "yes",
+                    {
+                      "global_val": "hub01_intercom_trade_unlocked"
+                    }
+                  ]
+                },
+                {
+                  "compare_string": [
+                    "yes",
+                    {
+                      "npc_val": "dialogue_intercom_npc_intercom_trade"
+                    }
+                  ]
+                }
               ]
             }
           ]
@@ -95,13 +111,30 @@
           "run_eocs": [
             {
               "id": "EOC_INTERCOM_MAYBE_ADD_FREE_MERCHANT_CAMP",
-              "condition": { "math": [ "free_merchants_hub_trade_route == 1" ] },
+              "condition": {
+                "math": [
+                  "free_merchants_hub_trade_route == 1"
+                ]
+              },
               "effect": [
-                { "mapgen_update": "nest_robofac_add_free_merchant_camp", "om_terrain": "robofachq_surface_parking" },
-                { "math": [ "free_merchants_hub_trade_route = 2" ] },
-                { "u_add_effect": "robofac_surveillance", "duration": "14 days" }
+                {
+                  "mapgen_update": "nest_robofac_add_free_merchant_camp",
+                  "om_terrain": "robofachq_surface_parking"
+                },
+                {
+                  "math": [
+                    "free_merchants_hub_trade_route = 2"
+                  ]
+                },
+                {
+                  "u_add_effect": "robofac_surveillance",
+                  "duration": "14 days"
+                }
               ],
-              "false_effect": { "u_add_effect": "robofac_surveillance", "duration": "14 days" }
+              "false_effect": {
+                "u_add_effect": "robofac_surveillance",
+                "duration": "14 days"
+              }
             }
           ]
         }
@@ -112,23 +145,60 @@
           "and": [
             {
               "and": [
-                { "u_has_trait": "EXODII_CYBERFRAME_GENERIC" },
-                { "not": { "compare_string": [ "yes", { "u_val": "robofac_knows_about_u_cyberframe" } ] } }
+                {
+                  "u_has_trait": "EXODII_CYBERFRAME_GENERIC"
+                },
+                {
+                  "not": {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "u_val": "robofac_knows_about_u_cyberframe"
+                      }
+                    ]
+                  }
+                }
               ]
             },
-            { "not": { "math": [ "hub01_intercom_locked == 1" ] } },
+            {
+              "not": {
+                "math": [
+                  "hub01_intercom_locked == 1"
+                ]
+              }
+            },
             {
               "or": [
-                { "compare_string": [ "yes", { "global_val": "hub01_intercom_trade_unlocked" } ] },
-                { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_npc_intercom_trade" } ] }
+                {
+                  "compare_string": [
+                    "yes",
+                    {
+                      "global_val": "hub01_intercom_trade_unlocked"
+                    }
+                  ]
+                },
+                {
+                  "compare_string": [
+                    "yes",
+                    {
+                      "npc_val": "dialogue_intercom_npc_intercom_trade"
+                    }
+                  ]
+                }
               ]
             }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG",
         "effect": [
-          { "u_add_var": "robofac_knows_about_u_cyberframe", "value": "yes" },
-          { "u_add_effect": "robofac_surveillance", "duration": "30 days" }
+          {
+            "u_add_var": "robofac_knows_about_u_cyberframe",
+            "value": "yes"
+          },
+          {
+            "u_add_effect": "robofac_surveillance",
+            "duration": "30 days"
+          }
         ]
       },
       {
@@ -136,17 +206,50 @@
         "topic": "TALK_ROBOFAC_INTERCOM_INTRO",
         "condition": {
           "and": [
-            { "not": { "math": [ "hub01_intercom_locked == 1" ] } },
             {
               "not": {
-                "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_trade_unlocked" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_npc_intercom_trade" } ] }
+                "math": [
+                  "hub01_intercom_locked == 1"
                 ]
               }
             },
-            { "not": { "u_has_mission": "MISSION_ROBOFAC_INTERCOM_1" } },
-            { "not": { "compare_string": [ "yes", { "u_val": "u_informed_robofac_of_exodii" } ] } }
+            {
+              "not": {
+                "or": [
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_trade_unlocked"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "dialogue_intercom_npc_intercom_trade"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "u_has_mission": "MISSION_ROBOFAC_INTERCOM_1"
+              }
+            },
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "u_val": "u_informed_robofac_of_exodii"
+                  }
+                ]
+              }
+            }
           ]
         }
       },
@@ -155,16 +258,38 @@
         "topic": "MISSION_ROBOFAC_INTERCOM_1_INQUIRE",
         "condition": {
           "and": [
-            { "not": { "math": [ "hub01_intercom_locked == 1" ] } },
             {
               "not": {
-                "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_trade_unlocked" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_npc_intercom_trade" } ] }
+                "math": [
+                  "hub01_intercom_locked == 1"
                 ]
               }
             },
-            { "u_has_mission": "MISSION_ROBOFAC_INTERCOM_1" }
+            {
+              "not": {
+                "or": [
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_trade_unlocked"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "dialogue_intercom_npc_intercom_trade"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "u_has_mission": "MISSION_ROBOFAC_INTERCOM_1"
+            }
           ]
         }
       },
@@ -173,14 +298,50 @@
         "topic": "TALK_ROBOFAC_INTERCOM_INTRO_3",
         "condition": {
           "and": [
-            { "not": { "math": [ "hub01_intercom_locked == 1" ] } },
-            { "compare_string": [ "yes", { "u_val": "u_informed_robofac_of_exodii" } ] },
-            { "not": { "compare_string": [ "yes", { "u_val": "u_give_robofac_exodii_info" } ] } },
+            {
+              "not": {
+                "math": [
+                  "hub01_intercom_locked == 1"
+                ]
+              }
+            },
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "u_informed_robofac_of_exodii"
+                }
+              ]
+            },
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "u_val": "u_give_robofac_exodii_info"
+                  }
+                ]
+              }
+            },
             {
               "not": {
                 "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_trade_unlocked" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_npc_intercom_trade" } ] }
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_trade_unlocked"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "dialogue_intercom_npc_intercom_trade"
+                      }
+                    ]
+                  }
                 ]
               }
             }
@@ -192,14 +353,45 @@
         "topic": "TALK_ROBOFAC_INTERCOM_INTRO_4",
         "condition": {
           "and": [
-            { "not": { "math": [ "hub01_intercom_locked == 1" ] } },
-            { "compare_string": [ "yes", { "u_val": "u_give_robofac_exodii_info" } ] },
-            { "not": { "u_has_mission": "MISSION_ROBOFAC_INTERCOM_1" } },
+            {
+              "not": {
+                "math": [
+                  "hub01_intercom_locked == 1"
+                ]
+              }
+            },
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "u_give_robofac_exodii_info"
+                }
+              ]
+            },
+            {
+              "not": {
+                "u_has_mission": "MISSION_ROBOFAC_INTERCOM_1"
+              }
+            },
             {
               "not": {
                 "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_trade_unlocked" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_npc_intercom_trade" } ] }
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_trade_unlocked"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "dialogue_intercom_npc_intercom_trade"
+                      }
+                    ]
+                  }
                 ]
               }
             }
@@ -211,12 +403,30 @@
         "topic": "TALK_ROBOFAC_INTERCOM",
         "condition": {
           "and": [
-            { "not": { "math": [ "hub01_intercom_locked == 1" ] } },
-            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_intercom_u_met_robofac_intercom" } ] } }
+            {
+              "not": {
+                "math": [
+                  "hub01_intercom_locked == 1"
+                ]
+              }
+            },
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "u_val": "dialogue_intercom_u_met_robofac_intercom"
+                  }
+                ]
+              }
+            }
           ]
         }
       },
-      { "text": "[Leave.]", "topic": "TALK_DONE" }
+      {
+        "text": "[Leave.]",
+        "topic": "TALK_DONE"
+      }
     ],
     "replace_built_in_responses": true
   },
@@ -264,22 +474,55 @@
         "Say again?"
       ]
     },
-    "speaker_effect": { "effect": { "npc_add_effect": "npc_said", "duration": 600 } },
+    "speaker_effect": {
+      "effect": {
+        "npc_add_effect": "npc_said",
+        "duration": 600
+      }
+    },
     "responses": [
-      { "text": "Let's discuss contracts.", "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS" },
-      { "text": "Let's trade.", "topic": "TALK_ROBOFAC_INTERCOM_SERVICES", "effect": "start_trade" },
-      { "text": "Is there anything fancier you can sell?", "topic": "TALK_ROBOFAC_INTERCOM_ASK_INTERVAL" },
+      {
+        "text": "Let's discuss contracts.",
+        "topic": "TALK_ROBOFAC_INTERCOM_CONTRACTS"
+      },
+      {
+        "text": "Let's trade.",
+        "topic": "TALK_ROBOFAC_INTERCOM_SERVICES",
+        "effect": "start_trade"
+      },
+      {
+        "text": "Is there anything fancier you can sell?",
+        "topic": "TALK_ROBOFAC_INTERCOM_ASK_INTERVAL"
+      },
       {
         "text": "Let's discuss prototypes.",
-        "condition": { "compare_string": [ "yes", { "u_val": "dialogue_intercom_u_hub_prototypes" } ] },
+        "condition": {
+          "compare_string": [
+            "yes",
+            {
+              "u_val": "dialogue_intercom_u_hub_prototypes"
+            }
+          ]
+        },
         "topic": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_MENU"
       },
       {
         "text": "The traders at the refugee center asked me to deliver this drive of FEMA data…",
         "condition": {
           "and": [
-            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_intercom_completed_free_merchants_hub_delivery_1" } ] } },
-            { "u_has_mission": "MISSION_FREE_MERCHANTS_HUB_DELIVERY_1" }
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "u_val": "dialogue_intercom_completed_free_merchants_hub_delivery_1"
+                  }
+                ]
+              }
+            },
+            {
+              "u_has_mission": "MISSION_FREE_MERCHANTS_HUB_DELIVERY_1"
+            }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_FREE_MERCHANT_DELIVERY_MERCENARY"
@@ -288,13 +531,43 @@
         "text": "You mentioned portal storms.  What are those?",
         "condition": {
           "and": [
-            { "compare_string": [ "yes", { "u_val": "global_portal_storms_u_heard_of_portal_storms" } ] },
-            { "not": { "compare_string": [ "yes", { "u_val": "global_portal_storms_u_witnessed_portal_storm" } ] } },
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "global_portal_storms_u_heard_of_portal_storms"
+                }
+              ]
+            },
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "u_val": "global_portal_storms_u_witnessed_portal_storm"
+                  }
+                ]
+              }
+            },
             {
               "not": {
                 "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_told_portal_storms" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_told_about_portal_storms" } ] }
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_told_portal_storms"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "dialogue_intercom_told_about_portal_storms"
+                      }
+                    ]
+                  }
                 ]
               }
             }
@@ -306,12 +579,33 @@
         "text": "Listen, something happened earlier.  The world got… bad.  Things felt very wrong.  Do you know anything about what that was?",
         "condition": {
           "and": [
-            { "compare_string": [ "yes", { "u_val": "global_portal_storms_u_witnessed_portal_storm" } ] },
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "global_portal_storms_u_witnessed_portal_storm"
+                }
+              ]
+            },
             {
               "not": {
                 "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_told_portal_storms" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_told_about_portal_storms" } ] }
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_told_portal_storms"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "dialogue_intercom_told_about_portal_storms"
+                      }
+                    ]
+                  }
                 ]
               }
             }
@@ -323,10 +617,30 @@
         "text": "I have some portal storm recordings.",
         "condition": {
           "or": [
-            { "u_has_items": { "item": "nre_anomaly_printout_data", "count": 1 } },
-            { "u_has_items": { "item": "small_printout_portal_storm_data", "count": 1 } },
-            { "u_has_items": { "item": "medium_printout_portal_storm_data", "count": 1 } },
-            { "u_has_items": { "item": "large_printout_portal_storm_data", "count": 1 } }
+            {
+              "u_has_items": {
+                "item": "nre_anomaly_printout_data",
+                "count": 1
+              }
+            },
+            {
+              "u_has_items": {
+                "item": "small_printout_portal_storm_data",
+                "count": 1
+              }
+            },
+            {
+              "u_has_items": {
+                "item": "medium_printout_portal_storm_data",
+                "count": 1
+              }
+            },
+            {
+              "u_has_items": {
+                "item": "large_printout_portal_storm_data",
+                "count": 1
+              }
+            }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_SELL_PORTAL_STORM_DATA"
@@ -335,30 +649,142 @@
         "text": "I have some HEW recordings.",
         "condition": {
           "and": [
-            { "compare_string": [ "yes", { "u_val": "dialogue_intercom_accepted_robofac_intercom_mws_4" } ] },
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "dialogue_intercom_accepted_robofac_intercom_mws_4"
+                }
+              ]
+            },
             {
               "or": [
-                { "u_has_items": { "item": "HEW_printout_data_portal", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_portal_storm", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_vitrified", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_exodii", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_strange_temple", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_lixa", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_highlands", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_labyrinth", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_physics_lab", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_amigara", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_radiosphere", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_monster_corpse", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_cabin_reverb", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_cabin_reverb_dimension", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_barricaded_church", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_morgantown", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_void_spider_lair", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_inner_cabins_open_field", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_inner_cabins_warped_cabin", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_inner_cabins_home_cabin", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_portal_storm_dungeon", "count": 1 } }
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_portal",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_portal_storm",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_vitrified",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_exodii",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_strange_temple",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_lixa",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_highlands",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_labyrinth",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_physics_lab",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_amigara",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_radiosphere",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_monster_corpse",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_cabin_reverb",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_cabin_reverb_dimension",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_barricaded_church",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_morgantown",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_void_spider_lair",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_inner_cabins_open_field",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_inner_cabins_warped_cabin",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_inner_cabins_home_cabin",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "HEW_printout_data_portal_storm_dungeon",
+                    "count": 1
+                  }
+                }
               ]
             }
           ]
@@ -371,19 +797,76 @@
           "and": [
             {
               "or": [
-                { "u_has_items": { "item": "broken_yrax_trifacet", "count": 1 } },
-                { "u_has_items": { "item": "broken_yrax_triakis", "count": 1 } },
-                { "u_has_items": { "item": "broken_golden_monolith", "count": 1 } },
-                { "u_has_items": { "item": "broken_yrax_delta", "count": 1 } },
-                { "u_has_items": { "item": "broken_yrax_quadraphract_leg", "count": 1 } },
-                { "u_has_items": { "item": "broken_yrax_quadraphract", "count": 1 } },
-                { "u_has_items": { "item": "bot_yrax_trifacet", "count": 1 } },
-                { "u_has_items": { "item": "bot_yrax_triakis", "count": 1 } },
-                { "u_has_items": { "item": "bot_golden_monolith", "count": 1 } },
-                { "u_has_items": { "item": "bot_yrax_delta", "count": 1 } }
+                {
+                  "u_has_items": {
+                    "item": "broken_yrax_trifacet",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "broken_yrax_triakis",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "broken_golden_monolith",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "broken_yrax_delta",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "broken_yrax_quadraphract_leg",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "broken_yrax_quadraphract",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "bot_yrax_trifacet",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "bot_yrax_triakis",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "bot_golden_monolith",
+                    "count": 1
+                  }
+                },
+                {
+                  "u_has_items": {
+                    "item": "bot_yrax_delta",
+                    "count": 1
+                  }
+                }
               ]
             },
-            { "compare_string": [ "yes", { "u_val": "dialogue_intercom_completed_robofac_intercom_robot_sm_1" } ] }
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "dialogue_intercom_completed_robofac_intercom_robot_sm_1"
+                }
+              ]
+            }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_SELL_YRAX_TOYS"
@@ -392,12 +875,33 @@
         "text": "What the hell were you testing out there?",
         "condition": {
           "and": [
-            { "compare_string": [ "yes", { "u_val": "dialogue_intercom_completed_robofac_intercom_1" } ] },
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "dialogue_intercom_completed_robofac_intercom_1"
+                }
+              ]
+            },
             {
               "not": {
                 "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_told_prototype" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_told_about_prototype" } ] }
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_told_prototype"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "dialogue_intercom_told_about_prototype"
+                      }
+                    ]
+                  }
                 ]
               }
             }
@@ -409,12 +913,33 @@
         "text": "Your scientist was wearing some kind of armor.  What is it?",
         "condition": {
           "and": [
-            { "compare_string": [ "yes", { "u_val": "dialogue_intercom_completed_robofac_intercom_1" } ] },
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "dialogue_intercom_completed_robofac_intercom_1"
+                }
+              ]
+            },
             {
               "not": {
                 "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_told_armor" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_told_about_armor" } ] }
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_told_armor"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "dialogue_intercom_told_about_armor"
+                      }
+                    ]
+                  }
                 ]
               }
             }
@@ -426,8 +951,20 @@
         "text": "I found this in the collapsed tower with the other data.  Is it useful to your people?  [Hand over the UHMWPE nanofabricator template.]",
         "condition": {
           "and": [
-            { "compare_string": [ "yes", { "u_val": "dialogue_intercom_completed_robofac_intercom_1" } ] },
-            { "u_has_items": { "item": "template_armor", "count": 1 } }
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "dialogue_intercom_completed_robofac_intercom_1"
+                }
+              ]
+            },
+            {
+              "u_has_items": {
+                "item": "template_armor",
+                "count": 1
+              }
+            }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_ARMOR_NANO_ASK"
@@ -436,9 +973,34 @@
         "text": "I saw that your mercs have specialty rifles.  Would I be able to get one of those?",
         "condition": {
           "and": [
-            { "compare_string": [ "yes", { "u_val": "dialogue_robofac_merc_1_robofac_merc_1_HWP" } ] },
-            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_hub_rnd_u_can_research_rifle" } ] } },
-            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_intercom_u_hub_prototypes" } ] } }
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "dialogue_robofac_merc_1_robofac_merc_1_HWP"
+                }
+              ]
+            },
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "u_val": "dialogue_hub_rnd_u_can_research_rifle"
+                  }
+                ]
+              }
+            },
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "u_val": "dialogue_intercom_u_hub_prototypes"
+                  }
+                ]
+              }
+            }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_NO"
@@ -447,9 +1009,32 @@
         "text": "I think one of your operatives has vouched for my competency.  I'd like one of those rifles.",
         "condition": {
           "and": [
-            { "compare_string": [ "yes", { "u_val": "dialogue_robofac_merc_1_robofac_merc_1_HWP" } ] },
-            { "compare_string": [ "yes", { "u_val": "dialogue_hub_rnd_u_can_research_rifle" } ] },
-            { "not": { "compare_string": [ "yes", { "u_val": "dialogue_intercom_u_hub_prototypes" } ] } }
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "dialogue_robofac_merc_1_robofac_merc_1_HWP"
+                }
+              ]
+            },
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "dialogue_hub_rnd_u_can_research_rifle"
+                }
+              ]
+            },
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "u_val": "dialogue_intercom_u_hub_prototypes"
+                  }
+                ]
+              }
+            }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_PROTOTYPE_GUN_YES"
@@ -458,12 +1043,28 @@
         "text": "So, about that protective gear?",
         "condition": {
           "and": [
-            { "u_has_mission": "MISSION_ROBOFAC_INTERCOM_3" },
+            {
+              "u_has_mission": "MISSION_ROBOFAC_INTERCOM_3"
+            },
             {
               "not": {
                 "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_bought_protective_gear" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_npc_bought_protective_gear" } ] }
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_bought_protective_gear"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "dialogue_intercom_npc_bought_protective_gear"
+                      }
+                    ]
+                  }
                 ]
               }
             }
@@ -475,12 +1076,33 @@
         "text": "You mentioned you had a map of the area?",
         "condition": {
           "and": [
-            { "compare_string": [ "yes", { "u_val": "dialogue_intercom_completed_robofac_intercom_2" } ] },
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "u_val": "dialogue_intercom_completed_robofac_intercom_2"
+                }
+              ]
+            },
             {
               "not": {
                 "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_sold_local_map" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "dialogue_intercom_sold_local_map" } ] }
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_sold_local_map"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "dialogue_intercom_sold_local_map"
+                      }
+                    ]
+                  }
                 ]
               }
             }
@@ -492,14 +1114,36 @@
         "text": "I need some gear to outfit my crew, I think five sets of police riot armor would do the trick.",
         "condition": {
           "and": [
-            { "u_has_faction_trust": 5 },
-            { "u_has_mission": "MISSION_ISHERWOOD_CHRIS_1_GET_GEAR" },
-            { "math": [ "isherwood_gear_status < 1" ] },
+            {
+              "u_has_faction_trust": 5
+            },
+            {
+              "u_has_mission": "MISSION_ISHERWOOD_CHRIS_1_GET_GEAR"
+            },
+            {
+              "math": [
+                "isherwood_gear_status < 1"
+              ]
+            },
             {
               "not": {
                 "or": [
-                  { "compare_string": [ "yes", { "global_val": "hub01_intercom_bought_riot_gear" } ] },
-                  { "compare_string": [ "yes", { "npc_val": "npc_dialogue_exodii_npc_bought_riot_gear" } ] }
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "global_val": "hub01_intercom_bought_riot_gear"
+                      }
+                    ]
+                  },
+                  {
+                    "compare_string": [
+                      "yes",
+                      {
+                        "npc_val": "npc_dialogue_exodii_npc_bought_riot_gear"
+                      }
+                    ]
+                  }
                 ]
               }
             }
@@ -513,12 +1157,33 @@
           "and": [
             {
               "or": [
-                { "compare_string": [ "yes", { "global_val": "hub01_intercom_pay_back_on_cash" } ] },
-                { "compare_string": [ "yes", { "npc_val": "npc_dialogue_intercom_u_pay_back_on_cash" } ] }
+                {
+                  "compare_string": [
+                    "yes",
+                    {
+                      "global_val": "hub01_intercom_pay_back_on_cash"
+                    }
+                  ]
+                },
+                {
+                  "compare_string": [
+                    "yes",
+                    {
+                      "npc_val": "npc_dialogue_intercom_u_pay_back_on_cash"
+                    }
+                  ]
+                }
               ]
             },
-            { "u_has_items": { "item": "RobofacCoin", "count": 8 } },
-            { "u_has_mission": "MISSION_HUB01_PAY_BACK_RIOT_GEAR" }
+            {
+              "u_has_items": {
+                "item": "RobofacCoin",
+                "count": 8
+              }
+            },
+            {
+              "u_has_mission": "MISSION_HUB01_PAY_BACK_RIOT_GEAR"
+            }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_PAY_BACK_RIOT_GEAR"
@@ -529,12 +1194,32 @@
           "and": [
             {
               "or": [
-                { "compare_string": [ "yes", { "global_val": "hub01_intercom_pay_back_on_specimens" } ] },
-                { "compare_string": [ "yes", { "npc_val": "npc_dialogue_intercom_u_pay_back_on_specimens" } ] }
+                {
+                  "compare_string": [
+                    "yes",
+                    {
+                      "global_val": "hub01_intercom_pay_back_on_specimens"
+                    }
+                  ]
+                },
+                {
+                  "compare_string": [
+                    "yes",
+                    {
+                      "npc_val": "npc_dialogue_intercom_u_pay_back_on_specimens"
+                    }
+                  ]
+                }
               ]
             },
-            { "math": [ "isherwood_barry_rescued == 1" ] },
-            { "u_has_mission": "MISSION_HUB01_PAY_BACK_RIOT_GEAR" }
+            {
+              "math": [
+                "isherwood_barry_rescued == 1"
+              ]
+            },
+            {
+              "u_has_mission": "MISSION_HUB01_PAY_BACK_RIOT_GEAR"
+            }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_PAY_BACK_RIOT_GEAR_SPECIMENS"
@@ -543,14 +1228,41 @@
         "text": "I have information about a warehouse full of inter-dimensional Exodii tech.  Are you interested?",
         "condition": {
           "and": [
-            { "math": [ "hub01_knows_exodii == 1" ] },
-            { "not": { "math": [ "hub01_bought_exodii_warehouse == 1" ] } },
+            {
+              "math": [
+                "hub01_knows_exodii == 1"
+              ]
+            },
+            {
+              "not": {
+                "math": [
+                  "hub01_bought_exodii_warehouse == 1"
+                ]
+              }
+            },
             {
               "or": [
-                { "u_has_mission": "EXODII_MISSION_WAREHOUSE" },
-                { "math": [ "warehouse_was_found == 1" ] },
-                { "compare_string": [ "yes", { "u_val": "mission_completed_u_found_warehouse" } ] },
-                { "math": [ "u_rebooted_locator == 1" ] }
+                {
+                  "u_has_mission": "EXODII_MISSION_WAREHOUSE"
+                },
+                {
+                  "math": [
+                    "warehouse_was_found == 1"
+                  ]
+                },
+                {
+                  "compare_string": [
+                    "yes",
+                    {
+                      "u_val": "mission_completed_u_found_warehouse"
+                    }
+                  ]
+                },
+                {
+                  "math": [
+                    "u_rebooted_locator == 1"
+                  ]
+                }
               ]
             }
           ]
@@ -561,14 +1273,43 @@
         "text": "I have information about a warehouse full of exotic tech.  Are you interested?",
         "condition": {
           "and": [
-            { "not": { "math": [ "hub01_knows_exodii == 1" ] } },
-            { "not": { "math": [ "hub01_bought_exodii_warehouse == 1" ] } },
+            {
+              "not": {
+                "math": [
+                  "hub01_knows_exodii == 1"
+                ]
+              }
+            },
+            {
+              "not": {
+                "math": [
+                  "hub01_bought_exodii_warehouse == 1"
+                ]
+              }
+            },
             {
               "or": [
-                { "u_has_mission": "EXODII_MISSION_WAREHOUSE" },
-                { "math": [ "warehouse_was_found == 1" ] },
-                { "compare_string": [ "yes", { "u_val": "mission_completed_u_found_warehouse" } ] },
-                { "math": [ "u_rebooted_locator == 1" ] }
+                {
+                  "u_has_mission": "EXODII_MISSION_WAREHOUSE"
+                },
+                {
+                  "math": [
+                    "warehouse_was_found == 1"
+                  ]
+                },
+                {
+                  "compare_string": [
+                    "yes",
+                    {
+                      "u_val": "mission_completed_u_found_warehouse"
+                    }
+                  ]
+                },
+                {
+                  "math": [
+                    "u_rebooted_locator == 1"
+                  ]
+                }
               ]
             }
           ]
@@ -579,9 +1320,21 @@
         "text": "Any news on the Exodii warehouse?",
         "condition": {
           "and": [
-            { "math": [ "has_var(u_timer_hub_waiting_on_warehouse)" ] },
-            { "math": [ "hub01_promised_warehouse_info != 1" ] },
-            { "math": [ "hub01_stole_warehouse == 1" ] }
+            {
+              "math": [
+                "has_var(u_timer_hub_waiting_on_warehouse)"
+              ]
+            },
+            {
+              "math": [
+                "hub01_promised_warehouse_info != 1"
+              ]
+            },
+            {
+              "math": [
+                "hub01_stole_warehouse == 1"
+              ]
+            }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_BUY_EXODII_WAREHOUSE_4a"
@@ -590,24 +1343,57 @@
         "text": "Any news on the Exodii warehouse?",
         "condition": {
           "and": [
-            { "math": [ "has_var(u_timer_hub_waiting_on_warehouse)" ] },
-            { "math": [ "hub01_promised_warehouse_info == 1" ] },
-            { "math": [ "hub01_stole_warehouse == 1" ] }
+            {
+              "math": [
+                "has_var(u_timer_hub_waiting_on_warehouse)"
+              ]
+            },
+            {
+              "math": [
+                "hub01_promised_warehouse_info == 1"
+              ]
+            },
+            {
+              "math": [
+                "hub01_stole_warehouse == 1"
+              ]
+            }
           ]
         },
         "topic": "TALK_ROBOFAC_INTERCOM_BUY_EXODII_WAREHOUSE_4b"
       },
       {
         "text": "Any news on the Exodii warehouse?",
-        "condition": { "and": [ { "math": [ "has_var(u_timer_hub_waiting_on_warehouse)" ] }, { "math": [ "hub01_stole_warehouse != 1" ] } ] },
+        "condition": {
+          "and": [
+            {
+              "math": [
+                "has_var(u_timer_hub_waiting_on_warehouse)"
+              ]
+            },
+            {
+              "math": [
+                "hub01_stole_warehouse != 1"
+              ]
+            }
+          ]
+        },
         "topic": "TALK_ROBOFAC_INTERCOM_BUY_EXODII_WAREHOUSE_4c"
       },
       {
         "text": "You mentioned that the Exodii I brought you would be useful for some kind of technology.  Any news on that?",
         "condition": {
           "and": [
-            { "math": [ "has_var(u_timer_hub_waiting_on_autodoc)" ] },
-            { "math": [ "hub01_told_u_about_warehouse_autodoc != 1" ] }
+            {
+              "math": [
+                "has_var(u_timer_hub_waiting_on_autodoc)"
+              ]
+            },
+            {
+              "math": [
+                "hub01_told_u_about_warehouse_autodoc != 1"
+              ]
+            }
           ]
         },
         "topic": "TALK_EXODI_INTERCOM_AUTODOC_A"
@@ -616,13 +1402,24 @@
         "text": "Any news on that Exodii surgical-thing?",
         "condition": {
           "and": [
-            { "math": [ "has_var(u_timer_hub_waiting_on_autodoc)" ] },
-            { "math": [ "hub01_told_u_about_warehouse_autodoc == 1" ] }
+            {
+              "math": [
+                "has_var(u_timer_hub_waiting_on_autodoc)"
+              ]
+            },
+            {
+              "math": [
+                "hub01_told_u_about_warehouse_autodoc == 1"
+              ]
+            }
           ]
         },
         "topic": "TALK_EXODI_INTERCOM_AUTODOC_B"
       },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+      {
+        "text": "<end_talking_leave>",
+        "topic": "TALK_DONE"
+      }
     ]
   }
 ]

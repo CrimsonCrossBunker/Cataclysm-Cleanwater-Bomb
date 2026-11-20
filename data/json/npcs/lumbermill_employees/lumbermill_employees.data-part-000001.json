@@ -1,7 +1,0 @@
-[
-  {
-    "id": "LUMBERMILL_MERCHANT_blacklist",
-    "type": "shopkeeper_blacklist",
-    "entries": [ { "group": "LUMBERMILL_MERCHANT_trade" } ]
-  }
-]

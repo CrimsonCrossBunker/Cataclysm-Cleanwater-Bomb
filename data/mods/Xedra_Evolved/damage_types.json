@@ -1,83 +1,5 @@
 [
   {
-    "id": "xe_cold_iron_cut_damage",
-    "type": "damage_info_order",
-    "info_display": "detailed",
-    "verb": "cutting",
-    "bionic_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "protection_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "pet_prot_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "melee_combat_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "ablative_info": {
-      "order": 999999,
-      "show_type": false
-    }
-  },
-  {
-    "id": "xe_cold_iron_bash_damage",
-    "type": "damage_info_order",
-    "info_display": "detailed",
-    "verb": "bashing",
-    "bionic_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "protection_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "pet_prot_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "melee_combat_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "ablative_info": {
-      "order": 999999,
-      "show_type": false
-    }
-  },
-  {
-    "id": "xe_cold_iron_stab_damage",
-    "type": "damage_info_order",
-    "info_display": "detailed",
-    "verb": "piercing",
-    "bionic_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "protection_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "pet_prot_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "melee_combat_info": {
-      "order": 999999,
-      "show_type": false
-    },
-    "ablative_info": {
-      "order": 999999,
-      "show_type": false
-    }
-  },
-  {
     "id": "xe_shadow_damage",
     "type": "damage_type",
     "physical": false,
@@ -186,32 +108,6 @@
     ]
   },
   {
-    "id": "xe_shadow_damage",
-    "type": "damage_info_order",
-    "info_display": "detailed",
-    "verb": "umbrous",
-    "bionic_info": {
-      "order": 999903,
-      "show_type": false
-    },
-    "protection_info": {
-      "order": 999903,
-      "show_type": false
-    },
-    "pet_prot_info": {
-      "order": 999903,
-      "show_type": false
-    },
-    "melee_combat_info": {
-      "order": 999903,
-      "show_type": false
-    },
-    "ablative_info": {
-      "order": 999903,
-      "show_type": false
-    }
-  },
-  {
     "id": "withering_damage",
     "type": "damage_type",
     "physical": false,
@@ -268,31 +164,5 @@
         }
       }
     ]
-  },
-  {
-    "id": "withering_damage",
-    "type": "damage_info_order",
-    "info_display": "detailed",
-    "verb": "withering",
-    "bionic_info": {
-      "order": 999905,
-      "show_type": false
-    },
-    "protection_info": {
-      "order": 999905,
-      "show_type": false
-    },
-    "pet_prot_info": {
-      "order": 999905,
-      "show_type": false
-    },
-    "melee_combat_info": {
-      "order": 999905,
-      "show_type": false
-    },
-    "ablative_info": {
-      "order": 999905,
-      "show_type": false
-    }
   }
 ]

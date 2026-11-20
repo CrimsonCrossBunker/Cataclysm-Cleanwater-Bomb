@@ -43,3 +43,10 @@ local definition = content.Species {
 definition:flag("DRACULIN_IMMUNE")
 content.add(definition)
 end
+if not content.is_mod_active("DinoMod") then
+local definition = content.Species {
+    id = "DINOSAUR",
+    description = ccb.content.text("a warm-blooded lizard"),
+}
+content.add(definition)
+end
