@@ -1,68 +1,35 @@
 [
   {
-    "id": "MISSION_GODCO_HELENA_4",
+    "id": "MISSION_GODCO_OLWEN_2",
     "type": "mission_definition",
-    "name": { "str": "Preservation of Sustenance" },
-    "description": "Find five canning pots for Helena Misinter.",
+    "name": { "str": "Radio-active" },
+    "description": "Get six antennae for Olwen Powell.",
     "goal": "MGOAL_FIND_ITEM",
-    "item": "pot_canning",
-    "count": 5,
-    "difficulty": 5,
+    "item": "antenna",
+    "count": 6,
+    "difficulty": 4,
     "value": 0,
     "end": {
       "effect": [
-        { "math": [ "godco_has_canningpots = 1" ] },
-        { "u_spawn_item": "icon", "count": 30 },
-        { "u_spawn_item": "pickled_egg", "count": 10, "container": "jar_glass_sealed" }
+        { "u_spawn_item": "icon", "count": 6 },
+        { "mapgen_update": "olwen_radio_adapter", "om_terrain": "godco_1_2" },
+        { "u_add_var": "general_mission_godco_has_radio", "value": "yes" }
       ],
-      "opinion": { "trust": 1, "value": 1 }
+      "opinion": { "trust": 2, "value": 2 }
     },
-    "fail": { "opinion": { "anger": 1 } },
+    "fail": { "opinion": { "anger": 2 } },
     "origins": [ "ORIGIN_SECONDARY" ],
     "has_generic_rewards": false,
     "dialogue": {
-      "describe": "Get five canning pots.",
-      "offer": "While we are blessed with a bountiful stock, we need a way to preserve our newer food, mainly those potatoes Darryl's growing.  Fortunately, he brought a book on canning things.  We need five canning pots to get the setup going in full fashion.",
-      "accepted": "May the Lord bless you.",
-      "rejected": "I'll find someone else, then.",
-      "advice": "An old factory might have one, or a hobby shop.",
-      "inquire": "Have you found the canning pots?",
-      "success": "Thank you.  You're welcome to some of our first batch, if you're interested.",
+      "describe": "Get six antennae.",
+      "offer": "Corrie and I have been working on a way to get in touch with anyone who's still out there, and we've started rigging up an internet-to-radio broadcast.  The only thing we need are antennae, six of them specifically.",
+      "accepted": "This could give us a prosperous future, <name_g>.",
+      "rejected": "We've got to see how many people are out there.",
+      "advice": "A radio tower should have some lying around in storage.",
+      "inquire": "Have you found the antennae?",
+      "success": "Now we can get in touch with a lot more people, see what's out there.  Thank you, <name_g>.",
       "success_lie": "What good is this?",
-      "failure": "As expected of such a person…"
-    }
-  },
-  {
-    "id": "MISSION_GODCO_HELENA_VISIT_MERCHANTS",
-    "type": "mission_definition",
-    "name": { "str": "Investigate the Center" },
-    "description": "Go to the location Helena told you about and see who's there.",
-    "goal": "MGOAL_CONDITION",
-    "difficulty": 1,
-    "goal_condition": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Gavin" } ] },
-    "value": 0,
-    "start": "reveal_refugee_center",
-    "end": {
-      "effect": [
-        { "math": [ "godco_met_merchants = 0" ] },
-        { "u_spawn_item": "icon", "count": 5 },
-        { "u_assign_activity": "ACT_WAIT_NPC", "duration": "30 minutes" }
-      ],
-      "opinion": { "trust": 1, "value": 1 }
-    },
-    "fail": { "opinion": { "anger": 1 } },
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "has_generic_rewards": false,
-    "dialogue": {
-      "describe": "See who's over there.",
-      "offer": ".",
-      "accepted": ".",
-      "rejected": ".",
-      "advice": ".",
-      "inquire": "What have you found out?",
-      "success": "This should be very useful to us.  Now we can truly begin our march of righteousness.",
-      "success_lie": ".",
-      "failure": "As expected of such a person…"
+      "failure": "That's too bad…"
     }
   }
 ]

@@ -1,37 +1,31 @@
 [
   {
-    "id": "MISSION_GODCO_KATHERINE_1",
+    "id": "MISSION_GODCO_FELICITY_2",
     "type": "mission_definition",
-    "name": { "str": "Fishy Business" },
-    "description": "Find three cans of sardines, tuna, or salmon for Katherine.",
-    "goal": "MGOAL_CONDITION",
-    "goal_condition": {
-      "u_has_items_sum": [ { "item": "can_sardine", "amount": 3 }, { "item": "can_tuna", "amount": 3 }, { "item": "can_salmon", "amount": 3 } ]
-    },
-    "difficulty": 6,
+    "name": { "str": "Writers' Will II" },
+    "description": "Get 30 pencils for Felicity Powell.",
+    "goal": "MGOAL_FIND_ITEM",
+    "item": "pencil",
+    "count": 30,
+    "difficulty": 1,
     "value": 0,
     "end": {
-      "effect": [
-        { "u_spawn_item": "icon", "count": 6 },
-        {
-          "u_consume_item_sum": [ { "item": "can_sardine", "amount": 3 }, { "item": "can_tuna", "amount": 3 }, { "item": "can_salmon", "amount": 3 } ]
-        }
-      ],
-      "opinion": { "value": 1 }
+      "effect": [ { "u_spawn_item": "icon", "count": 10 }, { "math": [ "n_timer_trade_writing_manuscript = time('now')" ] } ],
+      "opinion": { "trust": 1, "value": 1 }
     },
     "fail": { "opinion": { "anger": 1 } },
     "origins": [ "ORIGIN_SECONDARY" ],
     "has_generic_rewards": false,
     "dialogue": {
-      "describe": "Get some tuna.",
-      "offer": "I've had a craving for fish recently.  Could you find three cans of tuna for me?  I'll pay you for them.",
-      "accepted": "Thank you.",
-      "rejected": "Alright.  I'll do it myself.",
-      "advice": "A house or grocery store should have some.",
-      "inquire": "Have you found the fish?",
-      "success": "Thank you, here's your payment.",
+      "describe": "Get some pencils.",
+      "offer": "I've been writing for a bit, and I've used up my pencils.  If you could get me thirty more, I'll give you some money.",
+      "accepted": "I do appreciate it.",
+      "rejected": "I can understand that.  The offer's still available if you reconsider.",
+      "advice": "An office building should have tons.",
+      "inquire": "Have you found the pencils?",
+      "success": "Thank you so much!  I'll get back to work on my manuscript, I should have it ready in a month or so.",
       "success_lie": "What good is this?",
-      "failure": "That's too bad…"
+      "failure": "How unfortunate…"
     }
   }
 ]

@@ -15,36 +15,5 @@
       { "text": "<end_talking_nevermind>", "topic": "TALK_NONE" },
       { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "id": "MISSION_RANCH_SCRAPPER_TOOLS_FOR_SCRAP",
-    "type": "mission_definition",
-    "name": { "str": "Tools for Scrap" },
-    "description": "The scrapper is willing to part with some scrap to help build an anesthetic machine in exchange for an angle grinder and a hacksaw.",
-    "goal": "MGOAL_CONDITION",
-    "goal_condition": { "and": [ { "u_has_item": "angle_grinder" }, { "u_has_item": "hacksaw" } ] },
-    "difficulty": 1,
-    "value": 0,
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "followup": "MISSION_NULL",
-    "has_generic_rewards": false,
-    "dialogue": {
-      "describe": "…",
-      "offer": "…",
-      "accepted": "…",
-      "rejected": "…",
-      "advice": "…",
-      "inquire": "Have you found the tools yet?",
-      "success": "These will be very useful, thanks!  I found the parts that you needed and can work with the doctor to build the equipment whenever they are ready.",
-      "success_lie": "…",
-      "failure": "…"
-    },
-    "end": {
-      "effect": [
-        { "u_consume_item": "angle_grinder" },
-        { "u_consume_item": "hacksaw" },
-        { "u_add_var": "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped", "value": "yes" }
-      ]
-    }
   }
 ]

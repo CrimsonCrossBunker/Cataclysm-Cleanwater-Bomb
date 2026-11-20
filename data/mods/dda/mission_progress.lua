@@ -118,3 +118,5 @@ ccb.runtime.handler("advance_world_isherwood_luke_truck_coming_by_1", function()
     local current = checked(variables.get_global_number("isherwood_luke_truck_coming", { strict = true })).value or 0
     checked(variables.set_global("isherwood_luke_truck_coming", current + 1, { include_before = false }))
 end)
+track("mission_flag_FMShopkeep_Mission4")
+track("mission_tacoma_ranch_doctor_anesthetic_scrappers_helped")
