@@ -525,19 +525,25 @@ bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
                                 std::function<void( mission *, Character & )> &phase_func )
 {
     std::vector<std::function<void( mission *, Character & )>> funcs;
+    std::size_t before_rewards = 0;
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-    if( const auto callback = jo.get_member_opt( "//ccb_lua_mission_handler" ) ) {
-        if( callback->has_source_file() ) {
-            callback->throw_error( "mission callback metadata is reserved for ordered Lua definitions" );
+    const auto append_handlers = [&]( const char *field ) {
+        if( const auto callback = jo.get_member_opt( field ) ) {
+            if( callback->has_source_file() ) {
+                callback->throw_error( "mission callback metadata is reserved for ordered Lua definitions" );
+            }
+            for( const std::string &handler : jo.get_as_string_array( field ) ) {
+                funcs.emplace_back( [owner = std::string( src ), phase_name = std::string( phase ), handler](
+                mission * miss, Character & who ) {
+                    cata::lua_platform::detail::invoke_mission_phase_handler(
+                        owner, miss->get_type().id.str(), phase_name, handler, miss, who );
+                } );
+            }
         }
-        for( const std::string &handler : jo.get_as_string_array( "//ccb_lua_mission_handler" ) ) {
-            funcs.emplace_back( [owner = std::string( src ), phase_name = std::string( phase ), handler](
-            mission * miss, Character & who ) {
-                cata::lua_platform::detail::invoke_mission_phase_handler(
-                    owner, miss->get_type().id.str(), phase_name, handler, miss, who );
-            } );
-        }
-    }
+    };
+    append_handlers( "//ccb_lua_mission_before_rewards" );
+    before_rewards = funcs.size();
+    append_handlers( "//ccb_lua_mission_handler" );
 #endif
     if( !mission_util::load_funcs( jo, funcs ) ) {
         return false;
@@ -560,7 +566,7 @@ bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
         }
     }
 #endif
-    phase_func = [ funcs, talk_effects ]( mission * miss, Character & who ) {
+    phase_func = [ funcs, talk_effects, before_rewards ]( mission * miss, Character & who ) {
         const int mission_id = miss->get_id();
         const std::size_t generation = miss->identity_generation();
         const character_action_guard owner( who );
@@ -578,17 +584,23 @@ bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
         };
         ::dialogue d( get_talker_for( who ),
                       beta_npc == nullptr ? nullptr : get_talker_for( beta_npc ) );
+        for( std::size_t i = 0; i < before_rewards; ++i ) {
+            if( !live() ) {
+                return;
+            }
+            funcs[i]( miss, who );
+        }
         for( const talk_effect_fun_t &effect : talk_effects.effects ) {
             if( !live() ) {
                 return;
             }
             effect( d );
         }
-        for( const auto &mission_function : funcs ) {
+        for( std::size_t i = before_rewards; i < funcs.size(); ++i ) {
             if( !live() ) {
                 return;
             }
-            mission_function( miss, who );
+            funcs[i]( miss, who );
         }
     };
 

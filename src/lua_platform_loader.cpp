@@ -4726,6 +4726,168 @@ void write_forest_weights( JsonOut &json, const sol::table &options, const char 
     }
 }
 
+void write_region_identity( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
+}
+
+template<typename Value>
+void write_region_fields( JsonOut &json, const sol::table &options,
+                          std::initializer_list<const char *> fields )
+{
+    for( const char *field : fields ) {
+        write_placement_member<Value>( json, options, field, field );
+    }
+}
+
+void write_region_set_change( JsonOut &json, const sol::table &options, const char *field,
+                              const char *native, const char *operation )
+{
+    if( options.get<sol::optional<sol::table>>( field ) ) {
+        json.member( operation );
+        json.start_object();
+        write_mapgen_string_array( json, options, field, native );
+        json.end_object();
+    }
+}
+
+void write_static_region_settings_river( JsonOut &json, const sol::table &options )
+{
+    write_region_identity( json, options );
+    write_placement_member<int>( json, options, "river_scale", "river_scale" );
+    write_region_fields<double>( json, options, {
+        "river_frequency", "river_branch_chance", "river_branch_remerge_chance",
+        "river_branch_scale_decrease"
+    } );
+}
+
+void write_static_region_settings_lake( JsonOut &json, const sol::table &options )
+{
+    write_region_identity( json, options );
+    write_placement_member<double>( json, options, "noise_threshold_lake", "noise_threshold_lake" );
+    write_region_fields<int>( json, options, {
+        "lake_size_min", "lake_depth"
+    } );
+    write_mapgen_string_array( json, options, "shore_terrains", "shore_extendable_overmap_terrain" );
+    write_static_catalog_array( json, options, "shore_aliases", "shore_extendable_overmap_terrain_aliases",
+    []( JsonOut &out, const sol::table &alias ) {
+        out.start_object();
+        write_item_fields<std::string>( out, alias, {
+            { "terrain", "om_terrain" }, { "match", "om_terrain_match_type" }, { "alias", "alias" }
+        } );
+        out.end_object();
+    } );
+}
+
+void write_static_region_settings_ocean( JsonOut &json, const sol::table &options )
+{
+    write_region_identity( json, options );
+    write_placement_member<double>( json, options, "noise_threshold_ocean", "noise_threshold_ocean" );
+    write_region_fields<int>( json, options, {
+        "ocean_size_min", "ocean_depth", "sandy_beach_width"
+    } );
+    for( const char *field : { "ocean_start_north", "ocean_start_east", "ocean_start_west", "ocean_start_south" } ) {
+        const sol::object value = options.raw_get<sol::object>( field );
+        if( value.get_type() == sol::type::boolean && !value.as<bool>() ) {
+            json.member( field );
+            json.write_null();
+        } else if( value.get_type() != sol::type::nil ) {
+            json.member( field, value.as<int>() );
+        }
+    }
+}
+
+void write_static_region_settings_ravine( JsonOut &json, const sol::table &options )
+{
+    write_region_identity( json, options );
+    write_region_fields<int>( json, options, {
+        "num_ravines", "ravine_width", "ravine_range", "ravine_depth"
+    } );
+    write_placement_member<std::string>( json, options, "bottom_terrain", "ravine_bottom_terrain_id" );
+}
+
+void write_static_region_settings_forest( JsonOut &json, const sol::table &options )
+{
+    write_region_identity( json, options );
+    write_region_fields<double>( json, options, {
+        "noise_threshold_forest", "noise_threshold_forest_thick",
+        "noise_threshold_swamp_adjacent_water", "noise_threshold_swamp_isolated",
+        "forest_threshold_limit"
+    } );
+    write_region_fields<int>( json, options, {
+        "river_floodplain_buffer_distance_min", "river_floodplain_buffer_distance_max"
+    } );
+    if( const auto values = options.get<sol::optional<sol::table>>( "forest_threshold_increase" ) ) {
+        if( checked_dense_array_size( *values, "forest_threshold_increase", 4 ) != 4 ) {
+            throw std::invalid_argument( "forest_threshold_increase requires four cardinal values" );
+        }
+        json.member( "forest_threshold_increase", std::array<float, 4>{
+            values->get<float>( 1 ), values->get<float>( 2 ), values->get<float>( 3 ), values->get<float>( 4 )
+        } );
+    }
+}
+
+void write_static_region_settings_forest_trail( JsonOut &json, const sol::table &options )
+{
+    write_region_identity( json, options );
+    write_region_fields<int>( json, options, {
+        "chance", "border_point_chance", "minimum_forest_size", "random_point_min",
+        "random_point_max", "random_point_size_scalar", "trailhead_chance",
+        "trailhead_road_distance"
+    } );
+    if( const auto choices = options.get<sol::optional<sol::table>>( "trailheads" ) ) {
+        write_static_weighted_ids<int>( json, "trailheads", *choices );
+    }
+}
+
+void write_static_region_settings_forest_mapgen( JsonOut &json, const sol::table &options )
+{
+    write_region_identity( json, options );
+    write_mapgen_string_array( json, options, "biomes", "biomes" );
+    write_region_set_change( json, options, "add_biomes", "biomes", "extend" );
+}
+
+void write_static_region_settings_terrain_furniture( JsonOut &json, const sol::table &options )
+{
+    write_region_identity( json, options );
+    write_mapgen_string_array( json, options, "replacements", "ter_furn" );
+}
+
+void write_static_region_terrain_furniture( JsonOut &json, const sol::table &options )
+{
+    write_region_identity( json, options );
+    write_placement_member<std::string>( json, options, "terrain", "ter_id" );
+    write_placement_member<std::string>( json, options, "furniture", "furn_id" );
+    if( const auto choices = options.get<sol::optional<sol::table>>( "terrain_choices" ) ) {
+        write_static_weighted_ids<int>( json, "replace_with_terrain", *choices );
+    }
+    if( const auto choices = options.get<sol::optional<sol::table>>( "furniture_choices" ) ) {
+        write_static_weighted_ids<int>( json, "replace_with_furniture", *choices );
+    }
+    const auto terrain = options.get<sol::optional<sol::table>>( "add_terrain_choices" );
+    const auto furniture = options.get<sol::optional<sol::table>>( "add_furniture_choices" );
+    if( terrain || furniture ) {
+        json.member( "extend" );
+        json.start_object();
+        if( terrain ) {
+            write_static_weighted_ids<int>( json, "replace_with_terrain", *terrain );
+        }
+        if( furniture ) {
+            write_static_weighted_ids<int>( json, "replace_with_furniture", *furniture );
+        }
+        json.end_object();
+    }
+}
+
+void write_static_region_settings_map_extras( JsonOut &json, const sol::table &options )
+{
+    write_region_identity( json, options );
+    write_mapgen_string_array( json, options, "extras", "extras" );
+    write_region_set_change( json, options, "add_extras", "extras", "extend" );
+    write_region_set_change( json, options, "remove_extras", "extras", "delete" );
+}
+
 void write_static_forest_biome_component( JsonOut &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
@@ -6066,6 +6228,7 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
     const sol::table rules = phase.as<sol::table>();
     json.member( native );
     json.start_object();
+    write_static_string_or_ids( json, rules, "before_rewards", "//ccb_lua_mission_before_rewards" );
     write_static_string_or_ids( json, rules, "handler", "//ccb_lua_mission_handler" );
     write_static_catalog_array( json, rules, "item_rewards", "//ccb_lua_mission_item_rewards",
     []( JsonOut & out, const sol::table & reward ) {
@@ -6856,7 +7019,11 @@ void write_static_spell( JsonOut &json, const sol::table &options )
         { "magic_type", "magic_type" }, { "get_level_formula", "get_level_formula_id" },
         { "exp_for_level_formula", "exp_for_level_formula_id" }
     } );
+    const auto impact = options.get<sol::optional<std::string>>( "impact_handler" );
     if( const auto effect = options.get<sol::optional<std::string>>( "effect" ) ) {
+        if( impact ) {
+            throw std::invalid_argument( "an ordered spell may specify either effect or impact_handler" );
+        }
         if( *effect == "effect_on_condition" ) {
             throw std::invalid_argument( "ordered spell definitions require a native spell effect" );
         }
@@ -6870,6 +7037,7 @@ void write_static_spell( JsonOut &json, const sol::table &options )
         { "teachable", "teachable" }, { "sound_ambient", "sound_ambient" }
     } );
     write_placement_member<int>( json, options, "max_book_level", "max_book_level" );
+    std::map<std::string, std::string> stat_handlers;
     for( const char *stat : {
              "field_chance", "min_field_intensity", "field_intensity_increment", "max_field_intensity",
              "field_intensity_variance", "min_accuracy", "accuracy_increment", "max_accuracy",
@@ -6884,10 +7052,39 @@ void write_static_spell( JsonOut &json, const sol::table &options )
         if( value.get_type() == sol::type::nil ) {
             continue;
         }
-        if( value.get_type() != sol::type::number || !std::isfinite( value.as<double>() ) ) {
+        double fallback;
+        if( value.get_type() == sol::type::table ) {
+            const sol::table provider = value.as<sol::table>();
+            stat_handlers.emplace( stat, provider.get<std::string>( "handler" ) );
+            fallback = provider.get<double>( "fallback" );
+        } else if( value.get_type() == sol::type::number ) {
+            fallback = value.as<double>();
+        } else {
+            throw std::invalid_argument( std::string( "expected a spell stat number or handler: " ) + stat );
+        }
+        if( !std::isfinite( fallback ) ) {
             throw std::invalid_argument( std::string( "ordered spell stat must be a finite number: " ) + stat );
         }
-        json.member( stat, value.as<double>() );
+        json.member( stat, fallback );
+    }
+    const auto caster = options.get<sol::optional<std::string>>( "caster_when" );
+    const auto target = options.get<sol::optional<std::string>>( "target_when" );
+    if( impact || caster || target || !stat_handlers.empty() ) {
+        json.member( "//ccb_lua_spell" );
+        json.start_object();
+        if( impact ) {
+            json.member( "impact", *impact );
+        }
+        if( caster ) {
+            json.member( "caster", *caster );
+        }
+        if( target ) {
+            json.member( "target", *target );
+        }
+        if( !stat_handlers.empty() ) {
+            json.member( "stats", stat_handlers );
+        }
+        json.end_object();
     }
     write_item_ids( json, options, {
         { "valid_targets", "valid_targets" }, { "targeted_monsters", "targeted_monster_ids" },
@@ -7070,6 +7267,36 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_vehicle_part_location", static_catalog_definition(
                               resolved.id, "vehicle_part_location", write_static_vehicle_part_location,
                               vpart_location::load_vehicle_part_locations ) );
+    content.set_function( "define_region_settings_river", static_catalog_definition(
+                              resolved.id, "region_settings_river", write_static_region_settings_river,
+                              region_settings_river::load_region_settings_river ) );
+    content.set_function( "define_region_settings_lake", static_catalog_definition(
+                              resolved.id, "region_settings_lake", write_static_region_settings_lake,
+                              region_settings_lake::load_region_settings_lake ) );
+    content.set_function( "define_region_settings_ocean", static_catalog_definition(
+                              resolved.id, "region_settings_ocean", write_static_region_settings_ocean,
+                              region_settings_ocean::load_region_settings_ocean ) );
+    content.set_function( "define_region_settings_ravine", static_catalog_definition(
+                              resolved.id, "region_settings_ravine", write_static_region_settings_ravine,
+                              region_settings_ravine::load_region_settings_ravine ) );
+    content.set_function( "define_region_settings_forest", static_catalog_definition(
+                              resolved.id, "region_settings_forest", write_static_region_settings_forest,
+                              region_settings_forest::load_region_settings_forest ) );
+    content.set_function( "define_region_settings_forest_trail", static_catalog_definition(
+                              resolved.id, "region_settings_forest_trail", write_static_region_settings_forest_trail,
+                              region_settings_forest_trail::load_region_settings_forest_trail ) );
+    content.set_function( "define_region_settings_forest_mapgen", static_catalog_definition(
+                              resolved.id, "region_settings_forest_mapgen", write_static_region_settings_forest_mapgen,
+                              region_settings_forest_mapgen::load_region_settings_forest_mapgen ) );
+    content.set_function( "define_region_settings_terrain_furniture", static_catalog_definition(
+                              resolved.id, "region_settings_terrain_furniture", write_static_region_settings_terrain_furniture,
+                              region_settings_terrain_furniture::load_region_settings_terrain_furniture ) );
+    content.set_function( "define_region_terrain_furniture", static_catalog_definition(
+                              resolved.id, "region_terrain_furniture", write_static_region_terrain_furniture,
+                              region_terrain_furniture::load_region_terrain_furniture ) );
+    content.set_function( "define_region_settings_map_extras", static_catalog_definition(
+                              resolved.id, "region_settings_map_extras", write_static_region_settings_map_extras,
+                              region_settings_map_extras::load_region_settings_map_extras ) );
     content.set_function( "define_forest_biome_component", static_catalog_definition(
                               resolved.id, "forest_biome_component", write_static_forest_biome_component,
                               forest_biome_component::load_forest_biome_feature ) );

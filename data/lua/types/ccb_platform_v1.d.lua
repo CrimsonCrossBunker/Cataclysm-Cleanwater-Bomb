@@ -7360,7 +7360,131 @@ function CcbPlatformContent.define_vehicle_part_location(options) end
 ---@param options OrderedMapExtraOptions
 function CcbPlatformContent.define_map_extra(options) end
 
----@alias ForestBiomeWeight string|{id:string,weight:integer}
+---@alias RegionWeightedId string|{id:string,weight:integer}
+---@alias ForestBiomeWeight RegionWeightedId
+
+---@class OrderedRegionSettingsRiver
+---@field id string
+---@field copy_from? string Parent id; a matching id overrides the previous definition.
+---@field river_scale? integer
+---@field river_frequency? number
+---@field river_branch_chance? number
+---@field river_branch_remerge_chance? number
+---@field river_branch_scale_decrease? number
+
+---@param options OrderedRegionSettingsRiver
+function CcbPlatformContent.define_region_settings_river(options) end
+
+---@class OrderedRegionSettingsLake
+---@field id string
+---@field copy_from? string Parent id; a matching id overrides the previous definition.
+---@field noise_threshold_lake? number
+---@field lake_size_min? integer
+---@field lake_depth? integer
+---@field shore_terrains? string[]
+---@field shore_aliases? {terrain:string,match:string,alias:string}[]
+
+---@param options OrderedRegionSettingsLake
+function CcbPlatformContent.define_region_settings_lake(options) end
+
+---@class OrderedRegionSettingsOcean
+---@field id string
+---@field copy_from? string Parent id; a matching id overrides the previous definition.
+---@field noise_threshold_ocean? number
+---@field ocean_size_min? integer
+---@field ocean_depth? integer
+---@field sandy_beach_width? integer
+---@field ocean_start_north? integer|false Pass false to clear the inherited boundary.
+---@field ocean_start_east? integer|false Pass false to clear the inherited boundary.
+---@field ocean_start_west? integer|false Pass false to clear the inherited boundary.
+---@field ocean_start_south? integer|false Pass false to clear the inherited boundary.
+
+---@param options OrderedRegionSettingsOcean
+function CcbPlatformContent.define_region_settings_ocean(options) end
+
+---@class OrderedRegionSettingsRavine
+---@field id string
+---@field copy_from? string Parent id; a matching id overrides the previous definition.
+---@field num_ravines? integer
+---@field ravine_width? integer
+---@field ravine_range? integer
+---@field ravine_depth? integer
+---@field bottom_terrain? string
+
+---@param options OrderedRegionSettingsRavine
+function CcbPlatformContent.define_region_settings_ravine(options) end
+
+---@class OrderedRegionSettingsForest
+---@field id string
+---@field copy_from? string Parent id; a matching id overrides the previous definition.
+---@field noise_threshold_forest? number
+---@field noise_threshold_forest_thick? number
+---@field noise_threshold_swamp_adjacent_water? number
+---@field noise_threshold_swamp_isolated? number
+---@field forest_threshold_limit? number
+---@field river_floodplain_buffer_distance_min? integer
+---@field river_floodplain_buffer_distance_max? integer
+---@field forest_threshold_increase? [number,number,number,number] North, east, south and west.
+
+---@param options OrderedRegionSettingsForest
+function CcbPlatformContent.define_region_settings_forest(options) end
+
+---@class OrderedRegionSettingsForestTrail
+---@field id string
+---@field copy_from? string Parent id; a matching id overrides the previous definition.
+---@field chance? integer
+---@field border_point_chance? integer
+---@field minimum_forest_size? integer
+---@field random_point_min? integer
+---@field random_point_max? integer
+---@field random_point_size_scalar? integer
+---@field trailhead_chance? integer
+---@field trailhead_road_distance? integer
+---@field trailheads? RegionWeightedId[]
+
+---@param options OrderedRegionSettingsForestTrail
+function CcbPlatformContent.define_region_settings_forest_trail(options) end
+
+---@class OrderedRegionSettingsForestMapgen
+---@field id string
+---@field copy_from? string Parent id; a matching id overrides the previous definition.
+---@field biomes? string[]
+---@field add_biomes? string[]
+
+---@param options OrderedRegionSettingsForestMapgen
+function CcbPlatformContent.define_region_settings_forest_mapgen(options) end
+
+---@class OrderedRegionSettingsTerrainFurniture
+---@field id string
+---@field copy_from? string Parent id; a matching id overrides the previous definition.
+---@field replacements? string[]
+
+---@param options OrderedRegionSettingsTerrainFurniture
+function CcbPlatformContent.define_region_settings_terrain_furniture(options) end
+
+---@class OrderedRegionTerrainFurniture
+---@field id string
+---@field copy_from? string Parent id; a matching id overrides the previous definition.
+---@field terrain? string
+---@field furniture? string
+---@field terrain_choices? RegionWeightedId[]
+---@field furniture_choices? RegionWeightedId[]
+---@field add_terrain_choices? RegionWeightedId[]
+---@field add_furniture_choices? RegionWeightedId[]
+
+---@param options OrderedRegionTerrainFurniture
+function CcbPlatformContent.define_region_terrain_furniture(options) end
+
+---@class OrderedRegionSettingsMapExtras
+---@field id string
+---@field copy_from? string Parent id; a matching id overrides the previous definition.
+---@field extras? string[]
+---@field add_extras? string[]
+---@field remove_extras? string[]
+
+---@param options OrderedRegionSettingsMapExtras
+function CcbPlatformContent.define_region_settings_map_extras(options) end
+
 
 ---@class StaticForestBiomeComponent
 ---@field id string
@@ -8280,6 +8404,7 @@ function CcbPlatformContent.define_profession(options) end
 ---@field container? string Optional container for an item reward.
 
 ---@class StaticMissionPhase
+---@field before_rewards? string|string[] Registered mission callbacks invoked in order before item delivery.
 ---@field item_rewards? StaticMissionItemReward[] Grant in order before the phase callback. Use native item delivery, giver popups, and mission reward previews.
 ---@field map_updates? StaticMissionMapUpdate[] Apply in order after the handler and target assignment.
 ---@field handler? string|string[] Registered mission callbacks, invoked in order before target assignment. Each step rechecks the mission and its participants.
@@ -18418,6 +18543,10 @@ function CcbSpellsApi.adjust_casting(character, property, amount, options) end
 ---@field spell string
 ---@field level integer
 
+---@class OrderedSpellStat
+---@field handler string Named runtime handler evaluated with the spell's dialogue participants.
+---@field fallback number Value available before world callbacks are ready or if the handler fails.
+
 ---@class StaticSpellOptions
 ---@field id? string Provide either id or abstract.
 ---@field abstract? string Base definition available for inheritance.
@@ -18435,6 +18564,9 @@ function CcbSpellsApi.adjust_casting(character, property, amount, options) end
 ---@field sound_variant? string
 ---@field shape? string
 ---@field effect? string
+---@field impact_handler? string Named runtime handler for each valid spell impact.
+---@field caster_when? string Named caster predicate evaluated when checking the spell.
+---@field target_when? string Named target predicate evaluated when checking the spell.
 ---@field effect_data? string
 ---@field explosion_light? string
 ---@field field? string
@@ -18457,44 +18589,44 @@ function CcbSpellsApi.adjust_casting(character, property, amount, options) end
 ---@field channel? StaticSpellChannel
 ---@field extra_spells? StaticSpellFollowup[]
 ---@field learned_spells? StaticSpellLearned[]
----@field field_chance? number
----@field min_field_intensity? number
----@field field_intensity_increment? number
----@field max_field_intensity? number
----@field field_intensity_variance? number
----@field min_accuracy? number
----@field accuracy_increment? number
----@field max_accuracy? number
----@field min_damage? number
----@field damage_increment? number
----@field max_damage? number
----@field min_range? number
----@field range_increment? number
----@field max_range? number
----@field min_aoe? number
----@field aoe_increment? number
----@field max_aoe? number
----@field min_dot? number
----@field dot_increment? number
----@field max_dot? number
----@field min_duration? number
----@field duration_increment? number
----@field max_duration? number
----@field min_pierce? number
----@field pierce_increment? number
----@field max_pierce? number
----@field min_bash_scaling? number
----@field bash_scaling_increment? number
----@field max_bash_scaling? number
----@field base_energy_cost? number
----@field final_energy_cost? number
----@field energy_increment? number
----@field difficulty? number
----@field multiple_projectiles? number
----@field max_level? number
----@field base_casting_time? number
----@field final_casting_time? number
----@field casting_time_increment? number
+---@field field_chance? number|OrderedSpellStat
+---@field min_field_intensity? number|OrderedSpellStat
+---@field field_intensity_increment? number|OrderedSpellStat
+---@field max_field_intensity? number|OrderedSpellStat
+---@field field_intensity_variance? number|OrderedSpellStat
+---@field min_accuracy? number|OrderedSpellStat
+---@field accuracy_increment? number|OrderedSpellStat
+---@field max_accuracy? number|OrderedSpellStat
+---@field min_damage? number|OrderedSpellStat
+---@field damage_increment? number|OrderedSpellStat
+---@field max_damage? number|OrderedSpellStat
+---@field min_range? number|OrderedSpellStat
+---@field range_increment? number|OrderedSpellStat
+---@field max_range? number|OrderedSpellStat
+---@field min_aoe? number|OrderedSpellStat
+---@field aoe_increment? number|OrderedSpellStat
+---@field max_aoe? number|OrderedSpellStat
+---@field min_dot? number|OrderedSpellStat
+---@field dot_increment? number|OrderedSpellStat
+---@field max_dot? number|OrderedSpellStat
+---@field min_duration? number|OrderedSpellStat
+---@field duration_increment? number|OrderedSpellStat
+---@field max_duration? number|OrderedSpellStat
+---@field min_pierce? number|OrderedSpellStat
+---@field pierce_increment? number|OrderedSpellStat
+---@field max_pierce? number|OrderedSpellStat
+---@field min_bash_scaling? number|OrderedSpellStat
+---@field bash_scaling_increment? number|OrderedSpellStat
+---@field max_bash_scaling? number|OrderedSpellStat
+---@field base_energy_cost? number|OrderedSpellStat
+---@field final_energy_cost? number|OrderedSpellStat
+---@field energy_increment? number|OrderedSpellStat
+---@field difficulty? number|OrderedSpellStat
+---@field multiple_projectiles? number|OrderedSpellStat
+---@field max_level? number|OrderedSpellStat
+---@field base_casting_time? number|OrderedSpellStat
+---@field final_casting_time? number|OrderedSpellStat
+---@field casting_time_increment? number|OrderedSpellStat
 
 ---Define a spell with a native effect at its ordered position during content loading.
 ---@param options StaticSpellOptions

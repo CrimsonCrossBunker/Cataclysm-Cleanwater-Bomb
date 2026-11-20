@@ -49,6 +49,7 @@
 #include "localized_comparator.h"
 #include "lua_platform_content.h"
 #include "lua_platform_runtime.h"
+#include "lua_platform_runtime_internal.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -68,6 +69,7 @@
 #include "requirements.h"
 #include "rng.h"
 #include "sounds.h"
+#include "spell_impact.h"
 #include "string_formatter.h"
 #include "talker.h"
 #include "temp_crafting_inventory.h"
@@ -397,13 +399,30 @@ void spell_type::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "sound_ambient", sound_ambient, sound_ambient_default );
     optional( jo, was_loaded, "sound_id", sound_id, sound_id_default );
     optional( jo, was_loaded, "sound_variant", sound_variant, sound_variant_default );
-    mandatory( jo, was_loaded, "effect", effect_name );
-    const auto found_effect = spell_effect::effect_map.find( effect_name );
-    if( found_effect == spell_effect::effect_map.cend() ) {
-        effect = spell_effect::none;
-        debugmsg( "ERROR: spell %s has invalid effect %s", id.c_str(), effect_name );
-    } else {
-        effect = found_effect->second;
+    bool load_native_effect = !was_loaded || jo.has_member( "effect" );
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    const JsonObject callbacks = jo.get_object( "//ccb_lua_spell" );
+    if( const auto marker = jo.get_member_opt( "//ccb_lua_spell" ); marker && marker->has_source_file() ) {
+        marker->throw_error( "spell callbacks are reserved for ordered Lua definitions" );
+    }
+    if( callbacks.has_string( "impact" ) ) {
+        load_native_effect = false;
+        effect_name = "lua";
+        effect = [owner = std::string( src ), handler = callbacks.get_string( "impact" )](
+        const spell & cast_spell, Creature & caster, const tripoint_bub_ms & target ) {
+            cata::lua_platform::detail::invoke_spell_impact_handler( owner, handler, cast_spell, caster, target );
+        };
+    }
+#endif
+    if( load_native_effect ) {
+        mandatory( jo, was_loaded, "effect", effect_name );
+        const auto found_effect = spell_effect::effect_map.find( effect_name );
+        if( found_effect == spell_effect::effect_map.cend() ) {
+            effect = spell_effect::none;
+            debugmsg( "ERROR: spell %s has invalid effect %s", id.c_str(), effect_name );
+        } else {
+            effect = found_effect->second;
+        }
     }
     mandatory( jo, was_loaded, "shape", spell_area );
     spell_area_function = spell_effect::shape_map.at( spell_area );
@@ -437,6 +456,37 @@ void spell_type::load( const JsonObject &jo, std::string_view src )
         has_target_condition = true;
     }
     optional( jo, was_loaded, "target_condition_fail_message", target_condition_fail_message_ );
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    const auto bind_condition = [&]( const char *phase, auto &condition, bool &present ) {
+        if( callbacks.has_string( phase ) ) {
+            condition = [owner = std::string( src ), spell_name = id.str(), phase,
+                         handler = callbacks.get_string( phase )]( const const_dialogue &d ) {
+                return cata::lua_platform::detail::invoke_spell_condition_handler(
+                           owner, spell_name, phase, handler, d ).value_or( false );
+            };
+            present = true;
+        }
+    };
+    bind_condition( "caster", caster_condition, has_caster_condition );
+    bind_condition( "target", target_condition, has_target_condition );
+    const JsonObject stat_handlers = callbacks.get_object( "stats" );
+#endif
+    const auto load_stat = [&]( const char *name, dbl_or_var &stat, const auto &default_value ) {
+        optional( jo, was_loaded, name, stat, default_value );
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+        if( stat_handlers.has_string( name ) ) {
+            const double fallback = jo.get_float( name );
+            stat.min.val = runtime_dbl_provider{
+                [owner = std::string( src ), spell_name = id.str(), name,
+                 handler = stat_handlers.get_string( name ), fallback]( const const_dialogue &d ) {
+                    return cata::lua_platform::detail::invoke_spell_stat_handler(
+                               owner, spell_name, name, handler, d ).value_or( fallback );
+                }
+            };
+        }
+#endif
+    };
 
     optional( jo, was_loaded, "extra_effects", additional_spells );
 
@@ -472,41 +522,38 @@ void spell_type::load( const JsonObject &jo, std::string_view src )
     if( field_input != "none" ) {
         field = field_type_id( field_input );
     }
-    optional( jo, was_loaded, "field_chance", field_chance, field_chance_default );
-    optional( jo, was_loaded, "min_field_intensity", min_field_intensity, min_field_intensity_default );
-    optional( jo, was_loaded, "max_field_intensity", max_field_intensity, max_field_intensity_default );
-    optional( jo, was_loaded, "field_intensity_increment", field_intensity_increment,
-              field_intensity_increment_default );
-    optional( jo, was_loaded, "field_intensity_variance", field_intensity_variance,
-              field_intensity_variance_default );
-    optional( jo, was_loaded, "min_accuracy", min_accuracy, min_accuracy_default );
-    optional( jo, was_loaded, "accuracy_increment", accuracy_increment, accuracy_increment_default );
-    optional( jo, was_loaded, "max_accuracy", max_accuracy, max_accuracy_default );
-    optional( jo, was_loaded, "min_damage", min_damage, min_damage_default );
-    optional( jo, was_loaded, "damage_increment", damage_increment, damage_increment_default );
-    optional( jo, was_loaded, "max_damage", max_damage, max_damage_default );
-    optional( jo, was_loaded, "min_range", min_range, min_range_default );
-    optional( jo, was_loaded, "range_increment", range_increment, range_increment_default );
-    optional( jo, was_loaded, "max_range", max_range, max_range_default );
-    optional( jo, was_loaded, "min_aoe", min_aoe, min_aoe_default );
-    optional( jo, was_loaded, "aoe_increment", aoe_increment, aoe_increment_default );
-    optional( jo, was_loaded, "max_aoe", max_aoe, max_aoe_default );
-    optional( jo, was_loaded, "min_dot", min_dot, min_dot_default );
-    optional( jo, was_loaded, "dot_increment", dot_increment, dot_increment_default );
-    optional( jo, was_loaded, "max_dot", max_dot, max_dot_default );
-    optional( jo, was_loaded, "min_duration", min_duration, min_duration_default );
-    optional( jo, was_loaded, "duration_increment", duration_increment, duration_increment_default );
-    optional( jo, was_loaded, "max_duration", max_duration, max_duration_default );
-    optional( jo, was_loaded, "min_pierce", min_pierce, min_pierce_default );
-    optional( jo, was_loaded, "pierce_increment", pierce_increment, pierce_increment_default );
-    optional( jo, was_loaded, "max_pierce", max_pierce, max_pierce_default );
-    optional( jo, was_loaded, "min_bash_scaling", min_bash_scaling, min_bash_scaling_default );
-    optional( jo, was_loaded, "bash_scaling_increment", bash_scaling_increment,
-              bash_scaling_increment_default );
-    optional( jo, was_loaded, "max_bash_scaling", max_bash_scaling, max_bash_scaling_default );
-    optional( jo, was_loaded, "base_energy_cost", base_energy_cost, base_energy_cost_default );
-    optional( jo, was_loaded, "final_energy_cost", final_energy_cost, base_energy_cost );
-    optional( jo, was_loaded, "energy_increment", energy_increment, energy_increment_default );
+    load_stat( "field_chance", field_chance, field_chance_default );
+    load_stat( "min_field_intensity", min_field_intensity, min_field_intensity_default );
+    load_stat( "max_field_intensity", max_field_intensity, max_field_intensity_default );
+    load_stat( "field_intensity_increment", field_intensity_increment, field_intensity_increment_default );
+    load_stat( "field_intensity_variance", field_intensity_variance, field_intensity_variance_default );
+    load_stat( "min_accuracy", min_accuracy, min_accuracy_default );
+    load_stat( "accuracy_increment", accuracy_increment, accuracy_increment_default );
+    load_stat( "max_accuracy", max_accuracy, max_accuracy_default );
+    load_stat( "min_damage", min_damage, min_damage_default );
+    load_stat( "damage_increment", damage_increment, damage_increment_default );
+    load_stat( "max_damage", max_damage, max_damage_default );
+    load_stat( "min_range", min_range, min_range_default );
+    load_stat( "range_increment", range_increment, range_increment_default );
+    load_stat( "max_range", max_range, max_range_default );
+    load_stat( "min_aoe", min_aoe, min_aoe_default );
+    load_stat( "aoe_increment", aoe_increment, aoe_increment_default );
+    load_stat( "max_aoe", max_aoe, max_aoe_default );
+    load_stat( "min_dot", min_dot, min_dot_default );
+    load_stat( "dot_increment", dot_increment, dot_increment_default );
+    load_stat( "max_dot", max_dot, max_dot_default );
+    load_stat( "min_duration", min_duration, min_duration_default );
+    load_stat( "duration_increment", duration_increment, duration_increment_default );
+    load_stat( "max_duration", max_duration, max_duration_default );
+    load_stat( "min_pierce", min_pierce, min_pierce_default );
+    load_stat( "pierce_increment", pierce_increment, pierce_increment_default );
+    load_stat( "max_pierce", max_pierce, max_pierce_default );
+    load_stat( "min_bash_scaling", min_bash_scaling, min_bash_scaling_default );
+    load_stat( "bash_scaling_increment", bash_scaling_increment, bash_scaling_increment_default );
+    load_stat( "max_bash_scaling", max_bash_scaling, max_bash_scaling_default );
+    load_stat( "base_energy_cost", base_energy_cost, base_energy_cost_default );
+    load_stat( "final_energy_cost", final_energy_cost, base_energy_cost );
+    load_stat( "energy_increment", energy_increment, energy_increment_default );
 
     optional( jo, was_loaded, "spell_class", spell_class, spell_class_default );
     if( jo.has_string( "energy_source" ) ) {
@@ -537,15 +584,12 @@ void spell_type::load( const JsonObject &jo, std::string_view src )
         debugmsg( "spell id:%s has a get_level_formula_id or exp_for_level_formula_id but not the other!  This breaks the calculations for xp/level!",
                   id.c_str() );
     }
-    optional( jo, was_loaded, "difficulty", difficulty, difficulty_default );
-    optional( jo, was_loaded, "multiple_projectiles", multiple_projectiles,
-              multiple_projectiles_default );
-    optional( jo, was_loaded, "max_level", max_level, max_level_default );
-    optional( jo, was_loaded, "base_casting_time", base_casting_time, base_casting_time_default );
-    optional( jo, was_loaded, "final_casting_time", final_casting_time, base_casting_time );
-    optional( jo, was_loaded, "max_damage", max_damage, max_damage_default );
-    optional( jo, was_loaded, "casting_time_increment", casting_time_increment,
-              casting_time_increment_default );
+    load_stat( "difficulty", difficulty, difficulty_default );
+    load_stat( "multiple_projectiles", multiple_projectiles, multiple_projectiles_default );
+    load_stat( "max_level", max_level, max_level_default );
+    load_stat( "base_casting_time", base_casting_time, base_casting_time_default );
+    load_stat( "final_casting_time", final_casting_time, base_casting_time );
+    load_stat( "casting_time_increment", casting_time_increment, casting_time_increment_default );
 
     for( const JsonMember member : jo.get_object( "learn_spells" ) ) {
         learn_spells.insert( std::pair<std::string, int>( member.name(), member.get_int() ) );
