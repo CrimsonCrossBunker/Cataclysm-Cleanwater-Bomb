@@ -42,18 +42,18 @@ local near = services.overmap.matches_location_near
 local at = services.overmap.matches_location
 
 local function practice_in_forest(character, location, omt)
-    if not on_sky_island(omt) and not flag(character, "arvore_is_in_wilderness") then return false end
+    if not flag(character, "arvore_is_in_wilderness") then return false end
     local outside = location.outside and omt.z >= 0
     return (outside and near(omt, "forest", 2) and not at(omt, "field"))
         or (outside and near(omt, "forest_thick", 2) and not at(omt, "field"))
-        or on_sky_island(omt) or flag(character, "arvore_is_in_forest")
+        or flag(character, "arvore_is_in_forest")
         or terrain(location.position) == "t_barkfloor"
 end
 
 local near_settlement = require("paraclesian_settlements")
 
 local function practice_near_civilization(_, location, omt)
-    return near_settlement(omt) or on_sky_island(omt) or near(omt, "FACTION_CAMP_ANY", 2)
+    return near_settlement(omt) or near(omt, "FACTION_CAMP_ANY", 2)
         or services.overmap.is_in_city(location.position)
 end
 
@@ -69,7 +69,7 @@ local function practice_in_earth(_, location, omt)
         return true
     end
     return at(omt, "ierde_genius_loci_NW") or at(omt, "ierde_genius_loci_NE")
-        or at(omt, "ierde_genius_loci_SW") or at(omt, "ierde_genius_loci_SE") or on_sky_island(omt)
+        or at(omt, "ierde_genius_loci_SW") or at(omt, "ierde_genius_loci_SE")
 end
 
 local lit_items = { "torch_lit", "candle_lit", "oil_lamp_on", "oil_lamp_clay_on", "cigar_lit", "cig_lit" }
@@ -81,12 +81,12 @@ end
 -- The native Fahrenheit conversion promotes single-precision constants to double.
 local warm_air_kelvin = (80 + native_float(459.67)) / native_float(1.8)
 
-local function practice_in_heat(character, _, omt)
+local function practice_in_heat(character)
     for _, item in ipairs(lit_items) do
         if checked(services.inventory.has_type(character, id("item", item))) then return true end
     end
     return flag(character, "salamander_near_fire")
-        or services.weather.current().precise.temperature.value >= warm_air_kelvin or on_sky_island(omt)
+        or services.weather.current().precise.temperature.value >= warm_air_kelvin
 end
 
 local wet_weather = { thunder = true, lightning = true, rain = true, rainstorm = true, drizzle = true }
@@ -98,7 +98,7 @@ local function practice_in_wind(_, location, omt)
         return true
     end
     return at(omt, "sylph_genius_loci_NW") or at(omt, "sylph_genius_loci_NE")
-        or at(omt, "sylph_genius_loci_SW") or at(omt, "sylph_genius_loci_SE") or on_sky_island(omt)
+        or at(omt, "sylph_genius_loci_SW") or at(omt, "sylph_genius_loci_SE")
 end
 
 local water = {
@@ -109,9 +109,9 @@ local water = {
     t_water_sh_murky_underground = true,
 }
 
-local function practice_in_water(character, location, omt)
-    return flag(character, "undine_is_connected_to_waters") or location.underwater
-        or water[terrain(location.position)] or on_sky_island(omt)
+local function practice_in_water(character, location)
+    return flag(character, "undine_is_connected_to_waters") or checked(services.characters.is_underwater(character))
+        or water[terrain(location.position)]
 end
 
 local environments = {
@@ -119,9 +119,10 @@ local environments = {
     salamander = practice_in_heat, sylph = practice_in_wind, undine = practice_in_water,
 }
 
-local function can_practice_in_environment(character, family)
+local function can_practice_in_environment(character, family, island_training)
     local location = checked(services.creatures.snapshot(character))
-    return environments[family](character, location, location.position:project_to("omt"))
+    local omt = location.position:project_to("omt")
+    return (island_training and on_sky_island(omt)) or environments[family](character, location, omt)
 end
 
 local function practice(character, profile)
@@ -191,7 +192,7 @@ local function register_timer(profile)
         local can_train = has_element
             or (profile.family == "arvore" and has_trait(character, "BLOODTHORNE_DRUID_SYMBIOTIC_PLANT"))
         local applies = can_train and has_ability(character, profile.abilities)
-            and can_practice_in_environment(character, profile.family)
+            and can_practice_in_environment(character, profile.family, true)
         if applies then practice(character, profile) end
         if applies or has_element then
             schedule(character)
@@ -245,3 +246,4 @@ register_draught("salamander", "mutagen_flamekin",
     function() return ccb.services.translate("You drink the Salamander destiny draught.") end)
 
 require("paraclesian_fae_bans")
+require("paraclesian_passive_traits")(profiles, can_practice_in_environment)

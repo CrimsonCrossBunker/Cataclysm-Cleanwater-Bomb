@@ -244,7 +244,19 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 483> migrated_character_tasks = {{
+const std::array<character_task_migration, 489> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_PARACLESIAN_ARVORE_GAIN_TRAIT_FROM_PASSIVE_POWER_CHECKER" ),
+          "arvore_passive_mutation", "arvore_passive_mutation" },
+        { effect_on_condition_id( "EOC_PARACLESIAN_HOMULLUS_GAIN_TRAIT_FROM_PASSIVE_POWER_CHECKER" ),
+          "homullus_passive_mutation", "homullus_passive_mutation" },
+        { effect_on_condition_id( "EOC_PARACLESIAN_IERDE_GAIN_TRAIT_FROM_PASSIVE_POWER_CHECKER" ),
+          "ierde_passive_mutation", "ierde_passive_mutation" },
+        { effect_on_condition_id( "EOC_PARACLESIAN_SALAMANDER_GAIN_TRAIT_FROM_PASSIVE_POWER_CHECKER" ),
+          "salamander_passive_mutation", "salamander_passive_mutation" },
+        { effect_on_condition_id( "EOC_PARACLESIAN_SYLPH_GAIN_TRAIT_FROM_PASSIVE_POWER_CHECKER" ),
+          "sylph_passive_mutation", "sylph_passive_mutation" },
+        { effect_on_condition_id( "EOC_PARACLESIAN_UNDINE_GAIN_TRAIT_FROM_PASSIVE_POWER_CHECKER" ),
+          "undine_passive_mutation", "undine_passive_mutation" },
         { effect_on_condition_id( "EOC_PARACLESIAN_BROKE_FAE_BAN_PAIN" ),
           "paraclesian_ban_pain", nullptr },
         { effect_on_condition_id( "EOC_SYLPH_FAE_BAN_TOO_LONG_UNDERGROUND_APPLY_PENALTY" ),
