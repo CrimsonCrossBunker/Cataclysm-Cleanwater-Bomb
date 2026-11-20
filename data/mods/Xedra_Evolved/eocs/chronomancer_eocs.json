@@ -11,7 +11,7 @@
         {
           "or": [
             {
-              "compare_string": [ { "context_val": "victim_type" }, "mon_tindalos", "mon_zombie_monochrome_3", "mon_lieutenant_shadow" ]
+              "compare_string": [ { "context_val": "victim_type" }, "mon_tindalos", "mon_zombie_monochrome_3" ]
             }
           ]
         },
