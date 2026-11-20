@@ -50,6 +50,7 @@ extern "C" {
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "achievement.h"
+#include "ammo.h"
 #include "ascii_art.h"
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
@@ -68,6 +69,7 @@ extern "C" {
 #include "json_loader.h"
 #include "magic.h"
 #include "martialarts.h"
+#include "map_extras.h"
 #include "mapdata.h"
 #include "mapgen.h"
 #include "mod_manager.h"
@@ -84,12 +86,14 @@ extern "C" {
 #include "profession.h"
 #include "proficiency.h"
 #include "recipe_dictionary.h"
-#include "scenario.h"
 #include "regional_climate.h"
+#include "regional_settings.h"
+#include "scenario.h"
 #include "start_location.h"
 #include "trap.h"
 #include "veh_type.h"
 #include "vehicle_group.h"
+#include "vehicle_part_location.h"
 #include "weakpoint.h"
 #include "widget.h"
 #include "worldfactory.h"
@@ -4641,6 +4645,66 @@ void write_static_external_option( JsonOut &json, const sol::table &options )
     }
 }
 
+void write_static_ammunition_type( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    json.member( "default", options.get<std::string>( "default_item" ) );
+}
+
+void write_static_vehicle_part_location( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "desc", options.raw_get<sol::object>( "description" ), false );
+    write_item_fields<int>( json, options, { { "z_order", "z_order" }, { "list_order", "list_order" } } );
+}
+
+void write_static_map_extra( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "color", "color" }, { "symbol", "sym" }, { "visibility", "autonote_visibility" }
+    } );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    if( const auto generator = options.get<sol::optional<sol::table>>( "generator" ) ) {
+        json.member( "generator" );
+        json.start_object();
+        json.member( "generator_method", generator->get<std::string>( "method" ) );
+        json.member( "generator_id", generator->get<std::string>( "id" ) );
+        json.end_object();
+    }
+    write_mapgen_range( json, "min_max_zlevel", options.raw_get<sol::object>( "z_levels" ) );
+    write_item_ids( json, options, { { "flags", "flags" } } );
+    if( options.raw_get<sol::object>( "add_flags" ).get_type() != sol::type::nil ) {
+        json.member( "extend" );
+        json.start_object();
+        write_item_ids( json, options, { { "add_flags", "flags" } } );
+        json.end_object();
+    }
+}
+
+void write_static_map_extra_collection( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
+    write_placement_member<int>( json, options, "chance", "chance" );
+    const auto write_entry = []( JsonOut & out, const sol::table & entry ) {
+        out.start_array();
+        out.write( entry.get<std::string>( "extra" ) );
+        out.write( entry.get<int>( "weight" ) );
+        out.end_array();
+    };
+    write_static_catalog_array( json, options, "extras", "extras", write_entry );
+    if( options.raw_get<sol::object>( "add_extras" ).get_type() != sol::type::nil ) {
+        json.member( "extend" );
+        json.start_object();
+        write_static_catalog_array( json, options, "add_extras", "extras", write_entry );
+        json.end_object();
+    }
+}
+
 void write_static_trait_migration( JsonOut &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
@@ -6889,6 +6953,17 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_mapgen", load_static_mapgen );
     content.set_function( "define_external_option", static_catalog_definition(
                               resolved.id, "EXTERNAL_OPTION", write_static_external_option, load_external_option ) );
+    content.set_function( "define_ammunition_type", static_catalog_definition(
+                              resolved.id, "ammunition_type", write_static_ammunition_type,
+                              ammunition_type::load_ammunition_type ) );
+    content.set_function( "define_vehicle_part_location", static_catalog_definition(
+                              resolved.id, "vehicle_part_location", write_static_vehicle_part_location,
+                              vpart_location::load_vehicle_part_locations ) );
+    content.set_function( "define_map_extra", static_catalog_definition(
+                              resolved.id, "map_extra", write_static_map_extra, MapExtras::load ) );
+    content.set_function( "define_map_extra_collection", static_catalog_definition(
+                              resolved.id, "map_extra_collection", write_static_map_extra_collection,
+                              map_extra_collection::load_map_extra_collection ) );
     content.set_function( "define_trait_migration", static_catalog_definition(
                               resolved.id, "TRAIT_MIGRATION", write_static_trait_migration, mutation_branch::load_trait_migration ) );
     content.set_function( "define_camp_migration", static_catalog_definition(

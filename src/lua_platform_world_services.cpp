@@ -486,7 +486,8 @@ sol::table spawn_monster_population(
     const script_tripoint_coord &requested_position, const sol::optional<sol::table> &requested )
 {
     constexpr std::string_view api_name = "services.spawns.population";
-    require_game_id( requested_type, "monster", api_name );
+    const bool from_group = requested_type.kind() == "monster_group";
+    require_game_id( requested_type, from_group ? "monster_group" : "monster", api_name );
     sol::state_view state( lua );
     sol::table placement = state.create_table();
     placement["min_radius"] = 1;
@@ -562,7 +563,9 @@ sol::table spawn_monster_population(
     tripoint_bub_ms target = require_loaded_position( *here, requested_position, api_name );
     // Native construction can roll special attack cooldowns before the population count.
     monster prototype;
-    prototype = monster( mtype_id( requested_type.value() ) );
+    if( !from_group ) {
+        prototype = monster( mtype_id( requested_type.value() ) );
+    }
     if( count_provider.valid() ) {
         const sol::protected_function_result result = count_provider();
         if( !result.valid() ) {
@@ -582,14 +585,22 @@ sol::table spawn_monster_population(
                                       minimum_lifespan;
         return duration == 0_turns ? std::nullopt : std::optional<time_duration>( duration );
     };
+    const auto placement_type = [&]() -> const mtype_id & {
+        if( from_group ) {
+            prototype = monster( MonsterGroupManager::GetRandomMonsterFromGroup(
+                                     mongroup_id( requested_type.value() ) ) );
+        }
+        return prototype.type->id;
+    };
     std::int64_t spawned = 0;
     std::int64_t visible = 0;
     for( int index = 0; index < hallucination_count; ++index ) {
+        const mtype_id &type = placement_type();
         tripoint_bub_ms point;
-        if( g->find_nearby_spawn_point( target, prototype.type->id, options.min_radius,
+        if( g->find_nearby_spawn_point( target, type, options.min_radius,
                                        options.max_radius, point, options.outdoor_only,
                                        options.indoor_only, options.open_air_allowed ) &&
-            g->spawn_hallucination( point, prototype.type->id, lifespan() ) ) {
+            g->spawn_hallucination( point, type, lifespan() ) ) {
             if( Creature *critter = get_creature_tracker().creature_at( point ) ) {
                 if( options.friendly ) {
                     critter->as_monster()->friendly = -1;
@@ -602,13 +613,14 @@ sol::table spawn_monster_population(
         }
     }
     for( int index = 0; index < real_count; ++index ) {
+        const mtype_id &type = placement_type();
         tripoint_bub_ms point;
-        if( !g->find_nearby_spawn_point( target, prototype.type->id, options.min_radius,
+        if( !g->find_nearby_spawn_point( target, type, options.min_radius,
                                         options.max_radius, point, options.outdoor_only,
                                        options.indoor_only, options.open_air_allowed ) ) {
             continue;
         }
-        if( monster *critter = g->place_critter_at( prototype.type->id, point ) ) {
+        if( monster *critter = g->place_critter_at( type, point ) ) {
             if( options.friendly ) {
                 critter->friendly = -1;
             }

@@ -7303,6 +7303,58 @@ function CcbPlatformContent.text_without_extraction(singular, plural, context) e
 ---@param options ExternalOptionDefinitionOptions
 function CcbPlatformContent.define_external_option(options) end
 
+---@class OrderedAmmunitionTypeOptions
+---@field id string
+---@field name? string|LocalizedText
+---@field default_item string
+
+---@param options OrderedAmmunitionTypeOptions
+function CcbPlatformContent.define_ammunition_type(options) end
+
+---@class OrderedVehiclePartLocationOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description? string|LocalizedText
+---@field z_order? integer
+---@field list_order? integer
+
+---@param options OrderedVehiclePartLocationOptions
+function CcbPlatformContent.define_vehicle_part_location(options) end
+
+---@class OrderedMapExtraGenerator
+---@field method "null"|"mapgen"|"update_mapgen"|"map_extra_function"
+---@field id string
+
+---@class OrderedMapExtraOptions
+---@field id string
+---@field copy_from? string
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field generator? OrderedMapExtraGenerator
+---@field symbol? string
+---@field color? string
+---@field visibility? string
+---@field z_levels? [integer, integer]
+---@field flags? string[]
+---@field add_flags? string[]
+
+---@param options OrderedMapExtraOptions
+function CcbPlatformContent.define_map_extra(options) end
+
+---@class WeightedMapExtra
+---@field extra string
+---@field weight integer
+
+---@class OrderedMapExtraCollectionOptions
+---@field id string
+---@field copy_from? string
+---@field chance? integer
+---@field extras? WeightedMapExtra[]
+---@field add_extras? WeightedMapExtra[]
+
+---@param options OrderedMapExtraCollectionOptions
+function CcbPlatformContent.define_map_extra_collection(options) end
+
 ---@class TraitMigrationOptions
 ---@field id string Old trait ID in a save.
 ---@field trait? string Replacement trait.
@@ -12043,9 +12095,14 @@ function CcbPlatformInteractionApi.confirm(message) end
 ---@return PlatformInteractionTextInputResult result
 function CcbPlatformInteractionApi.input_text(title, options) end
 
+---@class PlatformInteractionNumberInputResult
+---@field accepted boolean
+---@field cancelled boolean
+---@field value integer Entered number when accepted, or the supplied default when cancelled.
+
 ---@param description string
 ---@param default_value integer
----@return integer|nil value
+---@return PlatformInteractionNumberInputResult result
 function CcbPlatformInteractionApi.input_number(description, default_value) end
 
 ---In headless engine tests, required menus select the first enabled entry and optional menus cancel.
@@ -18148,7 +18205,7 @@ function CcbSpawnsApi.monster(monster_type, position, radius, upgrade) end
 
 ---Place a population through native randomized nearby-position searches. The native Monster prototype is prepared before the attempts; no additional upgrade pass runs.
 ---Counts/visibility follow the native loaded creature tracker, including hallucination tracking behavior. Blocked attempts are not errors and do not draw a lifespan.
----@param monster_type GameId GameId<monster>.
+---@param monster_type GameId GameId<monster> for one prototype, or GameId<monster_group> to draw and prepare a new member before each placement attempt.
 ---@param position TripointCoord Loaded absolute map-square center.
 ---@param options? CcbMonsterPopulationOptions
 ---@return CcbResult result value contains native tracked spawned and visible counts.
