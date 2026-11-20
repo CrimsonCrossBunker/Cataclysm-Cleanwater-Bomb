@@ -1,6 +1,7 @@
 [
   {
     "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
     "result": "regional_nanaimo_bar",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_SNACK",
@@ -25,6 +26,7 @@
   },
   {
     "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
     "result": "regional_tourtiere",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_MEAT",
@@ -48,6 +50,7 @@
   },
   {
     "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
     "result": "regional_blueberry_grunt",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_SNACK",
@@ -70,6 +73,7 @@
   },
   {
     "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
     "result": "regional_cochinita_pibil",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_MEAT",
@@ -92,6 +96,7 @@
   },
   {
     "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
     "result": "regional_birria",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_MEAT",
@@ -115,6 +120,7 @@
   },
   {
     "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
     "result": "regional_sonoran_machaca",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_MEAT",
@@ -129,6 +135,7 @@
   },
   {
     "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
     "result": "regional_chicken_mole_poblano",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_MEAT",
@@ -153,6 +160,7 @@
   },
   {
     "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
     "result": "regional_green_chile_stew",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_MEAT",
@@ -175,6 +183,7 @@
   },
   {
     "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
     "result": "regional_upper_peninsula_pasty",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_MEAT",
@@ -198,6 +207,7 @@
   },
   {
     "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
     "result": "regional_louisiana_gumbo",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_MEAT",
