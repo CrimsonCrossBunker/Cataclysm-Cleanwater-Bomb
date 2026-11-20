@@ -464,7 +464,7 @@ struct damage_info_order_section_definition_data {
 struct damage_info_order_definition_data {
     std::string id;
     std::string display = "detailed";
-    std::string verb;
+    detail::authored_text verb;
     std::vector<damage_info_order_section_definition_data> sections;
     bool registered = false;
 };
@@ -2996,7 +2996,7 @@ struct shopkeeper_entry_definition_data {
     std::string item;
     std::string category;
     std::string item_group;
-    std::string message;
+    detail::authored_text message;
 };
 
 struct shopkeeper_blacklist_definition_data {
@@ -3164,10 +3164,11 @@ struct shopkeeper_definition_handle {
 
     shopkeeper_definition_handle &entry(
         const std::string &item, const std::string &category,
-        const std::string &item_group, const std::string &message ) {
+        const std::string &item_group, const sol::object &message ) {
         require_building_handle( token, *definition, "shopkeeper entry" );
         definition->entries.push_back( shopkeeper_entry_definition_data{
-            item, category, item_group, message
+            item, category, item_group,
+            detail::read_singular_text( message, {}, "shopkeeper entry message" )
         } );
         return *this;
     }
@@ -4278,7 +4279,8 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         auto definition = std::make_shared<damage_info_order_definition_data>();
         definition->id = options.get_or( "id", std::string() );
         definition->display = options.get_or( "display", std::string( "detailed" ) );
-        definition->verb = options.get_or( "verb", std::string() );
+        definition->verb = detail::read_singular_text( options["verb"], {},
+                           "DamageInfoOrder.verb" );
         return damage_info_order_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -8214,7 +8216,7 @@ bool content_transaction::apply( std::string &error )
             damage_info_order native;
             native.id = id;
             native.dmg_type = damage_type_id( source.id );
-            native.verb = source.verb.empty() ? translation() : no_translation( source.verb );
+            native.verb = source.verb.empty() ? translation() : source.verb.native();
             native.info_display = source.display == "none" ?
                                   damage_info_order::info_disp::NONE :
                                   source.display == "basic" ?
@@ -9560,7 +9562,7 @@ bool content_transaction::apply( std::string &error )
                         native_entry.item_group = item_group_id( entry_data.item_group );
                     }
                     if( !entry_data.message.empty() ) {
-                        native_entry.message = no_translation( entry_data.message );
+                        native_entry.message = entry_data.message.native();
                     }
                     native.entries.push_back( native_entry );
                 }
@@ -9587,7 +9589,7 @@ bool content_transaction::apply( std::string &error )
                         native_entry.item_group = item_group_id( entry_data.item_group );
                     }
                     if( !entry_data.message.empty() ) {
-                        native_entry.message = no_translation( entry_data.message );
+                        native_entry.message = entry_data.message.native();
                     }
                     native.entries.push_back( native_entry );
                 }
@@ -9610,7 +9612,7 @@ bool content_transaction::apply( std::string &error )
                         native_entry.item_group = item_group_id( entry_data.item_group );
                     }
                     if( !entry_data.message.empty() ) {
-                        native_entry.message = no_translation( entry_data.message );
+                        native_entry.message = entry_data.message.native();
                     }
                     native.rates.push_back( native_entry );
                 }

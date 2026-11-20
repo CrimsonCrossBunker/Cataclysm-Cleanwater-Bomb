@@ -3020,7 +3020,7 @@ function MoodFaceDefinition:value(score, face) end
 ---@class DamageInfoOrderDefinitionOptions
 ---@field id string DamageType id whose presentation this definition controls.
 ---@field display? 'none'|'basic'|'detailed' Overall item-info detail level.
----@field verb? string Player-facing damage verb; defaults to the damage-type name.
+---@field verb? string|LocalizedText Player-facing damage verb; defaults to the damage-type name.
 
 ---@class DamageInfoOrderDefinition
 ---@field id string
@@ -4533,7 +4533,7 @@ local ShopkeeperDefinition = {}
 ---@param item string Item id matched by this entry.
 ---@param category string Item-category id matched by this entry.
 ---@param item_group string Item-group id matched by this entry.
----@param message string Message shown when the entry matches.
+---@param message string|LocalizedText Message shown when the entry matches.
 ---@return ShopkeeperDefinition self
 function ShopkeeperDefinition:entry(item, category, item_group, message) end
 

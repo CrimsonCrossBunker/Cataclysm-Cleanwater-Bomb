@@ -3816,6 +3816,11 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
                                 definition.id, "region settings river" );
         }
 
+        std::set<std::string> staged_forest_biome_mapgen_ids;
+        for( const forest_biome_mapgen_registration &entry : pimpl_->forest_biome_mapgens ) {
+            staged_forest_biome_mapgen_ids.insert( entry.definition->id );
+        }
+
         std::set<std::string> region_settings_forest_mapgen_ids;
         for( const region_settings_forest_mapgen_registration &entry :
              pimpl_->region_settings_forest_mapgens ) {
@@ -3836,7 +3841,8 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
                     throw std::runtime_error( "region settings forest mapgen '" + definition.id +
                                               "' contains duplicate biome id: " + biome_id );
                 }
-                if( check_engine_state && !forest_biome_mapgen_id( biome_id ).is_valid() ) {
+                if( check_engine_state && staged_forest_biome_mapgen_ids.count( biome_id ) == 0 &&
+                    !forest_biome_mapgen_id( biome_id ).is_valid() ) {
                     throw std::runtime_error( "region settings forest mapgen '" + definition.id +
                                               "' references unknown forest biome mapgen: " + biome_id );
                 }
