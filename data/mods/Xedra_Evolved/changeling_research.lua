@@ -264,19 +264,32 @@ end
 require("changeling_milestones")
 require("changeling_dreams")
 
-local function has_dreamdross(character)
-    local amount = math.modf(number(character, trait_cost))
+local function character_target(handle)
+    return handle and (handle.subtype == "avatar" or handle.subtype == "npc")
+end
+
+local function tell(character, text, severity)
+    if character.subtype == "avatar" then services.messages.add(text, severity) end
+end
+
+local function assign_activity(character, activity, duration)
+    local assigned = services.activities.assign_timed(character, id("activity", activity), duration)
+    if not assigned.ok and assigned.error.code ~= "assignment_rejected" then checked(assigned) end
+end
+
+local function has_dreamdross(character, amount)
     return checked(services.inventory.has_items(character, id("item", "scrap_dreamdross"), amount, 0))
 end
 
 ccb.runtime.handler("has_changeling_research_dreamdross", function(context)
-    return context.speaker and context.speaker.subtype ~= "monster" and has_dreamdross(context.speaker) or false
+    return character_target(context.speaker)
+        and has_dreamdross(context.speaker, math.modf(number(context.speaker, trait_cost))) or false
 end)
 
 ccb.runtime.handler("begin_changeling_heritage_research", function(impact)
     local character = impact.target_creature
-    if not character or character.subtype == "monster" then return end
-    local enough = has_dreamdross(character)
+    if not character_target(character) then return end
+    local enough = has_dreamdross(character, math.modf(number(character, trait_cost)))
     local vampire = checked(services.mutations.has_id_text(character, "VAMPIRE"))
     if vampire or not enough then
         if character.subtype == "avatar" then
@@ -295,7 +308,131 @@ ccb.runtime.handler("begin_changeling_heritage_research", function(impact)
             "ALL", true))
     end
     local duration = services.time.duration_from_turns(10800 + math.min(count * 1800, 28800))
-    local result = services.activities.assign_timed(character, id("activity", "ACT_CHANGELING_RESEARCH_NEW_POWERS"),
-        duration)
-    if not result.ok and result.error.code ~= "assignment_rejected" then checked(result) end
+    assign_activity(character, "ACT_CHANGELING_RESEARCH_NEW_POWERS", duration)
 end)
+
+ccb.runtime.handler("has_changeling_glamour_dreamdross", function(context)
+    return character_target(context.speaker)
+        and has_dreamdross(context.speaker, math.modf(number(context.speaker, glamour_cost))) or false
+end)
+
+ccb.runtime.handler("changeling_glamour_energy", function(context)
+    local cost = 1000
+    if character_target(context.speaker) then
+        for _, season in ipairs(seasons) do
+            local school = id("mutation", "CHANGELING_SEASONAL_MAGIC_" .. season.name)
+            local count = checked(services.spells.count(context.speaker, school))
+            cost = cost + count * (season.name == "WINTER" and 25 or 1)
+        end
+    end
+    return cost
+end)
+
+local research_labels = {
+    SPRING = function() return services.translate("Magicks of Spring") end,
+    SUMMER = function() return services.translate("Magicks of Summer") end,
+    AUTUMN = function() return services.translate("Magicks of Autumn") end,
+    WINTER = function() return services.translate("Magicks of Winter") end,
+}
+
+local function research_season(character, season)
+    -- The original duration reads the world variable. Actual expenditure uses the character's cost.
+    local cost = checked(services.variables.get_global_number(glamour_cost)).value or 0
+    local turns = math.modf(10800 + cost * 20)
+    assign_activity(character, "ACT_CHANGELING_RESEARCH_SEASONAL_MAGIC_" .. season,
+        services.time.duration_from_turns(turns))
+end
+
+ccb.runtime.handler("begin_changeling_glamour_research", function(impact)
+    local character = impact.target_creature
+    if not character_target(character) then return end
+    local enough = has_dreamdross(character, math.modf(number(character, glamour_cost)))
+    if checked(services.mutations.has_id_text(character, "VAMPIRE")) then
+        tell(character, services.translate("You try to research new magicks but you can't think about anything but finding some warm, delicious blood to sate your thirst."), "bad")
+        return
+    end
+    if not enough then
+        local text = services.translate("You don't have enough dreamdross for your research into new magicks to be effective.  You need at least <u_val:changeling_seasonal_magic_dreamdross_research_cost> scraps of dreamdross.")
+        tell(character, checked(services.text.expand_for(text, character, impact.caster)), "bad")
+        return
+    end
+    tell(character, services.translate("You reach into the dreamdross and draw on the dreams of mortals for inspiration."), "good")
+    local noble = checked(services.mutations.has_id_text(character, "UNKNOWING_CHANGELING_NOBLE"))
+    local entries = {}
+    for index, season in ipairs(seasons) do
+        if checked(services.mutations.has_id_text(character, "CHANGELING_SEASONAL_MAGIC_" .. season.name)) then
+            if noble then
+                entries[#entries + 1] = { id = season.name, label = research_labels[season.name](), hotkey = tostring(index) }
+            else
+                research_season(character, season.name)
+            end
+        end
+    end
+    if noble and #entries > 0 then
+        local chosen = services.interaction.choose(entries, {
+            title = services.translate("Which branch of glamour will you research?"), allow_cancel = false,
+        })
+        if chosen.accepted then research_season(character, chosen.id) end
+    end
+end)
+
+local extraction_activity = "ACT_CHANGELING_DREAMDROSS_TO_DREAMSPARKS"
+local extraction_counter = "dreamdross_to_dreamsparks_value"
+local extraction_due = "process_changeling_spark_extraction"
+local extracting = id("effect", "effect_extracting_dreamsparks")
+local dreamdross = id("item", "scrap_dreamdross")
+local spark = id("item", "changeling_dreamspark")
+
+local function queue_extraction(character)
+    local turns = math.modf(services.random.native_float(300, 900))
+    ccb.tasks.after_character_turn(character, turns, extraction_due)
+end
+
+ccb.runtime.handler("begin_changeling_spark_extraction", function(impact)
+    local character = impact.target_creature
+    if not character_target(character) then return end
+    if not has_dreamdross(character, 1) then
+        tell(character, services.translate("You need dreamdross to extract dreamsparks!"), "bad")
+        return
+    end
+    local amount = services.interaction.input_number("How much dreamdross to extract dreamsparks from?", 1)
+    store(character, extraction_counter, amount.value)
+    local duration = services.time.duration(24, "hour")
+    local added = services.effects.add(character, extracting, duration)
+    if not added.ok and added.error.code ~= "rejected" then checked(added) end
+    assign_activity(character, extraction_activity, duration)
+    queue_extraction(character)
+end)
+
+local function extracting_sparks(character)
+    return checked(services.effects.has(character, extracting, id("body_part", "bp_null"), -1))
+end
+
+ccb.runtime.handler(extraction_due, function(task)
+    local character = task.character
+    if not extracting_sparks(character) then return end
+    if not has_dreamdross(character, 1) or number(character, extraction_counter) <= 0 then
+        checked(services.activities.cancel(character))
+        return
+    end
+    for capacity = 10, 50, 10 do
+        if checked(services.inventory.has_items(character, spark, capacity, 0))
+            and checked(services.mutations.has_id_text(character, "CHANGELING_DREAMSPARK_STORAGE_" .. capacity)) then
+            checked(services.activities.cancel(character))
+            tell(character, services.translate("Dreamsparks are evanescent things, and to hold more would be to have them fade away."), "mixed")
+            return
+        end
+    end
+    checked(services.inventory.consume_by_type(character, dreamdross, 1, 0))
+    checked(services.inventory.receive_item(character, spark, 1))
+    store(character, extraction_counter, number(character, extraction_counter) - 1)
+    queue_extraction(character)
+end)
+
+ccb.runtime.handler("stop_changeling_spark_extraction", function(event)
+    local character = event.actors.speaker or event.actors.character or services.characters.avatar()
+    if event.data.activity == extraction_activity and extracting_sparks(character) then
+        checked(services.effects.remove(character, extracting))
+    end
+end)
+ccb.runtime.on("game:character_finished_activity", "stop_changeling_spark_extraction")

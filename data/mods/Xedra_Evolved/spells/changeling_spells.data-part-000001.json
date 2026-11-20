@@ -1,51 +1,5 @@
 [
   {
-    "id": "changeling_research_new_seasonal_spells",
-    "type": "SPELL",
-    "name": "Develop New Glamours",
-    "description": "Using the power of human dreams, unlock the secrets of new seasonal magicks.  It requires <color_pink><u_val:changeling_seasonal_magic_dreamdross_research_cost></color> scraps of dreamdross and a large amount of time to perform this research.",
-    "message": "",
-    "flags": [ "NO_FAIL", "VERBAL", "SOMATIC" ],
-    "valid_targets": [ "self" ],
-    "caster_condition": {
-      "u_has_items": { "item": "scrap_dreamdross", "count": { "math": [ "u_changeling_seasonal_magic_dreamdross_research_cost" ] } }
-    },
-    "caster_condition_fail_message": "You do not have enough dreamdross.",
-    "spell_class": "CHANGELING_MAGIC",
-    "difficulty": 6,
-    "skill": "gramarye",
-    "max_level": 1,
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_CHANGELING_USE_DREAMDROSS_TO_RESEARCH_NEW_SPELLS",
-    "magic_type": "xe_fey_magick",
-    "shape": "blast",
-    "base_energy_cost": {
-      "math": [
-        "1000 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SPRING') + u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') + u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_AUTUMN') + u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_WINTER') * 25)"
-      ]
-    },
-    "base_casting_time": 50
-  },
-  {
-    "id": "changeling_gain_dreamsparks",
-    "type": "SPELL",
-    "name": "Extract Dreamsparks",
-    "description": "Pull the power of creativity and enchantment from dreamdross and condense it into dreamsparks, so you can use them to power fae magicks.",
-    "message": "",
-    "flags": [ "NO_FAIL", "VERBAL", "SOMATIC" ],
-    "valid_targets": [ "self" ],
-    "spell_class": "CHANGELING_MAGIC",
-    "difficulty": 9,
-    "skill": "gramarye",
-    "max_level": 1,
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_CHANGELING_TURN_DREAMDROSS_INTO_DREAMSPARKS",
-    "magic_type": "xe_fey_magick",
-    "shape": "blast",
-    "base_energy_cost": 0,
-    "base_casting_time": 90000
-  },
-  {
     "id": "changeling_gain_dreamdross_from_dreams",
     "type": "SPELL",
     "name": "Banquet of Dreams",
