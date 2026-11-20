@@ -695,12 +695,12 @@ struct climbing_aid_definition_data {
     std::int64_t max_height = 1;
     std::int64_t easy_climb_back_up = 0;
     bool allow_remaining_height = true;
-    std::string menu_text;
-    std::string unavailable_text;
+    detail::authored_text menu_text;
+    detail::authored_text unavailable_text;
     std::string hotkey;
-    std::string confirm_text;
-    std::string before_message;
-    std::string after_message;
+    detail::authored_text confirm_text;
+    detail::authored_text before_message;
+    detail::authored_text after_message;
     std::int64_t pain = 0;
     std::int64_t damage = 0;
     std::int64_t kilocalories = 0;
@@ -2266,14 +2266,17 @@ struct climbing_aid_definition_handle {
                                              "easy_climb_back_up", 0 );
         definition->allow_remaining_height = options.get_or(
                 "allow_remaining_height", true );
-        definition->menu_text = options.get_or( "menu_text", std::string() );
-        definition->unavailable_text = options.get_or(
-                                           "unavailable_text", std::string() );
+        definition->menu_text = detail::read_singular_text(
+                                    options["menu_text"], {}, "ClimbingAid.menu_text" );
+        definition->unavailable_text = detail::read_singular_text(
+                                           options["unavailable_text"], {}, "ClimbingAid.unavailable_text" );
         definition->hotkey = options.get_or( "hotkey", std::string() );
-        definition->confirm_text = options.get_or( "confirm_text", std::string() );
-        definition->before_message = options.get_or(
-                                         "before_message", std::string() );
-        definition->after_message = options.get_or( "after_message", std::string() );
+        definition->confirm_text = detail::read_singular_text(
+                                       options["confirm_text"], {}, "ClimbingAid.confirm_text" );
+        definition->before_message = detail::read_singular_text(
+                                         options["before_message"], {}, "ClimbingAid.before_message" );
+        definition->after_message = detail::read_singular_text(
+                                        options["after_message"], {}, "ClimbingAid.after_message" );
         return *this;
     }
 
@@ -8748,16 +8751,16 @@ bool content_transaction::apply( std::string &error )
             native.down.max_height = static_cast<int>( source.max_height );
             native.down.easy_climb_back_up = static_cast<int>( source.easy_climb_back_up );
             native.down.allow_remaining_height = source.allow_remaining_height;
-            native.down.menu_text = no_translation( source.menu_text );
+            native.down.menu_text = source.menu_text.native();
             native.down.menu_cant = source.unavailable_text.empty() ? translation() :
-                                    no_translation( source.unavailable_text );
+                                    source.unavailable_text.native();
             native.down.menu_hotkey = source.hotkey.empty() ? 0 :
                                       static_cast<unsigned char>( source.hotkey.front() );
-            native.down.confirm_text = no_translation( source.confirm_text );
+            native.down.confirm_text = source.confirm_text.native();
             native.down.msg_before = source.before_message.empty() ? translation() :
-                                     no_translation( source.before_message );
+                                     source.before_message.native();
             native.down.msg_after = source.after_message.empty() ? translation() :
-                                    no_translation( source.after_message );
+                                    source.after_message.native();
             native.down.cost.pain = static_cast<int>( source.pain );
             native.down.cost.damage = static_cast<int>( source.damage );
             native.down.cost.kcal = static_cast<int>( source.kilocalories );

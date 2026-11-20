@@ -3474,12 +3474,12 @@ function StartLocationDefinition:z_levels(minimum, maximum) end
 ---@field max_height? integer Maximum supported descent height; -1 disables descent.
 ---@field easy_climb_back_up? integer Non-negative height that remains easy to climb back.
 ---@field allow_remaining_height? boolean Whether the aid may cover only part of a taller fall.
----@field menu_text string Player-facing menu entry.
----@field unavailable_text? string Required when deploy() is used.
+---@field menu_text string|LocalizedText Player-facing menu entry.
+---@field unavailable_text? string|LocalizedText Required when deploy() is used.
 ---@field hotkey? string Zero or one byte; required when deploy() is used.
----@field confirm_text string Confirmation prompt.
----@field before_message? string Message shown before descent.
----@field after_message? string Message shown after descent.
+---@field confirm_text string|LocalizedText Confirmation prompt.
+---@field before_message? string|LocalizedText Message shown before descent.
+---@field after_message? string|LocalizedText Message shown after descent.
 
 ---@class ClimbingAidCostOptions
 ---@field pain? integer Non-negative pain cost.
