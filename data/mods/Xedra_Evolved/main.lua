@@ -255,6 +255,7 @@ require("consumable_effects")
 require("alchemy_consumables")
 require("goblin_fruit_consumables")
 require("changeling_tree")
+require("chronomancy")
 require("paraclesian_training")
 
 require("technique_predicates")
