@@ -1,0 +1,11 @@
+local ccb = require("ccb")
+
+ccb.content.define_scenario {
+    id = "scen_MA",
+    name = "Massachusetts",
+    points = 0,
+    description = "Somewhere in New England.",
+    locations = { "sloc_wilderness_MA", "sloc_road_MA", "sloc_house_MA" },
+    start_name = "Somewhere in New England",
+    flags = { "LONE_START" },
+}

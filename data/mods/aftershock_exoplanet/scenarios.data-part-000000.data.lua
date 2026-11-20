@@ -1,0 +1,53 @@
+local ccb = require("ccb")
+
+ccb.content.define_scenario {
+    id = "robot_dispatch",
+    name = "Robots",
+    points = 1,
+    description = "During the riots and chaos, you hid in a robot dispatch center hoping the robots would protect you, but they may prove more dangerous than the zombies.",
+    locations = { "sloc_robot_dispatch" },
+    flags = { "CITY_START" },
+    requirement = "afs_achievement_many_ruins",
+    hard_requirement = true,
+    start_name = "Robot Dispatch",
+}
+
+ccb.content.define_scenario {
+    id = "augustmoon",
+    name = "Scavenger's Frontier",
+    points = 1,
+    description = "The Cryosleeper's slow approach allows the display of Salus IV in all its forms: a fiery marble against interstellar darkness, a silver-white mirror, and finally, a world of glaciers split by the thin ruins of an equatorial metroplex.  Before long, Port Augustmoon's ancient hull comes to obstruct most the viewport, and the ship's computer announces that it is time to disembark.",
+    locations = { "sloc_augustmoon_docking" },
+    professions = {
+        "afs_salvor",
+        "afs_academic",
+        "afs_holo_fighter",
+        "afs_wraitheon_executive",
+        "rocket_jumper",
+        "robot_scavenger",
+    },
+    whitelist_hobbies = true,
+    hobbies = {
+        "bionic_interface",
+        "driving_license",
+        "mundane_survival",
+        "afs_speed_freak",
+        "afs_armament_license",
+        "afs_leadership",
+        "afs_earthling",
+        "afs_noetic_scion_inheritance",
+        "afs_physical_stat_genemod",
+        "afs_mental_stat_genemod",
+        "afs_health_genemod",
+        "afs_efficiency_genemod",
+        "afs_beauty_genemod",
+        "afs_origin_corporate",
+        "afs_origin_spacer",
+        "afs_origin_periphery",
+        "afs_origin_uica",
+        "afs_origin_rebel_exile",
+        "afs_origin_tribal_hobby",
+    },
+    flags = { "LONE_START" },
+    start_name = "Port Augustmoon",
+}

@@ -1,0 +1,12 @@
+local ccb = require("ccb")
+
+ccb.content.define_scenario {
+    id = "sweet_cataclysm",
+    name = "The Sweet Life",
+    points = 0,
+    description = "You open your eyes as if for the first time.  Looking at yourself, you can see your skin glisten in the light.  One word comes to your mind: \"sugar\".  You don't remember where you learned it, and in fact you don't seem to remember anything.  Despite the circumstances, you feel quite hopeful.  Everything feels new and you're going to make the best of it!",
+    locations = { "sloc_candy_shop" },
+    professions = { "sugar_kin" },
+    start_name = "Candy Shop",
+    flags = { "CITY_START", "LONE_START" },
+}

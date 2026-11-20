@@ -1,0 +1,65 @@
+local ccb = require("ccb")
+
+ccb.content.define_scenario {
+    id = "bordered",
+    name = "Challenge - Bordered",
+    points = -2,
+    description = "You have survived the initial wave of panic, and have achieved (relative) safety in one of the many government evac shelters.  While evacuating, you noticed a mysterious sky-high wall in the distance, seemingly cutting off travel in every direction around you.",
+    locations = { "sloc_shelter_safe" },
+    start_name = "Evac Shelter",
+    flags = { "CHALLENGE", "CITY_START", "BORDERED" },
+}
+
+ccb.content.define_scenario {
+    id = "ambushed",
+    name = "Ambush",
+    points = -3,
+    description = "It is the winter after zero hour.  As you were scavenging for food and a warm place to stay, you heard the sound of lots of movement nearby.",
+    locations = {
+        "sloc_field",
+        "sloc_forest",
+        "sloc_cabin",
+        "sloc_hermit_shack",
+        "sloc_farm_survivalist",
+        "sloc_campsite",
+        "sloc_lodge_ground",
+        "sloc_campground",
+    },
+    start_name = "Outside Town",
+    surround_groups = { { group = "GROUP_BLACK_ROAD", expected_points = 70.0 } },
+    flags = { "LONE_START" },
+    start_of_cataclysm = { hour = 0, day = 56, season = "spring", year = 1 },
+    start_of_game = { hour = 8, day = 1, season = "winter", year = 1 },
+    add_professions = true,
+    professions = { "sheltered_survivor", "sheltered_militia", "winter_scavenger", "winter_army" },
+    initial_visibility = 0,
+    requirement = "achievement_survive_91_days",
+}
+
+ccb.content.define_scenario {
+    id = "summer_advanced_start",
+    name = "The Next Summer",
+    points = 0,
+    description = "A little over a year has passed since the apocalypse started, and you're about to face your second summer in Hell.",
+    locations = {
+        "sloc_field",
+        "sloc_forest",
+        "sloc_cabin",
+        "sloc_lodge_ground",
+        "sloc_hermit_shack",
+        "sloc_farm_survivalist",
+        "sloc_campsite",
+        "sloc_campground",
+        "sloc_cabin_lake",
+        "sloc_lighthouse_ground",
+        "sloc_lighthouse_small_ground",
+    },
+    start_name = "Outside Town",
+    flags = { "LONE_START" },
+    start_of_cataclysm = { hour = 0, day = 56, season = "spring", year = 1 },
+    start_of_game = { hour = 8, day = 1, season = "summer", year = 2 },
+    add_professions = true,
+    professions = { "sheltered_survivor", "sheltered_militia", "winter_scavenger", "winter_army" },
+    initial_visibility = 50,
+    requirement = "achievement_survive_91_days",
+}

@@ -381,6 +381,26 @@ def _content_definition_tables(
     return matches
 
 
+def _scenario_translation_edits(source: str) -> list[tuple[int, int, str]]:
+    if "define_scenario" not in source:
+        return []
+    tokens = _lua_tokens(source)
+    tables = _dialogue_tables(tokens)
+    edits = []
+    contexts = {
+        "name": ("scenario_male", "scenario_female"),
+        "description": ("scen_desc_male", "scen_desc_female"),
+        "start_name": ("start_name",),
+    }
+    for table in _content_definition_tables(tokens, tables, "define_scenario"):
+        for field, field_contexts in contexts.items():
+            message = _literal_string_field(tokens, table, field)
+            if message is not None and message.value not in ('""', "''"):
+                calls = [f'ccb.content.text({message.value}, "{context}")' for context in field_contexts]
+                edits.append((message.start, message.end, " .. ".join(calls)))
+    return edits
+
+
 def _profession_translation_edits(source: str) -> list[tuple[int, int, str]]:
     """Keep the native profession title and description contexts."""
     if "define_profession" not in source:
@@ -469,7 +489,7 @@ def _rewrite_translation_markers(source: str) -> str | None:
     edits = (
         _dialogue_translation_edits(source) + _gendered_translation_edits(source) +
         _effect_memorial_edits(source) + _profession_translation_edits(source) +
-        _vehicle_part_translation_edits(source)
+        _scenario_translation_edits(source) + _vehicle_part_translation_edits(source)
     )
     if not edits:
         return None
