@@ -1,10 +1,34 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
-    id = "bio_chest_gun",
-    copy_from = "bionic_general",
-    name = ccb.content.plural_text("Ionic Overload Generator CBM", "Ionic Overload Generator CBMs"),
-    description = ccb.content.text("A powerful ion energy generator is implanted on your chest.  Fires a powerful, ever-expanding energy blast.  The resulting blast ignites oxygen creating fires as it moves and an explosion on impact.  Close range use is highly discouraged."),
-    price = "2 kUSD 200 USD",
-    bionic = { difficulty = 8 },
+    id = "granade_act",
+    category = "weapons",
+    name = ccb.content.plural_text("active Granade", "active Granades"),
+    description = ccb.content.text("Attached to this grenade is a name tag with the name Maya written on it.  Does not seem to work like a grenade, handle with care.  Better throw it!"),
+    mass = "180 g",
+    volume = "250 ml",
+    price = "0 cent",
+    materials = { "steel", "plastic" },
+    symbol = "*",
+    color = "green",
+    flags = { "TRADER_AVOID" },
+    melee_damage = { bash = 6 },
+    tool = {},
+    use_actions = {
+        {
+            kind = "message",
+            message = ccb.content.text("You've already pulled the pin, try throwing it instead."),
+            menu_text = ccb.content.text_without_extraction("Pull pin"),
+        },
+    },
+    tick_actions = {
+        {
+            kind = "sound",
+            message = ccb.content.text("Merged!"),
+            volume = 0,
+            sound_id = "speech",
+            sound_variant = "granade_act",
+        },
+    },
+    countdown_action = "GRANADE_ACT",
 }
