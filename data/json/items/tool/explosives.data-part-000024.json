@@ -1,0 +1,27 @@
+[
+  {
+    "id": "military_explosive_bomb",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "weapons",
+    "name": { "str": "military explosive bomb" },
+    "looks_like": "homemade_bomb",
+    "description": "A homemade explosive device, consisting of a large plastic jug filled with military explosives and scrap metal, equipped with a delayed fuse.  Use this item to pull the pin.  Once you do, it should explode after about 20 seconds.",
+    "weight": "8760 g",
+    "volume": "3900 ml",
+    "price": "200 USD",
+    "material": [ "steel", "plastic" ],
+    "symbol": "*",
+    "color": "red",
+    "explode_in_fire": true,
+    "explosion": { "power": 6970, "shrapnel": { "casing_mass": 3000, "fragment_mass": 0.5, "drop": "scrap", "recovery": 20 } },
+    "use_action": {
+      "need_wielding": true,
+      "target": "military_explosive_bomb_act",
+      "msg": "You pull the pin on the %s.",
+      "menu_text": "Pull pin",
+      "type": "transform"
+    },
+    "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB" ]
+  }
+]

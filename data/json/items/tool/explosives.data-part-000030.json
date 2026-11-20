@@ -1,0 +1,27 @@
+[
+  {
+    "id": "homemade_bomb",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "weapons",
+    "name": { "str": "homemade bomb" },
+    "description": "A homemade explosive device, consisting of a large plastic jug filled with stable explosives and scrap metal, equipped with a long fuse.  Use this item to light the fuse.  Once you do, it should explode after about 20 seconds.",
+    "weight": "6500 g",
+    "volume": "3900 ml",
+    "price": "100 USD",
+    "material": [ "steel", "plastic" ],
+    "symbol": "*",
+    "color": "red",
+    "explode_in_fire": true,
+    "explosion": { "power": 2320, "shrapnel": { "casing_mass": 3000, "fragment_mass": 0.5, "drop": "scrap", "recovery": 20 } },
+    "use_action": {
+      "need_wielding": true,
+      "target": "homemade_bomb_act",
+      "msg": "You light the fuse on the bomb.  Get rid of it quickly!",
+      "need_fire": 1,
+      "menu_text": "Light fuse",
+      "type": "transform"
+    },
+    "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB" ]
+  }
+]

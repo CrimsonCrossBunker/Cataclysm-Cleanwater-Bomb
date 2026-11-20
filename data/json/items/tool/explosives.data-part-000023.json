@@ -1,0 +1,32 @@
+[
+  {
+    "id": "military_explosive_pipebomb",
+    "copy-from": "grenade",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "military explosive pipebomb" },
+    "looks_like": "pipebomb",
+    "description": "A section of steel pipe filled with military explosives.  Use this item to pull the pin, giving you six seconds to get away from it before it detonates.",
+    "weight": "1140 g",
+    "//": "Only one third (410 g) of a whole pipe is being used",
+    "volume": "280 ml",
+    "longest_side": "229 mm",
+    "price": "30 USD",
+    "price_postapoc": "30 USD",
+    "to_hit": { "grip": "solid", "length": "hand", "surface": "any", "balance": "uneven" },
+    "material": [ "steel" ],
+    "symbol": "*",
+    "color": "light_gray",
+    "explode_in_fire": true,
+    "explosion": { "power": 920, "shrapnel": { "casing_mass": 410, "fragment_mass": 0.5 } },
+    "use_action": {
+      "need_wielding": true,
+      "target": "military_explosive_pipebomb_act",
+      "msg": "You pull the pin on the %s.",
+      "menu_text": "Pull pin",
+      "type": "transform"
+    },
+    "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "CYLINDER_GRENADE" ],
+    "melee_damage": { "bash": 4 }
+  }
+]

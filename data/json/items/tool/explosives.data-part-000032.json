@@ -1,0 +1,27 @@
+[
+  {
+    "id": "half_barrel_bomb",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "category": "weapons",
+    "name": { "str": "50 L barrel bomb" },
+    "description": "A metal keg filled with stable explosives.  Contains a volatile explosive core, so 100 seconds after the fuse has been lit the charge will detonate completely, delivering its entire destructive power to everything in sight.",
+    "weight": "61620 g",
+    "volume": "52500 ml",
+    "price": "1 kUSD",
+    "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
+    "material": [ "steel" ],
+    "symbol": "(",
+    "color": "red",
+    "explode_in_fire": true,
+    "explosion": { "power": 34400, "shrapnel": { "casing_mass": 12600, "fragment_mass": 600 } },
+    "use_action": {
+      "target": "half_barrel_bomb_act",
+      "msg": "You activate the fuse on the barrel bomb.  Clear the area!",
+      "menu_text": "Activate fuse",
+      "type": "transform"
+    },
+    "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "ALLOWS_REMOTE_USE" ],
+    "melee_damage": { "bash": 20 }
+  }
+]

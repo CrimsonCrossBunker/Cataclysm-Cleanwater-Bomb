@@ -1,30 +1,28 @@
 local ccb = require("ccb")
 
--- Based off of the M67 grenade
 ccb.content.define_item {
-    id = "grenade",
-    category = "weapons",
-    name = ccb.content.plural_text("grenade", "grenades"),
-    description = ccb.content.text("A military-grade fragmentation hand grenade.  Use this item to pull the pin and start the fuse.  You will then have five seconds before it explodes; throwing it would be a good idea."),
-    mass = "397 g",
-    volume = "540 ml",
-    length = "110 mm",
-    price = "15 USD",
-    survival_price = "10 USD",
-    accuracy = { grip = "none", length = "hand", surface = "any", balance = "uneven" },
-    materials = { "steel", "plastic" },
-    symbol = "*",
-    color = "green",
-    flags = { "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE" },
-    melee_damage = { bash = 2 },
+    id = "EMPbomb_act",
+    copy_from = "EMPbomb",
+    description = ccb.content.text("This EMP bomb is active and will shortly detonate, creating a large EMP field that damages robots and drains bionic energy, as well as a sizeable explosion.  You may not want to be holding it much longer."),
+    flags = { "DANGEROUS", "WATER_BREAK", "SPAWN_ACTIVE" },
     tool = {},
     use_actions = {
         {
-            kind = "transform",
-            need_wielding = true,
-            target = "grenade_act",
-            message = ccb.content.text("You pull the pin on the %s."),
-            menu_text = ccb.content.text("Pull pin"),
+            kind = "message",
+            message = ccb.content.text("You've already activated the %s.  Get rid of it and clear out!"),
+            menu_text = ccb.content.text_without_extraction("Activate"),
         },
     },
+    countdown_action = {
+        kind = "explosion",
+        draw_radius = 10,
+        draw_color = "light_blue",
+        emp_radius = 10,
+        blast = {
+            power = 600,
+            light_effect = "emp_blast",
+            shrapnel = { casing_mass = 3214, fragment_mass = 0.5 },
+        },
+    },
+    countdown_interval = "50 seconds",
 }

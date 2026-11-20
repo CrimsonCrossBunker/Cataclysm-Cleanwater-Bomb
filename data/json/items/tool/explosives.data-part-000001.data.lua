@@ -1,25 +1,17 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
-    id = "firecracker",
-    name = ccb.content.plural_text("firecracker", "firecrackers"),
-    description = ccb.content.text("A solitary firecracker with a short fuse.  Use this item to light the fuse.  Of course, you will need a lighter or some matches to do so.  Shortly after you light the fuse it will explode, so throw it quickly!"),
-    mass = "3 g",
-    volume = "25 ml",
-    price = "4 cent",
-    survival_price = "10 cent",
-    materials = { "paper" },
-    symbol = ";",
-    color = "red",
+    id = "c4armed",
+    copy_from = "c4",
+    description = ccb.content.text("A block of military-grade RDX composition explosive.  A label reads: \"Highly explosive, use with extreme caution!\" It comes with a small timer, which is currently ticking down."),
+    flags = { "DANGEROUS", "SPAWN_ACTIVE" },
     tool = {},
     use_actions = {
         {
-            kind = "transform",
-            target = "firecracker_act",
-            message = ccb.content.text("You light the firecracker."),
-            need_fire = 1,
-            need_wielding = true,
-            menu_text = ccb.content.text("Light up"),
+            kind = "message",
+            message = ccb.content.text("You've already activated the %s.  Get rid of it and clear out!"),
         },
     },
+    countdown_action = { kind = "explosion", blast = { power = 2000 } },
+    countdown_interval = "6 seconds",
 }

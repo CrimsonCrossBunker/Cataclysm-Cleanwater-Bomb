@@ -1,32 +1,30 @@
 local ccb = require("ccb")
 
--- The moves action cost should always be at least 100 (one full second) so that the molotov can properly know who's throwing it. See iuse::molotov_lit() for more details.
+-- Based on the M84 stun grenade
 ccb.content.define_item {
-    id = "molotov",
+    id = "flashbang",
     category = "weapons",
-    name = ccb.content.plural_text("Molotov cocktail", "Molotov cocktails"),
-    description = ccb.content.text("A bottle of flammable liquid with a rag inserted.  Use this item to light the rag.  You will, of course, need a lighter or matches in your inventory to do this.  After lighting it, throw it to cause fires."),
-    mass = "889 g",
-    volume = "1085 ml",
-    length = "29 cm",
-    price = "0 USD",
-    survival_price = "4 USD",
+    name = ccb.content.plural_text("flashbang", "flashbangs"),
+    description = ccb.content.text("A military police-style flashbang.  Use this item to pull the pin and start the fuse.  You will then have two seconds before it detonates with intense light and sound, blinding, deafening, and disorienting anyone nearby."),
+    mass = "425 g",
+    volume = "207 ml",
+    length = "141 mm",
+    price = "20 USD",
+    survival_price = "2 USD 50 cent",
     accuracy = { grip = "none", length = "hand", surface = "any", balance = "uneven" },
-    materials = { "glass", "cotton" },
+    materials = { "steel", "plastic" },
     symbol = "*",
-    color = "light_gray",
-    flags = { "NPC_ACTIVATE", "NO_REPAIR", "CYLINDER_GRENADE" },
-    melee_damage = { bash = 5 },
+    color = "dark_gray",
+    flags = { "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE", "CYLINDER_GRENADE" },
+    melee_damage = { bash = 1 },
     tool = {},
     use_actions = {
         {
             kind = "transform",
             need_wielding = true,
-            target = "molotov_lit",
-            message = ccb.content.text("You light the Molotov cocktail!"),
-            moves = 250,
-            need_fire = 1,
-            menu_text = ccb.content.text("Light rag"),
+            target = "flashbang_act",
+            message = ccb.content.text("You pull the pin on the %s."),
+            menu_text = ccb.content.text("Pull pin"),
         },
     },
 }
