@@ -47,8 +47,20 @@ struct fruit_climate_profile {
     static fruit_climate_profile load( const JsonObject &jo );
 };
 
+struct crop_water_status {
+    double soil_moisture_mm;
+    double soil_capacity_mm;
+    double irrigation_mm;
+    double daily_need_mm;
+    bool temperature_limited;
+};
+
+crop_water_status get_crop_water_status( const map &here, const tripoint_bub_ms &p,
+        const item &seed );
+
 time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, item &seed,
-                                   const furn_t &furniture, float growth_speed, float water_use );
+                                   const furn_t &furniture, float growth_speed, float water_use,
+                                   bool finish_interval = false );
 
 bool has_local_fruit_climate( const tripoint_abs_ms &pos );
 

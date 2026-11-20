@@ -1,17 +1,20 @@
+#include <player_identity.h>
 #include <algorithm>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "calendar.h"
 #include "coords_fwd.h"
-#include "messages.h"
 #include "message_routing.h"
+#include "messages.h"
 
 class Creature;
 class JsonObject;
 class JsonOut;
+
 namespace debugmode
 {
 enum debug_filter : int;
@@ -33,7 +36,7 @@ static std::vector<std::optional<player_id>> excluded_owners;
 
 std::vector<std::pair<std::string, std::string>> Messages::recent_messages( size_t count )
 {
-    count = std::min( count, messages.size() );
+    count = count == 0 ? messages.size() : std::min( count, messages.size() );
     return { messages.end() - static_cast<std::ptrdiff_t>( count ), messages.end() };
 }
 std::vector<std::pair<std::string, std::string>> Messages::recent_messages_with_formatting(

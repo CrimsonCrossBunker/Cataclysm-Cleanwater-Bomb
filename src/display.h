@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -205,7 +206,8 @@ point mission_arrow_offset( const avatar &you, int width, int height );
 // Fully colorized newline-separated overmap string of the given size, centered on character
 std::string colorized_overmap_text( const avatar &u, int width, int height );
 // Current overmap position (coordinates)
-std::string overmap_position_text( const tripoint_abs_omt &loc );
+std::string overmap_position_text( const tripoint_abs_omt &loc,
+                                   std::optional<double> actual_altitude = std::nullopt );
 
 std::string current_position_text( const tripoint_abs_omt &loc );
 

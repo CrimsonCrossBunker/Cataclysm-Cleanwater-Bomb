@@ -33,6 +33,7 @@ void level_cache::clear()
     vision_transparency_low_profile = false;
     outside_cache_dirty = true;
     floor_cache_dirty = false;
+    vehicle_overlay_dirty = true;
     seen_cache_dirty = false;
     lightmap_dirty = true;
     has_colored_lights = false;

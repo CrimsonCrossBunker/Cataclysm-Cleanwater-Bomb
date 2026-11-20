@@ -343,8 +343,11 @@ class draw_points_cache_t
                 std::vector<row_vec> rows;
         };
 
+        void set_first_z( int z ) {
+            first_z = z;
+        }
         level_rows &operator[]( const int zlevel ) {
-            return levels[zlevel + OVERMAP_DEPTH];
+            return levels[zlevel - first_z];
         }
         void soft_clear() {
             for( level_rows &lr : levels ) {
@@ -352,6 +355,7 @@ class draw_points_cache_t
             }
         }
     private:
+        int first_z = -OVERMAP_DEPTH;
         std::array<level_rows, OVERMAP_LAYERS> levels;
 };
 

@@ -1,7 +1,20 @@
 [
   {
     "type": "mapgen",
-    "om_terrain": [ "field", "isherwood_barry_rescue_field" ],
+    "om_terrain": [
+      "field",
+      "isherwood_barry_rescue_field",
+      "na_biome_canyon",
+      "na_biome_badlands",
+      "na_biome_tundra",
+      "na_biome_zacaton",
+      "na_biome_alpine",
+      "na_biome_mojave",
+      "na_biome_sonoran",
+      "na_biome_chihuahuan",
+      "na_biome_great_basin",
+      "na_biome_chaparral"
+    ],
     "object": {
       "fill_ter": "t_region_groundcover",
       "rows": [

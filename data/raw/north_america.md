@@ -28,8 +28,9 @@ Distances from Bedford are preserved. Scale away from Bedford varies by
 direction, and small shoreline details are limited by the source and the
 120 m simplification tolerance. River width is rendered as a narrow corridor
 around the source centerline. Cities seed the existing procedural city
-generator. Street layouts, individual buildings, and elevation are outside
-the geographic data.
+generator. Individual buildings are procedural. The
+[transport layers](north_america_ground_and_transport.md) and
+[elevation grid](north_america_elevation.md) use the same coordinates.
 
 To regenerate, download the following Natural Earth ZIPs to one directory:
 `ne_10m_land.zip`, `ne_10m_lakes.zip`,

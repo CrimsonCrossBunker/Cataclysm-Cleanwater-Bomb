@@ -33,7 +33,7 @@
     "copy-from": "road_abstract",
     "name": "avenue",
     "sym": "║",
-    "looks_like": "road_ns",
+    "looks_like": "atlas_highway_north_south",
     "flags": [ "NO_ROTATE", "ROAD", "SIDEWALK" ],
     "mapgen": [ { "object": { "fill_ter": "t_pavement" } } ]
   },
@@ -43,9 +43,26 @@
     "copy-from": "road_abstract",
     "name": "avenue",
     "sym": "═",
-    "looks_like": "road_ew",
+    "looks_like": "atlas_highway_east_west",
     "flags": [ "NO_ROTATE", "ROAD", "SIDEWALK" ],
     "mapgen": [ { "object": { "fill_ter": "t_pavement" } } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_highway_north_south",
+    "copy-from": "road_abstract",
+    "name": "highway",
+    "sym": "║",
+    "looks_like": "road",
+    "flags": [ "NO_ROTATE", "ROAD" ],
+    "mapgen": [ { "object": { "fill_ter": "t_grass" } } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_highway_east_west",
+    "copy-from": "atlas_highway_north_south",
+    "sym": "═",
+    "mapgen": [ { "object": { "fill_ter": "t_grass" } } ]
   },
   {
     "type": "overmap_terrain",
@@ -84,6 +101,18 @@
     "copy-from": "generic_bridge",
     "travel_cost_type": "road",
     "name": "bridge (overpass)"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_raised_bridge_deck",
+    "copy-from": "bridge_road",
+    "looks_like": "road",
+    "flags": [ "LINEAR", "BRIDGE", "ROAD", "SIDEWALK" ],
+    "mapgen_straight": [ { "object": { "fill_ter": "t_open_air" } } ],
+    "mapgen_curved": [ { "object": { "fill_ter": "t_open_air" } } ],
+    "mapgen_end": [ { "object": { "fill_ter": "t_open_air" } } ],
+    "mapgen_tee": [ { "object": { "fill_ter": "t_open_air" } } ],
+    "mapgen_four_way": [ { "object": { "fill_ter": "t_open_air" } } ]
   },
   {
     "type": "overmap_terrain",

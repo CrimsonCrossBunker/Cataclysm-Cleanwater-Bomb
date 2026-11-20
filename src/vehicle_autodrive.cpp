@@ -1,5 +1,6 @@
 #include "vehicle.h" // IWYU pragma: associated
 
+#include <character_id.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -846,7 +847,9 @@ bool vehicle::autodrive_controller::check_drivable( map &here, const tripoint_bu
     if( terrain_type.movecost <= 0 ) {
         // walls and other impassable terrain
         return false;
-    } else if( terrain_type.movecost == 2 || terrain_type.has_flag( ter_furn_flag::TFLAG_NOCOLLIDE ) ) {
+    } else if( terrain_type.movecost == 2 || terrain_type.has_flag( ter_furn_flag::TFLAG_NOCOLLIDE ) ||
+               ( terrain_type.has_flag( ter_furn_flag::TFLAG_RAIL ) &&
+                 !here.is_bashable_furn( pt ) ) ) {
         // terrain with neutral move cost or tagged with NOCOLLIDE will never cause
         // collisions
         return true;

@@ -2,16 +2,17 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <numeric>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include "climate_seasons.h"
 #include "flexbuffer_json.h"
 #include "math_defines.h"
+#include "north_america_elevation.h"
 #include "point.h"
 
 namespace regional_climate
@@ -82,25 +83,34 @@ coordinates offset_metres( coordinates origin, double east, double north )
                              radians_per_degree, 360.0 ) };
 }
 
-std::optional<normals> at( coordinates location )
+std::optional<normals> at( coordinates location, bool with_elevation )
 {
     if( stations.empty() || !std::isfinite( location.latitude ) ||
         !std::isfinite( location.longitude ) ||
         std::abs( location.latitude ) > 90.0 || std::abs( location.longitude ) > 180.0 ) {
         return std::nullopt;
     }
+    const auto station_with_reference = [with_elevation]( const station & source ) {
+        normals result = source.data;
+        if( with_elevation && !result.reference_elevation_m ) {
+            result.reference_elevation_m = north_america::dem_elevation( source.location );
+        }
+        return result;
+    };
     const cartesian position = on_sphere( location );
     // Blend the closest stations. Taper to zero at the fifth to avoid jumps as neighbours change.
-    std::array<std::pair<double, const station *>, 5> closest{};
+    using closest_stations = std::array<std::pair<double, const station *>, 5>;
+    closest_stations closest{};
     for( auto &entry : closest ) {
         entry.first = 4.0;
     }
     for( const auto &entry : stations ) {
         const double d = distance_squared( position, entry.second.position );
         if( d < 1e-16 ) {
-            return entry.second.data;
+            return station_with_reference( entry.second );
         }
-        const auto insert = std::find_if( closest.begin(), closest.end(), [d]( const auto & candidate ) {
+        closest_stations::iterator insert = std::find_if( closest.begin(),
+        closest.end(), [d]( const auto & candidate ) {
             return !candidate.second || d < candidate.first;
         } );
         if( insert != closest.end() ) {
@@ -111,24 +121,40 @@ std::optional<normals> at( coordinates location )
     const double cutoff = closest.back().first;
     normals result{};
     double total_weight = 0;
-    for( auto it = closest.begin(); it != closest.end() - 1 && it->second; ++it ) {
+    double elevation_weight = 0;
+    double weighted_elevation = 0;
+    for( closest_stations::iterator it = closest.begin(); it != closest.end() - 1 &&
+         it->second; ++it ) {
         const double relative_weight = ( cutoff - it->first ) / it->first;
         const double weight = relative_weight * relative_weight;
         total_weight += weight;
-        for( size_t i = 0; i < result.months.size(); ++i ) {
+        if( with_elevation ) {
+            auto reference = it->second->data.reference_elevation_m;
+            if( !reference ) {
+                reference = north_america::dem_elevation( it->second->location );
+            }
+            if( reference ) {
+                elevation_weight += weight;
+                weighted_elevation += *reference * weight;
+            }
+        }
+        for( std::size_t i = 0; i < result.months.size(); ++i ) {
             const monthly_normal &source = it->second->data.months[i];
             monthly_normal &dest = result.months[i];
             dest.low_c += source.low_c * weight;
             dest.high_c += source.high_c * weight;
             dest.precipitation_mm += source.precipitation_mm * weight;
             dest.wet_days += source.wet_days * weight;
-            for( size_t system = 0; system < systems.size(); ++system ) {
+            for( std::size_t system = 0; system < systems.size(); ++system ) {
                 dest.system_weights[system] += source.system_weights[system] * source.precipitation_mm * weight;
             }
         }
     }
     if( total_weight == 0 ) {
-        return closest.front().second->data;
+        return station_with_reference( *closest.front().second );
+    }
+    if( elevation_weight > 0 ) {
+        result.reference_elevation_m = weighted_elevation / elevation_weight;
     }
     for( monthly_normal &dest : result.months ) {
         if( dest.precipitation_mm > 0 ) {
@@ -160,7 +186,7 @@ double precipitation_rate( const monthly_normal &normal, double days_in_game_mon
         return 0;
     }
     double pick = roll( 1 );
-    size_t system = 0;
+    std::size_t system = 0;
     for( ; system + 1 < systems.size() && pick >= normal.system_weights[system]; ++system ) {
         pick -= normal.system_weights[system];
     }
@@ -173,7 +199,7 @@ double precipitation_rate( const monthly_normal &normal, double days_in_game_mon
            normal.precipitation_mm / wet_days / duration[system] : 0.0;
 }
 
-void load_station( const JsonObject &jo, const std::string & )
+void load_station( const JsonObject &jo, std::string_view )
 {
     const std::string id = jo.get_string( "id" );
     const coordinates location{ jo.get_float( "latitude" ), jo.get_float( "longitude" ) };
@@ -185,10 +211,17 @@ void load_station( const JsonObject &jo, const std::string & )
     jo.get_string( "source_station" );
     const JsonArray months = jo.get_array( "months" );
     station entry{ location, on_sphere( location ), {} };
+    if( jo.has_member( "elevation_m" ) ) {
+        const double height = jo.get_float( "elevation_m" );
+        if( !north_america::within_altitude_limits( height ) ) {
+            jo.throw_error_at( "elevation_m", "Climate station elevation is out of range" );
+        }
+        entry.data.reference_elevation_m = height;
+    }
     if( months.size() != entry.data.months.size() ) {
         jo.throw_error_at( "months", "Climate stations require twelve monthly normals, January first" );
     }
-    for( size_t i = 0; i < months.size(); ++i ) {
+    for( std::size_t i = 0; i < months.size(); ++i ) {
         const JsonArray row = months.get_array( i );
         monthly_normal &month = entry.data.months[i];
         if( row.size() != 5 ) {
@@ -199,7 +232,8 @@ void load_station( const JsonObject &jo, const std::string & )
         month.precipitation_mm = row.get_float( 2 );
         month.wet_days = row.get_float( 3 );
         const std::string system = row.get_string( 4 );
-        const auto found = std::find( systems.begin(), systems.end(), system );
+        const std::array<std::string_view, 4>::const_iterator found =
+            std::find( systems.begin(), systems.end(), system );
         if( found == systems.end() || !std::isfinite( month.low_c ) || !std::isfinite( month.high_c ) ||
             !std::isfinite( month.precipitation_mm ) || !std::isfinite( month.wet_days ) ||
             month.low_c > month.high_c || month.precipitation_mm < 0 ||
@@ -209,7 +243,7 @@ void load_station( const JsonObject &jo, const std::string & )
         }
         month.system_weights[found - systems.begin()] = 1.0;
     }
-    stations.insert_or_assign( id, std::move( entry ) );
+    stations.insert_or_assign( id, entry );
 }
 
 void reset()

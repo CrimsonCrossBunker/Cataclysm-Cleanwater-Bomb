@@ -152,6 +152,9 @@ weather_sum sum_conditions( const time_point &start,
                             const time_point &end,
                             const tripoint_abs_ms &location );
 
+std::optional<double> regional_precipitation_rate( const weather_type_id &type,
+        const w_point &sample );
+
 /**
  * @param it The container item which is to be filled.
  * @param pos The absolute position of the funnel (in the map square system, the one used

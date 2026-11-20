@@ -213,6 +213,9 @@ class stats_tracker : public event_subscriber
 
         void clear();
         using event_subscriber::notify;
+        bool needs_talker() const override {
+            return false;
+        }
         void notify( const cata::event & ) override;
 
         void serialize( JsonOut & ) const;

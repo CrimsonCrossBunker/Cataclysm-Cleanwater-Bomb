@@ -464,7 +464,7 @@ TEST_CASE( "NPC_sweep_needs_a_close_group_and_a_clear_sector", "[npc_attack][gun
     CHECK_FALSE( find_firearm_sweep( shooter, here, primary, 20, 750, 12 ) );
 }
 
-TEST_CASE( "NPC treats bleeding only with time to finish before the enemy reaches them",
+TEST_CASE( "NPC_treats_bleeding_only_with_time_to_finish_before_the_enemy_reaches_them",
            "[npc_attack][npc_combat_self_care]" )
 {
     const int enemy_distance = GENERATE( 1, 12 );
@@ -498,7 +498,7 @@ TEST_CASE( "NPC treats bleeding only with time to finish before the enemy reache
     CHECK( follower.get_moves() < 100 );
 }
 
-TEST_CASE( "NPC reloads the empty gun in hand when there is time in combat",
+TEST_CASE( "NPC_reloads_the_empty_gun_in_hand_when_there_is_time_in_combat",
            "[npc_attack][npc_combat_self_care]" )
 {
     const int enemy_distance = GENERATE( 1, 12 );

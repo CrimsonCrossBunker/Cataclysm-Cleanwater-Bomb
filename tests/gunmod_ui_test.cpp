@@ -375,4 +375,3 @@ TEST_CASE( "gunmod_menu_return_flag_round_trips_and_defaults_off", "[gunmod][act
     const auto restored_removal = gunmod_remove_activity_actor::deserialize( removal_data );
     CHECK( dynamic_cast<const gunmod_remove_activity_actor &>( *restored_removal ).reopen_menu );
 }
-

@@ -1558,6 +1558,24 @@ TEST_CASE( "npc_drink_from_water_source", "[npc][needs]" )
         guy.set_thirst( 0 );
         CHECK_FALSE( guy.drink_from_water_source( water_pos ) );
     }
+
+    SECTION( "finite water is discovered and consumed only once" ) {
+        here.ter_set( water_pos, ter_t_water_dispenser );
+        REQUIRE( here.liquid_from( water_pos ).is_null() );
+        REQUIRE_FALSE( here.i_at( water_pos ).empty() );
+        here.i_at( water_pos ).only_item().charges = 1;
+        sources = guy.find_nearby_water_sources();
+        REQUIRE( sources.size() == 1 );
+        CHECK( sources.front().pos == water_pos );
+
+        guy.set_thirst( 200 );
+        const units::volume water_before = guy.stomach.get_water();
+        REQUIRE( guy.drink_from_water_source( water_pos ) );
+        CHECK( guy.stomach.get_water() == water_before + 250_ml );
+        CHECK( here.i_at( water_pos ).empty() );
+        CHECK_FALSE( guy.drink_from_water_source( water_pos ) );
+        CHECK( guy.stomach.get_water() == water_before + 250_ml );
+    }
 }
 
 TEST_CASE( "npc_find_nearby_food", "[npc][needs]" )
@@ -2558,6 +2576,7 @@ TEST_CASE( "npc_harvest_scavenging", "[npc][needs]" )
         REQUIRE_FALSE( guy.find_nearby_harvestable().empty() );
         REQUIRE( guy.find_nearby_food().empty() );
 
+        guy.set_moves( 100 );
         guy.address_needs( 0 );
 
         REQUIRE( guy.activity );
@@ -2578,6 +2597,7 @@ TEST_CASE( "npc_harvest_scavenging", "[npc][needs]" )
         here.build_map_cache( 0 );
         const int dist_before = rl_dist( guy.pos_bub(), bush );
 
+        guy.set_moves( 100 );
         guy.address_needs( 0 );
 
         CHECK( rl_dist( guy.pos_bub(), bush ) < dist_before );
@@ -2605,6 +2625,7 @@ TEST_CASE( "npc_harvest_scavenging", "[npc][needs]" )
         here.build_map_cache( 0 );
         const size_t items_before = here.i_at( adj ).size();
 
+        guy.set_moves( 100 );
         guy.address_needs( 0 );
 
         CHECK( here.i_at( adj ).size() < items_before );
@@ -2620,6 +2641,7 @@ TEST_CASE( "npc_harvest_scavenging", "[npc][needs]" )
         here.build_map_cache( 0 );
         const int dist_to_food = rl_dist( guy.pos_bub(), food_at );
 
+        guy.set_moves( 100 );
         guy.address_needs( 0 );
 
         CHECK( rl_dist( guy.pos_bub(), food_at ) < dist_to_food );
@@ -2640,6 +2662,7 @@ TEST_CASE( "npc_harvest_scavenging", "[npc][needs]" )
         here.ter_set( west, ter_t_underbrush );
         here.build_map_cache( 0 );
 
+        guy.set_moves( 100 );
         guy.address_needs( 0 );
 
         CHECK_FALSE( guy.has_activity() );
@@ -3802,6 +3825,7 @@ TEST_CASE( "follow_player_commitment_lifecycle", "[npc][behavior]" )
 {
     clear_map_without_vision();
     clear_avatar();
+    set_time_to_day();
     map &here = get_map();
     get_player_character().setpos( here, tripoint_bub_ms( 65, 50, 0 ) );
 
@@ -4573,7 +4597,7 @@ TEST_CASE( "camp_resident_guard_transitions", "[npc][camp]" )
         CHECK( guy.omt_path.empty() );
     }
     SECTION( "return_to_camp_duties away from camp: sets goal" ) {
-        guy.setpos( here, tripoint_bub_ms( 50 + SEEX * 4, 50, 0 ) );
+        guy.setpos( project_to<coords::ms>( camp_pos + tripoint( 2, 0, 0 ) ) );
         REQUIRE( guy.pos_abs_omt() != camp_pos );
         talk_function::assign_guard( guy );
         talk_function::return_to_camp_duties( guy );
@@ -7357,4 +7381,30 @@ TEST_CASE( "npc_warmth_indoor_hold_timeout", "[npc][needs][warmth]" )
         }
         CHECK( hold_count > 0 );
     }
+}
+
+TEST_CASE( "game_reset_discards_cached_npcs_before_factions", "[npc][save_integrity]" )
+{
+    clear_map();
+    npc &survivor = spawn_npc( { 50, 50 }, "test_talker" );
+    REQUIRE( survivor.get_faction() != nullptr );
+    REQUIRE_FALSE( overmap_buffer.get_npcs_near_player( HALF_MAPSIZE ).empty() );
+    const tripoint_abs_omt position = survivor.pos_abs_omt();
+    const auto summary = overmap_buffer.get_omt_summary( position );
+    REQUIRE( summary != nullptr );
+    on_out_of_scope restore_test_state( [] {
+        g->faction_manager_ptr->create_if_needed();
+        get_avatar().setID( g->assign_npc_id(), true );
+        clear_avatar();
+        get_avatar().ensure_player_id();
+        g->bind_local_player_control();
+    } );
+
+    g->reset_game_state();
+
+    CHECK( g->all_npcs().items.empty() );
+    CHECK( overmap_buffer.get_npcs_near_player( HALF_MAPSIZE ).empty() );
+    CHECK( overmap_buffer.get_omt_summary( position ) == summary );
+    g->reload_npcs();
+    CHECK( g->all_npcs().items.empty() );
 }

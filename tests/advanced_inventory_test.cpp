@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <list>
@@ -643,6 +644,57 @@ TEST_CASE( "AIM_basic_move_items", "[items][advanced_inv]" )
                     }
                 }
             }
+        }
+    }
+}
+
+TEST_CASE( "advanced_inventory_precomputed_sort_keys_follow_live_items", "[items][advanced_inv]" )
+{
+    clear_avatar();
+    clear_map();
+    restore_on_out_of_scope<advanced_inv_save_state> restore( uistate.transfer_save );
+    on_out_of_scope reset_menu( []() {
+        uistate.open_menu = nullptr;
+        cancel_aim_processing();
+    } );
+    avatar &you = get_avatar();
+    for( const itype_id &id : { itype_knife_combat, itype_steel_chunk, itype_test_9mm_ammo } ) {
+        get_map().add_item_or_charges( you.pos_bub(), item( id ) );
+    }
+    advanced_inventory menu;
+    menu.init();
+    init_panes( menu, AIM_CENTER, AIM_INVENTORY );
+    advanced_inventory_pane &pane = menu.get_pane( menu.get_src() );
+    const advanced_inv_sortby mode = GENERATE( SORTBY_DAMAGE, SORTBY_AMMO, SORTBY_PRICE,
+                                            SORTBY_PRICEPERVOLUME, SORTBY_PRICEPERWEIGHT, SORTBY_SPOILAGE );
+    pane.sortby = mode;
+    menu.recalc_pane( menu.get_src() );
+    REQUIRE( pane.items.size() > 1 );
+    for( const advanced_inv_listitem &entry : pane.items ) {
+        const item &it = *entry.items.front();
+        switch( mode ) {
+            case SORTBY_DAMAGE:
+                CHECK( entry.sort_value == Approx( it.average_dps( you ) ) );
+                break;
+            case SORTBY_AMMO:
+                CHECK( entry.sort_ammo_name == it.ammo_sort_name() );
+                break;
+            case SORTBY_PRICE:
+                CHECK( entry.sort_value == it.price( true ) );
+                break;
+            case SORTBY_PRICEPERVOLUME:
+                CHECK( entry.sort_value == Approx( static_cast<double>( it.price( true ) ) /
+                                                  std::max( 1, it.volume().value() ) ) );
+                break;
+            case SORTBY_PRICEPERWEIGHT:
+                CHECK( entry.sort_value == Approx( static_cast<double>( it.price( true ) ) /
+                                                  std::max<std::int64_t>( 1, it.weight().value() ) ) );
+                break;
+            case SORTBY_SPOILAGE:
+                CHECK( entry.sort_value == it.spoilage_sort_order( entry.items.front().spoil_multiplier() ) );
+                break;
+            default:
+                break;
         }
     }
 }

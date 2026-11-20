@@ -316,6 +316,12 @@ void submap::rotate( int turns )
     }
     terrain_growth = rot_growth;
 
+    std::map<point_sm_ms, graded_surface> rotated_grades;
+    for( const auto &[p, grade] : surface_grades ) {
+        rotated_grades.emplace( rotate_point( p ), grade );
+    }
+    surface_grades.swap( rotated_grades );
+
     std::map<point_sm_ms, int> rot_liquids;
     for( const auto &elem : finite_liquids ) {
         rot_liquids.emplace( rotate_point( elem.first ), elem.second );
@@ -356,6 +362,12 @@ void submap::mirror( bool horizontally )
         }
         terrain_growth = mirror_growth;
 
+        std::map<point_sm_ms, graded_surface> mirrored_grades;
+        for( const auto &[p, grade] : surface_grades ) {
+            mirrored_grades.emplace( point( SEEX - 1 - p.x(), p.y() ), grade );
+        }
+        surface_grades.swap( mirrored_grades );
+
         std::map<point_sm_ms, int> mirror_liquids;
         for( const auto &elem : finite_liquids ) {
             mirror_liquids.emplace( point( -elem.first.x(), elem.first.y() ) + point( SEEX - 1, 0 ),
@@ -387,6 +399,12 @@ void submap::mirror( bool horizontally )
         }
         terrain_growth = mirror_growth;
 
+        std::map<point_sm_ms, graded_surface> mirrored_grades;
+        for( const auto &[p, grade] : surface_grades ) {
+            mirrored_grades.emplace( point( p.x(), SEEY - 1 - p.y() ), grade );
+        }
+        surface_grades.swap( mirrored_grades );
+
         std::map<point_sm_ms, int> mirror_liquids;
         for( const auto &elem : finite_liquids ) {
             mirror_liquids.emplace( point( elem.first.x(), -elem.first.y() ) + point( 0, SEEY - 1 ),
@@ -403,6 +421,7 @@ void submap::revert_submap( submap &sr )
     if( sr.is_uniform() ) {
         m.reset();
         terrain_growth.clear();
+        surface_grades.clear();
         finite_liquids.clear();
         cosmetics.clear();
         set_all_ter( sr.get_ter( point_sm_ms::zero ), true );
@@ -426,6 +445,7 @@ void submap::revert_submap( submap &sr )
         }
     }
     terrain_growth = sr.terrain_growth;
+    surface_grades = sr.surface_grades;
     finite_liquids = sr.finite_liquids;
     // copy cosmetics to new submap
     // since their positions are stored in point_sm_ms, cosmetics do not require location updates.
@@ -437,6 +457,7 @@ submap submap::get_revert_submap() const
     submap ret;
     ret.uniform_ter = uniform_ter;
     ret.terrain_growth = terrain_growth;
+    ret.surface_grades = surface_grades;
     ret.finite_liquids = finite_liquids;
     if( !is_uniform() ) {
         ret.m = std::make_unique<maptile_soa>( *m );
@@ -478,7 +499,7 @@ void submap::merge_submaps( submap *copy_from, bool copy_from_is_overlay )
     for( int x = 0; x < SEEX; x++ ) {
         for( int y = 0; y < SEEY; y++ ) {
             if( copy_from->m->ter[x][y] != t_null && ( copy_from_is_overlay ||
-                this->m->ter[x][y] == t_null ) ) {
+                    this->m->ter[x][y] == t_null ) ) {
                 this->m->ter[x][y] = copy_from->m->ter[x][y];
                 this->set_map_damage( { x, y }, copy_from->get_map_damage( { x, y } ) );
             }
@@ -569,6 +590,12 @@ void submap::merge_submaps( submap *copy_from, bool copy_from_is_overlay )
         if( this->m->frn[comp.first.x()][comp.first.y()] == furn_f_console &&
             !this->get_computer( comp.first ) ) {
             this->set_computer( comp.first, comp.second );
+        }
+    }
+
+    for( const auto &[p, grade] : copy_from->surface_grades ) {
+        if( copy_from_is_overlay || surface_grades.count( p ) == 0 ) {
+            surface_grades.insert_or_assign( p, grade );
         }
     }
 

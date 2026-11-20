@@ -26,6 +26,7 @@
 #include "pocket_type.h"
 #include "point.h"
 #include "ret_val.h"
+#include "repair_activity.h"
 #include "type_id.h"
 #include "value_ptr.h"
 
@@ -275,7 +276,7 @@ static void setup_repair( item &fix, player_activity &act, Character &u )
 
     // Setup activity
     item_location fixloc( u, &fix );
-    act.values.emplace_back( /* repeat_type::FULL */ 3 );
+    act.values.emplace_back( static_cast<int>( repair_repeat::FULL ) );
     act.str_values.emplace_back( "repair_fabric" );
     act.targets.emplace_back( tailorloc );
     act.targets.emplace_back( fixloc );
@@ -661,7 +662,7 @@ TEST_CASE( "Gun_repair_with_degradation", "[item][degradation]" )
 static player_activity setup_repair_activity( item_location &tailorloc, item_location &fixloc )
 {
     player_activity act( ACT_REPAIR_ITEM );
-    act.values.emplace_back( /* repeat_type::FULL */ 3 );
+    act.values.emplace_back( static_cast<int>( repair_repeat::REFIT_FULL ) );
     act.str_values.emplace_back( "repair_fabric" );
     act.targets.emplace_back( tailorloc );
     act.targets.emplace_back( fixloc );
@@ -671,7 +672,7 @@ static player_activity setup_repair_activity( item_location &tailorloc, item_loc
 static item_location put_in_container( item_location &container, const itype_id &type )
 {
     ret_val<item *> inserted = container->get_contents().insert_item( item( type ),
-        pocket_type::CONTAINER );
+                               pocket_type::CONTAINER );
     REQUIRE( inserted.success() );
     return item_location( container, inserted.value() );
 }
@@ -706,6 +707,11 @@ TEST_CASE( "refit_item_inside_spillable_container", "[item][repair][container]" 
         item_location fix_tshirt = put_in_container( aluminum_can, itype_technician_shirt_gray );
         WHEN( "Refitting tshirt inside spillable container" ) {
             REQUIRE_FALSE( fix_tshirt->has_flag( flag_FIT ) );
+            const auto *actor = dynamic_cast<const repair_item_actor *>(
+                                    tailorkit->get_use( "repair_fabric" )->get_actor_ptr() );
+            REQUIRE( actor );
+            REQUIRE( actor->can_use_tool( u, *tailorkit, true ) );
+            REQUIRE( actor->can_repair_target( u, *fix_tshirt, true, true ) );
             player_activity act = setup_repair_activity( tailorkit, fix_tshirt );
             while( !act.is_null() ) {
                 ::repair_item_finish( &act, &u, true );

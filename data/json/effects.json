@@ -664,17 +664,6 @@
     "//": "This tells a devourer that it has absorbed a pupating zombie and can now produce flesh raptors"
   },
   {
-    "id": "Shadow_Reveal",
-    "type": "effect_type",
-    "max_duration": "60 s",
-    "name": [ "Revealed" ],
-    "desc": [ { "str": "The shadows no longer hide you!", "//~": "NO_I18N" } ],
-    "rating": "bad",
-    "show_intensity": false,
-    "show_in_info": true,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "LUMINATION", "add": 10 } ] } ]
-  },
-  {
     "type": "effect_type",
     "id": "yrax_overcharged",
     "name": [ { "str": "▙▜▛▜", "//~": "NO_I18N" } ],
@@ -1016,7 +1005,7 @@
   },
   {
     "type": "effect_type",
-    "//1": "Copy of blind effect, used to temporarily remove vision as a utility function. Only use outside of EOC_LIEUTENANT_SHADOW_WITHDRAWS_FOR_NOW with extreme caution.",
+    "//1": "Copy of blind effect, used to temporarily remove vision as a utility function. Use with extreme caution.",
     "id": "blind_no_msg",
     "name": [ "Blind" ],
     "desc": [

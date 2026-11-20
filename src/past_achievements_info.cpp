@@ -1,6 +1,12 @@
+#include <cata_path.h>
+#include <type_id.h>
+#include <exception>
+#include <functional>
 #include <utility>
 #include <vector>
 
+#include "cata_scope_helpers.h"
+#include "debug.h"
 #include "filesystem.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
@@ -8,8 +14,6 @@
 #include "past_games_info.h"
 #include "path_info.h"
 #include "string_formatter.h"
-
-class cata_path;
 
 void past_achievements_info::clear()
 {
@@ -46,34 +50,47 @@ void past_achievements_info::load()
     if( loaded_ ) {
         return;
     }
-    loaded_ = true;
     const cata_path &achievement_dir = PATH_INFO::achievementdir_path();
-    assure_dir_exist( achievement_dir );
+    if( !assure_dir_exist( achievement_dir ) ) {
+        debugmsg( "Could not access past achievements directory %s", achievement_dir.generic_u8string() );
+        return;
+    }
 
     std::vector<cata_path> filenames = get_files_from_path( ".json", achievement_dir, true, true );
+    loaded_ = true;
+    on_out_of_scope reset_loaded( [this]() {
+        loaded_ = false;
+    } );
+    decltype( completed_achievements_ ) completed;
+    std::string errors;
 
     for( const cata_path &filename : filenames ) {
-        int version;
-        std::vector<achievement_id> achievements;
-        std::string avatar_name;
-        JsonValue jsin = json_loader::from_path( filename );
-        JsonObject jo = jsin.get_object();
-        jo.read( "achievement_version", version );
-        if( version == 0 ) {
-            // version 0 has no `avatar_name` member, skip them
-            continue;
-        } else if( version != 1 ) {
-            throw JsonError( string_format( "unexpected past achievements version %d", version ) );
-        }
-        jo.read( "achievements", achievements );
-        jo.read( "avatar_name", avatar_name );
-        for( const achievement_id &id : achievements ) {
-            completed_achievements_[id].emplace_back( avatar_name );
+        try {
+            JsonObject jo = json_loader::from_path( filename ).get_object();
+            const int version = jo.get_int( "achievement_version" );
+            if( version == 0 ) {
+                continue;
+            } else if( version != 1 ) {
+                jo.throw_error( string_format( "unexpected past achievements version %d", version ) );
+            }
+            std::vector<achievement_id> achievements;
+            jo.get_member( "achievements" ).read( achievements, true );
+            const std::string avatar_name = jo.get_string( "avatar_name" );
+            for( const achievement_id &id : achievements ) {
+                completed[id].emplace_back( avatar_name );
+            }
+        } catch( const std::exception &err ) {
+            errors += string_format( "%s: %s\n", filename.generic_u8string(), err.what() );
         }
     }
 
     // Ensure memorial data are also loaded for legacy dead character achievements
     get_past_games();
+    completed_achievements_.swap( completed );
+    reset_loaded.cancel();
+    if( !errors.empty() ) {
+        debugmsg( "Some past achievement records could not be loaded:\n%s", errors );
+    }
 }
 
 static past_achievements_info past_achievements;

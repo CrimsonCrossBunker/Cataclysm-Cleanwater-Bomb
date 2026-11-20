@@ -85,6 +85,7 @@
 #include "mongroup.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
+#include "north_america_elevation.h"
 #include "north_america_soil.h"
 #include "north_america_transport.h"
 #include "plant_climate.h"
@@ -6944,7 +6945,8 @@ void map::draw_map( mapgendata &dat )
     const oter_id &terrain_type = dat.terrain_type();
     const std::string function_key = terrain_type->get_mapgen_id();
 
-    if( !north_america::draw_mapped_road( dat ) &&
+    if( !north_america::draw_native_habitat( dat ) &&
+        !north_america::draw_mapped_road( dat ) &&
         !run_mapgen_func( function_key, dat ) &&
         !cata::lua_platform::dispatch_mapgen_generate( dat ) ) {
         debugmsg( "Error: tried to generate map for omtype %s, \"%s\" (id_mapgen %s)",
@@ -6957,8 +6959,10 @@ void map::draw_map( mapgendata &dat )
     }
 
     resolve_regional_terrain_and_furniture( dat );
+    north_america::place_wide_highway_surface( dat );
     north_america::place_native_vegetation( dat );
     north_america::place_native_soil( dat );
+    north_america::grade_generated_surface( dat );
     // End of draw_map
 }
 

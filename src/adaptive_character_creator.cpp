@@ -283,15 +283,18 @@ void adaptive_character_creator_ui::draw_identity_bar( const cata::ui::profile &
             has_previous_item = true;
         }
 
-        const std::array<std::pair<std::string, std::string>, 3> buttons = {{
+        const std::array<std::pair<std::string, std::string>, 4> buttons = {{
                 { snapshot_.blood, "CHANGE_BLOOD_TYPE" },
                 { _( "Location" ), "CHOOSE_LOCATION" },
+                { snapshot_.start_outskirts ? _( "Far outskirts: On" ) : _( "Far outskirts: Off" ),
+                  "TOGGLE_START_OUTSKIRTS" },
                 { _( "Randomize" ), "RANDOMIZE_CHAR_DESCRIPTION" },
             }
         };
-        const std::array<float, 3> widths = {{
+        const std::array<float, 4> widths = {{
                 profile.minimum_target * 2.5F,
                 profile.width_compact,
+                profile.width_normal,
                 profile.width_normal
             }
         };

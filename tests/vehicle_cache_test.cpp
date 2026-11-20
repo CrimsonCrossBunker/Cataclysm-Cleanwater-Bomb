@@ -8,6 +8,7 @@
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
+#include "level_cache.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -73,4 +74,41 @@ TEST_CASE( "removing_vehicle_part_clears_its_fake_from_map_cache",
 
     veh->part_removal_cleanup( here );
     CHECK_FALSE( here.veh_at( fake_position ) );
+}
+
+TEST_CASE( "vehicle_overlays_survive_independent_floor_rebuilds", "[vehicle][cache]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    build_test_map( ter_id( "t_pavement" ) );
+    map &here = get_map();
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_van, tripoint_bub_ms( 60, 60, 0 ),
+                                     0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh );
+    here.build_map_cache( 0, true );
+    const auto check = [&]() {
+        for( const vpart_reference &part : veh->get_all_parts() ) {
+            if( part.has_feature( VPFLAG_BOARDABLE ) && !part.part().is_broken() ) {
+                const tripoint_bub_ms p = part.pos_bub( here );
+                CHECK( here.access_cache( p.z() ).floor_cache[p.x()][p.y()] );
+            }
+            if( part.has_feature( VPFLAG_ROOF ) || part.has_feature( VPFLAG_OPAQUE ) ) {
+                const tripoint_bub_ms p = part.pos_bub( here );
+                CHECK( here.access_cache( p.z() + 1 ).floor_cache[p.x()][p.y()] );
+            }
+        }
+    };
+    check();
+    here.build_map_cache( 0, true );
+    check();
+    here.set_floor_cache_dirty( 0 );
+    here.set_floor_cache_dirty( 1 );
+    here.build_floor_caches();
+    here.build_map_cache( 0, true );
+    check();
+    const auto revision = veh->map_cache_revision;
+    veh->refresh();
+    CHECK( veh->map_cache_revision > revision );
+    here.build_map_cache( 0, true );
+    check();
 }

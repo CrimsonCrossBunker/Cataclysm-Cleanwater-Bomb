@@ -1,15 +1,19 @@
 #include "zzip.h"
 
+#include <flatbuffers/flexbuffers.h>
+#include <zstd/common/mem.h>
+#include <zstd/common/xxhash.h>
+#include <zstd/zstd.h>
+#include <zstd/zstd_errors.h>
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
-#include <exception>
 #include <iosfwd>
-#include <memory>
 #include <limits>
+#include <memory>
 #include <new>
 #include <optional>
 #include <string>
@@ -21,15 +25,8 @@
 #include <utility>
 #include <vector>
 
-#include <flatbuffers/flexbuffers.h>
-
-#include <zstd/zstd.h>
-#include <zstd/zstd_errors.h>
-#include <zstd/common/mem.h>
-#include <zstd/common/xxhash.h>
-
-#include "filesystem.h"
 #include "compute_budget.h"
+#include "filesystem.h"
 #include "flexbuffer_cache.h"
 #include "flexbuffer_json.h"
 #include "mmap_file.h"
@@ -418,15 +415,19 @@ std::optional<zzip> zzip::load(
         cctx = it->second.cctx;
         dctx = it->second.dctx;
     } else {
-        cctx = ZSTD_createCCtx();
-        ZSTD_CCtx_setParameter( cctx, ZSTD_c_compressionLevel, 7 );
-        dctx = ZSTD_createDCtx();
-
         std::vector<char> dictionary;
         if( !dictionary_path.empty() ) {
             std::shared_ptr<const mmap_file> dictionary_file = mmap_file::map_file( dictionary_path );
+            if( !dictionary_file ) {
+                return std::nullopt;
+            }
             dictionary.resize( dictionary_file->len() );
             memcpy( dictionary.data(), dictionary_file->base(), dictionary_file->len() );
+        }
+        cctx = ZSTD_createCCtx();
+        ZSTD_CCtx_setParameter( cctx, ZSTD_c_compressionLevel, 7 );
+        dctx = ZSTD_createDCtx();
+        if( !dictionary.empty() ) {
             ZSTD_CCtx_loadDictionary_byReference( cctx, dictionary.data(), dictionary.size() );
             ZSTD_DCtx_loadDictionary_byReference( dctx, dictionary.data(), dictionary.size() );
         }
@@ -489,7 +490,7 @@ struct alignas( std::max_align_t ) budget_allocation {
 
 void *budget_zstd_allocate( void *opaque, std::size_t size ) noexcept
 {
-    auto &budget = *static_cast<byte_budget *>( opaque );
+    byte_budget &budget = *static_cast<byte_budget *>( opaque );
     if( size > std::numeric_limits<std::size_t>::max() - sizeof( budget_allocation ) ) {
         return nullptr;
     }
@@ -509,7 +510,7 @@ void *budget_zstd_allocate( void *opaque, std::size_t size ) noexcept
 void budget_zstd_free( void *opaque, void *allocation ) noexcept
 {
     if( allocation ) {
-        auto &budget = *static_cast<byte_budget *>( opaque );
+        byte_budget &budget = *static_cast<byte_budget *>( opaque );
         auto *header = static_cast<budget_allocation *>( allocation ) - 1;
         const std::size_t bytes = header->bytes;
         std::free( header );
@@ -534,7 +535,7 @@ void *zzip::create_private_dctx( std::filesystem::path const &dictionary, byte_b
             // _byReference variant used by the shared-context path).
             if( ( budget && dictionary_file->len() > budget->limit() ) ||
                 ZSTD_isError( ZSTD_DCtx_loadDictionary( dctx.get(), dictionary_file->base(),
-                        dictionary_file->len() ) ) ) {
+                              dictionary_file->len() ) ) ) {
                 return nullptr;
             }
         }
@@ -1126,6 +1127,7 @@ std::optional<zzip> zzip::create_from_folder_with_files( std::filesystem::path c
         return std::nullopt;
     }
     JsonObject original_footer = zip->copy_footer();
+    original_footer.allow_omitted_members();
     zzip_footer footer{ original_footer };
     std::optional<zzip_meta> meta_opt = footer.get_meta();
     size_t content_end = 0;
@@ -1147,13 +1149,14 @@ std::optional<zzip> zzip::create_from_folder_with_files( std::filesystem::path c
     // Conservatively estimate 10x compression ratio
     size_t input_consumed = 0;
     size_t bytes_written = 0;
-    zip->ensure_capacity_for( ( total_file_size / 10 ) + kFixedSizeOverhead );
+    if( !zip->ensure_capacity_for( ( total_file_size / 10 ) + kFixedSizeOverhead ) ) {
+        return std::nullopt;
+    }
 
     for( std::filesystem::path const &file_path : files ) {
         std::shared_ptr<const mmap_file> file = mmap_file::map_file( file_path );
         if( !file ) {
-            // This is really a higher level error but we should just continue if we can.
-            continue;
+            return std::nullopt;
         }
         std::string file_relative_path = file_path.lexically_relative( folder ).generic_u8string();
         size_t compressed_size = 0;
@@ -1186,7 +1189,9 @@ std::optional<zzip> zzip::create_from_folder_with_files( std::filesystem::path c
         content_end += compressed_size;
         total_file_size -= file->len();
     }
-    zip->update_footer( original_footer, content_end, new_entries, /* shrink_to_fit = */ true );
+    if( !zip->update_footer( original_footer, content_end, new_entries, /* shrink_to_fit = */ true ) ) {
+        return std::nullopt;
+    }
     return zip;
 }
 

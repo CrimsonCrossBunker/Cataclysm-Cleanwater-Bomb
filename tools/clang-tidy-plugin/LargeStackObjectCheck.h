@@ -1,16 +1,13 @@
 #ifndef CATA_TOOLS_CLANG_TIDY_PLUGIN_LARGESTACKOBJECTCHECK_H
 #define CATA_TOOLS_CLANG_TIDY_PLUGIN_LARGESTACKOBJECTCHECK_H
 
-#include <clang/ASTMatchers/ASTMatchFinder.h>
-#include <llvm/ADT/StringRef.h>
-
-#include <clang-tidy/ClangTidy.h>
 #include <clang-tidy/ClangTidyCheck.h>
+#include <clang/ASTMatchers/ASTMatchFinder.h>
+#include <clang/Basic/LLVM.h>
+#include <llvm/ADT/StringRef.h>
 
 namespace clang
 {
-class CompilerInstance;
-
 namespace tidy
 {
 class ClangTidyContext;
