@@ -1,8 +1,8 @@
 # Regional climate data
 
-`us_stations.json` contains editable monthly normals from [NOAA NCEI U.S. Climate Normals, 1991–2020](https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals). Each `source_station` is a CSV filename in the [NOAA monthly station archive](https://www.ncei.noaa.gov/data/normals-monthly/1991-2020/access/).
+`us_stations.data.lua` contains editable monthly normals from [NOAA NCEI U.S. Climate Normals, 1991–2020](https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals). Each `source_station` is a CSV filename in the [NOAA monthly station archive](https://www.ncei.noaa.gov/data/normals-monthly/1991-2020/access/).
 
-The Canadian and Mexican stations in `canada_mexico_stations.json` use the official [1981–2010 WMO Regional Association IV archives](https://www.ncei.noaa.gov/data/normals-old/WMO/1981-2010/RA-IV/). Each `WMO-` identifier matches a workbook station number. Canadian wet days use the workbook’s 1 mm threshold. The Mexican workbook uses 0.1 mm. Manzanillo’s workbook longitude omits the hemisphere and is interpreted as west.
+The Canadian and Mexican stations in `canada_mexico_stations.data.lua` use the official [1981–2010 WMO Regional Association IV archives](https://www.ncei.noaa.gov/data/normals-old/WMO/1981-2010/RA-IV/). Each `WMO-` identifier matches a workbook station number. Canadian wet days use the workbook’s 1 mm threshold. The Mexican workbook uses 0.1 mm. Manzanillo’s workbook longitude omits the hemisphere and is interpreted as west.
 
 The twelve rows run from January through December. Columns are the normal daily minimum and maximum in °C, the monthly precipitation in millimetres of water equivalent, the mean number of wet days (the U.S. threshold is 0.01 inches), and the prevailing precipitation system. Annual precipitation is the sum of the monthly values. To correct a station, keep its ID and edit the relevant row or coordinates.
 

@@ -9,6 +9,7 @@ try:
         NON_GAME_DATA_DIRECTORIES,
         is_non_game_data_json,
         parse_json_file,
+        parse_json_object,
     )
 except ImportError:
     try:
@@ -17,6 +18,7 @@ except ImportError:
             NON_GAME_DATA_DIRECTORIES,
             is_non_game_data_json,
             parse_json_file,
+            parse_json_object,
         )
     except ImportError:
         from string_extractor.message import messages
@@ -24,16 +26,17 @@ except ImportError:
             NON_GAME_DATA_DIRECTORIES,
             is_non_game_data_json,
             parse_json_file,
+            parse_json_object,
         )
 
 
 class JsonFileParsingTest(unittest.TestCase):
     def test_climate_station_names_are_not_game_text(self):
-        root = Path(__file__).resolve().parents[2]
         messages.clear()
         self.addCleanup(messages.clear)
 
-        parse_json_file(root / "data/json/regional_climate/us_stations.json")
+        parse_json_object({"type": "regional_climate_station",
+                           "name": "Bedford Hanscom Fld, Ma Us"}, "station.json")
         self.assertFalse(messages)
 
     def test_mounted_data_extracts_pet_slot_text(self):
