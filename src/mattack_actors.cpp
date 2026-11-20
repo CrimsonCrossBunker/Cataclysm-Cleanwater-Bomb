@@ -458,7 +458,7 @@ melee_actor::melee_actor() :
 {
 }
 
-void melee_actor::load_internal( const JsonObject &obj, const std::string & )
+void melee_actor::load_internal( const JsonObject &obj, const std::string &src )
 {
     // Optional:
     optional( obj, was_loaded, "damage_max_instance", damage_max_instance, damage_max_instance );
@@ -479,6 +479,22 @@ void melee_actor::load_internal( const JsonObject &obj, const std::string & )
     optional( obj, was_loaded, "throw_strength", throw_strength, 0 );
 
     optional( obj, was_loaded, "eoc", eoc );
+    if( const auto field = obj.get_member_opt( "//ccb_lua_attack_hit" ) ) {
+        if( field->has_source_file() || obj.has_member( "eoc" ) ) {
+            field->throw_error( "Monster attack hit metadata is reserved for ordered Lua definitions" );
+        }
+        lua_hit_handler = field->get_string();
+        if( lua_hit_handler.empty() || lua_hit_handler.find( '\0' ) != std::string::npos ) {
+            field->throw_error( "A monster attack on_hit callback requires a handler name" );
+        }
+        lua_hit_owner = src;
+        lua_hit_replaces_eoc = true;
+        eoc.clear();
+    } else if( lua_hit_replaces_eoc && obj.has_member( "eoc" ) ) {
+        lua_hit_handler.clear();
+        lua_hit_owner.clear();
+        lua_hit_replaces_eoc = false;
+    }
     optional( obj, was_loaded, "hitsize_min", hitsize_min, -1 );
     optional( obj, was_loaded, "hitsize_max", hitsize_max, -1 );
     optional( obj, was_loaded, "attack_upper", attack_upper, true );

@@ -42,3 +42,5 @@ require("mutation_categories")
 require("statistics")
 require("factions")
 require("mission_progress")
+
+require("attack_conditions")

@@ -13255,7 +13255,7 @@ std::optional<double> invoke_behavior_score_handler(
 }
 
 std::optional<bool> invoke_monster_attack_handler(
-    std::string_view, std::string_view, std::string_view, Creature & )
+    std::string_view, std::string_view, std::string_view, const Creature &, const Creature * )
 {
     return std::nullopt;
 }

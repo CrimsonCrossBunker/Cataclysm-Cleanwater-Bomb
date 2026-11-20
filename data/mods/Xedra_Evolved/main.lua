@@ -288,4 +288,6 @@ require("end_screens")
 require("mission_progress")
 require("mission_outcomes")
 require("mission_goals")
+
+require("attack_conditions")
 require("spell_level_scaling")

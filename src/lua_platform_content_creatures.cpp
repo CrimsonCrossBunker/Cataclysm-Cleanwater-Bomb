@@ -878,7 +878,7 @@ class lua_monster_attack_actor final : public mattack_actor
 
         bool call( monster &attacker ) const override {
             return invoke_monster_attack_handler(
-                       owner_, id, handler_, attacker ).value_or( false );
+                       owner_, id, handler_, attacker, attacker.attack_target() ).value_or( false );
         }
 
         std::unique_ptr<mattack_actor> clone() const override {

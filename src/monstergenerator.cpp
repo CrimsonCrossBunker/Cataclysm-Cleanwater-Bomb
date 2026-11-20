@@ -25,6 +25,7 @@
 #include "creature.h"
 #include "damage.h"
 #include "debug.h"
+#include "dialogue.h"
 #include "enums.h"
 #include "field_type.h"
 #include "flexbuffer_json.h"
@@ -33,6 +34,7 @@
 #include "item.h"
 #include "item_group.h"
 #include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "magic.h"
 #include "mattack_actors.h"
 #include "monattack.h"
@@ -41,6 +43,7 @@
 #include "monster.h"
 #include "mtype.h"
 #include "options.h"
+#include "talker.h"
 #include "pathfinding.h"
 #include "rng.h"
 #include "shearing.h"
@@ -1609,6 +1612,22 @@ void mattack_actor::load( const JsonObject &jo, const std::string &src )
     mandatory( jo, was_loaded, "cooldown", cooldown );
 
     load_internal( jo, src );
+    if( const auto field = jo.get_member_opt( "//ccb_lua_attack_when" ) ) {
+        if( field->has_source_file() || jo.has_member( "condition" ) ) {
+            field->throw_error( "Monster attack predicate metadata is reserved for ordered Lua definitions" );
+        }
+        const std::string handler = field->get_string();
+        if( handler.empty() || handler.find( '\0' ) != std::string::npos ) {
+            field->throw_error( "A monster attack predicate requires a handler name" );
+        }
+        condition = [owner = src, attack_id = id, handler]( const const_dialogue & d ) {
+            const Creature *attacker = d.const_actor( false )->get_const_creature();
+            const Creature *target = d.has_actor( true ) ? d.const_actor( true )->get_const_creature() : nullptr;
+            return attacker && cata::lua_platform::invoke_monster_attack_handler(
+                       owner, attack_id, handler, *attacker, target ).value_or( false );
+        };
+        has_condition = true;
+    }
     // Set was_loaded manually because we don't have generic_factory to do it for us
     was_loaded = true;
 }

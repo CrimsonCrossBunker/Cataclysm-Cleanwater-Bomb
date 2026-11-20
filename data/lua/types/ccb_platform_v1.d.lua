@@ -2051,6 +2051,8 @@ function BehaviorDefinition:score_native(predicate_id, argument) end
 ---@field attack_id string Native attack id being invoked.
 ---@field attacker GameHandle Generation-safe attacking monster handle.
 ---@field target GameHandle|nil Generation-safe current target when one exists.
+---@field attacker_size integer Native size category.
+---@field target_size? integer Native size category when a target is present.
 
 ---@class MonsterAttackResultPayload
 ---@field monster_type_id string Native monster type id.
@@ -9783,7 +9785,9 @@ function CcbPlatformContent.define_mutation(options) end
 ---@field attack_upper? boolean
 ---@field grab? boolean
 ---@field grab_settings? StaticMonsterGrabSettings
----@field body_part_types? string[]
+---@field body_part_types? (string|{id:string,weight:integer})[] Weighted native body part types in authored order.
+---@field when? string Named predicate receiving MonsterAttackPolicyPayload, evaluated at the actor's native condition check.
+---@field on_hit? string Named melee or bite callback receiving MonsterAttackResultPayload after native hit resolution.
 ---@field attack_count? integer|integer[]
 ---@field damage? StaticItemDamage
 ---@field spell? StaticMonsterSpellCast
@@ -9802,6 +9806,10 @@ function CcbPlatformContent.define_mutation(options) end
 ---@field self_effects_always? StaticMonsterAttackEffect[]
 ---@field self_effects_on_hit? StaticMonsterAttackEffect[]
 ---@field self_effects_on_damage? StaticMonsterAttackEffect[]
+
+---Register a monster attack in file order so later monster definitions can clone and override it.
+---@param options StaticMonsterAttackOverride
+function CcbPlatformContent.define_monster_attack(options) end
 
 ---@alias StaticMonsterAttack StaticMonsterAttackReference|StaticMonsterAttackOverride
 

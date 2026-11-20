@@ -473,7 +473,7 @@ std::optional<double> invoke_behavior_score_handler(
 /** Run one Lua-authored native monster special attack policy. */
 std::optional<bool> invoke_monster_attack_handler(
     std::string_view mod_id, std::string_view attack_id,
-    std::string_view handler_id, Creature &attacker );
+    std::string_view handler_id, const Creature &attacker, const Creature *target );
 
 /** Dispatch a post-hit handler for one native monster melee attack. */
 void invoke_monster_attack_result_handler(

@@ -162,3 +162,5 @@ require("materials")
 require("bionics")
 require("field_types")
 require("mission_outcomes")
+
+require("attack_conditions")

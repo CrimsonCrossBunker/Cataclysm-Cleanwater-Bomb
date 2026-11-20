@@ -177,3 +177,5 @@ require("shopkeeper_rules")
 require("field_types")
 require("trap_triggers")
 require("spell_level_scaling")
+
+require("attack_conditions")

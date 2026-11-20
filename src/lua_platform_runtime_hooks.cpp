@@ -3893,7 +3893,7 @@ std::optional<double> invoke_behavior_score_handler(
 
 std::optional<bool> invoke_monster_attack_handler(
     const std::string_view mod_id, const std::string_view attack_id,
-    const std::string_view handler_id, Creature &attacker )
+    const std::string_view handler_id, const Creature &attacker, const Creature *target )
 {
     const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
     if( !owner || !owner->world_is_ready ) {
@@ -3909,9 +3909,9 @@ std::optional<bool> invoke_monster_attack_handler(
     sol::table payload = owner->lua->create_table();
     payload["attack_id"] = std::string( attack_id );
     payload["attacker"] = platform_creature_handle( *owner, attacker );
-    Creature *target = nullptr;
-    if( monster *attacking_monster = attacker.as_monster() ) {
-        target = attacking_monster->attack_target();
+    payload["attacker_size"] = static_cast<int>( attacker.get_size() );
+    if( target ) {
+        payload["target_size"] = static_cast<int>( target->get_size() );
     }
     payload["target"] = target == nullptr ?
                         sol::make_object( *owner->lua, sol::lua_nil ) :

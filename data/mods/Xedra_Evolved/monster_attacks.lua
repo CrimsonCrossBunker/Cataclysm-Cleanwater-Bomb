@@ -1,5 +1,4 @@
 local ccb = require("ccb")
-local content = ccb.content
 local services = ccb.services
 
 ccb.runtime.handler("inject_warping_poison", function(hit)
@@ -19,18 +18,3 @@ ccb.runtime.handler("inject_warping_poison", function(hit)
         error(mutation.error.message)
     end
 end)
-
-local bite = content.MonsterAttack { id = "inject_warping_poison", cooldown = 25 }
-bite:melee {
-    move_cost = 150,
-    minimum_hit_size = 4,
-    damage = { { type = "stab", amount = 15, armor_penetration = 8, armor_multiplier = 0.5 } },
-    avatar_hit = ccb.content.text("%1$s bites and injects poison into your %2$s!"),
-    npc_hit = ccb.content.text("%1$s bites and injects poison into <npcname>!"),
-    avatar_miss = ccb.content.text("%1$s tries to bite your %2$s, but you dodge!"),
-    npc_miss = ccb.content.text("%1$s tries to bite <npcname>, but they dodge!"),
-    avatar_no_damage = ccb.content.text("%1$s tries to bite your %2$s, but fails to penetrate your armor."),
-    npc_no_damage = ccb.content.text("%1$s tries to bite <npcname>, but fails to penetrate their armor."),
-}
-bite:on_hit("inject_warping_poison")
-content.add(bite)

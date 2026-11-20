@@ -171,6 +171,7 @@ class melee_actor : public mattack_actor
         std::vector<effect_on_condition_id> eoc;
         std::string lua_hit_owner;
         std::string lua_hit_handler;
+        bool lua_hit_replaces_eoc = false;
 
         /**
          * If empty, regular melee roll body part selection is used.

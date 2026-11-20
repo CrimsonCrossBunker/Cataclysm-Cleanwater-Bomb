@@ -595,3 +595,5 @@ require("lixa_elevator_ledge")
 require("void_spider_lair")
 require("mission_goals")
 require("mission_deliveries")
+
+require("attack_conditions")

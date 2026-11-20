@@ -41,3 +41,5 @@ require("monster_groups")
 
 require("immortal_snail")
 require("bionics")
+
+require("attack_conditions")

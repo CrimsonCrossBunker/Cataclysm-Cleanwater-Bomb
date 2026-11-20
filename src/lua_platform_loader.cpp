@@ -3832,15 +3832,14 @@ void write_static_monster_effect_list( JsonOut &json, const sol::table &options,
     }
 }
 
-void write_static_monster_inline_attack( JsonOut &json, const sol::table &attack )
+void write_static_monster_attack_fields( JsonOut &json, const sol::table &attack, const char *kind_field )
 {
-    json.start_object();
     const auto kind = attack.get<sol::optional<std::string>>( "kind" );
     if( kind ) {
         if( *kind != "leap" && *kind != "spell" && *kind != "melee" && *kind != "bite" ) {
             throw std::invalid_argument( "unknown inline monster attack kind: " + *kind );
         }
-        json.member( "type", *kind );
+        json.member( kind_field, *kind );
         write_placement_member<std::string>( json, attack, "id", "id" );
     } else {
         json.member( "id", attack.get<std::string>( "id" ) );
@@ -3865,7 +3864,11 @@ void write_static_monster_inline_attack( JsonOut &json, const sol::table &attack
         { "effects_require_organic", "effects_require_organic" }, { "spread_damage", "spread_damage" },
         { "attack_upper", "attack_upper" }, { "grab", "grab" },
     } );
-    write_item_ids( json, attack, { { "body_part_types", "body_part_types" } } );
+    write_placement_member<std::string>( json, attack, "when", "//ccb_lua_attack_when" );
+    write_placement_member<std::string>( json, attack, "on_hit", "//ccb_lua_attack_hit" );
+    if( const auto parts = attack.get<sol::optional<sol::table>>( "body_part_types" ) ) {
+        write_mapgen_weighted_choices<int, false>( json, "body_part_types", *parts );
+    }
     write_mapgen_range( json, "attack_amount", attack.raw_get<sol::object>( "attack_count" ) );
     write_item_damage( json, attack, "damage", "damage_max_instance" );
     write_static_monster_spell( json, attack, "spell", "spell_data" );
@@ -3902,7 +3905,6 @@ void write_static_monster_inline_attack( JsonOut &json, const sol::table &attack
         write_placement_member<std::string>( json, *grab, "effect", "grab_effect" );
         json.end_object();
     }
-    json.end_object();
 }
 
 void write_static_monster_attacks( JsonOut &json, const sol::table &options )
@@ -3918,7 +3920,9 @@ void write_static_monster_attacks( JsonOut &json, const sol::table &options )
                 json.write( attack.get<double>( "cooldown" ) );
                 json.end_array();
             } else {
-                write_static_monster_inline_attack( json, attack );
+                json.start_object();
+                write_static_monster_attack_fields( json, attack, "type" );
+                json.end_object();
             }
         }
         json.end_array();
@@ -7331,6 +7335,12 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_region_settings_map_extras", static_catalog_definition(
                               resolved.id, "region_settings_map_extras", write_static_region_settings_map_extras,
                               region_settings_map_extras::load_region_settings_map_extras ) );
+    content.set_function( "define_monster_attack", static_catalog_definition(
+    resolved.id, "monster_attack", []( JsonOut & json, const sol::table & attack ) {
+        write_static_monster_attack_fields( json, attack, "attack_type" );
+    }, []( const JsonObject & definition, const std::string & source_id ) {
+        MonsterGenerator::generator().load_monster_attack( definition, source_id );
+    } ) );
     content.set_function( "define_magic_type", static_catalog_definition(
                               resolved.id, "magic_type", write_static_magic_type, magic_type::load_magic_type ) );
     content.set_function( "define_forest_biome_component", static_catalog_definition(
