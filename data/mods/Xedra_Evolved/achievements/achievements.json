@@ -3,79 +3,163 @@
     "id": "achievement_kill_changeling",
     "type": "achievement",
     "name": "Smashed a pixie.",
-    "requirements": [ { "event_statistic": "num_avatar_changeling_kills", "is": ">=", "target": 1 } ]
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_changeling_kills",
+        "is": ">=",
+        "target": 1
+      }
+    ]
   },
   {
     "id": "achievement_kill_10_changelings",
     "type": "achievement",
     "name": "Underhill Hunter",
-    "requirements": [ { "event_statistic": "num_avatar_changeling_kills", "is": ">=", "target": 10 } ]
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_changeling_kills",
+        "is": ">=",
+        "target": 10
+      }
+    ]
   },
   {
     "id": "achievement_kill_100_changelings",
     "type": "achievement",
     "name": "Unseelie competition",
-    "hidden_by": [ "achievement_kill_10_changelings" ],
-    "requirements": [ { "event_statistic": "num_avatar_changeling_kills", "is": ">=", "target": 100 } ]
+    "hidden_by": [
+      "achievement_kill_10_changelings"
+    ],
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_changeling_kills",
+        "is": ">=",
+        "target": 100
+      }
+    ]
   },
   {
     "id": "achievement_kill_1000_changelings",
     "type": "achievement",
     "name": "They tell stories to their children of you.",
-    "requirements": [ { "event_statistic": "num_avatar_changeling_kills", "is": ">=", "target": 1000 } ]
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_changeling_kills",
+        "is": ">=",
+        "target": 1000
+      }
+    ]
   },
   {
     "id": "achievement_kill_10000_changelings",
     "type": "achievement",
     "name": "Faebane",
-    "hidden_by": [ "achievement_kill_1000_changelings" ],
-    "requirements": [ { "event_statistic": "num_avatar_changeling_kills", "is": ">=", "target": 10000 } ]
+    "hidden_by": [
+      "achievement_kill_1000_changelings"
+    ],
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_changeling_kills",
+        "is": ">=",
+        "target": 10000
+      }
+    ]
   },
   {
     "id": "achievement_kill_100000_changelings",
     "type": "achievement",
     "name": "Your name is considered to be cold iron.",
-    "hidden_by": [ "achievement_kill_10000_changelings" ],
-    "requirements": [ { "event_statistic": "num_avatar_changeling_kills", "is": ">=", "target": 100000 } ]
+    "hidden_by": [
+      "achievement_kill_10000_changelings"
+    ],
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_changeling_kills",
+        "is": ">=",
+        "target": 100000
+      }
+    ]
   },
   {
     "id": "achievement_kill_vampire",
     "type": "achievement",
     "name": "Arthur 'Art' Holmwood.  Avenger of lost innocence.",
-    "requirements": [ { "event_statistic": "num_avatar_vampire_kills", "is": ">=", "target": 1 } ]
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_vampire_kills",
+        "is": ">=",
+        "target": 1
+      }
+    ]
   },
   {
     "id": "achievement_kill_10_vampires",
     "type": "achievement",
     "name": "The third Frog brother.",
-    "requirements": [ { "event_statistic": "num_avatar_vampire_kills", "is": ">=", "target": 10 } ]
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_vampire_kills",
+        "is": ">=",
+        "target": 10
+      }
+    ]
   },
   {
     "id": "achievement_kill_100_vampires",
     "type": "achievement",
     "name": "Were you chosen as the Slayer?",
-    "hidden_by": [ "achievement_kill_10_vampires" ],
-    "requirements": [ { "event_statistic": "num_avatar_vampire_kills", "is": ">=", "target": 100 } ]
+    "hidden_by": [
+      "achievement_kill_10_vampires"
+    ],
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_vampire_kills",
+        "is": ">=",
+        "target": 100
+      }
+    ]
   },
   {
     "id": "achievement_kill_1000_vampires",
     "type": "achievement",
     "name": "You have an ongoing competition with Blade.",
-    "requirements": [ { "event_statistic": "num_avatar_vampire_kills", "is": ">=", "target": 1000 } ]
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_vampire_kills",
+        "is": ">=",
+        "target": 1000
+      }
+    ]
   },
   {
     "id": "achievement_kill_10000_vampires",
     "type": "achievement",
     "name": "Founding member of the Hammer and Stake Society",
-    "hidden_by": [ "achievement_kill_1000_vampires" ],
-    "requirements": [ { "event_statistic": "num_avatar_vampire_kills", "is": ">=", "target": 10000 } ]
+    "hidden_by": [
+      "achievement_kill_1000_vampires"
+    ],
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_vampire_kills",
+        "is": ">=",
+        "target": 10000
+      }
+    ]
   },
   {
     "id": "achievement_kill_100000_vampires",
     "type": "achievement",
     "name": "Van Helsing's mentor.",
-    "hidden_by": [ "achievement_kill_10000_vampires" ],
-    "requirements": [ { "event_statistic": "num_avatar_vampire_kills", "is": ">=", "target": 100000 } ]
+    "hidden_by": [
+      "achievement_kill_10000_vampires"
+    ],
+    "requirements": [
+      {
+        "event_statistic": "num_avatar_vampire_kills",
+        "is": ">=",
+        "target": 100000
+      }
+    ]
   },
   {
     "id": "achievement_gains_dreamer_trait",
@@ -85,7 +169,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "DREAMER" ],
+        "target": [
+          "trait_id",
+          "DREAMER"
+        ],
         "description": "Gained access to dream magic.",
         "visible": "when_achievement_completed"
       }
@@ -99,7 +186,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "EATER" ],
+        "target": [
+          "trait_id",
+          "EATER"
+        ],
         "description": "Gained access to eater magic.",
         "visible": "when_achievement_completed"
       }
@@ -113,7 +203,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "DREAMSMITH" ],
+        "target": [
+          "trait_id",
+          "DREAMSMITH"
+        ],
         "description": "Gained access to dream forging magic",
         "visible": "when_achievement_completed"
       }
@@ -127,7 +220,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "INVENTOR" ],
+        "target": [
+          "trait_id",
+          "INVENTOR"
+        ],
         "description": "Gained access to mad genius inventions.",
         "visible": "when_achievement_completed"
       }
@@ -141,7 +237,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "VAMPIRE" ],
+        "target": [
+          "trait_id",
+          "VAMPIRE"
+        ],
         "description": "Developed an unnatural thirst.",
         "visible": "when_achievement_completed"
       }
@@ -155,7 +254,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "VAMPIRE2" ],
+        "target": [
+          "trait_id",
+          "VAMPIRE2"
+        ],
         "description": "You could still become a Black Ribboner and join the League of Temperance.",
         "visible": "when_achievement_completed"
       }
@@ -169,7 +271,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "VAMPIRE3" ],
+        "target": [
+          "trait_id",
+          "VAMPIRE3"
+        ],
         "description": "Right on the edge of becoming a true vampire.",
         "visible": "when_achievement_completed"
       }
@@ -183,7 +288,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "VAMPIRE4" ],
+        "target": [
+          "trait_id",
+          "VAMPIRE4"
+        ],
         "description": "You became a true vampire, forsaking your mortality forevermore.",
         "visible": "when_achievement_completed"
       }
@@ -197,7 +305,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "BLOOD_DRINKER" ],
+        "target": [
+          "trait_id",
+          "BLOOD_DRINKER"
+        ],
         "description": "You reached the final state of vampirism, becoming worthy of the title of ruler of the night.",
         "visible": "when_achievement_completed"
       }
@@ -206,79 +317,53 @@
   {
     "id": "achievement_lvl_1_deduction",
     "type": "achievement",
-    "name": { "str": "Inspector Lestrade" },
-    "description": "Sherlock Holmes you are not but you definitely see more details than you did before.",
-    "requirements": [ { "event_statistic": "num_gains_deduction_level_1", "is": ">=", "target": 1 } ]
-  },
-  {
-    "id": "avatar_gains_deduction_level_1",
-    "type": "event_transformation",
-    "event_type": "gains_skill_level",
-    "value_constraints": {
-      "character": { "equals_statistic": "avatar_id" },
-      "skill": { "equals": [ "skill_id", "deduction" ] },
-      "new_level": { "equals": [ "int", "1" ] }
+    "name": {
+      "str": "Inspector Lestrade"
     },
-    "drop_fields": [ "character", "skill", "new_level" ]
-  },
-  {
-    "id": "num_gains_deduction_level_1",
-    "type": "event_statistic",
-    "stat_type": "count",
-    "event_transformation": "avatar_gains_deduction_level_1",
-    "description": { "str_sp": "Investigation skill level 1 gained" }
+    "description": "Sherlock Holmes you are not but you definitely see more details than you did before.",
+    "requirements": [
+      {
+        "event_statistic": "num_gains_deduction_level_1",
+        "is": ">=",
+        "target": 1
+      }
+    ]
   },
   {
     "id": "achievement_lvl_5_deduction",
     "type": "achievement",
-    "name": { "str": "The Truth is out there" },
-    "description": "You can quickly deduce the events leading to every death scene you come across, unfortunately the cause is now always either zombie or suicide.",
-    "requirements": [ { "event_statistic": "num_gains_deduction_level_5", "is": ">=", "target": 1 } ],
-    "hidden_by": [ "achievement_lvl_1_deduction" ]
-  },
-  {
-    "id": "avatar_gains_deduction_level_5",
-    "type": "event_transformation",
-    "event_type": "gains_skill_level",
-    "value_constraints": {
-      "character": { "equals_statistic": "avatar_id" },
-      "skill": { "equals": [ "skill_id", "deduction" ] },
-      "new_level": { "equals": [ "int", "5" ] }
+    "name": {
+      "str": "The Truth is out there"
     },
-    "drop_fields": [ "character", "skill", "new_level" ]
-  },
-  {
-    "id": "num_gains_deduction_level_5",
-    "type": "event_statistic",
-    "stat_type": "count",
-    "event_transformation": "avatar_gains_deduction_level_5",
-    "description": { "str_sp": "Investigation skill level 5 gained" }
+    "description": "You can quickly deduce the events leading to every death scene you come across, unfortunately the cause is now always either zombie or suicide.",
+    "requirements": [
+      {
+        "event_statistic": "num_gains_deduction_level_5",
+        "is": ">=",
+        "target": 1
+      }
+    ],
+    "hidden_by": [
+      "achievement_lvl_1_deduction"
+    ]
   },
   {
     "id": "achievement_lvl_10_deduction",
     "type": "achievement",
-    "name": { "str": "Knowing everything you weren't meant to know" },
-    "description": "The things that aren't, that never were, that have yet to be and that are but shouldn't be, they hold no secret from you now.",
-    "requirements": [ { "event_statistic": "num_gains_deduction_level_10", "is": ">=", "target": 1 } ],
-    "hidden_by": [ "achievement_lvl_5_deduction" ]
-  },
-  {
-    "id": "avatar_gains_deduction_level_10",
-    "type": "event_transformation",
-    "event_type": "gains_skill_level",
-    "value_constraints": {
-      "character": { "equals_statistic": "avatar_id" },
-      "skill": { "equals": [ "skill_id", "deduction" ] },
-      "new_level": { "equals": [ "int", "10" ] }
+    "name": {
+      "str": "Knowing everything you weren't meant to know"
     },
-    "drop_fields": [ "character", "skill", "new_level" ]
-  },
-  {
-    "id": "num_gains_deduction_level_10",
-    "type": "event_statistic",
-    "stat_type": "count",
-    "event_transformation": "avatar_gains_deduction_level_10",
-    "description": { "str_sp": "Investigation skill level 10 gained" }
+    "description": "The things that aren't, that never were, that have yet to be and that are but shouldn't be, they hold no secret from you now.",
+    "requirements": [
+      {
+        "event_statistic": "num_gains_deduction_level_10",
+        "is": ">=",
+        "target": 1
+      }
+    ],
+    "hidden_by": [
+      "achievement_lvl_5_deduction"
+    ]
   },
   {
     "id": "achievement_find_border_patrol_office",
@@ -288,7 +373,10 @@
       {
         "event_statistic": "last_oter_type_avatar_entered",
         "is": "==",
-        "target": [ "oter_type_str_id", "field_office_3" ],
+        "target": [
+          "oter_type_str_id",
+          "field_office_3"
+        ],
         "visible": "when_achievement_completed",
         "description": "Enter a Border Patrol Office"
       }
@@ -302,7 +390,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "THRESH_FAIR_FOLK_NOBLE" ],
+        "target": [
+          "trait_id",
+          "THRESH_FAIR_FOLK_NOBLE"
+        ],
         "description": "You have joined the courts of your Sidhe kin.",
         "visible": "when_achievement_completed"
       }
@@ -316,7 +407,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "THRESH_FAIR_FOLK_COMMONER_BROWNIE" ],
+        "target": [
+          "trait_id",
+          "THRESH_FAIR_FOLK_COMMONER_BROWNIE"
+        ],
         "description": "Will you stay here easing the troubles and travails of mankind into its final dusk?  Or will you find hearths beyond this homeworld.",
         "visible": "when_achievement_completed"
       }
@@ -330,7 +424,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "THRESH_FAIR_FOLK_COMMONER_POOKA" ],
+        "target": [
+          "trait_id",
+          "THRESH_FAIR_FOLK_COMMONER_POOKA"
+        ],
         "description": "A unbroken trail alternating between feet and paws.",
         "visible": "when_achievement_completed"
       }
@@ -344,7 +441,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "THRESH_FAIR_FOLK_COMMONER_SELKIE" ],
+        "target": [
+          "trait_id",
+          "THRESH_FAIR_FOLK_COMMONER_SELKIE"
+        ],
         "description": "Do you choose land or water?",
         "visible": "when_achievement_completed"
       }
@@ -358,7 +458,10 @@
       {
         "event_statistic": "avatar_last_gains_mutation",
         "is": "==",
-        "target": [ "trait_id", "THRESH_FAIR_FOLK_COMMONER_TROW" ],
+        "target": [
+          "trait_id",
+          "THRESH_FAIR_FOLK_COMMONER_TROW"
+        ],
         "description": "Where you stand, none shall pass without your leave.",
         "visible": "when_achievement_completed"
       }
@@ -370,7 +473,9 @@
     "name": "Rerisen Revengeance.",
     "description": "Kill your murderer as a revenant",
     "manually_given": true,
-    "requirements": [  ],
-    "hidden_by": [ "achievement_xe_complete_revenant_mission" ]
+    "requirements": [],
+    "hidden_by": [
+      "achievement_xe_complete_revenant_mission"
+    ]
   }
 ]

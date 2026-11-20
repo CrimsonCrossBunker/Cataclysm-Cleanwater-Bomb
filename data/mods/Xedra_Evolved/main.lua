@@ -277,3 +277,4 @@ require("relic_procgen")
 
 require("migrations")
 require("jmath")
+require("statistics")

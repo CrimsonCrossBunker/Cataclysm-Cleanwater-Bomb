@@ -154,3 +154,4 @@ require("profession_groups")
 
 require("migrations")
 require("jmath")
+require("statistics")

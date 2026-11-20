@@ -576,3 +576,4 @@ require("blacklists")
 
 require("migrations")
 require("jmath")
+require("statistics")
