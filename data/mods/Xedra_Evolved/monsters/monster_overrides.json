@@ -12,12 +12,6 @@
     "extend": { "flags": [ "STABILIZED_TIMELINE", "WITHERINGPROOF", "SHADOW_MONSTER_IMMUNE" ] }
   },
   {
-    "type": "MONSTER",
-    "id": "mon_lieutenant_shadow",
-    "copy-from": "mon_lieutenant_shadow",
-    "extend": { "flags": [ "STABILIZED_TIMELINE", "WITHERINGPROOF", "SHADOW_MONSTER_IMMUNE" ] }
-  },
-  {
     "id": "mon_bear_cub",
     "type": "MONSTER",
     "copy-from": "mon_bear_cub",
