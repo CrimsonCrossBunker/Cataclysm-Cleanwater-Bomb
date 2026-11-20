@@ -73,43 +73,5 @@
     "zombify_into": "mon_meat_cocoon_small",
     "flags": [ "SEES", "HEARS", "SMELLS", "PATH_AVOID_FIRE", "PATH_AVOID_FALL", "PULP_PRYING" ],
     "armor": { "bash": 10, "cut": 12, "bullet": 10, "electric": 2 }
-  },
-  {
-    "id": "mon_ant_soldier_mega",
-    "type": "MONSTER",
-    "name": { "str": "super soldier ant" },
-    "description": "A cow-sized, hairy red ant.  Bulging pincers extend from her jaws.  Given the relative strength of ants to their body size, you don't doubt that this one could shove cars around or rip through solid walls.",
-    "copy-from": "mon_ant_soldier",
-    "proportional": { "hp": 5, "dodge": 0.5, "vision_day": 2 },
-    "volume": "625 L",
-    "weight": "815 kg",
-    "morale": 30,
-    "melee_dice": 2,
-    "bleed_rate": 60,
-    "grab_strength": 75,
-    "special_attacks": [
-      { "id": "smash", "throw_strength": 48, "cooldown": 30 },
-      { "id": "leg_sweep" },
-      {
-        "id": "bite_grab",
-        "cooldown": 5,
-        "condition": { "not": { "u_has_effect": "maimed_mandible" } },
-        "damage_max_instance": [ { "damage_type": "cut", "amount": 12, "armor_penetration": 14 } ]
-      },
-      {
-        "id": "grab_drag",
-        "condition": { "and": [ { "not": { "u_has_effect": "maimed_mandible" } }, { "not": { "u_has_flag": "GRAB_FILTER" } } ] }
-      },
-      {
-        "id": "drag_followup",
-        "condition": {
-          "and": [ { "not": { "u_has_effect": "maimed_mandible" } }, { "u_has_flag": "GRAB_FILTER" }, { "npc_has_flag": "GRAB" } ]
-        }
-      }
-    ],
-    "zombify_into": "mon_meat_cocoon_large",
-    "dissect": "dissect_insect_sample_large",
-    "extend": { "flags": [ "DESTROYS", "PUSH_MON", "PUSH_VEH" ] },
-    "armor": { "bash": 15, "cut": 24, "bullet": 15, "electric": 4 }
   }
 ]

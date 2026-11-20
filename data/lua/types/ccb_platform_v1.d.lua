@@ -9820,7 +9820,7 @@ function CcbPlatformContent.define_mutation(options) end
 
 ---@class StaticMonsterAttackReference
 ---@field reference string Registered monster attack to copy.
----@field cooldown number Cooldown in game turns.
+---@field cooldown number|integer[] Turns, or inclusive integer bounds sampled each time the native attack needs its cooldown.
 
 ---@class StaticMonsterGrabSettings
 ---@field strength? integer
@@ -9868,7 +9868,7 @@ function CcbPlatformContent.define_mutation(options) end
 ---@field keep_hp? boolean
 ---@field keep_anger? boolean
 ---@field action? string Named handler required for scripted attacks. Return true to consume the attack.
----@field cooldown? number Cooldown in turns. Required for an inline actor without inherited defaults.
+---@field cooldown? number|integer[] Turns, or inclusive integer bounds sampled at each native cooldown evaluation. Required for an inline actor without inherited defaults.
 ---@field move_cost? integer
 ---@field accuracy? integer
 ---@field range? integer Melee range.

@@ -85,34 +85,5 @@
       "PULP_PRYING"
     ],
     "armor": { "bash": 12, "cut": 14, "bullet": 11, "electric": 1 }
-  },
-  {
-    "id": "mon_ant_acid_soldier_mega",
-    "type": "MONSTER",
-    "name": { "str": "super soldier acidic ant" },
-    "description": "A cow-sized, woolly brown ant.  Corrosive liquid seeping from her huge mandibles.  Given the relative strength of ants to their body size, you don't doubt that this one could shove cars around or rip through solid walls.",
-    "copy-from": "mon_ant_acid_soldier",
-    "proportional": { "hp": 5, "dodge": 0.5, "vision_day": 2 },
-    "volume": "625 L",
-    "weight": "815 kg",
-    "morale": 30,
-    "melee_dice": 2,
-    "bleed_rate": 60,
-    "grab_strength": 100,
-    "special_attacks": [
-      { "id": "smash", "throw_strength": 48, "cooldown": 30 },
-      { "id": "leg_sweep" },
-      {
-        "id": "bite_grab",
-        "cooldown": 5,
-        "condition": { "not": { "u_has_effect": "maimed_mandible" } },
-        "damage_max_instance": [ { "damage_type": "cut", "amount": 12, "armor_penetration": 14 } ]
-      },
-      [ "ACID", 20 ]
-    ],
-    "dissect": "dissect_insect_sample_large",
-    "zombify_into": "mon_meat_cocoon_large",
-    "extend": { "flags": [ "DESTROYS", "PUSH_MON", "PUSH_VEH", "RANGED_ATTACKER" ] },
-    "armor": { "bash": 15, "cut": 24, "bullet": 15, "electric": 4 }
   }
 ]

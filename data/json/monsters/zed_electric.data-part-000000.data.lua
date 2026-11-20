@@ -1,0 +1,37 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_zombie_brute_shocker",
+    name = ccb.content.plural_text("shocker brute", "shocker brutes"),
+    description = ccb.content.text("A huge beast covered in visible scarring from the lightning bolts that arc out of its body.  Being near it, you can hear a slight humming, like that of an electrical transformer."),
+    copy_from = "mon_zombie_brute",
+    difficulty_adjustment = 10,
+    hp = 145,
+    speed = 110,
+    color = "white_cyan",
+    melee_skill = 3,
+    melee_sides = 4,
+    melee_damage = { { type = "electric", amount = 4 }, { type = "cut", amount = 2 } },
+    bleed_rate = 0,
+    vision_night = 3,
+    luminance = 16,
+    harvest = "zombie_humanoid_electric",
+    attacks = {
+        { reference = "PARROT", cooldown = 8 },
+        { id = "grab", cooldown = 2 },
+        { id = "bite_humanoid", cooldown = 5 },
+        { id = "scratch_humanoid" },
+        {
+            id = "smash",
+            throw_strength = 36,
+            cooldown = 30,
+            when = "allow_jabberwock_bite_jabberwock_1",
+        },
+        { id = "mon_shocker_chargeup", cooldown = 7 },
+        { id = "mon_shocker_chargeup_attack", damage = { { type = "electric", amount = 80 } } },
+        { id = "mon_shocker_chargeup_attack_grab", damage = { { type = "electric", amount = 80 } } },
+    },
+    defense = { id = "ZAPBACK", chance = 75 },
+    upgrade = false,
+    inheritance = { add = { flags = { "ELECTRIC" } } },
+}

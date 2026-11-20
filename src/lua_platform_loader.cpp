@@ -4111,6 +4111,22 @@ void write_monster_gun_attack( JsonOut &json, const sol::table &gun )
     }
 }
 
+void write_monster_attack_cooldown( JsonOut &json, const sol::object &cooldown )
+{
+    if( cooldown.get_type() != sol::type::table ) {
+        json.write( cooldown.as<double>() );
+        return;
+    }
+    const sol::table bounds = cooldown.as<sol::table>();
+    if( checked_dense_array_size( bounds, "monster attack cooldown", 2 ) != 2 ) {
+        throw std::invalid_argument( "monster attack cooldown requires a minimum and a maximum" );
+    }
+    json.start_array();
+    json.write( bounds.raw_get<int>( 1 ) );
+    json.write( bounds.raw_get<int>( 2 ) );
+    json.end_array();
+}
+
 void write_static_monster_attack_fields( JsonOut &json, const sol::table &attack, const char *kind_field )
 {
     const auto kind = attack.get<sol::optional<std::string>>( "kind" );
@@ -4138,8 +4154,13 @@ void write_static_monster_attack_fields( JsonOut &json, const sol::table &attack
         { "minimum_hit_size", "hitsize_min" }, { "maximum_hit_size", "hitsize_max" },
         { "throw_strength", "throw_strength" }, { "infection_chance", "infection_chance" },
     } );
+    const sol::object cooldown = attack.raw_get<sol::object>( "cooldown" );
+    if( cooldown.valid() && cooldown.get_type() != sol::type::nil ) {
+        json.member( "cooldown" );
+        write_monster_attack_cooldown( json, cooldown );
+    }
     write_item_fields<double>( json, attack, {
-        { "cooldown", "cooldown" }, { "minimum_damage_multiplier", "min_mul" },
+        { "minimum_damage_multiplier", "min_mul" },
         { "maximum_damage_multiplier", "max_mul" }, { "minimum_range", "min_range" },
         { "maximum_range", "max_range" }, { "minimum_target_distance", "min_consider_range" },
         { "maximum_target_distance", "max_consider_range" },
@@ -4206,7 +4227,7 @@ void write_static_monster_attacks( JsonOut &json, const sol::table &options )
             if( const auto base = attack.get<sol::optional<std::string>>( "reference" ) ) {
                 json.start_array();
                 json.write( *base );
-                json.write( attack.get<double>( "cooldown" ) );
+                write_monster_attack_cooldown( json, attack.raw_get<sol::object>( "cooldown" ) );
                 json.end_array();
             } else {
                 json.start_object();

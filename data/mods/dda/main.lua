@@ -599,3 +599,5 @@ require("mission_goals")
 require("mission_deliveries")
 
 require("attack_conditions")
+
+require("monster_attack_predicates")

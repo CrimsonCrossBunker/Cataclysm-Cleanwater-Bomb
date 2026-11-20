@@ -1,0 +1,52 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_zombie_strider",
+    name = ccb.content.plural_text("zombie strider", "zombie striders"),
+    description = ccb.content.text("In front of you lies the most disgusting rendition of a starfish you've ever seen.  Not just the arms, but the legs and even the head have been horrendously deformed and stretched several meters long.  It walks around hunchback, looking through the remains of its head for its next victim."),
+    copy_from = "mon_zombie_base",
+    species = { "ZOMBIE" },
+    difficulty_adjustment = 10,
+    hp = 180,
+    speed = 60,
+    color = "dark_gray_cyan",
+    melee_skill = 6,
+    vision_day = 8,
+    grab_strength = 50,
+    attacks = {
+        { id = "grab", cooldown = 5, move_cost = 50, range = 2 },
+        { id = "grab_2", cooldown = 5, move_cost = 50, range = 2 },
+        {
+            id = "stretch_attack",
+            cooldown = 5,
+            move_cost = 50,
+            range = 2,
+            no_adjacent = true,
+            damage = { { type = "bash", amount = 4 } },
+        },
+        {
+            id = "tentacle",
+            cooldown = 10,
+            no_adjacent = true,
+            damage = { { type = "bash", amount = 4 } },
+        },
+        {
+            id = "ranged_pull",
+            cooldown = 5,
+            no_adjacent = true,
+            grab_settings = { pull_weight_ratio = 1.5 },
+        },
+        { id = "push_away" },
+        {
+            cooldown = 3,
+            move_cost = 100,
+            maximum_range = 2,
+            minimum_target_distance = 2,
+            ignore_destination_danger = true,
+            message = ccb.content.text_without_extraction("The zombie strider takes a long step!"),
+            kind = "leap",
+            when = "monster_attack_intact_legs",
+        },
+    },
+    upgrade = false,
+}
