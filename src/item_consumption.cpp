@@ -96,7 +96,12 @@ bool supports_owned_consumption( const item &source )
         return false;
     }
     const use_function *use = source.type->get_default_use();
-    return !use || ( use->get_actor_ptr() && use->get_actor_ptr()->is_immediate_consumption() );
+    const iuse_actor *actor = use ? use->get_actor_ptr() : nullptr;
+    return !use || ( actor && ( actor->is_immediate_consumption() ||
+                                actor->type == "INHALER" || actor->type == "OXYGEN_BOTTLE" ||
+                                actor->type == "ADRENALINE_INJECTOR" ||
+                                actor->type == "JET_INJECTOR" ||
+                                actor->type == "STIMPACK" ) );
 }
 } // namespace
 

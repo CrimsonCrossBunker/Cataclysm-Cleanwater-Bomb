@@ -351,7 +351,7 @@ bool consume_mounted_tool_turn( Character &who, map &here, const mounted_tool_so
     } else {
         const int delta = prepared->initial_ammo - prepared->tool.ammo_remaining_linked( here, nullptr );
         if( delta > 0 && !prepared->fuel.is_null() ) {
-            if( prepared->fuel->ammo->type == ammotype( "battery" ) ) {
+            if( prepared->fuel->ammo && prepared->fuel->ammo->type == ammotype( "battery" ) ) {
                 target->discharge_battery( here, delta );
             } else {
                 target->drain( &here, prepared->fuel, delta );
