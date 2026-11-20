@@ -1,8 +1,0 @@
-[
-  {
-    "type": "region_terrain_furniture",
-    "id": "string_dimension_t_region_groundcover",
-    "ter_id": "t_string_dimension_groundcover",
-    "replace_with_terrain": [ "t_string_xyz" ]
-  }
-]

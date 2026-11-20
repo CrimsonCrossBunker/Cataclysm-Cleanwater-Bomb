@@ -13,12 +13,8 @@
     "type": "region_settings_terrain_furniture",
     "id": "mom_shoggothed_world",
     "copy-from": "default",
-    "ter_furn": [ "mom_shoggothed_world_t_region_groundcover" ]
-  },
-  {
-    "type": "region_terrain_furniture",
-    "id": "mom_shoggothed_world_t_region_groundcover",
-    "ter_id": "t_region_groundcover",
-    "replace_with_terrain": [ [ "t_dirt_cracked", 250 ], [ "t_dirt", 1 ] ]
+    "ter_furn": [
+      "mom_shoggothed_world_t_region_groundcover"
+    ]
   }
 ]

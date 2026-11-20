@@ -75,3 +75,4 @@ require("species")
 require("recipe_groups")
 
 require("monster_adjustments")
+require("region_components")
