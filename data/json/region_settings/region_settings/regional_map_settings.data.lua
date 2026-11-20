@@ -1,5 +1,238 @@
 local ccb = require("ccb")
 
+ccb.content.define_forest_biome_mapgen {
+    id = "biome_forest_default",
+    terrains = { "forest", "special_forest", "special_forest_isherwood" },
+    sparseness_adjacency_factor = 3,
+    item_group = "forest",
+    item_group_chance = 60,
+    item_spawn_iterations = 30,
+    groundcover = { { id = "t_region_groundcover_forest", weight = 1 } },
+    components = { "trees_forest", "shrubs_and_flowers_forest", "clutter_forest", "water_forest" },
+}
+
+ccb.content.define_forest_biome_mapgen {
+    id = "biome_forest_thick_default",
+    terrains = {
+        "anthill",
+        "bandit_cabin",
+        "bandit_garage_1",
+        "bandit_garage_2",
+        "campsite",
+        "campsite_a",
+        "campsite_cabin_incomplete",
+        "campsite_field_biker",
+        "campsite_field_biker_destroyed",
+        "cave",
+        "corpse_tentacle_surface_entry",
+        "derelict_property",
+        "desolatebarn",
+        "forest_thick",
+        "forest_trail",
+        "forest_trail_intersection",
+        "homelesscamp",
+        "island_forest",
+        "island_forest_thick",
+        "lake_shore",
+        "moonshine_still",
+        "moonshine_still_1",
+        "moonshine_still_2",
+        "natural_spring",
+        "river",
+        "river_c_not_ne",
+        "river_c_not_nw",
+        "river_c_not_se",
+        "river_c_not_sw",
+        "river_center",
+        "river_ne",
+        "river_nw",
+        "river_se",
+        "river_sw",
+        "slimepit_z0",
+        "special_forest_thick",
+        "special_forest_thick_isherwood",
+        "spider_pit",
+        "standing_stones",
+        "stream",
+        "stream_corner",
+        "stream_end",
+        "survivor_forest_camp",
+        "triffid_grove",
+        "triffid_field",
+        "ws_giant_sinkhole_1",
+        "ws_survivor_bunker_f0",
+    },
+    sparseness_adjacency_factor = 4,
+    item_group = "forest",
+    item_group_chance = 60,
+    item_spawn_iterations = 100,
+    groundcover = { { id = "t_region_groundcover_forest", weight = 1 } },
+    components = {
+        "trees_forest_thick",
+        "shrubs_and_flowers_forest_thick",
+        "clutter_forest_thick",
+        "water_forest",
+    },
+}
+
+ccb.content.define_forest_biome_mapgen {
+    id = "biome_forest_water_default",
+    terrains = { "forest_water", "hunter_shack", "hunter_shack_1", "shipwreck_river_1", "shipwreck_river_2" },
+    sparseness_adjacency_factor = 2,
+    item_group = "forest",
+    item_group_chance = 60,
+    item_spawn_iterations = 1,
+    groundcover = { { id = "t_region_groundcover_swamp", weight = 1 } },
+    components = {
+        "trees_forest_water",
+        "shrubs_and_flowers_forest_water",
+        "clutter_forest_water",
+        "water_forest_water",
+    },
+    terrain_furniture = {
+        t_water_murky = { chance = 2, furniture = { { id = "f_region_water_plant", weight = 1 } } },
+    },
+}
+
+ccb.content.define_forest_biome_component {
+    id = "trees_forest",
+    sequence = 0,
+    chance = 12,
+    types = { { id = "t_region_tree_forest", weight = 128 }, { id = "t_tree_young", weight = 32 } },
+}
+
+ccb.content.define_forest_biome_component {
+    id = "shrubs_and_flowers_forest",
+    sequence = 1,
+    chance = 10,
+    types = { { id = "t_region_shrub_forest", weight = 120 }, { id = "t_tree_young", weight = 10 } },
+}
+
+ccb.content.define_forest_biome_component {
+    id = "clutter_forest",
+    sequence = 2,
+    chance = 80,
+    types = {
+        { id = "t_trunk", weight = 128 },
+        { id = "t_dirtmound", weight = 128 },
+        { id = "f_boulder_small", weight = 128 },
+        { id = "f_rubble_rock", weight = 32 },
+        { id = "f_boulder_medium", weight = 8 },
+        { id = "f_boulder_large", weight = 1 },
+        { id = "t_pit", weight = 1 },
+        { id = "t_pit_shallow", weight = 1 },
+    },
+}
+
+ccb.content.define_forest_biome_component {
+    id = "water_forest",
+    sequence = 3,
+    chance = 512,
+    types = { { id = "t_puddle", weight = 1 } },
+}
+
+ccb.content.define_forest_biome_component {
+    id = "trees_forest_thick",
+    copy_from = "trees_forest",
+    chance = 5,
+    types = { { id = "t_region_tree_forest_dense", weight = 100 }, { id = "t_tree_young", weight = 5 } },
+}
+
+ccb.content.define_forest_biome_component {
+    id = "shrubs_and_flowers_forest_thick",
+    copy_from = "shrubs_and_flowers_forest",
+    chance = 5,
+    types = { { id = "t_region_shrub_forest_dense", weight = 130 }, { id = "t_tree_young", weight = 10 } },
+}
+
+ccb.content.define_forest_biome_component {
+    id = "clutter_forest_thick",
+    copy_from = "clutter_forest",
+    chance = 64,
+    types = {
+        { id = "t_trunk", weight = 64 },
+        { id = "t_dirtmound", weight = 64 },
+        { id = "f_boulder_small", weight = 32 },
+        { id = "f_rubble_rock", weight = 32 },
+        { id = "f_boulder_medium", weight = 16 },
+        { id = "f_boulder_large", weight = 4 },
+        { id = "t_pit", weight = 1 },
+        { id = "t_pit_shallow", weight = 1 },
+    },
+}
+
+-- for ease of mod copies
+ccb.content.define_forest_biome_component {
+    id = "water_forest_thick",
+    copy_from = "water_forest",
+}
+
+ccb.content.define_forest_biome_component {
+    id = "trees_forest_water",
+    copy_from = "trees_forest",
+    chance = 45,
+    types = {
+        { id = "t_tree", weight = 40 },
+        { id = "t_tree_young", weight = 80 },
+        { id = "t_tree_pine", weight = 40 },
+        { id = "t_tree_birch", weight = 20 },
+        { id = "t_tree_elm", weight = 20 },
+        { id = "t_tree_cottonwood", weight = 20 },
+        { id = "t_tree_alder", weight = 80 },
+        { id = "t_tree_maple", weight = 40 },
+        { id = "t_tree_willow", weight = 40 },
+        { id = "t_tree_walnut", weight = 8 },
+        { id = "t_tree_butternut", weight = 8 },
+        { id = "t_tree_chestnut", weight = 8 },
+        { id = "t_tree_hazelnut", weight = 2 },
+        { id = "t_tree_beech", weight = 2 },
+        { id = "t_tree_hickory", weight = 8 },
+        { id = "t_tree_crabapple", weight = 2 },
+        { id = "t_tree_apple", weight = 1 },
+        { id = "t_tree_cherry", weight = 1 },
+        { id = "t_tree_juniper", weight = 2 },
+        { id = "t_tree_peach", weight = 1 },
+        { id = "t_tree_pear", weight = 1 },
+        { id = "t_tree_plum", weight = 1 },
+        { id = "t_tree_elderberry", weight = 2 },
+        { id = "t_tree_nannyberry", weight = 10 },
+        { id = "t_tree_tupelo", weight = 10 },
+        { id = "t_tree_mulberry", weight = 2 },
+        { id = "t_tree_sassafras", weight = 3 },
+        { id = "t_region_tree_dead", weight = 90 },
+    },
+}
+
+ccb.content.define_forest_biome_component {
+    id = "shrubs_and_flowers_forest_water",
+    copy_from = "shrubs_and_flowers_forest",
+    chance = 15,
+    types = { { id = "t_region_shrub_swamp", weight = 80 }, { id = "f_region_forest_water", weight = 30 } },
+}
+
+ccb.content.define_forest_biome_component {
+    id = "clutter_forest_water",
+    copy_from = "clutter_forest",
+    chance = 75,
+    types = {
+        { id = "t_trunk", weight = 1 },
+        { id = "f_boulder_small", weight = 2 },
+        { id = "f_boulder_medium", weight = 1 },
+    },
+}
+
+ccb.content.define_forest_biome_component {
+    id = "water_forest_water",
+    copy_from = "water_forest",
+    chance = 2,
+    types = {
+        { id = "t_water_sh", weight = 6 },
+        { id = "t_water_dp", weight = 1 },
+        { id = "t_water_murky", weight = 12 },
+    },
+}
+
+
 ccb.content.define_map_extra_collection {
     id = "forest",
     chance = 40,

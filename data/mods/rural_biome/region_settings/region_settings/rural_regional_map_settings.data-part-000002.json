@@ -1,0 +1,12 @@
+[
+  {
+    "type": "region_settings_forest_mapgen",
+    "id": "default_ruralbiome",
+    "copy-from": "default",
+    "biomes": [
+      "biome_forest_ruralbiome",
+      "biome_forest_thick_ruralbiome",
+      "biome_forest_water_ruralbiome"
+    ]
+  }
+]
