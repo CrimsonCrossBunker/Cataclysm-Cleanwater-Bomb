@@ -9,11 +9,7 @@
       "and": [
         { "u_has_trait": "XEDRA_CHRONOMANCER" },
         {
-          "or": [
-            {
-              "compare_string": [ { "context_val": "victim_type" }, "mon_tindalos", "mon_zombie_monochrome_3" ]
-            }
-          ]
+          "or": [ { "compare_string": [ { "context_val": "victim_type" }, "mon_tindalos", "mon_zombie_monochrome_3" ] } ]
         },
         { "not": { "u_has_trait": "VAMPIRE" } }
       ]

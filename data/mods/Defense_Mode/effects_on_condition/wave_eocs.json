@@ -19,21 +19,13 @@
       "and": [
         { "math": [ "special_waves_allowed == 0" ] },
         {
-          "or": [
-            { "math": [ "wave_number == 5" ] },
-            { "math": [ "wave_number == 15" ] },
-            { "math": [ "wave_number == 30" ] }
-          ]
+          "or": [ { "math": [ "wave_number == 5" ] }, { "math": [ "wave_number == 15" ] }, { "math": [ "wave_number == 30" ] } ]
         }
       ]
     },
     "effect": [
       {
-        "run_eocs": [
-          "DEFENSE_MODE_WAVE_SPECIAL_FERALS",
-          "DEFENSE_MODE_WAVE_SPECIAL_RATKIN",
-          "DEFENSE_MODE_WAVE_SPECIAL_MILITARY"
-        ]
+        "run_eocs": [ "DEFENSE_MODE_WAVE_SPECIAL_FERALS", "DEFENSE_MODE_WAVE_SPECIAL_RATKIN", "DEFENSE_MODE_WAVE_SPECIAL_MILITARY" ]
       }
     ],
     "false_effect": [ { "run_eocs": "DEFENSE_MODE_WAVE_SPAWN_FALLBACK" } ]
