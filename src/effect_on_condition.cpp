@@ -244,7 +244,17 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 474> migrated_character_tasks = {{
+const std::array<character_task_migration, 479> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_CHANGELING_CHECK_INVENTORY_FOR_EXTRA_DREAMSPARKS" ),
+          "changeling_cap_dreamsparks", "changeling_cap_dreamsparks" },
+        { effect_on_condition_id( "EOC_BROWNIE_HOMEBODY_RAISING_EOC" ),
+          "brownie_homebody_hour", "brownie_homebody_hour" },
+        { effect_on_condition_id( "EOC_PLAYABLE_CHANGELING_ADVANCEMENT_NOBLE_YOU_HAVE_ONE_FOLLOWER" ),
+          "changeling_first_follower", "changeling_first_follower" },
+        { effect_on_condition_id( "EOC_PLAYABLE_CHANGELING_ADVANCEMENT_NOBLE_YOU_HAVES_SEVEN_FOLLOWERS" ),
+          "changeling_seven_followers", "changeling_seven_followers" },
+        { effect_on_condition_id( "EOC_PLAYABLE_CHANGELING_ADVANCEMENT_SELKIE_STAND_OUT_IN_RAIN" ),
+          "selkie_rain_exposure", "selkie_rain_exposure" },
         psychic_insight_migration( "EOC_BIOKIN_LEARNING_OXYGEN_ABSORPTION", "insight_biokin_breathe_skin" ),
         psychic_insight_migration( "EOC_BIOKIN_LEARNING_FLEXIBILITY", "insight_biokin_flexibility" ),
         psychic_insight_migration( "EOC_BIOKIN_LEARNING_DASH", "insight_biokin_dash" ),

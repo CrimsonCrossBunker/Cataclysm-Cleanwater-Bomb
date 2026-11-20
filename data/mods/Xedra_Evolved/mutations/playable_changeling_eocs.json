@@ -15,26 +15,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_TEST_CHANGELING_COMMONER_INITIAL_CONDITIONS",
-    "condition": {
-      "and": [
-        { "u_has_trait": "FAIR_FOLK_COMMONER_SELECTOR" },
-        {
-          "not": {
-            "u_has_any_trait": [
-              "UNKNOWING_CHANGELING_COMMONER_BROWNIE",
-              "UNKNOWING_CHANGELING_COMMONER_POOKA",
-              "UNKNOWING_CHANGELING_COMMONER_SELKIE",
-              "UNKNOWING_CHANGELING_COMMONER_TROW"
-            ]
-          }
-        }
-      ]
-    },
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_TEST_CHANGELING_EFFECTS_REMOVED_BY_COMBAT",
     "condition": {
       "or": [
@@ -700,32 +680,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_BROWNIE_HOMEBODY_RAISING_EOC",
-    "recurrence": [ "1 hours", "1 hours" ],
-    "condition": {
-      "and": [
-        { "u_has_trait": "BROWNIE_HOMEBODY" },
-        { "math": [ "u_brownie_homebody_speed_bonus <= 25" ] },
-        { "not": { "u_has_effect": "sleep" } }
-      ]
-    },
-    "deactivate_condition": { "not": { "u_has_trait": "BROWNIE_HOMEBODY" } },
-    "effect": [
-      { "math": [ "u_brownie_homebody_speed_bonus++" ] },
-      { "math": [ "u_brownie_sense_intruders++" ] },
-      {
-        "if": {
-          "and": [
-            { "math": [ "u_brownie_homebody_speed_bonus == 24" ] },
-            { "math": [ "u_changeling_advancement_brownie_condition_spend_twenty_four_hours_indoors != 1" ] }
-          ]
-        },
-        "then": [ { "run_eocs": "EOC_PLAYABLE_CHANGELING_BROWNIE_ADVANCEMENT_REACH_SPEND_TWENTY_FOUR_HOURS_INDOORS" } ]
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_BROWNIE_HOMEBODY_LOWERING_EOC",
     "required_event": "avatar_enters_omt",
     "eoc_type": "EVENT",
@@ -868,14 +822,6 @@
       }
     ],
     "false_effect": { "u_message": "You must be indoors to slip through the cracks.", "type": "bad" }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_BROWNIE_HOME_TELEPORT_SET_DESTINATION",
-    "eoc_type": "EVENT",
-    "required_event": "character_wakes_up",
-    "condition": { "and": [ { "u_has_trait": "BROWNIE_TELEPORT_HOME" }, { "math": [ "u_brownie_homebody_speed_bonus >= 12" ] } ] },
-    "effect": [ { "u_location_variable": { "u_val": "brownie_home_teleport_loc" } } ]
   },
   {
     "type": "effect_on_condition",
@@ -1557,21 +1503,6 @@
     "effect": [
       { "math": [ "u_weather_change_limit = 0" ] },
       { "u_lose_effect": [ "effect_controlling_weather", "effect_controlling_weather_lightningstorm" ] }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_TROW_MOONS_TEARS_FORGING_LEARN_RECIPES",
-    "eoc_type": "EVENT",
-    "required_event": "character_wakes_up",
-    "condition": { "and": [ { "u_has_trait": "TROW_MOONS_TEARS_FORGING" }, { "x_in_y_chance": { "x": 1, "y": 15 } } ] },
-    "effect": [
-      {
-        "if": { "not": { "u_know_recipe": "moon_tear_ingot" } },
-        "then": { "u_learn_recipe": "moon_tear_ingot" },
-        "else": { "run_eocs": "EOC_LEARN_MOONS_TEARS_RECIPES" }
-      },
-      { "u_message": "Your dreams have revealed to you a secret of forging moon's tears.", "type": "good" }
     ]
   },
   {

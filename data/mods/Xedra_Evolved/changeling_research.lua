@@ -260,3 +260,42 @@ for _, season in ipairs(seasons) do
         can_resume = false,
     }:on_finish(handler))
 end
+
+require("changeling_milestones")
+require("changeling_dreams")
+
+local function has_dreamdross(character)
+    local amount = math.modf(number(character, trait_cost))
+    return checked(services.inventory.has_items(character, id("item", "scrap_dreamdross"), amount, 0))
+end
+
+ccb.runtime.handler("has_changeling_research_dreamdross", function(context)
+    return context.speaker and context.speaker.subtype ~= "monster" and has_dreamdross(context.speaker) or false
+end)
+
+ccb.runtime.handler("begin_changeling_heritage_research", function(impact)
+    local character = impact.target_creature
+    if not character or character.subtype == "monster" then return end
+    local enough = has_dreamdross(character)
+    local vampire = checked(services.mutations.has_id_text(character, "VAMPIRE"))
+    if vampire or not enough then
+        if character.subtype == "avatar" then
+            local text = vampire and ccb.services.translate("You try to draw on the dreamdross's power but you can't think about anything but finding some warm, delicious blood to sate your thirst.")
+                or ccb.services.translate("You don't have enough dreamdross to draw on for power.  You need at least <u_val:changeling_new_trait_dreamdross_research_cost> scraps of dreamdross.")
+            services.messages.add(checked(services.text.expand_for(text, character, impact.caster)), "bad")
+        end
+        return
+    end
+    if character.subtype == "avatar" then
+        services.messages.add(ccb.services.translate("You reach into the dreamdross and draw on the dreams of mortals for power."), "good")
+    end
+    local count = 0
+    for _, lineage in ipairs(mortal_limits) do
+        count = count + checked(services.mutations.category_count(character, id("mutation_category", lineage[1]),
+            "ALL", true))
+    end
+    local duration = services.time.duration_from_turns(10800 + math.min(count * 1800, 28800))
+    local result = services.activities.assign_timed(character, id("activity", "ACT_CHANGELING_RESEARCH_NEW_POWERS"),
+        duration)
+    if not result.ok and result.error.code ~= "assignment_rejected" then checked(result) end
+end)

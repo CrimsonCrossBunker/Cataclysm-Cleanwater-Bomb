@@ -209,29 +209,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_LEARN_MOONS_TEARS_RECIPES",
-    "effect": [
-      {
-        "u_roll_remainder": [
-          "moon_tear_ingot",
-          "moons_tears_knife_baselard",
-          "moons_tears_broadsword",
-          "moons_tears_arming_sword",
-          "moons_tears_mace",
-          "moons_tears_scimitar",
-          "moons_tears_estoc",
-          "moons_tears_spear",
-          "moons_tears_battleaxe",
-          "moons_tears_katana"
-        ],
-        "type": "recipe",
-        "true_eocs": [  ],
-        "false_eocs": [  ]
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_SLEEP_NEAR_SEVENOCLOCK",
     "eoc_type": "EVENT",
     "required_event": "character_attempt_to_fall_asleep",
