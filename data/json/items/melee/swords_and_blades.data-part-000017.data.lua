@@ -1,0 +1,32 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "mc_katana",
+    category = "weapons",
+    name = ccb.content.plural_text("medium steel katana", "medium steel katana"),
+    description = ccb.content.text("A rare sword from Japan.  Deadly against unarmored targets, and still very effective against armor.\n\nMade with medium steel and with a grip made of leather wrapped in steel wire, this weapon is comfortable in your hand, though the balance isn't perfect and the edge could be sharper."),
+    mass = "1313 g",
+    volume = "2 L",
+    length = "90 cm",
+    symbol = "/",
+    ascii_picture = "katana",
+    color = "light_gray",
+    looks_like = "katana",
+    price = "980 USD",
+    survival_price = "45 USD",
+    materials = { { id = "leather", portions = 1.1 }, { id = "mc_steel", portions = 96 } },
+    repair_materials = { "mc_steel" },
+    flags = { "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" },
+    techniques = { "RAPID", "WBLOCK_2", "MOUNTED_CHARGE" },
+    accuracy = { grip = "weapon", length = "long", surface = "line", balance = "good" },
+    qualities = { { id = "CUT", level = 1 }, { id = "BUTCHER", level = 9 } },
+    weapon_categories = { "LONG_SWORDS" },
+    faults = {
+        { group = "handle_short" },
+        { group = "blade_general", weight_multiplier = 5 },
+        { group = "bladed_weapon_craft_failures" },
+    },
+    melee_damage = { bash = 5, cut = 33 },
+    tool = {},
+    mounted_charge = { max_steps = 15, damage_type = "cut", multiplier_per_step = 0.08, max_multiplier = 1.3 },
+}

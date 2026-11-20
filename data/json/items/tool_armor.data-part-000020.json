@@ -1,0 +1,28 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "ARMOR" ],
+    "id": "whistle",
+    "name": { "str": "whistle" },
+    "volume": "10 ml",
+    "description": "A simple metal whistle, with a cord to wear it around your neck.",
+    "weight": "25 g",
+    "color": "light_gray",
+    "price": "2 USD",
+    "price_postapoc": "50 cent",
+    "material": [ "steel", "cotton" ],
+    "flags": [ "WATER_FRIENDLY", "BELTED" ],
+    "symbol": "[",
+    "use_action": {
+      "type": "manualnoise",
+      "use_message": "You blow the whistle.",
+      "//": "Use of %s not currently supported.",
+      "noise_message": "FWEEEET!",
+      "noise_id": "misc",
+      "noise_variant": "whistle",
+      "noise": 100,
+      "moves": 100
+    },
+    "armor": [ { "coverage": 1, "covers": [ "torso" ], "specifically_covers": [ "torso_neck" ] } ]
+  }
+]

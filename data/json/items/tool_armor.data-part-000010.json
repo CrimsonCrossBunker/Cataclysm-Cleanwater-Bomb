@@ -1,155 +1,129 @@
 [
   {
-    "id": "military_papr_mask",
-    "//": "Based on the Avon/US military FM54",
+    "id": "ar_glasses_advanced_pat",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
     "category": "clothing",
-    "name": { "str": "military respirator mask (PAPR)", "str_pl": "military respirator masks (PAPR)" },
-    "looks_like": "mask_gas",
-    "description": "A black, full-face military respirator made from a silicon and butyl rubber blend, providing decent user comfort in addition to a clear field of view and a secure fit thanks to the mask's single-element visor and 6-point head harness.  This mask is configured for two modes: negative-pressure, using standard CBRN gas mask filter canisters; and positive-pressure, with built-in hardware to accommodate either a powered air-purifying respirator (PAPR) or a self-contained breathing apparatus (SCBA).  Once activated it will comfortably protect against chemical, biological, radiological, and nuclear threats.  It is currently in positive-pressure PAPR mode, so will only function with a powered PAPR blower.",
-    "weight": "490 g",
-    "volume": "1536 ml",
-    "longest_side": "27 cm",
-    "price": "499 USD 50 cent",
-    "price_postapoc": "7 USD 50 cent",
-    "material": [ { "type": "butyl_rubber", "portion": 3 }, { "type": "plastic", "portion": 2 } ],
+    "name": { "str_sp": "modified advanced AR glasses" },
+    "description": "An expensive model of augmented reality glasses, with adaptive light correction and some gadgets, designed to be compatible with corrective glasses.  An augmented reality overlay allows the user to zoom their view, and it displays handy information about local topology.  These have been modified by your friend Pat to function on long-distance radio waves (LoRa).  A battery pack, the internal parts of a tablet PC, and a two-way radio have been combined onto a hip-strapped unit.  Activate it to utilize software, start recording and transmitting with Pat's system, or hail Pat on the radio.",
+    "weight": "400 g",
+    "volume": "750 ml",
+    "price": "3 kUSD",
+    "price_postapoc": "4 USD",
+    "material": [ "plastic" ],
     "symbol": "[",
-    "color": "dark_gray",
-    "armor": [
-      {
-        "material": [ { "type": "cotton", "covered_by_mat": 100, "thickness": 0.2 } ],
-        "covers": [ "head" ],
-        "specifically_covers": [ "head_crown", "head_nape" ],
-        "coverage": 25,
-        "encumbrance": 0,
-        "layers": [ "SKINTIGHT" ],
-        "volume_encumber_modifier": 0
-      },
-      {
-        "material": [ { "type": "butyl_rubber", "covered_by_mat": 100, "thickness": 2 } ],
-        "covers": [ "head" ],
-        "specifically_covers": [ "head_forehead" ],
-        "coverage": 100,
-        "encumbrance": 20,
-        "volume_encumber_modifier": 0,
-        "layers": [ "SKINTIGHT" ]
-      },
-      {
-        "material": [ { "type": "hard_plastic_transp", "covered_by_mat": 100, "thickness": 2 } ],
-        "covers": [ "eyes" ],
-        "coverage": 100,
-        "encumbrance": 10,
-        "layers": [ "SKINTIGHT", "NORMAL" ],
-        "rigid_layer_only": true,
-        "volume_encumber_modifier": 0
-      },
-      {
-        "material": [
-          { "type": "butyl_rubber", "covered_by_mat": 100, "thickness": 2 },
-          { "type": "plastic", "covered_by_mat": 30, "thickness": 1 }
-        ],
-        "covers": [ "mouth" ],
-        "specifically_covers": [ "mouth_lips", "mouth_nose", "mouth_chin" ],
-        "coverage": 100,
-        "encumbrance": 10,
-        "layers": [ "SKINTIGHT", "NORMAL" ]
-      },
-      {
-        "material": [
-          { "type": "butyl_rubber", "covered_by_mat": 100, "thickness": 2 },
-          { "type": "plastic", "covered_by_mat": 25, "thickness": 1 }
-        ],
-        "covers": [ "mouth" ],
-        "specifically_covers": [ "mouth_cheeks" ],
-        "coverage": 100,
-        "encumbrance": 10,
-        "layers": [ "SKINTIGHT", "NORMAL" ],
-        "volume_encumber_modifier": 0
-      }
-    ],
-    "warmth": 40,
-    "material_thickness": 2,
-    "environmental_protection": 4,
-    "environmental_protection_with_filter": 16,
-    "pocket_data": [
-      { "pocket_type": "MAGAZINE_WELL", "flag_restriction": [ "GASFILTER_MED" ], "default_magazine": "gasfilter_med" },
-      {
-        "pocket_type": "CONTAINER",
-        "ablative": true,
-        "volume_encumber_modifier": 0,
-        "max_contains_volume": "50 ml",
-        "max_contains_weight": "60 g",
-        "max_item_length": "17 cm",
-        "moves": 250,
-        "description": "A number of external brackets arranged around the eyepiece to retain an outer attachment.",
-        "flag_restriction": [ "PANORAMIC_OUTSERT" ],
-        "inherits_flags": true
-      },
-      {
-        "pocket_type": "CONTAINER",
-        "rigid": true,
-        "ablative": true,
-        "volume_encumber_modifier": 0,
-        "max_contains_volume": "50 ml",
-        "max_contains_weight": "50 g",
-        "max_item_length": "10 cm",
-        "moves": 380,
-        "description": "A space behind the visor designed to accommodate the installation of inserts.",
-        "flag_restriction": [ "PANORAMIC_INSERT" ],
-        "inherits_flags": true
-      }
-    ],
+    "looks_like": "glasses_safety",
+    "color": "white",
+    "charges_per_use": 1,
+    "etransfer_rate": "30 MB",
+    "e_port": "phone",
     "use_action": [
-      "PAPR_MASK_ACTIVATE",
+      "CAMERA",
+      "PORTABLE_GAME",
+      "EBOOKSAVE",
+      "E_FILE_DEVICE",
       {
+        "menu_text": "Connect to Pat's system and start transmitting data",
         "type": "transform",
-        "msg": "You switch airflow to the CBRN filter compartment.",
-        "target": "military_papr_mask_gasmask",
-        "menu_text": "Switch to filter mode"
+        "msg": "You turn the %s on and put in your earbud.",
+        "target": "ar_glasses_advanced_pat_on",
+        "ammo_scale": 0
       },
       {
         "type": "effect_on_conditions",
-        "menu_text": "Switch to SCBA mode",
-        "effect_on_conditions": [
-          {
-            "id": "EOC_military_papr_mask_to_scba",
-            "effect": [ { "transform_item": "military_papr_mask_asr" }, { "u_message": "You switch airflow to the SCBA regulator." } ]
-          }
-        ]
+        "menu_text": "Hail Pat on the radio",
+        "effect_on_conditions": [ "EOC_ROBOFAC_PAT_CHATTING_ON_RADIO" ]
       }
     ],
-    "tick_action": [ "PAPR_MASK" ],
-    "flags": [ "SLEEP_IGNORE", "VARSIZE", "PADDED", "PAPR_MASK" ]
+    "pocket_data": [
+      {
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "flag_restriction": [ "BATTERY_LIGHT", "BATTERY_ULTRA_LIGHT" ],
+        "default_magazine": "light_battery_cell"
+      },
+      {
+        "pocket_type": "E_FILE_STORAGE",
+        "rigid": true,
+        "max_contains_volume": "1 ml",
+        "max_contains_weight": "1 g",
+        "weight_multiplier": 0,
+        "ememory_max": "1 TB"
+      }
+    ],
+    "armor": [
+      { "encumbrance": 5, "coverage": 100, "covers": [ "eyes" ] },
+      {
+        "coverage": 15,
+        "covers": [ "leg_l", "leg_r" ],
+        "encumbrance": 5,
+        "specifically_covers": [ "leg_hip_r", "leg_hip_l" ],
+        "layers": [ "BELTED" ]
+      }
+    ],
+    "material_thickness": 1,
+    "environmental_protection": 1,
+    "flags": [
+      "ZOOM",
+      "WATCH",
+      "ALARMCLOCK",
+      "OUTER",
+      "FRAGILE",
+      "SUN_GLASSES",
+      "THERMOMETER",
+      "WATER_BREAK",
+      "PADDED",
+      "ELECTRONIC",
+      "CAN_USE_IN_DARK",
+      "TWO_WAY_RADIO",
+      "TRADER_AVOID"
+    ],
+    "faults": [ { "fault_group": "electronic_general" } ],
+    "tool_ammo": "battery"
   },
   {
-    "id": "military_papr_mask_asr",
+    "id": "ar_glasses_advanced_pat_on",
+    "copy-from": "ar_glasses_advanced_pat",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
     "category": "clothing",
-    "name": { "str": "military respirator mask (SCBA)", "str_pl": "military respirator masks (SCBA)" },
-    "looks_like": "mask_gas",
-    "description": "A black, full-face military respirator made from a silicon and butyl rubber blend, providing decent user comfort in addition to a clear field of view and a secure fit thanks to the mask's single-element visor and 6-point head harness.  This mask is configured for two modes: negative-pressure, using standard CBRN gas mask filter canisters; and positive-pressure, with built-in hardware to accommodate either a powered air-purifying respirator (PAPR) or a self-contained breathing apparatus (SCBA).  Once activated it will comfortably protect against chemical, biological, radiological, and nuclear threats.  It is currently in positive-pressure SCBA mode, so will only function with an external air source.",
-    "copy-from": "military_papr_mask",
+    "name": { "str": "modified advanced AR glasses (on)", "str_pl": "pairs of modified advanced AR glasses (on)" },
+    "flags": [
+      "ZOOM",
+      "WATCH",
+      "ALARMCLOCK",
+      "OUTER",
+      "FRAGILE",
+      "SUN_GLASSES",
+      "THERMOMETER",
+      "WATER_BREAK",
+      "PADDED",
+      "ELECTRONIC",
+      "CAN_USE_IN_DARK",
+      "TWO_WAY_RADIO",
+      "TRADER_AVOID",
+      "SPAWN_ACTIVE"
+    ],
+    "power_draw": "120 mW",
+    "revert_to": "ar_glasses_advanced_pat",
     "use_action": [
-      "SCBA_MASK_ACTIVATE",
+      "CAMERA",
+      "PORTABLE_GAME",
+      "EBOOKSAVE",
+      "E_FILE_DEVICE",
       {
+        "menu_text": "Disconnect from Pat's system and stop transmitting data",
         "type": "transform",
-        "msg": "You switch airflow to the CBRN filter compartment.",
-        "target": "military_papr_mask_gasmask",
-        "menu_text": "Switch to filter mode"
+        "msg": "You turn the %s off and remove your earbud.",
+        "target": "ar_glasses_advanced_pat",
+        "ammo_scale": 0
       },
       {
         "type": "effect_on_conditions",
-        "menu_text": "Switch to PAPR mode",
-        "effect_on_conditions": [
-          {
-            "id": "EOC_military_scba_mask_to_papr",
-            "effect": [ { "transform_item": "military_papr_mask" }, { "u_message": "You switch airflow to PAPR mode." } ]
-          }
-        ]
+        "menu_text": "Hail Pat on the radio",
+        "effect_on_conditions": [ "EOC_ROBOFAC_PAT_CHATTING_ON_RADIO" ]
       }
     ],
-    "flags": [ "SLEEP_IGNORE", "VARSIZE", "PADDED", "SCBA" ]
+    "tick_action": { "type": "effect_on_conditions", "effect_on_conditions": [ "EOC_pat_AR_activate" ] }
   }
 ]

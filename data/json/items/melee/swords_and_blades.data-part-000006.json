@@ -1,32 +1,12 @@
 [
   {
-    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
-    "id": "mc_wakizashi",
+    "id": "ch_estoc",
+    "copy-from": "mc_estoc",
     "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str_sp": "medium steel wakizashi" },
-    "description": "A comparatively-common Japanese short sword.  Smaller and lighter than a katana, but still effective in combat.\n\nMade with medium steel and with a grip made of leather wrapped in steel wire, this weapon is comfortable in your hand, though the balance isn't perfect and the edge could be sharper.",
-    "weight": "925 g",
-    "volume": "1500 ml",
-    "longest_side": "70 cm",
-    "symbol": "/",
-    "color": "light_gray",
-    "looks_like": "wakizashi",
-    "price": "178 USD",
-    "price_postapoc": "27 USD 50 cent",
-    "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 64 } ],
-    "repairs_with": [ "mc_steel" ],
-    "flags": [ "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ],
-    "techniques": [ "RAPID", "WBLOCK_2", "MOUNTED_CHARGE" ],
-    "to_hit": { "grip": "weapon", "length": "short", "surface": "line", "balance": "good" },
-    "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 14 ] ],
-    "weapon_category": [ "MEDIUM_SWORDS" ],
-    "faults": [
-      { "fault_group": "handle_short" },
-      { "fault_group": "blade_general", "weight_mult": 5 },
-      { "fault_group": "bladed_weapon_craft_failures" }
-    ],
-    "melee_damage": { "bash": 2, "cut": 32 }
+    "name": { "str": "hardened steel estoc" },
+    "description": "A thin thrusting sword, a sort of predecessor to the rapier.  It requires a larger baldric or scabbard, compared to smaller swords.\n\nMade of hardened steel and with a molded grip that fits your hand perfectly, this weapon looks as good as any you might find in a museum.  The balance is perfect and the edge is as sharp as a razor.",
+    "replace_materials": { "mc_steel": "ch_steel", "leather": "kevlar" },
+    "proportional": { "price_postapoc": 1.1, "price": 1.1 },
+    "relative": { "melee_damage": { "stab": 5 }, "qualities": [ [ "BUTCHER", 1 ] ] }
   }
 ]
