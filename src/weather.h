@@ -15,6 +15,7 @@
 #include "point.h"
 #include "regional_climate.h"
 #include "ret_val.h"
+#include "safe_reference.h"
 #include "type_id.h"
 #include "units.h"
 #include "weather_gen.h"
@@ -22,6 +23,7 @@
 
 class JsonObject;
 class JsonOut;
+class map;
 class translation;
 
 /**
@@ -265,8 +267,6 @@ class weather_manager
         void set_nextweather( time_point t );
         // The time at which weather will shift next.
         time_point nextweather;
-        /** temperature cache, cleared every turn, sparse map of map tripoints to temperatures */
-        std::unordered_map< tripoint_bub_ms, units::temperature > temperature_cache;
         mutable std::unordered_map<tripoint_abs_omt, units::temperature> ground_temperature_cache;
         // Per-OMT snow depth state, updated incrementally
         mutable std::unordered_map< tripoint_abs_omt, omt_snow_state > snow_depth_map;
@@ -283,11 +283,17 @@ class weather_manager
         * this is essentially the "natural" temperature.
         */
         units::temperature get_area_temperature( const tripoint_abs_omt &location ) const;
+        void clear_local_temp_cache();
         void clear_temp_cache();
         static void serialize_all( JsonOut &json );
         static void unserialize_all( const JsonObject &w );
 
     private:
+        // Local heat depends on the loaded view, even where two views overlap.
+        safe_reference<map> temperature_cache_map;
+        tripoint_abs_sm temperature_cache_origin;
+        std::unordered_map<tripoint_abs_ms, units::temperature> temperature_cache;
+
         struct room_heat {
             double excess = 0;
             double equilibrium = 0;

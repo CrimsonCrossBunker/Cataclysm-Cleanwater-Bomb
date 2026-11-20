@@ -98,6 +98,11 @@ void talker_monster::mod_pain( int amount )
     me_mon->mod_pain( amount );
 }
 
+void talker_monster::set_pain( int amount )
+{
+    me_mon->set_pain( amount );
+}
+
 diag_value const *talker_monster_const::maybe_get_value( const std::string &var_name ) const
 {
     return me_mon_const->maybe_get_value( var_name );

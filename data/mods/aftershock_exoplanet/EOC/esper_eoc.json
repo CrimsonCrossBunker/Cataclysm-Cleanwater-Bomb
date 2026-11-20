@@ -47,7 +47,7 @@
         { "x_in_y_chance": { "x": 1, "y": { "math": [ "10 - u_vitamin('vitamin_afs_maintained_powers')" ] } } }
       ]
     },
-    "effect": [ { "math": [ "u_pain() += rand(2)" ] } ]
+    "effect": [ { "math": [ "u_pain('type': 'base') += rand(2)" ] } ]
   },
   {
     "type": "effect_on_condition",

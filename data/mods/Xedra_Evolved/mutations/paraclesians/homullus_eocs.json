@@ -400,6 +400,7 @@
           { "math": [ "u_vitamin('redcells') = 0" ] },
           { "math": [ "u_pain() = 0" ] },
           { "math": [ "u_val('rad') = 0" ] },
+          { "u_remove_wound": "ALL", "wound_id": [ "thermal_blister", "thermal_burn" ] },
           {
             "u_lose_effect": [
               "corroding",
@@ -408,7 +409,6 @@
               "stunned",
               "venom_blind",
               "formication",
-              "blisters",
               "frostbite",
               "frostbite_recovery",
               "wet",

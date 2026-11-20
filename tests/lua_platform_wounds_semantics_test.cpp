@@ -3,13 +3,16 @@
 #include <creature.h>
 #include "flexbuffer_json.h"
 #include <talker.h>
+#include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "avatar.h"
 #include "bodypart.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
@@ -27,6 +30,7 @@
 #include "wound.h"
 
 static const bodypart_str_id body_part_head_dragonfly( "head_dragonfly" );
+static const efftype_id effect_incorporeal( "incorporeal" );
 static const trait_id trait_MASOCHIST( "MASOCHIST" );
 static const wound_type_id wound_wound_platform_effect_test( "wound_platform_effect_test" );
 
@@ -37,7 +41,7 @@ class runtime;
 
 
 TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
-           "[lua][platform][wounds][semantic]" )
+           "[lua][platform][wounds][semantic][thermal_burn]" )
 {
     wound_type::load_wounds(
         json_loader::from_string( R"({
@@ -76,7 +80,7 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
     } );
 
     dialogue native_alpha_dialogue( get_talker_for( native_alpha ), nullptr );
-    dialogue hostile_native_npc_dialogue( get_talker_for( native_beta ), nullptr );
+    dialogue native_npc_dialogue( get_talker_for( native_alpha ), get_talker_for( native_beta ) );
     const bodypart_id requested_part = body_part_head_dragonfly.id();
     native_alpha.set_mutation( trait_MASOCHIST );
     platform_alpha.set_mutation( trait_MASOCHIST );
@@ -177,24 +181,32 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
         CHECK( native_alpha.get_morale_level() == native_morale_before_direct_remove );
         CHECK( platform_alpha.get_morale_level() == platform_morale_before_direct_remove );
 
+        constexpr const char *npc_add =
+            R"({"npc_add_wound":"head_dragonfly","wound_id":"wound_platform_effect_test"})";
+        constexpr const char *npc_remove =
+            R"({"npc_remove_wound":"head_dragonfly","wound_id":["wound_platform_effect_test"]})";
         const std::string add_beta_fallback_diagnostic = capture_debugmsg_during( [&]() {
-            apply_native( hostile_native_npc_dialogue,
-                          R"({"npc_add_wound":"head_dragonfly","wound_id":"wound_platform_effect_test"})" );
+            apply_native( native_alpha_dialogue, npc_add );
         } );
         CHECK( add_beta_fallback_diagnostic.find( "Tried to use an invalid beta talker." ) !=
                std::string::npos );
+        REQUIRE( wound_count( native_alpha ) == 1 );
+        CHECK( wound_count( native_beta ) == 0 );
+
+        apply_native( native_npc_dialogue, npc_add );
         CHECK( apply_platform( "add_unbounded", beta_handle ) );
-        CHECK( wound_count( native_beta ) == 1 );
+        REQUIRE( wound_count( native_beta ) == 1 );
         CHECK( wound_count( platform_beta ) == 1 );
-        const std::string remove_beta_fallback_diagnostic = capture_debugmsg_during( [&]() {
-            apply_native( hostile_native_npc_dialogue,
-                          R"({"npc_remove_wound":"head_dragonfly","wound_id":["wound_platform_effect_test"]})" );
+        const std::string missing_beta_diagnostic = capture_debugmsg_during( [&]() {
+            apply_native( native_alpha_dialogue, npc_remove );
         } );
-        CHECK( remove_beta_fallback_diagnostic.find( "Tried to use an invalid beta talker." ) !=
-               std::string::npos );
+        CHECK( missing_beta_diagnostic.empty() );
+        CHECK( wound_count( native_alpha ) == 1 );
+        apply_native( native_npc_dialogue, npc_remove );
         CHECK( apply_platform( "remove_all_direct", beta_handle ) );
         CHECK( wound_count( native_beta ) == 0 );
         CHECK( wound_count( platform_beta ) == 0 );
+        CHECK( wound_count( native_alpha ) == 1 );
 
         sol::protected_function legacy_remove = services["wounds"]["remove"];
         const sol::protected_function_result legacy_remove_call = legacy_remove(
@@ -221,6 +233,72 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
                     cata::lua_platform::script_game_id( "wound", "wound_not_registered" ) );
         CHECK_FALSE( unknown_remove_call.valid() );
         CHECK( wound_count( platform_alpha ) == 0 );
+
+        const cata::lua_platform::script_game_id hand( "body_part", "hand_l" );
+        const cata::lua_platform::script_game_id arm( "body_part", "arm_l" );
+        const cata::lua_platform::script_game_id blister( "wound", "thermal_blister" );
+        const cata::lua_platform::script_game_id burn( "wound", "thermal_burn" );
+        const auto invoke = [&]( const char *method, const auto &...args ) {
+            sol::protected_function function = services["wounds"][method];
+            const sol::protected_function_result call = function( alpha_handle, args... );
+            REQUIRE( call.valid() );
+            const sol::table result = call;
+            REQUIRE( result["ok"].get<bool>() );
+            return result["value"].get<sol::table>();
+        };
+        const auto check_snapshot = []( const sol::table &snapshot,
+        std::initializer_list<const char *> expected ) {
+            REQUIRE( snapshot.size() == expected.size() );
+            std::size_t index = 1;
+            for( const char *id : expected ) {
+                const auto actual = snapshot[index]["id"].get<cata::lua_platform::script_game_id>();
+                CHECK( actual.value() == id );
+                ++index;
+            }
+        };
+        const auto check_change = [&]( const sol::table &value, bool changed,
+        std::initializer_list<const char *> before, std::initializer_list<const char *> after ) {
+            CHECK( value["changed"].get<bool>() == changed );
+            check_snapshot( value["before"].get<sol::table>(), before );
+            check_snapshot( value["after"].get<sol::table>(), after );
+        };
+
+        check_change( invoke( "remove_all_direct", arm, burn ), false, {}, {} );
+        CHECK( platform_alpha.get_morale_level() == platform_morale_before_direct_remove );
+
+        const sol::table applied = invoke( "add", hand, blister );
+        check_change( applied, true, {}, { "thermal_blister" } );
+        check_snapshot( invoke( "snapshot", hand ), {} );
+        check_snapshot( invoke( "snapshot", arm ), { "thermal_blister" } );
+        check_change( invoke( "add_unbounded", hand, blister ), false,
+                      { "thermal_blister" }, { "thermal_blister" } );
+
+        platform_alpha.add_effect( effect_incorporeal, 1_minutes );
+        REQUIRE( platform_alpha.has_effect( effect_incorporeal ) );
+        check_change( invoke( "add_unbounded", hand, burn ), false,
+                      { "thermal_blister" }, { "thermal_blister" } );
+        platform_alpha.remove_effect( effect_incorporeal );
+
+        check_change( invoke( "add_unbounded", hand, burn ), true,
+                      { "thermal_blister" }, { "thermal_burn" } );
+        check_change( invoke( "add", hand, blister ), false, { "thermal_burn" }, { "thermal_burn" } );
+        check_change( applied, true, {}, { "thermal_blister" } ); // Detached from the later upgrade.
+
+        const int burn_morale = platform_alpha.get_morale_level();
+        REQUIRE( burn_morale > 0 );
+        check_change( invoke( "remove", hand, burn ), false, {}, {} );
+        check_change( invoke( "remove_all_direct", hand, burn ), false, {}, {} );
+        check_snapshot( invoke( "snapshot", arm ), { "thermal_burn" } );
+        CHECK( platform_alpha.get_morale_level() == burn_morale );
+        check_change( invoke( "remove_all_direct", arm, burn ), true, { "thermal_burn" }, {} );
+        check_snapshot( invoke( "snapshot", arm ), {} );
+        CHECK( platform_alpha.get_morale_level() == 0 );
+
+        check_change( invoke( "add_unbounded", part_id, blister ), true, {}, { "thermal_blister" } );
+        check_snapshot( invoke( "snapshot", exact_part_id ), { "thermal_blister" } );
+        REQUIRE( platform_alpha.get_morale_level() > 0 );
+        check_change( invoke( "remove", exact_part_id, blister ), true, { "thermal_blister" }, {} );
+        CHECK( platform_alpha.get_morale_level() == 0 );
         completed = true;
     } );
     sol::protected_function_result registered = ccb["runtime"]["handler"](

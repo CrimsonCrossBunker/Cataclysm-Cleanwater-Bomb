@@ -515,7 +515,7 @@
                 { "math": [ "u_val('thirst') < -20" ] }
               ]
             },
-            "effect": [ { "math": [ "u_pain()++" ] } ]
+            "effect": [ { "math": [ "u_pain('type': 'base')++" ] } ]
           },
           {
             "id": "HYDRATING_GOUT_SYMPTOMS_HIGH",

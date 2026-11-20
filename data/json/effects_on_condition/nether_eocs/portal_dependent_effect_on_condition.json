@@ -95,7 +95,7 @@
     "//": "Your feel faintly more accepted by the world, it could be related with the decay of reality in here.",
     "effect": [
       { "u_message": "You suddenly feel a weight you didn't know you had on you, being lifted away.", "type": "good" },
-      { "math": [ "u_pain() -= 5" ] }
+      { "math": [ "u_pain('type': 'base') -= 5" ] }
     ]
   },
   {
@@ -386,7 +386,7 @@
         "u_message": "Faint sparks suddenly appear and disappear around you, as if rejecting your very existence.  Pain flares across your body.",
         "type": "bad"
       },
-      { "math": [ "u_pain() += 10" ] }
+      { "math": [ "u_pain('type': 'base') += 10" ] }
     ]
   },
   {

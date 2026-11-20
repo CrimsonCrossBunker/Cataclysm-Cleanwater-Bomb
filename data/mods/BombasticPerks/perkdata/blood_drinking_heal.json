@@ -17,7 +17,18 @@
         { "u_has_trait": "perk_blood_drinking_heal" }
       ]
     },
-    "effect": [ { "math": [ "u_pain() -= 2" ] }, { "run_eocs": "EOC_perk_blood_drinking_heal_hp_check" } ]
+    "effect": [
+      { "u_relieve_pain": 2, "thermal_relief": "effect_perk_blood_drinking_thermal_relief", "duration": "2 minutes" },
+      { "run_eocs": "EOC_perk_blood_drinking_heal_hp_check" }
+    ]
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_perk_blood_drinking_thermal_relief",
+    "max_duration": "2 minutes",
+    "max_intensity": 6,
+    "rating": "good",
+    "flags": [ "THERMAL_PAIN_RELIEF" ]
   },
   {
     "type": "effect_on_condition",

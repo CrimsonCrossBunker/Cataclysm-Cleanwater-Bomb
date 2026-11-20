@@ -7,7 +7,10 @@
 #include <units.h>
 #include <weighted_list.h>
 #include <algorithm>
+#include <cstddef>
+#include <limits>
 #include <memory>
+#include <random>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -16,6 +19,7 @@
 
 #include "body_part_set.h"
 #include "calendar.h"
+#include "character.h"
 #include "creature.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -44,6 +48,9 @@ const bodypart_str_id body_part_leg_l( "leg_l" );
 const bodypart_str_id body_part_leg_r( "leg_r" );
 const bodypart_str_id body_part_mouth( "mouth" );
 const bodypart_str_id body_part_torso( "torso" );
+
+static const wound_type_id wound_thermal_blister( "thermal_blister" );
+static const wound_type_id wound_thermal_burn( "thermal_burn" );
 
 side opposite_side( side s )
 {
@@ -1153,26 +1160,36 @@ const std::vector<wound> &bodypart::get_wounds() const
     return wounds;
 }
 
-std::vector<wound> &bodypart::get_wounds()
+void bodypart::add_or_worsen_wound( Character &who, const wound_type_id type, bool allow_thermal )
 {
-    return wounds;
-}
-
-void bodypart::add_or_worsen_wound( const wound_type_id wd )
-{
-    wound wo = wound( wd );
-    add_or_worsen_wound( wo );
-}
-
-void bodypart::add_or_worsen_wound( const wound &wd )
-{
+    if( is_thermal_wound( type ) ) {
+        if( allow_thermal ) {
+            who.apply_thermal_burn( get_id(), type == wound_thermal_burn );
+        }
+        return;
+    }
+    wound wd( type );
     const std::vector<wound_progress> &wound_progression = wd.type->wound_progression;
 
     // todo: move one_in( 2 ) to something more reasonable
     // maybe checking hit_size of a limb against some new wound size property?
     if( has_wound( wd.type ) && !wound_progression.empty() && one_in( 2 ) ) {
         for( const wound_progress &wdp : wound_progression ) {
+            const bool thermal = is_thermal_wound( wdp.id );
+            if( thermal && !allow_thermal ) {
+                continue;
+            }
             if( x_in_y( wdp.chance, 100 ) ) {
+
+                if( thermal ) {
+                    if( !who.apply_thermal_burn( get_id(), wdp.id == wound_thermal_burn ) ) {
+                        continue;
+                    }
+                    // A blocked or redundant burn is not a successful progression.
+                    remove_wound( type );
+                    who.on_stat_change( "perceived_pain", who.get_perceived_pain() );
+                    return;
+                }
 
                 const wound *old_wound = get_wound( wd.type );
                 wound new_wound = wound( wdp.id );
@@ -1190,7 +1207,7 @@ void bodypart::add_or_worsen_wound( const wound &wd )
                              );
 
                 remove_wound( *old_wound );
-                add_wound( new_wound );
+                wounds.emplace_back( std::move( new_wound ) );
                 return;
             }
         }
@@ -1205,18 +1222,30 @@ void bodypart::add_or_worsen_wound( const wound &wd )
                        to_string_writable( wd.get_healing_time() )
                      );
 
-        add_wound( wd );
+        wounds.emplace_back( std::move( wd ) );
     }
 }
 
-void bodypart::add_wound( const wound &wd )
+bool bodypart::is_thermal_wound( const wound_type_id &type )
 {
-    wounds.emplace_back( wd );
+    return type == wound_thermal_blister || type == wound_thermal_burn;
+}
+
+bool bodypart::has_thermal_wound() const
+{
+    return std::any_of( wounds.begin(), wounds.end(), []( const wound & wd ) {
+        return is_thermal_wound( wd.type );
+    } );
 }
 
 void bodypart::add_wound( const wound_type_id wd )
 {
     wounds.emplace_back( wd );
+}
+
+void bodypart::add_wound( const wound &existing )
+{
+    wounds.push_back( existing );
 }
 
 bool bodypart::has_wounds() const
@@ -1248,36 +1277,60 @@ wound *bodypart::get_wound( const wound_type_id wd_id )
     return &*it;
 }
 
+void bodypart::on_wound_removed( bool thermal )
+{
+    if( thermal && !has_thermal_wound() ) {
+        reset_heat_exposure();
+        thermal_wound_cleared = true;
+    }
+}
+
 void bodypart::remove_wound( const wound wd )
 {
     const auto it = std::find( wounds.begin(), wounds.end(), wd );
     if( it != wounds.end() ) {
         wounds.erase( it );
+        on_wound_removed( is_thermal_wound( wd.type ) );
     }
+}
+
+bool bodypart::erase_wound( const wound_type_id &type )
+{
+    const auto it = std::find_if( wounds.begin(), wounds.end(), [&type]( const wound &existing ) {
+        return existing.type == type;
+    } );
+    if( it == wounds.end() ) {
+        return false;
+    }
+    wounds.erase( it );
+    return true;
 }
 
 void bodypart::remove_wound( const wound_type_id wd )
 {
-    const auto it = std::find_if( wounds.begin(), wounds.end(), [wd]( const wound & existing_wound ) {
-        return existing_wound.type == wd;
-    } );
-    if( it != wounds.end() ) {
-        wounds.erase( it );
-    }
+    on_wound_removed( erase_wound( wd ) && is_thermal_wound( wd ) );
 }
 
 void bodypart::remove_all_wounds_of_type( const wound_type_id wd )
 {
+    const std::size_t count_before = wounds.size();
     wounds.erase( std::remove_if( wounds.begin(), wounds.end(), [wd]( const wound & existing_wound ) {
         return existing_wound.type == wd;
     } ), wounds.end() );
+    on_wound_removed( wounds.size() != count_before && is_thermal_wound( wd ) );
 }
 
-void bodypart::update_wounds( time_duration time_passed )
+void bodypart::update_wounds( time_duration time_passed, bool freeze_thermal )
 {
-    wounds.erase( std::remove_if( wounds.begin(), wounds.end(), [time_passed]( wound & wd ) {
-        return wd.update_wound( time_passed );
+    bool removed_thermal_wound = false;
+    wounds.erase( std::remove_if( wounds.begin(), wounds.end(),
+    [time_passed, freeze_thermal, &removed_thermal_wound]( wound & wd ) {
+        const bool thermal = is_thermal_wound( wd.type );
+        const bool healed = !( freeze_thermal && thermal ) && wd.update_wound( time_passed );
+        removed_thermal_wound = removed_thermal_wound || ( healed && thermal );
+        return healed;
     } ), wounds.end() );
+    on_wound_removed( removed_thermal_wound );
 }
 
 int bodypart::get_hp_cur() const
@@ -1458,10 +1511,130 @@ void bodypart::mod_frostbite_timer( int mod )
     frostbite_timer += mod;
 }
 
+namespace
+{
+constexpr time_duration blister_exposure = 30_seconds;
+constexpr time_duration severe_burn_exposure = 2_minutes;
+} // namespace
+
+bool bodypart::try_sample_heat_exposure( time_point now )
+{
+    if( now == last_heat_exposure_update ) {
+        return false;
+    }
+    last_heat_exposure_update = now;
+    return true;
+}
+
+void bodypart::reset_heat_exposure()
+{
+    heat_exposure = 0_turns;
+}
+
+bool bodypart::needs_heat_exposure_reset() const
+{
+    return thermal_wound_cleared;
+}
+
+void bodypart::acknowledge_heat_exposure_reset()
+{
+    thermal_wound_cleared = false;
+}
+
+bodypart::thermal_burn_tier bodypart::update_heat_exposure( int rate )
+{
+    if( rate < 0 ) {
+        if( heat_exposure > 0_turns ) {
+            heat_exposure -= 1_turns;
+        }
+        return thermal_burn_tier::none;
+    }
+
+    const time_duration previous = heat_exposure;
+    heat_exposure = std::min( previous + 1_turns * rate, severe_burn_exposure );
+    if( previous < severe_burn_exposure && heat_exposure >= severe_burn_exposure ) {
+        return thermal_burn_tier::severe;
+    }
+    if( previous < blister_exposure && heat_exposure >= blister_exposure ) {
+        return thermal_burn_tier::blister;
+    }
+    return thermal_burn_tier::none;
+}
+
+void bodypart::write_thermal_state( JsonOut &out, const bodypart_str_id &exposure_target ) const
+{
+    if( !has_thermal_wound() && !has_heat_exposure() && !thermal_wound_cleared ) {
+        return;
+    }
+    out.member( id.str() );
+    out.start_object();
+    if( has_heat_exposure() ) {
+        out.member( "exposure", heat_exposure );
+        out.member( "exposure_target", exposure_target );
+    }
+    out.member( "wound_cleared", thermal_wound_cleared );
+    out.member( "wounds" );
+    out.start_array();
+    for( const wound &wd : wounds ) {
+        if( is_thermal_wound( wd.type ) ) {
+            out.write( wd );
+        }
+    }
+    out.end_array();
+    out.end_object();
+}
+
+void bodypart::thermal_state::deserialize( const JsonObject &jo )
+{
+    jo.read( "exposure", exposure, true );
+    jo.read( "exposure_target", exposure_target );
+    wound_cleared = jo.get_bool( "wound_cleared" );
+    jo.read( "wounds", wounds, true );
+    if( std::any_of( wounds.begin(), wounds.end(), []( const wound & wd ) {
+        return !is_thermal_wound( wd.type );
+    } ) ) {
+        jo.throw_error_at( "wounds", "Non-thermal wound in a thermal snapshot" );
+    }
+}
+
+void bodypart::restore_thermal_state( thermal_state &&state )
+{
+    wounds.erase( std::remove_if( wounds.begin(), wounds.end(), []( const wound & wd ) {
+        return is_thermal_wound( wd.type );
+    } ), wounds.end() );
+    for( wound &wd : state.wounds ) {
+        wounds.push_back( std::move( wd ) );
+    }
+    // Do not rewind the last sample timestamp: the current turn must not count twice.
+    heat_exposure = std::clamp( state.exposure, 0_turns, severe_burn_exposure );
+    thermal_wound_cleared = state.wound_cleared;
+}
+
+std::uint64_t bodypart::ensure_rewind_identity()
+{
+    if( rewind_identity == 0 ) {
+        // Save JSON reads only signed 64-bit integers. Do not consume gameplay RNG.
+        static thread_local std::random_device entropy;
+        rewind_identity = std::uniform_int_distribution<std::uint64_t>(
+                              1, std::numeric_limits<std::int64_t>::max() )( entropy );
+    }
+    return rewind_identity;
+}
+
+bool bodypart::matches_rewind_identity( const JsonObject &identities ) const
+{
+    std::uint64_t captured;
+    return rewind_identity != 0 && identities.read( id.str(), captured ) &&
+           captured == rewind_identity;
+}
+
 void bodypart::serialize( JsonOut &json ) const
 {
     json.start_object();
     json.member( "id", id );
+    if( rewind_identity != 0 ) {
+        json.member( "rewind_identity", rewind_identity );
+    }
     json.member( "hp_cur", hp_cur );
     json.member( "hp_max", hp_max );
     json.member( "healed_total", healed_total );
@@ -1472,6 +1645,15 @@ void bodypart::serialize( JsonOut &json ) const
     json.member( "temp_cur", units::to_legacy_bodypart_temp( temp_cur ) );
     json.member( "temp_conv", units::to_legacy_bodypart_temp( temp_conv ) );
     json.member( "frostbite_timer", frostbite_timer );
+    if( heat_exposure > 0_turns ) {
+        json.member( "heat_exposure", heat_exposure );
+    }
+    if( last_heat_exposure_update != calendar::before_time_starts ) {
+        json.member( "last_heat_exposure_update", last_heat_exposure_update );
+    }
+    if( thermal_wound_cleared ) {
+        json.member( "thermal_wound_cleared", true );
+    }
 
     json.member( "wounds", wounds );
 
@@ -1481,6 +1663,8 @@ void bodypart::serialize( JsonOut &json ) const
 void bodypart::deserialize( const JsonObject &jo )
 {
     jo.read( "id", id, true );
+    rewind_identity = 0;
+    jo.read( "rewind_identity", rewind_identity, true );
     jo.read( "hp_cur", hp_cur, true );
     jo.read( "hp_max", hp_max, true );
     jo.read( "healed_total", healed_total );
@@ -1495,8 +1679,15 @@ void bodypart::deserialize( const JsonObject &jo )
         temp_conv = units::from_legacy_bodypart_temp( legacy_temp_conv );
     }
     jo.read( "frostbite_timer", frostbite_timer, true );
+    heat_exposure = 0_turns;
+    jo.read( "heat_exposure", heat_exposure );
+    heat_exposure = std::clamp( heat_exposure, 0_turns, severe_burn_exposure );
+    last_heat_exposure_update = calendar::before_time_starts;
+    jo.read( "last_heat_exposure_update", last_heat_exposure_update );
 
     jo.read( "wounds", wounds );
+    thermal_wound_cleared = false;
+    jo.read( "thermal_wound_cleared", thermal_wound_cleared );
 
 }
 

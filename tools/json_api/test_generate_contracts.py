@@ -141,7 +141,15 @@ class RepositoryParityTest(unittest.TestCase):
         payload = self.payloads["json_object_types"]
         self.assertEqual(payload["summary"]["registration_calls"], 194)
         self.assertEqual(payload["summary"]["registered_types"], 193)
-        self.assertEqual(payload["summary"]["observed_types"], 186)
+        observed = {entry["type"] for entry in payload["entries"]
+                    if entry["instance_evidence"]["occurrences"]}
+        self.assertIn("wound", observed)
+        self.assertEqual(payload["summary"]["observed_types"], len(observed))
+        self.assertEqual(
+            {entry["type"] for entry in payload["entries"]} - observed,
+            {"TRAIT_BLACKLIST", "WORLD_OPTION", "colordef",
+             "sound_effect_preload", "spell_migration", "wound_fix"},
+        )
         self.assertEqual(payload["summary"]["observed_not_registered"], [])
         registrations = sum(len(entry["registrations"])
                             for entry in payload["entries"])
@@ -155,11 +163,17 @@ class RepositoryParityTest(unittest.TestCase):
         self.assertEqual(
             conditions["summary"]["simple_parser_registrations"], 77)
         self.assertEqual(
-            effects["summary"]["object_parser_registrations"], 145)
-        self.assertEqual(
             effects["summary"]["string_parser_registrations"], 128)
         self.assertEqual(conditions["summary"]["public_keys"], 276)
-        self.assertEqual(effects["summary"]["public_keys"], 329)
+        entries = {entry["key"]: entry for entry in effects["entries"]}
+        self.assertEqual(effects["summary"]["public_keys"], len(entries))
+        for operation in ("record_last_damage", "relieve_pain", "revert_last_damage"):
+            aliases = ["u_" + operation, "npc_" + operation]
+            for key, role in zip(aliases, ("alpha", "beta")):
+                registration, = entries[key]["parser_registrations"]
+                self.assertEqual(registration["alias_group"], aliases)
+                self.assertEqual(registration["alias_role"], role)
+            self.assertGreater(entries[aliases[0]]["example_evidence"]["occurrences"], 0)
         self.assertEqual({entry["key"] for entry in conditions["entries"]} & {
             "and", "or", "not"}, {"and", "or", "not"}, )
         self.assertEqual(

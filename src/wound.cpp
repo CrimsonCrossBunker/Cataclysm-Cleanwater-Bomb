@@ -362,6 +362,9 @@ void wound::serialize( JsonOut &jsout ) const
     jsout.member( "healing_time", healing_time );
     jsout.member( "healing_progress", healing_progress );
     jsout.member( "pain", pain );
+    if( reversible_contact ) {
+        jsout.member( "reversible_contact", true );
+    }
     jsout.end_object();
 }
 
@@ -371,6 +374,7 @@ void wound::deserialize( const JsonObject &jsin )
     jsin.read( "healing_time", healing_time );
     jsin.read( "healing_progress", healing_progress );
     jsin.read( "pain", pain );
+    reversible_contact = jsin.get_bool( "reversible_contact", false );
 }
 
 float wound::healing_percentage() const

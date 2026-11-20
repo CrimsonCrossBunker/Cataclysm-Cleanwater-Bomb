@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <array>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <list>
@@ -30,9 +32,13 @@
 #include "common_types.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
+#include "current_map.h"
 #include "damage.h"
 #include "debug.h"
 #include "enums.h"
+#include "event.h"
+#include "event_bus.h"
+#include "event_subscriber.h"
 #include "faction.h"
 #include "field.h"
 #include "field_type.h"
@@ -41,7 +47,10 @@
 #include "item.h"
 #include "item_group.h"
 #include "item_location.h"
+#include "item_transformation.h"
 #include "itype.h"
+#include "json.h"
+#include "json_loader.h"
 #include "list.h" // IWYU pragma: keep
 #include "map.h"
 #include "map_helpers.h"
@@ -54,6 +63,7 @@
 #include "messages.h"
 #include "iexamine.h"
 #include "monster.h"
+#include "mp_world_session.h"
 #include "npc.h"
 #include "npc_class.h"
 #include "npctalk.h"
@@ -64,9 +74,12 @@
 #include "pocket_type.h"
 #include "pimpl.h"
 #include "player_activity.h"
+#include "player_control.h"
 #include "player_helpers.h"
 #include "point.h"
+#include "rng.h"
 #include "stomach.h"
+#include "submap.h"
 #include "test_data.h"
 #include "text_snippets.h"
 #include "translation.h"
@@ -78,6 +91,7 @@
 #include "viewer.h"
 #include "vpart_position.h"
 #include "weather.h"
+#include "weather_gen.h"
 
 class Creature;
 enum npc_action : int;
@@ -86,12 +100,19 @@ static const activity_id ACT_FORAGE( "ACT_FORAGE" );
 static const activity_id ACT_HARVEST( "ACT_HARVEST" );
 static const activity_id ACT_START_FIRE( "ACT_START_FIRE" );
 
+static const damage_type_id damage_heat( "heat" );
+
 static const efftype_id effect_bouldering( "bouldering" );
 static const efftype_id effect_catch_up( "catch_up" );
+static const efftype_id effect_cold( "cold" );
+static const efftype_id effect_hot( "hot" );
+static const efftype_id effect_hot_speed( "hot_speed" );
+static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_lying_down( "lying_down" );
 static const efftype_id effect_meth( "meth" );
 static const efftype_id effect_npc_run_away( "npc_run_away" );
 static const efftype_id effect_npc_suspend( "npc_suspend" );
+static const efftype_id effect_onfire( "onfire" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_wet( "wet" );
 
@@ -150,8 +171,10 @@ static const ter_str_id ter_t_underbrush( "t_underbrush" );
 static const ter_str_id ter_t_wall( "t_wall" );
 static const ter_str_id ter_t_wall_glass( "t_wall_glass" );
 static const ter_str_id ter_t_water_dispenser( "t_water_dispenser" );
+static const ter_str_id ter_t_water_dp( "t_water_dp" );
 static const ter_str_id ter_t_water_sh( "t_water_sh" );
 
+static const trait_id trait_DEBUG_NODMG( "DEBUG_NODMG" );
 static const trait_id trait_IGNORE_SOUND( "IGNORE_SOUND" );
 static const trait_id trait_INTERCOM_OPERATOR( "INTERCOM_OPERATOR" );
 static const trait_id trait_RETURN_TO_START_POS( "RETURN_TO_START_POS" );
@@ -168,6 +191,8 @@ static const vpart_id vpart_trunk_floor( "trunk_floor" );
 static const vproto_id vehicle_prototype_none( "none" );
 static const vproto_id vehicle_prototype_test_rv( "test_rv" );
 static const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart" );
+
+static const wound_type_id wound_thermal_blister( "thermal_blister" );
 
 static const zone_type_id zone_type_CAMP_FOOD( "CAMP_FOOD" );
 static const zone_type_id zone_type_CAMP_STORAGE( "CAMP_STORAGE" );
@@ -1169,77 +1194,841 @@ TEST_CASE( "npc_warmth_response_in_address_needs", "[npc]" )
 TEST_CASE( "npc_bodytemp_updates_during_turn", "[npc][needs]" )
 {
     clear_map_without_vision();
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    calendar::turn = calendar::turn_zero;
     weather_manager &weather = get_weather();
-    weather.temperature = units::from_fahrenheit( 0 );
-    weather.clear_temp_cache();
+    const restore_on_out_of_scope restore_temperature( weather.forced_temperature );
+    weather.forced_temperature = 0_C;
 
-    SECTION( "throttle blocks bodytemp before 10-second boundary" ) {
-        // once_every(10s) fires when (turn - turn_zero) % 10s == 0.
-        // 3 seconds is non-aligned, so the throttle should block.
-        calendar::turn = calendar::turn_zero + 3_seconds;
-        npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
-        clear_character( guy, true );
-        guy.set_all_parts_temp_conv( BODYTEMP_NORM );
-        guy.set_all_parts_temp_cur( BODYTEMP_NORM );
+    npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
+    clear_character( guy, true );
+    guy.set_all_parts_temp_conv( BODYTEMP_NORM );
+    guy.set_all_parts_temp_cur( BODYTEMP_NORM );
 
-        guy.npc_update_body();
-
-        for( const bodypart_id &bp : guy.get_all_body_parts() ) {
-            CHECK( guy.get_part_temp_conv( bp ) == BODYTEMP_NORM );
+    SECTION( "cools on consecutive turns including the body update boundary" ) {
+        for( calendar::turn += 8_seconds; calendar::turn <= calendar::turn_zero + 11_seconds;
+             calendar::turn += 1_turns ) {
+            const units::temperature before = guy.get_part_temp_cur( body_part_torso );
+            guy.npc_update_body();
+            CAPTURE( to_turn<int>( calendar::turn ) );
+            CHECK( guy.get_part_temp_conv( body_part_torso ) < BODYTEMP_NORM );
+            CHECK( guy.get_part_temp_cur( body_part_torso ) < before );
         }
     }
 
-    SECTION( "bodytemp decreases after 10-second boundary in freezing weather" ) {
-        calendar::turn = calendar::turn_zero + 10_seconds;
-        npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
-        clear_character( guy, true );
-        guy.set_all_parts_temp_conv( BODYTEMP_NORM );
-        guy.set_all_parts_temp_cur( BODYTEMP_NORM );
-
+    SECTION( "cached convergence updates and clears cold penalties" ) {
+        const restore_on_out_of_scope restore_wind( weather.windspeed );
+        weather.windspeed = 0;
+        weather.forced_temperature = 19_C;
         guy.npc_update_body();
+        REQUIRE( guy.get_part_temp_conv( body_part_torso ) > BODYTEMP_COLD + 1_C_delta );
 
-        bool any_cooled = false;
-        for( const bodypart_id &bp : guy.get_all_body_parts() ) {
-            if( guy.get_part_temp_conv( bp ) < BODYTEMP_NORM ) {
-                any_cooled = true;
-                break;
-            }
-        }
-        CHECK( any_cooled );
+        guy.set_part_temp_cur( body_part_torso, BODYTEMP_VERY_COLD - 0.5_C_delta );
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+        CHECK( guy.get_effect_int( effect_cold, body_part_torso ) == 2 );
+
+        guy.set_part_temp_cur( body_part_torso, BODYTEMP_VERY_COLD - 0.001_C_delta );
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+        CHECK( guy.get_part_temp_cur( body_part_torso ) > BODYTEMP_VERY_COLD );
+        CHECK( guy.get_effect_int( effect_cold, body_part_torso ) == 1 );
+
+        guy.set_part_temp_cur( body_part_torso, BODYTEMP_COLD - 0.001_C_delta );
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+        CHECK( guy.get_part_temp_cur( body_part_torso ) > BODYTEMP_COLD );
+        CHECK_FALSE( guy.has_effect( effect_cold, body_part_torso ) );
     }
 
-    SECTION( "wetness updated via effect_wet" ) {
-        calendar::turn = calendar::turn_zero + 10_seconds;
-        npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
-        clear_character( guy, true );
-        const bodypart_id bp_torso( "torso" );
-        guy.set_part_wetness( bp_torso, guy.get_part_drench_capacity( bp_torso ) );
-
+    SECTION( "cached cooling updates hot and hot speed tiers separately" ) {
+        const restore_on_out_of_scope restore_wind( weather.windspeed );
+        weather.windspeed = 0;
         guy.npc_update_body();
+        REQUIRE( guy.get_part_temp_conv( body_part_torso ) < BODYTEMP_NORM );
 
-        // update_body_wetness adds effect_wet deterministically when wetness > 0
-        CHECK( guy.has_effect( effect_wet, bp_torso ) );
+        guy.set_part_temp_cur( body_part_torso, BODYTEMP_VERY_HOT + 1.5_C_delta );
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+        CHECK( guy.get_effect_int( effect_hot, body_part_torso ) == 2 );
+        CHECK( guy.get_effect_int( effect_hot_speed, body_part_torso ) == 2 );
+
+        guy.set_part_temp_cur( body_part_torso, BODYTEMP_VERY_HOT + 0.001_C_delta );
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+        CHECK( guy.get_part_temp_cur( body_part_torso ) < BODYTEMP_VERY_HOT );
+        CHECK( guy.get_effect_int( effect_hot, body_part_torso ) == 1 );
+        CHECK( guy.get_effect_int( effect_hot_speed, body_part_torso ) == 1 );
+
+        guy.set_part_temp_cur( body_part_torso, BODYTEMP_HOT + BODYTEMP_THRESHOLD + 0.001_C_delta );
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+        CHECK( guy.get_effect_int( effect_hot, body_part_torso ) == 1 );
+        CHECK_FALSE( guy.has_effect( effect_hot_speed, body_part_torso ) );
+
+        guy.set_part_temp_cur( body_part_torso, BODYTEMP_HOT + 0.001_C_delta );
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+        CHECK( guy.get_part_temp_cur( body_part_torso ) < BODYTEMP_HOT );
+        CHECK_FALSE( guy.has_effect( effect_hot, body_part_torso ) );
     }
 
-    SECTION( "on_load catch-up recomputes bodytemp" ) {
-        weather.temperature = units::from_fahrenheit( 0 );
-        weather.clear_temp_cache();
-        npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
-        clear_character( guy, true );
-        guy.set_all_parts_temp_conv( BODYTEMP_NORM );
-        guy.set_all_parts_temp_cur( BODYTEMP_NORM );
+    SECTION( "a scorching hand does not speed up frostbite updates on a cold foot" ) {
+        const restore_on_out_of_scope restore_wind( weather.windspeed );
+        weather.windspeed = 0;
+        weather.forced_temperature = units::from_celsius( -25 );
+        guy.set_part_temp_cur( body_part_foot_l, BODYTEMP_VERY_COLD );
+
+        calendar::turn += 10_seconds;
+        guy.npc_update_body();
+        const int timer = guy.get_part_frostbite_timer( body_part_foot_l );
+        REQUIRE( timer > 0 );
+
+        calendar::turn += 1_turns;
+        guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_SCORCHING + 2_C_delta );
+        guy.npc_update_body();
+        REQUIRE( guy.get_part( body_part_hand_l )->has_heat_exposure() );
+        CHECK( guy.get_part_frostbite_timer( body_part_foot_l ) == timer );
+    }
+
+    SECTION( "activation refreshes thermal targets without advancing temperature or drying" ) {
+        const override_option npc_food( "NO_NPC_FOOD", "false" );
+        guy.drench( 100, { body_part_torso }, false );
+        const int wetness = guy.get_part_wetness( body_part_torso );
+        REQUIRE( wetness > 0 );
+        // A temperature difference also reveals unintended heat equalization.
+        guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_VERY_HOT );
+        guy.set_part_frostbite_timer( body_part_hand_l, 100 );
 
         on_load_test( guy, 0_seconds, 30_minutes );
 
-        bool any_cooled = false;
-        for( const bodypart_id &bp : guy.get_all_body_parts() ) {
-            if( guy.get_part_temp_conv( bp ) < BODYTEMP_NORM ) {
-                any_cooled = true;
-                break;
+        CHECK( guy.get_part_temp_conv( body_part_torso ) < BODYTEMP_NORM );
+        CHECK( guy.get_part_temp_cur( body_part_torso ) == BODYTEMP_NORM );
+        CHECK( guy.get_part_temp_cur( body_part_hand_l ) == BODYTEMP_VERY_HOT );
+        CHECK( guy.get_part_frostbite_timer( body_part_hand_l ) == 100 );
+        CHECK( guy.get_part_wetness( body_part_torso ) == wetness );
+
+        guy.npc_update_body();
+        const units::temperature after = guy.get_part_temp_cur( body_part_hand_l );
+        CHECK( after < BODYTEMP_VERY_HOT );
+        guy.npc_update_body();
+        CHECK( guy.get_part_temp_cur( body_part_hand_l ) == after );
+    }
+}
+
+TEST_CASE( "worn_item_transformation_only_refreshes_equilibrium", "[npc][needs][transform]" )
+{
+    clear_map_without_vision();
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    calendar::turn = calendar::turn_zero + 1_turns;
+    weather_manager &weather = get_weather();
+    const restore_on_out_of_scope restore_temperature( weather.forced_temperature );
+    weather.forced_temperature = 19_C;
+
+    standard_npc guy( "Thermal test NPC", tripoint_bub_ms( 50, 50, 0 ) );
+    clear_character( guy, true );
+    guy.worn.wear_item( guy, item( itype_apron_leather ), false, false );
+    REQUIRE( guy.worn.top_items_loc( guy ).size() == 1 );
+    item_location garment = guy.worn.top_items_loc( guy ).front();
+    guy.update_bodytemp();
+    const units::temperature target = guy.get_part_temp_conv( body_part_torso );
+
+    guy.set_all_parts_temp_cur( BODYTEMP_NORM );
+    const units::temperature hand_temperature = BODYTEMP_SCORCHING + 2_C_delta;
+    guy.set_part_temp_cur( body_part_hand_l, hand_temperature );
+    guy.set_part_frostbite_timer( body_part_hand_l, 100 );
+    guy.drench( 100, { body_part_foot_l }, false );
+    const int wetness = guy.get_part_wetness( body_part_foot_l );
+    REQUIRE( wetness > 0 );
+
+    item_transformation transform;
+    transform.target = itype_sweater;
+    transform.transform( &guy, *garment );
+
+    REQUIRE( guy.is_wearing( itype_sweater ) );
+    CHECK( guy.get_part_temp_conv( body_part_torso ) > target );
+    CHECK( guy.get_part_temp_cur( body_part_torso ) == BODYTEMP_NORM );
+    CHECK( guy.get_part_temp_cur( body_part_arm_l ) == BODYTEMP_NORM );
+    CHECK( guy.get_part_temp_cur( body_part_hand_l ) == hand_temperature );
+    CHECK( guy.get_part_frostbite_timer( body_part_hand_l ) == 100 );
+    CHECK( guy.get_part_wetness( body_part_foot_l ) == wetness );
+    CHECK_FALSE( guy.has_effect( effect_hot, body_part_hand_l ) );
+    REQUIRE_FALSE( guy.get_part( body_part_hand_l )->has_heat_exposure() );
+
+    guy.npc_update_body();
+    CHECK( guy.get_part( body_part_hand_l )->has_heat_exposure() );
+}
+
+TEST_CASE( "npc_dries_on_live_turns_regardless_of_food_needs", "[npc][needs]" )
+{
+    clear_map_without_vision();
+    const bool no_food = GENERATE( false, true );
+    CAPTURE( no_food );
+    const override_option npc_food( "NO_NPC_FOOD", no_food ? "true" : "false" );
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    calendar::turn = calendar::turn_zero;
+    weather_manager &weather = get_weather();
+    const restore_on_out_of_scope restore_temperature( weather.forced_temperature );
+    const restore_on_out_of_scope restore_drying_temperature( weather.weather_precise->temperature );
+    const restore_on_out_of_scope restore_humidity( weather.weather_precise->humidity );
+    weather.forced_temperature = 19_C;
+    weather.weather_precise->temperature = 19_C;
+    weather.weather_precise->humidity = 40.0;
+
+    standard_npc guy( "Wet NPC", tripoint_bub_ms( 50, 50, 0 ) );
+    clear_character( guy, true );
+    guy.drench( 100, { body_part_torso }, false );
+    const int wetness = guy.get_part_wetness( body_part_torso );
+    REQUIRE( wetness > 0 );
+
+    calendar::turn += 1_turns;
+    guy.npc_update_body();
+    CHECK( guy.has_effect( effect_wet, body_part_torso ) );
+    const int after_drying = guy.get_part_wetness( body_part_torso );
+    CHECK( after_drying < wetness );
+    const units::temperature after_cooling = guy.get_part_temp_cur( body_part_torso );
+    guy.npc_update_body();
+    CHECK( guy.get_part_wetness( body_part_torso ) == after_drying );
+    CHECK( guy.get_part_temp_cur( body_part_torso ) == after_cooling );
+
+    while( calendar::turn < calendar::turn_zero + 10_minutes &&
+           guy.get_part_wetness( body_part_torso ) > 0 ) {
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+    }
+    CHECK( guy.get_part_wetness( body_part_torso ) == 0 );
+    calendar::turn += 1_turns;
+    guy.npc_update_body();
+    CHECK_FALSE( guy.has_effect( effect_wet, body_part_torso ) );
+}
+
+TEST_CASE( "npc_heat_exposure_samples_live_turns", "[npc][needs][thermal_burn]" )
+{
+    clear_map_without_vision();
+    const override_option npc_food( "NO_NPC_FOOD", "false" );
+    const override_option no_contact_wounds( "WOUND_CHANCE", "0" );
+    restore_on_out_of_scope restore_turn( calendar::turn );
+    calendar::turn = calendar::turn_zero;
+    restore_on_out_of_scope restore_temperature( get_weather().forced_temperature );
+    get_weather().forced_temperature = 19_C;
+    const restore_on_out_of_scope restore_wind( get_weather().windspeed );
+    get_weather().windspeed = 0;
+
+    standard_npc guy( "Thermal test NPC", tripoint_bub_ms( 50, 50, 0 ) );
+    clear_character( guy, true );
+    const bodypart &arm = *guy.get_part( body_part_arm_l );
+    const auto heat_for = []( npc &actor, int turns ) {
+        for( int i = 0; i < turns; ++i ) {
+            calendar::turn += 1_turns;
+            actor.set_part_temp_cur( body_part_hand_l, BODYTEMP_SCORCHING + 2_C_delta );
+            actor.npc_update_body();
+        }
+    };
+
+    SECTION( "disabling NPC food does not freeze temperature or prevent heat wounds" ) {
+        const override_option no_food( "NO_NPC_FOOD", "true" );
+        calendar::turn += 1_turns;
+        heat_for( guy, 29 );
+        REQUIRE_FALSE( arm.has_wounds() );
+        guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_SCORCHING + 2_C_delta );
+        const auto before = guy.get_part_temp_cur( body_part_hand_l );
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+        CHECK( guy.get_part_temp_cur( body_part_hand_l ) < before );
+        CHECK( arm.has_wound( wound_thermal_blister ) );
+    }
+
+    SECTION( "a contact hit contributes its post-convergence temperature" ) {
+        calendar::turn += 1_turns;
+        heat_for( guy, 29 );
+        REQUIRE_FALSE( arm.has_wounds() );
+        calendar::turn += 1_turns;
+        // Take a hit between the 10-second needs updates.
+        guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_SCORCHING - 0.25_C_delta );
+        guy.deal_damage( nullptr, body_part_hand_l, damage_instance( damage_heat, 3 ) );
+        const units::temperature heated = guy.get_part_temp_cur( body_part_hand_l );
+        REQUIRE( heated > BODYTEMP_SCORCHING );
+        REQUIRE_FALSE( arm.has_wounds() );
+        guy.npc_update_body();
+        CHECK( guy.get_part_temp_cur( body_part_hand_l ) < heated );
+        CHECK( arm.has_wound( wound_thermal_blister ) );
+    }
+
+    SECTION( "a briefly scorching hand cools before it can blister" ) {
+        get_weather().forced_temperature = 0_C;
+        guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_SCORCHING + 0.4_C_delta );
+        for( int i = 0; i < 40; ++i ) {
+            calendar::turn += 1_turns;
+            guy.npc_update_body();
+        }
+        CHECK( guy.get_part_temp_cur( body_part_hand_l ) < BODYTEMP_SCORCHING );
+        CHECK_FALSE( arm.has_wounds() );
+    }
+
+    SECTION( "a stale hot target does not keep the hand scorching after leaving the heat" ) {
+        get_weather().forced_temperature = 100_C;
+        guy.npc_update_body();
+        REQUIRE( guy.get_part_temp_conv( body_part_hand_l ) > BODYTEMP_SCORCHING );
+
+        guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_SCORCHING + 0.01_C_delta );
+        get_weather().forced_temperature = 0_C;
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+
+        CHECK( guy.get_part_temp_conv( body_part_hand_l ) < BODYTEMP_SCORCHING );
+        CHECK( guy.get_part_temp_cur( body_part_hand_l ) < BODYTEMP_SCORCHING );
+    }
+
+    SECTION( "stronger local heat can keep a borderline part scorching despite its cached target" ) {
+        get_weather().forced_temperature = 0_C;
+        guy.npc_update_body();
+        REQUIRE( guy.get_part_temp_conv( body_part_hand_l ) < BODYTEMP_NORM );
+
+        guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_SCORCHING + 0.01_C_delta );
+        get_weather().forced_temperature = 100_C;
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+
+        CHECK( guy.get_part_temp_conv( body_part_hand_l ) > BODYTEMP_SCORCHING );
+        CHECK( guy.get_part( body_part_hand_l )->has_heat_exposure() );
+    }
+
+    SECTION( "a stationary or moving NPC samples new local heat before crossing the threshold" ) {
+        const bool move_to_heat = GENERATE( false, true );
+        CAPTURE( move_to_heat );
+        weather_manager &weather = get_weather();
+        const restore_on_out_of_scope restore_ambient( weather.temperature );
+        const restore_on_out_of_scope restore_new_game( g->new_game );
+        g->new_game = false;
+        weather.temperature = 19_C;
+        weather.forced_temperature.reset();
+        weather.clear_temp_cache();
+
+        map &here = get_map();
+        const tripoint_bub_ms cool_at( 5 * SEEX - 1, 50, 0 );
+        const tripoint_bub_ms hot_at = move_to_heat ? cool_at + point::east : cool_at;
+        const units::temperature_delta original_mod = here.get_temperature_mod( hot_at );
+        const on_out_of_scope restore_tile( [&]() {
+            here.set_temperature_mod( hot_at, original_mod );
+            weather.clear_temp_cache();
+        } );
+        guy.setpos( here, cool_at, false );
+        guy.npc_update_body();
+        REQUIRE( guy.get_part_temp_conv( body_part_hand_l ) < BODYTEMP_SCORCHING );
+
+        // New local heat can cross the threshold even from outside the fallback band.
+        const units::temperature before = move_to_heat ? BODYTEMP_NORM :
+                                          BODYTEMP_SCORCHING - 1.25_C_delta;
+        guy.set_part_temp_cur( body_part_hand_l, before );
+        here.set_temperature_mod( hot_at, move_to_heat ? 150_C_delta : 4000_C_delta );
+        if( move_to_heat ) {
+            guy.setpos( here, hot_at, false );
+        }
+        calendar::turn += 1_turns;
+        weather.clear_temp_cache();
+        guy.npc_update_body();
+
+        CHECK( guy.get_part_temp_conv( body_part_hand_l ) > BODYTEMP_SCORCHING );
+        CHECK( guy.get_part_temp_cur( body_part_hand_l ) > before );
+        CHECK( ( guy.get_part_temp_cur( body_part_hand_l ) > BODYTEMP_SCORCHING ) == !move_to_heat );
+        CHECK( guy.get_part( body_part_hand_l )->has_heat_exposure() == !move_to_heat );
+    }
+
+    SECTION( "immersion can cool a scorching part without a change in the air sample" ) {
+        const bool move_to_water = GENERATE( false, true );
+        CAPTURE( move_to_water );
+        weather_manager &weather = get_weather();
+        const restore_on_out_of_scope restore_humidity( weather.weather_precise->humidity );
+        const restore_on_out_of_scope restore_weather( weather.weather_id );
+        weather.weather_precise->humidity = 0;
+        weather.weather_id = weather_type_id( "clear" );
+        weather.forced_temperature = 60_C;
+        calendar::turn += 1_turns;
+        heat_for( guy, 29 );
+        REQUIRE_FALSE( arm.has_wounds() );
+
+        // This target is not scorching, but would cool the hand too slowly.
+        const units::temperature cached_target = guy.get_part_temp_conv( body_part_hand_l );
+        REQUIRE( cached_target > BODYTEMP_VERY_HOT );
+        REQUIRE( cached_target < BODYTEMP_SCORCHING );
+        guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_SCORCHING + 0.01_C_delta );
+
+        map &here = get_map();
+        const tripoint_bub_ms water_at = move_to_water ? guy.pos_bub() + point::east : guy.pos_bub();
+        here.ter_set( water_at, ter_t_water_dp );
+        if( move_to_water ) {
+            guy.setpos( here, water_at, false );
+        }
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
+
+        CHECK( guy.get_part_temp_conv( body_part_hand_l ) < cached_target );
+        CHECK( guy.get_part_temp_cur( body_part_hand_l ) < BODYTEMP_SCORCHING );
+        CHECK_FALSE( arm.has_wounds() );
+    }
+
+    SECTION( "a hot endpoint does not retroactively replace a cooling turn" ) {
+        heat_for( guy, 28 );
+        calendar::turn += 1_turns;
+        guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_NORM );
+        guy.npc_update_body();
+
+        calendar::turn += 1_turns;
+        guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_SCORCHING + 5_C_delta );
+        guy.npc_update_body();
+        REQUIRE_FALSE( arm.has_wounds() );
+        heat_for( guy, 1 );
+        CHECK( arm.has_wound( wound_thermal_blister ) );
+    }
+
+    SECTION( "a clock jump and repeated samples add only the current turn" ) {
+        heat_for( guy, 28 );
+        // Skip many turns without replaying their environmental conditions.
+        calendar::turn += 5_minutes + 2_turns;
+        guy.npc_update_body();
+        guy.npc_update_body();
+        REQUIRE_FALSE( arm.has_wounds() );
+        heat_for( guy, 1 );
+        CHECK( arm.has_wound( wound_thermal_blister ) );
+    }
+
+    SECTION( "reload preserves the pending dose without processing the same turn again" ) {
+        heat_for( guy, 29 );
+        REQUIRE_FALSE( arm.has_wounds() );
+        std::ostringstream saved;
+        JsonOut out( saved );
+        guy.serialize( out );
+
+        npc restored;
+        restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
+        restored.on_load( &get_map() );
+        const on_out_of_scope unload( [&restored]() {
+            restored.on_unload();
+        } );
+        const bodypart &restored_arm = *restored.get_part( body_part_arm_l );
+        const units::temperature before = restored.get_part_temp_cur( body_part_hand_l );
+        restored.npc_update_body();
+        CHECK( restored.get_part_temp_cur( body_part_hand_l ) == before );
+        REQUIRE_FALSE( restored_arm.has_wounds() );
+        calendar::turn += 1_turns;
+        restored.npc_update_body();
+        CHECK( restored_arm.has_wound( wound_thermal_blister ) );
+    }
+
+    SECTION( "activation does not sample time spent off the active map" ) {
+        heat_for( guy, 29 );
+        REQUIRE_FALSE( arm.has_wounds() );
+        on_load_test( guy, 29_seconds, 5_minutes );
+        REQUIRE_FALSE( arm.has_wounds() );
+        guy.npc_update_body();
+        CHECK( arm.has_wound( wound_thermal_blister ) );
+    }
+
+    SECTION( "temporary invulnerability cannot consume a crossing" ) {
+        const bool incorporeal = GENERATE( false, true );
+        CAPTURE( incorporeal );
+        heat_for( guy, 29 );
+        if( incorporeal ) {
+            guy.add_effect( effect_incorporeal, 5_minutes );
+        } else {
+            guy.set_mutation( trait_DEBUG_NODMG );
+        }
+        heat_for( guy, 125 );
+        REQUIRE_FALSE( arm.has_wounds() );
+        if( incorporeal ) {
+            guy.remove_effect( effect_incorporeal );
+        } else {
+            guy.unset_mutation( trait_DEBUG_NODMG );
+        }
+        heat_for( guy, 29 );
+        REQUIRE_FALSE( arm.has_wounds() );
+        heat_for( guy, 1 );
+        CHECK( arm.has_wound( wound_thermal_blister ) );
+    }
+}
+
+TEST_CASE( "live_temperature_does_not_reuse_a_sample_from_before_a_weather_update",
+           "[weather][npc][thermal_burn][regression]" )
+{
+    // Isolate the ambient component of the tile sample used at NPC activation.
+    const restore_on_out_of_scope restore_new_game( g->new_game );
+    g->new_game = true;
+    weather_manager weather;
+    weather.weather_override = weather.weather_id;
+    weather.temperature = 150_C;
+    const tripoint_bub_ms tile( 8, 8, 0 );
+    REQUIRE( weather.get_temperature( tile ) == 150_C );
+    weather.set_nextweather( calendar::turn );
+    REQUIRE( weather.temperature != 150_C );
+    CHECK( weather.get_temperature( tile ) == weather.temperature );
+}
+
+TEST_CASE( "npc_temperature_cache_distinguishes_maps_at_the_same_absolute_tile",
+           "[npc][needs][thermal_burn][regression]" )
+{
+    clear_map_without_vision();
+    map &primary = get_map();
+    const tripoint_bub_ms tile( 8, 8, 0 );
+
+    // Separate storage for the same absolute tile forces a cache-key collision.
+    struct heated_test_map : map {
+        std::array<submap, 4> tiles;
+        explicit heated_test_map( const tripoint_abs_sm &origin ) : map( 2, false ) {
+            set_abs_sub( origin );
+            for( int y = 0; y < 2; ++y ) {
+                for( int x = 0; x < 2; ++x ) {
+                    submap &sm = tiles[y * 2 + x];
+                    sm.set_all_ter( ter_str_id( "t_dirt" ).id(), true );
+                    setsubmap( get_nonant( tripoint_rel_sm( x, y, 0 ) ), &sm );
+                }
             }
         }
-        CHECK( any_cooled );
+    } secondary( primary.get_abs_sub() );
+    REQUIRE( primary.get_abs( tile ) == secondary.get_abs( tile ) );
+    secondary.set_temperature_mod( tile, 150_C_delta );
+
+    weather_manager &weather = get_weather();
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    const restore_on_out_of_scope restore_new_game( g->new_game );
+    const restore_on_out_of_scope restore_swapping( g->swapping_dimensions );
+    const restore_on_out_of_scope restore_forced( weather.forced_temperature );
+    const restore_on_out_of_scope restore_ambient( weather.temperature );
+    Character &player = get_player_character();
+    const tripoint_abs_ms player_pos = player.pos_abs();
+    const units::temperature_delta original_mod = primary.get_temperature_mod( tile );
+    const on_out_of_scope cleanup( [&]() {
+        player.setpos( player_pos, false );
+        primary.set_temperature_mod( tile, original_mod );
+        weather.clear_local_temp_cache();
+    } );
+    player.setpos( primary, tripoint_bub_ms( 0, 0, -2 ), false );
+    g->new_game = false;
+    g->swapping_dimensions = false;
+    weather.forced_temperature.reset();
+    weather.temperature = 19_C;
+    primary.set_temperature_mod( tile, 0_C_delta );
+    calendar::turn = calendar::turn_zero + 1_turns;
+    weather.clear_local_temp_cache();
+
+    standard_npc guy( "Resident heat NPC", tile );
+    clear_character( guy, true );
+    guy.setpos( primary, tile, false );
+    guy.npc_update_body();
+    const units::temperature cool_target = guy.get_part_temp_conv( body_part_hand_l );
+    REQUIRE( cool_target < BODYTEMP_SCORCHING );
+    const units::temperature cool_sample = weather.get_temperature( tile );
+
+    calendar::turn += 1_turns;
+    weather.clear_local_temp_cache();
+    {
+        const swap_map use_secondary( secondary );
+        CHECK( weather.get_temperature( tile ) > cool_sample + 100_C_delta );
     }
+    // Both maps are simulated in the same turn, without a cache clear between them.
+    guy.npc_update_body();
+    CHECK( guy.get_part_temp_conv( body_part_hand_l ) == cool_target );
+    CHECK( weather.get_temperature( tile ) == cool_sample );
+    const swap_map use_secondary( secondary );
+    CHECK( weather.get_temperature( tile ) > cool_sample + 100_C_delta );
+    calendar::turn += 1_turns;
+    guy.setpos( secondary, tile, false );
+    guy.npc_update_body();
+    CHECK( guy.get_part_temp_conv( body_part_hand_l ) > cool_target );
+}
+
+TEST_CASE( "npc_live_temperature_drops_when_activation_heat_is_removed",
+           "[npc][needs][thermal_burn][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    const bool use_resident = GENERATE( false, true );
+    CAPTURE( use_resident );
+
+    weather_manager &weather = get_weather();
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    const restore_on_out_of_scope restore_new_game( g->new_game );
+    const restore_on_out_of_scope restore_swapping( g->swapping_dimensions );
+    const restore_on_out_of_scope restore_forced( weather.forced_temperature );
+    const restore_on_out_of_scope restore_ambient( weather.temperature );
+    const restore_on_out_of_scope restore_weather( weather.weather_id );
+    const restore_on_out_of_scope restore_wind( weather.windspeed );
+    calendar::turn = calendar::turn_zero + 1_turns;
+    g->new_game = false;
+    g->swapping_dimensions = false;
+    weather.forced_temperature.reset();
+    weather.temperature = 19_C;
+    weather.weather_id = weather_type_id( "clear" );
+    weather.windspeed = 0;
+
+    map &primary = get_map();
+    cata_mp::world_session &session = g->multiplayer_session();
+    REQUIRE_FALSE( session.has_regions() );
+    // The test world need not have a local controller until it simulates a turn.
+    player_control &local_control = g->local_player_controller();
+    const bool needs_control = !local_control.get();
+    const on_out_of_scope cleanup_control( [&local_control, needs_control]() {
+        if( needs_control ) {
+            local_control.reset();
+        }
+    } );
+    if( needs_control ) {
+        local_control = g->player_controls().claim( player_id( std::string( 32, '6' ) ),
+                        get_avatar() );
+    }
+
+    const player_id region_player( std::string( 32, '7' ) );
+    map *terrain = &primary;
+    const on_out_of_scope cleanup_region( [&session, &primary, &region_player, &weather]() {
+        session.retire_region( primary, region_player );
+        weather.clear_local_temp_cache();
+    } );
+    if( use_resident ) {
+        const tripoint_abs_sm origin = primary.get_abs_sub() +
+                                       point_rel_sm( primary.getmapsize() + 2, 0 );
+        const tripoint_abs_sm center = origin + point_rel_sm( HALF_MAPSIZE, HALF_MAPSIZE );
+        terrain = session.load_region( *g, primary, region_player, center ).terrain.get();
+        REQUIRE( terrain->get_abs_sub().x() >= primary.get_abs_sub().x() + primary.getmapsize() );
+    }
+
+    const tripoint_bub_ms tile( HALF_MAPSIZE_X, HALF_MAPSIZE_Y - 2 * SEEY, 0 );
+    const tripoint_abs_ms position = terrain->get_abs( tile );
+    REQUIRE( primary.inbounds( position ) == !use_resident );
+    REQUIRE( terrain->has_loaded_submap( tile ) );
+
+    const field_type_id hot_air = fd_hot_air4.id();
+    const units::temperature_delta previous_mod = terrain->get_temperature_mod( tile );
+    const on_out_of_scope cleanup_tile( [terrain, tile, hot_air, previous_mod]() {
+        terrain->delete_field( tile, hot_air );
+        terrain->set_temperature_mod( tile, previous_mod );
+    } );
+    const auto guy = make_shared_fast<standard_npc>( "Activation heat NPC", tile );
+    clear_character( *guy, true );
+    guy->spawn_at_precise( position );
+    guy->set_part_temp_cur( body_part_hand_l, BODYTEMP_SCORCHING );
+    const character_id id = guy->getID();
+    overmap_buffer.insert_npc( guy );
+    const on_out_of_scope cleanup_npc( [id]() {
+        g->remove_npc( id );
+        overmap_buffer.remove_npc( id );
+    } );
+
+    {
+        const swap_map context( *terrain );
+        terrain->ter_set( tile, ter_t_floor );
+        terrain->furn_set( tile, furn_str_id::NULL_ID() );
+        terrain->set_temperature_mod( tile, 0_C_delta );
+        terrain->clear_fields( tile );
+        REQUIRE( terrain->add_field( tile, hot_air, 3, 0_turns, false ) );
+        weather.clear_local_temp_cache();
+        g->load_npcs( terrain );
+        REQUIRE( g->shared_from<npc>( *guy ).get() == guy.get() );
+        REQUIRE( guy->pos_abs() == position );
+        REQUIRE( session.loaded_map_at( primary, guy->pos_abs_sm() ) == terrain );
+        REQUIRE( guy->get_part_temp_conv( body_part_hand_l ) > BODYTEMP_SCORCHING );
+        REQUIRE( guy->get_part_temp_cur( body_part_hand_l ) == BODYTEMP_SCORCHING );
+        // Mark it for removal; the field phase erases it without relying on decay RNG.
+        terrain->remove_field( tile, hot_air );
+        REQUIRE( terrain->field_at( tile ).find_field( hot_air, /*alive_only=*/false ) );
+    }
+
+    guy->add_effect( effect_npc_suspend, 1_minutes );
+    guy->set_moves( 0 );
+    g->simulate_turn_suffix();
+
+    CHECK( calendar::turn == calendar::turn_zero + 1_turns );
+    CHECK( guy->pos_abs() == position );
+    CHECK_FALSE( terrain->field_at( tile ).find_field( hot_air, /*alive_only=*/false ) );
+    CHECK( guy->get_part_temp_conv( body_part_hand_l ) < BODYTEMP_SCORCHING );
+    CHECK( guy->get_part_temp_cur( body_part_hand_l ) < BODYTEMP_SCORCHING );
+    CHECK_FALSE( guy->get_part( body_part_hand_l )->has_heat_exposure() );
+}
+
+TEST_CASE( "npc_thermal_penalties_stop_after_their_part_is_replaced",
+           "[npc][needs][thermal_burn][regression]" )
+{
+    clear_map_without_vision();
+    const bool fast_update = GENERATE( false, true );
+    const bool recreate = GENERATE( false, true );
+    const bool remove_cold = GENERATE( false, true );
+    CAPTURE( fast_update, recreate, remove_cold );
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    const restore_on_out_of_scope restore_temperature( get_weather().forced_temperature );
+    get_weather().forced_temperature = 19_C;
+    calendar::turn = calendar::turn_zero + 1_turns;
+
+    struct changing_npc : standard_npc {
+        using standard_npc::standard_npc;
+        efftype_id trigger;
+        bool armed = false;
+        bool changed = false;
+        bool recreate = false;
+
+        void on_effect_int_change( const efftype_id &id, int intensity,
+                                   const bodypart_id &bp ) override {
+            standard_npc::on_effect_int_change( id, intensity, bp );
+            if( armed && bp == body_part_hand_l && id == trigger ) {
+                armed = false;
+                changed = true;
+                body.erase( bp.id() );
+                if( recreate ) {
+                    body.emplace( bp.id(), bodypart( bp.id() ) );
+                }
+            }
+        }
+    } guy( "Anatomy callback NPC", tripoint_bub_ms( 50, 50, 0 ) );
+    clear_character( guy, true );
+    if( fast_update ) {
+        guy.npc_update_body();
+        calendar::turn += 1_turns;
+    }
+    if( remove_cold ) {
+        guy.add_effect( effect_cold, 1_turns, body_part_hand_l, true, 1 );
+        REQUIRE( guy.has_effect( effect_cold, body_part_hand_l ) );
+    }
+    const std::uint64_t identity = guy.get_part( body_part_hand_l )->identity_generation();
+    guy.trigger = remove_cold ? effect_cold : effect_hot;
+    guy.recreate = recreate;
+    guy.armed = true;
+    // A hand gets a speed penalty at tier two, below the refresh band.
+    guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_VERY_HOT + 0.5_C_delta );
+    guy.npc_update_body();
+
+    REQUIRE( guy.changed );
+    REQUIRE( guy.has_part( body_part_hand_l ) == recreate );
+    if( recreate ) {
+        CHECK( guy.get_part( body_part_hand_l )->identity_generation() != identity );
+        CHECK( guy.get_part_temp_cur( body_part_hand_l ) == BODYTEMP_NORM );
+    }
+    if( remove_cold ) {
+        CHECK_FALSE( guy.has_effect( effect_hot, body_part_hand_l ) );
+    }
+    CHECK_FALSE( guy.has_effect( effect_hot_speed, body_part_hand_l ) );
+}
+
+TEST_CASE( "npc_temperature_update_stops_when_a_penalty_callback_unloads_its_owner",
+           "[npc][needs][thermal_burn][regression]" )
+{
+    clear_map_without_vision();
+    const on_out_of_scope cleanup( []() { clear_npcs(); } );
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    const restore_on_out_of_scope restore_temperature( get_weather().forced_temperature );
+    get_weather().forced_temperature = 19_C;
+    calendar::turn = calendar::turn_zero + 1_turns;
+    const bool fast_update = GENERATE( false, true );
+    const bool remove_cold = GENERATE( false, true );
+    CAPTURE( fast_update, remove_cold );
+    npc &guy = spawn_npc( point_bub_ms( 50, 50 ), "test_talker" );
+    clear_character( guy, true );
+    if( fast_update ) {
+        REQUIRE( guy.npc_update_body() );
+        calendar::turn += 1_turns;
+    }
+    if( remove_cold ) {
+        guy.add_effect( effect_cold, 1_turns, body_part_hand_l, true, 1 );
+    }
+    struct retire_on_penalty : event_subscriber {
+        using event_subscriber::notify;
+        retire_on_penalty( npc &who, bool loss ) : who( who ), loss( loss ) {}
+        npc &who;
+        bool loss;
+        bool fired = false;
+
+        void notify( const cata::event &e ) override {
+            if( !fired && e.type() == ( loss ? event_type::character_loses_effect :
+                                        event_type::character_gains_effect ) &&
+                e.get<character_id>( "character" ) == who.getID() &&
+                e.get<bodypart_id>( "bodypart" ) == body_part_hand_l.id() &&
+                e.get<efftype_id>( "effect" ) == ( loss ? effect_cold : effect_hot ) ) {
+                fired = true;
+                who.on_unload();
+            }
+        }
+    } listener( guy, remove_cold );
+    get_event_bus().subscribe( &listener );
+    guy.set_part_temp_cur( body_part_hand_l, BODYTEMP_VERY_HOT + 0.5_C_delta );
+    const bool completed = fast_update ? guy.npc_update_body() : guy.update_bodytemp( true );
+    CHECK_FALSE( completed );
+    REQUIRE( listener.fired );
+    CHECK_FALSE( guy.has_effect( effect_hot_speed, body_part_hand_l ) );
+    if( remove_cold ) {
+        CHECK_FALSE( guy.has_effect( effect_hot, body_part_hand_l ) );
+    }
+}
+
+TEST_CASE( "npc_on_load_replays_fire_damage_without_live_thermal_contact",
+           "[npc][needs][thermal_burn]" )
+{
+    clear_map_without_vision();
+    const override_option always_wound( "WOUND_CHANCE", "1" );
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    constexpr unsigned int seed = 462172;
+    rng_set_engine_seed( seed );
+    CAPTURE( seed );
+    calendar::turn = calendar::turn_zero;
+
+    standard_npc replaying( "Off-map NPC", tripoint_bub_ms( 50, 50, 0 ) );
+    standard_npc active( "Active NPC", tripoint_bub_ms( 51, 50, 0 ) );
+    replaying.set_all_parts_temp_cur( BODYTEMP_NORM );
+    active.set_all_parts_temp_cur( BODYTEMP_NORM );
+    replaying.add_effect( effect_onfire, 50_turns, body_part_hand_l, false, 3, false, true );
+    active.add_effect( effect_onfire, 1_turns, body_part_hand_l, false, 1, false, true );
+    const on_out_of_scope unload( [&replaying]() {
+        replaying.on_unload();
+    } );
+    const int hp = replaying.get_part_hp_cur( body_part_arm_l );
+
+    class replay_damage_observer : public event_subscriber
+    {
+        public:
+            using event_subscriber::notify;
+
+            replay_damage_observer( npc &replaying, npc &active )
+                : replaying( replaying ), active( active ) {}
+
+            void notify( const cata::event &event ) override {
+                if( event.type() != event_type::character_takes_damage ||
+                    event.get<character_id>( "character" ) != replaying.getID() ) {
+                    return;
+                }
+                const int damage = event.get<int>( "damage" );
+                if( damage <= 0 ) {
+                    return;
+                }
+                // Later ticks must not see impulses from earlier ticks, before the load refresh.
+                CHECK( replaying.get_part_temp_cur( body_part_hand_l ) == BODYTEMP_NORM );
+                if( total_damage == 0 ) {
+                    active.deal_damage( nullptr, body_part_hand_l, damage_instance( damage_heat, 8 ) );
+                }
+                total_damage += damage;
+                max_damage = std::max( max_damage, damage );
+            }
+
+            int total_damage = 0;
+            int max_damage = 0;
+
+        private:
+            npc &replaying;
+            npc &active;
+    };
+
+    {
+        replay_damage_observer observer( replaying, active );
+        get_event_bus().subscribe( &observer );
+        on_load_test( replaying, 0_turns, 10_turns );
+        REQUIRE( observer.max_damage >= 4 ); // Enough damage to blister on a live turn.
+        CHECK( replaying.get_part_hp_cur( body_part_arm_l ) == hp - observer.total_damage );
+    }
+    CHECK_FALSE( replaying.get_part( body_part_arm_l )->has_wounds() );
+    CHECK( active.get_part_temp_cur( body_part_hand_l ) == BODYTEMP_NORM + 2_C_delta );
+    CHECK( active.get_part( body_part_arm_l )->has_wound( wound_thermal_blister ) );
+
+    calendar::turn += 1_turns;
+    const units::temperature before = replaying.get_part_temp_cur( body_part_hand_l );
+    REQUIRE( replaying.has_effect( effect_onfire, body_part_hand_l ) );
+    replaying.deal_damage( nullptr, body_part_hand_l, damage_instance( damage_heat, 8 ) );
+    CHECK( replaying.get_part_temp_cur( body_part_hand_l ) == before + 2_C_delta );
+    CHECK( replaying.get_part( body_part_arm_l )->has_wound( wound_thermal_blister ) );
 }
 
 TEST_CASE( "npc_camp_water_through_stomach", "[npc][needs][camp]" )
@@ -3335,15 +4124,19 @@ TEST_CASE( "schedule_reconciliation_no_npc_food", "[npc][schedule]" )
     clear_map_without_vision();
     override_option no_food( "NO_NPC_FOOD", "true" );
 
-    SECTION( "wakes and zeroes sleepiness at shift start" ) {
-        calendar::turn = calendar::turn_zero + 12_hours;
+    SECTION( "wakes and zeroes sleepiness only on a body tick" ) {
+        calendar::turn = calendar::turn_zero + 12_hours + 9_seconds;
         npc &guy = spawn_scheduled_npc( { 50, 50 }, NC_ROBOFAC_INTERCOM_DAY );
         guy.set_sleepiness( 100 );
         guy.add_effect( effect_sleep, 1_hours );
         REQUIRE( guy.in_sleep_state() );
         REQUIRE_FALSE( guy.needs_food() );
 
-        guy.reconcile_schedule();
+        guy.npc_update_body();
+        CHECK( guy.in_sleep_state() );
+        CHECK( guy.get_sleepiness() == 100 );
+        calendar::turn += 1_turns;
+        guy.npc_update_body();
 
         CHECK_FALSE( guy.in_sleep_state() );
         CHECK( guy.get_sleepiness() == 0 );

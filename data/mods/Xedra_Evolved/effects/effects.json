@@ -1980,7 +1980,8 @@
     "desc": [ "You are immune to heat and fire." ],
     "rating": "good",
     "show_in_info": true,
-    "removes_effects": [ "onfire", "blisters" ],
+    "removes_effects": [ "onfire" ],
+    "flags": [ "THERMAL_BURN_PROTECTION" ],
     "enchantments": [
       {
         "incoming_damage_mod": [ { "type": "heat", "add": -1000 } ],
@@ -1995,7 +1996,8 @@
     "name": [ "" ],
     "desc": [ "" ],
     "rating": "good",
-    "removes_effects": [ "onfire", "blisters" ],
+    "removes_effects": [ "onfire" ],
+    "flags": [ "THERMAL_BURN_PROTECTION" ],
     "enchantments": [
       {
         "incoming_damage_mod": [ { "type": "heat", "add": -1000 } ],
@@ -2655,9 +2657,9 @@
     "name": [ "Mantle of the Malakhim" ],
     "desc": [ "You are protected from heat and smoke." ],
     "remove_message": "Your charm of protection fades away.",
-    "removes_effects": [ "blisters", "smoke_eyes", "smoke_lungs" ],
+    "removes_effects": [ "smoke_eyes", "smoke_lungs" ],
     "enchantments": [ { "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": 1000 } ] } ],
-    "flags": [ "HEATPROOF" ]
+    "flags": [ "HEATPROOF", "THERMAL_BURN_PROTECTION" ]
   },
   {
     "type": "effect_type",
@@ -3851,7 +3853,7 @@
     "name": [ "Time Looped" ],
     "desc": [ "Every few seconds every change to your person reverts." ],
     "rating": "good",
-    "flags": [ "CANNOT_CHANGE_TEMPERATURE", "FREEZE_EFFECTS", "CANNOT_GAIN_EFFECTS" ],
+    "flags": [ "CANNOT_CHANGE_TEMPERATURE", "FREEZE_EFFECTS", "CANNOT_GAIN_EFFECTS", "THERMAL_BURN_PROTECTION" ],
     "enchantments": [ { "values": [ { "value": "EQUIPMENT_DAMAGE_CHANCE", "multiply": -1 } ] } ],
     "show_in_info": true
   },

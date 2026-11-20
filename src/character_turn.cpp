@@ -72,15 +72,14 @@ void character_turn_driver::update_body()
     impl_->last_body = calendar::turn;
 }
 
-void character_turn_driver::process_turn()
+bool character_turn_driver::process_turn()
 {
     if( !impl_ ) {
         throw std::runtime_error( "Character turn driver is not bound" );
     }
     Character &actor = impl_->get();
     if( impl_->policy == character_turn_policy::native_step ) {
-        actor.process_turn();
-        return;
+        return actor.process_turn();
     }
     const int moves = actor.get_moves();
     int elapsed = 0;
@@ -94,7 +93,10 @@ void character_turn_driver::process_turn()
     // or replaying each intermediate calendar requires separate rule migration.
     constexpr int max_catchup = 100;
     for( int i = 0; i < std::min( elapsed, max_catchup ); ++i ) {
-        actor.process_turn();
+        if( !actor.process_turn() ) {
+            return false;
+        }
     }
     actor.set_moves( moves );
+    return true;
 }

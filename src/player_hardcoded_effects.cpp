@@ -155,16 +155,11 @@ static const vitamin_id vitamin_calcium( "calcium" );
 static const vitamin_id vitamin_iron( "iron" );
 static const vitamin_id vitamin_redcells( "redcells" );
 
-static void eff_fun_onfire( Character &u, effect &it )
+static void eff_fun_onfire( Character &u, const effect &it, bodypart_id bp )
 {
     const int intense = it.get_intensity();
-    u.deal_damage( it.get_source().resolve_creature(), it.get_bp(), damage_instance( damage_heat,
+    u.deal_damage( it.get_source().resolve_creature(), bp, damage_instance( damage_heat,
                    rng( intense, intense * 2 ) ) );
-    if( u.is_limb_broken( it.get_bp() ) ) {
-        // Set effect to be cleaned up during effect processing instead of endlessly burning broken limb.
-        // TODO: Transfer damage towards core instead? (e.g. broken feet --> try legs, if broken --> try torso etc)
-        it.set_duration( 0_turns );
-    }
 }
 static void eff_fun_spores( Character &u, effect &it )
 {
@@ -1280,7 +1275,7 @@ static void eff_fun_sleep( Character &u, effect &it )
     }
 }
 
-void Character::hardcoded_effects( effect &it )
+void Character::hardcoded_effects( effect &it, bodypart_id bp )
 {
     map &here = get_map();
     const tripoint_bub_ms pos = pos_bub( here );
@@ -1293,9 +1288,13 @@ void Character::hardcoded_effects( effect &it )
         }
         return;
     }
+    const efftype_id &id = it.get_id();
+    if( id == effect_onfire ) {
+        eff_fun_onfire( *this, it, bp );
+        return;
+    }
     using hc_effect_fun = std::function<void( Character &, effect & )>;
     static const std::map<efftype_id, hc_effect_fun> hc_effect_map = {{
-            { effect_onfire, eff_fun_onfire },
             { effect_spores, eff_fun_spores },
             { effect_fungus, eff_fun_fungus },
             { effect_antifungal, eff_fun_antifungal },
@@ -1314,7 +1313,6 @@ void Character::hardcoded_effects( effect &it )
             { effect_fake_flu, eff_fun_fake_flu },
         }
     };
-    const efftype_id &id = it.get_id();
     const auto &iter = hc_effect_map.find( id );
     if( iter != hc_effect_map.end() ) {
         iter->second( *this, it );
@@ -1323,7 +1321,6 @@ void Character::hardcoded_effects( effect &it )
 
     const time_duration dur = it.get_duration();
     int intense = it.get_intensity();
-    const bodypart_id &bp = it.get_bp();
     bool sleeping = has_effect( effect_sleep );
     Character &player_character = get_player_character();
     creature_tracker &creatures = get_creature_tracker();

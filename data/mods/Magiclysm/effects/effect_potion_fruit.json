@@ -36,6 +36,14 @@
     "enchantments": [ { "values": [ { "value": "ATTACK_SPEED", "add": -15 } ] } ]
   },
   {
+    "id": "effect_pfruit_raspberry_relief",
+    "type": "effect_type",
+    "max_duration": "5 minutes",
+    "max_intensity": 9,
+    "rating": "good",
+    "flags": [ "THERMAL_PAIN_RELIEF" ]
+  },
+  {
     "id": "effect_pfruit_thorns",
     "type": "effect_type",
     "name": [ "Blackberry Thorns" ],

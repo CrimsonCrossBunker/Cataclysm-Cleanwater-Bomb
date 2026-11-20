@@ -25,7 +25,7 @@
       ]
     },
     "effect": [
-      { "math": [ "u_pain() -= 5" ] },
+      { "math": [ "u_pain('type': 'base') -= 5" ] },
       { "math": [ "u_hp('torso') += (3 + rand(4) )" ] },
       { "math": [ "u_hp('head') += (3 + rand(4) )" ] },
       { "math": [ "u_hp('arm_l') += (3 + rand(4) )" ] },

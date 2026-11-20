@@ -736,12 +736,23 @@ bool Character::pick_wound_fix( const bodypart_id &bp_id )
     if( debug_mode || has_trait( trait_DEBUG_HS ) ) {
         if( query_yn( "Open debug insertion and removing wounds?" ) ) {
             uilist menu;
+            const bodypart_id thermal_main = thermal_wound_part( bp->get_id() );
+            bodypart *const thermal_storage = thermal_main == bodypart_str_id::NULL_ID() ? nullptr :
+                                              get_part( thermal_main );
             do {
                 menu.reset();
                 menu.text = "Toggle which wound?";
                 std::vector<std::pair<wound_type_id, bool>> opts;
-                for( const auto& [wound, weight] : bp_id->potential_wounds ) {
-                    opts.emplace_back( wound.id, bp->has_wound( wound.id ) );
+                for( const wound_type &wound : wound_type::get_all() ) {
+                    const bool thermal = bodypart::is_thermal_wound( wound.id );
+                    if( ( !thermal && wound.weight <= 0 ) || !wound.allowed_on_bodypart( bp->get_id().id() ) ) {
+                        continue;
+                    }
+                    const bodypart *const storage = thermal ? thermal_storage : bp;
+                    if( !storage ) {
+                        continue;
+                    }
+                    opts.emplace_back( wound.id, storage->has_wound( wound.id ) );
                     menu.addentry( -1, true, -1, string_format( opts.back().second ? "Treat: %s" : "Set: %s",
                             wound.id.str() ) );
                 }
@@ -751,10 +762,18 @@ bool Character::pick_wound_fix( const bodypart_id &bp_id )
                 }
                 menu.query();
                 if( menu.ret >= 0 ) {
-                    if( opts[menu.ret].second ) {
-                        bp->remove_wound( opts[menu.ret].first );
+                    const auto &[id, present] = opts[menu.ret];
+                    if( bodypart::is_thermal_wound( id ) ) {
+                        if( present ) {
+                            thermal_storage->remove_all_wounds_of_type( id );
+                            on_stat_change( "perceived_pain", get_perceived_pain() );
+                        } else {
+                            apply_wound( bp->get_id(), id );
+                        }
+                    } else if( present ) {
+                        bp->remove_wound( id );
                     } else {
-                        bp->add_wound( opts[menu.ret].first );
+                        bp->add_wound( id );
                     }
                 }
             } while( menu.ret >= 0 );

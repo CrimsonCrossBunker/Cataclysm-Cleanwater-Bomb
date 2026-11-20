@@ -21,7 +21,7 @@
     "type": "effect_on_condition",
     "id": "EOC_PARACLESIAN_BROKE_FAE_BAN_PAIN",
     "//": "This is separate rather than in-line due to bug #70978",
-    "effect": [ { "math": [ "u_pain() += rand(35) + 8" ] } ]
+    "effect": [ { "math": [ "u_pain('type': 'base') += rand(35) + 8" ] } ]
   },
   {
     "type": "effect_on_condition",

@@ -649,6 +649,9 @@ These are checked by hardcode for monsters (introducing new flags will require C
 - ```EFFECT_LIMB_SCORE_MOD_LOCAL``` Same as `EFFECT_LIMB_SCORE_MOD`, but limb score is modified only if effect is applied to body part, that has said score; effect, that apply -50% vision debuff, won't have effect if applied to leg with this flag.
 - ```GRAB``` This effect is a grab, creatures will attempt to break it as such (see `character_escape.cpp`).
 - ```GRAB_FILTER``` This effect is a grab filter effect, assigning grabs to their grabbing monster.  Handles targeted grab removal on grab break, as well as potentially acting as a filter for monster attack logic.  Bodypart `grabbing_effects` should have it defined.
+- ```POWERED_THERMAL_PAIN_RELIEF``` As `THERMAL_PAIN_RELIEF`, but only while a functioning bionic grants this flag. Give toggleable bionics the flag in `active_flags`.
+- ```THERMAL_PAIN_CEILING``` A whole-character effect with this flag caps perceived pain at its intensity after painkillers, but never below what the character would feel without thermal wounds.
+- ```THERMAL_PAIN_RELIEF``` A whole-character effect with this flag masks blister and burn pain up to its intensity, without masking base pain or altering wounds.
 
 
 ## Furniture and Terrain

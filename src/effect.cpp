@@ -4,6 +4,7 @@
 #include <translation.h>
 #include <type_id.h>
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <map>
 #include <optional>
@@ -1096,6 +1097,15 @@ std::string effect::disp_mod_source_info() const
     return get_origin( eff_type->src );
 }
 
+std::uint64_t effect::identity_generation() const noexcept
+{
+    if( identity.value == 0 ) {
+        static std::atomic<std::uint64_t> next{ 1 };
+        identity.value = next.fetch_add( 1, std::memory_order_relaxed );
+    }
+    return identity.value;
+}
+
 static bool effect_is_blocked( const efftype_id &e, const effects_map &eff_map )
 {
     for( const auto &eff_grp : eff_map ) {
@@ -1113,6 +1123,15 @@ static bool effect_is_blocked( const efftype_id &e, const effects_map &eff_map )
 void effect::decay( std::vector<efftype_id> &rem_ids, std::vector<bodypart_id> &rem_bps,
                     const time_point &time, const bool player, const effects_map &eff_map )
 {
+    if( decay( time, player, eff_map ) ) {
+        rem_ids.push_back( get_id() );
+        rem_bps.push_back( get_bp() );
+    }
+}
+
+bool effect::decay( const time_point &time, const bool player, const effects_map &eff_map )
+{
+    bool expired = false;
     // Decay intensity if supposed to do so, removing effects at zero intensity
     if( intensity > 0 && eff_type->int_decay_tick != 0 &&
         to_turn<int>( time ) % eff_type->int_decay_tick == 0 &&
@@ -1120,20 +1139,16 @@ void effect::decay( std::vector<efftype_id> &rem_ids, std::vector<bodypart_id> &
         if( eff_type->int_decay_step <= 0 || !effect_is_blocked( eff_type->id, eff_map ) ) {
             set_intensity( intensity + eff_type->int_decay_step, player );
         }
-        if( intensity <= 0 ) {
-            rem_ids.push_back( get_id() );
-            rem_bps.push_back( bp.id() );
-        }
+        expired = intensity <= 0;
     }
 
-    // Add to removal list if duration is <= 0
-    // Decay duration if not permanent
     if( duration <= 0_turns ) {
-        rem_ids.push_back( get_id() );
-        rem_bps.push_back( bp.id() );
-    } else if( !is_permanent() ) {
+        return true;
+    }
+    if( !is_permanent() ) {
         mod_duration( -1_turns, player );
     }
+    return expired;
 }
 
 bool effect::use_part_descs() const
@@ -1786,9 +1801,20 @@ void effect::serialize( JsonOut &json ) const
 
 void effect::deserialize( const JsonObject &jo )
 {
+    identity.value = 0;
     efftype_id id;
-    jo.read( "eff_type", id );
-    eff_type = &id.obj();
+    const bool has_type = jo.read( "eff_type", id );
+    if( const auto found = effect_types.find( id ); found != effect_types.end() ) {
+        eff_type = &found->second;
+    } else if( const effect_migration *migration = effect_migration::find_migration( id );
+               ( has_type && id.str().empty() ) || ( migration && !migration->id_new ) ) {
+        // Effect collections discard null and retired records before exposing them.
+        jo.allow_omitted_members();
+        *this = effect();
+        return;
+    } else {
+        eff_type = &id.obj();
+    }
     jo.read( "duration", duration );
     jo.read( "bp", bp );
     jo.read( "permanent", permanent );

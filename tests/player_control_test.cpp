@@ -228,8 +228,9 @@ TEST_CASE( "control_release_during_native_dispatch_revokes_authority_immediately
 {
     struct callback_npc : npc {
         std::function<void()> callback;
-        void process_turn() override {
+        bool process_turn() override {
             callback();
+            return true;
         }
     } actor;
     npc replacement;

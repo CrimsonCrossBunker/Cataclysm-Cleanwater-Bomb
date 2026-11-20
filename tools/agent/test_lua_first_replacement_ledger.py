@@ -178,6 +178,14 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                     "tools/test_lua_mutation_migration.py", entry["evidence"]
                 )
 
+    def test_damage_recording_and_reversal_are_planned_combat_services(self):
+        for prefix in ("u_", "npc_"):
+            for operation in ("record_last_damage", "revert_last_damage"):
+                with self.subTest(prefix=prefix, operation=operation):
+                    entry = disposition("eoc-effects", prefix + operation, {})
+                    self.assertEqual(entry["target"], "services.combat")
+                    self.assertEqual(entry["status"], "planned")
+
     def test_schema_requires_each_todo_category_and_core_input_contract(self):
         schema_root = Path(__file__).resolve().parents[2] / "ai"
         schema_path = schema_root / "lua-first-replacement-ledger.schema.json"

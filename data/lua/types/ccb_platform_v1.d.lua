@@ -11318,11 +11318,11 @@ local CcbPlatformWoundsApi = {}
 ---@return CcbResult result `value` is a dense native-order CcbPlatformWoundSnapshot array.
 function CcbPlatformWoundsApi.snapshot(character, body_part) end
 
----Add or worsen one typed wound on an exact body part; runtime-callback write only.
----The Wound per-part limit is authoritative; reaching it returns `changed = false`.
----The explicit body part is authoritative: direct add bypasses the Wound's natural
----damage-selection body-part eligibility.  A changed add immediately resynchronizes
----the Character's perceived-pain derived state.
+---Add or worsen a typed wound; the requested body part must exist exactly.
+---Ordinary wounds bypass natural damage selection but respect their per-part limit.
+---Thermal wounds respect burn protection and share one tier on the contact's organic
+---main part. The before/after arrays describe the storage part.
+---A changed add immediately resynchronizes the Character's perceived pain.
 ---Wrong GameId kinds or unknown ids raise invalid_argument before mutation.
 ---@param character GameHandle Character handle.
 ---@param body_part GameId GameId<body_part>
@@ -11340,8 +11340,8 @@ function CcbPlatformWoundsApi.add(character, body_part, wound) end
 function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 
 ---Apply the native direct wound operation to the native next-best body part; runtime-callback write only.
----This intentionally bypasses Wound per-part limits and does not call Character::apply_wound,
----so it does not trigger that method's perceived-pain resynchronization.
+---Ordinary wounds bypass per-part limits and do not resynchronize perceived pain.
+---Thermal wounds still use the same main-part, immunity, tier and notification rules as `add`.
 ---Wrong GameId kinds or unknown ids raise invalid_argument before mutation.
 ---@param character GameHandle Character handle.
 ---@param body_part GameId GameId<body_part>; native next-best body-part fallback is used.
@@ -11350,7 +11350,7 @@ function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 function CcbPlatformWoundsApi.add_unbounded(character, body_part, wound) end
 
 ---Remove every matching wound directly from the native next-best body part; runtime-callback write only.
----This intentionally does not call Character::on_stat_change or resynchronize perceived pain.
+---Removing a thermal wound immediately resynchronizes perceived pain; ordinary direct removals do not.
 ---Wrong GameId kinds or unknown ids raise invalid_argument before mutation.
 ---@param character GameHandle Character handle.
 ---@param body_part GameId GameId<body_part>; native next-best body-part fallback is used.
@@ -11705,8 +11705,8 @@ function CcbVariablesApi.set_resolved(context, actor, scope, key, value, partici
 ---@class CcbEffectsApi
 local CcbEffectsApi = {}
 
----Apply an effect through native Creature rules. Nonpositive duration is preserved;
----it still applies immediately and expires when native effect processing runs.
+---Apply through native rules. Nonpositive durations apply immediately and expire during processing.
+---Targeted Character `onfire` snapshots the applied record with its actual contact part; `has`, `get` and `remove` still use exact IDs.
 ---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId
 ---@param duration TimeDuration Native signed int turn range

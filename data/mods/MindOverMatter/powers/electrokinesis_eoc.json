@@ -40,20 +40,27 @@
     "id": "EOC_ELECTROKIN_PAIN_IMMUNE_ON",
     "condition": { "not": { "u_has_effect": "effect_electrokinetic_pain_immune" } },
     "effect": [
-      { "math": [ "u_electrokin_pain_value = u_pain()" ] },
-      { "math": [ "u_pain() = 0" ] },
+      { "math": [ "_raw_pain_before_block = u_pain()" ] },
       { "u_add_effect": "effect_electrokinetic_pain_immune", "duration": "1 hours" },
       {
-        "run_eocs": "EOC_ELECTROKIN_PAIN_IMMUNE_OFF",
-        "time_in_future": [
+        "if": { "u_has_effect": "effect_electrokinetic_pain_immune" },
+        "then": [
+          { "math": [ "u_electrokin_pain_value = u_pain('type': 'base')" ] },
+          { "math": [ "u_pain('type': 'base') = 0" ] },
+          { "math": [ "u_electrokin_pain_rebound_bonus = floor((_raw_pain_before_block - u_pain()) / 10)" ] },
           {
-            "math": [
-              "( ( (u_spell_level('electrokinetic_pain_immune') + u_spell_level('electrokinetic_pain_immune_knack') ) * 8) + 60) * psionic_power_modifiers()"
-            ]
-          },
-          {
-            "math": [
-              "( ( (u_spell_level('electrokinetic_pain_immune') + u_spell_level('electrokinetic_pain_immune_knack') ) * 13) + 150) * psionic_power_modifiers()"
+            "run_eocs": "EOC_ELECTROKIN_PAIN_IMMUNE_OFF",
+            "time_in_future": [
+              {
+                "math": [
+                  "((u_spell_level('electrokinetic_pain_immune') + u_spell_level('electrokinetic_pain_immune_knack')) * 8 + 60) * psionic_power_modifiers()"
+                ]
+              },
+              {
+                "math": [
+                  "((u_spell_level('electrokinetic_pain_immune') + u_spell_level('electrokinetic_pain_immune_knack')) * 13 + 150) * psionic_power_modifiers()"
+                ]
+              }
             ]
           }
         ]
@@ -66,8 +73,12 @@
     "id": "EOC_ELECTROKIN_PAIN_IMMUNE_OFF",
     "condition": { "u_has_effect": "effect_electrokinetic_pain_immune" },
     "effect": [
-      { "u_lose_effect": "effect_electrokinetic_pain_immune" },
-      { "math": [ "u_pain('type': 'perceived') += (u_electrokin_pain_value * 1.1)" ] }
+      {
+        "u_lose_effect": "effect_electrokinetic_pain_immune",
+        "pain_delta": { "math": [ "u_electrokin_pain_value + max(u_electrokin_pain_rebound_bonus, floor(u_electrokin_pain_value / 10))" ] }
+      },
+      { "math": [ "u_electrokin_pain_value = 0" ] },
+      { "math": [ "u_electrokin_pain_rebound_bonus = 0" ] }
     ]
   },
   {

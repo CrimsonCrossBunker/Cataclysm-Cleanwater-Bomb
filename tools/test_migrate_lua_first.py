@@ -8171,10 +8171,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
         start = main.index(
             f"migrated_eoc_{child_id} = function(context, actor_override)"
         )
-        end = main.index(
-            f'migrated_eoc_functions[{migrate_lua_first.lua_quote(child_id)}]',
-            start,
-        )
+        end = main.index("\nend\n", start)
         callback = main[start:end]
         self.assertEqual(callback.count("services.items.set_flag("), 5)
         self.assertEqual(callback.count("context.actors.item ~= nil"), 5)
@@ -8249,10 +8246,19 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     "type": "effect_on_condition",
                     "id": "remove_hostile_npc_wound",
                     "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
-                    "effect": {
-                        "npc_remove_wound": "arm_l",
-                        "wound_id": ["scratch"],
-                    },
+                    "effect": [
+                        {
+                            "npc_remove_wound": "arm_l",
+                            "wound_id": ["scratch"],
+                        },
+                        {
+                            "if": {"and": []},
+                            "then": {
+                                "npc_remove_wound": "arm_l",
+                                "wound_id": ["scratch"],
+                            },
+                        },
+                    ],
                 },
             ]
             source.write_text(
@@ -8266,10 +8272,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 8)
+            self.assertEqual(len(result.converted), 9)
             self.assertEqual(result.partial, [])
             self.assertEqual(main.count("services.wounds.add_unbounded("), 3)
-            self.assertEqual(main.count("services.wounds.remove_all_direct("), 3)
+            self.assertEqual(main.count("services.wounds.remove_all_direct("), 2)
             self.assertIn("services.characters.avatar()", main)
             self.assertIn("context.actors.character", main)
             self.assertIn("context.actors.npc", main)
@@ -8344,6 +8350,13 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     {
                         "u_remove_wound": "arm_l",
                         "wound_id": ["scratch", {"context_val": "wound"}],
+                    },
+                ),
+                (
+                    "npc_becomes_hostile",
+                    {
+                        "npc_remove_wound": "arm_l",
+                        "wound_id": [{"context_val": "wound"}],
                     },
                 ),
                 (
@@ -38103,10 +38116,139 @@ assert(draws==1 and context.data.position.x==4 and context.data.position.y==8 an
             self.assertIn("services.npcs.list", main)
             self.assertIn("npc_page.has_more", main)
             self.assertIn("services.creatures.can_see(target, actor)", main)
-            self.assertIn("migrated_eoc_npc_target(context, target)", main)
+            self.assertIn("migrated_eoc_npc_target(npc_dialogue(target), target)", main)
             self.assertNotIn(
                 'runtime.handler("migrated.deactivated_owner"', main
             )
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_named_npc_traversal_activations_copy_the_dialogue(self) -> None:
+        def observe(key: str) -> dict[str, Any]:
+            return {"set_string_var": {"context_val": "selected"},
+                    "target_var": {"global_val": key}}
+
+        for filters in (
+            {"unique_ids": ["first", "second"]},
+            {"local": True, "unique_ids": ["first", "second"]},
+            {"local": True},
+            {"local": True, "npc_range": 3},
+        ):
+            with self.subTest(filters=filters):
+                objects = [
+                    {
+                        "id": "npc_frame_owner", "eoc_type": "EVENT",
+                        "required_event": "game_start",
+                        "effect": [
+                            {"u_run_npc_eocs": ["npc_frame_write", "npc_frame_read"], **filters},
+                            observe("parent"),
+                        ],
+                    },
+                    {
+                        "id": "npc_frame_write", "condition": {"get_condition": "entered"},
+                        "effect": [
+                            {"if": {"and": []}, "then": {
+                                "switch": 1, "cases": [{"case": 1, "effect": [
+                                    {"set_string_var": "child",
+                                     "target_var": {"context_val": "selected"}},
+                                    {"set_condition": "entered", "condition": "u_is_avatar"},
+                                ]}],
+                            }},
+                            observe("writer"),
+                        ],
+                    },
+                    {
+                        "id": "npc_frame_read", "condition": {"get_condition": "entered"},
+                        "effect": observe("reader"),
+                    },
+                ]
+                sources = [
+                    migrate_lua_first.SourceObject(
+                        Path("npc_frames.json"), index, {"type": "effect_on_condition", **obj},
+                    )
+                    for index, obj in enumerate(objects)
+                ]
+                result = migrate_lua_first.migrate(sources, "npc_frames")
+                self.assertEqual(result.partial, [], result.todos)
+                self.assertEqual(result.todos, [])
+                script = r"""
+local avatar, beta, handlers, frames, observed = {}, {}, {}, {}, {}
+local position, null = {z = 0}, {}
+local first = {is_valid = function() return true end}
+local second = {is_valid = function() return true end}
+local targets = {first = first, second = second}
+local function ok(value) return {ok = true, value = value} end
+local function page()
+    return {items = {
+        {handle = first, position = position, snapshot = {position = position}},
+        {handle = second, position = position, snapshot = {position = position}},
+    }, has_more = false}
+end
+package.preload.ccb = function() return {
+    runtime = {handler = function(id, callback) handlers[id] = callback end,
+               on = function() end},
+    services = {
+        characters = {
+            avatar = function() return avatar end,
+            snapshot = function(actor)
+                assert(actor == avatar)
+                return ok({creature = {position = position}})
+            end,
+        },
+        creatures = {
+            snapshot = function(actor)
+                assert(actor == first or actor == second)
+                return ok({position = position, kind = "npc"})
+            end,
+            nearby = function(actor) assert(actor == avatar); return page() end,
+        },
+        npcs = {
+            find_unique = function(id) return ok(targets[id]) end,
+            list = function() return ok(page()) end,
+        },
+        random = {native_int = function(lo, hi) assert(lo == 0 and hi == 0); return 0 end},
+        types = {null = null},
+        variables = {
+            get_context_string = function(data, key)
+                return ok({exists = data[key] ~= nil, value = data[key]})
+            end,
+            set_global = function(key, value)
+                observed[#observed + 1] = key .. ":" .. value
+                return ok()
+            end,
+        },
+    },
+} end
+""" + result.files[Path("main.lua")] + r"""
+local parent = {
+    data = {selected = "parent", payload = {{42, null}}},
+    conditions = {},
+    actors = {alpha = avatar, beta = beta, avatar = avatar, interlocutor = beta},
+}
+local function entered(frame, actor, stored_beta)
+    assert(actor == (#frames < 2 and first or second) and stored_beta == nil)
+    assert(frame ~= parent and frame.data ~= parent.data)
+    assert(frame.conditions ~= parent.conditions and frame.conditions.entered == entered)
+    assert(frame.actors.alpha == actor and next(frame.actors, "alpha") == nil)
+    assert(frame.data.selected == "parent")
+    assert(frame.data.payload[1] ~= parent.data.payload[1])
+    assert(frame.data.payload[1][1] == 42 and frame.data.payload[1][2] == null)
+    for _, previous in ipairs(frames) do
+        assert(frame ~= previous and frame.actors ~= previous.actors)
+    end
+    frames[#frames + 1] = frame
+    return true
+end
+parent.conditions.entered = entered
+handlers["migrated.npc_frame_owner"](parent)
+assert(#frames == 4)
+assert(frames[1].conditions.entered ~= entered and frames[3].conditions.entered ~= entered)
+assert(table.concat(observed, ",") == "writer:child,reader:parent,writer:child,reader:parent,parent:parent")
+assert(parent.data.selected == "parent" and parent.conditions.entered == entered)
+assert(parent.actors.alpha == avatar and parent.actors.beta == beta)
+"""
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
 
     def test_filtered_inventory_traversal_stays_explicit_todo(
         self,
@@ -39899,7 +40041,10 @@ assert(#messages==2 and messages[2]=="target")
             self.assertIn(
                 'migrated_eoc_functions["recipe_result_callback"]', main
             )
-            self.assertIn("migrated_eoc_recipe_result_callback(child_context, actor)", main)
+            self.assertIn(
+                "migrated_eoc_recipe_result_callback(copy_child_context(child_context), actor)",
+                main,
+            )
             self.assertNotIn("typed callback/task conversion", report)
 
     def test_delayed_run_eocs_accept_dynamic_bounded_time_ranges(self) -> None:
@@ -41296,6 +41441,79 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertIn("services.creatures.player_can_see(actor)", main)
             self.assertNotIn("services.creatures.can_see(", main)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_monster_attack_provenance_reaches_private_zenit_case(self) -> None:
+        path = REPOSITORY_ROOT / "data/mods/aftershock_exoplanet/monster_attacks"
+        sources = migrate_lua_first.load_objects([path / "monster_attacks.json", path / "zenit.json"])
+        owner = next(source for source in sources if source.value.get("id") == "EOC_ZENIT_CONTROL")
+        attack = next(source for source in sources if source.value.get("id") == "zenit_control")
+        result = migrate_lua_first.migrate(sources, "zenit_branch_provenance")
+        branch_name = "EOC_ZENIT_CONTROL__switch__0"
+        main = result.files[Path("main.lua")]
+        case_body = main.split(f"migrated_eoc_{branch_name} = function(", 1)[1].split("\nend", 1)[0]
+        for callback in ("eoc_zenit_shock_mines", "eoc_zenit_smoke"):
+            self.assertIn(
+                f"migrated_eoc_{callback}(copy_child_context(child_context), actor)", case_body,
+            )
+        self.assertNotIn("TODO", case_body)
+        self.assertNotIn(f'migrated_eoc_functions["{branch_name}"]', main)
+
+        # Execute the actual case and attack provenance without requiring
+        # Zenit's unrelated spells, cooldown math, or map services.
+        first_case = next(effect["cases"][0] for effect in owner.value["effect"] if "switch" in effect)
+        bounded_owner = migrate_lua_first.SourceObject(owner.path, owner.index, {
+            **owner.value,
+            "effect": {"switch": 0, "cases": [first_case]},
+        })
+        callbacks = [
+            migrate_lua_first.SourceObject(Path("zenit_case.json"), index, {
+                "type": "effect_on_condition", "id": f"eoc_zenit_{name}",
+                "condition": "u_is_monster",
+                "effect": {
+                    "set_string_var": {"context_val": key},
+                    "target_var": {"global_val": name},
+                },
+            })
+            for index, (name, key) in enumerate((("shock_mines", "my_loc"), ("smoke", "tar")))
+        ]
+        bounded = migrate_lua_first.migrate(
+            [attack, bounded_owner, *callbacks], "zenit_branch_runtime",
+            exclude_types=frozenset({"monster_attack"}),
+        )
+        script = r"""
+local handlers, calls = {}, {}
+local monster, target = {kind = "creature"}, {}
+package.preload.ccb = function() return {
+    runtime = {handler = function(id, callback) handlers[id] = callback end},
+    services = {
+        creatures = {snapshot = function(actor)
+            assert(actor == monster)
+            return {ok = true, value = {kind = "monster"}}
+        end},
+        random = {native_int = function(lo, hi) assert(lo == 0 and hi == 0); return 0 end},
+        variables = {
+            get_context_string = function(data, key)
+                return {ok = true, value = {exists = data[key] ~= nil, value = data[key]}}
+            end,
+            set_global = function(key, value)
+                calls[#calls + 1] = key .. ":" .. value
+                return {ok = true}
+            end,
+        },
+    },
+} end
+""" + bounded.files[Path("main.lua")] + r"""
+local payload = {my_loc = "source", tar = "old"}
+handlers["migrated-task.EOC_ZENIT_CONTROL"]({
+    actor = monster, participants = {alpha = monster, beta = target}, payload = payload,
+})
+assert(table.concat(calls, ",") == "shock_mines:source,smoke:source")
+assert(payload.tar == "old")
+"""
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+
     def test_faction_camp_proximity_uses_the_typed_camp_query(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -41363,7 +41581,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                             "if": {"compare_string": ["yes", "no"]},
                             "else": {
                                 "if": {"compare_string_match_all": ["x", "y"]},
-                                "else": {"math": ["global_value++"]},
+                                "else": {"math": ["u_skill_exp('survival') += 1"]},
                             },
                         },
                         "eoc_type": "EVENT",
@@ -42171,6 +42389,300 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertNotIn("false_effect #0", report)
             self.assertIn("false_switch__switch__0", report)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_nested_if_and_switch_share_dialogue_but_run_eocs_copies_it(self) -> None:
+        def set_context(key: str, value: str) -> dict[str, Any]:
+            return {"set_string_var": value, "target_var": {"context_val": key}}
+
+        def branch(value: str) -> list[dict[str, Any]]:
+            return [
+                set_context("selected", value),
+                {"set_condition": "entered", "condition": {"and": []}},
+            ]
+
+        def observe(key: str) -> dict[str, Any]:
+            return {"set_string_var": {"context_val": "selected"},
+                    "target_var": {"global_val": key}}
+
+        source = migrate_lua_first.SourceObject(Path("branches.json"), 0, {
+            "type": "effect_on_condition", "id": "branch_owner",
+            "eoc_type": "EVENT", "required_event": "game_start",
+            "effect": [
+                {"if": {"one_in_chance": 2}, "then": {
+                    "switch": {"context_val": "selection"},
+                    "cases": [
+                        {"case": 0, "effect": branch("first")},
+                        {"case": 2, "effect": branch("last")},
+                    ],
+                }, "else": {
+                    "if": {"or": []}, "then": branch("wrong"), "else": branch("else"),
+                }},
+                {"run_eocs": [
+                    {
+                        "id": "copied_child",
+                        "condition": {"get_condition": "entered"},
+                        "effect": [
+                            {"switch": 1, "cases": [{"case": 1, "effect": [
+                                set_context("selected", "isolated"),
+                                {"set_condition": "entered", "condition": {"or": []}},
+                            ]}]},
+                            observe("child_observed"),
+                        ],
+                    },
+                    {
+                        "id": "copied_sibling",
+                        "condition": {"get_condition": "entered"},
+                        "effect": observe("copy_observed"),
+                    },
+                ]},
+            ],
+        })
+        result = migrate_lua_first.migrate([source], "branch_context")
+        self.assertEqual(result.partial, [])
+        self.assertEqual(result.todos, [])
+        script = r"""
+local avatar, handlers, take_then, observed = {}, {}, false, {}
+package.preload.ccb = function() return {
+    runtime = {handler = function(id, callback) handlers[id] = callback end,
+               on = function() end},
+    services = {
+        characters = {avatar = function() return avatar end},
+        types = {null = {}},
+        random = {
+            one_in = function(denominator) assert(denominator == 2); return take_then end,
+            native_int = function(lo, hi) assert(lo == 0 and hi == 0); return 0 end,
+        },
+        variables = {
+            get_context_string = function(data, key)
+                assert(key == "selected")
+                return {ok = true, value = {exists = data[key] ~= nil, value = data[key]}}
+            end,
+            set_global = function(key, value)
+                assert(observed[key] == nil, "unexpected repeated write: " .. key)
+                observed[key] = value
+                return {ok = true}
+            end,
+        },
+    },
+} end
+""" + result.files[Path("main.lua")] + r"""
+for _, row in ipairs({{true, 1, "first"}, {true, 7, "last"}, {false, 7, "else"}}) do
+    take_then = row[1]
+    observed = {}
+    local context = {data = {selection = row[2]}, actors = {alpha = avatar}}
+    handlers["migrated.branch_owner"](context)
+    assert(context.data.selected == row[3], "branch writes must survive in the parent")
+    assert(context.conditions.entered(context, avatar), "copied child overwrote parent predicate")
+    assert(observed.child_observed == "isolated", "the inner switch must write to its EOC")
+    assert(observed.copy_observed == row[3],
+           "the sibling must see the parent's variable and named condition")
+end
+"""
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_actorless_event_blocks_private_actor_branches_but_keeps_globals(self) -> None:
+        def write(key: str) -> dict[str, Any]:
+            return {"set_string_var": "yes", "target_var": {"global_val": key}}
+
+        needs_alpha = {
+            "if": {"not": "u_is_avatar"},
+            "then": write("wrong_then"),
+            "else": write("wrong_else"),
+        }
+        global_condition = {"and": [
+            "u_has_camp", {"compare_string_match_all": ["u_literal", "u_literal"]},
+        ]}
+        source = migrate_lua_first.SourceObject(Path("portal.json"), 0, {
+            "type": "effect_on_condition", "id": "portal",
+            "eoc_type": "EVENT", "required_event": "opens_portal",
+            "effect": [
+                {"if": {"and": []}, "then": needs_alpha},
+                {"switch": 1, "cases": [{"case": 1, "effect": needs_alpha}]},
+                {"if": {"and": []}, "then": {"if": global_condition, "then": write("camp")}},
+                {"switch": {"global_val": "portal_mode"},
+                 "cases": [{"case": 1, "effect": write("global_switch")}]},
+                write("unconditional"),
+            ],
+        })
+        result = migrate_lua_first.migrate([source], "actorless_portal")
+        script = r"""
+local handlers, listeners, observed = {}, {}, {}
+package.preload.ccb = function() return {
+    runtime = {handler = function(id, callback) handlers[id] = callback end,
+               on = function(event, id) listeners[event] = id end},
+    services = {
+        camps = {has_player_owned_camp = function() return {ok = true, value = true} end},
+        random = {native_int = function(lo, hi) assert(lo == 0 and hi == 0); return 0 end},
+        variables = {
+            get_global = function(key)
+                assert(key == "portal_mode")
+                return {ok = true, value = {exists = true, value = 1}}
+            end,
+            set_global = function(key, value) observed[key] = value; return {ok = true} end,
+        },
+    },
+} end
+""" + result.files[Path("main.lua")] + r"""
+handlers[listeners["game:opens_portal"]]({data = {}, data_types = {}, actors = {}})
+assert(observed.wrong_then == nil and observed.wrong_else == nil)
+assert(observed.camp == "yes" and observed.global_switch == "yes" and observed.unconditional == "yes")
+"""
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(len(result.partial), 1)
+        self.assertIn("EOC portal", result.partial[0])
+        self.assertTrue(any("conditional-control-flow conversion" in todo.message
+                            for todo in result.todos))
+        self.assertTrue(any("switch-control-flow conversion" in todo.message
+                            for todo in result.todos))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_named_actorless_event_activation_uses_only_the_supplied_alpha(self) -> None:
+        def write(key: str) -> dict[str, Any]:
+            return {"set_string_var": "yes", "target_var": {"global_val": key}}
+
+        sources = [
+            migrate_lua_first.SourceObject(Path("named_portal.json"), 0, {
+                "type": "effect_on_condition", "id": "start_portal",
+                "eoc_type": "EVENT", "required_event": "game_start",
+                "effect": {"run_eocs": "portal_check"},
+            }),
+            migrate_lua_first.SourceObject(Path("named_portal.json"), 1, {
+                "type": "effect_on_condition", "id": "portal_check",
+                "eoc_type": "EVENT", "required_event": "opens_portal",
+                "condition": "u_is_avatar",
+                "effect": write("avatar"), "false_effect": write("other"),
+            }),
+        ]
+        prelude = r"""
+local handlers, listeners, calls = {}, {}, {}
+local avatar, npc = {kind = "creature"}, {kind = "creature"}
+package.preload.ccb = function() return {
+    runtime = {handler = function(id, callback) handlers[id] = callback end,
+               on = function(event, id) listeners[event] = id end},
+    services = {
+        characters = {avatar = function() return avatar end},
+        creatures = {snapshot = function(actor)
+            assert(actor == avatar or actor == npc)
+            return {ok = true, value = {kind = actor == avatar and "avatar" or "npc"}}
+        end},
+        random = {native_int = function(lo, hi) assert(lo == 0 and hi == 0); return 0 end},
+        variables = {set_global = function(key, value)
+            assert(value == "yes")
+            calls[#calls + 1] = key
+            return {ok = true}
+        end},
+    },
+} end
+"""
+        scenario = r"""
+handlers[listeners["game:opens_portal"]]({data = {}, data_types = {}, actors = {}})
+handlers[listeners["game:opens_portal"]]({data = {}, data_types = {}, actors = {alpha = npc}})
+assert(#calls == 0)
+handlers[listeners["game:game_start"]]({data = {callback_id = "portal_check"}, actors = {alpha = avatar}})
+handlers["migrated-task.portal_check"]({actor = npc, payload = {}})
+assert(table.concat(calls, ",") == "avatar,other")
+"""
+        for target in ("portal_check", {"context_val": "callback_id"}):
+            with self.subTest(target=target):
+                sources[0].value["effect"] = {"run_eocs": target}
+                result = migrate_lua_first.migrate(sources, "named_portal")
+                run = subprocess.run(["lua", "-"], input=prelude + result.files[Path("main.lua")] + scenario,
+                                     text=True, capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+                self.assertTrue(any("portal_check needs a proven alpha for direct opens_portal" in todo.message
+                                    for todo in result.todos))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_nested_branches_keep_absent_beta_only_in_the_owning_dialogue(self) -> None:
+        remove = {"npc_remove_wound": "arm_l", "wound_id": ["scratch"]}
+        nested = {
+            "if": {"and": []}, "then": {
+                "switch": 1, "cases": [{"case": 1, "effect": remove}],
+            },
+        }
+        sources = [
+            migrate_lua_first.SourceObject(Path("branches.json"), index, value)
+            for index, value in enumerate([
+                {
+                    "type": "wound", "id": "scratch", "name": "scratch",
+                    "description": "A test wound.", "damage_types": ["bash"],
+                    "damage_required": [1, 2],
+                },
+                {
+                    "type": "effect_on_condition", "id": "hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
+                    "condition": {"or": []}, "effect": "nothing",
+                    "false_effect": {
+                        "if": {"and": []}, "then": [
+                            nested,
+                            {"set_string_var": "visited", "target_var": {"context_val": "branch"}},
+                        ],
+                    },
+                },
+                {
+                    "type": "effect_on_condition", "id": "hostile_copy",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
+                    "effect": {"run_eocs": {
+                        "id": "wound_copy",
+                        "effect": [
+                            {"set_condition": "character_callback", "condition": {"and": []}},
+                            nested,
+                        ],
+                    }},
+                },
+            ])
+        ]
+        result = migrate_lua_first.migrate(sources, "no_beta_branch", frozenset({"wound"}))
+        self.assertEqual(len(result.partial), 1, result.todos)
+        self.assertIn("EOC wound_copy__if_then__0__switch__0", result.partial[0])
+        script = r"""
+local npc, handlers = {}, {}
+package.preload.ccb = function() return {
+    runtime = {handler = function(id, callback) handlers[id] = callback end,
+               on = function() end},
+    services = {
+        types = {null = {}, id = function(_, id) return id end},
+        wounds = {remove_all_direct = function() error("missing beta must not remove a wound") end},
+        random = {native_int = function(lo, hi) assert(lo == 0 and hi == 0); return 0 end},
+    },
+} end
+""" + result.files[Path("main.lua")] + r"""
+local context = {data = {}, actors = {npc = npc}}
+handlers["migrated.hostile"](context)
+assert(context.data.branch == "visited")
+"""
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+
+    def test_incomplete_branch_shapes_do_not_create_converted_callbacks(self) -> None:
+        write = {"set_string_var": "unexpected", "target_var": {"context_val": "branch"}}
+        shapes = [
+            {"if": None, "then": write},
+            {"if": {"and": []}, "then": write, "else": None},
+            {"if": {"condition": {"and": []}, "then": write}},
+            {"switch": 1, "cases": [{"effect": write}]},
+            {"switch": 1, "cases": [{"case": None, "effect": write}]},
+            {"switch": 1, "cases": [{"case": 1, "effect": [write, False]}]},
+            {"switch": 1, "cases": [{"case": 1, "effect": write, "opinion": {"trust": 2}}]},
+        ]
+        sources = [
+            migrate_lua_first.SourceObject(Path("partial_branches.json"), index, {
+                "type": "effect_on_condition", "id": f"partial_{index}",
+                "eoc_type": "EVENT", "required_event": "game_start", "effect": shape,
+            })
+            for index, shape in enumerate(shapes)
+        ]
+        result = migrate_lua_first.migrate(sources, "partial_branches")
+        self.assertEqual(len(result.partial), len(shapes))
+        self.assertEqual(result.converted, [])
+        self.assertNotIn('"unexpected"', result.files[Path("main.lua")])
+
     def test_explicit_invalid_eoc_conditions_are_not_reported_converted(self) -> None:
         for key in ("condition", "deactivate_condition"):
             for invalid in (None, True, False, 0, [], 1.5):
@@ -42292,81 +42804,116 @@ assert(#queue==2 and queue[2].payload.data=="user field")
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_run_eocs_variable_context_copies_named_predicates(self) -> None:
-        lines = migrate_lua_first.render_static_run_eocs(
-            {"run_eocs": ["first", "second"], "variables": {"argument": "value"}},
-            {"first": "first", "second": "second"}, actor_expression="actor",
-            avatar_actor_proven=True)
-        self.assertIsNotNone(lines)
         script = r"""
-local actor={}
-local original=function() return true end
-local context={data={nested={1,{2}}},conditions={check=original},actors={alpha=actor}}
-local services={characters={avatar=function() return actor end}}
-local calls=0
-local function first(child)
- assert(child.conditions.check==original)
- child.data.nested[2][1]=9
- child.conditions.check=function() return false end
- child.conditions.added=original
- calls=calls+1
+local actor, partner, null = {}, {}, {}
+local original = function() return true end
+local context = {
+    data = {nested = {1, {2}}, first_id = "first", second_id = "second"},
+    conditions = {check = original},
+    actors = {alpha = actor, beta = partner},
+}
+local services = {types = {null = null}}
+local calls, first_context = 0, nil
+local function check_snapshot(child, owner)
+    assert(owner == actor and child ~= context)
+    assert(child.actors.alpha == actor and child.actors.beta == partner)
+    assert(child.data.nested[2][1] == 2)
+    assert(child.conditions.check == original and child.conditions.added == nil)
+    if with_variables then
+        assert(child.data.argument[1] == null and child.data.argument[2][1] == 3)
+    else
+        assert(child.data.argument == nil)
+    end
 end
-local function second(child)
- assert(child.data.nested[2][1]==9)
- assert(calls==1 and not child.conditions.check() and child.conditions.added())
- calls=calls+1
+local function first(child, owner)
+    assert(calls == 0)
+    check_snapshot(child, owner)
+    child.data.nested[2][1] = 9
+    child.data.second_id = "missing"
+    if with_variables then child.data.argument[2][1] = 8 end
+    child.conditions.check = function() return false end
+    child.conditions.added = original
+    child.actors.beta = nil
+    owner.visited = true
+    first_context, calls = child, 1
 end
+local function second(child, owner)
+    assert(calls == 1 and child ~= first_context and owner.visited)
+    check_snapshot(child, owner)
+    calls = 2
+end
+local migrated_eoc_functions = {first = first, second = second}
 BODY
-assert(calls==2 and context.conditions.check==original and context.conditions.added==nil)
-assert(context.data.nested[2][1]==2)
-""".replace("BODY", "\n".join(lines))
-        result = subprocess.run(["lua", "-"], input=script, text=True,
-                                capture_output=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        no_variables = migrate_lua_first.render_static_run_eocs(
-            {"run_eocs": ["first", "second"]},
-            {"first": "first", "second": "second"}, actor_expression="actor",
-            avatar_actor_proven=True)
-        self.assertIsNotNone(no_variables)
-        plain_script = script.replace("\n".join(lines), "\n".join(no_variables))
-        result = subprocess.run(["lua", "-"], input=plain_script, text=True,
-                                capture_output=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr)
+assert(calls == 2 and context.conditions.check == original and context.conditions.added == nil)
+assert(context.data.nested[2][1] == 2 and context.data.second_id == "second")
+assert(context.actors.alpha == actor and context.actors.beta == partner and context.data.argument == nil)
+"""
+        for dynamic in (False, True):
+            for with_variables in (False, True):
+                with self.subTest(dynamic=dynamic, variables=with_variables):
+                    effect = {"run_eocs": [
+                        {"context_val": name + "_id"} if dynamic else name
+                        for name in ("first", "second")
+                    ]}
+                    if with_variables:
+                        effect["variables"] = {"argument": [None, [3]]}
+                    lines = migrate_lua_first.render_static_run_eocs(
+                        effect, {"first": "first", "second": "second"},
+                        actor_expression="actor", avatar_actor_proven=True)
+                    self.assertIsNotNone(lines)
+                    program = (
+                        f"local with_variables = {str(with_variables).lower()}\n" +
+                        script.replace("BODY", "\n".join(lines))
+                    )
+                    result = subprocess.run(["lua", "-"], input=program, text=True,
+                                            capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_run_eocs_loop_reads_parent_guard_and_retains_child_changes(self) -> None:
+    def test_run_eocs_loop_reads_parent_guard_and_copies_each_activation(self) -> None:
         lines = migrate_lua_first.render_static_run_eocs({
             "run_eocs": ["step"], "iterations": 3,
             "condition": {"compare_string": [{"context_val": "guard"}, "continue"]},
+            "variables": {"guard": "child", "argument": {"context_val": "source"}},
         }, {"step": "step"}, actor_expression="actor", avatar_actor_proven=True)
         self.assertIsNotNone(lines)
         script = r"""
 local actor={}
-local context={data={guard='continue',count=0},actors={alpha=actor}}
-local services={}
+local context={data={guard='continue', count=0, source='initial'}, actors={alpha=actor}}
+local function service_value(value) return value end
+local services={variables={resolve=function(data, owner, scope, name)
+ assert(data==context.data and scope=="context" and name=="guard")
+ return {exists=data[name]~=nil, value=data[name]}
+end}}
 local calls=0
 local previous_child=nil
 local function step(child,owner)
  assert(owner==actor and child~=context and child.actors.alpha==actor)
- assert(previous_child==nil or previous_child==child)
+ assert(previous_child~=child and child.data.count==0)
+ assert(child.data.guard=='child' and child.data.argument=='initial')
  previous_child=child
- child.data.count=child.data.count+1
+ child.data.count=9
  child.data.guard='stop'
+ child.data.argument='changed'
+ context.data.count=1
+ context.data.source='later'
  calls=calls+1
- assert(child.data.count==calls)
+ if stop_parent then context.data.guard='stop' end
 end
 BODY
-assert(calls==3 and context.data.guard=='continue' and context.data.count==0)
+assert(context.data.count==1 and context.data.source=='later')
+if stop_parent then
+    assert(calls==1 and context.data.guard=='stop')
+else
+    assert(calls==3 and context.data.guard=='continue')
+end
 """.replace("BODY", "\n".join(lines))
-        result = subprocess.run(["lua", "-"], input=script, text=True,
-                                capture_output=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        # Parent changes remain visible to the next guard evaluation.
-        script = script.replace("calls=calls+1", "calls=calls+1;context.data.guard='stop'")
-        script = script.replace("calls==3 and context.data.guard=='continue'",
-                                "calls==1 and context.data.guard=='stop'")
-        result = subprocess.run(["lua", "-"], input=script, text=True,
-                                capture_output=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr)
+        for stop_parent in ("false", "true"):
+            with self.subTest(stop_parent=stop_parent):
+                result = subprocess.run(
+                    ["lua", "-"], input=f"local stop_parent = {stop_parent}\n" + script,
+                    text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_run_eocs_actor_override_never_mutates_parent_on_error(self) -> None:
@@ -42547,7 +43094,7 @@ assert(context.data.entry=='previous')
                 {"u_add_wound": "arm_l", "wound_id": "after"},
             ],
         }, True, False, {}, actor_expression="actor",
-            wound_actor_targets={"u": "actor", "npc": None},
+            wound_actor_targets={"u_add_wound": "actor"},
             known_body_part_ids=frozenset({"arm_l"}),
             known_wound_ids=frozenset({"before", "inside", "after"}),
         )

@@ -36,6 +36,7 @@
 #include "cata_imgui.h"
 #include "color.h"
 #include "cursesdef.h"
+#include "game_constants.h"
 #include "game_ui.h"
 #include "input.h"
 #include "input_replay.h"

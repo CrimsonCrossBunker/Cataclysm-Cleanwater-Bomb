@@ -26,6 +26,7 @@
 #include "character_martial_arts.h"
 #include "color.h"
 #include "coordinates.h"
+#include "dialogue.h"
 #include "display.h"
 #include "effect.h"
 #include "game.h"
@@ -36,6 +37,7 @@
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "martialarts.h"
+#include "math_parser.h"
 #include "mission.h"
 #include "monster.h"
 #include "options_helpers.h"
@@ -47,6 +49,7 @@
 #include "player_helpers.h"
 #include "point.h"
 #include "string_formatter.h"
+#include "talker.h"
 #include "translation.h"
 #include "translations.h"
 #include "type_id.h"
@@ -62,6 +65,8 @@
     #include "cursesdef.h"
     #include "cursesport.h"
 #endif
+
+static const bodypart_str_id body_part_arm_leathery_l( "arm_leathery_l" );
 
 static const efftype_id effect_bandaged( "bandaged" );
 static const efftype_id effect_bite( "bite" );
@@ -104,6 +109,7 @@ static const move_mode_id move_mode_prone( "prone" );
 static const move_mode_id move_mode_run( "run" );
 static const move_mode_id move_mode_walk( "walk" );
 
+static const trait_id trait_ARMS_BAT( "ARMS_BAT" );
 static const trait_id trait_GOODHEARING( "GOODHEARING" );
 static const trait_id trait_NIGHTVISION( "NIGHTVISION" );
 static const trait_id trait_NIGHTVISION2( "NIGHTVISION2" );
@@ -120,6 +126,9 @@ static const weather_type_id weather_sunny( "sunny" );
 
 static const widget_id widget_all_location_info_rows_layout( "all_location_info_rows_layout" );
 static const widget_id widget_focus_num( "focus_num" );
+static const widget_id widget_i_bp_LA_hp_graph( "i_bp_LA_hp_graph" );
+static const widget_id widget_i_bp_LA_status_sym( "i_bp_LA_status_sym" );
+static const widget_id widget_i_bp_RA_status_sym( "i_bp_RA_status_sym" );
 static const widget_id widget_legacy_labels_sidebar( "legacy_labels_sidebar" );
 static const widget_id widget_ll_movement_layout( "ll_movement_layout" );
 static const widget_id widget_ll_place_info( "ll_place_info" );
@@ -209,6 +218,9 @@ static const widget_id widget_test_weight_clauses_normal( "test_weight_clauses_n
 static const widget_id widget_thick_side_by_side( "thick_side_by_side" );
 static const widget_id widget_weapon_style_layout( "weapon_style_layout" );
 static const widget_id widget_wielding_desc( "wielding_desc" );
+
+static const wound_type_id wound_thermal_blister( "thermal_blister" );
+static const wound_type_id wound_thermal_burn( "thermal_burn" );
 
 // dseguin 2022 - Ugly hack to scrape content from the window object.
 // Scrapes the window w at origin, reading the number of cols and rows.
@@ -590,6 +602,42 @@ TEST_CASE( "widget_showing_character_sleepiness_status", "[widget]" )
     CHECK( sleepiness_w.layout( ava ) == "Rest: <color_c_light_red>Dead Tired</color>" );
     ava.set_sleepiness( 576 );
     CHECK( sleepiness_w.layout( ava ) == "Rest: <color_c_red>Exhausted</color>" );
+}
+
+TEST_CASE( "mobile_burn_icon_uses_the_limb_shown_by_the_hp_widget", "[widget][thermal_burn]" )
+{
+    clear_avatar();
+    const on_out_of_scope reset_avatar( clear_avatar );
+    avatar &ava = get_avatar();
+    const bool replaced = GENERATE( false, true );
+    const wound_type_id injury = GENERATE( wound_thermal_blister, wound_thermal_burn );
+    CAPTURE( replaced, injury.str() );
+    if( replaced ) {
+        ava.set_mutation( trait_ARMS_BAT );
+    }
+    REQUIRE( ava.has_part( body_part_arm_l ) == !replaced );
+    const bodypart_id arm = replaced ? body_part_arm_leathery_l.id() : body_part_arm_l.id();
+    REQUIRE( ava.has_part( arm ) );
+    bodypart &part = *ava.get_part( arm );
+    part.set_hp_cur( 17 );
+    CHECK( widget_i_bp_LA_hp_graph->get_var_value( ava ) == 17 );
+
+    widget left = widget_i_bp_LA_status_sym.obj();
+    widget right = widget_i_bp_RA_status_sym.obj();
+    const std::string unburned = "▮▮▮▮▮▮";
+    CHECK( remove_color_tags( left.layout( ava ) ) == unburned );
+    part.add_wound( injury );
+    CHECK( remove_color_tags( left.layout( ava ) ) == "▮▮▮▮∞▮" );
+    CHECK( remove_color_tags( right.layout( ava ) ) == unburned );
+
+    math_exp exact_count;
+    REQUIRE( exact_count.parse( "u_wound_count('thermal_blister', 'bodypart': 'arm_l') + "
+                                "u_wound_count('thermal_burn', 'bodypart': 'arm_l')" ) );
+    const dialogue d( get_talker_for( ava ), nullptr );
+    CHECK( exact_count.eval( d ) == ( replaced ? 0 : 1 ) );
+
+    part.remove_wound( injury );
+    CHECK( remove_color_tags( left.layout( ava ) ) == unburned );
 }
 
 TEST_CASE( "widgets_showing_avatar_health_with_color_for_normal_value", "[widget][health][color]" )

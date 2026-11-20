@@ -4105,6 +4105,31 @@ talk_effect_fun_t::func f_add_effect( const JsonObject &jo, std::string_view mem
     };
 }
 
+talk_effect_fun_t::func f_relieve_pain( const JsonObject &jo, std::string_view member,
+                                      std::string_view, bool is_npc )
+{
+    const dbl_or_var amount = get_dbl_or_var( jo, member, true );
+    str_or_var thermal_relief;
+    mandatory( jo, false, "thermal_relief", thermal_relief );
+    duration_or_var duration;
+    mandatory( jo, false, "duration", duration );
+
+    return [is_npc, amount, thermal_relief, duration]( dialogue & d ) {
+        if( !d.has_actor( is_npc ) ) {
+            return;
+        }
+        if( Character *character = d.actor( is_npc )->get_character() ) {
+            const double value = amount.evaluate( d );
+            if( std::isfinite( value ) && value >= 1 ) {
+                const int budget = static_cast<int>( std::min<double>( value,
+                                                     std::numeric_limits<int>::max() ) );
+                character->relieve_pain( budget, efftype_id( thermal_relief.evaluate( d ) ),
+                                        duration.evaluate( d ) );
+            }
+        }
+    };
+}
+
 talk_effect_fun_t::func f_remove_effect( const JsonObject &jo, std::string_view member,
         std::string_view, bool is_npc )
 {
@@ -4119,6 +4144,42 @@ talk_effect_fun_t::func f_remove_effect( const JsonObject &jo, std::string_view 
 
     str_or_var target;
     optional( jo, false, "target_part", target, "bp_null" );
+
+    const bool exact_base = jo.has_member( "base_pain_delta" );
+    if( exact_base && jo.has_member( "pain_delta" ) ) {
+        jo.throw_error_at( "base_pain_delta", "cannot be combined with pain_delta" );
+    }
+    if( exact_base || jo.has_member( "pain_delta" ) ) {
+        if( jo.has_array( member ) ) {
+            jo.throw_error_at( member, "pain deltas require a single effect id" );
+        }
+        const str_or_var old_effect = get_str_or_var( jo.get_member( member ), member );
+        const dbl_or_var pain_delta = get_dbl_or_var( jo, exact_base ? "base_pain_delta" : "pain_delta",
+                                      true );
+        return [is_npc, old_effect, target, pain_delta, exact_base]( dialogue & d ) {
+            if( !d.has_actor( is_npc ) ) {
+                return;
+            }
+            if( Character *character = d.actor( is_npc )->get_character() ) {
+                const character_action_guard lifetime( *character, true );
+                const double value = pain_delta.evaluate( d );
+                if( !std::isfinite( value ) || !lifetime ) {
+                    return;
+                }
+                const std::string part = target.evaluate( d );
+                if( !lifetime ) {
+                    return;
+                }
+                const efftype_id id( old_effect.evaluate( d ) );
+                if( Character *live = lifetime.get() ) {
+                    const int delta = static_cast<int>( std::clamp<double>( value,
+                                                        std::numeric_limits<int>::min(),
+                                                        std::numeric_limits<int>::max() ) );
+                    live->remove_effect_with_pain_delta( id, part, delta, exact_base );
+                }
+            }
+        };
+    }
 
     return [is_npc, old_effects, target]( dialogue const & d ) {
         if( target.evaluate( d ) == "ALL" ) {
@@ -4479,13 +4540,21 @@ talk_effect_fun_t::func f_add_wound( const JsonObject &jo, std::string_view memb
     optional( jo, false, "wound_id", wound_to_be_added_var );
 
     return [is_npc, bodypart_var, wound_to_be_added_var]( dialogue & d ) {
+        Character *character = d.actor( is_npc )->get_character();
+        if( !character ) {
+            return;
+        }
+        bodypart *bp = character->get_part( bodypart_id( bodypart_var.evaluate( d ) ) );
+        if( !bp ) {
+            return;
+        }
 
-        bodypart *bp =
-            d.actor( is_npc )->get_character()->get_part( bodypart_id( bodypart_var.evaluate( d ) ) );
-
-        wound_type_id wound_to_be_added = wound_type_id( wound_to_be_added_var.evaluate( d ) );
-
-        bp->add_or_worsen_wound( wound_to_be_added );
+        const wound_type_id wound_to_be_added( wound_to_be_added_var.evaluate( d ) );
+        if( bodypart::is_thermal_wound( wound_to_be_added ) ) {
+            character->apply_wound( bp->get_id(), wound_to_be_added );
+        } else {
+            bp->add_or_worsen_wound( *character, wound_to_be_added );
+        }
     };
 }
 
@@ -4513,20 +4582,141 @@ talk_effect_fun_t::func f_remove_wound( const JsonObject &jo, std::string_view m
     }
 
     return [is_npc, bodypart_var, wound_to_be_removed_var]( dialogue & d ) {
+        if( !d.has_actor( is_npc ) ) {
+            return;
+        }
+        talker *actor = d.actor( is_npc );
+        Character *character = actor ? actor->get_character() : nullptr;
+        if( !character || wound_to_be_removed_var.empty() ) {
+            return;
+        }
 
-        bodypart *bp =
-            d.actor( is_npc )->get_character()->get_part( bodypart_id( bodypart_var.evaluate( d ) ) );
+        const std::string part = bodypart_var.evaluate( d );
+        const bool all_parts = part == "ALL";
+        bodypart *bp = all_parts ? nullptr : character->get_part( bodypart_id( part ) );
+        if( !all_parts && !bp ) {
+            return;
+        }
 
-        std::vector < wound_type_id > wound_to_be_removed;
-        wound_to_be_removed.reserve( wound_to_be_removed_var.size() );
+        bool removed_thermal = false;
+        const auto remove = [&removed_thermal]( bodypart & target, const wound_type_id & id ) {
+            const std::size_t count_before = target.get_wounds().size();
+            target.remove_all_wounds_of_type( id );
+            removed_thermal = removed_thermal || ( target.get_wounds().size() != count_before &&
+                                                   bodypart::is_thermal_wound( id ) );
+        };
         for( const str_or_var &v : wound_to_be_removed_var ) {
-            wound_to_be_removed.emplace_back( v.evaluate( d ) );
+            const wound_type_id wd_id( v.evaluate( d ) );
+            if( bp ) {
+                remove( *bp, wd_id );
+            } else {
+                for( const auto &entry : character->get_body() ) {
+                    remove( *character->get_part( entry.first ), wd_id );
+                }
+            }
         }
-
-        for( const wound_type_id &wd_id : wound_to_be_removed ) {
-            bp->remove_all_wounds_of_type( wd_id );
+        // Preserve the direct-removal behavior for ordinary wounds.
+        if( removed_thermal ) {
+            character->on_stat_change( "perceived_pain", character->get_perceived_pain() );
         }
+    };
+}
 
+talk_effect_fun_t::func f_save_thermal_wounds( const JsonObject &jo, std::string_view member,
+        std::string_view, bool is_npc )
+{
+    str_or_var slot;
+    mandatory( jo, false, member, slot );
+    const bool include_hp = jo.get_bool( "include_hp", false );
+    return [is_npc, slot, include_hp]( dialogue & d ) {
+        if( d.has_actor( is_npc ) ) {
+            if( Character *character = d.actor( is_npc )->get_character() ) {
+                character->save_thermal_wounds( slot.evaluate( d ), include_hp );
+            }
+        }
+    };
+}
+
+talk_effect_fun_t::func f_restore_thermal_wounds( const JsonObject &jo, std::string_view member,
+        std::string_view, bool is_npc )
+{
+    str_or_var slot;
+    mandatory( jo, false, member, slot );
+    const bool keep_snapshot = jo.get_bool( "keep_snapshot", false );
+    const bool discard_if_missing = jo.get_bool( "discard_last_damage_if_missing", false );
+    struct legacy_hit_vars {
+        str_or_var part;
+        dbl_or_var amount;
+        dbl_or_var pain;
+    };
+    std::optional<legacy_hit_vars> fallback_hit;
+    if( jo.has_member( "fallback_hit" ) ) {
+        const JsonObject fallback = jo.get_object( "fallback_hit" );
+        legacy_hit_vars &hit = fallback_hit.emplace();
+        mandatory( fallback, false, "part", hit.part );
+        hit.amount = get_dbl_or_var( fallback, "amount", true );
+        hit.pain = get_dbl_or_var( fallback, "pain", false, 0 );
+    }
+    return [is_npc, slot, keep_snapshot, discard_if_missing, fallback_hit]( dialogue & d ) {
+        Character::thermal_rewind_details details;
+        if( d.has_actor( is_npc ) ) {
+            if( Character *character = d.actor( is_npc )->get_character() ) {
+                if( fallback_hit ) {
+                    details.fallback_hit = {
+                        bodypart_str_id( fallback_hit->part.evaluate( d ) ),
+                        static_cast<int>( fallback_hit->amount.evaluate( d ) ),
+                        static_cast<int>( fallback_hit->pain.evaluate( d ) )
+                    };
+                }
+                const bool restored = character->restore_thermal_wounds( slot.evaluate( d ), keep_snapshot,
+                                      &details );
+                if( !restored && discard_if_missing ) {
+                    character->forget_recent_damage();
+                }
+            }
+        }
+        d.set_value( "thermal_snapshot_has_hp", diag_value( details.has_hp_baseline ? 1 : 0 ) );
+    };
+}
+
+talk_effect_fun_t::func f_record_last_damage( const JsonObject &jo, std::string_view member,
+        std::string_view, bool is_npc )
+{
+    str_or_var part;
+    mandatory( jo, false, member, part );
+    const dbl_or_var amount = get_dbl_or_var( jo, "amount", true );
+    const dbl_or_var pain = get_dbl_or_var( jo, "pain", false, 0 );
+    return [is_npc, part, amount, pain]( dialogue & d ) {
+        Character *character = d.has_actor( is_npc ) ? d.actor( is_npc )->get_character() : nullptr;
+        bodypart_str_id recipient = bodypart_str_id::NULL_ID();
+        if( character ) {
+            recipient = character->record_scripted_damage( bodypart_str_id( part.evaluate( d ) ),
+                        amount.evaluate( d ), pain.evaluate( d ) );
+        }
+        d.set_value( "last_damage_bodypart", diag_value( recipient.str() ) );
+    };
+}
+
+talk_effect_fun_t::func f_revert_last_damage( const JsonObject &jo, std::string_view member,
+        std::string_view, bool is_npc )
+{
+    const bool revert = jo.get_bool( member );
+    return [is_npc, revert]( dialogue & d ) {
+        Character *character = d.has_actor( is_npc ) ? d.actor( is_npc )->get_character() : nullptr;
+        if( !revert ) {
+            if( character ) {
+                character->forget_recent_damage();
+            }
+            return;
+        }
+        const std::optional<Character::recent_damage> hit = character ? character->take_recent_damage() :
+                std::nullopt;
+        d.set_value( "last_damage_recorded", diag_value( hit ? 1 : 0 ) );
+        d.set_value( "last_damage", diag_value( hit ? hit->amount : 0 ) );
+        d.set_value( "last_damage_pain", diag_value( hit ? hit->pain : 0 ) );
+        d.set_value( "last_damage_bodypart",
+                     diag_value( hit ? hit->part.str() : bodypart_str_id::NULL_ID().str() ) );
+        d.set_value( "last_damage_burn_reverted", diag_value( hit && hit->burn_reverted ? 1 : 0 ) );
     };
 }
 
@@ -9613,6 +9803,7 @@ std::vector < sub_effect_parser >
 parsers = {
     { "u_add_effect", "npc_add_effect", jarg::member, &talk_effect_fun::f_add_effect },
     { "u_lose_effect", "npc_lose_effect", jarg::member, &talk_effect_fun::f_remove_effect },
+    { "u_relieve_pain", "npc_relieve_pain", jarg::member, &talk_effect_fun::f_relieve_pain },
     { "u_add_var", "npc_add_var", jarg::string, &talk_effect_fun::f_add_var },
     { "u_lose_var", "npc_lose_var", jarg::string, &talk_effect_fun::f_remove_var },
     { "u_add_trait", "npc_add_trait", jarg::member, &talk_effect_fun::f_add_trait },
@@ -9706,6 +9897,10 @@ parsers = {
     { "u_pick_bodypart", "npc_pick_bodypart", jarg::member, &talk_effect_fun::f_pick_bodypart },
     { "u_add_wound", "npc_add_wound", jarg::member, &talk_effect_fun::f_add_wound },
     { "u_remove_wound", "npc_remove_wound", jarg::member, &talk_effect_fun::f_remove_wound },
+    { "u_save_thermal_wounds", "npc_save_thermal_wounds", jarg::member, &talk_effect_fun::f_save_thermal_wounds },
+    { "u_restore_thermal_wounds", "npc_restore_thermal_wounds", jarg::member, &talk_effect_fun::f_restore_thermal_wounds },
+    { "u_record_last_damage", "npc_record_last_damage", jarg::member, &talk_effect_fun::f_record_last_damage },
+    { "u_revert_last_damage", "npc_revert_last_damage", jarg::member, &talk_effect_fun::f_revert_last_damage },
     { "u_recalculate_enchantment_cache", "npc_recalculate_enchantment_cache", jarg::member, &talk_effect_fun::f_recalculate_enchantment_cache },
     { "toggle_npc_rule", jarg::member, &talk_effect_fun::f_toggle_npc_rule },
     { "set_npc_rule", jarg::member, &talk_effect_fun::f_set_npc_rule },

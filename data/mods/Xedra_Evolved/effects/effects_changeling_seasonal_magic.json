@@ -1,6 +1,14 @@
 [
   {
     "type": "effect_type",
+    "id": "effect_changeling_spring_verdant_vitality_relief",
+    "max_duration": "5 minutes",
+    "max_intensity": 9,
+    "rating": "good",
+    "flags": [ "THERMAL_PAIN_RELIEF" ]
+  },
+  {
+    "type": "effect_type",
     "id": "effect_changeling_using_glamour_removes_checker",
     "//": "Hidden effect, used to prevent the initial use of a glamour that's not supposed to be used with other glamours from removing itself",
     "name": [ "" ],
@@ -449,7 +457,7 @@
     "desc": [ "You stand in the ring of flames, facing your foe.  Woe to the vanquished." ],
     "rating": "good",
     "enchantments": [ { "values": [ { "value": "KNOCKBACK_RESIST", "add": 100 }, { "value": "CLIMATE_CONTROL_CHILL", "add": 1000 } ] } ],
-    "blocks_effects": [ "blisters" ]
+    "flags": [ "THERMAL_BURN_PROTECTION" ]
   },
   {
     "type": "effect_type",

@@ -1143,7 +1143,9 @@ void detail::install_runtime_state_task_api(
         }
         if( task.actor_character_id ) {
             task.state_character_id = task.actor_character_id;
-        } else if( owner->callback_character || owner_scope == "character" ) {
+        } else if( owner_scope == "character" ||
+                   ( owner->callback_character &&
+                     owner->callback_character->kind() != game_handle_kind::none ) ) {
             task.state_character_id = state_character( *owner ).getID();
         }
         if( participants ) {

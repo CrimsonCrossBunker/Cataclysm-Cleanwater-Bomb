@@ -10,6 +10,8 @@
 
 #include "calendar.h"
 #include "cata_variant.h"
+#include "character.h"
+#include "character_action_guard.h"
 #include "creature.h"
 #include "debug.h"
 #include "event.h"
@@ -34,6 +36,17 @@ void event_subscriber::notify( const cata::event &e, std::unique_ptr<talker>,
                                std::unique_ptr<talker> )
 {
     notify( e );
+}
+
+void event_subscriber::notify_character_damage( const cata::event &e,
+        const damage_event_participants &participants )
+{
+    if( Character *current = participants.target() ) {
+        Creature *source = participants.source();
+        notify( e, get_talker_for( *current ), source ? get_talker_for( source ) : nullptr );
+    } else {
+        notify( e );
+    }
 }
 
 void event_subscriber::on_subscribe( event_bus *b )
@@ -90,9 +103,25 @@ void event_bus::send( const cata::event &e ) const
     }
 }
 
+void event_bus::send_character_damage( const cata::event &e,
+                                       const damage_event_participants &participants ) const
+{
+    for( event_subscriber *s : subscribers ) {
+        s->notify_character_damage( e, participants );
+    }
+}
+
 void event_bus::send_with_talker( Creature *alpha, Creature *beta,
                                   const cata::event &e ) const
 {
+    if( e.type() == event_type::character_takes_damage ) {
+        if( Character *target = alpha ? alpha->as_character() : nullptr ) {
+            damage_event_participants participants( *target, beta );
+            participants.begin_notification();
+            send_character_damage( e, participants );
+            return;
+        }
+    }
     for( event_subscriber *s : subscribers ) {
         if( s->needs_talker() ) {
             s->notify( e, get_talker_for( alpha ), beta ? get_talker_for( beta ) : nullptr );

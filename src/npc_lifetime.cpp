@@ -48,7 +48,7 @@ bool npc_lifetime::belongs_to( const npc_lifetime_registry &owner ) const
     return state_ && state_->owner.lock() == owner.impl_->owner;
 }
 
-npc *npc_lifetime::resolve( const npc_lifetime_registry &owner ) const
+npc *npc_lifetime::resolve( const npc_lifetime_registry &owner, bool allow_dead ) const
 {
     if( !belongs_to( owner ) ||
         !state_->active || state_->generation != generation_ || state_->id != id_ ) {
@@ -56,13 +56,13 @@ npc *npc_lifetime::resolve( const npc_lifetime_registry &owner ) const
     }
     Creature *creature = state_->reference.get();
     npc *value = creature ? creature->as_npc() : nullptr;
-    return value && value->getID() == id_ && !value->is_dead() ? value : nullptr;
+    return value && value->getID() == id_ && ( allow_dead || !value->is_dead() ) ? value : nullptr;
 }
 
-npc_lifetime npc_lifetime_registry::acquire( npc &value )
+npc_lifetime npc_lifetime_registry::acquire( npc &value, bool allow_dead )
 {
     npc_lifetime result;
-    if( !value.getID().is_valid() || value.is_dead() ) {
+    if( !value.getID().is_valid() || ( !allow_dead && value.is_dead() ) ) {
         return result;
     }
     impl_->prune();
@@ -91,7 +91,7 @@ npc_lifetime npc_lifetime_registry::acquire( npc &value )
     return result;
 }
 
-npc_lifetime npc_lifetime_registry::active_reference( npc &value ) const
+npc_lifetime npc_lifetime_registry::active_reference( npc &value, bool allow_dead ) const
 {
     npc_lifetime result;
     const auto found = impl_->states.find( value.getID().get_value() );
@@ -99,7 +99,8 @@ npc_lifetime npc_lifetime_registry::active_reference( npc &value ) const
         return result;
     }
     const auto state = found->second.lock();
-    if( !state || !state->active || state->reference.get() != &value || value.is_dead() ) {
+    if( !state || !state->active || state->reference.get() != &value ||
+        ( !allow_dead && value.is_dead() ) ) {
         return result;
     }
     result.state_ = state;
@@ -108,13 +109,13 @@ npc_lifetime npc_lifetime_registry::active_reference( npc &value ) const
     return result;
 }
 
-npc_lifetime npc_lifetime_registry::track_active( npc &value )
+npc_lifetime npc_lifetime_registry::track_active( npc &value, bool allow_dead )
 {
     const auto found = impl_->states.find( value.getID().get_value() );
     if( found != impl_->states.end() && !found->second.expired() ) {
-        return active_reference( value );
+        return active_reference( value, allow_dead );
     }
-    return acquire( value );
+    return acquire( value, allow_dead );
 }
 
 void npc_lifetime_registry::activate( npc &value )

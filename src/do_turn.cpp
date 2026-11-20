@@ -28,6 +28,7 @@
 #include "activity_type.h"
 #include "avatar.h"
 #include "bionics.h"
+#include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
 #include "character.h"
@@ -376,9 +377,11 @@ void process_npc_sounds( game &owner, avatar &host )
     }
 }
 
-void update_character_environment( Character &u )
+bool update_character_environment( Character &u )
 {
-    u.update_bodytemp();
+    if( !u.update_bodytemp( true ) ) {
+        return false;
+    }
     {
         weather_manager &weather = get_weather();
         u.update_body_wetness( *weather.weather_precise );
@@ -388,6 +391,7 @@ void update_character_environment( Character &u )
     if( calendar::once_every( 1_minutes ) ) {
         u.update_morale();
     }
+    return true;
 }
 
 void finish_character_turn( Character &u )
@@ -504,8 +508,8 @@ void monmove()
                         "on_monster_do_turn", payload );
                 }
             }
-            if( !critter.is_dead() ) {
-                critter.process_turn();
+            if( !critter.is_dead() && !critter.process_turn() ) {
+                continue;
             }
         }
 
@@ -630,9 +634,11 @@ void monmove()
         }
         m.creature_in_field( guy );
         if( player_controlled ) {
-            g->player_controls().process_turn( guy );
-        } else if( !guy.has_effect( effect_npc_suspend ) ) {
-            guy.process_turn();
+            if( !g->player_controls().process_turn( guy ) ) {
+                continue;
+            }
+        } else if( !guy.has_effect( effect_npc_suspend ) && !guy.process_turn() ) {
+            continue;
         }
         while( !player_controlled && !guy.is_dead() && ( !guy.in_sleep_state() ||
                 guy.activity.id() == ACT_OPERATION || guy.activity.id() == ACT_MIGRATION_CANCEL ) &&
@@ -669,11 +675,13 @@ void monmove()
                     // Updates last_updated as well, so release/unload cannot
                     // replay this interval through NPC catch-up. AI schedules
                     // must not wake or redirect a player-controlled character.
-                    update_character_environment( guy );
+                    if( !update_character_environment( guy ) ) {
+                        continue;
+                    }
                     finish_character_turn( guy );
                 }
-            } else {
-                guy.npc_update_body();
+            } else if( !guy.npc_update_body() ) {
+                continue;
             }
         }
 
@@ -882,7 +890,7 @@ bool game::do_turn()
                 new_game = false;
                 get_weather().on_game_start();
             }
-            get_weather().temperature_cache.clear();
+            get_weather().clear_local_temp_cache();
             get_weather().update_weather();
             reset_light_level();
             for( int z = get_map().min_z(); z <= get_map().max_z(); ++z ) {
@@ -967,7 +975,7 @@ void game::simulate_turn_prefix()
     play_music( music::get_music_id_string() );
 
     // starting a new turn, clear out temperature cache
-    weather.temperature_cache.clear();
+    weather.clear_local_temp_cache();
 
     if( npcs_dirty ) {
         load_npcs();
@@ -1291,6 +1299,9 @@ void game::simulate_turn_suffix()
         m.process_items();
     }
     explosion_handler::process_explosions();
+    // Activation and item processing may have sampled heat before the map updates
+    // finished. Actors need fresh temperatures after both primary and resident maps.
+    get_weather().clear_local_temp_cache();
     m.creature_in_field( u );
 
     // Apply sounds from previous turn to monster and NPC AI.
@@ -1327,7 +1338,9 @@ void game::simulate_turn_suffix()
     mon_info_update();
 
     // Replenish moves through the current local character assignment.
-    local_player_controller().process_turn();
+    if( !local_player_controller().process_turn() ) {
+        return;
+    }
 
     update_avatar_memory( u );
 
@@ -1340,7 +1353,7 @@ void game::simulate_turn_suffix()
 
     m.invalidate_visibility_cache();
 
-    update_character_environment( u );
+    const bool avatar_valid = update_character_environment( u );
     if( calendar::once_every( 1_minutes ) ) {
         for( npc &guy : all_npcs() ) {
             if( guy.has_native_player_control() ) {
@@ -1351,8 +1364,10 @@ void game::simulate_turn_suffix()
         }
     }
 
-    finish_character_turn( u );
-    update_avatar_power_display( u );
+    if( avatar_valid ) {
+        finish_character_turn( u );
+        update_avatar_power_display( u );
+    }
 }
 
 void game::present_turn()

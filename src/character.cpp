@@ -58,6 +58,8 @@
 #include "bonuses.h"
 #include "cached_options.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
+#include "cata_small_literal_vector.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character_attire.h"
@@ -2498,7 +2500,7 @@ int Character::move_mode_switch_cost( const move_mode_id &old_mode,
     return move_cost;
 }
 
-void Character::process_turn()
+bool Character::process_turn()
 {
     map &here = get_map();
     // Has to happen before reset_stats
@@ -2519,7 +2521,9 @@ void Character::process_turn()
     }
 
     //Creature::process_turn() cannot be used directly here because Character::speed has not yet been calculated
-    Creature::process_turn_no_moves();
+    if( !Creature::process_turn_no_moves() ) {
+        return false;
+    }
 
     // If we're actively handling something we can't just drop it on the ground
     // in the middle of handling it
@@ -2538,7 +2542,9 @@ void Character::process_turn()
         it->process_relic( this, pos_bub() );
     } );
 
-    suffer();
+    if( !suffer() ) {
+        return false;
+    }
     recalc_speed_bonus();
     //
     if( !has_effect( effect_ridden ) ) {
@@ -2665,6 +2671,7 @@ void Character::process_turn()
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     cata::lua_platform::runtime_process_character_recurring( *this );
 #endif
+    return true;
 }
 
 // This must be called when any of the following change:
@@ -5440,6 +5447,21 @@ void Character::recalculate_bodyparts()
         body_set.set( bp.id() );
     }
     body_set = enchantment_cache->modify_bodyparts( body_set );
+    const bool anatomy_changed = body.size() != body_set.count() ||
+    std::any_of( body.begin(), body.end(), [&body_set]( const auto & entry ) {
+        return !body_set.test( entry.first );
+    } );
+    // A retained contact must not carry dose to a different wound site, even if
+    // its old main part was cured and removed before the next exposure sample.
+    std::vector<std::pair<bodypart *, bodypart_id>> previous_heat_targets;
+    if( anatomy_changed ) {
+        for( auto &[id, part] : body ) {
+            if( !part.has_heat_exposure() || !body_set.test( id ) ) {
+                continue;
+            }
+            previous_heat_targets.emplace_back( &part, thermal_wound_part( id.id() ) );
+        }
+    }
     // first come up with the bodyparts that need to be removed from body
     for( auto bp_iter = body.begin(); bp_iter != body.end(); ) {
         if( !body_set.test( bp_iter->first ) ) {
@@ -5454,6 +5476,12 @@ void Character::recalculate_bodyparts()
             body[bp] = bodypart( bp );
         }
     }
+    for( const auto &[contact, previous_main] : previous_heat_targets ) {
+        if( previous_main != thermal_wound_part( contact->get_id() ) ) {
+            contact->reset_heat_exposure();
+        }
+    }
+    normalize_onfire_effects();
     tally_organic_size();
     recalc_limb_energy_usage();
 
@@ -6547,14 +6575,11 @@ void Character::use_fire( const int quantity )
 void Character::on_effect_int_change( const efftype_id &eid, int intensity,
                                       const bodypart_id &bp )
 {
-    // Adrenaline can reduce perceived pain (or increase it when you enter comedown).
-    // See @ref get_perceived_pain()
-    if( eid == effect_adrenaline ) {
-        // Note that calling this does no harm if it wasn't changed.
+    morale->on_effect_int_change( eid, intensity, bp );
+    if( ( eid == effect_adrenaline || is_pain_relief_effect( eid, bp ) ) &&
+        !pain_reaction_scope::is_active( *this ) ) {
         on_stat_change( "perceived_pain", get_perceived_pain() );
     }
-
-    morale->on_effect_int_change( eid, intensity, bp );
 }
 
 void Character::on_mutation_gain( const trait_id &mid )
@@ -7318,13 +7343,24 @@ std::string Character::short_description() const
 
 void Character::process_one_effect( effect &it, bool is_new )
 {
+    bodypart_id bp = it.get_bp();
+    if( is_new && bp != bodypart_str_id::NULL_ID() && it.get_id() == effect_onfire ) {
+        bp = resolve_onfire_part( bp );
+        if( bp == bodypart_str_id::NULL_ID() ) {
+            return;
+        }
+    }
+    process_one_effect( it, is_new, bp );
+}
+
+void Character::process_one_effect( effect &it, bool is_new, bodypart_id bp )
+{
     if( has_flag( json_flag_FREEZE_EFFECTS ) ) {
         return;
     }
 
     bool reduced = resists_effect( it );
     double mod = 1;
-    const bodypart_id &bp = it.get_bp();
     int val = 0;
 
     // Still hardcoded stuff, do this first since some modify their other traits
@@ -7332,7 +7368,12 @@ void Character::process_one_effect( effect &it, bool is_new )
     int dex = get_dex_bonus();
     int intl = get_int_bonus();
     int per = get_per_bonus();
-    hardcoded_effects( it );
+    const bool is_fire = it.get_id() == effect_onfire;
+    const safe_reference<Creature> self = is_fire ? get_safe_reference() : safe_reference<Creature>();
+    hardcoded_effects( it, bp );
+    if( is_fire && !self ) {
+        return;
+    }
     str_bonus_hardcoded += get_str_bonus() - str;
     dex_bonus_hardcoded += get_dex_bonus() - dex;
     int_bonus_hardcoded += get_int_bonus() - intl;
@@ -7500,7 +7541,7 @@ void Character::process_one_effect( effect &it, bool is_new )
         }
         if( is_new || it.activated( calendar::turn, "PAIN", val, reduced, mod ) ) {
             int pain_inc = bound_mod_to_vals( get_pain(), val, it.get_max_val( "PAIN", reduced ), 0 );
-            mod_pain( pain_inc, it.get_bp() );
+            mod_pain( pain_inc, bp );
             if( pain_inc > 0 ) {
                 add_pain_msg( val, bp );
             }
@@ -7618,9 +7659,7 @@ void Character::process_one_effect( effect &it, bool is_new )
         return;
     }
 
-    const std::string body_part =
-        it.get_bp() == bodypart_str_id::NULL_ID() ?
-        std::string() : it.get_bp().id().str();
+    const std::string body_part = bp == bodypart_str_id::NULL_ID() ? std::string() : bp.id().str();
     const cata::lua_platform::native_callback_arguments payload = {
         { "character", static_cast < const Character * >( this ) },
         {
@@ -7652,7 +7691,7 @@ void Character::process_one_effect( effect &it, bool is_new )
     }
 }
 
-void Character::process_effects()
+bool Character::process_effects()
 {
     map &here = get_map();
 
@@ -7713,23 +7752,131 @@ void Character::process_effects()
     const bool has_lua_effect_hook =
         cata::lua_platform::has_native_hook( "on_character_effect" );
     std::vector < lua_effect_tick > lua_effect_ticks;
-    //Human only effects
-    for( std::pair < const efftype_id, std::map < bodypart_id, effect>> &elem : *effects ) {
-        for( std::pair < const bodypart_id, effect > &_effect_it : elem.second ) {
-            process_one_effect( _effect_it.second, false );
-            if( has_lua_effect_hook &&
-                _effect_it.second.has_flag(
-                    flag_EFFECT_LUA_ON_TICK ) ) {
-                const bodypart_id body_part =
-                    _effect_it.second.get_bp();
-                lua_effect_ticks.push_back( {
-                    _effect_it.second.get_id().str(),
-                    body_part == bodypart_str_id::NULL_ID() ?
-                    std::string() : body_part.id().str(),
-                    _effect_it.second.get_intensity()
-                } );
+    const auto queue_lua_tick = [has_lua_effect_hook, &lua_effect_ticks]( const effect &e,
+    bodypart_id body_part, bool use_record_part = false ) {
+        if( has_lua_effect_hook && e.has_flag( flag_EFFECT_LUA_ON_TICK ) ) {
+            if( use_record_part ) {
+                body_part = e.get_bp();
             }
+            lua_effect_ticks.push_back( {
+                e.get_id().str(),
+                body_part == bodypart_str_id::NULL_ID() ? std::string() : body_part.id().str(),
+                e.get_intensity()
+            } );
         }
+    };
+    // A heat tick can burn away equipment that changes the body's anatomy.
+    const safe_reference<Creature> lifetime = get_safe_reference();
+    {
+        const bool was_deferred = std::exchange( defer_onfire_normalization, true );
+        const on_out_of_scope restore_defer( [&lifetime, was_deferred]() {
+            Creature *const actor = lifetime.get();
+            if( Character *live = actor ? actor->as_character() : nullptr ) {
+                live->defer_onfire_normalization = was_deferred;
+            }
+        } );
+        for( auto group = effects->begin(); group != effects->end(); ) {
+            if( group->first != effect_onfire ) {
+                for( auto &[bp, e] : group->second ) {
+                    process_one_effect( e, false );
+                    queue_lua_tick( e, bp, true );
+                }
+                ++group;
+                continue;
+            }
+
+            // Keep keys stable, but neither the map nor its records are pinned
+            // across damage. A replacement may share a key, not an identity.
+            small_literal_vector<effect_record_key, 4, size_t> fires;
+            for( const auto &[key, fire] : group->second ) {
+                fires.push_back( effect_record_key{ key.to_i(), fire.identity_generation() } );
+            }
+            small_literal_vector<int, 4, size_t> ticked_fire_parts;
+            for( effect_record_key &record : fires ) {
+                if( record.generation == 0 ) {
+                    continue;
+                }
+                const effect *winner = find_effect_record( effect_onfire, record );
+                if( !winner ) {
+                    continue;
+                }
+                const bodypart_id key( record.part );
+                const bool fire_active = !has_flag( json_flag_FREEZE_EFFECTS );
+                if( key == bodypart_str_id::NULL_ID() ) {
+                    effect tick = *winner;
+                    process_one_effect( tick, false, key );
+                    if( !lifetime ) {
+                        return false;
+                    }
+                    if( effect *live = find_effect_record( effect_onfire, record ) ) {
+                        if( fire_active && is_limb_broken( key ) ) {
+                            live->set_duration( 0_turns );
+                        }
+                        queue_lua_tick( *live, key );
+                    }
+                    continue;
+                }
+
+                bodypart_id contact = key;
+                effect_record_key winner_record = record;
+                small_literal_vector<effect_record_key *, 4, size_t> aliases;
+                if( onfire_normalization_pending ) {
+                    contact = resolve_onfire_part( key );
+                    const auto resolves_to_contact = [this, contact]( int part ) {
+                        return resolve_onfire_part( bodypart_id( part ) ) == contact;
+                    };
+                    if( contact == bodypart_str_id::NULL_ID() ||
+                        std::any_of( ticked_fire_parts.begin(), ticked_fire_parts.end(),
+                                     resolves_to_contact ) ) {
+                        continue;
+                    }
+                    winner = nullptr;
+                    for( effect_record_key &candidate : fires ) {
+                        if( candidate.generation == 0 ||
+                            bodypart_id( candidate.part ) == bodypart_str_id::NULL_ID() ||
+                            !resolves_to_contact( candidate.part ) ) {
+                            continue;
+                        }
+                        if( const effect *fire = find_effect_record( effect_onfire, candidate ) ) {
+                            aliases.push_back( &candidate );
+                            // On a tie prefer the canonical key, then the first alias.
+                            if( !winner || stronger_fire( *fire, *winner ) ||
+                                ( candidate.part == contact.to_i() && !stronger_fire( *winner, *fire ) ) ) {
+                                winner = fire;
+                                winner_record = candidate;
+                            }
+                        }
+                    }
+                } else {
+                    aliases.push_back( &record );
+                }
+                ticked_fire_parts.push_back( contact.to_i() );
+                const onfire_limb_watch limb_watch( *this, contact );
+                effect tick = *winner;
+                process_one_effect( tick, false, contact );
+                if( !lifetime ) {
+                    return false;
+                }
+                if( const effect *live = find_effect_record( effect_onfire, winner_record ) ) {
+                    queue_lua_tick( *live, contact );
+                }
+                if( fire_active && limb_watch.extinguished() ) {
+                    // Only the records that shared the struck limb can be extinguished.
+                    for( effect_record_key *alias : aliases ) {
+                        if( effect *live = find_effect_record( effect_onfire, *alias ) ) {
+                            live->set_duration( 0_turns );
+                        }
+                        alias->generation = 0;
+                    }
+                } else if( winner_record.part != contact.to_i() ) {
+                    ticked_fire_parts.push_back( winner_record.part );
+                }
+            }
+            group = effects->upper_bound( effect_onfire );
+        }
+    }
+    if( onfire_normalization_pending ) {
+        normalize_onfire_effects();
     }
     for( const lua_effect_tick &tick : lua_effect_ticks ) {
         cata::lua_platform::dispatch_native_hook(
@@ -7750,6 +7897,9 @@ void Character::process_effects()
             },
             { "intensity", std::int64_t { tick.intensity } }
         } );
+        if( !lifetime ) {
+            return false;
+        }
     }
 
     // Apply new effects from effect->effect chains
@@ -7772,8 +7922,12 @@ void Character::process_effects()
     while( !terminating_effects.empty() ) {
 
         const terminating_effect_t &effect = terminating_effects.front();
+        const character_action_guard self( *this, true );
 
         remove_effect( effect.eff_id, effect.bp );
+        if( !self ) {
+            return false;
+        }
 
         terminating_effects.pop();
     }
@@ -7788,7 +7942,7 @@ void Character::process_effects()
         remove_effect( effect_cramped_space );
     }
 
-    Creature::process_effects();
+    return lifetime && Creature::process_effects();
 }
 
 void Character::gravity_check()

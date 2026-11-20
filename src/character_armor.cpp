@@ -41,7 +41,9 @@ static const bionic_id bio_ads( "bio_ads" );
 
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_bullet( "bullet" );
+static const damage_type_id damage_cold( "cold" );
 static const damage_type_id damage_cut( "cut" );
+static const damage_type_id damage_heat( "heat" );
 static const damage_type_id damage_stab( "stab" );
 
 static const json_character_flag json_flag_BIONIC_ARMOR_INTERFACE( "BIONIC_ARMOR_INTERFACE" );
@@ -163,9 +165,35 @@ void Character::absorb_hit( const sub_bodypart_id &sbp, damage_instance &dam,
     absorb_damage( sbp->parent.id(), sbp, dam, damage_armor );
 }
 
-void Character::absorb_damage( const bodypart_id &bp, const std::optional<sub_bodypart_id> &sbp,
-                               damage_instance &dam, bool damage_armor )
+Character::thermal_hit::thermal_hit() : contact( bodypart_str_id::NULL_ID() ) {}
+
+Character::thermal_hit Character::absorb_damage( const bodypart_id &bp,
+        const std::optional<sub_bodypart_id> &sbp, damage_instance &dam, bool damage_armor,
+        bool resolve_wound )
 {
+    const auto is_thermal = []( const damage_unit &du ) {
+        return du.type == damage_heat || du.type == damage_cold;
+    };
+    thermal_hit thermal;
+    if( std::any_of( dam.begin(), dam.end(), is_thermal ) ) {
+        thermal.contact = get_part_id( bp, body_part_filter::next_best, true );
+        if( thermal.contact != bodypart_str_id::NULL_ID() ) {
+            thermal.contact_identity = body.at( thermal.contact.id() ).identity_generation();
+            if( resolve_wound ) {
+                const bodypart_id main = thermal_wound_part( thermal.contact );
+                if( main != bodypart_str_id::NULL_ID() ) {
+                    thermal.wound_identity = body.at( main.id() ).identity_generation();
+                }
+            }
+        }
+    }
+    const auto contact_is_live = [this, &thermal]() {
+        const auto contact = body.find( thermal.contact.id() );
+        return contact != body.end() &&
+               contact->second.identity_generation() == thermal.contact_identity;
+    };
+    const bodypart_id null_part = bodypart_str_id::NULL_ID().id();
+
     std::list<item> worn_remains;
     bool armor_destroyed = false;
 
@@ -179,6 +207,7 @@ void Character::absorb_damage( const bodypart_id &bp, const std::optional<sub_bo
         damage_mitigated = true;
     }
 
+    const std::optional<sub_bodypart_id> no_subpart;
     for( damage_unit &elem : dam.damage_units ) {
         if( damage_mitigated ) {
             elem.amount = 0;
@@ -217,11 +246,19 @@ void Character::absorb_damage( const bodypart_id &bp, const std::optional<sub_bo
 
         adjust_taken_damage_by_enchantments( elem );
 
-        worn.absorb_damage( *this, elem, bp, worn_remains, armor_destroyed, sbp,
-                            damage_armor );
-
-        passive_absorb_hit( bp, elem );
-
+        // Only thermal damage follows a replacement for mitigation. Keep the original
+        // hit part for other units in the same strike and for HP application.
+        const bool thermal_unit = is_thermal( elem );
+        const bodypart_id &mitigation_part = thermal_unit ? thermal.contact : bp;
+        bool mitigate_at_contact = !thermal_unit || contact_is_live();
+        if( mitigate_at_contact ) {
+            worn.absorb_damage( *this, elem, mitigation_part, worn_remains, armor_destroyed,
+                                mitigation_part == bp ? sbp : no_subpart, damage_armor,
+                                thermal_unit ? thermal.contact_identity : 0 );
+            // A worn layer's callback may invalidate the contact before passive armor.
+            mitigate_at_contact = !thermal_unit || contact_is_live();
+        }
+        passive_absorb_hit( mitigate_at_contact ? mitigation_part : null_part, elem );
         adjust_taken_damage_by_enchantments_post_absorbed( elem );
         elem.amount = std::max( elem.amount, 0.0f );
     }
@@ -232,6 +269,7 @@ void Character::absorb_damage( const bodypart_id &bp, const std::optional<sub_bo
     if( armor_destroyed ) {
         drop_invalid_inventory();
     }
+    return thermal;
 }
 
 void Character::armor_use_power_when_hit( damage_unit &du, item &armor )

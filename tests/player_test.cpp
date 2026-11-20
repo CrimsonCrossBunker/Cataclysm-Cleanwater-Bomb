@@ -1,4 +1,5 @@
 #include <array>
+#include <cmath>
 #include <functional>
 #include <memory>
 #include <string>
@@ -7,13 +8,17 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "item.h"
+#include "map_helpers.h"
 #include "pimpl.h"
 #include "player_helpers.h"
 #include "type_id.h"
 #include "units.h"
 #include "weather.h"
+#include "weather_gen.h"
+#include "weather_type.h"
 
 static const itype_id itype_balclava( "balclava" );
 static const itype_id itype_bandana( "bandana" );
@@ -43,13 +48,34 @@ static const itype_id itype_tshirt( "tshirt" );
 static const itype_id itype_under_armor( "under_armor" );
 static const itype_id itype_vest( "vest" );
 
+static void set_bodytemp_environment( int ambient_f )
+{
+    weather_manager &weather = get_weather();
+    weather.forced_temperature = units::from_fahrenheit( ambient_f );
+    weather.weather_precise->temperature = *weather.forced_temperature;
+    weather.weather_precise->humidity = 50;
+    weather.windspeed = 0;
+    weather.weather_id = WEATHER_CLEAR;
+    calendar::turn = calendar::turn_zero;
+}
+
+static void check_torso_temperature( const Character &who, int ambient_f,
+                                     units::temperature target )
+{
+    const double actual = units::to_celsius( who.get_part_temp_cur( bodypart_id( "torso" ) ) );
+    const double expected = units::to_celsius( target );
+    CAPTURE( ambient_f, actual, expected );
+    CHECK( std::abs( actual - expected ) < 0.2 );
+}
+
 // Set the stage for a particular ambient and target temperature and run update_bodytemp() until
 // core body temperature settles.
 static void temperature_check( Character *p, const int ambient_temp,
                                const units::temperature target_temp )
 {
     p->set_body();
-    get_weather().temperature = units::from_fahrenheit( ambient_temp );
+    p->clear_effects();
+    set_bodytemp_environment( ambient_temp );
     p->set_all_parts_temp_cur( BODYTEMP_NORM );
     p->set_all_parts_temp_conv( BODYTEMP_NORM );
 
@@ -63,33 +89,25 @@ static void temperature_check( Character *p, const int ambient_temp,
             break;
         }
         prev_temp = torso_temp_cur;
+        calendar::turn += 1_turns;
         p->update_bodytemp();
     }
-    const units::temperature high = target_temp + 0.2_C_delta;
-    const units::temperature low = target_temp - 0.2_C_delta;
-    CHECK( low < p->get_part_temp_cur( bodypart_id( "torso" ) ) );
-    CHECK( high > p->get_part_temp_cur( bodypart_id( "torso" ) ) );
+    check_torso_temperature( *p, ambient_temp, target_temp );
 }
 
-// Set the stage for a particular ambient and target temperature and run update_bodytemp() until
-// core body temperature settles.
+// Advance both the physiology and the clock so periodic sweat effects see real turns.
 static void temperature_and_sweat_check( Character *p, const int ambient_temp,
         const units::temperature target_temp )
 {
-
-    weather_manager &weather = get_weather();
-
-    weather.temperature = units::from_fahrenheit( ambient_temp );
-
-    for( int i = 0; i < 1000; i++ ) {
+    set_bodytemp_environment( ambient_temp );
+    const w_point &sample = *get_weather().weather_precise;
+    for( int i = 0; i < to_turns<int>( 1_hours ); ++i ) {
+        calendar::turn += 1_turns;
         p->process_effects();
         p->update_bodytemp();
-        p->update_body_wetness( *weather.weather_precise );
+        p->update_body_wetness( sample );
     }
-    const units::temperature high = target_temp + 0.2_C_delta;
-    const units::temperature low = target_temp - 0.2_C_delta;
-    CHECK( low < p->get_part_temp_cur( bodypart_id( "torso" ) ) );
-    CHECK( high > p->get_part_temp_cur( bodypart_id( "torso" ) ) );
+    check_torso_temperature( *p, ambient_temp, target_temp );
 }
 
 static void equip_clothing( Character *p, const itype_id &clothing )
@@ -98,8 +116,7 @@ static void equip_clothing( Character *p, const itype_id &clothing )
     p->wear_item( article );
 }
 
-// Run the tests for each of the temperature setpoints.
-// ambient_temps MUST have 7 values or we'll segfault.
+// Ambient setpoints (°F) for the seven torso thresholds in clear, still air at 50% humidity.
 static void test_temperature_spread( Character *p, const std::array<int, 7> &ambient_temps )
 {
     temperature_check( p, ambient_temps[0], BODYTEMP_FREEZING );
@@ -113,13 +130,12 @@ static void test_temperature_spread( Character *p, const std::array<int, 7> &amb
 
 TEST_CASE( "player_body_temperatures_converge_on_expected_values", "[.bodytemp]" )
 {
-
+    const restore_on_out_of_scope restore_weather( get_weather() );
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    clear_map_without_vision();
     Character &dummy = get_player_character();
 
-    // Strip off any potentially encumbering clothing.
-    dummy.remove_worn_items_with( []( item & ) {
-        return true;
-    } );
+    clear_character( dummy );
 
     // See http://personal.cityu.edu.hk/~bsapplec/heat.htm for temperature basis.
     // As we aren't modeling metabolic rate, assume 2 METS when not sleeping.
@@ -133,7 +149,7 @@ TEST_CASE( "player_body_temperatures_converge_on_expected_values", "[.bodytemp]"
 
     SECTION( "Nude target temperatures." ) {
         //test_temperature_spread( &dummy, { 19, 34, 49, 64, 79, 94, 109 } );
-        test_temperature_spread( &dummy, {{ -12, 15, 40, 64, 78, 90, 101 }} );
+        test_temperature_spread( &dummy, {{ -15, 12, 39, 67, 85, 99, 111 }} );
     }
 
     SECTION( "Lightly clothed target temperatures" ) {
@@ -146,7 +162,7 @@ TEST_CASE( "player_body_temperatures_converge_on_expected_values", "[.bodytemp]"
         equip_clothing( &dummy, itype_sneakers );
 
         //test_temperature_spread( &dummy, { -3, 12, 27, 42, 57, 72, 87 } );
-        test_temperature_spread( &dummy, {{ -17, 10, 35, 62, 77, 90, 100 }} );
+        test_temperature_spread( &dummy, {{ -20, 7, 34, 64, 83, 98, 110 }} );
     }
 
     SECTION( "Heavily clothed target temperatures" ) {
@@ -161,7 +177,7 @@ TEST_CASE( "player_body_temperatures_converge_on_expected_values", "[.bodytemp]"
         equip_clothing( &dummy, itype_boots );
 
         //test_temperature_spread( &dummy, { -25, -10, 5, 20, 35, 50, 65 } );
-        test_temperature_spread( &dummy, {{ -39, -14, 17, 46, 70, 84, 96 }} );
+        test_temperature_spread( &dummy, {{ -40, -13, 15, 53, 76, 93, 106 }} );
     }
 
     SECTION( "Arctic gear target temperatures" ) {
@@ -179,12 +195,15 @@ TEST_CASE( "player_body_temperatures_converge_on_expected_values", "[.bodytemp]"
         equip_clothing( &dummy, itype_boots_winter );
 
         //test_temperature_spread( &dummy, { -47, -32, -17, -2, 13, 28, 43 } );
-        test_temperature_spread( &dummy, {{ -115, -87, -54, -6, 36, 64, 80 }} );
+        test_temperature_spread( &dummy, {{ -100, -73, -42, 0, 53, 76, 92 }} );
     }
 }
 
 TEST_CASE( "sweating", "[char][suffer][.bodytemp]" )
 {
+    const restore_on_out_of_scope restore_weather( get_weather() );
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    clear_map_without_vision();
     avatar &dummy = get_avatar();
     clear_character( dummy );
 
@@ -198,19 +217,19 @@ TEST_CASE( "sweating", "[char][suffer][.bodytemp]" )
             dummy.clear_worn();
             dummy.wear_item( fur_jumper, false );
 
-            temperature_and_sweat_check( &dummy, 100, 43.2_C );
+            temperature_and_sweat_check( &dummy, 100, 43.0_C );
         }
         WHEN( "wearing cotton" ) {
             dummy.clear_worn();
             dummy.wear_item( cotton_jumper, false );
 
-            temperature_and_sweat_check( &dummy, 100, 42.8_C );
+            temperature_and_sweat_check( &dummy, 100, 42.9_C );
         }
         WHEN( "wearing lycra" ) {
             dummy.clear_worn();
             dummy.wear_item( lycra_jumper, false );
 
-            temperature_and_sweat_check( &dummy, 100, 41_C );
+            temperature_and_sweat_check( &dummy, 100, 42.6_C );
         }
 
     }

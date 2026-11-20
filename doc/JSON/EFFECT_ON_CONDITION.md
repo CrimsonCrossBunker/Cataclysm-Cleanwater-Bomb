@@ -1835,7 +1835,7 @@ Every event EOC passes context vars with each of their key value pairs that the 
 | character_takes_damage | triggers when character gets any damage from any creature | { "character", `character_id` },<br/> { "damage", `int` },<br/> { "bodypart", `bodypart_id` },<br/> { "pain", `int` }, | character / attacker if exists, otherwise NONE(character or monster) | use `has_beta` conditon before interacting with beta talker
 | monster_takes_damage | triggers when monster gets any damage from any creature. Includes damages from effects like bleeding | { "damage", `int` },<br/> { "dies", `bool` }, | monster / attacker if exists, otherwise NONE(character or monster) | use `has_beta` conditon before interacting with beta talker
 | character_triggers_trap | | { "character", `character_id` },<br/> { "trap", `trap_str_id` }, | character / NONE |
-| character_wakes_up | triggers in the moment player lost it's sleep effect and wakes up | { "character", `character_id` }, | character / NONE |
+| character_wakes_up | Fires once when a sleeping character wakes. Further wake attempts do not fire it again while the expired sleep effect awaits removal. | { "character", `character_id` }, | character / NONE |
 | character_attempt_to_fall_asleep | triggers in the moment character tries to fall asleep, after confirming and setting an alarm, but before "you lie down" | { "character", `character_id` }, | character / NONE |
 | character_falls_asleep | triggers in the moment character actually falls asleep; trigger includes cases where character sleep for a short time because of sleepiness or drugs; duration of the sleep can be changed mid sleep because of hurt/noise/light/pain thresholds and another factors | { "character", `character_id` }, { "duration", `int_` (in seconds) } | character / NONE |
 | character_wields_item | | { "character", `character_id` },<br/> { "itype", `itype_id` }, | character / item to wield |
@@ -3285,12 +3285,14 @@ Adds deep_scratch to bodypart alpha talker picks from
 
 #### `u_remove_wound`, `npc_remove_wound`
 
-Removes specifc wounds from a specific bodypart
+Removes every instance of the listed wounds from a selected body part, or from all body parts the character actually has (including minor and mutation-added parts).
+If the specified talker is absent, no one is treated.
+Removing a thermal wound updates pain-related morale before the next effect in the EOC.
 
 | Syntax | Optionality | Value  | Info |
 | --- | --- | --- | --- |
-| "u_remove_wound", "npc_remove_wound" | **mandatory** | string or [variable object](#variable-object) | id of a bodypart where the wound should be added |
-| "wound_id" | optional | array of strings or [variable objects](#variable-object) | id of a wounds that will be removed |
+| "u_remove_wound", "npc_remove_wound" | **mandatory** | string or [variable object](#variable-object) | Body-part ID or `ALL` to treat every part of the character |
+| "wound_id" | optional | array of strings or [variable objects](#variable-object) | IDs of the wounds to remove |
 
 ##### Valid talkers:
 
@@ -3312,6 +3314,81 @@ Removes all scratch and deep_scratch wounds from bodypart alpha talker picks fro
     ]
   }
 ```
+
+Removes both grades of thermal wounds from all of the alpha talker's body parts:
+```jsonc
+{ "u_remove_wound": "ALL", "wound_id": [ "thermal_blister", "thermal_burn" ] }
+```
+
+#### `u_save_thermal_wounds`, `npc_save_thermal_wounds`
+
+Save the selected character's thermal wounds, including healing progress, by actual
+body-part instance. The snapshot also stores environmental heat dose and the latest
+native damage record, so the rewind does not misattribute an injury to a different
+hit. Set `"include_hp": true` to also capture each part's current HP.
+The argument is a string or [variable object](#variable-object) evaluating to a
+snapshot name. Snapshots persist with the character; saving again under the same
+name replaces that snapshot. Use distinct names for overlapping effects.
+
+#### `u_restore_thermal_wounds`, `npc_restore_thermal_wounds`
+
+Restore the selected character's named snapshot and consume it unless
+`"keep_snapshot": true` is set. A missing or unusable snapshot normally has no effect.
+If the script has already rewound HP and pain without a usable snapshot (for
+example, an effect active in an old save), set `"discard_last_damage_if_missing": true`
+to discard the live damage record without removing any wounds. This prevents
+later damage reversal from healing a hit already undone by the HP rewind.
+Restoring a snapshot leaves nonthermal wounds and body-part temperature unchanged.
+It only restores HP if it was captured. Base pain is not captured. A new part is not
+rewound, even if it has the same ID as a removed part.
+The effect sets `thermal_snapshot_has_hp` in the dialogue context to `1` if the
+restored snapshot contained a usable per-limb HP baseline, or `0` otherwise.
+An optional `"fallback_hit"` object with `part`, `amount`, and `pain` (default `0`)
+can supply a legacy per-limb hit. It becomes an identity-bound native hit only
+if its original recipient still exists and the snapshot has no native damage
+record. The `bp_null` whole-body sentinel is not imported.
+
+```jsonc
+{ "u_save_thermal_wounds": "my_time_loop" }
+{ "u_restore_thermal_wounds": "my_time_loop", "keep_snapshot": true }
+{ "u_restore_thermal_wounds": "my_time_loop" }
+```
+
+#### `u_record_last_damage`, `npc_record_last_damage`
+
+Record a scripted injury after applying its HP loss and base pain gain. The
+argument is a body-part ID or a [variable object](#variable-object) evaluating
+to one. `amount` is the HP lost; `pain` is the base pain gained (default `0`).
+Both fields accept numbers or variables. The effect resolves the body part the
+same way as `u_hp` and writes the actual recipient to `last_damage_bodypart`
+in the dialogue context (`bp_null` if there is none). This replaces the latest
+native damage record if a recipient exists, without dealing damage, emitting a
+damage event, or creating or removing wounds. A previous contact burn stays in
+place but is no longer reversible as the latest hit.
+
+```jsonc
+{ "u_record_last_damage": "torso", "amount": 10, "pain": 30 }
+```
+
+#### `u_revert_last_damage`, `npc_revert_last_damage`
+
+On the selected character, `true` consumes the latest native damage record and undoes
+only the contact burn that hit created or upgraded, if it still exists. Independently
+earned environmental burn tiers and still-healing prior blisters are preserved.
+Reversing a contact burn is not a cure and does not reset environmental heat dose.
+
+The effect writes `last_damage`, `last_damage_pain`, and `last_damage_bodypart` to
+the dialogue context; the caller is responsible for restoring HP, pain, or other
+effects. `last_damage_burn_reverted` is `1` if the burn was removed or downgraded and
+`0` otherwise. A hit can have zero HP loss and still have a burn to undo.
+`last_damage_recorded` is `1` if a native record existed, including a spent
+record, and `0` otherwise. Repeating the effect for a spent record returns zero
+damage, pain, and burn reversal. With no native record, the effect writes the
+same zeros and sets `last_damage_bodypart` to `bp_null`. Old-save fallbacks
+should only run when `last_damage_recorded` is `0`.
+
+Use `false` to discard the native record without removing any wounds or
+writing context variables.
 
 #### `u_recalculate_enchantment_cache`, `npc_recalculate_enchantment_cache`
 
@@ -3632,6 +3709,8 @@ Remove effect from character or NPC, if it has one
 | --- | --- | --- | --- |
 | "u_lose_effect" / "npc_lose_effect" | **mandatory** | string, [variable object](#variable-object), or array of both | id of effect or effects to be removed; if character or NPC has no such effect, nothing happens |
 | "target_part" | optional | string or [variable object](#variable-object) | default is "whole body"; if used, only specified body part would be used. `ALL` can be used to remove effect from all bodyparts talker has |
+| "pain_delta" | optional | number or [numeric variable object](#variable-object) | Avatar/NPC only, with a single effect ID. `target_part` selects effects as usual: `RANDOM` picks one part, and `ALL` removes matching effects across parts. Apply the signed change to base pain once per removal operation, not once per part. If nothing is removed, no pain is applied. Normal pain modifiers apply, and the character reacts once to the net change in perceived pain. |
+| "base_pain_delta" | optional | number or [numeric variable object](#variable-object) | Like `pain_delta`, but applies the exact change to stored base pain without scaling by sensitivity, immunity, or other pain modifiers. Use for restoring a saved amount. Cannot be combined with `pain_delta`. |
 
 ##### Valid talkers:
 
@@ -3663,6 +3742,27 @@ Removes effect, stored in `effect_id` context value, from the player:
 Removes `infection`, `downed` and `winded` effects from player:
 ```jsonc
 { "u_lose_effect": [ "infection", "downed", "winded" ] }
+```
+
+#### `u_relieve_pain`, `npc_relieve_pain`
+
+Spend a positive, whole-point analgesia budget. It first reduces the character's
+stored base pain, down to zero. Any unspent points add to a temporary effect's
+intensity, capped by that effect type's `max_intensity`. The effect masks only
+blister and burn pain; it never heals a wound or masks base pain.
+
+| Syntax | Optionality | Value | Info |
+| --- | --- | --- | --- |
+| "u_relieve_pain" / "npc_relieve_pain" | **mandatory** | number or [numeric variable object](#variable-object) | Amount of pain relief. Nonpositive amounts do nothing. |
+| "thermal_relief" | **mandatory** | string or [variable object](#variable-object) | Effect ID with `THERMAL_PAIN_RELIEF` or `POWERED_THERMAL_PAIN_RELIEF`. Use an effect ID unique to the analgesic source. |
+| "duration" | **mandatory** | duration or [variable object](#variable-object) | Duration to add if any budget remains. The effect's `dur_add_perc` and `max_duration` apply normally. |
+
+Only avatar and NPC talkers are supported. A powered relief effect requires a
+functioning bionic granting `POWERED_THERMAL_PAIN_RELIEF`, both to spend the
+budget and to mask pain.
+
+```jsonc
+{ "u_relieve_pain": 3, "thermal_relief": "effect_pfruit_raspberry_relief", "duration": "5 minutes" }
 ```
 
 #### `u_activate_trait`, `npc_activate_trait`

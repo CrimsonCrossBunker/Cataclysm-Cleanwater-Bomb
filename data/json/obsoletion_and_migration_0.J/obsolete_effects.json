@@ -1,6 +1,10 @@
 [
   {
     "type": "effect_migration",
+    "from": "blisters"
+  },
+  {
+    "type": "effect_migration",
     "from": "winded_leg_l",
     "to": "winded_leg"
   },

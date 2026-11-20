@@ -78,18 +78,19 @@
   {
     "type": "effect_on_condition",
     "id": "afs_eoc_chemhealing",
-    "effect": [ { "u_lose_effect": "post_healing_injection" } ]
+    "effect": [ { "u_lose_effect": "afs_chemhealing_thermal_relief" }, { "u_lose_effect": "post_healing_injection" } ]
   },
   {
     "type": "effect_on_condition",
     "id": "afs_eoc_chemhealing_pkill",
     "condition": { "one_in_chance": 40 },
-    "effect": [ { "math": [ "u_pain()--" ] } ]
+    "effect": [ { "u_relieve_pain": 1, "thermal_relief": "afs_chemhealing_thermal_relief", "duration": "2 minutes" } ]
   },
   {
     "type": "effect_on_condition",
     "id": "afs_eoc_hangover_healing",
     "effect": [
+      { "u_lose_effect": "afs_chemhealing_thermal_relief" },
       { "u_add_effect": "post_healing_injection", "duration": "6 hours", "target_part": "torso" },
       { "math": [ "u_val('sleepiness') += 80" ] },
       {

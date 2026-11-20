@@ -577,12 +577,25 @@
         "color": "h_black",
         "condition": { "not": { "u_has_effect": "disinfected" } }
       },
-      { "id": "5blisters", "sym": "∞", "color": "h_red", "condition": { "u_has_effect": "blisters" } },
+      {
+        "id": "5blisters",
+        "sym": "∞",
+        "color": "h_red",
+        "condition": {
+          "math": [
+            "u_wound_count('thermal_blister', 'bodypart': _widget_bodypart) + u_wound_count('thermal_burn', 'bodypart': _widget_bodypart) > 0"
+          ]
+        }
+      },
       {
         "id": "5notblisters",
         "sym": "▮",
         "color": "h_black",
-        "condition": { "not": { "u_has_effect": "blisters" } }
+        "condition": {
+          "math": [
+            "u_wound_count('thermal_blister', 'bodypart': _widget_bodypart) + u_wound_count('thermal_burn', 'bodypart': _widget_bodypart) == 0"
+          ]
+        }
       },
       { "id": "6chafing", "sym": "Ξ", "color": "h_red", "condition": { "u_has_effect": "chafing" } },
       { "id": "6notchafing", "sym": "▮", "color": "h_black", "condition": { "not": { "u_has_effect": "chafing" } } }

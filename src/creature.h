@@ -4,6 +4,7 @@
 
 #include <array>
 #include <climits>
+#include <cstdint>
 #include <functional>
 #include <list>
 #include <map>
@@ -42,7 +43,9 @@ class JsonObject;
 class JsonOut;
 class avatar;
 class body_part_set;
+class character_action_guard;
 class const_talker;
+class damage_event_participants;
 class effect;
 class effects_map;
 class enchant_cache;
@@ -337,10 +340,10 @@ class Creature : public viewer
         virtual void normalize();
     protected:
         /** Processes effects and bonuses. */
-        void process_turn_no_moves();
+        bool process_turn_no_moves();
     public:
-        /** Processes effects and bonuses and allocates move points based on speed. */
-        virtual void process_turn();
+        /** Processes effects and bonuses, then allocates moves. False if the actor was invalidated. */
+        virtual bool process_turn();
         /** Resets the value of all bonus fields to 0. */
         virtual void reset_bonuses();
         /** Resets stats, and applies effects in an idempotent manner */
@@ -505,8 +508,10 @@ class Creature : public viewer
                 const weakpoint &wp = weakpoint() );
         // for each damage type, how much gets through and how much pain do we
         // accrue? mutates damage and pain
+        // A null ignition part vetoes ignition; no override preserves ordinary behavior.
         virtual void deal_damage_handle_type( const effect_source &source, const damage_unit &du,
-                                              bodypart_id bp, int &damage, int &pain );
+                                              bodypart_id bp, int &damage, int &pain,
+                                              std::optional<bodypart_id> ignition_part = std::nullopt );
 
         // directly decrements the damage. ONLY handles damage, doesn't
         // increase pain, apply effects, etc
@@ -644,12 +649,22 @@ class Creature : public viewer
         void add_effect( const effect_source &source, const effect &eff, bool force = false,
                          bool deferred = false );
         /** Adds or modifies an effect. If intensity is given it will set the effect intensity
-            to the given value, or as close as max_intensity values permit. */
-        void add_effect( const effect_source &source, const efftype_id &eff_id, const time_duration &dur,
-                         bodypart_id bp, bool permanent = false, int intensity = 0, bool force = false,
-                         bool deferred = false );
+            to the given value, or as close as max_intensity values permit.
+            Returns the applied part (which can be null for an untargeted effect), or no value
+            if the application was rejected. Targeted character fire resolves to the actual
+            part; effect queries still use exact keys. On success, written_effect optionally
+            receives a copy of the record as written, before any application callbacks.
+            When collecting this snapshot, the returned contact follows fire rekeys and merges. */
+        std::optional<bodypart_id> add_effect(
+            const effect_source &source, const efftype_id &eff_id, const time_duration &dur,
+            bodypart_id bp, bool permanent = false, int intensity = 0, bool force = false,
+            bool deferred = false, effect *written_effect = nullptr );
         void add_effect( const effect_source &source, const efftype_id &eff_id, const time_duration &dur,
                          bool permanent = false, int intensity = 0, bool force = false, bool deferred = false );
+        /** Resolve a targeted character fire to its current contact part, preserving null. */
+        bodypart_id resolve_onfire_part( bodypart_id bp ) const;
+        /** The fire record is visible during its loss event but can no longer be refreshed. */
+        bool is_pending_fire_removal( const effect &fire ) const;
         /** Schedules a new effect to be applied. Used during effect processing to avoid invalidating
             current effects map. */
         void schedule_effect( const effect &eff, bool force = false,
@@ -668,7 +683,7 @@ class Creature : public viewer
         /** Removes a listed effect. If the bodypart is not specified remove all effects of
          * a given type, targeted or untargeted. Returns true if anything was
          * removed. */
-        bool remove_effect( const efftype_id &eff_id, const bodypart_id &bp );
+        bool remove_effect( const efftype_id &eff_id, bodypart_id bp );
         bool remove_effect( const efftype_id &eff_id );
         /** Schedule effect removal */
         void schedule_effect_removal( const efftype_id &eff_id, const bodypart_id &bp );
@@ -720,8 +735,8 @@ class Creature : public viewer
 
         virtual units::mass get_weight() const = 0;
 
-        /** Processes through all the effects on the Creature. */
-        virtual void process_effects();
+        /** Processes all effects. Returns false if a callback invalidated the actor. */
+        virtual bool process_effects();
 
         /** Returns true if the player has the entered trait, returns false for non-humans */
         virtual bool has_trait( const trait_id &flag ) const;
@@ -1254,10 +1269,50 @@ class Creature : public viewer
          * Must not remove the effect, but can set it up for removal.
          */
         virtual void process_one_effect( effect &e, bool is_new ) = 0;
+        // A guarded pain change needs to know whether this call erased a record itself.
+        bool remove_effect_impl( const efftype_id &id, bodypart_id bp,
+                                 const character_action_guard *pain_target,
+                                 const std::map<bodypart_id, std::uint64_t> *pain_effects = nullptr,
+                                 std::optional<std::uint64_t> expiry_generation = std::nullopt );
 
         pimpl<effects_map> effects;
         std::queue<scheduled_effect, std::list<scheduled_effect>> scheduled_effects;
         std::queue<terminating_effect, std::list<terminating_effect>> terminating_effects;
+
+        // Rekeying fire records must wait while effects are being iterated or anatomy is loading.
+        bool defer_onfire_normalization = false;
+        bool onfire_normalization_pending = false;
+        void normalize_onfire_effects();
+        static bool stronger_fire( const effect &lhs, const effect &rhs );
+
+        struct effect_record_key {
+            int part;
+            std::uint64_t generation;
+        };
+        effect *find_effect_record( const efftype_id &id, effect_record_key record );
+
+        // Observe the HP loss before break callbacks can replace the struck limb.
+        class onfire_limb_watch
+        {
+            public:
+                onfire_limb_watch( const Creature &creature, bodypart_id contact );
+                ~onfire_limb_watch();
+                onfire_limb_watch( const onfire_limb_watch & ) = delete;
+                onfire_limb_watch &operator=( const onfire_limb_watch & ) = delete;
+                bool extinguished() const;
+
+            private:
+                friend class Creature;
+                static thread_local onfire_limb_watch *active;
+                static onfire_limb_watch *for_creature( const Creature &creature );
+                void record_break( bodypart_id part );
+
+                const Creature &creature;
+                onfire_limb_watch *const parent;
+                bodypart_id limb;
+                std::optional<std::uint64_t> limb_identity;
+                bool broken = false;
+        };
 
         std::vector<damage_over_time_data> damage_over_time_map;
 
@@ -1354,6 +1409,15 @@ class Creature : public viewer
          */
         tripoint_abs_omt pos_abs_omt() const;
     protected:
+        struct character_damage_context {
+            damage_event_participants &participants;
+            std::optional<bool> wound_roll;
+        };
+
+        dealt_damage_instance deal_damage_impl( Creature *source, bodypart_id bp,
+                const damage_instance &dam, const weakpoint_attack &attack, const weakpoint &wp,
+                character_damage_context *character_hit );
+
         /**
          * These two functions are responsible for storing and loading the members
          * of this class to/from json data.
@@ -1385,6 +1449,8 @@ class Creature : public viewer
         void load( const JsonObject &jsin );
 
     private:
+        /** Select a live fire to refresh, excluding instances in a loss event. */
+        std::optional<bodypart_id> onfire_effect_key( bodypart_id actual_part ) const;
         int pain;
         // calculate how well the projectile hits
         double accuracy_projectile_attack( const int &speed, const double &missed_by ) const;

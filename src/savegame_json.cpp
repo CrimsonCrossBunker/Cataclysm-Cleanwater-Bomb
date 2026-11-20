@@ -854,8 +854,76 @@ void Character::load_mission_state( const JsonObject &data )
     }
 }
 
+void Character::read_last_damage_record( const JsonObject &data, const JsonObject *rewind_identities )
+{
+    if( !data.has_member( "last_damage_record" ) ) {
+        last_damage_record.reset();
+        return;
+    }
+    const JsonObject hit = data.get_object( "last_damage_record" );
+    recent_damage_record record;
+    record.damage.part = bodypart_str_id( hit.get_string( "part" ) );
+    record.damage.amount = hit.get_int( "amount" );
+    record.damage.pain = hit.get_int( "pain" );
+    // Only a named rewind can outlive the body it was serialized against.
+    const auto matches = [rewind_identities]( const bodypart &part ) {
+        return !rewind_identities || part.matches_rewind_identity( *rewind_identities );
+    };
+    const auto recipient = body.find( record.damage.part );
+    if( recipient != body.end() && matches( recipient->second ) ) {
+        record.hp_identity = recipient->second.identity_generation();
+    } else {
+        record.damage = {};
+    }
+    hit.read( "burn_part", record.burn_part );
+    hit.read( "burn_type", record.burn_type );
+    if( hit.has_member( "prior_blister" ) ) {
+        record.prior_blister.emplace().deserialize( hit.get_object( "prior_blister" ) );
+        hit.read( "prior_blister_burn_progress", record.prior_blister_burn_progress );
+    }
+    if( !record.burn_part.is_null() ) {
+        const auto burn_part = body.find( record.burn_part );
+        if( burn_part != body.end() && matches( burn_part->second ) ) {
+            record.burn_identity = burn_part->second.identity_generation();
+        } else {
+            record.burn_part = bodypart_str_id::NULL_ID();
+            record.prior_blister.reset();
+        }
+    }
+    last_damage_record = std::move( record );
+}
+
+void Character::write_last_damage_record( JsonOut &out ) const
+{
+    if( !last_damage_record ) {
+        return;
+    }
+    const recent_damage_record &record = *last_damage_record;
+    const recent_damage damage = damage_for_reversal( record );
+    out.member( "last_damage_record" );
+    out.start_object();
+    out.member( "part", damage.part );
+    out.member( "amount", damage.amount );
+    out.member( "pain", damage.pain );
+    const auto burn_part = body.find( record.burn_part );
+    if( !record.burn_part.is_null() && burn_part != body.end() &&
+        burn_part->second.identity_generation() == record.burn_identity ) {
+        out.member( "burn_part", record.burn_part );
+        out.member( "burn_type", record.burn_type );
+        if( record.prior_blister ) {
+            out.member( "prior_blister", *record.prior_blister );
+            out.member( "prior_blister_burn_progress", record.prior_blister_burn_progress );
+        }
+    }
+    out.end_object();
+}
+
 void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
 {
+    // Mutations, worn gear and legacy anatomy can rearrange the loaded body.
+    // Reconcile fire records only once the final body is known.
+    const restore_on_out_of_scope restore_defer( defer_onfire_normalization );
+    const bool was_deferred = std::exchange( defer_onfire_normalization, true );
     data.allow_omitted_members();
     kill_statistics_.clear();
     if( data.has_member( "kill_tracker" ) ) {
@@ -864,6 +932,7 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
         kill_statistics_.deserialize( *legacy_kills );
     }
     Creature::load( data );
+    read_last_damage_record( data );
 
     // stats
     data.read( "str_max", str_max );
@@ -1586,6 +1655,8 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
     // Merge stackable items that older saves stored as separate entries, so a
     // stackable field change takes effect after loading the character.
     inv->restack( *this );
+    defer_onfire_normalization = was_deferred;
+    normalize_onfire_effects();
 }
 
 /**
@@ -1594,6 +1665,7 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
 void Character::store( JsonOut &json ) const
 {
     Creature::store( json );
+    write_last_damage_record( json );
 
     if( !weapon.is_null() ) {
         json.member( "weapon", weapon ); // also saves contents
@@ -1878,6 +1950,21 @@ bionic_uid read_bionic_weapon_binding( const JsonObject &data, const item &weapo
     }
     return 0;
 }
+
+void prune_snapshot_effects( effects_map &loaded_effects )
+{
+    // Snapshots, including rollback backups, represent live state, not saves to migrate.
+    erase_if( loaded_effects, []( auto & entry ) {
+        if( !entry.first.is_valid() ) {
+            return true;
+        }
+        // A retired payload can be stored under an otherwise valid effect key.
+        erase_if( entry.second, []( const auto & part ) {
+            return part.second.is_null() || !part.second.get_id().is_valid();
+        } );
+        return entry.second.empty();
+    } );
+}
 } // namespace
 
 void Character::store_player_state( JsonOut &out ) const
@@ -1933,7 +2020,8 @@ void Character::store_turn_state( JsonOut &out ) const
     out.member( "recoil", recoil );
     out.member( "power_level", power_level );
     out.member( "max_power_level_modifier", max_power_level_modifier );
-    out.member( "pain", get_pain() );
+    // Wound pain is restored through the body, not the raw pain counter.
+    out.member( "pain", Creature::get_pain() );
     out.member( "speed_base", speed_base );
     out.member( "speed_bonus", speed_bonus );
     out.member( "num_blocks", num_blocks );
@@ -1965,6 +2053,8 @@ void Character::store_turn_state( JsonOut &out ) const
     out.member( "effects", *effects );
     out.member( "damage_over_time", damage_over_time_map );
     out.member( "body", body );
+    // A reversible contact wound and its damage record belong to the same authority.
+    write_last_damage_record( out );
     out.end_object();
 }
 
@@ -2061,7 +2151,10 @@ void Character::load_turn_state( const JsonObject &snapshot )
                 data.throw_error_at( "martial_arts_data", "Unknown learned martial style" );
             }
         }
-        read( "effects", *effects );
+        effects_map loaded_effects;
+        read( "effects", loaded_effects );
+        prune_snapshot_effects( loaded_effects );
+        *effects = std::move( loaded_effects );
         read( "damage_over_time", damage_over_time_map );
         read( "body", body );
         if( body.empty() ) {
@@ -2072,6 +2165,8 @@ void Character::load_turn_state( const JsonObject &snapshot )
                 data.throw_error_at( "body", "Unknown body part in character turn state" );
             }
         }
+        read_last_damage_record( data );
+        normalize_onfire_effects();
         // Direct assignment avoids Character::set_pain/add_effect:
         // those can wake a character, cancel an activity, or run gameplay hooks.
         trait_flag_cache.clear();
@@ -2224,7 +2319,10 @@ void Character::load_player_state( const JsonObject &snapshot )
         read( "lua_platform_death_mod", lua_platform_death_mod );
         read( "lua_platform_death_handler", lua_platform_death_handler );
         read( "inactive_eocs", inactive_effect_on_condition_vector );
-        read( "effects", *effects );
+        effects_map loaded_effects;
+        read( "effects", loaded_effects );
+        prune_snapshot_effects( loaded_effects );
+        *effects = std::move( loaded_effects );
         read( "damage_over_time_map", damage_over_time_map );
         read( "blocks_left", num_blocks );
         read( "dodges_left", num_dodges );
@@ -2247,6 +2345,8 @@ void Character::load_player_state( const JsonObject &snapshot )
         if( body.empty() ) {
             data.throw_error_at( "body", "Player character state requires a body" );
         }
+        read_last_damage_record( data );
+        normalize_onfire_effects();
         const JsonObject metrics = data.get_object( "mental_metrics" );
         mental_metric_guilt_kills = metrics.get_int( "guilt_kills" );
         mental_metric_human_dissections = metrics.get_int( "human_dissections" );
@@ -2823,6 +2923,11 @@ void npc::load( const JsonObject &data )
 {
     Character::load( data );
 
+    if( !data.read( "last_live_environment_update", last_live_environment_update ) ) {
+        last_live_environment_update = calendar::before_time_starts;
+    }
+    bodytemp_target_environment.reset();
+
     // TEMPORARY Remove if branch after 0.G (keep else branch)
     if( !data.has_member( "location" ) ) {
         point_abs_sm submap_coords;
@@ -3058,6 +3163,8 @@ void npc::serialize( JsonOut &json ) const
 void npc::store( JsonOut &json ) const
 {
     Character::store( json );
+
+    json.member( "last_live_environment_update", last_live_environment_update );
 
     json.member( "marked_for_death", marked_for_death );
     json.member( "dead", dead );
@@ -5083,6 +5190,9 @@ void vehicle::deserialize( const JsonObject &data )
     data.read( "fuel_remainder", fuel_remainder );
     data.read( "fuel_used_last_turn", fuel_used_last_turn );
     data.read( "effects", effects );
+    erase_if( effects, []( const auto & entry ) {
+        return entry.second.is_null();
+    } );
 
     refresh( );
 
@@ -5479,23 +5589,29 @@ void Creature::load( const JsonObject &jsin )
             for( const auto &maps : tmp_map ) {
                 const efftype_id id( maps.first );
                 if( !id.is_valid() ) {
-                    debugmsg( "Invalid effect: %s", id.c_str() );
+                    const effect_migration *migration = effect_migration::find_migration( id );
+                    if( !migration || migration->id_new ) {
+                        debugmsg( "Invalid effect: %s", id.c_str() );
+                    }
                     continue;
                 }
                 for( const auto &i : maps.second ) {
+                    const effect &e = i.second;
+                    if( e.is_null() ) {
+                        continue;
+                    }
                     if( !( std::istringstream( i.first ) >> key_num ) ) {
                         key_num = 0;
                     }
                     const bodypart_str_id &bp = convert_bp( static_cast<body_part>( key_num ) );
-                    const effect &e = i.second;
 
                     ( *effects )[id][bp] = e;
                     on_effect_int_change( id, e.get_intensity(), bp );
                 }
             }
         }
-    } else {
-        jsin.read( "effects", *effects );
+    } else if( effects_map loaded_effects; jsin.read( "effects", loaded_effects ) ) {
+        *effects = std::move( loaded_effects );
     }
 
     migrate_effects();
@@ -5561,6 +5677,7 @@ void Creature::load( const JsonObject &jsin )
     jsin.read( "underwater", underwater );
 
     jsin.read( "body", body );
+    normalize_onfire_effects();
 
     fake = false; // see Creature::load
     jsin.read( "lifespan_end", lifespan_end );

@@ -33,7 +33,7 @@ class character_turn_driver
         void bind( Character &actor, character_turn_policy policy );
         void reset();
         void update_body();
-        void process_turn();
+        bool process_turn();
     private:
         struct impl;
         std::unique_ptr<impl> impl_;

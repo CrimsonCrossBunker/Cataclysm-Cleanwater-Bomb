@@ -2625,6 +2625,22 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         return true;
     };
+    const auto add_thermal_wound = [make_wound_snapshot]( sol::state_view lua_state,
+    Character & character, const bodypart & contact, const wound_type_id & wound_id ) {
+        const bodypart_id main = character.thermal_wound_part( contact.get_id() );
+        const bodypart &storage = main == bodypart_str_id::NULL_ID() ? contact :
+                                  *character.get_part( main );
+        sol::table before = make_wound_snapshot( lua_state, storage );
+        const bool already_present = storage.has_wound( wound_id );
+        character.apply_wound( contact.get_id(), wound_id );
+        sol::table value = lua_state.create_table();
+        // The thermal policy changes storage only by installing a previously absent tier.
+        value["changed"] = !already_present && storage.has_wound( wound_id );
+        value["before"] = std::move( before );
+        value["after"] = make_wound_snapshot( lua_state, storage );
+        return cata::lua_platform::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    };
     sol::table wounds = lua.create_table();
     wounds.set_function( "snapshot", [require_read, runtime_generation, world_generation,
                                       make_wound_snapshot]( sol::this_state state,
@@ -2659,7 +2675,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                                 make_wound_snapshot( lua_state, *part ) ) );
     } );
     wounds.set_function( "add", [require_write, runtime_generation, world_generation,
-                                 make_wound_snapshot, same_wounds]( sol::this_state state,
+                                 make_wound_snapshot, same_wounds,
+                                 add_thermal_wound]( sol::this_state state,
                                          const cata::lua_platform::game_handle & handle,
                                          const cata::lua_platform::script_game_id & body_part_id,
     const cata::lua_platform::script_game_id & wound_id ) {
@@ -2691,9 +2708,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             } );
         }
         bodypart *part = character->get_part( native_part_id );
+        const wound_type_id native_wound_id( wound_id.value() );
+        if( bodypart::is_thermal_wound( native_wound_id ) ) {
+            return add_thermal_wound( lua_state, *character, *part, native_wound_id );
+        }
+
         const std::vector<wound> before_native = part->get_wounds();
         sol::table before = make_wound_snapshot( lua_state, *part );
-        const wound_type_id native_wound_id( wound_id.value() );
         const int limit = native_wound_id->get_limit();
         const std::size_t existing_count = std::count_if(
                                                before_native.begin(), before_native.end(),
@@ -2761,7 +2782,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, sol::make_object( lua_state, std::move( value ) ) );
     } );
     wounds.set_function( "add_unbounded", [require_write, runtime_generation, world_generation,
-                                           make_wound_snapshot, same_wounds]( sol::this_state state,
+                                           make_wound_snapshot, same_wounds,
+                                           add_thermal_wound]( sol::this_state state,
                                                    const cata::lua_platform::game_handle & handle,
                                                    const cata::lua_platform::script_game_id & body_part_id,
     const cata::lua_platform::script_game_id & wound_id ) {
@@ -2803,9 +2825,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 "missing_part", "services.wounds.add_unbounded found no native next-best body part"
             } );
         }
+        if( bodypart::is_thermal_wound( native_wound_id ) ) {
+            return add_thermal_wound( lua_state, *character, *part, native_wound_id );
+        }
+
         const std::vector<wound> before_native = part->get_wounds();
         sol::table before = make_wound_snapshot( lua_state, *part );
-        part->add_or_worsen_wound( native_wound_id );
+        part->add_or_worsen_wound( *character, native_wound_id );
         sol::table after = make_wound_snapshot( lua_state, *part );
         sol::table value = lua_state.create_table();
         value["changed"] = !same_wounds( before_native, part->get_wounds() );
@@ -2860,9 +2886,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         sol::table before = make_wound_snapshot( lua_state, *part );
         const std::size_t count_before = part->get_wounds().size();
         part->remove_all_wounds_of_type( native_wound_id );
+        const bool changed = part->get_wounds().size() != count_before;
+        if( changed && bodypart::is_thermal_wound( native_wound_id ) ) {
+            character->on_stat_change( "perceived_pain", character->get_perceived_pain() );
+        }
         sol::table after = make_wound_snapshot( lua_state, *part );
         sol::table value = lua_state.create_table();
-        value["changed"] = part->get_wounds().size() != count_before;
+        value["changed"] = changed;
         value["before"] = std::move( before );
         value["after"] = std::move( after );
         return cata::lua_platform::make_game_value_result(

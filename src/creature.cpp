@@ -16,8 +16,10 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
@@ -25,12 +27,15 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 
 #include "ammo_effect.h"
 #include "anatomy.h"
 #include "body_part_set.h"
 #include "calendar.h"
 #include "cata_assert.h"
+#include "cata_scope_helpers.h"
+#include "cata_small_literal_vector.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "character.h"
@@ -413,31 +418,36 @@ void Creature::reset_bonuses()
     throw_resist = 0;
 }
 
-void Creature::process_turn_no_moves()
+bool Creature::process_turn_no_moves()
 {
     decrement_summon_timer();
     if( is_dead_state() ) {
-        return;
+        return true;
     }
     reset_bonuses();
 
-    process_effects();
+    if( !process_effects() ) {
+        return false;
+    }
 
     process_damage_over_time();
 
     // Call this in case any effects have changed our stats
     reset_stats();
-
+    return true;
 }
 
-void Creature::process_turn()
+bool Creature::process_turn()
 {
-    process_turn_no_moves();
+    if( !process_turn_no_moves() ) {
+        return false;
+    }
 
     // add an appropriate number of moves
     if( !has_effect( effect_ridden ) ) {
         moves += get_speed();
     }
+    return true;
 }
 
 bool Creature::cant_do_underwater( bool msg ) const
@@ -1577,13 +1587,26 @@ void Creature::deal_projectile_attack( map *here, Creature *source, dealt_projec
 dealt_damage_instance Creature::deal_damage( Creature *source, bodypart_id bp,
         const damage_instance &dam, const weakpoint_attack &attack, const weakpoint &wp )
 {
-    const safe_reference<Creature> target_reference = get_safe_reference();
+    return deal_damage_impl( source, bp, dam, attack, wp, nullptr );
+}
+
+dealt_damage_instance Creature::deal_damage_impl( Creature *source, bodypart_id bp,
+        const damage_instance &dam, const weakpoint_attack &attack, const weakpoint &wp,
+        character_damage_context *character_hit )
+{
+    const safe_reference<Creature> target_reference = character_hit ?
+            safe_reference<Creature>() : get_safe_reference();
     const bool source_was_present = source != nullptr;
     safe_reference<Creature> source_reference;
-    if( source_was_present ) {
+    if( !character_hit && source_was_present ) {
         source_reference = source->get_safe_reference();
     }
-    const auto participants_alive = [&]() {
+    const auto refresh_participants = [character_hit, &target_reference, source_was_present,
+                                       &source_reference, &source]() {
+        if( character_hit ) {
+            source = character_hit->participants.source();
+            return character_hit->participants.target() != nullptr;
+        }
         return target_reference.get() != nullptr &&
                ( !source_was_present || source_reference.get() != nullptr );
     };
@@ -1596,21 +1619,39 @@ dealt_damage_instance Creature::deal_damage( Creature *source, bodypart_id bp,
     damage_instance d = dam; // copy, since we will mutate in absorb_hit
 
     dealt_damage_instance dealt_dams;
-    weakpoint_attack attack_copy = attack;
-    if( attack.accuracy == -1.0 ) {
-        attack_copy.source = source;
-        attack_copy.target = this;
-        attack_copy.compute_wp_skill();
+    Character *const character = character_hit ? as_character() : nullptr;
+    Character::thermal_hit thermal;
+    const weakpoint *wkpt = nullptr;
+    if( character ) {
+        thermal = character->absorb_damage( bp, std::nullopt, d, /*damage_armor=*/true,
+                                           /*resolve_wound=*/true );
+    } else {
+        weakpoint_attack attack_copy = attack;
+        if( attack.accuracy == -1.0 ) {
+            attack_copy.source = source;
+            attack_copy.target = this;
+            attack_copy.compute_wp_skill();
+        }
+        wkpt = absorb_hit( attack_copy, bp, d, wp );
     }
-    const weakpoint *wkpt = absorb_hit( attack_copy, bp, d, wp );
+    if( !refresh_participants() ) {
+        return dealt_damage_instance();
+    }
     dealt_dams.wp_hit = wkpt == nullptr ? "" : wkpt->get_name();
 
     // Add up all the damage units dealt
     for( const damage_unit &it : d.damage_units ) {
         int cur_damage = 0;
-        deal_damage_handle_type( effect_source( source ), it, bp, cur_damage, total_pain );
-        if( !participants_alive() ) {
-            return dealt_dams;
+        std::optional<bodypart_id> ignition_part;
+        if( character && it.type == damage_heat ) {
+            const auto contact = body.find( thermal.contact.id() );
+            ignition_part = contact != body.end() &&
+                            contact->second.identity_generation() == thermal.contact_identity ?
+                            thermal.contact : bodypart_str_id::NULL_ID().id();
+        }
+        deal_damage_handle_type( effect_source( source ), it, bp, cur_damage, total_pain, ignition_part );
+        if( !refresh_participants() ) {
+            return dealt_damage_instance();
         }
         total_base_damage += std::max( 0.0f, it.amount * it.unconditional_damage_mult );
         if( cur_damage > 0 ) {
@@ -1620,26 +1661,36 @@ dealt_damage_instance Creature::deal_damage( Creature *source, bodypart_id bp,
     }
     // get eocs for all damage effects
     d.ondamage_effects( source, this, dam, bp.id() );
-    if( !participants_alive() ) {
-        return dealt_dams;
+    if( !refresh_participants() ) {
+        return dealt_damage_instance();
     }
 
     if( total_base_damage < total_damage ) {
         // Only deal more HP than remains if damage not including crit multipliers is higher.
         total_damage = clamp( get_hp( bp ), total_base_damage, total_damage );
     }
+    int pain_added = 0;
     if( !bp->has_flag( json_flag_BIONIC_LIMB ) ) {
-        mod_pain( total_pain, bp );
+        // Use this call's adjusted increment; a pain callback can deal another hit.
+        pain_added = std::max( 0, mod_pain( total_pain, bp ) );
+    }
+    if( character && !refresh_participants() ) {
+        return dealt_damage_instance();
     }
 
+    if( character ) {
+        const Character::direct_hit hit{ thermal, dealt_dams, character_hit->wound_roll, pain_added };
+        character->apply_damage_internal( character_hit->participants, bp, total_damage, false, &hit );
+        return dealt_dams;
+    }
     apply_damage( source, bp, total_damage );
-    if( !participants_alive() ) {
+    if( !refresh_participants() ) {
         return dealt_dams;
     }
 
     if( wkpt != nullptr ) {
         wkpt->apply_effects( *this, total_damage, attack );
-        if( !participants_alive() ) {
+        if( !refresh_participants() ) {
             return dealt_dams;
         }
         add_msg_debug( debugmode::DF_WEAKPOINTS, "applying weakpoint: %s", wkpt->id );
@@ -1648,7 +1699,8 @@ dealt_damage_instance Creature::deal_damage( Creature *source, bodypart_id bp,
     return dealt_dams;
 }
 void Creature::deal_damage_handle_type( const effect_source &source, const damage_unit &du,
-                                        bodypart_id bp, int &damage, int &pain )
+                                        bodypart_id bp, int &damage, int &pain,
+                                        std::optional<bodypart_id> ignition_part )
 {
     const map &here = get_map();
 
@@ -1671,8 +1723,9 @@ void Creature::deal_damage_handle_type( const effect_source &source, const damag
         div = 5.0f;
     } else if( du.type == damage_heat ) {
         // heat damage sets us on fire sometimes
-        if( rng( 0, 100 ) < adjusted_damage ) {
-            add_effect( source, effect_onfire, rng( 1_turns, 3_turns ), bp );
+        if( rng( 0, 100 ) < adjusted_damage &&
+            ( !ignition_part || *ignition_part != bodypart_str_id::NULL_ID() ) ) {
+            add_effect( source, effect_onfire, rng( 1_turns, 3_turns ), ignition_part.value_or( bp ) );
 
             Character &player_character = get_player_character();
             if( player_character.has_unfulfilled_pyromania() ) {
@@ -1906,6 +1959,185 @@ void Creature::set_fake( const bool fake_value )
     fake = fake_value;
 }
 
+bool Creature::stronger_fire( const effect &lhs, const effect &rhs )
+{
+    const auto strength = []( const effect & fire ) {
+        const time_duration duration = fire.get_duration();
+        return std::make_tuple( duration > 0_turns, fire.is_permanent(), duration );
+    };
+    return strength( lhs ) > strength( rhs );
+}
+
+// An add during a loss event must not refresh a record that is being removed.
+using effect_generations = small_literal_vector<std::uint64_t, 4, size_t>;
+struct pending_fire_removal {
+    const safe_reference<Creature> &creature;
+    const effect_generations &generations;
+    const pending_fire_removal *parent;
+};
+static thread_local const pending_fire_removal *active_fire_removal = nullptr;
+
+bool Creature::is_pending_fire_removal( const effect &fire ) const
+{
+    for( const pending_fire_removal *loss = active_fire_removal; loss; loss = loss->parent ) {
+        if( loss->creature.get() == this &&
+            std::find( loss->generations.begin(), loss->generations.end(),
+                       fire.identity_generation() ) != loss->generations.end() ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+effect *Creature::find_effect_record( const efftype_id &id, effect_record_key record )
+{
+    effect &current = get_effect( id, bodypart_id( record.part ) );
+    return !current.is_null() && current.identity_generation() == record.generation ?
+           &current : nullptr;
+}
+
+bodypart_id Creature::resolve_onfire_part( bodypart_id bp ) const
+{
+    return bp == bodypart_str_id::NULL_ID() ? bp :
+           get_part_id( bp, body_part_filter::next_best, true );
+}
+
+thread_local Creature::onfire_limb_watch *Creature::onfire_limb_watch::active = nullptr;
+
+Creature::onfire_limb_watch::onfire_limb_watch( const Creature &creature, bodypart_id contact ) :
+    creature( creature ), parent( active )
+{
+    const bodypart_id main = contact->main_part;
+    limb = main == contact ? contact : creature.resolve_onfire_part( main );
+    const auto part = creature.body.find( limb.id() );
+    if( part != creature.body.end() ) {
+        limb_identity = part->second.identity_generation();
+    }
+    active = this;
+}
+
+Creature::onfire_limb_watch::~onfire_limb_watch()
+{
+    active = parent;
+}
+
+Creature::onfire_limb_watch *Creature::onfire_limb_watch::for_creature( const Creature &creature )
+{
+    onfire_limb_watch *watch = active;
+    while( watch && &watch->creature != &creature ) {
+        watch = watch->parent;
+    }
+    return watch;
+}
+
+void Creature::onfire_limb_watch::record_break( bodypart_id part )
+{
+    if( !broken && limb_identity ) {
+        const bodypart *limb = creature.get_part( part );
+        broken = limb && *limb_identity == limb->identity_generation();
+    }
+}
+
+bool Creature::onfire_limb_watch::extinguished() const
+{
+    if( broken ) {
+        return true;
+    }
+    if( !limb_identity ) {
+        return false;
+    }
+    const auto current = creature.body.find( limb.id() );
+    return current != creature.body.end() && current->second.identity_generation() == *limb_identity &&
+           current->second.get_hp_cur() == 0;
+}
+
+std::optional<bodypart_id> Creature::onfire_effect_key( bodypart_id actual_part ) const
+{
+    if( !active_fire_removal && !onfire_normalization_pending ) {
+        return actual_part;
+    }
+    const auto fire = effects->find( effect_onfire );
+    if( fire == effects->end() ) {
+        return actual_part;
+    }
+    const auto &parts = fire->second;
+    const auto canonical = parts.find( actual_part );
+    const bool canonical_pending = canonical != parts.end() &&
+                                   is_pending_fire_removal( canonical->second );
+    if( !onfire_normalization_pending ) {
+        return canonical_pending ? std::nullopt : std::optional<bodypart_id>( actual_part );
+    }
+    auto best = canonical_pending ? parts.end() : canonical;
+    for( auto it = parts.begin(); it != parts.end(); ++it ) {
+        if( it->first != bodypart_str_id::NULL_ID() && it->first != actual_part &&
+            ( best == parts.end() || stronger_fire( it->second, best->second ) ) &&
+            !is_pending_fire_removal( it->second ) &&
+            resolve_onfire_part( it->first ) == actual_part ) {
+            best = it;
+        }
+    }
+    if( best != parts.end() ) {
+        return best->first;
+    }
+    return canonical_pending ? std::nullopt : std::optional<bodypart_id>( actual_part );
+}
+
+namespace
+{
+// Follow the contact of an in-flight snapshot without copying the merge winner's fields.
+// Only adds that request a snapshot register a watcher; no history outlives the add.
+class fire_write_watch
+{
+    public:
+        fire_write_watch( const safe_reference<Creature> &owner, bodypart_id key,
+                          bodypart_id contact, std::uint64_t generation ) :
+            owner( owner ), key( key ), last_contact( contact ), generation( generation ),
+            parent( std::exchange( active, this ) ) {}
+        fire_write_watch( const fire_write_watch & ) = delete;
+        fire_write_watch &operator=( const fire_write_watch & ) = delete;
+        ~fire_write_watch() {
+            active = parent;
+        }
+
+        bodypart_id contact( const Creature &creature ) const {
+            if( generation ) {
+                const effect &live = creature.get_effect( effect_onfire, key );
+                if( !live.is_null() && live.identity_generation() == generation ) {
+                    // A deferred alias still reports its actual contact.
+                    return creature.resolve_onfire_part( key );
+                }
+            }
+            return last_contact;
+        }
+
+        static void follow( const Creature &creature, const effect &from, bodypart_id to,
+                            const effect *winner = nullptr ) {
+            for( fire_write_watch *write = active; write; write = write->parent ) {
+                if( write->generation && write->owner.get() == &creature &&
+                    write->generation == from.identity_generation() ) {
+                    write->key = to;
+                    write->last_contact = to;
+                    if( winner ) {
+                        write->generation = winner->identity_generation();
+                    } else if( to == bodypart_str_id::NULL_ID() ) {
+                        write->generation = 0;
+                    }
+                }
+            }
+        }
+
+    private:
+        const safe_reference<Creature> &owner;
+        bodypart_id key;
+        bodypart_id last_contact;
+        std::uint64_t generation;
+        fire_write_watch *const parent;
+        static thread_local fire_write_watch *active;
+};
+
+thread_local fire_write_watch *fire_write_watch::active = nullptr;
+} // namespace
+
 void Creature::add_effect( const effect_source &source, const effect &eff, bool force,
                            bool deferred )
 {
@@ -1913,12 +2145,13 @@ void Creature::add_effect( const effect_source &source, const effect &eff, bool 
                 eff.get_intensity(), force, deferred );
 }
 
-void Creature::add_effect( const effect_source &source, const efftype_id &eff_id,
-                           const time_duration &dur, bodypart_id bp, bool permanent, int intensity, bool force, bool deferred )
+std::optional<bodypart_id> Creature::add_effect( const effect_source &source,
+        const efftype_id &eff_id, const time_duration &dur, bodypart_id bp,
+        bool permanent, int intensity, bool force, bool deferred, effect *written_effect )
 {
     // Check our innate immunity
     if( ( !force && is_immune_effect( eff_id ) ) || has_flag( json_flag_CANNOT_GAIN_EFFECTS ) ) {
-        return;
+        return std::nullopt;
     }
     if( eff_id == effect_knockdown && ( has_effect( effect_ridden ) ||
                                         has_effect( effect_riding ) ) ) {
@@ -1930,7 +2163,7 @@ void Creature::add_effect( const effect_source &source, const efftype_id &eff_id
 
     if( !eff_id.is_valid() ) {
         debugmsg( "Invalid effect, ID: %s", eff_id.c_str() );
-        return;
+        return std::nullopt;
     }
     const effect_type &type = eff_id.obj();
 
@@ -1939,10 +2172,19 @@ void Creature::add_effect( const effect_source &source, const efftype_id &eff_id
         bp = bp->main_part;
     }
 
+    const bool targeted_character_fire = eff_id == effect_onfire &&
+                                         bp != bodypart_str_id::NULL_ID() && as_character();
+    if( targeted_character_fire ) {
+        bp = resolve_onfire_part( bp );
+        if( bp == bodypart_str_id::NULL_ID() ) {
+            return std::nullopt;
+        }
+    }
+
     // Filter out bodypart immunity
     for( json_character_flag flag : eff_id->immune_bp_flags ) {
         if( bp->has_flag( flag ) ) {
-            return;
+            return std::nullopt;
         }
     }
 
@@ -1952,20 +2194,31 @@ void Creature::add_effect( const effect_source &source, const efftype_id &eff_id
             for( const auto &blocked_effect : _effect_it.second.get_blocks_effects() ) {
                 if( blocked_effect == eff_id ) {
                     // The effect is blocked by another, return
-                    return;
+                    return std::nullopt;
                 }
             }
         }
     }
 
-    bool found = false;
-    // Check if we already have it
-    auto matching_map = effects->find( eff_id );
+    // Refresh a deferred alias in place rather than starting a second fire.
+    const std::optional<bodypart_id> key = targeted_character_fire ? onfire_effect_key( bp ) :
+                                           std::optional<bodypart_id>( bp );
+    if( !key ) {
+        return std::nullopt;
+    }
+    const auto matching_map = effects->find( eff_id );
     if( matching_map != effects->end() ) {
-        auto &bodyparts = matching_map->second;
-        auto found_effect = bodyparts.find( bp );
-        if( found_effect != bodyparts.end() ) {
-            found = true;
+        const auto found_effect = matching_map->second.find( *key );
+        if( found_effect != matching_map->second.end() ) {
+            if( !targeted_character_fire && eff_id == effect_onfire &&
+                is_pending_fire_removal( found_effect->second ) ) {
+                return std::nullopt;
+            }
+            std::optional<Character::pain_reaction_scope> pain_reaction;
+            if( Character *ch = as_character();
+                ch && Character::is_pain_relief_effect( eff_id, *key ) ) {
+                pain_reaction.emplace( *ch );
+            }
             effect &e = found_effect->second;
             const int prev_int = e.get_intensity();
             // If we do, mod the duration, factoring in the mod value
@@ -1982,39 +2235,111 @@ void Creature::add_effect( const effect_source &source, const efftype_id &eff_id
             }
             // Bound new effect intensity by [1, max intensity]
             e.clamp_intensity();
-            if( e.get_intensity() != prev_int ) {
-                on_effect_int_change( eff_id, e.get_intensity(), bp );
-
-                if( Character *ch = as_character() ) {
-                    get_event_bus().send<event_type::character_effect_intensity_changed>(
-                        ch->getID(), bp.id(), eff_id, e.get_intensity()
-                    );
+            if( written_effect ) {
+                *written_effect = e;
+            }
+            const int new_int = e.get_intensity();
+            if( new_int != prev_int ) {
+                // Callbacks may erase or merge the record, or invalidate this creature.
+                const safe_reference<Creature> lifetime = get_safe_reference();
+                std::optional<fire_write_watch> write;
+                if( targeted_character_fire && written_effect ) {
+                    write.emplace( lifetime, *key, bp, e.identity_generation() );
+                }
+                on_effect_int_change( type.id, new_int, *key );
+                if( lifetime && ( !pain_reaction || pain_reaction->lifetime() ) ) {
+                    if( Character *ch = as_character() ) {
+                        get_event_bus().send<event_type::character_effect_intensity_changed>(
+                            ch->getID(), key->id(), type.id, new_int
+                        );
+                    }
+                    if( lifetime && write ) {
+                        return write->contact( *this );
+                    }
                 }
             }
+            return bp;
         }
     }
 
-    if( !found ) {
-        // If we don't already have it then add a new one
-        // Now we can make the new effect for application
-
-        time_duration duration = permanent ? std::max( dur, 1_seconds ) : dur;
-        effect e( effect_source( source ), &type, duration, bp.id(), permanent, intensity, calendar::turn );
-
-        ( *effects )[eff_id][bp] = e;
-        if( Character *ch = as_character() ) {
-            get_event_bus().send<event_type::character_gains_effect>( ch->getID(), bp.id(), eff_id, intensity );
-            if( is_avatar() ) {
-                eff_id->add_apply_msg( e.get_intensity() );
+    // Keep a local copy for first-application gameplay since callbacks can rekey the stored effect.
+    const time_duration duration = permanent ? std::max( dur, 1_seconds ) : dur;
+    const bodypart_str_id written_part = bp.id();
+    effect e( effect_source( source ), &type, duration, written_part, permanent, intensity,
+              calendar::turn );
+    std::optional<Character::pain_reaction_scope> pain_reaction;
+    if( Character *ch = as_character();
+        ch && Character::is_pain_effect( eff_id, bp ) ) {
+        pain_reaction.emplace( *ch );
+    }
+    effect &stored = ( *effects )[eff_id][bp];
+    stored = e;
+    const effect_record_key original{
+        bp.to_i(),
+        targeted_character_fire && ( !deferred || written_effect ) ? stored.identity_generation() : 0
+    };
+    if( written_effect ) {
+        *written_effect = e;
+    }
+    std::optional<std::uint64_t> contact_identity;
+    if( targeted_character_fire && !deferred ) {
+        const auto part = body.find( written_part );
+        if( part != body.end() ) {
+            contact_identity = part->second.identity_generation();
+        }
+    }
+    const safe_reference<Creature> lifetime = get_safe_reference();
+    std::optional<fire_write_watch> write;
+    if( targeted_character_fire && written_effect ) {
+        write.emplace( lifetime, bp, bp, original.generation );
+    }
+    const auto applied_part = [this, bp, &write, &lifetime]() {
+        return write && lifetime ? write->contact( *this ) : bp;
+    };
+    if( Character *ch = as_character() ) {
+        get_event_bus().send<event_type::character_gains_effect>( ch->getID(), written_part, type.id,
+                intensity );
+        if( !lifetime || ( pain_reaction && !pain_reaction->lifetime() ) ) {
+            return bp;
+        }
+        if( is_avatar() ) {
+            type.add_apply_msg( e.get_intensity() );
+        }
+    }
+    on_effect_int_change( type.id, e.get_intensity(), bp );
+    if( !deferred && lifetime && ( !pain_reaction || pain_reaction->lifetime() ) ) {
+        if( targeted_character_fire ) {
+            // A callback can replace the struck limb, even with the same ID.
+            const auto part = body.find( written_part );
+            if( !contact_identity || part == body.end() ||
+                *contact_identity != part->second.identity_generation() ||
+                !find_effect_record( eff_id, original ) ) {
+                return applied_part();
             }
+            {
+                const bool was_deferred = std::exchange( defer_onfire_normalization, true );
+                const on_out_of_scope restore_defer( [&lifetime, was_deferred]() {
+                    if( Creature *live = lifetime.get() ) {
+                        live->defer_onfire_normalization = was_deferred;
+                    }
+                } );
+                const onfire_limb_watch limb_watch( *this, bp );
+                const bool fire_active = !has_flag( json_flag_FREEZE_EFFECTS );
+                process_one_effect( e, true );
+                if( lifetime && fire_active && limb_watch.extinguished() ) {
+                    if( effect *live = find_effect_record( eff_id, original ) ) {
+                        live->set_duration( 0_turns );
+                    }
+                }
+            }
+            if( lifetime && onfire_normalization_pending && !defer_onfire_normalization ) {
+                normalize_onfire_effects();
+            }
+            return applied_part();
         }
-        on_effect_int_change( eff_id, e.get_intensity(), bp );
-        // Perform any effect addition effects.
-        // only when not deferred
-        if( !deferred ) {
-            process_one_effect( e, true );
-        }
+        process_one_effect( e, true );
     }
+    return applied_part();
 }
 void Creature::add_effect( const effect_source &source, const efftype_id &eff_id,
                            const time_duration &dur, bool permanent, int intensity, bool force, bool deferred )
@@ -2069,40 +2394,168 @@ bool Creature::add_env_effect( const efftype_id &eff_id, const bodypart_id &vect
 
 void Creature::clear_effects()
 {
-    for( auto &elem : *effects ) {
+    effects_map removed;
+    removed.swap( *effects );
+    for( const auto &elem : removed ) {
         for( auto &_effect_it : elem.second ) {
             const effect &e = _effect_it.second;
             on_effect_int_change( e.get_id(), 0, e.get_bp() );
         }
     }
-    effects->clear();
 }
 void Creature::restore_effects_snapshot( const std::vector<effect> &snapshot )
 {
     clear_effects();
     for( const effect &entry : snapshot ) {
+        if( entry.is_null() ) {
+            continue; // A retired effect in a saved combat result.
+        }
         ( *effects )[entry.get_id()][entry.get_bp()] = entry;
         on_effect_int_change( entry.get_id(), entry.get_intensity(), entry.get_bp() );
     }
+    normalize_onfire_effects();
 }
 
-bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
+void Creature::normalize_onfire_effects()
 {
-    const safe_reference<Creature> creature_reference = get_safe_reference();
-    if( !has_effect( eff_id, bp.id() ) ) {
-        //Effect doesn't exist, so do nothing
+    if( !as_character() ) {
+        return;
+    }
+    if( defer_onfire_normalization ) {
+        onfire_normalization_pending = true;
+        return;
+    }
+    onfire_normalization_pending = false;
+    const auto fire = effects->find( effect_onfire );
+    if( fire == effects->end() ) {
+        return;
+    }
+
+    auto &parts = fire->second;
+    for( auto it = parts.begin(); it != parts.end(); ) {
+        auto current = it++;
+        const bodypart_id old_part = current->first;
+        const bodypart_id actual_part = resolve_onfire_part( old_part );
+        if( actual_part == old_part ) {
+            if( current->second.get_bp() != actual_part ) {
+                current->second.set_bp( actual_part.id() );
+            }
+        } else if( actual_part == bodypart_str_id::NULL_ID() ) {
+            fire_write_watch::follow( *this, current->second, actual_part );
+            parts.erase( current );
+        } else {
+            fire_write_watch::follow( *this, current->second, actual_part );
+            auto record = parts.extract( current );
+            record.key() = actual_part;
+            record.mapped().set_bp( actual_part.id() );
+            auto insertion = parts.insert( std::move( record ) );
+            if( !insertion.inserted ) {
+                // Keep the stronger existing fire with its source and start time.
+                // Legacy duplicates are not new applications: don't add their durations.
+                effect &duplicate = insertion.node.mapped();
+                effect &existing = insertion.position->second;
+                if( stronger_fire( duplicate, existing ) ) {
+                    fire_write_watch::follow( *this, existing, actual_part, &duplicate );
+                    existing = std::move( duplicate );
+                } else {
+                    fire_write_watch::follow( *this, duplicate, actual_part, &existing );
+                }
+            }
+        }
+    }
+    if( parts.empty() ) {
+        effects->erase( fire );
+    }
+}
+
+bool Creature::remove_effect( const efftype_id &requested_id, bodypart_id bp )
+{
+    return remove_effect_impl( requested_id, bp, nullptr );
+}
+
+bool Creature::remove_effect_impl( const efftype_id &requested_id, bodypart_id bp,
+                                   const character_action_guard *pain_target,
+                                   const std::map<bodypart_id, std::uint64_t> *pain_effects,
+                                   std::optional<std::uint64_t> expiry_generation )
+{
+    effect_generations originals;
+    const auto expired = []( const effect &e ) {
+        return e.get_duration() <= 0_turns || e.get_intensity() <= 0;
+    };
+    const auto group = effects->find( requested_id );
+    if( group == effects->end() ) {
         return false;
     }
-    const effect_type &type = eff_id.obj();
+    // Explicit bp_null removal remains bulk; a queued expiry can name the null key itself.
+    const bool exact = expiry_generation || bp != bodypart_str_id::NULL_ID();
+    const auto &initial_parts = group->second;
+    const auto first = exact ? initial_parts.find( bp ) : initial_parts.begin();
+    const auto last = exact && first != initial_parts.end() ? std::next( first ) : initial_parts.end();
+    Character *const character = as_character();
+    bool changes_felt_pain = false;
+    for( auto it = first; it != last; ++it ) {
+        const auto &[key, e] = *it;
+        const std::uint64_t generation = e.identity_generation();
+        if( pain_effects ) {
+            const auto saved = pain_effects->find( key );
+            if( saved == pain_effects->end() || saved->second != generation ) {
+                continue;
+            }
+        }
+        if( !expiry_generation || ( *expiry_generation == generation && expired( e ) ) ) {
+            originals.push_back( generation );
+            if( character && !pain_target && !changes_felt_pain ) {
+                changes_felt_pain = Character::is_pain_effect( requested_id, key );
+            }
+        }
+    }
+    if( originals.empty() ) {
+        return false;
+    }
+    const safe_reference<Creature> creature_reference = get_safe_reference();
+    const auto was_present = [&originals]( const effect &e ) {
+        return std::find( originals.begin(), originals.end(), e.identity_generation() ) !=
+               originals.end();
+    };
+    const effect_type &type = requested_id.obj();
+    const efftype_id &eff_id = type.id;
+    std::optional<Character::pain_reaction_scope> pain_reaction;
+    const auto target_valid = [&creature_reference, &pain_reaction, pain_target]() {
+        return creature_reference && ( !pain_target || *pain_target ) &&
+               ( !pain_reaction || pain_reaction->lifetime() );
+    };
 
-    if( Character *ch = as_character() ) {
+    if( Character *ch = character ) {
+        if( changes_felt_pain ) {
+            pain_reaction.emplace( *ch );
+        }
         if( is_avatar() ) {
             if( !type.get_remove_message().empty() ) {
                 add_msg( type.lose_game_message_type( get_effect( eff_id, bp.id() ).get_intensity() ),
                          type.get_remove_message() );
             }
         }
-        get_event_bus().send<event_type::character_loses_effect>( ch->getID(), bp.id(), eff_id );
+        const auto send_loss_event = [&]() {
+            get_event_bus().send<event_type::character_loses_effect>( ch->getID(), bp.id(), type.id );
+        };
+        if( eff_id == effect_onfire ) {
+            // The loss event can alter anatomy before the exact key is erased.
+            const bool was_deferred = std::exchange( defer_onfire_normalization, true );
+            const on_out_of_scope restore_defer( [&creature_reference, was_deferred]() {
+                if( Creature *live = creature_reference.get() ) {
+                    live->defer_onfire_normalization = was_deferred;
+                }
+            } );
+            const pending_fire_removal pending{ creature_reference, originals, active_fire_removal };
+            const restore_on_out_of_scope restore_removal( active_fire_removal );
+            active_fire_removal = &pending;
+            send_loss_event();
+        } else {
+            send_loss_event();
+        }
+        if( !target_valid() ) {
+            return !pain_target;
+        }
     }
 
     const bool dispatch_character_hook =
@@ -2114,42 +2567,45 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
         type.has_flag( flag_EFFECT_LUA_ON_REMOVED ) &&
         as_monster() != nullptr &&
         cata::lua_platform::has_native_hook( "on_mon_effect_removed" );
-    std::vector<std::string> removed_body_parts;
-    if( dispatch_character_hook || dispatch_monster_hook ) {
-        if( bp == bodypart_str_id::NULL_ID() ) {
-            removed_body_parts.reserve(
-                ( *effects )[eff_id].size() );
-            for( const auto &entry : ( *effects )[eff_id] ) {
-                removed_body_parts.push_back(
-                    entry.first == bodypart_str_id::NULL_ID() ?
-                    std::string() : entry.first.id().str() );
+
+    // The loss event may have erased or replaced these records. Detach only the
+    // original instances before running any further callbacks.
+    std::map<bodypart_id, effect> removed;
+    if( const auto live = effects->find( eff_id ); live != effects->end() ) {
+        auto &parts = live->second;
+        auto it = exact ? parts.find( bp ) : parts.begin();
+        const auto end = exact && it != parts.end() ? std::next( it ) : parts.end();
+        while( it != end ) {
+            const auto current = it++;
+            // Once a fire loss is announced, only replacing the instance can outlive it.
+            if( was_present( current->second ) &&
+                ( eff_id == effect_onfire || !expiry_generation || expired( current->second ) ) ) {
+                removed.insert( parts.extract( current ) );
             }
-        } else {
-            removed_body_parts.push_back(
-                bp == bodypart_str_id::NULL_ID() ?
-                std::string() : bp.id().str() );
+        }
+        if( parts.empty() ) {
+            effects->erase( live );
         }
     }
-
-    // bp_null means remove all of a given effect id
-    if( bp == bodypart_str_id::NULL_ID() ) {
-        for( auto &it : ( *effects )[eff_id] ) {
-            on_effect_int_change( eff_id, 0, it.first );
+    for( const auto &entry : removed ) {
+        on_effect_int_change( eff_id, 0, entry.first );
+        if( !target_valid() ) {
+            return true;
         }
-        effects->erase( eff_id );
-    } else {
-        ( *effects )[eff_id].erase( bp.id() );
-        on_effect_int_change( eff_id, 0, bp );
-        // If there are no more effects of a given type remove the type map
-        if( ( *effects )[eff_id].empty() ) {
-            effects->erase( eff_id );
-        }
+    }
+    if( eff_id == effect_onfire && onfire_normalization_pending && !defer_onfire_normalization ) {
+        normalize_onfire_effects();
+    }
+    if( !dispatch_character_hook && !dispatch_monster_hook ) {
+        return !pain_target || !removed.empty();
     }
 
     const char *hook_name = dispatch_character_hook ?
                             "on_character_effect_removed" :
                             "on_mon_effect_removed";
-    for( const std::string &body_part : removed_body_parts ) {
+    for( const auto &entry : removed ) {
+        const std::string body_part = entry.first == bodypart_str_id::NULL_ID() ?
+                                      std::string() : entry.first.id().str();
         cata::lua_platform::native_callback_arguments payload = {
             {
                 "effect", cata::lua_platform::native_callback_id {
@@ -2175,12 +2631,12 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
         }
         cata::lua_platform::dispatch_native_hook(
             hook_name, payload );
-        if( creature_reference.get() == nullptr ) {
+        if( !target_valid() ) {
             return true;
         }
     }
 
-    return true;
+    return !pain_target || !removed.empty();
 }
 bool Creature::remove_effect( const efftype_id &eff_id )
 {
@@ -2313,58 +2769,132 @@ int Creature::get_effect_int( const efftype_id &eff_id, const bodypart_id &bp ) 
 
     return 0;
 }
-void Creature::process_effects()
+bool Creature::process_effects()
 {
     map &here = get_map();
 
-    // id's and body_part's of all effects to be removed. If we ever get player or
-    // monster specific removals these will need to be moved down to that level and then
-    // passed in to this function.
-    std::vector<efftype_id> rem_ids;
-    std::vector<bodypart_id> rem_bps;
+    struct queued_removal {
+        efftype_id id;
+        bodypart_id part;
+        std::optional<std::uint64_t> expiry_generation;
+    };
+    std::vector<queued_removal> removals;
+    std::optional<Character::pain_reaction_scope> pain_reaction;
 
-    // Decay/removal of effects
-    for( auto &elem : *effects ) {
-        for( auto &_it : elem.second ) {
-            // Do not freeze the effect with the FREEZE_EFFECTS flag.
-            if( has_flag( json_flag_FREEZE_EFFECTS ) &&
-                !_it.second.has_flag( json_flag_FREEZE_EFFECTS ) ) {
-                continue;
-            }
-            // Add any effects that others remove to the removal list
-            for( const auto &removed_effect : _it.second.get_removes_effects() ) {
-                rem_ids.push_back( removed_effect );
-                rem_bps.emplace_back( bodypart_str_id::NULL_ID() );
-            }
-            effect &e = _it.second;
-            const int prev_int = e.get_intensity();
-            // Run decay effects, marking effects for removal as necessary.
-            e.decay( rem_ids, rem_bps, calendar::turn, is_avatar(), *effects );
+    // Decay and removal callbacks can change anatomy. Keep the old onfire keys
+    // until the traversal and all expirations queued against those keys are done.
+    const safe_reference<Creature> self = get_safe_reference();
+    const bool was_deferred = std::exchange( defer_onfire_normalization, true );
+    on_out_of_scope restore_defer( [&self, was_deferred]() {
+        if( Creature *live = self.get() ) {
+            live->defer_onfire_normalization = was_deferred;
+        }
+    } );
 
-            if( e.get_intensity() != prev_int && e.get_duration() > 0_turns ) {
-                on_effect_int_change( e.get_id(), e.get_intensity(), e.get_bp() );
+    const auto decay = [&]( effect &e, const effect_record_key *fire ) {
+        if( has_flag( json_flag_FREEZE_EFFECTS ) && !e.has_flag( json_flag_FREEZE_EFFECTS ) ) {
+            return true;
+        }
+        for( const efftype_id &removed_effect : e.get_removes_effects() ) {
+            removals.push_back( { removed_effect, bodypart_str_id::NULL_ID(), std::nullopt } );
+        }
+        const int prev_int = e.get_intensity();
+        const int decay_tick = e.get_int_decay_tick();
+        if( Character *ch = as_character();
+            ch && !pain_reaction &&
+            ( e.get_duration() <= 1_turns || e.get_int_dur_factor() > 0_turns ||
+              ( decay_tick != 0 && to_turn<int>( calendar::turn ) % decay_tick == 0 ) ) &&
+            Character::is_pain_relief_effect( e.get_id(), e.get_bp() ) ) {
+            // Thermal analgesia can stop contributing before its record is removed.
+            pain_reaction.emplace( *ch );
+        }
+        if( e.decay( calendar::turn, is_avatar(), *effects ) ) {
+            const bodypart_id part = fire ? bodypart_id( fire->part ) : e.get_bp();
+            const bool exact_expiry = fire || ( as_character() &&
+                                      Character::is_pain_effect( e.get_id(), part ) );
+            std::optional<std::uint64_t> generation;
+            if( exact_expiry ) {
+                generation = fire ? fire->generation : e.identity_generation();
             }
+            removals.push_back( { e.get_id(), part, generation } );
+        }
 
-            const bool reduced = resists_effect( e );
-            if( e.kill_roll( reduced ) ) {
-                add_msg_if_player( m_bad, e.get_death_message() );
-                if( is_avatar() ) {
-                    std::map<std::string, cata_variant> event_data;
-                    std::pair<std::string, cata_variant> data_obj( "character",
-                            cata_variant::make<cata_variant_type::character_id>( as_character()->getID() ) );
-                    event_data.insert( data_obj );
-                    cata::event sent( e.death_event(), calendar::turn, std::move( event_data ) );
-                    get_event_bus().send( sent );
+        effect *live = &e;
+        if( e.get_intensity() != prev_int && e.get_duration() > 0_turns ) {
+            on_effect_int_change( e.get_id(), e.get_intensity(), e.get_bp() );
+            if( !self || ( pain_reaction && !pain_reaction->lifetime() ) ) {
+                return false;
+            }
+            if( fire ) {
+                live = find_effect_record( effect_onfire, *fire );
+            }
+        }
+        if( live && live->kill_roll( resists_effect( *live ) ) ) {
+            const effect_source source = live->get_source();
+            add_msg_if_player( m_bad, live->get_death_message() );
+            if( is_avatar() ) {
+                std::map<std::string, cata_variant> event_data;
+                event_data.emplace( "character",
+                                    cata_variant::make<cata_variant_type::character_id>( as_character()->getID() ) );
+                cata::event sent( live->death_event(), calendar::turn, std::move( event_data ) );
+                get_event_bus().send( sent );
+                if( !self ) {
+                    return false;
                 }
-                die( &here, e.get_source().resolve_creature() );
             }
+            die( &here, source.resolve_creature() );
+        }
+        return self && ( !pain_reaction || pain_reaction->lifetime() );
+    };
+
+    for( auto it = effects->begin(); it != effects->end(); ) {
+        if( it->first == effect_onfire ) {
+            small_literal_vector<effect_record_key, 4, size_t> fires;
+            for( const auto &[key, e] : it->second ) {
+                fires.push_back( effect_record_key{ key.to_i(), e.identity_generation() } );
+            }
+            for( const effect_record_key &fire : fires ) {
+                if( effect *e = find_effect_record( effect_onfire, fire ) ) {
+                    if( !decay( *e, &fire ) ) {
+                        return false;
+                    }
+                }
+            }
+            it = effects->upper_bound( effect_onfire );
+        } else {
+            for( auto &entry : it->second ) {
+                if( !decay( entry.second, nullptr ) ) {
+                    return false;
+                }
+            }
+            ++it;
         }
     }
 
-    // Actually remove effects. This should be the last thing done in process_effects().
-    for( size_t i = 0; i < rem_ids.size(); ++i ) {
-        remove_effect( rem_ids[i], rem_bps[i] );
+    // Remove expired effects before letting any fire records change keys.
+    for( const queued_removal &removal : removals ) {
+        if( Character *ch = as_character();
+            ch && !pain_reaction && has_effect( removal.id, removal.part ) &&
+            Character::is_pain_effect( removal.id, removal.part ) ) {
+            pain_reaction.emplace( *ch );
+        }
+        remove_effect_impl( removal.id, removal.part,
+                            pain_reaction ? &pain_reaction->lifetime() : nullptr, nullptr,
+                            removal.expiry_generation );
+        if( !self || ( pain_reaction && !pain_reaction->lifetime() ) ) {
+            return false;
+        }
     }
+    defer_onfire_normalization = was_deferred;
+    if( onfire_normalization_pending && !was_deferred ) {
+        normalize_onfire_effects();
+    }
+    restore_defer.cancel();
+    if( pain_reaction ) {
+        pain_reaction->finish();
+        return pain_reaction->lifetime().get_alive() != nullptr;
+    }
+    return true;
 }
 
 bool Creature::resists_effect( const effect &e ) const
@@ -2631,6 +3161,7 @@ void Creature::set_body()
     for( const bodypart_id &bp : get_anatomy()->get_bodyparts() ) {
         body.emplace( bp.id(), bodypart( bp.id() ) );
     }
+    normalize_onfire_effects();
 }
 
 bool Creature::has_part( const bodypart_id &id, body_part_filter filter ) const
@@ -2714,11 +3245,12 @@ bodypart_id Creature::get_part_id( const bodypart_id &id,
     if( filter >= body_part_filter::next_best ) {
         for( const std::pair<const bodypart_str_id, bodypart> &bp : body ) {
             for( const std::pair<const bp_type, float> &mp : bp.first->limbtypes ) {
-                // if the secondary limb type matches and is better than the current
-                if( mp.first == id->primary_limb_type() && mp.second > best.second ) {
-                    // give an inflated bonus if the part sides match
-                    float bonus = id->part_side == bp.first->part_side ? 1.0f : 0.0f;
-                    best = { bp.first, mp.second + bonus };
+                if( mp.first != id->primary_limb_type() || mp.second <= 0.0f ) {
+                    continue;
+                }
+                const float score = mp.second + ( id->part_side == bp.first->part_side ? 1.0f : 0.0f );
+                if( score > best.second ) {
+                    best = { bp.first, score };
                 }
             }
         }
@@ -2824,10 +3356,18 @@ float Creature::get_part_wetness_percentage( const bodypart_id &id ) const
 
 void Creature::set_part_hp_cur( const bodypart_id &id, int set )
 {
-    bool was_broken = is_avatar() && as_character()->is_limb_broken( id );
+    onfire_limb_watch *const fire = onfire_limb_watch::for_creature( *this );
+    const bool avatar = is_avatar();
+    const bool check_break = avatar || fire;
+    const bool was_broken = check_break && as_character()->is_limb_broken( id );
     set_part_helper( *this, id, &bodypart::set_hp_cur, set );
-    if( !was_broken && is_avatar() && as_character()->is_limb_broken( id ) ) {
-        get_event_bus().send<event_type::broken_bone>( as_character()->getID(), id );
+    if( check_break && !was_broken && as_character()->is_limb_broken( id ) ) {
+        if( fire ) {
+            fire->record_break( id );
+        }
+        if( avatar ) {
+            get_event_bus().send<event_type::broken_bone>( as_character()->getID(), id );
+        }
     }
 }
 
@@ -2883,10 +3423,18 @@ void Creature::set_part_mut_drench( const bodypart_id &id, std::pair<water_toler
 
 void Creature::mod_part_hp_cur( const bodypart_id &id, int mod )
 {
-    bool was_broken = is_avatar() && as_character()->is_limb_broken( id );
+    onfire_limb_watch *const fire = onfire_limb_watch::for_creature( *this );
+    const bool avatar = is_avatar();
+    const bool check_break = avatar || fire;
+    const bool was_broken = check_break && as_character()->is_limb_broken( id );
     set_part_helper( *this, id, &bodypart::mod_hp_cur, mod );
-    if( !was_broken && is_avatar() && as_character()->is_limb_broken( id ) ) {
-        get_event_bus().send<event_type::broken_bone>( as_character()->getID(), id );
+    if( check_break && !was_broken && as_character()->is_limb_broken( id ) ) {
+        if( fire ) {
+            fire->record_break( id );
+        }
+        if( avatar ) {
+            get_event_bus().send<event_type::broken_bone>( as_character()->getID(), id );
+        }
     }
 }
 
@@ -3826,35 +4374,36 @@ std::unique_ptr<talker> get_talker_for( Creature *me )
 
 void Creature::migrate_effects()
 {
-    std::vector<efftype_id> removed_effects;
     effects_map new_effects;
+    for( auto it = effects->begin(); it != effects->end(); ) {
+        auto &[eff_id, bp_effect_map] = *it;
+        const effect_migration *migration = effect_migration::find_migration( eff_id );
+        if( migration && !migration->id_new ) {
+            it = effects->erase( it );
+            continue;
+        }
 
-    for( const auto &[eff_id, bp_effect_map] : *effects ) {
-        const effect_migration *em = effect_migration::find_migration( eff_id );
-
-        if( em != nullptr ) {
-            if( em->id_new.has_value() ) {
-                // if new id is presented, make new bp_effect_map, nuke old one, insert new one
-                std::map<bodypart_id, effect> new_bp_effect_map;
-                for( const auto &[bp_id, eff] : bp_effect_map ) {
-                    effect new_effect( eff.get_source(), &em->id_new.value().obj(), eff.get_duration(), bp_id.id(),
-                                       eff.is_permanent(), eff.get_intensity(), eff.get_start_time() );
-                    new_bp_effect_map.emplace( bp_id, new_effect );
-                }
-
-                removed_effects.emplace_back( eff_id );
-                new_effects.emplace( em->id_new.value(), new_bp_effect_map );
+        // A retired payload can be null even if its outer map key isn't retired.
+        for( auto part = bp_effect_map.begin(); part != bp_effect_map.end(); ) {
+            if( part->second.is_null() ) {
+                part = bp_effect_map.erase( part );
             } else {
-                // if no id_new, just nuke entire effect from character
-                removed_effects.emplace_back( eff_id );
+                ++part;
             }
         }
+        if( bp_effect_map.empty() ) {
+            it = effects->erase( it );
+        } else if( migration ) {
+            const effect_type &new_type = migration->id_new->obj();
+            for( auto &[bp_id, eff] : bp_effect_map ) {
+                eff = effect( eff.get_source(), &new_type, eff.get_duration(), bp_id.id(),
+                              eff.is_permanent(), eff.get_intensity(), eff.get_start_time() );
+            }
+            new_effects.emplace( *migration->id_new, std::move( bp_effect_map ) );
+            it = effects->erase( it );
+        } else {
+            ++it;
+        }
     }
-
-    for( const efftype_id e : removed_effects ) {
-        effects->erase( e );
-    }
-
     effects->merge( new_effects );
-
 }

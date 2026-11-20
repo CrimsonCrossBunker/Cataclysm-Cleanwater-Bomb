@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:df213581fe05c71a48bc20ac5881ad739b9441ef991c4f2f96da790f80db7982",
+    "source_fingerprint": "sha256:1aef0c74611a4f8db0c77373cfb8b3b1c4eafc2cac52f1992abaaaddd952961a",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -17,20 +17,19 @@
   "summary": {
     "registration_calls": 194,
     "registered_types": 193,
-    "observed_types": 186,
-    "registered_and_observed": 186,
+    "observed_types": 187,
+    "registered_and_observed": 187,
     "registered_not_observed": [
       "TRAIT_BLACKLIST",
       "WORLD_OPTION",
       "colordef",
       "sound_effect_preload",
       "spell_migration",
-      "wound",
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6883,
-    "top_level_objects": 97862,
+    "tracked_json_files": 6884,
+    "top_level_objects": 97881,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -820,7 +819,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3813
+            "line": 3913
           }
         ],
         "confidence": "lexical_only"
@@ -2432,7 +2431,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_FLAGS.md",
-            "line": 685
+            "line": 688
           }
         ],
         "confidence": "lexical_only"
@@ -2988,7 +2987,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8,
+        "occurrences": 9,
         "examples": [
           {
             "path": "data/json/obsoletion_and_migration_0.J/obsolete_effects.json",
@@ -3047,7 +3046,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5639,
+        "occurrences": 5643,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3086,7 +3085,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 114,
+              "line": 115,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3097,7 +3096,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 110,
+              "line": 111,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3108,7 +3107,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 118,
+              "line": 119,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3119,7 +3118,7 @@
             "default_expression": "eoc_type::NUM_EOC_TYPES",
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 98,
+              "line": 99,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3130,7 +3129,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 120,
+              "line": 121,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3141,7 +3140,7 @@
             "default_expression": "false",
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 126,
+              "line": 127,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3152,7 +3151,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 97,
+              "line": 98,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3163,7 +3162,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 104,
+              "line": 105,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3174,7 +3173,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 132,
+              "line": 133,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3185,7 +3184,7 @@
             "default_expression": "false",
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 125,
+              "line": 126,
               "symbol": "effect_on_condition::load"
             }
           }
@@ -3216,7 +3215,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1693,
+        "occurrences": 1700,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -3299,7 +3298,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5828
+            "line": 5928
           }
         ],
         "confidence": "lexical_only"
@@ -3766,7 +3765,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5366
+            "line": 5466
           }
         ],
         "confidence": "lexical_only"
@@ -4676,7 +4675,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 931,
+        "occurrences": 936,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -5656,7 +5655,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4421
+            "line": 4521
           }
         ],
         "confidence": "lexical_only"
@@ -9195,7 +9194,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4363
+            "line": 4463
           }
         ],
         "confidence": "lexical_only"
@@ -9362,7 +9361,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3967
+            "line": 4067
           }
         ],
         "confidence": "lexical_only"
@@ -9652,7 +9651,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4314
+            "line": 4414
           }
         ],
         "confidence": "lexical_only"
@@ -9888,7 +9887,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5563
+            "line": 5663
           }
         ],
         "confidence": "lexical_only"
@@ -11221,8 +11220,13 @@
         "note": "No general validator-backed Schema exists for this object type."
       },
       "documentation": {
-        "status": "not_found",
-        "evidence": [],
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/NPCs.md",
+            "line": 1496
+          }
+        ],
         "confidence": "lexical_only"
       },
       "field_contract": {
@@ -11255,8 +11259,13 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 0,
-        "examples": [],
+        "occurrences": 2,
+        "examples": [
+          {
+            "path": "data/json/thermal_wounds.json",
+            "pointer": "/0"
+          }
+        ],
         "contract_roots": [
           "data/core",
           "data/json",

@@ -1182,6 +1182,8 @@ void weather_manager::update_weather()
         temperature = w.temperature;
         winddirection = wind_direction_override ? *wind_direction_override : w.winddirection;
         windspeed = windspeed_override ? *windspeed_override : w.windpower;
+        // NPC activation and turn-start events can already have sampled the old weather.
+        clear_local_temp_cache();
         lightning_active = false;
         nextweather = calendar::turn + rng( weather_id->duration_min, weather_id->duration_max );
         if( w.climate_precipitation_mm_per_hour && eternal_weather_option == "normal" &&
@@ -1605,17 +1607,24 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
         return *forced_temperature;
     }
 
-    const auto &cached = temperature_cache.find( location );
+    map &here = get_map();
+    const tripoint_abs_sm origin = here.get_abs_sub();
+    if( temperature_cache_map.get() != &here || temperature_cache_origin != origin ) {
+        clear_local_temp_cache();
+        temperature_cache_map = here.get_context_reference();
+        temperature_cache_origin = origin;
+    }
+    const tripoint_abs_ms absolute = here.get_abs( location );
+    const auto cached = temperature_cache.find( absolute );
     if( cached != temperature_cache.end() ) {
         return cached->second;
     }
 
     units::temperature temp = location.z() < 0 ?
-                              get_area_temperature( project_to<coords::omt>( get_map().get_abs( location ) ) ) :
+                              get_area_temperature( project_to<coords::omt>( absolute ) ) :
                               temperature;
 
     if( !g->new_game && !g->swapping_dimensions ) {
-        const map &here = get_map();
         const tripoint_bub_ms player = get_player_character().pos_bub();
         if( location.z() >= 0 && here.inbounds( location ) && north_america::elevation_active() ) {
             const double current = north_america::altitude_at( here, location );
@@ -1648,7 +1657,7 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
         temp_mod = get_heat_radiation( location );
         temp_mod += get_convection_temperature( location );
         temp_mod += get_room_heat( here, location, player );
-        temp_mod += get_map().get_temperature_mod( location );
+        temp_mod += here.get_temperature_mod( location );
         if( location.z() >= 0 || !north_america::active() ) {
             temp_mod += weather_id->temperature_modifier;
         }
@@ -1656,7 +1665,7 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
         temp += temp_mod;
     }
 
-    temperature_cache.emplace( location, temp );
+    temperature_cache.emplace( absolute, temp );
     return temp;
 }
 
@@ -1712,9 +1721,14 @@ units::temperature weather_manager::get_area_temperature( const tripoint_abs_omt
     return entry->second;
 }
 
-void weather_manager::clear_temp_cache()
+void weather_manager::clear_local_temp_cache()
 {
     temperature_cache.clear();
+}
+
+void weather_manager::clear_temp_cache()
+{
+    clear_local_temp_cache();
     ground_temperature_cache.clear();
 }
 

@@ -41,6 +41,7 @@
 #include "auto_pickup.h"
 #include "avatar.h"
 #include "cata_assert.h"
+#include "cata_scope_helpers.h"
 #include "basecamp.h"
 #include "bodypart.h"
 #include "catacharset.h"
@@ -147,6 +148,7 @@ static const efftype_id effect_pkill_l( "pkill_l" );
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_riding( "riding" );
 static const efftype_id effect_sleep( "sleep" );
+static const efftype_id effect_wet( "wet" );
 
 static const faction_id faction_amf( "amf" );
 static const faction_id faction_no_faction( "no_faction" );
@@ -3743,27 +3745,56 @@ void npc::on_unload()
     retire_npc_lifetime( *this );
 }
 
-void npc::update_bodytemp_and_wetness()
+bool npc::npc_update_body()
 {
-    if( needs_food() ) {
-        update_bodytemp();
-        update_body_wetness( *get_weather().weather_precise );
+    if( activating || last_live_environment_update == calendar::turn ) {
+        return true;
     }
-}
+    const bool consecutive_turn = calendar::turn - last_live_environment_update == 1_turns;
+    last_live_environment_update = calendar::turn;
 
-// A throtled version of player::update_body since npc's don't need to-the-turn updates.
-void npc::npc_update_body()
-{
-    if( calendar::once_every( 10_seconds ) ) {
+    const bool body_tick = calendar::once_every( 10_seconds );
+    if( body_tick ) {
         update_body( last_updated, calendar::turn );
         last_updated = calendar::turn;
-        update_bodytemp_and_wetness();
+    }
+
+    if( !update_live_bodytemp( body_tick, consecutive_turn ) ) {
+        return false;
+    }
+    // Dry NPCs can skip evaporation unless wetness effects still need clearing.
+    if( is_underwater() || has_effect( effect_wet ) || has_atleast_one_wet_part() ) {
+        update_body_wetness( *get_weather().weather_precise );
+    }
+
+    if( body_tick ) {
         reconcile_schedule();
     }
+    return true;
 }
 
 void npc::on_load( map *here )
 {
+    const safe_reference<Creature> activation_actor = get_safe_reference();
+    const character_id activation_id = getID();
+    const auto original_npc = [&activation_actor, activation_id]() -> npc * {
+        Creature *live = activation_actor.get();
+        npc *original = live ? live->as_npc() : nullptr;
+        return original && original->getID() == activation_id ? original : nullptr;
+    };
+    const bool was_activating = activating;
+    const on_out_of_scope restore_activating( [&original_npc, was_activating]() {
+        if( npc *original = original_npc() ) {
+            original->activating = was_activating;
+        }
+    } );
+    activating = true;
+
+    // Catch-up effects can deal damage before the normal load hooks run.
+    // They belong to the new incarnation, not any handle from before unload.
+    activate_npc_lifetime( *this );
+    const character_action_guard lifetime( *this );
+
     update_ai_map_origin( *here );
     autonomy = npc_autonomy_state{};
     // Reconcile only changed traits; an unchanged personality must not
@@ -3815,16 +3846,22 @@ void npc::on_load( map *here )
     }
     for( ; cur < calendar::turn; cur += 1_turns ) {
         update_body( cur, cur + 1_turns );
-        process_effects();
+        {
+            const bool was_replaying = replaying_effects_on_load;
+            const on_out_of_scope restore_replay( [&original_npc, was_replaying]() {
+                if( npc *original = original_npc() ) {
+                    original->replaying_effects_on_load = was_replaying;
+                }
+            } );
+            replaying_effects_on_load = true;
+            if( !process_effects() || !lifetime ) {
+                return;
+            }
+        }
         if( ( cur - calendar::turn_zero ) % 1_minutes == 0_turns ) {
             update_mental_focus();
         }
     }
-
-    // Reconcile body temperature and wetness with current weather.
-    // The catch-up loops above ran update_body() but not update_bodytemp();
-    // one recompute at current conditions is enough since temp converges fast.
-    update_bodytemp_and_wetness();
 
     if( dt > 0_turns ) {
         // This ensures food is properly rotten at load
@@ -3868,6 +3905,10 @@ void npc::on_load( map *here )
     if( has_trait( trait_HALLUCINATION ) ) {
         hallucination = true;
     }
+    // Refresh targets after item processing and placement, without spending a live turn.
+    bodytemp_target_environment.reset();
+    refresh_bodytemp();
+
     effect_on_conditions::load_existing_character( *this );
 
     // Migrate legacy camp assignees from GUARD_ALLY to CAMP_RESIDENT.
@@ -3899,12 +3940,9 @@ void npc::on_load( map *here )
     reconcile_schedule_on_load();
     shop_restock();
 
-    // An unloaded NPC may retain its native address and stable id.  Register
-    // the new active lifetime before publishing any Platform load payload.
-    if( !getID().is_valid() || is_dead() ) {
+    if( !getID().is_valid() || !lifetime ) {
         return;
     }
-    activate_npc_lifetime( *this );
     overmap_buffer.platform_register_npc( *this );
     overmap_buffer.reconcile_platform_camp_tasks();
 
@@ -3945,15 +3983,17 @@ bool npc::dispose_item( item_location &&obj, const std::string & )
     return true;
 }
 
-void npc::process_turn()
+bool npc::process_turn()
 {
     const bool player_controlled = is_player_controlled();
-    Character::process_turn();
+    if( !Character::process_turn() ) {
+        return false;
+    }
 
     if( player_controlled ) {
         // The native NPC representation does not grant a controlled player
         // free stamina or autonomous follower-opinion updates.
-        return;
+        return true;
     }
 
     // NPCs shouldn't be using stamina, but if they have, set it back to max
@@ -3993,6 +4033,7 @@ void npc::process_turn()
 
     // TODO: Add decreasing trust/value/etc. here when player doesn't provide food
     // TODO: Make NPCs leave the player if there's a path out of map and player is sleeping/unseen/etc.
+    return true;
 }
 
 bool npc::invoke_item( item *used, const tripoint_bub_ms &pt, int )

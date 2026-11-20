@@ -6,12 +6,14 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
+#include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
@@ -28,6 +30,7 @@
 #include "debug.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
+#include "effect.h"
 #include "effect_on_condition.h"
 #include "enums.h"
 #include "field_type.h"
@@ -46,6 +49,7 @@
 #include "map_iterator.h"
 #include "map_selector.h"
 #include "mapdata.h"
+#include "math_parser.h"
 #include "math_parser_diag_value.h"
 #include "memory_fast.h"
 #include "messages.h"
@@ -65,6 +69,7 @@
 #include "units.h"
 #include "value_ptr.h"
 #include "weather.h"
+#include "wound.h"
 
 #if defined(LOCALIZE)
     #include "translation_manager.h"
@@ -76,8 +81,16 @@ static const activity_id ACT_ADD_VARIABLE_COMPLETE( "ACT_ADD_VARIABLE_COMPLETE" 
 static const activity_id ACT_ADD_VARIABLE_DURING( "ACT_ADD_VARIABLE_DURING" );
 static const activity_id ACT_GENERIC_EOC( "ACT_GENERIC_EOC" );
 
+static const bionic_id bio_test_bio_limb_leg_l( "test_bio_limb_leg_l" );
+static const bodypart_str_id body_part_test_bionic_basic_leg_l( "test_bionic_basic_leg_l" );
+
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_bullet( "bullet" );
+
+static const efftype_id effect_incorporeal( "incorporeal" );
+
+static const wound_type_id wound_thermal_blister( "thermal_blister" );
+static const wound_type_id wound_thermal_burn( "thermal_burn" );
 
 static const effect_on_condition_id
 effect_on_condition_EOC_MARLOSS_BERRY_CONSUME( "EOC_MARLOSS_BERRY_CONSUME" );
@@ -625,6 +638,276 @@ TEST_CASE( "EOC_math_integration", "[eoc][math_parser]" )
     get_avatar().set_stamina( 0 );
     effect_on_condition_EOC_math_weighted_list->activate( d );
     CHECK( globvars.get_global_value( "weighted_var" ) == 1 );
+}
+
+TEST_CASE( "EOC_pain_recovery_does_not_store_wound_pain", "[eoc][pain]" )
+{
+    const int tier = GENERATE( 1, 2, 3 );
+    CAPTURE( tier );
+    const std::string trait = "PAINREC" + std::to_string( tier );
+    const effect_on_condition_id recovery( trait + "_EOC" );
+    REQUIRE( recovery.is_valid() );
+
+    avatar patient;
+    patient.set_body();
+    patient.toggle_trait( trait_id( trait ) );
+    bodypart &arm = *patient.get_part( body_part_arm_l );
+    arm.add_wound( wound_thermal_burn );
+    const int wound_pain = patient.get_pain();
+    REQUIRE( wound_pain > 0 );
+
+    const int recovered_per_tick = tier + 2;
+    patient.set_pain( recovered_per_tick + 1 );
+    patient.set_painkiller( 1 );
+    dialogue d( get_talker_for( patient ), nullptr );
+    math_exp raw;
+    REQUIRE( raw.parse( "u_pain()" ) );
+    math_exp base;
+    REQUIRE( base.parse( "u_pain('type': 'base')" ) );
+
+    REQUIRE( recovery->activate( d ) );
+    CHECK( base.eval( d ) == 1 );
+    CHECK( raw.eval( d ) == wound_pain + 1 );
+    CHECK( patient.get_perceived_pain() == wound_pain );
+
+    REQUIRE( recovery->activate( d ) );
+    CHECK( base.eval( d ) == 0 );
+    CHECK( raw.eval( d ) == wound_pain );
+    CHECK( patient.get_perceived_pain() == wound_pain - 1 );
+    CHECK_FALSE( recovery->activate( d ) );
+    CHECK( arm.has_wound( wound_thermal_burn ) );
+}
+
+TEST_CASE( "EOC_base_pain_writes_monster_talker", "[eoc][math_parser][pain]" )
+{
+    monster zombie( mon_zombie );
+    dialogue d( std::make_unique<talker>(), get_talker_for( zombie ) );
+    math_exp base;
+    REQUIRE( base.parse( "n_pain('type': 'base')" ) );
+    math_exp write;
+
+    REQUIRE( write.parse( "n_pain('type': 'base') = 7" ) );
+    write.eval( d );
+    CHECK( zombie.get_pain() == 7 );
+    CHECK( base.eval( d ) == 7 );
+
+    REQUIRE( write.parse( "n_pain('type': 'base')++" ) );
+    write.eval( d );
+    CHECK( zombie.get_pain() == 8 );
+
+    REQUIRE( write.parse( "n_pain('type': 'base') -= 3" ) );
+    write.eval( d );
+    CHECK( zombie.get_pain() == 5 );
+
+    REQUIRE( write.parse( "n_pain('type': 'base') = -1" ) );
+    write.eval( d );
+    CHECK( zombie.get_pain() == 0 );
+}
+
+TEST_CASE( "EOC_base_pain_ignores_missing_talker", "[eoc][math_parser][pain]" )
+{
+    monster zombie( mon_zombie );
+    zombie.set_pain( 7 );
+    const bool missing_beta = GENERATE( false, true );
+    CAPTURE( missing_beta );
+    dialogue d( missing_beta ? get_talker_for( zombie ) : nullptr,
+                missing_beta ? nullptr : get_talker_for( zombie ) );
+    const std::string selector = missing_beta ? "n_pain('type': 'base')" : "u_pain('type': 'base')";
+    math_exp base;
+    REQUIRE( base.parse( selector ) );
+    CHECK( base.eval( d ) == 0 );
+
+    math_exp write;
+    REQUIRE( write.parse( selector + " = 12" ) );
+    write.eval( d );
+    CHECK( zombie.get_pain() == 7 );
+
+    REQUIRE( write.parse( selector + "++" ) );
+    write.eval( d );
+    CHECK( zombie.get_pain() == 7 );
+}
+
+TEST_CASE( "EOC_thermal_wound_query_and_cure", "[eoc][math_parser][thermal_burn]" )
+{
+    REQUIRE( wound_thermal_blister.is_valid() );
+    REQUIRE( wound_thermal_burn.is_valid() );
+
+    avatar patient;
+    patient.set_body();
+    npc other;
+    other.set_body();
+    dialogue d( get_talker_for( patient ), get_talker_for( other ) );
+
+    bodypart &arm = *patient.get_part( body_part_arm_l );
+    bodypart &hand = *patient.get_part( body_part_hand_r );
+    arm.add_wound( wound_thermal_blister );
+    hand.add_wound( wound_thermal_burn );
+    other.get_part( body_part_arm_l )->add_wound( wound_thermal_burn );
+
+    const auto evaluate = [&d]( std::string_view source ) {
+        math_exp expression;
+        REQUIRE( expression.parse( source ) );
+        return expression.eval( d );
+    };
+    CHECK( evaluate( "u_wound_count('thermal_blister') + u_wound_count('thermal_burn')" ) == 2 );
+    write_var_value( var_type::context, "widget", &d, body_part_arm_l.str() );
+    CHECK( evaluate( "u_wound_count('thermal_blister', 'bodypart': _widget)" ) == 1 );
+    CHECK( evaluate( "u_wound_count('thermal_burn', 'bodypart': _widget)" ) == 0 );
+    CHECK( evaluate( "u_wound_count('thermal_burn', 'bodypart': 'head_dragonfly')" ) == 0 );
+    CHECK( evaluate( "n_wound_count('thermal_burn', 'bodypart': _widget)" ) == 1 );
+    dialogue only_patient( get_talker_for( patient ), nullptr );
+    math_exp missing_beta;
+    REQUIRE( missing_beta.parse( "n_wound_count('thermal_burn')" ) );
+    CHECK( missing_beta.eval( only_patient ) == 0 );
+
+    const auto cure = []( dialogue & context, const char *source ) {
+        talk_effect_t treatment;
+        treatment.parse_sub_effect( json_loader::from_string( source ).get_object(), "TEST_DATA" );
+        for( const talk_effect_fun_t &action : treatment.effects ) {
+            action( context );
+        }
+    };
+    cure( only_patient, R"({"npc_remove_wound":"ALL","wound_id":["thermal_blister"]})" );
+    CHECK( arm.has_wound( wound_thermal_blister ) );
+    cure( d, R"({"u_remove_wound":"ALL","wound_id":["thermal_blister"]})" );
+    CHECK_FALSE( arm.has_wound( wound_thermal_blister ) );
+    CHECK( hand.has_wound( wound_thermal_burn ) );
+    arm.add_wound( wound_thermal_blister );
+    cure( d, R"({"u_remove_wound":"ALL","wound_id":["thermal_blister","thermal_burn"]})" );
+    CHECK( evaluate( "u_wound_count('thermal_blister') + u_wound_count('thermal_burn')" ) == 0 );
+    CHECK( evaluate( "n_wound_count('thermal_burn')" ) == 1 );
+}
+
+TEST_CASE( "EOC_thermal_wound_add_uses_character_policy", "[eoc][thermal_burn]" )
+{
+    avatar patient;
+    patient.normalize();
+    npc other;
+    other.normalize();
+    dialogue d( get_talker_for( patient ), get_talker_for( other ) );
+    const auto add = [&]( const char *source ) {
+        talk_effect_t effect;
+        effect.parse_sub_effect( json_loader::from_string( source ).get_object(), "TEST_DATA" );
+        for( const talk_effect_fun_t &action : effect.effects ) {
+            action( d );
+        }
+    };
+    constexpr const char *blister = R"({"u_add_wound":"hand_l","wound_id":"thermal_blister"})";
+    constexpr const char *burn = R"({"u_add_wound":"hand_l","wound_id":"thermal_burn"})";
+    bodypart &arm = *patient.get_part( body_part_arm_l );
+    Messages::clear_messages();
+
+    SECTION( "a hand maps to its arm and only actual writes give feedback" ) {
+        add( blister );
+        REQUIRE( arm.has_wound( wound_thermal_blister ) );
+        CHECK_FALSE( patient.get_part( body_part_hand_l )->has_wounds() );
+        REQUIRE( Messages::size() == 1 );
+        CHECK( Messages::recent_messages( 1 ).back().second.find(
+                   body_part_name( body_part_arm_l ) ) != std::string::npos );
+
+        patient.update_wounds( 1_minutes );
+        add( blister );
+        REQUIRE( arm.get_wounds().size() == 1 );
+        CHECK( arm.get_wounds().front().get_healing_progress() == 1_minutes );
+        CHECK( Messages::size() == 1 );
+
+        add( burn );
+        REQUIRE( arm.get_wounds().size() == 1 );
+        CHECK( arm.has_wound( wound_thermal_burn ) );
+        CHECK_FALSE( arm.has_wound( wound_thermal_blister ) );
+        CHECK( Messages::size() == 2 );
+        add( burn );
+        add( blister );
+        CHECK( arm.get_wounds().size() == 1 );
+        CHECK( Messages::size() == 2 );
+
+        add( R"({"npc_add_wound":"hand_l","wound_id":"thermal_blister"})" );
+        CHECK( other.get_part( body_part_arm_l )->has_wound( wound_thermal_blister ) );
+        CHECK( Messages::size() == 2 );
+    }
+
+    SECTION( "protected characters do not gain a thermal wound" ) {
+        patient.add_effect( effect_incorporeal, 1_minutes );
+        REQUIRE( patient.has_effect( effect_incorporeal ) );
+        Messages::clear_messages();
+        add( burn );
+        CHECK_FALSE( arm.has_wounds() );
+        CHECK_FALSE( patient.get_part( body_part_hand_l )->has_wounds() );
+        CHECK( Messages::size() == 0 );
+    }
+
+    SECTION( "an actual bionic limb is not eligible tissue" ) {
+        patient.add_bionic( bio_test_bio_limb_leg_l );
+        REQUIRE( patient.has_part( body_part_test_bionic_basic_leg_l, body_part_filter::strict ) );
+        Messages::clear_messages();
+        add( R"({"u_add_wound":"test_bionic_basic_leg_l","wound_id":"thermal_burn"})" );
+        CHECK_FALSE( patient.get_part( body_part_test_bionic_basic_leg_l )->has_wounds() );
+        CHECK( Messages::size() == 0 );
+    }
+}
+
+TEST_CASE( "EOC_thermal_wound_cure_updates_pain_morale", "[eoc][thermal_burn]" )
+{
+    static const trait_id trait_MASOCHIST( "MASOCHIST" );
+    avatar patient;
+    patient.normalize();
+    patient.set_mutation( trait_MASOCHIST );
+    dialogue d( get_talker_for( patient ), nullptr );
+    const int baseline_morale = patient.get_morale_level();
+
+    bodypart &left = *patient.get_part( body_part_arm_l );
+    bodypart &right = *patient.get_part( body_part_arm_r );
+    left.add_wound( wound_thermal_burn );
+    right.add_wound( wound_thermal_blister );
+    patient.on_stat_change( "perceived_pain", patient.get_perceived_pain() );
+    const int injured_morale = patient.get_morale_level();
+    REQUIRE( injured_morale > baseline_morale );
+
+    const auto cure = [&d]( const char *source ) {
+        talk_effect_t effect;
+        effect.parse_sub_effect( json_loader::from_string( source ).get_object(), "TEST_DATA" );
+        for( const talk_effect_fun_t &action : effect.effects ) {
+            action( d );
+        }
+    };
+    cure( R"({"u_remove_wound":"arm_l","wound_id":["thermal_burn"]})" );
+    CHECK_FALSE( left.has_wounds() );
+    CHECK( right.has_wound( wound_thermal_blister ) );
+    CHECK( patient.get_morale_level() < injured_morale );
+    CHECK( patient.get_morale_level() > baseline_morale );
+
+    cure( R"({"u_remove_wound":"ALL","wound_id":["thermal_blister","thermal_burn"]})" );
+    CHECK_FALSE( right.has_wounds() );
+    CHECK( patient.get_morale_level() == baseline_morale );
+}
+
+TEST_CASE( "legacy_blisters_are_discarded_on_load", "[eoc][save][thermal_burn]" )
+{
+    struct save_test_avatar : avatar {
+        using Creature::load;
+    };
+
+    const restore_on_out_of_scope restore_version( savegame_loading_version );
+    savegame_loading_version = GENERATE( 30, savegame_version );
+    const std::string part = savegame_loading_version < 31 ? std::to_string( bp_arm_l ) : "arm_l";
+    const std::string fields = R"(","duration":1800,"bp":"arm_l","permanent":false,"intensity":1}})";
+    const std::string snapshot = "{\"effects\":{\"blisters\":{\"" + part +
+                                 R"(":{"eff_type":"blisters)" + fields + ",\"wet\":{\"" + part +
+                                 R"(":{"eff_type":"wet)" + fields + "}}";
+
+    const efftype_id retired( "blisters" );
+    const efftype_id preserved( "wet" );
+    REQUIRE_FALSE( retired.is_valid() );
+    save_test_avatar patient;
+    patient.set_body();
+    const int hp_before = patient.get_part_hp_cur( body_part_arm_l );
+    CHECK( capture_debugmsg_during( [&]() {
+        patient.load( json_loader::from_string( snapshot ).get_object() );
+    } ).empty() );
+    CHECK_FALSE( patient.has_effect( retired ) );
+    CHECK( patient.has_effect( preserved, body_part_arm_l ) );
+    CHECK( patient.get_part_hp_cur( body_part_arm_l ) == hp_before );
+    CHECK( patient.get_part( body_part_arm_l )->get_wounds().empty() );
 }
 
 TEST_CASE( "EOC_jmath", "[eoc][math_parser]" )

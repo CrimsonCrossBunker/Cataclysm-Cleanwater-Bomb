@@ -45,7 +45,7 @@ class player_control
         // Native body/effect phases, driven by this assignment. Does not run
         // input or NPC AI, and rejects revoked world/actor assignments.
         void update_body();
-        void process_turn();
+        bool process_turn();
         void reset();
     private:
         friend class player_control_registry;

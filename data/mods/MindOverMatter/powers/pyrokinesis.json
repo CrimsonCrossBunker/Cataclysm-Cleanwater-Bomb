@@ -37,18 +37,7 @@
     "flags": [ "PSIONIC", "NO_PROJECTILE", "SPLIT_DAMAGE", "RANDOM_DAMAGE", "NO_HANDS", "NO_LEGS" ],
     "difficulty": 1,
     "max_level": { "math": [ "mom_pyrokinesis_max_power_formula()" ] },
-    "target_condition": {
-      "or": [
-        { "npc_has_effect": "onfire" },
-        { "npc_has_effect": "onfire", "bodypart": "torso" },
-        { "npc_has_effect": "onfire", "bodypart": "head" },
-        { "npc_has_effect": "onfire", "bodypart": "arm_l" },
-        { "npc_has_effect": "onfire", "bodypart": "arm_r" },
-        { "npc_has_effect": "onfire", "bodypart": "leg_l" },
-        { "npc_has_effect": "onfire", "bodypart": "leg_r" },
-        { "npc_has_effect": "onfire", "bodypart": "tail" }
-      ]
-    },
+    "target_condition": { "npc_has_flag": "EFFECT_ONFIRE" },
     "effect": "attack",
     "damage_type": "heat",
     "shape": "blast",

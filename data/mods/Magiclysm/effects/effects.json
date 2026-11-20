@@ -1772,10 +1772,9 @@
     "desc": [ "You are immune to heat and fire." ],
     "rating": "good",
     "show_in_info": true,
-    "blocks_effects": [ "blisters" ],
     "removes_effects": [ "onfire" ],
     "enchantments": [ { "incoming_damage_mod": [ { "type": "heat", "multiply": -1 } ] } ],
-    "flags": [ "HEAT_IMMUME" ]
+    "flags": [ "THERMAL_BURN_PROTECTION" ]
   },
   {
     "type": "effect_type",
@@ -2550,7 +2549,8 @@
     "id": "effect_vulcanist_no_smoke_or_blisters",
     "name": [ "" ],
     "desc": [ "" ],
-    "blocks_effects": [ "smoke_eyes", "smoke_lungs", "blisters" ]
+    "blocks_effects": [ "smoke_eyes", "smoke_lungs" ],
+    "flags": [ "THERMAL_BURN_PROTECTION" ]
   },
   {
     "type": "effect_type",

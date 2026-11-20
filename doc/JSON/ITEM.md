@@ -1791,7 +1791,7 @@ Also item variables can be assigned and read by effect_on_conditions
 ```jsonc
 { "math": [ "n_variablename = rand(5, 100)" ] } // assuming beta talker, aka n_, is item
 
-{ "math": [ "n_variablename > 50 ? u_pain()++ : u_pain()--" ] }
+{ "math": [ "u_pain('type': 'base') += (n_variablename > 50 ? 1 : -1)" ] }
 ```
 
 ```jsonc

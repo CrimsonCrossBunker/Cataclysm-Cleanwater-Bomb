@@ -119,12 +119,12 @@ void player_control::update_body()
     state_->turns.update_body();
 }
 
-void player_control::process_turn()
+bool player_control::process_turn()
 {
     if( !get() || state_->kind != player_control_kind::native ) {
         throw std::runtime_error( "Cannot advance an inactive or externally driven player control" );
     }
-    state_->turns.process_turn();
+    return state_->turns.process_turn();
 }
 
 void player_control::reset()
@@ -220,6 +220,5 @@ bool player_control_registry::process_turn( Character &actor )
     if( !state ) {
         return false;
     }
-    state->turns.process_turn();
-    return true;
+    return state->turns.process_turn();
 }

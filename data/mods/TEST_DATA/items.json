@@ -4453,7 +4453,7 @@
     "color": "red",
     "warmth": 20,
     "material_thickness": 3,
-    "environmental_protection": 3,
+    "environmental_protection": 5,
     "flags": [ "VARSIZE", "OVERSIZE", "STURDY" ],
     "armor": [
       {
@@ -4482,7 +4482,7 @@
     "color": "red",
     "warmth": 20,
     "material_thickness": 3,
-    "environmental_protection": 3,
+    "environmental_protection": 5,
     "flags": [ "VARSIZE", "OVERSIZE", "STURDY" ],
     "armor": [
       {

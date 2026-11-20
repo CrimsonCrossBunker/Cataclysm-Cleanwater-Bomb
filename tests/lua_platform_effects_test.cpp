@@ -43,6 +43,7 @@
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "effect.h"
+#include "effect_source.h"
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
@@ -62,9 +63,12 @@
 #include "lua_platform_items.h"
 #include "lua_platform_npc_services.h"
 #include "lua_platform_npcs.h"
+#include "lua_platform_runtime.h"
+#include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_trade.h"
 #include "lua_platform_world_services.h"
+#include "magic_enchantment.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "messages.h"
@@ -91,6 +95,7 @@ static const efftype_id effect_asked_to_lead( "asked_to_lead" );
 static const efftype_id effect_asked_to_train( "asked_to_train" );
 static const efftype_id effect_bleed( "bleed" );
 static const efftype_id effect_blind( "blind" );
+static const efftype_id effect_onfire( "onfire" );
 static const efftype_id effect_pet( "pet" );
 static const faction_id faction_no_faction( "no_faction" );
 static const faction_id faction_your_followers( "your_followers" );
@@ -122,8 +127,18 @@ struct active_activity_npc {
     }
 };
 
-struct effect_fixture {
-    explicit effect_fixture( const int first_id = 3100 ) {
+struct non_reigniting_npc : npc {
+    void deal_damage_handle_type( const effect_source &source, const damage_unit &du,
+                                  bodypart_id bp, int &damage, int &pain,
+                                  std::optional<bodypart_id> ) override {
+        // Keep heat damage and its callbacks, but veto incidental re-ignition.
+        npc::deal_damage_handle_type( source, du, bp, damage, pain, bodypart_str_id::NULL_ID().id() );
+    }
+};
+
+template<typename Npc>
+struct basic_effect_fixture {
+    explicit basic_effect_fixture( const int first_id = 3100 ) {
         player.normalize();
         player.setID( character_id( first_id + 1 ), true );
         other.normalize();
@@ -150,7 +165,7 @@ struct effect_fixture {
         } );
     }
 
-    ~effect_fixture() {
+    ~basic_effect_fixture() {
         cata::lua_platform::retire_npc_handle_identity( other );
     }
 
@@ -199,10 +214,62 @@ struct effect_fixture {
     std::size_t world = 1;
     bool writable = true;
     avatar player;
-    npc other;
+    Npc other;
     sol::state lua;
     sol::table services = lua.create_table();
 };
+
+using effect_fixture = basic_effect_fixture<npc>;
+using fire_effect_fixture = basic_effect_fixture<non_reigniting_npc>;
+
+struct fire_event_observer : event_subscriber {
+    using event_subscriber::notify;
+
+    fire_event_observer( event_type watched_type, const Character &target,
+                         std::function<void( const cata::event & )> on_event )
+        : watched( watched_type ), who( target.getID() ), callback( std::move( on_event ) ) {
+        get_event_bus().subscribe( this );
+    }
+
+    void notify( const cata::event &event ) override {
+        if( event.type() == watched && event.get<character_id>( "character" ) == who &&
+            event.get<efftype_id>( "effect" ) == effect_onfire ) {
+            callback( event );
+        }
+    }
+
+    event_type watched;
+    character_id who;
+    std::function<void( const cata::event & )> callback;
+};
+
+sol::table add_targeted_fire( fire_effect_fixture &fixture, bodypart_id part, time_duration duration )
+{
+    namespace platform = cata::lua_platform;
+    sol::table options = fixture.lua.create_table();
+    options["body_part"] = platform::script_game_id( "body_part", part.id().str() );
+    sol::protected_function add = fixture.services["effects"]["add"];
+    const sol::protected_function_result call = add(
+                fixture.handle( true ), platform::script_game_id( "effect", "onfire" ),
+                platform::script_time_duration::from_native( duration ), options );
+    REQUIRE( call.valid() );
+    return call;
+}
+
+sol::table update_targeted_fire( fire_effect_fixture &fixture, bodypart_id part,
+                                 time_duration duration )
+{
+    namespace platform = cata::lua_platform;
+    sol::table options = fixture.lua.create_table();
+    options["body_part"] = platform::script_game_id( "body_part", part.id().str() );
+    options["duration"] = platform::script_time_duration::from_native( duration );
+    sol::protected_function update = fixture.services["effects"]["update"];
+    const sol::protected_function_result call = update(
+                fixture.handle( true ), platform::script_game_id( "effect", "onfire" ), options );
+    REQUIRE( call.valid() );
+    return call;
+}
+
 } // namespace
 
 TEST_CASE( "lua_platform_first_topic_matches_native_beta_alpha_fallback",
@@ -774,6 +841,511 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
             CHECK( fixture->target( !npc_target ).has_effect( bleeding, left ) );
         }
     }
+}
+
+TEST_CASE( "lua_platform_fire_add_returns_the_actual_part_without_aliasing_queries",
+           "[lua][platform][effects][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    fire_effect_fixture fixture( 4500 );
+    Character &target = fixture.target( true );
+    target.setpos( get_map(), tripoint_bub_ms( 50, 50, 0 ), false );
+    const enchantment_id replacement( "ENCH_TEST_ALT_ARMS" );
+    target.enchantment_cache->force_add( *replacement, target );
+    target.recalculate_bodyparts();
+    const bodypart_id requested_part = body_part_arm_r.id();
+    const bodypart_id actual_part( "test_alt_arm_r" );
+    REQUIRE_FALSE( target.has_part( requested_part, body_part_filter::strict ) );
+    REQUIRE( target.has_part( actual_part, body_part_filter::strict ) );
+
+    const auto handle = fixture.handle( true );
+    const platform::script_game_id fire( "effect", "onfire" );
+    const platform::script_game_id requested( "body_part", requested_part.id().str() );
+    const platform::script_game_id actual( "body_part", actual_part.id().str() );
+    sol::protected_function get = fixture.services["effects"]["get"];
+    sol::protected_function remove = fixture.services["effects"]["remove"];
+
+    const auto add_fire = [&]() -> sol::table {
+        const sol::table added = add_targeted_fire( fixture, requested_part, 5_turns );
+        REQUIRE( added["ok"].get<bool>() );
+        const sol::table snapshot = added["value"];
+        CHECK( snapshot["body_part"].get<platform::script_game_id>().value() == actual.value() );
+        return snapshot;
+    };
+
+    CHECK_FALSE( target.has_effect( effect_onfire ) );
+    const int initial_hp = target.get_part_hp_cur( actual_part );
+    const sol::table first = add_fire();
+    CHECK( first["duration"].get<platform::script_time_duration>().to_native() == 5_turns );
+    CHECK( target.get_effect_dur( effect_onfire, actual_part ) == 5_turns );
+    const int ignited_hp = target.get_part_hp_cur( actual_part );
+    CHECK( ignited_hp < initial_hp );
+
+    const sol::table refreshed = add_fire();
+    CHECK( refreshed["duration"].get<platform::script_time_duration>().to_native() == 10_turns );
+    CHECK( target.get_effect_dur( effect_onfire, actual_part ) == 10_turns );
+    CHECK( target.get_part_hp_cur( actual_part ) == ignited_hp );
+
+    const sol::protected_function_result get_call = get( handle, fire, requested );
+    REQUIRE( get_call.valid() );
+    const sol::table missing = get_call;
+    CHECK_FALSE( missing["ok"].get<bool>() );
+    CHECK( missing["error"]["code"].get<std::string>() == "not_found" );
+    CHECK_FALSE( fixture.query( true, "onfire", "arm_r", 1 ) );
+    const sol::protected_function_result alias_remove_call = remove( handle, fire, requested );
+    REQUIRE( alias_remove_call.valid() );
+    const sol::table alias_remove = alias_remove_call;
+    REQUIRE( alias_remove["ok"].get<bool>() );
+    CHECK_FALSE( alias_remove["value"].get<bool>() );
+    CHECK( fixture.query( true, "onfire", "test_alt_arm_r", 1 ) );
+
+    REQUIRE_FALSE( target.has_part( body_part_test_tail, body_part_filter::next_best ) );
+    const sol::table rejected = add_targeted_fire( fixture, body_part_test_tail.id(), 5_turns );
+    CHECK_FALSE( rejected["ok"].get<bool>() );
+    CHECK( rejected["error"]["code"].get<std::string>() == "rejected" );
+    const sol::protected_function_result remove_call = remove( handle, fire, actual );
+    REQUIRE( remove_call.valid() );
+    const sol::table removed = remove_call;
+    REQUIRE( removed["ok"].get<bool>() );
+    CHECK( removed["value"].get<bool>() );
+    CHECK_FALSE( target.has_effect( effect_onfire ) );
+    CHECK( first["duration"].get<platform::script_time_duration>().to_native() == 5_turns );
+    CHECK( refreshed["duration"].get<platform::script_time_duration>().to_native() == 10_turns );
+}
+
+TEST_CASE( "lua_platform_fire_tick_uses_the_actual_part_after_anatomy_changes",
+           "[lua][platform][effects][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    struct ticking_fire_type : effect_type {
+        ticking_fire_type() : effect_type( effect_onfire.obj() ) {
+            flags.insert( flag_id( "EFFECT_LUA_ON_TICK" ) );
+        }
+    } fire_type;
+    fire_effect_fixture fixture( 4550 );
+    Character &target = fixture.target( true );
+    target.setpos( get_map(), tripoint_bub_ms( 50, 50, 0 ), false );
+    const bodypart_id left = body_part_arm_l.id();
+    const bodypart_id old_right = body_part_arm_r.id();
+    const bodypart_id new_right( "test_alt_arm_r" );
+    REQUIRE( left < old_right );
+    REQUIRE( old_right < new_right );
+
+    // Keep both parts long enough to establish duplicate fire records, then
+    // make the old part an alias from inside the first damage callback.
+    enchantment gain_part;
+    gain_part.load( json_loader::from_string( R"({
+        "modified_bodyparts": [ { "gain": "test_alt_arm_r" } ]
+    })" ).get_object() );
+    enchantment lose_part;
+    lose_part.load( json_loader::from_string( R"({
+        "modified_bodyparts": [ { "lose": "arm_r" } ]
+    })" ).get_object() );
+    target.enchantment_cache->force_add( gain_part, target );
+    target.recalculate_bodyparts();
+    REQUIRE( target.has_part( new_right, body_part_filter::strict ) );
+
+    const bool breaks = GENERATE( false, true );
+    const effect_source source( &get_avatar() );
+    const time_point start = calendar::turn - 5_turns;
+    std::vector<effect> fires = {
+        effect( effect_source::empty(), &fire_type, 5_turns, left.id(), false, 1, start ),
+        effect( source, &fire_type, 10_turns, old_right.id(), false, 1, start )
+    };
+    if( breaks ) {
+        target.set_part_hp_cur( new_right, 1 );
+    } else {
+        fires.emplace_back( effect_source::empty(), &fire_type, 1_turns, new_right.id(),
+                            false, 1, calendar::turn );
+    }
+    target.restore_effects_snapshot( fires );
+    const int right_hp = target.get_part_hp_cur( new_right );
+    std::optional<sol::table> refresh_snapshot;
+
+    struct damage_observer : event_subscriber {
+        using event_subscriber::notify;
+        character_id watched;
+        std::function<void( bodypart_id )> on_damage;
+        void notify( const cata::event &event ) override {
+            if( event.type() == event_type::character_takes_damage &&
+                event.get<character_id>( "character" ) == watched ) {
+                on_damage( event.get<bodypart_id>( "bodypart" ) );
+            }
+        }
+    } observer;
+    std::vector<bodypart_id> damaged_parts;
+    observer.watched = target.getID();
+    observer.on_damage = [&]( bodypart_id part ) {
+        damaged_parts.push_back( part );
+        if( part == left ) {
+            target.enchantment_cache->force_add( lose_part, target );
+            target.recalculate_bodyparts();
+            CHECK_FALSE( target.has_part( old_right, body_part_filter::strict ) );
+        } else if( part == new_right ) {
+            // Nested lookups still see the exact stored key during the tick.
+            const effect &entry = target.get_effect( effect_onfire, old_right );
+            REQUIRE_FALSE( entry.is_null() );
+            CHECK( entry.get_bp() == old_right );
+            CHECK( entry.get_source().get_character_id() == source.get_character_id() );
+            if( !breaks ) {
+                REQUIRE( entry.get_duration() == 10_turns );
+                REQUIRE( target.get_effect_dur( effect_onfire, new_right ) == 1_turns );
+                const sol::table added = add_targeted_fire( fixture, new_right, 5_turns );
+                REQUIRE( added["ok"].get<bool>() );
+                refresh_snapshot = added["value"].get<sol::table>();
+                CHECK( target.get_effect_dur( effect_onfire, old_right ) == 15_turns );
+                CHECK( target.get_effect_dur( effect_onfire, new_right ) == 1_turns );
+            }
+        }
+    };
+    get_event_bus().subscribe( &observer );
+
+    std::vector<std::string> hook_parts;
+    const auto previous = platform::detail::active_runtime_values();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_named_table( "ccb" );
+    const auto runtime = platform::make_runtime( "fire_contact_test", 4550, lua );
+    const on_out_of_scope restore( [&]() {
+        platform::set_active_runtimes( previous );
+    } );
+    platform::install_runtime_api( runtime, lua, ccb );
+    lua.set_function( "record_fire_part", [&]( const platform::script_game_id & part ) {
+        hook_parts.push_back( part.value() );
+    } );
+    const auto loaded = lua.safe_script( R"(
+        ccb.runtime.handler("record_tick", function(ctx) record_fire_part(ctx.body_part) end, 1)
+        ccb.runtime.hook("on_character_effect", "record_tick")
+    )", sol::script_pass_on_error );
+    REQUIRE( loaded.valid() );
+    runtime->world_is_ready = true;
+    platform::set_active_runtimes( { runtime } );
+
+    target.process_effects();
+
+    CHECK( damaged_parts == std::vector<bodypart_id>{ left, new_right } );
+    CHECK( hook_parts == std::vector<std::string>{ left.id().str(), new_right.id().str() } );
+    CHECK( target.get_part_hp_cur( new_right ) < right_hp );
+    CHECK( target.get_effect( effect_onfire, old_right ).is_null() );
+    const effect &remaining = target.get_effect( effect_onfire, new_right );
+    if( breaks ) {
+        CHECK( target.get_part_hp_cur( new_right ) == 0 );
+        CHECK( remaining.is_null() ); // The live tick's zero duration survived rekeying.
+    } else {
+        REQUIRE_FALSE( remaining.is_null() );
+        CHECK( remaining.get_duration() == 14_turns );
+        CHECK( remaining.get_start_time() == start );
+        CHECK( remaining.get_source().get_character_id() == source.get_character_id() );
+        REQUIRE( refresh_snapshot.has_value() );
+        const sol::table &snapshot = *refresh_snapshot;
+        CHECK( snapshot["body_part"].get<platform::script_game_id>().value() == new_right.id().str() );
+        CHECK( snapshot["duration"].get<platform::script_time_duration>().to_native() == 15_turns );
+    }
+}
+
+TEST_CASE( "lua_platform_fire_add_snapshots_the_written_alias_before_merge",
+           "[lua][platform][effects][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    fire_effect_fixture fixture( 4560 );
+    Character &target = fixture.target( true );
+    const bodypart_id left = body_part_arm_l.id();
+    const bodypart_id old_right = body_part_arm_r.id();
+    const bodypart_id new_right( "test_alt_arm_r" );
+    const enchantment_id replacement( "ENCH_TEST_ALT_ARMS" );
+    enchantment gain_part;
+    gain_part.load( json_loader::from_string( R"({
+        "modified_bodyparts": [ { "gain": "test_alt_arm_r" } ]
+    })" ).get_object() );
+    target.enchantment_cache->force_add( gain_part, target );
+    target.recalculate_bodyparts();
+    REQUIRE( target.has_part( new_right ) );
+
+    const bool permanent = GENERATE( false, true );
+    target.add_effect( effect_onfire, 20_turns, left, false, 0, true, true );
+    target.add_effect( effect_onfire, 10_turns, old_right, permanent, 0, true, true );
+    target.add_effect( effect_onfire, 5_turns, new_right, false, 0, true, true );
+    std::optional<sol::table> write_snapshot;
+    fire_event_observer observer( event_type::character_loses_effect, target,
+    [&]( const cata::event &event ) {
+        REQUIRE( event.get<bodypart_id>( "bodypart" ) == left );
+        target.enchantment_cache->force_add( *replacement, target );
+        target.recalculate_bodyparts();
+        REQUIRE_FALSE( target.has_part( old_right, body_part_filter::strict ) );
+        REQUIRE( target.has_part( new_right, body_part_filter::strict ) );
+        const sol::table result = add_targeted_fire( fixture, old_right, -12_turns );
+        REQUIRE( result["ok"].get<bool>() );
+        write_snapshot = result["value"].get<sol::table>();
+        CHECK( target.get_effect_dur( effect_onfire, old_right ) == -2_turns );
+        CHECK( target.get_effect_dur( effect_onfire, new_right ) == 5_turns );
+    } );
+
+    REQUIRE( target.remove_effect( effect_onfire, left ) );
+    CHECK_FALSE( target.has_effect( effect_onfire, old_right ) );
+    CHECK( target.get_effect_dur( effect_onfire, new_right ) == 5_turns );
+    CHECK_FALSE( target.get_effect( effect_onfire, new_right ).is_permanent() );
+    REQUIRE( write_snapshot.has_value() );
+    const sol::table &snapshot = *write_snapshot;
+    CHECK( snapshot["body_part"].get<platform::script_game_id>().value() == new_right.id().str() );
+    CHECK( snapshot["duration"].get<platform::script_time_duration>().to_native() == -2_turns );
+    CHECK( snapshot["permanent"].get<bool>() == permanent );
+}
+
+TEST_CASE( "lua_platform_fire_add_avoids_keys_in_nested_loss_callbacks",
+           "[lua][platform][effects][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    fire_effect_fixture fixture( 4570 );
+    Character &target = fixture.target( true );
+    target.setpos( get_map(), tripoint_bub_ms( 50, 50, 0 ), false );
+    const bodypart_id left = body_part_arm_l.id();
+    const bodypart_id right = body_part_arm_r.id();
+    const bodypart_id new_left( "test_alt_arm_l" );
+    const bodypart_id new_right( "test_alt_arm_r" );
+    const enchantment_id replacement( "ENCH_TEST_ALT_ARMS" );
+    for( const bodypart_id part : { left, right } ) {
+        target.add_effect( effect_onfire, 20_turns, part, false, 0, true, true );
+    }
+    fire_event_observer observer( event_type::character_loses_effect, target,
+    [&]( const cata::event &event ) {
+        const bodypart_id part = event.get<bodypart_id>( "bodypart" );
+        if( part == left ) {
+            // Without a different storage key, an add cannot survive this exact removal.
+            const sol::table result = add_targeted_fire( fixture, left, 5_turns );
+            CHECK_FALSE( result["ok"].get<bool>() );
+            CHECK( result["error"]["code"].get<std::string>() == "rejected" );
+            REQUIRE( target.remove_effect( effect_onfire, right ) );
+        } else {
+            REQUIRE( part == right );
+            target.enchantment_cache->force_add( *replacement, target );
+            target.recalculate_bodyparts();
+            for( const bodypart_id old_part : { left, right } ) {
+                const bodypart_id new_part = old_part == left ? new_left : new_right;
+                REQUIRE_FALSE( target.has_part( old_part, body_part_filter::strict ) );
+                REQUIRE( target.has_part( new_part, body_part_filter::strict ) );
+                REQUIRE_FALSE( target.has_effect( effect_onfire, new_part ) );
+                const sol::table result = add_targeted_fire( fixture, old_part, 5_turns );
+                REQUIRE( result["ok"].get<bool>() );
+                const sol::table snapshot = result["value"];
+                CHECK( snapshot["body_part"].get<platform::script_game_id>().value() ==
+                       new_part.id().str() );
+                CHECK( snapshot["duration"].get<platform::script_time_duration>().to_native() ==
+                       5_turns );
+                CHECK( target.get_effect_dur( effect_onfire, new_part ) == 5_turns );
+                // The pending record remains visible by its exact key until it is erased.
+                CHECK( target.has_effect( effect_onfire, old_part ) );
+                CHECK( target.get_effect_dur( effect_onfire, old_part ) == 20_turns );
+            }
+        }
+    } );
+
+    REQUIRE( target.remove_effect( effect_onfire, left ) );
+    CHECK_FALSE( target.has_effect( effect_onfire, left ) );
+    CHECK_FALSE( target.has_effect( effect_onfire, right ) );
+    CHECK( target.get_effect_dur( effect_onfire, new_left ) == 5_turns );
+    CHECK( target.get_effect_dur( effect_onfire, new_right ) == 5_turns );
+}
+
+TEST_CASE( "lua_platform_fire_expiry_rejects_updates_only_after_its_loss_is_announced",
+           "[lua][platform][effects][semantic]" )
+{
+    fire_effect_fixture fixture( 4610 );
+    Character &target = fixture.target( true );
+    const bodypart_id first = body_part_arm_l.id();
+    const bodypart_id second = body_part_arm_r.id();
+    REQUIRE( first < second );
+    for( bodypart_id part : { first, second } ) {
+        target.add_effect( effect_onfire, 0_turns, part, false, 1, false, true );
+    }
+
+    std::vector<bodypart_id> losses;
+    fire_event_observer observer( event_type::character_loses_effect, target,
+    [&]( const cata::event & event ) {
+        const bodypart_id part = event.get<bodypart_id>( "bodypart" );
+        losses.push_back( part );
+        if( part == first ) {
+            const sol::table rejected = update_targeted_fire( fixture, first, 10_turns );
+            CHECK_FALSE( rejected["ok"].get<bool>() );
+            CHECK( rejected["error"]["code"].get<std::string>() == "rejected" );
+            CHECK( target.get_effect_dur( effect_onfire, first ) == 0_turns );
+
+            const sol::table refreshed = update_targeted_fire( fixture, second, 20_turns );
+            REQUIRE( refreshed["ok"].get<bool>() );
+        }
+    } );
+
+    REQUIRE( target.Creature::process_effects() );
+    CHECK( losses == std::vector<bodypart_id>{ first } );
+    CHECK_FALSE( target.has_effect( effect_onfire, first ) );
+    CHECK( target.get_effect_dur( effect_onfire, second ) == 20_turns );
+}
+
+TEST_CASE( "lua_platform_fire_expiry_allows_updating_a_same_key_replacement",
+           "[lua][platform][effects][semantic]" )
+{
+    fire_effect_fixture fixture( 4620 );
+    Character &target = fixture.target( true );
+    const bodypart_id part = body_part_arm_r.id();
+    target.add_effect( effect_onfire, 0_turns, part, false, 1, false, true );
+
+    int losses = 0;
+    fire_event_observer observer( event_type::character_loses_effect, target,
+    [&]( const cata::event & event ) {
+        CHECK( event.get<bodypart_id>( "bodypart" ) == part );
+        ++losses;
+        target.clear_effects();
+        target.add_effect( effect_onfire, 5_turns, part, false, 1, false, true );
+        const sol::table refreshed = update_targeted_fire( fixture, part, 15_turns );
+        REQUIRE( refreshed["ok"].get<bool>() );
+    } );
+
+    REQUIRE( target.Creature::process_effects() );
+    CHECK( losses == 1 );
+    CHECK( target.get_effect_dur( effect_onfire, part ) == 15_turns );
+}
+
+TEST_CASE( "fire_intensity_event_retains_the_written_value_across_callbacks",
+           "[lua][platform][effects][semantic]" )
+{
+    struct callback_npc : npc {
+        bool modify_fire = false;
+        bool erase_fire = false;
+
+        void on_effect_int_change( const efftype_id &id, int intensity,
+                                   const bodypart_id &part ) override {
+            Character::on_effect_int_change( id, intensity, part );
+            if( modify_fire && id == effect_onfire && intensity > 0 ) {
+                get_effect( id, part ).set_duration( 1_turns );
+                if( erase_fire ) {
+                    remove_effect( id, part );
+                }
+            }
+        }
+    } target;
+    target.normalize();
+    target.setID( character_id( 4580 ), true );
+    const bodypart_id right = body_part_arm_r.id();
+    target.add_effect( effect_onfire, 5_turns, right, false, 0, true, true );
+    target.modify_fire = true;
+    target.erase_fire = GENERATE( false, true );
+
+    std::vector<int> intensities;
+    fire_event_observer observer( event_type::character_effect_intensity_changed, target,
+    [&]( const cata::event &event ) {
+        CHECK( event.get<bodypart_id>( "bodypart" ) == right );
+        intensities.push_back( event.get<int>( "intensity" ) );
+    } );
+    target.add_effect( effect_onfire, 10_turns, right, false, 0, true, true );
+    CHECK( intensities == std::vector<int>{ 3 } );
+    CHECK( target.has_effect( effect_onfire, right ) == !target.erase_fire );
+}
+
+TEST_CASE( "lua_platform_fire_add_revalidates_the_target_after_the_gain_callback",
+           "[lua][platform][effects][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    fire_effect_fixture fixture( 4590 );
+    Character &target = fixture.target( true );
+    target.setpos( get_map(), tripoint_bub_ms( 50, 50, 0 ), false );
+    const bodypart_id right = body_part_arm_r.id();
+    const bool stale_world = GENERATE( false, true );
+    const enchantment_id replacement( "ENCH_TEST_ALT_ARMS" );
+    int restored_hp = 0;
+    fire_event_observer observer( event_type::character_gains_effect, target,
+    [&]( const cata::event & ) {
+        // Replace the struck arm and then restore its ID before the first tick.
+        target.enchantment_cache->force_add( *replacement, target );
+        target.recalculate_bodyparts();
+        REQUIRE_FALSE( target.has_part( right ) );
+        target.enchantment_cache->clear();
+        target.recalculate_bodyparts();
+        REQUIRE( target.has_part( right ) );
+        restored_hp = target.get_part_hp_cur( right );
+        if( stale_world ) {
+            ++fixture.world;
+        }
+    } );
+
+    const sol::table result = add_targeted_fire( fixture, right, 5_turns );
+    REQUIRE( restored_hp > 0 );
+    CHECK( target.get_part_hp_cur( right ) == restored_hp );
+    REQUIRE( result["ok"].get<bool>() == !stale_world );
+    if( stale_world ) {
+        CHECK( result["error"]["code"].get<std::string>() == "stale_world" );
+    } else {
+        const sol::table snapshot = result["value"];
+        CHECK( snapshot["body_part"].get<platform::script_game_id>().value() == right.id().str() );
+        CHECK( snapshot["duration"].get<platform::script_time_duration>().to_native() == 5_turns );
+        CHECK( target.get_effect_dur( effect_onfire, right ) == 5_turns );
+    }
+}
+
+TEST_CASE( "lua_platform_fire_add_follows_the_written_record_after_anatomy_splits",
+           "[lua][platform][effects][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    fire_effect_fixture fixture( 4630 );
+    Character &target = fixture.target( true );
+    const bodypart_id right = body_part_arm_r.id();
+    const bodypart_id alternate( "test_alt_arm_r" );
+    const bool light_another_fire = GENERATE( false, true );
+    enum class rekey_path { move, merge, merge_then_move };
+    const rekey_path path = GENERATE( rekey_path::move, rekey_path::merge, rekey_path::merge_then_move );
+    const bool merge_away = path != rekey_path::move;
+    const bool return_to_right = path == rekey_path::merge_then_move;
+    const bodypart_id expected_contact = return_to_right ? right : alternate;
+    const bodypart_id independent_contact = return_to_right ? alternate : right;
+    const enchantment_id replacement( "ENCH_TEST_ALT_ARMS" );
+    enchantment gain_part;
+    gain_part.load( json_loader::from_string( R"({
+        "modified_bodyparts": [ { "gain": "test_alt_arm_r" } ]
+    })" ).get_object() );
+
+    if( merge_away ) {
+        target.enchantment_cache->force_add( gain_part, target );
+        target.recalculate_bodyparts();
+        REQUIRE( target.has_part( right, body_part_filter::strict ) );
+        REQUIRE( target.has_part( alternate, body_part_filter::strict ) );
+        target.add_effect( effect_onfire, 18_turns, alternate, false, 1, false, true );
+    }
+
+    bool rekeyed = false;
+    fire_event_observer observer( event_type::character_gains_effect, target,
+    [&]( const cata::event & ) {
+        if( rekeyed ) {
+            return;
+        }
+        rekeyed = true;
+        target.enchantment_cache->force_add( *replacement, target );
+        target.recalculate_bodyparts();
+        REQUIRE_FALSE( target.has_effect( effect_onfire, right ) );
+        REQUIRE( target.has_effect( effect_onfire, alternate ) );
+
+        target.enchantment_cache->clear();
+        if( return_to_right ) {
+            target.recalculate_bodyparts();
+            REQUIRE_FALSE( target.has_effect( effect_onfire, alternate ) );
+            REQUIRE( target.get_effect_dur( effect_onfire, right ) == 18_turns );
+        }
+        target.enchantment_cache->force_add( gain_part, target );
+        target.recalculate_bodyparts();
+        REQUIRE( target.has_part( right, body_part_filter::strict ) );
+        REQUIRE( target.has_part( alternate, body_part_filter::strict ) );
+        if( light_another_fire ) {
+            target.add_effect( effect_onfire, 22_turns, independent_contact, false, 1, false, true );
+        }
+    } );
+
+    const sol::table result = add_targeted_fire( fixture, right, 6_turns );
+    REQUIRE( result["ok"].get<bool>() );
+    const sol::table snapshot = result["value"];
+    CHECK( snapshot["body_part"].get<platform::script_game_id>().value() ==
+           expected_contact.id().str() );
+    CHECK( snapshot["duration"].get<platform::script_time_duration>().to_native() == 6_turns );
+    CHECK( target.get_effect_dur( effect_onfire, expected_contact ) ==
+           ( merge_away ? 18_turns : 6_turns ) );
+    CHECK( target.get_effect_dur( effect_onfire, independent_contact ) ==
+           ( light_another_fire ? 22_turns : 0_turns ) );
 }
 
 TEST_CASE( "lua_platform_effects_accept_registered_parts_outside_current_anatomy",

@@ -284,4 +284,39 @@ TEST_CASE( "lua_platform_effect_add_rejects_durations_outside_native_int_without
     }
 }
 
+TEST_CASE( "lua_platform_reducing_pain_relief_at_positive_intensity_wakes_the_sleeper",
+           "[lua][platform][effects][semantic][pain_transition]" )
+{
+    clear_map_without_vision();
+    const on_out_of_scope cleanup( [] { clear_map_without_vision(); } );
+    effect_intensity_fixture fixture( 9250 );
+    npc &target = fixture.platform_interlocutor;
+    const efftype_id relief( "pain_relief" );
+    const efftype_id sleep( "sleep" );
+    target.set_sensitive( 100 );
+    target.set_pain( 10 );
+    target.add_effect( relief, 5_minutes, false, 10 );
+    target.add_effect( sleep, 1_hours );
+    REQUIRE( target.get_perceived_pain() == 0 );
+    REQUIRE( target.get_effect_dur( sleep ) == 1_hours );
+
+    const bool adjust = GENERATE( false, true );
+    CAPTURE( adjust );
+    fixture.lua["effect_target"] = fixture.platform_handle;
+    const cata::lua_platform::detail::callback_scope callback( *fixture.runtime_owner );
+    const sol::protected_function_result call = fixture.lua.safe_script( adjust ? R"(
+        return ccb.services.effects.adjust_intensity(
+            effect_target, ccb.services.types.id("effect", "pain_relief"), -8)
+    )" : R"(
+        return ccb.services.effects.update(
+            effect_target, ccb.services.types.id("effect", "pain_relief"), { intensity = 2 })
+    )", sol::script_pass_on_error );
+    REQUIRE( call.valid() );
+    const sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    CHECK( target.get_effect_int( relief ) == 2 );
+    CHECK( target.get_perceived_pain() == 8 );
+    CHECK( target.get_effect_dur( sleep ) == 0_turns );
+}
+
 #endif // CATA_ENABLE_LUA_PLATFORM

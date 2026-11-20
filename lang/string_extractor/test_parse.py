@@ -48,6 +48,39 @@ class JsonFileParsingTest(unittest.TestCase):
         self.assertIn(("", "Holds tack used to control and ride a mount."),
                       messages)
 
+    def test_thermal_wound_names_and_descriptions_are_translatable(self):
+        root = Path(__file__).resolve().parents[2]
+        messages.clear()
+        self.addCleanup(messages.clear)
+
+        parse_json_file(root / "data/json/thermal_wounds.json")
+        for name in ("heat blister", "severe burn"):
+            self.assertEqual(messages[("", name)][0].text_plural, name + "s")
+        self.assertIn(("", "Painful blisters caused by exposure to heat."),
+                      messages)
+        self.assertIn(("", "A deep burn that makes it painful to use the "
+                           "affected body part."), messages)
+
+    def test_abstract_wound_and_treatment_supply_inherited_text(self):
+        messages.clear()
+        self.addCleanup(messages.clear)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "wounds.json"
+            path.write_text(json.dumps([
+                {"type": "wound", "abstract": "wound_template",
+                 "name": "bruise", "description": "Tender skin."},
+                {"type": "wound", "id": "minor_bruise",
+                 "copy-from": "wound_template"},
+                {"type": "wound_fix", "abstract": "fix_template",
+                 "name": "cooling", "success_msg": "It feels better."},
+                {"type": "wound_fix", "id": "cool_bruise",
+                 "copy-from": "fix_template"},
+            ]), encoding="utf-8")
+            parse_json_file(path)
+        self.assertEqual(messages[("", "bruise")][0].text_plural, "bruises")
+        for text in ("Tender skin.", "cooling", "It feels better."):
+            self.assertIn(("", text), messages)
+
     def test_schema_file_is_skipped_before_type_dispatch(self):
         with tempfile.TemporaryDirectory() as directory:
             schema = Path(directory) / "example.schema.json"

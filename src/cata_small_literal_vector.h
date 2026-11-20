@@ -2,9 +2,11 @@
 #ifndef CATA_SRC_CATA_SMALL_LITERAL_VECTOR_H
 #define CATA_SRC_CATA_SMALL_LITERAL_VECTOR_H
 
+#include <algorithm>
 #include <cstdlib>
 #include <limits>
 #include <memory>
+#include <new>
 #include <stdexcept>
 #include <type_traits>
 
@@ -120,20 +122,10 @@ struct alignas( T * ) alignas( T ) small_literal_vector {
             return;
         }
 
-        // 1.5x resize factor allows for reuse of earlier allocations at larger sizes.
-        // That works best if we tracked explicit capacity, but it's better than nothing.
-        // https://stackoverflow.com/a/1100426
-        size_t new_capacity = capacity_;
-        size_t next_capacity = capacity_ * 1.5;
-        // Prevent overflow by testing before multiplying
-        while( next_capacity > new_capacity && next_capacity < count ) {
-            new_capacity = next_capacity;
-            next_capacity *= 1.5;
-        }
-        if( new_capacity < count ) {
-            new_capacity = std::numeric_limits<SizeT>::max();
-        }
-        reserve_exact( new_capacity );
+        // Grow by 50%, bounded by both the size counter and the allocation size.
+        const size_t current = capacity_;
+        const size_t extra = std::min( current / 2, max_capacity() - current );
+        reserve_exact( std::max( count, current + extra ) );
     }
 
     void resize( size_t count ) {
@@ -143,13 +135,18 @@ struct alignas( T * ) alignas( T ) small_literal_vector {
     }
 
 private:
+    static constexpr size_t max_capacity() {
+        return std::min<size_t>( std::numeric_limits<SizeT>::max(),
+                                 std::numeric_limits<size_t>::max() / sizeof( T ) );
+    }
+
     void check_capacity( size_t count ) const {
-        if( count > std::numeric_limits<SizeT>::max() ) {
+        if( count > max_capacity() ) {
             throw std::runtime_error(
                 "Attempted to use small_literal_vector for " +
                 std::to_string( count ) +
                 " elements items when there is only tracking space for " +
-                std::to_string( std::numeric_limits<SizeT>::max() ) );
+                std::to_string( max_capacity() ) );
         }
     }
 
@@ -162,6 +159,9 @@ private:
             }
             on_out_of_scope heap_guard( [&heap] { free( heap ); } );
             heap = static_cast<T *>( std::malloc( sizeof( T ) * new_capacity ) );
+            if( !heap ) {
+                throw std::bad_alloc();
+            }
             std::uninitialized_copy_n( inline_, size(), heap );
             heap_ = heap;
             heap_guard.cancel();

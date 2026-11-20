@@ -298,9 +298,14 @@
     "required_event": "character_gains_effect",
     "condition": { "compare_string": [ "effect_lucid_dream", { "context_val": "effect" } ] },
     "effect": [
+      { "u_save_thermal_wounds": "xedra_lucid_dream", "include_hp": true },
+      {
+        "run_eocs": "EOC_XEDRA_TIME_SNAPSHOT_LEGACY_LAST_DAMAGE",
+        "variables": { "xedra_chronomancer_prefix": "lucid_dream", "xedra_last_damage_mode": "save" }
+      },
       { "u_location_variable": { "u_val": "lucid_dream_teleport" }, "min_radius": 0, "max_radius": 0 },
-      { "math": [ "u_hp_before_lucid = u_hp('ALL') / 6" ] },
-      { "math": [ "u_pain_before_lucid = u_pain()" ] },
+      { "u_lose_var": "hp_before_lucid" },
+      { "math": [ "u_pain_before_lucid = u_pain('type': 'base')" ] },
       { "math": [ "u_kcal_before_lucid = u_calories()" ] },
       { "math": [ "u_thirst_before_lucid = u_val('thirst')" ] },
       { "math": [ "u_blood_before_lucid = u_vitamin('blood')" ] },
@@ -324,15 +329,33 @@
         "interrupt_type": "eoc"
       },
       { "u_teleport": { "u_val": "lucid_dream_teleport" } },
-      { "math": [ "u_hp('ALL') = u_hp_before_lucid" ] },
-      { "math": [ "u_pain() = u_pain_before_lucid" ] },
+      { "math": [ "u_pain('type': 'base') = u_pain_before_lucid" ] },
       { "math": [ "u_calories('dont_affect_weariness': true) = u_kcal_before_lucid" ] },
       { "math": [ "u_val('thirst') = u_thirst_before_lucid" ] },
       { "math": [ "u_vitamin('blood') = u_blood_before_lucid" ] },
       { "math": [ "u_vitamin('redcells') = u_redcells_before_lucid" ] },
       { "math": [ "u_val('rad') = u_rad_before_lucid" ] },
       { "u_lose_effect": "bleed" },
-      { "u_lose_trait": "LUCID_DREAM" }
+      { "u_lose_trait": "LUCID_DREAM" },
+      {
+        "u_restore_thermal_wounds": "xedra_lucid_dream",
+        "discard_last_damage_if_missing": true,
+        "fallback_hit": {
+          "part": { "u_val": "xedra_last_damage_part_before_lucid_dream" },
+          "amount": { "u_val": "xedra_last_damage_before_lucid_dream" },
+          "pain": { "u_val": "xedra_last_pain_before_lucid_dream" }
+        }
+      },
+      {
+        "//": "Dreams already active in an old save only have an aggregate HP baseline.",
+        "if": { "and": [ { "math": [ "_thermal_snapshot_has_hp == 0" ] }, { "math": [ "has_var(u_hp_before_lucid)" ] } ] },
+        "then": [ { "math": [ "u_hp('ALL') = u_hp_before_lucid" ] } ]
+      },
+      { "u_lose_var": "hp_before_lucid" },
+      {
+        "run_eocs": "EOC_XEDRA_TIME_SNAPSHOT_LEGACY_LAST_DAMAGE",
+        "variables": { "xedra_chronomancer_prefix": "lucid_dream", "xedra_last_damage_mode": "restore" }
+      }
     ]
   },
   {
@@ -362,7 +385,6 @@
     "effect": [
       { "math": [ "u_vitamin('blood') = u_blood_before_lucid" ] },
       "u_prevent_death",
-      { "math": [ "u_hp('ALL') = 1" ] },
       { "run_eocs": "EOC_LUCID_DREAM_FORCE_END" }
     ]
   },

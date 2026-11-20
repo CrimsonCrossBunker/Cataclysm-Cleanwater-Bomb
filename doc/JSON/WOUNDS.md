@@ -39,6 +39,60 @@ Wound is a type, that affects specific bodyparts. It's similar in this to effect
   }
 ```
 
+### Thermal wounds
+
+`thermal_blister` and `thermal_burn` are two grades of the same injury. They
+are stored on the affected main body part. A worse burn replaces a blister;
+another hit of the same or a lower grade does not restart healing.
+The EOC and Lua add-wound operations and `wound_fix.wounds_added` use the
+same rule for these two IDs. Specify the contact body part when adding, and
+query or remove the wound on its main part. A blocked or same-grade
+application does not announce an injury.
+
+Sustained overheating uses the **current temperature of the exposed part**,
+not the ambient temperature or its equilibrium target. Heat armor, bark and
+heatsinks raise the exposure threshold. This path does not roll `WOUND_CHANCE`.
+Only simulated turns count toward exposure. Recalculating temperature again in
+the same turn, advancing the calendar without simulation, or reloading a save
+does not add exposure. An off-map NPC does not catch up on burns when it returns.
+Fire effects replayed during NPC activation can still deal their normal HP
+damage, but are not new live hits for temperature impulses or contact burns.
+Once a thermal wound is cured or fully heals, continued overheating must build
+a fresh dose before causing another injury. `NO_NPC_FOOD` does not disable
+temperature changes, drying, or heat exposure for active NPCs.
+
+A direct hit instead uses heat damage remaining after armor and immunity:
+4–11 points can blister and 12 or more can burn. A mixed-damage hit rolls
+`WOUND_CHANCE` once for both a contact burn and an ordinary wound.
+Both heat and cold damage also change the struck part's current temperature,
+without replacing the normal HP damage.
+If an attack names a standard limb that the character has replaced,
+its actual replacement supplies the heat or cold armor and receives the
+temperature change; the thermal wound is stored on its resolved main part.
+Pain immunity suppresses burn pain, not the wound or its local penalties.
+The whole-character effects `pain_relief` and `pain_ceiling` affect perceived
+pain only. After painkillers, `pain_ceiling` caps the pain at its intensity;
+`pain_relief` then subtracts from that perceived amount, down to zero. Neither changes base
+pain, wound severity, or healing progress. Removing an effect reveals the pain
+that remains at that time.
+
+Whole-character effects flagged `THERMAL_PAIN_RELIEF` subtract their intensity
+from the thermal component alone, before painkillers and the effects above.
+Different sources stack, but cannot suppress more than the remaining thermal
+pain, even after the wounds heal. `POWERED_THERMAL_PAIN_RELIEF` acts the same
+way, but only while a functioning bionic grants that flag. If shutdown or
+removal of an implant (including its parent) ends that relief, the character
+reacts to the pain that returns, not the nominal intensity of the effect.
+
+`THERMAL_PAIN_CEILING` caps perceived pain at the whole-character effect's
+intensity, but only by masking thermal pain. If nonthermal pain alone exceeds
+the ceiling after painkillers, it remains felt in full. The strictest active
+thermal ceiling applies, before `pain_ceiling` and `pain_relief`.
+
+`HEAT_IMMUNE` prevents both sources of burn. `THERMAL_BURN_PROTECTION`
+prevents only new burns and upgrades; it does not nullify heat damage,
+freeze body temperature, or heal existing wounds.
+
 ### wound_fix
 
 Wound fix is a way for wounds to be treated

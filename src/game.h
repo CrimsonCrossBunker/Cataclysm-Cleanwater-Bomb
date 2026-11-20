@@ -34,7 +34,7 @@
 #include "overmap_ui.h"
 #include "pimpl.h"
 #include "type_id.h"
-#include "units_fwd.h"
+#include "units.h"
 #include "weather.h"
 #include "view_action.h"
 
@@ -1581,8 +1581,19 @@ class game
 // @param location Location affected by heat sources
 units::temperature_delta get_heat_radiation( const tripoint_bub_ms &location );
 
-// Returns heat intensity of adjecent fires
+// Returns the strongest adjacent heat source, including radiant terrain.
 int get_best_fire( const tripoint_bub_ms &location );
+
+struct nearby_fire_heat {
+    int best_fire = 0;
+    bool adjacent_flame = false;
+    units::temperature_delta radiation;
+    units::temperature_delta flame_radiation;
+};
+
+// Collects warming, thawing, and flame-only inputs in one scan.
+nearby_fire_heat get_nearby_fire_heat( const tripoint_bub_ms &location );
+
 // Returns temperature modifier from hot air fields of given location
 units::temperature_delta get_convection_temperature( const tripoint_bub_ms &location );
 

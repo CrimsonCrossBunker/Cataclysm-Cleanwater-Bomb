@@ -422,6 +422,10 @@
     "info": "This gear <good>completely protects</good> you from <info>high temperatures</info>."
   },
   {
+    "id": "THERMAL_BURN_PROTECTION",
+    "type": "json_flag"
+  },
+  {
     "id": "HELMET_FACE_SHIELD",
     "type": "json_flag",
     "info": "This item is attachable in the front of <info>hard hats and helmets</info> to protect your eyes or face.",
@@ -1616,6 +1620,10 @@
     "//": "Allows an effect type to trigger the bounded Lua hook after it is removed."
   },
   {
+    "id": "EFFECT_ONFIRE",
+    "type": "json_flag"
+  },
+  {
     "id": "ENCUMBRANCE_UPDATE",
     "type": "json_flag"
   },
@@ -2174,6 +2182,18 @@
   },
   {
     "id": "PAIN_IMMUNE",
+    "type": "json_flag"
+  },
+  {
+    "id": "THERMAL_PAIN_CEILING",
+    "type": "json_flag"
+  },
+  {
+    "id": "THERMAL_PAIN_RELIEF",
+    "type": "json_flag"
+  },
+  {
+    "id": "POWERED_THERMAL_PAIN_RELIEF",
     "type": "json_flag"
   },
   {

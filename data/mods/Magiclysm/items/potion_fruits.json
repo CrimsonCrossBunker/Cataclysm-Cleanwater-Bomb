@@ -87,7 +87,7 @@
   {
     "type": "effect_on_condition",
     "id": "EOC_POTION_FRUIT_RASPBERRY",
-    "effect": [ { "math": [ "u_pain() -= 3" ] } ]
+    "effect": [ { "u_relieve_pain": 3, "thermal_relief": "effect_pfruit_raspberry_relief", "duration": "5 minutes" } ]
   },
   {
     "type": "ITEM",
