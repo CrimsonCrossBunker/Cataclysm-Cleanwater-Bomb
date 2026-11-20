@@ -166,3 +166,37 @@ end)
 ccb.runtime.handler("allow_while_grabbing", function(attack)
     return flag(attack.attacker, "GRAB_FILTER")
 end)
+
+local shock_charge = services.types.id("effect", "effect_shocker_zombie_charge_up")
+
+ccb.runtime.handler("shocker_can_charge", function(attack)
+    return (checked(services.effects.exact_intensity(attack.attacker, shock_charge)) or -1) <= 5
+end)
+
+ccb.runtime.handler("shocker_charge", function(hit)
+    -- An omitted intensity increments an existing charge through the native effect rules.
+    checked(services.effects.add(hit.attacker, shock_charge, services.time.duration(12, "turn")))
+end)
+
+ccb.runtime.handler("hekatonkheire_rend", function(attack)
+    local attacker = attack.attacker
+    local grapples = 0
+    local first_grab = intensity(attacker, "grabbing") ~= nil
+    if first_grab then
+        grapples = 1
+    end
+    -- The second hold is counted twice while the first is also active.
+    if intensity(attacker, "grabbing_2") ~= nil then
+        grapples = grapples + (first_grab and 2 or 1)
+    end
+    for index = 3, 5 do
+        if intensity(attacker, "grabbing_" .. index) ~= nil then
+            grapples = grapples + 1
+        end
+    end
+    checked(services.variables.set(attacker, "grappled", grapples, { include_before = false }))
+    if grapples > 1 then
+        checked(services.monsters.cast_spell(attacker, services.types.id("spell", "HEKATONKHEIRE_REND_AND_TEAR")))
+    end
+    return true
+end)

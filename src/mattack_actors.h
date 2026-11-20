@@ -82,15 +82,17 @@ class mon_spellcasting_actor : public mattack_actor
         std::unique_ptr<mattack_actor> clone() const override;
 };
 
-class mon_eoc_actor : public mattack_actor
+class mon_action_actor : public mattack_actor
 {
     public:
         int range = 1;
         bool allow_no_target = false;
         std::vector<effect_on_condition_id> eoc;
+        std::string lua_action_owner;
+        std::string lua_action_handler;
 
-        mon_eoc_actor() = default;
-        ~mon_eoc_actor() override = default;
+        mon_action_actor() = default;
+        ~mon_action_actor() override = default;
 
         void load_internal( const JsonObject &obj, const std::string &src ) override;
         bool call( monster & ) const override;

@@ -1,5 +1,26 @@
 local ccb = require("ccb")
 
+ccb.content.define_monster_attack {
+    kind = "melee",
+    id = "mon_shocker_chargeup",
+    accuracy = 8,
+    cooldown = 8,
+    move_cost = 100,
+    range = 5,
+    dodgeable = false,
+    blockable = false,
+    effects_require_damage = false,
+    damage = { { type = "pure", amount = 0 } },
+    avatar_hit = ccb.content.text("With a crackling sound, %1$s begins glowing brighter!"),
+    npc_hit = ccb.content.text("With a crackling sound, %1$s begins glowing brighter!"),
+    avatar_miss = ccb.content.text("With a crackling sound, %1$s begins glowing brighter!"),
+    npc_miss = ccb.content.text("With a crackling sound, %1$s begins glowing brighter!"),
+    avatar_no_damage = ccb.content.text("With a crackling sound, %1$s begins glowing brighter!"),
+    npc_no_damage = ccb.content.text("With a crackling sound, %1$s begins glowing brighter!"),
+    when = "shocker_can_charge",
+    on_hit = "shocker_charge",
+}
+
 -- We need a second effect to cancel out the charge-up
 ccb.content.define_monster_attack {
     kind = "melee",

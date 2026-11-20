@@ -3883,8 +3883,10 @@ void write_static_monster_attack_fields( JsonOut &json, const sol::table &attack
 {
     const auto kind = attack.get<sol::optional<std::string>>( "kind" );
     if( kind ) {
-        if( *kind != "leap" && *kind != "spell" && *kind != "melee" && *kind != "bite" ) {
-            throw std::invalid_argument( "unknown inline monster attack kind: " + *kind );
+        if( *kind == "scripted" ) {
+            json.member( "//ccb_lua_attack_action", attack.get<std::string>( "action" ) );
+        } else if( *kind != "leap" && *kind != "spell" && *kind != "melee" && *kind != "bite" ) {
+            throw std::invalid_argument( "unknown monster attack kind: " + *kind );
         }
         json.member( kind_field, *kind );
         write_placement_member<std::string>( json, attack, "id", "id" );

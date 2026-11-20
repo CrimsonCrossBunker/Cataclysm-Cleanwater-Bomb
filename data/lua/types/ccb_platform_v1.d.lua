@@ -9796,7 +9796,8 @@ function CcbPlatformContent.define_mutation(options) end
 
 ---@class StaticMonsterAttackOverride
 ---@field id? string Native attack ID. Required when configuring a registered attack with no kind.
----@field kind? 'leap'|'spell'|'melee'|'bite' Native actor type for an inline attack.
+---@field kind? 'leap'|'spell'|'melee'|'bite'|'scripted' Native attack actor type.
+---@field action? string Named handler required for scripted attacks. Return true to consume the attack.
 ---@field cooldown? number Cooldown in turns. Required for an inline actor without inherited defaults.
 ---@field move_cost? integer
 ---@field accuracy? integer
@@ -18178,8 +18179,9 @@ function CcbCreaturesApi.heal(target, body_part, amount) end
 function CcbCreaturesApi.avatar() end
 
 ---@param handle GameHandle Exact live Creature handle.
+---@param observer? GameHandle Exact live observer for native visibility, distance and attitude.
 ---@return CcbResult result `value` is a detached CcbCreatureSnapshot; stale or dead handles fail closed.
-function CcbCreaturesApi.snapshot(handle) end
+function CcbCreaturesApi.snapshot(handle, observer) end
 
 ---Use total volume, including carried and wielded items for Characters.
 ---@param creature GameHandle Exact live Creature handle.

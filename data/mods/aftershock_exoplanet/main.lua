@@ -164,3 +164,4 @@ require("field_types")
 require("mission_outcomes")
 
 require("attack_conditions")
+require("zenit_control")

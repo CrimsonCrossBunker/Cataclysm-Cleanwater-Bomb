@@ -1,6 +1,14 @@
 local ccb = require("ccb")
 
 ccb.content.define_monster_attack {
+    id = "hekatonkheire_rend",
+    kind = "scripted",
+    cooldown = 1,
+    range = 1,
+    action = "hekatonkheire_rend",
+}
+
+ccb.content.define_monster_attack {
     kind = "melee",
     id = "ranged_pull",
     cooldown = 15,

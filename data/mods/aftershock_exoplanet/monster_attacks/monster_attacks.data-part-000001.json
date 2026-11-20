@@ -1,23 +1,5 @@
 [
   {
-    "type": "monster_attack",
-    "attack_type": "melee",
-    "id": "zenit_control",
-    "cooldown": 3,
-    "move_cost": 0,
-    "range": 35,
-    "dodgeable": false,
-    "blockable": false,
-    "damage_max_instance": [ { "damage_type": "bash", "amount": 0 } ],
-    "eoc": [ "EOC_ZENIT_CONTROL" ],
-    "hit_dmg_u": "",
-    "hit_dmg_npc": "",
-    "miss_msg_u": "",
-    "miss_msg_npc": "",
-    "no_dmg_msg_u": "",
-    "no_dmg_msg_npc": ""
-  },
-  {
     "id": "shock_mine_control",
     "type": "SPELL",
     "name": { "str": "Sock mine control", "//~": "NO_I18N" },

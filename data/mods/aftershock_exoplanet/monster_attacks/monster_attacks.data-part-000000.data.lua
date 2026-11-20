@@ -63,3 +63,21 @@ ccb.content.define_monster_attack {
     npc_miss = ccb.content.text("<npcname> rolls out of the way of %1$s's stomp!"),
     when = "allow_android_crush_monster",
 }
+
+ccb.content.define_monster_attack {
+    kind = "melee",
+    id = "zenit_control",
+    cooldown = 3,
+    move_cost = 0,
+    range = 35,
+    dodgeable = false,
+    blockable = false,
+    damage = { { type = "bash", amount = 0 } },
+    avatar_hit = "",
+    npc_hit = "",
+    avatar_miss = "",
+    npc_miss = "",
+    avatar_no_damage = "",
+    npc_no_damage = "",
+    on_hit = "zenit_control",
+}

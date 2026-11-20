@@ -287,16 +287,30 @@ bool leap_actor::call( monster &z ) const
     return true;
 }
 
-std::unique_ptr<mattack_actor> mon_eoc_actor::clone() const
+std::unique_ptr<mattack_actor> mon_action_actor::clone() const
 {
-    return std::make_unique<mon_eoc_actor>( *this );
+    return std::make_unique<mon_action_actor>( *this );
 }
 
-void mon_eoc_actor::load_internal( const JsonObject &obj, const std::string & )
+void mon_action_actor::load_internal( const JsonObject &obj, const std::string &src )
 {
 
     optional( obj, was_loaded, "range", range, 1 );
-    optional( obj, was_loaded, "eoc", eoc );
+    if( const auto field = obj.get_member_opt( "//ccb_lua_attack_action" ) ) {
+        if( field->has_source_file() || obj.has_member( "eoc" ) ) {
+            field->throw_error( "Monster attack action metadata is reserved for ordered Lua definitions" );
+        }
+        lua_action_handler = field->get_string();
+        if( lua_action_handler.empty() || lua_action_handler.find( '\0' ) != std::string::npos ) {
+            field->throw_error( "A scripted monster attack requires a handler name" );
+        }
+        lua_action_owner = src;
+        eoc.clear();
+    } else if( obj.has_member( "eoc" ) ) {
+        optional( obj, was_loaded, "eoc", eoc );
+        lua_action_handler.clear();
+        lua_action_owner.clear();
+    }
     allow_no_target = obj.get_bool( "allow_no_target", false );
 
     if( obj.has_member( "condition" ) ) {
@@ -306,7 +320,7 @@ void mon_eoc_actor::load_internal( const JsonObject &obj, const std::string & )
 
 }
 
-bool mon_eoc_actor::call( monster &mon ) const
+bool mon_action_actor::call( monster &mon ) const
 {
     map &here = get_map();
     Creature *target = ( allow_no_target ) ? nullptr : mon.attack_target();
@@ -337,14 +351,15 @@ bool mon_eoc_actor::call( monster &mon ) const
         }
     }
 
-    {
-        for( const effect_on_condition_id &eoc : eoc ) {
-            dialogue d( get_talker_for( mon ),
-                        allow_no_target ? nullptr : get_talker_for( target ) );
-            eoc->activate( d );
-        }
-        return true;
+    if( !lua_action_handler.empty() ) {
+        return cata::lua_platform::invoke_monster_attack_handler(
+                   lua_action_owner, id, lua_action_handler, mon, target ).value_or( false );
     }
+    for( const effect_on_condition_id &action : eoc ) {
+        dialogue d( get_talker_for( mon ), allow_no_target ? nullptr : get_talker_for( target ) );
+        action->activate( d );
+    }
+    return true;
 }
 
 std::unique_ptr<mattack_actor> mon_spellcasting_actor::clone() const
