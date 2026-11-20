@@ -22,6 +22,7 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "lua_platform_runtime_internal.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
@@ -520,6 +521,21 @@ bool mission_util::load_funcs( const JsonObject &jo,
     return true;
 }
 
+// The factory can defer a Lua mission until a copy-from parent has loaded.
+// Keep its native operations available until the factory finishes resolving them.
+static std::vector<talk_effect_t> staged_mission_actions;
+
+std::size_t cata::lua_platform::detail::stage_mission_actions( talk_effect_t actions )
+{
+    staged_mission_actions.push_back( std::move( actions ) );
+    return staged_mission_actions.size() - 1;
+}
+
+void cata::lua_platform::detail::clear_staged_mission_actions()
+{
+    staged_mission_actions.clear();
+}
+
 bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
                                 [[maybe_unused]] std::string_view phase,
                                 std::function<void( mission *, Character & )> &phase_func )
@@ -555,6 +571,12 @@ bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
     talk_effect_t talk_effects;
     talk_effects.load_effect( jo, "effect", src );
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    if( const auto actions = jo.get_member_opt( "//ccb_lua_mission_actions" ) ) {
+        if( actions->has_source_file() ) {
+            actions->throw_error( "mission action metadata is reserved for ordered Lua definitions" );
+        }
+        talk_effects.append_actions( staged_mission_actions.at( actions->get_uint64() ) );
+    }
     if( const auto rewards = jo.get_member_opt( "//ccb_lua_mission_item_rewards" ) ) {
         if( rewards->has_source_file() ) {
             rewards->throw_error( "mission reward metadata is reserved for ordered Lua definitions" );

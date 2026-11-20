@@ -1,31 +1,5 @@
 [
   {
-    "id": "MISSION_RANCH_DOCTOR_MEDICAL_GLOVES",
-    "type": "mission_definition",
-    "name": { "str": "Find 5 Pairs of Medical Gloves" },
-    "description": "Bring the doctor 5 pairs of medical gloves.",
-    "goal": "MGOAL_FIND_ITEM",
-    "difficulty": 5,
-    "value": 3500,
-    "item": "gloves_medical",
-    "count": 5,
-    "origins": [ "ORIGIN_SECONDARY" ],
-    "has_generic_rewards": false,
-    "followup": "MISSION_RANCH_DOCTOR_MEDICAL_ANESTHETIC",
-    "dialogue": {
-      "describe": "We need help…",
-      "offer": "We're getting a lot of scrapes and bruises coming in right now, but it's only a matter of time before we see a serious injury.  I'm not prepared for when that happens and I'm hoping you can help.  To start off, I'm going to need some more medical gloves to help prevent infections.  Can you bring me 5 pairs?",
-      "accepted": "I'm counting on you.",
-      "rejected": "Come back when you get a chance.  We need skilled survivors.",
-      "advice": "Hospitals or clinics might have a few sitting around.",
-      "inquire": "Do you have the medical gloves?",
-      "success": "Thank you for your assistance.",
-      "success_lie": "What good does this do us?",
-      "failure": "It was a lost cause anyways…"
-    },
-    "end": { "effect": [ { "npc_add_var": "dialogue_tacoma_ranch_provides_aid", "value": "yes" } ] }
-  },
-  {
     "id": "MISSION_RANCH_DOCTOR_MEDICAL_ANESTHETIC",
     "type": "mission_definition",
     "name": { "str": "Anesthetic for the Doctor" },

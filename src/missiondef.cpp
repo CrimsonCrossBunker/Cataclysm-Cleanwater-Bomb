@@ -121,6 +121,7 @@ void mission_type::load_mission_type( const JsonObject &jo, const std::string &s
 void mission_type::reset()
 {
     mission_type_factory.reset();
+    cata::lua_platform::detail::clear_staged_mission_actions();
 }
 
 template <typename Fun>
@@ -239,6 +240,7 @@ bool mission_type::test_goal_condition( struct dialogue &d ) const
 void mission_type::finalize_all()
 {
     mission_type_factory.finalize();
+    cata::lua_platform::detail::clear_staged_mission_actions();
 }
 
 void mission_type::check_consistency()

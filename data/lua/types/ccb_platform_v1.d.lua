@@ -8424,6 +8424,7 @@ function CcbPlatformContent.define_profession(options) end
 ---@field container? string Optional container for an item reward.
 
 ---@class StaticMissionPhase
+---@field actions? (StaticDialogueNativeAction|StaticDialogueAction)[] Ordered participant operations before item delivery. Supply either actions or native_actions.
 ---@field native_actions? StaticDialogueNativeAction[] Run built-in conversation operations on the original mission participants after before_rewards and before item delivery.
 ---@field before_rewards? string|string[] Registered mission callbacks invoked in order before item delivery.
 ---@field item_rewards? StaticMissionItemReward[] Grant in order before the phase callback. Use native item delivery, giver popups, and mission reward previews.

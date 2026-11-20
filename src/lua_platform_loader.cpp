@@ -6221,7 +6221,7 @@ void write_static_profession_skill( JsonOut &json, const sol::table &skill )
 }
 
 void write_static_mission_phase( JsonOut &json, const sol::table &options, const char *field,
-                                 const char *native )
+                                 const char *native, const std::string &source )
 {
     const sol::object phase = options.raw_get<sol::object>( field );
     if( phase.get_type() == sol::type::nil ) {
@@ -6234,7 +6234,11 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
     const sol::table rules = phase.as<sol::table>();
     json.member( native );
     json.start_object();
-    write_static_dialogue_native_actions( json, rules, "mission phase" );
+    if( auto actions = read_static_dialogue_actions( rules, source ) ) {
+        json.member( "//ccb_lua_mission_actions", detail::stage_mission_actions( std::move( *actions ) ) );
+    } else {
+        write_static_dialogue_native_actions( json, rules, "mission phase" );
+    }
     write_static_string_or_ids( json, rules, "before_rewards", "//ccb_lua_mission_before_rewards" );
     write_static_string_or_ids( json, rules, "handler", "//ccb_lua_mission_handler" );
     write_static_catalog_array( json, rules, "item_rewards", "//ccb_lua_mission_item_rewards",
@@ -6300,7 +6304,7 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
     json.end_object();
 }
 
-void write_static_mission( JsonOut &json, const sol::table &options )
+void write_static_mission( JsonOut &json, const sol::table &options, const std::string &source )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" }, { "goal", "goal" },
@@ -6330,9 +6334,9 @@ void write_static_mission( JsonOut &json, const sol::table &options )
         json.end_object();
     }
     write_static_string_or_ids( json, options, "deadline", "deadline" );
-    write_static_mission_phase( json, options, "start", "start" );
-    write_static_mission_phase( json, options, "finish", "end" );
-    write_static_mission_phase( json, options, "failure", "fail" );
+    write_static_mission_phase( json, options, "start", "start", source );
+    write_static_mission_phase( json, options, "finish", "end", source );
+    write_static_mission_phase( json, options, "failure", "fail", source );
 }
 
 void write_static_scenario_lists( JsonOut &json, const sol::table &options )
@@ -7404,7 +7408,9 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_start_location", static_catalog_definition(
                               resolved.id, "start_location", write_static_start_location, start_locations::load ) );
     content.set_function( "define_mission", static_catalog_definition(
-                              resolved.id, "mission_definition", write_static_mission, mission_type::load_mission_type ) );
+    resolved.id, "mission_definition", [&resolved]( JsonOut & json, const sol::table & options ) {
+        write_static_mission( json, options, resolved.id );
+    }, mission_type::load_mission_type ) );
     content.set_function( "define_scenario", static_catalog_definition(
                               resolved.id, "scenario", write_static_scenario, scenario::load_scenario ) );
     content.set_function( "define_profession", static_catalog_definition(

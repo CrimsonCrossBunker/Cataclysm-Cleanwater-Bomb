@@ -132,3 +132,8 @@ end)
 ccb.runtime.handler("complete_mission_prove_you_are_a_survivor", function()
     return services.time.snapshot().turns_since_cataclysm >= services.time.duration(10, "day").turns
 end)
+
+ccb.runtime.handler("complete_mission_ranch_doctor_supplies", function(context)
+    return services.inventory.has_items(context.speaker, id("item", "book_binder"), 10, 0).value
+        and services.inventory.has_items(context.speaker, id("item", "paper"), 500, 0).value
+end)

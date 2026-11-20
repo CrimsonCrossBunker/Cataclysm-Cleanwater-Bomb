@@ -1,76 +1,77 @@
 [
   {
-    "id": "MISSION_CAMP_LEADERSHIP_CHANGE",
+    "id": "MISSION_LEARN_ABOUT_CATTAIL_JELLY",
     "type": "mission_definition",
-    "name": { "str": "Faction succession" },
+    "name": { "str": "Gather cattail stalks to create cattail jelly" },
+    "description": "Gather <color_yellow>60 cattail stalks</color> from the swamp and bring them back to <color_light_red>learn how to craft cattail jelly</color>.  Raise your <color_yellow>survival skill to at least 1</color> by harvesting cattail stalks.  <color_yellow>Bring back the provided bag with the 60 cattail stalks in them</color> as well.",
     "goal": "MGOAL_CONDITION",
-    "description": "You have some time left until you can transfer control to your companions, provided you have <color_yellow>established a Basecamp</color> and <color_yellow>have at least 1 NPC companion</color>.",
-    "difficulty": 0,
+    "goal_condition": {
+      "and": [
+        { "u_has_item": "swag_bag" },
+        { "u_has_items": { "item": "cattail_stalk", "count": 60 } },
+        { "math": [ "u_skill('survival') >= 1" ] }
+      ]
+    },
+    "difficulty": 1,
     "value": 0,
-    "deadline": { "math": [ "time_between_succession" ] },
-    "invisible_on_complete": true,
+    "has_generic_rewards": false,
+    "origins": [ "ORIGIN_OPENER_NPC", "ORIGIN_ANY_NPC" ],
     "start": {
-      "effect": [ { "math": [ "u_timer_time_of_last_succession = time('now')" ] }, { "run_eocs": "EOC_FACTION_SUCCESSION_CHECK" } ]
+      "effect": [ { "u_spawn_item": "swag_bag" } ],
+      "assign_mission_target": { "om_terrain": "forest_water", "reveal_radius": 3 }
+    },
+    "end": {
+      "effect": [
+        { "u_sell_item": "cattail_stalk", "count": 60 },
+        { "u_sell_item": "swag_bag" },
+        { "npc_consume_item": "cattail_stalk", "count": 60 },
+        { "u_learn_recipe": "cattail_jelly" },
+        { "u_message": "You learn how to craft cattail jelly.", "popup": true },
+        { "u_spawn_item": "cattail_jelly", "container": "bag_zipper", "count": 5 }
+      ]
+    },
+    "dialogue": {
+      "describe": "Medical services are a little sparse following <the_cataclysm>, but people have been surviving using their wits and the bounty of Mother Nature for a long time.  Care to learn a little?",
+      "offer": "Did you know that cattails are a source of a jelly that works as an antiseptic and analgesic?  Something like that is likely to be mighty helpful out here.  I want you to take this bag, head to the nearest swamp, collect 60 cattail stalks, and bring them back here.  In exchange, I'll show you how to harvest the jelly.",
+      "accepted": "Great!  <color_yellow>This bag should be big enough to hold all of the stalks we'll need.  Don't forget to bring it back.</color>",
+      "rejected": "Your loss.",
+      "advice": "The cattails grow in the fresh water in swamps.  You can't miss them.",
+      "inquire": "Got those cattail stalks yet?  Don't forget to <color_yellow>bring back my bag with the stalks in them</color> and to work on improving your survival skill as well.",
+      "success": "Great!  Hand them over and I'll show you how this works.",
+      "success_lie": "OK, then hand them over.",
+      "failure": "Well, that's a shame."
     }
   },
   {
-    "type": "effect_on_condition",
-    "id": "EOC_FACTION_SUCCESSION_CHECK",
-    "recurrence": [ "5 minutes", "20 minutes" ],
-    "global": true,
-    "condition": { "math": [ "time_since(u_timer_time_of_last_succession) > time_between_succession" ] },
-    "effect": [ { "remove_active_mission": "MISSION_CAMP_LEADERSHIP_CHANGE" }, { "u_lose_var": "time_of_last_succession" } ],
-    "deactivate_condition": { "not": { "compare_string": [ "yes", { "u_val": "time_of_last_succession" } ] } }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FACTION_SUCCESSION_CHANGE_REINIT",
-    "eoc_type": "EVENT",
-    "required_event": "game_avatar_new",
-    "effect": [
-      { "remove_active_mission": "MISSION_CAMP_LEADERSHIP_CHANGE" },
-      {
-        "assign_mission": "MISSION_CAMP_LEADERSHIP_CHANGE",
-        "deadline": { "math": [ "time('now') + time_between_succession" ] }
-      }
-    ]
-  },
-  {
-    "//": "DUMB HACK ALERT! We need to check during both game_start and game_begin, because game_start runs first. If we only listen during game_begin then EOC_FACTION_SUCCESSION_CHANGE_INIT finds the variable doesn't exist when it runs during game_start, substituting a value of 0 turns. Double assigning the same value is harmless, just stupid. It shouldn't be necessary to make two EOCs for this. Oh well, what can you do",
-    "type": "effect_on_condition",
-    "id": "EOC_FACTION_SUCCESSION_COOLDOWN_GAMEBEGIN_CHECK",
-    "eoc_type": "EVENT",
-    "required_event": "game_begin",
-    "effect": [ { "run_eocs": "EOC_FACTION_SUCCESSION_COOLDOWN" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FACTION_SUCCESSION_COOLDOWN",
-    "effect": [ { "math": [ "time_between_succession = time(' 3 d')" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FACTION_SUCCESSION_IMMEDIATE",
-    "eoc_type": "EVENT",
-    "required_event": "broken_bone",
-    "//1": "Only run EOC if character is currently on succession cooldown!",
-    "condition": {
-      "and": [
-        "u_is_avatar",
-        { "math": [ "has_var(u_timer_time_of_last_succession)" ] },
-        { "math": [ "time_since(u_timer_time_of_last_succession) < time_between_succession" ] },
-        { "math": [ "u_hp('torso') != 0" ] },
-        { "math": [ "u_hp('head') != 0" ] }
-      ]
+    "id": "MISSION_PYROMANIAC",
+    "type": "mission_definition",
+    "name": { "str": "Angry pyromaniac" },
+    "description": "Bring the pyromaniac to <color_light_blue>their rival's house</color> and don't forget to <color_yellow>bring at least 200 units of gasoline</color>.  After you got there, talk to the pyromaniac to start burning the house.",
+    "goal": "MGOAL_GO_TO",
+    "difficulty": 0,
+    "value": 0,
+    "//": "NPC will ask player to burn tagged house. Will follow player after accepting mission.",
+    "//2": "Change first topic to do proper checks. MGOAL_GO_TO to check if player stands on tagged tile.",
+    "//3": "At the end of the mission, will place fire on tagged tile and NPC will join player faction.",
+    "has_generic_rewards": false,
+    "start": {
+      "effect": [ "follow_only", { "npc_first_topic": "MISSION_PYROMANIAC" } ],
+      "assign_mission_target": { "om_terrain": "house", "om_terrain_replace": "forest", "om_terrain_match_type": "PREFIX", "random": true, "z": 0 }
     },
-    "//2": "Remove the mission tracking that you can't change char, push the timer back by [cooldown length] so changing is immediately available.",
-    "effect": [
-      { "remove_active_mission": "MISSION_CAMP_LEADERSHIP_CHANGE" },
-      {
-        "u_message": "You've been badly wounded.  It might be better to rest for a while and let someone else scavenge.  (Changing characters is now available at any camp board.)",
-        "type": "mixed"
-      },
-      { "math": [ "u_timer_time_of_last_succession -= time_between_succession" ] }
-    ]
+    "end": {
+      "effect": [ "follow", { "u_consume_item": "gasoline", "count": 200 }, { "mapgen_update": "MISSION_PYROMANIAC_BURN" } ]
+    },
+    "origins": [ "ORIGIN_OPENER_NPC" ],
+    "dialogue": {
+      "describe": "Oh man, I want to fucking burn it so bad…",
+      "offer": "I'm so fucking infuriated!  I've got an enemy that ruined my life, and now I want to get revenge!  I don't care about <the_cataclysm>, I just want to burn his house!  Would you help me, <name_g>?",
+      "accepted": "Good.  Let's go to his house and goddamn burn it down!  Oh, by the way, could you bring gasoline with you, <name_g>?  I was so angry I forgot to bring it with me…",
+      "rejected": "Seriously?  It's such an easy job…",
+      "advice": "Maybe we can find some gasoline at a gas station.",
+      "inquire": "Are you ready, <name_g>?",
+      "success": "Sweet, sweet revenge!  Ah, smells so nice!  Feels like the smell of napalm in the morning!  All his stuff, and probably even that <name_b>, will burn to ashes in a matter of minutes.  You helped me get my revenge, so I'll follow you to the end, <name_g>!",
+      "success_lie": "What?!  You liar!",
+      "failure": "Wow, you failed?  How…"
+    }
   }
 ]

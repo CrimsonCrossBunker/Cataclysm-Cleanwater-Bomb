@@ -99,3 +99,11 @@ ccb.runtime.handler("wait_half_hour", function(context)
     services.activities.assign_timed(context.character, id("activity", "ACT_WAIT_NPC"),
         services.time.duration(30, "minute"))
 end)
+
+ccb.runtime.handler("deliver_book_binder_10_items", function(context)
+    services.inventory.consume_by_type(context.character, id("item", "book_binder"), 10, 0)
+end)
+
+ccb.runtime.handler("deliver_paper_500_items", function(context)
+    services.inventory.consume_by_type(context.character, id("item", "paper"), 500, 0)
+end)
