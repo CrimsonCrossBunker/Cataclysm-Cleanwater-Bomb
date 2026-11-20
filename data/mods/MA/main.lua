@@ -3517,3 +3517,4 @@ add_city {
 }
 
 require("scenario_filters")
+require("start_locations")

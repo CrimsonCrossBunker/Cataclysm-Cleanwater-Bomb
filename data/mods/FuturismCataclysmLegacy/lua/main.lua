@@ -45,3 +45,4 @@ require("lua.effect_types")
 require("monster_groups")
 
 require("lua.migrations")
+require("lua.damage_types")

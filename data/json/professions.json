@@ -1,201 +1,91 @@
 [
   {
     "type": "profession_item_substitutions",
-    "item": "blazer",
-    "sub": [ { "present": [ "WOOLALLERGY" ], "new": [ "jacket_leather" ] }, { "present": [ "VEGAN" ], "new": [ "jacket_light" ] } ]
+    "group": {
+      "items": [
+        "glasses_eye"
+      ]
+    },
+    "bonus": {
+      "present": [
+        "MYOPIC"
+      ],
+      "absent": [
+        "HYPEROPIC"
+      ]
+    }
   },
   {
     "type": "profession_item_substitutions",
-    "item": "hat_hunting",
-    "sub": [ { "present": [ "WOOLALLERGY", "VEGAN" ], "new": [ "hat_cotton" ] } ]
+    "group": {
+      "items": [
+        "glasses_bifocal"
+      ]
+    },
+    "bonus": {
+      "present": [
+        "HYPEROPIC",
+        "MYOPIC"
+      ]
+    }
   },
   {
     "type": "profession_item_substitutions",
-    "item": "hat_newsboy",
-    "sub": [ { "present": [ "WOOLALLERGY", "VEGAN" ], "new": [ "hat_cotton" ] } ]
+    "group": {
+      "items": [
+        "glasses_reading"
+      ]
+    },
+    "bonus": {
+      "present": [
+        "HYPEROPIC"
+      ],
+      "absent": [
+        "MYOPIC"
+      ]
+    }
   },
   {
     "type": "profession_item_substitutions",
-    "item": "peacoat",
-    "sub": [ { "present": [ "WOOLALLERGY", "VEGAN" ], "new": [ "jacket_flannel" ] } ]
+    "group": {
+      "entries": [
+        {
+          "item": "inhaler",
+          "ammo-item": "albuterol",
+          "charges": 100
+        }
+      ]
+    },
+    "bonus": {
+      "present": [
+        "ASTHMA"
+      ]
+    }
   },
   {
     "type": "profession_item_substitutions",
-    "item": "sweater",
-    "sub": [ { "present": [ "WOOLALLERGY", "VEGAN" ], "new": [ "sweatshirt" ] } ]
+    "group": {
+      "items": [
+        "thorazine"
+      ]
+    },
+    "bonus": {
+      "present": [
+        "SCHIZOPHRENIC"
+      ]
+    }
   },
   {
     "type": "profession_item_substitutions",
-    "item": "boots_winter",
-    "sub": [ { "present": [ "WOOLALLERGY" ], "new": [ "boots_fur" ] }, { "present": [ "VEGAN" ], "new": [ "boots_faux_fur" ] } ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "cloak_wool",
-    "sub": [ { "present": [ "WOOLALLERGY" ], "new": [ "cloak_leather" ] }, { "present": [ "VEGAN" ], "new": [ "cloak" ] } ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "gloves_wool",
-    "sub": [ { "present": [ "WOOLALLERGY" ], "new": [ "gloves_leather" ] }, { "present": [ "VEGAN" ], "new": [ "gloves_light" ] } ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "socks_wool",
-    "sub": [ { "present": [ "VEGAN" ], "new": [ "socks" ] }, { "present": [ "WOOLALLERGY" ], "new": [ "socks" ] } ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "mask_ski",
-    "sub": [ { "present": [ "WOOLALLERGY", "VEGAN" ], "new": [ "balclava" ] } ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "kilt",
-    "sub": [ { "present": [ "WOOLALLERGY" ], "new": [ "kilt_leather" ] }, { "present": [ "VEGAN" ], "new": [ "kilt_utility" ] } ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "trait": "VEGAN",
-    "sub": [ { "item": "dress_shoes", "new": [ "espadrilles" ] } ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "sunglasses",
-    "sub": [ { "present": [ "HYPEROPIC", "MYOPIC" ], "new": [ "fitover_sunglasses" ] } ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "hardtack",
-    "sub": [
-      { "present": [ "ANTIWHEAT" ], "absent": [ "MEATARIAN" ], "new": [ "cornbread" ] },
-      { "present": [ "ANTIWHEAT", "MEATARIAN" ], "new": [ { "item": "meat_cooked", "ratio": 0.72 } ] }
-    ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "sandwich_pbj",
-    "sub": [
-      { "present": [ "ANTIFRUIT" ], "absent": [ "ANTIWHEAT" ], "new": [ "sandwich_pbh" ] },
-      { "present": [ "ANTIWHEAT" ], "absent": [ "VEGETARIAN" ], "new": [ { "item": "cracklins", "ratio": 5.625 } ] },
-      { "present": [ "ANTIWHEAT", "VEGETARIAN" ], "new": [ "boiled_egg" ] }
-    ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "granola",
-    "sub": [
-      { "present": [ "ANTIFRUIT" ], "absent": [ "MEATARIAN" ], "new": [ { "item": "pemmican", "ratio": 0.838 } ] },
-      { "present": [ "ANTIFRUIT", "MEATARIAN" ], "new": [ { "item": "jerky", "ratio": 4 } ] },
-      { "present": [ "ANTIWHEAT" ], "absent": [ "ANTIFRUIT" ], "new": [ { "item": "boiled_egg", "ratio": 0.818 } ] }
-    ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "juice",
-    "sub": [
-      { "present": [ "ANTIFRUIT" ], "absent": [ "ANTIJUNK" ], "new": [ "lemonlime" ] },
-      { "present": [ "ANTIFRUIT", "ANTIJUNK" ], "new": [ { "item": "water_clean", "ratio": 0.4 } ] }
-    ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "cheeseburger",
-    "sub": [
-      { "present": [ "ANTIWHEAT" ], "absent": [ "ANTIJUNK" ], "new": [ { "item": "fries", "ratio": 4 } ] },
-      { "present": [ "ANTIWHEAT", "ANTIJUNK" ], "absent": [ "MEATARIAN" ], "new": [ "veggy_salad", "fork" ] },
-      { "present": [ "ANTIWHEAT", "ANTIJUNK", "MEATARIAN" ], "new": [ "fried_spam", "fork" ] },
-      { "present": [ "LACTOSE" ], "absent": [ "ANTIWHEAT", "VEGETARIAN" ], "new": [ "hamburger" ] },
-      { "present": [ "LACTOSE", "VEGETARIAN" ], "absent": [ "ANTIWHEAT" ], "new": [ "sandwich_veggy" ] },
-      { "present": [ "VEGAN" ], "absent": [ "ANTIWHEAT" ], "new": [ "sandwich_veggy" ] },
-      {
-        "present": [ "VEGETARIAN" ],
-        "absent": [ "ANTIWHEAT", "LACTOSE" ],
-        "new": [ { "item": "sandwich_cheese_grilled", "ratio": 0.5 } ]
-      }
-    ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "pizza_meat",
-    "sub": [
-      { "present": [ "VEGETARIAN" ], "absent": [ "ANTIWHEAT" ], "new": [ "pizza_veggy" ] },
-      { "present": [ "VEGAN" ], "absent": [ "ANTIWHEAT" ], "new": [ "pizza_veggy" ] },
-      { "present": [ "VEGETARIAN", "ANTIWHEAT" ], "new": [ "veggy_salad", "fork" ] },
-      { "present": [ "VEGAN", "ANTIWHEAT" ], "new": [ "veggy_salad", "fork" ] },
-      {
-        "present": [ "ANTIWHEAT" ],
-        "absent": [ "VEGETARIAN", "ANTIJUNK" ],
-        "new": [ { "item": "fchicken", "ratio": 1 } ]
-      },
-      {
-        "present": [ "ANTIWHEAT", "ANTIJUNK" ],
-        "absent": [ "VEGETARIAN" ],
-        "new": [ { "item": "fish_fried", "ratio": 1 }, { "item": "fork", "ratio": 0.5 } ]
-      }
-    ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "pizza_veggy",
-    "sub": [
-      { "present": [ "ANTIWHEAT", "VEGETARIAN" ], "new": [ "veggy_salad", "fork" ] },
-      { "present": [ "ANTIWHEAT", "VEGAN" ], "new": [ "veggy_salad", "fork" ] },
-      {
-        "present": [ "ANTIWHEAT" ],
-        "absent": [ "VEGETARIAN", "ANTIJUNK" ],
-        "new": [ { "item": "fchicken", "ratio": 1 } ]
-      },
-      {
-        "present": [ "ANTIWHEAT", "ANTIJUNK" ],
-        "absent": [ "VEGETARIAN" ],
-        "new": [ { "item": "fish_fried", "ratio": 1 }, { "item": "fork", "ratio": 0.5 } ]
-      },
-      { "present": [ "MEATARIAN" ], "absent": [ "ANTIWHEAT" ], "new": [ "pizza_meat" ] }
-    ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "pudding",
-    "sub": [
-      { "present": [ "ANTIJUNK" ], "absent": [ "LACTOSE" ], "new": [ "yoghurt" ] },
-      { "present": [ "ANTIWHEAT" ], "absent": [ "ANTIJUNK" ], "new": [ "neccowafers" ] },
-      { "present": [ "ANTIJUNK", "LACTOSE" ], "new": [ "boiled_egg" ] }
-    ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "item": "can_beans",
-    "sub": [ { "present": [ "MEATARIAN" ], "new": [ "can_spam" ] } ]
-  },
-  {
-    "type": "profession_item_substitutions",
-    "group": { "items": [ "glasses_eye" ] },
-    "bonus": { "present": [ "MYOPIC" ], "absent": [ "HYPEROPIC" ] }
-  },
-  {
-    "type": "profession_item_substitutions",
-    "group": { "items": [ "glasses_bifocal" ] },
-    "bonus": { "present": [ "HYPEROPIC", "MYOPIC" ] }
-  },
-  {
-    "type": "profession_item_substitutions",
-    "group": { "items": [ "glasses_reading" ] },
-    "bonus": { "present": [ "HYPEROPIC" ], "absent": [ "MYOPIC" ] }
-  },
-  {
-    "type": "profession_item_substitutions",
-    "group": { "entries": [ { "item": "inhaler", "ammo-item": "albuterol", "charges": 100 } ] },
-    "bonus": { "present": [ "ASTHMA" ] }
-  },
-  {
-    "type": "profession_item_substitutions",
-    "group": { "items": [ "thorazine" ] },
-    "bonus": { "present": [ "SCHIZOPHRENIC" ] }
-  },
-  {
-    "type": "profession_item_substitutions",
-    "group": { "items": [ "teleumbrella" ] },
-    "bonus": { "present": [ "ALBINO" ] }
+    "group": {
+      "items": [
+        "teleumbrella"
+      ]
+    },
+    "bonus": {
+      "present": [
+        "ALBINO"
+      ]
+    }
   }
 ]
