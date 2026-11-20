@@ -126,3 +126,48 @@ ccb.content.define_map_extra_collection {
         { extra = "mx_phavian_science", weight = 8 },
     },
 }
+
+ccb.content.define_map_extra_collection {
+    id = "phavian_lab_lot",
+    chance = 3,
+    extras = {
+        { extra = "mx_helicopter", weight = 15 },
+        { extra = "mx_military", weight = 65 },
+        { extra = "mx_collegekids", weight = 1 },
+        { extra = "mx_portal", weight = 150 },
+        { extra = "mx_crater", weight = 180 },
+        { extra = "mx_alien_grass", weight = 25 },
+        { extra = "mx_alien_grass_2", weight = 25 },
+        { extra = "mx_alien_grass_3", weight = 25 },
+        { extra = "mx_alien_grass_4", weight = 25 },
+        { extra = "mx_alien_grass_5", weight = 25 },
+        { extra = "mx_alien_grove", weight = 25 },
+        { extra = "mx_nether_pond", weight = 50 },
+        { extra = "mx_portal_in", weight = 30 },
+        { extra = "mx_point_burned_ground", weight = 100 },
+        { extra = "mx_casings", weight = 30 },
+        { extra = "mx_exocrash_1", weight = 1 },
+        { extra = "mx_exocrash_2", weight = 1 },
+    },
+}
+
+ccb.content.define_map_extra_collection {
+    id = "phavian_lab_interior",
+    chance = 2,
+    extras = {
+        { extra = "mx_crater", weight = 15000 },
+        { extra = "mx_point_burned_ground", weight = 6250 },
+        { extra = "mx_portal", weight = 3750 },
+        { extra = "mx_glass_and_crystal", weight = 2500 },
+        { extra = "mx_nether_pond", weight = 2500 },
+        { extra = "mx_portal_in", weight = 2000 },
+        { extra = "mx_casings", weight = 1500 },
+        { extra = "mx_alien_grass", weight = 1250 },
+        { extra = "mx_alien_grass_2", weight = 1250 },
+        { extra = "mx_alien_grass_3", weight = 1250 },
+        { extra = "mx_alien_grass_4", weight = 1250 },
+        { extra = "mx_alien_grass_5", weight = 1250 },
+        { extra = "mx_military", weight = 250 },
+        { extra = "mx_jabberwock", weight = 1 },
+    },
+}

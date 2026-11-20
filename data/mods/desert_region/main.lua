@@ -18,5 +18,4 @@ require("monster_groups")
 require("map_weights")
 
 require("overmap_connections")
-require("map_extra_collections")
 require("region_components")

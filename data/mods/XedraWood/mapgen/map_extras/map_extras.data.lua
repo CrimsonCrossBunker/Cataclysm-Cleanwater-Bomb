@@ -1,103 +1,79 @@
 local ccb = require("ccb")
-local content = ccb.content
 
--- Native map-extra definitions
-do
-local definition = content.MapExtra {
+ccb.content.define_map_extra {
     id = "mx_witchwood_grove",
     name = ccb.content.text("witchwood grove"),
     description = ccb.content.text("A grove of witchwood trees."),
-    generator_method = "update_mapgen",
-    generator_id = "mx_witchwood_grove",
+    generator = { method = "update_mapgen", id = "mx_witchwood_grove" },
     symbol = "F",
     color = "cyan",
-    autonote_visibility = "details",
+    visibility = "details",
 }
-content.add(definition)
-end
-do
-local definition = content.MapExtra {
+
+ccb.content.define_map_extra {
     id = "mx_warped_tree_grove",
     name = ccb.content.text("dead grove"),
     description = ccb.content.text("A grove of strange trees, all dead."),
-    generator_method = "update_mapgen",
-    generator_id = "mx_warped_tree_grove",
+    generator = { method = "update_mapgen", id = "mx_warped_tree_grove" },
     z_levels = { 0, 0 },
     symbol = "T",
     color = "light_gray",
-    autonote_visibility = "details",
+    visibility = "details",
+    flags = { "CLASSIC" },
 }
-definition:flag("CLASSIC")
-content.add(definition)
-end
-do
-local definition = content.MapExtra {
+
+ccb.content.define_map_extra {
     id = "mx_campfire_remnants",
     name = ccb.content.text("campfire remains"),
     description = ccb.content.text("The remnants of a campfire, long gone to ash."),
-    generator_method = "update_mapgen",
-    generator_id = "mx_campfire_remnants",
+    generator = { method = "update_mapgen", id = "mx_campfire_remnants" },
     z_levels = { 0, 0 },
     symbol = "X",
     color = "light_gray",
-    autonote_visibility = "details",
+    visibility = "details",
+    flags = { "CLASSIC" },
 }
-definition:flag("CLASSIC")
-content.add(definition)
-end
-do
-local definition = content.MapExtra {
+
+ccb.content.define_map_extra {
     id = "mx_nest_claw_hunter",
     name = ccb.content.text("claw hunter nest"),
     description = ccb.content.text("A nest of claw hunters.  Watch out."),
-    generator_method = "update_mapgen",
-    generator_id = "mx_nest_claw_hunter",
+    generator = { method = "update_mapgen", id = "mx_nest_claw_hunter" },
     symbol = "D",
     color = "yellow",
-    autonote_visibility = "details",
+    visibility = "details",
 }
-content.add(definition)
-end
-do
-local definition = content.MapExtra {
+
+ccb.content.define_map_extra {
     id = "mx_nest_claw_runner",
     name = ccb.content.text("claw runner nest"),
     description = ccb.content.text("A claw runner nest."),
-    generator_method = "update_mapgen",
-    generator_id = "mx_nest_claw_runner",
+    generator = { method = "update_mapgen", id = "mx_nest_claw_runner" },
     symbol = "D",
     color = "yellow",
-    autonote_visibility = "details",
+    visibility = "details",
 }
-content.add(definition)
-end
-do
-local definition = content.MapExtra {
+
+ccb.content.define_map_extra {
     id = "mx_tanglevine_patch",
     name = ccb.content.text("Tanglevines"),
     description = ccb.content.text("A patch of tanglevines is growing here."),
-    generator_method = "update_mapgen",
-    generator_id = "mx_tanglevine_patch",
+    generator = { method = "update_mapgen", id = "mx_tanglevine_patch" },
     z_levels = { -2, 0 },
     symbol = "t",
     color = "green",
-    autonote_visibility = "none",
+    visibility = "none",
+    flags = { "WILDERNESS" },
 }
-definition:flag("WILDERNESS")
-content.add(definition)
-end
-do
-local definition = content.MapExtra {
+
+ccb.content.define_map_extra {
     id = "mx_giant_snake_nest",
     name = ccb.content.text("Giant snakes"),
     description = ccb.content.text("This is the lair of a giant serpent."),
-    generator_method = "update_mapgen",
-    generator_id = "mx_giant_snake_nest",
+    generator = { method = "update_mapgen", id = "mx_giant_snake_nest" },
     z_levels = { 0, 0 },
     symbol = "s",
     color = "green",
-    autonote_visibility = "details",
+    visibility = "details",
+    flags = { "WILDERNESS" },
 }
-definition:flag("WILDERNESS")
-content.add(definition)
-end

@@ -1,5 +1,22 @@
 local ccb = require("ccb")
 
+ccb.content.define_map_extra {
+    id = "mx_pond_swamp",
+    name = ccb.content.text("bog"),
+    description = ccb.content.text("Small bog is here."),
+    generator = { method = "update_mapgen", id = "mx_pond_swamp" },
+    z_levels = { 0, 0 },
+    flags = { "CLASSIC", "WATER" },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_pond_swamp_2",
+    copy_from = "mx_pond_swamp",
+    generator = { method = "update_mapgen", id = "mx_pond_swamp_2" },
+    z_levels = { 0, 0 },
+    flags = { "CLASSIC", "WATER" },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "pond_saltwater_shallow",

@@ -9,6 +9,7 @@ return ccb.ModDefinition {
     dependencies = { "ccb" },
     version = "0.1",
     obsolete = true,
+    ordered_data_files = true,
     -- should not be deleted until actual biomes exist in the game
     world_options = {
         OVERMAP_PLACE_HIGHWAYS = false,

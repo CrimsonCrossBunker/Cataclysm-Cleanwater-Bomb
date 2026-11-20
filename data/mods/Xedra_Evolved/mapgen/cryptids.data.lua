@@ -1,5 +1,16 @@
 local ccb = require("ccb")
 
+ccb.content.define_map_extra {
+    id = "mx_sevenoclock_track",
+    name = ccb.content.text("Half-eaten corpses"),
+    description = ccb.content.text("Piles of gore surround a trail of bloody footsteps."),
+    generator = { method = "update_mapgen", id = "mx_sevenoclock_track" },
+    symbol = "l",
+    z_levels = { 0, 0 },
+    color = "magenta_yellow",
+    visibility = "same_tile",
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "mx_sevenoclock_track",
@@ -151,6 +162,17 @@ ccb.content.define_mapgen {
         palettes = { "roof_palette" },
         terrain = { ["."] = "t_tar_flat_roof" },
     },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_deathworm_track",
+    name = ccb.content.text("Bloodsoaked acid streaks"),
+    description = ccb.content.text("A hole in the ground surrounds piles of acid-burned gore."),
+    generator = { method = "update_mapgen", id = "mx_deathworm_track" },
+    symbol = "l",
+    z_levels = { 0, 0 },
+    color = "magenta_yellow",
+    visibility = "same_tile",
 }
 
 ccb.content.define_mapgen {

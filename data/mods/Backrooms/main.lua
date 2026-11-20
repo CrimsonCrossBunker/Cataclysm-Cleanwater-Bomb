@@ -21,6 +21,4 @@ require("generic_items")
 require("inherited_items")
 
 require("monster_groups")
-require("map_extras")
-require("map_extra_collections")
 require("region_components")

@@ -51,6 +51,4 @@ require("generic_items")
 require("map_weights")
 
 require("migrations")
-require("map_extras")
-require("map_extra_collections")
 require("materials")

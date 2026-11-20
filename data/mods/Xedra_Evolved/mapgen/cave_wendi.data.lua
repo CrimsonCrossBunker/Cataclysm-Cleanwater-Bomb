@@ -1,5 +1,16 @@
 local ccb = require("ccb")
 
+ccb.content.define_map_extra {
+    id = "mx_hunger_track",
+    name = ccb.content.text("Half-eaten corpses"),
+    description = ccb.content.text("Piles of gore surround a trail of bloody footsteps."),
+    generator = { method = "update_mapgen", id = "mx_hunger_track" },
+    symbol = "l",
+    z_levels = { 0, 0 },
+    color = "magenta_yellow",
+    visibility = "same_tile",
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "mx_hunger_track",

@@ -1,5 +1,17 @@
 local ccb = require("ccb")
 
+ccb.content.define_map_extra {
+    id = "mx_golden_monolith",
+    name = ccb.content.text("Golden Monolith"),
+    description = ccb.content.text("A golden monolith sitting serenely overlooking the nearby terrain."),
+    generator = { method = "update_mapgen", id = "mx_golden_monolith" },
+    symbol = "I",
+    z_levels = { 0, 0 },
+    color = "magenta_yellow",
+    visibility = "same_tile",
+    flags = { "CLASSIC" },
+}
+
 ccb.content.define_mapgen {
     kind = "nested",
     id = "corpse_blood_gibs_fae_3x3",
@@ -71,6 +83,40 @@ ccb.content.define_mapgen {
     },
 }
 
+ccb.content.define_map_extra {
+    id = "mx_spider_shimmering",
+    name = ccb.content.text("Spiders"),
+    description = ccb.content.text("This area is covered with webs.  There probably are spiders nearby."),
+    generator = { method = "update_mapgen", id = "mx_spider_shimmering" },
+    z_levels = { -2, 0 },
+    symbol = "S",
+    color = "yellow",
+    visibility = "same_tile",
+}
+
+ccb.content.define_map_extra {
+    id = "mx_goblin_spider",
+    name = ccb.content.text("Spiders"),
+    description = ccb.content.text("This area is covered with webs.  There probably are spiders nearby."),
+    generator = { method = "update_mapgen", id = "mx_goblin_spider" },
+    z_levels = { -2, 0 },
+    symbol = "S",
+    color = "yellow",
+    visibility = "same_tile",
+    flags = { "CLASSIC" },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_trees_map_salamander",
+    name = ccb.content.text("Stand of trees"),
+    description = ccb.content.text("A copse of trees."),
+    generator = { method = "update_mapgen", id = "mx_trees_map_salamander" },
+    z_levels = { 0, 0 },
+    symbol = "E",
+    color = "green",
+    visibility = "same_tile",
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "mx_trees_map_salamander",
@@ -113,6 +159,17 @@ ccb.content.define_mapgen {
         },
         palettes = { "copse_trees_palette" },
     },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_trees_map_sylph",
+    name = ccb.content.text("Stand of trees"),
+    description = ccb.content.text("A copse of trees."),
+    generator = { method = "update_mapgen", id = "mx_trees_map_sylph" },
+    z_levels = { 0, 0 },
+    symbol = "E",
+    color = "green",
+    visibility = "same_tile",
 }
 
 ccb.content.define_mapgen {
@@ -159,6 +216,17 @@ ccb.content.define_mapgen {
     },
 }
 
+ccb.content.define_map_extra {
+    id = "mx_trees_map_ierde",
+    name = ccb.content.text("Stand of trees"),
+    description = ccb.content.text("A copse of trees."),
+    generator = { method = "update_mapgen", id = "mx_trees_map_ierde" },
+    z_levels = { 0, 0 },
+    symbol = "E",
+    color = "green",
+    visibility = "same_tile",
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "mx_trees_map_ierde",
@@ -201,6 +269,18 @@ ccb.content.define_mapgen {
         },
         palettes = { "copse_trees_palette" },
     },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_homelesscamp_homullus",
+    name = ccb.content.text("Homeless camp"),
+    description = ccb.content.text("A camp of the homeless."),
+    generator = { method = "update_mapgen", id = "mx_homelesscamp_homullus" },
+    z_levels = { 0, 0 },
+    symbol = "E",
+    color = "green",
+    visibility = "same_tile",
+    flags = { "MAN_MADE" },
 }
 
 ccb.content.define_mapgen {
@@ -266,6 +346,17 @@ ccb.content.define_mapgen {
             m = "f_makeshift_bed",
         },
     },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_forest_pond_avore",
+    name = ccb.content.text("basin"),
+    description = ccb.content.text("Small basin is here."),
+    generator = { method = "update_mapgen", id = "mx_forest_pond_avore" },
+    z_levels = { 0, 0 },
+    symbol = "E",
+    color = "light_green",
+    visibility = "details",
 }
 
 ccb.content.define_mapgen {
@@ -348,6 +439,17 @@ ccb.content.define_mapgen {
             ["~"] = "t_water_dp",
         },
     },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_forest_pond_salamander_avore",
+    name = ccb.content.text("basin"),
+    description = ccb.content.text("Small basin is here."),
+    generator = { method = "update_mapgen", id = "mx_forest_pond_salamander_avore" },
+    z_levels = { 0, 0 },
+    symbol = "E",
+    color = "light_green",
+    visibility = "same_tile",
 }
 
 ccb.content.define_mapgen {
@@ -439,6 +541,17 @@ ccb.content.define_mapgen {
     },
 }
 
+ccb.content.define_map_extra {
+    id = "mx_pond_forest_undine",
+    name = ccb.content.text("basin"),
+    description = ccb.content.text("Small basin is here."),
+    generator = { method = "update_mapgen", id = "mx_pond_forest_undine" },
+    z_levels = { 0, 0 },
+    symbol = "E",
+    color = "blue",
+    visibility = "same_tile",
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "mx_pond_forest_undine",
@@ -520,6 +633,17 @@ ccb.content.define_mapgen {
             ["~"] = "t_water_dp",
         },
     },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_pond_forest_undine_ierde",
+    name = ccb.content.text("basin"),
+    description = ccb.content.text("Small basin is here."),
+    generator = { method = "update_mapgen", id = "mx_pond_forest_undine_ierde" },
+    z_levels = { 0, 0 },
+    symbol = "E",
+    color = "blue",
+    visibility = "same_tile",
 }
 
 ccb.content.define_mapgen {
@@ -612,6 +736,18 @@ ccb.content.define_mapgen {
     },
 }
 
+ccb.content.define_map_extra {
+    id = "mx_goblin_fruits",
+    name = ccb.content.text("strange plants"),
+    description = ccb.content.text("A group of strange plants are growing here."),
+    generator = { method = "update_mapgen", id = "mx_goblin_fruits" },
+    z_levels = { 0, 0 },
+    symbol = "G",
+    color = "magenta",
+    visibility = "details",
+    flags = { "CLASSIC" },
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "mx_goblin_fruits",
@@ -675,6 +811,18 @@ ccb.content.define_mapgen {
             [" "] = "t_null",
         },
     },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_ring_of_mushrooms",
+    name = ccb.content.text("a ring of mushrooms"),
+    description = ccb.content.text("A group of mushrooms growing in a ring."),
+    generator = { method = "update_mapgen", id = "mx_ring_of_mushrooms" },
+    z_levels = { 0, 0 },
+    symbol = "m",
+    color = "light_gray",
+    visibility = "none",
+    flags = { "CLASSIC" },
 }
 
 ccb.content.define_mapgen {
@@ -988,6 +1136,30 @@ ccb.content.define_mapgen {
     },
 }
 
+ccb.content.define_map_extra {
+    id = "mx_dreamwound_shadow",
+    name = ccb.content.text("a shadowy wound in reality"),
+    description = ccb.content.text("What you can only describe as a wound in reality appears to be leaking shadows."),
+    generator = { method = "update_mapgen", id = "mx_dreamwound_shadow" },
+    symbol = "w",
+    z_levels = { 0, 0 },
+    color = "dark_gray_red",
+    visibility = "same_tile",
+    flags = { "CLASSIC" },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_ozma_statue",
+    name = ccb.content.text("a statue surrounded by emerald poppies"),
+    description = ccb.content.text("A ruined statue surrounded by emerald poppies."),
+    generator = { method = "update_mapgen", id = "mx_ozma_statue" },
+    z_levels = { 0, 0 },
+    symbol = "m",
+    color = "light_green",
+    visibility = "none",
+    flags = { "CLASSIC" },
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "mx_ozma_statue",
@@ -1163,6 +1335,17 @@ ccb.content.define_mapgen {
         },
         furniture = { S = "f_ozma_poppy", ["@"] = "f_statue_fae_ozymandius" },
     },
+}
+
+ccb.content.define_map_extra {
+    id = "mx_XE_XEDRA_mutagen_transport",
+    name = ccb.content.text("TCL Truck"),
+    description = ccb.content.text("A crashed Trans-Coast Logistics truck."),
+    generator = { method = "update_mapgen", id = "mx_XE_XEDRA_mutagen_transport" },
+    z_levels = { 0, 0 },
+    symbol = "T",
+    color = "yellow",
+    flags = { "CLASSIC" },
 }
 
 ccb.content.define_mapgen {
