@@ -25,10 +25,10 @@
 #include "memory_fast.h"
 #include "player_identity.h"
 #include "point.h"
-#include "safe_reference.h"
 #include "type_id.h"
 #include "units.h"
 
+class Creature;
 class JsonObject;
 class JsonOut;
 class advanced_inv_area;
@@ -41,11 +41,13 @@ class memorized_tile;
 class monster;
 class npc;
 class talker;
-class time_duration;
 enum class character_type : int;
 enum class pool_type;
 struct bionic;
 struct mtype;
+
+template<typename T>
+class safe_reference;
 
 // Monster visible in different directions (safe mode & compass)
 // Suppressions due to a bug in clang-tidy 12
