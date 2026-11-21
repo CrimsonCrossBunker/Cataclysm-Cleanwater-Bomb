@@ -1,6 +1,18 @@
 local ccb = require("ccb")
 
 ccb.content.define_scenario {
+    id = "lost_faith",
+    name = "Lost Faith",
+    surround_groups = { { group = "GROUP_BLACK_ROAD", expected_points = 70.0 } },
+    flags = { "LONE_START" },
+    points = 2,
+    description = "You've been preaching your faith for a long time, but the recent events have begun to make you doubt it.  Wandering in your temple, you just found books that may restore your faith or shatter it completely.",
+    start_name = "Sanctuary",
+    locations = { "sloc_church" },
+    professions = { "priest", "shinto_priest", "imam", "rabbi", "guru", "preacher" },
+}
+
+ccb.content.define_scenario {
     id = "magic_basement",
     name = "The Wizard's Apprentice",
     flags = { "LONE_START" },

@@ -30,6 +30,7 @@ end, 1)
 ccb.runtime.on("game:game_begin", "initialize_default_spellcasting")
 
 require("heritage")
+require("scenarios")
 
 require("nested_recipes")
 
