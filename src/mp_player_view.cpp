@@ -49,7 +49,7 @@ void write_player_view( JsonOut &out, const player_id &id, const npc &actor,
     std::ostringstream appearance_text;
     JsonOut appearance( appearance_text );
     appearance.start_object();
-    appearance.member( "male", actor.male );
+    appearance.member( "male", actor.get_gender() );
     appearance.member( "carried" );
     actor.store_carried_items( appearance );
     appearance.member( "mutations" );
@@ -235,7 +235,7 @@ void write_npc_view( JsonOut &out, const npc &actor, const Character &viewer,
     std::ostringstream appearance_text;
     JsonOut appearance( appearance_text );
     appearance.start_object();
-    appearance.member( "male", actor.male );
+    appearance.member( "male", actor.get_gender() );
     appearance.member( "carried" );
     actor.store_carried_items( appearance );
     appearance.member( "mutations" );
