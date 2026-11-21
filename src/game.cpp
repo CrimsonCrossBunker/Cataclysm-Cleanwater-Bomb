@@ -4790,7 +4790,7 @@ void game::knockback( std::vector<tripoint_bub_ms> &traj, int stun, int dam_mult
                     add_msg( _( "%s collided with something else and sent it flying!" ),
                              targ->name() );
                 } else if( npc *const guy = creatures.creature_at<npc>( traj.front() ) ) {
-                    if( guy->male ) {
+                    if( guy->get_gender() ) {
                         add_msg( _( "%s collided with someone else and sent him flying!" ),
                                  targ->name() );
                     } else {
@@ -4865,7 +4865,7 @@ void game::knockback( std::vector<tripoint_bub_ms> &traj, int stun, int dam_mult
                     add_msg( _( "%s collided with something else and sent it flying!" ),
                              targ->get_name() );
                 } else if( npc *const guy = creatures.creature_at<npc>( traj_front ) ) {
-                    if( guy->male ) {
+                    if( guy->get_gender() ) {
                         add_msg( _( "%s collided with someone else and sent him flying!" ),
                                  targ->get_name() );
                     } else {
@@ -4946,7 +4946,7 @@ void game::knockback( std::vector<tripoint_bub_ms> &traj, int stun, int dam_mult
                 if( creatures.creature_at<monster>( traj.front() ) ) {
                     add_msg( _( "You collided with something and sent it flying!" ) );
                 } else if( npc *const guy = creatures.creature_at<npc>( traj.front() ) ) {
-                    if( guy->male ) {
+                    if( guy->get_gender() ) {
                         add_msg( _( "You collided with someone and sent him flying!" ) );
                     } else {
                         add_msg( _( "You collided with someone and sent her flying!" ) );
