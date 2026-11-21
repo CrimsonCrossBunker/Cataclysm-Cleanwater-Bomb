@@ -7844,10 +7844,9 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
     } else if( member_name == "surface_grades" ) {
         const JsonArray grades = jv.get_array();
         for( const JsonArray entry : grades ) {
-            const int x = entry.get_int( 0 );
-            const int y = entry.get_int( 1 );
-            if( x >= 0 && x < SEEX && y >= 0 && y < SEEY ) {
-                set_grade( point_sm_ms( x, y ), { entry.get_int( 2 ), entry.get_int( 3 ) } );
+            const point_sm_ms position( entry.get_int( 0 ), entry.get_int( 1 ) );
+            if( position.x() >= 0 && position.x() < SEEX && position.y() >= 0 && position.y() < SEEY ) {
+                set_grade( position, { entry.get_int( 2 ), entry.get_int( 3 ) } );
             }
         }
     } else if( member_name == "terrain_growth" ) {
