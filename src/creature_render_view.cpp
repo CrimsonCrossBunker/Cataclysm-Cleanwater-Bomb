@@ -26,7 +26,7 @@ entity_render_view capture_character_render_view( const Character &ch,
         FacingDirection facing_override )
 {
     entity_render_view view;
-    view.male = ch.male;
+    view.male = ch.get_gender();
     view.rotation = rotation_for( facing_override == FacingDirection::NONE ? ch.facing :
                                   facing_override );
     const std::vector<trait_id> mutations = ch.get_functioning_mutations( true,
@@ -34,8 +34,8 @@ entity_render_view capture_character_render_view( const Character &ch,
         return mut.override_look.has_value();
     } );
     if( mutations.empty() ) {
-        view.body = ch.is_npc() ? ( ch.male ? "npc_male" : "npc_female" ) :
-                    ( ch.male ? "player_male" : "player_female" );
+        view.body = ch.is_npc() ? ( ch.get_gender() ? "npc_male" : "npc_female" ) :
+                    ( ch.get_gender() ? "player_male" : "player_female" );
         view.category = "none";
         view.overlays = ch.get_overlay_ids();
     } else {
