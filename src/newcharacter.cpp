@@ -681,7 +681,7 @@ void Character::randomize( const bool random_scenario, bool play_now )
     }
 
     bool gender_selection = one_in( 2 );
-    male = gender_selection;
+    set_gender( gender_selection, false );
     if( one_in( 10 ) ) {
         outfit = !gender_selection;
     } else {
@@ -3200,7 +3200,7 @@ static void build_preview_avatar( const avatar &src, avatar &dst )
         input >> rng_get_engine();
     } );
 
-    dst.male = src.male;
+    dst.set_gender( src.get_gender(), false );
     dst.set_body();
     dst.prof = src.prof;
 
@@ -4417,7 +4417,7 @@ bool character_creator_ui::handle_action( const std::string &action )
         }
     } else if( action == "RANDOMIZE_CHAR_DESCRIPTION" ) {
         bool gender_selection = one_in( 2 );
-        you.male = gender_selection;
+        you.set_gender( gender_selection, false );
         if( one_in( 10 ) ) {
             outfit = !gender_selection;
         } else {
@@ -4439,7 +4439,7 @@ bool character_creator_ui::handle_action( const std::string &action )
         you.randomize( false );
         update_uilist_entries();
     } else if( action == "CHANGE_GENDER" ) {
-        you.male = !you.male;
+        you.set_gender( !you.get_gender(), false );
     } else if( action == "CHANGE_OUTFIT" ) {
         outfit = !outfit;
     } else if( action == "CHANGE_START_OF_CATACLYSM" ) {
