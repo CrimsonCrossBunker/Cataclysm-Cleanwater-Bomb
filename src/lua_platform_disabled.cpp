@@ -3,16 +3,32 @@
 #include "lua_platform_camps.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_hooks.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_world_services.h"
 #include "lua_platform_world.h"
 
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include "coordinates.h"
 #include "dialogue.h"
 #include "npc_lifetime.h"
+#include "point.h"
+#include "safe_reference.h"
+
+class Character;
+class Creature;
+class basecamp;
+class const_talker;
+class item;
+class mapgendata;
+class npc;
+class vehicle;
 
 namespace cata::lua_platform
 {
@@ -194,6 +210,10 @@ bool dispatch_native_hook(
 bool dispatch_befor_installs_cbm( const Character &, const Character &, std::string_view, bool )
 {
     return true;
+}
+
+void dispatch_character_gender_changed( Character &, bool, bool )
+{
 }
 
 bool dispatch_avatar_fatal( Character &, const Creature * )

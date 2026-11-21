@@ -4657,7 +4657,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             overlays = m->get_overlay_ids();
         } else if( const Character *ch = critter.as_character() ) {
             size_scale = CHARACTER_SIZE_SCALE;
-            male = ch->male;
+            male = ch->get_gender();
             const std::vector<trait_id> look_muts = ch->get_functioning_mutations( true, false,
             []( const mutation_branch & mut ) {
                 return mut.override_look.has_value();

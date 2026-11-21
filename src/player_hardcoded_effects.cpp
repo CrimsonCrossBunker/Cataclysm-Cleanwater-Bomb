@@ -459,7 +459,8 @@ static void eff_fun_hallu( Character &u, effect &it )
             loudness = ( loudness < 30 ? loudness : 30 );
             sounds::sound( u.pos_bub(), loudness, sounds::sound_t::speech, _( random_entry_ref( npc_hallu ) ),
                            false, "speech",
-                           loudness < 15 ? ( u.male ? "NPC_m" : "NPC_f" ) : ( u.male ? "NPC_m_loud" : "NPC_f_loud" ) );
+                           loudness < 15 ? ( u.get_gender() ? "NPC_m" : "NPC_f" ) : ( u.get_gender() ? "NPC_m_loud" :
+                                   "NPC_f_loud" ) );
         }
     } else if( dur == peakTime ) {
         // Visuals start

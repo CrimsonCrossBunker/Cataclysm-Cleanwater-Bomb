@@ -11,6 +11,7 @@
 #include <optional>
 #include "coords_fwd.h"
 #include "enums.h"
+#include "mtype.h"
 #include "talker.h"
 #include "type_id.h"
 #include "units_fwd.h"

@@ -1,32 +1,51 @@
 #if defined(TILES)
 #include "cata_catch.h"
+
+#include <functional>
+#include <memory>
+#include <optional>
+#include <random>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "avatar.h"
 #include "calendar.h"
-#include "cata_utility.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "creature_render_view.h"
-#include "effect.h"
-#include "monster.h"
-#include "mtype.h"
-#include "map.h"
 #include "magic_enchantment.h"
+#include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "monster.h"
+#include "mtype.h"
+#include "pimpl.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "rng.h"
 #include "type_id.h"
+
+struct const_dialogue;
+
+static const efftype_id effect_ridden( "ridden" );
+static const efftype_id effect_stunned( "stunned" );
+static const mtype_id mon_zombie( "mon_zombie" );
 
 TEST_CASE( "character_render_view_owns_appearance_after_character_changes",
            "[tiles][semantic_view]" )
 {
     Character &ch = get_player_character();
     clear_character( ch );
-    ch.male = false;
+    ch.set_gender( false, false );
     ch.facing = FacingDirection::LEFT;
-    ch.add_effect( efftype_id( "stunned" ), 1_minutes );
+    ch.add_effect( effect_stunned, 1_minutes );
     const auto expected = ch.get_overlay_ids();
-    const auto engine = rng_get_engine();
+    std::ostringstream engine_before;
+    engine_before << rng_get_engine();
     const entity_render_view view = capture_character_render_view( ch, FacingDirection::NONE );
     CHECK( view.body == "player_female" );
     CHECK( view.category == "none" );
@@ -34,9 +53,11 @@ TEST_CASE( "character_render_view_owns_appearance_after_character_changes",
     CHECK_FALSE( view.male );
     CHECK_FALSE( view.stack_overlays );
     CHECK( view.overlays == expected );
-    CHECK( rng_get_engine() == engine );
+    std::ostringstream engine_after;
+    engine_after << rng_get_engine();
+    CHECK( engine_after.str() == engine_before.str() );
     clear_character( ch );
-    ch.male = true;
+    ch.set_gender( true, false );
     ch.facing = FacingDirection::RIGHT;
     CHECK( view.body == "player_female" );
     CHECK( view.overlays == expected );
@@ -47,20 +68,22 @@ TEST_CASE( "monster_overlay_view_survives_actor_destruction_without_rng", "[tile
 {
     entity_render_view view;
     std::vector<std::pair<std::string, std::string>> expected;
-    auto engine = rng_get_engine();
+    std::ostringstream engine_before;
     {
-        monster mon( mtype_id( "mon_zombie" ) );
+        monster mon( mon_zombie );
         mon.facing = FacingDirection::RIGHT;
-        mon.add_effect( efftype_id( "stunned" ), 1_minutes );
+        mon.add_effect( effect_stunned, 1_minutes );
         expected = mon.get_overlay_ids();
-        engine = rng_get_engine();
+        engine_before << rng_get_engine();
         view = capture_monster_overlay_view( mon );
     }
     CHECK( view.rotation == 0 );
     CHECK( view.male );
     CHECK( view.stack_overlays );
     CHECK( view.overlays == expected );
-    CHECK( rng_get_engine() == engine );
+    std::ostringstream engine_after;
+    engine_after << rng_get_engine();
+    CHECK( engine_after.str() == engine_before.str() );
 }
 TEST_CASE( "creature_view_freezes_visibility_mount_and_copied_appearance",
            "[tiles][semantic_view]" )
@@ -69,7 +92,7 @@ TEST_CASE( "creature_view_freezes_visibility_mount_and_copied_appearance",
     map &here = get_map();
     Character &you = get_player_character();
     clear_character( you );
-    you.male = true;
+    you.set_gender( true, false );
     set_time_to_day();
     you.setpos( here, { 50, 50, 0 } );
     monster &mon = spawn_test_monster( "mon_zombie", { 52, 50, 0 } );
@@ -89,7 +112,7 @@ TEST_CASE( "creature_view_freezes_visibility_mount_and_copied_appearance",
         REQUIRE( view->monster_overlays );
         const auto expected = mon.get_overlay_ids();
         mon.facing = FacingDirection::RIGHT;
-        mon.add_effect( efftype_id( "stunned" ), 1_minutes );
+        mon.add_effect( effect_stunned, 1_minutes );
         CHECK( view->rotation == -1 );
         CHECK( view->monster_overlays->overlays == expected );
     }
@@ -97,7 +120,7 @@ TEST_CASE( "creature_view_freezes_visibility_mount_and_copied_appearance",
         CHECK_FALSE( capture_creature_render_view( here, you, &mon, mon.pos_bub(), true ) );
     }
     SECTION( "ridden creature captures its passenger first" ) {
-        mon.add_effect( efftype_id( "ridden" ), 1_minutes );
+        mon.add_effect( effect_ridden, 1_minutes );
         mon.mounted_player = &you;
         const auto view = capture_creature_render_view( here, you, &mon, mon.pos_bub(), false );
         REQUIRE( view );

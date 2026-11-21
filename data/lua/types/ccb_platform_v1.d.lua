@@ -6718,6 +6718,19 @@ function CcbPlatformContent.edit_forest_biome_mapgen(id) end
 ---@field data CcbPlatformBeforInstallsCbmData
 ---@field actors CcbPlatformBeforInstallsCbmActors
 
+---@class CcbPlatformCharacterGenderChangedData
+---@field character integer Character id.
+---@field old_male boolean Gender before the change.
+---@field new_male boolean Gender after the change.
+
+---@class CcbPlatformCharacterGenderChangedActors
+---@field character GameHandle Character whose gender changed.
+
+---@class CcbPlatformCharacterGenderChangedEvent: CcbPlatformNativeEvent
+---@field type 'character_gender_changed'
+---@field data CcbPlatformCharacterGenderChangedData
+---@field actors CcbPlatformCharacterGenderChangedActors
+
 ---@class CcbDetachedDialogueParticipant
 ---@field kind 'computer'|'zone'|'topic'|'talker'|'item' Detached participant kind.
 ---@field name string Bounded display name snapshot.
@@ -6788,7 +6801,12 @@ function CcbPlatformRuntime.character_recurring(effect_handler, interval_handler
 ---or no return allows native checks to continue. The first false stops dispatch.
 ---Errors and invalid return types are logged and ignored. Other event returns
 ---are ignored. The permission is not rechecked during an ongoing operation.
----@param event_name string `world_ready`, `before_save`, `after_save`, `shutdown`, `game:befor_installs_cbm`, or `game:<event>`.
+---`game:character_gender_changed` receives CcbPlatformCharacterGenderChangedEvent
+---synchronously after a net gender change. Handler returns cannot cancel the
+---change or stop other observers. Construction, loading, character creation,
+---and initial multiplayer snapshots do not notify. Later local replica changes
+---notify locally; this subscription does not itself transmit network events.
+---@param event_name string `world_ready`, `before_save`, `after_save`, `shutdown`, or `game:<event>`.
 ---@param handler_id string
 function CcbPlatformRuntime.on(event_name, handler_id) end
 
@@ -8496,6 +8514,30 @@ function CcbCharactersApi.random_body_part(character, main_parts_only) end
 ---@param character GameHandle Exact live Character; no implicit dialogue participant.
 ---@return CcbResult result `value` is the current integer score; unavailable/stale handles return an error.
 function CcbCharactersApi.intimidation(character) end
+
+---@alias CcbCharacterGender 'male'|'female'
+
+---@class CcbCharacterGenderResult: CcbResult
+---@field value? CcbCharacterGender
+
+---@class CcbCharacterSetGenderValue
+---@field gender CcbCharacterGender Gender after synchronous observers finish.
+---@field changed boolean Whether the requested write changed the previous value.
+
+---@class CcbCharacterSetGenderResult: CcbResult
+---@field value? CcbCharacterSetGenderValue
+
+---Read the exact live Character's gender.
+---@param character GameHandle
+---@return CcbCharacterGenderResult
+function CcbCharactersApi.get_gender(character) end
+
+---Set the exact live Character's gender and notify on changes only.
+---Returns a handle error if an observer removes or invalidates the Character.
+---@param character GameHandle
+---@param gender CcbCharacterGender Only 'male' and 'female' are accepted.
+---@return CcbCharacterSetGenderResult
+function CcbCharactersApi.set_gender(character, gender) end
 
 ---@param character GameHandle Exact live Character handle; subtype and lifecycle are checked before access.
 ---@param body_part_limit? integer

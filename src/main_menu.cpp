@@ -1930,7 +1930,7 @@ bool main_menu::opening_screen()
         }
     }
     if( start && !load_game && get_scenario() ) {
-        add_msg( get_scenario()->description( player_character.male ) );
+        add_msg( get_scenario()->description( player_character.get_gender() ) );
 
         if( get_option<std::string>( "ETERNAL_WEATHER" ) != "normal" ) {
             if( player_character.posz() >= 0 ) {

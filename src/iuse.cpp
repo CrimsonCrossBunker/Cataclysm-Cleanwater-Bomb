@@ -5831,7 +5831,7 @@ static item::extended_photo_def photo_def_for_camera_point( const tripoint_bub_m
                 const std::vector<std::string> vec = guy->short_description_parts();
                 figure_appearance = string_join( vec, "\n\n" );
                 figure_name = guy->get_name();
-                pronoun_gender = guy->male ? _( "He" ) : _( "She" );
+                pronoun_gender = guy->get_gender() ? _( "He" ) : _( "She" );
                 creature = guy;
                 character_vec.push_back( guy );
             } else {

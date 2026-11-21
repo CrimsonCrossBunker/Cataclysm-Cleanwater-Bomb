@@ -8634,7 +8634,7 @@ void workout_activity_actor::start( player_activity &act, Character &who )
     }
     act.moves_total = to_moves<int>( duration );
     act.moves_left = act.moves_total;
-    if( who.male ) {
+    if( who.get_gender() ) {
         sfx::play_activity_sound( "plmove", "sleepiness_m_med", sfx::get_heard_volume( location ) );
     } else {
         sfx::play_activity_sound( "plmove", "sleepiness_f_med", sfx::get_heard_volume( location ) );
@@ -17041,7 +17041,7 @@ void pulp_activity_actor::send_final_message( Character &you ) const
                 n_gettext( "<npcname> left one corpse unpulped, for %1$s has no tool heavy enough to deal with it.",
                            "<npcname> left some corpses unpulped, for %1$s has no tool heavy enough to deal with it.",
                            unpulped_corpses_qty ),
-                you.male ? pgettext( "npc", "he" ) : pgettext( "npc", "she" )
+                you.get_gender() ? pgettext( "npc", "he" ) : pgettext( "npc", "she" )
             );
         }
         return;

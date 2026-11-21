@@ -5,6 +5,7 @@
 #include <chrono>
 #include <array>
 #include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <map>
@@ -20,11 +21,9 @@
 #include "coordinates.h"
 #include "map_scale_constants.h"
 #include "mp_entity_registry.h"
+#include "point.h"
 #include "type_id.h"
 #include "world_identity.h"
-
-class monster;
-class vehicle;
 
 namespace cata_mp
 {
@@ -56,10 +55,12 @@ struct mp_tile_state {
 };
 
 struct pending_omsync_t {
-    int z = 0, ox = 0, oy = 0, w = 0;
+    int z = 0;
+    point origin;
+    int w = 0;
     std::vector<oter_id> cells;   // row-major resolved terrain
     std::vector<char> ok;         // 1 = apply this cell, 0 = skip (ungenerated)
-    size_t cursor = 0;
+    std::size_t cursor = 0;
     bool active = false;
 };
 
@@ -84,19 +85,19 @@ struct host_replication_baselines {
     // connect so a fresh client receives snapshots for every visible vehicle.
     // A change in part identity, tank content identity, or liquid phase requires
     // a fresh snapshot. Ordinary charge updates preserve the existing item UID.
-    std::unordered_set<uint32_t> client_known_veh_nids{};
-    std::unordered_map<uint32_t, std::vector<replicated_vehicle_part_identity>> server_veh_parts{};
+    std::unordered_set<uint32_t> client_known_veh_nids;
+    std::unordered_map<uint32_t, std::vector<replicated_vehicle_part_identity>> server_veh_parts;
     // Server: nids broadcast in the most recent state packet.  Diffed against the
     // current iteration to detect vehicles that have disappeared (folded, fully
     // destroyed, driven out of bubble) so we can emit a "removed_vehicles" entry
     // in the state packet for the client to clean up.
-    std::unordered_set<uint32_t> server_veh_live_nids{};
+    std::unordered_set<uint32_t> server_veh_live_nids;
     // Host: nids of monsters that were alive (and net-id'd) at the last broadcast.
     // Diff against the currently-alive set to emit "removed_monsters" — monsters
     // that genuinely DIED/left the bubble, not merely ones outside the broadcast
     // radius. The client removes only these and never culls by absence, so a
     // transient short broadcast can't kill a live monster (the woodpecker bug).
-    std::unordered_set<uint32_t> server_mon_known_nids{};
+    std::unordered_set<uint32_t> server_mon_known_nids;
     // Host: per-nid last-broadcast monster record (the emitted JSON object). The
     // monster snapshot resent every monster, every turn — large and ~95% redundant
     // (most monsters don't move/change between turns). build_monster_list now emits
@@ -107,16 +108,16 @@ struct host_replication_baselines {
     // (re)connect and on a periodic keyframe so a fresh/recovering client gets the
     // full set. Pruned of nids that leave the broadcast radius (forces a re-send on
     // re-entry, since their state may have changed while away).
-    std::unordered_map<uint32_t, std::string> server_mon_last_sent{};
+    std::unordered_map<uint32_t, std::string> server_mon_last_sent;
     // Map-sync sent-set and forward declaration — defined later in the map-streaming
     // section but referenced in the move handler (process_remote_action).
-    std::set<tripoint_abs_sm> map_sync_sent{};
-    std::unordered_map<tripoint_abs_ms, mp_tile_state> tile_baseline{};
+    std::set<tripoint_abs_sm> map_sync_sent;
+    std::unordered_map<tripoint_abs_ms, mp_tile_state> tile_baseline;
     // Server→client vehicle cargo baseline.  Same keying as the client direction —
     // without this the client can't see items the host drops into trunks/seats/etc.,
     // and its stale snapshot would then overwrite the host on the next client drop.
-    std::unordered_map<tripoint_abs_ms, std::string> host_veh_cargo_baseline{};
-    std::string last_vehicle_step_payload{};
+    std::unordered_map<tripoint_abs_ms, std::string> host_veh_cargo_baseline;
+    std::string last_vehicle_step_payload;
     // ---------------------------------------------------------------------------
     // Overmap streaming (host -> client)
     // ---------------------------------------------------------------------------
@@ -141,14 +142,14 @@ struct host_replication_baselines {
     int om_sync_last_client_z = INT_MIN;   // proxy z at last sync (stair retrigger)
     bool om_sync_done = false;
     int keyframe_ctr = 0;
-    std::string host_worn_json_cache{};
-    std::string host_worn_sig_cache{};
+    std::string host_worn_json_cache;
+    std::string host_worn_sig_cache;
 };
 
 struct client_replication_state {
     // Resolve removals by persistent identity even when the origin has no physical part.
-    std::unordered_map<uint32_t, int64_t> vehicle_uids{};
-    monster_mirrors monsters{};
+    std::unordered_map<uint32_t, int64_t> vehicle_uids;
+    monster_mirrors monsters;
     struct terrain_chunk {
         std::array<ter_id, SEEX *SEEY> terrain;
         std::array<furn_id, SEEX *SEEY> furniture;
@@ -157,19 +158,20 @@ struct client_replication_state {
     std::map<tripoint_abs_sm, terrain_chunk> pending_terrain;
     bool position_received = false;
     // Client: last known HP per bodypart string ID — used to synthesise "you were hit" messages.
-    std::unordered_map<std::string, int> last_bodypart_hp{};
+    std::unordered_map<std::string, int> last_bodypart_hp;
     // Client: fingerprint of the last host_worn list applied — avoids re-dressing every tick.
-    std::string client_host_worn_sig{};
+    std::string client_host_worn_sig;
+    bool client_host_gender_initialized = false;
     // FIFO of per-z regions.  The host may stream more than one floor's overmap in a
     // turn (host and client on different z), so each region drains independently
     // instead of overwriting the previous (the v1 single buffer).
-    std::vector<pending_omsync_t> pending_omsync{};
-    std::unordered_set<uint32_t> ever_seen_nids{};
-    std::unordered_map<std::string, int> phantom_strikes{};
+    std::vector<pending_omsync_t> pending_omsync;
+    std::unordered_set<uint32_t> ever_seen_nids;
+    std::unordered_map<std::string, int> phantom_strikes;
 };
 
 struct world_replication_state {
-    entity_registry entity_ids{};
+    entity_registry entity_ids;
     bool applying_remote_note = false;
     client_replication_state client;
 };
@@ -177,7 +179,7 @@ struct world_replication_state {
 struct host_turn_state {
     int64_t character_revision = 0;
     std::optional<std::uint64_t> last_kill_statistics_revision;
-    std::vector<MPSfxEvent> host_sfx_queue{};
+    std::vector<MPSfxEvent> host_sfx_queue;
     // Server: cumulative AP for the remote player (replaces the NPC's own moves which
     // are skipped by monmove since is_remote_player() returns true).
     int remote_moves = 0;
@@ -203,11 +205,11 @@ struct host_turn_state {
     // Server: messages captured during a remote player action that are forwarded
     // verbatim (after NPC→"You" substitution) regardless of NPC name filter.
     // Cleared by serialize_remote_player_state() when it consumes them.
-    std::vector<std::string> action_msgs_pending{};
+    std::vector<std::string> action_msgs_pending;
     // Server: messages from the avatar's own actions, forwarded to the client with
     // "You" → host character name so the client sees attributed host hits.
     // Populated by host_capture_avatar_msgs(); cleared by serialize_remote_player_state().
-    std::vector<std::string> host_action_msgs_pending{};
+    std::vector<std::string> host_action_msgs_pending;
     // Server: monotonically increasing sequence number, incremented each grant_client_turn().
     // Included in every state packet so the client can distinguish a fresh grant from a
     // TCP-buffered duplicate of a previous grant.
@@ -244,10 +246,10 @@ struct client_turn_state {
     // Set alongside g_client_ctrl_veh from "client_veh_pos" in the state packet.
     tripoint_abs_ms client_ctrl_veh_abs{ 0, 0, 0 };
     // Diagnostic timestamp; elapsed wall time never unlocks an action grant.
-    std::chrono::steady_clock::time_point ack_set_time{};
+    std::chrono::steady_clock::time_point ack_set_time;
     // Timestamp of when the server last granted moves (moves > 0 packet received).
     // Used by ms_since_last_grant() to auto-send "wait" when the player is idle.
-    std::chrono::steady_clock::time_point last_grant_time{};
+    std::chrono::steady_clock::time_point last_grant_time;
     // Client: last grant_seq that was successfully applied (moves > 0 path).
     // Guards the "new grant" branch: a packet with grant_seq <= g_client_last_grant_seq
     // is a stale buffered duplicate and its moves value is ignored.
@@ -261,7 +263,7 @@ struct client_turn_state {
     // Sent over the wire instead of av.activity at enrich-time because the activity
     // can finish (set_to_null) mid-turn, leaving av.activity null when the wait
     // dispatch runs — which would mask the activity from the host's HUD.
-    std::string client_turn_activity{};
+    std::string client_turn_activity;
     // Client → host message forwarding.  When the client's avatar generates a
     // notable "You ..." message (e.g. "Now reading X", "You start crafting Y"),
     // we capture it here and tack it onto the next outgoing action so the host
@@ -269,7 +271,7 @@ struct client_turn_state {
     // Monotonic append watermark (Messages::size()), not size() — see
     // g_last_forwarded_msg_count note.
     unsigned long long client_msg_watermark = 0;
-    std::vector<std::string> client_msgs_pending{};
+    std::vector<std::string> client_msgs_pending;
 };
 
 struct peer_observation {
@@ -278,9 +280,9 @@ struct peer_observation {
     // host's activity (set from state packets).  Display-only — the actual
     // activity ticks on the side that owns the player.  Used by the Co-op HUD and
     // transition-edge messages.
-    std::string partner_activity{};
+    std::string partner_activity;
     // Stable identity of the player this helper committed to.
-    std::string partner_help_target{};
+    std::string partner_help_target;
     // Progress % (0-100) of the partner's current activity.  Forwarded each
     // action/state packet alongside g_partner_activity.  Read by the Co-op panel.
     int partner_activity_pct = 0;
@@ -315,7 +317,7 @@ struct peer_observation {
     // the local proxy NPC isn't (yet) resolvable — proxy spawn races the panel on
     // first connect; this lets the panel still show *something* instead of
     // "Partner unknown".
-    std::string partner_name_cached{};
+    std::string partner_name_cached;
     // Client: luminance emitted by the host player (flashlight, mutations, etc.).
     // Received from state packet each turn and injected into the lighting pass.
     float mp_host_luminance = 0.0f;
@@ -331,7 +333,7 @@ struct client_admission_state {
     world_id host_world;
     // Client: world name received from host in 'welcome'.  Empty until the first
     // welcome is processed.  Exposed via mp_client_host_world_name().
-    std::string client_host_world_name{};
+    std::string client_host_world_name;
     // Client: the host's seed as received in 'welcome', and whether we've applied
     // it to g->set_seed() yet. Applied before the initial host-area overmap is
     // generated so the client's terrain matches the host's. 0 = not yet received.
@@ -343,12 +345,12 @@ struct client_admission_state {
     // the first do_turn is too late — start_game has already built the host-area
     // overmap with the client's own rng_bits() seed by then. See
     // mp_store_pending_welcome() / mp_client_prepare_spawn().
-    std::string pending_welcome{};
+    std::string pending_welcome;
     // Client: the host's OMT received in 'welcome' — the spawn target start_game uses
     // in client mode. invalid until a welcome carrying host_omt is processed.
     tripoint_abs_omt client_host_spawn_omt = tripoint_abs_omt::invalid;
     // Client: the host's character name received in 'welcome'. Empty until processed.
-    std::string client_host_player_name{};
+    std::string client_host_player_name;
 };
 
 struct session_presentation {
@@ -367,14 +369,14 @@ struct session_presentation {
     // so the local "Queued" HUD field actually reflects the host's most recent key,
     // not the client's (which was the previous, misleading behavior).
     std::string last_host_action_label = "\xe2\x80\x94";
-    std::string partner_activity_prev{};
-    std::vector<mp_chat_line> mp_chat_overlay{};   // newest last
+    std::string partner_activity_prev;
+    std::vector<mp_chat_line> mp_chat_overlay;   // newest last
     // Smoother for the brief moves=0 gap between a sent action and the next grant.
     // Module-scope so the edge frame and the panel border pulse together.
     std::chrono::steady_clock::time_point mp_last_go_time =
         std::chrono::steady_clock::now() - std::chrono::seconds( 10 );
-    std::unique_ptr<mp_edge_t> mp_edge{};
-    std::unique_ptr<mp_hud_t> mp_hud{};
+    std::unique_ptr<mp_edge_t> mp_edge;
+    std::unique_ptr<mp_hud_t> mp_hud;
     int debt_skips = 0;
     std::chrono::steady_clock::time_point last_redraw =
         std::chrono::steady_clock::now();
@@ -383,13 +385,13 @@ struct session_presentation {
     int last_safe = -2;
     int last_help_pct = -1;
     int last_build_pct = -1;
-    std::string last_overlay{};
-    std::string client_drain_last{};
-    std::string last_excluded_near{};
+    std::string last_overlay;
+    std::string client_drain_last;
+    std::string last_excluded_near;
     int last_n_sent = -1;
-    std::unordered_set<uint32_t> logged_skip_nids{};
+    std::unordered_set<uint32_t> logged_skip_nids;
     int last_phantom = -1;
-    std::string last_bp{};
+    std::string last_bp;
 };
 
 } // namespace cata_mp

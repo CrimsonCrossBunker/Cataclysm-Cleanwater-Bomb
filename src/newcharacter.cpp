@@ -681,7 +681,7 @@ void Character::randomize( const bool random_scenario, bool play_now )
     }
 
     bool gender_selection = one_in( 2 );
-    male = gender_selection;
+    set_gender( gender_selection, false );
     if( one_in( 10 ) ) {
         outfit = !gender_selection;
     } else {
@@ -1769,7 +1769,7 @@ void draw_profession_header( const avatar &u )
     if( !selected_profession.can_pick().success() ) {
         draw_colored_text_wrap( selected_profession.can_pick().str(), c_red );
     }
-    draw_colored_text_wrap( selected_profession.description( u.male ), COL_NOTE_MINOR );
+    draw_colored_text_wrap( selected_profession.description( u.get_gender() ), COL_NOTE_MINOR );
 }
 
 void draw_header( bool &drawn_anything, const std::string &title )
@@ -2028,7 +2028,7 @@ void draw_hobby_header( const avatar &u )
 {
     const profession &selected_hobby = *cc_uistate.get_selected_hobby();
     draw_colored_text_wrap( _( "Background story:" ), COL_HEADER );
-    draw_colored_text_wrap( selected_hobby.description( u.male ), COL_NOTE_MINOR );
+    draw_colored_text_wrap( selected_hobby.description( u.get_gender() ), COL_NOTE_MINOR );
 }
 
 void draw_hobby_details()
@@ -2075,7 +2075,7 @@ void draw_hobby_selected( const avatar &u )
 {
     cataimgui::draw_colored_text( _( "Backgrounds Selected:" ), COL_HEADER );
     for( const profession *hobby : u.hobbies ) {
-        cataimgui::draw_colored_text( hobby->gender_appropriate_name( u.male ), COL_NOTE_MINOR );
+        cataimgui::draw_colored_text( hobby->gender_appropriate_name( u.get_gender() ), COL_NOTE_MINOR );
     }
 }
 
@@ -2159,7 +2159,7 @@ void draw_scenario_details( const avatar &u )
     draw_spacer();
 
     draw_colored_text_wrap( _( "Scenario Story:" ), COL_HEADER );
-    draw_colored_text_wrap( current_scenario->description( u.male ), COL_NOTE_MINOR );
+    draw_colored_text_wrap( current_scenario->description( u.get_gender() ), COL_NOTE_MINOR );
     draw_spacer();
     const std::optional<achievement_id> scenRequirement = current_scenario->get_requirement();
 
@@ -2191,7 +2191,7 @@ void draw_scenario_details( const avatar &u )
     const auto permitted = current_scenario->permitted_professions();
     const auto default_prof = *std::min_element( permitted.begin(), permitted.end(), psorter );
 
-    draw_colored_text_wrap( default_prof->gender_appropriate_name( u.male ), COL_NOTE_MINOR );
+    draw_colored_text_wrap( default_prof->gender_appropriate_name( u.get_gender() ), COL_NOTE_MINOR );
 
     draw_spacer();
     draw_colored_text_wrap( _( "Scenario Location:" ), COL_HEADER );
@@ -2275,7 +2275,7 @@ void draw_gender( const avatar &you )
 {
     draw_action_button( _( "Gender:" ), "CHANGE_GENDER" );
     ImGui::SameLine();
-    cataimgui::draw_colored_text( get_gender_string( you.male ), c_white );
+    cataimgui::draw_colored_text( get_gender_string( you.get_gender() ), c_white );
 }
 
 void draw_outfit()
@@ -2310,8 +2310,8 @@ void draw_blood( const Character &you )
 void draw_scenario_profession( const avatar &you )
 {
     draw_colored_text_wrap( string_format( _( "Scenario: %s  Profession: %s" ),
-                                           colorize( get_scenario()->gender_appropriate_name( you.male ), c_light_gray ),
-                                           colorize( you.prof->gender_appropriate_name( you.male ), c_light_gray ) ), c_white );
+                                           colorize( get_scenario()->gender_appropriate_name( you.get_gender() ), c_light_gray ),
+                                           colorize( you.prof->gender_appropriate_name( you.get_gender() ), c_light_gray ) ), c_white );
 }
 
 void draw_time_cataclysm_start()
@@ -2969,7 +2969,7 @@ void character_creator_ui::update_uilist_entries()
             cc_uistate.recalc_scenario_list( u );
 
             for( const scenario *scen : cc_uistate.sorted_scenarios ) {
-                uilist_entry entry = get_uilist_entry( scen->gender_appropriate_name( u.male ) );
+                uilist_entry entry = get_uilist_entry( scen->gender_appropriate_name( u.get_gender() ) );
                 entry.text_color = scen == cc_uistate.get_selected_scenario() ? COL_SELECTED : COL_NOT_SELECTED;
                 entry.enabled = scen->can_pick().success();
                 menu->addentry( entry );
@@ -2981,7 +2981,7 @@ void character_creator_ui::update_uilist_entries()
             cc_uistate.recalc_profession_list( u );
 
             for( const profession_id prof_id : cc_uistate.sorted_professions ) {
-                uilist_entry entry = get_uilist_entry( prof_id->gender_appropriate_name( u.male ) );
+                uilist_entry entry = get_uilist_entry( prof_id->gender_appropriate_name( u.get_gender() ) );
                 entry.text_color = prof_id == cc_uistate.get_selected_profession() ? COL_SELECTED :
                                    COL_NOT_SELECTED;
                 entry.enabled = prof_id->can_pick().success();
@@ -2994,7 +2994,7 @@ void character_creator_ui::update_uilist_entries()
             cc_uistate.recalc_hobby_list( u );
 
             for( const profession_id prof_id : cc_uistate.sorted_hobbies ) {
-                uilist_entry entry = get_uilist_entry( prof_id->gender_appropriate_name( u.male ) );
+                uilist_entry entry = get_uilist_entry( prof_id->gender_appropriate_name( u.get_gender() ) );
                 entry.text_color = u.hobbies.count( &*prof_id ) ? COL_SELECTED : COL_NOT_SELECTED;
                 menu->addentry( entry );
             }
@@ -3200,7 +3200,7 @@ static void build_preview_avatar( const avatar &src, avatar &dst )
         input >> rng_get_engine();
     } );
 
-    dst.male = src.male;
+    dst.set_gender( src.get_gender(), false );
     dst.set_body();
     dst.prof = src.prof;
 
@@ -3278,7 +3278,7 @@ static SDL_Texture *character_preview_texture( const avatar &u, int &out_w, int 
     last_scale = preview_scale;
     last_renderer_generation = renderer_generation;
 
-    std::string sig = std::string( u.male ? "m|" : "f|" ) + ( outfit ? "o1|" : "o0|" ) +
+    std::string sig = std::string( u.get_gender() ? "m|" : "f|" ) + ( outfit ? "o1|" : "o0|" ) +
                       std::to_string( preview_scale ) + "|" +
                       ( u.prof ? u.prof->ident().str() : "none" ) + "|";
     for( const std::pair<std::string, std::string> &ov : u.get_overlay_ids() ) {
@@ -3506,7 +3506,7 @@ adaptive_character_creator_snapshot make_adaptive_character_creator_snapshot(
     result.tab = cc_uistate.selected_tab;
     const avatar &you = get_avatar();
     result.name = you.name;
-    result.gender = remove_color_tags( char_creation::get_gender_string( you.male ) );
+    result.gender = remove_color_tags( char_creation::get_gender_string( you.get_gender() ) );
     result.age = you.base_age();
     result.height = you.base_height();
     result.blood = io::enum_to_string( you.my_blood_type ) + ( you.blood_rh_factor ? "+" : "-" );
@@ -3759,7 +3759,7 @@ void character_creator_ui_impl::draw_scenarios() const
 
     if( ImGui::BeginTable( "SCENARIO_MAIN", list_detail_columns(), CHARACTER_CREATOR_TABLE_FLAGS ) ) {
         if( current_scenario ) {
-            std::string scenario_name = current_scenario->gender_appropriate_name( !u.male );
+            std::string scenario_name = current_scenario->gender_appropriate_name( !u.get_gender() );
             if( current_scenario == get_scenario() ) {
                 append_screen_reader_active( scenario_name );
             }
@@ -3782,7 +3782,7 @@ void character_creator_ui_impl::draw_professions() const
         const profession_id &selected_profession = cc_uistate.get_selected_profession();
 
         if( !selected_profession.is_null() ) {
-            std::string profession_name = selected_profession->gender_appropriate_name( u.male );
+            std::string profession_name = selected_profession->gender_appropriate_name( u.get_gender() );
             if( u.prof->ident() == selected_profession ) {
                 append_screen_reader_active( profession_name );
             }
@@ -3816,7 +3816,7 @@ void character_creator_ui_impl::draw_backgrounds()
 
         const profession_id selected_hobby = cc_uistate.get_selected_hobby();
         if( !selected_hobby.is_null() ) {
-            std::string hobby_name = selected_hobby->gender_appropriate_name( u.male );
+            std::string hobby_name = selected_hobby->gender_appropriate_name( u.get_gender() );
             if( u.hobbies.count( &*selected_hobby ) ) {
                 append_screen_reader_active( hobby_name );
             }
@@ -3986,7 +3986,7 @@ void character_creator_uistate::recalc_scenario_list( const avatar &u )
             }
             new_scenarios.push_back( &scen );
         }
-        scenario_sorter scen_sorter{ true, u.male, cities_enabled() };
+        scenario_sorter scen_sorter{ true, u.get_gender(), cities_enabled() };
         std::stable_sort( new_scenarios.begin(), new_scenarios.end(), scen_sorter );
         sorted_scenarios = new_scenarios;
         selected_scenario_index = find_index( sorted_scenarios, get_scenario() );
@@ -3998,7 +3998,7 @@ void character_creator_uistate::recalc_profession_list( const avatar &u )
 {
     if( recalc_professions ) {
         std::vector<profession_id> new_profs = get_scenario()->permitted_professions();
-        profession_sorter prof_sorter { true, u.male };
+        profession_sorter prof_sorter { true, u.get_gender() };
         std::stable_sort( new_profs.begin(), new_profs.end(), prof_sorter );
         sorted_professions = new_profs;
         selected_profession_index = find_index( sorted_professions, u.prof->ident() );
@@ -4018,7 +4018,7 @@ void character_creator_uistate::recalc_hobby_list( const avatar &u )
             debugmsg( "Why would you blacklist all hobbies?" );
             new_hobbies = profession::get_all_hobbies();
         }
-        profession_sorter prof_sorter { true, u.male };
+        profession_sorter prof_sorter { true, u.get_gender() };
         std::stable_sort( new_hobbies.begin(), new_hobbies.end(), prof_sorter );
         sorted_hobbies = new_hobbies;
         selected_hobby_index = 0;
@@ -4050,7 +4050,7 @@ bool character_creator_uistate::hobby_conflict_check( const avatar &u )
                 if( are_conflicting_traits( new_trait.trait, suspect.trait ) ) {
                     conflict_reason_found = true;
                     popup( _( "The trait [%1$s] conflicts with profession [%2$s]'s trait [%3$s]." ), new_trait.name(),
-                           u.prof->gender_appropriate_name( u.male ), suspect.name() );
+                           u.prof->gender_appropriate_name( u.get_gender() ), suspect.name() );
                 }
             }
             for( const profession *hobby : u.hobbies ) {
@@ -4058,7 +4058,7 @@ bool character_creator_uistate::hobby_conflict_check( const avatar &u )
                     if( are_conflicting_traits( new_trait.trait, suspect.trait ) ) {
                         conflict_reason_found = true;
                         popup( _( "The trait [%1$s] conflicts with background [%2$s]'s trait [%3$s]." ), new_trait.name(),
-                               hobby->gender_appropriate_name( u.male ), suspect.name() );
+                               hobby->gender_appropriate_name( u.get_gender() ), suspect.name() );
                     }
                 }
             }
@@ -4067,7 +4067,7 @@ bool character_creator_uistate::hobby_conflict_check( const avatar &u )
     if( conflict_found ) {
         if( !conflict_reason_found ) {
             popup( _( "A conflicting trait is preventing you from taking %s" ),
-                   selected_hobby->gender_appropriate_name( u.male ) );
+                   selected_hobby->gender_appropriate_name( u.get_gender() ) );
         }
         return false;
     }
@@ -4417,7 +4417,7 @@ bool character_creator_ui::handle_action( const std::string &action )
         }
     } else if( action == "RANDOMIZE_CHAR_DESCRIPTION" ) {
         bool gender_selection = one_in( 2 );
-        you.male = gender_selection;
+        you.set_gender( gender_selection, false );
         if( one_in( 10 ) ) {
             outfit = !gender_selection;
         } else {
@@ -4439,7 +4439,7 @@ bool character_creator_ui::handle_action( const std::string &action )
         you.randomize( false );
         update_uilist_entries();
     } else if( action == "CHANGE_GENDER" ) {
-        you.male = !you.male;
+        you.set_gender( !you.get_gender(), false );
     } else if( action == "CHANGE_OUTFIT" ) {
         outfit = !outfit;
     } else if( action == "CHANGE_START_OF_CATACLYSM" ) {
@@ -4642,7 +4642,7 @@ void character_creator_callback::confirm( uilist *menu )
             const scenario *selected_scenario = cc_uistate.get_selected_scenario();
             ret_val<void> can_pick = selected_scenario->can_pick();
 
-            scenario_sorter sorter{ true, u.male, cities_enabled() };
+            scenario_sorter sorter{ true, u.get_gender(), cities_enabled() };
 
             if( !can_pick.success() ) {
                 popup( can_pick.str() );
@@ -4684,7 +4684,8 @@ void character_creator_callback::confirm( uilist *menu )
                     for( const trait_id &suspect_trait : u.get_mutations() ) {
                         if( are_conflicting_traits( new_trait.trait, suspect_trait ) ) {
                             popup( _( "Your trait %1$s has been removed since it conflicts with the %2$s's %3$s trait." ),
-                                   u.mutation_name( suspect_trait ), u.prof->gender_appropriate_name( u.male ), new_trait.name() );
+                                   u.mutation_name( suspect_trait ), u.prof->gender_appropriate_name( u.get_gender() ),
+                                   new_trait.name() );
                             u.toggle_trait_deps( suspect_trait );
                         }
                     }
@@ -4788,17 +4789,17 @@ void character_creator_callback::confirm( uilist *menu )
                     if( get_scenario()->is_locked_trait( cur_trait ) ) {
                         inc_type = 0;
                         popup( _( "Your scenario of %s prevents you from removing this trait." ),
-                               get_scenario()->gender_appropriate_name( u.male ) );
+                               get_scenario()->gender_appropriate_name( u.get_gender() ) );
                     } else if( u.prof->is_locked_trait( cur_trait ) ) {
                         inc_type = 0;
                         popup( _( "Your profession of %s prevents you from removing this trait." ),
-                               u.prof->gender_appropriate_name( u.male ) );
+                               u.prof->gender_appropriate_name( u.get_gender() ) );
                     }
                     for( const profession *hobbies : u.hobbies ) {
                         if( hobbies->is_locked_trait( cur_trait ) ) {
                             inc_type = 0;
                             popup( _( "Your background of %s prevents you from removing this trait." ),
-                                   hobbies->gender_appropriate_name( u.male ) );
+                                   hobbies->gender_appropriate_name( u.get_gender() ) );
                         }
                     }
                 }
@@ -4814,7 +4815,7 @@ void character_creator_callback::confirm( uilist *menu )
                 popup( _( "The scenario you picked prevents you from taking this trait!" ) );
             } else if( u.prof->is_forbidden_trait( cur_trait ) ) {
                 popup( _( "Your profession of %s prevents you from taking this trait." ),
-                       u.prof->gender_appropriate_name( u.male ) );
+                       u.prof->gender_appropriate_name( u.get_gender() ) );
             } else if( !cbms_blocking_trait.empty() ) {
                 // Grab a list of the names of the bionics that block this trait
                 // So that the player know what is preventing them from taking it

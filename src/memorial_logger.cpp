@@ -38,7 +38,7 @@
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
-#include "kill_tracker.h"
+#include "kill_statistics.h"
 #include "magic.h"
 #include "martialarts.h"
 #include "messages.h"
@@ -129,7 +129,7 @@ void memorial_logger::add( std::string_view male_msg,
                            std::string_view female_msg )
 {
     Character &player_character = get_player_character();
-    const std::string_view msg = player_character.male ? male_msg : female_msg;
+    const std::string_view msg = player_character.get_gender() ? male_msg : female_msg;
 
     if( msg.empty() ) {
         return;
@@ -213,18 +213,18 @@ void memorial_logger::write_text_memorial( std::ostream &file,
     //Size of indents in the memorial file
     const std::string indent = "  ";
 
-    const std::string pronoun = u.male ? _( "He" ) : _( "She" );
+    const std::string pronoun = u.get_gender() ? _( "He" ) : _( "She" );
 
     //Avoid saying "a male unemployed" or similar
     std::string profession_name;
     if( u.prof == profession::generic() ) {
-        if( u.male ) {
+        if( u.get_gender() ) {
             profession_name = _( "an unemployed male" );
         } else {
             profession_name = _( "an unemployed female" );
         }
     } else {
-        profession_name = string_format( _( "a %s" ), u.prof->gender_appropriate_name( u.male ) );
+        profession_name = string_format( _( "a %s" ), u.prof->gender_appropriate_name( u.get_gender() ) );
     }
 
     const std::string locdesc =

@@ -7,6 +7,7 @@
 
 #include "character_id.h"
 #include "mp_actor_binding.h"
+#include "mp_player_identity.h"
 #include "mp_world_state.h"
 #include "type_id.h"
 
@@ -15,6 +16,7 @@ class JsonArray;
 class JsonObject;
 class JsonOut;
 class npc;
+class player_id;
 
 namespace cata_mp
 {

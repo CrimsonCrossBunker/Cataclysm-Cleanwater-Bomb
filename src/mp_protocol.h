@@ -18,4 +18,4 @@ std::string version_commit_id( const std::string &version );
 std::string encode_game_packet( const std::string &json );
 bool decode_game_packet( const std::string &packet, std::string &json );
 } // namespace cata_mp
-#endif
+#endif // CATA_SRC_MP_PROTOCOL_H

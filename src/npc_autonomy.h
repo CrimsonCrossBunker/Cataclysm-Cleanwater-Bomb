@@ -13,6 +13,7 @@
 #include "coordinates.h"
 #include "item_location.h"
 #include "memory_fast.h"
+#include "point.h"
 #include "type_id.h"
 
 class Creature;
@@ -189,6 +190,6 @@ inline bool worthwhile_upgrade( double current, double candidate )
 {
     return candidate > current + 3.0 && candidate > current * 1.15;
 }
-}
+} // namespace npc_autonomy
 
 #endif // CATA_SRC_NPC_AUTONOMY_H

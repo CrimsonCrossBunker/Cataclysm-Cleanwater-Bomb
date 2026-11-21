@@ -2420,7 +2420,7 @@ bool mattack::nurse_assist( monster *z )
         if( target->is_wearing( itype_badge_doctor ) ||
             z->attitude_to( *target ) == Creature::Attitude::FRIENDLY ) {
             sounds::sound( z->pos_bub(), 8, sounds::sound_t::electronic_speech,
-                           SNIPPET.expand( target->male
+                           SNIPPET.expand( target->get_gender()
                                            ? _( "a soft robotic voice say, \"Welcome doctor <male_full_name>.  I'll be your assistant today.\"" )
                                            : _( "a soft robotic voice say, \"Welcome doctor <female_full_name>.  I'll be your assistant today.\"" ) ) );
             target->add_effect( effect_assisted, 20_turns, false, 12 );
@@ -2671,7 +2671,7 @@ bool mattack::photograph( monster *z )
     // TODO: Make the player known to the faction
     std::string msg;
     if( one_in( 6 ) ) {
-        if( player_character.male ) {
+        if( player_character.get_gender() ) {
             msg = SNIPPET.expand( _( "a robotic voice boom, \"Citizen <male_full_name>!\"" ) );
         } else {
             msg = SNIPPET.expand( _( "a robotic voice boom, \"Citizen <female_full_name>!\"" ) );

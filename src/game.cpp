@@ -71,7 +71,6 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_imgui.h"
-#include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -114,7 +113,6 @@
 #include "faction.h"
 #include "field.h"
 #include "field_type.h"
-#include "filesystem.h"
 #include "flag.h"
 #include "flood_fill.h"
 #include "game_constants.h"
@@ -193,7 +191,6 @@
 #include "overmapbuffer.h"
 #include "panels.h"
 #include "past_achievements_info.h"
-#include "path_info.h"
 #include "pathfinding.h"
 #include "pickup.h"
 #include "pimpl.h"
@@ -229,7 +226,6 @@
 #include "timed_event.h"
 #include "translation.h"
 #include "translation_cache.h"
-#include "translation_manager.h"
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
@@ -4790,7 +4786,7 @@ void game::knockback( std::vector<tripoint_bub_ms> &traj, int stun, int dam_mult
                     add_msg( _( "%s collided with something else and sent it flying!" ),
                              targ->name() );
                 } else if( npc *const guy = creatures.creature_at<npc>( traj.front() ) ) {
-                    if( guy->male ) {
+                    if( guy->get_gender() ) {
                         add_msg( _( "%s collided with someone else and sent him flying!" ),
                                  targ->name() );
                     } else {
@@ -4865,7 +4861,7 @@ void game::knockback( std::vector<tripoint_bub_ms> &traj, int stun, int dam_mult
                     add_msg( _( "%s collided with something else and sent it flying!" ),
                              targ->get_name() );
                 } else if( npc *const guy = creatures.creature_at<npc>( traj_front ) ) {
-                    if( guy->male ) {
+                    if( guy->get_gender() ) {
                         add_msg( _( "%s collided with someone else and sent him flying!" ),
                                  targ->get_name() );
                     } else {
@@ -4946,7 +4942,7 @@ void game::knockback( std::vector<tripoint_bub_ms> &traj, int stun, int dam_mult
                 if( creatures.creature_at<monster>( traj.front() ) ) {
                     add_msg( _( "You collided with something and sent it flying!" ) );
                 } else if( npc *const guy = creatures.creature_at<npc>( traj.front() ) ) {
-                    if( guy->male ) {
+                    if( guy->get_gender() ) {
                         add_msg( _( "You collided with someone and sent him flying!" ) );
                     } else {
                         add_msg( _( "You collided with someone and sent her flying!" ) );

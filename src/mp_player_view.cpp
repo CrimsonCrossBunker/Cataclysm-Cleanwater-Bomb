@@ -1,7 +1,12 @@
 #include "mp_player_view.h"
 #include "math_parser_diag_value.h"
 
+#include <exception>
+#include <functional>
 #include <map>
+#include <memory>
+#include <optional>
+#include <set>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -9,26 +14,32 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "cata_scope_helpers.h"
-#include "character_attire.h"
+#include "character.h"
+#include "character_id.h"
+#include "coordinates.h"
+#include "creature.h"
 #include "dialogue_chatbin.h"
-#include "enums.h"
+#include "flexbuffer_json.h"
 #include "game.h"
-#include "inventory.h"
-#include "item.h"
-#include "item_location.h"
 #include "json.h"
-#include "json_loader.h"
 #include "map.h"
 #include "memory_fast.h"
 #include "mission.h"
+#include "mp_actor_binding.h"
+#include "mp_player_identity.h"
+#include "mp_world_state.h"
 #include "mutation.h"
 #include "npc.h"
 #include "npc_opinion.h"
 #include "npc_radio.h"
 #include "overmapbuffer.h"
-#include "pimpl.h"
+#include "player_identity.h"
+#include "point.h"
 #include "rng.h"
+#include "type_id.h"
 #include "vpart_position.h"
+
+static const faction_id faction_your_followers( "your_followers" );
 
 namespace cata_mp
 {
@@ -38,7 +49,7 @@ void write_player_view( JsonOut &out, const player_id &id, const npc &actor,
     std::ostringstream appearance_text;
     JsonOut appearance( appearance_text );
     appearance.start_object();
-    appearance.member( "male", actor.male );
+    appearance.member( "male", actor.get_gender() );
     appearance.member( "carried" );
     actor.store_carried_items( appearance );
     appearance.member( "mutations" );
@@ -155,16 +166,17 @@ void apply_player_view( const JsonObject &message, player_view &view )
         actor->set_movement_mode( mode );
     }
     actor->set_attitude( NPCATT_FOLLOW );
-    actor->set_fac( faction_id( "your_followers" ) );
+    actor->set_fac( faction_your_followers );
     actor->chatbin.first_topic = "TALK_FRIEND";
     actor->op_of_u.trust = 10;
     actor->op_of_u.value = 10;
     g->add_npc_follower( actor->getID() );
 
+    const bool previous_gender = actor->get_gender();
     if( message.has_object( "appearance" ) ) {
         const JsonObject appearance = message.get_object( "appearance" );
         appearance.allow_omitted_members();
-        actor->male = appearance.get_bool( "male" );
+        actor->set_gender( appearance.get_bool( "male" ), false );
         const std::vector<trait_id> previous = actor->get_mutations();
         for( const trait_id &trait : previous ) {
             actor->unset_mutation( trait );
@@ -179,7 +191,7 @@ void apply_player_view( const JsonObject &message, player_view &view )
         }
         actor->load_carried_items( appearance.get_object( "carried" ) );
     }
-    auto &observation = view.observation;
+    peer_observation &observation = view.observation;
     observation.partner_name_cached = actor->name;
     observation.partner_activity = message.get_string( "activity" );
     observation.partner_help_target = message.get_string( "help_target", "" );
@@ -198,6 +210,9 @@ void apply_player_view( const JsonObject &message, player_view &view )
         observation.partner_hp_max += hp.get_int( "maximum" );
     }
     applied = true;
+    if( !created ) {
+        actor->notify_gender_change( previous_gender );
+    }
 }
 
 character_id host_npc_identity( const npc &actor )
@@ -220,7 +235,7 @@ void write_npc_view( JsonOut &out, const npc &actor, const Character &viewer,
     std::ostringstream appearance_text;
     JsonOut appearance( appearance_text );
     appearance.start_object();
-    appearance.member( "male", actor.male );
+    appearance.member( "male", actor.get_gender() );
     appearance.member( "carried" );
     actor.store_carried_items( appearance );
     appearance.member( "mutations" );
@@ -381,10 +396,11 @@ void apply_npc_view( const JsonObject &message, npc_view &view )
         actor->op_of_u.deserialize( op );
         actor->opinion_of( get_avatar().getID() ) = actor->op_of_u;
     }
+    const bool previous_gender = actor->get_gender();
     if( message.has_object( "appearance" ) ) {
         const JsonObject appearance = message.get_object( "appearance" );
         appearance.allow_omitted_members();
-        actor->male = appearance.get_bool( "male" );
+        actor->set_gender( appearance.get_bool( "male" ), false );
         const std::vector<trait_id> previous = actor->get_mutations();
         for( const trait_id &trait : previous ) {
             actor->unset_mutation( trait );
@@ -423,6 +439,9 @@ void apply_npc_view( const JsonObject &message, npc_view &view )
         }
     }
     applied = true;
+    if( !created ) {
+        actor->notify_gender_change( previous_gender );
+    }
 }
 
 void write_mission_view( JsonOut &out, const Character &who )

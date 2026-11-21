@@ -3735,6 +3735,49 @@ sol::table character_body_parts(
     return result;
 }
 
+sol::table get_character_gender( sol::this_state lua, const game_handle &handle,
+                                 const game_handle_runtime &runtime_generation,
+                                 const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    const Character *character = resolve_exact_character(
+                                     handle, runtime_generation, world_generation, error );
+    if( !character ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, character->get_gender() ? "male" : "female" ) );
+}
+
+sol::table set_character_gender( sol::this_state lua, const game_handle &handle,
+                                 const std::string &gender,
+                                 const game_handle_runtime &runtime_generation,
+                                 const std::size_t world_generation )
+{
+    if( gender != "male" && gender != "female" ) {
+        throw std::invalid_argument( "services.characters.set_gender expects 'male' or 'female'" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               handle, runtime_generation, world_generation, error );
+    if( !character ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool is_male = gender == "male";
+    const bool changed = character->get_gender() != is_male;
+    character->set_gender( is_male );
+    character = resolve_exact_character( handle, runtime_generation, world_generation, error );
+    if( !character ) {
+        return make_game_error_result( state, *error );
+    }
+    sol::table value = state.create_table();
+    value["gender"] = character->get_gender() ? "male" : "female";
+    value["changed"] = changed;
+    return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table snapshot_character(
     sol::state_view lua, const Character &character,
     const int requested_body_part_limit )
@@ -3745,7 +3788,7 @@ sol::table snapshot_character(
     result["name"] = character.get_name();
     result["avatar"] = character.is_avatar();
     result["npc"] = character.is_npc();
-    result["male"] = character.male;
+    result["male"] = character.get_gender();
     result["cash"] = character.cash;
     result["faction_id"] = character.get_faction_id().str();
 
@@ -4708,6 +4751,22 @@ void install_creature_api(
             return make_game_error_result( state, *error );
         }
         return make_game_value_result( state, sol::make_object( state, character->intimidation() ) );
+    } );
+    characters.set_function(
+        "get_gender",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        return get_character_gender( lua_state, handle, current_runtime_generation(),
+                                     current_world_generation() );
+    } );
+    characters.set_function(
+        "set_gender",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle, const std::string & gender ) {
+        require_write();
+        return set_character_gender( lua_state, handle, gender, current_runtime_generation(),
+                                     current_world_generation() );
     } );
     characters.set_function(
         "snapshot",
