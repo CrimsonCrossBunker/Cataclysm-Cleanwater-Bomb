@@ -1553,7 +1553,7 @@ void sfx::do_player_death_hurt( const Character &target, bool death )
     const bool indoors = !is_creature_outside( get_player_character() );
     const bool night = is_night( calendar::turn );
     int heard_volume = get_heard_volume( target.pos_bub() );
-    const bool male = target.male;
+    const bool male = target.get_gender();
     if( !male && !death ) {
         play_variant_sound( "deal_damage", "hurt_f", seas_str, indoors, night, heard_volume );
     } else if( male && !death ) {
@@ -1647,20 +1647,20 @@ void sfx::do_low_stamina_sfx()
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .74 &&
                player_character.get_stamina() >= player_character.get_stamina_max() * .5 &&
-               player_character.male && !is_channel_playing( channel::stamina_75 ) ) {
+               player_character.get_gender() && !is_channel_playing( channel::stamina_75 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_m_low", seas_str, indoors,
                                     night, 100, channel::stamina_75, 1000 );
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .49 &&
                player_character.get_stamina() >= player_character.get_stamina_max() * .25 &&
-               player_character.male && !is_channel_playing( channel::stamina_50 ) ) {
+               player_character.get_gender() && !is_channel_playing( channel::stamina_50 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_m_med", seas_str, indoors,
                                     night, 100, channel::stamina_50, 1000 );
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .24 &&
-               player_character.get_stamina() >= 0 && player_character.male &&
+               player_character.get_stamina() >= 0 && player_character.get_gender() &&
                !is_channel_playing( channel::stamina_35 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_m_high", seas_str, indoors,
@@ -1668,20 +1668,20 @@ void sfx::do_low_stamina_sfx()
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .74 &&
                player_character.get_stamina() >= player_character.get_stamina_max() * .5 &&
-               !player_character.male && !is_channel_playing( channel::stamina_75 ) ) {
+               !player_character.get_gender() && !is_channel_playing( channel::stamina_75 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_f_low", seas_str, indoors,
                                     night, 100, channel::stamina_75, 1000 );
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .49 &&
                player_character.get_stamina() >= player_character.get_stamina_max() * .25 &&
-               !player_character.male && !is_channel_playing( channel::stamina_50 ) ) {
+               !player_character.get_gender() && !is_channel_playing( channel::stamina_50 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_f_med", seas_str, indoors,
                                     night, 100, channel::stamina_50, 1000 );
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .24 &&
-               player_character.get_stamina() >= 0 && !player_character.male &&
+               player_character.get_stamina() >= 0 && !player_character.get_gender() &&
                !is_channel_playing( channel::stamina_35 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_f_high", seas_str, indoors,
