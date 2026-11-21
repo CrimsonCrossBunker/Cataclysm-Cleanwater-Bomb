@@ -4684,7 +4684,8 @@ void character_creator_callback::confirm( uilist *menu )
                     for( const trait_id &suspect_trait : u.get_mutations() ) {
                         if( are_conflicting_traits( new_trait.trait, suspect_trait ) ) {
                             popup( _( "Your trait %1$s has been removed since it conflicts with the %2$s's %3$s trait." ),
-                                   u.mutation_name( suspect_trait ), u.prof->gender_appropriate_name( u.get_gender() ), new_trait.name() );
+                                   u.mutation_name( suspect_trait ), u.prof->gender_appropriate_name( u.get_gender() ),
+                                   new_trait.name() );
                             u.toggle_trait_deps( suspect_trait );
                         }
                     }
