@@ -1,11 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_open_perk_menu",
-    "effect": [ { "open_dialogue": { "topic": "TALK_PERK_MENU_MAIN" } } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_level_up",
     "effect": [
       { "math": [ "u_available_exp = u_val('exp') + u_bonus_exp - u_used_exp" ] },
