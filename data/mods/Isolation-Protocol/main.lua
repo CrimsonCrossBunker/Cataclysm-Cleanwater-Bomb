@@ -39,6 +39,7 @@ require("effect_types")
 require("terrain_transforms")
 
 require("tile_interactions")
+require("elevator")
 
 require("recipe_categories")
 require("skills")
