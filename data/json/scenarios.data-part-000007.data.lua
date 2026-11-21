@@ -1,6 +1,19 @@
 local ccb = require("ccb")
 
 ccb.content.define_scenario {
+    id = "trapped_in_labyrinth",
+    name = "Challenge - Labyrinth Bound",
+    points = 0,
+    description = "During the worst of the portal storms you found yourself exposed, and existence as you knew it folded in upon itself.  You now find yourself lost in another world.  You're not sure if you'll ever be able to return.  But, there is something in the distance.  A green light?  Atop a metal spire?  Perhaps there is somewhere safe, there.",
+    flags = { "CHALLENGE", "LONE_START" },
+    start_name = "Field",
+    locations = { "sloc_field", "sloc_forest" },
+    initial_visibility = 0,
+    reveal_locale = false,
+    requirement = "achievement_reach_labyrinth",
+}
+
+ccb.content.define_scenario {
     id = "infested_shelter_start",
     name = "Challenge - Compromised Shelter",
     points = -1,

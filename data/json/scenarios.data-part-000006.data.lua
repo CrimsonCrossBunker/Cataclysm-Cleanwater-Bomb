@@ -1,6 +1,22 @@
 local ccb = require("ccb")
 
 ccb.content.define_scenario {
+    id = "faction_camp_start",
+    name = "Brave New World",
+    points = 8,
+    description = "It's been a year since the apocalypse, and winter is fast approaching.  You and your company have managed to gather up enough supplies to finally settle down somewhere, away from the death and destruction.  Life has been hard for you, but in your heart you still hold a vision of a bright future lying ahead.",
+    start_name = "Old Evac Shelter",
+    locations = { "sloc_shelter_safe" },
+    start_of_cataclysm = { hour = 0, day = 56, season = "spring", year = 1 },
+    start_of_game = { hour = 8, day = 1, season = "autumn", year = 2 },
+    add_professions = true,
+    professions = { "sheltered_survivor", "sheltered_militia", "winter_scavenger", "winter_army" },
+    requirement = "achievement_survive_91_days",
+    initial_visibility = 50,
+    flags = { "CITY_START", "LONE_START" },
+}
+
+ccb.content.define_scenario {
     id = "alone",
     name = "Sheltered",
     points = -3,

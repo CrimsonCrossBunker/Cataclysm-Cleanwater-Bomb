@@ -1,34 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "scenario_bad_day",
-    "effect": [
-      { "u_add_effect": "flu", "intensity": 1, "duration": "1000 minutes" },
-      { "u_add_effect": "drunk", "intensity": 1, "duration": "270 minutes" },
-      {
-        "u_add_morale": "morale_feeling_bad",
-        "bonus": -100,
-        "max_bonus": -100,
-        "duration": "50 minutes",
-        "decay_start": "50 minutes"
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "scenario_infected",
-    "effect": [
-      { "u_add_effect": "infected", "intensity": 1, "duration": "PERMANENT", "target_part": "RANDOM" },
-      { "assign_mission": "MISSION_INFECTED_START_FIND_ANTIBIOTICS" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "scenario_fungal_infection",
-    "effect": [ { "u_add_effect": "fungus", "intensity": 1, "duration": "PERMANENT", "target_part": "RANDOM" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "scenario_paralyzepoison",
     "effect": [ { "u_add_effect": "paralyzepoison", "intensity": 3, "duration": "10 minutes" } ]
   },
@@ -175,11 +147,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "faction_camp_start",
-    "effect": [ { "mapgen_update": "faction_start_add" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "scenario_liam",
     "effect": [
       { "open_dialogue": { "topic": "TALK_Liam_Introdialogue" } },
@@ -198,38 +165,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_lone_survivor",
-    "effect": [
-      {
-        "u_message": "They are all dead.  The group you were surviving with has been annihilated.  Their bodies are still nearby.  You are the last one left alive and their screams will haunt you.",
-        "type": "warning",
-        "popup": true
-      },
-      {
-        "u_add_morale": "morale_feeling_bad",
-        "bonus": -100,
-        "max_bonus": -100,
-        "duration": "1440 minutes",
-        "decay_start": "180 minutes"
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_scenario_drunk",
-    "effect": [
-      { "u_add_effect": "drunk", "intensity": 1, "duration": "270 minutes" },
-      {
-        "u_add_morale": "morale_feeling_bad",
-        "bonus": -50,
-        "max_bonus": -50,
-        "duration": "50 minutes",
-        "decay_start": "50 minutes"
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_scenario_blood",
     "effect": [ { "mapgen_update": "SCENARIO_BLOOD" } ]
   },
@@ -242,22 +177,6 @@
     "type": "effect_on_condition",
     "id": "EOC_scenario_smoke",
     "effect": [ { "mapgen_update": "SCENARIO_SMOKE" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "eoc_type": "ACTIVATION",
-    "id": "EOC_deactivate_moonlit",
-    "effect": [ { "math": [ "is_moonlit_scenario = 0" ] }, "next_weather" ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_scenario_clear_weather",
-    "effect": [
-      { "u_message": "The moon shines brightly." },
-      { "math": [ "is_moonlit_scenario = 1" ] },
-      "next_weather",
-      { "run_eocs": "EOC_deactivate_moonlit", "time_in_future": "4 hours" }
-    ]
   },
   {
     "type": "effect_on_condition",

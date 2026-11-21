@@ -1,6 +1,18 @@
 local ccb = require("ccb")
 
 ccb.content.define_scenario {
+    id = "low_profile_start",
+    name = "Low Profile",
+    points = -1,
+    description = "You heard the global, worsening news and saw the nightmare in the cities firsthand — a situation that prompted you to jump from low-rent motel to cheap trailer, trying to outrun the madness.  While only you know where you'd planned to go, when you heard the government's last broadcast and realized 'no help was coming,' you resolved to raise a dejected toast and sink to the bottom of a bottle for as long as you could.  What happened in the following days of drunken stupor is an enigma.  What you do know, is that it's time to see how much of the world there's left to return to.",
+    forced_traits = { "ADDICTIVE" },
+    start_name = "Outside Town",
+    locations = { "sloc_mobile_home", "sloc_motel" },
+    initial_visibility = 6,
+    flags = { "LONE_START" },
+}
+
+ccb.content.define_scenario {
     id = "mass_quarantine_start",
     name = "Mass Quarantine",
     points = -1,
