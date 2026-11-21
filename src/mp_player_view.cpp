@@ -161,10 +161,11 @@ void apply_player_view( const JsonObject &message, player_view &view )
     actor->op_of_u.value = 10;
     g->add_npc_follower( actor->getID() );
 
+    const bool previous_gender = actor->get_gender();
     if( message.has_object( "appearance" ) ) {
         const JsonObject appearance = message.get_object( "appearance" );
         appearance.allow_omitted_members();
-        actor->male = appearance.get_bool( "male" );
+        actor->set_gender( appearance.get_bool( "male" ), false );
         const std::vector<trait_id> previous = actor->get_mutations();
         for( const trait_id &trait : previous ) {
             actor->unset_mutation( trait );
@@ -198,6 +199,9 @@ void apply_player_view( const JsonObject &message, player_view &view )
         observation.partner_hp_max += hp.get_int( "maximum" );
     }
     applied = true;
+    if( !created ) {
+        actor->notify_gender_change( previous_gender );
+    }
 }
 
 character_id host_npc_identity( const npc &actor )
@@ -381,10 +385,11 @@ void apply_npc_view( const JsonObject &message, npc_view &view )
         actor->op_of_u.deserialize( op );
         actor->opinion_of( get_avatar().getID() ) = actor->op_of_u;
     }
+    const bool previous_gender = actor->get_gender();
     if( message.has_object( "appearance" ) ) {
         const JsonObject appearance = message.get_object( "appearance" );
         appearance.allow_omitted_members();
-        actor->male = appearance.get_bool( "male" );
+        actor->set_gender( appearance.get_bool( "male" ), false );
         const std::vector<trait_id> previous = actor->get_mutations();
         for( const trait_id &trait : previous ) {
             actor->unset_mutation( trait );
@@ -423,6 +428,9 @@ void apply_npc_view( const JsonObject &message, npc_view &view )
         }
     }
     applied = true;
+    if( !created ) {
+        actor->notify_gender_change( previous_gender );
+    }
 }
 
 void write_mission_view( JsonOut &out, const Character &who )
