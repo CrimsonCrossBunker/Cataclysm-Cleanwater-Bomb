@@ -41,6 +41,16 @@ ccb.runtime.handler("examine_t_afs_starcrane_control", function(ctx)
     checked(services.characters.open_topic(actor, "THI_CONTROL_START"))
 end)
 
+ccb.runtime.handler("examine_t_afs_gun_ship_engine_console", function(ctx)
+    local actor = ctx.character
+    if ask(actor, ccb.services.translate("Do you want to overload the ship's drive?"), true) then
+        message(ctx, ccb.services.translate("You hear a high pitched whine start and increase in volume."),
+            "neutral", true)
+        checked(services.characters.cast_spell(actor, id("spell", "gunship_drive_overload")))
+        transform_radius(actor, 5, "engine_overload_transform")
+    end
+end)
+
 ccb.runtime.handler("examine_t_afs_gun_ship_engine_console_burnt", function(ctx)
     local actor = ctx.character
     if ask(actor, ccb.services.translate("Do you want to overload the ship's drive?"), true) then
@@ -103,6 +113,36 @@ ccb.runtime.handler("examine_t_landing_stair_control", function(ctx)
         apply_ship_update(below, "your_ship_stairs_retract")
         message(ctx, ccb.services.translate("The boarding stairs retract upward."), "neutral", false)
         store_ship_setting("your_ship_stairs_up", 1)
+    end
+end)
+
+ccb.runtime.handler("examine_t_bay_ramp_control", function(ctx)
+    local actor = ctx.character
+    local origin = checked(services.creatures.snapshot(actor)).position
+    if services.overmap.matches_location(origin:project_to("omt"), "high_orbit_salus_4tp") then
+        message(ctx, ccb.services.translate("You cant deploy the ramp while in space."), "neutral", false)
+        return
+    end
+    local ramp = services.world.find_location(origin).position
+    if ship_setting("your_ship_ramp_up") == 1 then
+        checked(services.world.transform_radius(ramp, 20, id("terrain_furniture_transform", "your_ship_ramp_down")))
+        apply_ship_update(ramp:add(services.coords.tripoint_rel_ms(0, 0, -1)), "your_ship_ramp_deployed")
+        message(ctx, ccb.services.translate("The bay ramp hydraulics whine as the ramp extends downwards."),
+            "neutral", false)
+        store_ship_setting("your_ship_ramp_up", 0)
+    else
+        apply_ship_update(ramp, "your_ship_ramp_closed")
+        local open_bay = services.world.find_location(origin,
+            { kind = "terrain", id = id("terrain", "t_open_air_bay") },
+            { target_max_radius = 24, distance_origin = origin })
+        if open_bay.found then
+            message(ctx, ccb.services.translate("You must clear all vehicles near the ramp before raising it"),
+                "neutral", false)
+        else
+            apply_ship_update(ramp:add(services.coords.tripoint_rel_ms(0, 0, -1)), "your_ship_ramp_retract")
+            message(ctx, ccb.services.translate("The ramp rises into position, sealing the bay."), "neutral", false)
+            store_ship_setting("your_ship_ramp_up", 1)
+        end
     end
 end)
 

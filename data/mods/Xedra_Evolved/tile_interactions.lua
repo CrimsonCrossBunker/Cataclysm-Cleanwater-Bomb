@@ -9,6 +9,13 @@ local function checked(result)
     return result.value
 end
 
+local function ask(actor, question, default)
+    if actor.subtype == "avatar" then
+        return services.interaction.confirm(question)
+    end
+    return default
+end
+
 local function assign_mission(actor, mission)
     local reserved = checked(services.missions.reserve(id("mission", mission)))
     checked(services.missions.assign(actor, reserved.token))
@@ -73,5 +80,13 @@ ccb.runtime.handler("examine_f_hunger_track", function(ctx)
             "neutral", false)
         assign_mission(actor, "MISSION_DEATHWORM")
         checked(services.variables.set(actor, "tracked_wendigo", 1, { include_before = false }))
+    end
+end)
+
+ccb.runtime.handler("examine_xedra_elocked_door", function(ctx)
+    local actor = ctx.character
+    if ask(actor, ccb.services.translate("Try to deduce the key code?"), false) then
+        checked(services.activities.assign_timed(actor, id("activity", "ACT_KEYPAD_ENTRY"),
+            services.time.duration(1, "second")))
     end
 end)
