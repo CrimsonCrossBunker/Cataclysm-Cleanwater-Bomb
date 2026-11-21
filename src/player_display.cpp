@@ -1102,15 +1102,15 @@ static void draw_tip( const catacurses::window &w_tip, const Character &you,
     if( you.crossed_threshold() ) {
         //~ player info window: 1s - name, 2s - gender, 3s - Prof or Mutation name
         mvwprintz( w_tip, point::zero, c_white, _( " %1$s | %2$s | %3$s" ), you.get_name(),
-                   you.male ? _( "Male" ) : _( "Female" ), race );
+                   you.get_gender() ? _( "Male" ) : _( "Female" ), race );
     } else {
         std::string profession = you.disp_profession();
         if( !profession.empty() ) {
             mvwprintz( w_tip, point::zero, c_white, _( " %1$s | %2$s | %3$s " ), you.get_name(),
-                       you.male ? _( "Male" ) : _( "Female" ), profession );
+                       you.get_gender() ? _( "Male" ) : _( "Female" ), profession );
         } else {
             mvwprintz( w_tip, point::zero, c_white, _( " %1$s | %2$s " ), you.get_name(),
-                       you.male ? _( "Male" ) : _( "Female" ) );
+                       you.get_gender() ? _( "Male" ) : _( "Female" ) );
         }
     }
 
