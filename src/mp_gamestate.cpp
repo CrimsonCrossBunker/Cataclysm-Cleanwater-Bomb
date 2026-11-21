@@ -59,6 +59,7 @@
 #include "map_scale_constants.h"
 #include "map_simulation_regions.h"
 #include "mapdata.h"
+#include "math_parser_diag_value.h"
 #include "memory_fast.h"
 #include "messages.h"
 #include "message_routing.h"
@@ -89,7 +90,6 @@
 #include "rng.h"
 #include "sleep.h"
 #include "sounds.h"
-#include "scent_map.h"
 #include "string_formatter.h"
 #include "string_input_popup.h"
 #include "tileray.h"
@@ -102,6 +102,7 @@
 #include "units.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_uid.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "worldfactory.h"
@@ -153,7 +154,6 @@
 #include <string_view>
 #include <system_error>
 #include <thread>
-#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
