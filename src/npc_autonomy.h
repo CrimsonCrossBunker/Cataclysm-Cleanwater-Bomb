@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -13,6 +14,7 @@
 #include "coordinates.h"
 #include "item_location.h"
 #include "memory_fast.h"
+#include "point.h"
 #include "type_id.h"
 
 class Creature;
