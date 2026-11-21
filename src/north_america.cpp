@@ -608,6 +608,24 @@ regional_climate::coordinates location( point_abs_ms position )
     return { latitude / radians, std::remainder( bedford_longitude + longitude / radians, 360.0 ) };
 }
 
+point_abs_ms position_at( regional_climate::coordinates geo )
+{
+    const double lat = geo.latitude * radians;
+    const double lon = std::remainder( geo.longitude - bedford_longitude, 360.0 ) * radians;
+    const double east = std::cos( lat ) * std::sin( lon );
+    const double north = std::cos( bedford_latitude ) * std::sin( lat ) -
+                         std::sin( bedford_latitude ) * std::cos( lat ) * std::cos( lon );
+    const double horizontal = std::hypot( east, north );
+    if( horizontal < 1e-12 ) {
+        return point_abs_ms( 0, 0 );
+    }
+    const double dot = std::sin( bedford_latitude ) * std::sin( lat ) +
+                       std::cos( bedford_latitude ) * std::cos( lat ) * std::cos( lon );
+    const double factor = earth_radius * std::atan2( horizontal, dot ) / horizontal;
+    return point_abs_ms( static_cast<int>( std::lround( east * factor ) ),
+                         static_cast<int>( std::lround( -north * factor ) ) );
+}
+
 std::optional<water_level> water_surface_elevation( point_abs_ms position )
 {
     struct river_segment {
