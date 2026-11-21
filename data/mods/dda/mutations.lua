@@ -112,3 +112,45 @@ ccb.runtime.handler("amputee_reset", function(context)
     end
     checked(services.variables.set(character, "traits_limbs_amputee_reset", "yes", { include_before = false }))
 end)
+
+ccb.runtime.handler("debug_mutate", function(context)
+    checked(services.mutations.mutate(context.character, 0, true))
+end)
+
+local random_npc_missions = {
+    { id = "MISSION_GET_RELIC", move_only = false },
+    { id = "MISSION_GET_RECORD_ACCOUNTING", move_only = true },
+    { id = "MISSION_GET_INHALER", move_only = false },
+    { id = "MISSION_GET_ANTIBIOTICS", move_only = false },
+    { id = "MISSION_GET_FLAG", move_only = false },
+    { id = "MISSION_GET_RECORD_WEATHER", move_only = false },
+    { id = "MISSION_GET_SOFTWARE", move_only = false },
+    { id = "MISSION_GET_RECORD_PATIENT", move_only = true },
+    { id = "MISSION_KILL_JABBERWOCK", move_only = false },
+    { id = "MISSION_KILL_ZOMBIE_MOM", move_only = false },
+    { id = "MISSION_RESCUE_DOG", move_only = false },
+    { id = "MISSION_PROVE_YOU_ARE_A_SURVIVOR", move_only = true },
+    { id = "MISSION_LEARN_ABOUT_CATTAIL_JELLY", move_only = false },
+    { id = "MISSION_PYROMANIAC", move_only = true },
+}
+
+local random_npc_mission_weights = {}
+for i = 1, #random_npc_missions do
+    random_npc_mission_weights[i] = 1
+end
+
+ccb.runtime.handler("give_random_mission", function(context)
+    local c = context.character
+    local has_move = checked(services.mutations.has_id_text(c, "GETS_RANDOM_MISSION"))
+    local has_nomove = checked(services.mutations.has_id_text(c, "GETS_RANDOM_MISSION_NOMOVE"))
+    if not (has_move or has_nomove) then
+        return
+    end
+    local idx = services.random.weighted_index(random_npc_mission_weights)
+    local entry = idx and random_npc_missions[idx]
+    if entry and (has_move or not entry.move_only) and c.subtype == "npc" then
+        checked(services.npcs.missions.offer(c, id("mission", entry.id)))
+    end
+    checked(services.mutations.erase(c, id("mutation", "GETS_RANDOM_MISSION")))
+    checked(services.mutations.erase(c, id("mutation", "GETS_RANDOM_MISSION_NOMOVE")))
+end)

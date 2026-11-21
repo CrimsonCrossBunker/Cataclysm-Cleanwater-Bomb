@@ -1,11 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "eoc_debug_mutate",
-    "effect": [ { "u_mutate": 0 } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_MUTE_BIRD_GAIN",
     "eoc_type": "EVENT",
     "required_event": "gains_mutation",
