@@ -14,6 +14,20 @@ local function assign_mission(actor, mission)
     checked(services.missions.assign(actor, reserved.token))
 end
 
+local function finish_mission(actor, name)
+    local offset = 0
+    repeat
+        local page = services.missions.active(actor, { offset = offset, limit = 256 })
+        for _, mission in ipairs(page.items) do
+            if mission.id.value == name then
+                checked(services.missions.finish(actor, mission.token))
+                return
+            end
+        end
+        offset = offset + page.returned
+    until not page.has_more
+end
+
 local function has_item(actor, item)
     local resources = checked(services.inventory.resources(actor, id("item", item), 1))
     return resources.charges > 0 or resources.has_amount
@@ -306,5 +320,87 @@ ccb.runtime.handler("examine_f_bulletin_evac", function(ctx)
             ccb.services.translate("You study the board.  One of the pages has a map and address for a nearby refugee center alongside minutia you no longer need trouble yourself with now that society has collapsed, like 'operating hours' and 'acceptable forms of ID'.  You take careful note of the map on the board and mark down the coordinates."),
             "neutral", true)
         assign_mission(actor, "MISSION_REACH_REFUGEE_CENTER")
+    end
+end)
+
+local nether_lily_messages = {
+    "You admire the lily.  Isn't it beautiful?",
+    "You worship the lily, and feel truly fulfilled.",
+    "You bow to the lily, and gain immense satisfaction in having done so.",
+    "You focus on the lily and realize it truly is perfection *incarnate*.",
+}
+
+ccb.runtime.handler("examine_f_nm_nether_lily", function(ctx)
+    local choice = services.random.weighted_index({ 15, 10, 5, 2 })
+    if choice then
+        message(ctx, ccb.services.translate(nether_lily_messages[choice]), "neutral", false)
+    end
+end)
+
+ccb.runtime.handler("examine_t_pit_BEM_human_sample", function(ctx)
+    local actor = ctx.character
+    if checked(services.inventory.has_items(actor, id("item", "human_sample"), 1, 0))
+        and checked(services.missions.has_active(actor, id("mission", "BEM_human_sample_mission"))) then
+        local count = (number_value(actor, "counter_BEM_BEM_human_sample_reward_owed") or 0) + 1
+        checked(services.variables.set(actor, "counter_BEM_BEM_human_sample_reward_owed", count,
+            { include_before = false }))
+        message(ctx, ccb.services.translate("You prepare the drop as instructed"), "neutral", true)
+        checked(services.inventory.consume_by_type(actor, id("item", "human_sample"), 1, 0))
+        finish_mission(actor, "BEM_human_sample_mission")
+    else
+        message(ctx, ccb.services.translate("You don't have anything to deliver."), "neutral", true)
+    end
+end)
+
+local slot_bets = {
+    { item = "money_twenty", label = "Twenty dollars." },
+    { item = "money_ten", label = "Ten dollars." },
+    { item = "money_five", label = "Five dollars." },
+    { item = "money_one", label = "One dollar." },
+}
+
+local slot_outcomes = {
+    { weight = 1000, multiplier = 0, text = "Oh, you lost!" },
+    { weight = 200, multiplier = 1, text = "Three cherries!  You get your money back." },
+    { weight = 50, multiplier = 2, text = "Three bells!  You double your money!" },
+    { weight = 20, multiplier = 3, text = "Three stars!  You triple your money!" },
+    { weight = 1, multiplier = 100, text = "Three sevens, JACKPOT!  You get 100 times your bet!" },
+}
+
+local slot_weights = {}
+for index, entry in ipairs(slot_outcomes) do
+    slot_weights[index] = entry.weight
+end
+
+ccb.runtime.handler("examine_t_slot_machine", function(ctx)
+    local actor = ctx.character
+    local choices = {}
+    for _, bet in ipairs(slot_bets) do
+        if has_item(actor, bet.item) then
+            choices[#choices + 1] = { id = bet.item, label = ccb.services.translate(bet.label) }
+        end
+    end
+    if #choices == 0 then
+        message(ctx, ccb.services.translate("You don't have any money to gamble with."), "neutral", true)
+        return
+    end
+    choices[#choices + 1] = { id = "walk_away", label = ccb.services.translate("Walk away.") }
+    local selection = services.interaction.choose(choices, {
+        title = ccb.services.translate("How much money do you want to bet?"),
+        allow_cancel = true,
+    })
+    if not selection.id or selection.id == "walk_away" then
+        return
+    end
+    local bet_item = id("item", selection.id)
+    checked(services.inventory.consume_by_type(actor, bet_item, 1, 0))
+    local picked = services.random.weighted_index(slot_weights)
+    local outcome = picked and slot_outcomes[picked]
+    if not outcome then
+        return
+    end
+    message(ctx, ccb.services.translate(outcome.text), "neutral", true)
+    if outcome.multiplier > 0 then
+        checked(services.inventory.receive_item(actor, bet_item, outcome.multiplier))
     end
 end)
