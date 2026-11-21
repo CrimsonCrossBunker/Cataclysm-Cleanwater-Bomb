@@ -153,3 +153,9 @@ ccb.runtime.handler("reward_robofac_merc_value", function(context)
         checked(ccb.services.npcs.modify_opinion(context.giver, { value = 2 }))
     end
 end)
+
+ccb.runtime.handler("reset_lighthouse_man_cleaning_count", function(context)
+    if context.giver then
+        checked(variables.set(context.giver, "count_cleaning_lighthouse_man", 0, { include_before = false }))
+    end
+end)

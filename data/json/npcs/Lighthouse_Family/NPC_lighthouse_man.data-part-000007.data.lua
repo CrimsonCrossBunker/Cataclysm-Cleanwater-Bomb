@@ -1,6 +1,58 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
+    id = "MISSION_lighthouse_man_2",
+    generic_rewards = false,
+    name = ccb.content.text("House cleaning"),
+    description = ccb.content.text("Clean lighthouse from <zombies> with Mikhail."),
+    goal = "MGOAL_CONDITION",
+    complete_when = "complete_mission_lighthouse_man_2",
+    difficulty = 0,
+    value = 5000,
+    start = {
+        actions = {
+            "follow_only",
+            ccb.content.dialogue_actions.set_first_topic("TALK_lighthouse_man_cleaning"),
+            { handler = "reset_lighthouse_man_cleaning_count" },
+        },
+    },
+    -- Native mission phases did not apply the giver opinion (trust +3, value +3).
+    finish = {
+        map_updates = {
+            {
+                terrain = "lighthouse_ground",
+                layout = {
+                    faction_areas = {
+                        { id = "fisherman_family", x = { 0, 23 }, y = { 0, 23 } },
+                    },
+                    zone_placements = {
+                        { id = "NPC_INVESTIGATE_ONLY", faction = "fisherman_family", x = { 0, 23 }, y = { 0, 23 } },
+                    },
+                },
+            },
+        },
+        actions = {
+            "stop_following",
+            ccb.content.dialogue_actions.set_first_topic("TALK_lighthouse_man_1"),
+            ccb.content.dialogue_actions.clear_actor_value("interlocutor", "count_cleaning_lighthouse_man"),
+        },
+    },
+    origins = { "ORIGIN_SECONDARY" },
+    followup = "MISSION_lighthouse_man_3",
+    dialogue = {
+        describe = ccb.content.text("-"),
+        offer = ccb.content.text("So, we found the lighthouse.  Now, I need to clean it.  Want to help me with it?"),
+        accepted = ccb.content.text("Great.  Let's do it together.  I'll be right behind you.  We will clean floor by floor.  If you decide that the floor is clean, tell me about it, and we will move on to the next, and so on to the very top."),
+        rejected = ccb.content.text("Well, it's your choice."),
+        advice = ccb.content.text("Be careful.  These <name_b>s are most dangerous in tight spaces."),
+        inquire = ccb.content.text("<its_safe>"),
+        success = ccb.content.text("Great, incredibly great.  All that remains is to wash all the floors…"),
+        success_lie = ccb.content.text("-"),
+        failure = ccb.content.text("-"),
+    },
+}
+
+ccb.content.define_mission {
     id = "MISSION_lighthouse_man_3",
     name = ccb.content.text("Fisherman's family"),
     description = ccb.content.text("Mikhail asked you to bring back his family."),

@@ -126,14 +126,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_MISSION_GET_DRIVEBELTS_done",
-    "global": true,
-    "condition": { "u_has_items": { "item": "drivebelt", "count": 3 } },
-    "effect": [ { "u_sell_item": "drivebelt", "count": 3 } ],
-    "false_effect": [ { "u_sell_item": "drivebelt_makeshift", "count": 3 } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_BANDIT_ASSASSIN",
     "recurrence": [ "60 days", "100 days" ],
     "global": true,

@@ -136,3 +136,39 @@ end)
 ccb.runtime.handler("teach_cake2", function(context)
     ccb.services.recipes.learn(context.character, ccb.services.types.id("recipe", "cake2"))
 end)
+
+local function deliver_first_item(context, items)
+    local chosen = items[#items]
+    for _, item in ipairs(items) do
+        if has_item(context.character, item) then
+            chosen = item
+            break
+        end
+    end
+    local item_id = id("item", chosen)
+    if context.giver then
+        local result = services.inventory.hand_in(context.character, context.giver, item_id, 1, 0)
+        if result.ok then
+            ccb.presentation.notice(result.value.notice)
+            return
+        end
+    end
+    services.inventory.consume_by_type(context.character, item_id, 1, 0)
+end
+
+ccb.runtime.handler("deliver_isherwood_carlos_anvil", function(context)
+    deliver_first_item(context, { "anvil", "anvil_crude", "anvil_heavy", "anvil_bronze" })
+end)
+
+ccb.runtime.handler("deliver_mission_get_antibiotics", function(context)
+    deliver_first_item(context, { "antibiotics", "strong_antibiotic", "panacea" })
+end)
+
+ccb.runtime.handler("deliver_mission_get_drivebelts", function(context)
+    local item_name = services.inventory.has_items(context.character, id("item", "drivebelt"), 3, 0).value
+        and "drivebelt" or "drivebelt_makeshift"
+    if not context.giver then return end
+    local result = services.inventory.transfer_by_type(context.character, context.giver, id("item", item_name), 3)
+    if not result.ok then error(result.error.message) end
+    ccb.presentation.notice(result.value.notice)
+end)

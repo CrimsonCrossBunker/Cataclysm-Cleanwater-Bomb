@@ -167,3 +167,23 @@ ccb.runtime.handler("complete_mission_learn_about_cattail_jelly_swag_bag", funct
         and services.inventory.has_items(context.speaker, services.types.id("item", "cattail_stalk"), 60, 0).value
         and services.skills.level(context.speaker, "survival").value >= 1
 end)
+
+ccb.runtime.handler("complete_mission_lighthouse_man_2", function(context)
+    if not context.interlocutor then return false end
+    local result = services.variables.get_number(context.interlocutor, "count_cleaning_lighthouse_man", { strict = true })
+    if not result.ok then error(result.error.message) end
+    return (result.value.value or 0) == 7
+end)
+
+carries_any("complete_mission_isherwood_carlos_1", {
+    "anvil", "anvil_crude", "anvil_heavy", "anvil_bronze",
+})
+
+ccb.runtime.handler("complete_mission_get_drivebelts", function(context)
+    return services.inventory.has_items(context.speaker, id("item", "drivebelt"), 3, 0).value
+        or services.inventory.has_items(context.speaker, id("item", "drivebelt_makeshift"), 3, 0).value
+end)
+
+carries_any("complete_mission_get_antibiotics", {
+    "antibiotics", "strong_antibiotic", "panacea",
+})
