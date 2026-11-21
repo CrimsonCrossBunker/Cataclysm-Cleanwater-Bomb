@@ -7,29 +7,32 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <ratio>
+#include <set>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
-#include "activity_type.h"
 #include "cached_options.h" // IWYU pragma: keep
 #include "calendar.h"
 #include "character.h"
 #include "coordinates.h"
+#include "creature.h"
 #include "creature_tracker.h"
 #include "current_map.h"
 #include "debug.h"
 #include "effect.h"
 #include "enums.h"
 #include "game.h"
-#include "game_constants.h"
+#include "item.h"
 #include "itype.h" // IWYU pragma: keep
 #include "line.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "map_scale_constants.h"
 #include "map_simulation_regions.h"
+#include "mapdata.h"
 #include "messages.h"
 #include "monster.h"
 #include "mp_client_conn.h"
@@ -38,17 +41,20 @@
 #include "north_america_soil.h"
 #include "npc.h"
 #include "output.h"
+#include "overmap_ui.h"
 #include "overmapbuffer.h"
 #include "player_activity.h"
 #include "point.h"
 #include "rng.h"
 #include "safemode_ui.h"
 #include "string_formatter.h"
+#include "translation.h"
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
 #include "uistate.h"
 #include "units.h"
+#include "value_ptr.h"
 #include "veh_type.h" // IWYU pragma: keep
 #include "vehicle.h"
 #include "vpart_position.h"
