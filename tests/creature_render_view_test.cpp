@@ -1,5 +1,6 @@
 #if defined(TILES)
 #include "cata_catch.h"
+#include <sstream>
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_utility.h"
@@ -26,7 +27,8 @@ TEST_CASE( "character_render_view_owns_appearance_after_character_changes",
     ch.facing = FacingDirection::LEFT;
     ch.add_effect( efftype_id( "stunned" ), 1_minutes );
     const auto expected = ch.get_overlay_ids();
-    const auto engine = rng_get_engine();
+    std::ostringstream engine_before;
+    engine_before << rng_get_engine();
     const entity_render_view view = capture_character_render_view( ch, FacingDirection::NONE );
     CHECK( view.body == "player_female" );
     CHECK( view.category == "none" );
@@ -34,7 +36,9 @@ TEST_CASE( "character_render_view_owns_appearance_after_character_changes",
     CHECK_FALSE( view.male );
     CHECK_FALSE( view.stack_overlays );
     CHECK( view.overlays == expected );
-    CHECK( rng_get_engine() == engine );
+    std::ostringstream engine_after;
+    engine_after << rng_get_engine();
+    CHECK( engine_after.str() == engine_before.str() );
     clear_character( ch );
     ch.set_gender( true, false );
     ch.facing = FacingDirection::RIGHT;
@@ -47,20 +51,22 @@ TEST_CASE( "monster_overlay_view_survives_actor_destruction_without_rng", "[tile
 {
     entity_render_view view;
     std::vector<std::pair<std::string, std::string>> expected;
-    auto engine = rng_get_engine();
+    std::ostringstream engine_before;
     {
         monster mon( mtype_id( "mon_zombie" ) );
         mon.facing = FacingDirection::RIGHT;
         mon.add_effect( efftype_id( "stunned" ), 1_minutes );
         expected = mon.get_overlay_ids();
-        engine = rng_get_engine();
+        engine_before << rng_get_engine();
         view = capture_monster_overlay_view( mon );
     }
     CHECK( view.rotation == 0 );
     CHECK( view.male );
     CHECK( view.stack_overlays );
     CHECK( view.overlays == expected );
-    CHECK( rng_get_engine() == engine );
+    std::ostringstream engine_after;
+    engine_after << rng_get_engine();
+    CHECK( engine_after.str() == engine_before.str() );
 }
 TEST_CASE( "creature_view_freezes_visibility_mount_and_copied_appearance",
            "[tiles][semantic_view]" )
