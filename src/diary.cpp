@@ -558,7 +558,7 @@ void diary::new_page()
     page -> mission_completed = mission::to_uid_vector( u->get_completed_missions() );
     page -> mission_active = mission::to_uid_vector( u->get_active_missions() );
     page -> mission_failed = mission::to_uid_vector( u->get_failed_missions() );
-    page -> male = u->male;
+    page -> male = u->get_gender();
     page->strength = u->get_str_base();
     page->dexterity = u->get_dex_base();
     page->intelligence = u->get_int_base();
