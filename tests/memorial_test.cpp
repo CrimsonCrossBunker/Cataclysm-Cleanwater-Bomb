@@ -102,7 +102,7 @@ TEST_CASE( "memorials", "[memorial]" )
     get_achievements().clear();
 
     avatar &player_character = get_avatar();
-    player_character.male = false;
+    player_character.set_gender( false, false );
     character_id ch = player_character.getID();
     std::string u_name = player_character.name;
     character_id ch2 = character_id( ch.get_value() + 1 );
