@@ -8515,6 +8515,30 @@ function CcbCharactersApi.random_body_part(character, main_parts_only) end
 ---@return CcbResult result `value` is the current integer score; unavailable/stale handles return an error.
 function CcbCharactersApi.intimidation(character) end
 
+---@alias CcbCharacterGender 'male'|'female'
+
+---@class CcbCharacterGenderResult: CcbResult
+---@field value? CcbCharacterGender
+
+---@class CcbCharacterSetGenderValue
+---@field gender CcbCharacterGender Gender after synchronous observers finish.
+---@field changed boolean Whether the requested write changed the previous value.
+
+---@class CcbCharacterSetGenderResult: CcbResult
+---@field value? CcbCharacterSetGenderValue
+
+---Read the exact live Character's gender.
+---@param character GameHandle
+---@return CcbCharacterGenderResult
+function CcbCharactersApi.get_gender(character) end
+
+---Set the exact live Character's gender and notify on changes only.
+---Returns a handle error if an observer removes or invalidates the Character.
+---@param character GameHandle
+---@param gender CcbCharacterGender Only 'male' and 'female' are accepted.
+---@return CcbCharacterSetGenderResult
+function CcbCharactersApi.set_gender(character, gender) end
+
 ---@param character GameHandle Exact live Character handle; subtype and lifecycle are checked before access.
 ---@param body_part_limit? integer
 ---@return CcbResult result `value` is a detached CcbCharacterSnapshot.
