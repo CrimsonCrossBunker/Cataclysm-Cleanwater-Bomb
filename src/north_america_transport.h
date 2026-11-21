@@ -21,6 +21,7 @@ struct road_cell {
     unsigned lanes = 0;
     std::size_t connections = 0;
     std::size_t mapped_connections = 0;
+    std::size_t mapped_wide_connections = 0;
     std::size_t arterial_connections = 0;
     urban_road street = urban_road::none;
 };

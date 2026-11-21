@@ -3676,6 +3676,7 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                             seed.charges = 1;
                         }
                         // The historical simulation can start before the game's turn zero.
+                        seed.set_var( "crop_field_sown", to_turn<int>( *sown ) );
                         iexamine::set_plant_last_water_check( seed, *sown );
                         dat.m.add_item( pos, std::move( seed ) );
                         dat.m.furn_set( pos, chosen_furn );

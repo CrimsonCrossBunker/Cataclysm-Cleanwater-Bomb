@@ -5,6 +5,7 @@
 #include <cmath>
 #include <functional>
 #include <memory>
+#include <numeric>
 #include <set>
 #include <string>
 #include <tuple>
@@ -208,13 +209,19 @@ crop_weather_cell &cell_at( const tripoint_abs_omt &cell, const weather_generato
     return sample;
 }
 
+time_duration crop_time_of_day( time_point when )
+{
+    const time_duration elapsed = time_past_midnight( when );
+    return elapsed < 0_turns ? elapsed + 1_days : elapsed;
+}
+
 const crop_day &sample_day( const tripoint_abs_ms &pos, time_point date )
 {
     const weather_manager &weather = get_weather_const();
     const weather_generator &generator = weather.get_cur_weather_gen();
     const tripoint_abs_omt cell = snow_climate_cell( project_to<coords::omt>( pos ) );
     crop_weather_cell &cached = cell_at( cell, generator );
-    const time_point start = date - time_past_midnight( date );
+    const time_point start = date - crop_time_of_day( date );
     const int day = to_days<int>( start - calendar::turn_zero );
     const auto found = cached.days.find( day );
     if( found != cached.days.end() ) {
@@ -359,8 +366,10 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     double moisture = std::clamp( seed.get_var( "crop_soil_moisture_mm", capacity * 0.65 ),
                                   0.0, capacity );
     time_point start = iexamine::get_plant_last_water_check( seed );
+    const bool field_crop = seed.has_var( "crop_field_sown" );
     if( !seed.has_var( "seed_last_water_check" ) ) {
-        start = calendar::turn - seed.age();
+        start = field_crop ? time_point::from_turn( static_cast<int>(
+                    seed.get_var( "crop_field_sown", 0.0 ) ) ) : calendar::turn - seed.age();
     }
 
     double effective = effective_crop_turns( seed );
@@ -374,7 +383,7 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     }
     const tripoint_abs_ms position = here.get_abs( p );
     const time_point end = finish_interval ? calendar::turn :
-                           calendar::turn - time_past_midnight( calendar::turn ) % 1_hours;
+                           calendar::turn - crop_time_of_day( calendar::turn ) % 1_hours;
     const double maturity_turns = to_turns<double>( maturity );
     const double day_fraction = per_model_day / climate.growing_days;
     double thermal_growth = seed.get_var( "crop_thermal_growth", effective / maturity_turns );
@@ -397,16 +406,16 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
                                    iexamine::get_plant_max_water( *stage_furniture ) * charge_mm );
         }
         const time_duration step = std::min( end - start,
-                                             1_hours - time_past_midnight( start ) % 1_hours );
+                                             1_hours - crop_time_of_day( start ) % 1_hours );
         const double days = to_days<double>( step );
-        const time_point date = start - time_past_midnight( start );
+        const time_point date = start - crop_time_of_day( start );
         if( date != sampled_date ) {
             const crop_day &day = sample_day( position, date );
             heat_fraction = crop_heat_fraction( here, p, climate, day );
             hourly_rain = day.rain;
             sampled_date = date;
         }
-        const int hour = to_hours<int>( time_past_midnight( start ) );
+        const int hour = to_hours<int>( crop_time_of_day( start ) );
         const double activity = std::clamp( heat_fraction / day_fraction, 0.15, 1.0 );
         const double need = crop_water_need( seed, *stage_furniture, effective / maturity_turns,
                                              std::max( 0.01f, water_use ) ) * days * activity;
@@ -442,6 +451,27 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
         }
     }
     if( effective >= final_growth ) {
+        // A standing field crop still records its local weather after growth stops.
+        while( field_crop && start < end ) {
+            const time_duration elapsed = crop_time_of_day( start );
+            const time_duration step = std::min( end - start, 1_days - elapsed );
+            const crop_day &day = sample_day( position, start - elapsed );
+            degree_days += crop_heat_fraction( here, p, climate, day ) *
+                           to_days<double>( step ) * climate.degree_days;
+            if( !covered ) {
+                if( step == 1_days ) {
+                    sampled_rain += std::accumulate( day.rain.begin(), day.rain.end(), 0.0 );
+                } else {
+                    for( time_duration cursor = elapsed; cursor < elapsed + step; ) {
+                        const time_duration slice = std::min( elapsed + step - cursor,
+                                                             1_hours - cursor % 1_hours );
+                        sampled_rain += day.rain[to_hours<int>( cursor )] * to_hours<double>( slice );
+                        cursor += slice;
+                    }
+                }
+            }
+            start += step;
+        }
         start = std::max( start, end );
     }
 
