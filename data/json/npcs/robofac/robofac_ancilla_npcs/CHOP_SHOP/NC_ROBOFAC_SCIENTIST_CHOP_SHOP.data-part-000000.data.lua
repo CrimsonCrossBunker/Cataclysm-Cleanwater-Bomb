@@ -20,3 +20,15 @@ ccb.content.define_npc_class {
     weapon = "NC_ROBOFAC_SCIENTIST_CHOP_SHOP_wield",
     skills = { { skill = "firstaid", bonus = 8 }, { skill = "electronics", bonus = 8 } },
 }
+
+ccb.content.define_npc {
+    id = "robofac_chop_shop_scientist_1",
+    unique_name = ccb.content.text("Michael Harlow"),
+    suffix = ccb.content.text("Hub Scientist"),
+    class = "NC_ROBOFAC_SCIENTIST_CHOP_SHOP",
+    attitude = 1,
+    mission = "GUARD",
+    chat = "NC_ROBOFAC_SCIENTIST_CHOP_SHOP",
+    faction = "robofac_auxiliaries_chop_shop",
+    on_death = "robofac_chop_shop_scientist_death",
+}

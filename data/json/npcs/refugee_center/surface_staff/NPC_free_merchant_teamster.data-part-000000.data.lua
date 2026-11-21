@@ -21,3 +21,14 @@ ccb.content.define_npc_class {
         { skill = "archery", bonus = { rng = { 0, 3 } } },
     },
 }
+
+ccb.content.define_npc {
+    id = "evac_teamster",
+    suffix = ccb.content.text("Teamster"),
+    class = "NC_TEAMSTER",
+    attitude = 0,
+    mission = "GUARD",
+    chat = "TALK_FREE_MERCHANT_TEAMSTER",
+    faction = "free_merchants",
+    on_death = "godco_trader_mission_deathfail",
+}

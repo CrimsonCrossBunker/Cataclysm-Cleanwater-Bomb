@@ -24,3 +24,15 @@ ccb.content.define_npc_class {
     carry = "naked_prisoner",
     weapon = "naked_prisoner",
 }
+
+ccb.content.define_npc {
+    id = "isherwood_barry",
+    unique_name = ccb.content.text("Barry Isherwood"),
+    gender = "male",
+    class = "NC_ISHERWOOD_BARRY",
+    attitude = 0,
+    mission = "GUARD",
+    chat = "TALK_ISHERWOOD_BARRY_RESCUE",
+    faction = "isherwood_family",
+    on_death = "isherwood_barry_death",
+}
