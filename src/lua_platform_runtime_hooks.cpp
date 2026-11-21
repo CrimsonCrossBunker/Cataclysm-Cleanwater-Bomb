@@ -224,7 +224,7 @@ Character *platform_event_character( const character_id &id )
 
 static bool platform_event_contract_exists( const std::string_view name )
 {
-    if( name == "befor_installs_cbm" ) {
+    if( name == "befor_installs_cbm" || name == "character_gender_changed" ) {
         return true;
     }
     for( int raw = 0; raw < static_cast<int>( event_type::num_event_types ); ++raw ) {
@@ -1691,6 +1691,66 @@ bool dispatch_befor_installs_cbm( const Character &character, const Character &i
         }
     }
     return true;
+}
+
+void dispatch_character_gender_changed( Character &character, const bool old_male,
+                                        const bool new_male )
+{
+    const character_action_guard lifetime( character );
+    if( !lifetime.get() ) {
+        return;
+    }
+    const std::string event_name = "game:character_gender_changed";
+    if( detail::current_platform_event_dispatch_depth() >= 16 ) {
+        DebugLog( D_WARNING, D_MAIN ) << "Lua-first global event recursion limit reached for '"
+                                      << event_name << "'";
+        return;
+    }
+    detail::platform_event_dispatch_scope event_scope;
+    struct pending_callback {
+        std::shared_ptr<runtime> owner;
+        std::string handler_id;
+        sol::object payload;
+    };
+    std::vector<pending_callback> pending;
+    for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
+        if( !owner || !owner->world_is_ready ) {
+            continue;
+        }
+        const auto subscription = owner->subscriptions.find( event_name );
+        if( subscription == owner->subscriptions.end() ) {
+            continue;
+        }
+        for( const std::string &handler_id : subscription->second ) {
+            try {
+                sol::table payload = owner->lua->create_table();
+                payload["type"] = "character_gender_changed";
+                payload["turn"] = to_turn<std::int64_t>( calendar::turn );
+                sol::table data = owner->lua->create_table();
+                data["character"] = character.getID().get_value();
+                data["old_male"] = old_male;
+                data["new_male"] = new_male;
+                payload["data"] = std::move( data );
+                sol::table data_types = owner->lua->create_table();
+                data_types["character"] = "character_id";
+                data_types["old_male"] = "bool";
+                data_types["new_male"] = "bool";
+                payload["data_types"] = std::move( data_types );
+                sol::table actors = owner->lua->create_table();
+                actors["character"] = platform_creature_handle( *owner, character );
+                payload["actors"] = std::move( actors );
+                pending.push_back( { owner, handler_id, sol::make_object( *owner->lua, payload ) } );
+            } catch( const std::exception &exception ) {
+                DebugLog( D_ERROR, D_MAIN ) << "Lua-first event payload for '"
+                                            << owner->mod_id << ':' << event_name << ':'
+                                            << handler_id << "' failed: " << exception.what();
+            }
+        }
+    }
+    for( const pending_callback &callback : pending ) {
+        detail::dispatch_event_handler( *callback.owner, event_name, callback.handler_id,
+                                        callback.payload );
+    }
 }
 
 bool has_runtime_hook( const std::string_view name )

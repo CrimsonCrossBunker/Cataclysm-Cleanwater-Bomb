@@ -3038,6 +3038,11 @@ class Character : public Creature, public visitable
         // In-game customized suffix, set by player OR temp professison for NPC
         std::string custom_profession;
 
+        bool get_gender() const;
+        void set_gender( bool is_male, bool notify = true );
+        /** Notify a net change after a batch of silent gender updates. */
+        void notify_gender_change( bool previous_gender );
+
         bool male = false;
 
         std::vector < effect_on_condition_id > death_eocs;

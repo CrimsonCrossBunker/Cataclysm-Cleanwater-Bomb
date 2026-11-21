@@ -633,7 +633,7 @@ Character::Character() :
     set_power_level( 0_kJ );
     cash = 0;
     scent = 500;
-    male = true;
+    set_gender( true, false );
     prof = profession::has_initialized() ? profession::generic() :
            nullptr; //workaround for a potential structural limitation, see player::create
     start_location = start_location_sloc_shelter_safe;
@@ -671,6 +671,29 @@ Character::Character() :
 Character::~Character() = default;
 Character::Character( Character && ) noexcept( map_is_noexcept ) = default;
 Character &Character::operator=( Character && ) noexcept( list_is_noexcept ) = default;
+
+bool Character::get_gender() const
+{
+    return male;
+}
+
+void Character::set_gender( const bool is_male, const bool notify )
+{
+    const bool previous_gender = get_gender();
+    male = is_male;
+    if( notify ) {
+        notify_gender_change( previous_gender );
+    }
+}
+
+void Character::notify_gender_change( const bool previous_gender )
+{
+    if( previous_gender == get_gender() || !g ||
+        ( !is_avatar() && !g->shared_from( *this ) ) ) {
+        return;
+    }
+    cata::lua_platform::dispatch_character_gender_changed( *this, previous_gender, get_gender() );
+}
 
 void Character::setID( character_id i, bool force )
 {

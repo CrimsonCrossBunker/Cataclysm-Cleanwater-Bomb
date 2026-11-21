@@ -196,6 +196,10 @@ bool dispatch_befor_installs_cbm( const Character &, const Character &, std::str
     return true;
 }
 
+void dispatch_character_gender_changed( Character &, bool, bool )
+{
+}
+
 bool dispatch_avatar_fatal( Character &, const Creature * )
 {
     return true;
