@@ -14,6 +14,9 @@
 #include "mutation.h"
 #include "npc.h"
 
+static const efftype_id effect_ridden( "ridden" );
+static const trait_id trait_INATTENTIVE( "INATTENTIVE" );
+
 namespace
 {
 int rotation_for( FacingDirection facing )
@@ -89,7 +92,7 @@ std::optional<creature_render_view> capture_creature_render_view( const map &her
         view.body = mon->type->id.str();
         view.species = mon->type->species.empty() ? std::string{} :
                        mon->type->species.begin()->str();
-        if( mon->has_effect( efftype_id( "ridden" ) ) ) {
+        if( mon->has_effect( effect_ridden ) ) {
             view.ridden_body = "rid_" + view.body;
             if( mon->mounted_player ) {
                 view.rider = capture_character_render_view( *mon->mounted_player, FacingDirection::NONE );
@@ -143,7 +146,7 @@ std::string capture_creature_disposition( const map &here, Character &you, const
         return {};
     }
     std::string id = "overlay_" + Creature::attitude_raw_string( attitude );
-    if( sees && !you.has_trait( trait_id( "INATTENTIVE" ) ) ) {
+    if( sees && !you.has_trait( trait_INATTENTIVE ) ) {
         id += "_sees_player";
     }
     return id;
