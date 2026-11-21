@@ -155,6 +155,7 @@ require("weather_types")
 
 require("portal_storm_scenarios")
 require("scenarios")
+require("mutations")
 
 require("portal_storm_interactions")
 

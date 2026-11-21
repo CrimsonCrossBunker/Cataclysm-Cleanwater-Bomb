@@ -1,0 +1,26 @@
+local ccb = require("ccb")
+
+ccb.content.define_mutation {
+    id = "BIRD_LEGS",
+    name = ccb.content.text("Avian Legs"),
+    description = ccb.content.text("Your legs and feet have become bird-like, with long talons arranged three ahead and one behind.  They probably won't fit in human shoes, but they're perfect for gripping onto precarious perches."),
+    categories = { "BIRD" },
+    types = { "LEGS", "FEET" },
+    prerequisites = { "WINGS_BIRD" },
+    threshold_requirements = { "THRESH_BIRD" },
+    points = 0,
+    mixed_effect = true,
+    active = true,
+    vitamin_cost = 260,
+    visibility = 4,
+    ugliness = 2,
+    flags = { "TOUGH_FEET" },
+    activation_setup_only = false,
+    consumes_stamina = true,
+    cost = 2500,
+    on_activate = "activate_avian_leap",
+    destroys_gear = true,
+    allowed_item_flags = { "ALLOWS_TALONS" },
+    restricts_gear = { "foot_l", "foot_r" },
+    enchantments = { "INLINE_ENCH_BIRD_LEGS_0", "INLINE_ENCH_BIRD_LEGS_1" },
+}
