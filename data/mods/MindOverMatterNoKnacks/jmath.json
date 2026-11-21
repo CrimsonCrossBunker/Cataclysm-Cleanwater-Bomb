@@ -1,8 +1,0 @@
-[
-  {
-    "type": "jmath_function",
-    "id": "int_to_level",
-    "num_args": 1,
-    "return": "min( ( (u_val('intelligence') * 1.5) * (_0) ), 20)"
-  }
-]

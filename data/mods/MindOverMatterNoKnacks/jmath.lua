@@ -10,3 +10,11 @@ local definition = content.MathFunction {
 }
 content.replace(definition)
 end
+do
+local definition = content.MathFunction {
+    id = "int_to_level",
+    arguments = 1,
+    expression = "min( ( (u_val('intelligence') * 1.5) * (_0) ), 20)",
+}
+content.add(definition)
+end

@@ -41,6 +41,7 @@ require("terrain_transforms")
 require("tile_interactions")
 
 require("recipe_categories")
+require("skills")
 require("jmath")
 require("field_types")
 require("chasm")

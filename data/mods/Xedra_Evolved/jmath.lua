@@ -474,3 +474,11 @@ local definition = content.MathFunction {
 }
 content.add(definition)
 end
+if not content.is_mod_active("mom_knacks_only") then
+    local definition = content.MathFunction {
+        id = "int_to_level",
+        arguments = 1,
+        expression = "(u_val('intelligence') * 1.5) * (_0)",
+    }
+    content.add(definition)
+end
