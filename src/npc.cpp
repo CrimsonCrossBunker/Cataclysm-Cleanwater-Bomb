@@ -8,6 +8,7 @@
 #include <inventory.h>
 #include <item_location.h>
 #include "item_disposition.h"
+#include "item_uid.h"
 #include <lru_cache.h>
 #include <map_scale_constants.h>
 #include <memory_fast.h>
@@ -77,7 +78,6 @@
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
-#include "lua_platform_handle.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
 #include "magic.h"
@@ -94,6 +94,7 @@
 #include "monster.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "npc_autonomy.h"
 #include "npc_class.h"
 #include "npctalk.h"
 #include "npctrade.h"
