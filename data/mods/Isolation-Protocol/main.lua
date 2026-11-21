@@ -23,6 +23,7 @@ require("item_enchantments")
 require("sidebar_extensions")
 
 require("scenario_filters")
+require("scenarios")
 
 require("overmap_locations")
 
