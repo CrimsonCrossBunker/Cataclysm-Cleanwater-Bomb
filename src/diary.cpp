@@ -21,7 +21,7 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "json.h"
-#include "kill_tracker.h"
+#include "kill_statistics.h"
 #include "magic.h"
 #include "mission.h"
 #include "mtype.h"
@@ -36,6 +36,7 @@
 #include "translation.h"
 #include "translations.h"
 #include "type_id.h"
+#include "units.h"
 #include "weather.h"
 
 diary_page::diary_page() = default;
