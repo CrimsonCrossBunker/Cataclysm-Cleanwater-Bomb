@@ -1,5 +1,22 @@
 local ccb = require("ccb")
 local content = ccb.content
+local services = ccb.services
+
+local function checked(result)
+    if not result.ok then
+        error(result.error.message)
+    end
+    return result.value
+end
+
+ccb.runtime.handler("money_maker_setup", function()
+    checked(services.variables.set_global("wave_money_modifier", -1500, { include_before = false }))
+end)
+
+ccb.runtime.handler("extra_life_addup", function()
+    local count = checked(services.variables.get_global_number("revivication_counter")).value or 0
+    checked(services.variables.set_global("revivication_counter", count + 1, { include_before = false }))
+end)
 
 -- mod_interactions/bombastic_perks/perks.json
 ccb.runtime.handler("interaction_enchantment_active_inline_ench_perk_melee_master_0", function(ctx)
