@@ -1895,7 +1895,7 @@ double gender_eval( const_dialogue const & d, char scope,
     // This has no talker overload because it's only relevant to characters.
     const Character *maybe_guy = d.const_actor( is_beta( scope ) )->get_const_character();
     if( maybe_guy ) {
-        return maybe_guy->male;
+        return maybe_guy->get_gender();
     } else {
         return 0;
     }
@@ -1907,7 +1907,7 @@ void gender_ass( double val, dialogue & d, char scope,
     // This has no talker overload because it's only relevant to characters.
     Character *maybe_guy_maybe_girl_soon = d.actor( is_beta( scope ) )->get_character();
     if( maybe_guy_maybe_girl_soon ) {
-        maybe_guy_maybe_girl_soon->male = val;
+        maybe_guy_maybe_girl_soon->set_gender( val != 0 );
     }
 }
 
