@@ -644,9 +644,16 @@ void npc::load_npc_template( const string_id<npc_template> &ident )
 
     idz = ident;
     myclass = npc_class_id( tguy.myclass );
+    const character_action_guard lifetime( *this );
     randomize( myclass, ident );
+    if( !lifetime.get() ) {
+        return;
+    }
     if( tem.gender_override != npc_template::gender::random ) {
-        male = tem.gender_override == npc_template::gender::male;
+        set_gender( tem.gender_override == npc_template::gender::male );
+        if( !lifetime.get() ) {
+            return;
+        }
     }
     name = SNIPPET.expand( male ? "<male_full_name>" : "<female_full_name>" );
     if( !tem.name_unique.empty() ) {
@@ -690,12 +697,17 @@ npc::~npc() = default;
 
 void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
 {
+    const bool previous_gender = get_gender();
+    const character_action_guard lifetime( *this );
     if( !getID().is_valid() ) {
         setID( g->assign_npc_id() );
     }
     if( type.is_null() || type == NC_NONE ) {
         Character::randomize( false );
         starting_inv_passtime();
+        if( lifetime.get() ) {
+            notify_gender_change( previous_gender );
+        }
         return;
     }
 
@@ -704,7 +716,10 @@ void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
     randomize_personality();
     moves = 100;
     mission = NPC_MISSION_NULL;
-    male = one_in( 2 );
+    set_gender( one_in( 2 ) );
+    if( !lifetime.get() ) {
+        return;
+    }
     pick_name();
     randomize_height();
     set_base_age( rng( NPC_RAND_AGE_MIN, NPC_RAND_AGE_MAX ) );
