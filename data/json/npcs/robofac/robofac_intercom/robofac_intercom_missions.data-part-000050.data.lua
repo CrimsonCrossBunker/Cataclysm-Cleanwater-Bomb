@@ -1,0 +1,81 @@
+local ccb = require("ccb")
+
+ccb.content.define_mission {
+    id = "MISSION_ROBOFAC_INTERCOM_CHOP_SHOP",
+    name = ccb.content.text("Post-Apocalyptic IRB"),
+    description = ccb.content.text("The intercom has asked me to <color_yellow>kill a rogue scientist named Dr. Harlow</color>, who they say is performing unethical experiments on live humans.  I am also authorized to use lethal force against anyone who resists, and to pillage the site."),
+    goal = "MGOAL_NULL",
+    destination = "robofac_strip_mall_x1y0",
+    difficulty = 5,
+    value = 0,
+    start = {
+        target = {
+            terrain = "robofac_strip_mall_x1y0",
+            special = "robofac_strip_mall",
+            reveal_radius = 4,
+            random = false,
+        },
+        handler = "set_world_robofac_chop_shop_scientist_1_kill_orders_to_1",
+    },
+    finish = {
+        actions = {
+            { item = "RobofacCoin", count = 4 },
+            { handler = "mark_dialogue_intercom_completed_robofac_intercom_chop_shop" },
+            { handler = "advance_hub01_completed_missions_by_1" },
+            ccb.content.dialogue_actions.update_map("remove_robofac_mercs", "robofac_strip_mall_x0y0"),
+            ccb.content.dialogue_actions.update_map("remove_robofac_mercs", "robofac_strip_mall_x1y0"),
+            ccb.content.dialogue_actions.update_map("remove_robofac_mercs", "robofac_strip_mall_x2y0"),
+            ccb.content.dialogue_actions.update_map("remove_robofac_mercs", "robofac_strip_mall_x3y0"),
+            ccb.content.dialogue_actions.update_map("remove_robofac_mercs", "robofac_strip_mall_x4y0"),
+            ccb.content.dialogue_actions.update_map("remove_robofac_mercs", "robofac_strip_mall_x0y1"),
+            ccb.content.dialogue_actions.update_map("remove_robofac_mercs", "robofac_strip_mall_x1y1"),
+            ccb.content.dialogue_actions.update_map("remove_robofac_mercs", "robofac_strip_mall_x2y1"),
+            ccb.content.dialogue_actions.update_map("remove_robofac_mercs", "robofac_strip_mall_x3y1"),
+            ccb.content.dialogue_actions.update_map("remove_robofac_mercs", "robofac_strip_mall_x4y1"),
+        },
+    },
+    origins = { "ORIGIN_SECONDARY" },
+    generic_rewards = false,
+    dialogue = {
+        describe = ccb.content.text("…"),
+        offer = ccb.content.text("…"),
+        accepted = ccb.content.text("…"),
+        rejected = ccb.content.text("…"),
+        advice = ccb.content.text("…"),
+        inquire = ccb.content.text("…"),
+        success = ccb.content.text("…"),
+        success_lie = ccb.content.text("…"),
+        failure = ccb.content.text("…"),
+    },
+}
+
+ccb.content.define_mission {
+    id = "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI",
+    name = ccb.content.text("Circuit Safari"),
+    description = ccb.content.text("The intercom has asked me to bring them the remains of an <color_yellow>Exodii worker</color>.  They said I can use any violent means necessary to take it down."),
+    goal = "MGOAL_NULL",
+    difficulty = 5,
+    value = 0,
+    finish = {
+        actions = {
+            { item = "RobofacCoin", count = 4 },
+            { handler = "mark_dialogue_intercom_completed_robofac_intercom_circuit_safari" },
+            { handler = "advance_hub01_completed_missions_by_1" },
+            { handler = "set_world_hub01_has_cbm_interface_tech_to_1" },
+            { handler = "schedule_robofac_hq_ancilla_autodoc" },
+        },
+    },
+    origins = { "ORIGIN_SECONDARY" },
+    generic_rewards = false,
+    dialogue = {
+        describe = ccb.content.text("…"),
+        offer = ccb.content.text("…"),
+        accepted = ccb.content.text("…"),
+        rejected = ccb.content.text("…"),
+        advice = ccb.content.text("…"),
+        inquire = ccb.content.text("…"),
+        success = ccb.content.text("…"),
+        success_lie = ccb.content.text("…"),
+        failure = ccb.content.text("…"),
+    },
+}

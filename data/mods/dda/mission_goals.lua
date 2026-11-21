@@ -187,3 +187,9 @@ end)
 carries_any("complete_mission_get_antibiotics", {
     "antibiotics", "strong_antibiotic", "panacea",
 })
+
+ccb.runtime.handler("complete_mission_get_solar_panels_balthazar", function()
+    local power = services.variables.get_global_number("balthazar_power", { strict = true })
+    if not power.ok then error(power.error.message) end
+    return (power.value.value or 0) < 50
+end)

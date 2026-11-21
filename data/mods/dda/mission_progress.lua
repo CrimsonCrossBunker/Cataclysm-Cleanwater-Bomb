@@ -159,3 +159,16 @@ ccb.runtime.handler("reset_lighthouse_man_cleaning_count", function(context)
         checked(variables.set(context.giver, "count_cleaning_lighthouse_man", 0, { include_before = false }))
     end
 end)
+
+track("dialogue_intercom_completed_robofac_intercom_chop_shop")
+track("dialogue_intercom_completed_robofac_intercom_circuit_safari")
+set_world_progress("set_world_robofac_chop_shop_scientist_1_kill_orders_to_1", "robofac_chop_shop_scientist_1_kill_orders", 1)
+set_world_progress("set_world_hub01_has_cbm_interface_tech_to_1", "hub01_has_cbm_interface_tech", 1)
+
+ccb.runtime.handler("record_balthazar_solar_power", function()
+    local power = checked(variables.get_global_number("balthazar_power", { strict = true })).value or 0
+    checked(variables.set_global("balthazar_power", power + 20, { include_before = false }))
+    local gain = checked(variables.get_global_number("balthazar_daily_power_gain", { strict = true })).value or 0
+    checked(variables.set_global("balthazar_daily_power_gain", gain + 1, { include_before = false }))
+    checked(variables.set_global("balthazar_solar_power", 1, { include_before = false }))
+end)

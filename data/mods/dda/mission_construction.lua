@@ -75,3 +75,45 @@ ccb.runtime.handler("collect_isherwood_truck", function(context)
     update_at(context.character, services.overmap.find_target(origin, location), { "LUKE_REMOVE_TRUCK" })
     advance("isherwood_luke_truck_status")
 end)
+
+ccb.runtime.handler("schedule_robofac_hq_ancilla_autodoc", function(context)
+    ccb.tasks.after_character_turn(context.character, 14 * 24 * 3600, "place_robofac_hq_ancilla_autodoc")
+end)
+
+ccb.runtime.handler("place_robofac_hq_ancilla_autodoc", function(context)
+    local placed = checked(variables.get_global_number("ancilla_autodoc_placed", { strict = true })).value or 0
+    if placed == 1 then return end
+    local character = context.character
+    local origin = checked(services.creatures.snapshot(character)).position:project_to("omt")
+    local target = services.overmap.find_target(origin, "robofachq_subcc_a1")
+    update_at(character, target, { "robofachq_ancilla_bar_autodoc" })
+    checked(variables.set_global("ancilla_autodoc_loc", target:project_to("ms"), { include_before = false }))
+    set_progress("ancilla_autodoc_placed", 1)
+    ccb.tasks.after_character_turn(character, 7 * 24 * 3600, "place_robofac_hq_ancilla_bionic_garage")
+end)
+
+ccb.runtime.handler("place_robofac_hq_ancilla_bionic_garage", function(context)
+    local character = context.character
+    if services.gameplay.environment.dimension() ~= "default" then
+        ccb.tasks.after_character_turn(character, 2 * 24 * 3600, "place_robofac_hq_ancilla_bionic_garage")
+        return
+    end
+    -- Preserves native EOC_ROBOFAC_HQ_FORCE_PLACE_ANCILLA_BIONIC_GARAGE guard on ancilla_autodoc_placed.
+    local placed = checked(variables.get_global_number("ancilla_autodoc_placed", { strict = true })).value or 0
+    if placed == 1 then return end
+    local origin = checked(services.creatures.snapshot(character)).position:project_to("omt")
+    local target = services.overmap.find_target(origin, "robofachq_surface_car_entrance")
+    update_at(character, target, { "robofachq_ancilla_bionic_garage" })
+    checked(variables.set_global("ancilla_bionic_garage_loc", target:project_to("ms"), { include_before = false }))
+    set_progress("ancilla_bionic_garage_placed", 1)
+    local completed = checked(variables.get_number(character, "hub01_completed_missions", { strict = true })).value or 0
+    if completed < 1 and services.mutations.has_id_text(character, "EXODII_CYBERFRAME_GENERIC").value then
+        local entrance = services.overmap.find_target(origin, "robofachq_surface_entrance")
+        update_at(character, entrance, { "remove_robofac_intercom" })
+        set_progress("hub01_intercom_locked", 1)
+        for _, faction_id in ipairs({ "robofac", "robofac_auxiliaries_chop_shop", "robofac_auxiliaries" }) do
+            checked(services.factions.set_reputation(services.types.id("faction", faction_id),
+                { likes = -100, respects = -100, trusts = -100 }))
+        end
+    end
+end)
