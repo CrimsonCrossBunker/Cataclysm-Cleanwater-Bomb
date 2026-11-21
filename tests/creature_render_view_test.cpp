@@ -18,6 +18,10 @@
 #include "rng.h"
 #include "type_id.h"
 
+static const efftype_id effect_ridden( "ridden" );
+static const efftype_id effect_stunned( "stunned" );
+static const mtype_id mon_zombie( "mon_zombie" );
+
 TEST_CASE( "character_render_view_owns_appearance_after_character_changes",
            "[tiles][semantic_view]" )
 {
@@ -25,7 +29,7 @@ TEST_CASE( "character_render_view_owns_appearance_after_character_changes",
     clear_character( ch );
     ch.set_gender( false, false );
     ch.facing = FacingDirection::LEFT;
-    ch.add_effect( efftype_id( "stunned" ), 1_minutes );
+    ch.add_effect( effect_stunned, 1_minutes );
     const auto expected = ch.get_overlay_ids();
     std::ostringstream engine_before;
     engine_before << rng_get_engine();
@@ -53,9 +57,9 @@ TEST_CASE( "monster_overlay_view_survives_actor_destruction_without_rng", "[tile
     std::vector<std::pair<std::string, std::string>> expected;
     std::ostringstream engine_before;
     {
-        monster mon( mtype_id( "mon_zombie" ) );
+        monster mon( mon_zombie );
         mon.facing = FacingDirection::RIGHT;
-        mon.add_effect( efftype_id( "stunned" ), 1_minutes );
+        mon.add_effect( effect_stunned, 1_minutes );
         expected = mon.get_overlay_ids();
         engine_before << rng_get_engine();
         view = capture_monster_overlay_view( mon );
@@ -95,7 +99,7 @@ TEST_CASE( "creature_view_freezes_visibility_mount_and_copied_appearance",
         REQUIRE( view->monster_overlays );
         const auto expected = mon.get_overlay_ids();
         mon.facing = FacingDirection::RIGHT;
-        mon.add_effect( efftype_id( "stunned" ), 1_minutes );
+        mon.add_effect( effect_stunned, 1_minutes );
         CHECK( view->rotation == -1 );
         CHECK( view->monster_overlays->overlays == expected );
     }
@@ -103,7 +107,7 @@ TEST_CASE( "creature_view_freezes_visibility_mount_and_copied_appearance",
         CHECK_FALSE( capture_creature_render_view( here, you, &mon, mon.pos_bub(), true ) );
     }
     SECTION( "ridden creature captures its passenger first" ) {
-        mon.add_effect( efftype_id( "ridden" ), 1_minutes );
+        mon.add_effect( effect_ridden, 1_minutes );
         mon.mounted_player = &you;
         const auto view = capture_creature_render_view( here, you, &mon, mon.pos_bub(), false );
         REQUIRE( view );
