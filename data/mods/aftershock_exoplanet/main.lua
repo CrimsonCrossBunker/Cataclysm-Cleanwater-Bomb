@@ -147,6 +147,7 @@ require("skills")
 require("species")
 require("dreams")
 require("mutation_categories")
+require("mutations")
 
 require("fault_groups")
 
