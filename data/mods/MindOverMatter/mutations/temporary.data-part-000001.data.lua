@@ -1,5 +1,23 @@
 local ccb = require("ccb")
 
+ccb.content.define_mutation {
+    id = "TELELIXIRDOWN_active",
+    name = ccb.content.text("Elixir PK Surge (active)"),
+    copy_from = "TELELIXIRDOWN",
+    description = ccb.content.text("You are lashing out with your elixir-forged telekinetic powers."),
+    consumes_rest = true,
+    cost = 1,
+    cooldown = "1 m",
+    on_activate = "telelixir_cast_once",
+    valid = false,
+    transform = {
+        target = "TELELIXIRDOWN",
+        message = ccb.content.text("You rein your powers back in for now."),
+        active = false,
+        moves = 10,
+    },
+}
+
 -- NO_I18N
 -- NO_I18N
 ccb.content.define_spell {
