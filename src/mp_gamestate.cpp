@@ -5249,7 +5249,7 @@ static void apply_pending_terrain()
             ++it;
             continue;
         }
-        const auto &chunk = it->second;
+        const client_replication_state::terrain_chunk &chunk = it->second;
         const tripoint_bub_ms origin = terrain.get_bub( project_to<coords::ms>( position ) );
         for( int y = 0; y < SEEY; ++y ) {
             for( int x = 0; x < SEEX; ++x ) {
@@ -5869,12 +5869,13 @@ bool client_apply_message( const std::string &msg )
                 client_replication_state::terrain_chunk chunk;
                 if( decode( cell.get_array( "t" ), terrain_palette, chunk.terrain ) &&
                     decode( cell.get_array( "f" ), furniture_palette, chunk.furniture ) ) {
-                    pending.insert_or_assign( position, std::move( chunk ) );
+                    pending.insert_or_assign( position, chunk );
                 }
             }
             apply_pending_terrain();
-            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                     std::chrono::steady_clock::now() - t0 ).count();
+            const std::chrono::milliseconds::rep elapsed =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - t0 ).count();
             mp_log( "[ccb-mp] MAPSYNC recv: pending=" + std::to_string( pending.size() ) +
                     " ms=" + std::to_string( elapsed ) );
         } catch( const JsonError &e ) {
