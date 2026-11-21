@@ -1366,7 +1366,9 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
 
     data.read( "slow_rad", slow_rad );
     data.read( "scent", scent );
-    data.read( "male", male );
+    bool loaded_gender = get_gender();
+    data.read( "male", loaded_gender );
+    set_gender( loaded_gender, false );
     data.read( "free_dodges_left", free_dodges_left );
     data.read( "cash", cash );
     data.read( "recoil", recoil );
@@ -2207,7 +2209,9 @@ void Character::load_player_state( const JsonObject &snapshot )
         read( "last_sleep_check", last_sleep_check );
         read( "slow_rad", slow_rad );
         read( "scent", scent );
-        read( "male", male );
+        bool loaded_gender = get_gender();
+        read( "male", loaded_gender );
+        set_gender( loaded_gender, false );
         read( "free_dodges_left", free_dodges_left );
         read( "cash", cash );
         read( "recoil", recoil );
