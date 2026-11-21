@@ -1,6 +1,75 @@
 local ccb = require("ccb")
 
 ccb.content.define_mission {
+    id = "mission_best_friend_bookhunt1",
+    name = ccb.content.text("Help me find my favorite book.  Apocalypse Now"),
+    description = ccb.content.text("Could you help me find my favorite book?  It's an anthology of stories titled 'Apocalypse Now'.  I know it's weird to want to read a book about apocalypses during one, but it gives me hope we'll come out the other side of this one too."),
+    goal = "MGOAL_FIND_ITEM",
+    difficulty = 2,
+    item = "book_anthology_an",
+    origins = { "ORIGIN_SECONDARY" },
+    value = 0,
+    dialogue = {
+        describe = ccb.content.text("I would love it if you could find my favorite book."),
+        offer = ccb.content.text("I know you are my friend and I don't want to push you but if you come across my favorite book I'd appreciate it if you brought it to me."),
+        accepted = ccb.content.text("Thank you!"),
+        rejected = ccb.content.text("Let me know if you change your mind."),
+        advice = ccb.content.text("Bookstores and libraries are the most likely places to find it or just wandering through houses."),
+        inquire = ccb.content.text("Did you find it?"),
+        success = ccb.content.text("You've found it!"),
+        success_lie = ccb.content.text("This clearly isn't it."),
+        failure = ccb.content.text("Well thanks anyway."),
+    },
+    finish = { handler = { "gamehunt_morale", "assign_sacrifice_gamehunt_mission" } },
+}
+
+ccb.content.define_mission {
+    id = "mission_best_friend_bookhunt2",
+    name = ccb.content.text("Help me find my favorite book.  Brave New World."),
+    description = ccb.content.text("Could you help me find my favorite book?  It's Brave New World by Aldous Huxley.  It really spoke to me before the end and even more now."),
+    goal = "MGOAL_FIND_ITEM",
+    difficulty = 2,
+    item = "book_fict_soft_scifi_brave",
+    origins = { "ORIGIN_SECONDARY" },
+    value = 0,
+    dialogue = {
+        describe = ccb.content.text("I would love it if you could find my favorite book."),
+        offer = ccb.content.text("I know you are my friend and I don't want to push you but if you come across my favorite book I'd appreciate it if you brought it to me."),
+        accepted = ccb.content.text("Thank you!"),
+        rejected = ccb.content.text("Let me know if you change your mind."),
+        advice = ccb.content.text("Bookstores and libraries are the most likely places to find it or just wandering through houses."),
+        inquire = ccb.content.text("Did you find it?"),
+        success = ccb.content.text("You've found it!"),
+        success_lie = ccb.content.text("This clearly isn't it."),
+        failure = ccb.content.text("Well thanks anyway."),
+    },
+    finish = { handler = { "gamehunt_morale", "assign_sacrifice_gamehunt_mission" } },
+}
+
+ccb.content.define_mission {
+    id = "mission_best_friend_bookhunt3",
+    name = ccb.content.text("Help me find my favorite book.  Cat's Cradle."),
+    description = ccb.content.text("Could you help me find my favorite book?  It's Cat's Cradle, by Kurt Vonnegut.  It's an interesting take on an alternate cataclysmic scenario."),
+    goal = "MGOAL_FIND_ITEM",
+    difficulty = 2,
+    item = "book_fict_soft_satire_cats",
+    origins = { "ORIGIN_SECONDARY" },
+    value = 0,
+    dialogue = {
+        describe = ccb.content.text("I would love it if you could find my favorite book."),
+        offer = ccb.content.text("I know you are my friend and I don't want to push you but if you come across my favorite book I'd appreciate it if you brought it to me."),
+        accepted = ccb.content.text("Thank you!"),
+        rejected = ccb.content.text("Let me know if you change your mind."),
+        advice = ccb.content.text("Bookstores and libraries are the most likely places to find it or just wandering through houses."),
+        inquire = ccb.content.text("Did you find it?"),
+        success = ccb.content.text("You've found it!"),
+        success_lie = ccb.content.text("This clearly isn't it."),
+        failure = ccb.content.text("Well thanks anyway."),
+    },
+    finish = { handler = { "gamehunt_morale", "assign_sacrifice_gamehunt_mission" } },
+}
+
+ccb.content.define_mission {
     id = "mission_best_friend_gamehunt1",
     name = ccb.content.text("Help me find my favorite game.  Pathogen"),
     description = ccb.content.text("Could you help me find my favorite game?  It's a board game called Pathogen.  At least the diseases in this game can be beaten."),
