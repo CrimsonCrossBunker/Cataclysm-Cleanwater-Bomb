@@ -1413,6 +1413,9 @@ class cata_tiles
         // View-local working buffers; the map only supplies a change revision.
         map_view_cache_state draw_cache_state_;
         view_snapshot draw_points_cache_;
+        // Terrain-only snapshots for visible wall faces above the observer.
+        // Kept separate so no upper-level furniture/item/creature layers run.
+        draw_points_cache_t upper_wall_points_;
         point_rel_ms prev_top_left_;
         point_rel_ms prev_bottom_right_;
         point prev_o_;

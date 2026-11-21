@@ -96,6 +96,9 @@
 #include "point.h"
 #include "popup.h"
 #include "profiling.h"
+#if defined(TILES)
+    #include "render3d.h"
+#endif
 #include "radio_car_control.h"
 #include "ranged.h"
 #include "rng.h"
@@ -1886,6 +1889,27 @@ static void manage_android_buttons()
 }
 #endif
 
+static bool handle_render3d_zoom_action( const action_id act )
+{
+#if defined(TILES)
+    if( !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) || !render3d::available() ) {
+        return false;
+    }
+    if( act == ACTION_ZOOM_IN ) {
+        render3d::toggle_same_level_only();
+    } else if( act == ACTION_ZOOM_OUT ) {
+        render3d::toggle_cursor_dither();
+    } else {
+        return false;
+    }
+    g->invalidate_main_ui_adaptor();
+    return true;
+#else
+    static_cast<void>( act );
+    return false;
+#endif
+}
+
 // NOLINTNEXTLINE(readability-function-size)
 bool game::do_regular_action( action_id &act, avatar &player_character,
                               const std::optional<tripoint_bub_ms> &mouse_target )
@@ -1916,11 +1940,15 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         // Pure display/UI actions — always free, work even while locked.
         if( act == ACTION_ZOOM_IN ) {
-            zoom_in();
+            if( !handle_render3d_zoom_action( act ) ) {
+                zoom_in();
+            }
             return false;
         }
         if( act == ACTION_ZOOM_OUT ) {
-            zoom_out();
+            if( !handle_render3d_zoom_action( act ) ) {
+                zoom_out();
+            }
             return false;
         }
         if( act == ACTION_LIST_ITEMS ) {
@@ -3254,13 +3282,17 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_ZOOM_IN:
-            zoom_in();
-            mark_main_ui_adaptor_resize();
+            if( !handle_render3d_zoom_action( act ) ) {
+                zoom_in();
+                mark_main_ui_adaptor_resize();
+            }
             break;
 
         case ACTION_ZOOM_OUT:
-            zoom_out();
-            mark_main_ui_adaptor_resize();
+            if( !handle_render3d_zoom_action( act ) ) {
+                zoom_out();
+                mark_main_ui_adaptor_resize();
+            }
             break;
 
         case ACTION_ITEMACTION:

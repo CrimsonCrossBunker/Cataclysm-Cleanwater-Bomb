@@ -1200,6 +1200,67 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 }
             }
         }
+
+        // Upper floors need a terrain-only snapshot. Their whole cells remain
+        // invisible: only wall faces reached by the floor-blocked sight pass
+        // are captured, and no dynamic object layers consume these entries.
+        upper_wall_points_.set_first_z( here.min_z() );
+        upper_wall_points_.soft_clear();
+        for( int zlevel = center.z() + 1; zlevel <= here.max_z(); ++zlevel ) {
+            const int dz = zlevel - center.z();
+            const half_open_rectangle<point> range = is_isometric()
+                    ? get_window_any_tile_range( { width, height }, dz )
+                    : top_any_tile_range;
+            const level_cache &wall_cache = here.access_cache( zlevel );
+            for( int row = range.p_min.y; row < range.p_max.y; ++row ) {
+                for( int col = range.p_min.x; col < range.p_max.x; ++col ) {
+                    const std::optional<point> temp = tile_to_player( { col, row } );
+                    if( !temp.has_value() ) {
+                        continue;
+                    }
+                    const tripoint_bub_ms pos( point_bub_ms( temp.value() ), zlevel );
+                    if( !here.inbounds( pos ) || pos.y() < min_visible.y || pos.y() > max_visible.y ||
+                        pos.x() < min_visible.x || pos.x() > max_visible.x ) {
+                        continue;
+                    }
+                    const point delta = pos.xy().raw() - you_pos.xy().raw();
+                    if( delta.x * delta.x + delta.y * delta.y > MAX_VIEW_DISTANCE * MAX_VIEW_DISTANCE ||
+                        wall_cache.floor_blocked_seen_cache[pos.x()][pos.y()] <= 0.0f ||
+                        !here.has_wall_surface( pos ) ) {
+                        continue;
+                    }
+                    const lit_level ll = here.apparent_light_on_wall_at( pos, cache );
+                    if( here.get_visibility( ll, cache ) != visibility_type::CLEAR ) {
+                        continue;
+                    }
+
+                    std::array<bool, 5> invisible{};
+                    for( int i = 0; i < 4; ++i ) {
+                        const tripoint_bub_ms np = pos + neighborhood[i];
+                        invisible[i + 1] = np.y() < min_visible.y || np.y() > max_visible.y ||
+                                           np.x() < min_visible.x || np.x() > max_visible.x ||
+                                           here.get_visibility( here.apparent_light_on_wall_at( np, cache ),
+                                                                cache ) != visibility_type::CLEAR;
+                    }
+                    const ter_id &cap_t = here.ter( pos );
+                    int cap_subtile = 0;
+                    int cap_rotation = 0;
+                    const std::bitset<NUM_TERCONN> &connect_group = cap_t.obj().connect_to_groups;
+                    const std::bitset<NUM_TERCONN> &rotate_group = cap_t.obj().rotate_to_groups;
+                    if( connect_group.any() ) {
+                        map::get_connect_values( pos, cap_subtile, cap_rotation, connect_group,
+                                                 rotate_group, {}, true );
+                    } else {
+                        map::get_terrain_orientation( pos, cap_rotation, cap_subtile, {}, invisible,
+                                                      rotate_group );
+                    }
+                    tile_render_info::sprite sprite_var{ ll, invisible };
+                    sprite_var.set_ter_content( cap_t, cap_subtile, cap_rotation );
+                    upper_wall_points_[zlevel][row].emplace_back( tile_render_info::tile_view_data{ pos },
+                            tile_render_info::tile_render_scratch{}, sprite_var );
+                }
+            }
+        }
         cache_rebuild.complete();
     }
     overlay_strings = overlay_strings_cache_;
@@ -2060,6 +2121,40 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             }
             cur_zlevel += 1;
         }
+
+        // Paint visible upper wall faces after the ordinary levels, using the
+        // same Z stacking and row order. This pass is terrain-only by design.
+        m_zlev_tint_bound = false;
+        for( ; cur_zlevel <= here.max_z() && !draw_aborted; ++cur_zlevel ) {
+            const int dz = cur_zlevel - center.z();
+            const half_open_rectangle<point> range = is_isometric()
+                    ? get_window_any_tile_range( { width, height }, dz )
+                    : top_any_tile_range;
+            lit_ground_dy = divide_round_down( -dz * zlevel_height * tile_width,
+                                               tileset_ptr->get_tile_width() );
+            lit_level_height_3d = dz * zlevel_height;
+            for( int row = range.p_min.y; row < range.p_max.y && !draw_aborted; ++row ) {
+                if( renderer_should_abort_frame() || command_frame.order().cancelled() ) {
+                    draw_aborted = true;
+                    break;
+                }
+                draw_points_cache_t::row_vec &points = upper_wall_points_[cur_zlevel][row];
+                for( const std::size_t index : points.sprite_indices() ) {
+                    tile_render_info &p = points[index];
+                    const tile_render_info::sprite &var = std::get<tile_render_info::sprite>( p.var );
+                    p.scratch.height_3d = dz * zlevel_height;
+                    m_cur_tile = &p;
+                    m_cur_bounds = nullptr;
+                    m_cur_tint_sprites = nullptr;
+                    m_cur_tint = nullptr;
+                    draw_terrain( p.view.pos, var.ll, p.scratch.height_3d, var.invisible );
+                }
+            }
+        }
+        m_cur_tile = nullptr;
+        m_cur_bounds = nullptr;
+        m_cur_tint_sprites = nullptr;
+        m_cur_tint = nullptr;
         m_collecting_glide_critters = false;
         m_deferred_glide_critters.clear();
     }

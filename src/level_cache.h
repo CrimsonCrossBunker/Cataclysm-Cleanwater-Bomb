@@ -70,6 +70,10 @@ struct level_cache_default_zero_members {
     // values range from 1 (fully visible to player) to 0 (not visible)
     cata::mdarray<float, point_bub_ms> seen_cache;
 
+    // Sight reaching a tile whose floor blocks ordinary whole-cell visibility.
+    // A wall's vertical face may still be visible; this is not a seen_cache alias.
+    cata::mdarray<float, point_bub_ms> floor_blocked_seen_cache;
+
     // same as `seen_cache` (same units) but contains values for cameras and mirrors
     // effective "visibility_cache" is calculated as "max(seen_cache, camera_cache)"
     cata::mdarray<float, point_bub_ms> camera_cache;

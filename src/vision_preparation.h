@@ -39,12 +39,14 @@ struct snapshot {
 void cast_horizontal( const array_of_grids_of<float> &out,
                       const array_of_grids_of<const float> &in,
                       const array_of_grids_of<const bool> &floors,
-                      const snapshot &parameters, unsigned segment );
+                      const snapshot &parameters, unsigned segment,
+                      const array_of_grids_of<float> *floor_blocked_caches = nullptr );
 void cast_vertical( const array_of_grids_of<float> &out,
                     const array_of_grids_of<const float> &in,
                     const array_of_grids_of<const bool> &floors,
                     const tripoint_bub_ms &origin, int offset_distance,
-                    float numerator, vertical_direction direction, bool trig_distance );
+                    float numerator, vertical_direction direction, bool trig_distance,
+                    const array_of_grids_of<float> *floor_blocked_caches = nullptr );
 
 // Scheduling policy only: the owner measures the preceding horizontal cast.
 // Cold/cheap casts stay serial; completed worker kernel costs refresh admission.
@@ -79,8 +81,9 @@ class frame
         frame &operator=( const frame & ) = delete;
         lease try_acquire( int radius );
         snapshot &capture();
-        bool prepare();
-        bool apply( const array_of_grids_of<float> &out, const lease &request );
+        bool prepare( bool capture_floor_blocked = false );
+        bool apply( const array_of_grids_of<float> &out, const lease &request,
+                    const array_of_grids_of<float> *floor_blocked_out = nullptr );
         // Owner invalidation rejects completed stale results. Cancellation may
         // be requested from another thread; all tasks are still joined.
         void invalidate();
@@ -93,6 +96,7 @@ class frame
         const std::thread::id owner_thread_;
         compute_ptr<snapshot> snapshot_;
         std::vector<compute_ptr<output>, compute_allocator<compute_ptr<output>>> outputs_;
+        std::vector<compute_ptr<output>, compute_allocator<compute_ptr<output>>> floor_blocked_outputs_;
         std::atomic<bool> cancelled_{ false };
         std::uint64_t generation_ = 0;
         std::uint64_t ready_generation_ = 0;
@@ -100,6 +104,7 @@ class frame
         std::array<double, 4> horizontal_costs_ms_{};
         bool leased_ = false;
         bool used_workers_ = false;
+        bool captured_floor_blocked_ = false;
         // prepare drains all accepted tasks before any owner buffer can change.
         std::shared_ptr<cata_thread_pool> pool_;
         unsigned workers_ = 0;

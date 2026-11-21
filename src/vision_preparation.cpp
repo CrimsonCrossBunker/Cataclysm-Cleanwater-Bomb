@@ -76,12 +76,13 @@ snapshot &frame::capture()
     }
     return *snapshot_;
 }
-bool frame::prepare()
+bool frame::prepare( const bool capture_floor_blocked )
 {
     assert_owner();
     cata_assert( leased_ && snapshot_ );
     ready_generation_ = 0;
     used_workers_ = false;
+    captured_floor_blocked_ = capture_floor_blocked;
     horizontal_costs_ms_.fill( 0.0 );
     if( cancelled_.load( std::memory_order_relaxed ) ) {
         return false;
@@ -97,24 +98,39 @@ bool frame::prepare()
         while( outputs_.size() < chunks ) {
             outputs_.push_back( make_compute<output>() );
         }
+        if( capture_floor_blocked ) {
+            while( floor_blocked_outputs_.size() < chunks ) {
+                floor_blocked_outputs_.push_back( make_compute<output>() );
+            }
+        }
         CATA_PROFILE_SCOPE_NAMED( "vision.queue" );
         for( unsigned chunk = 0; chunk < chunks; ++chunk ) {
             const unsigned begin = segments * chunk / chunks;
             const unsigned end = segments * ( chunk + 1 ) / chunks;
             const snapshot &values = *snapshot_;
             output &block = *outputs_[chunk];
-            pending[submitted] = pool_->submit_returning( [this, &values, &block, begin, end, chunk]() {
+            output *const floor_block = capture_floor_blocked ?
+                                        floor_blocked_outputs_[chunk].get() : nullptr;
+            pending[submitted] = pool_->submit_returning( [this, &values, &block, floor_block, begin, end,
+            chunk]() {
                 CATA_PROFILE_SCOPE_NAMED( "vision.worker_compute" );
                 array_of_grids_of<float> out;
+                array_of_grids_of<float> floor_blocked;
                 array_of_grids_of<const float> in;
                 array_of_grids_of<const bool> floors;
                 for( int z = 0; z < OVERMAP_LAYERS; ++z ) {
                     for( int x = 0; x < MAPSIZE_X; ++x ) {
                         for( int y = 0; y < MAPSIZE_Y; ++y ) {
                             block[z][x][y] = -std::numeric_limits<float>::infinity();
+                            if( floor_block != nullptr ) {
+                                ( *floor_block )[z][x][y] = -std::numeric_limits<float>::infinity();
+                            }
                         }
                     }
                     out[z] = &block[z];
+                    if( floor_block != nullptr ) {
+                        floor_blocked[z] = &( *floor_block )[z];
+                    }
                     in[z] = &values.transparency[z];
                     floors[z] = &values.floors[z];
                 }
@@ -123,7 +139,8 @@ bool frame::prepare()
                     if( cancelled_.load( std::memory_order_relaxed ) ) {
                         break;
                     }
-                    cast_horizontal( out, in, floors, values, segment );
+                    cast_horizontal( out, in, floors, values, segment,
+                                     floor_block != nullptr ? &floor_blocked : nullptr );
                 }
                 horizontal_costs_ms_[chunk] = std::chrono::duration<double, std::milli>(
                                                   std::chrono::steady_clock::now() - start ).count();
@@ -153,11 +170,16 @@ bool frame::prepare()
     ready_generation_ = generation_;
     return true;
 }
-bool frame::apply( const array_of_grids_of<float> &out, const lease &request )
+bool frame::apply( const array_of_grids_of<float> &out, const lease &request,
+                   const array_of_grids_of<float> *floor_blocked_out )
 {
     assert_owner();
     if( request.owner_ != this || request.generation_ != generation_ ||
         ready_generation_ != generation_ || cancelled_.load( std::memory_order_relaxed ) ) {
+        return false;
+    }
+    if( floor_blocked_out != nullptr &&
+        ( !captured_floor_blocked_ || floor_blocked_outputs_.size() < worker_count() ) ) {
         return false;
     }
     CATA_PROFILE_SCOPE_NAMED( "vision.merge" );
@@ -166,9 +188,15 @@ bool frame::apply( const array_of_grids_of<float> &out, const lease &request )
     for( unsigned chunk = 0; chunk < worker_count(); ++chunk ) {
         for( int z = 0; z < OVERMAP_LAYERS; ++z ) {
             const light_grid &source = ( *outputs_[chunk] )[z];
+            const light_grid *floor_source = floor_blocked_out != nullptr ?
+                                             &( *floor_blocked_outputs_[chunk] )[z] : nullptr;
             for( int x = 0; x < MAPSIZE_X; ++x ) {
                 for( int y = 0; y < MAPSIZE_Y; ++y ) {
                     ( *out[z] )[x][y] = std::max( ( *out[z] )[x][y], source[x][y] );
+                    if( floor_source != nullptr ) {
+                        float &wall = ( *( *floor_blocked_out )[z] )[x][y];
+                        wall = std::max( wall, ( *floor_source )[x][y] );
+                    }
                 }
             }
         }

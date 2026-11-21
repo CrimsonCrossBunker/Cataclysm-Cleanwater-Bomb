@@ -145,6 +145,7 @@ void cast_zlight(
     const array_of_grids_of<const T> &input_arrays,
     const array_of_grids_of<const bool> &floor_caches,
     const tripoint_bub_ms &origin, int offset_distance, T numerator,
-    vertical_direction dir = vertical_direction::BOTH, double *horizontal_cost_ms = nullptr );
+    vertical_direction dir = vertical_direction::BOTH, double *horizontal_cost_ms = nullptr,
+    const array_of_grids_of<T> *floor_blocked_caches = nullptr );
 
 #endif // CATA_SRC_SHADOWCASTING_H
