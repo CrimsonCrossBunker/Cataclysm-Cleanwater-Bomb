@@ -2,6 +2,7 @@
 #include "avatar.h"
 #include "cata_catch.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "sdl_renderer_recovery.h"
 
 TEST_CASE( "character_preview_uses_scaled_opaque_sprite_bounds", "[tiles][character_preview]" )
