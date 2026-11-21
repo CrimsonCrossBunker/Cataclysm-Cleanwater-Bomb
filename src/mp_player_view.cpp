@@ -30,6 +30,8 @@
 #include "rng.h"
 #include "vpart_position.h"
 
+static const faction_id faction_your_followers( "your_followers" );
+
 namespace cata_mp
 {
 void write_player_view( JsonOut &out, const player_id &id, const npc &actor,
@@ -155,7 +157,7 @@ void apply_player_view( const JsonObject &message, player_view &view )
         actor->set_movement_mode( mode );
     }
     actor->set_attitude( NPCATT_FOLLOW );
-    actor->set_fac( faction_id( "your_followers" ) );
+    actor->set_fac( faction_your_followers );
     actor->chatbin.first_topic = "TALK_FRIEND";
     actor->op_of_u.trust = 10;
     actor->op_of_u.value = 10;
@@ -180,7 +182,7 @@ void apply_player_view( const JsonObject &message, player_view &view )
         }
         actor->load_carried_items( appearance.get_object( "carried" ) );
     }
-    auto &observation = view.observation;
+    peer_observation &observation = view.observation;
     observation.partner_name_cached = actor->name;
     observation.partner_activity = message.get_string( "activity" );
     observation.partner_help_target = message.get_string( "help_target", "" );
