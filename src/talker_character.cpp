@@ -722,7 +722,7 @@ bool talker_character_const::has_stolen_item( const_talker const &guy ) const
 {
     const Character *owner = guy.get_const_character();
     if( owner ) {
-        for( const item*&elem : me_chr_const->inv_dump() ) {
+        for( const item *&elem : me_chr_const->inv_dump() ) {
             if( elem->is_old_owner( *owner, true ) ) {
                 return true;
             }
