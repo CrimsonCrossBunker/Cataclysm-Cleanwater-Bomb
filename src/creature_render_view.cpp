@@ -1,10 +1,14 @@
 #include "creature_render_view.h"
 
+#include <functional>
+#include <memory>
+#include <set>
+
 #include "avatar.h"
 #include "character.h"
+#include "coordinates.h"
 #include "creature_tracker.h"
 #include "dialogue.h"
-#include "effect.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "mapdata.h"
@@ -13,6 +17,9 @@
 #include "monster.h"
 #include "mutation.h"
 #include "npc.h"
+#include "pimpl.h"
+#include "point.h"
+#include "type_id.h"
 
 static const efftype_id effect_ridden( "ridden" );
 static const trait_id trait_INATTENTIVE( "INATTENTIVE" );
