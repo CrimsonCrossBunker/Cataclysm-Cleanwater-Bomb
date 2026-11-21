@@ -225,24 +225,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_SHIP_VANISHING_ARC_START",
-    "effect": [
-      {
-        "u_location_variable": { "global_val": "ship_new" },
-        "target_params": { "om_terrain": "afs_shuttlepad_salvors_old_pad", "z": 0 }
-      },
-      { "mapgen_update": "your_ship_stairs_deployed", "target_var": { "global_val": "ship_new" } },
-      { "mapgen_update": "your_ship_ramp_deployed", "target_var": { "global_val": "ship_new" } },
-      { "math": [ "ship_new.z = 1" ] },
-      { "mapgen_update": "your_ship", "target_var": { "global_val": "ship_new" } },
-      { "math": [ "your_ship_stairs_up = 0" ] },
-      { "math": [ "your_ship_ramp_up = 0" ] },
-      { "assign_mission": "MISSION_thi_location" },
-      { "u_lose_var": "ship_new" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_SHIP_THI_TO_SALUS_ORBIT",
     "effect": [
       {

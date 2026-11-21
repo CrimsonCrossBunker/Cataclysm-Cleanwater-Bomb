@@ -1,6 +1,28 @@
 local ccb = require("ccb")
 
 ccb.content.define_scenario {
+    id = "ship",
+    name = "Smuggler's Hideout",
+    points = 1,
+    description = "After a disastrous smuggling run, you thought to fly your ship, The Vanishing Arc, to the most remote and backwater system you could find.  You estimate you have at least six months before the Nyssian cartels catch up with you, and you need to make the most of it.",
+    locations = { "your_ship" },
+    professions = { "afs_han" },
+    whitelist_hobbies = true,
+    hobbies = {
+        "bionic_interface",
+        "driving_license",
+        "mundane_survival",
+        "afs_armament_license",
+        "afs_leadership",
+        "afs_origin_spacer",
+        "afs_origin_periphery",
+        "afs_origin_upper_class",
+    },
+    flags = { "LONE_START" },
+    start_name = "The Vanishing Arc",
+}
+
+ccb.content.define_scenario {
     id = "last_dance",
     name = "One Last Dance on the Ice",
     points = 1,
