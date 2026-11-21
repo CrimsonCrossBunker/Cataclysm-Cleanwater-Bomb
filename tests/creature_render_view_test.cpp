@@ -1,22 +1,35 @@
 #if defined(TILES)
 #include "cata_catch.h"
+
+#include <functional>
+#include <memory>
+#include <optional>
+#include <random>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "avatar.h"
 #include "calendar.h"
-#include "cata_utility.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "creature_render_view.h"
-#include "effect.h"
-#include "monster.h"
-#include "mtype.h"
-#include "map.h"
 #include "magic_enchantment.h"
+#include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "monster.h"
+#include "mtype.h"
+#include "pimpl.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "rng.h"
 #include "type_id.h"
+
+struct const_dialogue;
 
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_stunned( "stunned" );
