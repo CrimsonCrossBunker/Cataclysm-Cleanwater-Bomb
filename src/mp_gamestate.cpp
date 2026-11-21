@@ -7864,7 +7864,7 @@ static void apply_vehicle_sync( JsonObject &jo )
             }
             vehicle *previous = lookup( identity );
             if( !previous ) {
-                const auto at_origin = m.veh_at( m.get_bub( new_abs ) );
+                const optional_vpart_position at_origin = m.veh_at( m.get_bub( new_abs ) );
                 if( at_origin && at_origin->vehicle().pos_abs() == new_abs &&
                     !host_uids.count( at_origin->vehicle().uid().get_value() ) ) {
                     previous = &at_origin->vehicle();
@@ -8067,7 +8067,7 @@ static void apply_vehicle_sync( JsonObject &jo )
     // Full lists contain every authoritative vehicle in the same loaded region.
     // Preserve the avatar's current vehicle until boarding state is reconciled.
     if( host_uids.size() == incoming.size() ) {
-        const auto avatar_part = m.veh_at( get_avatar().pos_bub() );
+        const optional_vpart_position avatar_part = m.veh_at( get_avatar().pos_bub() );
         const vehicle *avatar_vehicle = avatar_part ? &avatar_part->vehicle() : nullptr;
         for( const wrapped_vehicle &local : m.get_vehicles() ) {
             if( local.v && local.v != avatar_vehicle && !host_uids.count( local.v->uid().get_value() ) ) {
