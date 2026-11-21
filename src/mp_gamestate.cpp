@@ -5747,7 +5747,7 @@ bool client_apply_message( const std::string &msg )
             // ~32k ter_set calls don't freeze the main thread for seconds on receipt.
             pending_omsync_t p;
             p.z = z;
-            p.origin = point( o.x, o.y );
+            p.origin = o;
             p.w = w;
             p.cells.assign( total, oter_id() );
             p.ok.assign( total, 0 );
