@@ -58,3 +58,57 @@ ccb.runtime.handler("activate_avian_leap", function(context)
         "You jump at your target with your talons up front, attempting to deal devastating damage to your target.",
         "Your legs are too tired to perform a jump.")
 end)
+
+local amputee_reset_removed_traits = {
+    "NO_LEFT_ARM",
+    "LEFT_PROSTHETIC_ARM",
+    "LEFT_NEUROPROSTHETIC_ARM",
+    "LEFT_COSMETIC_PROSTHETIC_ARM",
+    "NO_RIGHT_ARM",
+    "RIGHT_PROSTHETIC_ARM",
+    "RIGHT_NEUROPROSTHETIC_ARM",
+    "RIGHT_COSMETIC_PROSTHETIC_ARM",
+    "NO_LEFT_LEG",
+    "LEFT_PROSTHETIC_LEG",
+    "LEFT_PEG_LEG",
+    "NO_RIGHT_LEG",
+    "RIGHT_PROSTHETIC_LEG",
+    "RIGHT_PEG_LEG",
+}
+
+local amputee_reset_restored_traits = {
+    "HAS_LEFT_ARM",
+    "HAS_RIGHT_ARM",
+    "HAS_LEFT_LEG",
+    "HAS_RIGHT_LEG",
+}
+
+local amputee_reset_cleared_vars = {
+    "traits_limbs_missing_left_arm",
+    "traits_limbs_missing_left_leg",
+    "traits_limbs_missing_right_arm",
+    "traits_limbs_missing_right_leg",
+}
+
+ccb.runtime.handler("amputee_reset", function(context)
+    local character = context.character
+    if checked(services.variables.get_string(character, "traits_limbs_amputee_reset")).value == "yes" then
+        return
+    end
+    if character.subtype == "avatar" then
+        local text = services.translate("Resetting character to non-amputated state.  To continue this game unaltered with the WIP limb system exit the game without saving and add WIP Limb Stuff to this world before reloading.")
+        ccb.presentation.notice(text)
+        services.activities.offer_interruption("")
+        services.messages.add(text)
+    end
+    for _, trait_id in ipairs(amputee_reset_removed_traits) do
+        checked(services.mutations.erase(character, id("mutation", trait_id)))
+    end
+    for _, trait_id in ipairs(amputee_reset_restored_traits) do
+        checked(services.mutations.replace(character, id("mutation", trait_id)))
+    end
+    for _, key in ipairs(amputee_reset_cleared_vars) do
+        checked(services.variables.remove(character, key, { include_before = false }))
+    end
+    checked(services.variables.set(character, "traits_limbs_amputee_reset", "yes", { include_before = false }))
+end)
