@@ -39,6 +39,7 @@ require("flags")
 require("monster_flags")
 require("terrain_transforms")
 require("tile_interactions")
+require("attunement_altar")
 
 require("speech")
 
