@@ -485,7 +485,7 @@ static void deliver_sound( const centroid &cluster, const tripoint_abs_ms &sourc
         overmap_buffer.signal_hordes( project_to<coords::sm>( source ), signal );
     }
     const tripoint_bub_ms primary_source = primary.get_bub( source );
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     for( monster &critter : g->all_monsters() ) {
         const int dist = sound_distance( primary_source, critter.pos_bub( primary ) );
         if( vol * 2 <= dist ) {
@@ -529,7 +529,7 @@ void sounds::process_sounds()
         return;
     }
     map &primary = get_map();
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     const auto views = session.active_maps( primary );
     std::optional<map_simulation_regions> regions;
     if( session.has_regions() ) {
