@@ -1,6 +1,26 @@
 local ccb = require("ccb")
 
 ccb.content.define_scenario {
+    id = "paraclesian_birth_naked_afraid",
+    name = "Paraclesian Birth, Lost and Alone",
+    flags = { "LONE_START" },
+    points = 0,
+    description = "Your first moments of life, born of the elements, alone.  An elemental fae on a dying world, lost in the wilderness.",
+    start_name = "Paraclesian Birth",
+    locations = { "sloc_field", "sloc_forest", "sloc_desert_island", "sloc_river" },
+    professions = {
+        "paraclesian_ierde_naked_afraid",
+        "paraclesian_undine_naked_afraid",
+        "paraclesian_salamander_naked_afraid",
+        "paraclesian_sylph_naked_afraid",
+        "paraclesian_arvore_naked_afraid",
+        "paraclesian_homullus_naked_afraid",
+    },
+    traits = { "ELEMENTAL_MANA1", "ELEMENTAL_MANA2" },
+    reveal_locale = false,
+}
+
+ccb.content.define_scenario {
     id = "werewolf_native",
     name = "Werewolf, Natural-born",
     flags = { "LONE_START" },

@@ -61,6 +61,7 @@ end, 1)
 ccb.runtime.on("game:game_start", "initialize_encounter_timer")
 
 require("character_start")
+require("scenarios")
 require("lilin_ability")
 require("mutation_abilities")
 require("pooka_shapeshifting")

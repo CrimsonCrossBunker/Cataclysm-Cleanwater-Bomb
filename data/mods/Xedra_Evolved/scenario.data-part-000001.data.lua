@@ -1,6 +1,78 @@
 local ccb = require("ccb")
 
 ccb.content.define_scenario {
+    id = "paraclesian_birth",
+    name = "Paraclesian Birth",
+    flags = { "LONE_START", "SKIP_DEFAULT_BACKGROUND" },
+    points = 0,
+    description = "Your first moments of life.  An elemental fae birth on a dying world.  Now you have to figure out how to survive on your own.  (Select the location that matches your profession or you may have a short journey)  P.S. This scenario is still in development, PRs for additional content welcome.",
+    start_name = "Paraclesian Birth",
+    locations = { "sloc_undine", "sloc_ierde", "sloc_salamander", "sloc_sylph", "sloc_arvore", "sloc_homullus" },
+    professions = {
+        "paraclesian_ierde",
+        "paraclesian_undine",
+        "paraclesian_salamander",
+        "paraclesian_sylph",
+        "paraclesian_arvore",
+        "paraclesian_homullus",
+    },
+    traits = { "ELEMENTAL_MANA1", "ELEMENTAL_MANA2" },
+    reveal_locale = false,
+}
+
+ccb.content.define_scenario {
+    id = "werewolf_native_born",
+    name = "Werewolf, Natural-born",
+    flags = { "LONE_START" },
+    points = 0,
+    description = "You had no idea what was going on the first time it happened, when you woke up with mud on your bare feet and a sour taste in your mouth, but you were soon found.  The People of the Moon, they called themselves, and they said you were one of them.  A werewolf.  You lived out in the wilderness for a while but didn't entirely abandon human civilization, and when the Cataclysm hit you ignored the evacuation warnings and struck it out on your own.  Maybe some of the People are still out there.",
+    start_name = "Alone",
+    locations = {
+        "sloc_shelter_vandal",
+        "sloc_hermit_shack",
+        "sloc_cabin",
+        "sloc_house_boarded",
+        "sloc_forest",
+        "sloc_field",
+    },
+    forced_traits = {
+        "NATIVE_SHAPESHIFTER",
+        "WEREWOLF_ANIMAL_FORM",
+        "WEREWOLF_HYBRID_FORM",
+        "WEREWOLF_SPELLS",
+        "WEREWOLF_MANA_TRAIT",
+    },
+}
+
+ccb.content.define_scenario {
+    id = "once_bitten",
+    copy_from = "infected",
+    name = "Once Bitten",
+    points = 0,
+    description = "Whether you were visiting Salem's Lot, boating on the Demeter, vacationing to Transylvania, or just another lost boy or girl, you've been bitten by a stranger at twilight the night before.  As a new day breaks you might want to find someone to interview about how you are feeling.  Dark shadows feel more inviting than yesterday and you don't feel like you are long for the day shift.",
+    start_name = "In Town",
+    requirement = "avchievement_gains_vampire_trait",
+    flags = { "CITY_START", "LONE_START" },
+}
+
+ccb.content.define_scenario {
+    -- Name below is a reference to Isaiah 34:14
+    id = "xe_lilin_scenario",
+    name = "The Owl's Abode",
+    points = 0,
+    description = "For most or all of your life, you've had a secret; you are a predator.  While you don't need to drink blood or eat flesh or anything so crude, you must absorb the spiritual essence, the \"ruach\", of living beings in order to maintain your health and vitality.  You had to hide your condition before the Cataclysm, especially as things became stranger in the years leading up to it, but now you don't have to hide anymore.  On the other hand, your potential ruach supply has taken a drastic decline.",
+    start_name = "Away from town",
+    locations = {
+        "sloc_hermit_shack",
+        "sloc_cabin",
+        "sloc_shelter_safe",
+        "sloc_farm_survivalist",
+        "sloc_shelter_vandal",
+    },
+    forced_traits = { "LILIN_TRAITS", "LILIN_DRAIN_RUACH_MELEE" },
+}
+
+ccb.content.define_scenario {
     id = "xe_xedra_chronomancer_scenario",
     name = "Challenge - Temporal Misadventure",
     points = -10,
