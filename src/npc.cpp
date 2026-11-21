@@ -659,7 +659,7 @@ void npc::load_npc_template( const string_id<npc_template> &ident )
             return;
         }
     }
-    name = SNIPPET.expand( male ? "<male_full_name>" : "<female_full_name>" );
+    name = SNIPPET.expand( get_gender() ? "<male_full_name>" : "<female_full_name>" );
     if( !tem.name_unique.empty() ) {
         name = tem.name_unique.translated();
     }
@@ -804,7 +804,7 @@ void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
         set_stored_kcal( get_healthy_kcal() );
     }
     starting_weapon( myclass );
-    starting_clothes( *this, myclass, male );
+    starting_clothes( *this, myclass, get_gender() );
     starting_inv( *this, myclass );
     has_new_items = true;
     clear_mutations();
@@ -2294,14 +2294,14 @@ void npc::say( const std::string &line, const sounds::sound_t spriority ) const
     // Sound happens even if we can't hear it
     if( spriority == sounds::sound_t::order || spriority == sounds::sound_t::alert ) {
         sounds::sound( pos_bub(), get_shout_volume(), spriority, sound, false, "speech",
-                       male ? "NPC_m" : "NPC_f" );
+                       get_gender() ? "NPC_m" : "NPC_f" );
     } else {
         // Always shouting when in danger or short time since being in danger
         sounds::sound( pos_bub(), danger_assessment() > NPC_DANGER_VERY_LOW ?
                        get_shout_volume() : indoor_voice(),
                        sounds::sound_t::speech,
                        sound, false, "speech",
-                       male ? "NPC_m_loud" : "NPC_f_loud" );
+                       get_gender() ? "NPC_m_loud" : "NPC_f_loud" );
     }
 }
 
@@ -4218,7 +4218,7 @@ std::vector<std::string> npc::extended_description() const
 std::string npc::get_epilogue() const
 {
     return SNIPPET.random_from_category(
-               male ? "epilogue_npc_male" : "epilogue_npc_female"
+               get_gender() ? "epilogue_npc_male" : "epilogue_npc_female"
            ).value_or( translation() ).translated();
 }
 
@@ -4233,7 +4233,7 @@ std::pair<std::string, nc_color> npc::hp_description() const
     int cur_hp = hp_percentage();
     std::string damage_info;
     std::string pronoun;
-    if( male ) {
+    if( get_gender() ) {
         pronoun = _( "He " );
     } else {
         pronoun = _( "She " );
