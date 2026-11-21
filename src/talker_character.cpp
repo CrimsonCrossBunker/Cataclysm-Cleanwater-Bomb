@@ -81,7 +81,7 @@ character_id talker_character_const::getID() const
 
 bool talker_character_const::is_male() const
 {
-    return me_chr_const->male;
+    return me_chr_const->get_gender();
 }
 
 std::vector<std::string> talker_character_const::get_grammatical_genders() const
