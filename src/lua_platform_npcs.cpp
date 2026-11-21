@@ -37,6 +37,7 @@
 #include "basecamp.h"
 #include "calendar.h"
 #include "coordinates.h"
+#include "enum_conversions.h"
 #include "faction.h"
 #include "game.h"
 #include "game_constants.h"
