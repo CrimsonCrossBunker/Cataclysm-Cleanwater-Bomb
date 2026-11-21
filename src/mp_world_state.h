@@ -20,6 +20,7 @@
 #include "coordinates.h"
 #include "map_scale_constants.h"
 #include "mp_entity_registry.h"
+#include "point.h"
 #include "type_id.h"
 #include "world_identity.h"
 
@@ -56,7 +57,9 @@ struct mp_tile_state {
 };
 
 struct pending_omsync_t {
-    int z = 0, ox = 0, oy = 0, w = 0;
+    int z = 0;
+    point origin;
+    int w = 0;
     std::vector<oter_id> cells;   // row-major resolved terrain
     std::vector<char> ok;         // 1 = apply this cell, 0 = skip (ungenerated)
     size_t cursor = 0;

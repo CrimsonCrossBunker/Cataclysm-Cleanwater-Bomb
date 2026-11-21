@@ -3287,8 +3287,8 @@ static void mp_drain_pending_omsync()
     for( ; p.cursor < end; ++p.cursor ) {
         if( p.ok[p.cursor] ) {
             overmap_buffer.ter_set(
-                tripoint_abs_omt( p.ox + static_cast<int>( p.cursor % p.w ),
-                                  p.oy + static_cast<int>( p.cursor / p.w ), p.z ),
+                tripoint_abs_omt( p.origin.x + static_cast<int>( p.cursor % p.w ),
+                                  p.origin.y + static_cast<int>( p.cursor / p.w ), p.z ),
                 p.cells[p.cursor] );
             ++applied;
         }
@@ -5747,8 +5747,7 @@ bool client_apply_message( const std::string &msg )
             // ~32k ter_set calls don't freeze the main thread for seconds on receipt.
             pending_omsync_t p;
             p.z = z;
-            p.ox = o.x;
-            p.oy = o.y;
+            p.origin = point( o.x, o.y );
             p.w = w;
             p.cells.assign( total, oter_id() );
             p.ok.assign( total, 0 );
