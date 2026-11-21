@@ -4026,6 +4026,11 @@ bool cata_tiles::draw_sprite_at(
         if( const texture *tinted = tileset_ptr->get_tinted_tile(
                                         renderer, sprite_index, *rp.tint, sprite_tex ) ) {
             sprite_tex = tinted;
+        } else if( renderer_boundary_recovery_pending() ||
+                   display_buffer_scope_recovery_pending() ) {
+            display_buffer_scope_signal_recovery_required();
+            throw std::runtime_error(
+                "cata_tiles::draw_sprite_at: get_tinted_tile lost render target boundary" );
         }
     }
 

@@ -2,19 +2,15 @@
 #ifndef CATA_SRC_PIXEL_MINIMAP_H
 #define CATA_SRC_PIXEL_MINIMAP_H
 
-#include <array>
-#include <cstddef>
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
-#include "coordinates.h"
-#include "map_scale_constants.h"
-#include "point.h"
+#include "coords_fwd.h"
 #include "pixel_minimap_geometry.h"
-#include "sdl_wrappers.h"
+#include "point.h"
 #include "sdl_geometry.h"
 #include "sdl_quad_batch.h"
+#include "sdl_wrappers.h"
 
 class pixel_minimap_projector;
 
@@ -50,9 +46,8 @@ class pixel_minimap
         void draw( const SDL_Rect &screen_rect, const tripoint_bub_ms &center,
                    bool force_scale_to_fit = false );
 
-        // Drop every renderer-owned GPU resource (main texture, texture
-        // pool) along with the projector and submap cache. All of it
-        // rebuilds lazily on the next draw().
+        // Drop the projector and cached geometry/beacon buffers so they rebuild
+        // lazily on the next draw().
         void reset();
 
         // True if the last draw() rendered any critters with blinking beacons.
@@ -61,74 +56,12 @@ class pixel_minimap
         }
 
     private:
-        // Texture pool, defined in the .cpp; forward declared so submap_cache can hold a ref.
-        class shared_texture_pool;
-
-        struct submap_cache {
-            //the color stored for each submap tile
-            std::array<SDL_Color, SEEX *SEEY> minimap_colors = {};
-            //checks if the submap has been looked at by the minimap routine
-            bool touched = false;
-            //the texture updates are drawn to
-            SDL_Texture_Ptr chunk_tex;
-            //the submap being handled
-            size_t texture_index = 0;
-            //the list of updates to apply to the texture
-            //reduces render target switching to once per submap
-            std::vector<point> update_list;
-            //flag used to indicate that the texture needs to be cleared before first use
-            bool ready = false;
-            shared_texture_pool &pool;
-
-            explicit submap_cache( shared_texture_pool &pool );
-            ~submap_cache();
-
-            submap_cache( const submap_cache & ) = delete;
-            submap_cache( submap_cache && ) = default;
-
-            SDL_Color &color_at( const point &p );
-        };
-
-        // A single critter beacon to paint onto main_tex. Captured each frame so
-        // render() can tell whether the critter layer is identical to last frame
-        // (and thus whether main_tex can be reused without repainting).
         struct beacon {
             SDL_Rect rect;
             SDL_Color color;
-            bool operator==( const beacon &rhs ) const {
-                return rect.x == rhs.rect.x && rect.y == rhs.rect.y &&
-                       rect.w == rhs.rect.w && rect.h == rhs.rect.h &&
-                       color.r == rhs.color.r && color.g == rhs.color.g &&
-                       color.b == rhs.color.b && color.a == rhs.color.a;
-            }
-            bool operator!=( const beacon &rhs ) const {
-                return !( *this == rhs );
-            }
         };
 
-        submap_cache &get_cache_at( const tripoint_abs_sm &abs_sm_pos );
-
         void set_screen_rect( const SDL_Rect &screen_rect, bool force_scale_to_fit );
-
-        void draw_beacon( const SDL_Rect &rect, const SDL_Color &color );
-
-        // Builds/refreshes the chunk caches for this frame and flushes pending
-        // updates. Transitively returns flush_cache_updates()'s result: true if
-        // any chunk texture was actually repainted.
-        bool process_cache( const tripoint_bub_ms &center );
-
-        // Returns true if any chunk texture was actually repainted this frame.
-        bool flush_cache_updates();
-        void update_cache_at( const tripoint_bub_sm &pos );
-        void prepare_cache_for_updates( const tripoint_bub_ms &center );
-        void clear_unused_cache();
-
-        void render( const tripoint_bub_ms &center, bool chunks_repainted );
-        void render_cache( const tripoint_bub_ms &center );
-        // Scan visible critters into a beacon list (no rendering). Also refreshes
-        // has_blinking_beacons_. The returned list is compared frame-to-frame to
-        // decide whether main_tex can be reused.
-        std::vector<beacon> collect_critter_beacons( const tripoint_bub_ms &center );
 
         std::unique_ptr<pixel_minimap_projector> create_projector( const SDL_Rect &max_screen_rect ) const;
 
@@ -139,37 +72,15 @@ class pixel_minimap
 
         point pixel_size;
 
-        //track the previous viewing area to determine if the minimap cache needs to be cleared
-        tripoint_abs_sm cached_center_sm;
-
         SDL_Rect screen_rect;
-        SDL_Rect main_tex_clip_rect;
-        SDL_Rect screen_clip_rect;
         bool forced_scale_to_fit = false;
-
-        SDL_Texture_Ptr main_tex;
+        minimap_transform transform_;
 
         std::unique_ptr<pixel_minimap_projector> projector;
 
-        std::unique_ptr<shared_texture_pool> tex_pool;
-
-        std::unordered_map<tripoint_abs_sm, submap_cache> cache;
-
         quad_batch geometry_batch_;
+        std::vector<beacon> beacons_;
         bool has_blinking_beacons_ = false;
-
-        // State of the last main_tex paint, used to skip re-rendering when the
-        // minimap is visually unchanged. main_tex content depends only on the
-        // camera position, the chunk textures, and the critter beacon layer.
-        // The camera position must be compared at tile (ms) resolution, not
-        // submap resolution: chunk placement in render_cache and beacon
-        // positions both shift per tile, so a sub-submap move still changes the
-        // image. main_tex_valid_ is cleared whenever the GPU texture is
-        // dropped/rebuilt (reset(), set_screen_rect()).
-        bool main_tex_valid_ = false;
-        tripoint_abs_sm last_render_abs_sub;
-        tripoint_bub_ms last_render_center;
-        std::vector<beacon> last_beacons_;
 };
 
 #endif // CATA_SRC_PIXEL_MINIMAP_H

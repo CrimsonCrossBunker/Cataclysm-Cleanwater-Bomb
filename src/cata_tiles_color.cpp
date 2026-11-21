@@ -11,7 +11,19 @@
 #include "options.h"
 #include "sdl_utils.h"
 #include "sdl_wrappers.h"
+#include "sdltiles.h"
 #include "vehicle.h"
+
+namespace
+{
+// Quarantine slot for offscreen tint targets left potentially bound after a
+// failed scoped_render_target switch or restore.
+gpu_handle_graveyard &tint_target_quarantine()
+{
+    static gpu_handle_graveyard q;
+    return q;
+}
+} // namespace
 
 // Self-contained rendering helpers for vehicle part coloring, kept out of
 // tileset_loader.cpp / cata_tiles.cpp so those files stay almost untouched:
@@ -50,6 +62,10 @@ const texture *tileset::get_tinted_tile( const SDL_Renderer_Ptr &renderer, const
         return nullptr;
     }
 
+    if( renderer_boundary_recovery_pending() ) {
+        return nullptr;
+    }
+
     // Render the (already light-adjusted) source sprite to an offscreen target
     // and read it back so its pixels can be recolored in HSV space.
     SDL_Texture_Ptr target = CreateTexture( renderer, SDL_PIXELFORMAT_RGBA8888,
@@ -64,8 +80,12 @@ const texture *tileset::get_tinted_tile( const SDL_Renderer_Ptr &renderer, const
         return nullptr;
     }
     {
-        scoped_render_target swap_target( renderer, target.get() );
+        scoped_render_target swap_target( renderer, target.get(), get_shared_variant_pass() );
         if( !swap_target.is_valid() ) {
+            if( !swap_target.boundary_intact() ) {
+                tint_target_quarantine().add( target.release() );
+                display_buffer_scope_signal_recovery_required();
+            }
             return nullptr;
         }
         SetRenderDrawColor( renderer, 0, 0, 0, 0 );
@@ -73,8 +93,16 @@ const texture *tileset::get_tinted_tile( const SDL_Renderer_Ptr &renderer, const
         const SDL_Rect dst{ 0, 0, w, h };
         source->render_copy_ex( renderer, &dst, 0.0, nullptr, SDL_FLIP_NONE );
         const SDL_Rect read_rect{ 0, 0, w, h };
-        if( !RenderReadPixels( renderer, &read_rect, GetSurfacePixelFormat( surf ),
-                               surf->pixels, surf->pitch ) ) {
+        const bool read_ok = RenderReadPixels( renderer, &read_rect, GetSurfacePixelFormat( surf ),
+                                               surf->pixels, surf->pitch );
+        if( !swap_target.restore() ) {
+            if( !swap_target.boundary_intact() ) {
+                tint_target_quarantine().add( target.release() );
+                display_buffer_scope_signal_recovery_required();
+            }
+            return nullptr;
+        }
+        if( !read_ok ) {
             return nullptr;
         }
     }
