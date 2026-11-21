@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_NORTH_AMERICA_TRANSPORT_H
 #define CATA_SRC_NORTH_AMERICA_TRANSPORT_H
 
+#include <array>
 #include <cstddef>
 #include <vector>
 
@@ -22,6 +23,7 @@ struct road_cell {
     std::size_t connections = 0;
     std::size_t mapped_connections = 0;
     std::size_t mapped_wide_connections = 0;
+    std::array<unsigned, 4> mapped_lanes{};
     std::size_t arterial_connections = 0;
     urban_road street = urban_road::none;
 };

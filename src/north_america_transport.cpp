@@ -74,6 +74,7 @@ static const ter_str_id ter_t_pavement_y_hw_air( "t_pavement_y_hw_air" );
 static const ter_str_id ter_t_sidewalk( "t_sidewalk" );
 static const ter_str_id ter_t_sidewalk_hw_air( "t_sidewalk_hw_air" );
 static const ter_str_id ter_t_water_moving_dp( "t_water_moving_dp" );
+static const ter_str_id ter_t_zebra( "t_zebra" );
 
 namespace north_america
 {
@@ -430,6 +431,89 @@ oter_id wide_highway_flank( bool north_south )
     return ( north_south ? oter_atlas_highway_north_south : oter_atlas_highway_east_west ).id();
 }
 
+enum class crosswalk_tile : unsigned char { none, asphalt, zebra };
+
+static std::array<crosswalk_tile, road_span *road_span> wide_urban_crosswalks(
+    const tripoint_abs_omt &omt, bool mapped, bool arterials )
+{
+    std::array<crosswalk_tile, road_span *road_span> marks{};
+    constexpr int radius = max_road_flanks + 1;
+    constexpr int side = 2 * radius + 1;
+    const point_abs_omt origin = omt.xy() - point( radius, radius );
+    const auto network = road_network( origin, side, side, arterials );
+    for( int y = 0; y < side; ++y ) {
+        for( int x = 0; x < side; ++x ) {
+            const road_cell &cell = network[y * side + x];
+            if( !( ( mapped && cell.mapped_wide_connections ) ||
+                   ( arterials && cell.arterial_connections ) ) ) {
+                continue;
+            }
+            const tripoint_abs_omt junction( origin + point( x, y ), omt.z() );
+            const oter_id &terrain = overmap_buffer.ter_existing( junction );
+            if( !terrain || terrain->get_type_id() != oter_type_road ) {
+                continue;
+            }
+            const std::size_t links = terrain->get_line();
+            std::array<int, 4> offsets{};
+            std::array<int, 4> half_widths{};
+            int arms = 0;
+            for( const om_direction::type arm : om_direction::all ) {
+                if( !om_lines::has_segment( links, arm ) ) {
+                    continue;
+                }
+                ++arms;
+                const auto index = static_cast<std::size_t>( arm );
+                const unsigned lanes = mapped ? cell.mapped_lanes[index] : 0;
+                const bool arterial = arterials && om_lines::has_segment( cell.arterial_connections,
+                                      arm );
+                half_widths[index] = lanes >= 4 ? highway_half_width( lanes ) :
+                                     arterial ? highway_half_width( 4 ) : 8;
+                offsets[index] = lanes >= 4 ? ( lanes % 4 == 0 ? 2 * SEEX : SEEX ) :
+                                 arterial ? 2 * SEEX : SEEX;
+            }
+            if( arms < 3 ) {
+                continue;
+            }
+            const point tile_origin = point( x - radius, y - radius ) * road_span;
+            for( const om_direction::type arm : om_direction::all ) {
+                const auto index = static_cast<std::size_t>( arm );
+                const int half_width = half_widths[index];
+                if( half_width <= 8 ) {
+                    continue;
+                }
+                const point direction = om_direction::displace( arm ).raw();
+                const bool vertical = direction.x == 0;
+                const bool forwards = direction.x + direction.y > 0;
+                int edge = forwards ? 0 : road_span;
+                for( const om_direction::type crossing : om_direction::all ) {
+                    const auto across = static_cast<std::size_t>( crossing );
+                    if( half_widths[across] == 0 ||
+                        ( om_direction::displace( crossing ).x() == 0 ) == vertical ) {
+                        continue;
+                    }
+                    edge = forwards ? std::max( edge, offsets[across] + half_widths[across] ) :
+                           std::min( edge, offsets[across] - half_widths[across] );
+                }
+                const int first = edge + ( forwards ? 1 : -3 );
+                const int curb = offsets[index] - half_width;
+                // Match the stock crossing: two tiles deep, alternating paint and asphalt.
+                for( int across = curb; across < offsets[index] + half_width; ++across ) {
+                    for( int along = first; along < first + 2; ++along ) {
+                        const point pos = tile_origin + ( vertical ? point( across, along ) :
+                                                          point( along, across ) );
+                        if( pos.x >= 0 && pos.x < road_span && pos.y >= 0 && pos.y < road_span ) {
+                            crosswalk_tile &mark = marks[pos.y * road_span + pos.x];
+                            mark = std::max( mark, ( across - curb ) % 2 == 0 ?
+                                             crosswalk_tile::asphalt : crosswalk_tile::zebra );
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return marks;
+}
+
 void place_wide_highway_surface( mapgendata &dat )
 {
     const oter_id terrain = dat.terrain_type();
@@ -463,7 +547,7 @@ void place_wide_highway_surface( mapgendata &dat )
                 const oter_id &neighbor = overmap_buffer.ter_existing( dat.pos() + point( x, y ) );
                 has_flank = neighbor == oter_atlas_highway_north_south ||
                             neighbor == oter_atlas_highway_east_west;
-                missing_neighbor = missing_neighbor || neighbor.is_null();
+                missing_neighbor = missing_neighbor || !neighbor;
             }
         }
         // Keep stock pavement if the overmap reserved no adjoining wide-road tiles.
@@ -504,7 +588,7 @@ void place_wide_highway_surface( mapgendata &dat )
                                              static_cast<int>( std::lround( along * stroke.south ) ) );
                     const double station = east * stroke.east + south * stroke.south;
                     cell = { route.lanes, distance,
-                             station + route.begin.x * stroke.east + route.begin.y * stroke.south,
+                             station + route.begin.x *stroke.east + route.begin.y * stroke.south,
                              point_abs_ms( center )
                            };
                     found = true;
@@ -515,6 +599,8 @@ void place_wide_highway_surface( mapgendata &dat )
     if( !found ) {
         return;
     }
+    const auto crosswalks = urban ? wide_urban_crosswalks( dat.pos(), mapped, arterials ) :
+                            std::array<crosswalk_tile, road_span *road_span> {};
     for( int row = 0; row < road_span; ++row ) {
         for( int column = 0; column < road_span; ++column ) {
             const point_bub_ms pos( column, row );
@@ -554,7 +640,10 @@ void place_wide_highway_surface( mapgendata &dat )
             }
             const int lane_width = ( half_width - 2 ) / ( sample.lanes / 2 );
             const bool dashed = static_cast<int>( std::abs( sample.along ) ) % 6 < 3;
-            const ter_id pavement = stripe == 0 ? ter_t_pavement_y.id() :
+            const crosswalk_tile crossing = crosswalks[row * road_span + column];
+            const ter_id pavement = crossing == crosswalk_tile::zebra ? ter_t_zebra.id() :
+                                    crossing == crosswalk_tile::asphalt ? ter_t_pavement.id() :
+                                    stripe == 0 ? ter_t_pavement_y.id() :
                                     dashed && stripe % lane_width == 0 &&
                                     stripe < lane_width * static_cast<int>( sample.lanes / 2 ) ?
                                     ter_t_atlas_pavement_white.id() : ter_t_pavement.id();
@@ -591,6 +680,8 @@ std::vector<road_cell> road_network( point_abs_omt origin, int width, int height
             cell.mapped_connections = om_lines::set_segment( cell.mapped_connections, direction );
             if( lanes >= 4 ) {
                 cell.mapped_wide_connections = om_lines::set_segment( cell.mapped_wide_connections, direction );
+                unsigned &road_lanes = cell.mapped_lanes[static_cast<std::size_t>( direction )];
+                road_lanes = std::max( road_lanes, lanes );
             }
         } else {
             cell.street = std::max( cell.street, street );
