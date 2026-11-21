@@ -192,3 +192,11 @@ bind_scenario("a_moonlit_night_start", "scenario_a_moonlit_night_start", "scenar
     ccb.tasks.after_character_turn(actor, services.time.duration(4, "hour").turns,
         "scenario_moonlit_deactivate_due")
 end)
+
+bind_scenario("friend_liam", "scenario_friend_liam_start", "scenario_friend_liam_due", function(payload)
+    local actor = payload.character
+    checked(services.characters.open_topic(actor, "TALK_Liam_Introdialogue"))
+    local origin_omt = checked(services.creatures.snapshot(actor)).position:project_to("omt")
+    local target_omt = services.overmap.find_target(origin_omt, "cabin_liam")
+    run_mapgen_update_at(target_omt, "scenario_spawn_liam")
+end)

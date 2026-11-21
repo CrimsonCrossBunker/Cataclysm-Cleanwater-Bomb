@@ -1,5 +1,36 @@
 local ccb = require("ccb")
 
+ccb.content.define_scenario {
+    copy_from = "defense_mode_fortified",
+    id = "defense_mode_fortified",
+    name = "Fortified",
+    points = 0,
+    description = "You do not know who you are, nor do you know why you're here.  All you know is that you must fight and defend yourself from the horde.",
+    extend = {
+        locations = {
+            "sloc_bar",
+            "sloc_hospital",
+            "public_works",
+            "megastore",
+            "mansion",
+            "sloc_shelter_safe",
+            "sloc_gun_store",
+            "survivor_camp",
+            "sloc_cabin",
+            "cave",
+            "sugar_house",
+            "sloc_bank",
+            "sloc_pawn_shop",
+            "sloc_restaurant",
+        },
+    },
+    forced_traits = { "HAS_NEMESIS" },
+    missions = { "MISSION_DEFENSE_MODE_SURVIVE" },
+    flags = { "LONE_START" },
+    start_name = "Holdout",
+    reveal_locale = false,
+}
+
 ccb.content.define_start_location {
     id = "sloc_bar",
     name = ccb.content.text("Bar"),

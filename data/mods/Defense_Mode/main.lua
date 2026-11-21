@@ -5,6 +5,7 @@ require("mutation_enchantments")
 require("portal_storm")
 
 require("scenario_filters")
+require("scenarios")
 
 require("item_groups")
 

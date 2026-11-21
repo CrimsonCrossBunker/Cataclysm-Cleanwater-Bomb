@@ -1,6 +1,17 @@
 local ccb = require("ccb")
 
 ccb.content.define_scenario {
+    id = "friend_liam",
+    name = "Friends to the End",
+    points = -10,
+    description = "You and your friends always talked about what you'd do when the world ended… now it's come true, and you've made your way to a remote cabin your friend Liam always said to head for.  It's been a hell of a journey.  You hope Liam and the others made it in one piece.",
+    locations = { "sloc_liam_cabin" },
+    start_name = "Liam's Cabin",
+    missions = { "MISSION_FIND_LIAM" },
+    flags = { "CITY_START", "LONE_START" },
+}
+
+ccb.content.define_scenario {
     id = "squatter",
     name = "Squatter",
     points = -1,
