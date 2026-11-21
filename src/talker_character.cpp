@@ -63,6 +63,8 @@ struct bionic;
 
 static const flag_id json_flag_FIT( "FIT" );
 static const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
+static const efftype_id effect_pacified( "pacified" );
+static const efftype_id effect_pet( "pet" );
 
 std::string talker_character_const::disp_name() const
 {
@@ -1511,9 +1513,6 @@ int talker_character_const::climate_control_str_chill() const
 bool talker_character::buy_monster( talker &seller, const mtype_id &mtype, int cost,
                                     int count, bool pacified, const translation &name )
 {
-    static const efftype_id effect_pacified( "pacified" );
-    static const efftype_id effect_pet( "pet" );
-
     if( !is_valid() ) {
         return false;
     }
