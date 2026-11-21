@@ -390,3 +390,182 @@ ccb.runtime.handler("trigger_labyrinth_chasm", function(ctx)
     leave_chasm(ctx.creature)
     return false
 end)
+
+local function can_leave(actor)
+    return not checked(services.inventory.has_worn_flag(actor, id("json_flag", "DIMENSIONAL_ANCHOR")))
+        and not checked(services.characters.snapshot(actor, 0)).movement.driving
+end
+
+local function string_value(actor, key)
+    return checked(services.variables.get_string(actor, key)).value or ""
+end
+
+local function set_var(actor, key, value)
+    checked(services.variables.set(actor, key, value, { include_before = false }))
+end
+
+local function finish_mission(actor, name)
+    local offset = 0
+    repeat
+        local page = services.missions.active(actor, { offset = offset, limit = 256 })
+        for _, mission in ipairs(page.items) do
+            if mission.id.value == name then
+                checked(services.missions.finish(actor, mission.token))
+                return
+            end
+        end
+        offset = offset + page.returned
+    until not page.has_more
+end
+
+local function confirm_obelisk_touch(ctx, title, description)
+    local choice = services.interaction.choose({
+        {
+            id = "touch",
+            label = expand(ctx, ccb.services.translate("Place your hand upon the obelisk.")),
+            description = expand(ctx, description),
+        },
+    }, {
+        title = expand(ctx, title),
+        allow_cancel = true,
+        show_descriptions = true,
+    })
+    return choice.id == "touch"
+end
+
+local function travel_to_safehouse()
+    return checked(services.relocation.travel_to_dimension("netherum_labyrinth_safehouse", {
+        npc_travel_radius = 0,
+        npc_travel_filter = "none",
+        item_travel_radius = -1,
+    }))
+end
+
+local function teleport_to_safehouse_portal(actor)
+    if checked(services.variables.get(actor, "safehouse_floor_portal_enclosure")).value == nil then
+        local origin = state.position(actor)
+        local om_target = services.overmap.find_target(origin:project_to("omt"), "labyrinth_safehouse", {
+            special = id("overmap_special", "labyrinth_safehouse"),
+            create_special = true,
+        })
+        local location = services.world.find_location(om_target:project_to("ms"), {
+            kind = "furniture",
+            id = id("furniture", "f_exodii_floor_portal_enclosure"),
+        }, {
+            target_max_radius = 250,
+            distance_origin = origin,
+        })
+        if location.position then
+            set_var(actor, "safehouse_floor_portal_enclosure", location.position)
+        end
+    end
+    local destination = checked(services.variables.get_tripoint(actor, "safehouse_floor_portal_enclosure")).value
+        or services.coords.tripoint_abs_ms(0, 0, 0)
+    checked(services.relocation.teleport_character(actor, destination))
+end
+
+ccb.runtime.handler("examine_t_nl_obelisk_scarlet", function(ctx)
+    local actor = ctx.character
+    if not confirm_obelisk_touch(ctx,
+        ccb.services.translate(
+            "As you approach the massive obelisk,\nits surface starts to warp,\nlike sand in the wind.\nA depression quickly forms.\nIn the shape of your hand."),
+        ccb.services.translate("It looks like a perfect fit for you.")) then
+        return
+    end
+    if not can_leave(actor) then
+        state.message(actor, ccb.services.translate("You feel a prickle at the edge of your senses."))
+        return
+    end
+    local visited = string_value(actor, "traveled_to_labyrinth_safehouse") == "yes"
+    local trapped = string_value(actor, "scenario_trapped_in_labyrinth") == "yes"
+    local arrival_text
+    if visited then
+        arrival_text = "Zwoink."
+    elseif trapped then
+        arrival_text = "As you place your hand in the depression the scarlet light fades in a dizzying pinch of your senses.  Then the world itself folds inward - pop - your senses go black, as if you've entered a deep sleep.\n\nYou awake to three soft chimes and a stiff neck.  You find yourself standing in a metal ring.  The air around you is clean, and where the obelisk once stood is now a tall, bulbous computer screen, slightly too tall to comfortably look at without craning your neck.  It's certainly more home-like than the place you just came from, but alien in its own right.  Text starts to populate the screen."
+    else
+        arrival_text = "As you place your hand in the depression the scarlet light fades in a dizzying pinch of your senses.  Then the world itself folds inward - pop.\n\nSuddenly, you hear three soft chimes.  You find yourself standing in a metal ring.  The air around you is clean, and where the obelisk once stood is now a tall, bulbous computer screen, slightly too tall to comfortably look at without craning your neck.  It's certainly more home-like than the place you just came from, but alien in its own right.  Text starts to populate the screen."
+    end
+    state.message(actor, ccb.services.translate(arrival_text), "neutral", true)
+    set_var(actor, "player_location_scarlet_before_labyrinth", state.position(actor))
+    set_var(actor, "traveled_scarlet_to_labyrinth", "yes")
+    travel_to_safehouse()
+    teleport_to_safehouse_portal(actor)
+    if not visited then
+        if trapped then
+            checked(services.bionics.grant(actor, id("bionic", "bio_nl_collar")))
+            checked(services.mutations.replace(actor, id("mutation", "NL_CBM_Interface")))
+            finish_mission(actor, "MISSION_FIND_LABYRINTH_SPIRE")
+            checked(services.characters.open_topic(actor,
+                "COMP_labyrinthine_safehouse_computer_meeting_scenario_trapped_in_labyrinth"))
+        else
+            checked(services.characters.open_topic(actor, "COMP_labyrinthine_safehouse_computer_meeting"))
+        end
+    end
+end)
+
+local green_obelisk_title =
+    "As you approach the massive obelisk,\nits surface starts to warp,\nand a sound slips free:\nlike a whisper, beckoning.\nA depression quickly forms.\nIn the shape of your hand."
+local green_obelisk_description =
+    "How strange.  It looks like a perfect fit for you.  You have a bad feeling in the pit of your stomach."
+
+ccb.runtime.handler("examine_t_nl_obelisk_earth", function(ctx)
+    local actor = ctx.character
+    if not confirm_obelisk_touch(ctx, ccb.services.translate(green_obelisk_title),
+        ccb.services.translate(green_obelisk_description)) then
+        return
+    end
+    if not can_leave(actor) then
+        state.message(actor, ccb.services.translate("You feel a prickle at the edge of your senses."))
+        return
+    end
+    checked(services.world.transform_radius(state.position(actor), 20,
+        id("terrain_furniture_transform", "transform_LS_teleport_default_dimension_spire_to_safehouse")))
+    local visited = string_value(actor, "traveled_to_labyrinth_safehouse") == "yes"
+    if not visited then
+        state.message(actor, ccb.services.translate(
+            "As you place your hand in the depression the world you know fades in a dizzying pinch of your senses.  Then everything folds inward - pop - your senses go black.\n\nYou hear three soft chimes.  You find yourself standing in a metal ring.  Where the obelisk once stood is now a tall, bulbous computer screen, slightly too tall to comfortably look at without craning your neck.  Text starts to populate the screen."),
+            "neutral", true)
+    else
+        state.message(actor, ccb.services.translate("Zwoink."), "neutral", true)
+    end
+    set_var(actor, "player_location_home_before_labyrinth", state.position(actor))
+    set_var(actor, "traveled_home_to_labyrinth", "yes")
+    travel_to_safehouse()
+    teleport_to_safehouse_portal(actor)
+    if not visited then
+        checked(services.characters.open_topic(actor, "COMP_labyrinthine_safehouse_computer_meeting"))
+    end
+end)
+
+ccb.runtime.handler("examine_t_nl2_obelisk_altaros", function(ctx)
+    local actor = ctx.character
+    if not confirm_obelisk_touch(ctx, ccb.services.translate(green_obelisk_title),
+        ccb.services.translate(green_obelisk_description)) then
+        return
+    end
+    if not can_leave(actor) then
+        state.message(actor, ccb.services.translate("You feel a prickle at the edge of your senses."))
+        return
+    end
+    if string_value(actor, "traveled_safehouse_to_labyrinth") == "yes" then
+        state.message(actor, ccb.services.translate("Zworunk."), "neutral", true)
+        local result = travel_to_safehouse()
+        state.message(actor, result.accepted
+            and ccb.services.translate("Your surroundings warp and fold into a familiar place.")
+            or ccb.services.translate("You feel a prickle at the edge of your senses."))
+        local destination = checked(services.variables.get_tripoint(actor,
+            "player_location_safehouse_before_labyrinth")).value
+            or services.coords.tripoint_abs_ms(0, 0, 0)
+        checked(services.relocation.teleport_character(actor, destination, { force = true }))
+        services.gameplay.environment.clear_saved_dimension("netherum_labyrinth")
+        services.gameplay.environment.clear_saved_dimension("netherum_labyrinth2")
+    else
+        travel_to_safehouse()
+        teleport_to_safehouse_portal(actor)
+        state.message(actor, ccb.services.translate(
+            "The maze around you folds in on itself - zwoink.  Then, you hear three soft chimes, and find yourself standing in a metal ring.  A tall, bulbous computer screen looms before you, slightly too tall to comfortably look at without craning your neck.  Text starts to populate the screen."),
+            "neutral", true)
+        checked(services.characters.open_topic(actor, "COMP_labyrinthine_safehouse_computer_meeting"))
+    end
+end)
