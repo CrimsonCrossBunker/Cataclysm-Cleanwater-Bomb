@@ -1,7 +1,12 @@
 #include "mp_player_view.h"
 #include "math_parser_diag_value.h"
 
+#include <exception>
+#include <functional>
 #include <map>
+#include <memory>
+#include <optional>
+#include <set>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -9,25 +14,28 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "cata_scope_helpers.h"
-#include "character_attire.h"
+#include "character.h"
+#include "character_id.h"
+#include "coordinates.h"
+#include "creature.h"
 #include "dialogue_chatbin.h"
-#include "enums.h"
+#include "flexbuffer_json.h"
 #include "game.h"
-#include "inventory.h"
-#include "item.h"
-#include "item_location.h"
 #include "json.h"
-#include "json_loader.h"
 #include "map.h"
 #include "memory_fast.h"
 #include "mission.h"
+#include "mp_actor_binding.h"
+#include "mp_world_state.h"
 #include "mutation.h"
 #include "npc.h"
 #include "npc_opinion.h"
 #include "npc_radio.h"
 #include "overmapbuffer.h"
-#include "pimpl.h"
+#include "player_identity.h"
+#include "point.h"
 #include "rng.h"
+#include "type_id.h"
 #include "vpart_position.h"
 
 static const faction_id faction_your_followers( "your_followers" );
