@@ -68,3 +68,4 @@ content.add(definition)
 require("craft_recipes")
 
 require("monster_groups")
+require("tileset")
