@@ -3043,8 +3043,6 @@ class Character : public Creature, public visitable
         /** Notify a net change after a batch of silent gender updates. */
         void notify_gender_change( bool previous_gender );
 
-        bool male = false;
-
         std::vector < effect_on_condition_id > death_eocs;
         cata::lua_platform::character_script_state lua_character_state;
         std::string lua_platform_death_mod;
@@ -3076,6 +3074,8 @@ class Character : public Creature, public visitable
         // Last clatter check belongs to the moving character, not the local view.
         time_point last_pocket_noise = time_point( 0 );
     private:
+        bool male = false;
+
         // Book discovery belongs to each character, including remote human players.
         std::unordered_set < itype_id > items_identified;
         object_type grab_type = object_type::NONE;
