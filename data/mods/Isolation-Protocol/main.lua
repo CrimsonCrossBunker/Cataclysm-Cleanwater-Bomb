@@ -17,6 +17,7 @@ require("enchantment_variables")
 require("effect_enchantments")
 
 require("sorcery_spells")
+require("mutations")
 
 require("item_enchantments")
 

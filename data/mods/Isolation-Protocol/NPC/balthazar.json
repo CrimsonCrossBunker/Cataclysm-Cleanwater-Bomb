@@ -1,12 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_talk_balthazar",
-    "global": true,
-    "effect": [ { "open_dialogue": { "topic": "ISO_BALTHAZAR_MAIN" } } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_talk_balthazar_finish_integration",
     "global": true,
     "effect": [ { "open_dialogue": { "topic": "ISO_BALTHAZAR_INTEGRATED" } } ]
