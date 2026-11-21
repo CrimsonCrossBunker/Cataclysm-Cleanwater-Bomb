@@ -5,6 +5,7 @@
 #include <chrono>
 #include <array>
 #include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <map>
@@ -23,9 +24,6 @@
 #include "point.h"
 #include "type_id.h"
 #include "world_identity.h"
-
-class monster;
-class vehicle;
 
 namespace cata_mp
 {
@@ -62,7 +60,7 @@ struct pending_omsync_t {
     int w = 0;
     std::vector<oter_id> cells;   // row-major resolved terrain
     std::vector<char> ok;         // 1 = apply this cell, 0 = skip (ungenerated)
-    size_t cursor = 0;
+    std::size_t cursor = 0;
     bool active = false;
 };
 
