@@ -160,6 +160,7 @@ struct client_replication_state {
     std::unordered_map<std::string, int> last_bodypart_hp{};
     // Client: fingerprint of the last host_worn list applied — avoids re-dressing every tick.
     std::string client_host_worn_sig{};
+    bool client_host_gender_initialized = false;
     // FIFO of per-z regions.  The host may stream more than one floor's overmap in a
     // turn (host and client on different z), so each region drains independently
     // instead of overwriting the previous (the v1 single buffer).

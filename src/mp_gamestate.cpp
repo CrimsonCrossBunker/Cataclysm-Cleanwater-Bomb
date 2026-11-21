@@ -5322,6 +5322,7 @@ static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::s
         g->load_npcs();
         mp_session().client_host_actor.bind_view( *host_npc, g->npc_lifetimes() );
         mp_session().client_host_spawned = true;
+        mp_session().replication.client.client_host_gender_initialized = false;
 
         // Apply ally status AFTER load_npcs so the NPC is fully wired into the
         // game state (faction manager, critter tracker, etc.).
@@ -6142,9 +6143,6 @@ bool client_apply_message( const std::string &msg )
                 mp_session().replication.client.client_host_worn_sig = sig;
                 npc *host_npc = mp_host_view_actor();
                 if( host_npc ) {
-                    if( jo.has_bool( "host_male" ) ) {
-                        host_npc->male = jo.get_bool( "host_male" );
-                    }
                     host_npc->clear_worn();
                     std::string applied_log;
                     for( const JsonValue &wv : jo.get_array( "host_worn" ) ) {
@@ -6257,6 +6255,14 @@ bool client_apply_message( const std::string &msg )
                         }
                     }
                 }
+            }
+        }
+
+        if( jo.has_bool( "host_male" ) && mp_session().client_host_spawned ) {
+            if( npc *host_npc = mp_host_view_actor() ) {
+                const bool notify = mp_session().replication.client.client_host_gender_initialized;
+                mp_session().replication.client.client_host_gender_initialized = true;
+                host_npc->set_gender( jo.get_bool( "host_male" ), notify );
             }
         }
 
@@ -8911,7 +8917,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
         }
     }
 
-    const std::string host_male_str = host.male ? "true" : "false";
+    const std::string host_male_str = host.get_gender() ? "true" : "false";
 
     // Build host mutation array — ALL active mutations (cosmetics like skin/hair
     // plus physical mutations like Fangs / Sleek Fur / Spines / Feathered Arms).
