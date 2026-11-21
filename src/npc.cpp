@@ -645,6 +645,9 @@ void npc::load_npc_template( const string_id<npc_template> &ident )
 
     idz = ident;
     myclass = npc_class_id( tguy.myclass );
+    if( !getID().is_valid() ) {
+        setID( g->assign_npc_id() );
+    }
     const character_action_guard lifetime( *this );
     randomize( myclass, ident );
     if( !lifetime.get() ) {
@@ -698,11 +701,11 @@ npc::~npc() = default;
 
 void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
 {
-    const bool previous_gender = get_gender();
-    const character_action_guard lifetime( *this );
     if( !getID().is_valid() ) {
         setID( g->assign_npc_id() );
     }
+    const bool previous_gender = get_gender();
+    const character_action_guard lifetime( *this );
     if( type.is_null() || type == NC_NONE ) {
         Character::randomize( false );
         starting_inv_passtime();
