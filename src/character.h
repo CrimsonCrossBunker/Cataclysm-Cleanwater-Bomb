@@ -25,7 +25,6 @@
 #include <vector>
 
 #include "activity_tracker.h"
-#include "addiction.h"
 #include "body_part_set.h"
 #include "bodypart.h"
 #include "cached_options.h"
@@ -74,6 +73,7 @@ class JsonOut;
 class SkillLevel;
 class SkillLevelMap;
 class activity_actor;
+class addiction;
 class basecamp;
 class bionic_collection;
 class character_martial_arts;
