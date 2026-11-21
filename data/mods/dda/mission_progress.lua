@@ -172,3 +172,46 @@ ccb.runtime.handler("record_balthazar_solar_power", function()
     checked(variables.set_global("balthazar_daily_power_gain", gain + 1, { include_before = false }))
     checked(variables.set_global("balthazar_solar_power", 1, { include_before = false }))
 end)
+
+local succession_mission_id = ccb.services.types.id("mission", "MISSION_CAMP_LEADERSHIP_CHANGE")
+
+local function abandon_active_mission(character, mission_id)
+    local offset = 0
+    repeat
+        local page = ccb.services.missions.active(character, { offset = offset, limit = 256 })
+        for _, mission in ipairs(page.items) do
+            if mission.id.value == mission_id then
+                checked(ccb.services.missions.abandon(character, mission.token))
+                return
+            end
+        end
+        offset = offset + page.returned
+    until not page.has_more
+end
+
+local function check_faction_succession(character)
+    if character.subtype ~= "avatar" then return end
+    if not checked(ccb.services.missions.has_active(character, succession_mission_id)) then return end
+    local now = ccb.services.time.now().turn
+    local last = checked(variables.get_number(character, "timer_time_of_last_succession", { strict = true })).value or 0
+    local cooldown = checked(variables.get_global_number("time_between_succession", { strict = true })).value or 0
+    if now - last > cooldown then
+        abandon_active_mission(character, "MISSION_CAMP_LEADERSHIP_CHANGE")
+        checked(variables.remove(character, "time_of_last_succession", { include_before = false }))
+        return
+    end
+    ccb.tasks.ensure_avatar_turn(ccb.services.random.native_int(5 * 60, 20 * 60), "check_faction_succession_cooldown")
+end
+
+ccb.runtime.handler("start_faction_succession_cooldown", function(context)
+    local now = ccb.services.time.now().turn
+    local cooldown = checked(variables.get_global_number("time_between_succession", { strict = true })).value or 0
+    local deadline = cooldown ~= 0 and ccb.services.time.point(now + math.modf(cooldown)) or nil
+    checked(ccb.services.missions.set_deadline(context.mission, deadline))
+    checked(variables.set(context.character, "timer_time_of_last_succession", now, { include_before = false }))
+    check_faction_succession(context.character)
+end)
+
+ccb.runtime.handler("check_faction_succession_cooldown", function(context)
+    check_faction_succession(context.character)
+end)
