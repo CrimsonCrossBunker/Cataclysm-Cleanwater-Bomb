@@ -22,7 +22,7 @@ TEST_CASE( "character_render_view_owns_appearance_after_character_changes",
 {
     Character &ch = get_player_character();
     clear_character( ch );
-    ch.male = false;
+    ch.set_gender( false, false );
     ch.facing = FacingDirection::LEFT;
     ch.add_effect( efftype_id( "stunned" ), 1_minutes );
     const auto expected = ch.get_overlay_ids();
@@ -36,7 +36,7 @@ TEST_CASE( "character_render_view_owns_appearance_after_character_changes",
     CHECK( view.overlays == expected );
     CHECK( rng_get_engine() == engine );
     clear_character( ch );
-    ch.male = true;
+    ch.set_gender( true, false );
     ch.facing = FacingDirection::RIGHT;
     CHECK( view.body == "player_female" );
     CHECK( view.overlays == expected );
@@ -69,7 +69,7 @@ TEST_CASE( "creature_view_freezes_visibility_mount_and_copied_appearance",
     map &here = get_map();
     Character &you = get_player_character();
     clear_character( you );
-    you.male = true;
+    you.set_gender( true, false );
     set_time_to_day();
     you.setpos( here, { 50, 50, 0 } );
     monster &mon = spawn_test_monster( "mon_zombie", { 52, 50, 0 } );
