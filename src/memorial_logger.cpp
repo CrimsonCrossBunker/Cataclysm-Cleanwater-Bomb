@@ -38,7 +38,7 @@
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
-#include "kill_tracker.h"
+#include "kill_statistics.h"
 #include "magic.h"
 #include "martialarts.h"
 #include "messages.h"
