@@ -172,3 +172,104 @@ ccb.runtime.handler("launch_escape_pod_from_seat", function(hit)
     return false
 end)
 ccb.runtime.handler("examine_escape_pod_guidance", function(ctx) launch_escape_pod(ctx.character) end)
+
+local function global_point(key)
+    return checked(services.variables.get_global_tripoint(key)).value or services.coords.tripoint_abs_ms(0, 0, 0)
+end
+
+local function has_global(key)
+    return checked(services.variables.get_global(key)).value ~= nil
+end
+
+local function remove_mission(actor, name)
+    local offset = 0
+    repeat
+        local page = services.missions.active(actor, { offset = offset, limit = 256 })
+        for _, entry in ipairs(page.items) do
+            if entry.id.value == name then
+                checked(services.missions.abandon(actor, entry.token))
+                return
+            end
+        end
+        offset = offset + page.returned
+    until not page.has_more
+end
+
+local function validate_port_augustmoon(ctx, actor)
+    if has_global("Port_augustmoon") and has_global("Port_augustmoon_cargo")
+        and has_global("augustmoon_main_concourse1") and has_global("augustmoon_main_concourse2") then
+        return
+    end
+    message(ctx, ccb.services.translate("MANUALLY FINDING PORT AUGUSTMOON AS A FALLBACK.  (PRESS SPACE)."),
+        "neutral", true)
+    local origin = checked(services.creatures.snapshot(actor)).position
+    local origin_omt = origin:project_to("omt")
+    local docking_omt = services.overmap.find_target(origin_omt, "augustmoon_docking_arm", { z = -9 })
+    local docking_ms = docking_omt:project_to("ms")
+    local start_loc = services.world.find_location(docking_ms, { kind = "zone", id = id("zone", "ZONE_START_POINT") },
+        { target_max_radius = 30, distance_origin = origin })
+    if start_loc.position then
+        store_ship_setting("Port_augustmoon", start_loc.position)
+    end
+    local cargo_loc = services.world.find_location(docking_ms,
+        { kind = "terrain", id = id("terrain", "t_intermodal_crate_scripted_destination") },
+        { target_max_radius = 26, distance_origin = origin })
+    if cargo_loc.position then
+        store_ship_setting("Port_augustmoon_cargo", cargo_loc.position)
+    end
+    local concourse1 = services.world.find_location(
+        services.overmap.find_target(origin_omt, "augustmoon_main_concourse1", { z = -9 }):project_to("ms")).position
+    if concourse1 then
+        store_ship_setting("augustmoon_main_concourse1", concourse1)
+    end
+    local concourse2 = services.world.find_location(
+        services.overmap.find_target(origin_omt, "augustmoon_main_concourse2", { z = -9 }):project_to("ms")).position
+    if concourse2 then
+        store_ship_setting("augustmoon_main_concourse2", concourse2)
+    end
+end
+
+ccb.runtime.handler("afs_augustmoon_shuttle_recall_due", function()
+    local avatar = services.characters.avatar()
+    local origin = checked(services.creatures.snapshot(avatar)).position
+    if services.overmap.matches_location_near(origin:project_to("omt"), "afs_landed_shuttle", 4) then
+        ccb.tasks.after_avatar_turn(10, "afs_augustmoon_shuttle_recall_due")
+    else
+        store_ship_setting("augustmoon_shuttle_inprogress", 0)
+        remove_mission(avatar, "MISSION_REACH_AUGUSTMOON_SHUTTLE")
+        apply_ship_update(global_point("landing_site"), "augustmoon_shuttle_ground_left")
+    end
+end)
+
+ccb.runtime.handler("afs_augustmoon_reroll_vending_due", function()
+    apply_ship_update(global_point("augustmoon_main_concourse1"), "augustmoon_concourse_vending1")
+    apply_ship_update(global_point("augustmoon_main_concourse2"), "augustmoon_concourse_vending2")
+end)
+
+ccb.runtime.handler("examine_t_augustmoon_shuttle_console", function(ctx)
+    local actor = ctx.character
+    store_ship_setting("augustmoon_shuttle_inprogress", 0)
+    validate_port_augustmoon(ctx, actor)
+    ccb.tasks.after_avatar_turn(1, "afs_augustmoon_shuttle_recall_due")
+    ccb.tasks.after_avatar_turn(1, "afs_augustmoon_reroll_vending_due")
+    local origin = checked(services.creatures.snapshot(actor)).position
+    local crate = services.world.find_location(origin,
+        { kind = "terrain", id = id("terrain", "t_intermodal_crate_scripted_source") },
+        { target_max_radius = 24, distance_origin = origin }).position or services.coords.tripoint_abs_ms(0, 0, 0)
+    local cargo_dest = global_point("Port_augustmoon_cargo")
+    for _, cargo in ipairs(checked(services.items.on_map(crate, 0, 0))) do
+        if cargo:is_valid() then
+            checked(services.relocation.teleport_item(cargo, cargo_dest))
+        end
+    end
+    local port_dest = global_point("Port_augustmoon")
+    for _, npc in ipairs(checked(services.npcs.loaded())) do
+        if checked(services.npcs.get(npc)).following then
+            checked(services.relocation.teleport_character(npc, port_dest))
+        end
+    end
+    message(ctx,
+        ccb.services.translate("The shuttle's ascent is a little rough, but you're soon on your way to Port Augustmoon."),
+        "neutral", true)
+    checked(services.relocation.teleport_character(actor, port_dest))
+end)
