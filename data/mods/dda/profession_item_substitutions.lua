@@ -141,3 +141,40 @@ local definition = content.ProfessionItemSubstitution { item = "can_beans" }
 definition:when({ present = { "MEATARIAN" } }, { "can_spam" })
 content.add(definition)
 end
+
+-- Native profession item bonuses
+do
+    local function add_bonus(group_id, conditions, configure)
+        local group = content.ItemGroup { id = group_id, kind = "collection" }
+        configure(group)
+        content.add(group)
+
+        local bonus = content.ProfessionItemBonus { group = group_id }
+        bonus:when(conditions)
+        content.add(bonus)
+    end
+
+    add_bonus("prof_bonus_myopic", { present = { "MYOPIC" }, absent = { "HYPEROPIC" } }, function(group)
+        group:item("glasses_eye")
+    end)
+
+    add_bonus("prof_bonus_bifocal", { present = { "HYPEROPIC", "MYOPIC" } }, function(group)
+        group:item("glasses_bifocal")
+    end)
+
+    add_bonus("prof_bonus_hyperopic", { present = { "HYPEROPIC" }, absent = { "MYOPIC" } }, function(group)
+        group:item("glasses_reading")
+    end)
+
+    add_bonus("prof_bonus_asthma", { present = { "ASTHMA" } }, function(group)
+        group:entry { item = "inhaler", ammo = { item = "albuterol" }, charges = { 100, 100 } }
+    end)
+
+    add_bonus("prof_bonus_schizophrenic", { present = { "SCHIZOPHRENIC" } }, function(group)
+        group:item("thorazine")
+    end)
+
+    add_bonus("prof_bonus_albino", { present = { "ALBINO" } }, function(group)
+        group:item("teleumbrella")
+    end)
+end
