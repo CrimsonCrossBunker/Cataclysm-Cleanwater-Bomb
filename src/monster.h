@@ -116,6 +116,7 @@ class monster : public Creature
         void gravity_check() override;
         void gravity_check( map *here ) override;
         void poly( const mtype_id &id );
+        void restore_replica_type( const mtype_id &id );
         bool can_upgrade() const;
         void hasten_upgrade();
         int get_upgrade_time() const;
@@ -605,6 +606,7 @@ class monster : public Creature
         int anger = 0;
         int morale = 2;
     private:
+        void change_type( const mtype_id &id, bool simulate );
         float rate_target_impl( Creature &c, float best, bool smart, bool already_visible ) const;
         monster_uid uid_;
         int amount_eaten = 0;

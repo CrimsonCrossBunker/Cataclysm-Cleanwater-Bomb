@@ -129,6 +129,62 @@ TEST_CASE( "mp_cleanup_never_claims_npcs_by_name_or_unverified_cleanup_ids",
     CHECK( session.stale_proxy_cleanup_done );
 }
 
+TEST_CASE( "mp_host_sends_monster_spell_state_even_without_movement_or_damage",
+           "[multiplayer][world_session][mp_spell_owned]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        get_creature_tracker().clear();
+    } );
+    bind_test_player( session );
+    auto &peer = only_test_remote( session );
+    peer.connected = true;
+    auto target = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
+                  tripoint_bub_ms( 62, 60, 0 ) );
+    REQUIRE( get_creature_tracker().add( target ) );
+    const auto export_state = [&]() {
+        return json_loader::from_string( cata_mp::serialize_remote_player_state( peer ) );
+    };
+    const auto monsters = []( const JsonValue &value ) {
+        const JsonObject state = value.get_object();
+        state.allow_omitted_members();
+        return state.get_array( "monsters" );
+    };
+    JsonValue snapshot = export_state();
+    REQUIRE( monsters( snapshot ).size() == 1 );
+    snapshot = export_state();
+    CHECK( monsters( snapshot ).empty() );
+
+    const efftype_id stunned( "stunned" );
+    target->friendly = 10;
+    target->add_effect( stunned, 3_turns );
+    snapshot = export_state();
+    const JsonArray changed = monsters( snapshot );
+    REQUIRE( changed.size() == 1 );
+    const JsonObject observed = changed.get_object( 0 );
+    observed.allow_omitted_members();
+    CHECK( observed.get_int( "friendly" ) == 10 );
+    REQUIRE( observed.get_array( "effects" ).size() == 1 );
+    const JsonObject status = observed.get_array( "effects" ).get_object( 0 );
+    status.allow_omitted_members();
+    CHECK( status.get_string( "eff_type" ) == stunned.str() );
+
+    target->clear_effects();
+    target->friendly = 0;
+    snapshot = export_state();
+    const JsonArray cleared = monsters( snapshot );
+    REQUIRE( cleared.size() == 1 );
+    const JsonObject after = cleared.get_object( 0 );
+    after.allow_omitted_members();
+    CHECK( after.get_array( "effects" ).empty() );
+    CHECK( after.get_int( "friendly" ) == 0 );
+}
+
 TEST_CASE( "mp_native_export_reassigns_retained_monsters_after_session_reset",
            "[multiplayer][world_session][entity_identity][regression]" )
 {

@@ -13,6 +13,7 @@
 #include "character_id.h"
 #include "creature_tracker.h"
 #include "display.h"
+#include "effect.h"
 #include "game.h"
 #include "json.h"
 #include "json_loader.h"
@@ -38,6 +39,7 @@ struct wire_monster {
     int id;
     const monster *native;
     int hp;
+    bool include_effects = false;
 };
 
 std::string state_message( std::initializer_list<wire_monster> monsters,
@@ -57,6 +59,15 @@ std::string state_message( std::initializer_list<wire_monster> monsters,
         json.member( "y", entry.native->pos_abs().y() );
         json.member( "z", entry.native->pos_abs().z() );
         json.member( "hp", entry.hp );
+        if( entry.include_effects ) {
+            json.member( "friendly", entry.native->friendly );
+            json.member( "effects" );
+            json.start_array();
+            for( const effect &status : entry.native->get_effects() ) {
+                json.write( status );
+            }
+            json.end_array();
+        }
         json.end_object();
     }
     json.end_array();
@@ -106,6 +117,56 @@ TEST_CASE( "compass_drops_retired_npcs_before_the_next_visibility_update",
     }
     CHECK( display::colorized_compass_text( cardinal_direction::EAST, 10 ).empty() );
     CHECK( display::colorized_compass_legend_text( 80, 30, legend_height ) == original_legend );
+}
+
+TEST_CASE( "mp_monster_spell_state_updates_the_same_replica",
+           "[multiplayer][replication][mp_spell_owned]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        get_creature_tracker().clear();
+    } );
+    cata_mp::set_client_mode( true );
+    cata_mp::mp_store_pending_welcome(
+        R"({"type":"welcome","world_id":"11111111111111111111111111111111"})" );
+    session.host_observation.mp_remote_pos = get_avatar().pos_abs();
+    const tripoint_bub_ms location( 62, 60, 0 );
+    const mtype_id zombie_type( "mon_test_zombie" );
+    const mtype_id changed_type( "mon_zombie" );
+    const efftype_id stunned( "stunned" );
+    auto mirror = make_shared_fast<monster>( zombie_type, location );
+    REQUIRE( get_creature_tracker().add( mirror ) );
+    REQUIRE( cata_mp::client_apply_message( state_message( { { 81, mirror.get(), 70 } } ) ) );
+    REQUIRE( session.replication.client.monsters.find( 81 ) == mirror.get() );
+
+    monster host( changed_type, location );
+    host.friendly = 15;
+    host.add_effect( stunned, 4_turns );
+    const auto rng = rng_get_engine();
+    const std::string transformed = state_message( { { 81, &host, 38, true } } );
+    REQUIRE( cata_mp::client_apply_message( transformed ) );
+    REQUIRE( session.replication.client.monsters.find( 81 ) == mirror.get() );
+    CHECK( mirror->type->id == changed_type );
+    CHECK( mirror->friendly == 15 );
+    CHECK( mirror->get_hp() == 38 );
+    CHECK( mirror->get_effect_dur( stunned ) == 4_turns );
+    CHECK( rng_get_engine() == rng );
+
+    REQUIRE( cata_mp::client_apply_message( transformed ) );
+    CHECK( mirror->get_effect_dur( stunned ) == 4_turns );
+    host.clear_effects();
+    host.friendly = 0;
+    REQUIRE( cata_mp::client_apply_message( state_message( { { 81, &host, 38, true } } ) ) );
+    CHECK_FALSE( mirror->has_effect( stunned ) );
+    CHECK( mirror->friendly == 0 );
+
+    REQUIRE( cata_mp::client_apply_message( state_message( {}, { 81 } ) ) );
+    CHECK( session.replication.client.monsters.find( 81 ) == nullptr );
+    CHECK( get_map().i_at( location ).empty() );
 }
 
 TEST_CASE( "mp_client_pins_authority_world_independently_of_local_world",
