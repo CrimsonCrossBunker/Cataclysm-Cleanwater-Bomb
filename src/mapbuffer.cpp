@@ -30,6 +30,7 @@
 #include "json_loader.h"
 #include "json_loader_buffer.h"
 #include "map.h"
+#include "map_scale_constants.h"
 #include "map_storage_context.h"
 #include "output.h"
 #include "overmap_types.h"

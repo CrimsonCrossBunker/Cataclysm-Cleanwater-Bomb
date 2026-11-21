@@ -135,13 +135,13 @@ using distant_lru_list = std::list<tripoint_abs_sm>;
 struct distant_terrain_snapshot {
     std::vector<ter_id> terrain;
     ter_id uniform_terrain;
-    std::pair<uint64_t, uint64_t> geometry_stamp{};
+    std::pair<uint64_t, uint64_t> geometry_stamp;
     distant_lru_list::iterator lru_order;
     uint64_t last_used = 0;
     bool open_air = false;
 
-    ter_id terrain_at( const int x, const int y ) const {
-        return terrain.empty() ? uniform_terrain : terrain[y * SEEX + x];
+    ter_id terrain_at( const point_sm_ms &p ) const {
+        return terrain.empty() ? uniform_terrain : terrain[p.y() * SEEX + p.x()];
     }
 };
 // float3 pos + float3 scale + float2 uv0 + float2 uv1 + float4 color + float flags + float pad
@@ -5408,11 +5408,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const submap & sm ) -> const distant_terrain_snapshot * {
             auto existing = far_cache.find( p );
             const std::pair<uint64_t, uint64_t> stamp = sm.geometry_stamp();
-            if( existing != far_cache.end() && existing->second.geometry_stamp == stamp ) {
+            if( existing != far_cache.end() && existing->second.geometry_stamp == stamp )
+            {
                 touch_snapshot( existing );
                 return &existing->second;
             }
-            if( existing == far_cache.end() && far_cache.size() >= FAR_TERRAIN_CACHE_MAX_SUBMAPS ) {
+            if( existing == far_cache.end() && far_cache.size() >= FAR_TERRAIN_CACHE_MAX_SUBMAPS )
+            {
                 const auto oldest = far_lru.begin();
                 if( oldest == far_lru.end() ) {
                     return nullptr;
@@ -5424,7 +5426,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 far_cache.erase( cached );
                 far_lru.erase( oldest );
             }
-            if( existing == far_cache.end() ) {
+            if( existing == far_cache.end() )
+            {
                 existing = far_cache.try_emplace( p ).first;
                 far_lru.push_back( p );
                 existing->second.lru_order = std::prev( far_lru.end() );
@@ -5433,11 +5436,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             snapshot.geometry_stamp = stamp;
             snapshot.terrain.clear();
             snapshot.open_air = false;
-            if( sm.is_uniform() ) {
+            if( sm.is_uniform() )
+            {
                 snapshot.uniform_terrain = sm.get_ter( point_sm_ms::zero );
                 snapshot.open_air = snapshot.uniform_terrain &&
                                     snapshot.uniform_terrain->has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
-            } else {
+            } else
+            {
                 snapshot.terrain.resize( SEEX * SEEY );
                 for( int y = 0; y < SEEY; ++y ) {
                     for( int x = 0; x < SEEX; ++x ) {
@@ -5451,16 +5456,19 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         };
         auto snapshot_for = [&]( const tripoint_abs_sm & p ) -> const distant_terrain_snapshot * {
             const auto cached = far_cache.find( p );
-            if( cached != far_cache.end() && !here.has_loaded_submap( p ) ) {
+            if( cached != far_cache.end() && !here.has_loaded_submap( p ) )
+            {
                 touch_snapshot( cached );
                 return &cached->second;
             }
             const submap *resident = MAPBUFFER.get_submap_if_loaded( p );
             if( resident && ( cached == far_cache.end() ||
-                              cached->second.geometry_stamp != resident->geometry_stamp() ) ) {
+                              cached->second.geometry_stamp != resident->geometry_stamp() ) )
+            {
                 return capture_snapshot( p, *resident );
             }
-            if( cached != far_cache.end() ) {
+            if( cached != far_cache.end() )
+            {
                 touch_snapshot( cached );
                 return &cached->second;
             }
@@ -5576,7 +5584,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 }
                             }
                             if( gray_visible && snapshot && !uniform_open_air ) {
-                                const ter_id t = snapshot->terrain_at( lx, ly );
+                                const ter_id t = snapshot->terrain_at( point_sm_ms( lx, ly ) );
                                 if( t ) {
                                     gather_structure_tile( t.obj(), here.get_bub( abs_p ), d, wz );
                                 }

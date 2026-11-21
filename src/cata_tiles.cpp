@@ -1579,7 +1579,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         std::vector<row_sprite_entry> row_sprites;
         std::unordered_map<tripoint_abs_omt, snow_cover> snow_cover_for_cell;
         const weather_manager &weather = get_weather_const();
-        const auto ground_snow = [&]( const tripoint_bub_ms &pos ) {
+        const auto ground_snow = [&]( const tripoint_bub_ms & pos ) {
             if( !here.inbounds( pos ) ) {
                 return snow_cover::none;
             }
