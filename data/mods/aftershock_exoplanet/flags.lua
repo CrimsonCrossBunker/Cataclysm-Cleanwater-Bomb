@@ -38,3 +38,6 @@ content.add(content.JsonFlag { id = "ACTIVE_HACK_TOOL" })
 
 -- This Hacking tool does not consume energy.
 content.add(content.JsonFlag { id = "HACK_NO_CHARGE" })
+
+-- Tracks active bio_shield_* bionic state (referenced by bionics active_flags and eoc_handlers_03).
+content.add(content.JsonFlag { id = "BIO_SHIELD_ACTIVE" })

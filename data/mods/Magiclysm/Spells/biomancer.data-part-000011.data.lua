@@ -34,3 +34,17 @@ ccb.content.define_spell {
         { spell = "biomancer_baleful_polymorph_npcs", self = false },
     },
 }
+
+ccb.content.define_spell {
+    id = "biomancer_baleful_polymorph_npcs",
+    shape = "blast",
+    spell_class = "BIOMANCER",
+    magic_type = "magiclysm_transformation_magic",
+    name = ccb.content.text_without_extraction("Fleshwarping NPCs"),
+    description = ccb.content.text_without_extraction("Transform your enemies into wretches if they're NPCs."),
+    flags = { "TRANSFORMATION_SPELL", "VERBAL", "SOMATIC", "NO_LEGS", "NO_PROJECTILE" },
+    valid_targets = { "hostile" },
+    min_range = { handler = "w16b_sp_stat_magiclysm_6352c099802f", fallback = 0 },
+    max_level = 20,
+    impact_handler = "w16b_sp_imp_magiclysm_662757fed712",
+}

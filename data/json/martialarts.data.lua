@@ -1876,3 +1876,70 @@ ccb.content.define_martial_art {
         },
     },
 }
+
+ccb.content.define_martial_art {
+    id = "style_debug",
+    name = "Debug Mastery",
+    description = "A secret martial art used only by developers and cheaters.",
+    initiate = { "You get ready pwn some zeds!", "%s prepares to cheat at martial arts!" },
+    priority = 1,
+    leg_block = 99,
+    arm_block = 99,
+    techniques = { "tec_debug_slow", "tec_debug_arpen", "tec_debug_eoc_demo" },
+    static_buffs = {
+        {
+            id = "debug_elem_resist",
+            name = "Elemental Resistance",
+            description = "You are a walking tank!\n\nBash armor increased by 100% of Strength, cut armor increased by 100% of Dexterity, electric armor increased by 100% of Intelligence, and fire armor increased by 100% of Perception.",
+            unarmed_allowed = true,
+            flat_bonuses = {
+                { stat = "armor", scale = 1.0, type = "bash", scaling_stat = "str" },
+                { stat = "armor", scale = 1.0, type = "cut", scaling_stat = "dex" },
+                { stat = "armor", scale = 1.0, type = "electric", scaling_stat = "int" },
+                { stat = "armor", scale = 1.0, type = "heat", scaling_stat = "per" },
+            },
+        },
+    },
+    onmiss_buffs = {
+        {
+            id = "debug_miss_buff",
+            name = "Getting Angry",
+            description = "When I get my hands on you…\n\n+2 bash damage.\nLasts 2 turns.  Stacks 5 times.",
+            buff_duration = 2,
+            max_stacks = 5,
+            unarmed_allowed = true,
+            flat_bonuses = {
+                { stat = "damage", scale = 2.0, type = "bash" },
+            },
+        },
+    },
+    oncrit_buffs = {
+        {
+            id = "debug_crit_buff",
+            name = "Lightning Strike",
+            description = "Lightning strikes twice.\n\nElectric damage equal to 100% of Perception.\nLasts 3 turns.  Stacks 2 times.",
+            buff_duration = 3,
+            max_stacks = 2,
+            unarmed_allowed = true,
+            flat_bonuses = {
+                { stat = "damage", scale = 1.0, type = "electric", scaling_stat = "per" },
+            },
+        },
+    },
+    onkill_buffs = {
+        {
+            id = "debug_kill_buff",
+            name = "On Fire",
+            description = "YOU ARE ON FIRE!\n\n+5 fire damage.\nLasts 5 turns.",
+            buff_duration = 5,
+            unarmed_allowed = true,
+            flat_bonuses = {
+                { stat = "damage", scale = 5.0, type = "heat" },
+            },
+        },
+    },
+}
+
+ccb.content.set_martial_art_handler("style_debug", "kill", "w16b_ma_kill_dda_aed99c898b9c")
+
+ccb.content.set_martial_art_handler("style_debug", "gethit", "w16b_ma_gethit_dda_09fdc7e52b5c")

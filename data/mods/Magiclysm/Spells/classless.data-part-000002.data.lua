@@ -30,3 +30,24 @@ ccb.content.define_spell {
     difficulty = 3,
     damage_type = "light",
 }
+
+ccb.content.define_spell {
+    id = "create_atomic_light",
+    shape = "blast",
+    magic_type = "magiclysm_conjuration_magic",
+    name = "Orb of Light",
+    description = "Creates an orb of magical light that floats nearby and lets out a soft glow.  Taking any damage will disrupt the enchantment.  Recast to cancel.",
+    flags = { "CONJURATION_SPELL", "VERBAL", "NO_LEGS" },
+    valid_targets = { "self" },
+    min_duration = 100000,
+    duration_increment = 45000,
+    max_duration = 1000000,
+    base_energy_cost = { handler = "w16b_sp_stat_magiclysm_caf1330d758d", fallback = 0 },
+    difficulty = 1,
+    max_level = 20,
+    base_casting_time = 1000,
+    impact_handler = "w16b_sp_imp_magiclysm_044686a0360c",
+    extra_spells = {
+        { spell = "eoc_summon_setup", self = true },
+    },
+}

@@ -43,3 +43,44 @@ ccb.content.define_spell {
     max_range = 20,
     range_increment = 1.2,
 }
+
+ccb.content.define_spell {
+    id = "earthshaper_reveal_world_map",
+    shape = "blast",
+    spell_class = "EARTHSHAPER",
+    magic_type = "magiclysm_channeling_magic",
+    name = "Reading the Earthbones",
+    description = "You extend your senses into the ground, becoming aware of every hill and valley within a large area.  It will only work when in contact with the earth.",
+    flags = { "CHANNELING_SPELL", "NO_HANDS", "CONCENTRATE", "VERBAL" },
+    valid_targets = { "self" },
+    base_energy_cost = 1000,
+    difficulty = 8,
+    max_level = 15,
+    base_casting_time = 6000,
+    impact_handler = "w16b_sp_imp_magiclysm_e1745265d6df",
+    extra_spells = {
+        { spell = "eoc_channeling_setup", self = true },
+    },
+}
+
+ccb.content.define_spell {
+    id = "earthshaper_danger_sense",
+    shape = "blast",
+    spell_class = "EARTHSHAPER",
+    magic_type = "magiclysm_channeling_magic",
+    name = "Tremorsense",
+    description = "By sensing their movements upon the earth, you can detect nearby sources of danger.  You must maintain a connection to the earth for the spell to function.",
+    flags = { "CHANNELING_SPELL", "CONCENTRATE", "SOMATIC", "VERBAL", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    min_duration = 0,
+    duration_increment = 30000,
+    max_duration = 300000,
+    base_energy_cost = 350,
+    difficulty = 3,
+    max_level = 10,
+    base_casting_time = 400,
+    impact_handler = "w16b_sp_imp_magiclysm_3ef0816f7d17",
+    extra_spells = {
+        { spell = "eoc_channeling_setup", self = true },
+    },
+}

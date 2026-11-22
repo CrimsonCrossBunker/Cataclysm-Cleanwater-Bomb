@@ -111,3 +111,85 @@ ccb.content.define_item {
     use_actions = { "PAPR_MASK_ACTIVATE" },
     tick_actions = { "PAPR_MASK" },
 }
+
+ccb.content.define_item {
+    id = "military_papr_mask_gasmask",
+    copy_from = "military_papr_mask",
+    name = ccb.content.plural_text("military respirator mask (filter)", "military respirator masks (filter)"),
+    description = "A black, full-face military respirator made from a silicon and butyl rubber blend, providing decent user comfort in addition to a clear field of view and a secure fit thanks to the mask's single-element visor and 6-point head harness.  This mask is configured for two modes: negative-pressure, using standard CBRN gas mask filter canisters; and positive-pressure, with built-in hardware to accommodate either a powered air-purifying respirator (PAPR) or a self-contained breathing apparatus (SCBA).  Once activated it will comfortably protect against chemical, biological, radiological, and nuclear threats.  It is currently in negative-pressure mode, so will only function with an installed and prepared CBRN gas mask canister.",
+    category = "clothing",
+    looks_like = "mask_gas",
+    flags = { "SLEEP_IGNORE", "VARSIZE", "PADDED" },
+    use_actions = {
+        "GASMASK_ACTIVATE",
+        {
+            kind = "transform",
+            target = "military_papr_mask_asr",
+            message = "You switch airflow to the SCBA regulator.",
+            menu_text = "Switch to SCBA mode",
+        },
+    },
+    tick_actions = { "GASMASK" },
+    tool = { ammo_types = "gasfilter_m" },
+    armor = {
+        portions = {
+            {
+                covers = { "head" },
+                subparts = { "head_crown", "head_nape" },
+                layers = { "SKINTIGHT" },
+                coverage = 25,
+                volume_encumbrance = 0,
+                encumbrance = 0,
+                materials = {
+                    { id = "cotton", thickness = 0.2, coverage = 100 },
+                },
+            },
+            {
+                covers = { "head" },
+                subparts = { "head_forehead" },
+                layers = { "SKINTIGHT" },
+                coverage = 100,
+                volume_encumbrance = 0,
+                encumbrance = 20,
+                materials = {
+                    { id = "butyl_rubber", thickness = 2, coverage = 100 },
+                },
+            },
+            {
+                covers = { "eyes" },
+                layers = { "SKINTIGHT", "NORMAL" },
+                coverage = 100,
+                rigid_only = true,
+                volume_encumbrance = 0,
+                encumbrance = 10,
+                materials = {
+                    { id = "hard_plastic_transp", thickness = 2, coverage = 100 },
+                },
+            },
+            {
+                covers = { "mouth" },
+                subparts = { "mouth_lips", "mouth_nose", "mouth_chin" },
+                layers = { "SKINTIGHT", "NORMAL" },
+                coverage = 100,
+                encumbrance = { 20, 40 },
+                materials = {
+                    { id = "butyl_rubber", thickness = 2, coverage = 100 },
+                    { id = "plastic", thickness = 1, coverage = 30 },
+                },
+            },
+            {
+                covers = { "mouth" },
+                subparts = { "mouth_cheeks" },
+                layers = { "SKINTIGHT", "NORMAL" },
+                coverage = 100,
+                volume_encumbrance = 0,
+                encumbrance = 10,
+                materials = {
+                    { id = "butyl_rubber", thickness = 2, coverage = 100 },
+                    { id = "plastic", thickness = 1, coverage = 25 },
+                },
+            },
+        },
+    },
+    subtype_order = { "tool", "armor" },
+}

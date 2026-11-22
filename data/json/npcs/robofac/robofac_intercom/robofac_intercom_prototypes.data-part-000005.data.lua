@@ -2,6 +2,8 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+
+
 ccb.content.define_dialogue_topic {
     id = "TALK_ROBOFAC_INTERCOM_ARMOR_REQUEST",
     line = ccb.content.text("Understood.  The parts will finish fabrication in 24 hours, once you hand over the stipulated HGC.  Depending on our currently available selection, the price will range from 2 to 4 HGC for non-specialty equipment."),
@@ -189,6 +191,51 @@ ccb.content.define_dialogue_topic {
             next_topic = "TALK_ROBOFAC_INTERCOM_REPAIR_STARTED_SHORT",
             when = predicates.has_inventory("speaker", "RobofacCoin", 10),
             actions = { actions.handler("dlg_a_dda_b9f5c369fc72"), actions.adjust_faction_trust(1), actions.handler("dlg_a_dda_29d31aae2139"), actions.set_actor_value("speaker", "dialogue_hub_rnd_u_project_ongoing", "yes"), actions.set_actor_value("speaker", "dialogue_hub_rnd_u_current_project", "resonance_suit") },
+        },
+        {
+            text = ccb.content.text("What about another project?"),
+            next_topic = "TALK_ROBOFAC_INTERCOM_PROTOTYPE_MENU",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ROBOFAC_INTERCOM_ARMOR_BREAKTHROUGH",
+    line = {
+        when = predicates.handler("w16b_p_dda_1a48db796a76"),
+        yes = ccb.content.text("Yes we have!  The disk contained the configuration necessary to print our armors with a much more resilient composite than was previously available to us, without sacrificing any maneuverability.  As a form of payment, we are willing to provide you with the first functional models of the armor at a good price - six HGC.  While that may seem steep, the materials used are very high-end, and six coins just barely covers the production cost alone.  If you are unwilling or incapable of filling that price now, the offer will remain available indefinitely - just let us know when you'd like it.\"\n\n\"Should you find anything else of interest in the world, please bring it to us.  We would be happy to collaborate like this again in the future."),
+        no = ccb.content.text("Not yet.  The contents are very strongly encrypted, so simply pulling the data is impossible.  Work is underway to deduce the correct access key, but even with our facilities, it will take some time."),
+    },
+    on_enter = {
+        { when = predicates.handler("w16b_p_dda_1a48db796a76"), actions = { actions.clear_actor_value("speaker", "dialogue_hub_rnd_u_project_ongoing"), actions.set_actor_value("speaker", "dialogue_hub_rnd_u_can_buy_armor", "yes"), actions.handler("w16b_a_dda_b5a2696d95dd") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("[6 HGC] Let's see what this armor is capable of."),
+            next_topic = "TALK_ROBOFAC_INTERCOM_SERVICES",
+            when = predicates.handler("w16b_p_dda_7ece59ddc907"),
+            actions = { actions.handler("w16b_a_dda_64a68bf9b5df") },
+        },
+        {
+            text = ccb.content.text("What about another project?"),
+            next_topic = "TALK_ROBOFAC_INTERCOM_PROTOTYPE_MENU",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ROBOFAC_INTERCOM_ARMOR_FINISHED",
+    line = {
+        when = predicates.handler("w16b_p_dda_55a9c64ca06c"),
+        yes = ccb.content.text("Yes, we've finished printing the requested armor pieces.  Transferring to you now."),
+        no = ccb.content.text("The parts are still being printed.  Please be patient."),
+    },
+    replies = {
+        {
+            text = ccb.content.text("Sweet, thanks."),
+            next_topic = "TALK_ROBOFAC_INTERCOM_SERVICES",
+            when = predicates.handler("w16b_p_dda_55a9c64ca06c"),
+            actions = { actions.handler("w16b_a_dda_b6833dfd9ade"), actions.clear_actor_value("speaker", "dialogue_hub_rnd_u_project_ongoing"), actions.clear_actor_value("speaker", "dialogue_hub_rnd_u_armor_type"), actions.clear_actor_value("speaker", "timer_hub_rnd_u_waiting_on_hub") },
         },
         {
             text = ccb.content.text("What about another project?"),

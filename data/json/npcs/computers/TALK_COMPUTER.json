@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_REFUGEE_CENTER_COMPUTER",
-    "type": "effect_on_condition",
-    "effect": [ "open_dialogue" ]
-  }
-]

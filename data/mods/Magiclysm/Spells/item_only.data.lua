@@ -21,3 +21,23 @@ ccb.content.define_spell {
     effect = "summon",
     effect_data = "mon_mag_stag_beetle",
 }
+
+ccb.content.define_spell {
+    id = "forge_teleport",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Forge Teleport"),
+    description = ccb.content.text_without_extraction("Travel to the forge marking your return point in the process."),
+    valid_targets = { "self" },
+    base_casting_time = 30000,
+    impact_handler = "w16b_sp_imp_magiclysm_c6964f19fa6f",
+}
+
+ccb.content.define_spell {
+    id = "forge_return_teleport",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Forge Return Teleport"),
+    description = ccb.content.text_without_extraction("Travel back to your saved forge return point."),
+    valid_targets = { "self" },
+    base_casting_time = 30000,
+    impact_handler = "w16b_sp_imp_magiclysm_5b9cd920bb87",
+}

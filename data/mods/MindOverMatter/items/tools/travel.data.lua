@@ -10,3 +10,49 @@ ccb.content.define_item {
     tool = {},
     use_actions = {},
 }
+
+ccb.content.define_item {
+    id = "psionic_transporter_remote_on",
+    copy_from = "psionic_transporter_remote",
+    name = ccb.content.plural_text("transporter remote (searching)", "transporter remote (searching)"),
+    description = "A blocky item, like an old feature cellphone crossed with a radio.  A matrix channeling array is sticking out of the side like an antenna.  There is a small screen on the front, currently running what looks like a series of mathematical calculations.",
+    symbol = ";",
+    color = "blue",
+    mass = "500 g",
+    volume = "350 ml",
+    length = "15 cm",
+    price = "90 USD",
+    survival_price = "1 USD",
+    revert_to = "psionic_transporter_remote",
+    flags = { "TRADER_AVOID", "WATER_BREAK", "ELECTRONIC", "SPAWN_ACTIVE" },
+    materials = {
+        { id = "plastic", portions = 85 },
+        { id = "steel", portions = 10 },
+        { id = "nether_crystal", portions = 5 },
+    },
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            default_magazine = "light_battery_cell",
+            rigid = true,
+            allowed_flags = { "BATTERY_LIGHT", "BATTERY_ULTRA_LIGHT" },
+        },
+    },
+    faults = {
+        { group = "electronic_general" },
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            target = "psionic_transporter_remote",
+            ammo_scale = 0,
+            message = "You turn off the %s.",
+            menu_text = "Turn off",
+        },
+    },
+    tool = {
+        charges_per_use = 1,
+        power_draw = "25000 mW",
+        ammo_types = { "battery" },
+    },
+}

@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_TRAIN_DATA_COMPUTER",
-    "type": "effect_on_condition",
-    "effect": [ "open_dialogue" ]
-  }
-]

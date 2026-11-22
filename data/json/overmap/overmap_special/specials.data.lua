@@ -1559,3 +1559,74 @@ ccb.content.define_fixed_overmap_special {
     priority = 1,
     flags = { "MAN_MADE", "GLOBALLY_UNIQUE" },
 }
+
+ccb.content.define_fixed_overmap_special {
+    id = "Barry's Mi-Go Scout Tower",
+    locations = { "wilderness" },
+    city_distance = { 5, -1 },
+    city_sizes = { 0, 20 },
+    flags = { "MI-GO", "WILDERNESS", "GLOBALLY_UNIQUE", "SAFE_AT_WORLDGEN" },
+    tiles = {
+        {
+            point = { 0, 0, 0 },
+            terrain = "barry_mi-go_scout_tower_1_north",
+        },
+        {
+            point = { 0, 0, 1 },
+            terrain = "barry_mi-go_scout_tower_2_north",
+        },
+        {
+            point = { 0, 0, 2 },
+            terrain = "barry_mi-go_scout_tower_3_north",
+        },
+        {
+            point = { 0, 0, 3 },
+            terrain = "barry_mi-go_scout_tower_4_north",
+        },
+        {
+            point = { 0, 1, 0 },
+            terrain = "isherwood_barry_rescue_field",
+        },
+        {
+            point = { 1, 1, 0 },
+            terrain = "field",
+        },
+        {
+            point = { -1, 1, 0 },
+            terrain = "field",
+        },
+        {
+            point = { 1, 0, 0 },
+            terrain = "field",
+        },
+        {
+            point = { -1, 0, 0 },
+            terrain = "field",
+        },
+        {
+            point = { 0, -1, 0 },
+            terrain = "field",
+        },
+        {
+            point = { 1, -1, 0 },
+            terrain = "field",
+        },
+        {
+            point = { -1, -1, 0 },
+            terrain = "field",
+        },
+    },
+    connections = {
+        {
+            point = { -2, 2, 0 },
+            terrain = "road",
+            connection = "local_road",
+        },
+    },
+    spawns = {
+        group = "GROUP_MI-GO_CAMP_OM",
+        population = { 2, 5 },
+        radius = { 2, 30 },
+    },
+    occurrences = ccb.content.is_mod_active("innawood") and { 0, 0 } or { 70, 100 },
+}

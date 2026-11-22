@@ -1,5 +1,8 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
 local predicates = ccb.content.dialogue_predicates
+
+
 
 ccb.content.define_dialogue_topic {
     id = "TALK_NPC_LUMBERMILL_LOGGER_STORY",
@@ -22,4 +25,39 @@ ccb.content.define_dialogue_topic {
         },
     },
     replies = { { text = ccb.content.text("Hope it goes well."), next_topic = "TALK_NONE" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_NPC_LUMBERMILL_LOGGER_INTRO",
+    line = ccb.content.text("Do you need something?"),
+    replies = {
+        {
+            text = ccb.content.text("What's your story?"),
+            next_topic = "TALK_NPC_LUMBERMILL_LOGGER_STORY",
+        },
+        {
+            text = ccb.content.text("I'd like to ask you a few questions."),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+            when = predicates.handler("w16b_p_dda_13cced564466"),
+        },
+        {
+            text = ccb.content.text("I'm looking for a specific, strange building.  I wonder if you've heard anything about it?"),
+            next_topic = "TALK_NPC_LUMBERMILL_LOGGER_MISSION_WAREHOUSE",
+            when = predicates.all({ predicates.has_mission("EXODII_MISSION_WAREHOUSE"), predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "asked_about_exodii_warehouse_mission" } })) }),
+            actions = { actions.handler("w16b_a_dda_9812bef589e2") },
+        },
+        {
+            text = ccb.content.text("How do things work around here now?"),
+            next_topic = "TALK_NPC_LUMBERMILL_LOGGER_TALK_TO_MANAGER",
+        },
+        {
+            text = ccb.content.text("Any jobs you need done?"),
+            next_topic = "TALK_MISSION_LIST",
+            when = predicates.all({ predicates.negate(predicates.assigned_missions(1, 1)), predicates.negate(predicates.assigned_missions(2)) }),
+        },
+        {
+            text = ccb.content.text("Nah, see ya."),
+            next_topic = "TALK_DONE",
+        },
+    },
 }

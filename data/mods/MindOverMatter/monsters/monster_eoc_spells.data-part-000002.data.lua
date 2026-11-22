@@ -34,3 +34,58 @@ ccb.content.define_spell {
     targeted_species = { "ZOMBIE", "FERAL" },
     ignored_species = { "PSI_NULL" },
 }
+
+ccb.content.define_spell {
+    id = "hidebehind_apply_obscurity_power",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Hidebehind Obscurity enemy check"),
+    description = ccb.content.text_without_extraction("Preps for using Obscurity when a hostile target is detected."),
+    flags = {
+        "SILENT",
+        "NO_HANDS",
+        "NO_LEGS",
+        "NO_PROJECTILE",
+        "NO_EXPLOSION_SFX",
+        "MUST_HAVE_CLASS_TO_LEARN",
+        "HIDDEN_SPELL",
+    },
+    valid_targets = { "hostile" },
+    min_range = 60,
+    max_range = 60,
+    max_level = 1,
+    impact_handler = "w16b_sp_imp_mindovermatter_acd103bac23e",
+}
+
+ccb.content.define_spell {
+    id = "teleporter_breach_lab_devourer",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "TELEPORTER",
+    name = ccb.content.text_without_extraction("[Ψ]Breach Melded Task Force"),
+    description = ccb.content.text_without_extraction("Open a portal to the Nether and summon monsters, if you're also a monster.  This will not end badly for you because they're all on your side."),
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "CONCENTRATE", "SILENT", "NO_HANDS", "NO_LEGS" },
+    valid_targets = { "self", "hostile" },
+    min_damage = 1,
+    min_range = 5,
+    range_increment = 1,
+    max_range = 80,
+    max_level = 30,
+    impact_handler = "w16b_sp_imp_mindovermatter_e35fce980f9f",
+}
+
+ccb.content.define_spell {
+    id = "amalgamation_telekinetic_shielder_shield_other_spell",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Inertial Barrier Guardian Amalgamation Shield Detector"),
+    description = ccb.content.text_without_extraction("Preps for using Inertial Barrier when a hostile target is detected."),
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "NO_PROJECTILE", "MUST_HAVE_CLASS_TO_LEARN" },
+    valid_targets = { "hostile" },
+    min_damage = 0,
+    max_damage = 0,
+    min_range = 20,
+    max_range = 20,
+    max_level = 1,
+    impact_handler = "w16b_sp_imp_mindovermatter_6c77438a9689",
+}

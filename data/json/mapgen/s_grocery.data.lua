@@ -845,3 +845,29 @@ ccb.content.define_mapgen {
         terrain = { ["+"] = "t_door_boarded", [":"] = "t_window_boarded" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "s_grocery",
+    layout = {
+        fill_terrain = { parameter = "linoleum_color", fallback = "t_linoleum_white" },
+        nested = {
+            {
+                choices = {
+                    {
+                        id = "s_grocery_unlooted",
+                        weight = { global = "s_grocery_unlooted_weight", fallback = 250 },
+                    },
+                    { id = "s_grocery_empty", weight = 500 },
+                    {
+                        id = "s_grocery_looted",
+                        weight = { global = "s_grocery_looted_weight", fallback = 250 },
+                    },
+                },
+                x = 0,
+                y = 0,
+            },
+        },
+        palettes = { "grocery_store_palette" },
+    },
+}

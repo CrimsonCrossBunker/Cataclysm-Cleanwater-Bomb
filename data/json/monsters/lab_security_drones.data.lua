@@ -122,3 +122,19 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_spell {
+    id = "green_maintenance_check",
+    shape = "line",
+    name = ccb.content.text_without_extraction("Green Maintenance Badge Trait"),
+    description = ccb.content.text_without_extraction("Adds trait for badge check."),
+    message = "the drone scans for your ID badge.",
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "hostile" },
+    min_damage = 10000,
+    max_damage = 10000,
+    min_range = 15,
+    max_range = 15,
+    max_level = 1,
+    impact_handler = "w16b_sp_imp_dda_4f13e241e51a",
+}

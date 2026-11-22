@@ -25,3 +25,23 @@ ccb.content.define_spell {
     shape = "blast",
     effect = "attack",
 }
+
+ccb.content.define_spell {
+    id = "animist_slow_food_rotting_spell",
+    components = "spell_components_slow_food_rotting",
+    shape = "blast",
+    spell_class = "ANIMIST",
+    magic_type = "magiclysm_enhancement_magic",
+    name = "Abjure Spirits of Rot",
+    description = "Placing a warding on food or drink, preventing the spirits of decay from nesting within it.  The mage may affect as much food or drink as they can carry.  The principles by which this spell functions were not discovered until the 20th century, but some animists maintain that radiation is frightening to decay spirits.",
+    flags = { "ENHANCEMENT_SPELL", "CONCENTRATE", "VERBAL", "SOMATIC" },
+    valid_targets = { "self" },
+    base_energy_cost = 550,
+    difficulty = 5,
+    max_level = 15,
+    base_casting_time = 90000,
+    impact_handler = "w16b_sp_imp_magiclysm_3a6825a92341",
+    extra_spells = {
+        { spell = "eoc_enhancement_setup", self = true },
+    },
+}

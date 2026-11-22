@@ -1,0 +1,126 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "null_break_concentration_spell",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("[Ψ]Breaker end powers"),
+    description = ccb.content.text_without_extraction("Breaker's power that ends concentration.  It's a bug if you have it."),
+    flags = { "NO_PROJECTILE", "NO_EXPLOSION_SFX" },
+    valid_targets = { "hostile" },
+    min_damage = 1,
+    max_damage = 2,
+    min_range = 25,
+    max_level = 1,
+    impact_handler = "w16b_sp_imp_mindovermatter_ec64e1dc6ea8",
+}
+
+ccb.content.define_spell {
+    id = "clairsentient_discern_weakness_monster",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("[Ψ]Discern Weakness Triffid"),
+    description = ccb.content.text_without_extraction("The triffid lays your weak points bare and shares them with others through the heartmind.  It's a bug if you have this."),
+    message = "",
+    teachable = false,
+    flags = {
+        "CONCENTRATE",
+        "SILENT",
+        "NO_HANDS",
+        "NO_LEGS",
+        "IGNORE_WALLS",
+        "RANDOM_DURATION",
+        "NO_EXPLOSION_SFX",
+    },
+    valid_targets = { "hostile" },
+    min_range = 3,
+    range_increment = 1,
+    max_range = 100,
+    max_level = 100,
+    impact_handler = "w16b_sp_imp_mindovermatter_78768132e537",
+}
+
+ccb.content.define_spell {
+    id = "teleporter_triffid_summon_allies",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("[Ψ]Teleporter Triffid Summon Allies"),
+    description = ccb.content.text_without_extraction("The triffid uses its connection to the heartmind to teleport in guards around an intruder.  If you see this, it's a bug."),
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "CONCENTRATE", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "hostile" },
+    min_range = 3,
+    range_increment = 1,
+    max_range = 23,
+    max_level = 20,
+    impact_handler = "w16b_sp_imp_mindovermatter_dfc2bbf9a0c3",
+}
+
+ccb.content.define_spell {
+    id = "electrokinetic_paralysis_monster",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("[Ψ]Neural Spasms Monster"),
+    description = ccb.content.text_without_extraction("Cause an electrical burst in the target's nervous system, stunning them briefly."),
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "CONCENTRATE", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "hostile", "ally" },
+    min_range = 3,
+    range_increment = 1,
+    max_range = 23,
+    min_duration = 150,
+    max_duration = 400,
+    max_level = 20,
+    impact_handler = "w16b_sp_imp_mindovermatter_d5b58d782a67",
+}
+
+ccb.content.define_spell {
+    id = "electrokinetic_power_draining",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("[Ψ]Electrokinetic Power Draining Spell"),
+    description = ccb.content.text_without_extraction("The monster uses its powers to suck the energy out of battery devices.  If you see this, it's a bug."),
+    message = "",
+    teachable = false,
+    flags = {
+        "PSIONIC",
+        "CONCENTRATE",
+        "SILENT",
+        "NO_HANDS",
+        "NO_LEGS",
+        "RANDOM_AOE",
+        "IGNORE_WALLS",
+    },
+    valid_targets = { "self", "ally", "hostile" },
+    min_range = 0,
+    max_range = 0,
+    min_aoe = 5,
+    max_aoe = 25,
+    max_level = 20,
+    impact_handler = "w16b_sp_imp_mindovermatter_f76349762c25",
+}
+
+ccb.content.define_spell {
+    id = "eater_drain_monster",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("[Ψ]Essence Drain"),
+    description = ccb.content.text_without_extraction("Eater's draining attack.  It's a bug if you have it."),
+    message = "",
+    flags = { "NO_EXPLOSION_SFX" },
+    valid_targets = { "hostile" },
+    min_range = 30,
+    difficulty = 1,
+    max_level = 20,
+    impact_handler = "w16b_sp_imp_mindovermatter_387ee7a2aac4",
+}
+
+ccb.content.define_spell {
+    id = "eater_drain_monster_close_range",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("[Ψ]Essence Drain"),
+    description = ccb.content.text_without_extraction("Eater's draining attack.  It's a bug if you have it."),
+    message = "",
+    flags = { "NO_PROJECTILE", "NO_EXPLOSION_SFX" },
+    valid_targets = { "hostile" },
+    min_range = 30,
+    difficulty = 1,
+    max_level = 20,
+    impact_handler = "w16b_sp_imp_mindovermatter_387ee7a2aac4",
+}

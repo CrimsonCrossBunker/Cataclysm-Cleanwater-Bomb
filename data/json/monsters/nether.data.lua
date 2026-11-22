@@ -1,0 +1,45 @@
+local ccb = require("ccb")
+
+ccb.content.define_monster {
+    id = "mon_amigara_horror",
+    name = "amigara horror",
+    description = "A hellish, vaguely humanoid horror, two stories tall.  Its face is grotesquely stretched out, its limbs deformed to unrecognizable outgrowths.",
+    default_faction = "amigara",
+    symbol = "&",
+    body_type = "human",
+    color = "white",
+    volume = "108500 ml",
+    mass = "120 kg",
+    harvest = "demihuman",
+    dissect = "dissect_human_sample_single",
+    difficulty_adjustment = 5,
+    hp = 250,
+    speed = 70,
+    aggression = 100,
+    morale = 100,
+    melee_skill = 7,
+    melee_dice = 2,
+    melee_sides = 4,
+    dodge = 2,
+    bleed_rate = 50,
+    flags = { "SMELLS", "HEARS", "SEES", "STUMBLES", "HARDTOSHOOT" },
+    species = { "HORROR" },
+    weakpoint_sets = { "wps_humanoid_body", "wps_eyes" },
+    families = { "prof_gross_anatomy", "prof_intro_biology", "prof_physiology" },
+    materials = { "flesh" },
+    armor = { electric = 1 },
+    melee_damage = {
+        { type = "cut", amount = 2 },
+    },
+    attacks = {
+        {
+            kind = "spell",
+            cooldown = 0,
+            spell = { id = "fear_paralyze" },
+            casting_message = "",
+        },
+    },
+    death = {
+        outcome = { on_death = "w16b_mon_die_dda_349bae35910e" },
+    },
+}

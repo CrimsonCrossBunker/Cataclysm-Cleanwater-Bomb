@@ -33,3 +33,20 @@ ccb.content.define_dialogue_topic {
     line = ccb.content.text("ERROR ACCESSING SERVER"),
     replies = { { text = ccb.content.text("RETURN TO PREVIOUS PAGE"), next_topic = "COMP_SHILLS_BRANCH" } },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "shills_branch_manager",
+    layout = {
+        size = { width = 1, height = 1 },
+        computer_placements = {
+            {
+                x = 0,
+                y = 0,
+                name = "Shady Hills Corporation: Branch Manager",
+                chat_topics = { "COMP_SHILLS_BRANCH" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

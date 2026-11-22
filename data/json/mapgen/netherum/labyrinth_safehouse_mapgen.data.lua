@@ -364,3 +364,48 @@ ccb.content.define_mapgen {
         flags = { "NO_UNDERLYING_ROTATE", "ALLOW_TERRAIN_UNDER_OTHER_DATA" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "labyrinth_safehouse" },
+    layout = {
+        fill_terrain = "t_nl_chasm_no_trap",
+        rows = {
+            " ***                    ",
+            " *T#                    ",
+            "**O##                   ",
+            "*...#                   ",
+            "*f..#                   ",
+            "*B..#                   ",
+            "*####                   ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+        },
+        palettes = { "labyrinthine_safehouse_palette" },
+        item_spawns = {
+            f = { id = "kipple_object" },
+        },
+        computer_glyphs = {
+            T = {
+                name = "bulbous console",
+                chat_topics = { "COMP_labyrinthine_safehouse_computer" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

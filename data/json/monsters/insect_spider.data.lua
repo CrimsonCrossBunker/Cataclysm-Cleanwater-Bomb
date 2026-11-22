@@ -572,3 +572,26 @@ ccb.content.define_monster {
     upgrade = { grow_at_age = 14, monster = "mon_water_scorpion" },
     inheritance = { scale = { hp = 0.5, speed = 1.1, morale = 0.67, melee_sides = 0.67 } },
 }
+
+ccb.content.define_monster {
+    id = "mon_silverfish_small",
+    name = ccb.content.plural_text("oversized silverfish", "oversized silverfish"),
+    description = "An oversized mutated silverfish the size of a small dog.",
+    copy_from = "mon_silverfish",
+    volume = "15 L",
+    mass = "15 kg",
+    zombify_into = "mon_meat_cocoon_tiny",
+    hp = 23,
+    upgrade = { grow_at_age = 30, monster = "mon_silverfish" },
+    inheritance = {
+        add = {
+            flags = { "NO_BREED" },
+        },
+        scale = {
+            speed = 1.1,
+            morale = 0.67,
+            melee_sides = 0.67,
+            armor = { bash = 0.45, cut = 0.45, bullet = 0.45 },
+        },
+    },
+}

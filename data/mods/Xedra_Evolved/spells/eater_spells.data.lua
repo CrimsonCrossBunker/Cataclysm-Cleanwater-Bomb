@@ -551,3 +551,33 @@ ccb.content.define_spell {
         { spell = "eat_dreamdross_fun_3" },
     },
 }
+
+ccb.content.define_spell {
+    id = "eat_dreamdross_fun_1",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Eat dreamdross mood effect T1"),
+    description = ccb.content.text_without_extraction("Boost your mood from consuming dreamdross.  Tier 1 effect."),
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_xedra_evolved_9a9b91620250",
+}
+
+ccb.content.define_spell {
+    id = "eat_dreamdross_fun_2",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Eat dreamdross mood effect T2"),
+    description = ccb.content.text_without_extraction("Boost your mood from consuming dreamdross.  Tier 2 effect."),
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_xedra_evolved_bf277fe7a463",
+}
+
+ccb.content.define_spell {
+    id = "eat_dreamdross_fun_3",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Eat dreamdross mood effect T3"),
+    description = ccb.content.text_without_extraction("Boost your mood from consuming dreamdross.  Tier 3 effect."),
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_xedra_evolved_92227d901c7f",
+}

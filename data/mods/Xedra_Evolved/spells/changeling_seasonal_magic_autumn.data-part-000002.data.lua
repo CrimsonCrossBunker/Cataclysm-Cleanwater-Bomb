@@ -113,3 +113,25 @@ ccb.content.define_spell {
     max_level = 1,
     base_casting_time = 350,
 }
+
+ccb.content.define_spell {
+    id = "changeling_autumn_time_fells_mighty_warrior",
+    skill = "gramarye",
+    components = "spell_components_changeling_dreamsparks_3",
+    shape = "blast",
+    spell_class = "CHANGELING_SEASONAL_MAGIC_AUTUMN",
+    magic_type = "xe_fey_seasonal_magick_autumn",
+    name = "Time Fells the Mightiest Warrior",
+    description = "The greatest swordsman in the world may win ten thousand duels, but they are powerless against their own mortality.  This glamour cripples the target's martial skill, rendering even a peerless warrior no more dangerous than a newborn infant.  The duration is <color_green>greatly increased</color> in autumn.",
+    teachable = false,
+    flags = { "VERBAL", "SOMATIC", "RANDOM_DURATION", "NO_LEGS" },
+    valid_targets = { "ally", "hostile" },
+    min_range = 10,
+    min_duration = { handler = "w16b_sp_stat_xedra_evolved_fce668083c0a", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_xedra_evolved_0bcd24d5f95b", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_xedra_evolved_1d34c24ee23a", fallback = 0 },
+    difficulty = 9,
+    max_level = 1,
+    base_casting_time = 175,
+    impact_handler = "w16b_sp_imp_xedra_evolved_7406d58a4c44",
+}

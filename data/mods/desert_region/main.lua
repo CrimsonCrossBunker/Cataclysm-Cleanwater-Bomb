@@ -19,3 +19,5 @@ require("map_weights")
 
 require("overmap_connections")
 require("tileset")
+require("eoc_runtime")
+require("eoc_items")

@@ -2300,3 +2300,37 @@ ccb.content.define_mapgen {
         liquid_glyphs = { ["Я"] = { id = "water_clean", amount = { 0, 50 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ret_comm_office",
+    layout = {
+        size = { width = 1, height = 1 },
+        computer_placements = {
+            {
+                x = 0,
+                y = 0,
+                name = "Shady Hills Corporation: Community Manager",
+                chat_topics = { "COMP_RET_COMM_OFFICE" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ret_comm_home",
+    layout = {
+        size = { width = 1, height = 1 },
+        computer_placements = {
+            {
+                x = 0,
+                y = 0,
+                name = "Welcome to MY PC",
+                chat_topics = { "COMP_RET_COMM_HOME" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

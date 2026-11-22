@@ -141,3 +141,22 @@ ccb.content.define_spell {
     min_range = { handler = "wave14a_xedra_evolved_stat_408", fallback = 0 },
     max_range = { handler = "wave14a_xedra_evolved_stat_408", fallback = 0 },
 }
+
+ccb.content.define_spell {
+    id = "dream_drainer_maker",
+    skill = "deduction",
+    shape = "blast",
+    spell_class = "NONE",
+    name = ccb.content.text_without_extraction("Create the dream-drainer"),
+    description = ccb.content.text_without_extraction("This spell is used by the catalyst to summon the dream-drainer.  It's not intended to be known by the player."),
+    message = "",
+    teachable = false,
+    flags = { "NO_HANDS", "SILENT", "NO_FAIL" },
+    valid_targets = { "hostile", "ally" },
+    targeted_monsters = { "mon_mosquito_small", "mon_mosquito_giant", "mon_mosquito_mega", "mon_mosquito_larva" },
+    min_range = 5,
+    max_range = 5,
+    difficulty = 0,
+    base_casting_time = 5,
+    impact_handler = "w16b_sp_imp_xedra_evolved_47a46d654d4d",
+}

@@ -65,3 +65,46 @@ ccb.content.define_monster {
     armor = { bash = 8, cut = 5, bullet = 4, electric = 2 },
     inheritance = { add = { flags = { "NIGHT_INVISIBILITY" } } },
 }
+
+ccb.content.define_monster {
+    id = "mon_zombie_brute",
+    name = "zombie brute",
+    description = "This zombie's entire body bulges with distended muscles and swollen, festering wounds.",
+    copy_from = "mon_zombie_base",
+    color = "red",
+    volume = "100 L",
+    mass = "135 kg",
+    fungalize_into = "mon_zombie_brute_dusted",
+    burn_into = "mon_zombie_scorched_brute",
+    difficulty_adjustment = 2,
+    hp = 120,
+    speed = 105,
+    melee_dice = 2,
+    melee_sides = 10,
+    grab_strength = 30,
+    bleed_rate = 50,
+    vision_night = 4,
+    species = { "ZOMBIE" },
+    scents_tracked = { "sc_human", "sc_fetid" },
+    armor = { bash = 4, cut = 6, bullet = 5, electric = 2 },
+    melee_damage = {
+        { type = "bash", amount = 6, penetration = 6 },
+    },
+    upgrade = { half_life = 168, monster_group = "GROUP_ZOMBIE_BRUTE" },
+    revive_forms = {
+        { monster = "mon_fungal_mound_large", when = "w16b_rev_dda_8cdff51a3b28" },
+    },
+    inheritance = {
+        add = {
+            flags = { "SMELLS", "PUSH_VEH" },
+            weakpoint_sets = { "wps_humanoid_head_small" },
+            attacks = {
+                { id = "staggering_blow" },
+                { id = "smash", throw_strength = 72, cooldown = 30, when = "w16b_mon_when_dda_68e95bb7065a" },
+            },
+        },
+        remove = {
+            flags = { "STUMBLES" },
+        },
+    },
+}

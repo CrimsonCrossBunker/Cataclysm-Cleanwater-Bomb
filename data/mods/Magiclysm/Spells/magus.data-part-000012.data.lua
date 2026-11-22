@@ -97,3 +97,23 @@ ccb.content.define_spell {
     max_duration = 2500,
     duration_increment = 100,
 }
+
+ccb.content.define_spell {
+    id = "magus_diamond_imbuement",
+    components = "spell_components_diamond_imbuement",
+    shape = "blast",
+    spell_class = "MAGUS",
+    magic_type = "magiclysm_enhancement_magic",
+    name = "Diamond Imbuement",
+    description = "Magically infuse a melee weapon with the hardness and resilience of a diamond as well as its industrial cutting capability, making it supremely sharp and durable.  However, like a diamond, any damage the weapon suffers afterwards cannot be repaired.",
+    flags = { "ENHANCEMENT_SPELL", "CONCENTRATE", "VERBAL", "NO_HANDS" },
+    valid_targets = { "self" },
+    base_energy_cost = 900,
+    difficulty = 8,
+    max_level = 15,
+    base_casting_time = 180000,
+    impact_handler = "w16b_sp_imp_magiclysm_0ce87083a8db",
+    extra_spells = {
+        { spell = "eoc_channeling_setup", self = true },
+    },
+}

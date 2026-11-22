@@ -208,7 +208,7 @@ local stop_drizzle = "end_goblin_fruit_drizzle"
 
 ccb.runtime.handler("eat_weeping_goblin_fruit", function(context)
     local character = context.character
-    if services.weather.current().precise.temperature.value <= rain_threshold_kelvin then
+    if services.weather.current().precise.temperature:value("kelvin") <= rain_threshold_kelvin then
         message(character, ccb.services.translate("A few droplets fall from the sky, but nothing more happen."), "info")
         return
     end

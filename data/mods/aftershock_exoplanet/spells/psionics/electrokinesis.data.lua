@@ -95,3 +95,106 @@ ccb.content.define_spell {
     max_level = { handler = "wave14a_aftershock_exoplanet_stat_3", fallback = 0 },
     base_casting_time = 1500,
 }
+
+ccb.content.define_spell {
+    id = "afs_electrokinetic_see_electric",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "AFS_ELECTROKINETIC",
+    magic_type = "aftershock_psionics",
+    name = "[Ψ]Spark Sight (C)",
+    description = "Open your senses to the flow of electricity, revealing nearby electrical creatures or robots.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_3bc4670dab17",
+        fallback = 0,
+    },
+    max_duration = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_0c54f04c794b",
+        fallback = 0,
+    },
+    base_energy_cost = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_127b6da29cdb",
+        fallback = 0,
+    },
+    difficulty = 2,
+    max_level = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_47a6ac95789b",
+        fallback = 0,
+    },
+    base_casting_time = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_9ea528b5de57",
+        fallback = 0,
+    },
+    impact_handler = "w16b_sp_imp_aftershock_exoplanet_09a8abfd66f9",
+}
+
+ccb.content.define_spell {
+    id = "afs_electrokinetic_hacking_interface",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "AFS_ELECTROKINETIC",
+    magic_type = "aftershock_psionics",
+    name = "[Ψ]Hacking Interface (C)",
+    description = "Create an electrical interface with your powers, allowing you to hack nearby devices as if you were using a computer.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_480dee216b22",
+        fallback = 0,
+    },
+    max_duration = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_25a035782a64",
+        fallback = 0,
+    },
+    base_energy_cost = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_81660f15b2e0",
+        fallback = 0,
+    },
+    difficulty = 4,
+    max_level = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_47a6ac95789b",
+        fallback = 0,
+    },
+    base_casting_time = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_8da9ef32c2db",
+        fallback = 0,
+    },
+    impact_handler = "w16b_sp_imp_aftershock_exoplanet_83199e6519e6",
+}
+
+ccb.content.define_spell {
+    id = "afs_electrokinetic_personal_battery",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "AFS_ELECTROKINETIC",
+    magic_type = "aftershock_psionics",
+    name = "[Ψ]Electron Overflow (C)",
+    description = "Generate power for UPS compatible devices on your person.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_damage = 1,
+    min_duration = 120000,
+    max_duration = 360000,
+    base_energy_cost = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_f66cfc987f66",
+        fallback = 0,
+    },
+    difficulty = 5,
+    max_level = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_47a6ac95789b",
+        fallback = 0,
+    },
+    base_casting_time = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_859fd6ff849d",
+        fallback = 0,
+    },
+    impact_handler = "w16b_sp_imp_aftershock_exoplanet_a508242b35de",
+}

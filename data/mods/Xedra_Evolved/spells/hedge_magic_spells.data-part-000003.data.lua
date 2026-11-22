@@ -45,3 +45,43 @@ ccb.content.define_spell {
     min_duration = 360000,
     max_duration = 720000,
 }
+
+ccb.content.define_spell {
+    id = "hedge_light_fire",
+    skill = "survival",
+    components = "spell_components_hedge_light_fire",
+    shape = "blast",
+    spell_class = "HEDGE_MAGIC",
+    magic_type = "xe_hedge_magick",
+    name = "To Kindle the Flames",
+    description = "Call forth the remnants of a fire from some ash to light a new flame.",
+    message = "You sprinkle the wood ash over the kindling as you recite the words of the charm.",
+    flags = { "VERBAL", "SOMATIC", "NO_FAIL" },
+    valid_targets = { "self" },
+    difficulty = 40,
+    max_level = 1,
+    base_casting_time = 12000,
+    impact_handler = "w16b_sp_imp_xedra_evolved_3c85b0d9a2cd",
+}
+
+ccb.content.define_spell {
+    id = "hedge_see_fae_necklace",
+    skill = "survival",
+    components = "spell_components_hedge_see_fae_necklace",
+    shape = "blast",
+    spell_class = "HEDGE_MAGIC",
+    magic_type = "xe_hedge_magick",
+    name = "To Spot the Goodly Folk",
+    description = "Using wild herbs and hawthorn berries, create an amulet that will tell you if any of the Fair Folk are nearby.",
+    message = "You laboriously sew the square of leather into a pouch and place the herbs and hawthorn berries inside.  Chanting softly, you seal the bag and attach the string to it so it can be worn around your neck.",
+    flags = { "VERBAL", "SOMATIC", "NO_FAIL", "PERMANENT", "PERMANENT_ALL_LEVELS" },
+    valid_targets = { "self" },
+    min_damage = 1,
+    max_damage = 1,
+    min_duration = 360000,
+    max_duration = 720000,
+    difficulty = 110,
+    max_level = 1,
+    base_casting_time = 1440000,
+    impact_handler = "w16b_sp_imp_xedra_evolved_936b5ef8f30c",
+}

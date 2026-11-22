@@ -930,3 +930,13 @@ ccb.content.define_monster {
     copy_from = "mon_skeleton_medical",
     inheritance = { add = { armor = { withering_damage = 14 } } },
 }
+
+ccb.content.define_monster {
+    id = "mon_zomborg",
+    copy_from = "mon_zomborg",
+    inheritance = {
+        add = {
+            armor = { withering_damage = 15 },
+        },
+    },
+}

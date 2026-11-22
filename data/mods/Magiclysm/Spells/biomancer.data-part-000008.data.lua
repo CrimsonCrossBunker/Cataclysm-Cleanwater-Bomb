@@ -65,3 +65,25 @@ ccb.content.define_spell {
     extra_spells = { { spell = "eoc_enhancement_setup", self = true } },
     base_casting_time = 1500,
 }
+
+ccb.content.define_spell {
+    id = "biomancer_slow_bleeding",
+    shape = "blast",
+    spell_class = "BIOMANCER",
+    magic_type = "magiclysm_enhancement_magic",
+    name = "Halt Bleeding",
+    description = "As you can control your body, you can control your blood.",
+    flags = { "ENHANCEMENT_SPELL", "CONCENTRATE", "SOMATIC", "VERBAL" },
+    valid_targets = { "self" },
+    min_duration = 90000,
+    duration_increment = 36000,
+    max_duration = 630000,
+    base_energy_cost = 250,
+    difficulty = 4,
+    max_level = 15,
+    base_casting_time = 350,
+    impact_handler = "w16b_sp_imp_magiclysm_02db1834e02d",
+    extra_spells = {
+        { spell = "eoc_enhancement_setup", self = true },
+    },
+}

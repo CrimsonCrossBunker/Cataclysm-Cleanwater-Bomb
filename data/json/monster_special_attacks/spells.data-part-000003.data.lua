@@ -42,3 +42,20 @@ ccb.content.define_spell {
     shape = "blast",
     effect = "attack",
 }
+
+ccb.content.define_spell {
+    id = "base_portal",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Base characteristics of portal spells"),
+    description = ccb.content.text_without_extraction("Base portal stats."),
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "NO_PROJECTILE", "NO_EXPLOSION_SFX" },
+    valid_targets = { "hostile" },
+    min_range = 1,
+    max_range = 1,
+    max_level = 1,
+    base_casting_time = 75,
+    impact_handler = "w16b_sp_imp_dda_ba42177bae6f",
+    extra_spells = {
+        { spell = "portal_hurt_self", self = true },
+    },
+}

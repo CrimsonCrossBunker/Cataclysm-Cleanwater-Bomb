@@ -1742,3 +1742,13 @@ ccb.content.define_monster {
     copy_from = "mon_skeleton_medical",
     inheritance = { add = { armor = { necrotic = 14 } } },
 }
+
+ccb.content.define_monster {
+    id = "mon_zomborg",
+    copy_from = "mon_zomborg",
+    inheritance = {
+        add = {
+            armor = { nether = 4, poison = 15, psionic = 14, necrotic = 8 },
+        },
+    },
+}

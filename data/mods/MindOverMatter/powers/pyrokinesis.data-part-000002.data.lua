@@ -37,3 +37,24 @@ ccb.content.define_spell {
     sound_description = ccb.content.text("a crackle!"),
     ignored_species = { "PSI_NULL" },
 }
+
+ccb.content.define_spell {
+    id = "pyrokinetic_cloak",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "PYROKINETIC",
+    magic_type = "mom_psionics",
+    name = "[Ψ]Cloak of Warmth (C)",
+    description = "Control the temperature of the nearby air, warming you and protecting you against flames.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_mindovermatter_135a3f703966", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_mindovermatter_cdc04e947bd5", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_mindovermatter_3bb969297266", fallback = 0 },
+    difficulty = 4,
+    max_level = { handler = "w16b_sp_stat_mindovermatter_073c19652ad6", fallback = 0 },
+    base_casting_time = { handler = "w16b_sp_stat_mindovermatter_2af83482b0e6", fallback = 0 },
+    impact_handler = "w16b_sp_imp_mindovermatter_c81ebdb4632f",
+}

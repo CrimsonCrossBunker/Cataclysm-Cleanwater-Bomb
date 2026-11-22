@@ -39,3 +39,14 @@ ccb.content.define_spell {
     difficulty = 0,
     max_level = 1,
 }
+
+ccb.content.define_spell {
+    id = "call_daffodil",
+    shape = "blast",
+    spell_class = "NONE",
+    name = "Call Daffodil",
+    description = "A few daffodil warriors appear near you.  They will fight for you, but they will fade away after a day.",
+    flags = { "NO_LEGS", "SILENT", "NO_EXPLOSION_SFX", "NO_FAIL", "NO_HANDS", "NON_MAGICAL" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_xedra_evolved_517d1a97e0eb",
+}

@@ -37,3 +37,27 @@ ccb.content.define_spell {
     max_aoe = 15,
     base_casting_time = 100,
 }
+
+ccb.content.define_spell {
+    id = "AO_BOOK_COMBUSTION",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Book combustion"),
+    description = ccb.content.text_without_extraction("Causes other nearby books to explode."),
+    message = "The pages glint slightly as you flip through them.",
+    flags = { "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    base_casting_time = 100,
+    impact_handler = "w16b_sp_imp_dda_b31a4fb3e1d2",
+}
+
+ccb.content.define_spell {
+    id = "AO_MAGIC_CASCADE_START",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Artifact magic cascade"),
+    description = ccb.content.text_without_extraction("Fires bursts of low damage ranged attacks."),
+    message = "Burning ash whirls around you.",
+    flags = { "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    base_casting_time = 100,
+    impact_handler = "w16b_sp_imp_dda_0240443f212a",
+}

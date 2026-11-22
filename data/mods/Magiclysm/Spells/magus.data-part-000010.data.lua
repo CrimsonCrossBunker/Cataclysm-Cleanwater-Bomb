@@ -39,3 +39,26 @@ ccb.content.define_spell {
     max_range = { handler = "scaled_magus_far_hand_pull_creatures_min_range", fallback = 3.0 },
     magic_type = "magiclysm_generic_magic",
 }
+
+ccb.content.define_spell {
+    id = "magus_far_hand_pull",
+    shape = "blast",
+    spell_class = "MAGUS",
+    magic_type = "magiclysm_evocation_magic",
+    name = "Sorcerer's Hand",
+    description = "Pull a target or set of items to you.",
+    flags = { "EVOCATION_SPELL", "CONCENTRATE", "VERBAL", "SOMATIC", "NO_HANDS" },
+    valid_targets = { "self" },
+    base_energy_cost = 200,
+    final_energy_cost = 50,
+    energy_increment = -10,
+    difficulty = 2,
+    max_level = 10,
+    base_casting_time = 150,
+    final_casting_time = 50,
+    casting_time_increment = -10,
+    impact_handler = "w16b_sp_imp_magiclysm_1f1abf99c3e9",
+    extra_spells = {
+        { spell = "eoc_evocation_setup", self = true },
+    },
+}

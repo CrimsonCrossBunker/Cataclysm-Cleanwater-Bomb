@@ -106,3 +106,56 @@ ccb.content.define_monster {
     inheritance = { add = { flags = { "SMELLS", "WATER_CAMOUFLAGE" } } },
     death = { drops = "mon_zombie_swimmer_death_drops" },
 }
+
+ccb.content.define_monster {
+    id = "mon_zombie_hulk",
+    name = "zombie hulk",
+    description = "A human corpse swollen to the size of six men, with arms as wide as trash cans.",
+    copy_from = "mon_zombie_base",
+    color = "white_magenta",
+    volume = "875 L",
+    mass = "1000 kg",
+    harvest = "zombie_hulk",
+    fungalize_into = "mon_zombie_hulk_dusted",
+    burn_into = "mon_zombie_fiend",
+    difficulty_adjustment = 5,
+    hp = 480,
+    speed = 130,
+    melee_skill = 6,
+    melee_dice = 3,
+    melee_sides = 8,
+    grab_strength = 50,
+    bleed_rate = 0,
+    vision_day = 83,
+    vision_night = 4,
+    species = { "ZOMBIE" },
+    scents_tracked = { "sc_human", "sc_fetid" },
+    armor = { bash = 8, cut = 12, bullet = 10, electric = 5 },
+    melee_damage = {
+        { type = "bash", amount = 10, penetration = 10 },
+    },
+    upgrade = false,
+    attacks = {
+        { id = "grab" },
+        { id = "scratch_humanoid" },
+        { id = "bite_humanoid" },
+        { id = "smash", throw_strength = 96 },
+        { id = "smash_equal", throw_strength = 48 },
+        { id = "hulk_lift_and_smash" },
+        { id = "hulk_wide_swing" },
+    },
+    revive_forms = {
+        { monster = "mon_fungal_mound_massive", when = "w16b_rev_dda_8cdff51a3b28" },
+    },
+    death = { drops = "mon_zombie_hulk_death_drops" },
+    inheritance = {
+        add = {
+            flags = { "SMELLS", "PUSH_VEH", "DESTROYS" },
+            weakpoint_sets = { "wps_humanoid_head_small" },
+            families = { "prof_wp_hulk" },
+        },
+        remove = {
+            flags = { "STUMBLES" },
+        },
+    },
+}

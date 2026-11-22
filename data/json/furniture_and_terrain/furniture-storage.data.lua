@@ -602,3 +602,40 @@ ccb.content.define_furniture {
     flags = { "CONTAINER", "FIRE_CONTAINER", "PLACE_ITEM" },
     base_item = "exodii_kiln",
 }
+
+ccb.content.define_furniture {
+    id = "f_board_map",
+    name = "map board",
+    description = "A secure metal board with a locked glass panel used to display a map.",
+    looks_like = "f_bulletin",
+    symbol = "6",
+    color = "light_gray",
+    coverage = 75,
+    move_cost_mod = -1,
+    required_strength = -1,
+    flags = { "TRANSPARENT", "SEALED", "PLACE_ITEM", "PICKABLE" },
+    bash = {
+        minimum_strength = 6,
+        maximum_strength = 20,
+        volume = 16,
+        failure_volume = 12,
+        furniture = "f_board_map_b",
+        sound = "glass breaking!",
+        failure_sound = "whack!",
+        drops = {
+            {
+                item = "glass_shard",
+                count = { 25, 50 },
+            },
+        },
+    },
+    deconstruct = {
+        drops = {
+            { item = "pipe", count = 4 },
+            { item = "sheet_metal", count = 1 },
+            { item = "hinge", count = 2 },
+            { item = "glass_sheet", count = 1 },
+        },
+    },
+    examine_handler = "w16b_tile_ex_dda_f87909e875f4",
+}

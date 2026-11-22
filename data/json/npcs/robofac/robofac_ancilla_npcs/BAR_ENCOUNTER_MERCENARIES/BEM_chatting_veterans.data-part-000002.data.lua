@@ -1,5 +1,8 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
 local predicates = ccb.content.dialogue_predicates
+
+
 
 ccb.content.define_dialogue_topic {
     id = "BEM_CHATTING_VETERANS_TELL_STORY",
@@ -149,6 +152,21 @@ ccb.content.define_dialogue_topic {
             text = ccb.content.text("Recall the story of the domed ruin, and show them the odd, plastic key you recovered from the walking corpse."),
             next_topic = "BEM_CHATTING_VETERANS_TELL_STORY_IMPRESSIVE",
             when = predicates.has_item("speaker", "id_exodii_string_dimension"),
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "BEM_CHATTING_VETERANS_DRINKING",
+    line = ccb.content.text("You share increasingly embellished stories about your exploits as you dare each other into downing series of eye-watering drinks."),
+    on_enter = {
+        { actions = { actions.add_effect("speaker", "drunk", { turns = 22200 }), actions.handler("w16b_a_dda_437a457cc817"), actions.adjust_faction_trust(1) } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Bar… barshender!  We… we?"),
+            next_topic = "TALK_DONE",
+            actions = { "end_conversation", actions.handler("w16b_a_dda_f6d831e35749") },
         },
     },
 }

@@ -234,3 +234,18 @@ ccb.content.define_spell {
     field_intensity_increment = 0.5,
     damage_type = "cold",
 }
+
+ccb.content.define_spell {
+    id = "afs_motion_sensor_spell",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("motion sensor spell"),
+    description = ccb.content.text_without_extraction("EOCs the victim."),
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self", "hostile", "ally" },
+    min_range = 0,
+    min_aoe = 1,
+    max_aoe = 1,
+    max_level = 1,
+    base_casting_time = 75,
+    impact_handler = "w16b_sp_imp_aftershock_exoplanet_fcbf2b2f725b",
+}

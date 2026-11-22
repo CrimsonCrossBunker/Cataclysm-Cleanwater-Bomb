@@ -65,3 +65,27 @@ ccb.content.define_spell {
     min_duration = 4000,
     max_duration = 4000,
 }
+
+ccb.content.define_spell {
+    id = "mon_xe_strange_brownie_open_conversation",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Brownie Event Conversation"),
+    description = ccb.content.text_without_extraction("Causes the strange event brownie to open dialogue on seeing you."),
+    flags = { "NO_HANDS", "NO_LEGS", "MUST_HAVE_CLASS_TO_LEARN", "RANDOM_DURATION" },
+    valid_targets = { "hostile" },
+    min_range = 10,
+    max_level = 1,
+    impact_handler = "w16b_sp_imp_xedra_evolved_cec23e052653",
+}
+
+ccb.content.define_spell {
+    id = "mon_vampire_fear_gaze",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Vampire Fear Gaze"),
+    description = ccb.content.text_without_extraction("When a vampire uses its fear gaze on you.  Bluh!."),
+    flags = { "NO_HANDS", "NO_LEGS", "MUST_HAVE_CLASS_TO_LEARN", "RANDOM_DURATION" },
+    valid_targets = { "hostile" },
+    min_range = 6,
+    max_level = 1,
+    impact_handler = "w16b_sp_imp_xedra_evolved_c4ee4b9b5340",
+}

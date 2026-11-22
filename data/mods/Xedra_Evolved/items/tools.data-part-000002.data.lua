@@ -21,3 +21,14 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "revenant_effigy",
+    name = ccb.content.plural_text("revenant's effigy", "revenant's effigy"),
+    description = "A macabre effigy made of meat and bone, with a heart filled with glass and faewild dust.  When the full moon will shine upon it, you will be able to use it to summon the Luna-attuned revenant.",
+    symbol = "%",
+    color = "magenta",
+    mass = "91500 g",
+    volume = "72500 ml",
+    tool = {},
+}

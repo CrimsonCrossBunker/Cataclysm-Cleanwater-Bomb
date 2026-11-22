@@ -189,3 +189,16 @@ ccb.content.define_spell {
     min_duration = 90000,
     max_duration = 360000,
 }
+
+ccb.content.define_spell {
+    id = "hedge_astral_projection_return",
+    skill = "survival",
+    shape = "blast",
+    spell_class = "HEDGE_MAGIC",
+    name = "Follow the Silver Cord",
+    description = "Follow the silver cord back to your body.",
+    message = "",
+    flags = { "SOMATIC", "NO_FAIL", "NON_MAGICAL", "SILENT", "NO_HANDS", "NO_LEGS" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_xedra_evolved_a4c9f8929e04",
+}

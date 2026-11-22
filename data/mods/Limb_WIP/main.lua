@@ -29,3 +29,4 @@ require("limb_changing")
 if require("ccb").content.is_mod_active("mindovermatter") then
     require("mod_interactions.mindovermatter.runtime_interaction")
 end
+require("eoc_runtime")

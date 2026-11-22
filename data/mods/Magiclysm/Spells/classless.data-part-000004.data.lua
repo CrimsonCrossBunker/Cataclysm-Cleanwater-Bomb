@@ -70,3 +70,22 @@ ccb.content.define_spell {
     energy_increment = 33.33,
     base_casting_time = 100,
 }
+
+ccb.content.define_spell {
+    id = "classless_clean_clothing_and_self",
+    components = "spell_components_freshen_up",
+    shape = "blast",
+    magic_type = "magiclysm_channeling_magic",
+    name = "Freshen Up",
+    description = "Undoubtedly the single most common spell in the world before the Cataclysm, Freshen Up cleans your teeth, sweetens your breath, removes stains and sweat from your clothes, exfoliates you, and gives volume back to your hair.",
+    flags = { "CHANNELING_SPELL", "CONCENTRATE", "VERBAL", "SOMATIC" },
+    valid_targets = { "self" },
+    base_energy_cost = 75,
+    difficulty = 2,
+    max_level = 15,
+    base_casting_time = 3000,
+    impact_handler = "w16b_sp_imp_magiclysm_1cb60e37062d",
+    extra_spells = {
+        { spell = "eoc_channeling_setup", self = true },
+    },
+}

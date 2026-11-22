@@ -19,3 +19,20 @@ ccb.content.define_spell {
     min_duration = 8640000,
     max_duration = 8640000,
 }
+
+ccb.content.define_spell {
+    id = "hedge_astral_projection",
+    skill = "survival",
+    shape = "blast",
+    spell_class = "HEDGE_MAGIC",
+    magic_type = "xe_hedge_magick",
+    name = "To Project the Etheric Form",
+    description = "After a period of trance and meditation, send out your disembodied spirit to wander the world.  Use of this ritual is <color_yellow>very tiring</color> and you will become increasingly more weary the longer you remain out of your body.",
+    message = "You settle down and slip into a trance.",
+    flags = { "NO_FAIL" },
+    valid_targets = { "self" },
+    difficulty = 90,
+    max_level = 1,
+    base_casting_time = 180000,
+    impact_handler = "w16b_sp_imp_xedra_evolved_f0daa2394cbc",
+}

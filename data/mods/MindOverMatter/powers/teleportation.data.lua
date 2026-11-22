@@ -29,3 +29,26 @@ ccb.content.define_spell {
     min_field_intensity = 3,
     max_field_intensity = 3,
 }
+
+ccb.content.define_spell {
+    id = "teleport_blink",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "TELEPORTER",
+    magic_type = "mom_psionics",
+    name = "[Ψ]Blink",
+    description = "Step briefly into the void between dimensions and emerge at a random nearby location.\n\nThe power <color_red>will fail</color> if the volume of your carried gear is too great.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS" },
+    valid_targets = { "self" },
+    base_energy_cost = 900,
+    final_energy_cost = 350,
+    energy_increment = -55,
+    difficulty = 1,
+    max_level = { handler = "w16b_sp_stat_mindovermatter_f3b23418fec0", fallback = 0 },
+    base_casting_time = 50,
+    final_casting_time = 5,
+    casting_time_increment = -3.5,
+    impact_handler = "w16b_sp_imp_mindovermatter_439c8b4415e1",
+}

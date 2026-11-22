@@ -237,3 +237,23 @@ ccb.content.define_spell {
     final_casting_time = 35,
     casting_time_increment = -4,
 }
+
+ccb.content.define_spell {
+    id = "sylph_reveal_overmap_spell",
+    shape = "blast",
+    spell_class = "SYLPH",
+    magic_type = "xe_fey_magick",
+    name = "Like a Bird on the Wing",
+    description = "Concentrating for a moment, you can hurl your senses into the air, seeing the landscape spread out before you.  This spell only works outdoors.",
+    flags = { "SOMATIC", "VERBAL" },
+    valid_targets = { "self" },
+    base_energy_cost = 350,
+    final_energy_cost = 150,
+    energy_increment = -10,
+    difficulty = 7,
+    max_level = { handler = "w16b_sp_stat_xedra_evolved_893d5f083442", fallback = 0 },
+    base_casting_time = 6000,
+    final_casting_time = 1500,
+    casting_time_increment = -100,
+    impact_handler = "w16b_sp_imp_xedra_evolved_347014a9f1de",
+}

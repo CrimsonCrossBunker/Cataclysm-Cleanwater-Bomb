@@ -33,3 +33,24 @@ ccb.content.define_spell {
     final_casting_time = 40,
     casting_time_increment = -8.5,
 }
+
+ccb.content.define_spell {
+    id = "photokinetic_invisibility",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "PHOTOKINETIC",
+    magic_type = "mom_psionics",
+    name = "[Ψ]Veil of Light (C)",
+    description = "Refract light around yourself to become invisible.  Moving too quickly has a chance to disrupt the effect, and attacking in melee will invariably do so.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_mindovermatter_99c0ceecbbdf", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_mindovermatter_46c62d2cb5cf", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_mindovermatter_5fbf3a088ef6", fallback = 0 },
+    difficulty = 6,
+    max_level = { handler = "w16b_sp_stat_mindovermatter_649ad2e6bf35", fallback = 0 },
+    base_casting_time = { handler = "w16b_sp_stat_mindovermatter_9b2e59a74f40", fallback = 0 },
+    impact_handler = "w16b_sp_imp_mindovermatter_e5d21642d555",
+}

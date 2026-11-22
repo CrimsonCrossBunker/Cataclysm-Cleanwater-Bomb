@@ -1,8 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_HOSPITAL_2_MAKE_MISSION",
-    "//": "Assigns the mission through an EOC to avoid having to bring the NPC along with the player.",
-    "effect": [ { "assign_mission": "directions_hospital_2_CABIN" } ]
-  }
-]

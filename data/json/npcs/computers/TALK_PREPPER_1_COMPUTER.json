@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_PREPPER_1_COMPUTER",
-    "type": "effect_on_condition",
-    "effect": [ { "open_dialogue": { "topic": "COMP_PREPPER_1_MAIN" } } ]
-  }
-]

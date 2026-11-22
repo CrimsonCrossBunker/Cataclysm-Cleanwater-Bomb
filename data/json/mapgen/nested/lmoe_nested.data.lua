@@ -254,3 +254,20 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "prepper_1_computer",
+    layout = {
+        size = { width = 1, height = 1 },
+        computer_placements = {
+            {
+                x = 0,
+                y = 0,
+                name = "Personal Computer: User",
+                chat_topics = { "COMP_PREPPER_1_MAIN" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

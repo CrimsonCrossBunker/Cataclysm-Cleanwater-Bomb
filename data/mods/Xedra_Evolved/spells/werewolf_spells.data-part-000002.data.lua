@@ -45,3 +45,23 @@ ccb.content.define_spell {
     difficulty = 4,
     base_casting_time = 50,
 }
+
+ccb.content.define_spell {
+    id = "xe_werewolf_summon_fog_spell",
+    skill = "deduction",
+    shape = "blast",
+    spell_class = "WEREWOLF_SPELLS",
+    magic_type = "xe_werewolf_powers",
+    name = "Hunter's Haze",
+    description = "You can cause just enough change in a machine to confuse the rigid requirements of its programming, stunning it.",
+    message = "",
+    teachable = false,
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_xedra_evolved_300bb3476e92", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_xedra_evolved_db20dd32dc7f", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_xedra_evolved_b3e9da9751d9", fallback = 0 },
+    difficulty = 8,
+    base_casting_time = 250,
+    impact_handler = "w16b_sp_imp_xedra_evolved_5eb52b5006f4",
+}

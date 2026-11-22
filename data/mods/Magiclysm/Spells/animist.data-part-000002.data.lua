@@ -149,3 +149,28 @@ ccb.content.define_spell {
     max_duration = 1260000,
     duration_increment = 36000,
 }
+
+ccb.content.define_spell {
+    id = "summon_undead_swarm",
+    components = "spell_components_rune_animist_3",
+    shape = "blast",
+    spell_class = "ANIMIST",
+    magic_type = "magiclysm_conjuration_magic",
+    name = "Summon Undead Swarm",
+    description = "A group of undead animals rises from the depths of the earth to fight for you.  The type of undead you summon get deadlier with increasing spell level.",
+    flags = { "CONJURATION_SPELL", "SOMATIC", "VERBAL", "CONCENTRATE", "CONSUMES_RUNES" },
+    valid_targets = { "self" },
+    min_damage = 1,
+    max_damage = 1,
+    min_duration = 36000,
+    duration_increment = 36000,
+    max_duration = 1080000,
+    base_energy_cost = 600,
+    difficulty = 3,
+    max_level = 35,
+    base_casting_time = 3000,
+    impact_handler = "w16b_sp_imp_magiclysm_ef45c13b909d",
+    extra_spells = {
+        { spell = "eoc_summon_setup", self = true },
+    },
+}

@@ -44,3 +44,52 @@ ccb.content.define_mapgen {
         monster_glyphs = { T = { id = "mon_turret_rifle", ammunition = { { id = "556", quantity = { 30, 90 } } } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = {
+        { "microlab_portal_MSU14" },
+    },
+    layout = {
+        fill_terrain = "t_strconc_floor",
+        rows = {
+            "########################",
+            "#########||||||#########",
+            "#####||||| ÚÚ |||||#####",
+            "#####| Ú |    | Ú |#####",
+            "#####|   |((((|   |#####",
+            "##||||===|yyyy|===||||##",
+            "##|ZZ=  :y    y   =ZZ|##",
+            "##|Z [yyyy YY yyyy[ Z|##",
+            "##|ZZ=    ====   :=ZZ|##",
+            "##||||    =ZZ=    ||||##",
+            "####|NY   =ZZ=   YN|####",
+            "###||||É55||||55É||||###",
+            "###|Z=     99     =Z|###",
+            "###|Z[            [Z|###",
+            "###|Z=            =Z|###",
+            "##||||==[[====[[==||||##",
+            "##|6d=     YY     =d6|##",
+            "##|h [    d hd    [ h|##",
+            "##|dd=    dddd    =dd|##",
+            "##||||     PP     ||||##",
+            "#####|^    PP    ^|#####",
+            "#####|||N| PP |N|||#####",
+            "#######|||    |||#######",
+            "#########| YY |#########",
+        },
+        palettes = { "microlab_generic" },
+        terrain = { P = "t_carpet_concrete_red", ["É"] = "t_card_science_mu" },
+        furniture = { Z = "f_server", [":"] = "f_xedra_antenna", ["Ú"] = "f_melchior_unit" },
+        item_spawns = {
+            d = { id = "msu14_password", chance = 10 },
+        },
+        computer_glyphs = {
+            ["9"] = {
+                name = "MSU 14 Unit",
+                chat_topics = { "MSU14_START" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

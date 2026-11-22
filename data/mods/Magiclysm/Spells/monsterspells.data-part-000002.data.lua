@@ -20,3 +20,27 @@ ccb.content.define_spell {
     max_range = 10,
     targeted_monsters = { "mon_rust_monster" },
 }
+
+ccb.content.define_spell {
+    id = "will_o_wisp_draining_spell",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Will o the Wisp draining attack"),
+    description = ccb.content.text_without_extraction("The will o the Wisp life-draining attack."),
+    flags = { "NO_LEGS", "SILENT", "NO_PROJECTILE", "SPLIT_DAMAGE" },
+    valid_targets = { "hostile", "ally", "ground" },
+    min_range = 3,
+    impact_handler = "w16b_sp_imp_magiclysm_a462961d419e",
+}
+
+ccb.content.define_spell {
+    id = "rust_monster_detect_metal_spell",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("rust monster detect metal"),
+    description = ccb.content.text_without_extraction("Rust monster detecting metal.  It's a bug if you have it."),
+    message = "",
+    flags = { "NO_PROJECTILE", "NO_EXPLOSION_SFX", "IGNORE_WALLS" },
+    valid_targets = { "ally", "hostile", "self" },
+    min_aoe = 5,
+    max_aoe = 5,
+    impact_handler = "w16b_sp_imp_magiclysm_5332ae20b626",
+}

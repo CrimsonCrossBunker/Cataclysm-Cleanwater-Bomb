@@ -1,4 +1,7 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+
 
 ccb.content.define_mission {
     id = "MISSION_ISHERWOOD_CHRIS_1",
@@ -67,5 +70,33 @@ ccb.content.define_mission {
         success = ccb.content.text("."),
         success_lie = ccb.content.text("."),
         failure = ccb.content.text("."),
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_CHRIS_TRY_AGAIN",
+    line = ccb.content.text("If you think we're ready, I think we can try another go.  Even… even if it's too late for Uncle Barry, I think we've got to try to take that damn tower out of commission."),
+    replies = {
+        {
+            text = ccb.content.text("All right.  Let's kick some alien butt."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_617ec9bf0096") },
+        },
+        {
+            text = ccb.content.text("Is there anyone else around here that could help us?"),
+            next_topic = "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_TAKE_LISA",
+        },
+        {
+            text = ccb.content.text("You mentioned that Carlos, Eddie and Luke probably can't help in a firefight.  Is there any other way we could use them?"),
+            next_topic = "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_THE_ISHERWOODS",
+        },
+        {
+            text = ccb.content.text("<done_conversation_section>"),
+            next_topic = "TALK_ISHERWOOD_CHRIS_TOPICS",
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
     },
 }

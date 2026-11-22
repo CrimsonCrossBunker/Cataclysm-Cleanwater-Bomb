@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_OBSIDIAN_RING_COMPUTER_VITAKINESIS_DIALOGUE",
-    "type": "effect_on_condition",
-    "effect": [ "open_dialogue" ]
-  }
-]

@@ -256,3 +256,8 @@ if require("ccb").content.is_mod_active("bombastic_perks") then
 end
 require("spell_math_handlers")
 require("dialogue_handlers")
+require("eoc_runtime")
+require("dialogue_handlers_wave16b")
+require("eoc_items")
+require("eoc_monsters")
+require("eoc_spells")

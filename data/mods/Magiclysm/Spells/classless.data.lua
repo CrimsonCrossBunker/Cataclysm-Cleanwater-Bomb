@@ -21,3 +21,27 @@ ccb.content.define_spell {
     base_energy_cost = 0,
     base_casting_time = 12000,
 }
+
+ccb.content.define_spell {
+    id = "crystallize_mana",
+    shape = "blast",
+    spell_class = "NONE",
+    magic_type = "magiclysm_channeling_magic",
+    name = "Crystallize Mana",
+    description = "Crystallizes mana into solid form.",
+    flags = { "CHANNELING_SPELL", "NO_LEGS", "CONCENTRATE" },
+    valid_targets = { "self" },
+    min_damage = 1,
+    max_damage = 1,
+    duration_increment = 1,
+    base_energy_cost = 1000,
+    final_energy_cost = 1000,
+    difficulty = 3,
+    base_casting_time = 600000,
+    final_casting_time = 600000,
+    impact_handler = "w16b_sp_imp_magiclysm_a248dc9ec300",
+    extra_spells = {
+        { spell = "mana_fatigue" },
+        { spell = "eoc_channeling_setup", self = true },
+    },
+}

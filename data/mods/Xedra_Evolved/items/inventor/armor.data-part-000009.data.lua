@@ -43,3 +43,26 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "inventor_fists_plus",
+    copy_from = "inventor_fists",
+    name = "advanced heavy CQC system",
+    description = "An advanced version of the heavy CQC system.  It contain a self-recharging pneumatic tank that slowly builds pressure that you can use in a fight.",
+    symbol = "3",
+    color = "light_gray",
+    techniques = { "WBLOCK_3", "BRUTAL", "SWEEP", "CQB_BRUTAL" },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            airtight = true,
+            ammunition = { oxygen = 3 },
+        },
+    },
+    tool = {},
+    armor = {},
+    artifact = {
+        charge = { recharge_type = "periodic", interval = "1 m", regenerate_ammo = true },
+    },
+    subtype_order = { "tool", "armor", "artifact" },
+}

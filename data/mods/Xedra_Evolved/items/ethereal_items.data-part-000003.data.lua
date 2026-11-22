@@ -94,3 +94,35 @@ ccb.content.define_item {
     },
     subtype_order = { "tool", "artifact" },
 }
+
+ccb.content.define_item {
+    id = "winch_stone",
+    name = ccb.content.plural_text("constructed winch", "constructed winches"),
+    description = "A small token that floats near your right hand.  It pulls you to determined coordinates when you command it.",
+    symbol = "*",
+    color = "dark_gray",
+    mass = "1 g",
+    volume = "1 ml",
+    max_worn = 1,
+    flags = {
+        "SINGLE_USE",
+        "TRADER_AVOID",
+        "AURA",
+        "SEMITANGIBLE",
+        "OVERSIZE",
+        "NO_TAKEOFF",
+        "NONCONDUCTIVE",
+        "UNBREAKABLE",
+        "ALLOWS_NATURAL_ATTACKS",
+    },
+    materials = { "dreamstuff" },
+    armor = {
+        portions = {
+            {
+                covers = { "hand_r" },
+                coverage = 0,
+                encumbrance = 0,
+            },
+        },
+    },
+}

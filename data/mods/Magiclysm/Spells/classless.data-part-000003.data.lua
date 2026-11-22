@@ -251,3 +251,33 @@ ccb.content.define_spell {
     base_energy_cost = 50,
     base_casting_time = 6000,
 }
+
+ccb.content.define_spell {
+    id = "ethereal_grasp",
+    shape = "blast",
+    spell_class = "NONE",
+    damage_type = "bash",
+    magic_type = "magiclysm_evocation_magic",
+    name = "Ethereal Grasp",
+    description = "A mass of spectral hands emerge from the ground, grabbing and slowing everything in range.  Higher levels allow a bigger AoE, and longer effect\n\nLarger targets will be <color_yellow>less affected</color> by the spell.",
+    flags = { "EVOCATION_SPELL", "SOMATIC", "NO_PROJECTILE" },
+    valid_targets = { "hostile", "ground" },
+    affected_bodyparts = { "foot_l", "foot_r" },
+    min_range = 5,
+    range_increment = 2.0,
+    max_range = 20,
+    min_aoe = 2,
+    aoe_increment = 0.33,
+    max_aoe = 8,
+    min_duration = 1000,
+    duration_increment = 200,
+    max_duration = 5000,
+    base_energy_cost = 400,
+    difficulty = 3,
+    max_level = 20,
+    base_casting_time = 200,
+    impact_handler = "w16b_sp_imp_magiclysm_056b97690d34",
+    extra_spells = {
+        { spell = "eoc_evocation_setup", self = true },
+    },
+}

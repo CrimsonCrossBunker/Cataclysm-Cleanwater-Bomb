@@ -2,6 +2,8 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+
+
 ccb.content.define_dialogue_topic {
     id = { "TALK_ROBOFAC_INTERCOM_SERVICES", "TALK_ROBOFAC_INTERCOM_SERVICES_FIRST", "TALK_ROBOFAC_INTERCOM_PORTAL_STORMS_END", "TALK_ROBOFAC_INTERCOM_FREE_MERCHANT_DELIVERY_MERCENARY_END", "TALK_ROBOFAC_INTERCOM_PROTOTYPE_NO" },
     line = {
@@ -249,5 +251,81 @@ ccb.content.define_dialogue_topic {
             next_topic = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_1",
         },
         { text = ccb.content.text("[Leave.]"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ROBOFAC_INTERCOM",
+    line = {
+        when = predicates.handler("w16b_p_dda_05358c4abb14"),
+        yes = ccb.content.text("&The intercom is dead.  No light, no static, nothing."),
+        no = {
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_completed_robofac_intercom_1" } }),
+            yes = {
+                choices = {
+                    ccb.content.text("&The intercom is silent."),
+                    ccb.content.text("&The intercom crackles on."),
+                    ccb.content.text("&The intercom's red LED blinks on."),
+                    ccb.content.text("&The intercom says something unintelligible."),
+                },
+            },
+            no = {
+                when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_intercom_u_discovered_robofac_intercom" } }),
+                yes = ccb.content.text("&The intercom is silent."),
+                no = ccb.content.text("&An intercom is embedded into the wall here, just next to the card reader.  It's a metal box about as big as a dinner plate, with a speaker shaped like a downwards curve and a large camera prominently featured in the center.  You see a single metal button with a dark LED next to it.  The intercom is silent."),
+            },
+        },
+    },
+    replace_native_replies = true,
+    on_enter = {
+        { once = "discovered_intercom", actions = { actions.set_actor_value("speaker", "dialogue_intercom_u_discovered_robofac_intercom", "yes") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("[Leave the dead intercom.]"),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("w16b_p_dda_05358c4abb14"),
+        },
+        {
+            text = ccb.content.text("[Identify yourself before the intercom.]"),
+            next_topic = "TALK_ROBOFAC_INTERCOM_SERVICES",
+            when = predicates.handler("w16b_p_dda_a851a16c0202"),
+            actions = { actions.handler("w16b_a_dda_6aa122c05524") },
+        },
+        {
+            text = ccb.content.text("[Identify yourself before the intercom.]"),
+            next_topic = "TALK_ROBOFAC_INTERCOM_LEARNS_U_CYBORG",
+            when = predicates.handler("w16b_p_dda_9212c5541e94"),
+            actions = { actions.set_actor_value("speaker", "robofac_knows_about_u_cyberframe", "yes"), actions.add_effect("speaker", "robofac_surveillance", { turns = 2592000 }) },
+        },
+        {
+            text = ccb.content.text("[Press the button.]"),
+            next_topic = "TALK_ROBOFAC_INTERCOM_INTRO",
+            when = predicates.handler("w16b_p_dda_b23e0697bc03"),
+        },
+        {
+            text = ccb.content.text("[Press the button.]"),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_1_INQUIRE",
+            when = predicates.handler("w16b_p_dda_50779c75cf34"),
+        },
+        {
+            text = ccb.content.text("[Press the button.]"),
+            next_topic = "TALK_ROBOFAC_INTERCOM_INTRO_3",
+            when = predicates.handler("w16b_p_dda_08c1915085bb"),
+        },
+        {
+            text = ccb.content.text("[Press the button.]"),
+            next_topic = "TALK_ROBOFAC_INTERCOM_INTRO_4",
+            when = predicates.handler("w16b_p_dda_405869359679"),
+        },
+        {
+            text = ccb.content.text("[Bang on the metal door.]"),
+            next_topic = "TALK_ROBOFAC_INTERCOM",
+            when = predicates.handler("w16b_p_dda_fcab9102c2fe"),
+        },
+        {
+            text = ccb.content.text("[Leave.]"),
+            next_topic = "TALK_DONE",
+        },
     },
 }

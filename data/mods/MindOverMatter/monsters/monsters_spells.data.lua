@@ -189,3 +189,19 @@ ccb.content.define_spell {
     effect = "summon",
     effect_data = "GROUP_SPAWN_PSI_RAPTOR",
 }
+
+ccb.content.define_spell {
+    id = "pigeon_aura",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Pigeon aura"),
+    description = ccb.content.text_without_extraction("Anyone nearby will get stronger."),
+    flags = { "SILENT", "NO_LEGS", "NO_FAIL" },
+    valid_targets = { "self" },
+    energy_source = "NONE",
+    min_range = 30,
+    max_range = 30,
+    base_energy_cost = 0,
+    difficulty = 0,
+    base_casting_time = 500,
+    impact_handler = "w16b_sp_imp_mindovermatter_c06d85907bdf",
+}

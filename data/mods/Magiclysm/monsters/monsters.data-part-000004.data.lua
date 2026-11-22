@@ -437,3 +437,34 @@ ccb.content.define_monster {
     armor = { bash = 7, cut = 7, bullet = 7, electric = 50 },
     death = { outcome = { message = ccb.content.text("The %s dissolves."), corpse = "NO_CORPSE" } },
 }
+
+ccb.content.define_monster {
+    id = "mon_troll_stone",
+    name = "rock troll",
+    description = "A monstrous, gray-skinned humanoid, almost three meters tall but as thin as the average human.  Rock trolls have rocky skin that's almost impervious to hand weapons, but they turn to stone in the sunlight.",
+    copy_from = "mon_troll",
+    looks_like = "mon_troll",
+    armor = {
+        bash = 15,
+        stab = 40,
+        cut = 35,
+        bullet = 13,
+        heat = -30,
+        acid = -30,
+    },
+    melee_damage = {
+        { type = "bash", amount = 18 },
+    },
+    death = {
+        outcome = {
+            corpse = "NO_CORPSE",
+            message = "The %s turns to stone.",
+            on_death = "w16b_mon_die_magiclysm_7750a01550f3",
+        },
+    },
+    inheritance = {
+        add = {
+            flags = { "SUNDEATH" },
+        },
+    },
+}

@@ -1,8 +1,0 @@
-[
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_RURAL_1_MAKE_MISSION",
-    "//": "Assigns the mission through an EOC to avoid having to bring the NPC along with the player.",
-    "effect": [ { "assign_mission": "directions_rural_1_FARM" } ]
-  }
-]

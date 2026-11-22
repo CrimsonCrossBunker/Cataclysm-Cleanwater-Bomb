@@ -42,3 +42,28 @@ ccb.content.define_spell {
     base_casting_time = 350,
     extra_spells = { { spell = "eoc_enhancement_setup", self = true } },
 }
+
+ccb.content.define_spell {
+    id = "summon_undead",
+    components = "spell_components_rune_animist",
+    shape = "blast",
+    spell_class = "ANIMIST",
+    magic_type = "magiclysm_conjuration_magic",
+    name = "Summon Undead",
+    description = "An ethereal-looking undead rises from the depths of the earth to fight for you.  The type of undead you summon get deadlier with increasing spell level.",
+    flags = { "CONJURATION_SPELL", "SOMATIC", "VERBAL", "CONCENTRATE", "CONSUMES_RUNES" },
+    valid_targets = { "self" },
+    min_damage = 1,
+    max_damage = 1,
+    min_duration = 36000,
+    duration_increment = 36000,
+    max_duration = 1080000,
+    base_energy_cost = 400,
+    difficulty = 3,
+    max_level = 35,
+    base_casting_time = 3000,
+    impact_handler = "w16b_sp_imp_magiclysm_b405595872a8",
+    extra_spells = {
+        { spell = "eoc_summon_setup", self = true },
+    },
+}

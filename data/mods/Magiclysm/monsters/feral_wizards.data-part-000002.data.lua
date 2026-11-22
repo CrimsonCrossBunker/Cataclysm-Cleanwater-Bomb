@@ -834,3 +834,91 @@ ccb.content.define_monster {
     },
     death = { drops = "mon_feral_technomancer_death_drops" },
 }
+
+ccb.content.define_monster {
+    id = "mon_feral_radiation_mage",
+    name = "feral radiation mage",
+    description = "A research thaumaturge with the international radiation danger symbol in front of a pentagram on their lab coat.  If you had a Geiger counter active, it would probably be going crazy right now.",
+    copy_from = "mon_feral_wizard_default",
+    symbol = "@",
+    color = "cyan",
+    death = {
+        drops = {
+            kind = "collection",
+            items = {
+                { item = "wrapped_rad_badge", probability = 80 },
+                {
+                    group = "mon_zombie_research_thaumaturge_death_drops",
+                    probability = 100,
+                },
+            },
+        },
+    },
+    inheritance = {
+        add = {
+            flags = { "NO_BREATHE" },
+            attacks = {
+                {
+                    kind = "melee",
+                    id = "feral_rad_mage__magic_fissile",
+                    move_cost = 100,
+                    range = 12,
+                    dodgeable = false,
+                    blockable = false,
+                    cooldown = 10,
+                    damage = {
+                        { type = "necrotic", amount = 10 },
+                    },
+                    avatar_hit = "%1$s screams words of magic and a sickly-glowing eldritch bolt impacts your %2$s!",
+                    avatar_miss = "%1$s screams words of magic and you narrowly avoid a sickly-glowing eldritch bolt!",
+                    avatar_no_damage = "%1$s screams words of magic and your %2$s is impacted by a sickly-glowing eldritch bolt, but it does no damage.",
+                    npc_hit = "%1$s screams words of magic and a sickly-glowing eldritch bolt impacts <npcname>'s %2$s!",
+                    npc_miss = "%1$s screams words of magic and <npcname> narrowly avoids a sickly-glowing eldritch bolt!",
+                    npc_no_damage = "%1$s screams words of magic and <npcname>'s %2$s is impacted by a sickly-glowing eldritch bolt, but it does no damage.",
+                    when = "w16b_mon_when_magiclysm_1a7cb897b668",
+                    on_hit = "w16b_mon_hit_magiclysm_e96b61308c20",
+                },
+                {
+                    kind = "spell",
+                    id = "feral_rad_mage_wall_of_fog",
+                    cooldown = 15,
+                    spell = { id = "stormshaper_wall_of_fog", min_level = 3 },
+                    casting_message = "%1$s gestures and a sudden force slams you to the ground!",
+                    when = "w16b_mon_when_magiclysm_055f7663f8f9",
+                },
+                {
+                    kind = "spell",
+                    id = "feral_rad_mage_rad_attack",
+                    cooldown = 25,
+                    spell = { id = "feral_rad_mage_rad_spell", min_level = 5 },
+                    casting_message = "%1$s makes arcane motions and the air is filled with burning gas!",
+                    when = "w16b_mon_when_magiclysm_1a7cb897b668",
+                },
+                {
+                    kind = "spell",
+                    id = "feral_thaum_sci_spell_mirrorimage",
+                    cooldown = 15,
+                    spell = { id = "mirror_image_rad_mage", min_level = 0 },
+                    casting_message = "%1$s smiles and duplicates appear!",
+                    when = "w16b_mon_when_magiclysm_d703c72ddb40",
+                },
+                {
+                    kind = "spell",
+                    id = "feral_thaum_sci_spell_summon_zombie",
+                    cooldown = 30,
+                    spell = { id = "feral_rad_mage_summon_spell", min_level = 0 },
+                    casting_message = "%1$s intones words of power and a corpse claws its way out of the ground!",
+                    when = "w16b_mon_when_magiclysm_d703c72ddb40",
+                },
+                {
+                    kind = "spell",
+                    id = "feral_thaum_sci_spell_disjunction",
+                    cooldown = 50,
+                    spell = { id = "disjunction_monster", min_level = 8 },
+                    casting_message = "%1$s waves their hands in a gesture of negation!",
+                    when = "w16b_mon_when_magiclysm_d703c72ddb40",
+                },
+            },
+        },
+    },
+}

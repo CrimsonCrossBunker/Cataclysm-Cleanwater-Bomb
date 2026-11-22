@@ -105,3 +105,21 @@ ccb.content.define_spell {
     min_duration = 1000000,
     max_duration = 8600000,
 }
+
+ccb.content.define_spell {
+    id = "hedge_stunning_spell",
+    skill = "survival",
+    components = "spell_components_hedge_stunning_spell",
+    shape = "blast",
+    spell_class = "HEDGE_MAGIC",
+    magic_type = "xe_hedge_magick",
+    name = "To Befuddle As the Thunderstrike",
+    description = "While outdoors, recite a quick charm to produce a flash of light like unto a thunderbolt, bedazzling anyone around you.",
+    message = "You call out the words of the charm to the sky and there is a burst of light.",
+    flags = { "VERBAL", "SOMATIC", "NO_FAIL" },
+    valid_targets = { "self" },
+    difficulty = 80,
+    max_level = 1,
+    base_casting_time = 150,
+    impact_handler = "w16b_sp_imp_xedra_evolved_8d9034cc5f25",
+}

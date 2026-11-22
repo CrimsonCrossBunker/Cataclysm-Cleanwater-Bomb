@@ -28,3 +28,19 @@ ccb.content.define_mutation {
     on_activate = "perk_second_wind",
     flags = { "PERK" },
 }
+
+ccb.content.define_mutation {
+    id = "perk_troubleseeker",
+    name = "Trouble Seeker",
+    description = "As if the apocalypse itself wasn't enough, you are constantly looking for some trouble.  Zombies somehow sometimes sense your presence and approach you.  Fortunately, they always appear at a good distance from you.  Activate to toggle.",
+    points = 0,
+    purifiable = false,
+    valid = false,
+    active = true,
+    activation_setup_only = true,
+    cooldown = 20000,
+    flags = { "PERK" },
+    on_activate = "w16b_mut_activate_bombasticperks_ad215ed3fc3d",
+    on_deactivate = "w16b_mut_deactivate_bombasticperks_8c184449b0e1",
+    on_process = "w16b_mut_process_bombasticperks_d1deb6f5758f",
+}

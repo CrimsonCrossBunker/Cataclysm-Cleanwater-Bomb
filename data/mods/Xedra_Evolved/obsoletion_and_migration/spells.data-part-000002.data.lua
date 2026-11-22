@@ -175,3 +175,45 @@ ccb.content.define_spell {
     difficulty = 8,
     max_level = 1,
 }
+
+ccb.content.define_spell {
+    id = "arvore_sun_foods_on_spell",
+    skill = "deduction",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Solar Repast Spell"),
+    description = ccb.content.text_without_extraction("The spell that provides the effects when your Solar Repast is active.  It's a bug if you have it directly."),
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_xedra_evolved_1348e34c2030",
+}
+
+ccb.content.define_spell {
+    id = "arvore_reduce_thirst_spell",
+    skill = "deduction",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("One with the Forest Reduce Thirst"),
+    description = ccb.content.text_without_extraction("This is the actual spell that reduces thirst for tree form."),
+    flags = { "SILENT" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_xedra_evolved_ef9596a4e732",
+}
+
+ccb.content.define_spell {
+    id = "paraclesian_spell_dodge_bonus",
+    skill = "deduction",
+    shape = "blast",
+    magic_type = "xe_fey_magick",
+    name = "The Wind Blows, the Willow Bends",
+    description = "Like the flitting wind or the flexible willow, the spell allows you to avoid attacks much more easily.  It has <color_yellow>reduced effects</color> away from your natural environment (indoors for Sylph, non-natural terrain for Arvore).",
+    flags = { "SOMATIC", "VERBAL", "NO_EXPLOSION_SFX", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_xedra_evolved_fed723c45139", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_xedra_evolved_e502b1ba6b1c", fallback = 0 },
+    base_energy_cost = 600,
+    final_energy_cost = 400,
+    energy_increment = -12,
+    difficulty = 5,
+    max_level = 25,
+    base_casting_time = 150,
+    impact_handler = "w16b_sp_imp_xedra_evolved_9e42b885713b",
+}

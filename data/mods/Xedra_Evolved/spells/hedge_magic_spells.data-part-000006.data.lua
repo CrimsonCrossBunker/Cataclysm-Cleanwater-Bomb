@@ -20,3 +20,23 @@ ccb.content.define_spell {
     min_duration = 4320000,
     max_duration = 4320000,
 }
+
+ccb.content.define_spell {
+    id = "hedge_hide_in_forest",
+    skill = "survival",
+    components = "spell_components_hedge_hide_in_forest",
+    shape = "blast",
+    spell_class = "HEDGE_MAGIC",
+    magic_type = "xe_hedge_magick",
+    name = "To Vanish Amidst the Leaves",
+    description = "While standing in a forest, conceal your presence.  For a brief time after using the charm, anything looking at you will only see another bit of foliage.  Movement or taking any hostile action will cancel the charm.",
+    message = "You wrap the beans in the leaf and, with a slight grimace, recite the words of the charm before you put them in your mouth and hold them there.",
+    flags = { "VERBAL", "SOMATIC", "NO_FAIL" },
+    valid_targets = { "self" },
+    min_duration = 30000,
+    max_duration = 30000,
+    difficulty = 70,
+    max_level = 1,
+    base_casting_time = 350,
+    impact_handler = "w16b_sp_imp_xedra_evolved_611ccb090341",
+}

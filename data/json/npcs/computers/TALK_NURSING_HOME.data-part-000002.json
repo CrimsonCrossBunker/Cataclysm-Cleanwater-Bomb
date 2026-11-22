@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_NURSING_HOME_RECEP_MANAGER",
-    "type": "effect_on_condition",
-    "effect": [ "open_dialogue" ]
-  }
-]

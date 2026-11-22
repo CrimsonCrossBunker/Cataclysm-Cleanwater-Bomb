@@ -78,7 +78,7 @@ local function waterway(omt, adjacent)
 end
 
 local function salamander_modifiers(character, position)
-    local temperature = services.weather.current().precise.temperature.value
+    local temperature = services.weather.current().precise.temperature:value("kelvin")
     local fire = false
     for _, field in ipairs(hot_fields) do
         if env.field_exists(position, field, false) then fire = true break end

@@ -22,3 +22,25 @@ ccb.content.define_spell {
     base_energy_cost = 300,
     base_casting_time = 3000,
 }
+
+ccb.content.define_spell {
+    id = "technomancer_conjure_ups",
+    shape = "blast",
+    spell_class = "TECHNOMANCER",
+    magic_type = "magiclysm_conjuration_magic",
+    name = "Power Supply",
+    description = "For the technomancer with no enhancements, this spell summons a power supply composed of pure mana that can be used to charge any compatible device.  Just keep it on your person and it will continually recharge your electronic devices until the duration expires.",
+    flags = { "CONJURATION_SPELL", "CONCENTRATE", "VERBAL", "SOMATIC" },
+    valid_targets = { "self" },
+    min_duration = 100000,
+    duration_increment = 10000,
+    max_duration = 300000,
+    base_energy_cost = 350,
+    difficulty = 7,
+    max_level = 20,
+    base_casting_time = 3000,
+    impact_handler = "w16b_sp_imp_magiclysm_5210a0417178",
+    extra_spells = {
+        { spell = "eoc_summon_setup", self = true },
+    },
+}

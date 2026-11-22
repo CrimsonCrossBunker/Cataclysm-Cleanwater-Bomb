@@ -28,3 +28,4 @@ require("combat_events")
 
 require("technique_movement")
 require("dialogue_handlers")
+require("eoc_runtime")

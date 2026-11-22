@@ -1,6 +1,8 @@
 local ccb = require("ccb")
 local actions = ccb.content.dialogue_actions
 
+
+
 ccb.content.define_dialogue_topic {
     id = "TALK_PERK_MENU_WELCOME_FIRST_LEVEL",
     line = ccb.content.text("How much experience should be required to get to the first level?"),
@@ -102,6 +104,22 @@ ccb.content.define_dialogue_topic {
         {
             text = ccb.content.text("Back"),
             next_topic = "TALK_PERK_MENU_WELCOME_PLAYSTYLE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_PERK_MENU_WELCOME",
+    line = ccb.content.text("Welcome to Bombastic Perks.  Once you complete this configuration, your character should receive a \"perk menu\" trait which you can use to check your EXP, level, and browse available perks.\nPlease configure the mod with the settings below."),
+    replies = {
+        {
+            text = ccb.content.text("Use Default Settings"),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_bombasticperks_8173186b74c6") },
+        },
+        {
+            text = ccb.content.text("Customize Settings"),
+            next_topic = "TALK_PERK_MENU_WELCOME_FIRST_LEVEL",
         },
     },
 }

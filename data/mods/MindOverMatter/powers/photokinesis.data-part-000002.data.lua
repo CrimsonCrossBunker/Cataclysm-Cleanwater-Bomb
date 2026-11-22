@@ -31,3 +31,24 @@ ccb.content.define_spell {
     final_casting_time = 35,
     casting_time_increment = -6,
 }
+
+ccb.content.define_spell {
+    id = "photokinetic_light_dodge",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "PHOTOKINETIC",
+    magic_type = "mom_psionics",
+    name = "[Ψ]Trick of the Light (C)",
+    description = "Manipulate the light around your body, creating shifting illusions, blurring your outline and position, and becoming harder to hit.  An enemy successfully hitting you will pinpoint your location and <color_red>disrupt the power</color>.\n\nhis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_mindovermatter_41b43945a6e0", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_mindovermatter_b031e855850f", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_mindovermatter_530ff7e76fcb", fallback = 0 },
+    difficulty = 2,
+    max_level = { handler = "w16b_sp_stat_mindovermatter_649ad2e6bf35", fallback = 0 },
+    base_casting_time = { handler = "w16b_sp_stat_mindovermatter_efd45fe57dd2", fallback = 0 },
+    impact_handler = "w16b_sp_imp_mindovermatter_2b7725b5eae4",
+}

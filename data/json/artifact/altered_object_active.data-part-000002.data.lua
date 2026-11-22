@@ -88,3 +88,16 @@ ccb.content.define_spell {
         { spell = "AO_BOOK_SNAP_PUSH", self = true },
     },
 }
+
+ccb.content.define_spell {
+    id = "AO_SURFACE",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Artifact surfacing"),
+    description = ccb.content.text_without_extraction("Sends you to the surface."),
+    message = "You reel as your sense of balance falters, but you didn't fall anywhere.",
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    min_range = 1,
+    max_range = 1,
+    impact_handler = "w16b_sp_imp_dda_dc45c4be89fa",
+}

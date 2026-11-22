@@ -14,3 +14,14 @@ ccb.content.define_spell {
     flags = { "SILENT", "NO_EXPLOSION_SFX" },
     base_casting_time = 100,
 }
+
+ccb.content.define_spell {
+    id = "AO_BOOK_FAR_TP",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Book far tp"),
+    description = ccb.content.text_without_extraction("Teleports you to a distant location."),
+    message = "You find the description of a distant place.",
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_dda_19f00d256aea",
+}

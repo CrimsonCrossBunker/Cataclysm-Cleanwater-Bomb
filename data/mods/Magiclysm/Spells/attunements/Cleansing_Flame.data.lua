@@ -21,3 +21,29 @@ ccb.content.define_spell {
     aoe_increment = 0.06,
     spell_class = "CLEANSING_FLAME",
 }
+
+ccb.content.define_spell {
+    id = "burning_trail",
+    shape = "blast",
+    spell_class = "CLEANSING_FLAME",
+    magic_type = "magiclysm_evocation_magic",
+    name = "Burning Trail",
+    description = "Speak a short phrase and transform your footsteps into burning pits of flame, leaving a trail of fire behind you.  Each step will consume mana, but you will be immune to fire while the spell is in effect.",
+    flags = {
+        "EVOCATION_SPELL",
+        "CONCENTRATE",
+        "VERBAL",
+        "NO_HANDS",
+        "MUST_HAVE_CLASS_TO_LEARN",
+        "NO_FAIL",
+    },
+    valid_targets = { "self" },
+    base_energy_cost = 25,
+    difficulty = 8,
+    max_level = 1,
+    base_casting_time = { handler = "w16b_sp_stat_magiclysm_5d46ffb57ea5", fallback = 0 },
+    impact_handler = "w16b_sp_imp_magiclysm_60fd72496d14",
+    extra_spells = {
+        { spell = "eoc_evocation_setup", self = true },
+    },
+}

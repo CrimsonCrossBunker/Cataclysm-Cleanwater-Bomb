@@ -17,3 +17,14 @@ ccb.content.define_spell {
     message = "",
     sound_description = "",
 }
+
+ccb.content.define_spell {
+    id = "boann_retaliation",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Boann's retaliation"),
+    description = ccb.content.text_without_extraction("Intended to be hidden.  Makes Boann teleport the player away, spawns some huntsmen and hounds then cure all her ailments and injuries if she survives being hit by the player."),
+    message = "",
+    flags = { "SILENT", "NO_EXPLOSION_SFX", "NO_FAIL" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_xedra_evolved_46f11199f37d",
+}

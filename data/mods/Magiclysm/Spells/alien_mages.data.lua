@@ -249,3 +249,15 @@ ccb.content.define_spell {
     shape = "blast",
     min_range = 30,
 }
+
+ccb.content.define_spell {
+    id = "migo_fleshwarper_mutate",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Fleshwarp Target"),
+    description = ccb.content.text_without_extraction("A spell for the mi-go fleshwarper to cause a random mutation."),
+    flags = { "SILENT", "RANDOM_DAMAGE", "TOUCH_REQUIRED" },
+    valid_targets = { "hostile" },
+    min_range = 1,
+    max_range = 1,
+    impact_handler = "w16b_sp_imp_magiclysm_f0193c799283",
+}

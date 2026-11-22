@@ -1,5 +1,8 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
 local predicates = ccb.content.dialogue_predicates
+
+
 
 ccb.content.define_dialogue_topic {
     id = "TALK_REFUGEE_BEGGAR_1_LEAVE",
@@ -117,6 +120,25 @@ ccb.content.define_dialogue_topic {
             text = ccb.content.text("I'm sorry, I can't help you."),
             next_topic = "TALK_DONE",
             when = predicates.negate(predicates.has_effect("interlocutor", "beggar_has_eaten")),
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_BEGGAR_1_GAVE_FOOD",
+    line = ccb.content.text("This is wonderful of you, I really appreciate it."),
+    on_enter = {
+        { actions = { "u_bulk_donate" } },
+        { actions = { actions.handler("w16b_a_dda_ee5ac56a72a9") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("What are you doing here?"),
+            next_topic = "TALK_REFUGEE_BEGGAR_1_INTRO",
+        },
+        {
+            text = ccb.content.text("No problem.  <end_talking_leave>"),
+            next_topic = "TALK_DONE",
         },
     },
 }

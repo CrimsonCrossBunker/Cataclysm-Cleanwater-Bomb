@@ -38,3 +38,39 @@ ccb.content.define_monster {
         },
     },
 }
+
+ccb.content.define_monster {
+    id = "mon_feral_serum_user_armus",
+    name = "feral test subject",
+    description = "Despite the myriad rips and tears in this feral's orange jumpsuit, they don't have a single scratch on them.  Only their bloodshot eyes and the way the zombies ignore them indicate something is wrong.",
+    copy_from = "mon_feral_human_pipe",
+    bleed_rate = 0,
+    death = {
+        drops = {
+            kind = "collection",
+            items = {
+                {
+                    item = "serum_resilience",
+                    probability = 30,
+                    count = { 1, 3 },
+                },
+                { group = "feral_humans_death_drops_pipe", probability = 100 },
+            },
+        },
+    },
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    kind = "scripted",
+                    id = "armus_user_armor",
+                    range = 100,
+                    allow_no_target = true,
+                    cooldown = 1,
+                    when = "w16b_mon_when_dda_faf89649dc5f",
+                    action = "w16b_mon_act_dda_1cdaa456d5d6",
+                },
+            },
+        },
+    },
+}

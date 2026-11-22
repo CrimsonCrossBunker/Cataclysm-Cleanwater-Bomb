@@ -228,3 +228,15 @@ ccb.content.define_spell {
     effect = "summon",
     effect_data = "mon_shifter_feral",
 }
+
+ccb.content.define_spell {
+    id = "mon_shabriri_blind_spell_reduce_anger",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Shabriri Blinding Spell Reduce Anger"),
+    description = ccb.content.text_without_extraction("After we blind a target we're less annoyed at them."),
+    message = "",
+    teachable = false,
+    flags = { "NO_PROJECTILE", "NO_HANDS", "NO_LEGS" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_xedra_evolved_7097520b043a",
+}

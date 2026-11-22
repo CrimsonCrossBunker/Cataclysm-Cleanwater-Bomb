@@ -58,3 +58,24 @@ ccb.content.define_spell {
     final_casting_time = 90,
     casting_time_increment = -4,
 }
+
+ccb.content.define_spell {
+    id = "photokinetic_hide_ugly",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "PHOTOKINETIC",
+    magic_type = "mom_psionics",
+    name = "[Ψ]Mirror-Mask (C)",
+    description = "Hide your true form behind unassuming illusions, preventing baseline humans from reacting poorly to your presence if you are mutated or a cyborg.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.  It is <color_red>canceled by engaging in combat</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_mindovermatter_9d30eaf30686", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_mindovermatter_baad7df8baff", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_mindovermatter_620b6157bb24", fallback = 0 },
+    difficulty = 4,
+    max_level = { handler = "w16b_sp_stat_mindovermatter_649ad2e6bf35", fallback = 0 },
+    base_casting_time = { handler = "w16b_sp_stat_mindovermatter_e616ae40dee0", fallback = 0 },
+    impact_handler = "w16b_sp_imp_mindovermatter_3ffd7192396b",
+}

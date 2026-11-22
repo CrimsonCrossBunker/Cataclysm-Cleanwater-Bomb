@@ -24,3 +24,24 @@ ccb.content.define_spell {
     final_casting_time = 100,
     casting_time_increment = -8,
 }
+
+ccb.content.define_spell {
+    id = "vita_purge_rads",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "VITAKINETIC",
+    magic_type = "mom_psionics",
+    name = "[Ψ]Radiation Decontamination",
+    description = "Use your powers to isolate and flush radiation from your body.  Depending on your level of contamination, this power may have serious side effects.",
+    message = "You focus your powers on the corruption infusing your flesh.",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    base_energy_cost = 7000,
+    final_energy_cost = 4500,
+    energy_increment = -135,
+    difficulty = 6,
+    max_level = { handler = "w16b_sp_stat_mindovermatter_c90982788f60", fallback = 0 },
+    base_casting_time = 6000,
+    impact_handler = "w16b_sp_imp_mindovermatter_bd320a5679a2",
+}

@@ -338,3 +338,96 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "afs_enforcer_station_a1_floor2" },
+    layout = {
+        fill_terrain = "t_metal_floor",
+        rows = {
+            "                        ",
+            " //////==/////--)--/)-- ",
+            " /~/~/.hÓ/>>/❶-@.~-@.~- ",
+            " /:/:/.'k/../❺-@..-@..- ",
+            " =...//://../:-...-...- ",
+            " /á..:...'....-))!-))!- ",
+            " /á'b/...'.%....'...'.) ",
+            " /á.b/.///!//...'...'.) ",
+            " //:////ää.ä/..--!---!- ",
+            " /...'%/â..ä/..-.'.)k.- ",
+            " /F.h.h/â'.â/..-.y.)c'- ",
+            " =o.yyy/fh.â/''-hyh)k.- ",
+            " /jUh.h/ffââ/..-------- ",
+            " /==/==//////..-éé.ééé- ",
+            " [™£™™£/3.4.:..1...'.é- ",
+            " [™£❷£™/.'../..2ééyy.é- ",
+            " [™™❻™™/3..5/..-----.é- ",
+            " [£™❷£™/====/==/£™£---- ",
+            " [™£™™™™£™£™£™™£™™£™™™[ ",
+            " [™™666£™™™™£™£7™7™™™£[ ",
+            " [£™666™£™™™[[[[™£™[[[[ ",
+            " [™£™£™™™££™[  [£™™[    ",
+            " [[[[[[[[[[[[  [[[[[    ",
+            "                        ",
+        },
+        nested = {
+            {
+                id = { parameter = "lightstatus", fallback = "null" },
+                x = 0,
+                y = 0,
+            },
+            {
+                id = {
+                    select = { parameter = "enemies", fallback = "afs_enforcer_station_a1_floor2_moxies" },
+                    cases = {
+                        afs_enforcer_station_a1_floor1_moxies = "afs_enforcer_station_a1_floor2_moxies",
+                        afs_enforcer_station_a1_floor1_robots = "afs_enforcer_station_a1_floor2_robots",
+                    },
+                },
+                x = 0,
+                y = 0,
+            },
+        },
+        palettes = {
+            "afs_habitat_structure",
+            "afs_habitat_exterior",
+            "afs_habitat_residential_furnishing",
+            "afs_habitat_life_support",
+            "afs_enforcer_station_a1_parrameter_palette",
+            "afs_light_param_palette",
+        },
+        terrain = { ["1"] = "t_door_metal_locked", ["2"] = "t_afs_enforcer_card_reader", [" "] = "t_open_air" },
+        furniture = {
+            ["3"] = "f_treadmill",
+            ["4"] = "f_punching_bag",
+            ["5"] = "f_exercise",
+            ["6"] = "f_solar_unit",
+            ["7"] = "f_small_satellite_dish",
+            ["á"] = "f_locker",
+            ["â"] = "f_rack",
+            ["ä"] = "f_metal_table",
+            ["é"] = "f_locker",
+        },
+        item_groups = {
+            ["á"] = { group = "afs_wintersuit_police_advanced", chance = 30 },
+            ["â"] = {
+                repetitions = { 1, 2 },
+                group = "afs_tools_robot_maintenance",
+                chance = 30,
+            },
+            ["ë"] = { group = "afs_police_bot_storage", chance = 20 },
+            ["é"] = {
+                repetitions = { 1, 12 },
+                group = "afs_police_evidence_locker",
+                chance = 60,
+            },
+        },
+        computer_glyphs = {
+            ["Ó"] = {
+                name = "ColNet access point",
+                chat_topics = { "COMPUTER_GENERIC_SALVAGE_LOCKED" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

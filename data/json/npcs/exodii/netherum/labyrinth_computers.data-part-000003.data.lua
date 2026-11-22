@@ -2,6 +2,8 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+
+
 ccb.content.define_dialogue_topic {
     id = "COMP_LS2_MAP_2",
     line = ccb.content.text("&<color_light_green> @User > map get --update\n<color_light_green> Error: Insufficient confidence.  Blood tax requested.\n\n</color>A drawer on the side of the terminal slides open, revealing a a bloodstained stone with the outline of a human hand."),
@@ -47,6 +49,30 @@ ccb.content.define_dialogue_topic {
         {
             text = ccb.content.text("Log off."),
             next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_LS_Passcode_Door2",
+    line = ccb.content.text("&<color_light_green> @User > doorstatus --update=unlock\n<color_light_green>Command accepted.\n<color_light_green>Nearby doors unlocked.\n<color_light_green>Thank you for using AltarOS.\n\n<color_light_green> @User > _"),
+    replies = {
+        {
+            text = ccb.content.text("Log off."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_c965521e93b8") },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_LS_Passcode_Door3",
+    line = ccb.content.text("&<color_light_green> @User > doorstatus --update=lock\n<color_light_green>Command accepted.\n<color_light_green>Nearby doors locked.\n<color_light_green>Warning: What is done cannot be undone.  This does not represent a return to how things were.  You can never go back.\n\n<color_light_green> @User > _"),
+    replies = {
+        {
+            text = ccb.content.text("Log off."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_602258923b5d") },
         },
     },
 }

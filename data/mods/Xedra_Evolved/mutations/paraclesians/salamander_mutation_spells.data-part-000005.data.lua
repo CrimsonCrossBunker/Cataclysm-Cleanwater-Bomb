@@ -101,3 +101,23 @@ ccb.content.define_spell {
         },
     },
 }
+
+ccb.content.define_spell {
+    id = "salamander_fire_fly",
+    skill = "deduction",
+    shape = "blast",
+    spell_class = "SALAMANDER",
+    magic_type = "xedra_salamader_magick",
+    name = "Burning Ascension",
+    description = "Like the rising heat of fire, you can ascend into the air and walk with the smoke for a short time before falling safely back to the earth.",
+    caster_condition_fail_message = "You must be standing in flames to cast Burning Ascension.",
+    teachable = false,
+    flags = { "SOMATIC", "SILENT", "NO_LEGS", "VERBAL", "TARGET_TELEPORT" },
+    valid_targets = { "self" },
+    base_energy_cost = 250,
+    difficulty = 6,
+    max_level = 15,
+    base_casting_time = { handler = "w16b_sp_stat_xedra_evolved_efe4d63a8049", fallback = 0 },
+    caster_when = "w16b_sp_cast_xedra_evolved_9406ffb9ec84",
+    impact_handler = "w16b_sp_imp_xedra_evolved_e286a436a44b",
+}

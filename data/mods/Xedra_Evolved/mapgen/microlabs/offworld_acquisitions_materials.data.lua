@@ -1,0 +1,106 @@
+local ccb = require("ccb")
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "microlab_generic_tile",
+    layout = {
+        rows = {
+            "     | cc 2  2 cc |     ",
+            "     |    |55G    |cccc ",
+            "  |||||||||  |||||||||c ",
+            "  |--------   -------|6 ",
+            "  |-ch  lll    -6hh6-|r ",
+            "|||-c          2    -||2",
+            "  |---  ƀƀ ƀƀ  (   M̃-|c ",
+            "  |-6h  ƀƀ ƀƀ  -å  M-|c ",
+            " ||-c   ƀƀ ƀƀ  -A6 6-|| ",
+            " |----- ƀƀ ƀƀ 9-------| ",
+            "2|-6  2        5Z   O-||",
+            " |-h  -----22---- t O-| ",
+            " |-  ƀ-h      h-O   O-| ",
+            "||-Ė ƀ-66 8  66-OOOOO-||",
+            " |---------55---------|c",
+            " |-...-...-  -...-...-| ",
+            " |-(5(-(5(- 7-(5(-(5(-| ",
+            "c|-                  -|c",
+            "||-((5(-((5(-((5(-(5(-||",
+            "c|-....-....-....-...-|F",
+            " |--------------------|F",
+            " |||||||||||||||||||||||",
+            " cccc|c   |^^|    |  cc ",
+            "    c|c   2  2    |     ",
+        },
+        size = { width = 24, height = 24 },
+        palettes = { "microlab" },
+        terrain = { G = "t_card_science", Z = "t_door_metal_o" },
+        furniture = {
+            A = "f_autodoc",
+            ["å"] = "f_autodoc_couch",
+            ["ƀ"] = "f_lab_bench",
+            ["Ė"] = "f_electron_microscope",
+            t = "f_counter",
+            p = "f_counter",
+            M = "f_CTscan",
+            ["M̃"] = "f_scan_bed",
+        },
+        item_groups = {
+            ["ƀ"] = {
+                repetitions = { 1, 2 },
+                group = "science",
+                chance = 20,
+            },
+            O = {
+                {
+                    repetitions = { 1, 2 },
+                    group = "Zomborg_CBM_harvest",
+                    chance = 15,
+                },
+                {
+                    repetitions = { 1, 2 },
+                    group = "Zomborg_CBM_harvest_power",
+                    chance = 25,
+                },
+            },
+        },
+        monster_group_placements = {
+            {
+                x = { 2, 14 },
+                y = { 2, 14 },
+                repetitions = { 1, 5 },
+                group = "GROUP_LAB",
+                chance = 4,
+            },
+        },
+        computer_glyphs = {
+            ["7"] = {
+                name = "Offworld Acquisitions - Open Raw Materials Storage Chambers",
+                access_denied = "ERROR, access denied.  Raw materials access requires appropriate clearance.  Please contact your supervisor if you have received this message in error.",
+                security = 5,
+                menu = {
+                    { label = "Open Raw Materials Storage Chambers", action = "unlock" },
+                },
+                failures = { "shutdown", "alarm", "damage", "manhacks" },
+            },
+            ["8"] = {
+                name = "Offworld Acquisitions - Raw Materials",
+                chat_topics = { "OFFWORLD_ACQUISITIONS_RAW_MATERIALS_COMPUTER_MAIN" },
+                dialogue_on_access = true,
+            },
+            ["9"] = {
+                name = "Offworld Acquisitions - Assets",
+                chat_topics = { "OFFWORLD_ACQUISITIONS_ASSETS_COMPUTER_MAIN" },
+                dialogue_on_access = true,
+            },
+        },
+        monster_placements = {
+            { x = 4, y = 15, id = "mon_zomborg", chance = 25 },
+            { x = 8, y = 15, id = "mon_zomborg", chance = 25 },
+            { x = 15, y = 15, id = "mon_zomborg", chance = 25 },
+            { x = 19, y = 15, id = "mon_zomborg", chance = 25 },
+            { x = 4, y = 19, id = "mon_zomborg", chance = 25 },
+            { x = 9, y = 19, id = "mon_zomborg", chance = 25 },
+            { x = 15, y = 19, id = "mon_zomborg", chance = 25 },
+            { x = 19, y = 19, id = "mon_zomborg", chance = 25 },
+        },
+    },
+}

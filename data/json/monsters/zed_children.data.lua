@@ -162,3 +162,60 @@ ccb.content.define_monster {
     upgrade = false,
     flags = { "SEES", "HEARS", "IMMOBILE", "WARM", "POISON", "NO_BREATHE", "FILTHY" },
 }
+
+ccb.content.define_monster {
+    id = "mon_zombie_child_base",
+    name = ccb.content.plural_text("zombie child", "zombie children"),
+    description = "It was only a child, and little is different about it now aside from the hungry look in its eyes.  You'd be hard-pressed to not feel like you were killing an actual child by putting it down.",
+    copy_from = "mon_zombie_base",
+    symbol = "z",
+    fungalize_into = "mon_zombie_child_dusted",
+    burn_into = "mon_zombie_child_scorched",
+    hp = 40,
+    speed = 65,
+    melee_skill = 2,
+    dodge = 2,
+    vision_day = 30,
+    weakpoint_sets = {
+        "wps_humanoid_body",
+        "wps_vital_organs",
+        "wps_eyes",
+        "wps_humanoid_child_body",
+        "wps_humanoid_head_big",
+    },
+    families = {
+        "prof_gross_anatomy",
+        "prof_intro_biology",
+        "prof_physiology",
+        "prof_wp_zombie",
+        "prof_wp_child",
+    },
+    melee_damage = {
+        { type = "cut", amount = 2 },
+    },
+    upgrade = { half_life = 120, monster_group = "GROUP_CHILD_ZOMBIE_UPGRADE" },
+    attacks = {
+        { id = "bite_humanoid", attack_upper = false, cooldown = 5 },
+        { id = "scratch", attack_upper = false, cooldown = 15 },
+    },
+    death = {
+        drops = {
+            kind = "collection",
+            groups = {
+                { id = "default_zombie_children_clothes", weight = 100 },
+                { id = "child_items_pockets", weight = 65 },
+            },
+        },
+    },
+    inheritance = {
+        add = {
+            flags = { "CLUMSY_ATTACKS" },
+            weakpoint_sets = { "wps_humanoid_child_body", "wps_humanoid_head_big" },
+            families = { "prof_wp_child" },
+        },
+        remove = {
+            flags = { "PUSH_MON" },
+        },
+        scale = { mass = 0.5, volume = 0.5 },
+    },
+}

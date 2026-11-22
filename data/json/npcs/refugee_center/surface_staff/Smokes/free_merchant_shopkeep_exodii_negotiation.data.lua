@@ -2,6 +2,8 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+
+
 ccb.content.define_dialogue_topic {
     id = { "TALK_FREE_MERCHANTS_MERCHANT_Exodii_mission_meet_free_merchants_negotiations" },
     line = ccb.content.text("&You boot up the strange TV-radio device.  There is a sharp squeal from the device as the screen, first covered in only static, blips into life.  After a moment, the image on the screen wobbles and Rubik appears, offering a stiff bow.  You hold the screen up so Smokes can see it."),
@@ -227,6 +229,45 @@ ccb.content.define_dialogue_topic {
             text = ccb.content.text("Happy to help.  Just remember I'm a friend to the Center, yeah?"),
             next_topic = "TALK_DONE",
             actions = { actions.adjust_faction_trust(5) },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = { "TALK_FREE_MERCHANTS_MERCHANT_Exodii_mission_meet_free_merchants_negotiations_DONE" },
+    line = {
+        when = predicates.handler("w16b_p_dda_c49833a17225"),
+        yes = ccb.content.text("&Rubik unceremoniously shuts off the the screen, leaving nothing but static.  Smokes leans back in his chair, wiping his brow.  \"Well, that didn't go well.  Something tells me it isn't gonna work out, and it's for the best.\""),
+        no = {
+            when = predicates.handler("w16b_p_dda_679bee254e20"),
+            yes = ccb.content.text("&Rubik and Smokes finish their negotiation and agree to a complex set of terms.  Caravans will begin in about a week.  Rubik offers a stiff bow over the screen before it switches to static.  Smokes leans back, offering an easy smile.  \"Well, didn't expect that today, but that went well.  You were, uh, well, let's just say I think you should stick to scavenging, yeah?\""),
+            no = ccb.content.text("&Rubik and Smokes finish their negotiation and agree to a complex set of terms.  Caravans will begin in about a week.  Rubik offers a stiff bow over the screen before it switches to static.  Smokes leans back, offering an easy smile.  \"Well, didn't expect that today - negotiations with, well, whatever they are - but that went well.  I appreciate you.  Not sure we would've come to a deal without someone to do a bit of translating.\""),
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Yeah, it's definitely for the best.  See you around.  Maybe."),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("w16b_p_dda_c49833a17225"),
+            actions = { actions.handler("w16b_a_dda_df2b41f36920") },
+        },
+        {
+            text = ccb.content.text("Hm.  See you around, I guess."),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("w16b_p_dda_b4a71b11572d"),
+            actions = { actions.handler("w16b_a_dda_6b33ca9a0565") },
+        },
+        {
+            text = ccb.content.text("Glad to be of service.  I better get back to the Exodii.  See you around."),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("w16b_p_dda_7676c8d1ead1"),
+            actions = { actions.handler("w16b_a_dda_6b33ca9a0565") },
+        },
+        {
+            text = ccb.content.text("Glad to be of service.  Seems the deal went pretty well for you, yeah?"),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_Exodii_mission_meet_free_merchants_negotiations_FAVORS_MERCHANTS",
+            when = predicates.handler("w16b_p_dda_73f94f9c82ab"),
+            actions = { actions.handler("w16b_a_dda_6b33ca9a0565") },
         },
     },
 }

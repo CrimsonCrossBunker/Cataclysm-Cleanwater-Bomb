@@ -24,3 +24,6 @@ if require("ccb").content.is_mod_active("bombastic_perks") then
     require("mod_interactions.bombastic_perks.runtime_interaction")
 end
 require("dialogue_handlers")
+require("eoc_runtime")
+require("dialogue_handlers_wave16b")
+require("eoc_monsters")

@@ -161,3 +161,45 @@ ccb.content.define_furniture {
         },
     },
 }
+
+ccb.content.define_furniture {
+    id = "f_sealed_intermodal_crate",
+    name = "sealed intermodal crate",
+    description = "A sealed metal crate used to ferry cargo to and from orbit.  This one appears to be secured with an electric lock.",
+    symbol = "O",
+    background_color = "brown",
+    coverage = 60,
+    move_cost_mod = -1,
+    required_strength = -1,
+    flags = {
+        "TRANSPARENT",
+        "MOUNTABLE",
+        "SHORT",
+        "SMALL_HIDE",
+        "PLACE_ITEM",
+        "CONTAINER",
+        "SEALED",
+    },
+    bash = {
+        minimum_strength = 40,
+        maximum_strength = 200,
+        sound = "screeching metal!",
+        failure_sound = "whump!",
+        drops = {
+            {
+                item = "ch_steel_chunk",
+                count = { 1, 5 },
+            },
+            {
+                item = "scrap",
+                count = { 1, 5 },
+            },
+            {
+                item = "afs_circuitry_1",
+                count = { 1, 2 },
+            },
+        },
+    },
+    oxytorch = { result = "f_intermodal_crate_open", duration = "14 seconds" },
+    examine_handler = "w16b_tile_ex_aftershock_exoplanet_aae3520fcb96",
+}

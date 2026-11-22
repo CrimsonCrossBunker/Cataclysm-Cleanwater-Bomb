@@ -67,3 +67,21 @@ ccb.content.define_spell {
     min_duration = 18000,
     max_duration = 18000,
 }
+
+ccb.content.define_spell {
+    id = "hedge_clairvoyance_cone",
+    skill = "survival",
+    components = "spell_components_hedge_clairvoyance_cone",
+    shape = "blast",
+    spell_class = "HEDGE_MAGIC",
+    magic_type = "xe_hedge_magick",
+    name = "To See Beyond the Barriers",
+    description = "Gain a brief vision of what lies beyond a wall or a doorway.",
+    message = "You close your eyes and place the shards of glass over them and press, just slightly.  As the pain blooms and the blood trickles, you see beyond.",
+    flags = { "VERBAL", "SOMATIC", "NO_FAIL" },
+    valid_targets = { "self" },
+    difficulty = 40,
+    max_level = 1,
+    base_casting_time = 1000,
+    impact_handler = "w16b_sp_imp_xedra_evolved_1192a2a1b45b",
+}

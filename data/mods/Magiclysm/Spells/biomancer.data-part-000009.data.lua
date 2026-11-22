@@ -23,3 +23,24 @@ ccb.content.define_spell {
     },
     base_casting_time = 6000,
 }
+
+ccb.content.define_spell {
+    id = "biomancer_get_more_blood",
+    components = "spell_components_biomancer_get_more_blood",
+    shape = "blast",
+    spell_class = "BIOMANCER",
+    magic_type = "magiclysm_restoration_magic",
+    name = "Carmine Infusion",
+    description = "Using water as a catalyst, restore some of your lost blood.  This spell has no effect if you're healthy and uninjured.",
+    flags = { "RESTORATION_SPELL", "CONCENTRATE", "VERBAL", "SOMATIC" },
+    valid_targets = { "self" },
+    base_energy_cost = 350,
+    difficulty = 5,
+    max_level = 15,
+    base_casting_time = 1500,
+    impact_handler = "w16b_sp_imp_magiclysm_2c3e2ed6d8d4",
+    extra_spells = {
+        { spell = "eoc_restoration_setup", self = true },
+        { spell = "biomantic_pain_caused_light", self = true },
+    },
+}

@@ -18,3 +18,16 @@ ccb.content.define_monster_attack {
     avatar_no_damage = ccb.content.text("%s tries to grasp you, but it slides off your armor."),
     npc_no_damage = ccb.content.text("%s tries to grasp <npcname>, but its legs slide of their armor."),
 }
+
+ccb.content.define_spell {
+    id = "shock_mine_control",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Sock mine control"),
+    description = ccb.content.text_without_extraction("Shock mines control themselves using this one."),
+    message = "",
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    min_range = 1,
+    max_range = 1,
+    impact_handler = "w16b_sp_imp_aftershock_exoplanet_6683a9b08ada",
+}

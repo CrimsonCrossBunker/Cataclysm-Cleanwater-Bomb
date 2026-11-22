@@ -1195,3 +1195,92 @@ ccb.content.define_mapgen {
         palettes = { "labyrinth2_nest_palette" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth2_9x9_square_room_nest",
+    layout = {
+        rows = {
+            "         ",
+            " ÇÇÇ ÇÇÇ ",
+            "         ",
+            "  ÇÇÇÇϴ  ",
+            "         ",
+            "  ϴÇÇÇÇ  ",
+            "         ",
+            "  ϴÇÇÇçÇ ",
+            "         ",
+        },
+        size = { width = 9, height = 9 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        rotation = { 0, 3 },
+        palettes = { "labyrinth2_nest_palette" },
+        computer_glyphs = {
+            ["ç"] = {
+                name = "Active Terminal",
+                chat_topics = { "COMP_LS2_MAP" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth2_9x9_square_room_nest",
+    layout = {
+        rows = {
+            "         ",
+            " ÇÇÇ ÇÇÇ ",
+            " ϴ       ",
+            "  ÇçÇÇϴ  ",
+            "         ",
+            "   ÇÇÇÇ  ",
+            " ϴ       ",
+            "  ÇÇÇÇÇÇ ",
+            "         ",
+        },
+        size = { width = 9, height = 9 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        rotation = { 0, 3 },
+        palettes = { "labyrinth2_nest_palette" },
+        computer_glyphs = {
+            ["ç"] = {
+                name = "Active Terminal",
+                chat_topics = { "COMP_LS2_MAP" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth2_9x9_circle_room_nest",
+    layout = {
+        rows = {
+            "           ",
+            "   Ç   Ç   ",
+            "  Ç M M Ç  ",
+            "   M   M   ",
+            "     L     ",
+            "  (     (  ",
+            "     L     ",
+            "   M   M   ",
+            "  ç M M Ç  ",
+            "   Ç   Ç   ",
+            "           ",
+        },
+        size = { width = 11, height = 11 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        rotation = { 0, 3 },
+        palettes = { "labyrinth2_nest_palette" },
+        computer_glyphs = {
+            ["ç"] = {
+                name = "Active Terminal",
+                chat_topics = { "COMP_LS2_MAP" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

@@ -35,3 +35,40 @@ ccb.content.define_monster {
     armor = { bash = 8, cut = 8, stab = 8, bullet = 8 },
     inheritance = { add = { flags = { "SMELLS", "PUSH_VEH" } }, remove = { flags = { "GRABS" } } },
 }
+
+ccb.content.define_monster {
+    id = "mon_zombie_urchin",
+    name = "rust urchin",
+    description = "A spiked horror of a zombie covered in long, rusty spikes.  A walking tetanus infection waiting to happen.",
+    copy_from = "mon_zombie_base",
+    color = "brown",
+    mass = "90 kg",
+    harvest = "zombie_rust",
+    decay = "zombie_decay_bone_human_skull_rust",
+    burn_into = "mon_zombie_scorched_rust",
+    hp = 100,
+    speed = 60,
+    melee_skill = 3,
+    melee_sides = 6,
+    grab_strength = 35,
+    bleed_rate = 0,
+    species = { "ZOMBIE" },
+    scents_tracked = { "sc_human", "sc_fetid" },
+    materials = { "flesh", "steel" },
+    armor = { bash = 5, cut = 5, stab = 5, bullet = 5 },
+    melee_damage = {
+        { type = "cut", amount = 12 },
+    },
+    attack_effects = {
+        { id = "tetanus", chance = 20, duration = 300 },
+    },
+    upgrade = false,
+    inheritance = {
+        add = {
+            flags = { "CLUMSY_ATTACKS" },
+            attacks = {
+                { id = "impale" },
+            },
+        },
+    },
+}

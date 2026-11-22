@@ -86,7 +86,7 @@ local function practice_in_heat(character)
         if checked(services.inventory.has_type(character, id("item", item))) then return true end
     end
     return flag(character, "salamander_near_fire")
-        or services.weather.current().precise.temperature.value >= warm_air_kelvin
+        or services.weather.current().precise.temperature:value("kelvin") >= warm_air_kelvin
 end
 
 local wet_weather = { thunder = true, lightning = true, rain = true, rainstorm = true, drizzle = true }

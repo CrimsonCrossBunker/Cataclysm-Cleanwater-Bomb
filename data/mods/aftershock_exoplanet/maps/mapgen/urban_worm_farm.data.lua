@@ -96,3 +96,86 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "afs_urban_aquaponicsw_n2" },
+    layout = {
+        fill_terrain = "t_metal_floor_no_roof",
+        rows = {
+            "                        ",
+            "                        ",
+            "  -ó----------  ------- ",
+            "  -.-E      E-  -h...^- ",
+            "  -.-E      E-  -Ódh.f- ",
+            "  -.-E      E-  -.....- ",
+            "---ó--(((((((----:====- ",
+            "hh.d^|..........-.....- ",
+            "...dh|..........3YY...- ",
+            ".....3..........-..->>- ",
+            "------(((((((----33---- ",
+            "    -G.th.3..3..3..dh-  ",
+            "    -G.th.(>>-bl-..d.-  ",
+            "    -G.th.(((----...n-  ",
+            "    -G..YY...-^hd..d.-  ",
+            "    --(((((((-..d..dh-  ",
+            "    -E  1   E-f......-  ",
+            "    -E  1111E-n.d..d.-  ",
+            "    -E  1   E-.hd..dh-  ",
+            "    -E111   E--=====--  ",
+            "    -E      E-%,,,,,U,  ",
+            "    -E      E-U,,,,,,,  ",
+            "    ----------,,,,,,,,  ",
+            "                        ",
+        },
+        palettes = { "afs_generic_building" },
+        terrain = { [" "] = "t_open_air", [","] = "t_flat_roof" },
+        furniture = {
+            U = "f_air_conditioner",
+            ["/"] = "f_autodoc_couch",
+            E = "f_water_purifier",
+            ["1"] = "f_vent_pipe",
+            G = "f_utility_shelf",
+            ["%"] = "f_machinery_electronic",
+            f = "f_filing_cabinet",
+            n = "f_trashcan",
+        },
+        item_spawns = {
+            d = { id = "afs_bugbrew_book" },
+        },
+        item_groups = {
+            G = {
+                repetitions = { 1, 3 },
+                group = "afs_mealgrub_precursor",
+                chance = 80,
+            },
+            d = { group = "SUS_office_desk", chance = 60 },
+            f = { group = "SUS_office_filing_cabinet", chance = 90 },
+            W = { group = "oa_ig_sb_water" },
+            R = {
+                { group = "decontamination_room", chance = 60 },
+                { group = "clothing_work_set", chance = 30 },
+            },
+            t = {
+                { group = "SUS_office_desk", chance = 60 },
+                {
+                    repetitions = { 1, 2 },
+                    group = "tools_science",
+                    chance = 20,
+                },
+                {
+                    repetitions = { 1, 3 },
+                    group = "afs_mealgrub_procesing",
+                    chance = 60,
+                },
+            },
+        },
+        computer_glyphs = {
+            ["Ó"] = {
+                name = "ColNet access point",
+                chat_topics = { "COMPUTER_GENERIC_SALVAGE_LOCKED" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

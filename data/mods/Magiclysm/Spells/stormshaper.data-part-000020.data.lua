@@ -37,3 +37,13 @@ ccb.content.define_spell {
     aoe_increment = 0.65,
     min_duration = { handler = "scaled_stormshaper_cloak_frog_summon_min_duration", fallback = 15000.0 },
 }
+
+ccb.content.define_spell {
+    id = "stormshaper_cloak_frog_transform",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Cloak of Frog Transform"),
+    description = ccb.content.text_without_extraction("Grants the caster some post-threshold Batrachian mutations if they aren't already a frog mutant."),
+    flags = { "TRANSFORMATION_SPELL", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_magiclysm_78cfe1e30897",
+}

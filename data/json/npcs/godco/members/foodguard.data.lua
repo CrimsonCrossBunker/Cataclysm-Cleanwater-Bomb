@@ -1,4 +1,8 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+local predicates = ccb.content.dialogue_predicates
+
+
 
 ccb.content.define_dialogue_topic {
     id = "TALK_GODCO_guard_food_future_plans",
@@ -46,6 +50,66 @@ ccb.content.define_dialogue_topic {
         {
             text = ccb.content.text("<end_talking_leave>  <end_talking_bye>"),
             next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_GODCO_guard_food",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_godco_godco_notalk_to_u" } }),
+        yes = ccb.content.text("You better step away from me real quick, sinner.  I don't want your kind here."),
+        no = {
+            when = predicates.handler("w16b_p_dda_866fa9af59a5"),
+            yes = ccb.content.text("What brings you around here <name_b>?  I don't want to see your face for a while."),
+            no = {
+                when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "general_meeting_u_met_food_guard" } }),
+                yes = {
+                    choices = {
+                        ccb.content.text("Hey there."),
+                        ccb.content.text("You're back."),
+                        ccb.content.text("So…?"),
+                    },
+                },
+                no = ccb.content.text("Hello.  What brings you around here?"),
+            },
+        },
+    },
+    on_enter = {
+        { actions = { actions.handler("w16b_a_dda_63cfbf23b6ac") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Who are you?"),
+            next_topic = "TALK_GODCO_guard_food_who",
+            when = predicates.all({ predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "general_meeting_u_met_food_guard" } })), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_godco_godco_notalk_to_u" } })) }),
+            actions = { actions.set_actor_value("interlocutor", "general_meeting_u_met_food_guard", "yes") },
+        },
+        {
+            text = ccb.content.text("Just stopping by for a moment.  <end_talking_bye>"),
+            next_topic = "TALK_DONE",
+            when = predicates.all({ predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "general_meeting_u_met_food_guard" } })), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_godco_godco_notalk_to_u" } })) }),
+            actions = { actions.set_actor_value("interlocutor", "general_meeting_u_met_food_guard", "yes") },
+        },
+        {
+            text = ccb.content.text("Who are you again?"),
+            next_topic = "TALK_GODCO_guard_food_who",
+            when = predicates.handler("w16b_p_dda_68bfd4661f4b"),
+        },
+        {
+            text = ccb.content.text("Care to talk for a bit?"),
+            next_topic = "TALK_GODCO_guard_food_idlechat",
+            when = predicates.handler("w16b_p_dda_68bfd4661f4b"),
+        },
+        {
+            text = ccb.content.text("I'll see you around."),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("w16b_p_dda_68bfd4661f4b"),
+        },
+        {
+            text = ccb.content.text("Alright then, fuck you <name_b>."),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("w16b_p_dda_2d84e4efe5a2"),
         },
     },
 }

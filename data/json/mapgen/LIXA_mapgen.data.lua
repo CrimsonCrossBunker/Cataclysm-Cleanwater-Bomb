@@ -3120,3 +3120,761 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = {
+        { "LIXA_surface_1a", "LIXA_surface_1b" },
+        { "LIXA_surface_2a", "LIXA_surface_2b" },
+    },
+    layout = {
+        fill_terrain = "t_pavement",
+        rows = {
+            "////////////////////////////////////////////////",
+            "/>D                                            /",
+            "//6                                            /",
+            "/                                              /",
+            "/                                              /",
+            "/            //////////////////////            /",
+            "/  Z...Z     /T/T/S|,/____/,|S/T/T/            /",
+            "/  .....     /+/+/.+,/____/,+./+/+/            /",
+            "/  .....     /..i..|,/____/,|..i../            /",
+            "/  .....     /||||||,//DD//,||||||/            /",
+            "/  Z...Z     /$$$$$|,,,,,5,,|0BBB./            /",
+            "/            /,,j,,+,j,,,,j,|,,j,,w            /",
+            "/            /$$.$k|,,,,,,,,|,,:,,w            /",
+            "/            /||+|||,,,,h,,,|,h:h,/            /",
+            "/            /'#.#'|,,####,,|,h:h,/            /",
+            "/            wh,,,h|,j,,,,j,|,h:h,/   //////////",
+            "/            w',j,,+,,,,,,,,+,h:h,w   /l.!!!!.l/",
+            "/            wh,,,h|,,,,,,,,|,,h,,w   /l......l/",
+            "/            /'#,#'|,,,,,,,,|,,j,,/   /l.i..i.l/",
+            "/            //ww//////dd/////ww///   /......../",
+            "/                         P           /......../",
+            "/                                     ////DD////",
+            "/                                     /l.6...KK/",
+            "/                                     /l......./",
+            "/////d/////                           /l..i..KK/",
+            "/        e/                           /l......./",
+            "/C                                    /l.....KK/",
+            "/                                     /l......./",
+            "/C                                    /l.....KK/",
+            "/                                     w...i..../",
+            "/                                     /......KK/",
+            "/?    ____/                           +......../",
+            "/?    ____/                           /////+////",
+            "/?    ____/                           /RRcc..../",
+            "/?    ____/                           w......../",
+            "/         D                           /...t...A/",
+            "/         D                           /..it...A/",
+            "/C        D                           +...t...A/",
+            "/         D                           /......../",
+            "/         D                           w.H;;;.../",
+            "/   VV   e/                           /.H;;;H../",
+            "///////////                           ////////+/",
+            "/                                     ///S.S.../",
+            "/                         /////       /T+.....l/",
+            "/              //D//DDDDDD/e../       ///..i.../",
+            "/              /5         w{../       ///....../",
+            "/              /          w{H.d       /T+.l/L/L/",
+            "////////////////          //////////////////////",
+        },
+        palettes = { "LIXA_ground_palette" },
+        traps = { _ = "tr_lixa_fall_down" },
+        item_spawns = {
+            ["$"] = {
+                {
+                    repetitions = { 4, 8 },
+                    id = "LIXA_generic_file",
+                    chance = 3,
+                },
+                { id = "LIXA_lab_file", chance = 5 },
+                { id = "id_LIXA", chance = 6 },
+            },
+            k = {
+                {
+                    repetitions = { 4, 8 },
+                    id = "LIXA_generic_file",
+                    chance = 3,
+                },
+                { id = "LIXA_lab_file", chance = 5 },
+                { id = "id_LIXA" },
+            },
+            ["!"] = {
+                { id = "id_LIXA_mil", chance = 10 },
+            },
+            l = {
+                { id = "LIXA_mil_file", chance = 8 },
+            },
+        },
+        item_groups = {
+            l = {
+                {
+                    repetitions = { 5, 10 },
+                    group = "army_personal_locker",
+                    chance = 50,
+                },
+                { group = "mil_base_coats", chance = 10 },
+            },
+            K = {
+                {
+                    repetitions = { 1, 2 },
+                    group = "army_bed",
+                    chance = 30,
+                },
+            },
+            ["!"] = {
+                {
+                    repetitions = { 1, 2 },
+                    group = "military_standard_assault_rifles",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 1, 2 },
+                    group = "military_ballistic_vest_light",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 3, 6 },
+                    group = "military_patrol_food",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 3, 6 },
+                    group = "military_patrol_food",
+                    chance = 40,
+                },
+            },
+            R = {
+                {
+                    repetitions = { 5, 7 },
+                    group = "military_patrol_food",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 2, 4 },
+                    group = "foodintincan",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 3, 6 },
+                    group = "soda_in_small_container",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 3, 6 },
+                    group = "salty_snacks",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 3, 6 },
+                    group = "alcohol_bottled_canned",
+                    chance = 40,
+                },
+            },
+            ["?"] = {
+                {
+                    repetitions = { 1, 2 },
+                    group = "tools_workshop",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 1, 2 },
+                    group = "supplies_electronics",
+                    chance = 40,
+                },
+            },
+            C = {
+                {
+                    repetitions = { 1, 2 },
+                    group = "tools_workshop",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 1, 2 },
+                    group = "supplies_electronics",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 5, 7 },
+                    group = "military_patrol_food",
+                    chance = 40,
+                },
+                {
+                    repetitions = { 2, 4 },
+                    group = "foodintincan",
+                    chance = 40,
+                },
+            },
+        },
+        item_placements = {
+            { x = 41, y = 33, id = "microwave", chance = 1 },
+            { x = 14, y = 14, id = "id_LIXA", chance = 1 },
+        },
+        monster_group_placements = {
+            {
+                x = { 1, 13 },
+                y = { 14, 23 },
+                group = "GROUP_MIL_STRONG",
+                density = 0.1,
+            },
+            {
+                x = { 35, 45 },
+                y = { 4, 15 },
+                group = "GROUP_MIL_STRONG",
+                density = 0.1,
+            },
+            {
+                x = { 25, 37 },
+                y = { 25, 42 },
+                group = "GROUP_MIL_STRONG",
+                density = 0.1,
+            },
+            {
+                x = { 40, 46 },
+                y = { 25, 32 },
+                group = "GROUP_MIL_STRONG",
+                density = 0.1,
+            },
+            {
+                x = { 40, 46 },
+                y = { 35, 42 },
+                group = "GROUP_MIL_STRONG",
+                density = 0.1,
+            },
+            {
+                x = { 3, 10 },
+                y = { 28, 41 },
+                group = "GROUP_MIL_STRONG",
+                density = 0.1,
+            },
+            {
+                x = { 14, 23 },
+                y = { 13, 21 },
+                group = "GROUP_CIVILIAN_NO_FERAL",
+                density = 0.1,
+            },
+        },
+        vehicle_placements = {
+            { x = 14, y = 36, id = "military_cargo_truck", rotation = 270 },
+        },
+        computer_glyphs = {
+            ["0"] = {
+                name = "Presentation Computer",
+                chat_topics = { "LIXA_presentation_computer_main" },
+                dialogue_on_access = true,
+            },
+        },
+        monster_placements = {
+            {
+                x = { 1, 13 },
+                y = { 14, 23 },
+                id = "mon_zombie_soldier_lixa_police",
+                chance = 50,
+            },
+            {
+                x = { 35, 45 },
+                y = { 4, 15 },
+                id = "mon_zombie_soldier_lixa_police",
+                chance = 50,
+            },
+            {
+                x = { 25, 37 },
+                y = { 25, 42 },
+                id = "mon_zombie_soldier_lixa_police",
+                chance = 50,
+            },
+            {
+                x = { 40, 46 },
+                y = { 25, 32 },
+                id = "mon_zombie_soldier_lixa_police",
+                chance = 50,
+            },
+        },
+        sign_glyphs = {
+            P = { text = "LIXA" },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = {
+        { "LIXA_workfloor_1a", "LIXA_workfloor_1b" },
+        { "LIXA_workfloor_2a", "LIXA_workfloor_2b" },
+    },
+    layout = {
+        fill_terrain = "t_thconc_floor",
+        rows = {
+            "//////////////////////                          ",
+            "/<D../       /#,K/qKK/                          ",
+            "//6/./       /h,K/,,,/                          ",
+            "  //./       /,j,/,jP/                          ",
+            "   /./       /a,,/h,,/                          ",
+            "   /./       /B,q/#,B//////                     ",
+            "   /./ ////////+///+//8888/                     ",
+            "   /./ /KK,,B/A,,B,,A/8888/                     ",
+            "   /./ /,jQh,+,,jE,,A/888X/                     ",
+            "   /./ /q,,#,/,,h,,,A/edd////////////////       ",
+            "   /./ ///////B,tth,4/..../lllluuu/bbbbb/       ",
+            "   /./ /#h,fa/,,tth,o/i..i/.......9....R/       ",
+            "   /./ /B,j,,+,,jh,,c/....D...i...D..i.l/       ",
+            "   /./ /q,,KK/Ba,,,FF/....D......./....O/       ",
+            "   /./ //////////+////....e......./bbbbb/       ",
+            "   /./ /L/T/./,!#,,$$/....///dd//////////       ",
+            " ///d///+/+/.+,,h,,,,d..../*******/             ",
+            " /V...V/..i../,,,j,,,/i..i/*******/             ",
+            " /V...V/...SS/,,,#,,,/..../*******//////////////",
+            " /u...u////////////////dd//*******7/////////////",
+            " /M.i........D.....i....../*******D.....C.0...//",
+            " /...........D............/////////...H...H...//",
+            " /w....uu....e/////////////////////.....i.....//",
+            " /w...M////////////////////////////...........//",
+            " /....M/*****7/////////////////////...........//",
+            " /....M/*****D.....i.....;__//____>-----------//",
+            " /....u/*****D...........;__//____>-----------//",
+            " /V...u/7DD///////////////////________________//",
+            " /V.i......../              //________________//",
+            " /V........../              //________________//",
+            " /...//..e/../              //________________//",
+            " /////@@@@////              //________________//",
+            "     /@@@@//                //________________//",
+            "     /@@@@/                 //________________//",
+            "     /@@@X/                 //________________//",
+            "     //////                 //________________//",
+            "                            //________________//",
+            "                            //________________//",
+            "                            //________________//",
+            "                            //________________//",
+            "                            //________________//",
+            "                            //________________//",
+            "                            //________________//",
+            "                            //________________//",
+            "                            //________________//",
+            "                            //________________//",
+            "                            //________________//",
+            "                            //________________//",
+        },
+        nested = {
+            {
+                choices = {
+                    { id = "null", weight = 30 },
+                    { id = "LIXA_sad_graffiti", weight = 70 },
+                },
+                x = 21,
+                y = 7,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_sad_graffiti", weight = 50 },
+                },
+                x = 13,
+                y = 18,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_sad_graffiti", weight = 50 },
+                },
+                x = 14,
+                y = 14,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_sad_graffiti", weight = 50 },
+                },
+                x = 21,
+                y = 14,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 20 },
+                    { id = "LIXA_sad_graffiti", weight = 80 },
+                },
+                x = 14,
+                y = 27,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_sad_graffiti", weight = 50 },
+                },
+                x = 14,
+                y = 22,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_sad_graffiti", weight = 50 },
+                },
+                x = 26,
+                y = 21,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_sad_graffiti", weight = 50 },
+                },
+                x = 1,
+                y = 21,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 30 },
+                    { id = "LIXA_bored_graffiti", weight = 70 },
+                },
+                x = 26,
+                y = 11,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_bored_graffiti", weight = 50 },
+                },
+                x = 22,
+                y = 9,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_bored_graffiti", weight = 50 },
+                },
+                x = 19,
+                y = 14,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 30 },
+                    { id = "LIXA_bored_graffiti", weight = 70 },
+                },
+                x = 21,
+                y = 18,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_bored_graffiti", weight = 50 },
+                },
+                x = 11,
+                y = 23,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_bored_graffiti", weight = 50 },
+                },
+                x = 26,
+                y = 10,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_bored_graffiti", weight = 50 },
+                },
+                x = 13,
+                y = 14,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_bored_graffiti", weight = 50 },
+                },
+                x = 17,
+                y = 22,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_bored_graffiti", weight = 50 },
+                },
+                x = 19,
+                y = 22,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 50 },
+                    { id = "LIXA_bored_graffiti", weight = 50 },
+                },
+                x = 21,
+                y = 19,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 25 },
+                    { id = "LIXA_raving_graffiti", weight = 75 },
+                },
+                x = 29,
+                y = 21,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 25 },
+                    { id = "LIXA_raving_graffiti", weight = 75 },
+                },
+                x = 32,
+                y = 21,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 25 },
+                    { id = "LIXA_raving_graffiti", weight = 75 },
+                },
+                x = 34,
+                y = 16,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 25 },
+                    { id = "LIXA_raving_graffiti", weight = 75 },
+                },
+                x = 30,
+                y = 21,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 25 },
+                    { id = "LIXA_raving_graffiti", weight = 75 },
+                },
+                x = 45,
+                y = 19,
+            },
+            {
+                choices = {
+                    { id = "null", weight = 25 },
+                    { id = "LIXA_raving_graffiti", weight = 75 },
+                },
+                x = 46,
+                y = 24,
+            },
+            {
+                choices = {
+                    { id = "LIXA_goodbye_graffiti", weight = 100 },
+                },
+                x = 34,
+                y = 21,
+            },
+        },
+        palettes = { "LIXA_workfloor_palette" },
+        traps = { Q = "tr_rollmat" },
+        item_spawns = {
+            f = {
+                {
+                    id = "rootbeer",
+                    chance = 1,
+                    amount = { 8, 15 },
+                },
+            },
+            ["$"] = {
+                {
+                    repetitions = { 4, 8 },
+                    id = "LIXA_generic_file",
+                    chance = 80,
+                },
+                { repetitions = 2, id = "LIXA_lab_file", chance = 50 },
+            },
+            ["#"] = {
+                { repetitions = 1, id = "LIXA_lab_postit", chance = 3 },
+                { repetitions = 2, id = "LIXA_lab_file", chance = 7 },
+                { repetitions = 1, id = "software_math", chance = 3 },
+                { repetitions = 2, id = "software_electronics_reference", chance = 4 },
+            },
+            q = {
+                {
+                    id = "adderall",
+                    amount = { 2, 5 },
+                },
+            },
+            E = {
+                { id = "television", amount = 1 },
+            },
+            R = {
+                { id = "xedra_artifact_cleansuit", amount = 1 },
+                { id = "xedra_enviro_suit", amount = 1 },
+                { id = "military_papr_mask", amount = 1 },
+                { id = "military_papr_blower_off", amount = 1 },
+                { id = "id_LIXA_mil", amount = 1 },
+            },
+            O = {
+                { id = "xedra_artifact_cleansuit", amount = 1 },
+                { id = "xedra_enviro_suit", amount = 1 },
+                { id = "papr_half_mask", amount = 1 },
+                { id = "basic_papr_belt_off", amount = 1 },
+            },
+        },
+        item_groups = {
+            B = {
+                { group = "lab_bookshelves", chance = 80 },
+            },
+            K = {
+                { group = "bed", chance = 40 },
+            },
+            F = {
+                { group = "SUS_fridge_bachelor", chance = 70 },
+            },
+            f = {
+                { group = "SUS_fridge_bachelor", chance = 70 },
+            },
+            ["#"] = {
+                { group = "SUS_office_desk", chance = 60 },
+            },
+            u = {
+                {
+                    repetitions = { 1, 2 },
+                    group = "electronics",
+                    chance = 70,
+                },
+                {
+                    repetitions = { 1, 2 },
+                    group = "tools_robotics",
+                    chance = 30,
+                },
+            },
+            V = {
+                { group = "tools_robotics", chance = 30 },
+            },
+            l = {
+                { group = "decontamination_room", chance = 60 },
+            },
+            c = {
+                { group = "SUS_dishes", chance = 100 },
+                { group = "SUS_silverware", chance = 100 },
+                { group = "SUS_cookware", chance = 100 },
+            },
+            E = {
+                { group = "entertainment_center_loot", chance = 100 },
+            },
+        },
+        item_placements = {
+            {
+                x = 11,
+                y = 11,
+                id = "heroin",
+                amount = { 3, 7 },
+            },
+            {
+                x = 11,
+                y = 11,
+                id = "syringe",
+                amount = { 1, 3 },
+            },
+            { x = 8, y = 9, id = "headscarf", amount = 3 },
+            { x = 16, y = 1, id = "teddy_bear", amount = 1 },
+            { x = 11, y = 9, id = "holybook_quran", amount = 1 },
+            { x = 12, y = 7, id = "holybook_hadith", amount = 1 },
+            { x = 18, y = 1, id = "long_knit_scarf", amount = 1 },
+            { x = 18, y = 1, id = "knit_scarf", amount = 2 },
+            { x = 18, y = 5, id = "laptop", amount = 1 },
+            {
+                x = 18,
+                y = 5,
+                id = "software_useless",
+                amount = { 4, 7 },
+            },
+            { x = 18, y = 5, id = "usb_drive_nano", amount = 1 },
+            {
+                x = 18,
+                y = 5,
+                id = "knitting_needles",
+                amount = { 4, 8 },
+            },
+            {
+                x = 18,
+                y = 5,
+                id = "yarn",
+                amount = { 20, 40 },
+            },
+            { x = 14, y = 1, id = "laptop", amount = 1 },
+            {
+                x = 14,
+                y = 1,
+                id = "software_useless",
+                amount = { 4, 7 },
+            },
+            { x = 14, y = 1, id = "paint_brush", amount = 4 },
+            { x = 14, y = 1, id = "pen", amount = 2 },
+            { x = 14, y = 1, id = "permanent_marker", amount = 6 },
+            {
+                x = 14,
+                y = 1,
+                id = "paper",
+                amount = { 20, 30 },
+            },
+            { x = 10, y = 15, id = "id_LIXA_2", amount = 1 },
+            { x = 20, y = 1, id = "id_LIXA_2", amount = 1 },
+            { x = 17, y = 10, id = "dnd", amount = 2 },
+            { x = 17, y = 10, id = "dnd_handbook", amount = 1 },
+            { x = 17, y = 10, id = "character_sheet", amount = 4 },
+            {
+                x = 17,
+                y = 10,
+                id = "RPG_die",
+                amount = { 6, 12 },
+            },
+        },
+        item_group_placements = {
+            {
+                x = 8,
+                y = 12,
+                repetitions = { 1, 2 },
+                group = "SUS_book_nonf_hard",
+            },
+            { x = 12, y = 7, group = "SUS_book_nonf_hard" },
+            { x = 14, y = 5, group = "SUS_book_fict_soft_scifi" },
+            { x = 20, y = 5, group = "SUS_fiction_bookcase" },
+            { x = 9, y = 13, group = "SUS_dresser_mens" },
+            { x = 9, y = 9, group = "SUS_dresser_womens" },
+            { x = 19, y = 1, repetitions = 1, group = "jar_weed" },
+            {
+                x = 19,
+                y = 5,
+                repetitions = { 1, 3 },
+                group = "stoner",
+            },
+            { x = 19, y = 1, group = "SUS_dresser_mens" },
+            {
+                x = 15,
+                y = 1,
+                repetitions = { 2, 4 },
+                group = "stoner",
+                chance = 1,
+            },
+            { x = 17, y = 5, group = "SUS_dresser_womens" },
+        },
+        monster_group_placements = {
+            {
+                x = { 2, 6 },
+                y = { 19, 23 },
+                group = "GROUP_LAB_MAINTENANCE",
+                density = 0.1,
+            },
+            {
+                x = { 2, 6 },
+                y = { 25, 33 },
+                group = "GROUP_LAB_MAINTENANCE",
+                density = 0.1,
+            },
+            {
+                x = { 15, 21 },
+                y = { 18, 21 },
+                group = "GROUP_LAB_MAINTENANCE",
+                density = 0.1,
+            },
+        },
+        computer_glyphs = {
+            ["!"] = {
+                name = "Personal Computer",
+                access_denied = "Credentials Unrecognized.",
+                security = 2,
+                chat_topics = { "LIXA_personal_computer_main" },
+                dialogue_on_access = true,
+            },
+            ["0"] = {
+                name = "Experiment Control Computer",
+                chat_topics = { "LIXA_experiment_computer_main" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

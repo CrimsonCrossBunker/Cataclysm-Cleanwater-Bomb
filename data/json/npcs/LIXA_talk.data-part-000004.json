@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_LIXA_experiment_computer",
-    "type": "effect_on_condition",
-    "effect": [ "open_dialogue" ]
-  }
-]

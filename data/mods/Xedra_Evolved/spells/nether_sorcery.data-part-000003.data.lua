@@ -56,3 +56,24 @@ ccb.content.define_spell {
     base_energy_cost = 4000,
     base_casting_time = 350,
 }
+
+ccb.content.define_spell {
+    id = "xe_nether_sorcery_summon_kreck_pack",
+    skill = "deduction",
+    shape = "blast",
+    spell_class = "XE_NETHER_SORCERY",
+    magic_type = "xe_nether_sorcery",
+    name = "The Baying of Hounds",
+    description = "Using this spell will summon a pack of otherworldly hounds.  They are <color_yellow>somewhat difficult</color> to control.",
+    message = "You intone the words of the spell.",
+    flags = { "VERBAL", "SOMATIC", "NO_LEGS" },
+    valid_targets = { "self" },
+    min_duration = 680000,
+    duration_increment = 68000,
+    max_duration = 1360000,
+    base_energy_cost = 5000,
+    difficulty = 50,
+    max_level = 15,
+    base_casting_time = 300,
+    impact_handler = "w16b_sp_imp_xedra_evolved_acf6a43ea403",
+}

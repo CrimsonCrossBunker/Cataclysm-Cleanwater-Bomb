@@ -27,3 +27,24 @@ ccb.content.define_spell {
     final_casting_time = 50,
     casting_time_increment = -10,
 }
+
+ccb.content.define_spell {
+    id = "photokinetic_blinding_glare",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "PHOTOKINETIC",
+    magic_type = "mom_psionics",
+    name = "[Ψ]Blinding Radiance (C)",
+    description = "You can emit so much light that anyone trying to attack you risks being blinded.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_mindovermatter_f5732d5e2bf6", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_mindovermatter_6d729e7b460c", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_mindovermatter_92b91ab81540", fallback = 0 },
+    difficulty = 7,
+    max_level = { handler = "w16b_sp_stat_mindovermatter_649ad2e6bf35", fallback = 0 },
+    base_casting_time = { handler = "w16b_sp_stat_mindovermatter_2d24f4bfaa8a", fallback = 0 },
+    impact_handler = "w16b_sp_imp_mindovermatter_ba898b9619de",
+}

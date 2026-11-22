@@ -472,3 +472,25 @@ ccb.content.define_spell {
     final_casting_time = 50,
     casting_time_increment = -5,
 }
+
+ccb.content.define_spell {
+    id = "xedra_chronomancer_revert_wound",
+    skill = "deduction",
+    shape = "blast",
+    spell_class = "XEDRA_CHRONOMANCER",
+    magic_type = "xedra_chronomancy_magic",
+    name = "Revert Wound",
+    description = "Rewind the last injury you have taken, erasing the effects it has had on your person.",
+    teachable = false,
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "MUST_HAVE_CLASS_TO_LEARN" },
+    valid_targets = { "self" },
+    base_energy_cost = 200,
+    final_energy_cost = 50,
+    energy_increment = -5,
+    difficulty = 4,
+    max_level = { handler = "w16b_sp_stat_xedra_evolved_5a688814d702", fallback = 0 },
+    base_casting_time = 200,
+    final_casting_time = 50,
+    casting_time_increment = -5,
+    impact_handler = "w16b_sp_imp_xedra_evolved_66ede08f8c47",
+}

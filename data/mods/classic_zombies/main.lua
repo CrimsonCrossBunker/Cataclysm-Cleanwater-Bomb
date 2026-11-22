@@ -75,3 +75,5 @@ require("species")
 require("recipe_groups")
 
 require("monster_adjustments")
+require("eoc_items")
+require("eoc_monsters")

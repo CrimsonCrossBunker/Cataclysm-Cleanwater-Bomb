@@ -2,6 +2,8 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+
+
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_ExodizeMe2",
     line = ccb.content.text("Fine an' fine, an' fine an' fine!  Ha!  Now as us've got the good tea, us'll rubber up the ol' gristle mill.  You jus' set along with ol' Rubik."),
@@ -98,6 +100,23 @@ ccb.content.define_dialogue_topic {
         {
             text = ccb.content.text("<end_talking_leave>  Thanks for swapping out my brain implants.  <end_talking_bye>"),
             next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_EXODII_MERCHANT_Remove_Hub01_CBM_interface_1",
+    line = ccb.content.text("&Rubik stares at you for a very long moment, rubs their chin, and scratches at a bit of metal on their head.  \"Rightly then, that tells where the missin' shinies n' stompers went.  Ye came clean, an' ol' Rubik prizes that.  Aye.  We can take it out.  But not wi'out risk.  Might leave ye wi' a mite less wits than afore, I'm afeared.  Yet for all yet honesty, we can't trade wi' ye nor let ye tarry if ye refuse, now.  So we take it out, an' ye may be the duller for it.  Or ye keep it, an' I'll grant ye' ten minutes' head start afore the stompers come huntin'.  Sorry.  Must be so.\""),
+    replies = {
+        {
+            text = ccb.content.text("[Replace Hub 01 CBM interface with Exodii CBM interface; -1 Intelligence, -1 Dexterity]  I think it's worth the risk, especially so we can keep working together.  Get this thing out of me."),
+            next_topic = "TALK_EXODII_MERCHANT_Exodized_Alt",
+            actions = { actions.add_effect("speaker", "narcosis", { turns = 7200 }), actions.add_effect("speaker", "sleep", { turns = 7200 }), actions.handler("w16b_a_dda_09221323f43d"), actions.replace_mutation("speaker", "CBM_Interface"), actions.replace_mutation("speaker", "CBM_Interface_brain_lesion"), actions.handler("w16b_a_dda_7a90366fcd0b"), actions.set_actor_value("speaker", "Rubik_exodized_u", "yes") },
+        },
+        {
+            text = ccb.content.text("Sorry, Rubik, but that doesn't sound worth it.  Thanks for the head start.  Guess I better go, before the Exodii start shooting."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_21d1c1428822") },
         },
     },
 }

@@ -1,6 +1,8 @@
 local ccb = require("ccb")
 local actions = ccb.content.dialogue_actions
 
+
+
 ccb.content.define_dialogue_topic {
     id = "TALK_BIO_ADJUST_YOUR_BEARD",
     line = ccb.content.text("How do you want your artificial beard to look?"),
@@ -137,6 +139,142 @@ ccb.content.define_dialogue_topic {
         },
         {
             text = ccb.content.text("Don't change anything."),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_BIO_ADJUST_YOUR_HAIR",
+    line = ccb.content.text("What form should your artificial hair take?"),
+    replies = {
+        {
+            text = ccb.content.text("Get a buzzcut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_buzzcut") },
+        },
+        {
+            text = ccb.content.text("Get a crewcut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_crewcut") },
+        },
+        {
+            text = ccb.content.text("Get a short cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_short") },
+        },
+        {
+            text = ccb.content.text("Get a short cut (no fringe)."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_short_no_fringe") },
+        },
+        {
+            text = ccb.content.text("Get a short cut (over eye)."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_short_over_eye") },
+        },
+        {
+            text = ccb.content.text("Get a modern cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_modern") },
+        },
+        {
+            text = ccb.content.text("Get a detective cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_detective") },
+        },
+        {
+            text = ccb.content.text("Get a medium-length cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_medium") },
+        },
+        {
+            text = ccb.content.text("Get a puff cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_puff") },
+        },
+        {
+            text = ccb.content.text("Get a mohawk."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_mohawk") },
+        },
+        {
+            text = ccb.content.text("Get a beaded cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_beaded") },
+        },
+        {
+            text = ccb.content.text("Get a curly cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_curls") },
+        },
+        {
+            text = ccb.content.text("Get a super princess cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_super_princess") },
+        },
+        {
+            text = ccb.content.text("Get a long mohawk."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_long_mohawk") },
+        },
+        {
+            text = ccb.content.text("Get a long cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_long") },
+        },
+        {
+            text = ccb.content.text("Get a long cut (over eye)."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_long_over_eye") },
+        },
+        {
+            text = ccb.content.text("Get a mullet."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_mullet") },
+        },
+        {
+            text = ccb.content.text("Get a bun cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_bun") },
+        },
+        {
+            text = ccb.content.text("Get a messy cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_messy") },
+        },
+        {
+            text = ccb.content.text("Get a long punk cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_punk_long") },
+        },
+        {
+            text = ccb.content.text("Get a very long cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_very_long") },
+        },
+        {
+            text = ccb.content.text("Get an extremely long cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_extremely_long") },
+        },
+        {
+            text = ccb.content.text("Get twin tails."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_twintails") },
+        },
+        {
+            text = ccb.content.text("Get a braided cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_braid") },
+        },
+        {
+            text = ccb.content.text("Get a body-length cut."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_dda_89685fa0d951"), actions.replace_mutation("speaker", "artificial_hair_body_length") },
+        },
+        {
+            text = ccb.content.text("Don't adjust anything."),
             next_topic = "TALK_DONE",
         },
     },

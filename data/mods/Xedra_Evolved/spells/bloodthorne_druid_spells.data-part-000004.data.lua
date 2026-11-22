@@ -43,3 +43,41 @@ ccb.content.define_spell {
     base_casting_time = 500,
     caster_when = "wave14a_xedra_evolved_cond_4",
 }
+
+ccb.content.define_spell {
+    id = "bloodthorne_druid_heal_from_spilled_blood_spell",
+    skill = "deduction",
+    shape = "blast",
+    spell_class = "BLOODTHORNE_SORCERY",
+    magic_type = "xedra_bloodthorne_sorcery",
+    name = "Drinking Crimson Rain",
+    description = "Vampires are known for drinking blood but plants will drink anything that sinks into the soil.  This spell draws all blood spilled onto the earth in the area around you through the roots to be absorbed by your heartvines, healing you.  Only blood spilled on verdant ground will be affected.",
+    message = "",
+    flags = { "SOMATIC", "NO_LEGS" },
+    valid_targets = { "self" },
+    min_aoe = { handler = "w16b_sp_stat_xedra_evolved_28d99919352b", fallback = 0 },
+    max_aoe = { handler = "w16b_sp_stat_xedra_evolved_28d99919352b", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_xedra_evolved_6a1442c28c6a", fallback = 0 },
+    base_casting_time = 350,
+    caster_when = "w16b_sp_cast_xedra_evolved_f1848b59f389",
+    impact_handler = "w16b_sp_imp_xedra_evolved_7c99ee4319a9",
+}
+
+ccb.content.define_spell {
+    id = "bloodthorne_druid_create_thorn_prison_spell",
+    skill = "deduction",
+    shape = "blast",
+    spell_class = "BLOODTHORNE_SORCERY",
+    magic_type = "xedra_bloodthorne_sorcery",
+    name = "Henge of Iron Thorns",
+    description = "When one of the blood-drinkers of their servants is on verdant ground, you can cause a massive tangle of thorns to grow and imprison them.\n\nThis spell still works on other targets, but simply causes bleeding and creates a tangle of thorns, it <color_red>will not</color> restrain them.",
+    message = "",
+    flags = { "VERBAL", "SOMATIC" },
+    valid_targets = { "hostile" },
+    min_range = 20,
+    max_range = 20,
+    base_energy_cost = 800,
+    base_casting_time = 250,
+    target_when = "w16b_sp_targ_xedra_evolved_74e2b320b559",
+    impact_handler = "w16b_sp_imp_xedra_evolved_94077641edaf",
+}

@@ -39,3 +39,43 @@ ccb.content.define_spell {
     casting_time_increment = -3,
     ignored_species = { "PSI_NULL" },
 }
+
+ccb.content.define_spell {
+    id = "vita_increased_hp",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "VITAKINETIC",
+    magic_type = "mom_psionics",
+    name = "[Ψ]Augment Durability (C)",
+    description = "Increase your overall resilience against damage, allowing you to continue functioning for longer in the face of injury.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_mindovermatter_b21d992d62b4", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_mindovermatter_68fb01a19087", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_mindovermatter_9d8a33ab7745", fallback = 0 },
+    difficulty = 5,
+    max_level = { handler = "w16b_sp_stat_mindovermatter_c90982788f60", fallback = 0 },
+    base_casting_time = { handler = "w16b_sp_stat_mindovermatter_c1acafd585a0", fallback = 0 },
+    impact_handler = "w16b_sp_imp_mindovermatter_1588f6cb0cf7",
+}
+
+ccb.content.define_spell {
+    id = "vita_healing_trance",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "VITAKINETIC",
+    magic_type = "mom_psionics",
+    name = "[Ψ]Revitalizing Meditation",
+    description = "Enter a trance state and heal your injuries many times faster than they would heal naturally.",
+    message = "You enter a trance and submerge your awareness into your body.",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DAMAGE" },
+    valid_targets = { "self" },
+    base_energy_cost = 8000,
+    difficulty = 6,
+    max_level = { handler = "w16b_sp_stat_mindovermatter_c90982788f60", fallback = 0 },
+    base_casting_time = 500,
+    impact_handler = "w16b_sp_imp_mindovermatter_facb1f54ee6f",
+}

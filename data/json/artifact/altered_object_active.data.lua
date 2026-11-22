@@ -62,3 +62,29 @@ ccb.content.define_spell {
     effect = "remove_field",
     effect_data = "fd_fatigue",
 }
+
+ccb.content.define_spell {
+    id = "AO_SPATIAL_ANCHOR",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Artifact anchor"),
+    description = ccb.content.text_without_extraction("Return to the spot where you cast this spell after a random amount of time."),
+    message = "You feel a deep sense of connection to this place.",
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    min_range = 1,
+    max_range = 1,
+    impact_handler = "w16b_sp_imp_dda_e7276a100109",
+}
+
+ccb.content.define_spell {
+    id = "AO_SPATIAL_ANCHOR_SLOW",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Artifact anchor (SLOW)"),
+    description = ccb.content.text_without_extraction("Return to the spot where you cast this spell after a random amount of time."),
+    message = "You feel a deep sense of connection to this place.",
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    min_range = 1,
+    max_range = 1,
+    impact_handler = "w16b_sp_imp_dda_3e3851b7d965",
+}

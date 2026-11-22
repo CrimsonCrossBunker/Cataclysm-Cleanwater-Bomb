@@ -1,0 +1,26 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "telepathic_network",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "TELEPATH",
+    magic_type = "mom_psionics",
+    name = "[Ψ]Network Effect",
+    description = "Forge an unconscious telepathic network between you and nearby allies, allowing you all to send and receive information about nearby dangers and react more quickly in combat.  The network requires at least one ally nearby to be effective.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_mindovermatter_3b2a551a015b", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_mindovermatter_abaaf4c985c9", fallback = 0 },
+    base_energy_cost = 6500,
+    final_energy_cost = 3750,
+    energy_increment = -135,
+    difficulty = 9,
+    max_level = { handler = "w16b_sp_stat_mindovermatter_5e6c3dfbac75", fallback = 0 },
+    base_casting_time = 500,
+    final_casting_time = 250,
+    casting_time_increment = -9,
+    impact_handler = "w16b_sp_imp_mindovermatter_8b2d256c9cf0",
+}

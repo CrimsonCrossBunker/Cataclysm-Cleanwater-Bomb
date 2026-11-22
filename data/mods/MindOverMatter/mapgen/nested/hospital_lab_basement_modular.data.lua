@@ -2242,3 +2242,45 @@ ccb.content.define_mapgen {
         furniture = { H = "f_bench" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_osiris_chamber_biokinesis",
+    layout = {
+        rows = { "   ", " T ", "   " },
+        size = { width = 3, height = 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        terrain = { T = "t_ascension_chamber_biokinesis" },
+        computer_placements = {
+            {
+                x = 2,
+                y = 2,
+                name = "Project OBSIDIAN RING access",
+                chat_topics = { "COMP_OBSIDIAN_RING_COMPUTER_BIOKINESIS" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_hospital_lab_osiris_chamber_vitakinesis",
+    layout = {
+        rows = { "   ", " T ", "   " },
+        size = { width = 3, height = 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        terrain = { T = "t_ascension_chamber_vitakinesis" },
+        computer_placements = {
+            {
+                x = 2,
+                y = 2,
+                name = "Project OBSIDIAN RING access",
+                chat_topics = { "COMP_OBSIDIAN_RING_COMPUTER_VITAKINESIS" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

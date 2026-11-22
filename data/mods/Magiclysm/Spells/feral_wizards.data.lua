@@ -137,3 +137,15 @@ ccb.content.define_spell {
     max_field_intensity = 2,
     field_chance = 1,
 }
+
+ccb.content.define_spell {
+    id = "feral_magus_push_nearby_enemies_back",
+    shape = "blast",
+    spell_class = "MAGUS",
+    name = ccb.content.text_without_extraction("Feral Magus Repulsion Wave"),
+    description = ccb.content.text_without_extraction("It's like Repulsion Wave but for ferals"),
+    flags = { "VERBAL", "SOMATIC" },
+    valid_targets = { "ally", "hostile" },
+    min_aoe = 1,
+    impact_handler = "w16b_sp_imp_magiclysm_c66a7a8f98b3",
+}

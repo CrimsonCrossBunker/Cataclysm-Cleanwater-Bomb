@@ -82,3 +82,124 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_grocer_a1_floor_1",
+    layout = {
+        fill_terrain = "t_metal_floor",
+        rows = {
+            " © 2222  2222 ©© © ©©   ",
+            "© /====//====/  © © ©   ",
+            " //..........// ©       ",
+            "©/3.555n.n55..=2© © ©   ",
+            " /3.555n.n55..=2  © ©   ",
+            " /4.,,....,,..=2 ℗℗©©   ",
+            "©/4.555n.n555.=2 ℗℗©    ",
+            "©/4......n555./ ©℗℗     ",
+            " //!/!//......=2©℗℗©©   ",
+            "©/^,/,^/n.,,.n=2© ©©©   ",
+            " /n~/~n/5.88.5=2   ©    ",
+            "©///////5.88.5=2 ©      ",
+            " /</777/n....n/ © ©©    ",
+            "©1..,..!.....6/!!/!!/℗  ",
+            "©1.555./..,,.6/../..//℗ ",
+            "©1..,../jJj..n/..c..l/℗ ",
+            "0/55.66/7.j...!,,.,,l/℗℗",
+            " ///!///7,c...!.....l/℗ ",
+            " /l...h/7.j..n/../..l/℗ ",
+            " /l.,.y/7.j..9/../bb//  ",
+            " /l...h/7,Ó..9///////   ",
+            " //UUo./7.j..//℗℗℗      ",
+            "  ////////////℗℗        ",
+            "    ℗℗℗℗                ",
+        },
+        nested = {
+            {
+                id = { parameter = "lightstatus", fallback = "null" },
+                x = 0,
+                y = 0,
+            },
+        },
+        palettes = {
+            "afs_habitat_structure",
+            "afs_habitat_exterior",
+            "afs_habitat_residential_furnishing",
+            "afs_light_param_palette",
+        },
+        terrain = {
+            ["1"] = "t_afs_security_gate_closed",
+            ["2"] = "t_region_groundcover_urban",
+            ["0"] = "t_region_groundcover_urban",
+        },
+        furniture = {
+            ["2"] = "f_screenmirror",
+            ["3"] = "f_display_fridge",
+            ["4"] = "f_display_fridge",
+            ["5"] = "f_rack",
+            ["6"] = "f_rack",
+            ["7"] = "f_rack",
+            ["8"] = "f_rack",
+            ["9"] = "f_rack",
+            ["0"] = "f_security_panel",
+        },
+        item_groups = {
+            ["3"] = {
+                repetitions = { 1, 5 },
+                group = "afs_old_beverage_storage",
+                chance = 60,
+            },
+            ["4"] = {
+                repetitions = { 1, 2 },
+                group = "afs_old_food_storage",
+                chance = 60,
+            },
+            ["5"] = {
+                repetitions = { 1, 2 },
+                group = "afs_old_food_storage",
+                chance = 60,
+            },
+            ["6"] = {
+                repetitions = { 5, 8 },
+                group = "drugs_heal_simple",
+                chance = 40,
+            },
+            ["7"] = {
+                repetitions = { 1, 3 },
+                group = "consumer_electronics",
+                chance = 30,
+            },
+            ["8"] = {
+                repetitions = { 5, 8 },
+                group = "dinnerware",
+                chance = 60,
+            },
+            ["9"] = {
+                repetitions = { 1, 3 },
+                group = "tools_common_small",
+                chance = 70,
+            },
+            y = {
+                repetitions = { 1, 3 },
+                group = "dinnerware",
+                chance = 60,
+            },
+        },
+        computer_glyphs = {
+            ["Ó"] = {
+                name = "ColNet access point",
+                chat_topics = { "COMPUTER_GENERIC_SALVAGE_LOCKED" },
+                dialogue_on_access = true,
+            },
+        },
+        monster_placements = {
+            {
+                x = { 0, 23 },
+                y = { 0, 23 },
+                group = "AFS_GROUP_RUIN_MOXIE",
+                chance = 20,
+                pack_size = { 1, 3 },
+            },
+        },
+    },
+}

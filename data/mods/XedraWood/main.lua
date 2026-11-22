@@ -121,3 +121,7 @@ require("damage_types")
 
 require("monster_attack_predicates")
 require("spell_math_handlers")
+require("eoc_runtime")
+require("eoc_bionics")
+require("eoc_monsters")
+require("eoc_professions")

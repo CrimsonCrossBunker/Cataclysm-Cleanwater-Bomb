@@ -51,3 +51,34 @@ ccb.content.define_monster {
     inheritance = { add = { weakpoint_sets = { "wps_humanoid_body_armor", "wps_humanoid_full_helmet" } } },
     death = { drops = "mon_zombie_survivor_elite_death_drops" },
 }
+
+ccb.content.define_monster {
+    id = "mon_zombie_survivor",
+    name = "survivor zombie",
+    description = "Still wearing the tattered remnants of improvised armor and weaponry, it is plain to see that this zombie was once a survivor like you.",
+    copy_from = "mon_zombie_base",
+    color = "light_red_green",
+    hp = 120,
+    speed = 85,
+    melee_skill = 6,
+    melee_dice = 3,
+    vision_day = 30,
+    armor = {
+        bash = 7,
+        cut = 7,
+        stab = 5,
+        acid = 4,
+        bullet = 6,
+        electric = 2,
+    },
+    death = { drops = "mon_zombie_survivor_death_drops" },
+    inheritance = {
+        add = {
+            weakpoint_sets = { "wps_humanoid_light_armor", "wps_humanoid_open_helmet" },
+            families = { "prof_wp_syn_armored" },
+        },
+        remove = {
+            flags = { "STUMBLES" },
+        },
+    },
+}

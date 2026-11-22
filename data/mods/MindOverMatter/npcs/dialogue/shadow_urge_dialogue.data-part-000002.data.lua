@@ -2,6 +2,8 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+
+
 ccb.content.define_dialogue_topic {
     id = { "COMP_MOM_SHADOW_URGE_COMPUTER_IMPROVE_STRENGTH_FUEL" },
     line = {
@@ -86,6 +88,70 @@ ccb.content.define_dialogue_topic {
             text = ccb.content.text("Fine, fine."),
             next_topic = "COMP_MOM_SHADOW_URGE_COMPUTER_MAIN_MENU",
             when = predicates.any_equal({ "no", { scope = "speaker", key = "activated_shadow_urge_machine" } }),
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = { "COMP_MOM_SHADOW_URGE_COMPUTER_IMPROVE_STRENGTH" },
+    line = ccb.content.text("&You select Improve Strength and after a moment, a screen pops up with the message: \"Catalyst required.  Insert BURNT NOVEMBER matrix crystal.\""),
+    replies = {
+        {
+            text = ccb.content.text("Let me see…"),
+            next_topic = "COMP_MOM_SHADOW_URGE_COMPUTER_IMPROVE_STRENGTH_FUEL",
+            actions = { actions.handler("w16b_a_mindovermatter_e457d9286bc2") },
+        },
+        {
+            text = ccb.content.text("Well, maybe not now."),
+            next_topic = "COMP_MOM_SHADOW_URGE_COMPUTER_MAIN_MENU",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = { "COMP_MOM_SHADOW_URGE_COMPUTER_IMPROVE_AGILITY" },
+    line = ccb.content.text("&You select Improve Agility and after a moment, a screen pops up with the message: \"Catalyst required.  Insert BURNT NOVEMBER matrix crystal.\""),
+    replies = {
+        {
+            text = ccb.content.text("Let me see…"),
+            next_topic = "COMP_MOM_SHADOW_URGE_COMPUTER_IMPROVE_AGILITY_FUEL",
+            actions = { actions.handler("w16b_a_mindovermatter_e457d9286bc2") },
+        },
+        {
+            text = ccb.content.text("Well, maybe not now."),
+            next_topic = "COMP_MOM_SHADOW_URGE_COMPUTER_MAIN_MENU",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = { "COMP_MOM_SHADOW_URGE_COMPUTER_IMPROVE_RESILIENCE" },
+    line = ccb.content.text("&You select Improve Agility and after a moment, a screen pops up with the message: \"Catalyst required.  Insert SMOKE USHER matrix crystal.\""),
+    replies = {
+        {
+            text = ccb.content.text("Let me see…"),
+            next_topic = "COMP_MOM_SHADOW_URGE_COMPUTER_IMPROVE_RESILIENCE_FUEL",
+            actions = { actions.handler("w16b_a_mindovermatter_c6177b479547") },
+        },
+        {
+            text = ccb.content.text("Well, maybe not now."),
+            next_topic = "COMP_MOM_SHADOW_URGE_COMPUTER_MAIN_MENU",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = { "COMP_MOM_SHADOW_URGE_COMPUTER_IMPROVE_RECOVERY" },
+    line = ccb.content.text("&You select Improve Agility and after a moment, a screen pops up with the message: \"Catalyst required.  Insert SMOKE USHER matrix crystal.\""),
+    replies = {
+        {
+            text = ccb.content.text("Let me see…"),
+            next_topic = "COMP_MOM_SHADOW_URGE_COMPUTER_IMPROVE_RECOVERY_FUEL",
+            actions = { actions.handler("w16b_a_mindovermatter_c6177b479547") },
+        },
+        {
+            text = ccb.content.text("Well, maybe not now."),
+            next_topic = "COMP_MOM_SHADOW_URGE_COMPUTER_MAIN_MENU",
         },
     },
 }

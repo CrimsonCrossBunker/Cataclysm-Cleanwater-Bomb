@@ -704,3 +704,109 @@ ccb.content.define_overmap_terrain {
     },
     copy_from = "generic_large_office_tower",
 }
+
+ccb.content.define_fixed_overmap_special {
+    id = "defense_mode_field_office",
+    locations = { "land" },
+    city_distance = { 40, -1 },
+    flags = { "DEFENSE_MODE", "GLOBALLY_UNIQUE" },
+    tiles = {
+        {
+            point = { 1, 1, 0 },
+            terrain = "dm_field_office_5_south",
+        },
+        {
+            point = { 0, 1, 0 },
+            terrain = "dm_field_office_6_south",
+        },
+        {
+            point = { 1, 0, 0 },
+            terrain = "dm_field_office_7_south",
+        },
+        {
+            point = { 0, 0, 0 },
+            terrain = "dm_field_office_8_south",
+        },
+        {
+            point = { 1, 1, -1 },
+            terrain = "dm_field_office_1_south",
+        },
+        {
+            point = { 0, 1, -1 },
+            terrain = "dm_field_office_2_south",
+        },
+        {
+            point = { 1, 0, -1 },
+            terrain = "dm_field_office_3_south",
+        },
+        {
+            point = { 0, 0, -1 },
+            terrain = "dm_field_office_4_south",
+        },
+        {
+            point = { 1, 1, 1 },
+            terrain = "dm_field_office_9_south",
+        },
+        {
+            point = { 0, 1, 1 },
+            terrain = "dm_field_office_10_south",
+        },
+        {
+            point = { 1, 0, 1 },
+            terrain = "dm_field_office_11_south",
+        },
+        {
+            point = { 0, 0, 1 },
+            terrain = "dm_field_office_12_south",
+        },
+        {
+            point = { 1, 1, 2 },
+            terrain = "dm_field_office_9_south",
+        },
+        {
+            point = { 0, 1, 2 },
+            terrain = "dm_field_office_10_south",
+        },
+        {
+            point = { 1, 0, 2 },
+            terrain = "dm_field_office_11_south",
+        },
+        {
+            point = { 0, 0, 2 },
+            terrain = "dm_field_office_12_south",
+        },
+        {
+            point = { 1, 1, 3 },
+            terrain = "dm_field_office_13_south",
+        },
+        {
+            point = { 0, 1, 3 },
+            terrain = "dm_field_office_14_south",
+        },
+        {
+            point = { 1, 0, 3 },
+            terrain = "dm_field_office_15_south",
+        },
+        {
+            point = { 0, 0, 3 },
+            terrain = "dm_field_office_16_south",
+        },
+        {
+            point = { 1, 1, 4 },
+            terrain = "dm_field_office_17_south",
+        },
+        {
+            point = { 0, 1, 4 },
+            terrain = "dm_field_office_18_south",
+        },
+        {
+            point = { 1, 0, 4 },
+            terrain = "dm_field_office_19_south",
+        },
+        {
+            point = { 0, 0, 4 },
+            terrain = "dm_field_office_20_south",
+        },
+    },
+    occurrences = ccb.content.is_mod_active("defense_mode") and { 100, 100 } or { 0, 0 },
+}

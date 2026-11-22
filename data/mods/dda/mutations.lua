@@ -424,3 +424,346 @@ content.add(content.Mutation {
             message_on_type = "mixed",
         },
     }))
+
+-- WAVE16B_START
+local services = ccb.services
+local E = require("eoc_runtime")
+local H = E.H
+if H.char_snap == nil then
+H.char_snap = function(actor)
+    if not actor then return nil end
+    local r = services.characters.snapshot(actor)
+    if not r.ok then return nil end
+    return r.value
+end
+end
+if H.creature_snap == nil then
+H.creature_snap = function(actor)
+    if not actor then return nil end
+    local r = services.creatures.snapshot(actor)
+    if not r.ok then return nil end
+    return r.value
+end
+end
+if H.char_val_extra == nil then
+H.char_val_extra = function(actor, aspect)
+    if not actor then return 0 end
+    local s = H.char_snap(actor)
+    if s then
+        if aspect == "fine_detail_vision_mod" then return s.senses and s.senses.fine_detail_vision_modifier or 0 end
+        if aspect == "activity_level" then return s.activity and s.activity.level_index or 0 end
+        if aspect == "morale" then return s.needs and s.needs.morale or 0 end
+        if aspect == "focus" then return s.needs and s.needs.focus or 0 end
+        if aspect == "instant_thirst" then return s.needs and (s.needs.instant_thirst or s.needs.thirst) or 0 end
+        if aspect == "exp" then return s.progression and s.progression.kill_xp or 0 end
+        if aspect == "sleep_deprivation" then
+            local nr = services.needs.get(actor)
+            return (nr.ok and nr.value and nr.value.sleep_deprivation) or 0
+        end
+        if aspect == "stim" then
+            local nr = services.needs.get(actor)
+            return (nr.ok and nr.value and nr.value.stimulant) or 0
+        end
+        if aspect == "pkill" then
+            local nr = services.needs.get(actor)
+            return (nr.ok and nr.value and nr.value.painkiller) or 0
+        end
+    end
+    local cs = H.creature_snap(actor)
+    if cs then
+        if aspect == "size" then
+            local sz = { tiny = 1, small = 2, medium = 3, large = 4, huge = 5 }
+            return sz[cs.size] or 3
+        end
+        if aspect == "difficulty" then return cs.difficulty or 0 end
+        if aspect == "anger" then return cs.anger or 0 end
+        if aspect == "morale" then return cs.morale or 0 end
+    end
+    return 0
+end
+end
+if H.ctx_new == nil then
+H.ctx_new = function(u, npc, vars, extra)
+    local c = { u = u, npc = npc, vars = vars or {}, _conds = {} }
+    if extra then
+        for k, v in pairs(extra) do c[k] = v end
+    end
+    local function _disp(a)
+        if not a then return "" end
+        local r = services.creatures.snapshot(a)
+        if r and r.ok and r.value then return r.value.display_name or r.value.name or "" end
+        local ir = services.items.snapshot(a)
+        if ir and ir.ok and ir.value then return ir.value.display_name or ir.value.name or "" end
+        return ""
+    end
+    return setmetatable(c, {
+        __index = {
+            speaker = function(self) return self.u end,
+            interlocutor = function(self) return self.npc end,
+            alpha = function(self) return self.u end,
+            beta = function(self) return self.npc end,
+            has_speaker = function(self) return self.u ~= nil end,
+            has_interlocutor = function(self) return self.npc ~= nil end,
+            by_radio = function(self) return self._by_radio == true end,
+            has_reason = function(self) return self._has_reason == true end,
+            topic_item = function(self) return self._topic_item end,
+            assigned_mission_count = function(self)
+                if not self.u then return 0 end
+                local r = services.missions.active(self.u, { limit = 64 })
+                if not r or not r.items then return 0 end
+                return #r.items
+            end,
+            context_value = function(self, k)
+                if self.vars[k] ~= nil then return self.vars[k] end
+                if self._raw_dlg and self._raw_dlg.get then return self._raw_dlg:get(k) end
+                return nil
+            end,
+            set_context_value = function(self, k, v)
+                self.vars[k] = v
+                if self._raw_dlg then
+                    if v == nil and self._raw_dlg.remove then self._raw_dlg:remove(k)
+                    elseif self._raw_dlg.set then self._raw_dlg:set(k, v) end
+                end
+            end,
+            get = function(self, k) return self:context_value(k) end,
+            get_number = function(self, k)
+                local v = self:context_value(k)
+                return tonumber(v) or 0
+            end,
+            get_string = function(self, k)
+                local v = self:context_value(k)
+                return v == nil and "" or tostring(v)
+            end,
+            set = function(self, k, v) self:set_context_value(k, v) end,
+            remove = function(self, k) self:set_context_value(k, nil) end,
+            conditional = function(self, k) return self._conds[k] == true end,
+            evaluate_conditional = function(self, k) return self._conds[k] == true end,
+            set_conditional = function(self, k, v) self._conds[k] = (v == true) end,
+            expand_text = function(self, text)
+                if type(text) ~= "string" then return "" end
+                if self._raw_dlg and self._raw_dlg.expand_text then
+                    return self._raw_dlg:expand_text(text)
+                end
+                local out = string.gsub(text, "<context_val:([^>]+)>", function(k)
+                    local v = self.vars[k]
+                    return v == nil and "" or tostring(v)
+                end)
+                out = string.gsub(out, "<u_name>", function() return _disp(self.u) end)
+                out = string.gsub(out, "<my_name>", function() return _disp(self.u) end)
+                out = string.gsub(out, "<npc_name>", function() return _disp(self.npc) end)
+                return out
+            end,
+        }
+    })
+end
+end
+if H.npc == nil then
+H.npc = function(ctx)
+    return ctx:interlocutor()
+end
+end
+if H.run_eoc == nil then
+H.run_eoc = function(eid, ctx, vars_ovr, alpha_ovr, beta_ovr)
+    if not eid or eid == "" then return end
+    local vars = {}
+    if ctx and ctx.vars then
+        for k, v in pairs(ctx.vars) do vars[k] = v end
+    end
+    if vars_ovr then
+        for k, v in pairs(vars_ovr) do vars[k] = v end
+    end
+    local ctx_u = ctx and (ctx.u or (ctx.speaker and ctx:speaker())) or nil
+    local ctx_npc = ctx and (ctx.npc or (ctx.interlocutor and ctx:interlocutor())) or nil
+    local u = (alpha_ovr ~= nil) and alpha_ovr or ctx_u or services.characters.avatar()
+    local npc = (beta_ovr ~= nil) and beta_ovr or ctx_npc or nil
+    local extra = nil
+    if ctx then
+        extra = {
+            prevent_death_fn = ctx.prevent_death_fn,
+            avatar_death = ctx.avatar_death,
+            proxy_pos = ctx.proxy_pos,
+            proxy_teleport = ctx.proxy_teleport,
+            _raw_dlg = (not ctx.vars and ctx.get) and ctx or ctx._raw_dlg,
+        }
+    end
+    local sub = H.ctx_new(u, npc, vars, extra)
+    local fn = E.run[eid]
+    if fn then
+        return fn(sub)
+    end
+    if type(ccb.runtime.call_eoc) == "function" then
+        local u_c = (u and H.creature_snap(u)) and u or nil
+        local npc_c = (npc and H.creature_snap(npc)) and npc or nil
+        local flat_vars = {}
+        for k, v in pairs(vars) do
+            if type(k) == "string" then
+                local vt = type(v)
+                if vt == "boolean" or vt == "number" or vt == "string" then
+                    flat_vars[k] = v
+                elseif vt == "userdata" and v.x ~= nil and v.y ~= nil and v.z ~= nil then
+                    flat_vars[k] = v
+                end
+            end
+        end
+        local ok = pcall(ccb.runtime.call_eoc, "eoc:" .. tostring(eid), { u = u_c, npc = npc_c, vars = flat_vars })
+        if ok and vars_ovr == nil and ctx and ctx.vars then
+            for k, v in pairs(flat_vars) do ctx.vars[k] = v end
+        end
+    elseif u and H.creature_snap(u) then
+        pcall(ccb.runtime.call_creature, "eoc:" .. tostring(eid), u)
+    end
+end
+end
+if H.test_eoc == nil then
+H.test_eoc = function(eid, ctx)
+    if not eid or eid == "" then return false end
+    local cfn = E.cond[eid]
+    if cfn then
+        if ctx and not ctx.context_value and ctx.get then
+            local wrapped = H.ctx_new(ctx:speaker(), ctx:interlocutor(), {}, { _raw_dlg = ctx })
+            return cfn(wrapped) == true
+        end
+        return cfn(ctx) == true
+    end
+    if type(ccb.runtime.call_eoc) == "function" then
+        local u = ctx and (ctx.u or (ctx.speaker and ctx:speaker())) or nil
+        local npc = ctx and (ctx.npc or (ctx.interlocutor and ctx:interlocutor())) or nil
+        local u_c = (u and H.creature_snap(u)) and u or nil
+        local npc_c = (npc and H.creature_snap(npc)) and npc or nil
+        local flat_vars = {}
+        if ctx and ctx.vars then
+            for k, v in pairs(ctx.vars) do
+                if type(k) == "string" then
+                    local vt = type(v)
+                    if vt == "boolean" or vt == "number" or vt == "string" then
+                        flat_vars[k] = v
+                    elseif vt == "userdata" and v.x ~= nil and v.y ~= nil and v.z ~= nil then
+                        flat_vars[k] = v
+                    end
+                end
+            end
+        end
+        local ok, res = pcall(ccb.runtime.call_eoc, "eoc_test:" .. tostring(eid), { u = u_c, npc = npc_c, vars = flat_vars })
+        return ok and res == true
+    end
+    return false
+end
+end
+if H.time_since == nil then
+H.time_since = function(point_turns, unit_div)
+    if point_turns == nil then return -1 end
+    local diff = services.turn() - point_turns
+    if unit_div and unit_div ~= 1 then return diff / unit_div end
+    return diff
+end
+end
+if H.u == nil then
+H.u = function(ctx)
+    return ctx:speaker()
+end
+end
+if H.var_num_opt == nil then
+H.var_num_opt = function(actor, key)
+    if not actor then return nil end
+    local r = services.variables.get_number(actor, key)
+    if not r.ok or not r.value or not r.value.exists or r.value.value == nil then return nil end
+    return r.value.value
+end
+end
+
+ccb.runtime.handler("w16b_reflex_amog_1_1", function(context)
+    if not context or not context.has_speaker or not context.speaker then
+        return false
+    end
+    local ctx = H.ctx_new(context.speaker, nil, {})
+    return (((H.char_val_extra(H.u(ctx), "morale") < (-75)) or (H.char_val_extra(H.u(ctx), "morale") > 75) or (H.char_val_extra(H.u(ctx), "stim") < (-50)) or (H.char_val_extra(H.u(ctx), "stim") > 50))) == true
+end)
+
+content.add(content.Mutation {
+    id = "AMOG",
+    name = "Alpha Member of the Group",
+    description = "You are the natural leader of any group.  It's just part of who you are, groups naturally form around you and you need these groups to energize you.  Sometimes however, you give in to your worst impulses and this trait will flip.",
+    categories = { "ALPHA" },
+    types = { "SOCIAL" },
+    prerequisites = { "INT_ALPHA", "PER_ALPHA", "STR_ALPHA", "DEX_ALPHA" },
+    threshold_requirements = { "THRESH_ALPHA" },
+    cancels = { "ASOCIAL1", "ASOCIAL2", "SOCIAL1", "SOCIAL2" },
+    points = 0,
+    mixed_effect = true,
+    vitamin_cost = 160,
+    social_modifiers = { intimidate = 5, persuade = 15, lie = 10 },
+    transform = {
+        target = "DARK_TRIAD",
+        active = false,
+        moves = 10,
+        message = "You give in to your worst instincts.",
+    },
+}
+    :relationship("flag", "SOCIAL2")
+    :reflex({
+        { handler = "w16b_reflex_amog_1_1" },
+    }))
+
+
+ccb.runtime.handler("w16b_reflex_dark_triad_1_1", function(context)
+    if not context or not context.has_speaker or not context.speaker then
+        return false
+    end
+    local ctx = H.ctx_new(context.speaker, nil, {})
+    return ((H.time_since(H.var_num_opt(H.u(ctx), "transform_time"), 1) > 129600)) == true
+end)
+
+content.add(content.Mutation {
+    id = "DARK_TRIAD",
+    name = "Dark Triad",
+    description = "You are a god among mortals and they are all so very disappointing.  Why should you even bother to hide your disappointment in their failures?",
+    categories = { "ALPHA" },
+    types = { "SOCIAL" },
+    cancels = { "ASOCIAL1", "ASOCIAL2", "SOCIAL1", "SOCIAL2" },
+    points = -1,
+    valid = false,
+    social_modifiers = { intimidate = -10, persuade = -25, lie = -15 },
+    transform = {
+        target = "AMOG",
+        active = false,
+        moves = 10,
+        message = "Maybe you can make better decisions this time.",
+    },
+}
+    :relationship("flag", "ASOCIAL2")
+    :reflex({
+        { handler = "w16b_reflex_dark_triad_1_1" },
+    }))
+
+
+ccb.runtime.handler("w16b_reflex_hyde_1_1", function(context)
+    if not context or not context.has_speaker or not context.speaker then
+        return false
+    end
+    local ctx = H.ctx_new(context.speaker, nil, {})
+    return (((((services.turn() % 86400) / 3600) > 6) and (((services.turn() % 86400) / 3600) < 21))) == true
+end)
+
+content.add(content.Mutation {
+    id = "HYDE",
+    name = "Violent Monster",
+    description = "Anger clouds your mind; you can't think straight, but you feel strong.",
+    categories = { "MEDICAL" },
+    points = -1,
+    mixed_effect = true,
+    valid = false,
+    visibility = 8,
+    ugliness = 8,
+    purifiable = false,
+    social_modifiers = { intimidate = 4 },
+    transform = { target = "JEKYLL", active = false, moves = 10, message = "The anger subsides." },
+}
+    :relationship("enchantment", "INLINE_ENCH_HYDE_0")
+    :reflex({
+        {
+            handler = "w16b_reflex_hyde_1_1",
+            message_on = "As the morning comes, you return back to normal.",
+            message_on_type = "good",
+        },
+    }))
+-- WAVE16B_END

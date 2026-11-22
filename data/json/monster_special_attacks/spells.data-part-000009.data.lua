@@ -79,3 +79,31 @@ ccb.content.define_spell {
     copy_from = "base_portal",
     effect_data = "EOC_sloth_attack",
 }
+
+ccb.content.define_spell {
+    id = "mon_XEDRA_officer_banish",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Officer banish"),
+    description = ccb.content.text_without_extraction("Stops the haunting."),
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS" },
+    valid_targets = { "self", "ground" },
+    min_range = 15,
+    max_range = 15,
+    max_level = 1,
+    base_casting_time = 75,
+    impact_handler = "w16b_sp_imp_dda_524665f3baae",
+}
+
+ccb.content.define_spell {
+    id = "mon_tainted_shadow_revive",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Tainted Shadow Revive"),
+    description = ccb.content.text_without_extraction("Revives the tainted shadow."),
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self", "ground" },
+    min_range = 15,
+    max_range = 15,
+    max_level = 1,
+    base_casting_time = 75,
+    impact_handler = "w16b_sp_imp_dda_321a1ae0df67",
+}

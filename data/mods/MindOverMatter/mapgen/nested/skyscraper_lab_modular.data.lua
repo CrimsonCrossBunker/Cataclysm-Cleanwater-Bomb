@@ -2187,3 +2187,45 @@ ccb.content.define_mapgen {
         palettes = { "phavian_skyscraper_office_room_palette" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_osiris_chamber_clairsentient",
+    layout = {
+        rows = { "...", ".T.", "..." },
+        size = { width = 3, height = 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        terrain = { T = "t_ascension_chamber_clairsentience" },
+        computer_placements = {
+            {
+                x = 2,
+                y = 2,
+                name = "Project OBSIDIAN RING access",
+                chat_topics = { "COMP_OBSIDIAN_RING_COMPUTER_CLAIRSENTIENT" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "phavian_skyscraper_osiris_chamber_telepathic",
+    layout = {
+        rows = { "...", ".T.", "..." },
+        size = { width = 3, height = 3 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        palettes = { "phavian_skyscraper_office_room_palette" },
+        terrain = { T = "t_ascension_chamber_telepathy" },
+        computer_placements = {
+            {
+                x = 2,
+                y = 2,
+                name = "Project OBSIDIAN RING access",
+                chat_topics = { "COMP_OBSIDIAN_RING_COMPUTER_TELEPATH" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

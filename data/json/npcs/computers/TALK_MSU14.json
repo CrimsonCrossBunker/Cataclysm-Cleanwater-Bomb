@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_MSU14_COMPUTER",
-    "type": "effect_on_condition",
-    "effect": [ "open_dialogue" ]
-  }
-]

@@ -2,6 +2,8 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+
+
 ccb.content.define_dialogue_topic {
     id = "TALK_DEFENSE_MODE_ENEMY_SELECTION",
     line = ccb.content.text("What kinds of enemies do you want to see?"),
@@ -360,6 +362,47 @@ ccb.content.define_dialogue_topic {
         {
             text = ccb.content.text("Choose a preset difficulty."),
             next_topic = "TALK_DEFENSE_MODE_DIFFICULTY_SELECTION_MENU",
+        },
+        {
+            text = ccb.content.text("Return to main menu."),
+            next_topic = "TALK_DEFENSE_MODE_MAIN_MENU",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_DEFENSE_MODE_PRESET_GAME_MENU",
+    line = ccb.content.text("We have a grand variety of preselected game modes for you to choose from!  Pick one and play now!"),
+    replies = {
+        {
+            text = ccb.content.text("<color_yellow>Shaun of The Dead</color>: (Defend a bar against classic zombies with your five friends.  Easy and fun.)"),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_defense_mode_1fa21d483221"), actions.update_map("shaun_of_the_dead_spawns"), actions.handler("w16b_a_defense_mode_296a9ff5a306") },
+        },
+        {
+            text = ccb.content.text("<color_yellow>Dawn of The Dead</color>: (Classic zombies only, slower and more realistic.)"),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_defense_mode_0d6d2f53de6e") },
+        },
+        {
+            text = ccb.content.text("<color_yellow>Eight-Legged Freaks</color>: (Hordes of spiders!  Not arachnophobia friendly!)"),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_defense_mode_f0fe268dafaa") },
+        },
+        {
+            text = ccb.content.text("<color_yellow>Day of The Triffids</color>: (Protect your mansion against the triffids.)"),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_defense_mode_cb8db5532f28") },
+        },
+        {
+            text = ccb.content.text("<color_yellow>Skynet</color>: (Robots have decided that humans are the enemy!)"),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_defense_mode_90d5bf0fcf83") },
+        },
+        {
+            text = ccb.content.text("<color_yellow>The Call of Cthulhu</color>: (Fend off hordes of eldritch horrors.)"),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("w16b_a_defense_mode_37ee9666505a") },
         },
         {
             text = ccb.content.text("Return to main menu."),

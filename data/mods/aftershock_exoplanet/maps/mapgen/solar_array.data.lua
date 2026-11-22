@@ -106,3 +106,93 @@ ccb.content.define_mapgen {
         furniture = { ["1"] = "f_solar_unit", ["2"] = "f_capacitor" },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = {
+        { "afs_solar_arrary_a1", "afs_solar_array_a2" },
+    },
+    layout = {
+        fill_terrain = "t_metal_floor",
+        rows = {
+            "                                                ",
+            " 1111111111111111111111                         ",
+            " 1                    1                         ",
+            " 1                    1                         ",
+            " 1                    1©©©   ©©©    ©©©  ©© ©© ©",
+            " 1                    //#//////©¢¢¢ ¢  ¢¢¢ ¢ ¢¢©",
+            " 1                    /3'/Fohy/ ¢  ¢  ¢¢¢¢¢ ¢   ",
+            " 1                    /3./.'hy/©¢¢ ¢¢¢  ¢ ¢¢¢ ¢©",
+            " 1                    //:/://// ¢¢    ¢  ¢¢¢   ©",
+            " 1                    =k.../'*/©¢¢¢ ¢¢  ¢¢¢¢¢ ¢©",
+            " 1                    =ch..:.&/©††† ††¢ ¢¢ ¢¢¢¢©",
+            " 1                    =k.'.////©¢¢  ¢¢¢ ¢   ¢¢¢©",
+            " 1                    =Óh..:'❶/ ¢¢¢ ¢ ¢¢¢  ¢¢¢  ",
+            " 1                    =k.../.❺/©¢¢ ¢¢  ¢¢¢¢¢ ¢ ©",
+            " 1                    =4..%/❻❷/©¢¢ ¢¢¢¢¢   ¢    ",
+            " 1                    //!////// ††††††¢¢¢¢ ¢¢¢¢ ",
+            " 1                    1/'l/©©©©©¢¢ ¢¢¢  ¢ ¢   ¢©",
+            " 1                    1/.l/ ℗℗©©¢ ¢¢  ¢¢¢  ¢¢¢ ©",
+            " 1                    1/!//©℗℗b©¢¢¢  ¢¢ ¢¢ ¢¢ ¢©",
+            " 1                    1©© ©©℗℗b©¢¢¢¢¢¢¢     ¢¢  ",
+            " 1                    2   © ℗℗©©© ©©©©¢¢¢¢ ¢¢ ¢ ",
+            " 1                    1©    ©    ©  ©©¢¢  ¢   ¢©",
+            " 1111111111111111111111©©©©©©  ©  ©©©©¢¢¢   ¢¢¢©",
+            "                       ©©    ©©© ©©©  ¢¢¢¢ ¢¢  ©",
+        },
+        nested = {
+            {
+                id = { parameter = "lightstatus", fallback = "null" },
+                x = 24,
+                y = 0,
+            },
+            {
+                choices = {
+                    { id = "afs_solar_array_panels_lines", weight = 50 },
+                    { id = "afs_solar_array_panels_circle", weight = 50 },
+                },
+                x = 0,
+                y = 0,
+            },
+        },
+        palettes = {
+            "afs_habitat_structure",
+            "afs_habitat_exterior",
+            "afs_habitat_residential_furnishing",
+            "afs_habitat_life_support",
+            "afs_light_param_palette",
+        },
+        terrain = { ["1"] = "t_chainfence", ["2"] = "t_chaingate_c", b = "t_sidewalk" },
+        furniture = { ["3"] = "f_server", ["4"] = "f_drone_recharge_station" },
+        computer_glyphs = {
+            ["Ó"] = {
+                name = "ColNet access point",
+                chat_topics = { "COMPUTER_GENERIC_SALVAGE_LOCKED" },
+                dialogue_on_access = true,
+            },
+        },
+        monster_placements = {
+            {
+                x = { 0, 23 },
+                y = { 0, 23 },
+                group = "AFS_GROUP_RUIN_MOXIE",
+                chance = 40,
+                pack_size = { 1, 3 },
+            },
+            {
+                x = { 24, 47 },
+                y = { 0, 23 },
+                group = "AFS_GROUP_RUIN_MOXIE",
+                chance = 40,
+                pack_size = { 1, 3 },
+            },
+            {
+                x = { 24, 29 },
+                y = { 6, 14 },
+                group = "AFS_GROUP_ROBOT_LOW_RISK",
+                chance = 50,
+                pack_size = { 1, 3 },
+            },
+        },
+    },
+}

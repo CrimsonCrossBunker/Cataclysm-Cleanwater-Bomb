@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_ESPOD_CONTROL",
-    "type": "effect_on_condition",
-    "effect": [ "open_dialogue" ]
-  }
-]

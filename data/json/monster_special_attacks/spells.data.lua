@@ -33,3 +33,20 @@ ccb.content.define_spell {
     effect = "summon",
     effect_data = "mon_inner_cabins_interstice_horror",
 }
+
+ccb.content.define_spell {
+    id = "cellar_spider_leg_detach",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Detach Leg"),
+    description = ccb.content.text_without_extraction("The hurt leg of the cellar spider wriggles loose.  Ew."),
+    flags = { "HOSTILE_SUMMON", "NO_PROJECTILE", "RANDOM_TARGET", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    min_range = 1,
+    min_aoe = 3,
+    base_casting_time = 10,
+    impact_handler = "w16b_sp_imp_dda_a6367bbee809",
+    extra_spells = {
+        { spell = "frog_mother_hurt_self", self = true },
+        { spell = "frog_mother_hurt_self", self = true },
+    },
+}

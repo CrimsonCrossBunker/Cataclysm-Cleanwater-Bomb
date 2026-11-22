@@ -157,3 +157,54 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ls_deadend_template_chasm",
+    layout = {
+        rows = {
+            "!vvvvvvvv1     vvvvvvvv!",
+            "!vvvvvvvv      vvvvvvvv!",
+            "!vvvvvvvv      vvvvvvvv!",
+            "!vvvvvvvv      vvvvvvvv!",
+            "!vvvvvvvv      vvvvvvvv!",
+            "!vvvvvvvv      vvvvvvvv!",
+            "!vvvvvvvvvv...X((vvvvvv!",
+            "!vvvvvvvvvvvvvv((vvvvvv!",
+            "!vvvvvvvvvvvvvvvvvvvvvv!",
+            "!vvvvvv||||++||||vvvvvv!",
+            "!vvvvv||________||vvvvv!",
+            "!vvvvv|__________|vvvvv!",
+            "!vvvvv|__________|vvvvv!",
+            "!vvvvv|__________|vvvvv!",
+            "!vvvvv|__________|vvvvv!",
+            "!vvvvv|__________|vvvvv!",
+            "!vvvvv|__________|vvvvv!",
+            "!vvvvv|__________|vvvvv!",
+            "!vvvvv|__________|vvvvv!",
+            "!vvvvv||________||vvvvv!",
+            "!|vvvvv||||||||||vvvvv|!",
+            "!||vvvvvvvvvvvvvvvvvv||!",
+            "!|||vvvvvvvvvvvvvvvv|||!",
+            "!!!!!!!!!!!!!!!!!!!!!!!!",
+        },
+        size = { width = 24, height = 24 },
+        palettes = { "labyrinthine_base_palette" },
+        terrain = { X = "t_nl_metal_floor" },
+        nested_glyphs = {
+            ["1"] = {
+                choices = {
+                    { id = "ls_ns_6x6hall_basic", weight = 50 },
+                    { id = "ls_ns_6x6hall_fancy", weight = 50 },
+                },
+            },
+        },
+        computer_glyphs = {
+            X = {
+                name = "Bridge Controls",
+                chat_topics = { "COMP_LS_Bridge_control_deadend_1" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

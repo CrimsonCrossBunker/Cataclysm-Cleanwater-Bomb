@@ -284,3 +284,57 @@ ccb.content.define_mapgen {
         item_spawns = { ["1"] = { id = "afs_biomaterial_1", chance = 33, repetitions = { 1, 3 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "afs_modular_greenhouse_hydro",
+    layout = {
+        fill_terrain = "t_metal_floor_no_roof",
+        rows = {
+            "########################",
+            "########################",
+            "########################",
+            "########################",
+            "########################",
+            "########################",
+            "########################",
+            "########################",
+            "#########||||||#########",
+            "###|||||||2222|||||||###",
+            "###|                |###",
+            "###| 11111    11111 |###",
+            "###| 11113    11111 |###",
+            "###| 11111 ,, 31111 |###",
+            "###| 11111    11111 |###",
+            "###| 11111    11111 |###",
+            "###|                |###",
+            "###| 11111    11111 |###",
+            "###| 11111    11111 |###",
+            "###| 11311    31111 |###",
+            "###| 11111 ,, 11111 |###",
+            "###|   400    200   |###",
+            "###|                |###",
+            "###|                |###",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        palettes = { "afs_habitat_structure", "afs_habitat_residential_furnishing" },
+        terrain = {
+            [" "] = "t_metal_floor",
+            ["#"] = "t_ice_wall",
+            ["1"] = "t_water_sh",
+            ["2"] = "t_concrete_ramp_up_high",
+            ["3"] = "t_water_sh",
+        },
+        furniture = { ["0"] = "f_metal_table", ["3"] = "f_future_industy_pump" },
+        item_groups = {
+            ["0"] = { group = "afs_tools_biolab", chance = 76 },
+        },
+        computer_glyphs = {
+            ["4"] = {
+                name = "ColNet access point",
+                chat_topics = { "COMPUTER_GENERIC_SALVAGE_LOCKED" },
+                dialogue_on_access = true,
+            },
+        },
+    },
+}

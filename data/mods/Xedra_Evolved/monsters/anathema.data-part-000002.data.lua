@@ -55,3 +55,16 @@ ccb.content.define_spell {
     max_duration = 3000000,
     extra_spells = { { spell = "VAMPIRE_ANATHEMA_HEAL", self = true, min_level = 10 } },
 }
+
+ccb.content.define_spell {
+    id = "VAMPIRE_ANATHEMA_REACT_TO_HIT",
+    shape = "blast",
+    spell_class = "NONE",
+    name = ccb.content.text_without_extraction("Anathema reacts"),
+    description = ccb.content.text_without_extraction("This gives the Anathema their buff effects without needing to wait for their turn."),
+    flags = { "NO_EXPLOSION_SFX", "SILENT", "NO_FAIL", "NO_LEGS", "NO_HANDS" },
+    valid_targets = { "self" },
+    energy_source = "NONE",
+    max_level = 1,
+    impact_handler = "w16b_sp_imp_xedra_evolved_a5481bdb6ec8",
+}

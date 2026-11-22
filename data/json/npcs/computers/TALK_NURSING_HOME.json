@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_NURSING_HOME_RECEPTIONIST",
-    "type": "effect_on_condition",
-    "effect": [ "open_dialogue" ]
-  }
-]

@@ -51,3 +51,18 @@ ccb.content.define_monster {
         },
     },
 }
+
+ccb.content.define_spell {
+    id = "LTNT_LIFE_DRAIN",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Life Drain"),
+    description = ccb.content.text_without_extraction("When even the grass rises against you, what hope do you have?"),
+    flags = { "NO_EXPLOSION_SFX" },
+    valid_targets = { "hostile" },
+    min_accuracy = 20,
+    max_accuracy = 20,
+    min_range = 30,
+    max_range = 30,
+    max_level = 1,
+    impact_handler = "w16b_sp_imp_dda_dfa1f5d72601",
+}

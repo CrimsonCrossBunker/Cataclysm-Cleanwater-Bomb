@@ -44,3 +44,69 @@ ccb.content.define_monster {
     copy_from = "mon_zombie_child",
     inheritance = { remove = { flags = { "UNBREAKABLE_MORALE", "WARM" } } },
 }
+
+ccb.content.define_monster {
+    id = "mon_zombie",
+    description = "A human body, skin a sickly grayish color, moving with a slow shuffling motion.",
+    copy_from = "mon_zombie",
+    inheritance = {
+        add = {
+            flags = { "CLUMSY_ATTACKS" },
+            attacks = {
+                {
+                    kind = "melee",
+                    id = "zombie_drag_down",
+                    move_cost = 100,
+                    accuracy = 5,
+                    dodgeable = true,
+                    blockable = false,
+                    effects_require_damage = false,
+                    cooldown = 15,
+                    damage = {
+                        { type = "bash", amount = 0 },
+                    },
+                    avatar_hit = "%1$s drags you down to the ground!",
+                    avatar_miss = "",
+                    avatar_no_damage = "%1$s drags you down to the ground!",
+                    npc_hit = "%1$s drags <npcname> down to the ground!",
+                    npc_miss = "",
+                    npc_no_damage = "%1$s drags <npcname> down to the ground!",
+                    effects = {
+                        { id = "downed", duration = 3 },
+                    },
+                    when = "w16b_mon_when_classic_zombies_1a6cf59beca8",
+                },
+                {
+                    kind = "melee",
+                    id = "zombie_pile_on",
+                    move_cost = 100,
+                    accuracy = 5,
+                    dodgeable = true,
+                    blockable = false,
+                    effects_require_damage = false,
+                    cooldown = 15,
+                    damage = {
+                        { type = "bash", amount = 0 },
+                    },
+                    avatar_hit = "%1$s piles on while you're down!",
+                    avatar_miss = "",
+                    avatar_no_damage = "%1$s piles on while you're down!",
+                    npc_hit = "%1$s piles on <npcname> while they're down!",
+                    npc_miss = "",
+                    npc_no_damage = "%1$s piles on <npcname> while they're down!",
+                    effects = {
+                        { id = "downed", duration = 3 },
+                        { id = "effect_zombie_pile_on", duration = 10 },
+                    },
+                    self_effects_always = {
+                        { id = "downed", duration = 3 },
+                    },
+                    when = "w16b_mon_when_classic_zombies_b6428e37817e",
+                },
+            },
+        },
+        remove = {
+            flags = { "UNBREAKABLE_MORALE", "WARM" },
+        },
+    },
+}

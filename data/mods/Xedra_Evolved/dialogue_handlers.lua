@@ -46,6 +46,17 @@ H.add_proficiency_progress = function(actor, prof_id, val, fmt, is_direct, op)
     elseif op == "*=" then target = cur * delta_or_abs
     elseif op == "/=" then target = cur / delta_or_abs
     end
+    if not is_direct then
+        local delta = target - cur
+        if delta < 1 then return end
+        local sr = services.characters.snapshot(actor)
+        local snap = sr and sr.ok and sr.value or nil
+        local eff_focus = (snap and snap.needs and snap.needs.effective_focus) or (snap and snap.needs and snap.needs.focus) or 100
+        if not (def and def.ignore_focus) then
+            delta = delta * (math.max(0, eff_focus) / 100.0)
+        end
+        target = cur + delta
+    end
     local turns = math.floor(target + 0.5)
     if fmt == "time_left" and total_turns > 0 then
         turns = math.floor(total_turns - target + 0.5)
@@ -170,11 +181,11 @@ H.char_spell_difficulty = function(actor, spell_id, baseline)
 end
 
 H.char_spell_exp = function(actor, spell_id)
-    if not actor then return 0 end
+    if not actor then return -1 end
     local gid = H.safe_id("spell", spell_id)
-    if not gid then return 0 end
+    if not gid then return -1 end
     local r = services.spells.get(actor, gid)
-    if not r.ok or not r.value then return 0 end
+    if not r.ok or not r.value then return -1 end
     return r.value.experience or 0
 end
 

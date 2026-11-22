@@ -114,3 +114,111 @@ ccb.content.define_spell {
     final_casting_time = 25,
     casting_time_increment = -2.5,
 }
+
+ccb.content.define_spell {
+    id = "afs_telepathic_shield",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "AFS_TELEPATH",
+    magic_type = "aftershock_psionics",
+    name = "[Ψ]Telepathic Shield (C)",
+    description = "You can protect your mind from the dangers of Salus IV.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_8c5586316516",
+        fallback = 0,
+    },
+    max_duration = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_929e342ce5fe",
+        fallback = 0,
+    },
+    base_energy_cost = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_72ca327fc30e",
+        fallback = 0,
+    },
+    difficulty = 2,
+    max_level = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_47a6ac95789b",
+        fallback = 0,
+    },
+    base_casting_time = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_4a50feda0b31",
+        fallback = 0,
+    },
+    impact_handler = "w16b_sp_imp_aftershock_exoplanet_8b15655655cd",
+}
+
+ccb.content.define_spell {
+    id = "afs_telepathic_mind_sense",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "AFS_TELEPATH",
+    magic_type = "aftershock_psionics",
+    name = "[Ψ]Sense Minds (C)",
+    description = "You can use your powers to detect the tell-tale hum of a living, sapient mind, no matter how strange or alien it may be.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_1aa90031cacc",
+        fallback = 0,
+    },
+    max_duration = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_4ef2ea07ff14",
+        fallback = 0,
+    },
+    base_energy_cost = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_f92cf150f632",
+        fallback = 0,
+    },
+    difficulty = 3,
+    max_level = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_47a6ac95789b",
+        fallback = 0,
+    },
+    base_casting_time = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_7880815587af",
+        fallback = 0,
+    },
+    impact_handler = "w16b_sp_imp_aftershock_exoplanet_7635194fddfd",
+}
+
+ccb.content.define_spell {
+    id = "afs_telepathic_suggestion",
+    skill = "metaphysics",
+    shape = "blast",
+    spell_class = "AFS_TELEPATH",
+    magic_type = "aftershock_psionics",
+    name = "[Ψ]Telepathic Suggestion (C)",
+    description = "You can subtly influence the thoughts of others, making them more amenable to your point of view.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_6f54706ae510",
+        fallback = 0,
+    },
+    max_duration = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_1b1797e83627",
+        fallback = 0,
+    },
+    base_energy_cost = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_2455504b152d",
+        fallback = 0,
+    },
+    difficulty = 4,
+    max_level = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_47a6ac95789b",
+        fallback = 0,
+    },
+    base_casting_time = {
+        handler = "w16b_sp_stat_aftershock_exoplanet_72a01a10871d",
+        fallback = 0,
+    },
+    impact_handler = "w16b_sp_imp_aftershock_exoplanet_7ae166bfa075",
+}

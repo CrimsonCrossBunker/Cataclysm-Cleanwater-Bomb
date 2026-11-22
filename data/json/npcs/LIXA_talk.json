@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_LIXA_presentation_computer",
-    "type": "effect_on_condition",
-    "effect": { "open_dialogue": { "topic": "LIXA_presentation_computer_main" } }
-  }
-]

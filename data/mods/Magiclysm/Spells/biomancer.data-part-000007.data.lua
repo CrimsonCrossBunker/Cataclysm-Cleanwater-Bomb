@@ -132,3 +132,25 @@ ccb.content.define_spell {
     base_energy_cost = 900,
     base_casting_time = 150,
 }
+
+ccb.content.define_spell {
+    id = "biomancer_giant_growth",
+    shape = "blast",
+    spell_class = "BIOMANCER",
+    magic_type = "magiclysm_transformation_magic",
+    name = "Giant Growth",
+    description = "Grow to enormous size.  Your clothing and equipment will not grow with you.",
+    flags = { "TRANSFORMATION_SPELL", "VERBAL", "SOMATIC" },
+    valid_targets = { "self" },
+    min_duration = 30000,
+    duration_increment = 4000,
+    max_duration = 90000,
+    base_energy_cost = 500,
+    difficulty = 6,
+    max_level = 15,
+    base_casting_time = 100,
+    impact_handler = "w16b_sp_imp_magiclysm_765e88261046",
+    extra_spells = {
+        { spell = "eoc_transformation_setup", self = true },
+    },
+}

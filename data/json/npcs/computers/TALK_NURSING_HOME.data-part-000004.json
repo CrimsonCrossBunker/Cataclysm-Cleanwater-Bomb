@@ -1,7 +1,0 @@
-[
-  {
-    "id": "EOC_NURSING_HOME_COO",
-    "type": "effect_on_condition",
-    "effect": [ "open_dialogue" ]
-  }
-]

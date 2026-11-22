@@ -857,3 +857,45 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ls_straight_2basic_rooms_offset",
+    layout = {
+        rows = {
+            "L_____|        |______",
+            "___|__+        |___Ă__",
+            "___|__+        |______",
+            "______|        |______",
+            "|__||||        |______",
+            "_____L|        |______",
+            "______|        |______",
+            "______|        |______",
+            "______|        |______",
+            "||||__|        |______",
+            "______|        |______",
+            "_____L|        |||____",
+            "_||||||        |L|||==",
+            "______|        =______",
+            "______|        =______",
+            "LUUU_L|        |L|||==",
+            "||||+||        |||L___",
+            "L_____|        |______",
+            "Ṫ_____|        |______",
+            "Ṫ_____|        |______",
+            "Ṫ_____|        |______",
+            "ṪṪṪṪṪÇ|        |UUUUUU",
+        },
+        size = { width = 22, height = 22 },
+        palettes = { "labyrinthine_base_palette", "labyrinthine_item_palette_utility_tier0" },
+        terrain = { ["Ă"] = "t_nl_obelisk_0" },
+        computer_glyphs = {
+            ["Ç"] = {
+                name = "Door controls",
+                chat_topics = { "COMP_LS_Passcode_Door" },
+                dialogue_on_access = true,
+                access_handler = "w16b_comp_ls_passcode",
+            },
+        },
+    },
+}

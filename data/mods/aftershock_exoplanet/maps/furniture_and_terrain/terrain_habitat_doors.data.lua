@@ -56,3 +56,51 @@ ccb.content.define_terrain {
         },
     },
 }
+
+ccb.content.define_terrain {
+    id = "t_afs_door_metal_elocked",
+    name = "closed metal door",
+    description = "A galvanized steel door, forged to withstand punishment and impede anyone or anything.  This one is secured with an electronic lock.",
+    looks_like = "t_door_metal_elocked",
+    roof = "t_metal_roof",
+    symbol = "+",
+    color = "cyan",
+    connect_groups = "WALL",
+    connects_to = "WALL",
+    coverage = 95,
+    move_cost = 0,
+    flags = { "NOITEM", "REDUCE_SCENT", "LOCKED", "BLOCK_WIND", "SUPPORTS_ROOF" },
+    bash = {
+        minimum_strength = 80,
+        maximum_strength = 250,
+        terrain = "t_mdoor_frame",
+        sound = "metal screeching!",
+        failure_sound = "clang!",
+        drops = {
+            {
+                item = "scrap",
+                count = { 12, 24 },
+            },
+            { item = "steel_plate", chance = 75 },
+            {
+                item = "hinge",
+                count = { 1, 3 },
+            },
+        },
+    },
+    oxytorch = {
+        result = "t_mdoor_frame",
+        duration = "14 seconds",
+        byproducts = {
+            {
+                item = "steel_plate",
+                count = { 0, 1 },
+            },
+            {
+                item = "mc_steel_chunk",
+                count = { 3, 8 },
+            },
+        },
+    },
+    examine_handler = "w16b_tile_ex_aftershock_exoplanet_49d6e9dea68e",
+}
