@@ -882,6 +882,42 @@ void write_placement_item( JsonOut &json, const sol::table &options )
     }
 }
 
+void write_placement_item_group_entries( JsonOut &json, const sol::table &entries )
+{
+    json.start_array();
+    for( std::size_t i = 1, count = entries.size(); i <= count; ++i ) {
+        const sol::table entry = entries.raw_get<sol::table>( i );
+        const auto item_id = entry.get<sol::optional<std::string>>( "item" );
+        const auto group_id = entry.get<sol::optional<std::string>>( "group" );
+        const auto collection = entry.get<sol::optional<sol::table>>( "collection" );
+        const auto distribution = entry.get<sol::optional<sol::table>>( "distribution" );
+        if( item_id.has_value() + group_id.has_value() +
+            collection.has_value() + distribution.has_value() != 1 ) {
+            throw std::invalid_argument(
+                "mapgen item group entry requires one of item, group, collection or distribution" );
+        }
+        json.start_object();
+        if( item_id ) {
+            json.member( "item", *item_id );
+        } else if( group_id ) {
+            json.member( "group", *group_id );
+        } else if( collection ) {
+            json.member( "collection" );
+            write_placement_item_group_entries( json, *collection );
+        } else {
+            json.member( "distribution" );
+            write_placement_item_group_entries( json, *distribution );
+        }
+        write_placement_member<std::string>( json, entry, "variant", "variant" );
+        write_placement_member<int>( json, entry, "probability", "prob" );
+        for( const char *field : { "count", "charges", "damage" } ) {
+            write_mapgen_range( json, field, entry.raw_get<sol::object>( field ) );
+        }
+        json.end_object();
+    }
+    json.end_array();
+}
+
 void write_placement_item_group( JsonOut &json, const sol::table &options )
 {
     const sol::object group = options.raw_get<sol::object>( "group" );
@@ -892,27 +928,7 @@ void write_placement_item_group( JsonOut &json, const sol::table &options )
         write_placement_member<std::string>( json, definition, "kind", "subtype" );
         const sol::table entries = definition.get<sol::table>( "entries" );
         json.member( "entries" );
-        json.start_array();
-        for( std::size_t i = 1, count = entries.size(); i <= count; ++i ) {
-            const sol::table entry = entries.raw_get<sol::table>( i );
-            const auto item_id = entry.get<sol::optional<std::string>>( "item" );
-            const auto group_id = entry.get<sol::optional<std::string>>( "group" );
-            if( item_id.has_value() == group_id.has_value() ) {
-                throw std::invalid_argument( "mapgen item group entry requires one of item or group" );
-            }
-            json.start_object();
-            if( item_id ) {
-                json.member( "item", *item_id );
-            } else {
-                json.member( "group", *group_id );
-            }
-            write_placement_member<int>( json, entry, "probability", "prob" );
-            for( const char *field : { "count", "charges", "damage" } ) {
-                write_mapgen_range( json, field, entry.raw_get<sol::object>( field ) );
-            }
-            json.end_object();
-        }
-        json.end_array();
+        write_placement_item_group_entries( json, entries );
         json.end_object();
     } else {
         json.member( "item", group.as<std::string>() );
@@ -1762,8 +1778,18 @@ void load_static_mapgen( const sol::table &options )
     } else {
         throw std::runtime_error( "mapgen kind must be overmap, nested or update" );
     }
-    if( const auto weight = options.get<sol::optional<int>>( "weight" ) ) {
-        json.member( "weight", *weight );
+    const sol::object weight = options.raw_get<sol::object>( "weight" );
+    if( weight.get_type() == sol::type::number ) {
+        json.member( "weight", weight.as<int>() );
+    } else if( weight.get_type() == sol::type::table ) {
+        const sol::table dynamic_weight = weight.as<sol::table>();
+        json.member( "weight" );
+        json.start_object();
+        json.member( "global_val", dynamic_weight.get<std::string>( "global" ) );
+        write_placement_member<double>( json, dynamic_weight, "fallback", "default" );
+        json.end_object();
+    } else if( weight.get_type() != sol::type::nil ) {
+        throw std::invalid_argument( "mapgen weight must be an integer or global weight specification" );
     }
     write_static_mapgen_layout( json, options.get<sol::table>( "layout" ),
                                 std::numeric_limits<std::size_t>::max() );
@@ -1989,6 +2015,22 @@ void write_item_rot_spawn( JsonOut &json, const sol::table &values )
     }
 }
 
+void write_item_contamination( JsonOut &json, const sol::table &entries )
+{
+    json.member( "contamination" );
+    json.start_array();
+    const std::size_t count = checked_dense_array_size( entries, "contamination",
+                              std::numeric_limits<std::size_t>::max() );
+    for( std::size_t i = 1; i <= count; ++i ) {
+        const sol::table entry = entries.raw_get<sol::table>( i );
+        json.start_object();
+        json.member( "disease", entry.get<std::string>( "disease" ) );
+        json.member( "probability", entry.get<double>( "probability" ) );
+        json.end_object();
+    }
+    json.end_array();
+}
+
 void write_item_comestible( JsonOut &json, const sol::table &food )
 {
     if( const auto addictions = food.get<sol::optional<sol::table>>( "addictions" ) ) {
@@ -2034,6 +2076,9 @@ void write_item_comestible( JsonOut &json, const sol::table &food )
     write_item_ids( json, food, { { "pet_food", "petfood" } } );
     write_item_vitamins( json, food, "vitamins" );
     write_item_rot_spawn( json, food );
+    if( const auto contamination = food.get<sol::optional<sol::table>>( "contamination" ) ) {
+        write_item_contamination( json, *contamination );
+    }
     if( const auto handler = food.get<sol::optional<std::string>>( "on_consume" ) ) {
         if( handler->empty() ) {
             throw std::invalid_argument( "item consumption handler id cannot be empty" );
@@ -2279,12 +2324,24 @@ void write_item_pockets( JsonOut &json, const sol::table &pockets, const char *f
             { "holster", "holster" }, { "ablative", "ablative" }, { "transparent", "transparent" },
             { "rigid", "rigid" }, { "watertight", "watertight" }, { "airtight", "airtight" },
             { "inherits_flags", "inherits_flags" }, { "fire_protection", "fire_protection" },
-            { "open_container", "open_container" },
+            { "open_container", "open_container" }, { "forbidden", "forbidden" },
         } );
         write_item_ids( json, pocket, {
             { "allowed_flags", "flag_restriction" }, { "allowed_items", "item_restriction" },
             { "allowed_materials", "material_restriction" }, { "allowed_speedloaders", "allowed_speedloaders" },
         } );
+        if( const auto noise = pocket.get<sol::optional<sol::table>>( "activity_noise" ) ) {
+            json.member( "activity_noise" );
+            json.start_object();
+            write_item_fields<int>( json, *noise, { { "volume", "volume" }, { "chance", "chance" } } );
+            json.end_object();
+        }
+        if( const auto sealed_data = pocket.get<sol::optional<sol::table>>( "sealed_data" ) ) {
+            json.member( "sealed_data" );
+            json.start_object();
+            write_placement_member<double>( json, *sealed_data, "spoil_multiplier", "spoil_multiplier" );
+            json.end_object();
+        }
         if( const auto ammo = pocket.get<sol::optional<sol::table>>( "ammunition" ) ) {
             write_item_keyed_values<int>( json, "ammo_restriction", *ammo );
         }
@@ -2375,11 +2432,20 @@ void write_item_artifact( JsonOut &json, const sol::table &artifact )
     if( const auto passives = artifact.get<sol::optional<sol::table>>( "enchantments" ) ) {
         json.member( "passive_effects" );
         json.start_array();
-        const auto ids = bounded_string_array( *passives, "enchantments",
-                        std::numeric_limits<std::size_t>::max(), "artifact" );
-        for( const std::string &id : ids ) {
+        const std::size_t count = checked_dense_array_size( *passives, "enchantments",
+                                  std::numeric_limits<std::size_t>::max() );
+        for( std::size_t i = 1; i <= count; ++i ) {
+            const sol::object entry = passives->raw_get<sol::object>( i );
             json.start_object();
-            json.member( "id", id );
+            if( entry.get_type() == sol::type::string ) {
+                json.member( "id", entry.as<std::string>() );
+            } else {
+                const sol::table passive = entry.as<sol::table>();
+                json.member( "id", passive.get<std::string>( "id" ) );
+                write_item_fields<std::string>( json, passive, {
+                    { "has", "has" }, { "condition", "condition" }
+                } );
+            }
             json.end_object();
         }
         json.end_array();
@@ -2465,10 +2531,18 @@ void write_item_qualities( JsonOut &json, const sol::table &qualities, const cha
     const std::size_t count = qualities.size();
     for( std::size_t i = 1; i <= count; ++i ) {
         const sol::table quality = qualities.raw_get<sol::table>( i );
-        json.start_array();
-        json.write( quality.get<std::string>( "id" ) );
-        json.write( quality.get<int>( "level" ) );
-        json.end_array();
+        if( const auto speed = quality.get<sol::optional<double>>( "speed" ) ) {
+            json.start_object();
+            json.member( "id", quality.get<std::string>( "id" ) );
+            json.member( "level", quality.get<int>( "level" ) );
+            json.member( "speed", *speed );
+            json.end_object();
+        } else {
+            json.start_array();
+            json.write( quality.get<std::string>( "id" ) );
+            json.write( quality.get<int>( "level" ) );
+            json.end_array();
+        }
     }
     json.end_array();
 }
@@ -2478,27 +2552,56 @@ void write_item_inheritance( JsonOut &json, const sol::table &options )
     if( const auto additions = options.get<sol::optional<sol::table>>( "add" ) ) {
         json.member( "extend" );
         json.start_object();
-        write_item_ids( json, *additions, { { "flags", "flags" }, { "pet_food", "petfood" },
-            { "projectile_effects", "effects" }, { "firing_effects", "ammo_effects" } } );
+        write_item_ids( json, *additions, {
+            { "flags", "flags" }, { "pet_food", "petfood" }, { "materials", "material" },
+            { "techniques", "techniques" }, { "weapon_categories", "weapon_category" },
+            { "projectile_effects", "effects" }, { "firing_effects", "ammo_effects" },
+        } );
         write_item_vitamins( json, *additions, "vitamins" );
         write_item_rot_spawn( json, *additions );
         write_item_variants( json, *additions );
+        if( const auto qualities = additions->get<sol::optional<sol::table>>( "qualities" ) ) {
+            write_item_qualities( json, *qualities, "qualities" );
+        }
+        if( const auto contamination = additions->get<sol::optional<sol::table>>( "contamination" ) ) {
+            write_item_contamination( json, *contamination );
+        }
         json.end_object();
     }
     if( const auto removals = options.get<sol::optional<sol::table>>( "remove" ) ) {
         json.member( "delete" );
         json.start_object();
-        write_item_ids( json, *removals, { { "flags", "flags" },
-            { "projectile_effects", "effects" }, { "firing_effects", "ammo_effects" } } );
+        const sol::object flags = removals->raw_get<sol::object>( "flags" );
+        if( flags.get_type() == sol::type::string ) {
+            json.member( "flags", flags.as<std::string>() );
+        } else {
+            write_item_ids( json, *removals, { { "flags", "flags" } } );
+        }
+        write_item_ids( json, *removals, {
+            { "materials", "material" },
+            { "projectile_effects", "effects" }, { "firing_effects", "ammo_effects" }
+        } );
+        if( const auto qualities = removals->get<sol::optional<sol::table>>( "qualities" ) ) {
+            if( qualities->size() > 0 &&
+                qualities->raw_get<sol::object>( 1 ).get_type() == sol::type::string ) {
+                json.member( "qualities", bounded_string_array( *qualities, "qualities",
+                             std::numeric_limits<std::size_t>::max(), "item delete" ) );
+            } else {
+                write_item_qualities( json, *qualities, "qualities" );
+            }
+        }
+        write_item_vitamins( json, *removals, "vitamins" );
         json.end_object();
     }
     if( const auto scale = options.get<sol::optional<sol::table>>( "scale" ) ) {
         json.member( "proportional" );
         json.start_object();
         write_item_fields<double>( json, *scale, {
-            { "mass", "weight" }, { "volume", "volume" }, { "price", "price" },
+            { "mass", "weight" }, { "volume", "volume" }, { "length", "longest_side" },
+            { "price", "price" },
             { "survival_price", "price_postapoc" }, { "warmth", "warmth" },
-            { "calories", "calories" }, { "encumbrance", "encumbrance" },
+            { "calories", "calories" }, { "healthy", "healthy" },
+            { "encumbrance", "encumbrance" },
             { "fun", "fun" }, { "quench", "quench" }, { "parasites", "parasites" },
             { "dispersion", "dispersion" }, { "sight_dispersion", "sight_dispersion" },
             { "recoil", "recoil" }, { "range", "range" },
@@ -2516,8 +2619,11 @@ void write_item_inheritance( JsonOut &json, const sol::table &options )
     if( const auto offset = options.get<sol::optional<sol::table>>( "offset" ) ) {
         json.member( "relative" );
         json.start_object();
-        write_item_fields<std::string>( json, *offset, { { "mass", "weight" }, { "volume", "volume" },
-            { "price", "price" }, { "barrel_volume", "barrel_volume" } } );
+        write_item_fields<std::string>( json, *offset, {
+            { "mass", "weight" }, { "volume", "volume" },
+            { "price", "price" }, { "survival_price", "price_postapoc" },
+            { "barrel_volume", "barrel_volume" }
+        } );
         write_item_fields<int>( json, *offset, { { "warmth", "warmth" }, { "fun", "fun" },
             { "quench", "quench" }, { "range", "range" }, { "dispersion", "dispersion" },
             { "recoil", "recoil" }, { "accuracy", "to_hit" } } );
@@ -2525,6 +2631,9 @@ void write_item_inheritance( JsonOut &json, const sol::table &options )
         write_item_damage( json, *offset, "ranged_damage", "ranged_damage" );
         if( const auto damage = offset->get<sol::optional<sol::table>>( "melee_damage" ) ) {
             write_item_keyed_values<double>( json, "melee_damage", *damage );
+        }
+        if( const auto qualities = offset->get<sol::optional<sol::table>>( "qualities" ) ) {
+            write_item_qualities( json, *qualities, "qualities" );
         }
         json.end_object();
     }
@@ -2548,6 +2657,20 @@ void write_item_tool( JsonOut &json, const sol::table &tool )
         write_item_ids( json, tool, { { "ammo_types", "tool_ammo" } } );
     }
     write_item_text( json, "revert_msg", tool.raw_get<sol::object>( "revert_message" ), false );
+    if( const auto reqs = tool.get<sol::optional<sol::table>>( "consumption_per_use" ) ) {
+        json.member( "consumption_per_use" );
+        json.start_array();
+        const std::size_t count = checked_dense_array_size( *reqs, "consumption_per_use",
+                                  std::numeric_limits<std::size_t>::max() );
+        for( std::size_t i = 1; i <= count; ++i ) {
+            const sol::table req = reqs->raw_get<sol::table>( i );
+            json.start_object();
+            json.member( "pocket", req.get<std::string>( "pocket" ) );
+            json.member( "qty", req.get<int>( "count" ) );
+            json.end_object();
+        }
+        json.end_array();
+    }
 }
 
 void write_item_bionic( JsonOut &json, const sol::table &bionic )
@@ -2904,7 +3027,7 @@ void write_item_native_action( JsonOut &json, const sol::object &action )
     if( kind == "transform" || kind == "delayed_transform" ) {
         write_item_transform_action( json, options );
         if( kind == "delayed_transform" ) {
-            json.member( "transform_age", options.get<int>( "age" ) );
+            write_placement_member<int>( json, options, "age", "transform_age" );
             write_item_text( json, "not_ready_msg", options.raw_get<sol::object>( "not_ready_message" ), false );
         }
     } else if( kind == "consume_drug" ) {
@@ -3004,7 +3127,61 @@ void write_item_native_action( JsonOut &json, const sol::object &action )
         write_item_fields<bool>( json, options, {
             { "need_worn", "need_worn" }, { "need_wielding", "need_wielding" }, { "mundane", "mundane" }
         } );
-    } else if( kind != "play_instrument" ) {
+    } else if( kind == "deploy_tent" ) {
+        write_placement_member<int>( json, options, "radius", "radius" );
+        write_item_fields<std::string>( json, options, {
+            { "broken_type", "broken_type" }, { "wall", "wall" }, { "floor", "floor" },
+            { "floor_center", "floor_center" }, { "door_opened", "door_opened" },
+            { "door_closed", "door_closed" },
+        } );
+    } else if( kind == "deploy_appliance" ) {
+        write_placement_member<std::string>( json, options, "base", "base" );
+    } else if( kind == "deploy_furn" ) {
+        write_placement_member<std::string>( json, options, "furn_type", "furn_type" );
+    } else if( kind == "place_trap" ) {
+        write_placement_member<std::string>( json, options, "trap", "trap" );
+        write_item_fields<int>( json, options, { { "moves", "moves" }, { "practice", "practice" } } );
+        write_item_text( json, "done_message", options.raw_get<sol::object>( "done_message" ), false );
+    } else if( kind == "weigh_self" ) {
+        write_placement_member<std::string>( json, options, "max_weight", "max_weight" );
+    } else if( kind == "change_scent" ) {
+        write_placement_member<std::string>( json, options, "scent_typeid", "scent_typeid" );
+        const sol::object duration = options.raw_get<sol::object>( "duration" );
+        if( duration.get_type() == sol::type::string ) {
+            json.member( "duration", duration.as<std::string>() );
+        } else if( duration.get_type() == sol::type::number ) {
+            json.member( "duration", duration.as<int>() );
+        }
+        write_item_fields<int>( json, options, {
+            { "moves", "moves" }, { "charges_to_use", "charges_to_use" }
+        } );
+        write_item_action_effects( json, options );
+    } else if( kind == "fireweapon_off" ) {
+        write_placement_member<std::string>( json, options, "target_id", "target_id" );
+        write_item_fields<int>( json, options, { { "moves", "moves" }, { "noise", "noise" } } );
+        write_item_text( json, "success_message",
+                         options.raw_get<sol::object>( "success_message" ), false );
+    } else if( kind == "fireweapon_on" ) {
+        write_placement_member<int>( json, options, "noise_chance", "noise_chance" );
+        write_item_text( json, "noise_message",
+                         options.raw_get<sol::object>( "noise_message" ), false );
+        write_item_text( json, "charges_extinguish_message",
+                         options.raw_get<sol::object>( "charges_extinguish_message" ), false );
+        write_item_text( json, "water_extinguish_message",
+                         options.raw_get<sol::object>( "water_extinguish_message" ), false );
+    } else if( kind == "learn_spell" ) {
+        write_item_ids( json, options, { { "spells", "spells" } } );
+    } else if( kind == "place_npc" ) {
+        write_placement_member<std::string>( json, options, "npc_class_id", "npc_class_id" );
+        write_placement_member<int>( json, options, "moves", "moves" );
+        write_placement_member<bool>( json, options, "place_randomly", "place_randomly" );
+        write_item_text( json, "summon_msg", options.raw_get<sol::object>( "summon_msg" ), false );
+    } else if( kind == "sew_advanced" ) {
+        write_placement_member<std::string>( json, options, "skill", "skill" );
+        write_item_ids( json, options, {
+            { "materials", "materials" }, { "clothing_mods", "clothing_mods" }
+        } );
+    } else if( kind != "paint_vehicle" && kind != "play_instrument" ) {
         throw std::invalid_argument( "unsupported ordered item action: " + kind );
     }
     json.end_object();
@@ -3124,8 +3301,30 @@ void load_static_item( const sol::table &options, const std::string &source )
         { "integral_mass", "integral_weight" }, { "integral_volume", "integral_volume" },
         { "integral_length", "integral_longest_side" },
         { "price", "price" }, { "survival_price", "price_postapoc" },
-        { "snippet_category", "snippet_category" }, { "revert_to", "revert_to" },
+        { "revert_to", "revert_to" },
+        { "e_port", "e_port" }, { "ememory_size", "ememory_size" },
+        { "transfer_rate", "etransfer_rate" },
+        { "nanofab_template_group", "nanofab_template_group" },
+        { "template_requirements", "template_requirements" }, { "trait_group", "trait_group" },
     } );
+    const sol::object snippet_cat = options.raw_get<sol::object>( "snippet_category" );
+    if( snippet_cat.get_type() == sol::type::string ) {
+        json.member( "snippet_category", snippet_cat.as<std::string>() );
+    } else if( snippet_cat.get_type() == sol::type::table ) {
+        const sol::table entries = snippet_cat.as<sol::table>();
+        json.member( "snippet_category" );
+        json.start_array();
+        const std::size_t count = checked_dense_array_size( entries, "snippet_category",
+                                  std::numeric_limits<std::size_t>::max() );
+        for( std::size_t i = 1; i <= count; ++i ) {
+            const sol::table entry = entries.raw_get<sol::table>( i );
+            json.start_object();
+            json.member( "id", entry.get<std::string>( "id" ) );
+            write_item_text( json, "text", entry.raw_get<sol::object>( "text" ), false );
+            json.end_object();
+        }
+        json.end_array();
+    }
     write_item_fields<bool>( json, options, {
         { "stackable", "stackable" }, { "expand_snippets", "expand_snippets" },
         { "sealed_container", "sealed" }, { "explode_in_fire", "explode_in_fire" },
@@ -3133,11 +3332,15 @@ void load_static_item( const sol::table &options, const std::string &source )
     write_item_fields<int>( json, options, {
         { "stack_size", "stack_size" }, { "light", "light" }, { "max_worn", "max_worn" },
         { "min_strength", "min_strength" }, { "throwing_recovery_chance", "thrown_recovery_chance" },
+        { "max_energy_shield_hp", "max_energy_shield_hp" },
     } );
-    write_placement_member<double>( json, options, "fertilizer_quality", "fertilizer_quality" );
+    write_item_fields<double>( json, options, {
+        { "fertilizer_quality", "fertilizer_quality" }, { "solar_efficiency", "solar_efficiency" },
+    } );
     write_item_ids( json, options, {
         { "flags", "flags" }, { "techniques", "techniques" }, { "repair_materials", "repairs_with" },
         { "emissions", "emits" }, { "weapon_categories", "weapon_category" },
+        { "e_ports_banned", "e_ports_banned" },
     } );
     if( const auto materials = options.get<sol::optional<sol::table>>( "materials" ) ) {
         write_item_materials( json, *materials, false );
@@ -3177,6 +3380,44 @@ void load_static_item( const sol::table &options, const std::string &source )
     }
     if( const auto qualities = options.get<sol::optional<sol::table>>( "qualities" ) ) {
         write_item_qualities( json, *qualities );
+    }
+    if( const auto qualities = options.get<sol::optional<sol::table>>( "charged_qualities" ) ) {
+        write_item_qualities( json, *qualities, "charged_qualities" );
+    }
+    if( const auto properties = options.get<sol::optional<sol::table>>( "properties" ) ) {
+        write_item_keyed_values<std::string>( json, "properties", *properties );
+    }
+    if( const auto variables = options.get<sol::optional<sol::table>>( "variables" ) ) {
+        json.member( "variables" );
+        json.start_object();
+        for( const auto &[key, value] : *variables ) {
+            const std::string name = key.as<std::string>();
+            if( value.get_type() == sol::type::string ) {
+                json.member( name, value.as<std::string>() );
+            } else if( value.get_type() == sol::type::boolean ) {
+                json.member( name, value.as<bool>() );
+            } else if( value.get_type() == sol::type::number ) {
+                if( value.is<lua_Integer>() ) {
+                    json.member( name, static_cast<std::int64_t>( value.as<lua_Integer>() ) );
+                } else {
+                    json.member( name, value.as<double>() );
+                }
+            } else {
+                throw std::invalid_argument( "item variable requires a string, number or boolean" );
+            }
+        }
+        json.end_object();
+    }
+    if( const auto memory_card = options.get<sol::optional<sol::table>>( "memory_card" ) ) {
+        json.member( "memory_card" );
+        json.start_object();
+        write_item_fields<int>( json, *memory_card, {
+            { "data_chance", "data_chance" }, { "recipes_chance", "recipes_chance" },
+            { "recipes_amount", "recipes_amount" }, { "recipes_level_min", "recipes_level_min" },
+            { "recipes_level_max", "recipes_level_max" },
+        } );
+        write_item_ids( json, *memory_card, { { "recipes_categories", "recipes_categories" } } );
+        json.end_object();
     }
     write_item_counted_ids( json, options, "minimum_skills", "min_skills" );
     const sol::object to_hit = options.raw_get<sol::object>( "accuracy" );

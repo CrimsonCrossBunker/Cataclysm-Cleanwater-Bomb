@@ -9156,6 +9156,17 @@ function CcbPlatformContent.Item(options) end
 ---@field id string Native addiction type.
 ---@field potential integer Exposure strength for this addiction.
 
+---@class StaticItemContamination
+---@field disease string
+---@field probability number
+
+---@class StaticItemPocketActivityNoise
+---@field volume? integer
+---@field chance? integer
+
+---@class StaticItemPocketSealedData
+---@field spoil_multiplier? number
+
 ---@class StaticItemComestible
 ---@field kind? 'FOOD'|'DRINK'|'MED'|'INVALID' Omit to inherit the native type.
 ---@field tool? string
@@ -9181,6 +9192,7 @@ function CcbPlatformContent.Item(options) end
 ---@field shelf_life? integer|string Duration with a native unit or a legacy turn count.
 ---@field pet_food? string[]
 ---@field vitamins? StaticItemVitamin[]
+---@field contamination? StaticItemContamination[]
 ---@field rot_spawn? StaticItemRotSpawn
 ---@field on_consume? string Named handler registered by this Mod. Receives the consumer and item before the native consumption path decrements charges.
 
@@ -9214,6 +9226,9 @@ function CcbPlatformContent.Item(options) end
 ---@field inherits_flags? boolean
 ---@field fire_protection? boolean
 ---@field open_container? boolean
+---@field forbidden? boolean
+---@field activity_noise? StaticItemPocketActivityNoise
+---@field sealed_data? StaticItemPocketSealedData
 ---@field allowed_flags? string[]
 ---@field allowed_items? string[]
 ---@field allowed_materials? string[]
@@ -9322,24 +9337,34 @@ function CcbPlatformContent.Item(options) end
 ---@class StaticItemAdditions
 ---@field flags? string[]
 ---@field pet_food? string[]
+---@field materials? string[]
+---@field techniques? string[]
+---@field weapon_categories? string[]
+---@field qualities? StaticItemQuality[]
 ---@field vitamins? StaticItemVitamin[]
+---@field contamination? StaticItemContamination[]
 ---@field rot_spawn? StaticItemRotSpawn
 ---@field variants? ItemVariantDefinitionOptions[]
 ---@field projectile_effects? string[]
 ---@field firing_effects? string[]
 
 ---@class StaticItemRemovals
----@field flags? string[]
+---@field flags? string|string[]
+---@field materials? string[]
+---@field qualities? string[]|StaticItemQuality[]
+---@field vitamins? StaticItemVitamin[]
 ---@field projectile_effects? string[]
 ---@field firing_effects? string[]
 
 ---@class StaticItemScales
 ---@field mass? number
 ---@field volume? number
+---@field length? number
 ---@field price? number
 ---@field survival_price? number
 ---@field warmth? number
 ---@field calories? number
+---@field healthy? number
 ---@field encumbrance? number
 ---@field fun? number
 ---@field quench? number
@@ -9364,6 +9389,7 @@ function CcbPlatformContent.Item(options) end
 ---@field fun? integer
 ---@field quench? integer
 ---@field price? string
+---@field survival_price? string
 ---@field barrel_volume? string
 ---@field range? integer
 ---@field dispersion? integer
@@ -9371,7 +9397,8 @@ function CcbPlatformContent.Item(options) end
 ---@field accuracy? integer
 ---@field damage? StaticItemDamage
 ---@field ranged_damage? StaticItemDamage
----@field melee_damage? table<string, number>
+---@field melee_damage? table<string,number>
+---@field qualities? StaticItemQuality[]
 
 ---@class StaticItemInheritance
 ---@field add? StaticItemAdditions
@@ -9390,6 +9417,7 @@ function CcbPlatformContent.Item(options) end
 ---@class StaticItemQuality
 ---@field id string Native tool quality ID.
 ---@field level integer
+---@field speed? number Crafting speed multiplier for this quality.
 
 ---@class StaticItemFermentation
 ---@field duration? string|integer Native duration or turns.
@@ -9405,6 +9433,18 @@ function CcbPlatformContent.Item(options) end
 ---@field fear_multiplier? number
 ---@field spook_multiplier? number
 ---@field mounted_move_cost_multiplier? number
+
+---@class StaticItemMemoryCard
+---@field data_chance? integer
+---@field recipes_chance? integer
+---@field recipes_amount? integer
+---@field recipes_level_min? integer
+---@field recipes_level_max? integer
+---@field recipes_categories? string[]
+
+---@class StaticItemSnippetEntry
+---@field id string
+---@field text string|LocalizedText
 
 ---@class StaticItemOptions
 ---@field id string Stable item ID or abstract template ID.
@@ -9430,8 +9470,17 @@ function CcbPlatformContent.Item(options) end
 ---@field integral_mass? string Installed mass with a native unit.
 ---@field integral_volume? string Installed volume with a native unit.
 ---@field integral_length? string Installed length with a native unit.
----@field snippet_category? string
+---@field snippet_category? string|StaticItemSnippetEntry[]
 ---@field revert_to? string
+---@field e_port? string
+---@field ememory_size? string
+---@field transfer_rate? string
+---@field nanofab_template_group? string
+---@field template_requirements? string
+---@field trait_group? string
+---@field e_ports_banned? string[]
+---@field max_energy_shield_hp? integer
+---@field solar_efficiency? number
 ---@field transform_into? StaticItemTransformation Countdown transformation.
 ---@field stackable? boolean
 ---@field expand_snippets? boolean
@@ -9459,6 +9508,10 @@ function CcbPlatformContent.Item(options) end
 ---@field conditional_names? ItemConditionalName[]
 ---@field faults? StaticItemFault[]
 ---@field qualities? StaticItemQuality[]
+---@field charged_qualities? StaticItemQuality[]
+---@field properties? table<string,string>
+---@field variables? table<string,string|number|boolean>
+---@field memory_card? StaticItemMemoryCard
 ---@field minimum_skills? StaticOrderedCountedId[]
 ---@field inheritance? StaticItemInheritance
 ---@field armor? StaticItemArmor
@@ -10450,8 +10503,11 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field z? StaticMapgenRange Z offset.
 
 ---@class StaticMapgenInlineItemGroupEntry
----@field item? string Item ID. Supply one of item and group.
+---@field item? string Item ID. Supply one of item, group, collection or distribution.
 ---@field group? string Existing item group ID.
+---@field variant? string Variant ID for item entries.
+---@field collection? StaticMapgenInlineItemGroupEntry[] Nested collection entries.
+---@field distribution? StaticMapgenInlineItemGroupEntry[] Nested distribution entries.
 ---@field probability? integer Collection percentage or distribution weight.
 ---@field count? integer|[integer, integer] Fixed native count or its minimum and maximum.
 ---@field charges? integer|[integer, integer] Fixed native charges or their minimum and maximum.
@@ -10782,11 +10838,15 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@param options StaticMapgenPaletteOptions
 function CcbPlatformContent.define_mapgen_palette(options) end
 
+---@class StaticMapgenGlobalWeight
+---@field global string Global diagnostic variable name controlling variant weight.
+---@field fallback? number Default numeric weight when the global variable is unset.
+
 ---@class StaticMapgenDefinitionOptions
 ---@field kind 'overmap'|'nested'|'update' Selects the native mapgen registry.
 ---@field id string|string[]|string[][] Single ID, or for overmap mapgen a shared-generator list or a grid in row-major order.
 ---@field layout StaticOvermapMapgenLayout
----@field weight? integer Native selection weight for overmap and nested variants.
+---@field weight? integer|StaticMapgenGlobalWeight Native selection weight or global variable override for overmap and nested variants.
 
 ---Register mapgen during the Mod's ordered data load.
 ---@param options StaticMapgenDefinitionOptions
@@ -19277,6 +19337,7 @@ function CcbPlatformContent.set_martial_art_handler(id, phase, handler_id) end
 ---@field transfer_rate? string Electronic transfer rate with a native unit.
 ---@field ammo_types? string|string[]
 ---@field revert_message? string|LocalizedText
+---@field consumption_per_use? StaticItemFiringRequirement[]
 
 ---@class StaticOrderedPetArmor
 ---@field thickness? number
@@ -19583,7 +19644,90 @@ function CcbPlatformContent.set_martial_art_handler(id, phase, handler_id) end
 ---@field need_wielding? boolean
 ---@field mundane? boolean
 
----@alias StaticOrderedItemAction string|StaticOrderedNamedAction|StaticOrderedTransformAction|StaticOrderedDrugAction|StaticOrderedHolsterAction|StaticOrderedMessageAction|StaticOrderedMolleAttachAction|StaticOrderedMolleDetachAction|StaticOrderedCastSpellAction|StaticOrderedDelayedTransformAction|StaticOrderedRepairAction|StaticOrderedPlaceMonsterAction|StaticOrderedFirestarterAction|StaticOrderedMusicPlayerAction|StaticOrderedSoundAction|StaticOrderedInscribeAction|StaticOrderedCableAction|StaticOrderedEmitAction|StaticOrderedExplosionAction|StaticOrderedHealingAction|StaticOrderedInstrumentAction|StaticOrderedPlayInstrumentAction|StaticOrderedManualSoundAction
+---@class StaticOrderedDeployTentAction
+---@field kind 'deploy_tent'
+---@field ammo_scale? integer
+---@field radius? integer
+---@field broken_type? string
+---@field wall? string
+---@field floor? string
+---@field floor_center? string
+---@field door_opened? string
+---@field door_closed? string
+
+---@class StaticOrderedDeployApplianceAction
+---@field kind 'deploy_appliance'
+---@field ammo_scale? integer
+---@field base? string
+
+---@class StaticOrderedDeployFurnAction
+---@field kind 'deploy_furn'
+---@field ammo_scale? integer
+---@field furn_type? string
+
+---@class StaticOrderedPlaceTrapAction
+---@field kind 'place_trap'
+---@field ammo_scale? integer
+---@field trap? string
+---@field moves? integer
+---@field practice? integer
+---@field done_message? string|LocalizedText
+
+---@class StaticOrderedWeighSelfAction
+---@field kind 'weigh_self'
+---@field ammo_scale? integer
+---@field max_weight? string
+
+---@class StaticOrderedChangeScentAction
+---@field kind 'change_scent'
+---@field ammo_scale? integer
+---@field scent_typeid? string
+---@field duration? string|integer
+---@field moves? integer
+---@field charges_to_use? integer
+---@field effects? StaticOrderedDrugEffect[]
+
+---@class StaticOrderedFireweaponOffAction
+---@field kind 'fireweapon_off'
+---@field ammo_scale? integer
+---@field target_id? string
+---@field moves? integer
+---@field noise? integer
+---@field success_message? string|LocalizedText
+
+---@class StaticOrderedFireweaponOnAction
+---@field kind 'fireweapon_on'
+---@field ammo_scale? integer
+---@field noise_chance? integer
+---@field noise_message? string|LocalizedText
+---@field charges_extinguish_message? string|LocalizedText
+---@field water_extinguish_message? string|LocalizedText
+
+---@class StaticOrderedLearnSpellAction
+---@field kind 'learn_spell'
+---@field ammo_scale? integer
+---@field spells? string[]
+
+---@class StaticOrderedPlaceNpcAction
+---@field kind 'place_npc'
+---@field ammo_scale? integer
+---@field npc_class_id? string
+---@field moves? integer
+---@field place_randomly? boolean
+---@field summon_msg? string|LocalizedText
+
+---@class StaticOrderedSewAdvancedAction
+---@field kind 'sew_advanced'
+---@field ammo_scale? integer
+---@field skill? string
+---@field materials? string[]
+---@field clothing_mods? string[]
+
+---@class StaticOrderedPaintVehicleAction
+---@field kind 'paint_vehicle'
+---@field ammo_scale? integer
+
+---@alias StaticOrderedItemAction string|StaticOrderedNamedAction|StaticOrderedTransformAction|StaticOrderedDrugAction|StaticOrderedHolsterAction|StaticOrderedMessageAction|StaticOrderedMolleAttachAction|StaticOrderedMolleDetachAction|StaticOrderedCastSpellAction|StaticOrderedDelayedTransformAction|StaticOrderedRepairAction|StaticOrderedPlaceMonsterAction|StaticOrderedFirestarterAction|StaticOrderedMusicPlayerAction|StaticOrderedSoundAction|StaticOrderedInscribeAction|StaticOrderedCableAction|StaticOrderedEmitAction|StaticOrderedExplosionAction|StaticOrderedHealingAction|StaticOrderedInstrumentAction|StaticOrderedPlayInstrumentAction|StaticOrderedManualSoundAction|StaticOrderedDeployTentAction|StaticOrderedDeployApplianceAction|StaticOrderedDeployFurnAction|StaticOrderedPlaceTrapAction|StaticOrderedWeighSelfAction|StaticOrderedChangeScentAction|StaticOrderedFireweaponOffAction|StaticOrderedFireweaponOnAction|StaticOrderedLearnSpellAction|StaticOrderedPlaceNpcAction|StaticOrderedSewAdvancedAction|StaticOrderedPaintVehicleAction
 
 ---@class StaticOrderedCountedId
 ---@field id string
@@ -19653,8 +19797,13 @@ function CcbPlatformContent.set_martial_art_handler(id, phase, handler_id) end
 ---@field recharge_condition? string Native condition for accumulating charges.
 ---@field interval? string Duration with a native unit.
 
+---@class StaticOrderedArtifactEnchantment
+---@field id string
+---@field has? string
+---@field condition? string
+
 ---@class StaticOrderedArtifact
----@field enchantments? string[] Native enchantment IDs resolved during item finalization.
+---@field enchantments? (string|StaticOrderedArtifactEnchantment)[] Native enchantment IDs or conditioned entries resolved during item finalization.
 ---@field charge? StaticOrderedArtifactCharge
 
 ---@class StaticOrderedMountedCharge
