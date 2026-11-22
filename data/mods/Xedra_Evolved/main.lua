@@ -297,3 +297,4 @@ require("attack_conditions")
 require("spell_level_scaling")
 
 require("monster_attack_predicates")
+require("addictions")

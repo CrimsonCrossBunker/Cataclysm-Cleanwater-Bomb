@@ -47,3 +47,24 @@ content.add(content.Bionic {
     flags = { "BIONIC_TOGGLED" },
     occupied_bodyparts = { { bodypart = "torso", slots = 8 }, { bodypart = "head", slots = 2 }, { bodypart = "arm_l", slots = 3 }, { bodypart = "arm_r", slots = 3 }, { bodypart = "hand_l", slots = 1 }, { bodypart = "hand_r", slots = 1 }, { bodypart = "leg_l", slots = 4 }, { bodypart = "leg_r", slots = 4 }, { bodypart = "foot_l", slots = 1 }, { bodypart = "foot_r", slots = 1 } },
 })
+content.add(content.Bionic {
+    id = "bio_dangersight_eyes_standard",
+    name = ccb.content.text("Ohuicatlachiyaliztimeh"),
+    description = ccb.content.text("Minute quantities of matrix crystal interface with your optic nerves, allowing you to detect the presence of living beings that seek to do you harm.  Activate to toggle on."),
+    activation_energy_millijoules = 40000,
+    over_time_energy_millijoules = 15000,
+    charge_time_turns = 1,
+    enchantments = { "ench_bio_dangersight_eyes" },
+    flags = { "BIONIC_TOGGLED" },
+    mutation_conflicts = { "COMPOUND_EYES", "CEPH_VISION", "CEPH_EYES", "EYEBULGE", "EYESTALKS1", "EYESTALKS2" },
+    occupied_bodyparts = { { bodypart = "eyes", slots = 2 } },
+})
+content.add(content.Bionic {
+    id = "bio_power_storage_fifth_sun",
+    name = ccb.content.text("Ikpitikayotecontli System"),
+    description = ccb.content.text("A Compact Bionics Module that increases your power capacity by 600 kJ."),
+    capacity_energy_millijoules = 600000000,
+    dupes_allowed = true,
+    flags = { "BIONIC_NPC_USABLE" },
+    occupied_bodyparts = { { bodypart = "torso", slots = 2 } },
+})

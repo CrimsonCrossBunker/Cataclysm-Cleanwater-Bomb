@@ -605,3 +605,4 @@ require("mission_deliveries")
 require("attack_conditions")
 
 require("monster_attack_predicates")
+require("addictions")
