@@ -1,5 +1,69 @@
 local ccb = require("ccb")
 local content = ccb.content
+local services = ccb.services
+
+local function value(result)
+    if not result.ok then
+        error(result.error.message)
+    end
+    return result.value
+end
+
+local LEY_TAP_TOKEN_KEY = "magiclysm_mana_to_bionic_power_gen"
+
+ccb.runtime.handler("magiclysm_mana_to_bionic_power_tick", function(context)
+    local character = context.character
+    if not character then
+        return
+    end
+    local token = context.data and context.data.token
+    local current_token = value(services.variables.get_number(character, LEY_TAP_TOKEN_KEY)).value or 0
+    if token == nil or current_token ~= token then
+        return
+    end
+    local effect_id = services.types.id("effect", "effect_bio_mana_to_bionic_power")
+    if not value(services.effects.has(character, effect_id)) then
+        return
+    end
+    local mana = value(services.spells.mana(character)).current
+    if mana > 0 then
+        value(services.spells.set_mana_raw(character, mana - 1))
+        local current_power = value(services.bionics.summary(character)).power
+        value(services.bionics.set_power(
+            character,
+            current_power:add(services.units.new("energy", 35000, "millijoule"))
+        ))
+    end
+    ccb.tasks.after_character_turn(character, 10, "magiclysm_mana_to_bionic_power_tick", { token = token })
+end, 1)
+
+ccb.runtime.handler("magiclysm_bionic_activated", function(payload)
+    if payload.bionic.value ~= "bio_mana_to_bionic_power" then
+        return
+    end
+    local character = payload.character
+    value(services.effects.add(
+        character,
+        services.types.id("effect", "effect_bio_mana_to_bionic_power"),
+        services.time.duration(1),
+        { permanent = true }
+    ))
+    local next_token = (value(services.variables.get_number(character, LEY_TAP_TOKEN_KEY)).value or 0) + 1
+    value(services.variables.set(character, LEY_TAP_TOKEN_KEY, next_token, { include_before = false }))
+    ccb.tasks.after_character_turn(character, 10, "magiclysm_mana_to_bionic_power_tick", { token = next_token })
+end, 1)
+ccb.runtime.hook("on_bionic_activated", "magiclysm_bionic_activated")
+
+ccb.runtime.handler("magiclysm_bionic_deactivated", function(payload)
+    if payload.bionic.value ~= "bio_mana_to_bionic_power" then
+        return
+    end
+    value(services.effects.remove(
+        payload.character,
+        services.types.id("effect", "effect_bio_mana_to_bionic_power")
+    ))
+end, 1)
+ccb.runtime.hook("on_bionic_deactivated", "magiclysm_bionic_deactivated")
 
 -- Native bionic definitions
 content.add(content.Bionic {
@@ -44,4 +108,12 @@ content.add(content.Bionic {
     activated_close_ui = true,
     activation_spell = { id = "bio_ley_energy_blaster_spell" },
     occupied_bodyparts = { { bodypart = "arm_l", slots = 2 }, { bodypart = "arm_r", slots = 2 }, { bodypart = "hand_l", slots = 1 }, { bodypart = "hand_r", slots = 1 } },
+})
+content.add(content.Bionic {
+    id = "bio_mana_to_bionic_power",
+    name = ccb.content.text("Corporeal Ley Tap"),
+    description = ccb.content.text("Tiny bits of orichalcum have been implanted at important intersections in your ley lines, allowing you to turn your mana into bionic power.  Activate to begin the conversion process."),
+    occupied_bodyparts = { { bodypart = "head", slots = 1 }, { bodypart = "torso", slots = 1 }, { bodypart = "arm_l", slots = 1 }, { bodypart = "arm_r", slots = 1 }, { bodypart = "leg_l", slots = 1 }, { bodypart = "leg_r", slots = 1 } },
+    mutation_conflicts = { "EARTHSHAPER" },
+    flags = { "BIONIC_TOGGLED", "BIONIC_POWER_SOURCE" },
 })

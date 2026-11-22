@@ -1,5 +1,41 @@
 local ccb = require("ccb")
 local content = ccb.content
+local services = ccb.services
+
+local function value(result)
+    if not result.ok then
+        error(result.error.message)
+    end
+    return result.value
+end
+
+ccb.runtime.handler("xe_renfield_bionic_activated", function(payload)
+    local bionic_id = payload.bionic.value
+    if bionic_id == "xe_bio_chiropteran_signal" then
+        value(services.characters.cast_spell(
+            payload.character,
+            services.types.id("spell", "spell_summon_bat_swarm"),
+            {
+                min_level = 1,
+                max_level = 6,
+                message = "There is a loud clicking sound as you commune with any nearby bats.",
+                targeted = true,
+            }
+        ))
+    elseif bionic_id == "xe_bio_xl_chiropteran_signal" then
+        value(services.characters.cast_spell(
+            payload.character,
+            services.types.id("spell", "spell_summon_bat_giant"),
+            {
+                min_level = 1,
+                max_level = 6,
+                message = "A click fires out of the back of your throat like a gunshot.  What could this possibly be speaking to?",
+                targeted = true,
+            }
+        ))
+    end
+end, 1)
+ccb.runtime.hook("on_bionic_activated", "xe_renfield_bionic_activated")
 
 -- Native bionic definitions
 content.add(content.Bionic {
@@ -135,4 +171,20 @@ content.add(content.Bionic {
     enchantments = { "BIONIC_ENCH_xe_bio_spore_enhancer_0" },
     flags = { "BIONIC_NPC_USABLE" },
     occupied_bodyparts = { { bodypart = "torso", slots = 2 }, { bodypart = "arm_l", slots = 2 }, { bodypart = "arm_r", slots = 2 }, { bodypart = "leg_l", slots = 3 }, { bodypart = "leg_r", slots = 3 } },
+})
+content.add(content.Bionic {
+    id = "xe_bio_chiropteran_signal",
+    name = ccb.content.text("Chiropteran Vocal Cords"),
+    description = ccb.content.text("Your vocal cords have been enhanced, able to resonate like a bat to draw in a swarm to protect you."),
+    activation_energy_millijoules = 100000,
+    flags = { "USES_BIONIC_POWER" },
+    occupied_bodyparts = { { bodypart = "mouth", slots = 1 } },
+})
+content.add(content.Bionic {
+    id = "xe_bio_xl_chiropteran_signal",
+    name = ccb.content.text("Desmodontinae Gargantua Vocalizer"),
+    description = ccb.content.text("Your vocal cords have been reinforced and enlarged.  You can make a strange noise with it, but you don't know what it's supposed to communicate."),
+    activation_energy_millijoules = 50000,
+    flags = { "USES_BIONIC_POWER" },
+    occupied_bodyparts = { { bodypart = "mouth", slots = 2 } },
 })
