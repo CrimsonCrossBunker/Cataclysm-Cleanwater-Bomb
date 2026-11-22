@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <map>
 #include <memory>
 #include <ostream>
 #include <set>
@@ -367,6 +368,8 @@ std::pair<float, float> spell_type::calculate_damage_increment() const
     return std::make_pair( min_1 - min_0, max_1 - max_0 );
 }
 
+static std::map<spell_id, std::string> pending_spell_fields;
+
 void spell_type::load_spell( const JsonObject &jo, const std::string &src )
 {
     spell_factory.load( jo, src );
@@ -374,6 +377,12 @@ void spell_type::load_spell( const JsonObject &jo, const std::string &src )
 
 void spell_type::finalize_all()
 {
+    for( const auto &[sid, field_input] : pending_spell_fields ) {
+        if( sid.is_valid() && !sid.obj().field.has_value() ) {
+            const_cast<spell_type &>( sid.obj() ).field = field_type_id( field_input );
+        }
+    }
+    pending_spell_fields.clear();
     spell_factory.finalize();
 }
 
@@ -521,7 +530,20 @@ void spell_type::load( const JsonObject &jo, std::string_view src )
     // So just pass false instead
     optional( jo, false, "field_id", field_input, "none" );
     if( field_input != "none" ) {
-        field = field_type_id( field_input );
+        if( field_type_str_id( field_input ).is_valid() ) {
+            field = field_type_id( field_input );
+            pending_spell_fields.erase( id );
+        } else {
+            pending_spell_fields[id] = field_input;
+        }
+    } else if( jo.has_member( "field_id" ) ) {
+        field.reset();
+        pending_spell_fields.erase( id );
+    } else if( was_loaded && jo.has_string( "copy-from" ) ) {
+        const auto parent_it = pending_spell_fields.find( spell_id( jo.get_string( "copy-from" ) ) );
+        if( parent_it != pending_spell_fields.end() ) {
+            pending_spell_fields[id] = parent_it->second;
+        }
     }
     load_stat( "field_chance", field_chance, field_chance_default );
     load_stat( "min_field_intensity", min_field_intensity, min_field_intensity_default );
@@ -698,6 +720,7 @@ const std::vector<spell_type> &spell_type::get_all()
 
 void spell_type::reset_all()
 {
+    pending_spell_fields.clear();
     spell_factory.reset();
 }
 

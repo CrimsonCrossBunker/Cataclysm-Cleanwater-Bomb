@@ -1815,6 +1815,22 @@ void write_item_text( JsonOut &json, const char *field, const sol::object &value
     }
 }
 
+void write_item_plain_text( JsonOut &json, const char *field, const sol::object &value )
+{
+    if( value.get_type() == sol::type::nil ) {
+        return;
+    }
+    if( value.get_type() == sol::type::string ) {
+        json.member( field, value.as<std::string>() );
+        return;
+    }
+    const detail::localized_text &text = value.as<const detail::localized_text &>();
+    if( text.plural ) {
+        throw std::invalid_argument( std::string( field ) + " does not accept plural text" );
+    }
+    json.member( field, text.singular );
+}
+
 void write_static_native_text( JsonOut &json, const sol::table &options, const char *field,
                                const char *native )
 {
@@ -4711,8 +4727,8 @@ void load_static_monster( const sol::table &options, const std::string &source )
         json.member( "petfood" );
         json.start_object();
         write_item_ids( json, *pet, { { "food", "food" } } );
-        write_item_text( json, "feed", pet->raw_get<sol::object>( "feed_message" ), false );
-        write_item_text( json, "pet", pet->raw_get<sol::object>( "pet_message" ), false );
+        write_item_plain_text( json, "feed", pet->raw_get<sol::object>( "feed_message" ) );
+        write_item_plain_text( json, "pet", pet->raw_get<sol::object>( "pet_message" ) );
         json.end_object();
     }
     if( const auto mount = options.get<sol::optional<sol::table>>( "mount_items" ) ) {
