@@ -151,7 +151,7 @@ void trap::load( const JsonObject &jo, std::string_view source )
             "or both required." );
     }
 
-    optional( jo, was_loaded, "flags", _flags );
+    optional( jo, was_loaded, "flags", _flags, auto_flags_reader<flag_id> {} );
     optional( jo, was_loaded, "trap_radius", trap_radius, 0 );
     // TODO: Is there a generic_factory version of this?
     if( jo.has_string( "action" ) ) {
