@@ -3756,9 +3756,12 @@ std::size_t &runtime_world_generation_storage()
 
 std::shared_ptr<runtime> find_active_runtime( const std::string_view id )
 {
+    const std::size_t separator = id.find( '#' );
+    const std::string_view runtime_id =
+        separator == std::string_view::npos ? id : id.substr( 0, separator );
     const auto found = std::find_if( active_runtimes.begin(), active_runtimes.end(),
-    [id]( const std::shared_ptr<runtime> &value ) {
-        return value && value->mod_id == id;
+    [runtime_id]( const std::shared_ptr<runtime> &value ) {
+        return value && value->mod_id == runtime_id;
     } );
     return found == active_runtimes.end() ? nullptr : *found;
 }

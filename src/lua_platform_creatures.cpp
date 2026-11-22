@@ -1530,6 +1530,7 @@ struct character_adjustments {
     int radiation = 0;
     int painkiller = 0;
     int stored_kcal = 0;
+    std::int64_t cash = 0;
 };
 
 int bounded_adjustment( const sol::object &value,
@@ -1561,6 +1562,21 @@ character_adjustments read_character_adjustments(
                 "services.characters.adjust keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
+        if( key == "cash" ) {
+            if( !entry.second.is<lua_Integer>() ) {
+                throw std::invalid_argument(
+                    "services.characters.adjust field 'cash' must be an integer" );
+            }
+            const lua_Integer requested_cash = entry.second.as<lua_Integer>();
+            constexpr std::int64_t maximum_cash_adjustment = 1000000000LL;
+            if( requested_cash < -maximum_cash_adjustment ||
+                requested_cash > maximum_cash_adjustment ) {
+                throw std::invalid_argument(
+                    "services.characters.adjust field 'cash' exceeds the per-call limit" );
+            }
+            result.cash = static_cast<std::int64_t>( requested_cash );
+            continue;
+        }
         const int value = bounded_adjustment( entry.second, key );
         if( key == "moves" ) {
             result.moves = value;
@@ -1605,6 +1621,7 @@ sol::table character_mutable_state(
     result["radiation"] = character.get_rad();
     result["painkiller"] = character.get_painkiller();
     result["stored_kcal"] = character.get_stored_kcal();
+    result["cash"] = character.cash;
     return result;
 }
 
@@ -1655,6 +1672,14 @@ sol::table adjust_character(
     }
     if( adjustments.stored_kcal != 0 ) {
         character->mod_stored_kcal( adjustments.stored_kcal, true );
+    }
+    if( adjustments.cash != 0 ) {
+        const std::int64_t next_cash =
+            static_cast<std::int64_t>( character->cash ) + adjustments.cash;
+        character->cash = static_cast<int>( std::clamp<std::int64_t>(
+                                                next_cash,
+                                                std::numeric_limits<int>::min(),
+                                                std::numeric_limits<int>::max() ) );
     }
 
     sol::table value = state.create_table();

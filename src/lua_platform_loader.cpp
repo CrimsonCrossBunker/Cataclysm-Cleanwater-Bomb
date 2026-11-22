@@ -3913,6 +3913,41 @@ void install_static_dialogue_actions( sol::state &lua, sol::table &content,
                     read_dialogue_string_value( id ), dbl_or_var( count.value_or( 1 ) ),
                     dbl_or_var( debt.value_or( 0 ) ) ) ) };
     } );
+    actions.set_function( "give_equipment", []( const sol::object & allowance ) {
+        std::ostringstream serialized;
+        JsonOut json( serialized );
+        json.start_object();
+        json.member( "give_equipment" );
+        json.start_object();
+        json.member( "allowance" );
+        if( allowance.is<int>() ) {
+            json.write( allowance.as<int>() );
+        } else if( allowance.get_type() == sol::type::table ) {
+            const sol::table modifiers = allowance.as<sol::table>();
+            const std::size_t count = checked_dense_array_size( modifiers, "give_equipment modifiers",
+                std::numeric_limits<std::size_t>::max() );
+            json.start_array();
+            for( std::size_t i = 1; i <= count; ++i ) {
+                const sol::table modifier = modifiers.raw_get<sol::table>( i );
+                json.start_array();
+                json.write( modifier.get<std::string>( "score" ) );
+                json.write( modifier.get<int>( "scale" ) );
+                json.end_array();
+            }
+            json.end_array();
+        } else {
+            throw std::invalid_argument( "dialogue give_equipment allowance must be an integer or modifier array" );
+        }
+        json.end_object();
+        json.end_object();
+        const JsonObject parsed_json = json_loader::from_string( serialized.str() ).get_object();
+        talk_effect_t parsed;
+        parsed.parse_sub_effect( parsed_json, {} );
+        if( parsed.effects.size() != 1 ) {
+            throw std::invalid_argument( "dialogue give_equipment failed to parse" );
+        }
+        return static_dialogue_action{ std::move( parsed.effects.front() ) };
+    } );
     content["dialogue_actions"] = actions;
 }
 

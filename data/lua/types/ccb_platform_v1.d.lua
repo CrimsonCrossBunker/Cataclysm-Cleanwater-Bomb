@@ -9870,6 +9870,11 @@ function StaticDialogueActions.purchase_pet(id, options) end
 ---@return StaticDialogueAction
 function StaticDialogueActions.transfer_items(id, count, debt) end
 
+---Offer free equipment from the interlocutor up to a fixed or modifier-computed allowance.
+---@param allowance integer|StaticDialogueTrialModifier[]
+---@return StaticDialogueAction
+function StaticDialogueActions.give_equipment(allowance) end
+
 ---@class StaticDialogueOpinion
 ---@field trust? integer
 ---@field fear? integer
@@ -13865,9 +13870,10 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@field radiation integer Current radiation.
 ---@field painkiller integer Current painkiller level.
 ---@field stored_kcal integer Current stored calories.
+---@field cash integer Current cash in cents.
 
 ---Only the listed fields are accepted; each supplied integer must be within
----[-1000000, 1000000].
+---[-1000000, 1000000] (except `cash`, which accepts [-1000000000, 1000000000]).
 ---@class CcbCharacterAdjustments
 ---@field moves? integer Move delta.
 ---@field pain? integer Pain delta.
@@ -13879,6 +13885,7 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@field radiation? integer Radiation delta.
 ---@field painkiller? integer Painkiller delta.
 ---@field stored_kcal? integer Stored-calorie delta.
+---@field cash? integer Cash delta in cents (bounded to ±1000000000).
 
 ---@class CcbCharacterAdjustmentValue
 ---@field before CcbCharacterMutableState State before changes.
