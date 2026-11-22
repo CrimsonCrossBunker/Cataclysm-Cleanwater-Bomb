@@ -601,6 +601,40 @@ void mortar_examine_actor::load( const JsonObject &jo, const std::string &src )
     optional( jo, false, "aim_duration", aim_duration, 0_seconds );
     optional( jo, false, "flight_time", flight_time, 0_seconds );
 
+    if( const auto marker = jo.get_member_opt( "//ccb_lua_mortar" ) ) {
+        if( marker->has_source_file() ) {
+            marker->throw_error( "mortar callbacks are reserved for ordered Lua definitions" );
+        }
+        const JsonObject callbacks = jo.get_object( "//ccb_lua_mortar" );
+        if( callbacks.has_string( "condition" ) ) {
+            condition = [owner = src, handler = callbacks.get_string( "condition" )](
+            const const_dialogue &d ) {
+                return cata::lua_platform::invoke_mortar_condition_handler(
+                           owner, handler, d ).value_or( false );
+            };
+            has_condition = true;
+        }
+        if( callbacks.has_string( "aim_duration" ) ) {
+            aim_duration.min.val = runtime_duration_provider{
+                [owner = src, handler = callbacks.get_string( "aim_duration" )](
+                const const_dialogue &d ) {
+                    const double turns = cata::lua_platform::invoke_mortar_number_handler(
+                                             owner, handler, d ).value_or( 0.0 );
+                    return time_duration::from_turns( std::lround( std::max( 0.0, turns ) ) );
+                }
+            };
+        }
+        if( callbacks.has_string( "aim_deviation" ) ) {
+            aim_deviation.min.val = runtime_dbl_provider{
+                [owner = src, handler = callbacks.get_string( "aim_deviation" )](
+                const const_dialogue &d ) {
+                    return cata::lua_platform::invoke_mortar_number_handler(
+                               owner, handler, d ).value_or( 0.0 );
+                }
+            };
+        }
+    }
+
     for( JsonValue jv : jo.get_array( "effect_on_conditions" ) ) {
         eocs.emplace_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }

@@ -743,6 +743,8 @@ end
     lua["require"] = bound.get<sol::function>();
 }
 
+thread_local std::string active_ordered_mod_id;
+
 void write_mapgen_range( JsonOut &json, const char *field, const sol::object &value )
 {
     if( !value.valid() || value.get_type() == sol::type::nil ) {
@@ -797,7 +799,16 @@ void write_mapgen_weighted_choices( JsonOut &json, const char *field, const sol:
             if( id.get_type() != sol::type::nil ) {
                 json.start_array();
                 write_choice( id );
-                json.write( choice.get<Weight>( "weight" ) );
+                const sol::object weight_obj = choice.raw_get<sol::object>( "weight" );
+                if( weight_obj.get_type() == sol::type::table ) {
+                    const sol::table dynamic_weight = weight_obj.as<sol::table>();
+                    json.start_object();
+                    json.member( "global_val", dynamic_weight.get<std::string>( "global" ) );
+                    write_placement_member<double>( json, dynamic_weight, "fallback", "default" );
+                    json.end_object();
+                } else {
+                    json.write( weight_obj.as<Weight>() );
+                }
                 json.end_array();
                 continue;
             }
@@ -1116,6 +1127,16 @@ void write_placement_computer( JsonOut &json, const sol::table &options )
     write_placement_member<int>( json, options, "security", "security" );
     write_placement_member<bool>( json, options, "mission_target", "target" );
     write_placement_member<bool>( json, options, "dialogue_on_access", "//ccb_lua_computer_dialogue" );
+    if( const auto handler = options.get<sol::optional<std::string>>( "access_handler" ) ) {
+        if( handler->empty() || handler->find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument( "mapgen computer access_handler requires a registered handler name" );
+        }
+        if( active_ordered_mod_id.empty() ) {
+            throw std::runtime_error( "mapgen computer access_handler requires an active ordered mod context" );
+        }
+        json.member( "//ccb_lua_computer_access_handler", *handler );
+        json.member( "//ccb_lua_computer_mod", active_ordered_mod_id );
+    }
     write_mapgen_string_array( json, options, "chat_topics", "chat_topics" );
     if( const auto menu = options.get<sol::optional<sol::table>>( "menu" ) ) {
         json.member( "options" );
@@ -5147,6 +5168,43 @@ void load_static_monster( const sol::table &options, const std::string &source )
     write_static_monster_effects( json, options );
     write_static_monster_lifecycle( json, options );
     write_static_monster_attacks( json, options );
+    if( const auto revive_forms = options.get<sol::optional<sol::table>>( "revive_forms" ) ) {
+        json.member( "revive_forms" );
+        json.start_array();
+        const std::string &revive_owner = source.empty() ? active_ordered_mod_id : source;
+        for( std::size_t i = 1, count = revive_forms->size(); i <= count; ++i ) {
+            const sol::table form = revive_forms->raw_get<sol::table>( i );
+            json.start_object();
+            if( const auto when = form.get<sol::optional<std::string>>( "when" ) ) {
+                if( when->empty() || when->find( '\0' ) != std::string::npos ) {
+                    throw std::invalid_argument( "monster revive_forms.when requires a registered handler name" );
+                }
+                if( revive_owner.empty() ) {
+                    throw std::runtime_error( "monster revive_forms.when requires an active ordered mod context" );
+                }
+                json.member( "//ccb_lua_revive_handler", *when );
+                json.member( "//ccb_lua_revive_mod", revive_owner );
+            }
+            const auto monster = form.get<sol::optional<std::string>>( "monster" );
+            const auto monster_group = form.get<sol::optional<std::string>>( "monster_group" );
+            if( static_cast<bool>( monster ) == static_cast<bool>( monster_group ) ) {
+                throw std::invalid_argument( "monster revive_forms entry requires exactly one of monster or monster_group" );
+            }
+            if( monster ) {
+                if( monster->empty() ) {
+                    throw std::invalid_argument( "monster revive_forms.monster requires a non-empty monster id" );
+                }
+                json.member( "monster", *monster );
+            } else {
+                if( monster_group->empty() ) {
+                    throw std::invalid_argument( "monster revive_forms.monster_group requires a non-empty monster group id" );
+                }
+                json.member( "monster_group", *monster_group );
+            }
+            json.end_object();
+        }
+        json.end_array();
+    }
     if( const auto death = options.get<sol::optional<sol::table>>( "death" ) ) {
         write_static_monster_death( json, *death );
     }
@@ -7037,14 +7095,58 @@ void write_static_tile_card_reader( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
+void write_static_tile_mortar( JsonOut &json, const sol::table &options )
+{
+    json.start_object();
+    json.member( "type", "mortar" );
+    write_item_ids( json, options, { { "ammo", "ammo" } } );
+    write_placement_member<int>( json, options, "range", "range" );
+    const sol::object flight = options.raw_get<sol::object>( "flight_time" );
+    if( flight.get_type() == sol::type::string ) {
+        json.member( "flight_time", flight.as<std::string>() );
+    } else if( flight.get_type() == sol::type::number ) {
+        json.member( "flight_time", flight.as<int>() );
+    }
+    write_static_native_text( json, options, "condition_fail_msg", "condition_fail_msg" );
+    const sol::object aim_dur = options.raw_get<sol::object>( "aim_duration" );
+    if( aim_dur.get_type() == sol::type::string ) {
+        json.member( "aim_duration", aim_dur.as<std::string>() );
+    } else if( aim_dur.get_type() == sol::type::number ) {
+        json.member( "aim_duration", aim_dur.as<int>() );
+    }
+    write_placement_member<double>( json, options, "aim_deviation", "aim_deviation" );
+    const auto cond_h = options.get<sol::optional<std::string>>( "condition_handler" );
+    const auto dur_h = options.get<sol::optional<std::string>>( "aim_duration_handler" );
+    const auto dev_h = options.get<sol::optional<std::string>>( "aim_deviation_handler" );
+    if( cond_h || dur_h || dev_h ) {
+        json.member( "//ccb_lua_mortar" );
+        json.start_object();
+        if( cond_h ) {
+            json.member( "condition", *cond_h );
+        }
+        if( dur_h ) {
+            json.member( "aim_duration", *dur_h );
+        }
+        if( dev_h ) {
+            json.member( "aim_deviation", *dev_h );
+        }
+        json.end_object();
+    }
+    json.member( "effect_on_conditions" );
+    json.start_array();
+    json.end_array();
+    json.end_object();
+}
+
 void write_static_tile_examine( JsonOut &json, const sol::table &options )
 {
     const sol::object builtin = options.raw_get<sol::object>( "builtin_examine" );
     const auto appliance = options.get<sol::optional<sol::table>>( "appliance_conversion" );
     const auto card_reader = options.get<sol::optional<sol::table>>( "card_reader" );
+    const auto mortar = options.get<sol::optional<sol::table>>( "mortar" );
     const auto handler = options.get<sol::optional<std::string>>( "examine_handler" );
     const int kinds = ( builtin.get_type() != sol::type::nil ) + appliance.has_value() +
-                      card_reader.has_value() + handler.has_value();
+                      card_reader.has_value() + mortar.has_value() + handler.has_value();
     if( kinds > 1 ) {
         throw std::invalid_argument( "tile examine requires one interaction kind" );
     }
@@ -7059,6 +7161,9 @@ void write_static_tile_examine( JsonOut &json, const sol::table &options )
     } else if( card_reader ) {
         json.member( "examine_action" );
         write_static_tile_card_reader( json, *card_reader );
+    } else if( mortar ) {
+        json.member( "examine_action" );
+        write_static_tile_mortar( json, *mortar );
     } else {
         write_static_string_or_ids( json, options, "builtin_examine", "examine_action" );
     }
@@ -8962,6 +9067,11 @@ void load_mod_content_with_data( const mod_source &source,
     } );
     content.set_function( "patch_overmap_terrain", [&resolved]( const sol::table &options ) {
         load_static_overmap_terrain( options, resolved.id, true );
+    } );
+    const std::string previous_mod_id = active_ordered_mod_id;
+    active_ordered_mod_id = resolved.id;
+    on_out_of_scope restore_mod_id( [&]() {
+        active_ordered_mod_id = previous_mod_id;
     } );
     execute_file( lua, resolved.entry, "Lua-first data entry for '" + resolved.id + "'" );
 }

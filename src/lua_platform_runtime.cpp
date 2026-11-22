@@ -656,6 +656,8 @@ struct addiction_type_definition_data {
     std::string description;
     std::string craving_morale;
     std::string tick_handler;
+    std::optional<std::int64_t> sated_turns;
+    std::vector<std::string> satisfying_effects;
     bool registered = false;
 };
 
@@ -4560,6 +4562,26 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->type_name = options.get_or( "type_name", std::string() );
         definition->description = options.get_or( "description", std::string() );
         definition->craving_morale = options.get_or( "craving_morale", std::string() );
+        if( const sol::optional<std::int64_t> sated = options.get<sol::optional<std::int64_t>>
+                ( "sated_turns" ) ) {
+            if( *sated < 0 || *sated > std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument( "addiction type sated_turns must be a non-negative 32-bit integer" );
+            }
+            definition->sated_turns = *sated;
+        }
+        if( const sol::optional<sol::table> effects =
+                options.get<sol::optional<sol::table>>( "satisfying_effects" ) ) {
+            const std::size_t count = require_dense_array(
+                                          *effects, "addiction satisfying_effects", 0, 256 );
+            definition->satisfying_effects.reserve( count );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                const sol::object entry = effects->raw_get<sol::object>( index );
+                if( !entry.is<std::string>() ) {
+                    throw std::invalid_argument( "addiction satisfying_effects entries must be strings" );
+                }
+                definition->satisfying_effects.push_back( entry.as<std::string>() );
+            }
+        }
         return addiction_type_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -6490,6 +6512,14 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "addiction type '" + definition.id +
                                           "' references missing tick handler '" +
                                           definition.tick_handler + "'" );
+            }
+            for( const std::string &eff : definition.satisfying_effects ) {
+                if( eff.empty() ||
+                    ( check_engine_state && !pimpl_->creatures.defines_effect_type( eff ) &&
+                      !efftype_id( eff ).is_valid() ) ) {
+                    throw std::runtime_error( "addiction type '" + definition.id +
+                                              "' references invalid satisfying effect '" + eff + "'" );
+                }
             }
             validate_operation( entry.operation, addiction_id( definition.id ).is_valid(),
                                 definition.id, "addiction type" );
@@ -8805,6 +8835,14 @@ bool content_transaction::apply( std::string &error )
                                      morale_type::NULL_ID() : morale_type( source.craving_morale );
             native._effect = effect_on_condition_id::NULL_ID();
             native._builtin.clear();
+            if( source.sated_turns ) {
+                native._sated = time_duration::from_turns( *source.sated_turns );
+            }
+            native._satisfying_effects.clear();
+            native._satisfying_effects.reserve( source.satisfying_effects.size() );
+            for( const std::string &eff : source.satisfying_effects ) {
+                native._satisfying_effects.emplace_back( eff );
+            }
             native._lua_policy = true;
             detail::addiction_type_registry().restore( native );
         }
@@ -12310,6 +12348,12 @@ std::string content_transaction::fingerprint() const
         hash_part( state, value.description );
         hash_part( state, value.craving_morale );
         hash_part( state, value.tick_handler );
+        if( value.sated_turns ) {
+            hash_part( state, "sated_turns:" + std::to_string( *value.sated_turns ) );
+        }
+        for( const std::string &eff : value.satisfying_effects ) {
+            hash_part( state, "satisfying_effect:" + eff );
+        }
     }
     for( const character_modifier_registration &entry : pimpl_->character_modifiers ) {
         hash_part( state, "character_modifier" );
@@ -13424,6 +13468,24 @@ void invoke_examine_handler(
     std::string_view, std::string_view, std::string_view, std::string_view,
     Character &, const tripoint_bub_ms & )
 {
+}
+
+std::optional<bool> invoke_mortar_condition_handler(
+    std::string_view, std::string_view, const const_dialogue & )
+{
+    return std::nullopt;
+}
+
+std::optional<double> invoke_mortar_number_handler(
+    std::string_view, std::string_view, const const_dialogue & )
+{
+    return std::nullopt;
+}
+
+std::optional<bool> invoke_monster_revive_handler(
+    std::string_view, std::string_view, const const_dialogue & )
+{
+    return std::nullopt;
 }
 
 std::optional<bool> invoke_weather_type_handler( std::string_view, const w_point &,

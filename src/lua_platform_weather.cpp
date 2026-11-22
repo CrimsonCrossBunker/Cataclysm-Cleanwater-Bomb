@@ -1017,6 +1017,48 @@ sol::table set_current_temperature( sol::this_state lua, const script_unit_value
     return make_game_value_result( state, sol::make_object( state, true ) );
 }
 
+sol::table set_humidity( sol::this_state lua, const double humidity )
+{
+    constexpr std::string_view api = "services.weather.set_humidity";
+    if( !std::isfinite( humidity ) || humidity < -1000.0 || humidity > 1000.0 ) {
+        throw std::invalid_argument( std::string( api ) + " humidity must be finite and within -1000..1000" );
+    }
+    require_active_game( api );
+    weather_manager &weather = get_weather();
+    weather.weather_precise->humidity = humidity;
+    weather.clear_temp_cache();
+    sol::state_view state( lua );
+    return make_game_value_result( state, sol::make_object( state, true ) );
+}
+
+sol::table set_pressure( sol::this_state lua, const double pressure )
+{
+    constexpr std::string_view api = "services.weather.set_pressure";
+    if( !std::isfinite( pressure ) || pressure < -10000.0 || pressure > 100000.0 ) {
+        throw std::invalid_argument( std::string( api ) + " pressure must be finite and within -10000..100000" );
+    }
+    require_active_game( api );
+    weather_manager &weather = get_weather();
+    weather.weather_precise->pressure = pressure;
+    weather.clear_temp_cache();
+    sol::state_view state( lua );
+    return make_game_value_result( state, sol::make_object( state, true ) );
+}
+
+sol::table set_windpower( sol::this_state lua, const double windpower )
+{
+    constexpr std::string_view api = "services.weather.set_windpower";
+    if( !std::isfinite( windpower ) || windpower < -1000.0 || windpower > 1000.0 ) {
+        throw std::invalid_argument( std::string( api ) + " windpower must be finite and within -1000..1000" );
+    }
+    require_active_game( api );
+    weather_manager &weather = get_weather();
+    weather.weather_precise->windpower = windpower;
+    weather.clear_temp_cache();
+    sol::state_view state( lua );
+    return make_game_value_result( state, sol::make_object( state, true ) );
+}
+
 sol::table set_temperature_override(
     sol::this_state lua,
     const script_unit_value &temperature )
@@ -1506,6 +1548,24 @@ void install_weather_api(
         [require_write]( sol::this_state state, const script_unit_value & temperature ) {
         require_write();
         return set_current_temperature( state, temperature );
+    } );
+    weather.set_function(
+        "set_humidity",
+        [require_write]( sol::this_state state, const double humidity ) {
+        require_write();
+        return set_humidity( state, humidity );
+    } );
+    weather.set_function(
+        "set_pressure",
+        [require_write]( sol::this_state state, const double pressure ) {
+        require_write();
+        return set_pressure( state, pressure );
+    } );
+    weather.set_function(
+        "set_windpower",
+        [require_write]( sol::this_state state, const double windpower ) {
+        require_write();
+        return set_windpower( state, windpower );
     } );
     weather.set_function(
         "set_temperature_override",

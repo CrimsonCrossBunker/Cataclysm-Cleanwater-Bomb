@@ -164,6 +164,8 @@ void do_craft( npc & );
 void do_disassembly( npc &p );
 } // namespace talk_function
 
+void translate_vehicle_linked_items( vehicle &veh, const tripoint_rel_ms &offset );
+
 time_duration calc_skill_training_time_char( const Character &teacher, const Character &student,
         const skill_id &skill );
 int calc_skill_training_cost_char( const Character &teacher, const Character &student,

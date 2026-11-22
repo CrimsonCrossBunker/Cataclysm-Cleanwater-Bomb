@@ -4432,6 +4432,37 @@ talk_effect_fun_t::func dialogue_action::set_translated_string( var_info target,
     return set_dialogue_string( std::move( target ), std::move( values ), expand_tags );
 }
 
+static const std::string EOC_CABLE_RELOCATION_TURN_VAR( "eoc_cable_relocation_turn" );
+
+static void translate_linked_items( visitable &items, const tripoint_rel_ms &offset )
+{
+    items.visit_items( [&]( item * it, item * ) {
+        if( it->has_link_data() && !it->has_no_links() &&
+            it->link().t_abs_pos != tripoint_abs_ms::invalid ) {
+            it->link().t_abs_pos += offset;
+            it->link().s_bub_pos = tripoint_bub_ms::invalid;
+            it->set_var( EOC_CABLE_RELOCATION_TURN_VAR, -1 );
+        }
+        return VisitResponse::NEXT;
+    } );
+}
+
+void translate_vehicle_linked_items( vehicle &veh, const tripoint_rel_ms &offset )
+{
+    for( const vpart_reference &vpr : veh.get_all_parts() ) {
+        for( item &it : veh.get_items( veh.part( vpr.part_index() ) ) ) {
+            translate_linked_items( it, offset );
+        }
+    }
+    for( const rider_data &rider : veh.get_riders() ) {
+        if( rider.psg != nullptr ) {
+            if( Character *character = rider.psg->as_character() ) {
+                translate_linked_items( *character, offset );
+            }
+        }
+    }
+}
+
 namespace talk_effect_fun
 {
 namespace
@@ -6084,37 +6115,6 @@ talk_effect_fun_t::func f_revert_location( const JsonObject &jo, std::string_vie
 
         reality_bubble().invalidate_map_cache( omt_pos.z() );
     };
-}
-
-const std::string EOC_CABLE_RELOCATION_TURN_VAR( "eoc_cable_relocation_turn" );
-
-void translate_linked_items( visitable &items, const tripoint_rel_ms &offset )
-{
-    items.visit_items( [&]( item * it, item * ) {
-        if( it->has_link_data() && !it->has_no_links() &&
-            it->link().t_abs_pos != tripoint_abs_ms::invalid ) {
-            it->link().t_abs_pos += offset;
-            it->link().s_bub_pos = tripoint_bub_ms::invalid;
-            it->set_var( EOC_CABLE_RELOCATION_TURN_VAR, -1 );
-        }
-        return VisitResponse::NEXT;
-    } );
-}
-
-void translate_vehicle_linked_items( vehicle &veh, const tripoint_rel_ms &offset )
-{
-    for( const vpart_reference &vpr : veh.get_all_parts() ) {
-        for( item &it : veh.get_items( veh.part( vpr.part_index() ) ) ) {
-            translate_linked_items( it, offset );
-        }
-    }
-    for( const rider_data &rider : veh.get_riders() ) {
-        if( rider.psg != nullptr ) {
-            if( Character *character = rider.psg->as_character() ) {
-                translate_linked_items( *character, offset );
-            }
-        }
-    }
 }
 
 void translate_submap_linked_items( submap &sm, const tripoint_rel_ms &offset )

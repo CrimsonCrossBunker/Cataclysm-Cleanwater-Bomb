@@ -1078,6 +1078,8 @@ void cata::lua_platform::ensure_avatar_turn_task( time_point due, std::string_vi
 }
 #endif
 
+static const effect_on_condition_id builtin_add_effect_eoc( "add_effect" );
+
 static void process_new_eocs( queued_eocs &eoc_queue,
                               std::vector<effect_on_condition_id> &eoc_vector,
                               std::map<effect_on_condition_id, bool> &new_eocs,
@@ -1086,6 +1088,11 @@ static void process_new_eocs( queued_eocs &eoc_queue,
     queued_eocs temp_queued_eocs;
     while( !eoc_queue.empty() ) {
         const queued_eoc &entry = eoc_queue.top();
+        if( entry.eoc == builtin_add_effect_eoc && !global_queue ) {
+            temp_queued_eocs.push( entry );
+            eoc_queue.pop();
+            continue;
+        }
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
         if( entry.eoc == lua_task_record ) {
             temp_queued_eocs.push( entry );
@@ -1198,6 +1205,10 @@ void effect_on_conditions::queue_effect_on_condition( time_duration duration,
         global_variables::impl_t const &context )
 {
     queued_eoc new_eoc = queued_eoc{ eoc, calendar::turn + duration, context };
+    if( eoc == builtin_add_effect_eoc ) {
+        you.queued_effect_on_conditions.push( new_eoc );
+        return;
+    }
     if( eoc->global ) {
         g->queued_global_effect_on_conditions.push( new_eoc );
     } else if( eoc->type == eoc_type::ACTIVATION || eoc->type == eoc_type::RECURRING ) {
@@ -1273,6 +1284,16 @@ static bool process_eocs( queued_eocs &eoc_queue, std::vector<effect_on_conditio
             continue;
         }
 #endif
+        if( top.eoc == builtin_add_effect_eoc ) {
+            const auto eff = top.context.find( "effect" );
+            const auto dur = top.context.find( "duration" );
+            if( eff != top.context.end() && dur != top.context.end() ) {
+                actor.add_effect( efftype_id( eff->second.to_string() ),
+                                  time_duration::from_turns<int>( static_cast<int>( dur->second.dbl() ) ) );
+            }
+            eoc_queue.list.erase( it );
+            continue;
+        }
         dialogue nested_d{ d };
         for( const auto &val : top.context ) {
             nested_d.set_value( val.first, val.second );

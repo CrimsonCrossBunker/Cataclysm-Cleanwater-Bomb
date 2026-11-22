@@ -25,6 +25,7 @@ class mapgendata;
 class npc;
 class player_activity;
 class vehicle;
+struct const_dialogue;
 struct dialogue;
 struct mounted_charge_profile;
 struct oter_t;
@@ -498,6 +499,21 @@ void invoke_examine_handler(
     std::string_view target_kind, std::string_view target_id,
     std::string_view mod_id, std::string_view handler_id,
     Character &character, const tripoint_bub_ms &position );
+
+/** Evaluate a Lua-authored mortar examine condition handler. */
+std::optional<bool> invoke_mortar_condition_handler(
+    std::string_view mod_id, std::string_view handler_id,
+    const const_dialogue &dialogue );
+
+/** Evaluate a Lua-authored mortar examine numeric handler (seconds or deviation). */
+std::optional<double> invoke_mortar_number_handler(
+    std::string_view mod_id, std::string_view handler_id,
+    const const_dialogue &dialogue );
+
+/** Evaluate a Lua-authored monster revive condition handler. */
+std::optional<bool> invoke_monster_revive_handler(
+    std::string_view mod_id, std::string_view handler_id,
+    const const_dialogue &dialogue );
 
 /** Evaluate a Lua-authored weather condition against one generated sample. */
 std::optional<bool> invoke_weather_type_handler(

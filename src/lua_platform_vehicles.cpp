@@ -28,6 +28,7 @@
 
 #include "avatar.h"
 #include "coordinates.h"
+#include "line.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
@@ -36,6 +37,7 @@
 #include "npc.h"
 #include "npctalk.h"
 #include "npctrade.h"
+#include "teleport.h"
 #include "units.h"
 #include "veh_type.h"
 #include "vehicle.h"
@@ -1533,6 +1535,113 @@ sol::table open_part_service(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table list_loaded_vehicles(
+    sol::this_state lua,
+    const sol::optional<sol::table> &requested,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    tripoint_abs_ms center_abs = get_avatar().pos_abs();
+    std::optional<int> radius;
+    std::optional<int> z_min;
+    std::optional<int> z_max;
+    if( requested ) {
+        const sol::object center_obj = requested->raw_get<sol::object>( "center" );
+        if( center_obj.valid() && center_obj.get_type() != sol::type::nil ) {
+            if( !center_obj.is<script_tripoint_coord>() ) {
+                throw std::invalid_argument(
+                    "services.vehicles.loaded center must be an absolute map-square Tripoint" );
+            }
+            const script_tripoint_coord &coord = center_obj.as<script_tripoint_coord>();
+            if( coord.native_origin() != coords::origin::abs ||
+                coord.native_scale() != coords::scale::map_square ) {
+                throw std::invalid_argument(
+                    "services.vehicles.loaded center must be an absolute map-square Tripoint" );
+            }
+            center_abs = tripoint_abs_ms( coord.to_native() );
+        }
+        if( const auto r = requested->get<sol::optional<int>>( "radius" ) ) {
+            if( *r < 0 ) {
+                throw std::invalid_argument( "services.vehicles.loaded radius cannot be negative" );
+            }
+            radius = *r;
+        }
+        if( const auto min_z = requested->get<sol::optional<int>>( "z_min" ) ) {
+            z_min = *min_z;
+        }
+        if( const auto max_z = requested->get<sol::optional<int>>( "z_max" ) ) {
+            z_max = *max_z;
+        }
+    }
+    sol::state_view state( lua );
+    sol::table items = state.create_table();
+    std::size_t count = 0;
+    for( wrapped_vehicle &elem : get_map().get_vehicles() ) {
+        if( elem.v == nullptr ) {
+            continue;
+        }
+        vehicle &veh = *elem.v;
+        const tripoint_abs_ms pos_abs = veh.pos_abs();
+        if( z_min && pos_abs.z() < *z_min ) {
+            continue;
+        }
+        if( z_max && pos_abs.z() > *z_max ) {
+            continue;
+        }
+        if( radius && rl_dist( center_abs, pos_abs ) > *radius ) {
+            continue;
+        }
+        ++count;
+        sol::table entry = state.create_table();
+        entry["handle"] = make_vehicle_handle( veh, runtime_generation, world_generation );
+        entry["position"] = script_tripoint_coord::from_native(
+                                coords::origin::abs, coords::scale::map_square, pos_abs.raw() );
+        entry["name"] = veh.disp_name();
+        items[count] = std::move( entry );
+    }
+    sol::table result = state.create_table();
+    result["items"] = std::move( items );
+    result["total"] = count;
+    return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
+}
+
+sol::table teleport_live_vehicle(
+    sol::this_state lua,
+    const game_handle &handle,
+    const script_tripoint_coord &destination,
+    const sol::optional<sol::table> &requested,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( destination.native_origin() != coords::origin::abs ||
+        destination.native_scale() != coords::scale::map_square ) {
+        throw std::invalid_argument(
+            "services.vehicles.teleport destination requires an absolute map-square Tripoint" );
+    }
+    const bool force = requested ? requested->get_or( "force", false ) : false;
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const tripoint_abs_ms before = entry->pos_abs();
+    const tripoint_abs_ms target( destination.to_native() );
+    const bool moved = teleport::teleport_vehicle( *entry, target, force );
+    if( moved ) {
+        translate_vehicle_linked_items( *entry, entry->pos_abs() - before );
+    }
+    const tripoint_abs_ms after = entry->pos_abs();
+    sol::table value = state.create_table();
+    value["moved"] = moved;
+    value["before"] = script_tripoint_coord::from_native(
+                          coords::origin::abs, coords::scale::map_square, before.raw() );
+    value["after"] = script_tripoint_coord::from_native(
+                         coords::origin::abs, coords::scale::map_square, after.raw() );
+    return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_vehicle_api(
@@ -1752,6 +1861,27 @@ void install_vehicle_api(
                    lua_state, vehicle_handle, mechanic_handle,
                    repair_multiplier.value_or( 1.0 ),
                    install_multiplier.value_or( 1.0 ),
+                   current_runtime_generation(), current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "loaded",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return list_loaded_vehicles(
+                   lua_state, options,
+                   current_runtime_generation(), current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "teleport",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_tripoint_coord &destination,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        return teleport_live_vehicle(
+                   lua_state, handle, destination, options,
                    current_runtime_generation(), current_world_generation() );
     } );
     services["vehicles"] = std::move( vehicles_api );

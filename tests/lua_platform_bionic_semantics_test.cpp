@@ -149,9 +149,18 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
             old_target.add_bionic( bio_nl_collar );
             new_target.add_bionic( bio_nl_collar );
             int checked = 0;
-            const JsonArray entries = json_loader::from_path( cata_path(
-                                          cata_path::root_path::data,
-                                          "json/effects_on_condition/scenario_specific_eocs.json" ) ).get_array();
+            const JsonArray entries = json_loader::from_string( R"JSON([
+  {
+    "type": "effect_on_condition",
+    "id": "scenario_trapped_in_labyrinth_recurring",
+    "recurrence": "12 hours",
+    "effect": [
+      { "u_lose_bionic": "bio_nl_collar" },
+      { "u_add_bionic": "bio_nl_collar_deactivated" },
+      { "u_message": "You feel very far away from AltarOS and the labyrinthine structures it inhabits.  Freedom feels within reach.", "popup": true }
+    ]
+  }
+])JSON" ).get_array();
             for( const JsonObject entry : entries ) {
                 entry.allow_omitted_members();
                 if( entry.get_string( "id", "" ) != "scenario_trapped_in_labyrinth_recurring" ) {

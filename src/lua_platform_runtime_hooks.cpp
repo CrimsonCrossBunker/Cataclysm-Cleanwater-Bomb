@@ -2294,6 +2294,168 @@ void install_runtime_callback_api(
     const sol::optional<game_handle> &handle ) {
         call_actor( id, handle, false );
     } );
+    runtime_api.set_function( "call_eoc", [weak]( const std::string & id,
+    const sol::optional<sol::table> &options ) -> bool {
+        const std::shared_ptr<runtime> caller = weak.lock();
+        if( !caller || !caller->world_is_ready || caller->callback_depth <= 0 ||
+            find_active_runtime( caller->mod_id ) != caller ) {
+            throw std::runtime_error( "runtime.call_eoc requires a live runtime callback" );
+        }
+        const auto resolve_opt_actor = [&]( const char *field ) -> Creature * {
+            if( !options ) {
+                return nullptr;
+            }
+            const sol::object obj = options->raw_get<sol::object>( field );
+            if( !obj.valid() || obj.get_type() == sol::type::nil ) {
+                return nullptr;
+            }
+            if( !obj.is<game_handle>() ) {
+                throw std::invalid_argument(
+                    std::string( "runtime.call_eoc " ) + field + " must be a GameHandle" );
+            }
+            const auto resolved = obj.as<game_handle>().resolve_creature(
+                caller->handle_runtime(), runtime_world_generation_storage() );
+            if( !resolved ) {
+                throw std::invalid_argument( resolved.error->message );
+            }
+            return resolved.value;
+        };
+        Creature *const u_actor = resolve_opt_actor( "u" );
+        Creature *const npc_actor = resolve_opt_actor( "npc" );
+        std::optional<sol::table> caller_vars;
+        if( options ) {
+            const sol::object vobj = options->raw_get<sol::object>( "vars" );
+            if( vobj.valid() && vobj.get_type() != sol::type::nil ) {
+                if( vobj.get_type() != sol::type::table ) {
+                    throw std::invalid_argument( "runtime.call_eoc vars must be a table" );
+                }
+                caller_vars = vobj.as<sol::table>();
+            }
+        }
+        const auto copy_flat_value = []( const sol::object &v, sol::state_view dst_lua,
+        const char *ctx ) -> sol::object {
+            switch( v.get_type() ) {
+                case sol::type::nil:
+                    return sol::make_object( dst_lua, sol::lua_nil );
+                case sol::type::boolean:
+                    return sol::make_object( dst_lua, v.as<bool>() );
+                case sol::type::number:
+                    return sol::make_object( dst_lua, v.as<double>() );
+                case sol::type::string:
+                    return sol::make_object( dst_lua, v.as<std::string>() );
+                case sol::type::userdata:
+                    if( v.is<script_tripoint_coord>() ) {
+                        const script_tripoint_coord &pt = v.as<script_tripoint_coord>();
+                        return sol::make_object(
+                            dst_lua, script_tripoint_coord::from_native(
+                                pt.native_origin(), pt.native_scale(), pt.to_native() ) );
+                    }
+                    throw std::invalid_argument(
+                        std::string( "runtime.call_eoc unsupported userdata in " ) + ctx );
+                case sol::type::table: {
+                    const sol::table src = v.as<sol::table>();
+                    sol::table out = dst_lua.create_table();
+                    for( const auto &kv : src ) {
+                        sol::object mk;
+                        if( kv.first.get_type() == sol::type::string ) {
+                            mk = sol::make_object( dst_lua, kv.first.as<std::string>() );
+                        } else if( kv.first.get_type() == sol::type::number ) {
+                            mk = sol::make_object( dst_lua, kv.first.as<double>() );
+                        } else {
+                            continue;
+                        }
+                        switch( kv.second.get_type() ) {
+                            case sol::type::boolean:
+                                out[mk] = kv.second.as<bool>();
+                                break;
+                            case sol::type::number:
+                                out[mk] = kv.second.as<double>();
+                                break;
+                            case sol::type::string:
+                                out[mk] = kv.second.as<std::string>();
+                                break;
+                            default:
+                                throw std::invalid_argument(
+                                    std::string( "runtime.call_eoc nested table must contain scalars in " ) + ctx );
+                        }
+                    }
+                    return sol::make_object( dst_lua, std::move( out ) );
+                }
+                default:
+                    throw std::invalid_argument(
+                        std::string( "runtime.call_eoc unsupported value in " ) + ctx );
+            }
+        };
+        for( auto entry = active_runtimes.rbegin(); entry != active_runtimes.rend(); ++entry ) {
+            const std::shared_ptr<runtime> provider = *entry;
+            if( !provider ) {
+                continue;
+            }
+            const auto handler = provider->handlers.find( id );
+            if( handler == provider->handlers.end() ) {
+                continue;
+            }
+            if( !provider->world_is_ready || provider->callback_depth >= 32 ) {
+                throw std::runtime_error( "runtime.call_eoc provider is unavailable for '" + id + "'" );
+            }
+            const std::optional<game_handle> u_handle = u_actor ?
+                    std::optional<game_handle>( platform_creature_handle( *provider, *u_actor ) ) : std::nullopt;
+            const std::optional<game_handle> npc_handle = npc_actor ?
+                    std::optional<game_handle>( platform_creature_handle( *provider, *npc_actor ) ) : std::nullopt;
+            sol::table provider_payload = provider->lua->create_table();
+            if( u_handle ) {
+                provider_payload["u"] = *u_handle;
+            }
+            if( npc_handle ) {
+                provider_payload["npc"] = *npc_handle;
+            }
+            sol::table provider_vars = provider->lua->create_table();
+            std::vector<std::string> prev_keys;
+            if( caller_vars ) {
+                for( const auto &kv : *caller_vars ) {
+                    if( kv.first.get_type() != sol::type::string ) {
+                        throw std::invalid_argument( "runtime.call_eoc vars keys must be strings" );
+                    }
+                    const std::string key = kv.first.as<std::string>();
+                    prev_keys.push_back( key );
+                    provider_vars[key] = copy_flat_value( kv.second, *provider->lua, "vars" );
+                }
+            }
+            provider_payload["vars"] = provider_vars;
+            sol::protected_function callback = handler->second.callback;
+            callback_scope scope( *provider, caller->native_enchantment_random );
+            provider->callback_character = u_handle;
+            const sol::protected_function_result result = callback( provider_payload );
+            if( !result.valid() ) {
+                const sol::error error = result;
+                throw std::runtime_error( "runtime.call_eoc '" + provider->mod_id + ":" +
+                                          id + "' failed: " + error.what() );
+            }
+            if( caller_vars ) {
+                for( const std::string &key : prev_keys ) {
+                    if( !provider_vars.raw_get<sol::object>( key ).valid() ||
+                        provider_vars.raw_get<sol::object>( key ).get_type() == sol::type::nil ) {
+                        ( *caller_vars )[key] = sol::lua_nil;
+                    }
+                }
+                for( const auto &kv : provider_vars ) {
+                    if( kv.first.get_type() == sol::type::string ) {
+                        ( *caller_vars )[kv.first.as<std::string>()] =
+                            copy_flat_value( kv.second, *caller->lua, "vars" );
+                    }
+                }
+            }
+            if( result.return_count() == 0 || result.get_type() == sol::type::nil ) {
+                return true;
+            }
+            if( result.return_count() == 1 && result.get_type() == sol::type::boolean ) {
+                return result.get<bool>();
+            }
+            throw std::runtime_error( "runtime.call_eoc '" + provider->mod_id + ":" +
+                                      id + "' must return nil or a boolean" );
+        }
+        throw std::runtime_error( "runtime.call_eoc references missing handler '" + id + "'" );
+    } );
     runtime_api.set_function( "character_recurring", [weak](
                                   const std::string & effect_handler,
     const std::string & interval_handler ) {
@@ -4157,6 +4319,131 @@ void invoke_examine_handler(
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
     }
+}
+
+std::optional<bool> invoke_mortar_condition_handler(
+    const std::string_view mod_id, const std::string_view handler_id,
+    const const_dialogue &dialogue )
+{
+    if( mod_id.empty() || handler_id.empty() ) {
+        return std::nullopt;
+    }
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return std::nullopt;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first mortar condition unavailable for '"
+                                    << mod_id << ':' << handler_id << "'";
+        return std::nullopt;
+    }
+    const const_talker *speaker = dialogue.has_alpha ? dialogue.const_actor( false ) : nullptr;
+    sol::table payload = detail::platform_callback_payload( *owner, {
+        { "character", speaker }
+    } );
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+        return std::nullopt;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first mortar condition '"
+                                    << mod_id << ':' << handler_id
+                                    << "' must return exactly one boolean";
+        return std::nullopt;
+    }
+    return result.get<bool>();
+}
+
+std::optional<double> invoke_mortar_number_handler(
+    const std::string_view mod_id, const std::string_view handler_id,
+    const const_dialogue &dialogue )
+{
+    if( mod_id.empty() || handler_id.empty() ) {
+        return std::nullopt;
+    }
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return std::nullopt;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first mortar numeric handler unavailable for '"
+                                    << mod_id << ':' << handler_id << "'";
+        return std::nullopt;
+    }
+    const const_talker *speaker = dialogue.has_alpha ? dialogue.const_actor( false ) : nullptr;
+    sol::table payload = detail::platform_callback_payload( *owner, {
+        { "character", speaker }
+    } );
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+        return std::nullopt;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::number ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first mortar numeric handler '"
+                                    << mod_id << ':' << handler_id
+                                    << "' must return one finite number";
+        return std::nullopt;
+    }
+    const double value = result.get<double>();
+    if( !std::isfinite( value ) ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first mortar numeric handler '"
+                                    << mod_id << ':' << handler_id
+                                    << "' returned a non-finite number";
+        return std::nullopt;
+    }
+    return value;
+}
+
+std::optional<bool> invoke_monster_revive_handler(
+    const std::string_view mod_id, const std::string_view handler_id,
+    const const_dialogue &dialogue )
+{
+    if( mod_id.empty() || handler_id.empty() ) {
+        return std::nullopt;
+    }
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return std::nullopt;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first monster revive condition unavailable for '"
+                                    << mod_id << ':' << handler_id << "'";
+        return std::nullopt;
+    }
+    sol::table payload = owner->lua->create_table();
+    if( const diag_value *loc = dialogue.maybe_get_value( "loc" );
+        loc != nullptr && loc->is_tripoint() ) {
+        payload["position"] = script_tripoint_coord::from_native(
+                                  coords::origin::abs, coords::scale::map_square,
+                                  loc->tripoint().raw() );
+    }
+    if( const diag_value *damage = dialogue.maybe_get_value( "corpse_damage" );
+        damage != nullptr && damage->is_dbl() ) {
+        payload["corpse_damage"] = static_cast<int>( damage->dbl() );
+    }
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+        return std::nullopt;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first monster revive condition '"
+                                    << mod_id << ':' << handler_id
+                                    << "' must return exactly one boolean";
+        return std::nullopt;
+    }
+    return result.get<bool>();
 }
 
 void invoke_damage_type_handler( const std::string_view damage_id,

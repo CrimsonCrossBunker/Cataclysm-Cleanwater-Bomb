@@ -3500,6 +3500,8 @@ class jmapgen_computer : public jmapgen_piece_with_has_vehicle_collision
         std::vector<effect_on_condition_id> eocs;
         bool target;
         bool dialogue_on_access = false;
+        std::string lua_access_mod;
+        std::string lua_access_handler;
         jmapgen_computer( const JsonObject &jsi, std::string_view/*context*/ ) {
             jsi.read( "name", name );
             jsi.read( "access_denied", access_denied );
@@ -3510,6 +3512,18 @@ class jmapgen_computer : public jmapgen_piece_with_has_vehicle_collision
                     open->throw_error( "terminal access metadata is reserved for ordered Lua definitions" );
                 }
                 dialogue_on_access = open->get_bool();
+            }
+            if( const auto handler = jsi.get_member_opt( "//ccb_lua_computer_access_handler" ) ) {
+                if( handler->has_source_file() ) {
+                    handler->throw_error( "terminal access metadata is reserved for ordered Lua definitions" );
+                }
+                lua_access_handler = handler->get_string();
+            }
+            if( const auto mod = jsi.get_member_opt( "//ccb_lua_computer_mod" ) ) {
+                if( mod->has_source_file() ) {
+                    mod->throw_error( "terminal access metadata is reserved for ordered Lua definitions" );
+                }
+                lua_access_mod = mod->get_string();
             }
             if( jsi.has_array( "options" ) ) {
                 for( JsonObject jo : jsi.get_array( "options" ) ) {
@@ -3540,6 +3554,9 @@ class jmapgen_computer : public jmapgen_piece_with_has_vehicle_collision
                 dat.m.add_computer( r, name.translated(),
                                     security );
             cpu->dialogue_on_access = dialogue_on_access;
+            if( !lua_access_mod.empty() && !lua_access_handler.empty() ) {
+                cpu->set_platform_access_handler( lua_access_mod, lua_access_handler );
+            }
             for( const computer_option &opt : options ) {
                 cpu->add_option( opt );
             }

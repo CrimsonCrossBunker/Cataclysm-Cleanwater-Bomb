@@ -1007,8 +1007,28 @@ void mount_item_data::deserialize( const JsonObject &jo )
 
 void revive_type::deserialize( const JsonObject &jo )
 {
-    // FIXME: reader for read_condition
-    read_condition( jo, "condition", condition, true );
+    if( const auto field = jo.get_member_opt( "//ccb_lua_revive_handler" ) ) {
+        if( field->has_source_file() || jo.has_member( "condition" ) ) {
+            field->throw_error( "Monster revive predicate metadata is reserved for ordered Lua definitions" );
+        }
+        const std::string handler = field->get_string();
+        const auto mod_field = jo.get_member_opt( "//ccb_lua_revive_mod" );
+        if( handler.empty() || handler.find( '\0' ) != std::string::npos ||
+            !mod_field || mod_field->has_source_file() ) {
+            field->throw_error( "Monster revive predicate metadata requires a registered Lua mod and handler" );
+        }
+        const std::string mod_id = mod_field->get_string();
+        if( mod_id.empty() || mod_id.find( '\0' ) != std::string::npos ) {
+            field->throw_error( "Monster revive predicate metadata requires a non-empty Lua mod id" );
+        }
+        condition = [mod_id, handler]( const const_dialogue &d ) {
+            return cata::lua_platform::invoke_monster_revive_handler(
+                       mod_id, handler, d ).value_or( false );
+        };
+    } else {
+        // FIXME: reader for read_condition
+        read_condition( jo, "condition", condition, true );
+    }
     if( jo.has_string( "monster" ) ) {
         mandatory( jo, false, "monster", revive_mon );
     } else {

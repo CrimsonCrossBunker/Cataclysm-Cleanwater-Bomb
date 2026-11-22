@@ -3402,6 +3402,8 @@ function AmmoEffectDefinition:impact_policy(handler_id) end
 ---@field type_name string Noun phrase completing “became addicted to …”.
 ---@field description string Player-facing effects description.
 ---@field craving_morale? string Native morale-type id used for cravings.
+---@field sated_turns? integer Default sated duration in turns.
+---@field satisfying_effects? string[] Effect type ids that satisfy cravings.
 
 ---@class AddictionTickPolicyPayload
 ---@field addiction_type_id string
@@ -9052,6 +9054,18 @@ function CcbPlatformContent.define_npc_class(options) end
 ---@field examine_handler? string Named handler in the owning runtime, receiving CcbTileExamineContext.
 ---@field appliance_conversion? StaticTileAppliance Convert the tile to an appliance.
 ---@field card_reader? StaticTileCardReader Apply the native card reader interaction.
+---@field mortar? StaticTileMortar Apply the native indirect mortar examine interaction.
+
+---@class StaticTileMortar
+---@field ammo string[] Accepted ammunition type IDs.
+---@field range integer Maximum mortar range in map squares.
+---@field flight_time? string|integer Projectile flight duration.
+---@field condition_fail_msg? string|LocalizedText Failure message shown when condition_handler returns false.
+---@field condition_handler? string Named handler receiving { character = GameHandle } and returning boolean.
+---@field aim_duration? string|integer Fallback aiming duration.
+---@field aim_duration_handler? string Named handler receiving { character = GameHandle } and returning aiming turns.
+---@field aim_deviation? number Fallback aiming deviation.
+---@field aim_deviation_handler? string Named handler receiving { character = GameHandle } and returning deviation multiplier.
 
 ---@class StaticTerrainOptions : StaticMapTileOptions
 ---@field transforms_into? string
@@ -10354,6 +10368,11 @@ function CcbPlatformContent.define_monster_attack(options) end
 ---@field drops? string|StaticMonsterDropGroup Item group ID or inline group.
 ---@field outcome? StaticMonsterDeathOutcome
 
+---@class StaticMonsterReviveForm
+---@field when? string Registered handler receiving {position?: {coordinate_space:"abs_ms",x:integer,y:integer,z:integer}, corpse_damage?: integer}.
+---@field monster? string Replacement monster type id when this form matches. Provide exactly one of monster and monster_group.
+---@field monster_group? string Replacement monster group id when this form matches. Provide exactly one of monster and monster_group.
+
 ---@class StaticMonsterDrop
 ---@field item? string Provide exactly one of item and group.
 ---@field group? string
@@ -10478,6 +10497,7 @@ function CcbPlatformContent.define_monster_attack(options) end
 ---@field biosignature? StaticMonsterBiosignature
 ---@field attacks? StaticMonsterAttack[]
 ---@field death? StaticMonsterDeath
+---@field revive_forms? StaticMonsterReviveForm[]
 ---@field inheritance? StaticMonsterInheritance
 
 ---Register a monster during ordered Mod data loading, using native inheritance and finalization.
@@ -10684,6 +10704,7 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@field mission_target? boolean Associate the console with the mapgen mission.
 ---@field chat_topics? string[] Native dialogue topic IDs in menu order.
 ---@field dialogue_on_access? boolean Open a conversation with this terminal when used.
+---@field access_handler? string Named runtime handler invoked when accessing this computer.
 ---@field menu? StaticMapgenComputerMenuOption[] Menu options in display order.
 ---@field failures? string[] Native computer failure action IDs in selection order.
 
@@ -12094,6 +12115,17 @@ function CcbPlatformRuntime.call_character(id, character) end
 ---@param creature? GameHandle Exact live avatar, NPC or monster; nil preserves an absent actor.
 ---@return nil Handler results are ignored.
 function CcbPlatformRuntime.call_creature(id, creature) end
+
+---@class PlatformCallEocOptions
+---@field u? GameHandle Primary actor passed as payload.u.
+---@field npc? GameHandle Secondary actor passed as payload.npc.
+---@field vars? table<string, boolean|number|string|TripointCoord|table> Flat variables shared across the call.
+
+---Call the last active Mod's named behavior with { u, npc, vars } and return its boolean outcome (nil counts as true).
+---@param id string Handler registered with runtime.handler.
+---@param options? PlatformCallEocOptions
+---@return boolean
+function CcbPlatformRuntime.call_eoc(id, options) end
 
 ---Register one per-Character recurring policy. The effect handler runs only
 ---when the Character-local due turn is reached; the interval handler runs on
@@ -14381,6 +14413,12 @@ function CcbRelocationApi.teleport_avatar(avatar, position, options) end
 ---@return CcbCreatureTeleportResult result
 function CcbRelocationApi.teleport_creature(creature, position, options) end
 
+---Set a live Creature's absolute map-square position directly via native `setpos`.
+---@param creature GameHandle Exact live Creature handle.
+---@param position TripointCoord Absolute map-square destination.
+---@return CcbResult result `value` is the updated TripointCoord position.
+function CcbRelocationApi.set_position(creature, position) end
+
 ---Move the deceased avatar during the final avatar_death callback before native death camera and corpse placement. Does not grant a live handle or change death state.
 ---@param position TripointCoord Absolute map-square destination.
 ---@param options? CcbAvatarTeleportOptions
@@ -14632,6 +14670,21 @@ function CcbWeatherApi.clear_override() end
 ---@param temperature UnitValue UnitValue<temperature>, within 0..1000 kelvin.
 ---@return CcbResult result `value` is true after changing the sample.
 function CcbWeatherApi.set_current_temperature(temperature) end
+
+---Change the current weather humidity sample and clear temperature caches.
+---@param humidity number Finite humidity value within -1000..1000.
+---@return CcbResult result `value` is true after changing the sample.
+function CcbWeatherApi.set_humidity(humidity) end
+
+---Change the current weather pressure sample and clear temperature caches.
+---@param pressure number Finite pressure value within -10000..100000.
+---@return CcbResult result `value` is true after changing the sample.
+function CcbWeatherApi.set_pressure(pressure) end
+
+---Change the current weather sample windpower and clear temperature caches.
+---@param windpower number Finite windpower value within -1000..1000.
+---@return CcbResult result `value` is true after changing the sample.
+function CcbWeatherApi.set_windpower(windpower) end
 
 ---@param temperature UnitValue UnitValue<temperature>
 ---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
@@ -15494,6 +15547,27 @@ function CcbVehiclesApi.start_full_repair(vehicle, mechanic, repair_multiplier) 
 ---@param install_multiplier? number Finite value in (0, 1000]; defaults to 1.
 ---@return CcbResult result `value` is a CcbVehiclePartServiceResult.
 function CcbVehiclesApi.open_part_service(vehicle, mechanic, repair_multiplier, install_multiplier) end
+
+---@class CcbVehiclesLoadedOptions
+---@field center? TripointCoord Absolute map-square center; defaults to the avatar position.
+---@field radius? integer Non-negative Chebyshev distance radius around center.
+---@field z_min? integer Inclusive minimum z-level.
+---@field z_max? integer Inclusive maximum z-level.
+
+---@class CcbVehicleTeleportOptions
+---@field force? boolean Skip collision checks when teleporting.
+
+---List loaded vehicles matching optional spatial filters.
+---@param options? CcbVehiclesLoadedOptions
+---@return CcbResult
+function CcbVehiclesApi.loaded(options) end
+
+---Teleport a loaded live vehicle to an absolute map-square destination.
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param destination TripointCoord Absolute map-square destination.
+---@param options? CcbVehicleTeleportOptions
+---@return CcbResult
+function CcbVehiclesApi.teleport(vehicle, destination, options) end
 
 ---@class MissionToken
 ---@field uid integer Native mission instance id; not sufficient to resume after replacement.

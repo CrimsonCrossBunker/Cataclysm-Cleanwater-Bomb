@@ -2199,6 +2199,41 @@ sol::table teleport_creature_to_position(
                state, sol::make_object( state, std::move( result ) ) );
 }
 
+sol::table set_creature_position(
+    sol::this_state lua, const game_handle &handle,
+    const script_tripoint_coord &requested_position,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name = "services.relocation.set_position";
+    sol::state_view state( lua );
+    const tripoint_abs_ms destination = require_absolute_ms( requested_position, api_name );
+    if( handle.kind() != game_handle_kind::creature ) {
+        return make_game_error_result( state, {
+            "unsupported",
+            std::string( api_name ) + " supports only an exact Creature handle"
+        } );
+    }
+    std::optional<game_handle_error> error;
+    Creature *value = resolve_exact_creature( handle, runtime_generation, world_generation, error );
+    if( value == nullptr ) {
+        return make_game_error_result( state, error.value_or( game_handle_error{
+            "invalid_handle",
+            std::string( api_name ) + " could not resolve the Creature handle"
+        } ) );
+    }
+    const auto reference = value->get_safe_reference();
+    value->setpos( destination );
+    value = reference.get();
+    bump_map_mutation_epoch();
+    if( !value ) {
+        return make_game_error_result( state, {
+            "destroyed", std::string( api_name ) + " target was destroyed by a synchronous callback"
+        } );
+    }
+    return make_game_value_result( state, sol::make_object( state, absolute_position( *value ) ) );
+}
+
 sol::table relocate_npc(
     sol::this_state lua, const game_handle &handle,
     const map_tile_token &target_token,
@@ -2998,6 +3033,19 @@ void install_relocation_move_api(
         return teleport_creature_to_position(
                    lua, handle, position, options, current_runtime_generation(),
                    current_world_generation(), creature_teleport_scope::creature );
+    } );
+    relocation.set_function(
+        "set_position",
+        [current_runtime_generation, current_world_generation,
+         require_write, require_dangerous_relocation, has_active_callback](
+            sol::this_state lua, const game_handle & handle,
+            const script_tripoint_coord & position ) {
+        require_write();
+        require_dangerous_relocation();
+        require_active_callback( has_active_callback, "services.relocation.set_position" );
+        return set_creature_position(
+                   lua, handle, position, current_runtime_generation(),
+                   current_world_generation() );
     } );
     relocation.set_function(
         "move",
