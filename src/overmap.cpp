@@ -1148,6 +1148,9 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
             north_america::road_network( global_base_point(), OMAPX, OMAPY ) :
             std::vector<north_america::road_cell> {};
     if( !atlas_streets.empty() ) {
+        if( settings->city_spec && settings->get_settings_city().city_size > 0 ) {
+            place_atlas_campuses( atlas_streets, atlas_water );
+        }
         place_atlas_roads( atlas_streets, atlas_water );
     }
     if( settings->city_spec ) {
@@ -2448,6 +2451,49 @@ void overmap::place_swamps()
     }
 }
 
+void overmap::place_atlas_campuses( const std::vector<north_america::road_cell> &network,
+                                    const std::vector<north_america::terrain> &coast )
+{
+    const auto &sites = north_america::public_campuses_in( pos() );
+    static const overmap_special_id campus_id( "atlas_public_university" );
+    if( sites.empty() || !campus_id.is_valid() ) {
+        return;
+    }
+    const overmap_special &campus = *campus_id;
+    const point_abs_omt origin = global_base_point();
+    const bool mapped = settings->place_roads || settings->overmap_highway.has_value();
+    const auto main_roads = north_america::wide_highway_footprint( origin, OMAPX, OMAPY, mapped,
+                            false );
+    const auto footprint = campus.required_locations();
+    for( const point_abs_omt &site : sites ) {
+        const point_om_omt center( ( site - origin ).raw() - point( 7, 4 ) );
+        for( const point_om_omt &corner : closest_points_first( center, 45 ) ) {
+            const tripoint_om_omt start( corner, 0 );
+            if( !inbounds( start, 2 ) || !inbounds( start + point( 16, 9 ), 2 ) ) {
+                continue;
+            }
+            const bool occupied = std::any_of( footprint.begin(), footprint.end(),
+            [&]( const overmap_special_locations & place ) {
+                const tripoint_om_omt tile = start + place.p;
+                if( overmap_special_placements.count( tile ) ) {
+                    return true;
+                }
+                if( tile.z() != 0 ) {
+                    return false;
+                }
+                const int index = tile.y() * OMAPX + tile.x();
+                return coast[( tile.y() + 1 ) * ( OMAPX + 2 ) + tile.x() + 1] != north_america::terrain::land ||
+                       ( mapped && ( network[index].mapped_connections || main_roads[index] ) );
+            } );
+            if( !occupied && can_place_special( campus, start, om_direction::type::north, false ) ) {
+                place_special( campus, start, om_direction::type::north, get_nearest_city( start ), false,
+                               false );
+                break;
+            }
+        }
+    }
+}
+
 void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &network,
                                  const std::vector<north_america::terrain> &coast )
 {
@@ -2461,7 +2507,8 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
         return coast[index] != north_america::terrain::land;
     };
     const auto can_build_street = [&]( const tripoint_om_omt & p ) {
-        return !atlas_water_at( p ) && connection->pick_subtype_for( ter( p ) );
+        return !atlas_water_at( p ) && !overmap_special_placements.count( p ) &&
+               connection->pick_subtype_for( ter( p ) );
     };
     for( int y = 0; y < OMAPY; ++y ) {
         for( int x = 0; x < OMAPX; ++x ) {

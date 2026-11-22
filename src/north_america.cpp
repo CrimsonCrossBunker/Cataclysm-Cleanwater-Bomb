@@ -608,6 +608,27 @@ regional_climate::coordinates location( point_abs_ms position )
     return { latitude / radians, std::remainder( bedford_longitude + longitude / radians, 360.0 ) };
 }
 
+const std::vector<point_abs_omt> &public_campuses_in( point_abs_om overmap )
+{
+    static const auto campuses = [] {
+        std::unordered_map<point_abs_om, std::vector<point_abs_omt>> result;
+        read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america_campuses.json",
+                             [&]( const JsonValue & data )
+        {
+            for( const JsonValue row : data.get_array() ) {
+                const JsonArray campus = row.get_array();
+                const point_abs_omt position = project_to<coords::omt>(
+                position_at( { campus.get_float( 1 ), campus.get_float( 2 ) } ) );
+                result[project_to<coords::om>( position )].push_back( position );
+            }
+        } );
+        return result;
+    }();
+    static const std::vector<point_abs_omt> empty;
+    const auto found = campuses.find( overmap );
+    return found == campuses.end() ? empty : found->second;
+}
+
 point_abs_ms position_at( regional_climate::coordinates geo )
 {
     const double lat = geo.latitude * radians;

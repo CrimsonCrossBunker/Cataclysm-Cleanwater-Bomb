@@ -5722,17 +5722,150 @@ units::energy vehicle::drain_energy( const itype_id &ftype, units::energy wanted
     return drained;
 }
 
+namespace
+{
+bool uses_liquid_fuel_model( const vehicle_part &part )
+{
+    return part.info().engine_info && part.info().has_flag( "E_COMBUSTION" ) &&
+           !part.fuel_current().is_null() && item( part.fuel_current() ).made_of( phase_id::LIQUID );
+}
+
+double liquid_fuel_input_w( const vehicle_part &part, double shaft_w, double speed_mps )
+{
+    const vpart_info &data = part.info();
+    const auto &engine = *data.engine_info;
+    const double rated = std::max( 1.0, static_cast<double>( units::to_watt( data.power ) ) );
+    const double pressure = std::clamp( shaft_w / rated, 0.0, 1.0 );
+    const bool diesel = data.has_flag( "E_DIESEL_FUEL" );
+    const double input = units::to_watt( data.energy_consumption );
+    const double peak = input > 0 ? std::clamp( rated / input, 0.18, 0.46 ) :
+                        diesel ? 0.39 : 0.30;
+    if( engine.turbine ) {
+        // A gas generator still needs substantial power to sustain combustion at idle.
+        return shaft_w / ( peak * ( 0.65 + 0.35 * pressure ) ) + rated * 0.12;
+    }
+    const double displacement = engine.displacement_ml > 0 ? engine.displacement_ml / 1000.0 :
+                                rated / ( diesel ? 45000.0 : 60000.0 );
+    const int rated_rpm = engine.rated_rpm > 0 ? engine.rated_rpm : diesel ? 3000 : 5800;
+    const double idle_rpm = std::min( 800.0, rated_rpm * 0.3 );
+    // Select an approximate operating speed from throttle and road speed rather
+    // than assuming all vehicles share one gear ratio.
+    const double rpm = idle_rpm + ( rated_rpm - idle_rpm ) *
+                       std::clamp( pressure * 0.75 + speed_mps / 95.0, 0.0, 1.0 );
+    const double loss = displacement * rpm * ( diesel ? 0.75 : 1.25 );
+    const double efficiency = peak * ( 0.65 + 0.35 * std::min( 1.0, pressure * 2.5 ) );
+    return ( shaft_w + loss ) / efficiency;
+}
+} // namespace
+
+double vehicle::propulsion_power_w( map &here, double speed_mps, bool afloat, bool flying ) const
+{
+    const double drag = coeff_air_drag() + ( afloat ? coeff_water_drag( here ) : 0.0 );
+    double demand = drag * speed_mps * speed_mps * speed_mps;
+    if( flying ) {
+        double rotor_area = 0;
+        for( int rotor : rotors ) {
+            const vpart_info &info = parts[rotor].info();
+            const double diameter = info.rotor_info->rotor_diameter + info.bonus;
+            rotor_area += M_PI * diameter * diameter / 4;
+        }
+        if( rotor_area > 0 ) {
+            const double weight = units::to_kilogram( total_mass( here ) ) * accel_g;
+            constexpr double air_density = 1.225;
+            const double induced = weight * std::sqrt( weight / ( 2 * air_density * rotor_area ) );
+            demand += induced * ( 1.30 - 0.34 * std::clamp( speed_mps / 32.0, 0.0, 1.0 ) );
+        }
+    } else if( !afloat ) {
+        demand += coeff_rolling_drag( here ) * ( speed_mps + 33.33 ) * speed_mps;
+    }
+    return demand;
+}
+
+std::optional<double> vehicle::combined_liquid_fuel_consumption( map &here ) const
+{
+    const bool flying = !rotors.empty() && is_aircraft( here );
+    const bool afloat = !flying && ( is_watercraft() || ( wheelcache.empty() && !floating.empty() ) );
+    const double max_speed = ( flying ? safe_rotor_velocity( here, false ) :
+                               afloat ? safe_water_velocity( here, false ) :
+                               safe_ground_velocity( here, false ) ) * 0.0044704;
+    if( max_speed < 0.5 ) {
+        return std::nullopt;
+    }
+    const double available = std::max( 1.0, static_cast<double>( units::to_watt(
+                                           total_power( here, false ) ) ) );
+    bool has_liquid = false;
+    const auto cycle = [&]( double target_mps, double start_penalty ) {
+        const double speed = std::min( target_mps, max_speed );
+        const double work = propulsion_power_w( here, speed, afloat, flying ) +
+                            start_penalty * units::to_kilogram( total_mass( here ) ) * speed;
+        const double duty = std::clamp( work / available, 0.0, 1.0 );
+        double litres_per_second = 0;
+        for( int index : engines ) {
+            const vehicle_part &part = parts[index];
+            if( !is_engine_on( part ) || !uses_liquid_fuel_model( part ) ) {
+                continue;
+            }
+            const item fuel( part.fuel_current() );
+            const double joules_per_litre = units::to_joule( fuel.get_base_material().get_fuel_data().energy );
+            if( joules_per_litre <= 0 ) {
+                continue;
+            }
+            has_liquid = true;
+            const double shaft = units::to_watt( part_vpower_w( here, part ) ) * duty;
+            const units::power input = units::from_watt( liquid_fuel_input_w( part, shaft, speed ) );
+            const double input_w = units::to_watt( enchantment_cache.modify_value(
+                    enchant_vals::mod::FUEL_USAGE, input ) );
+            litres_per_second += input_w * ( part.has_fault_flag( "DOUBLE_FUEL_CONSUMPTION" ) ? 2 : 1 ) /
+                                 joules_per_litre;
+        }
+        return litres_per_second * 100000 / speed;
+    };
+    const double estimate = flying ? cycle( 52.0, 0 ) :
+                            afloat ? cycle( 8.0, 0 ) :
+                            0.55 * cycle( 40 / 3.6, 0.055 ) + 0.45 * cycle( 90 / 3.6, 0 );
+    return has_liquid ? std::optional<double>( estimate ) : std::nullopt;
+}
+
 void vehicle::consume_fuel( map &here, int load, bool idling )
 {
-    double st = strain( here );
-    for( const auto &fuel_pr : fuel_usage() ) {
-        const itype_id &ft = fuel_pr.first;
-        if( idling && ft == fuel_type_battery ) {
+    const double strain_now = strain( here );
+    std::map<itype_id, units::power> demand;
+    const bool flying = is_flying_in_air() || requested_z_change > 0;
+    const bool afloat = !flying && is_watercraft();
+    const double speed = std::abs( velocity ) * 0.0044704;
+    std::optional<double> liquid_duty;
+    for( int index : engines ) {
+        const vehicle_part &part = parts[index];
+        const itype_id fuel = part.fuel_current();
+        if( !is_engine_on( part ) || is_perpetual_type( part ) ||
+            ( idling && fuel == fuel_type_battery ) ) {
             continue;
         }
-
+        if( uses_liquid_fuel_model( part ) ) {
+            if( !engine_fuel_left( here, part ) ) {
+                continue;
+            }
+            if( !liquid_duty ) {
+                const double available = std::max( 1.0, static_cast<double>( units::to_watt(
+                                                       total_power( here ) ) ) );
+                const double drag = !idling || flying ? propulsion_power_w( here, speed, afloat, flying ) :
+                                    0.0;
+                const double throttle = flying ? std::max( 0, requested_z_change ) * 0.15 :
+                                        load / 1000.0;
+                liquid_duty = std::clamp( std::max( drag / available, throttle ), 0.0, 1.0 );
+            }
+            const double shaft = units::to_watt( part_vpower_w( here, part ) ) * *liquid_duty;
+            units::power input = units::from_watt( liquid_fuel_input_w( part, shaft, idling && !flying ?
+                                                   0.0 : speed ) );
+            input = enchantment_cache.modify_value( enchant_vals::mod::FUEL_USAGE, input );
+            demand[fuel] += input * ( part.has_fault_flag( "DOUBLE_FUEL_CONSUMPTION" ) ? 2 : 1 );
+        } else {
+            demand[fuel] += engine_fuel_usage( part ) * ( load * ( 1 + strain_now * strain_now * 100 ) / 1000 );
+        }
+    }
+    for( const auto &fuel_pr : demand ) {
+        const itype_id &ft = fuel_pr.first;
         units::energy to_consume = fuel_pr.second * 1_seconds;
-        to_consume *= load * ( 1 + st * st * 100 ) / 1000;
         auto inserted = fuel_used_last_turn.insert( { ft, 0_J } );
         inserted.first->second += to_consume;
         // Only a fraction of a charge can carry over.  Unserved demand after

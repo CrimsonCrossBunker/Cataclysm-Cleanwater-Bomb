@@ -2167,6 +2167,7 @@ class map
         void on_unload( const tripoint_rel_sm &loc );
         void copy_grid( const tripoint_rel_sm &to, const tripoint_rel_sm &from );
         void draw_map( mapgendata &dat );
+        void generate_atlas_tower_floor( const tripoint_abs_omt &p );
 
         // Builds a transparency cache and returns true if the cache was invalidated.
         // Used to determine if seen cache should be rebuilt.

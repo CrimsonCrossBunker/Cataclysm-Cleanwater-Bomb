@@ -30,6 +30,7 @@ bool active();
 bool offer_starting_city();
 const std::vector<place> &cities();
 const std::vector<std::size_t> &cities_in( point_abs_om overmap );
+const std::vector<point_abs_omt> &public_campuses_in( point_abs_om overmap );
 bool suitable_for_highway_intersection( point_abs_om overmap );
 bool military_base_region( point_abs_om overmap, unsigned seed );
 regional_climate::coordinates location( point_abs_ms position );

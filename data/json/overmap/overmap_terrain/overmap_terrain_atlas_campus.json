@@ -1,0 +1,28 @@
+[
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_campus_dorm",
+    "name": "university residence hall",
+    "looks_like": "apartments_mod_tower_000",
+    "sym": "U",
+    "color": "light_blue",
+    "see_cost": "high",
+    "travel_cost_type": "structure"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_campus_dorm_roof",
+    "copy-from": "atlas_campus_dorm",
+    "name": "university residence hall roof"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_campus_quad",
+    "name": "university quadrangle",
+    "looks_like": "park",
+    "sym": "U",
+    "color": "green",
+    "see_cost": "normal",
+    "flags": [ "NO_ROTATE" ]
+  }
+]

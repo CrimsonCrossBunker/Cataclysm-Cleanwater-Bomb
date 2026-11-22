@@ -999,6 +999,72 @@ void overmapbuffer::add_camp( const basecamp &camp )
     om_loc.om->add_camp( omt, camp );
 }
 
+static std::optional<oter_id> atlas_tower_terrain( const overmap_with_local_coords &where,
+        const tripoint_abs_omt &p )
+{
+    if( !where.om || p.z() < 2 || p.z() > 66 || !north_america::elevation_active() ) {
+        return std::nullopt;
+    }
+    const tripoint_om_omt ground( where.local.xy(), 0 );
+    const auto special = where.om->overmap_special_at( ground );
+    if( !special ) {
+        return std::nullopt;
+    }
+    const std::string_view id = special->str();
+    const bool hotel = id.substr( 0, 17 ) == "atlas_tall_hotel_";
+    if( !hotel && id.substr( 0, 18 ) != "atlas_tall_office_" ) {
+        return std::nullopt;
+    }
+    const oter_id base = where.om->ter( ground );
+    const std::string_view base_id = base->get_type_id().str();
+    const std::string_view prefix = hotel ? "hotel_tower_1_" : "loffice_tower_";
+    if( base_id.size() != prefix.size() + 1 || base_id.substr( 0, prefix.size() ) != prefix ) {
+        return std::nullopt;
+    }
+    const int part = base_id.back() - '0';
+    if( hotel ? part < 4 || part > 9 : part < 5 || part > 8 ) {
+        return std::nullopt;
+    }
+    const point offset = hotel ? point( 2 - ( part - 1 ) % 3, ( part - 1 ) / 3 ) :
+                         point( ( 8 - part ) % 2, ( 8 - part ) / 2 );
+    const auto rotation = static_cast<om_direction::type>(
+                              ( base->get_rotation() + ( hotel ? 0 : 2 ) ) % 4 );
+    const point_abs_omt anchor = p.xy() - om_direction::rotate( offset, rotation );
+    const int low = id.back() == '3' ? 34 : id.back() == '2' ? 20 : 12;
+    const int spread = id.back() == '3' ? 31 : id.back() == '2' ? 17 : 9;
+    const int stories = low + static_cast<int>( std::hash<point_abs_omt> {}( anchor ) % spread );
+    const int roof = hotel ? stories : stories / 2 * 2 + 1;
+    if( p.z() > roof + 1 ) {
+        return std::nullopt;
+    }
+    std::string donor;
+    if( hotel ) {
+        if( p.z() == roof + 1 && part < 7 ) {
+            return std::nullopt;
+        }
+        donor = p.z() == roof + 1 ? "hotel_tower_6_1_" :
+                p.z() == roof ? "hotel_tower_roof_1_" :
+                p.z() == roof - 1 ? "hotel_tower_flr4_1_" : "hotel_tower_flr3_1_";
+        donor += std::to_string( part ) + "_north";
+    } else {
+        const int group = p.z() == roof + 1 ? 12 : p.z() == roof ? 8 : 4;
+        donor = "loffice_tower_" + std::to_string( part + group );
+        if( p.z() < roof && p.z() % 2 == 0 && part <= 6 ) {
+            donor += 'b';
+        }
+        donor += "_south";
+    }
+    const oter_str_id terrain( donor );
+    return terrain.is_valid() ? std::optional<oter_id>( terrain->get_rotated(
+                rotation ) ) : std::nullopt;
+}
+
+static const oter_id &stable_tower_terrain( oter_id id )
+{
+    static thread_local std::map<int, oter_id> ids;
+    return ids.try_emplace( id.to_i(), id ).first->second;
+}
+
 static const oter_id *atlas_outlying_terrain( int z )
 {
     if( ( z >= -OVERMAP_DEPTH && z <= OVERMAP_HEIGHT ) || !north_america::elevation_active() ) {
@@ -1049,24 +1115,32 @@ bool overmapbuffer::seen_more_than( const tripoint_abs_omt &p, om_vision_level t
 
 const oter_id &overmapbuffer::ter( const tripoint_abs_omt &p )
 {
-    if( const oter_id *terrain = atlas_outlying_terrain( p.z() ) ) {
-        return *terrain;
+    if( atlas_outlying_terrain( p.z() ) ) {
+        return ter_existing( p );
     }
     const overmap_with_local_coords om_loc = get_om_global( p );
+    if( const auto tower = atlas_tower_terrain( om_loc, p ) ) {
+        // Return a reference to the registered instance ID, not a temporary.
+        return stable_tower_terrain( *tower );
+    }
     return om_loc.om->ter( om_loc.local );
 }
 
 const oter_id &overmapbuffer::ter_existing( const tripoint_abs_omt &p )
 {
-    if( const oter_id *terrain = atlas_outlying_terrain( p.z() ) ) {
-        return *terrain;
+    const oter_id *outside = atlas_outlying_terrain( p.z() );
+    if( outside && ( p.z() < 2 || p.z() > 66 ) ) {
+        return *outside;
+    }
+    const overmap_with_local_coords om_loc = get_existing_om_global( p );
+    if( const auto tower = atlas_tower_terrain( om_loc, p ) ) {
+        return stable_tower_terrain( *tower );
+    }
+    if( outside ) {
+        return *outside;
     }
     static const oter_id ot_null;
-    const overmap_with_local_coords om_loc = get_existing_om_global( p );
-    if( !om_loc.om ) {
-        return ot_null;
-    }
-    return om_loc.om->ter( om_loc.local );
+    return om_loc.om ? om_loc.om->ter( om_loc.local ) : ot_null;
 }
 
 void overmapbuffer::ter_set( const tripoint_abs_omt &p, const oter_id &id )
@@ -1113,6 +1187,15 @@ std::vector<oter_id> overmapbuffer::predecessors( const tripoint_abs_omt &p )
 
 int overmapbuffer::highest_omt_point( tripoint_abs_omt loc )
 {
+    if( north_america::elevation_active() ) {
+        const overmap_with_local_coords where = get_existing_om_global( loc );
+        for( int z = 66; z > OVERMAP_HEIGHT; --z ) {
+            const auto terrain = atlas_tower_terrain( where, tripoint_abs_omt( loc.xy(), z ) );
+            if( terrain && !( *terrain )->can_see_down_through() ) {
+                return z;
+            }
+        }
+    }
     for( int i = OVERMAP_HEIGHT; i >= OVERMAP_DEPTH * -1; i-- ) {
         loc.z() = i;
         if( !ter( loc )->can_see_down_through() ) {
