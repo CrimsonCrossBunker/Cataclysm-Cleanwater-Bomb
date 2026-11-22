@@ -24,5 +24,26 @@
     "color": "green",
     "see_cost": "medium",
     "flags": [ "NO_ROTATE" ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_campus_dorm_court",
+    "copy-from": "atlas_campus_quad",
+    "name": "university residence courtyard",
+    "looks_like": "park"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_campus_gate",
+    "copy-from": "atlas_campus_quad",
+    "name": "university campus gate",
+    "looks_like": "park"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_campus_perimeter",
+    "copy-from": "atlas_campus_quad",
+    "name": "university perimeter wall",
+    "looks_like": "park"
   }
 ]

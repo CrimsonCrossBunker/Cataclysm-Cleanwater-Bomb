@@ -167,15 +167,17 @@ struct habitat_atlas {
                 entry.shrub_percent = jo.get_int( "shrub_percent", 0 );
                 entry.rock_percent = jo.get_int( "rock_percent", 0 );
                 entry.water_percent = jo.get_int( "water_percent", 0 );
-                for( const int percent : { entry.tree_percent, entry.shrub_percent,
-                                          entry.rock_percent, entry.water_percent } ) {
+                for( const int percent : {
+                         entry.tree_percent, entry.shrub_percent,
+                         entry.rock_percent, entry.water_percent
+                     } ) {
                     if( percent < 0 || percent > 100 ) {
                         jo.throw_error( "Habitat cover percentages must be between zero and 100" );
                     }
                 }
                 for( const JsonArray grove : jo.get_array( "groves" ) ) {
                     entry.groves.push_back( { grove.get_float( 0 ), grove.get_float( 1 ),
-                                             grove.get_float( 2 ) } );
+                                              grove.get_float( 2 ) } );
                 }
                 for( const JsonArray vertex : jo.get_array( "corridor" ) ) {
                     entry.corridor.push_back( { vertex.get_float( 1 ), vertex.get_float( 0 ) } );
@@ -219,7 +221,7 @@ double treeline_at( regional_climate::coordinates location, std::string_view reg
         for( std::size_t i = 1; i < heights.size(); ++i ) {
             if( location.latitude < heights[i].first ) {
                 const double fraction = std::clamp( ( location.latitude - heights[i - 1].first ) /
-                                        ( heights[i].first - heights[i - 1].first ), 0.0, 1.0 );
+                                                    ( heights[i].first - heights[i - 1].first ), 0.0, 1.0 );
                 return heights[i - 1].second + fraction * ( heights[i].second - heights[i - 1].second );
             }
         }
@@ -285,14 +287,14 @@ const habitat *habitat_at( point_abs_omt pos, std::string_view region, bool wet 
         }
         const double above_treeline = *height - treeline_height;
         const double margin = std::min( { *height - entry.minimum_m, entry.maximum_m - *height,
-                                         above_treeline - entry.treeline_minimum_m,
-                                         entry.treeline_maximum_m - above_treeline } );
+                                          above_treeline - entry.treeline_minimum_m,
+                                          entry.treeline_maximum_m - above_treeline } );
         if( margin <= 0 || habitat_roll( pos ) >= std::min( 1.0, margin / entry.transition_m ) ) {
             continue;
         }
         if( !entry.groves.empty() && std::none_of( entry.groves.begin(), entry.groves.end(),
         [&geo]( const auto & grove ) {
-            return horizontal_distance_km( geo, grove[0], grove[1] ) <= grove[2];
+        return horizontal_distance_km( geo, grove[0], grove[1] ) <= grove[2];
         } ) ) {
             continue;
         }
@@ -823,6 +825,33 @@ std::string ecoregion_code( point_abs_omt pos )
     return profile ? profile->ecoregion : std::string();
 }
 
+ter_id street_tree_at( point_abs_omt pos )
+{
+    const ecology_profile *profile = profile_at( pos );
+    if( !profile ) {
+        return ter_id::NULL_ID();
+    }
+
+    static const std::unordered_set<ter_str_id> street_species = {
+        ter_str_id( "t_tree_paper_birch" ), ter_str_id( "t_tree_oregon_white_oak" ),
+        ter_str_id( "t_tree_blue_oak" ), ter_str_id( "t_tree_southern_live_oak" ),
+        ter_str_id( "t_tree_bur_oak" ), ter_str_id( "t_tree_shagbark_hickory" ),
+        ter_str_id( "t_tree_pacific_madrone" ), ter_str_id( "t_tree_netleaf_oak" ),
+        ter_str_id( "t_tree_texas_mesquite" ), ter_str_id( "t_tree_gumbo_limbo" ),
+        ter_str_id( "t_tree_spanish_cedar" ), ter_str_id( "t_tree_montezuma_pine" ),
+        ter_str_id( "t_tree_white_spruce" ), ter_str_id( "t_tree_ponderosa_pine" )
+    };
+    weighted_int_list<ter_id> trees;
+    for( const plant &species : profile->plants ) {
+        if( !species.shrub && species.weight > 0 && street_species.count( species.terrain ) &&
+            species.terrain.is_valid() ) {
+            trees.add( species.terrain.id(), species.weight );
+        }
+    }
+    const ter_id *tree = trees.pick();
+    return tree ? *tree : ter_id::NULL_ID();
+}
+
 oter_id wilderness_terrain( point_abs_omt pos, const oter_id &original )
 {
     const std::string &type = original->get_type_id().str();
@@ -834,8 +863,8 @@ oter_id wilderness_terrain( point_abs_omt pos, const oter_id &original )
     }
     const ecology_profile *profile = profile_at( pos );
     const habitat *local = habitat_at( pos, profile ? std::string_view( profile->ecoregion ) :
-                                      std::string_view(),
-                                      type == "forest_water" );
+                                       std::string_view(),
+                                       type == "forest_water" );
     return local && local->terrain.is_valid() ? local->terrain.id() : original;
 }
 

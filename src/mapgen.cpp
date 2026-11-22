@@ -3665,8 +3665,7 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                 const std::optional<field_crop> crop = regional_field_crop(
                         north_america::jurisdiction_at( abs_field ), roll );
                 if( crop && crop->seed.is_valid() ) {
-                    const auto sown = crop->sowing_date( std::min( dat.when(),
-                                                         calendar::start_of_cataclysm ) );
+                    const auto sown = crop->sowing_date( calendar::start_of_cataclysm );
                     if( !sown ) {
                         return;
                     }
@@ -6979,7 +6978,6 @@ namespace
 struct regional_site_style {
     ter_str_id siding;
     ter_str_id diner_floor;
-    ter_str_id street_tree;
     furn_str_id farm_storage;
     furn_str_id diner_table;
 };
@@ -6988,29 +6986,29 @@ const regional_site_style &site_style_at( point_abs_ms pos )
 {
     static const regional_site_style northern = {
         ter_str_id( "t_wood_wall_gray" ), ter_str_id( "t_linoleum_white" ),
-        ter_str_id( "t_tree_birch" ), furn_str_id( "f_rack_wood" ), furn_str_id( "f_table" )
+        furn_str_id( "f_rack_wood" ), furn_str_id( "f_table" )
     };
     static const regional_site_style pacific = {
         ter_str_id( "t_wood_wall_brown" ), ter_str_id( "t_linoleum_gray" ),
-        ter_str_id( "t_tree_oregon_white_oak" ), furn_str_id( "f_rack_wood" ),
+        furn_str_id( "f_rack_wood" ),
         furn_str_id( "f_table_fancy" )
     };
     static const regional_site_style prairie = {
         ter_str_id( "t_wood_wall_r" ), ter_str_id( "t_linoleum_gray" ),
-        ter_str_id( "t_tree_cottonwood" ), furn_str_id( "f_rack" ), furn_str_id( "f_table" )
+        furn_str_id( "f_rack" ), furn_str_id( "f_table" )
     };
     static const regional_site_style southern = {
         ter_str_id( "t_wood_wall_w" ), ter_str_id( "t_linoleum_white" ),
-        ter_str_id( "t_tree_southern_live_oak" ), furn_str_id( "f_rack_wood" ),
+        furn_str_id( "f_rack_wood" ),
         furn_str_id( "f_table_fancy" )
     };
     static const regional_site_style southwest = {
         ter_str_id( "t_adobe_brick_wall" ), ter_str_id( "t_linoleum_gray" ),
-        ter_str_id( "t_tree_netleaf_oak" ), furn_str_id( "f_rack_wood" ), furn_str_id( "f_table" )
+        furn_str_id( "f_rack_wood" ), furn_str_id( "f_table" )
     };
     static const regional_site_style eastern = {
         ter_str_id( "t_brick_wall" ), ter_str_id( "t_linoleum_white" ),
-        ter_str_id( "t_tree_maple" ), furn_str_id( "f_rack" ), furn_str_id( "f_table_fancy" )
+        furn_str_id( "f_rack" ), furn_str_id( "f_table_fancy" )
     };
     const std::string_view region = north_america::jurisdiction_at( pos );
     const overmap_special_id house = north_america::regional_house_for( region );
@@ -7060,7 +7058,8 @@ void dress_atlas_site( mapgendata &dat, std::string_view id )
     static const furn_str_id furn_f_rack( "f_rack" );
     static const furn_str_id furn_f_table( "f_table" );
     const point_abs_ms origin = project_to<coords::ms>( dat.pos().xy() );
-    const regional_site_style &style = site_style_at( origin );
+    const regional_site_style *style = street ? nullptr : &site_style_at( origin );
+    std::optional<ter_id> street_tree;
     map &here = dat.m;
     constexpr int width = 2 * SEEX;
     constexpr int height = 2 * SEEY;
@@ -7068,16 +7067,16 @@ void dress_atlas_site( mapgendata &dat, std::string_view id )
         for( int x = 0; x < width; ++x ) {
             const point_bub_ms p( x, y );
             const ter_id ground = here.ter( p );
-            if( !street ) {
+            if( style ) {
                 if( ground == ter_t_wall_wood ) {
-                    here.ter_set( p, style.siding.id() );
+                    here.ter_set( p, style->siding.id() );
                 } else if( diner && ( ground == ter_t_linoleum_white || ground == ter_t_linoleum_gray ) ) {
-                    here.ter_set( p, style.diner_floor.id() );
+                    here.ter_set( p, style->diner_floor.id() );
                 }
                 if( farm && here.furn( p ) == furn_f_rack ) {
-                    here.furn_set( p, style.farm_storage.id() );
+                    here.furn_set( p, style->farm_storage.id() );
                 } else if( diner && here.furn( p ) == furn_f_table ) {
-                    here.furn_set( p, style.diner_table.id() );
+                    here.furn_set( p, style->diner_table.id() );
                 }
                 continue;
             }
@@ -7104,7 +7103,13 @@ void dress_atlas_site( mapgendata &dat, std::string_view id )
                     here.ter( p + inward + along * 2 ) == ter_t_sidewalk &&
                     here.ter( p + inward - along * 2 ) == ter_t_sidewalk &&
                     here.has_flag_ter( ter_furn_flag::TFLAG_ROAD, edge ) && here.ter( edge ) != ter_t_zebra ) {
-                    here.ter_set( p, style.street_tree.id() );
+                    if( !street_tree ) {
+                        street_tree = north_america::street_tree_at( dat.pos().xy() );
+                    }
+                    if( street_tree->is_null() ) {
+                        return;
+                    }
+                    here.ter_set( p, *street_tree );
                     break;
                 }
             }

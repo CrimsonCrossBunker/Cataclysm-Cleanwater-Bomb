@@ -32,7 +32,7 @@
       "fill_ter": "t_grass",
       "terrain": {".": "t_grass", " ": "t_floor", "b": "t_floor", "d": "t_floor", "t": "t_floor", "c": "t_floor", "T": "t_floor", "h": "t_floor", "C": "t_floor", "S": "t_floor", "u": "t_floor", "#": "t_brick_wall", "W": "t_window_domestic", "p": "t_sidewalk", "+": "t_door_c"},
       "furniture": {"b": "f_bed", "d": "f_dresser", "t": "f_desk", "T": "f_table", "h": "f_chair", "C": "f_counter", "S": "f_sink", "u": "f_toilet", "c": "f_chair"},
-      "items": {"b": {"item": "bed", "chance": 45}, "d": {"item": "dresser", "chance": 60}, "t": {"item": "office", "chance": 45}}
+      "items": {"b": {"item": "bed", "chance": 45}, "d": [ { "item": "dresser", "chance": 100, "repeat": [ 2, 4 ] }, { "item": "bedroom", "chance": 40 }, { "item": "bags", "chance": 10 } ], "t": {"item": "office", "chance": 45}}
     }
   },
   {
@@ -101,6 +101,107 @@
       "terrain": {".": "t_grass", "p": "t_sidewalk", "T": "t_tree_young"},
       "furniture": {"b": "f_bench"},
       "fill_ter": "t_grass"
+    }
+  },
+  {
+    "type": "mapgen",
+    "om_terrain": "atlas_campus_dorm_court",
+    "object": {
+      "rows": [
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "......t..Lpppp...t......",
+        "..........pppp..........",
+        "..........pppp..........",
+        ".......b..pppp..b.......",
+        "..........pppp..........",
+        "pppppppppppppppppppppppp",
+        "pppppppppppppppppppppppp",
+        "pppppppppppppppppppppppp",
+        "pppppppppppppppppppppppp",
+        "..........pppp..........",
+        ".......rr.pppp.rr.......",
+        "..........pppp..........",
+        "..........pppp..........",
+        "......t...ppppL..t......",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp.........."
+      ],
+      "terrain": { ".": "t_grass", "p": "t_sidewalk", "t": "t_tree_young", "b": "t_grass", "r": "t_sidewalk", "L": "t_sidewalk" },
+      "furniture": { "b": "f_bench", "r": "f_bike_rack", "L": "f_street_light" }
+    }
+  },
+  {
+    "type": "mapgen",
+    "om_terrain": "atlas_campus_gate",
+    "object": {
+      "rows": [
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "........r.pppp.r........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "wwwwwwwwPPggggPPwwwwwwww",
+        "pppppppppppppppppppppppp",
+        "pppppppppppppppppppppppp",
+        "pppppppppppppppppppppppp",
+        "..........pppp..........",
+        "........L.pppp.L........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp.........."
+      ],
+      "terrain": { ".": "t_grass", "p": "t_sidewalk", "r": "t_sidewalk", "L": "t_sidewalk", "w": "t_rock_wall", "P": "t_brick_wall", "g": "t_gate_metal_o" },
+      "furniture": { "r": "f_bike_rack", "L": "f_street_light" }
+    }
+  },
+  {
+    "type": "mapgen",
+    "om_terrain": "atlas_campus_perimeter",
+    "object": {
+      "rows": [
+        "........................",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "..........pppp..........",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "wwwwwwwwwwwwwwwwwwwwwwww",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................"
+      ],
+      "terrain": { ".": "t_grass", "p": "t_sidewalk", "w": "t_rock_wall" }
     }
   }
 ]

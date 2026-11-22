@@ -18,6 +18,7 @@
 #include "cata_utility.h"
 #include "climate_seasons.h"
 #include "coordinates.h"
+#include "flag.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "iexamine.h"
@@ -28,8 +29,10 @@
 #include "north_america.h"
 #include "north_america_elevation.h"
 #include "north_america_soil.h"
+#include "omdata.h"
 #include "options.h"
 #include "overmap_ui.h"
+#include "overmapbuffer.h"
 #include "path_info.h"
 #include "point.h"
 #include "regional_climate.h"
@@ -71,15 +74,19 @@ double crop_climate_profile::heat_units( double low, double high ) const
 
 std::optional<time_point> field_crop::sowing_date( time_point when ) const
 {
-    constexpr double days_in_calendar = 365;
+    constexpr int calendar_days = regional_climate::model_year_days;
     const time_duration year = calendar::year_length();
+    const auto day_offset = [year]( int day ) {
+        return time_duration::from_turns( std::lround(
+                                              to_turns<double>( year ) * day / calendar_days ) );
+    };
     const time_duration date = ( time_past_new_year( when ) + year ) % year;
-    time_point planted = when - date + year * ( planting_day / days_in_calendar );
+    time_point planted = when - date + day_offset( planting_day );
     if( planted > when ) {
         planted -= year;
     }
-    const int field_season = ( harvest_day - planting_day + 365 ) % 365 + 1;
-    return when - planted < year * ( field_season / days_in_calendar ) ?
+    const int field_season = ( harvest_day - planting_day + calendar_days ) % calendar_days + 1;
+    return when - planted < day_offset( field_season ) ?
            std::optional<time_point>( planted ) : std::nullopt;
 }
 
@@ -102,15 +109,16 @@ int crop_calendar_day( const JsonValue &value )
     if( month < 1 || month > 12 || day < 1 || day > month_lengths[month - 1] ) {
         value.throw_error( "Expected a planting or harvest date in MMDD form" );
     }
-    int result = day - 1;
-    for( int i = 0; i < month - 1; ++i ) {
-        result += month_lengths[i];
-    }
-    return result;
+    const int quarter = ( month - 1 ) / 3;
+    const int within_quarter = ( month - 1 ) % 3;
+    constexpr std::array<int, 3> month_start = { 0, 31, 61 };
+    return quarter * 91 + month_start[within_quarter] +
+           std::min( day, within_quarter == 0 ? 31 : 30 ) - 1;
 }
 } // namespace
 
-std::optional<field_crop> regional_field_crop( std::string_view region, unsigned field_roll )
+std::optional<field_crop> regional_field_crop( std::string_view region, unsigned field_roll,
+        const itype_id &existing_seed )
 {
     static const auto profiles = [] {
         std::unordered_map<std::string, std::vector<weighted_crop>> result;
@@ -142,6 +150,13 @@ std::optional<field_crop> regional_field_crop( std::string_view region, unsigned
     const auto options = profiles.find( std::string( region ) );
     if( options == profiles.end() || options->second.empty() ) {
         return std::nullopt;
+    }
+    if( !existing_seed.is_null() ) {
+        const auto match = std::find_if( options->second.begin(), options->second.end(),
+        [&]( const weighted_crop & choice ) {
+            return choice.crop.seed == existing_seed;
+        } );
+        return match == options->second.end() ? std::nullopt : std::optional<field_crop>( match->crop );
     }
     unsigned total = 0;
     for( const weighted_crop &choice : options->second ) {
@@ -194,7 +209,8 @@ crop_weather_cell &cell_at( const tripoint_abs_omt &cell, const weather_generato
     const weather_manager &weather = get_weather_const();
     const auto current = std::make_tuple( g->get_seed(), &generator, calendar::year_length(),
                                           get_option<std::string>( "ETERNAL_WEATHER" ), weather.weather_override,
-                                          weather.forced_temperature, weather.climate_origin );
+                                          weather.forced_temperature, weather.climate_origin,
+                                          north_america::active() );
     static auto previous = current;
     if( previous != current ) {
         cells.clear();
@@ -208,7 +224,11 @@ crop_weather_cell &cell_at( const tripoint_abs_omt &cell, const weather_generato
         cells.clear();
     }
     crop_weather_cell &sample = cells[cell];
-    sample.normals = generator.climate_at( project_to<coords::ms>( cell ) );
+    const tripoint_abs_ms center = project_to<coords::ms>( cell ) + point( 384, 384 );
+    sample.normals = north_america::active() ?
+                     regional_climate::at( north_america::location( center.xy() ),
+                                           north_america::elevation_active() ) :
+                     generator.climate_at( center );
     return sample;
 }
 
@@ -239,10 +259,7 @@ const crop_day &sample_day( const tripoint_abs_ms &pos, time_point date,
     const std::string eternal = get_option<std::string>( "ETERNAL_WEATHER" );
     const weather_type_id forced = field_history ? WEATHER_NULL :
                                    eternal == "normal" ? weather.weather_override : weather_type_id( eternal );
-    const auto atlas_normals = field_history && !cached.normals && north_america::active() ?
-                               regional_climate::at( north_america::location( location.xy() ),
-                                       north_america::elevation_active() ) : std::nullopt;
-    const auto &normals = atlas_normals ? atlas_normals : cached.normals;
+    const auto &normals = cached.normals;
     // For pregame fields, use the local precipitation normal rather than the
     // current weather override or a particular roll of the storm model.
     std::optional<double> historical_rate;
@@ -253,7 +270,10 @@ const crop_day &sample_day( const tripoint_abs_ms &pos, time_point date,
         const auto normal = regional_climate::temperature_for_day( *normals, model_day );
         const double days_in_month = ( normal.month % 3 == 0 ? 31.0 : 30.0 ) *
                                      to_days<double>( year ) / model_days;
-        historical_rate = normals->months[normal.month].precipitation_mm / ( days_in_month * 24 );
+        // Partition the monthly normal into rain and snow from the local seasonal temperature.
+        const double rain_fraction = std::clamp( ( normal.mean_c + 1.0 ) / 4.0, 0.0, 1.0 );
+        historical_rate = rain_fraction * normals->months[normal.month].precipitation_mm /
+                          ( days_in_month * 24 );
     }
     crop_day result{ 100, -100, {} };
     for( int hour = 0; hour < 24; ++hour ) {
@@ -265,11 +285,9 @@ const crop_day &sample_day( const tripoint_abs_ms &pos, time_point date,
             result.low = std::min( result.low, c );
             result.high = std::max( result.high, c );
         }
-        if( c > 1 ) {
-            if( historical_rate ) {
-                result.rain[hour] = *historical_rate;
-                continue;
-            }
+        if( historical_rate ) {
+            result.rain[hour] = *historical_rate;
+        } else if( c > 1 ) {
             if( forced == WEATHER_NULL && sample.climate_precipitation_mm_per_hour ) {
                 result.rain[hour] = *sample.climate_precipitation_mm_per_hour;
                 continue;
@@ -408,13 +426,28 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
                                   0.0, capacity );
     time_point start = iexamine::get_plant_last_water_check( seed );
     const time_point history_end = calendar::start_of_game;
-    // Earlier atlas saves kept the date on the seed item when it was after turn zero.
-    const bool field_crop = seed.has_var( "crop_field_sown" ) ||
-                            ( p.z() == 0 && seed.birthday() < calendar::start_of_cataclysm &&
-                              north_america::active() );
-    const time_point sown = time_point::from_turn( static_cast<int>(
-                                seed.get_var( "crop_field_sown", to_turn<int>( seed.birthday() ) ) ) );
-    if( !seed.has_var( "seed_last_water_check" ) ) {
+    const tripoint_abs_ms position = here.get_abs( p );
+    const bool had_field_date = seed.has_var( "crop_field_sown" );
+    time_point sown = time_point::from_turn( static_cast<int>(
+                          seed.get_var( "crop_field_sown", to_turn<int>( seed.birthday() ) ) ) );
+    const time_point previous_sowing = sown;
+    bool field_crop = had_field_date;
+    const bool repair_history = !seed.has_var( "crop_field_history_v2" );
+    if( repair_history && p.z() == 0 && north_america::active() &&
+        ( had_field_date || ( !seed.has_flag( json_flag_HIDDEN_ITEM ) &&
+                              ( seed.birthday() < calendar::start_of_cataclysm ||
+                                ( seed.birthday() == calendar::start_of_cataclysm &&
+                                  overmap_buffer.ter_existing( project_to<coords::omt>( position ) )->get_travel_cost_type() ==
+                                  oter_travel_cost_type::crop_field ) ) ) ) ) {
+        const auto crop = regional_field_crop( north_america::jurisdiction_at( position.xy() ), 0,
+                                               seed.typeId() );
+        if( const auto date = crop ? crop->sowing_date( calendar::start_of_cataclysm ) : std::nullopt ) {
+            sown = *date;
+        }
+        seed.set_var( "crop_field_sown", to_turn<int>( sown ) );
+        field_crop = true;
+    }
+    if( !seed.has_var( "seed_last_water_check" ) || start < sown ) {
         start = sown;
     }
     const auto interval_end = [field_crop, history_end]( time_point from, time_point limit ) {
@@ -430,7 +463,6 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     if( start > calendar::turn ) {
         return time_duration::from_turns( effective );
     }
-    const tripoint_abs_ms position = here.get_abs( p );
     const time_point end = finish_interval ? calendar::turn :
                            calendar::turn - crop_time_of_day( calendar::turn ) % 1_hours;
     const double maturity_turns = to_turns<double>( maturity );
@@ -439,28 +471,37 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     double growing_time = seed.get_var( "crop_growing_time", effective / maturity_turns );
     double sampled_rain = seed.get_var( "crop_sampled_rain_mm", 0.0 );
     double degree_days = seed.get_var( "crop_degree_days", 0.0 );
-    if( field_crop && !seed.has_var( "crop_field_history_recorded" ) ) {
-        // Repair fields that already advanced their checkpoint without recording rain.
-        // Keep existing growth and irrigation, and never add to a populated record.
-        const bool missing_rain = sampled_rain == 0;
-        const bool missing_heat = degree_days == 0;
-        if( missing_rain || missing_heat ) {
-            const time_point recorded_until = std::min( start, history_end );
+    if( field_crop && repair_history ) {
+        // Backfill an empty ledger. When a calendar correction moves sowing earlier, add
+        // only the newly included days to a ledger that already contains weather.
+        const auto backfill = [&]( bool rain, bool heat, time_point recorded_until ) {
             for( time_point cursor = sown; cursor < recorded_until; ) {
                 const time_duration elapsed = crop_time_of_day( cursor );
                 const time_duration step = std::min( recorded_until - cursor, 1_days - elapsed );
                 const crop_day &day = sample_day( position, cursor - elapsed, true );
-                if( missing_rain ) {
-                    sampled_rain += crop_rain_for_interval( day, elapsed, step );
+                if( rain ) {
+                    const double mm = crop_rain_for_interval( day, elapsed, step );
+                    sampled_rain += mm;
+                    moisture = std::min( capacity, moisture +
+                                         mm * soil.infiltration * std::exp( -to_days<double>( start - cursor ) / 6.0 ) );
                 }
-                if( missing_heat ) {
+                if( heat ) {
                     degree_days += crop_heat_fraction( here, p, climate, day, false ) *
                                    to_days<double>( step ) * climate.degree_days;
                 }
                 cursor += step;
             }
+        };
+        const bool missing_rain = sampled_rain <= 0;
+        const bool missing_heat = degree_days <= 0;
+        const time_point recorded_until = std::min( start, history_end );
+        if( missing_rain || missing_heat ) {
+            backfill( missing_rain, missing_heat, recorded_until );
         }
-        seed.set_var( "crop_field_history_recorded", true );
+        if( sown < previous_sowing && ( !missing_rain || !missing_heat ) ) {
+            backfill( !missing_rain, !missing_heat, std::min( recorded_until, previous_sowing ) );
+        }
+        seed.set_var( "crop_field_history_v2", true );
     }
     time_point sampled_date = start - 1_days;
     bool sampled_history = false;
