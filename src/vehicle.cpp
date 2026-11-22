@@ -5934,7 +5934,7 @@ void vehicle::consume_fuel( map &here, int load, bool idling )
         //do this as a function of current load
         // But only if the player is actually there!
         int eff_load = load / 10;
-        int mod = 4 * st; // strain
+        int mod = 4 * strain_now; // strain
         const int base_staminaRegen = static_cast < int >
                                       ( get_option < float >( "PLAYER_BASE_STAMINA_REGEN_RATE" ) );
         const int actual_staminaRegen = static_cast < int >( base_staminaRegen *

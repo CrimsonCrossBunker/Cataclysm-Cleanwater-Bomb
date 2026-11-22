@@ -22,7 +22,7 @@
     "looks_like": "park",
     "sym": "U",
     "color": "green",
-    "see_cost": "normal",
+    "see_cost": "medium",
     "flags": [ "NO_ROTATE" ]
   }
 ]
