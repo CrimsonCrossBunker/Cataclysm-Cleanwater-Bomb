@@ -50,29 +50,41 @@ extern "C" {
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "achievement.h"
+#include "addiction.h"
 #include "ammo.h"
 #include "ascii_art.h"
+#include "bionics.h"
+#include "bodypart.h"
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
 #include "character_modifier.h"
 #include "condition.h"
 #include "construction.h"
+#include "construction_group.h"
+#include "damage.h"
 #include "dialogue.h"
 #include "enum_conversions.h"
 #include "enums.h"
 #include "native_file_path.h"
 #include "fault.h"
 #include "field_type.h"
+#include "flag.h"
+#include "gates.h"
 #include "generic_factory.h"
 #include "harvest.h"
+#include "init.h"
 #include "item_action.h"
 #include "item_factory.h"
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
 #include "magic.h"
+#include "magic_enchantment.h"
+#include "magic_ter_furn_transform.h"
+#include "magic_type.h"
 #include "math_parser_type.h"
 #include "martialarts.h"
+#include "material.h"
 #include "map_extras.h"
 #include "mapdata.h"
 #include "mapgen.h"
@@ -81,11 +93,14 @@ extern "C" {
 #include "mission.h"
 #include "monfaction.h"
 #include "monstergenerator.h"
+#include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
 #include "npc_class.h"
 #include "omdata.h"
 #include "overmap.h"
+#include "overmap_connection.h"
+#include "overmap_location.h"
 #include "output.h"
 #include "profession.h"
 #include "proficiency.h"
@@ -94,11 +109,15 @@ extern "C" {
 #include "regional_settings.h"
 #include "scenario.h"
 #include "start_location.h"
+#include "subbodypart.h"
 #include "trap.h"
 #include "veh_type.h"
 #include "vehicle_group.h"
 #include "vehicle_part_location.h"
+#include "vitamin.h"
 #include "weakpoint.h"
+#include "weather_gen.h"
+#include "weather_type.h"
 #include "widget.h"
 #include "worldfactory.h"
 #include <functional>
@@ -923,11 +942,14 @@ void write_static_singular_text( JsonOut &json, const char *field, const sol::ob
         return;
     }
     const detail::authored_text text = detail::read_singular_text( value, {}, label );
-    if( text.translated && text.translated->context ) {
+    if( text.translated ) {
         json.member( field );
         json.start_object();
         json.member( "str", text.raw );
-        json.member( "ctxt", *text.translated->context );
+        if( text.translated->context ) {
+            json.member( "ctxt", *text.translated->context );
+        }
+        json.member( "//NOLINT(cata-text-style)", "lua-content-text" );
         json.end_object();
     } else {
         json.member( field, text.raw );
@@ -1803,6 +1825,7 @@ void write_item_text_value( JsonOut &json, const char *field, const sol::object 
     if( text.context ) {
         json.member( "ctxt", *text.context );
     }
+    json.member( "//NOLINT(cata-text-style)", "lua-content-text" );
     json.end_object();
 }
 
@@ -8167,11 +8190,66 @@ bool apply_prepared_content( std::string &error )
         error.clear();
         return true;
     }
-    // JSON items and recipes may still be waiting for parents declared later.
-    // Resolve native inheritance before any Lua transaction takes its snapshots;
-    // leave abstract parents and unresolved dependencies for finalization.
+    // JSON definitions may still be waiting for parents declared later across
+    // files or mods. Resolve available native inheritance before any Lua
+    // transaction takes its snapshots or validates engine state; leave abstract
+    // parents and unresolved cross-mod dependencies for finalization.
     item_controller->get_generic_factory().resolve_deferred();
     recipe_dictionary::resolve_deferred();
+    detail::json_flag_registry().resolve_deferred();
+    detail::material_registry().resolve_deferred();
+    detail::vitamin_registry().resolve_deferred();
+    detail::damage_type_registry().resolve_deferred();
+    detail::body_part_registry().resolve_deferred();
+    detail::sub_body_part_registry().resolve_deferred();
+    detail::addiction_type_registry().resolve_deferred();
+    detail::fault_registry().resolve_deferred();
+    detail::fault_fix_registry().resolve_deferred();
+    detail::fault_group_registry().resolve_deferred();
+    detail::terrain_registry().resolve_deferred();
+    detail::furniture_registry().resolve_deferred();
+    detail::trap_registry().resolve_deferred();
+    detail::gate_registry().resolve_deferred();
+    detail::ter_furn_transform_registry().resolve_deferred();
+    detail::construction_group_registry().resolve_deferred();
+    detail::construction_registry().resolve_deferred();
+    detail::map_extra_registry().resolve_deferred();
+    detail::map_extra_collection_registry().resolve_deferred();
+    detail::overmap_terrain_type_registry().resolve_deferred();
+    detail::overmap_location_registry().resolve_deferred();
+    detail::overmap_connection_registry().resolve_deferred();
+    detail::overmap_special_registry().resolve_deferred();
+    detail::start_location_registry().resolve_deferred();
+    detail::scenario_registry().resolve_deferred();
+    detail::vehicle_part_registry().resolve_deferred();
+    detail::vehicle_prototype_registry().resolve_deferred();
+    detail::monster_faction_registry().resolve_deferred();
+    detail::monster_type_registry().resolve_deferred();
+    detail::harvest_drop_type_registry().resolve_deferred();
+    detail::harvest_list_registry().resolve_deferred();
+    detail::mutation_registry().resolve_deferred();
+    detail::bionic_registry().resolve_deferred();
+    detail::profession_registry().resolve_deferred();
+    detail::proficiency_registry().resolve_deferred();
+    detail::npc_class_registry().resolve_deferred();
+    detail::magic_type_registry().resolve_deferred();
+    detail::enchantment_registry().resolve_deferred();
+    detail::spell_registry().resolve_deferred();
+    detail::martialart_registry().resolve_deferred();
+    detail::ma_technique_registry().resolve_deferred();
+    detail::mission_type_registry().resolve_deferred();
+    detail::widget_registry().resolve_deferred();
+    detail::weather_type_registry().resolve_deferred();
+    detail::weather_generator_registry().resolve_deferred();
+    detail::forest_biome_component_registry().resolve_deferred();
+    detail::forest_biome_mapgen_registry().resolve_deferred();
+    detail::region_settings_ravine_registry().resolve_deferred();
+    detail::region_settings_terrain_furniture_registry().resolve_deferred();
+    detail::region_settings_registry().resolve_deferred();
+    detail::achievement_registry().resolve_deferred();
+    detail::character_modifier_registry().resolve_deferred();
+    detail::ascii_art_registry().resolve_deferred();
+    detail::weakpoint_set_registry().resolve_deferred();
     std::vector<std::shared_ptr<runtime>> applied;
     for( runtime_state &state : prepared_states ) {
         if( !validate_runtime( state.platform, true, error ) ) {

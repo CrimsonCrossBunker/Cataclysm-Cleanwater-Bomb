@@ -2539,7 +2539,12 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     cata::lua_platform::install_mapgen_service_api(
         services, runtime_generation, world_generation, require_read, require_write );
 
-    cata::lua_platform::install_value_type_api( lua, services, require_read );
+    const auto require_values = [weak]() {
+        if( weak.expired() ) {
+            throw std::runtime_error( "stale Platform runtime" );
+        }
+    };
+    cata::lua_platform::install_value_type_api( lua, services, require_values );
     cata::lua_platform::install_registry_api( lua, services, require_read, require_read );
     cata::lua_platform::install_time_api( services, require_read, require_write );
     cata::lua_platform::install_game_handle_api( lua, services, runtime_generation,

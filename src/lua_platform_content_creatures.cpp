@@ -1813,7 +1813,7 @@ struct sub_body_part_definition_handle {
     sub_body_part_definition_handle &unarmed_damage( const std::string &damage_type,
             const double amount ) {
         require_building_handle( token, *definition, "sub body part" );
-        if( damage_type.empty() || !std::isfinite( amount ) || amount < 0.0 ) {
+        if( damage_type.empty() || !std::isfinite( amount ) ) {
             throw std::runtime_error( "sub-body-part unarmed damage is invalid" );
         }
         definition->unarmed_damage[damage_type] = amount;
@@ -1915,7 +1915,7 @@ struct body_part_definition_handle {
                 const double amount, const sol::optional<double> &armor_penetration ) {
             require_building_handle( token, *definition, "body part" );
             const double penetration = armor_penetration.value_or( 0.0 );
-            if( damage_type.empty() || !std::isfinite( amount ) || amount < 0.0 ||
+            if( damage_type.empty() || !std::isfinite( amount ) ||
                 !std::isfinite( penetration ) || penetration < 0.0 ) {
                 throw std::runtime_error( "body-part unarmed damage is invalid" );
             }
@@ -3500,7 +3500,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
             throw std::runtime_error( "content transaction is no longer building" );
         }
     };
-    const auto each_string = [&require_building_transaction]( const sol::table & options,
+    const auto each_string = [require_building_transaction]( const sol::table & options,
     const char *key, const char *label, const auto & visitor ) {
         const sol::optional<sol::table> values =
             options.get<sol::optional<sol::table>>( key );
@@ -3517,7 +3517,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         require_building_transaction();
     };
-    const auto each_table = [&require_building_transaction]( const sol::table & options,
+    const auto each_table = [require_building_transaction]( const sol::table & options,
     const char *key, const char *label, const auto & visitor ) {
         const sol::optional<sol::table> values =
             options.get<sol::optional<sol::table>>( key );
@@ -4777,18 +4777,28 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown added wound '" + id + "'" );
                 }
             }
+            std::set<std::string> requirement_ids;
             std::vector<std::pair<std::string, std::int64_t>> scaled_requirements;
             scaled_requirements.reserve( definition.requirements.size() );
             for( const wound_fix_requirement_definition_data &requirement :
                  definition.requirements ) {
+                if( requirement.id.empty() || requirement.id.size() > 256 ||
+                    requirement.id.find( '\0' ) != std::string::npos ||
+                    requirement.count <= 0 || !fits_native_int( requirement.count ) ||
+                    !requirement_ids.insert( requirement.id ).second ) {
+                    throw std::runtime_error( "wound fix '" + definition.id +
+                                              "' has invalid requirement '" + requirement.id + "'" );
+                }
                 scaled_requirements.emplace_back( requirement.id, requirement.count );
             }
-            std::string requirement_error;
-            if( !index.validate_scaled_requirements ||
-                !index.validate_scaled_requirements(
-                    scaled_requirements, requirement_error ) ) {
-                throw std::runtime_error( "wound fix '" + definition.id + "' " +
-                                          requirement_error );
+            if( check_engine_state ) {
+                std::string requirement_error;
+                if( !index.validate_scaled_requirements ||
+                    !index.validate_scaled_requirements(
+                        scaled_requirements, requirement_error ) ) {
+                    throw std::runtime_error( "wound fix '" + definition.id + "' " +
+                                              requirement_error );
+                }
             }
         }
         for( const auto &entry : pimpl_->anatomies ) {
@@ -5081,7 +5091,7 @@ void creatures_content_transaction::impl::apply_foundations()
         mon_flag native;
         native.id = id;
         native.was_loaded = true;
-        detail::monster_flag_registry().insert( native );
+        detail::monster_flag_registry().restore( native );
     }
     if( !this->monster_flags.empty() ) {
         detail::monster_flag_registry().finalize();
@@ -5111,7 +5121,7 @@ void creatures_content_transaction::impl::apply_foundations()
         for( const std::string &trigger : source.placate ) {
             native.placate.set( io::string_to_enum<mon_trigger>( trigger ) );
         }
-        detail::species_registry().insert( native );
+        detail::species_registry().restore( native );
     }
     if( !this->species.empty() ) {
         detail::species_registry().finalize();
@@ -5158,7 +5168,7 @@ void creatures_content_transaction::impl::apply_foundations()
             }
         }
         native.rebuild_attitude_map();
-        detail::monster_faction_registry().insert( native );
+        detail::monster_faction_registry().restore( native );
     }
     if( !this->monster_factions.empty() ) {
         monfactions::finalize();
@@ -5267,7 +5277,7 @@ void creatures_content_transaction::impl::apply_behavior()
                 }, score.argument );
             }
         }
-        detail::behavior_registry().insert( native );
+        detail::behavior_registry().restore( native );
     }
     if( !this->behaviors.empty() ) {
         behavior::finalize();
@@ -5431,7 +5441,7 @@ void creatures_content_transaction::impl::apply_sub_body_part()
             native.unarmed_damage.add_damage( damage_type_id( damage_id ),
                                               static_cast<float>( amount ) );
         }
-        detail::sub_body_part_registry().insert( native ).finalize();
+        detail::sub_body_part_registry().restore( native ).finalize();
     }
     if( !this->sub_body_parts.empty() ) {
         detail::refresh_sub_body_part_similarity_cache();
@@ -5489,7 +5499,7 @@ void creatures_content_transaction::impl::apply_wound_type()
         for( const std::string &kind : source.forbidden_body_part_types ) {
             native.blacklist_body_part_types.push_back( io::string_to_enum<bp_type>( kind ) );
         }
-        detail::wound_type_registry().insert( native ).finalize();
+        detail::wound_type_registry().restore( native ).finalize();
     }
     if( !this->wound_types.empty() ) {
         detail::refresh_body_part_wound_cache();
@@ -5614,7 +5624,7 @@ void creatures_content_transaction::impl::apply_body_part()
                 static_cast<float>( quality.disable_fraction )
             } );
         }
-        body_part_type &installed = detail::body_part_registry().insert( native );
+        body_part_type &installed = detail::body_part_registry().restore( native );
         // The core null body part is installed before the game damage types.
         if( !damage_type::get_all().empty() ) {
             installed.finalize();
@@ -5640,7 +5650,7 @@ void creatures_content_transaction::impl::apply_anatomy()
         for( const std::string &part : entry.definition->parts ) {
             native.unloaded_bps.emplace_back( part );
         }
-        detail::anatomy_registry().insert( native ).finalize();
+        detail::anatomy_registry().restore( native ).finalize();
     }
     this->next_apply_phase = creatures_content_apply_phase::body_graph;
 }
@@ -5688,7 +5698,7 @@ void creatures_content_transaction::impl::apply_body_graph()
                        native.fill_sym : source_part.display_symbol;
             native.parts.emplace( source_part.symbol, std::move( part ) );
         }
-        detail::bodygraph_registry().insert( native ).finalize();
+        detail::bodygraph_registry().restore( native ).finalize();
     }
     this->next_apply_phase = creatures_content_apply_phase::field_type;
 }
@@ -5917,7 +5927,7 @@ void creatures_content_transaction::impl::apply_weakpoint_set()
         []( const weakpoint & lhs, const weakpoint & rhs ) {
             return lhs.coverage < rhs.coverage;
         } );
-        detail::weakpoint_set_registry().insert( native ).finalize();
+        detail::weakpoint_set_registry().restore( native ).finalize();
     }
     this->next_apply_phase = creatures_content_apply_phase::morale_type;
 }
@@ -5935,7 +5945,7 @@ void creatures_content_transaction::impl::apply_morale_type()
         native.src.emplace_back( id, mod_id( this->owner ) );
         native.text = entry.definition->text.native();
         native.permanent = entry.definition->permanent;
-        detail::morale_type_registry().insert( native );
+        detail::morale_type_registry().restore( native );
     }
     if( !this->morale_types.empty() ) {
         detail::morale_type_registry().finalize();
@@ -5969,7 +5979,7 @@ void creatures_content_transaction::impl::apply_disease_type()
         for( const std::string &body_part : source.affected_body_parts ) {
             native.affected_bodyparts.insert( bodypart_str_id( body_part ) );
         }
-        detail::disease_type_registry().insert( native );
+        detail::disease_type_registry().restore( native );
     }
     this->next_apply_phase = creatures_content_apply_phase::wound_fix;
 }
@@ -6011,7 +6021,7 @@ void creatures_content_transaction::impl::apply_wound_fix()
             native.requirement_refs.emplace_back(
                 requirement_id( requirement.id ), static_cast<int>( requirement.count ) );
         }
-        detail::wound_fix_registry().insert( native ).finalize();
+        detail::wound_fix_registry().restore( native ).finalize();
     }
     this->next_apply_phase = creatures_content_apply_phase::monster;
 
@@ -6108,7 +6118,7 @@ void creatures_content_transaction::impl::apply_monster()
         set_option( "decay", native.decay, source.decay.empty() ? harvest_id::NULL_ID() :
                        harvest_id( source.decay ) );
         set_option( "speed_description", native.speed_desc, speed_description_id( source.speed_description ) );
-        set_option( "death_drops", native.death_drops, source.death_drops.empty() ? item_group_id::NULL_ID() :
+        set_option( "death_drops", native.death_drops, source.death_drops.empty() ? item_group_id() :
                              item_group_id( source.death_drops ) );
         set_option( "volume_ml", native.volume, units::from_milliliter<std::int64_t>( source.volume_ml ) );
         set_option( "weight_grams", native.weight, units::from_gram<std::int64_t>( source.weight_grams ) );
@@ -6251,7 +6261,7 @@ void creatures_content_transaction::impl::apply_monster()
         for( const std::string &trigger : source.placate_triggers ) {
             native.placate.set( monster_triggers.at( trigger ) );
         }
-        mtype &inserted = registry.insert( native );
+        mtype &inserted = registry.restore( native );
         generator.finalize_lua_first_mtype_if_ready( inserted, loader.is_data_finalized() );
     }
     for( const auto &[id, handler] : this->monster_death_bindings ) {
@@ -6263,7 +6273,7 @@ void creatures_content_transaction::impl::apply_monster()
         this->monster_undo.emplace_back( native_id, native );
         native.mdeath_effect.lua_platform_mod = this->owner;
         native.mdeath_effect.lua_platform_handler = handler;
-        registry.insert( native );
+        registry.restore( native );
     }
     if( !this->monsters.empty() ) {
         if( !loader.is_data_finalized() ) {
@@ -6624,7 +6634,7 @@ void creatures_content_transaction::impl::apply_mutation()
             comfort.was_loaded = true;
             native.comfort.push_back( std::move( comfort ) );
         }
-        detail::mutation_registry().insert( native );
+        detail::mutation_registry().restore( native );
     }
 
     if( !this->mutations.empty() ) {

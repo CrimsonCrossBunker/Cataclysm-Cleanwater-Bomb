@@ -40,6 +40,7 @@ extern "C" {
 #include "game.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
+#include "lua_platform_content.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_items.h"
 #include "lua_platform_world.h"
@@ -413,6 +414,7 @@ camp_create_options read_camp_create_options(
         result.type.rfind( base_camps::prefix, 0 ) != 0 ||
         ( !oter_str_id( result.type ).is_valid() &&
           !oter_type_str_id( result.type ).is_valid() &&
+          !detail::overmap_terrain_type_is_pending( result.type ) &&
           !recipe_id( result.type ).is_valid() ) ) {
         throw std::invalid_argument(
             "services.camps.create options.type must be a valid Platform camp type" );

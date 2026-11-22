@@ -46,6 +46,10 @@ class world_content_transaction
                                         const std::string &phase,
                                         std::string &handler_id ) const;
         bool defines_overmap_terrain_type( const std::string &id ) const;
+        bool defines_overmap_terrain_exact( const std::string &id ) const;
+        bool defines_overmap_special( const std::string &id ) const;
+        bool defines_vehicle( const std::string &id ) const;
+        bool defines_npc_class( const std::string &id ) const;
         bool apply( std::string &error );
         bool validate_finalized( std::string &error ) const;
         void rollback();

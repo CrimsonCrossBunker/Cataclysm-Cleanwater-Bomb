@@ -12,6 +12,8 @@
 #include <cstring>
 #include <optional>
 #include <ostream>
+#include <string_view>
+#include <unordered_set>
 #include <vector>
 
 #include "cached_options.h"
@@ -94,12 +96,18 @@ namespace
 generic_factory<overmap_land_use_code> land_use_codes( "overmap land use codes" );
 generic_factory<oter_type_t> terrain_types( "overmap terrain type" );
 generic_factory<oter_t> terrains( "overmap terrain" );
+std::unordered_set<std::string> pending_oter_type_ids;
 
 } // namespace
 
 generic_factory<oter_type_t> &cata::lua_platform::detail::overmap_terrain_type_registry()
 {
     return terrain_types;
+}
+
+bool cata::lua_platform::detail::overmap_terrain_type_is_pending( std::string_view id )
+{
+    return pending_oter_type_ids.count( std::string( id ) ) != 0;
 }
 
 generic_factory<oter_t> &cata::lua_platform::detail::overmap_terrain_registry()
@@ -928,6 +936,19 @@ bool oter_t::has_connection( om_direction::type dir ) const
 void overmap_terrains::load( const JsonObject &jo, const std::string &src )
 {
     terrain_types.load( jo, src );
+    if( jo.has_string( "id" ) ) {
+        const std::string id = jo.get_string( "id" );
+        if( !terrain_types.is_valid( oter_type_str_id( id ) ) ) {
+            pending_oter_type_ids.insert( id );
+        }
+    } else if( jo.has_array( "id" ) ) {
+        for( JsonValue e : jo.get_array( "id" ) ) {
+            const std::string id = e.get_string();
+            if( !terrain_types.is_valid( oter_type_str_id( id ) ) ) {
+                pending_oter_type_ids.insert( id );
+            }
+        }
+    }
 }
 
 void overmap_terrains::check_consistency()
@@ -965,6 +986,7 @@ void overmap_terrains::check_consistency()
 void overmap_terrains::finalize()
 {
     terrain_types.finalize();
+    pending_oter_type_ids.clear();
     set_oter_ids();
 }
 
@@ -972,6 +994,7 @@ void overmap_terrains::reset()
 {
     terrain_types.reset();
     terrains.reset();
+    pending_oter_type_ids.clear();
 }
 
 const std::vector<oter_t> &overmap_terrains::get_all()

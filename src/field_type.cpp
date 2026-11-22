@@ -359,6 +359,12 @@ void field_type::finalize()
         wandering_field = fd_null;
     }
 
+    // should be the last operation for the type
+    processors = map_field_processing::processors_for_type( *this );
+}
+
+void field_type::check() const
+{
     for( const mtype_id &m_id : immune_mtypes ) {
         if( !m_id.is_valid() ) {
             debugmsg( "Invalid mtype_id %s in immune_mtypes for field %s.", m_id.c_str(), id.c_str() );
@@ -371,12 +377,6 @@ void field_type::finalize()
         }
     }
 
-    // should be the last operation for the type
-    processors = map_field_processing::processors_for_type( *this );
-}
-
-void field_type::check() const
-{
     if( fire_reaction.degrade_at < 0 || fire_reaction.degrade_at > 3 ||
         fire_reaction.clear_at < 0 || fire_reaction.clear_at > 3 ) {
         debugmsg( "Field type %s has fire reaction thresholds outside the range 0 to 3.",

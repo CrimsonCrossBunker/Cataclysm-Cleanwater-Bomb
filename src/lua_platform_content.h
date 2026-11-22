@@ -551,6 +551,7 @@ generic_factory<move_mode> &movement_mode_registry();
 std::vector<faction_template> &faction_template_registry();
 generic_factory<npc_class> &npc_class_registry();
 generic_factory<oter_type_t> &overmap_terrain_type_registry();
+bool overmap_terrain_type_is_pending( std::string_view id );
 generic_factory<oter_t> &overmap_terrain_registry();
 generic_factory<overmap_special> &overmap_special_registry();
 generic_factory<vpart_info> &vehicle_part_registry();

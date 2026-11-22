@@ -25,6 +25,7 @@ namespace
 {
 
 generic_factory<material_type> material_data( "material" );
+std::set<material_id> materials_using_default_burn_data;
 
 } // namespace
 
@@ -153,9 +154,21 @@ void material_type::load( const JsonObject &jsobj, std::string_view )
 
     mandatory( jsobj, was_loaded, "dmg_adj", _dmg_adj );
 
-    mat_burn_data default_burn_data;
-    default_burn_data.burn = _resistances.type_resist( damage_heat ) <= 0.f;
-    optional( jsobj, was_loaded, "burn_data", _burn_data, { default_burn_data } );
+    if( jsobj.has_member( "burn_data" ) ) {
+        materials_using_default_burn_data.erase( id );
+        optional( jsobj, was_loaded, "burn_data", _burn_data );
+    } else if( !was_loaded ) {
+        mat_burn_data default_burn_data;
+        if( damage_heat.is_valid() ) {
+            materials_using_default_burn_data.erase( id );
+            default_burn_data.burn = _resistances.type_resist( damage_heat ) <= 0.f;
+        } else {
+            const auto iter = _resistances.resist_vals.find( damage_heat );
+            default_burn_data.burn = iter == _resistances.resist_vals.end() || iter->second <= 0.f;
+            materials_using_default_burn_data.insert( id );
+        }
+        _burn_data = { default_burn_data };
+    }
 
     optional( jsobj, was_loaded, "fuel_data", fuel );
 
@@ -165,6 +178,9 @@ void material_type::load( const JsonObject &jsobj, std::string_view )
 void material_type::finalize()
 {
     finalize_damage_map( _resistances.resist_vals );
+    if( materials_using_default_burn_data.erase( id ) > 0 && _burn_data.size() == 1 ) {
+        _burn_data.front().burn = _resistances.type_resist( damage_heat ) <= 0.f;
+    }
 }
 
 void material_type::finalize_all()
@@ -405,6 +421,7 @@ void materials::check()
 void materials::reset()
 {
     material_data.reset();
+    materials_using_default_burn_data.clear();
 }
 
 material_list materials::get_all()

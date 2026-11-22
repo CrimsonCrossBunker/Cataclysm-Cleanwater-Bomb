@@ -152,6 +152,17 @@ static const crafting_category_id crafting_category_CC_FOOD( "CC_FOOD" );
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_bullet( "bullet" );
 
+namespace
+{
+struct deferred_material_weight_adjustment {
+    material_id original;
+    material_id replacement;
+    double mat_percent = 0.0;
+};
+std::map<itype_id, std::vector<deferred_material_weight_adjustment>>
+    pending_material_weight_adjustments;
+} // namespace
+
 static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
 static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
 
@@ -361,6 +372,19 @@ static bool load_min_max( std::pair<T, T> &pa, const JsonObject &obj, const std:
 
 void Item_factory::finalize_pre( itype &obj )
 {
+    const auto pending_it = pending_material_weight_adjustments.find( obj.id );
+    if( pending_it != pending_material_weight_adjustments.end() ) {
+        for( const deferred_material_weight_adjustment &adj : pending_it->second ) {
+            if( adj.original.is_valid() && adj.replacement.is_valid() ) {
+                const float density_percent = adj.replacement->density() / adj.original->density();
+                const units::mass material_weight = obj.weight * adj.mat_percent;
+                const units::mass weight_dif = material_weight * density_percent - material_weight;
+                obj.weight += weight_dif;
+            }
+        }
+        pending_material_weight_adjustments.erase( pending_it );
+    }
+
     //a gunmod slot needs a toolmod slot even if one wasn't loaded
     if( obj.gunmod && !obj.mod ) {
         obj.mod = cata::make_value<islot_mod>();
@@ -1683,6 +1707,7 @@ void Item_factory::finalize()
         finalize_pre( const_cast<itype &>( e ) );
         register_cached_uses( e );
     }
+    pending_material_weight_adjustments.clear();
 
     for( const itype &e : item_factory.get_all() ) {
         finalize_post( const_cast<itype &>( e ) );
@@ -4922,19 +4947,23 @@ void itype::replace_material( const material_id &original, const material_id &re
         double mat_percent = static_cast < double >( mat_portion ) / static_cast < double >
                              ( mat_portion_total );
 
-        float density_percent = replacement->density() / original->density();
-
         // add the portion for the replaced material
         materials[replacement] += mat_portion;
 
         // delete the old data
         materials.erase( original );
 
-        // change the weight relative
-        units::mass material_weight = original_weight * mat_percent;
-        units::mass weight_dif = material_weight * density_percent - material_weight;
+        if( original.is_valid() && replacement.is_valid() ) {
+            float density_percent = replacement->density() / original->density();
 
-        weight += weight_dif;
+            // change the weight relative
+            units::mass material_weight = original_weight * mat_percent;
+            units::mass weight_dif = material_weight * density_percent - material_weight;
+
+            weight += weight_dif;
+        } else {
+            pending_material_weight_adjustments[id].push_back( { original, replacement, mat_percent } );
+        }
     }
 
     // update the armor defs
@@ -5152,6 +5181,24 @@ void itype::load( const JsonObject &jo, std::string_view src )
         mandatory( jo, was_loaded, "abstract", id );
     } else {
         mandatory( jo, was_loaded, "id", id );
+    }
+
+    if( jo.has_member( "copy-from" ) ) {
+        if( jo.has_member( "weight" ) ) {
+            pending_material_weight_adjustments.erase( id );
+        } else {
+            const itype_id parent_id( jo.get_string( "copy-from" ) );
+            if( parent_id != id ) {
+                const auto parent_it = pending_material_weight_adjustments.find( parent_id );
+                if( parent_it != pending_material_weight_adjustments.end() ) {
+                    pending_material_weight_adjustments[id] = parent_it->second;
+                } else {
+                    pending_material_weight_adjustments.erase( id );
+                }
+            }
+        }
+    } else {
+        pending_material_weight_adjustments.erase( id );
     }
 
     // snippet_category should be loaded after def.id is determined
@@ -5381,6 +5428,7 @@ void Item_factory::clear()
     migrated_ammo.clear();
     migrated_magazines.clear();
     migrations.clear();
+    pending_material_weight_adjustments.clear();
 
     frozen = false;
 }

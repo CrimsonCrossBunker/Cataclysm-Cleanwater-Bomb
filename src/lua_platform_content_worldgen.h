@@ -4,9 +4,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     #include "lua_platform_sol.h"
@@ -30,6 +32,8 @@ struct worldgen_validation_index {
     std::set<std::string> weather_generator_ids;
     std::set<std::string> item_group_ids;
     std::set<std::string> overmap_connection_ids;
+    std::function<bool( std::string_view )> defines_overmap_terrain_type;
+    std::function<bool( std::string_view )> defines_overmap_special;
 };
 
 /**

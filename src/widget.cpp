@@ -67,6 +67,7 @@ namespace
 generic_factory<widget> widget_factory( "widgets" );
 // Generic factory copy-from may defer a definition until the entire data load finishes.
 std::vector<widget_clause::predicate> staged_widget_conditions;
+std::map<widget_id, std::vector<bodypart_str_id>> deferred_widget_bps;
 thread_local int hud_layout_render_depth = 0;
 
 class scoped_hud_layout_render
@@ -189,6 +190,7 @@ void widget::reset()
 {
     widget_factory.reset();
     staged_widget_conditions.clear();
+    deferred_widget_bps.clear();
 }
 
 const std::vector<widget> &widget::get_all()
@@ -671,19 +673,53 @@ void widget::load( const JsonObject &jo, const std::string_view source )
         platform_custom_range = {};
     }
 
+    if( jo.has_string( "copy-from" ) && !jo.has_string( "bodypart" ) &&
+        !jo.has_array( "bodyparts" ) ) {
+        const widget_id parent_id( jo.get_string( "copy-from" ) );
+        if( parent_id != id ) {
+            const auto parent_it = deferred_widget_bps.find( parent_id );
+            if( parent_it != deferred_widget_bps.end() ) {
+                deferred_widget_bps[id] = parent_it->second;
+            } else {
+                deferred_widget_bps.erase( id );
+            }
+        }
+    } else if( !jo.has_string( "copy-from" ) && !jo.has_string( "bodypart" ) &&
+               !jo.has_array( "bodyparts" ) ) {
+        deferred_widget_bps.erase( id );
+    }
+
     if( jo.has_string( "bodypart" ) ) {
         _bps.clear();
-        _bps.emplace( jo.get_string( "bodypart" ) );
+        const bodypart_str_id bp_str( jo.get_string( "bodypart" ) );
+        if( bp_str.is_valid() ) {
+            deferred_widget_bps.erase( id );
+            _bps.emplace( bp_str.id() );
+        } else {
+            deferred_widget_bps[id] = { bp_str };
+        }
     }
 
     if( jo.has_array( "bodyparts" ) ) {
         _bps.clear();
+        std::vector<bodypart_str_id> raw_bps;
+        bool all_valid = true;
         for( const JsonValue val : jo.get_array( "bodyparts" ) ) {
             if( !val.test_string() ) {
                 jo.throw_error_at( "bodyparts", "Invalid string value in bodyparts array" );
                 continue;
             }
-            _bps.emplace( val.get_string() );
+            const bodypart_str_id bp_str( val.get_string() );
+            all_valid = all_valid && bp_str.is_valid();
+            raw_bps.push_back( bp_str );
+        }
+        if( all_valid ) {
+            deferred_widget_bps.erase( id );
+            for( const bodypart_str_id &bp_str : raw_bps ) {
+                _bps.emplace( bp_str.id() );
+            }
+        } else {
+            deferred_widget_bps[id] = std::move( raw_bps );
         }
     }
 
@@ -1002,6 +1038,7 @@ void widget::finalize_inherited_fields_recursive( const widget_id &id,
 void widget::finalize_all()
 {
     widget_factory.finalize();
+    deferred_widget_bps.clear();
     staged_widget_conditions.clear();
 }
 
@@ -1010,6 +1047,14 @@ void widget::finalize_all()
 // NOLINTNEXTLINE(readability-make-member-function-const)
 void widget::finalize()
 {
+    const auto pending_it = deferred_widget_bps.find( id );
+    if( pending_it != deferred_widget_bps.end() ) {
+        _bps.clear();
+        for( const bodypart_str_id &bp_str : pending_it->second ) {
+            _bps.emplace( bp_str.id() );
+        }
+        deferred_widget_bps.erase( pending_it );
+    }
     if( _style == "sidebar" ) {
         widget::finalize_inherited_fields_recursive( getId(), _separator, _padding );
         widget::finalize_label_width_recursive( getId() );

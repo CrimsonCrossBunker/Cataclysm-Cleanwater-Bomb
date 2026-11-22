@@ -3984,6 +3984,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           definition.no_bonus + "'" );
             }
             if( check_engine_state && !definition.starting_vehicle.empty() &&
+                !index_defines( index.defines_vehicle, definition.starting_vehicle ) &&
                 !vproto_id( definition.starting_vehicle ).is_valid() ) {
                 throw std::runtime_error( "profession '" + definition.id +
                                           "' references unknown vehicle '" +
@@ -4036,7 +4037,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             for( const std::string &bionic : definition.cbms ) {
                 require_valid_id( bionic, "profession CBM" );
                 if( !unique.insert( bionic ).second ||
-                    ( check_engine_state && !bionic_id( bionic ).is_valid() ) ) {
+                    ( check_engine_state && !staged_bionic( bionic ) &&
+                      !bionic_id( bionic ).is_valid() ) ) {
                     throw std::runtime_error( "profession '" + definition.id +
                                               "' has an unknown or duplicate CBM '" + bionic + "'" );
                 }
@@ -4148,7 +4150,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 require_valid_id( spell, "profession spell" );
                 if( !fits_native_int( level ) || level < 0 ||
                     !unique.insert( spell ).second ||
-                    ( check_engine_state && !spell_id( spell ).is_valid() ) ) {
+                    ( check_engine_state && !staged_spell( spell ) &&
+                      !spell_id( spell ).is_valid() ) ) {
                     throw std::runtime_error( "profession '" + definition.id +
                                               "' has an unknown, duplicate, or invalid spell '" + spell + "'" );
                 }
@@ -4157,7 +4160,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             for( const std::string &mission : definition.missions ) {
                 require_valid_id( mission, "profession mission" );
                 if( !unique.insert( mission ).second ||
-                    ( check_engine_state && !mission_type_id( mission ).is_valid() ) ) {
+                    ( check_engine_state && !defines_mission_definition( mission ) &&
+                      !mission_type_id( mission ).is_valid() ) ) {
                     throw std::runtime_error( "profession '" + definition.id +
                                               "' has an unknown or duplicate mission '" + mission + "'" );
                 }
@@ -4463,13 +4467,14 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           "' references missing Lua handler '" + handler + "'" );
             }
         };
-        const auto validate_fake_spell = [check_engine_state](
+        const auto validate_fake_spell = [&staged_spell, check_engine_state](
         const std::string & owner, const enchantment_fake_spell_definition_data & spell ) {
             if( spell.spell.empty() || !fits_native_int( spell.level ) || spell.level < 0 ||
                 !fits_native_int( spell.trigger_once_in ) || spell.trigger_once_in <= 0 ||
                 ( spell.max_level &&
                   ( !fits_native_int( *spell.max_level ) || *spell.max_level < spell.level ) ) ||
-                ( check_engine_state && !spell_id( spell.spell ).is_valid() ) ) {
+                ( check_engine_state && !staged_spell( spell.spell ) &&
+                  !spell_id( spell.spell ).is_valid() ) ) {
                 throw std::runtime_error( "enchantment '" + owner +
                                           "' has an unknown or invalid fake spell '" +
                                           spell.spell + "'" );
@@ -4626,7 +4631,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             for( const std::string &mutation : definition.mutations ) {
                 require_valid_id( mutation, "enchantment mutation" );
                 if( !unique.insert( mutation ).second ||
-                    ( check_engine_state && !trait_id( mutation ).is_valid() ) ) {
+                    ( check_engine_state && !index_defines( index.defines_trait, mutation ) &&
+                      !trait_id( mutation ).is_valid() ) ) {
                     throw std::runtime_error( "enchantment '" + definition.id +
                                               "' has an unknown or duplicate mutation '" + mutation + "'" );
                 }
@@ -4660,7 +4666,10 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 if( modifier.load_skills ) {
                     std::set<std::string> skills;
                     for( const std::string &skill : *modifier.load_skills ) {
-                        if( !skill_id( skill ).is_valid() || !skills.insert( skill ).second ) {
+                        if( skill.empty() || !skills.insert( skill ).second ||
+                            ( check_engine_state &&
+                              !index_defines( index.defines_skill, skill ) &&
+                              !skill_id( skill ).is_valid() ) ) {
                             throw std::runtime_error( "enchantment '" + definition.id +
                                                       "' has an unknown or duplicate load skill '" + skill + "'" );
                         }
@@ -4828,8 +4837,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
         const auto proficiency_exists = [&staged_proficiency]( const std::string & id ) {
             return staged_proficiency( id ) || proficiency_id( id ).is_valid();
         };
-        const auto trait_exists = []( const std::string & id ) {
-            return trait_id( id ).is_valid();
+        const auto trait_exists = [&index_defines, &index]( const std::string & id ) {
+            return index_defines( index.defines_trait, id ) || trait_id( id ).is_valid();
         };
         const auto body_part_exists = [&staged_body_part]( const std::string & id ) {
             return staged_body_part( id ) || bodypart_str_id( id ).is_valid();
@@ -5126,6 +5135,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           "' references unknown field '" + definition.field + "'" );
             }
             if( definition.spell_class != "NONE" && check_engine_state &&
+                !index_defines( index.defines_trait, definition.spell_class ) &&
                 !trait_id( definition.spell_class ).is_valid() ) {
                 throw std::runtime_error( "spell '" + definition.id +
                                           "' references unknown spell class '" +
@@ -5142,6 +5152,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             if( energy && *energy == magic_energy_type::vitamin ) {
                 if( definition.energy_vitamin.empty() ||
                     ( check_engine_state &&
+                      !index_defines( index.defines_vitamin, definition.energy_vitamin ) &&
                       !vitamin_id( definition.energy_vitamin ).is_valid() ) ||
                     color_from_string( definition.energy_color,
                                        report_color_error::no ) == c_unset ) {
@@ -5168,6 +5179,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                      &definition.get_level_formula, &definition.exp_for_level_formula
                  } ) {
                 if( !formula->empty() && check_engine_state &&
+                    !index_defines( index.defines_math_function, *formula ) &&
                     !jmath_func_id( *formula ).is_valid() ) {
                     throw std::runtime_error( "spell '" + definition.id +
                                               "' references unknown progression formula '" +
@@ -5471,6 +5483,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           definition.item_group + "'" );
             }
             if( !definition.recruit_class.empty() && check_engine_state &&
+                !index_defines( index.defines_npc_class, definition.recruit_class ) &&
                 !npc_class_id( definition.recruit_class ).is_valid() ) {
                 throw std::runtime_error( "mission definition '" + definition.id +
                                           "' references unknown NPC class '" +
@@ -5491,7 +5504,9 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           definition.monster_species + "'" );
             }
             if( !definition.destination.empty() && check_engine_state &&
-                !oter_type_str_id( definition.destination ).is_valid() ) {
+                !index_defines( index.defines_overmap_terrain_type, definition.destination ) &&
+                !oter_type_str_id( definition.destination ).is_valid() &&
+                !detail::overmap_terrain_type_is_pending( definition.destination ) ) {
                 throw std::runtime_error( "mission definition '" + definition.id +
                                           "' references unknown destination '" +
                                           definition.destination + "'" );
@@ -5836,7 +5851,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
             if( *energy == magic_energy_type::vitamin ) {
                 if( definition.vitamin.empty() ||
-                    ( !index_defines( index.defines_vitamin, definition.vitamin ) &&
+                    ( check_engine_state &&
+                      !index_defines( index.defines_vitamin, definition.vitamin ) &&
                       !vitamin_id( definition.vitamin ).is_valid() ) ) {
                     throw std::runtime_error( "magic type '" + definition.id +
                                               "' needs a valid vitamin energy source" );
@@ -6330,7 +6346,7 @@ void character_content_transaction::impl::apply_profession()
             native.lua_platform_start_handler = source.start_handler;
         }
         native.src.emplace_back( id, mod_id( this->owner ) );
-        detail::profession_registry().insert( native );
+        detail::profession_registry().restore( native );
     }
     for( const profession_patch &patch : this->profession_patches ) {
         const profession &previous = patch.target.obj();
@@ -6364,7 +6380,7 @@ void character_content_transaction::impl::apply_profession_group()
         for( const std::string &profession : entry.definition->professions ) {
             native.profession_list.emplace_back( profession );
         }
-        detail::profession_group_registry().insert( native );
+        detail::profession_group_registry().restore( native );
     }
     if( !this->profession_groups.empty() ) {
         detail::profession_group_registry().finalize();
@@ -6465,7 +6481,7 @@ void character_content_transaction::impl::apply_widget()
         native._label_width = native._label.empty() ||
                               native._flags.count( json_flag_W_LABEL_NONE ) != 0 ?
                               0 : utf8_width( native._label.translated() );
-        detail::widget_registry().insert( native );
+        detail::widget_registry().restore( native );
     }
     for( const sidebar_extension &extension : this->sidebar_extensions ) {
         const widget &previous = extension.target.obj();
@@ -6688,7 +6704,7 @@ void character_content_transaction::impl::apply_enchantment()
             }
             native.special_vision_vector.push_back( std::move( value ) );
         }
-        detail::enchantment_registry().insert( native );
+        detail::enchantment_registry().restore( native );
     }
     if( !this->enchantments.empty() ) {
         detail::enchantment_registry().finalize();
@@ -6839,7 +6855,7 @@ void character_content_transaction::impl::apply_bionic()
                            native.power_activate > 0_kJ ||
                            native.spell_on_activate ||
                            native.charge_time > 0_turns;
-        detail::bionic_registry().insert( native );
+        detail::bionic_registry().restore( native );
     }
     if( !this->bionics.empty() ) {
         detail::bionic_registry().finalize();
@@ -7060,7 +7076,7 @@ void character_content_transaction::impl::apply_spell()
         native.base_casting_time = make_stat( "base_casting_time" );
         native.casting_time_increment = make_stat( "casting_time_increment" );
         native.final_casting_time = make_stat( "final_casting_time" );
-        detail::spell_registry().insert( native );
+        detail::spell_registry().restore( native );
     }
     if( !this->spells.empty() ) {
         detail::spell_registry().finalize();
@@ -7191,7 +7207,7 @@ void character_content_transaction::impl::apply_mission_definition()
                            owner, mission_id, "goal", handler, dialogue ).value_or( false );
             };
         }
-        detail::mission_type_registry().insert( native );
+        detail::mission_type_registry().restore( native );
     }
     if( !this->mission_definitions.empty() ) {
         detail::mission_type_registry().finalize();
@@ -7329,7 +7345,7 @@ void character_content_transaction::impl::apply_technique()
             ( entry.operation == definition_operation::upsert && id.is_valid() ) ) {
             detail::ma_technique_registry().restore( native );
         } else {
-            detail::ma_technique_registry().insert( native );
+            detail::ma_technique_registry().restore( native );
         }
     }
     if( !this->techniques.empty() ) {
@@ -7387,7 +7403,7 @@ void character_content_transaction::impl::apply_martial_art()
             native.set_lua_phase_handler( phase, this->owner, handler );
         }
         native.was_loaded = true;
-        detail::martialart_registry().insert( native );
+        detail::martialart_registry().restore( native );
     }
     for( const technique_registration &entry : this->techniques ) {
         for( const std::string &style : entry.definition->styles ) {
@@ -7429,7 +7445,7 @@ void character_content_transaction::impl::apply_magic_type()
         native.failure_exp_percent = source.failure_experience_fraction;
         native.lua_failure_mod = this->owner;
         native.lua_failure_handler = source.failure_handler;
-        detail::magic_type_registry().insert( native );
+        detail::magic_type_registry().restore( native );
     }
     if( !this->magic_types.empty() ) {
         detail::magic_type_registry().finalize();
@@ -7470,7 +7486,7 @@ void character_content_transaction::impl::apply_movement_mode()
             native.change_messages_success[steed] = messages.success.native();
             native.change_messages_fail[steed] = messages.failure.native();
         }
-        detail::movement_mode_registry().insert( native );
+        detail::movement_mode_registry().restore( native );
     }
     if( !this->movement_modes.empty() ) {
         detail::refresh_movement_mode_registry();
@@ -8507,6 +8523,13 @@ bool character_content_transaction::was_applied() const
         return registration_id_exists( pimpl_->member, id ); \
     }
 CATA_CHARACTER_DEFINES( defines_profession, professions )
+bool character_content_transaction::defines_hobby( const std::string_view id ) const
+{
+    return std::any_of( pimpl_->professions.begin(), pimpl_->professions.end(),
+    [id]( const profession_registration & entry ) {
+        return entry.definition->id == id && entry.definition->subtype == "hobby";
+    } );
+}
 CATA_CHARACTER_DEFINES( defines_profession_group, profession_groups )
 CATA_CHARACTER_DEFINES( defines_widget, widgets )
 CATA_CHARACTER_DEFINES( defines_enchantment, enchantments )
@@ -8602,6 +8625,7 @@ bool character_content_transaction::was_applied() const
 #define CATA_CHARACTER_FALSE_QUERY( name ) \
     bool character_content_transaction::name( std::string_view ) const { return false; }
 CATA_CHARACTER_FALSE_QUERY( defines_profession )
+CATA_CHARACTER_FALSE_QUERY( defines_hobby )
 CATA_CHARACTER_FALSE_QUERY( defines_profession_group )
 CATA_CHARACTER_FALSE_QUERY( defines_widget )
 CATA_CHARACTER_FALSE_QUERY( defines_enchantment )

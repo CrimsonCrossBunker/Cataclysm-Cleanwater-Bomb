@@ -51,6 +51,10 @@ struct character_content_validation_index {
     std::function<bool( std::string_view )> defines_attack_vector;
     std::function<bool( std::string_view )> defines_explosion_light;
     std::function<bool( std::string_view )> defines_limb_score;
+    std::function<bool( std::string_view )> defines_math_function;
+    std::function<bool( std::string_view )> defines_vehicle;
+    std::function<bool( std::string_view )> defines_npc_class;
+    std::function<bool( std::string_view )> defines_overmap_terrain_type;
 };
 
 /**
@@ -137,6 +141,7 @@ class character_content_transaction
         bool was_applied() const;
 
         bool defines_profession( std::string_view id ) const;
+        bool defines_hobby( std::string_view id ) const;
         bool defines_profession_group( std::string_view id ) const;
         bool defines_widget( std::string_view id ) const;
         bool defines_enchantment( std::string_view id ) const;

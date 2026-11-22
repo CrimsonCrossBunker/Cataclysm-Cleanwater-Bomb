@@ -398,6 +398,10 @@ void install_time_api(
 {
     sol::table time =
         services["time"];
+    time.set_function( "now", [require_read]() {
+        require_read();
+        return script_time_point::from_native( calendar::turn );
+    } );
     time.set_function(
         "snapshot",
         [require_read](

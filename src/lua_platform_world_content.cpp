@@ -3052,7 +3052,8 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
         } );
         validate_registrations( pimpl_->overmap_terrains, "overmap terrain", check_engine_state,
         []( const std::string & id ) {
-            return oter_type_str_id( id ).is_valid();
+            return oter_type_str_id( id ).is_valid() ||
+                   detail::overmap_terrain_type_is_pending( id );
         } );
         validate_registrations( pimpl_->overmap_specials, "overmap special", check_engine_state,
         []( const std::string & id ) {
@@ -3530,6 +3531,45 @@ bool world_content_transaction::defines_overmap_terrain_type( const std::string 
     } );
 }
 
+bool world_content_transaction::defines_overmap_terrain_exact( const std::string &id ) const
+{
+    if( defines_overmap_terrain_type( id ) ) {
+        return true;
+    }
+    for( const std::string_view suffix : { "_north", "_east", "_south", "_west" } ) {
+        if( id.size() > suffix.size() &&
+            id.compare( id.size() - suffix.size(), suffix.size(), suffix ) == 0 &&
+            defines_overmap_terrain_type( id.substr( 0, id.size() - suffix.size() ) ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool world_content_transaction::defines_overmap_special( const std::string &id ) const
+{
+    return std::any_of( pimpl_->overmap_specials.begin(), pimpl_->overmap_specials.end(),
+    [&id]( const registration<overmap_special_data> &entry ) {
+        return entry.definition->id == id;
+    } );
+}
+
+bool world_content_transaction::defines_vehicle( const std::string &id ) const
+{
+    return std::any_of( pimpl_->vehicles.begin(), pimpl_->vehicles.end(),
+    [&id]( const registration<vehicle_data> &entry ) {
+        return entry.definition->id == id;
+    } );
+}
+
+bool world_content_transaction::defines_npc_class( const std::string &id ) const
+{
+    return std::any_of( pimpl_->npc_classes.begin(), pimpl_->npc_classes.end(),
+    [&id]( const registration<npc_class_data> &entry ) {
+        return entry.definition->id == id;
+    } );
+}
+
 bool world_content_transaction::find_overmap_terrain_handler(
     const std::string &id, const std::string &phase, std::string &handler_id ) const
 {
@@ -3815,7 +3855,7 @@ void world_content_transaction::impl::apply_npc_class()
             native_rule.price = rule.price;
             native.shop_price_rules.push_back( std::move( native_rule ) );
         }
-        detail::npc_class_registry().insert( native );
+        detail::npc_class_registry().restore( native );
     }
 }
 
@@ -3927,7 +3967,7 @@ void world_content_transaction::impl::apply_overmap_terrain()
         for( const std::string &flag : source.flags ) {
             native.set_flag( io::string_to_enum<oter_flags>( flag ) );
         }
-        detail::overmap_terrain_type_registry().insert( native );
+        detail::overmap_terrain_type_registry().restore( native );
     }
 }
 
@@ -4075,7 +4115,7 @@ void world_content_transaction::impl::apply_overmap_special()
             }
             native.data_ = std::move( mutable_data );
         }
-        detail::overmap_special_registry().insert( native );
+        detail::overmap_special_registry().restore( native );
     }
     for( const auto &[id, flags] : overmap_special_flag_additions ) {
         const overmap_special_id target( id );
@@ -4085,7 +4125,7 @@ void world_content_transaction::impl::apply_overmap_special()
         overmap_special native = target.obj();
         overmap_special_undo.emplace_back( target, native );
         native.flags_.insert( flags.begin(), flags.end() );
-        detail::overmap_special_registry().insert( native );
+        detail::overmap_special_registry().restore( native );
     }
 }
 
@@ -4524,7 +4564,7 @@ void world_content_transaction::impl::apply_vehicle_part( std::string &error )
                 native.control_land.skills.emplace( skill_id( skill ), level );
             }
         }
-        detail::vehicle_part_registry().insert( native );
+        detail::vehicle_part_registry().restore( native );
     }
 }
 
@@ -4689,7 +4729,7 @@ void world_content_transaction::impl::apply_vehicle()
         VehicleGroup self_group = previous_group ? *previous_group : VehicleGroup();
         self_group.add_vehicle( id, 100 );
         detail::vehicle_group_registry_set( source.id, self_group );
-        detail::vehicle_prototype_registry().insert( native );
+        detail::vehicle_prototype_registry().restore( native );
     }
 }
 
@@ -4960,6 +5000,26 @@ bool world_content_transaction::validate( const runtime &, bool, std::string &er
 }
 
 bool world_content_transaction::defines_overmap_terrain_type( const std::string & ) const
+{
+    return false;
+}
+
+bool world_content_transaction::defines_overmap_terrain_exact( const std::string & ) const
+{
+    return false;
+}
+
+bool world_content_transaction::defines_overmap_special( const std::string & ) const
+{
+    return false;
+}
+
+bool world_content_transaction::defines_vehicle( const std::string & ) const
+{
+    return false;
+}
+
+bool world_content_transaction::defines_npc_class( const std::string & ) const
 {
     return false;
 }

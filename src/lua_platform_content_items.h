@@ -33,6 +33,12 @@ struct items_content_validation_context {
     std::function<bool( std::string_view )> defines_furniture;
     std::function<bool( std::string_view )> defines_explosion_light;
     std::function<bool( std::string_view )> defines_species;
+    std::function<bool( std::string_view )> defines_effect_type;
+    std::function<bool( std::string_view )> defines_field_type;
+    std::function<bool( std::string_view )> defines_spell;
+    std::function<bool( std::string_view )> defines_body_part;
+    std::function<bool( std::string_view )> defines_sub_body_part;
+    std::function<bool( std::string_view )> defines_relic_procgen;
 };
 
 struct items_content_staged_ids {

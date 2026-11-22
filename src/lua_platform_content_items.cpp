@@ -4369,6 +4369,10 @@ class lua_platform_iuse_actor : public iuse_actor
                                        here, position );
         }
 
+        bool is_valid() const override {
+            return true;
+        }
+
         bool supports_owned_activation() const override {
             return true;
         }
@@ -6038,6 +6042,10 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             return std::isfinite( value ) &&
                    std::abs( value ) <= std::numeric_limits<float>::max();
         };
+        const auto ctx_defines = []( const std::function<bool( std::string_view )> &predicate,
+        const std::string & id ) {
+            return predicate && predicate( id );
+        };
 
         std::set<std::string> tool_quality_ids;
         for( const tool_quality_registration &entry : pimpl_->tool_qualities ) {
@@ -6089,14 +6097,16 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                           "' has values outside the native range" );
             }
             if( definition.tags.count( "contextual_skill" ) == 0 &&
-                skill_display_ids.count( definition.display_category ) == 0 &&
-                !skill_displayType_id( definition.display_category ).is_valid() ) {
+                ( definition.display_category.empty() ||
+                  ( check_engine_state &&
+                    skill_display_ids.count( definition.display_category ) == 0 &&
+                    !skill_displayType_id( definition.display_category ).is_valid() ) ) ) {
                 throw std::runtime_error( "skill '" + definition.id +
                                           "' references unknown display category '" +
                                           definition.display_category + "'" );
             }
             for( const auto &[id, weight] : definition.companion_practice ) {
-                if( id.empty() || !native_int( weight ) ) {
+                if( !native_int( weight ) ) {
                     throw std::runtime_error( "skill '" + definition.id +
                                               "' has an invalid companion practice" );
                 }
@@ -6125,12 +6135,16 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "vitamin '" + definition.id +
                                           "' bounds or rate are outside the native range" );
             }
-            if( !definition.deficiency.empty() && !efftype_id( definition.deficiency ).is_valid() ) {
+            if( check_engine_state && !definition.deficiency.empty() &&
+                !ctx_defines( context.defines_effect_type, definition.deficiency ) &&
+                !efftype_id( definition.deficiency ).is_valid() ) {
                 throw std::runtime_error( "vitamin '" + definition.id +
                                           "' references unknown deficiency effect '" +
                                           definition.deficiency + "'" );
             }
-            if( !definition.excess.empty() && !efftype_id( definition.excess ).is_valid() ) {
+            if( check_engine_state && !definition.excess.empty() &&
+                !ctx_defines( context.defines_effect_type, definition.excess ) &&
+                !efftype_id( definition.excess ).is_valid() ) {
                 throw std::runtime_error( "vitamin '" + definition.id +
                                           "' references unknown excess effect '" + definition.excess + "'" );
             }
@@ -6141,7 +6155,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             const vitamin_definition_data &definition = *entry.definition;
             for( const auto &[decay_id, rate] : definition.decays_into ) {
                 if( decay_id.empty() || !native_int( rate ) ||
-                    ( vitamin_ids.count( decay_id ) == 0 && !vitamin_id( decay_id ).is_valid() ) ) {
+                    ( check_engine_state && vitamin_ids.count( decay_id ) == 0 &&
+                      !vitamin_id( decay_id ).is_valid() ) ) {
                     throw std::runtime_error( "vitamin '" + definition.id +
                                               "' decays into unknown vitamin '" + decay_id + "'" );
                 }
@@ -6162,14 +6177,14 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         }
         for( const json_flag_registration &entry : pimpl_->json_flags ) {
             const json_flag_definition_data &definition = *entry.definition;
-            if( !definition.requires_flag.empty() &&
+            if( check_engine_state && !definition.requires_flag.empty() &&
                 json_flag_ids.count( definition.requires_flag ) == 0 &&
                 !flag_id( definition.requires_flag ).is_valid() ) {
                 throw std::runtime_error( "JSON flag '" + definition.id +
                                           "' requires unknown flag '" + definition.requires_flag + "'" );
             }
             for( const std::string &conflict : definition.conflicts ) {
-                if( conflict.empty() || ( json_flag_ids.count( conflict ) == 0 &&
+                if( conflict.empty() || ( check_engine_state && json_flag_ids.count( conflict ) == 0 &&
                                           !flag_id( conflict ).is_valid() ) ) {
                     throw std::runtime_error( "JSON flag '" + definition.id +
                                               "' conflicts with unknown flag '" + conflict + "'" );
@@ -6210,7 +6225,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "damage type '" + definition.id +
                                           "' has invalid values or a duplicate registration" );
             }
-            if( !definition.skill.empty() && skill_ids.count( definition.skill ) == 0 &&
+            if( check_engine_state && !definition.skill.empty() &&
+                skill_ids.count( definition.skill ) == 0 &&
                 !skill_id( definition.skill ).is_valid() ) {
                 throw std::runtime_error( "damage type '" + definition.id +
                                           "' references unknown skill '" + definition.skill + "'" );
@@ -6232,7 +6248,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         }
         for( const damage_type_registration &entry : pimpl_->damage_types ) {
             const damage_type_definition_data &definition = *entry.definition;
-            if( !definition.derived_from.empty() &&
+            if( check_engine_state && !definition.derived_from.empty() &&
                 damage_type_ids.count( definition.derived_from ) == 0 &&
                 !damage_type_id( definition.derived_from ).is_valid() ) {
                 throw std::runtime_error( "damage type '" + definition.id +
@@ -6298,8 +6314,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             for( const auto &[damage_id, amount] : definition.resistances ) {
-                if( damage_type_ids.count( damage_id ) == 0 &&
-                    !damage_type_id( damage_id ).is_valid() ) {
+                if( damage_id.empty() || ( check_engine_state &&
+                                           damage_type_ids.count( damage_id ) == 0 &&
+                                           !damage_type_id( damage_id ).is_valid() ) ) {
                     throw std::runtime_error( "material '" + definition.id +
                                               "' references unknown damage type '" + damage_id + "'" );
                 }
@@ -6309,7 +6326,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             for( const auto &[vitamin_key, amount] : definition.vitamins ) {
-                if( vitamin_ids.count( vitamin_key ) == 0 && !vitamin_id( vitamin_key ).is_valid() ) {
+                if( vitamin_key.empty() || ( check_engine_state &&
+                                             vitamin_ids.count( vitamin_key ) == 0 &&
+                                             !vitamin_id( vitamin_key ).is_valid() ) ) {
                     throw std::runtime_error( "material '" + definition.id +
                                               "' references unknown vitamin '" + vitamin_key + "'" );
                 }
@@ -6318,8 +6337,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                               "' has an invalid vitamin amount" );
                 }
             }
-            const auto known_item = [&declared_item_ids]( const std::string & id ) {
-                return id.empty() || declared_item_ids.count( id ) != 0 ||
+            const auto known_item = [&declared_item_ids, check_engine_state]( const std::string & id ) {
+                return !check_engine_state || id.empty() || declared_item_ids.count( id ) != 0 ||
                        item::type_is_defined( itype_id( id ) );
             };
             if( !known_item( definition.salvaged_into ) ) {
@@ -6379,7 +6398,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "proficiency '" + definition.id +
                                           "' has invalid values or a duplicate registration" );
             }
-            if( proficiency_category_ids.count( definition.category ) == 0 &&
+            if( check_engine_state && proficiency_category_ids.count( definition.category ) == 0 &&
                 !proficiency_category_id( definition.category ).is_valid() ) {
                 throw std::runtime_error( "proficiency '" + definition.id +
                                           "' references unknown category '" + definition.category + "'" );
@@ -6395,7 +6414,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         }
         for( const proficiency_registration &entry : pimpl_->proficiencies ) {
             for( const std::string &required : entry.definition->required ) {
-                if( proficiency_ids.count( required ) == 0 && !proficiency_id( required ).is_valid() ) {
+                if( required.empty() || ( check_engine_state && proficiency_ids.count( required ) == 0 &&
+                                          !proficiency_id( required ).is_valid() ) ) {
                     throw std::runtime_error( "proficiency '" + entry.definition->id +
                                               "' requires unknown proficiency '" + required + "'" );
                 }
@@ -6411,7 +6431,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                           "' requires a name and one registration per transaction" );
             }
             for( const std::string &proficiency : definition.proficiencies ) {
-                if( proficiency_ids.count( proficiency ) == 0 && !proficiency_id( proficiency ).is_valid() ) {
+                if( proficiency.empty() || ( check_engine_state &&
+                                             proficiency_ids.count( proficiency ) == 0 &&
+                                             !proficiency_id( proficiency ).is_valid() ) ) {
                     throw std::runtime_error( "weapon category '" + definition.id +
                                               "' references unknown proficiency '" + proficiency + "'" );
                 }
@@ -6436,7 +6458,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                               "' has an unusable priority-zone rule" );
                 }
                 for( const std::string &flag : priority.flags ) {
-                    if( json_flag_ids.count( flag ) == 0 && !flag_id( flag ).is_valid() ) {
+                    if( flag.empty() || ( check_engine_state && json_flag_ids.count( flag ) == 0 &&
+                                          !flag_id( flag ).is_valid() ) ) {
                         throw std::runtime_error( "item category '" + definition.id +
                                                   "' references unknown flag '" + flag + "'" );
                     }
@@ -6578,7 +6601,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "recipe group '" + definition.id +
                                               "' has an invalid or duplicate recipe entry" );
                 }
-                if( declared_recipe_ids.count( recipe.id ) == 0 && !recipe_id( recipe.id ).is_valid() ) {
+                if( check_engine_state && declared_recipe_ids.count( recipe.id ) == 0 &&
+                    !recipe_id( recipe.id ).is_valid() ) {
                     throw std::runtime_error( "recipe group '" + definition.id +
                                               "' references unknown recipe '" + recipe.id + "'" );
                 }
@@ -6613,8 +6637,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                           "' requires receptive species and one registration per transaction" );
             }
             for( const std::string &species : definition.receptive_species ) {
-                if( !( context.defines_species && context.defines_species( species ) ) &&
-                    !species_id( species ).is_valid() ) {
+                if( species.empty() || ( check_engine_state &&
+                                         !ctx_defines( context.defines_species, species ) &&
+                                         !species_id( species ).is_valid() ) ) {
                     throw std::runtime_error( "scent type '" + definition.id +
                                               "' references unknown species '" + species + "'" );
                 }
@@ -6634,7 +6659,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             for( const auto &requirement : definition.entries ) {
                 if( !finite_native_float( requirement.speed ) || requirement.speed < 0.0 ||
                     !platform_creature_size( requirement.size ) || !platform_butcher_type( requirement.butcher ) ||
-                    ( requirement_ids.count( requirement.requirement ) == 0 &&
+                    requirement.requirement.empty() ||
+                    ( check_engine_state && requirement_ids.count( requirement.requirement ) == 0 &&
                       !requirement_id( requirement.requirement ).is_valid() ) ) {
                     throw std::runtime_error( "butchery requirement '" + definition.id +
                                               "' has an invalid entry" );
@@ -6766,7 +6792,10 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     validate_group_item( id, component, "component", false );
                 }
                 if( group_entry.artifact && ( group_entry.artifact->id.is_empty() ||
-                                              ( check_engine_state && !group_entry.artifact->id.is_valid() ) ) ) {
+                                              ( check_engine_state &&
+                                                !ctx_defines( context.defines_relic_procgen,
+                                                              group_entry.artifact->id.str() ) &&
+                                                !group_entry.artifact->id.is_valid() ) ) ) {
                     throw std::runtime_error( "item group '" + id + "' references an unknown relic preset" );
                 }
                 if( group_entry.group ) {
@@ -6804,8 +6833,10 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         }
 
         std::set<std::string> ammo_effect_ids;
-        const auto defines_explosion_light = [&context]( const std::string & id ) {
-            return id.empty() || ( context.defines_explosion_light && context.defines_explosion_light( id ) ) ||
+        const auto defines_explosion_light = [&context, &ctx_defines,
+                                              check_engine_state]( const std::string & id ) {
+            return !check_engine_state || id.empty() ||
+                   ctx_defines( context.defines_explosion_light, id ) ||
                    explosion_light_str_id( id ).is_valid();
         };
         for( const ammo_effect_registration &entry : pimpl_->ammo_effects ) {
@@ -6823,7 +6854,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     !native_nonnegative_int( field.intensity_max ) || field.intensity_max < field.intensity_min ||
                     !percent( field.chance ) || ( !trail && ( !native_nonnegative_int( field.radius ) ||
                                                   !native_nonnegative_int( field.height ) || !native_nonnegative_int( field.footprint ) ) ) ||
-                    ( check_engine_state && !field_type_str_id( field.field ).is_valid() ) ) {
+                    ( check_engine_state && !ctx_defines( context.defines_field_type, field.field ) &&
+                      !field_type_str_id( field.field ).is_valid() ) ) {
                     throw std::runtime_error( "ammo effect '" + definition.id + "' has an invalid " +
                                               ( trail ? "trail" : "field burst" ) );
                 }
@@ -6841,7 +6873,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     effect.intensity_max < effect.intensity_min || ( area && ( !percent( effect.chance ) ||
                             !native_nonnegative_int( effect.radius ) || effect.hits_min <= 0 ||
                             effect.hits_max < effect.hits_min || !native_nonnegative_int( effect.hits_max ) ) ) ||
-                    ( check_engine_state && !efftype_id( effect.effect ).is_valid() ) ) {
+                    ( check_engine_state && !ctx_defines( context.defines_effect_type, effect.effect ) &&
+                      !efftype_id( effect.effect ).is_valid() ) ) {
                     throw std::runtime_error( "ammo effect '" + definition.id + "' has an invalid " +
                                               ( area ? "area effect" : "on-hit effect" ) );
                 }
@@ -6872,7 +6905,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
             for( const ammo_spell_definition_data &spell : definition.spells ) {
                 if( spell.spell.empty() || spell.level < 0 || !native_int( spell.level ) ||
-                    ( check_engine_state && !spell_id( spell.spell ).is_valid() ) ) {
+                    ( check_engine_state && !ctx_defines( context.defines_spell, spell.spell ) &&
+                      !spell_id( spell.spell ).is_valid() ) ) {
                     throw std::runtime_error( "ammo effect '" + definition.id + "' has an invalid spell" );
                 }
             }
@@ -6948,7 +6982,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             std::int64_t material_portions = 0;
             std::map<std::string, std::int64_t> portions_by_material;
             for( const material_part &material : definition.materials ) {
-                if( material_ids.count( material.id ) == 0 && !material_id( material.id ).is_valid() ) {
+                if( material.id.empty() || ( check_engine_state &&
+                                             material_ids.count( material.id ) == 0 &&
+                                             !material_id( material.id ).is_valid() ) ) {
                     throw std::runtime_error( "item '" + definition.id +
                                               "' references unknown material '" + material.id + "'" );
                 }
@@ -6961,7 +6997,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
             for( const auto &[original, replacement] : definition.material_replacements ) {
                 for( const material_id &id : { original, replacement } ) {
-                    if( material_ids.count( id.str() ) == 0 && !id.is_valid() ) {
+                    if( id.is_empty() || ( check_engine_state &&
+                                           material_ids.count( id.str() ) == 0 && !id.is_valid() ) ) {
                         throw std::runtime_error( "item '" + definition.id +
                                                   "' replaces an unknown material '" + id.str() + "'" );
                     }
@@ -6971,8 +7008,10 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 if( *adjustment ) {
                     for( const auto &entry : ( *adjustment )->damage_map ) {
                         const damage_type_id &id = entry.first;
-                        if( damage_type_ids.count( id.str() ) == 0 && !id.is_valid() &&
-                            id.str() != "all" && id.str() != "physical" && id.str() != "non_physical" ) {
+                        if( id.is_empty() || ( check_engine_state &&
+                                               damage_type_ids.count( id.str() ) == 0 && !id.is_valid() &&
+                                               id.str() != "all" && id.str() != "physical" &&
+                                               id.str() != "non_physical" ) ) {
                             throw std::runtime_error( "item '" + definition.id +
                                                       "' adjusts an unknown damage type '" + id.str() + "'" );
                         }
@@ -6980,7 +7019,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             for( const quality_level &quality : definition.qualities ) {
-                if( tool_quality_ids.count( quality.id ) == 0 && !quality_id( quality.id ).is_valid() ) {
+                if( quality.id.empty() || ( check_engine_state &&
+                                            tool_quality_ids.count( quality.id ) == 0 &&
+                                            !quality_id( quality.id ).is_valid() ) ) {
                     throw std::runtime_error( "item '" + definition.id +
                                               "' references unknown quality '" + quality.id + "'" );
                 }
@@ -6991,8 +7032,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             if( definition.charged_qualities ) {
                 std::set<std::string> ids;
                 for( const quality_level &quality : *definition.charged_qualities ) {
-                    if( !ids.insert( quality.id ).second ||
-                        ( tool_quality_ids.count( quality.id ) == 0 && !quality_id( quality.id ).is_valid() ) ) {
+                    if( !ids.insert( quality.id ).second || quality.id.empty() ||
+                        ( check_engine_state && tool_quality_ids.count( quality.id ) == 0 &&
+                          !quality_id( quality.id ).is_valid() ) ) {
                         throw std::runtime_error( "item '" + definition.id +
                                                   "' has a duplicate or unknown charged quality '" +
                                                   quality.id + "'" );
@@ -7006,7 +7048,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             for( const auto &[damage, amount] : definition.melee_damage ) {
-                if( damage_type_ids.count( damage ) == 0 && !damage_type_id( damage ).is_valid() ) {
+                if( damage.empty() || ( check_engine_state &&
+                                        damage_type_ids.count( damage ) == 0 &&
+                                        !damage_type_id( damage ).is_valid() ) ) {
                     throw std::runtime_error( "item '" + definition.id +
                                               "' references unknown damage type '" + damage + "'" );
                 }
@@ -7017,7 +7061,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             if( definition.ammunition ) {
                 const item_definition_data::ammunition_data &ammo = *definition.ammunition;
                 if( ammo.type.empty() ||
-                    ( ammunition_type_ids.count( ammo.type ) == 0 && !ammotype( ammo.type ).is_valid() ) ||
+                    ( check_engine_state && ammunition_type_ids.count( ammo.type ) == 0 &&
+                      !ammotype( ammo.type ).is_valid() ) ||
                     ( ammo.count && ( *ammo.count < 1 || !native_int( *ammo.count ) ) ) ||
                     ( ammo.stack_size && ( *ammo.stack_size < 1 || !native_int( *ammo.stack_size ) ) ) ) {
                     throw std::runtime_error( "item '" + definition.id + "' has invalid ammunition values" );
@@ -7027,7 +7072,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 const auto &tool = *definition.tool;
                 if( tool.ammo_types ) {
                     for( const std::string &ammo : *tool.ammo_types ) {
-                        if( ammo.empty() || ( ammunition_type_ids.count( ammo ) == 0 && !ammotype( ammo ).is_valid() ) ) {
+                        if( ammo.empty() || ( check_engine_state &&
+                                              ammunition_type_ids.count( ammo ) == 0 &&
+                                              !ammotype( ammo ).is_valid() ) ) {
                             throw std::runtime_error( "item '" + definition.id + "' references unknown tool ammo '" + ammo + "'" );
                         }
                     }
@@ -7035,12 +7082,15 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
             for( const auto &[ammo, capacity] : definition.magazine_ammo ) {
                 if( ammo.empty() || capacity <= 0 || !native_int( capacity ) ||
-                    ( ammunition_type_ids.count( ammo ) == 0 && !ammotype( ammo ).is_valid() ) ) {
+                    ( check_engine_state && ammunition_type_ids.count( ammo ) == 0 &&
+                      !ammotype( ammo ).is_valid() ) ) {
                     throw std::runtime_error( "item '" + definition.id + "' has invalid magazine ammo" );
                 }
             }
             for( const auto &[ammo, capacity] : definition.ammo_pocket ) {
-                if( ammunition_type_ids.count( ammo ) == 0 && !ammotype( ammo ).is_valid() ) {
+                if( ammo.empty() || ( check_engine_state &&
+                                      ammunition_type_ids.count( ammo ) == 0 &&
+                                      !ammotype( ammo ).is_valid() ) ) {
                     throw std::runtime_error( "item '" + definition.id + "' references unknown pocket ammo '" + ammo + "'" );
                 }
             }
@@ -7052,7 +7102,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             for( const auto &authored : definition.pockets ) {
                 const pocket_data &pocket = authored.native;
                 for( const auto &[ammo, capacity] : pocket.ammo_restriction ) {
-                    if( ammunition_type_ids.count( ammo.str() ) == 0 && !ammo.is_valid() ) {
+                    if( ammo.is_empty() || ( check_engine_state &&
+                                             ammunition_type_ids.count( ammo.str() ) == 0 &&
+                                             !ammo.is_valid() ) ) {
                         throw std::runtime_error( "item '" + definition.id +
                                                   "' references unknown pocket ammo '" + ammo.str() + "'" );
                     }
@@ -7064,7 +7116,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "item '" + definition.id + "' references an unknown default magazine" );
                 }
                 for( const material_id &material : pocket.material_restriction ) {
-                    if( material_ids.count( material.str() ) == 0 && !material.is_valid() ) {
+                    if( material.is_empty() || ( check_engine_state &&
+                                                 material_ids.count( material.str() ) == 0 &&
+                                                 !material.is_valid() ) ) {
                         throw std::runtime_error( "item '" + definition.id +
                                                   "' has an unknown container pocket material '" +
                                                   material.str() + "'" );
@@ -7093,17 +7147,23 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "item '" + definition.id + "' has invalid armor portion values" );
                 }
                 for( const std::string &part : portion.covers ) {
-                    if( part.empty() || ( check_engine_state && !bodypart_str_id( part ).is_valid() ) ) {
+                    if( part.empty() || ( check_engine_state &&
+                                          !ctx_defines( context.defines_body_part, part ) &&
+                                          !bodypart_str_id( part ).is_valid() ) ) {
                         throw std::runtime_error( "item '" + definition.id + "' references unknown body part '" + part + "'" );
                     }
                 }
                 for( const std::string &part : portion.sub_parts ) {
-                    if( part.empty() || ( check_engine_state && !sub_bodypart_str_id( part ).is_valid() ) ) {
+                    if( part.empty() || ( check_engine_state &&
+                                          !ctx_defines( context.defines_sub_body_part, part ) &&
+                                          !sub_bodypart_str_id( part ).is_valid() ) ) {
                         throw std::runtime_error( "item '" + definition.id + "' references unknown body subpart '" + part + "'" );
                     }
                 }
                 for( const std::string &material : portion.materials ) {
-                    if( material_ids.count( material ) == 0 && !material_id( material ).is_valid() ) {
+                    if( material.empty() || ( check_engine_state &&
+                                              material_ids.count( material ) == 0 &&
+                                              !material_id( material ).is_valid() ) ) {
                         throw std::runtime_error( "item '" + definition.id +
                                                   "' references unknown armor material '" + material + "'" );
                     }
@@ -7131,8 +7191,10 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 ( definition.magazine_capacity <= 0 || !native_int( definition.magazine_capacity ) ) ) {
                 throw std::runtime_error( "item '" + definition.id + "' has an invalid magazine capacity" );
             }
-            if( definition.has_category && item_category_ids.count( definition.category ) == 0 &&
-                !item_category_id( definition.category ).is_valid() ) {
+            if( definition.has_category &&
+                ( definition.category.empty() || ( check_engine_state &&
+                                                   item_category_ids.count( definition.category ) == 0 &&
+                                                   !item_category_id( definition.category ).is_valid() ) ) ) {
                 throw std::runtime_error( "item '" + definition.id +
                                           "' references unknown category '" + definition.category + "'" );
             }
@@ -7156,7 +7218,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                               "' has invalid comestible values" );
                 }
                 for( const auto &[vitamin_key, amount] : food.vitamins ) {
-                    if( ( vitamin_ids.count( vitamin_key ) == 0 &&
+                    if( vitamin_key.empty() ||
+                        ( check_engine_state && vitamin_ids.count( vitamin_key ) == 0 &&
                           !vitamin_id( vitamin_key ).is_valid() ) ||
                         amount < std::numeric_limits<int>::min() ||
                         amount > std::numeric_limits<int>::max() ) {
@@ -7175,7 +7238,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
             if( definition.book ) {
                 const item_definition_data::book_data &book = *definition.book;
-                if( ( !book.skill.empty() && book.skill != skill_id::NULL_ID().str() &&
+                if( ( check_engine_state && !book.skill.empty() &&
+                      book.skill != skill_id::NULL_ID().str() &&
                       skill_ids.count( book.skill ) == 0 && !skill_id( book.skill ).is_valid() ) ||
                     !native_int( book.required_level ) || !native_int( book.maximum_level ) ||
                     book.intelligence < 0 ||
@@ -7189,7 +7253,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                               "' has invalid book values" );
                 }
                 for( const book_proficiency_bonus &bonus : book.proficiencies ) {
-                    if( ( proficiency_ids.count( bonus.id.str() ) == 0 && !bonus.id.is_valid() ) ||
+                    if( bonus.id.is_empty() ||
+                        ( check_engine_state && proficiency_ids.count( bonus.id.str() ) == 0 &&
+                          !bonus.id.is_valid() ) ||
                         !( bonus.time_factor >= 0.0f && bonus.time_factor < 1.0f ) ||
                         !( bonus.fail_factor >= 0.0f && bonus.fail_factor < 1.0f ) ||
                         !( bonus.cap > 0.0f && bonus.cap <= 1.0f ) ) {
@@ -7273,7 +7339,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "nested recipe category '" + definition.id +
                                               "' has invalid presentation, difficulty, activity, or members" );
                 }
-                if( crafting_category_ids.count( definition.category ) == 0 &&
+                if( check_engine_state && crafting_category_ids.count( definition.category ) == 0 &&
                     !crafting_category_id( definition.category ).is_valid() ) {
                     throw std::runtime_error( "nested recipe category '" + definition.id +
                                               "' references unknown category '" + definition.category + "'" );
@@ -7308,7 +7374,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "recipe '" + definition.id +
                                           "' has invalid result, duration, difficulty, or activity" );
             }
-            if( ( !definition.uncraft || !definition.category.empty() ) &&
+            if( check_engine_state && ( !definition.uncraft || !definition.category.empty() ) &&
                 crafting_category_ids.count( definition.category ) == 0 &&
                 !crafting_category_id( definition.category ).is_valid() ) {
                 throw std::runtime_error( "recipe '" + definition.id +
@@ -7504,7 +7570,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                         throw std::runtime_error( "plant lifecycle references unknown seed item '" +
                                                   definition.id + "'" );
                     }
-                } else if( context.defines_furniture && !context.defines_furniture( definition.id ) &&
+                } else if( !ctx_defines( context.defines_furniture, definition.id ) &&
                            !furn_str_id( definition.id ).is_valid() ) {
                     throw std::runtime_error( "plant lifecycle references unknown furniture '" +
                                               definition.id + "'" );
@@ -7756,7 +7822,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.craft_inherit_ = source.craft_inherit;
                     native.requires_flag_ = source.requires_flag;
                     native.taste_mod_ = static_cast<int>( source.taste_modifier );
-                    detail::json_flag_registry().insert( native );
+                    detail::json_flag_registry().restore( native );
                 }
 
                 for( const math_function_registration &entry : pimpl_->math_functions ) {
@@ -7770,7 +7836,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.was_loaded = true;
                     native.num_params = static_cast<int>( source.num_args );
                     native._str = source.expression;
-                    detail::jmath_func_registry().insert( native );
+                    detail::jmath_func_registry().restore( native );
                 }
                 if( !pimpl_->math_functions.empty() ) {
                     detail::jmath_func_registry().finalize();
@@ -7788,7 +7854,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     for( const auto &[level, text] : entry.definition->usages ) {
                         native.usages.emplace_back( static_cast<int>( level ), text );
                     }
-                    detail::tool_quality_registry().insert( native );
+                    detail::tool_quality_registry().restore( native );
                 }
 
                 for( const skill_display_registration &entry : pimpl_->skill_displays ) {
@@ -7886,7 +7952,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native.decays_into_.emplace_back( vitamin_id( decay_id ), static_cast<int>( rate ) );
                     }
                     native.flags_ = source.flags;
-                    detail::vitamin_registry().insert( native );
+                    detail::vitamin_registry().restore( native );
                 }
 
                 for( const damage_type_registration &entry : pimpl_->damage_types ) {
@@ -7924,7 +7990,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         };
                     }
                     native.was_loaded = true;
-                    detail::damage_type_registry().insert( native );
+                    detail::damage_type_registry().restore( native );
                 }
 
                 break;
@@ -8089,7 +8155,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native.fuel.explosion_data.fuel_size_factor =
                             static_cast<float>( source.fuel_size_factor );
                     }
-                    registry.insert( native );
+                    registry.restore( native );
                 }
                 break;
             }
@@ -8103,7 +8169,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native._name = entry.definition->name.native();
                     native._description = entry.definition->description.native();
                     native.was_loaded = true;
-                    detail::proficiency_category_registry().insert( native );
+                    detail::proficiency_category_registry().restore( native );
                 }
                 const auto proficiency_attribute = []( const std::string & attribute ) {
                     if( attribute == "strength" ) {
@@ -8149,7 +8215,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                             proficiency_attribute( bonus.attribute ), static_cast<float>( bonus.value )
                         } );
                     }
-                    detail::proficiency_registry().insert( native );
+                    detail::proficiency_registry().restore( native );
                 }
                 for( const weapon_category_registration &entry : pimpl_->weapon_categories ) {
                     const weapon_category_id id( entry.definition->id );
@@ -8163,7 +8229,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     for( const std::string &proficiency : entry.definition->proficiencies ) {
                         native.proficiencies_.emplace_back( proficiency );
                     }
-                    detail::weapon_category_registry().insert( native );
+                    detail::weapon_category_registry().restore( native );
                 }
                 for( const item_category_registration &entry : pimpl_->item_categories ) {
                     const item_category_id id( entry.definition->id );
@@ -8189,7 +8255,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         }
                         native.zone_priority_.push_back( std::move( rule ) );
                     }
-                    detail::item_category_registry().insert( native );
+                    detail::item_category_registry().restore( native );
                     if( id.is_valid() ) {
                         id.obj().set_spawn_rate( static_cast<float>( source.spawn_rate ) );
                     }
@@ -8206,7 +8272,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.is_building = entry.definition->building;
                     native.is_wildcard = entry.definition->wildcard;
                     native.subcategories = entry.definition->subcategories;
-                    detail::crafting_category_registry().insert( native );
+                    detail::crafting_category_registry().restore( native );
                 }
                 const std::size_t load_index = ammunition_type::mod_load_index( pimpl_->owner );
                 for( const ammunition_type_registration &entry : pimpl_->ammunition_types ) {
@@ -8328,7 +8394,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     for( const std::string &species : entry.definition->receptive_species ) {
                         native.receptive_species.insert( species_id( species ) );
                     }
-                    detail::scent_type_registry().insert( native );
+                    detail::scent_type_registry().restore( native );
                 }
                 for( const butchery_requirement_registration &entry : pimpl_->butchery_requirement_entries ) {
                     const string_id<butchery_requirements> id( entry.definition->id );
@@ -8344,7 +8410,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         [*platform_butcher_type( requirement.butcher )] =
                             requirement_id( requirement.requirement );
                     }
-                    detail::butchery_requirements_registry().insert( native );
+                    detail::butchery_requirements_registry().restore( native );
                 }
                 for( const item_action_registration &entry : pimpl_->item_actions ) {
                     const item_action_definition_data &source = *entry.definition;

@@ -94,6 +94,24 @@ std::string enum_to_string<mission_goal>( mission_goal data )
 
 static generic_factory<mission_type> mission_type_factory( "mission_type" );
 
+namespace
+{
+struct deferred_mission_queue {
+    std::vector<std::pair<JsonObject, std::string>> entries;
+    ~deferred_mission_queue() {
+        clear();
+    }
+    void clear() {
+        for( auto &entry : entries ) {
+            entry.first.allow_omitted_members();
+        }
+        entries.clear();
+    }
+};
+deferred_mission_queue deferred_mission_loads;
+bool mission_load_deferred = false;
+} // namespace
+
 generic_factory<mission_type> &cata::lua_platform::detail::mission_type_registry()
 {
     return mission_type_factory;
@@ -115,11 +133,34 @@ bool string_id<mission_type>::is_valid() const
 
 void mission_type::load_mission_type( const JsonObject &jo, const std::string &src )
 {
+    std::optional<mission_type_id> deferred_id;
+    std::optional<mission_type> previous_entry;
+    if( jo.has_string( "id" ) ) {
+        deferred_id = mission_type_id( jo.get_string( "id" ) );
+        if( deferred_id->is_valid() ) {
+            previous_entry = deferred_id->obj();
+        }
+    }
+    mission_load_deferred = false;
     mission_type_factory.load( jo, src );
+    if( mission_load_deferred ) {
+        if( deferred_id ) {
+            if( previous_entry ) {
+                mission_type_factory.restore( *previous_entry );
+            } else {
+                mission_type_factory.erase( *deferred_id );
+            }
+        }
+        deferred_mission_loads.entries.emplace_back( jo, src );
+        jo.allow_omitted_members();
+        mission_load_deferred = false;
+    }
 }
 
 void mission_type::reset()
 {
+    deferred_mission_loads.clear();
+    mission_load_deferred = false;
     mission_type_factory.reset();
     cata::lua_platform::detail::clear_staged_mission_actions();
 }
@@ -191,12 +232,15 @@ bool mission_type::load( const JsonObject &jo, const std::string_view src )
         return true;
     };
     if( !parse_phase( "start", "start", start ) ) {
+        mission_load_deferred = true;
         return false;
     }
     if( !parse_phase( "end", "success", end ) ) {
+        mission_load_deferred = true;
         return false;
     }
     if( !parse_phase( "fail", "failure", fail ) ) {
+        mission_load_deferred = true;
         return false;
     }
 
@@ -239,6 +283,21 @@ bool mission_type::test_goal_condition( struct dialogue &d ) const
 
 void mission_type::finalize_all()
 {
+    while( !deferred_mission_loads.entries.empty() ) {
+        std::vector<std::pair<JsonObject, std::string>> pending;
+        pending.swap( deferred_mission_loads.entries );
+        const std::size_t before = pending.size();
+        for( auto &entry : pending ) {
+            if( entry.first.has_string( "type" ) ) {
+                entry.first.get_string( "type" );
+            }
+            load_mission_type( entry.first, entry.second );
+        }
+        if( deferred_mission_loads.entries.size() >= before ) {
+            deferred_mission_loads.clear();
+            break;
+        }
+    }
     mission_type_factory.finalize();
     cata::lua_platform::detail::clear_staged_mission_actions();
 }

@@ -81,6 +81,7 @@ extern "C" {
 #include "harvest.h"
 #include "hsv_color.h"
 #include "iexamine_actors.h"
+#include "init.h"
 #include "item.h"
 #include "item_group.h"
 #include "json.h"
@@ -5872,15 +5873,30 @@ bool content_transaction::validate( const runtime &owner_runtime,
         const auto &damage_type_ids = staged_items.damage_types;
         const auto &declared_item_ids = staged_items.items;
         const auto &item_group_ids = staged_items.item_groups;
-
-        items_content_validation_context items_context;
-        items_context.defines_furniture = [this]( const std::string_view id ) {
+        const auto furniture_is_staged = [this]( const std::string_view id ) {
             return std::any_of(
                        pimpl_->furniture.begin(), pimpl_->furniture.end(),
             [id]( const furniture_registration & entry ) {
                 return entry.definition->id == id;
             } );
         };
+        const auto fault_is_staged = [this]( const std::string_view id ) {
+            return std::any_of(
+                       pimpl_->faults.begin(), pimpl_->faults.end(),
+            [id]( const fault_registration & entry ) {
+                return entry.definition->id == id;
+            } );
+        };
+        const auto achievement_is_staged = [this]( const std::string_view id ) {
+            return std::any_of(
+                       pimpl_->achievements.begin(), pimpl_->achievements.end(),
+            [id]( const achievement_registration & entry ) {
+                return entry.definition->id == id;
+            } );
+        };
+
+        items_content_validation_context items_context;
+        items_context.defines_furniture = furniture_is_staged;
         items_context.defines_explosion_light = [this]( const std::string_view id ) {
             return std::any_of(
                        pimpl_->explosion_lights.begin(), pimpl_->explosion_lights.end(),
@@ -5890,6 +5906,28 @@ bool content_transaction::validate( const runtime &owner_runtime,
         };
         items_context.defines_species = [this]( const std::string_view id ) {
             return pimpl_->creatures.defines_species( id );
+        };
+        items_context.defines_effect_type = [this]( const std::string_view id ) {
+            return pimpl_->creatures.defines_effect_type( id );
+        };
+        items_context.defines_field_type = [this]( const std::string_view id ) {
+            return pimpl_->creatures.defines_field_type( id );
+        };
+        items_context.defines_spell = [this]( const std::string_view id ) {
+            return pimpl_->character.defines_spell( id );
+        };
+        items_context.defines_body_part = [this]( const std::string_view id ) {
+            return pimpl_->creatures.defines_body_part( id );
+        };
+        items_context.defines_sub_body_part = [this]( const std::string_view id ) {
+            return pimpl_->creatures.defines_sub_body_part( id );
+        };
+        items_context.defines_relic_procgen = [this]( const std::string_view id ) {
+            return std::any_of(
+                       pimpl_->relic_procgens.begin(), pimpl_->relic_procgens.end(),
+            [id]( const relic_procgen_registration & entry ) {
+                return entry.definition->id == id;
+            } );
         };
         if( !pimpl_->item_content.validate(
                 owner_runtime, check_engine_state, items_context, error ) ) {
@@ -5920,8 +5958,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 return entry.definition->id == id;
             } );
         };
-        creatures_index.defines_trait = []( const std::string_view id ) {
-            return trait_id( std::string( id ) ).is_valid();
+        creatures_index.defines_trait = [this]( const std::string_view id ) {
+            return pimpl_->creatures.defines_mutation( id ) ||
+                   trait_id( std::string( id ) ).is_valid();
         };
         creatures_index.validate_scaled_requirements = [this](
                 const std::vector<std::pair<std::string, std::int64_t>> &requirements,
@@ -6022,6 +6061,18 @@ bool content_transaction::validate( const runtime &owner_runtime,
             } );
         };
         character_index.defines_limb_score = creatures_index.defines_limb_score;
+        character_index.defines_math_function = [this]( const std::string_view id ) {
+            return pimpl_->item_content.defines_math_function( id );
+        };
+        character_index.defines_vehicle = [this]( const std::string_view id ) {
+            return pimpl_->world.defines_vehicle( std::string( id ) );
+        };
+        character_index.defines_npc_class = [this]( const std::string_view id ) {
+            return pimpl_->world.defines_npc_class( std::string( id ) );
+        };
+        character_index.defines_overmap_terrain_type = [this]( const std::string_view id ) {
+            return pimpl_->world.defines_overmap_terrain_type( std::string( id ) );
+        };
         if( !pimpl_->character.validate(
                 owner_runtime, check_engine_state, character_index, error ) ) {
             return false;
@@ -6158,7 +6209,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
             std::set<std::string> selectors;
             for( const std::string &terrain : definition.terrains ) {
                 if( !selectors.insert( "terrain:" + terrain ).second ||
-                    ( check_engine_state && !oter_type_str_id( terrain ).is_valid() ) ) {
+                    ( check_engine_state && !pimpl_->world.defines_overmap_terrain_type( terrain ) &&
+                      !oter_type_str_id( terrain ).is_valid() &&
+                      !detail::overmap_terrain_type_is_pending( terrain ) ) ) {
                     throw std::runtime_error( "overmap location '" + definition.id +
                                               "' has an unknown or duplicate terrain '" + terrain + "'" );
                 }
@@ -6231,7 +6284,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
             for( const auto &[vehicle, weight] : definition.entries ) {
                 if( weight <= 0 ||
                     weight > std::numeric_limits<int>::max() ||
-                    ( check_engine_state && !vproto_id( vehicle ).is_valid() ) ) {
+                    ( check_engine_state && !pimpl_->world.defines_vehicle( vehicle ) &&
+                      !vproto_id( vehicle ).is_valid() ) ) {
                     throw std::runtime_error( "vehicle group '" + definition.id +
                                               "' has an unknown or invalidly weighted vehicle '" +
                                               vehicle + "'" );
@@ -6365,7 +6419,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
             for( const auto &[fault, weight] : definition.entries ) {
                 if( weight <= 0 ||
                     weight > std::numeric_limits<int>::max() ||
-                    ( check_engine_state && !fault_id( fault ).is_valid() ) ) {
+                    ( check_engine_state && !fault_is_staged( fault ) &&
+                      !fault_id( fault ).is_valid() ) ) {
                     throw std::runtime_error( "fault group '" + definition.id +
                                               "' has an unknown or invalidly weighted fault '" +
                                               fault + "'" );
@@ -6498,10 +6553,12 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 if( target.terrain.empty() || !match || target.parameters.size() > 64 ||
                     !target_keys.insert( key ).second ||
                     ( check_engine_state && *match == ot_match_type::exact &&
+                      !pimpl_->world.defines_overmap_terrain_exact( target.terrain ) &&
                       !oter_str_id( target.terrain ).is_valid() ) ||
                     ( check_engine_state && *match == ot_match_type::type &&
                       !pimpl_->world.defines_overmap_terrain_type( target.terrain ) &&
-                      !oter_type_str_id( target.terrain ).is_valid() ) ) {
+                      !oter_type_str_id( target.terrain ).is_valid() &&
+                      !detail::overmap_terrain_type_is_pending( target.terrain ) ) ) {
                     throw std::runtime_error( "start location '" + definition.id +
                                               "' has an invalid or duplicate terrain selector" );
                 }
@@ -6539,6 +6596,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 ( deploys && ( definition.unavailable_text.empty() ||
                                definition.hotkey.size() != 1 ) ) ||
                 ( check_engine_state && deploys &&
+                  !furniture_is_staged( definition.deploy_furniture ) &&
                   !furn_str_id( definition.deploy_furniture ).is_valid() ) ) {
                 throw std::runtime_error( "climbing aid '" + definition.id +
                                           "' has invalid availability, descent, cost, or deployment data" );
@@ -6641,8 +6699,11 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     !chance( effect.chance_in_vehicle ) ||
                     !chance( effect.chance_inside_vehicle ) ||
                     !chance( effect.chance_outside_vehicle ) ||
-                    ( check_engine_state && !efftype_id( effect.effect ).is_valid() ) ||
+                    ( check_engine_state &&
+                      !pimpl_->creatures.defines_effect_type( effect.effect ) &&
+                      !efftype_id( effect.effect ).is_valid() ) ||
                     ( check_engine_state && !effect.body_part.empty() &&
+                      !pimpl_->creatures.defines_body_part( effect.body_part ) &&
                       !bodypart_str_id( effect.body_part ).is_valid() ) ) {
                     throw std::runtime_error( "weather type '" + definition.id +
                                               "' has an invalid passive character effect" );
@@ -6903,7 +6964,10 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             std::set<std::string> limbs;
             for( const std::string &limb : definition.limbs ) {
-                if( !limbs.insert( limb ).second || !bodypart_str_id( limb ).is_valid() ) {
+                if( limb.empty() || !limbs.insert( limb ).second ||
+                    ( check_engine_state &&
+                      !pimpl_->creatures.defines_body_part( limb ) &&
+                      !bodypart_str_id( limb ).is_valid() ) ) {
                     throw std::runtime_error( "attack vector '" + definition.id +
                                               "' references an invalid or duplicate limb '" +
                                               limb + "'" );
@@ -6911,8 +6975,10 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             std::set<std::string> contacts;
             for( const std::string &contact : definition.contacts ) {
-                if( !contacts.insert( contact ).second ||
-                    !sub_bodypart_str_id( contact ).is_valid() ) {
+                if( contact.empty() || !contacts.insert( contact ).second ||
+                    ( check_engine_state &&
+                      !pimpl_->creatures.defines_sub_body_part( contact ) &&
+                      !sub_bodypart_str_id( contact ).is_valid() ) ) {
                     throw std::runtime_error( "attack vector '" + definition.id +
                                               "' references an invalid or duplicate contact '" +
                                               contact + "'" );
@@ -6980,7 +7046,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             for( const auto &[item, quantity, charges] : definition.drops ) {
                 if( item.empty() || quantity <= 0 || charges <= 0 ||
-                    ( check_engine_state && !itype_id( item ).is_valid() ) ) {
+                    ( check_engine_state && declared_item_ids.count( item ) == 0 &&
+                      !itype_id( item ).is_valid() ) ) {
                     throw std::runtime_error( "trap '" + definition.id +
                                               "' references an invalid drop item" );
                 }
@@ -7067,7 +7134,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 for( const std::string &target : {
                          definition.open, definition.close, definition.lockpick_result
                      } ) {
-                    if( !target.empty() && !furn_str_id( target ).is_valid() ) {
+                    if( !target.empty() && !furniture_is_staged( target ) &&
+                        !furn_str_id( target ).is_valid() ) {
                         throw std::runtime_error( "furniture '" + definition.id +
                                                   "' references an invalid furniture id '" +
                                                   target + "'" );
@@ -7159,6 +7227,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     }
                 }
                 if( definition.trap && !definition.trap->empty() &&
+                    trap_ids.count( *definition.trap ) == 0 &&
                     !trap_str_id( *definition.trap ).is_valid() ) {
                     throw std::runtime_error( "terrain '" + definition.id +
                                               "' references an invalid trap id '" +
@@ -7189,7 +7258,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             if( check_engine_state ) {
                 for( const std::string &wall : definition.walls ) {
-                    if( !ter_str_id( wall ).is_valid() ) {
+                    if( wall.empty() || ( !terrain_is_staged( wall ) &&
+                                          !ter_str_id( wall ).is_valid() ) ) {
                         throw std::runtime_error( "gate '" + definition.id +
                                                   "' references an invalid wall '" +
                                                   wall + "'" );
@@ -7230,7 +7300,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             for( const auto &[skill, level] : definition.skills ) {
                 if( skill.empty() || level < 0 ||
-                    ( check_engine_state && !skill_id( skill ).is_valid() ) ) {
+                    ( check_engine_state && skill_ids.count( skill ) == 0 &&
+                      !skill_id( skill ).is_valid() ) ) {
                     throw std::runtime_error( "fault fix '" + definition.id +
                                               "' references an invalid skill requirement" );
                 }
@@ -7490,7 +7561,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "damage info order '" + definition.id +
                                           "' requires sections and one registration per transaction" );
             }
-            if( damage_type_ids.count( definition.id ) == 0 &&
+            if( check_engine_state && damage_type_ids.count( definition.id ) == 0 &&
                 !damage_type_id( definition.id ).is_valid() ) {
                 throw std::runtime_error( "damage info order '" + definition.id +
                                           "' has no matching damage type" );
@@ -7681,56 +7752,66 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "scenario '" + definition.id +
                                           "' requires a name and one registration per transaction" );
             }
-            for( const std::string &location : definition.locations ) {
-                if( start_location_ids.count( location ) == 0 &&
-                    !start_location_id( location ).is_valid() ) {
-                    throw std::runtime_error( "scenario '" + definition.id +
-                                              "' references unknown start location '" + location + "'" );
+            if( check_engine_state || DynamicDataLoader::get_instance().is_data_finalized() ) {
+                for( const std::string &location : definition.locations ) {
+                    if( start_location_ids.count( location ) == 0 &&
+                        !start_location_id( location ).is_valid() ) {
+                        throw std::runtime_error( "scenario '" + definition.id +
+                                                  "' references unknown start location '" + location + "'" );
+                    }
                 }
             }
-            for( const std::string &profession : definition.professions ) {
-                if( !profession_id( profession ).is_valid() ) {
-                    throw std::runtime_error( "scenario '" + definition.id +
-                                              "' references unknown profession '" + profession + "'" );
+            if( check_engine_state ) {
+                for( const std::string &profession : definition.professions ) {
+                    if( !pimpl_->character.defines_profession( profession ) &&
+                        !profession_id( profession ).is_valid() ) {
+                        throw std::runtime_error( "scenario '" + definition.id +
+                                                  "' references unknown profession '" + profession + "'" );
+                    }
                 }
-            }
-            for( const std::string &hobby : definition.hobbies ) {
-                const profession_id hobby_id( hobby );
-                if( !hobby_id.is_valid() || !hobby_id->is_hobby() ) {
-                    throw std::runtime_error( "scenario '" + definition.id +
-                                              "' references an unavailable hobby '" + hobby + "'" );
+                for( const std::string &hobby : definition.hobbies ) {
+                    const profession_id hobby_id( hobby );
+                    if( !pimpl_->character.defines_hobby( hobby ) &&
+                        ( !hobby_id.is_valid() || !hobby_id->is_hobby() ) ) {
+                        throw std::runtime_error( "scenario '" + definition.id +
+                                                  "' references an unavailable hobby '" + hobby + "'" );
+                    }
                 }
-            }
-            for( const std::string &trait : definition.allowed_traits ) {
-                if( !trait_id( trait ).is_valid() ) {
-                    throw std::runtime_error( "scenario '" + definition.id +
-                                              "' references unknown trait '" + trait + "'" );
+                for( const std::string &trait : definition.allowed_traits ) {
+                    if( !pimpl_->creatures.defines_mutation( trait ) &&
+                        !trait_id( trait ).is_valid() ) {
+                        throw std::runtime_error( "scenario '" + definition.id +
+                                                  "' references unknown trait '" + trait + "'" );
+                    }
                 }
-            }
-            for( const std::string &trait : definition.forced_traits ) {
-                if( !trait_id( trait ).is_valid() ) {
-                    throw std::runtime_error( "scenario '" + definition.id +
-                                              "' references unknown trait '" + trait + "'" );
+                for( const std::string &trait : definition.forced_traits ) {
+                    if( !pimpl_->creatures.defines_mutation( trait ) &&
+                        !trait_id( trait ).is_valid() ) {
+                        throw std::runtime_error( "scenario '" + definition.id +
+                                                  "' references unknown trait '" + trait + "'" );
+                    }
                 }
-            }
-            for( const std::string &trait : definition.forbidden_traits ) {
-                if( !trait_id( trait ).is_valid() ) {
-                    throw std::runtime_error( "scenario '" + definition.id +
-                                              "' references unknown trait '" + trait + "'" );
+                for( const std::string &trait : definition.forbidden_traits ) {
+                    if( !pimpl_->creatures.defines_mutation( trait ) &&
+                        !trait_id( trait ).is_valid() ) {
+                        throw std::runtime_error( "scenario '" + definition.id +
+                                                  "' references unknown trait '" + trait + "'" );
+                    }
                 }
-            }
-            if( definition.map_extra && !definition.map_extra->empty() &&
-                map_extra_ids.count( *definition.map_extra ) == 0 &&
-                !map_extra_id( *definition.map_extra ).is_valid() ) {
-                throw std::runtime_error( "scenario '" + definition.id +
-                                          "' references unknown map extra '" +
-                                          *definition.map_extra + "'" );
-            }
-            if( definition.requirement && !definition.requirement->empty() &&
-                !achievement_id( *definition.requirement ).is_valid() ) {
-                throw std::runtime_error( "scenario '" + definition.id +
-                                          "' references unknown achievement '" +
-                                          *definition.requirement + "'" );
+                if( definition.map_extra && !definition.map_extra->empty() &&
+                    map_extra_ids.count( *definition.map_extra ) == 0 &&
+                    !map_extra_id( *definition.map_extra ).is_valid() ) {
+                    throw std::runtime_error( "scenario '" + definition.id +
+                                              "' references unknown map extra '" +
+                                              *definition.map_extra + "'" );
+                }
+                if( definition.requirement && !definition.requirement->empty() &&
+                    !achievement_is_staged( *definition.requirement ) &&
+                    !achievement_id( *definition.requirement ).is_valid() ) {
+                    throw std::runtime_error( "scenario '" + definition.id +
+                                              "' references unknown achievement '" +
+                                              *definition.requirement + "'" );
+                }
             }
             validate_operation(
                 entry.operation, string_id<scenario>( definition.id ).is_valid(),
@@ -7766,7 +7847,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     }
                 }
                 for( const auto &[name, weight] : group.colors ) {
-                    if( !staged_named_color( name ) && !RGBColor::try_parse( name ) ) {
+                    if( name.empty() || ( check_engine_state && !staged_named_color( name ) &&
+                                          !RGBColor::try_parse( name ) ) ) {
                         throw std::runtime_error( "vehicle color palette '" + definition.id +
                                                   "' references unknown color '" + name + "'" );
                     }
@@ -7847,7 +7929,10 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             for( const overmap_connection_subtype_definition_data &subtype :
                  definition.subtypes ) {
-                if( check_engine_state && !string_id<oter_type_t>( subtype.terrain ).is_valid() ) {
+                if( check_engine_state &&
+                    !pimpl_->world.defines_overmap_terrain_type( subtype.terrain ) &&
+                    !string_id<oter_type_t>( subtype.terrain ).is_valid() &&
+                    !detail::overmap_terrain_type_is_pending( subtype.terrain ) ) {
                     throw std::runtime_error( "overmap connection '" + definition.id +
                                               "' references unknown terrain '" +
                                               subtype.terrain + "'" );
@@ -7907,7 +7992,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                                     std::vector<std::string> { "survival" } :
                                                     definition.skills;
             for( const std::string &skill : skills ) {
-                if( skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) {
+                if( skill.empty() || ( check_engine_state && skill_ids.count( skill ) == 0 &&
+                                       !skill_id( skill ).is_valid() ) ) {
                     throw std::runtime_error( "harvest drop type '" + definition.id +
                                               "' references unknown skill '" + skill + "'" );
                 }
@@ -7927,13 +8013,14 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "harvest '" + definition.id +
                                           "' requires leftovers, butchery requirements, and one registration" );
             }
-            if( declared_item_ids.count( definition.leftovers ) == 0 &&
+            if( check_engine_state && declared_item_ids.count( definition.leftovers ) == 0 &&
                 !item::type_is_defined( itype_id( definition.leftovers ) ) ) {
                 throw std::runtime_error( "harvest '" + definition.id +
                                           "' references unknown leftovers item '" +
                                           definition.leftovers + "'" );
             }
             if( check_engine_state &&
+                staged_items.butchery_requirements.count( definition.butchery_requirements ) == 0 &&
                 !butchery_requirements_id( definition.butchery_requirements ).is_valid() ) {
                 throw std::runtime_error( "harvest '" + definition.id +
                                           "' references unknown butchery requirements '" +
@@ -7960,13 +8047,14 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                               "' has an invalid drop for '" + drop.output + "'" );
                 }
 
+                bool category_resolved = true;
                 bool output_is_item_group = false;
                 if( !drop.category.empty() ) {
                     const auto staged_category =
                         harvest_drop_type_item_groups.find( drop.category );
                     if( staged_category != harvest_drop_type_item_groups.end() ) {
                         output_is_item_group = staged_category->second;
-                    } else {
+                    } else if( check_engine_state ) {
                         const harvest_drop_type_id category( drop.category );
                         if( !category.is_valid() ) {
                             throw std::runtime_error( "harvest '" + definition.id +
@@ -7974,28 +8062,34 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                                       drop.category + "'" );
                         }
                         output_is_item_group = category->is_item_group();
+                    } else {
+                        category_resolved = false;
                     }
                 }
-                if( output_is_item_group ) {
-                    if( item_group_ids.count( drop.output ) == 0 && check_engine_state &&
-                        !item_group::group_is_defined( item_group_id( drop.output ) ) ) {
+                if( check_engine_state && category_resolved ) {
+                    if( output_is_item_group ) {
+                        if( item_group_ids.count( drop.output ) == 0 &&
+                            !item_group::group_is_defined( item_group_id( drop.output ) ) ) {
+                            throw std::runtime_error( "harvest '" + definition.id +
+                                                      "' references unknown item group '" +
+                                                      drop.output + "'" );
+                        }
+                    } else if( declared_item_ids.count( drop.output ) == 0 &&
+                               !item::type_is_defined( itype_id( drop.output ) ) ) {
                         throw std::runtime_error( "harvest '" + definition.id +
-                                                  "' references unknown item group '" +
-                                                  drop.output + "'" );
+                                                  "' references unknown item '" + drop.output + "'" );
                     }
-                } else if( declared_item_ids.count( drop.output ) == 0 &&
-                           !item::type_is_defined( itype_id( drop.output ) ) ) {
-                    throw std::runtime_error( "harvest '" + definition.id +
-                                              "' references unknown item '" + drop.output + "'" );
                 }
                 for( const std::string &flag : drop.flags ) {
-                    if( json_flag_ids.count( flag ) == 0 && !flag_id( flag ).is_valid() ) {
+                    if( flag.empty() || ( check_engine_state && json_flag_ids.count( flag ) == 0 &&
+                                          !flag_id( flag ).is_valid() ) ) {
                         throw std::runtime_error( "harvest '" + definition.id +
                                                   "' references unknown item flag '" + flag + "'" );
                     }
                 }
                 for( const std::string &fault : drop.faults ) {
-                    if( check_engine_state && !fault_id( fault ).is_valid() ) {
+                    if( check_engine_state && fault_ids.count( fault ) == 0 &&
+                        !fault_id( fault ).is_valid() ) {
                         throw std::runtime_error( "harvest '" + definition.id +
                                                   "' references unknown item fault '" + fault + "'" );
                     }
@@ -8181,6 +8275,12 @@ bool content_transaction::validate( const runtime &owner_runtime,
         worldgen_index.weather_generator_ids = weather_generator_ids;
         worldgen_index.item_group_ids = item_group_ids;
         worldgen_index.overmap_connection_ids = overmap_connection_ids;
+        worldgen_index.defines_overmap_terrain_type = [this]( const std::string_view id ) {
+            return pimpl_->world.defines_overmap_terrain_type( std::string( id ) );
+        };
+        worldgen_index.defines_overmap_special = [this]( const std::string_view id ) {
+            return pimpl_->world.defines_overmap_special( std::string( id ) );
+        };
         if( !pimpl_->worldgen.validate(
                 worldgen_index, check_engine_state, error ) ) {
             return false;
@@ -8233,7 +8333,7 @@ bool content_transaction::apply( std::string &error )
             // Mirrors the legacy finalize fill-in: every damage type not
             // authored explicitly inherits its bash conversion factor.
             native.finalize();
-            detail::bash_damage_profile_registry().insert( native );
+            detail::bash_damage_profile_registry().restore( native );
         }
 
         for( const damage_info_order_registration &entry : pimpl_->damage_info_orders ) {
@@ -8270,7 +8370,7 @@ bool content_transaction::apply( std::string &error )
                 }
             }
             native.was_loaded = true;
-            detail::damage_info_order_registry().insert( native );
+            detail::damage_info_order_registry().restore( native );
         }
         if( !pimpl_->damage_info_orders.empty() ) {
             detail::refresh_damage_info_order_registry();
@@ -8302,7 +8402,7 @@ bool content_transaction::apply( std::string &error )
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
             native._name = entry.definition->name.native();
-            detail::construction_category_registry().insert( native );
+            detail::construction_category_registry().restore( native );
         }
 
         for( const construction_group_registration &entry : pimpl_->construction_groups ) {
@@ -8314,7 +8414,7 @@ bool content_transaction::apply( std::string &error )
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
             native._name = entry.definition->name.native();
-            detail::construction_group_registry().insert( native );
+            detail::construction_group_registry().restore( native );
         }
 
         for( const vehicle_part_location_registration &entry :
@@ -8329,7 +8429,7 @@ bool content_transaction::apply( std::string &error )
             native.description = no_translation( entry.definition->description );
             native.z_order = static_cast<int>( entry.definition->z_order );
             native.list_order = static_cast<int>( entry.definition->list_order );
-            detail::vehicle_part_location_registry().insert( native );
+            detail::vehicle_part_location_registry().restore( native );
         }
 
         for( const vehicle_part_category_registration &entry :
@@ -8369,7 +8469,7 @@ bool content_transaction::apply( std::string &error )
             []( const mood_face_value & left, const mood_face_value & right ) {
                 return left.value() > right.value();
             } );
-            detail::mood_face_registry().insert( native );
+            detail::mood_face_registry().restore( native );
         }
 
         if( !pimpl_->named_colors.empty() ) {
@@ -8402,7 +8502,7 @@ bool content_transaction::apply( std::string &error )
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
             native.picture = entry.definition->lines;
-            detail::ascii_art_registry().insert( native );
+            detail::ascii_art_registry().restore( native );
         }
 
         for( const limb_score_registration &entry : pimpl_->limb_scores ) {
@@ -8416,7 +8516,7 @@ bool content_transaction::apply( std::string &error )
             native.wound_affect = entry.definition->affected_by_wounds;
             native.encumb_affect = entry.definition->affected_by_encumbrance;
             native.was_loaded = true;
-            detail::limb_score_registry().insert( native );
+            detail::limb_score_registry().restore( native );
         }
 
         if( !pimpl_->hit_ranges.empty() ) {
@@ -8447,7 +8547,7 @@ bool content_transaction::apply( std::string &error )
             native.detailed_definition = no_translation( source.description );
             native.symbol = source.symbol;
             native.color = color_from_string( source.color, report_color_error::no );
-            detail::overmap_land_use_code_registry().insert( native );
+            detail::overmap_land_use_code_registry().restore( native );
         }
 
         for( const overmap_vision_registration &entry : pimpl_->overmap_visions ) {
@@ -8471,7 +8571,7 @@ bool content_transaction::apply( std::string &error )
                 }
                 native.levels.push_back( std::move( level ) );
             }
-            detail::overmap_vision_registry().insert( native );
+            detail::overmap_vision_registry().restore( native );
         }
         if( !pimpl_->overmap_visions.empty() ) {
             detail::overmap_vision_registry().finalize();
@@ -8489,7 +8589,7 @@ bool content_transaction::apply( std::string &error )
                 native.terrains.insert( oter_type_str_id( terrain ) );
             }
             native.flags = entry.definition->terrain_flags;
-            detail::overmap_location_registry().insert( native );
+            detail::overmap_location_registry().restore( native );
         }
         if( !pimpl_->overmap_locations.empty() ) {
             detail::overmap_location_registry().finalize();
@@ -8520,7 +8620,7 @@ bool content_transaction::apply( std::string &error )
             for( const auto &[extra, weight] : entry.definition->entries ) {
                 native.values.add( map_extra_id( extra ), static_cast<int>( weight ) );
             }
-            detail::map_extra_collection_registry().insert( native );
+            detail::map_extra_collection_registry().restore( native );
         }
         if( !pimpl_->map_extra_collections.empty() ) {
             detail::map_extra_collection_registry().finalize();
@@ -8612,7 +8712,7 @@ bool content_transaction::apply( std::string &error )
             for( const auto &[fault, weight] : entry.definition->entries ) {
                 native.fault_weighted_list.add( fault_id( fault ), static_cast<int>( weight ) );
             }
-            detail::fault_group_registry().insert( native );
+            detail::fault_group_registry().restore( native );
         }
         if( !pimpl_->fault_groups.empty() ) {
             detail::fault_group_registry().finalize();
@@ -8649,7 +8749,7 @@ bool content_transaction::apply( std::string &error )
             native.shockwave_strength = static_cast<float>( source.shockwave_strength );
             native.shockwave_speed = static_cast<float>( source.shockwave_speed );
             native.shockwave_thickness = static_cast<float>( source.shockwave_thickness );
-            get_all_explosion_lights().insert( native );
+            get_all_explosion_lights().restore( native );
         }
         if( !pimpl_->explosion_lights.empty() ) {
             get_all_explosion_lights().finalize();
@@ -8676,7 +8776,7 @@ bool content_transaction::apply( std::string &error )
             native._effect = effect_on_condition_id::NULL_ID();
             native._builtin.clear();
             native._lua_policy = true;
-            detail::addiction_type_registry().insert( native );
+            detail::addiction_type_registry().restore( native );
         }
         if( !pimpl_->addiction_types.empty() ) {
             detail::addiction_type_registry().finalize();
@@ -8697,7 +8797,7 @@ bool content_transaction::apply( std::string &error )
                              character_modifier::NONE;
             native.builtin.clear();
             native.limbscores.clear();
-            detail::character_modifier_registry().insert( native );
+            detail::character_modifier_registry().restore( native );
         }
         if( !pimpl_->character_modifiers.empty() ) {
             detail::character_modifier_registry().finalize();
@@ -8732,7 +8832,7 @@ bool content_transaction::apply( std::string &error )
                 value.parameters = target.parameters;
                 native._locations.push_back( std::move( value ) );
             }
-            detail::start_location_registry().insert( native );
+            detail::start_location_registry().restore( native );
         }
         if( !pimpl_->start_locations.empty() ) {
             detail::start_location_registry().finalize();
@@ -8771,7 +8871,7 @@ bool content_transaction::apply( std::string &error )
             native.down.cost.kcal = static_cast<int>( source.kilocalories );
             native.down.cost.thirst = static_cast<int>( source.thirst );
             native.down.deploy_furn = furn_str_id( source.deploy_furniture );
-            detail::climbing_aid_registry().insert( native );
+            detail::climbing_aid_registry().restore( native );
         }
         if( !pimpl_->climbing_aids.empty() ) {
             detail::refresh_climbing_aid_registry();
@@ -8854,7 +8954,7 @@ bool content_transaction::apply( std::string &error )
             };
             native.debug_cause_eoc.reset();
             native.debug_leave_eoc.reset();
-            detail::weather_type_registry().insert( native );
+            detail::weather_type_registry().restore( native );
         }
         if( !pimpl_->weather_types.empty() ) {
             detail::weather_type_registry().finalize();
@@ -8954,7 +9054,7 @@ bool content_transaction::apply( std::string &error )
                 value.type = io::string_to_enum<relic_recharge_type>( source.recharge_type );
                 native.charge_values.add( value, static_cast<int>( source.weight ) );
             }
-            detail::relic_procgen_registry().insert( native );
+            detail::relic_procgen_registry().restore( native );
         }
         if( !pimpl_->relic_procgens.empty() ) {
             detail::relic_procgen_registry().finalize();
@@ -8995,10 +9095,7 @@ bool content_transaction::apply( std::string &error )
                 native.forbidden_limb_flags.insert( flag_id( flag ) );
             }
             native.was_loaded = true;
-            detail::attack_vector_registry().insert( native );
-        }
-        if( !pimpl_->attack_vectors.empty() ) {
-            detail::refresh_attack_vector_registry();
+            detail::attack_vector_registry().restore( native );
         }
 
         apply_character_phase( character_content_apply_phase::technique );
@@ -9055,7 +9152,7 @@ bool content_transaction::apply( std::string &error )
                 } );
             }
             native.was_loaded = true;
-            detail::trap_registry().insert( native );
+            detail::trap_registry().restore( native );
         }
         if( !pimpl_->traps.empty() ) {
             detail::trap_registry().finalize();
@@ -9115,7 +9212,7 @@ bool content_transaction::apply( std::string &error )
             }
             native.requirements = inline_requirement;
             native.was_loaded = true;
-            detail::construction_registry().insert( native );
+            detail::construction_registry().restore( native );
         }
 
         for( const furniture_registration &entry : pimpl_->furniture ) {
@@ -9187,7 +9284,7 @@ bool content_transaction::apply( std::string &error )
                         source.examine_handler, source.examine_name ) );
             }
             native.was_loaded = true;
-            detail::furniture_registry().insert( native );
+            detail::furniture_registry().restore( native );
         }
         if( !pimpl_->furniture.empty() ) {
             detail::furniture_registry().finalize();
@@ -9298,7 +9395,7 @@ bool content_transaction::apply( std::string &error )
                         source.examine_handler, source.examine_name ) );
             }
             native.was_loaded = true;
-            terrain_registry.insert( native );
+            terrain_registry.restore( native );
         }
         if( !terrain_order.empty() ) {
             terrain_registry.resolve_deferred();
@@ -9333,7 +9430,7 @@ bool content_transaction::apply( std::string &error )
             native.moves = static_cast<int>( source.moves );
             native.bash_dmg = static_cast<int>( source.bashing_damage );
             native.was_loaded = true;
-            detail::gate_registry().insert( native );
+            detail::gate_registry().restore( native );
         }
         if( !pimpl_->gates.empty() ) {
             detail::gate_registry().finalize();
@@ -9391,7 +9488,7 @@ bool content_transaction::apply( std::string &error )
                 }
             }
             native.was_loaded = true;
-            detail::fault_registry().insert( native );
+            detail::fault_registry().restore( native );
         }
         if( !pimpl_->faults.empty() ) {
             detail::fault_registry().finalize();
@@ -9423,7 +9520,7 @@ bool content_transaction::apply( std::string &error )
                 native.faults_added.insert( fault_id( added ) );
             }
             native.was_loaded = true;
-            detail::fault_fix_registry().insert( native );
+            detail::fault_fix_registry().restore( native );
         }
         if( !pimpl_->fault_fixes.empty() ) {
             // Finalize only the staged fixes: fault_fix::finalize accumulates
@@ -9519,7 +9616,7 @@ bool content_transaction::apply( std::string &error )
                 native.flags_.insert( flag );
             }
             native.was_loaded = true;
-            detail::map_extra_registry().insert( native );
+            detail::map_extra_registry().restore( native );
         }
         if( !pimpl_->map_extras.empty() ) {
             detail::map_extra_registry().finalize();
@@ -9566,7 +9663,7 @@ bool content_transaction::apply( std::string &error )
                                           "' inherits conflicting weather lists" );
             }
             native.was_loaded = true;
-            detail::weather_generator_registry().insert( native );
+            detail::weather_generator_registry().restore( native );
         }
         if( !pimpl_->weather_generators.empty() ) {
             detail::weather_generator_registry().finalize();
@@ -9596,7 +9693,7 @@ bool content_transaction::apply( std::string &error )
                     native.entries.push_back( native_entry );
                 }
                 native.was_loaded = true;
-                detail::shopkeeper_blacklist_registry().insert( native );
+                detail::shopkeeper_blacklist_registry().restore( native );
             } else if( source.kind == "whitelist" ) {
                 shopkeeper_whitelist native;
                 native.id = shopkeeper_whitelist_id( source.id );
@@ -9623,7 +9720,7 @@ bool content_transaction::apply( std::string &error )
                     native.entries.push_back( native_entry );
                 }
                 native.was_loaded = true;
-                detail::shopkeeper_whitelist_registry().insert( native );
+                detail::shopkeeper_whitelist_registry().restore( native );
             } else {
                 shopkeeper_cons_rates native;
                 native.id = shopkeeper_cons_rates_id( source.id );
@@ -9649,7 +9746,7 @@ bool content_transaction::apply( std::string &error )
                     native.rates.push_back( native_entry );
                 }
                 native.was_loaded = true;
-                detail::shopkeeper_cons_rates_registry().insert( native );
+                detail::shopkeeper_cons_rates_registry().restore( native );
             }
         }
         if( !pimpl_->shopkeeper_rules.empty() ) {
@@ -9679,7 +9776,7 @@ bool content_transaction::apply( std::string &error )
                 native.new_id = overmap_special_id( source.to_id );
                 native.src.emplace_back( native.id, mod_id( pimpl_->owner ) );
                 native.was_loaded = true;
-                detail::overmap_special_migration_registry().insert( native );
+                detail::overmap_special_migration_registry().restore( native );
             } else {
                 detail::insert_platform_savegame_migration( source );
             }
@@ -9714,7 +9811,13 @@ bool content_transaction::apply( std::string &error )
             }
             native._eoc.clear();
             native.id = id;
-            native.src.emplace_back( id, mod_id( pimpl_->owner ) );
+            if( source.inherits != source.id ) {
+                native.src.clear();
+            }
+            const std::pair<string_id<scenario>, mod_id> source_entry( id, mod_id( pimpl_->owner ) );
+            if( native.src.empty() || native.src.back() != source_entry ) {
+                native.src.emplace_back( source_entry );
+            }
             native.was_loaded = true;
             if( source.name ) {
                 native._name_male = source.name->native();
@@ -9806,7 +9909,7 @@ bool content_transaction::apply( std::string &error )
             }
             native.cached_permitted_professions.clear();
             native.cached_permitted_hobbies.clear();
-            detail::scenario_registry().insert( native );
+            detail::scenario_registry().restore( native );
         }
         if( !pimpl_->scenarios.empty() ) {
             detail::scenario_registry().finalize();
@@ -9909,7 +10012,7 @@ bool content_transaction::apply( std::string &error )
                 }
                 native.subtypes.push_back( std::move( subtype ) );
             }
-            detail::overmap_connection_registry().insert( native );
+            detail::overmap_connection_registry().restore( native );
         }
         if( !pimpl_->overmap_connections.empty() ) {
             detail::overmap_connection_registry().finalize();
@@ -9936,7 +10039,7 @@ bool content_transaction::apply( std::string &error )
             []( const speed_description_value & lhs, const speed_description_value & rhs ) {
                 return lhs.value() > rhs.value();
             } );
-            detail::speed_description_registry().insert( native );
+            detail::speed_description_registry().restore( native );
         }
 
         if( !pimpl_->item_content.apply_phase(
@@ -9967,7 +10070,7 @@ bool content_transaction::apply( std::string &error )
             for( const std::string &skill : skills ) {
                 native.harvest_skills.emplace_back( skill );
             }
-            detail::harvest_drop_type_registry().insert( native );
+            detail::harvest_drop_type_registry().restore( native );
         }
 
         for( const harvest_registration &entry : pimpl_->harvests ) {
@@ -10009,7 +10112,7 @@ bool content_transaction::apply( std::string &error )
                 drop.was_loaded = true;
                 native.entries_.push_back( std::move( drop ) );
             }
-            detail::harvest_list_registry().insert( native );
+            detail::harvest_list_registry().restore( native );
         }
 
         if( !pimpl_->creatures.apply_phase(
@@ -10035,6 +10138,9 @@ bool content_transaction::apply( std::string &error )
         if( !pimpl_->creatures.apply_phase(
                 creatures_content_apply_phase::body_part, error ) ) {
             throw std::runtime_error( error );
+        }
+        if( !pimpl_->attack_vectors.empty() ) {
+            detail::refresh_attack_vector_registry();
         }
 
         if( !pimpl_->creatures.apply_phase(
@@ -10115,7 +10221,7 @@ bool content_transaction::apply( std::string &error )
                 modifier.coverage_proportion = source_modifier.per_coverage;
                 native.mod_values.push_back( modifier );
             }
-            detail::clothing_mod_registry().insert( native );
+            detail::clothing_mod_registry().restore( native );
         }
         if( !pimpl_->clothing_mods.empty() ) {
             detail::refresh_clothing_mod_registry_cache();
@@ -10200,7 +10306,7 @@ bool content_transaction::apply( std::string &error )
                     }
                 }
             }
-            detail::ter_furn_transform_registry().insert( native );
+            detail::ter_furn_transform_registry().restore( native );
         }
         if( !pimpl_->terrain_transforms.empty() ) {
             detail::ter_furn_transform_registry().finalize();
@@ -10249,7 +10355,7 @@ bool content_transaction::apply( std::string &error )
                               pp_sub_generator_scope::omt;
                 native.sub_generators_.push_back( stage );
             }
-            detail::post_process_generator_registry().insert( native );
+            detail::post_process_generator_registry().restore( native );
         }
         if( !pimpl_->post_process_generators.empty() ) {
             detail::post_process_generator_registry().finalize();
@@ -10304,6 +10410,15 @@ bool content_transaction::validate_finalized( std::string &error ) const
             if( is_monster ? !mtype_id( id ).is_valid() : !mongroup_id( id ).is_valid() ) {
                 error = "monster group '" + entry.definition->id +
                         "' references id '" + id + "' missing after finalization";
+                return false;
+            }
+        }
+    }
+    for( const overmap_location_registration &entry : pimpl_->overmap_locations ) {
+        for( const std::string &terrain : entry.definition->terrains ) {
+            if( !oter_type_str_id( terrain ).is_valid() ) {
+                error = "overmap location '" + entry.definition->id +
+                        "' references unknown terrain '" + terrain + "' after finalization";
                 return false;
             }
         }
@@ -10846,7 +10961,7 @@ void content_transaction::rollback()
     for( auto it = pimpl_->trap_undo.rbegin();
          it != pimpl_->trap_undo.rend(); ++it ) {
         if( it->second ) {
-            detail::trap_registry().insert( *it->second );
+            detail::trap_registry().restore( *it->second );
         } else {
             detail::trap_registry().erase( it->first );
         }
@@ -10869,7 +10984,7 @@ void content_transaction::rollback()
     for( auto it = pimpl_->furniture_undo.rbegin();
          it != pimpl_->furniture_undo.rend(); ++it ) {
         if( it->second ) {
-            detail::furniture_registry().insert( *it->second );
+            detail::furniture_registry().restore( *it->second );
         } else {
             detail::furniture_registry().erase( it->first );
         }
@@ -10892,7 +11007,7 @@ void content_transaction::rollback()
     for( auto it = pimpl_->gate_undo.rbegin();
          it != pimpl_->gate_undo.rend(); ++it ) {
         if( it->second ) {
-            detail::gate_registry().insert( *it->second );
+            detail::gate_registry().restore( *it->second );
         } else {
             detail::gate_registry().erase( it->first );
         }
@@ -10905,7 +11020,7 @@ void content_transaction::rollback()
     for( auto it = pimpl_->fault_undo.rbegin();
          it != pimpl_->fault_undo.rend(); ++it ) {
         if( it->second ) {
-            detail::fault_registry().insert( *it->second );
+            detail::fault_registry().restore( *it->second );
         } else {
             detail::fault_registry().erase( it->first );
         }
@@ -10918,7 +11033,7 @@ void content_transaction::rollback()
     for( auto it = pimpl_->fault_fix_undo.rbegin();
          it != pimpl_->fault_fix_undo.rend(); ++it ) {
         if( it->second ) {
-            detail::fault_fix_registry().insert( *it->second );
+            detail::fault_fix_registry().restore( *it->second );
         } else {
             detail::fault_fix_registry().erase( it->first );
         }
@@ -10971,7 +11086,7 @@ void content_transaction::rollback()
     for( auto it = pimpl_->map_extra_undo.rbegin();
          it != pimpl_->map_extra_undo.rend(); ++it ) {
         if( it->second ) {
-            detail::map_extra_registry().insert( *it->second );
+            detail::map_extra_registry().restore( *it->second );
         } else {
             detail::map_extra_registry().erase( it->first );
         }
@@ -10984,7 +11099,7 @@ void content_transaction::rollback()
     for( auto it = pimpl_->weather_generator_undo.rbegin();
          it != pimpl_->weather_generator_undo.rend(); ++it ) {
         if( it->second ) {
-            detail::weather_generator_registry().insert( *it->second );
+            detail::weather_generator_registry().restore( *it->second );
         } else {
             detail::weather_generator_registry().erase( it->first );
         }

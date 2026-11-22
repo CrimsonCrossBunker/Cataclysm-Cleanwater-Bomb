@@ -1338,7 +1338,7 @@ bool presentation_content_transaction::apply( std::string &error )
             native.stat_ = event_statistic_id( source.statistic );
             native.description_ = source.description.empty() ? translation() :
                                   source.description.native();
-            detail::score_registry().insert( native );
+            detail::score_registry().restore( native );
         }
         if( !pimpl_->scores.empty() ) {
             detail::score_registry().finalize();
@@ -1369,7 +1369,7 @@ bool presentation_content_transaction::apply( std::string &error )
             native.was_loaded = true;
             native.can_be_personal = source.can_be_personal;
             native.hidden = source.hidden;
-            detail::zone_type_registry().insert( native );
+            detail::zone_type_registry().restore( native );
         }
         if( !pimpl_->zone_types.empty() ) {
             detail::zone_type_registry().finalize();
@@ -1413,7 +1413,7 @@ bool presentation_content_transaction::apply( std::string &error )
                 return false;
             };
             native.was_loaded = true;
-            detail::end_screen_registry().insert( native );
+            detail::end_screen_registry().restore( native );
         }
         if( !pimpl_->end_screens.empty() ) {
             detail::end_screen_registry().finalize();

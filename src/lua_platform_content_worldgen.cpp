@@ -3673,6 +3673,12 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
             return value >= std::numeric_limits<int>::min() &&
                    value <= std::numeric_limits<int>::max();
         };
+        const auto staged_oter_type = [&index]( const std::string &id ) {
+            return index.defines_overmap_terrain_type && index.defines_overmap_terrain_type( id );
+        };
+        const auto staged_special = [&index]( const std::string &id ) {
+            return index.defines_overmap_special && index.defines_overmap_special( id );
+        };
 
         std::set<std::string> region_settings_ravine_ids;
         for( const region_settings_ravine_registration &entry : pimpl_->region_settings_ravines ) {
@@ -3958,8 +3964,11 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
                     throw std::runtime_error( "region settings forest trail '" + definition.id +
                                               "' has invalid weight for trailhead: " + special );
                 }
-                if( check_engine_state && !overmap_special_id( special ).is_valid() &&
-                    !oter_type_str_id( special ).is_valid() ) {
+                if( check_engine_state && !staged_special( special ) &&
+                    !staged_oter_type( special ) &&
+                    !overmap_special_id( special ).is_valid() &&
+                    !oter_type_str_id( special ).is_valid() &&
+                    !detail::overmap_terrain_type_is_pending( special ) ) {
                     throw std::runtime_error( "region settings forest trail '" + definition.id +
                                               "' references unknown overmap special or terrain type: " +
                                               special );
@@ -3992,7 +4001,9 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
             const auto check_oter_type = [&]( const std::string & oter, const char *label ) {
                 if( !oter.empty() ) {
                     require_valid_id( oter, label );
-                    if( check_engine_state && !oter_type_str_id( oter ).is_valid() ) {
+                    if( check_engine_state && !staged_oter_type( oter ) &&
+                        !oter_type_str_id( oter ).is_valid() &&
+                        !detail::overmap_terrain_type_is_pending( oter ) ) {
                         throw std::runtime_error( "region settings highway '" + definition.id +
                                                   "' references unknown " + label + ": " + oter );
                     }
@@ -4001,7 +4012,8 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
             const auto check_special = [&]( const std::string & spec, const char *label ) {
                 if( !spec.empty() ) {
                     require_valid_id( spec, label );
-                    if( check_engine_state && !overmap_special_id( spec ).is_valid() ) {
+                    if( check_engine_state && !staged_special( spec ) &&
+                        !overmap_special_id( spec ).is_valid() ) {
                         throw std::runtime_error( "region settings highway '" + definition.id +
                                                   "' references unknown " + label + ": " + spec );
                     }
@@ -4039,8 +4051,11 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
                         throw std::runtime_error( "region settings highway '" + definition.id +
                                                   "' has invalid weight for " + label + ": " + special );
                     }
-                    if( check_engine_state && !overmap_special_id( special ).is_valid() &&
-                        !oter_type_str_id( special ).is_valid() ) {
+                    if( check_engine_state && !staged_special( special ) &&
+                        !staged_oter_type( special ) &&
+                        !overmap_special_id( special ).is_valid() &&
+                        !oter_type_str_id( special ).is_valid() &&
+                        !detail::overmap_terrain_type_is_pending( special ) ) {
                         throw std::runtime_error( "region settings highway '" + definition.id +
                                                   "' references unknown overmap special or terrain type: " +
                                                   special );
@@ -4317,8 +4332,11 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
                         throw std::runtime_error( "region_settings_city '" + definition.id +
                                                   "' has invalid weight for " + label + ": " + special );
                     }
-                    if( check_engine_state && !overmap_special_id( special ).is_valid() &&
-                        !oter_type_str_id( special ).is_valid() ) {
+                    if( check_engine_state && !staged_special( special ) &&
+                        !staged_oter_type( special ) &&
+                        !overmap_special_id( special ).is_valid() &&
+                        !oter_type_str_id( special ).is_valid() &&
+                        !detail::overmap_terrain_type_is_pending( special ) ) {
                         throw std::runtime_error( "region_settings_city '" + definition.id +
                                                   "' references unknown overmap special or terrain type: " +
                                                   special );
@@ -4370,7 +4388,9 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
             }
             for( const std::string &terrain : definition.terrains ) {
                 require_valid_id( terrain, "terrain" );
-                if( check_engine_state && !oter_type_str_id( terrain ).is_valid() ) {
+                if( check_engine_state && !staged_oter_type( terrain ) &&
+                    !oter_type_str_id( terrain ).is_valid() &&
+                    !detail::overmap_terrain_type_is_pending( terrain ) ) {
                     throw std::runtime_error( "forest_biome_mapgen '" + definition.id +
                                               "' references unknown overmap terrain: " + terrain );
                 }
@@ -5210,6 +5230,8 @@ bool worldgen_content_transaction::apply( std::string &error )
             native.description = faction_mission_text( entry.definition->description );
             if( !entry.definition->skill.empty() ) {
                 native.skill_used = skill_id( entry.definition->skill );
+            } else {
+                native.skill_used = skill_id::NULL_ID();
             }
             if( !entry.definition->difficulty.empty() ) {
                 if( entry.definition->difficulty == "NONE" ) {
