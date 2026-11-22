@@ -5,3 +5,5 @@ require("ammunition_types")
 require("ammo_effects")
 
 require("recipe_overrides")
+
+require("eoc_items")
