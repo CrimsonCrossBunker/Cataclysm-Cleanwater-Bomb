@@ -559,6 +559,10 @@ class update_mapgen_function_json : public mapgen_function_json_base
 {
     public:
         update_mapgen_function_json( JsonObject &&jsobj, const std::string &context );
+        update_mapgen_function_json( const update_mapgen_function_json & );
+        update_mapgen_function_json( update_mapgen_function_json && );
+        update_mapgen_function_json &operator=( const update_mapgen_function_json & );
+        update_mapgen_function_json &operator=( update_mapgen_function_json && );
         ~update_mapgen_function_json() override;
 
         void setup();
@@ -601,6 +605,11 @@ class mapgen_patch final : private update_mapgen_function_json
 {
     public:
         mapgen_patch();
+        mapgen_patch( const mapgen_patch & );
+        mapgen_patch( mapgen_patch && );
+        mapgen_patch &operator=( const mapgen_patch & );
+        mapgen_patch &operator=( mapgen_patch && );
+        ~mapgen_patch() override;
         void keep_orientation();
         void preserve_tile_contents();
         void erase_before_terrain();

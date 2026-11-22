@@ -854,10 +854,10 @@ void enchant_cache::serialize( JsonOut &jsout ) const
         jsout.member( "behavior_source", behavior_source );
     }
     if( !name.empty() ) {
-        jsout.member( "name", name );
+        jsout.member( "name", name.translated() );
     }
     if( !description.empty() ) {
-        jsout.member( "description", description );
+        jsout.member( "description", description.translated() );
     }
     jsout.member( "has", io::enum_to_string<enchantment::has>( active_conditions.first ) );
     jsout.member( "condition", io::enum_to_string<enchantment::condition>( active_conditions.second ) );
@@ -1039,7 +1039,7 @@ void enchant_cache::serialize( JsonOut &jsout ) const
             if( struc_desc.description.empty() ) {
                 jsout.member( "text", struc_desc.text );
             } else {
-                jsout.member( "text", struc_desc.description );
+                jsout.member( "text", struc_desc.description.translated() );
             }
             jsout.end_object();
         }
@@ -1188,7 +1188,8 @@ void enchant_cache::force_add( const enchant_cache &rhs )
     for( const special_vision &struc : rhs.special_vision_vector ) {
         special_vision_vector.emplace_back( special_vision{
             struc.special_vision_descriptions_vector, struc.condition, struc.range,
-            struc.precise, struc.ignores_aiming_cone } );
+            struc.precise, struc.ignores_aiming_cone, struc.definition_source,
+            struc.definition_index } );
     }
 
     hit_me_effect.insert( hit_me_effect.end(), rhs.hit_me_effect.begin(), rhs.hit_me_effect.end() );

@@ -1535,13 +1535,13 @@ sol::table change_mana(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
+    const bool relative = mutation == mana_mutation::modify;
     if( mutation == mana_mutation::set_raw ) {
         if( amount < std::numeric_limits<int>::min() || amount > std::numeric_limits<int>::max() ) {
             throw std::invalid_argument(
                 "services.spells.set_mana_raw requires a native signed-int amount" );
         }
     } else {
-        const bool relative = mutation == mana_mutation::modify;
         if( amount < ( relative ? -maximum_mana_value : 0 ) || amount > maximum_mana_value ) {
             const char *const api_name = relative ? "services.spells.modify_mana" : "services.spells.set_mana";
             throw std::invalid_argument( std::string( api_name ) + " amount is outside its limit" );

@@ -525,7 +525,7 @@ TEST_CASE( "offline_mission_failure_runs_the_saved_owner_phase_once_after_return
         "effect": { "u_add_morale": "morale_feeling_good", "bonus": -10, "max_bonus": -50,
                     "duration": "60 minutes", "decay_start": "60 minutes" }
     })" ).get_object();
-    REQUIRE( definition.parse_funcs( phase, "test", definition.fail ) );
+    REQUIRE( definition.parse_funcs( phase, "test", "fail", definition.fail ) );
     mission *task = mission::reserve_new( definition.id, character_id() );
     task->assign( remote );
     const int id = task->get_id();
@@ -1006,7 +1006,7 @@ TEST_CASE( "dead_mission_giver_still_runs_the_surviving_owners_failure_phase",
         "effect": { "u_add_morale": "morale_feeling_good", "bonus": -10, "max_bonus": -50,
                     "duration": "60 minutes", "decay_start": "60 minutes" }
     })" ).get_object();
-    REQUIRE( definition.parse_funcs( phase, "test", definition.fail ) );
+    REQUIRE( definition.parse_funcs( phase, "test", "fail", definition.fail ) );
     mission *task = mission::reserve_new( definition.id, giver.getID() );
     task->assign( remote );
     giver.set_all_parts_hp_cur( 0 );

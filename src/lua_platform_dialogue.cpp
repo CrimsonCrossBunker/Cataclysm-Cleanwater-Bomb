@@ -38,6 +38,7 @@
 #include "math_parser_diag_value.h"
 #include "mission_dialogue.h"
 #include "npc.h"
+#include "translation_gendered.h"
 
 namespace cata::lua_platform::dialogue
 {

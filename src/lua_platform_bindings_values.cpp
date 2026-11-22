@@ -1363,7 +1363,7 @@ void install_value_type_api(
     } );
     time.set_function( "infinite_duration", [require_values]() {
         require_values();
-        return script_time_duration::from_native( INDEFINITELY_LONG_DURATION );
+        return script_time_duration::from_native( calendar::INDEFINITELY_LONG_DURATION );
     } );
     time.set_function( "before_time_starts", [require_values]() {
         require_values();

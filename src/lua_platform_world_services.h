@@ -35,7 +35,9 @@ void install_game_world_service_api(
     const std::function<void()> &require_write,
     const std::function<void()> &require_dangerous_relocation,
     const std::function<bool()> &has_active_callback,
-    const std::function<bool()> &has_avatar_death_callback );
+    const std::function<bool()> &has_avatar_death_callback = []() {
+        return false;
+    } );
 
 } // namespace cata::lua_platform
 

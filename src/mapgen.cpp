@@ -4913,6 +4913,13 @@ void update_mapgen_function_json::setup()
     setup_common();
 }
 
+update_mapgen_function_json::update_mapgen_function_json( const update_mapgen_function_json & ) =
+    default;
+update_mapgen_function_json::update_mapgen_function_json( update_mapgen_function_json && ) = default;
+update_mapgen_function_json &update_mapgen_function_json::operator=(
+    const update_mapgen_function_json & ) = default;
+update_mapgen_function_json &update_mapgen_function_json::operator=(
+    update_mapgen_function_json && ) = default;
 update_mapgen_function_json::~update_mapgen_function_json() = default;
 
 void mapgen_function_json::finalize_parameters()
@@ -8187,6 +8194,12 @@ mapgen_patch::mapgen_patch() : update_mapgen_function_json( JsonObject(), "Lua m
 {
 }
 
+mapgen_patch::mapgen_patch( const mapgen_patch & ) = default;
+mapgen_patch::mapgen_patch( mapgen_patch && ) = default;
+mapgen_patch &mapgen_patch::operator=( const mapgen_patch & ) = default;
+mapgen_patch &mapgen_patch::operator=( mapgen_patch && ) = default;
+mapgen_patch::~mapgen_patch() = default;
+
 void mapgen_patch::keep_orientation()
 {
     flags_.set( jmapgen_flags::no_underlying_rotate );
@@ -8275,8 +8288,8 @@ void mapgen_patch::add_item_group( const jmapgen_place &where, const item_group_
 void mapgen_patch::add_named_stamp( const jmapgen_place &where,
                                     const std::vector<std::pair<nested_mapgen_id, int>> &choices )
 {
-    const int low = std::min( min_z_offset_, where.z.val );
-    const int high = std::max( max_z_offset_, where.z.valmax );
+    const int low = std::min<int>( min_z_offset_, where.z.val );
+    const int high = std::max<int>( max_z_offset_, where.z.valmax );
     if( high - low > OVERMAP_DEPTH + OVERMAP_HEIGHT ) {
         throw std::invalid_argument( "Mapgen stamp spans more levels than the world contains" );
     }

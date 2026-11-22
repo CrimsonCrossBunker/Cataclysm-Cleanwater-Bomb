@@ -46,6 +46,7 @@
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_creatures.h"
+#include "lua_platform_loader.h"
 #include "lua_platform_missions.h"
 #include "magic.h"
 #include "map.h"

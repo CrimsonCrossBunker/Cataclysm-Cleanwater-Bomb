@@ -111,6 +111,7 @@ extern "C" {
 #include "output.h"
 #include "overmap_connection.h"
 #include "overmap_location.h"
+#include "profession.h"
 #include "regional_settings.h"
 #include "relic.h"
 #include "requirements.h"

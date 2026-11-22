@@ -527,6 +527,7 @@ class ma_style_callback : public uilist_callback
         ~ma_style_callback() override = default;
 };
 
+tech_effect_data load_tech_effect_data( const JsonObject &e, std::string_view source = "" );
 void load_technique( const JsonObject &jo, const std::string &src );
 void load_martial_art( const JsonObject &jo, const std::string &src );
 void set_ordered_martial_art_handler( const matype_id &id, const std::string &phase,

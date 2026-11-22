@@ -297,16 +297,6 @@ bool load_combat_predicate( const JsonObject &definition, std::string_view sourc
     return true;
 }
 
-tech_effect_data load_tech_effect_data( const JsonObject &e, std::string_view source )
-{
-    tech_effect_data ret( efftype_id( e.get_string( "id" ) ), e.get_int( "duration", 0 ),
-                          e.get_bool( "permanent", false ), e.get_bool( "on_damage", true ),
-                          e.get_int( "chance", 100 ), e.get_string( "message", "" ),
-                          json_character_flag( e.get_string( "req_flag", "NULL" ) ) );
-    ret.has_condition = load_combat_predicate( e, source, ret.condition );
-    return ret;
-}
-
 class tech_effect_reader : public generic_typed_reader<tech_effect_reader>
 {
     public:
@@ -326,6 +316,16 @@ class tech_effect_reader : public generic_typed_reader<tech_effect_reader>
         std::string_view source;
 };
 } // namespace
+
+tech_effect_data load_tech_effect_data( const JsonObject &e, std::string_view source )
+{
+    tech_effect_data ret( efftype_id( e.get_string( "id" ) ), e.get_int( "duration", 0 ),
+                          e.get_bool( "permanent", false ), e.get_bool( "on_damage", true ),
+                          e.get_int( "chance", 100 ), e.get_string( "message", "" ),
+                          json_character_flag( e.get_string( "req_flag", "NULL" ) ) );
+    ret.has_condition = load_combat_predicate( e, source, ret.condition );
+    return ret;
+}
 
 void ma_requirements::load( const JsonObject &jo, std::string_view )
 {
@@ -520,6 +520,23 @@ bool string_id<ma_buff>::is_valid() const
     return ma_buffs.is_valid( *this );
 }
 
+// Not implemented on purpose (martialart objects have no integer id)
+// int_id<T> string_id<martialart>::id() const;
+
+/** @relates string_id */
+template<>
+const martialart &string_id<martialart>::obj() const
+{
+    return martialarts.obj( *this );
+}
+
+/** @relates string_id */
+template<>
+bool string_id<martialart>::is_valid() const
+{
+    return martialarts.is_valid( *this );
+}
+
 void load_martial_art( const JsonObject &jo, const std::string &src )
 {
     martialarts.load( jo, src );
@@ -656,23 +673,6 @@ void martialart::load( const JsonObject &jo, std::string_view src )
 
     optional( jo, was_loaded, "arm_block_with_bio_armor_arms", arm_block_with_bio_armor_arms, false );
     optional( jo, was_loaded, "leg_block_with_bio_armor_legs", leg_block_with_bio_armor_legs, false );
-}
-
-// Not implemented on purpose (martialart objects have no integer id)
-// int_id<T> string_id<martialart>::id() const;
-
-/** @relates string_id */
-template<>
-const martialart &string_id<martialart>::obj() const
-{
-    return martialarts.obj( *this );
-}
-
-/** @relates string_id */
-template<>
-bool string_id<martialart>::is_valid() const
-{
-    return martialarts.is_valid( *this );
 }
 
 std::vector<matype_id> all_martialart_types()

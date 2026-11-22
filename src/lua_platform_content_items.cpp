@@ -1576,7 +1576,7 @@ struct item_definition_handle {
         require_building_handle( token, *definition, "item" );
         const auto weight = options.get_or<std::int64_t>( "weight_override", -1 );
         const auto add = options.get_or<std::int64_t>( "weight_add", 0 );
-        const auto multiplier = options.get_or<double>( "weight_multiplier", 1.0 );
+        const auto multiplier = options.get_or( "weight_multiplier", 1.0 );
         if( id.empty() || weight < -1 || weight > std::numeric_limits<int>::max() ||
             add < std::numeric_limits<int>::min() || add > std::numeric_limits<int>::max() ||
             !std::isfinite( multiplier ) || std::abs( multiplier ) > std::numeric_limits<float>::max() ) {
@@ -1590,8 +1590,8 @@ struct item_definition_handle {
     item_definition_handle &mounted_charge( const sol::table &options ) {
         require_building_handle( token, *definition, "item" );
         const auto steps = options.get<std::int64_t>( "max_steps" );
-        const auto per_step = options.get_or<double>( "multiplier_per_step", 0.10 );
-        const auto maximum = options.get_or<double>( "max_multiplier", 1.50 );
+        const auto per_step = options.get_or( "multiplier_per_step", 0.10 );
+        const auto maximum = options.get_or( "max_multiplier", 1.50 );
         if( steps < 1 || steps > std::numeric_limits<int>::max() ||
             !( per_step >= 0.0 && per_step <= 0.5 ) || !( maximum >= 1.0 && maximum <= 2.0 ) ) {
             throw std::invalid_argument( "invalid mounted charge range or multipliers" );
@@ -1922,8 +1922,8 @@ struct item_definition_handle {
                                             units::to_milliliter( pocket.raw_volume_capacity ) );
         const std::int64_t mass = kind == pocket_type::CONTAINER ?
                                   options.get<std::int64_t>( "max_weight_milligrams" ) :
-                                  options.get_or<std::int64_t>( "max_weight_milligrams",
-                                          units::to_milligram( pocket.max_contains_weight ) );
+                                  options.get_or( "max_weight_milligrams",
+                                          static_cast<std::int64_t>( units::to_milligram( pocket.max_contains_weight ) ) );
         const auto length = options.get<std::optional<std::int64_t>>( "max_item_length_mm" );
         const std::int64_t moves = options.get_or<std::int64_t>( "moves", 100 );
         const double weight_multiplier = options.get_or( "weight_multiplier", 1.0 );
@@ -1973,8 +1973,11 @@ struct item_definition_handle {
         } else {
             pocket.raw_volume_capacity = units::from_milliliter( static_cast<int>( volume ) );
             pocket.max_contains_weight = units::from_milligram( mass );
-            pocket.max_item_length = length ? units::from_millimeter( static_cast<int>( *length ) ) :
-                                     units::default_length_from_volume( pocket.raw_volume_capacity ) * M_SQRT2;
+            if( length ) {
+                pocket.max_item_length = units::from_millimeter( static_cast<int>( *length ) );
+            } else {
+                pocket.max_item_length = units::default_length_from_volume( pocket.raw_volume_capacity ) * M_SQRT2;
+            }
             if( const auto item_volume = size_option( "max_item_volume_ml" ) ) {
                 pocket.max_item_volume = units::from_milliliter( *item_volume );
             }
@@ -7068,7 +7071,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     }
                 }
                 for( const flag_id &flag : pocket.get_flag_restrictions() ) {
-                    if( flag.is_null() || flag.str().empty() ||
+                    if( flag == flag_NULL || flag.str().empty() ||
                         ( check_engine_state && json_flag_ids.count( flag.str() ) == 0 && !flag.is_valid() ) ) {
                         throw std::runtime_error( "item '" + definition.id +
                                                   "' has an unknown container pocket flag '" + flag.str() + "'" );

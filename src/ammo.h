@@ -41,6 +41,9 @@ class ammunition_type
             return default_ammotype_;
         }
 
+    public:
+        static void load_ammunition_type( const JsonObject &jsobj, const std::string &source );
+
     private:
         using registry_type = std::unordered_map<ammotype, ammunition_type>;
 
@@ -54,7 +57,6 @@ class ammunition_type
         static registry_type &registry();
 
         static std::size_t mod_load_index( const std::string &source );
-        static void load_ammunition_type( const JsonObject &jsobj, const std::string &source );
         static void reset();
         static void check_consistency();
 };

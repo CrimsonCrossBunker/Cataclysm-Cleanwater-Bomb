@@ -1782,7 +1782,7 @@ struct world_content_transaction::impl {
     void apply_npc();
     void install_overmap_terrain_api( sol::table &content ) const;
     void apply_overmap_terrain();
-    void install_overmap_special_api( sol::table &content ) const;
+    void install_overmap_special_api( sol::table &content );
     void apply_overmap_special();
     void apply_mapgens();
     void install_vehicle_part_api( sol::table &content ) const;
@@ -2208,7 +2208,7 @@ void world_content_transaction::impl::install_overmap_terrain_api( sol::table &c
     } );
 }
 
-void world_content_transaction::impl::install_overmap_special_api( sol::table &content ) const
+void world_content_transaction::impl::install_overmap_special_api( sol::table &content )
 {
     const std::shared_ptr<token> owner = handle_token;
     content.set_function( "OvermapSpecial", [owner]( const sol::table & options ) {
