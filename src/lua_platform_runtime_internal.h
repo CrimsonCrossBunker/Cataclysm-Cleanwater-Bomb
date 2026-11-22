@@ -33,6 +33,7 @@ class const_talker;
 class mission;
 class spell;
 struct const_dialogue;
+struct dialogue;
 
 namespace cata::lua_platform
 {
@@ -465,6 +466,15 @@ void invoke_mutation_lifecycle_handler(
 std::optional<bool> invoke_mutation_condition_handler(
     std::string_view mod_id, std::string_view mutation_id,
     std::string_view handler_id, const const_dialogue &dialogue );
+bool invoke_ordered_dialogue_predicate(
+    std::string_view mod_id, std::string_view handler_id,
+    const const_dialogue &dialogue );
+void invoke_ordered_dialogue_action(
+    std::string_view mod_id, std::string_view handler_id,
+    ::dialogue &dialogue );
+std::string invoke_ordered_dialogue_line(
+    std::string_view mod_id, std::string_view handler_id,
+    ::dialogue &dialogue );
 
 void start_runtime_event_bridge();
 void stop_runtime_event_bridge();

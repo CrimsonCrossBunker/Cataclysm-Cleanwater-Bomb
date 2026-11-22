@@ -9568,6 +9568,11 @@ function CcbPlatformContent.define_item(options) end
 ---@class StaticDialoguePredicates
 local StaticDialoguePredicates = {}
 
+---Evaluate a registered runtime predicate handler receiving a read-only dialogue context.
+---@param id string
+---@return StaticDialoguePredicate
+function StaticDialoguePredicates.handler(id) end
+
 ---Evaluate these predicates in order until one fails.
 ---@param conditions StaticDialoguePredicate[]
 ---@return StaticDialoguePredicate
@@ -9676,9 +9681,12 @@ function StaticDialoguePredicates.available_missions(role, minimum, maximum) end
 ---@field no? StaticDialogueLine
 
 ---@class StaticDialogueSpecialLine
----@field special 'hint'|'consume_reason'
+---@field special 'hint'|'consume_reason'|'list_faction_camp_sites'
 
----@alias StaticDialogueLine string|LocalizedText|StaticDialogueGenderedLine|StaticDialogueRandomLine|StaticDialogueJoinedLine|StaticDialogueConditionalLine|StaticDialogueSpecialLine
+---@class StaticDialogueHandlerLine
+---@field handler string Registered handler id returning a dialogue string.
+
+---@alias StaticDialogueLine string|LocalizedText|StaticDialogueGenderedLine|StaticDialogueRandomLine|StaticDialogueJoinedLine|StaticDialogueConditionalLine|StaticDialogueSpecialLine|StaticDialogueHandlerLine
 
 ---Record literal gendered dialogue text for native translation at display time.
 ---@param text string
@@ -9697,6 +9705,23 @@ function CcbPlatformContent.gendered_line(text, participants) end
 ---| 'start_training_npc'|'start_training_seminar'|'npc_rules_menu'|'clear_overrides'|'npc_thankful'|'nothing'
 ---| 'dismount'|'find_mount'|'morale_chat_activity'|'drop_items_in_place'|'start_camp'|'basecamp_mission'
 ---| 'return_to_camp_duties'|'repair_bionic_limbs'|'bionic_install_allies'|'bionic_remove_allies'
+---| 'sort_loot'|'do_chop_plank'|'do_vehicle_deconstruct'|'do_vehicle_repair'
+---| 'select_vehicle_part_service'|'quote_vehicle_full_repair'|'start_vehicle_full_repair'
+---| 'do_chop_trees'|'do_fishing'|'do_construction'|'do_mining'|'do_mopping'
+---| 'do_read'|'do_eread'|'do_read_repeatedly'|'do_study'|'do_craft'
+---| 'do_butcher'|'do_farming'|'assign_camp'|'abandon_camp'
+---| 'buy_cow'|'buy_chicken'|'buy_horse'|'lesser_give_aid'|'lesser_give_all_aid'
+---| 'barber_beard'|'barber_hair'|'buy_haircut'|'buy_shave'
+---| 'revert_activity'|'copy_npc_rules'|'set_npc_pickup'|'pick_style'
+---| 'do_disassembly'|'distribute_food_auto'
+---| 'u_bulk_trade_accept'|'npc_bulk_trade_accept'|'u_bulk_donate'|'npc_bulk_donate'
+---| 'lightning'|'u_vomit'|'npc_vomit'|'u_marlossify'|'npc_marlossify'
+---| 'u_die'|'u_cancel_activity'|'npc_cancel_activity'|'u_prevent_death'|'npc_prevent_death'
+---| 'next_weather'|'npc_gets_item'|'npc_gets_item_to_use'
+---| 'u_ranged_attack'|'npc_ranged_attack'
+---| 'open_dialogue'|'take_control'|'take_control_menu'
+---| 'u_make_radio_representative'|'npc_make_radio_representative'
+---| 'u_wants_to_talk'|'npc_wants_to_talk'
 
 ---A native effect usable in an ordered dialogue definition.
 ---@class StaticDialogueAction
@@ -9714,6 +9739,11 @@ function CcbPlatformContent.gendered_line(text, participants) end
 
 ---@class StaticDialogueActions
 local StaticDialogueActions = {}
+
+---Run a registered runtime handler receiving a writable dialogue context.
+---@param id string
+---@return StaticDialogueAction
+function StaticDialogueActions.handler(id) end
 
 ---Run a named native mapgen update at the speaker's terrain or the nearest matching terrain.
 ---Uses the participants' selected mission and refreshes the affected map cache.
@@ -9860,15 +9890,18 @@ function StaticDialogueActions.transfer_items(id, count, debt) end
 ---@field scale integer
 
 ---@class StaticDialogueTrial
----@field kind? 'none'|'lie'|'persuade'|'intimidate'|'skill_check'
+---@field kind? 'none'|'lie'|'persuade'|'intimidate'|'skill_check'|'condition'
 ---@field difficulty? integer Required for an active trial.
 ---@field skill? string Required for a skill check.
+---@field when? StaticDialoguePredicate Required when kind is 'condition'.
 ---@field modifiers? StaticDialogueTrialModifier[]
 
 ---@class StaticDialogueReply : StaticDialogueOutcome
 ---@field when? StaticDialoguePredicate Determine whether the reply is available.
 ---@field show_when? StaticDialoguePredicate Show the reply even if the availability rule fails.
 ---@field text? string|LocalizedText
+---@field text_when? StaticDialoguePredicate Condition determining whether `text` or `false_text` is shown.
+---@field false_text? string|LocalizedText Alternate text displayed when `text_when` evaluates to false.
 ---@field trial? StaticDialogueTrial
 ---@field success? StaticDialogueOutcome
 ---@field failure? StaticDialogueOutcome
@@ -9889,7 +9922,9 @@ function StaticDialogueActions.transfer_items(id, count, debt) end
 ---@class StaticDialogueEntryRule
 ---@field when? StaticDialoguePredicate Checked after reply generation.
 ---@field once? string Persist a once-per-speaker marker under the primary topic id.
----@field actions (StaticDialogueNativeAction|StaticDialogueAction)[] Executed in order when the rule applies.
+---@field actions? (StaticDialogueNativeAction|StaticDialogueAction)[] Executed in order when the rule applies.
+---@field opinion? StaticDialogueOpinion
+---@field mission_opinion? StaticDialogueOpinion
 
 ---@class StaticDialogueTopicOptions
 ---@field id string|string[] Topic id or aliases.
@@ -12282,6 +12317,10 @@ function PlatformDialogueContext:get(key) end
 ---@return string|nil value
 function PlatformDialogueContext:get_string(key) end
 
+---@param key string
+---@return number|nil value
+function PlatformDialogueContext:get_number(key) end
+
 ---Read the live native speaker's variable string slot, independently of its converted handle kind.
 ---Missing is nil; present Null is empty, and other type mismatches preserve native diagnostics.
 ---@param key string Raw native variable key, including empty, NUL-containing and long text.
@@ -12300,6 +12339,14 @@ function PlatformDialogueContext:set(key, value) end
 
 ---@param key string
 function PlatformDialogueContext:remove(key) end
+
+---@param key string
+---@param value boolean
+function PlatformDialogueContext:set_conditional(key, value) end
+
+---@param key string
+---@return boolean
+function PlatformDialogueContext:evaluate_conditional(key) end
 
 ---@class CcbPlatformDialogueDeferredTranslation
 ---@field context? string Optional GNU gettext context for the source text.

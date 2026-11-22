@@ -54,6 +54,7 @@ extern "C" {
 #include "lua_platform_dialogue.h"
 #include "lua_platform_npc_services.h"
 #include "map.h"
+#include "math_parser_diag_value.h"
 #include "npc_opinion.h"
 #include "output.h"
 #include "sounds.h"
@@ -867,10 +868,13 @@ void detail::install_runtime_dialogue_presentation_api(
     "interlocutor", &platform_dialogue_context::interlocutor,
     "get", &platform_dialogue_context::get,
     "get_string", &platform_dialogue_context::get_string,
+    "get_number", &platform_dialogue_context::get_number,
     "speaker_variable_string", &platform_dialogue_context::speaker_variable_string,
     "interlocutor_variable_string", &platform_dialogue_context::interlocutor_variable_string,
     "set", &platform_dialogue_context::set,
-    "remove", &platform_dialogue_context::remove );
+    "remove", &platform_dialogue_context::remove,
+    "set_conditional", &platform_dialogue_context::set_conditional,
+    "evaluate_conditional", &platform_dialogue_context::evaluate_conditional );
     ccb["PlatformDialogueContext"] = sol::lua_nil;
 
     sol::table dialogue_api = lua.create_table();
@@ -2378,6 +2382,296 @@ talk_topic invoke_platform_dialogue_response_callback(
     }
 }
 
+namespace
+{
+
+class scoped_ordered_dialogue_session
+{
+    public:
+        explicit scoped_ordered_dialogue_session( ::dialogue &d )
+            : dialogue_( d ),
+              started_( !cata::lua_platform::dialogue::has_active_dialogue( d ) ) {
+            if( started_ ) {
+                cata::lua_platform::dialogue::begin_dialogue( dialogue_ );
+            }
+        }
+
+        ~scoped_ordered_dialogue_session() {
+            if( started_ ) {
+                cata::lua_platform::dialogue::end_session( dialogue_ );
+            }
+        }
+
+        scoped_ordered_dialogue_session( const scoped_ordered_dialogue_session & ) = delete;
+        scoped_ordered_dialogue_session &operator=( const scoped_ordered_dialogue_session & ) = delete;
+
+    private:
+        ::dialogue &dialogue_;
+        bool started_ = false;
+};
+
+struct ordered_dialogue_handler_lookup {
+    std::shared_ptr<runtime> owner;
+    sol::protected_function callback;
+};
+
+std::optional<ordered_dialogue_handler_lookup> lookup_ordered_dialogue_handler(
+    const std::string_view mod_id, const std::string_view handler_id,
+    const std::string_view kind )
+{
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready || owner->lua == nullptr ) {
+        return std::nullopt;
+    }
+    const auto found = owner->handlers.find( std::string( handler_id ) );
+    if( found == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first ordered dialogue " << kind
+                                    << " unavailable for '" << mod_id << ":" << handler_id << "'";
+        return std::nullopt;
+    }
+    return ordered_dialogue_handler_lookup{ owner, found->second.callback };
+}
+
+template <typename OnResult>
+bool invoke_ordered_live_dialogue_handler(
+    const std::string_view mod_id, const std::string_view handler_id,
+    const std::string_view kind, ::dialogue &d, const bool allow_write,
+    OnResult &&on_result )
+{
+    const std::optional<ordered_dialogue_handler_lookup> lookup =
+        lookup_ordered_dialogue_handler( mod_id, handler_id, kind );
+    if( !lookup ) {
+        return false;
+    }
+    scoped_ordered_dialogue_session session_guard( d );
+    const std::string topic_id =
+        d.topic_stack.empty() ? std::string() : d.topic_stack.back().id;
+    const std::shared_ptr<platform_dialogue_context> context =
+        make_platform_dialogue_context( *lookup->owner, d, topic_id, allow_write, allow_write );
+    const on_out_of_scope invalidate_context( [&context]() {
+        context->invalidate();
+    } );
+    detail::callback_scope scope( *lookup->owner );
+    const auto npc_services = npc_services_for_callback( *lookup->owner, d, topic_id );
+    const sol::protected_function_result result = lookup->callback( context );
+    if( !result.valid() ) {
+        detail::report_callback_error( *lookup->owner, handler_id, result );
+        return false;
+    }
+    on_result( *lookup->owner, result );
+    return true;
+}
+
+sol::table make_const_dialogue_predicate_context(
+    runtime &owner, const const_dialogue &d,
+    const std::shared_ptr<bool> &alive )
+{
+    sol::state_view lua( owner.lua->lua_state() );
+    sol::table ctx = detail::platform_callback_payload( owner, {
+        { "speaker_actor", d.has_alpha ? d.const_actor( false ) : nullptr },
+        { "interlocutor_actor", d.has_beta ? d.const_actor( true ) : nullptr },
+        { "has_speaker_flag", d.has_alpha },
+        { "has_interlocutor_flag", d.has_beta },
+        { "by_radio_flag", d.by_radio },
+        { "reason_text", d.reason },
+        { "assigned_mission_total", static_cast<int>( d.missions_assigned.size() ) }
+    } );
+    const sol::object speaker_val = ctx.raw_get<sol::object>( "speaker_actor" );
+    const sol::object interlocutor_val = ctx.raw_get<sol::object>( "interlocutor_actor" );
+    const bool has_speaker = d.has_alpha;
+    const bool has_interlocutor = d.has_beta;
+    const bool by_radio = d.by_radio;
+    const std::string reason = d.reason;
+    const std::size_t missions_assigned = d.missions_assigned.size();
+    const std::string cur_item = d.cur_item.is_null() ? std::string() : d.cur_item.str();
+    const const_dialogue *d_ptr = &d;
+
+    const auto require_alive = [alive]() {
+        if( !*alive ) {
+            throw std::runtime_error( "Platform dialogue context is no longer valid" );
+        }
+    };
+    sol::table methods = lua.create_table();
+    methods.set_function( "valid", [alive]( const sol::object & ) {
+        return *alive;
+    } );
+    methods.set_function( "speaker", [require_alive, speaker_val]( const sol::object & ) {
+        require_alive();
+        return speaker_val;
+    } );
+    methods.set_function( "interlocutor", [require_alive, interlocutor_val]( const sol::object & ) {
+        require_alive();
+        return interlocutor_val;
+    } );
+    methods.set_function( "has_speaker", [require_alive, has_speaker]( const sol::object & ) {
+        require_alive();
+        return has_speaker;
+    } );
+    methods.set_function( "has_interlocutor", [require_alive, has_interlocutor]( const sol::object & ) {
+        require_alive();
+        return has_interlocutor;
+    } );
+    methods.set_function( "by_radio", [require_alive, by_radio]( const sol::object & ) {
+        require_alive();
+        return by_radio;
+    } );
+    methods.set_function( "has_reason", [require_alive, reason]( const sol::object & ) {
+        require_alive();
+        return !reason.empty();
+    } );
+    methods.set_function( "reason", [require_alive, reason]( const sol::object & ) {
+        require_alive();
+        return reason;
+    } );
+    methods.set_function( "assigned_mission_count", [require_alive, missions_assigned]( const sol::object & ) {
+        require_alive();
+        return missions_assigned;
+    } );
+    methods.set_function( "topic", [require_alive]( const sol::object & ) {
+        require_alive();
+        return std::string();
+    } );
+    methods.set_function( "topic_item", [require_alive, cur_item]( const sol::object & ) {
+        require_alive();
+        return cur_item;
+    } );
+    methods.set_function( "get", [require_alive, d_ptr, lua]( const sol::object &,
+    const std::string & key ) {
+        require_alive();
+        const diag_value *value = d_ptr->maybe_get_value( key );
+        if( value == nullptr ) {
+            return sol::make_object( lua, sol::lua_nil );
+        }
+        if( value->is_empty() ) {
+            return sol::make_object( lua, script_null_value{} );
+        }
+        if( value->is_dbl() ) {
+            return sol::make_object( lua, value->dbl() );
+        }
+        if( value->is_str() ) {
+            return sol::make_object( lua, value->str() );
+        }
+        return sol::make_object( lua, value->to_string() );
+    } );
+    methods.set_function( "get_string", [require_alive, d_ptr, lua]( const sol::object &,
+    const std::string & key ) {
+        require_alive();
+        const diag_value *value = d_ptr->maybe_get_value( key );
+        return value == nullptr ? sol::make_object( lua, sol::lua_nil ) :
+               sol::make_object( lua, value->str() );
+    } );
+    methods.set_function( "get_number", [require_alive, d_ptr, lua]( const sol::object &,
+    const std::string & key ) {
+        require_alive();
+        const diag_value *value = d_ptr->maybe_get_value( key );
+        return value == nullptr ? sol::make_object( lua, sol::lua_nil ) :
+               sol::make_object( lua, value->dbl() );
+    } );
+    methods.set_function( "evaluate_conditional", [require_alive, d_ptr]( const sol::object &,
+    const std::string & key ) {
+        require_alive();
+        return d_ptr->evaluate_conditional( key, *d_ptr );
+    } );
+    methods.set_function( "speaker_variable_string", [require_alive, d_ptr, lua]( const sol::object &,
+    const std::string & key ) {
+        require_alive();
+        const const_talker *actor = d_ptr->has_alpha ? d_ptr->const_actor( false ) : nullptr;
+        const diag_value *value = actor ? actor->maybe_get_value( key ) : nullptr;
+        return value == nullptr ? sol::make_object( lua, sol::lua_nil ) :
+               sol::make_object( lua, value->str() );
+    } );
+    methods.set_function( "interlocutor_variable_string", [require_alive, d_ptr, lua]( const sol::object &,
+    const std::string & key ) {
+        require_alive();
+        const const_talker *actor = d_ptr->has_beta ? d_ptr->const_actor( true ) : nullptr;
+        const diag_value *value = actor ? actor->maybe_get_value( key ) : nullptr;
+        return value == nullptr ? sol::make_object( lua, sol::lua_nil ) :
+               sol::make_object( lua, value->str() );
+    } );
+    return methods;
+}
+
+} // namespace
+
+namespace detail
+{
+
+bool invoke_ordered_dialogue_predicate(
+    const std::string_view mod_id, const std::string_view handler_id,
+    const const_dialogue &dialogue )
+{
+    bool answer = false;
+    if( const ::dialogue *live = dynamic_cast<const ::dialogue *>( &dialogue ) ) {
+        ::dialogue &mutable_dialogue = *const_cast<::dialogue *>( live );
+        invoke_ordered_live_dialogue_handler(
+            mod_id, handler_id, "predicate", mutable_dialogue, false,
+        [&]( const runtime & owner, const sol::protected_function_result & result ) {
+            if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
+                DebugLog( D_ERROR, D_MAIN ) << "Lua-first ordered dialogue predicate '"
+                                            << owner.mod_id << ':' << handler_id
+                                            << "' must return exactly one boolean";
+                return;
+            }
+            answer = result.get<bool>();
+        } );
+        return answer;
+    }
+
+    const std::optional<ordered_dialogue_handler_lookup> lookup =
+        lookup_ordered_dialogue_handler( mod_id, handler_id, "predicate" );
+    if( !lookup ) {
+        return false;
+    }
+    const std::shared_ptr<bool> alive = std::make_shared<bool>( true );
+    const on_out_of_scope retire( [alive]() {
+        *alive = false;
+    } );
+    sol::table context = make_const_dialogue_predicate_context( *lookup->owner, dialogue, alive );
+    detail::callback_scope scope( *lookup->owner );
+    const sol::protected_function_result result = lookup->callback( context );
+    if( !result.valid() ) {
+        detail::report_callback_error( *lookup->owner, handler_id, result );
+        return false;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first ordered dialogue predicate '"
+                                    << mod_id << ':' << handler_id
+                                    << "' must return exactly one boolean";
+        return false;
+    }
+    return result.get<bool>();
+}
+
+void invoke_ordered_dialogue_action(
+    const std::string_view mod_id, const std::string_view handler_id,
+    ::dialogue &dialogue )
+{
+    invoke_ordered_live_dialogue_handler(
+        mod_id, handler_id, "action", dialogue, true,
+    []( const runtime &, const sol::protected_function_result & ) {
+    } );
+}
+
+std::string invoke_ordered_dialogue_line(
+    const std::string_view mod_id, const std::string_view handler_id,
+    ::dialogue &dialogue )
+{
+    std::string line;
+    invoke_ordered_live_dialogue_handler(
+        mod_id, handler_id, "line", dialogue, false,
+    [&]( const runtime & owner, const sol::protected_function_result & result ) {
+        if( result.return_count() != 1 || result.get_type() != sol::type::string ) {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first ordered dialogue line '"
+                                        << owner.mod_id << ':' << handler_id
+                                        << "' must return exactly one string";
+            return;
+        }
+        line = result.get<std::string>();
+    } );
+    return line;
+}
+
+} // namespace detail
 
 } // namespace cata::lua_platform
 

@@ -562,6 +562,10 @@ struct dynamic_line_t {
         static dynamic_line_t branch( talk_predicate test, dynamic_line_t yes, dynamic_line_t no );
         static dynamic_line_t hint();
         static dynamic_line_t use_reason();
+        static dynamic_line_t list_faction_camp_sites();
+        static dynamic_line_t callback( std::function<std::string( dialogue & )> fn ) {
+            return dynamic_line_t( std::move( fn ) );
+        }
 
         std::string operator()( dialogue &d ) const {
             if( !function ) {
@@ -574,6 +578,9 @@ struct dynamic_line_t {
 struct talk_response_rules {
     talk_predicate condition;
     talk_predicate show_condition;
+    talk_predicate trial_condition;
+    talk_predicate text_condition;
+    std::optional<translation> false_text;
     std::optional<talk_effect_t> success_actions;
     std::optional<talk_effect_t> failure_actions;
 };

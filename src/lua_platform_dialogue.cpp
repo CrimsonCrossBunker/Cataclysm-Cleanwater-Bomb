@@ -306,6 +306,11 @@ void dialogue_session::deactivate() noexcept
     contexts_.clear();
 }
 
+bool has_active_dialogue( const ::dialogue &d ) noexcept
+{
+    return active_lifetime_for( d ) != nullptr;
+}
+
 void begin_dialogue( ::dialogue &d )
 {
     dialogue_session_registry &registry = session_registry();
@@ -1060,6 +1065,31 @@ void context::set( const std::string &key, const sol::object &value ) const
 void context::remove( const std::string &key ) const
 {
     require_write_state().dialogue_ref().remove_value( key );
+}
+
+sol::object context::get_number( const std::string &key ) const
+{
+    state &current = require_state();
+    const diag_value *value = current.dialogue_ref().maybe_get_value( key );
+    sol::state_view lua( current.lua_state );
+    if( value == nullptr ) {
+        return sol::make_object( lua, sol::lua_nil );
+    }
+    return sol::make_object( lua, value->dbl() );
+}
+
+void context::set_conditional( const std::string &key, const bool value ) const
+{
+    ::dialogue &d = require_write_state().dialogue_ref();
+    d.set_conditional( key, [value]( const const_dialogue & ) {
+        return value;
+    } );
+}
+
+bool context::evaluate_conditional( const std::string &key ) const
+{
+    const ::dialogue &d = require_state().dialogue_ref();
+    return d.evaluate_conditional( key, d );
 }
 
 namespace

@@ -10368,6 +10368,15 @@ void json_talk_response::set_rules( const talk_response_rules &rules )
     if( rules.failure_actions ) {
         actual_response.failure.append_actions( *rules.failure_actions );
     }
+    if( rules.trial_condition ) {
+        actual_response.trial.condition = rules.trial_condition;
+    }
+    if( rules.text_condition ) {
+        actual_response.truefalse_condition = rules.text_condition;
+    }
+    if( rules.false_text ) {
+        actual_response.falsetext = *rules.false_text;
+    }
 }
 
 void json_talk_response::load_condition( const JsonObject &jo, std::string_view )
@@ -10504,6 +10513,23 @@ dynamic_line_t dynamic_line_t::use_reason()
     } );
 }
 
+dynamic_line_t dynamic_line_t::list_faction_camp_sites()
+{
+    return dynamic_line_t( []( dialogue & ) {
+        const auto &sites = recipe_group::get_recipes_by_id( "all_faction_base_types" );
+        if( sites.empty() ) {
+            return std::string( _( "I can't think of a single place I can build a camp." ) );
+        }
+        std::string tmp = "I can start a new camp as a ";
+        tmp += enumerate_as_string( sites.begin(), sites.end(),
+        []( const std::pair < recipe_id, translation > &site ) {
+            return site.second.translated();
+        },
+        enumeration_conjunction::or_ );
+        return tmp;
+    } );
+}
+
 dynamic_line_t dynamic_line_t::from_member( const JsonObject &jo,
         std::string_view member_name )
 {
@@ -10566,19 +10592,7 @@ dynamic_line_t::dynamic_line_t( const JsonObject &jo )
     } else if( jo.get_bool( "use_reason", false ) ) {
         *this = use_reason();
     } else if( jo.get_bool( "list_faction_camp_sites", false ) ) {
-        function = [&]( const dialogue & ) {
-            const auto &sites = recipe_group::get_recipes_by_id( "all_faction_base_types" );
-            if( sites.empty() ) {
-                return std::string( _( "I can't think of a single place I can build a camp." ) );
-            }
-            std::string tmp = "I can start a new camp as a ";
-            tmp += enumerate_as_string( sites.begin(), sites.end(),
-            []( const std::pair < recipe_id, translation > &site ) {
-                return site.second.translated();
-            },
-            enumeration_conjunction::or_ );
-            return tmp;
-        };
+        *this = list_faction_camp_sites();
     } else if( jo.has_string( "gendered_line" ) ) {
         std::string line;
         mandatory( jo, false, "gendered_line", line, text_style_check_reader() );

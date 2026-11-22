@@ -98,6 +98,7 @@ extern "C" {
 #include "mutation.h"
 #include "npc.h"
 #include "npc_class.h"
+#include "npc_opinion.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "overmap_connection.h"
@@ -3555,9 +3556,19 @@ static_dialogue_predicate combine_dialogue_predicates( const sol::table &values,
     } };
 }
 
-void install_static_dialogue_predicates( sol::state &lua, sol::table &content )
+void install_static_dialogue_predicates( sol::state &lua, sol::table &content,
+        const std::string &mod_id )
 {
     sol::table predicates = lua.create_table();
+    predicates.set_function( "handler", [mod_id]( const std::string & id ) {
+        if( id.empty() ) {
+            throw std::invalid_argument( "dialogue predicate handler id must not be empty" );
+        }
+        return static_dialogue_predicate{ [mod_id, id]( const const_dialogue & d )
+        {
+            return detail::invoke_ordered_dialogue_predicate( mod_id, id, d );
+        } };
+    } );
     predicates.set_function( "all", []( const sol::table & values ) {
         return combine_dialogue_predicates( values, true );
     } );
@@ -3639,7 +3650,7 @@ void install_static_dialogue_predicates( sol::state &lua, sol::table &content )
     content["dialogue_predicates"] = predicates;
 }
 
-dynamic_line_t read_static_dialogue_line( const sol::object &line )
+dynamic_line_t read_static_dialogue_line( const sol::object &line, const std::string &source )
 {
     if( line.get_type() == sol::type::nil ) {
         return {};
@@ -3656,9 +3667,10 @@ dynamic_line_t read_static_dialogue_line( const sol::object &line )
     const auto gendered = options.get<sol::optional<std::string>>( "gendered" );
     const auto condition = options.get<sol::optional<static_dialogue_predicate>>( "when" );
     const auto special = options.get<sol::optional<std::string>>( "special" );
+    const auto handler = options.get<sol::optional<std::string>>( "handler" );
     if( choices.has_value() + joined.has_value() + gendered.has_value() + condition.has_value() +
-        special.has_value() != 1 ) {
-        throw std::invalid_argument( "dialogue line requires choices, joined lines, gendered text, a predicate, or a native line" );
+        special.has_value() + handler.has_value() != 1 ) {
+        throw std::invalid_argument( "dialogue line requires choices, joined lines, gendered text, a predicate, a handler, or a native line" );
     }
     if( choices || joined ) {
         const sol::table &lines = choices ? *choices : *joined;
@@ -3669,15 +3681,23 @@ dynamic_line_t read_static_dialogue_line( const sol::object &line )
         const std::size_t count = lines.size();
         entries.reserve( count );
         for( std::size_t i = 1; i <= count; ++i ) {
-            entries.push_back( read_static_dialogue_line( lines.raw_get<sol::object>( i ) ) );
+            entries.push_back( read_static_dialogue_line( lines.raw_get<sol::object>( i ), source ) );
         }
         return choices ? dynamic_line_t::choose( std::move( entries ) ) :
                dynamic_line_t::join( std::move( entries ) );
     }
     if( condition ) {
         return dynamic_line_t::branch( condition->test,
-                                       read_static_dialogue_line( options.raw_get<sol::object>( "yes" ) ),
-                                       read_static_dialogue_line( options.raw_get<sol::object>( "no" ) ) );
+                                       read_static_dialogue_line( options.raw_get<sol::object>( "yes" ), source ),
+                                       read_static_dialogue_line( options.raw_get<sol::object>( "no" ), source ) );
+    }
+    if( handler ) {
+        if( handler->empty() ) {
+            throw std::invalid_argument( "dialogue line handler id must not be empty" );
+        }
+        return dynamic_line_t::callback( [mod_id = source, handler_id = *handler]( dialogue & d ) {
+            return detail::invoke_ordered_dialogue_line( mod_id, handler_id, d );
+        } );
     }
     if( special ) {
         if( *special == "hint" ) {
@@ -3685,6 +3705,9 @@ dynamic_line_t read_static_dialogue_line( const sol::object &line )
         }
         if( *special == "consume_reason" ) {
             return dynamic_line_t::use_reason();
+        }
+        if( *special == "list_faction_camp_sites" ) {
+            return dynamic_line_t::list_faction_camp_sites();
         }
         throw std::invalid_argument( "unsupported native dialogue line: " + *special );
     }
@@ -3712,15 +3735,42 @@ void validate_builtin_dialogue_action( const std::string &name )
         "dismount", "find_mount", "morale_chat_activity", "drop_items_in_place",
         "start_camp", "basecamp_mission", "return_to_camp_duties", "repair_bionic_limbs",
         "bionic_install_allies", "bionic_remove_allies",
+        "sort_loot", "do_chop_plank", "do_vehicle_deconstruct", "do_vehicle_repair",
+        "select_vehicle_part_service", "quote_vehicle_full_repair", "start_vehicle_full_repair",
+        "do_chop_trees", "do_fishing", "do_construction", "do_mining", "do_mopping",
+        "do_read", "do_eread", "do_read_repeatedly", "do_study", "do_craft",
+        "do_butcher", "do_farming", "assign_camp", "abandon_camp",
+        "buy_cow", "buy_chicken", "buy_horse", "lesser_give_aid", "lesser_give_all_aid",
+        "barber_beard", "barber_hair", "buy_haircut", "buy_shave",
+        "revert_activity", "copy_npc_rules", "set_npc_pickup", "pick_style",
+        "do_disassembly", "distribute_food_auto",
+        "u_bulk_trade_accept", "npc_bulk_trade_accept", "u_bulk_donate", "npc_bulk_donate",
+        "lightning", "u_vomit", "npc_vomit", "u_marlossify", "npc_marlossify",
+        "u_die", "u_cancel_activity", "npc_cancel_activity", "u_prevent_death", "npc_prevent_death",
+        "next_weather", "npc_gets_item", "npc_gets_item_to_use",
+        "u_ranged_attack", "npc_ranged_attack",
+        "open_dialogue", "take_control", "take_control_menu",
+        "u_make_radio_representative", "npc_make_radio_representative",
+        "u_wants_to_talk", "npc_wants_to_talk",
     };
     if( available.count( name ) == 0 ) {
         throw std::invalid_argument( "unsupported native dialogue action: " + name );
     }
 }
 
-void install_static_dialogue_actions( sol::state &lua, sol::table &content )
+void install_static_dialogue_actions( sol::state &lua, sol::table &content,
+                                      const std::string &mod_id )
 {
     sol::table actions = lua.create_table();
+    actions.set_function( "handler", [mod_id]( const std::string & id ) {
+        if( id.empty() ) {
+            throw std::invalid_argument( "dialogue action handler id must not be empty" );
+        }
+        return static_dialogue_action{ talk_effect_fun_t( talk_effect_fun_t::func( [mod_id, id]( ::dialogue & d )
+        {
+            detail::invoke_ordered_dialogue_action( mod_id, id, d );
+        } ) ) };
+    } );
     actions.set_function( "update_map", []( const sol::object & id, const sol::optional<sol::object> & terrain ) {
         return static_dialogue_action{ talk_effect_fun_t( dialogue_action::update_map(
                     read_dialogue_string_value( id ), terrain ? read_dialogue_string_value( *terrain ) : str_or_var{} ) ) };
@@ -3915,6 +3965,18 @@ std::optional<talk_effect_t> read_static_dialogue_actions( const sol::table &out
     return result;
 }
 
+npc_opinion read_static_dialogue_opinion( const sol::table &t )
+{
+    npc_opinion result;
+    result.trust = t.get_or( "trust", 0 );
+    result.fear = t.get_or( "fear", 0 );
+    result.value = t.get_or( "value", 0 );
+    result.anger = t.get_or( "anger", 0 );
+    result.owed = t.get_or( "owed", 0 );
+    result.sold = t.get_or( "sold", 0 );
+    return result;
+}
+
 talk_entry_rules read_static_dialogue_entry( const sol::table &entry, const std::string &source )
 {
     talk_entry_rules rules;
@@ -3925,10 +3987,20 @@ talk_entry_rules read_static_dialogue_entry( const sol::table &entry, const std:
         rules.once = *once;
     }
     auto actions = read_static_dialogue_actions( entry, source );
-    if( !actions ) {
+    const auto opinion = entry.get<sol::optional<sol::table>>( "opinion" );
+    const auto mission_opinion = entry.get<sol::optional<sol::table>>( "mission_opinion" );
+    if( !actions && !opinion && !mission_opinion ) {
         throw std::invalid_argument( "dialogue entry rule requires actions" );
     }
-    rules.actions = std::move( *actions );
+    if( actions ) {
+        rules.actions = std::move( *actions );
+    }
+    if( opinion ) {
+        rules.actions.opinion = read_static_dialogue_opinion( *opinion );
+    }
+    if( mission_opinion ) {
+        rules.actions.mission_opinion = read_static_dialogue_opinion( *mission_opinion );
+    }
     return rules;
 }
 
@@ -3943,6 +4015,23 @@ talk_response_rules read_static_dialogue_rules( const sol::table &reply, const s
             throw std::invalid_argument( "dialogue reply cannot set both show_always and show_when" );
         }
         rules.show_condition = predicate->test;
+    }
+    const auto text_when = reply.get<sol::optional<static_dialogue_predicate>>( "text_when" );
+    const sol::object raw_false_text = reply.raw_get<sol::object>( "false_text" );
+    const bool has_false_text = raw_false_text.valid() && raw_false_text.get_type() != sol::type::nil;
+    if( text_when.has_value() != has_false_text ) {
+        throw std::invalid_argument(
+            "dialogue reply text_when and false_text must be specified together" );
+    }
+    if( text_when ) {
+        rules.text_condition = text_when->test;
+        rules.false_text = detail::read_singular_text(
+                               raw_false_text, {}, "dialogue reply false_text" ).native();
+    }
+    if( const auto trial = reply.get<sol::optional<sol::table>>( "trial" ) ) {
+        if( const auto predicate = trial->get<sol::optional<static_dialogue_predicate>>( "when" ) ) {
+            rules.trial_condition = predicate->test;
+        }
     }
     rules.success_actions = read_static_dialogue_actions( reply, source );
     if( const auto success = reply.get<sol::optional<sol::table>>( "success" ) ) {
@@ -3994,6 +4083,7 @@ void write_static_dialogue_trial( JsonOut &json, const sol::table &trial )
     static const std::map<std::string_view, std::string_view> trial_kinds = {
         { "none", "NONE" }, { "lie", "LIE" }, { "persuade", "PERSUADE" },
         { "intimidate", "INTIMIDATE" }, { "skill_check", "SKILL_CHECK" },
+        { "condition", "CONDITION" },
     };
     json.member( "trial" );
     json.start_object();
@@ -4067,7 +4157,7 @@ void load_static_dialogue_topic( const sol::table &options, const std::string &s
     talk_topic_rules rules;
     const sol::object line = options.raw_get<sol::object>( "line" );
     if( line.get_type() != sol::type::nil ) {
-        rules.line = read_static_dialogue_line( line );
+        rules.line = read_static_dialogue_line( line, source );
     }
     write_item_fields<bool>( json, options, {
         { "insert_before_standard_exits", "insert_before_standard_exits" },
@@ -8813,9 +8903,9 @@ void load_mod_content_with_data( const mod_source &source,
     resolved.id, "npc_class", [&resolved]( JsonOut & json, const sol::table & options ) {
         write_static_npc_class( json, options, resolved.id );
     }, npc_class::load_npc_class ) );
-    install_static_dialogue_predicates( lua, content );
+    install_static_dialogue_predicates( lua, content, resolved.id );
     install_static_widget_conditions( lua, content );
-    install_static_dialogue_actions( lua, content );
+    install_static_dialogue_actions( lua, content, resolved.id );
     content.set_function( "gendered_line", static_gendered_dialogue_line );
     content.set_function( "define_dialogue_topic", [&resolved]( const sol::table &options ) {
         load_static_dialogue_topic( options, resolved.id );

@@ -94,6 +94,7 @@ using dialogue_session_ptr = std::shared_ptr<dialogue_session>;
 
 /** Register the native dialogue lifetime used by callback-scoped contexts. */
 void begin_dialogue( ::dialogue &d );
+bool has_active_dialogue( const ::dialogue &d ) noexcept;
 /** Begin an owner-, world-, and native-lifetime-bound session. */
 dialogue_session_ptr begin_session( ::dialogue &d,
                                     const game_handle_runtime &runtime_identity,
@@ -159,10 +160,13 @@ class context
         sol::object interlocutor() const;
         sol::object get( const std::string &key ) const;
         sol::object get_string( const std::string &key ) const;
+        sol::object get_number( const std::string &key ) const;
         sol::object speaker_variable_string( const std::string &key ) const;
         sol::object interlocutor_variable_string( const std::string &key ) const;
         void set( const std::string &key, const sol::object &value ) const;
         void remove( const std::string &key ) const;
+        void set_conditional( const std::string &key, bool value ) const;
+        bool evaluate_conditional( const std::string &key ) const;
 
     private:
         struct state;
