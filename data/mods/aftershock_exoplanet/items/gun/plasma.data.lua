@@ -46,3 +46,73 @@ ccb.content.define_item {
         reload_time = 1800,
     },
 }
+
+ccb.content.define_item {
+    id = "afs_plasma_torch_gun",
+    copy_from = "afs_plasma_base",
+    name = ccb.content.plural_text("377-UASTA (weaponized)", "377-UASTA (weaponized)"),
+    description = "A common modification for directed plasma torches that involves the installation of oversize capacitor banks and judiciously bypassed safety mechanisms, allowing them to function as a deadly if decidedly short-ranged weapons.  In most cases, the resulting \"gun\" can still perform its original metalworking functions, albeit at a much lower efficiency.\n\nUnlike purposefully made plasma weapons, the propelled plasma bottle won't cause a considerable explosion upon contact, allowing for relatively safe operation within enclosed spaces.",
+    mass = "4200 g",
+    volume = "4500 ml",
+    length = "60 cm",
+    price = "350 USD",
+    survival_price = "350 USD",
+    flags = {
+        "ALLOWS_REMOTE_USE",
+        "NEVER_JAMS",
+        "NON_FOULING",
+        "NEEDS_NO_LUBE",
+        "OVERHEATS",
+        "BELT_CLIP",
+        "OVERHEATS",
+    },
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            capacity = "20 L",
+            mass_limit = "20 kg",
+            magazine_well = "120 ml",
+            holster = true,
+            allowed_items = { "afs_40g_plasma_civ" },
+        },
+    },
+    faults = {
+        { fault = "fault_overheat_melting" },
+    },
+    qualities = {
+        { id = "WELD", level = 2 },
+    },
+    use_actions = { "OXYTORCH" },
+    tool = {
+        charges_per_use = 2,
+        ammo_types = { "afs_shydrogen" },
+    },
+    gun = {
+        skill = "launcher",
+        range = 3,
+        dispersion = 1500,
+        recoil = 30,
+        durability = 6,
+        loudness = 5,
+        reload_time = 2200,
+        ammo_per_shot = 2,
+        heat_per_shot = 27,
+        cooling = 3,
+        overheat_threshold = 100,
+        damage = {
+            { type = "afs_plasma", amount = 45 },
+        },
+        mod_locations = {
+            { id = "sling", count = 1 },
+        },
+    },
+    subtype_order = { "tool", "gun" },
+    inheritance = {
+        add = {
+            firing_effects = { "DAZZLE_BEAM" },
+        },
+        remove = {
+            firing_effects = { "FLAME", "EXPLOSIVE_SMALL" },
+        },
+    },
+}

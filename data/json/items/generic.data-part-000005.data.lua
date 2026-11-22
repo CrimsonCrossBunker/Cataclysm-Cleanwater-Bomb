@@ -110,3 +110,19 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "pouch_autoclave",
+    name = ccb.content.plural_text("autoclave pouch", "autoclave pouches"),
+    description = "A medical device that bears the approval of the FDA (Food and Drug Administration).  If used properly, this pouch can keep things sterile indefinitely.",
+    symbol = "]",
+    color = "light_gray",
+    category = "other",
+    mass = "2 g",
+    volume = "25 ml",
+    price = "5 cent",
+    survival_price = "1 USD",
+    materials = { "plastic", "paper" },
+    use_actions = { "PACK_CBM" },
+    ammunition = { type = "NULL", count = 25 },
+}

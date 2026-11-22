@@ -23,3 +23,20 @@ ccb.content.define_item {
         effects = { "INCENDIARY" },
     },
 }
+
+ccb.content.define_item {
+    id = "airship_balloon_item",
+    name = "airship balloon",
+    description = "A big plastic airbag filled with hydrogen gas.  Provides lift if installed on a vehicle, but you'll need a propeller to do anything more than float up and down.",
+    symbol = "o",
+    color = "light_gray",
+    category = "veh_parts",
+    mass = "3 kg",
+    volume = "100 L",
+    price = "5 USD",
+    survival_price = "25 cent",
+    explode_in_fire = true,
+    materials = { "plastic" },
+    melee_damage = { bash = 4 },
+    blast = { power = 100 },
+}

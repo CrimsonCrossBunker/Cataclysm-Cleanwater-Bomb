@@ -964,3 +964,34 @@ ccb.content.define_mapgen {
         palettes = { "crater_palette" },
     },
 }
+
+ccb.content.define_mapgen_palette {
+    id = "crater_palette",
+    layout = {
+        terrain = {
+            ["."] = {
+                { id = "t_region_groundcover_barren", copies = 4 },
+                { id = "t_null" },
+            },
+            ["?"] = {
+                { id = "t_region_groundcover_barren", copies = 2 },
+                { id = "t_null" },
+            },
+            ["0"] = "t_region_groundcover_barren",
+        },
+        nested_glyphs = {
+            ["."] = {
+                choices = {
+                    { id = "rubble", weight = 10 },
+                    { id = "null", weight = 3 },
+                },
+            },
+            ["?"] = {
+                choices = {
+                    { id = "rubble", weight = 3 },
+                    { id = "null", weight = 10 },
+                },
+            },
+        },
+    },
+}

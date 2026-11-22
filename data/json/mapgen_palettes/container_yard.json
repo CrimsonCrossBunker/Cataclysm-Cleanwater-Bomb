@@ -1,7 +1,0 @@
-[
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "shipping_container_brick_1x1",
-    "object": { "mapgensize": [ 1, 1 ], "furniture": { " ": [ "f_pallet_brick", 95 ] } }
-  }
-]

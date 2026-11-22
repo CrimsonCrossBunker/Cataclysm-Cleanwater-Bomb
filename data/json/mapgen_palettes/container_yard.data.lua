@@ -1398,3 +1398,16 @@ ccb.content.define_mapgen {
         item_spawns = { [" "] = { id = "bike_rack", chance = 95, repetitions = { 2, 4 } } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "shipping_container_brick_1x1",
+    layout = {
+        size = { width = 1, height = 1 },
+        furniture = {
+            [" "] = {
+                { id = "f_pallet_brick" },
+            },
+        },
+    },
+}

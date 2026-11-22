@@ -97,3 +97,65 @@ ccb.content.define_item {
     artifact = { charge = { recharge_type = "periodic", interval = "24 h", regenerate_ammo = true } },
     use_actions = { { kind = "cast_spell", spell = "rupture", no_fail = true, level = 10, need_wielding = true } },
 }
+
+ccb.content.define_item {
+    id = "rune_kelvinist_ice_adept_weapon",
+    copy_from = "qt_scimitar",
+    name = "Kelvinist Frostbind",
+    description = "This curved sword, reminiscent of a scimitar, has a handle with an embedded crystal from which a cold wind emanates.  There are Kelvinist runes embedded in the blade.",
+    symbol = "/",
+    color = "light_gray",
+    category = "weapons",
+    looks_like = "scimitar",
+    price = "5 kUSD 580 USD",
+    survival_price = "210 USD",
+    flags = {
+        "DURABLE_MELEE",
+        "SHEATH_SWORD",
+        "TRADER_AVOID",
+        "THERMOMETER",
+        "MAGIC_FOCUS",
+        "SPELLCASTING_AID",
+        "NO_UNLOAD",
+        "NO_RELOAD",
+    },
+    techniques = { "WBLOCK_2", "WIDE", "MOUNTED_CHARGE" },
+    weapon_categories = { "MEDIUM_SWORDS" },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            holster = true,
+            rigid = true,
+            ammunition = { crystallized_mana = 3 },
+        },
+    },
+    qualities = {
+        { id = "CUT", level = 1 },
+        { id = "BUTCHER", level = 8 },
+    },
+    use_actions = {
+        {
+            kind = "cast_spell",
+            spell = "frost_spray",
+            level = 10,
+            no_fail = true,
+            need_wielding = true,
+        },
+        "WEATHER_TOOL",
+    },
+    tool = { charges_per_use = 1 },
+    artifact = {
+        enchantments = {
+            "ITEM_ENCH_Magiclysm_rune_kelvinist_ice_adept_weapon_0",
+        },
+        charge = { recharge_type = "periodic", interval = "24 h", regenerate_ammo = true },
+    },
+    subtype_order = { "tool", "artifact" },
+    inheritance = {
+        scale = {
+            mass = 0.8,
+            melee_damage = { all = 1.2 },
+        },
+        offset = { accuracy = 2 },
+    },
+}

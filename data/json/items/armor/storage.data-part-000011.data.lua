@@ -351,3 +351,100 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "hide_bag",
+    copy_from = "raw_leather",
+    name = "hide bag",
+    description = "The raw skin of an animal, quickly turned into a makeshift bag for storage.  It will still rot, and needs to be cured and tanned.",
+    symbol = "[",
+    color = "pink",
+    category = "clothing",
+    looks_like = "plastic_shopping_bag",
+    flags = { "OVERSIZE", "BELTED", "RESTRICT_HANDS", "WATER_FRIENDLY" },
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "15 L",
+            mass_limit = "30 kg",
+            max_item_length = "50 cm",
+            moves = 300,
+        },
+    },
+    comestible = {},
+    armor = {
+        sided = true,
+        portions = {
+            {
+                covers = { "arm_l", "arm_r", "hand_l", "hand_r" },
+                coverage = 5,
+                volume_encumbrance = 0.5,
+                encumbrance = 10,
+                materials = {
+                    { id = "leather", thickness = 0.1, coverage = 100 },
+                },
+            },
+        },
+    },
+    subtype_order = { "comestible", "armor" },
+    inheritance = {
+        scale = {
+            mass = 6.0,
+            volume = 6.0,
+            price = 6.0,
+            calories = 6.0,
+            healthy = 6.0,
+            fun = 6.0,
+            quench = 6.0,
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "hide_tainted_bag",
+    copy_from = "raw_tainted_leather",
+    name = "tainted hide bag",
+    description = "The raw skin of a monster, quickly turned into a makeshift bag for storage.  It will still rot, and needs to be cured and tanned.",
+    symbol = "[",
+    color = "pink",
+    category = "clothing",
+    looks_like = "hide_bag",
+    survival_price = "10 cent",
+    flags = { "OVERSIZE", "BELTED", "RESTRICT_HANDS", "WATER_FRIENDLY" },
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "15 L",
+            mass_limit = "30 kg",
+            max_item_length = "50 cm",
+            moves = 300,
+        },
+    },
+    comestible = {},
+    armor = {
+        sided = true,
+        portions = {
+            {
+                covers = { "arm_l", "arm_r", "hand_l", "hand_r" },
+                coverage = 5,
+                volume_encumbrance = 0.5,
+                encumbrance = 10,
+                materials = {
+                    { id = "leather", thickness = 0.1, coverage = 100 },
+                },
+            },
+        },
+    },
+    subtype_order = { "comestible", "armor" },
+    inheritance = {
+        scale = {
+            mass = 6.0,
+            volume = 6.0,
+            price = 6.0,
+            calories = 6.0,
+            healthy = 6.0,
+            fun = 6.0,
+            quench = 6.0,
+        },
+    },
+}

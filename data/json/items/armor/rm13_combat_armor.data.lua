@@ -18,3 +18,144 @@ ccb.content.define_item {
     pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { battery = 5000 } } },
     magazine = { ammunition = { "battery" }, capacity = 5000 },
 }
+
+ccb.content.define_item {
+    id = "rm13_armor_on",
+    copy_from = "rm13_armor",
+    name = ccb.content.plural_text("RM13 combat armor (on)", "RM13 combat armors (on)"),
+    description = "A full-body suit of sleek black military armor representing the pinnacle of powered armor technology.  As you move your fingers over the surface, the armor tenses, almost as though it were alive.  <color_light_red>The rebreather system is currently disabled</color>.  Use it to turn it off.",
+    revert_to = "rm13_armor",
+    flags = {
+        "STURDY",
+        "WATERPROOF",
+        "RAINPROOF",
+        "WATCH",
+        "ALARMCLOCK",
+        "SWIM_GOGGLES",
+        "SUN_GLASSES",
+        "RAD_PROOF",
+        "ELECTRIC_IMMUNE",
+        "THERMOMETER",
+        "TRADER_AVOID",
+        "NO_REPAIR",
+        "NANOFAB_REPAIR",
+        "PADDED",
+        "COMBAT_TOGGLEABLE",
+        "UNBREAKABLE_MELEE",
+        "USE_POWER_WHEN_HIT",
+        "PARTIAL_DEAF",
+        "PORTAL_PROOF",
+        "SPAWN_ACTIVE",
+    },
+    materials = { "hyperweave_on", "carbide" },
+    qualities = {
+        { id = "GLARE", level = 1 },
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            target = "rm13_armor",
+            need_worn = true,
+            message = "You deactivate your RM13 combat armor.\nShutdown sequence initiated.\nShutting down.\nYour RM13 combat armor turns off.",
+            menu_text = "Turn off",
+        },
+    },
+    tool = {
+        turns_per_charge = 10,
+        ammo_types = { "battery", "rebreather_filter", "rebreather_o2_regenerator" },
+        consumption_per_use = {
+            { pocket = "battery", count = 1 },
+        },
+    },
+    armor = {
+        thickness = 3,
+        environmental_protection = 10,
+        portions = {
+            {
+                covers = { "eyes" },
+                coverage = 100,
+                volume_encumbrance = 0,
+                encumbrance = 5,
+                materials = {
+                    { id = "lvl4ballisticglass", thickness = 1.0, coverage = 100 },
+                    { id = "thermo_resin", thickness = 1.0, coverage = 100 },
+                },
+            },
+            {
+                covers = {
+                    "mouth",
+                    "head",
+                    "torso",
+                    "arm_l",
+                    "arm_r",
+                    "leg_l",
+                    "leg_r",
+                    "hand_l",
+                    "hand_r",
+                },
+                coverage = 100,
+                volume_encumbrance = 0,
+                encumbrance = 10,
+                materials = {
+                    { id = "carbide", thickness = 1.0, coverage = 100 },
+                    { id = "hyperweave_on", thickness = 2.0, coverage = 100 },
+                },
+            },
+            {
+                covers = { "foot_l", "foot_r" },
+                subparts = {
+                    "foot_toes_r",
+                    "foot_toes_l",
+                    "foot_ankle_r",
+                    "foot_ankle_l",
+                    "foot_heel_r",
+                    "foot_heel_l",
+                    "foot_arch_r",
+                    "foot_arch_l",
+                },
+                coverage = 100,
+                volume_encumbrance = 0,
+                encumbrance = 10,
+                materials = {
+                    { id = "carbide", thickness = 1.0, coverage = 100 },
+                    { id = "hyperweave_on", thickness = 2.0, coverage = 100 },
+                },
+            },
+            {
+                covers = { "foot_l", "foot_r" },
+                subparts = { "foot_sole_r", "foot_sole_l" },
+                coverage = 100,
+                volume_encumbrance = 0,
+                encumbrance = 0,
+                materials = {
+                    { id = "carbide", thickness = 1.0, coverage = 100 },
+                    { id = "rubber", thickness = 5.0, coverage = 100 },
+                },
+            },
+        },
+    },
+    subtype_order = { "tool", "armor" },
+}
+
+ccb.content.define_item {
+    id = "rm13_armor_rebreather_on",
+    copy_from = "rm13_armor_on",
+    name = ccb.content.plural_text("RM13 combat armor (on) (rebreather)", "RM13 combat armors (on) (rebreather)"),
+    description = "A full-body suit of sleek black military armor representing the pinnacle of powered armor technology.  As you move your fingers over the surface, the armor tenses, almost as though it were alive.  The rebreather system is enabled, protecting you from the outside atmosphere (or lack thereof).  Use it to turn it off.",
+    revert_to = "rm13_armor",
+    tool = {
+        turns_per_charge = 30,
+        ammo_types = { "battery", "rebreather_filter", "rebreather_o2_regenerator" },
+        consumption_per_use = {
+            { pocket = "battery", count = 3 },
+            { pocket = "rebreather", count = 1 },
+        },
+    },
+    armor = { environmental_protection = 40 },
+    subtype_order = { "tool", "armor" },
+    inheritance = {
+        add = {
+            flags = { "REBREATHER", "GAS_PROOF" },
+        },
+    },
+}

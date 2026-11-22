@@ -45,3 +45,65 @@ ccb.content.define_item {
     tool = { ammo_types = { "battery" } },
     armor = {},
 }
+
+ccb.content.define_item {
+    id = "nano_forge",
+    name = "folded nanotech forge",
+    description = "Matrioshka Fabritechnics created this portable nanotech forge for when expeditions are setting up a basecamp far from population centers.  Once deployed it can be used to craft ultratech marvels that otherwise are too minute for human crafting.",
+    symbol = "u",
+    color = "light_green",
+    category = "tools",
+    looks_like = "forge",
+    mass = "8464 g",
+    volume = "11356 ml",
+    price = "50 USD",
+    survival_price = "450 USD",
+    flags = { "DURABLE_MELEE", "HEAVY_TOOL" },
+    materials = { "superalloy" },
+    melee_damage = { bash = 5 },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            ammunition = { battery = 5000 },
+        },
+    },
+    use_actions = {
+        { kind = "deploy_furn", furn_type = "f_nano_forge" },
+    },
+    artifact = {
+        charge = { recharge_type = "periodic", interval = "1 h", regenerate_ammo = true },
+    },
+}
+
+ccb.content.define_item {
+    id = "afs_cRTG",
+    copy_from = "folding_solar_panel",
+    name = "U-344 RTG",
+    description = "A compact power source that employs the decay of transuranic elements to generate a small but constant amount of electricity and is commonly used in remote locations to power up equipment.  Must be integrated into a power grid before use.",
+    symbol = "]",
+    color = "light_green",
+    mass = "17500 g",
+    volume = "2 L",
+    length = "30 cm",
+    price = "5600 USD",
+    survival_price = "5600 USD",
+    materials = { "lead", "steel" },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            rigid = true,
+            ammunition = { battery = 1000 },
+        },
+    },
+    use_actions = {
+        { kind = "deploy_appliance", base = "afs_cRTG" },
+    },
+    artifact = {
+        charge = { recharge_type = "periodic", interval = "5 m", regenerate_ammo = true },
+    },
+    inheritance = {
+        add = {
+            flags = { "RECHARGE", "NO_UNLOAD", "NO_RELOAD", "WATERPROOF", "LEAK_DAM", "RADIOACTIVE" },
+        },
+    },
+}

@@ -24,3 +24,29 @@ ccb.content.define_item {
     flags = { "ZERO_WEIGHT", "TARDIS" },
     artifact = { enchantments = { "ITEM_ENCH_dda_string_dimension_hypercube_0" } },
 }
+
+ccb.content.define_item {
+    id = "mp3_reverberation",
+    copy_from = "mp3",
+    name = ccb.content.plural_text("red mp3 player (off)", "red mp3 players (off)"),
+    description = "A light-red mp3 player, you feel the text on the screen says \"TRAVEL // JOURNEY\".  Under that, \"Let's go on an adventure!\"\nThe screen is dark, it's powered off.",
+    color = "light_red",
+    category = "artifacts",
+    variables = { warm_up = 10 },
+    pockets = {},
+    faults = {},
+    use_actions = {
+        {
+            kind = "mp3",
+            target = "mp3_on_reverberation",
+            activate = true,
+            message = "You put in the earbuds and turn on the device.",
+        },
+    },
+    tool = { charges_per_use = 0, power_draw = "0 W" },
+    inheritance = {
+        remove = {
+            flags = { "WATER_BREAK_ACTIVE", "ELECTRONIC" },
+        },
+    },
+}

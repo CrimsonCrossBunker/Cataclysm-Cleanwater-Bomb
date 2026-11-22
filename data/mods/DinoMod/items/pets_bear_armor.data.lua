@@ -84,3 +84,43 @@ ccb.content.define_item {
     volume = "150 L",
     pet_armor = { thickness = 4 },
 }
+
+ccb.content.define_item {
+    id = "leather_armor_bear",
+    copy_from = "bear_armor",
+    name = ccb.content.plural_text("boiled leather bear barding with caparison", "boiled leather bear bardings with caparison"),
+    description = "A full barding for bears, consisting of boiled leather with cloth underneath.  This caparison depicts four men in heavy metal armor riddled with bullet marks.  You could put this on a friendly bear.",
+    color = "green",
+    mass = "15 kg",
+    volume = "150 L",
+    price = "300 USD",
+    survival_price = "30 USD",
+    snippet_category = {
+        {
+            id = "honeyeater",
+            text = "A full barding for bears, consisting of boiled leather with cloth underneath.  This caparison depicts a large brown bear being swarmed by bees as it devours a honeycomb.  You could put this on a friendly bear.",
+        },
+        {
+            id = "mormont",
+            text = "A full barding for bears, consisting of boiled leather with cloth underneath.  This caparison depicts a warrior-woman holding a baby in one arm and a battleaxe in the other.  You could put this on a friendly bear.",
+        },
+        {
+            id = "maidenfair",
+            text = "A full barding for bears, consisting of boiled leather with cloth underneath.  This caparison depicts a bear dancing with a golden-haired maiden.  You could put this on a friendly bear.",
+        },
+        {
+            id = "wight",
+            text = "A full barding for bears, consisting of boiled leather with cloth underneath.  This caparison depicts a zombified bear with cold blue eyes fighting alongside an undead army.  You could put this on a friendly bear.",
+        },
+        {
+            id = "beorn",
+            text = "A full barding for bears, consisting of boiled leather with cloth underneath.  This caparison depicts a tall man transforming into a giant bear and leaping into battle.  You could put this on a friendly bear.",
+        },
+        {
+            id = "stegosaurus",
+            text = "A full barding for bears, consisting of boiled leather with cloth underneath.  This caparison depicts a fierce stegosaurus bursting out the side of a 1970s-era van.  You could put this on a friendly bear.",
+        },
+    },
+    materials = { "cotton", "leather" },
+    pet_armor = { thickness = 6 },
+}

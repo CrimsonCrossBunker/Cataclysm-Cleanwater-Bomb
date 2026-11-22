@@ -17,3 +17,32 @@ ccb.content.define_item {
     countdown_action = { kind = "explosion", blast = { power = 2590 } },
     countdown_interval = "20 seconds",
 }
+
+ccb.content.define_item {
+    id = "homemade_demolition_charge",
+    name = "homemade demolition charge",
+    description = "An improvised demolition charge.  Use this item to light the fuse.  You will, of course, need a lighter or matches in your inventory to do this.  20 seconds after lighting the fuse, it will explode, so get away!",
+    symbol = "*",
+    color = "red",
+    category = "weapons",
+    looks_like = "homemade_bomb",
+    mass = "3875 g",
+    volume = "3900 ml",
+    price = "0 cent",
+    explode_in_fire = true,
+    flags = { "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB" },
+    materials = { "plastic", "powder" },
+    melee_damage = { bash = 4 },
+    accuracy = { grip = "bad", length = "hand", surface = "any", balance = "clumsy" },
+    blast = { power = 2590 },
+    use_actions = {
+        {
+            kind = "transform",
+            target = "homemade_demolition_charge_act",
+            need_fire = 1,
+            message = "You light the fuse on the bomb.  Get rid of it quickly!",
+            menu_text = "Light fuse",
+        },
+    },
+    tool = {},
+}

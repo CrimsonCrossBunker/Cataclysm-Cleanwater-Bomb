@@ -760,3 +760,645 @@ ccb.content.define_mapgen {
         },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "road_end",
+    weight = { global = "vanilla_road_weight", fallback = 1000 },
+    layout = {
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        rotation = { 0, 0 },
+        fallback_predecessor_mapgen = "field",
+        nested = {
+            {
+                choices = {
+                    { id = "24x24_road_end_cul_de_sac", weight = 1 },
+                    { id = "24x24_road_end_straight", weight = 2 },
+                },
+                x = 0,
+                y = 0,
+                any_flags = {
+                    north = { "SIDEWALK" },
+                    north_east = { "SIDEWALK" },
+                    east = { "SIDEWALK" },
+                    south_east = { "SIDEWALK" },
+                    south = { "SIDEWALK" },
+                    south_west = { "SIDEWALK" },
+                    west = { "SIDEWALK" },
+                    north_west = { "SIDEWALK" },
+                },
+            },
+            {
+                otherwise = { "24x24_road_end_straight" },
+                x = 0,
+                y = 0,
+                any_flags = {
+                    north = { "SIDEWALK" },
+                    north_east = { "SIDEWALK" },
+                    east = { "SIDEWALK" },
+                    south_east = { "SIDEWALK" },
+                    south = { "SIDEWALK" },
+                    south_west = { "SIDEWALK" },
+                    west = { "SIDEWALK" },
+                    north_west = { "SIDEWALK" },
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "road_straight",
+    weight = { global = "vanilla_road_weight", fallback = 1000 },
+    layout = {
+        rows = {
+            "    ................    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    ................    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    ................    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    ................    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    ................    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    ................    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        fallback_predecessor_mapgen = "field",
+        nested = {
+            {
+                id = "24x24_sidewalk_ns_double",
+                x = 0,
+                y = 0,
+                required_flags = {
+                    north = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "12x12_sidewalk_ns_half",
+                x = 20,
+                y = 0,
+                required_flags = {
+                    north_east = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "24x24_sidewalk_ns_long",
+                x = 20,
+                y = 0,
+                required_flags = {
+                    east = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "12x12_sidewalk_ns_half",
+                x = 20,
+                y = 12,
+                required_flags = {
+                    south_east = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "24x24_sidewalk_ns_double",
+                x = 0,
+                y = 12,
+                required_flags = {
+                    south = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "12x12_sidewalk_ns_half",
+                x = 0,
+                y = 12,
+                required_flags = {
+                    south_west = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "24x24_sidewalk_ns_long",
+                x = 0,
+                y = 0,
+                required_flags = {
+                    west = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "12x12_sidewalk_ns_half",
+                x = 0,
+                y = 0,
+                required_flags = {
+                    north_west = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "culvert_west",
+                x = 0,
+                y = 5,
+                predecessors = { "stream" },
+            },
+            {
+                id = "culvert_east",
+                x = 12,
+                y = 5,
+                predecessors = { "stream" },
+            },
+            {
+                id = "3x3_road_corner_ne",
+                x = 1,
+                y = 0,
+                neighbors = {
+                    north_west = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    north = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "3x3_road_corner_nw",
+                x = 20,
+                y = 0,
+                neighbors = {
+                    north_east = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    north = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "3x3_road_corner_se",
+                x = 1,
+                y = 21,
+                neighbors = {
+                    south_west = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    south = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "3x3_road_corner_sw",
+                x = 20,
+                y = 21,
+                neighbors = {
+                    south_east = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    south = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                },
+            },
+            { id = "24x24_road_trash", x = 0, y = 0 },
+            { id = "24x24_street_lights_straight", x = 0, y = 0 },
+            {
+                choices = {
+                    { id = "24x24_marked_crosswalk_and_lights", weight = 1 },
+                    { id = "null", weight = 9 },
+                },
+                x = 0,
+                y = { 6, 14 },
+                any_flags = {
+                    north_east = { "SIDEWALK" },
+                    east = { "SIDEWALK" },
+                    south_east = { "SIDEWALK" },
+                },
+            },
+            { id = "24x24_road_straight_vehicles", x = 0, y = 0 },
+            { id = "24x24_road_zombies", x = 0, y = 0 },
+        },
+        palettes = { "road_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "road_curved",
+    weight = { global = "vanilla_road_weight", fallback = 1000 },
+    layout = {
+        fallback_predecessor_mapgen = "field",
+        nested = {
+            {
+                id = "24x24_road_curved_layby",
+                x = 0,
+                y = 0,
+                neighbors = {
+                    east = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    south_east = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    south = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                },
+            },
+            {
+                otherwise = { "road_curved_bend" },
+                x = 0,
+                y = 0,
+                neighbors = {
+                    east = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    south_east = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    south = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "road_tee",
+    weight = { global = "vanilla_road_weight", fallback = 1000 },
+    layout = {
+        rows = {
+            "                        ",
+            "                        ",
+            "                        ",
+            "                        ",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "***.***.***.***.***.***.",
+            "***.***.***.***.***.***.",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "........................",
+            "    .........*******    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+            "    .......**.......    ",
+        },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        fallback_predecessor_mapgen = "field",
+        nested = {
+            { id = "1x1_stop_sign", x = 20, y = 20 },
+            {
+                id = "24x24_sidewalk_ew_long",
+                x = 0,
+                y = 0,
+                required_flags = {
+                    north = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "12x12_sidewalk_ew_half",
+                x = 12,
+                y = 0,
+                required_flags = {
+                    north_east = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "24x24_sidewalk_esw_corner_half_e",
+                x = 0,
+                y = 0,
+                required_flags = {
+                    east = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "4x4_sidewalk",
+                x = 20,
+                y = 20,
+                required_flags = {
+                    south_east = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "24x24_sidewalk_ns_corner_double",
+                x = 0,
+                y = 20,
+                required_flags = {
+                    south = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "4x4_sidewalk",
+                x = 0,
+                y = 20,
+                required_flags = {
+                    south_west = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "24x24_sidewalk_esw_corner_half_w",
+                x = 0,
+                y = 0,
+                required_flags = {
+                    west = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "12x12_sidewalk_ew_half",
+                x = 0,
+                y = 0,
+                required_flags = {
+                    north_west = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "3x3_road_corner_se",
+                x = 1,
+                y = 21,
+                neighbors = {
+                    south_west = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    south = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "3x3_road_corner_sw",
+                x = 20,
+                y = 21,
+                neighbors = {
+                    south_east = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    south = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "3x3_road_corner_ne",
+                x = 21,
+                y = 20,
+                neighbors = {
+                    south_east = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    east = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "3x3_road_corner_nw",
+                x = 0,
+                y = 20,
+                neighbors = {
+                    south_west = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    west = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "3x3_road_corner_se",
+                x = 21,
+                y = 1,
+                neighbors = {
+                    north_east = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    east = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "3x3_road_corner_sw",
+                x = 0,
+                y = 1,
+                neighbors = {
+                    north_west = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    west = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "24x24_layby_junction_EN",
+                x = 0,
+                y = 0,
+                neighbors = {
+                    east = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    south_east = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    south = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "24x24_layby_junction_SW",
+                x = 0,
+                y = 0,
+                neighbors = {
+                    south = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    south_east = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    east = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "24x24_layby_junction_SE",
+                x = 0,
+                y = 0,
+                neighbors = {
+                    south = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    south_west = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    west = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                },
+            },
+            {
+                id = "24x24_layby_junction_WN",
+                x = 0,
+                y = 0,
+                neighbors = {
+                    west = {
+                        { terrain = "road_curved", match = "subtype" },
+                    },
+                    south_west = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    south = {
+                        { terrain = "road_four_way", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                },
+            },
+            { id = "24x24_road_trash", x = 0, y = 0 },
+            {
+                id = "1x1_street_light",
+                x = { 11, 12 },
+                y = 3,
+                required_flags = {
+                    north = { "SIDEWALK" },
+                    north_east = { "SIDEWALK" },
+                    south_east = { "SIDEWALK" },
+                    south_west = { "SIDEWALK" },
+                    north_west = { "SIDEWALK" },
+                },
+            },
+            {
+                choices = { "24x24_traffic_lights", "null" },
+                x = 0,
+                y = 0,
+                required_flags = {
+                    north_east = { "SIDEWALK" },
+                    south_east = { "SIDEWALK" },
+                    south_west = { "SIDEWALK" },
+                    north_west = { "SIDEWALK" },
+                },
+            },
+            {
+                choices = { "24x24_stop_signs", "null" },
+                x = 0,
+                y = 0,
+                required_flags = {
+                    north_east = { "SIDEWALK" },
+                    south_east = { "SIDEWALK" },
+                    south_west = { "SIDEWALK" },
+                    north_west = { "SIDEWALK" },
+                },
+            },
+            {
+                id = "24x24_marked_crosswalks",
+                x = 0,
+                y = 0,
+                required_flags = {
+                    north_east = { "SIDEWALK" },
+                    south_east = { "SIDEWALK" },
+                    south_west = { "SIDEWALK" },
+                    north_west = { "SIDEWALK" },
+                },
+            },
+            { id = "24x24_road_tee_vehicles", x = 0, y = 0 },
+            { id = "24x24_road_zombies", x = 0, y = 0 },
+        },
+        palettes = { "road_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = { "road_four_way", "road_nesw_manhole" },
+    weight = { global = "vanilla_road_weight", fallback = 1000 },
+    layout = {
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        fallback_predecessor_mapgen = "field",
+        nested = {
+            {
+                choices = {
+                    { id = "24x24_road_four_way_crossroad", weight = 39 },
+                    { id = "24x24_road_four_way_rotary", weight = 1 },
+                },
+                x = 0,
+                y = 0,
+                neighbors = {
+                    north = {
+                        { terrain = "road_straight", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    east = {
+                        { terrain = "road_straight", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    south = {
+                        { terrain = "road_straight", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    west = {
+                        { terrain = "road_straight", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                },
+            },
+            {
+                otherwise = { "24x24_road_four_way_crossroad" },
+                x = 0,
+                y = 0,
+                neighbors = {
+                    north = {
+                        { terrain = "road_straight", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    east = {
+                        { terrain = "road_straight", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    south = {
+                        { terrain = "road_straight", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                    west = {
+                        { terrain = "road_straight", match = "subtype" },
+                        { terrain = "road_tee", match = "subtype" },
+                    },
+                },
+            },
+        },
+    },
+}

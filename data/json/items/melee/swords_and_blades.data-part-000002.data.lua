@@ -34,3 +34,44 @@ ccb.content.define_item {
     melee_damage = { cut = 20 },
     tool = {},
 }
+
+ccb.content.define_item {
+    id = "survivor_machete_qt",
+    copy_from = "machete",
+    name = "tempered steel combat machete",
+    description = "This common gardening tool has been tempered to dramatically improve its performance as a weapon.",
+    looks_like = "machete",
+    replace_materials = { mc_steel = "qt_steel", wood = "kevlar" },
+    variants = {
+        {
+            id = "survivor_machete_qt_standard",
+            name = "tempered steel combat machete",
+            description = "This common gardening tool has been tempered to dramatically improve its performance as a weapon.",
+            color = "dark_gray",
+            append = false,
+            weight = 1,
+        },
+        {
+            id = "xedra_machete",
+            name = "hazardous environment blade",
+            description = "This black tempered steel bushcraft machete has been designed for use in exotic environments.  \"HE Blade\" is engraved in the steel.",
+            color = "dark_gray",
+            append = false,
+            weight = 0,
+        },
+    },
+    tool = {},
+    inheritance = {
+        add = {
+            techniques = { "RAPID" },
+        },
+        scale = { price = 1.15, survival_price = 1.15 },
+        offset = {
+            survival_price = "20 USD",
+            melee_damage = { cut = 7 },
+            qualities = {
+                { id = "BUTCHER", level = 4 },
+            },
+        },
+    },
+}

@@ -21,3 +21,68 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "flamethrower",
+    name = "M9-7 flamethrower",
+    description = "A large flamethrower with substantial gas reserves.  The steel frame, with canvas accoutrements and aluminum cylinders, are all colored olive drab, like so many other pieces of equipment from the Vietnam War era.",
+    symbol = "(",
+    color = "light_gray",
+    looks_like = "m79",
+    mass = "11340 g",
+    volume = "69450 ml",
+    length = "584 mm",
+    price = "800 USD",
+    survival_price = "60 USD",
+    max_worn = 1,
+    flags = { "NEVER_JAMS", "FIRESTARTER", "BELTED", "PRIMITIVE_RANGED_WEAPON", "IS_ARMOR" },
+    melee_damage = { bash = 10 },
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            magazine_well = "1196 ml",
+            rigid = false,
+            allowed_items = { "pressurized_tank", "pressurized_tank_modern" },
+        },
+    },
+    faults = {},
+    use_actions = {
+        { kind = "firestarter" },
+    },
+    armor = {
+        portions = {
+            {
+                covers = { "torso" },
+                subparts = { "torso_hanging_back" },
+                coverage = 80,
+                volume_encumbrance = 0.2307,
+                encumbrance = { 0, 60 },
+                materials = {
+                    { id = "steel", thickness = 2, coverage = 40 },
+                    { id = "aluminum", thickness = 2, coverage = 100 },
+                },
+            },
+        },
+    },
+    gun = {
+        skill = "launcher",
+        ammunition = { "flammable" },
+        range = 6,
+        dispersion = 300,
+        durability = 8,
+        reload_time = 4,
+        effects = { "FLARE" },
+        ammo_per_shot = 100,
+        modes = {
+            { id = "DEFAULT", label = "Jet", quantity = 1 },
+            { id = "AUTO", label = "Gout", quantity = 4 },
+        },
+        mod_locations = {
+            { id = "rail mount", count = 1 },
+            { id = "sights mount", count = 1 },
+            { id = "stock mount", count = 1 },
+            { id = "underbarrel mount", count = 1 },
+        },
+    },
+    subtype_order = { "armor", "gun" },
+}

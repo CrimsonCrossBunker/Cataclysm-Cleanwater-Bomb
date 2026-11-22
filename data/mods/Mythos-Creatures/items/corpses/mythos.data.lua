@@ -1,0 +1,40 @@
+local ccb = require("ccb")
+
+ccb.content.define_item {
+    id = "corpse_generic_gunned_deep_one",
+    copy_from = "corpse_generic_deep_one",
+    name = "deep one corpse",
+    description = "The dead body of a deep one.  Its forehead bears a large bullet entrance wound.  An even larger exit wound is present on the back of its head.",
+    looks_like = "corpse_generic_deep_one",
+    snippet_category = {
+        {
+            id = "generic_gunned_deep_one_01",
+            text = "The dead body of a deep one.  Its forehead bears a large bullet entrance wound.  An even larger exit wound is present on the back of its head.",
+        },
+        {
+            id = "generic_gunned_deep_one_02",
+            text = "The corpse of a deep one shot several times in the back with a low-caliber weapon.",
+        },
+        {
+            id = "generic_gunned_deep_one_03",
+            text = "A deep one corpse gored by arms fire chest to thighs, leaving the face eerily and fishily pristine.",
+        },
+        {
+            id = "generic_gunned_deep_one_04",
+            text = "The corpse of a deep one.  It appears to have been shot in the forehead at a very close range leaving you a good view of its brain matter.",
+        },
+        {
+            id = "generic_gunned_deep_one_05",
+            text = "The corpse of a deep one, its legs and arms covered in blood.  It appears to have been shot in the thigh.",
+        },
+        {
+            id = "generic_gunned_deep_one_06",
+            text = "The corpse of a deep one who appears to have been shot to death.  Its right arm is only barely still attached to his shoulder.",
+        },
+        {
+            id = "generic_gunned_deep_one_07",
+            text = "The corpse of a deep one unblemished but for the bloody hole atop its head, its bald scalp intermixed now with brain, viscera and shotgun pellets.",
+        },
+    },
+    materials = { "flesh" },
+}

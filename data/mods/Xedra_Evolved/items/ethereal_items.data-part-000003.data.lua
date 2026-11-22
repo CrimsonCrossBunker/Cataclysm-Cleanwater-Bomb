@@ -47,3 +47,50 @@ ccb.content.define_item {
         portions = { { encumbrance = { 5, 10 }, coverage = 40, covers = { "torso" } } },
     },
 }
+
+ccb.content.define_item {
+    id = "xe_oneiric_hammer",
+    name = "Oneiric Hammer",
+    description = "The platonic embodiment of a blacksmiths hammer.  This hammer is necessary to forge or repair items made of forged dreamstuff.",
+    symbol = "/",
+    color = "brown",
+    mass = "1337 g",
+    volume = "1250 ml",
+    price = "0 cent",
+    flags = {
+        "NONCONDUCTIVE",
+        "BELT_CLIP",
+        "TRADER_AVOID",
+        "UNBREAKABLE_MELEE",
+        "NO_REPAIR",
+        "NO_SALVAGE",
+        "MAGIC_FOCUS",
+    },
+    materials = { "dreamstuff" },
+    melee_damage = { bash = 30 },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            ammunition = { scrap_dreamdross = 100 },
+        },
+    },
+    qualities = {
+        { id = "DREAM_HAMMER", level = 1 },
+    },
+    use_actions = {
+        {
+            kind = "repair_item",
+            id = "repair_metal",
+            skill = "deduction",
+            tool_quality = 0,
+            move_cost = 100,
+            cost_scaling = 0.1,
+            materials = { "forged_dreamstuff", "moon_tears", "moon_tears_fine_chain" },
+        },
+    },
+    tool = { charges_per_use = 1 },
+    artifact = {
+        enchantments = { "ITEM_ENCH_Xedra_Evolved_xe_oneiric_hammer_0" },
+    },
+    subtype_order = { "tool", "artifact" },
+}

@@ -26,3 +26,42 @@ ccb.content.define_item {
     },
     countdown_interval = "50 seconds",
 }
+
+ccb.content.define_item {
+    id = "EMPbomb",
+    name = "EMP bomb",
+    description = "This substantial device is a bomb that generates an electromagnetic pulse.  When activated, the plutonium fuel cell is drained into a flux compression generator, the detonation of which creates a strong magnetic field.  When this magnetic field is fed into the antenna, it creates a strong electro-magnetic pulse.",
+    symbol = "*",
+    color = "light_gray",
+    category = "weapons",
+    mass = "4543 g",
+    volume = "15500 ml",
+    price = "600 USD",
+    survival_price = "30 USD",
+    explode_in_fire = true,
+    flags = {
+        "RADIO_MODABLE",
+        "RADIO_INVOKE_PROC",
+        "BOMB",
+        "GRENADE",
+        "WATER_BREAK",
+        "ALLOWS_REMOTE_USE",
+    },
+    materials = { "steel", "plastic" },
+    melee_damage = { bash = 12 },
+    accuracy = { grip = "none", length = "hand", surface = "any", balance = "clumsy" },
+    blast = {
+        power = 600,
+        light_effect = "emp_blast",
+        shrapnel = { casing_mass = 3214, fragment_mass = 0.5 },
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            target = "EMPbomb_act",
+            message = "You activate the EMP bomb.",
+            menu_text = "Activate",
+        },
+    },
+    tool = {},
+}

@@ -191,3 +191,25 @@ ccb.content.define_item {
     milling = {},
     comestible = { vitamins = { { id = "calcium", amount = "1680 mg" }, { id = "meat_allergen", amount = 1 } } },
 }
+
+ccb.content.define_item {
+    id = "skull_human_tainted",
+    copy_from = "skull_human",
+    name = "tainted human skull",
+    description = "The stained skull of what was once a human being.  It is rotted and noticeably warped from its lively form.  Carrying this around probably isn't going to win you any friends.",
+    color = "light_gray",
+    survival_price = "0 cent",
+    snippet_category = "skull_human_tainted_desc",
+    materials = { "bone" },
+    use_actions = { "POISON" },
+    milling = { result = "meal_bone_tainted", recipe = "meal_bone_tainted_mill_1_4" },
+    comestible = { fun = -10 },
+    subtype_order = { "milling", "comestible" },
+    inheritance = {
+        remove = {
+            vitamins = {
+                { id = "human_flesh_vitamin", amount = 1 },
+            },
+        },
+    },
+}

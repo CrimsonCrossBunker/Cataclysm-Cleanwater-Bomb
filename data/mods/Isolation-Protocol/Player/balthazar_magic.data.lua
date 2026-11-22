@@ -21,3 +21,38 @@ ccb.content.define_spell {
     base_energy_cost = 1500,
     base_casting_time = 500,
 }
+
+ccb.content.define_item {
+    id = "iso_blackfire_shield",
+    name = "Blackfire shell",
+    description = "A thin shell of altered reality periodically flickers in and out of existence in resemblance to slick globules of dark oil.  It seemingly absorbs incoming attacks, protecting you from harm.",
+    symbol = "o",
+    color = "blue",
+    mass = "1 g",
+    volume = "1 ml",
+    max_worn = 1,
+    max_energy_shield_hp = 1200,
+    flags = {
+        "AURA",
+        "ENERGY_SHIELD",
+        "OVERSIZE",
+        "TRADER_AVOID",
+        "NO_TAKEOFF",
+        "NONCONDUCTIVE",
+        "SPAWN_ACTIVE",
+        "ALLOWS_NATURAL_ATTACKS",
+        "SEMITANGIBLE",
+        "POWERARMOR_COMPATIBLE",
+        "UNRESTRICTED",
+    },
+    materials = { "monolith" },
+    tool = {},
+    armor = {
+        thickness = 5.0,
+        environmental_protection = 20,
+        portions = {
+            { coverage = 100, covers_all = true, encumbrance = 0 },
+        },
+    },
+    subtype_order = { "tool", "armor" },
+}

@@ -19,3 +19,21 @@ ccb.content.define_item {
     artifact = { enchantments = { "ITEM_ENCH_dda_jade_nagamaki_0" } },
     mounted_charge = { max_steps = 15, damage_type = "cut", multiplier_per_step = 0.08, max_multiplier = 1.3 },
 }
+
+ccb.content.define_item {
+    id = "qt_katana",
+    copy_from = "mc_katana",
+    name = ccb.content.plural_text("tempered steel katana", "tempered steel katana"),
+    description = "A rare sword from Japan.  Deadly against unarmored targets, and still very effective against armor.\n\nMade of tempered steel, this is a masterpiece.  The grip, the balance, the blade, all perfect.  This is the peak of the swordsmith's craft.",
+    replace_materials = { mc_steel = "qt_steel", leather = "kevlar" },
+    tool = {},
+    inheritance = {
+        scale = { price = 1.15, survival_price = 1.15 },
+        offset = {
+            melee_damage = { cut = 4 },
+            qualities = {
+                { id = "BUTCHER", level = 3 },
+            },
+        },
+    },
+}

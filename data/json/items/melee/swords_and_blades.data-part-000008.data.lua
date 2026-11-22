@@ -22,3 +22,21 @@ ccb.content.define_item {
     melee_damage = { bash = 6, cut = 28 },
     tool = {},
 }
+
+ccb.content.define_item {
+    id = "ch_arming_sword",
+    copy_from = "mc_arming_sword",
+    name = "hardened steel arming sword",
+    description = "A classic medieval sword, just the right size to use one-handed.\n\nMade of hardened steel and with a molded grip that fits your hand perfectly, this weapon looks as good as any you might find in a museum.  The balance is perfect and the edge is as sharp as a razor.",
+    replace_materials = { mc_steel = "ch_steel", leather = "kevlar" },
+    tool = {},
+    inheritance = {
+        scale = { price = 1.1, survival_price = 1.1 },
+        offset = {
+            melee_damage = { cut = 3 },
+            qualities = {
+                { id = "BUTCHER", level = 2 },
+            },
+        },
+    },
+}

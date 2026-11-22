@@ -40,3 +40,21 @@ ccb.content.define_item {
     milling = {},
     comestible = { vitamins = { { id = "calcium", amount = "4800 mg" }, { id = "meat_allergen", amount = 1 } } },
 }
+
+ccb.content.define_item {
+    id = "skull_beaver_huge",
+    copy_from = "skull_beaver",
+    name = "dambreaker skull",
+    description = "A skull of an abnormally large mutant beaver.",
+    milling = { result = "meal_bone", recipe = "meal_bone_mill_1_4" },
+    comestible = {
+        vitamins = {
+            { id = "calcium", amount = "4200 mg" },
+            { id = "meat_allergen", amount = 1 },
+        },
+    },
+    subtype_order = { "milling", "comestible" },
+    inheritance = {
+        scale = { mass = 2.5, volume = 2.5, length = 1.75, calories = 2.5 },
+    },
+}

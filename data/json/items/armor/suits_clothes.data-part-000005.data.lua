@@ -60,3 +60,79 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "ski_bib",
+    name = ccb.content.plural_text("ski bib", "ski bib"),
+    description = "A heavy, waterproof ski bib that covers the legs and torso.  It is made of a thick, durable material and is designed to keep the wearer warm in cold conditions, and includes a boot clip to keep snow out of your feet.  Activate them to unzip the front legs for ventilation and pull up the gaiters.",
+    symbol = "[",
+    color = "light_blue",
+    looks_like = "denim_overalls",
+    mass = "1200 g",
+    volume = "3300 ml",
+    price = "65 USD 50 cent",
+    survival_price = "8 USD",
+    flags = { "VARSIZE", "POCKETS", "WATERPROOF" },
+    materials = { "nylon", "cotton", "vinyl" },
+    pockets = {
+        { kind = "CONTAINER", capacity = "2 L", mass_limit = "4 kg", moves = 120 },
+        { kind = "CONTAINER", capacity = "2 L", mass_limit = "4 kg", moves = 120 },
+        { kind = "CONTAINER", capacity = "350 ml", mass_limit = "1600 g", moves = 90 },
+        { kind = "CONTAINER", capacity = "800 ml", mass_limit = "1600 g", moves = 70 },
+        { kind = "CONTAINER", capacity = "800 ml", mass_limit = "1600 g", moves = 70 },
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            target = "ski_bib_unzipped",
+            message = "You open vents in the legs of the snow bib.",
+            menu_text = "Open vents",
+        },
+    },
+    armor = {
+        thickness = 1.1,
+        warmth = 45,
+        environmental_protection = 3,
+        portions = {
+            {
+                covers = { "torso" },
+                coverage = 65,
+                encumbrance = { 12, 14 },
+                materials = {
+                    { id = "nylon", thickness = 0.4, coverage = 100 },
+                },
+            },
+            {
+                covers = { "leg_l", "leg_r" },
+                subparts = { "leg_hip_l", "leg_upper_l", "leg_knee_l", "leg_hip_r", "leg_upper_r", "leg_knee_r" },
+                coverage = 100,
+                encumbrance = { 12, 14 },
+                materials = {
+                    { id = "nylon", thickness = 0.4, coverage = 100 },
+                    { id = "cotton", thickness = 0.4, coverage = 100 },
+                },
+            },
+            {
+                covers = { "leg_l", "leg_r" },
+                subparts = { "leg_lower_r", "leg_lower_l" },
+                coverage = 100,
+                rigid_only = false,
+                encumbrance = { 0, 0 },
+                materials = {
+                    { id = "nylon", thickness = 0.4, coverage = 100 },
+                    { id = "vinyl", thickness = 0.2, coverage = 60 },
+                },
+            },
+            {
+                covers = { "foot_l", "foot_r" },
+                subparts = { "foot_arch_l", "foot_arch_r", "foot_ankle_r", "foot_ankle_l" },
+                coverage = 60,
+                rigid_only = false,
+                encumbrance = { 0, 0 },
+                materials = {
+                    { id = "vinyl", thickness = 0.2, coverage = 100 },
+                },
+            },
+        },
+    },
+}

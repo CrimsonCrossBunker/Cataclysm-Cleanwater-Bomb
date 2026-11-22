@@ -42,3 +42,40 @@ ccb.content.define_item {
     inheritance = { add = { flags = { "ALLOWS_REMOTE_USE", "PSEUDO" } } },
     tool = { ammo_types = { "battery" } },
 }
+
+ccb.content.define_item {
+    id = "integrated_ar",
+    copy_from = "fake_item",
+    name = "Integrated AR System",
+    description = "Extremely thin lenses provide user with augmented reality overlay allowing the user to zoom, and it displays handy information about local topology.",
+    e_port = "phone",
+    flags = {
+        "ZOOM",
+        "WATCH",
+        "ALARMCLOCK",
+        "SUN_GLASSES",
+        "THERMOMETER",
+        "INTEGRATED",
+        "UNBREAKABLE",
+        "PERSONAL",
+        "NO_REPAIR",
+        "ALLOWS_NATURAL_ATTACKS",
+        "USES_BIONIC_POWER",
+    },
+    materials = { "plastic" },
+    variables = { browsed = "true" },
+    pockets = {
+        {
+            kind = "E_FILE_STORAGE",
+            capacity = "1 ml",
+            mass_limit = "1 g",
+            memory_capacity = "2 TB",
+            weight_multiplier = 0.0,
+            rigid = true,
+        },
+    },
+    use_actions = { "CAMERA", "PORTABLE_GAME", "EBOOKSAVE", "E_FILE_DEVICE" },
+    tool = { charges_per_use = 1, transfer_rate = "140 MB" },
+    armor = {},
+    subtype_order = { "tool", "armor" },
+}

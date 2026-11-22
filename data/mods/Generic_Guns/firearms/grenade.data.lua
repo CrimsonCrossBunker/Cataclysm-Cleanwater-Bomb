@@ -8,3 +8,29 @@ ccb.content.define_item {
     pockets = { { kind = "MAGAZINE", ammunition = { ammo_grenade = 6 }, rigid = true } },
     gun = { ammunition = { "ammo_grenade" }, clip_size = 6 },
 }
+
+ccb.content.define_item {
+    id = "grenade_pistol",
+    copy_from = "m320",
+    name = "grenade pistol",
+    description = "A stubby single shot pistol with a large bore barrel, suitable for launching grenades or flares.  This is a slightly more convenient way to transport a grenade launcher than mounted to one's rifle, a practice more common among special forces.  In more recent years, variants were sold commercially to ostensibly launch flares.  With the right cartridges, this would be devastating against hard or soft targets.  This could be attached to a suitable rifle, if so desired.",
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            rigid = true,
+            ammunition = { ammo_grenade = 1 },
+        },
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            target = "grenade_under",
+            message = "You make the launcher ready for attachment.",
+            menu_text = "Deploy as attachment",
+        },
+    },
+    gun = {
+        ammunition = { "ammo_grenade" },
+        clip_size = 1,
+    },
+}

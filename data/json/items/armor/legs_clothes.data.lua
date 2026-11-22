@@ -512,3 +512,77 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "jeans",
+    name = ccb.content.plural_text("jeans", "jeans"),
+    description = "A pair of jeans with two deep pockets.",
+    symbol = "[",
+    color = "light_blue",
+    looks_like = "pants",
+    mass = "600 g",
+    volume = "2 L",
+    price = "50 USD",
+    survival_price = "1 USD 50 cent",
+    snippet_category = {
+        {
+            id = "jeans1",
+            text = "A pair of blue jeans with two deep pockets.",
+        },
+        {
+            id = "jeans2",
+            text = "A pair of black jeans with two deep pockets.",
+        },
+        { id = "jeans3", text = "A stylish pair of bleached denim jeans." },
+        {
+            id = "jeans4",
+            text = "A pair of old baggy jeans.  The heels are all ripped up.",
+        },
+    },
+    flags = { "VARSIZE", "POCKETS" },
+    materials = { "denim" },
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "1250 ml",
+            mass_limit = "4 kg",
+            max_item_length = "19 cm",
+            moves = 80,
+        },
+        {
+            kind = "CONTAINER",
+            capacity = "1250 ml",
+            mass_limit = "4 kg",
+            max_item_length = "19 cm",
+            moves = 80,
+        },
+        {
+            kind = "CONTAINER",
+            capacity = "1080 ml",
+            mass_limit = "4 kg",
+            max_item_length = "165 mm",
+            moves = 100,
+        },
+        {
+            kind = "CONTAINER",
+            capacity = "1080 ml",
+            mass_limit = "4 kg",
+            max_item_length = "165 mm",
+            moves = 100,
+        },
+    },
+    faults = {
+        { group = "fabric_denim" },
+    },
+    armor = {
+        thickness = 0.65,
+        warmth = 10,
+        portions = {
+            {
+                covers = { "leg_l", "leg_r" },
+                coverage = 100,
+                encumbrance = { 7, 11 },
+            },
+        },
+    },
+}

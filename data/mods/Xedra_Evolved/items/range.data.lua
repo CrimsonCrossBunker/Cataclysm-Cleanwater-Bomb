@@ -86,3 +86,70 @@ ccb.content.define_item {
         recovery_chance = 97,
     },
 }
+
+ccb.content.define_item {
+    id = "dreamforged_longbow",
+    name = "dreamforged bow",
+    description = "A six-foot bow, forged entirely from dreamdross, including its strings.  Primitive look, devastating power.",
+    symbol = "(",
+    color = "light_gray",
+    looks_like = "longbow",
+    mass = "884 g",
+    volume = "2800 ml",
+    length = "160 cm",
+    price = "500 USD",
+    min_strength = 7,
+    flags = {
+        "FIRE_TWOHAND",
+        "RELOAD_AND_SHOOT",
+        "PRIMITIVE_RANGED_WEAPON",
+        "BELTED",
+        "WATER_FRIENDLY",
+        "SHEATH_BOW",
+        "WATERPROOF_GUN",
+        "NEVER_JAMS",
+    },
+    materials = { "forged_dreamstuff" },
+    melee_damage = { bash = 10 },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            open_container = true,
+            ammunition = { arrow = 1 },
+        },
+    },
+    armor = {
+        portions = {
+            {
+                covers = { "torso" },
+                subparts = { "torso_hanging_back" },
+                coverage = 0,
+                encumbrance = 14,
+                materials = {
+                    { id = "forged_dreamstuff", thickness = 2, coverage = 100 },
+                },
+            },
+        },
+    },
+    gun = {
+        skill = "archery",
+        ammunition = { "arrow" },
+        range = 25,
+        dispersion = 1000,
+        sight_dispersion = 3000,
+        durability = 6,
+        loudness = 8,
+        clip_size = 1,
+        reload_time = 50,
+        reload_noise_volume = 3,
+        damage = { type = "stab", amount = 11 },
+        mod_locations = {
+            { id = "underbarrel", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "stabilizer", count = 1 },
+            { id = "dampening", count = 1 },
+            { id = "arrow rest", count = 1 },
+        },
+    },
+    subtype_order = { "armor", "gun" },
+}

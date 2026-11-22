@@ -23,3 +23,33 @@ ccb.content.define_item {
     },
     countdown_interval = "20 seconds",
 }
+
+ccb.content.define_item {
+    id = "homemade_bomb",
+    name = "homemade bomb",
+    description = "A homemade explosive device, consisting of a large plastic jug filled with stable explosives and scrap metal, equipped with a long fuse.  Use this item to light the fuse.  Once you do, it should explode after about 20 seconds.",
+    symbol = "*",
+    color = "red",
+    category = "weapons",
+    mass = "6500 g",
+    volume = "3900 ml",
+    price = "100 USD",
+    explode_in_fire = true,
+    flags = { "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB" },
+    materials = { "steel", "plastic" },
+    blast = {
+        power = 2320,
+        shrapnel = { casing_mass = 3000, fragment_mass = 0.5, drop = "scrap", recovery = 20 },
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            target = "homemade_bomb_act",
+            need_fire = 1,
+            need_wielding = true,
+            message = "You light the fuse on the bomb.  Get rid of it quickly!",
+            menu_text = "Light fuse",
+        },
+    },
+    tool = {},
+}

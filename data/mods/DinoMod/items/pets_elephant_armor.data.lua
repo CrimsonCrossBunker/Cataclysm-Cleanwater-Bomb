@@ -84,3 +84,47 @@ ccb.content.define_item {
     volume = "150 L",
     pet_armor = { thickness = 4 },
 }
+
+ccb.content.define_item {
+    id = "leather_armor_elephant",
+    copy_from = "elephant_armor",
+    name = ccb.content.plural_text("boiled leather elephant barding with caparison", "boiled leather elephant bardings with caparison"),
+    description = "A full barding for elephants, consisting of boiled leather with cloth underneath.  This caparison depicts a battle between a monstrous demon and a regal warrior astride an elephant and wielding an elaborate vajra.  You could put this on a friendly elephant.",
+    color = "green",
+    mass = "15 kg",
+    volume = "150 L",
+    price = "300 USD",
+    survival_price = "30 USD",
+    snippet_category = {
+        {
+            id = "vritra",
+            text = "A full barding for elephants, consisting of boiled leather with cloth underneath.  This caparison depicts a battle between a monstrous demon and a regal warrior astride an elephant and wielding an elaborate vajra.  You could put this on a friendly elephant.",
+        },
+        {
+            id = "khajurahoshiva",
+            text = "A full barding for elephants, consisting of boiled leather with cloth underneath.  This caparison depicts a being, a goddess?  with many arms bearing different items with one large uncovered breast on the left side.  You could put this on a friendly elephant.",
+        },
+        {
+            id = "elephantry",
+            text = "A full barding for elephants, consisting of boiled leather with cloth underneath.  This caparison depicts several charging elephants trampling enemy soldiers.  You could put this on a friendly elephant.",
+        },
+        {
+            id = "diamond",
+            text = "A full barding for elephants, consisting of boiled leather with cloth underneath.  This caparison depicts an assortment of diamonds and gems.  You could put this on a friendly elephant.",
+        },
+        {
+            id = "ashoka",
+            text = "A full barding for elephants, consisting of boiled leather with cloth underneath.  This caparison depicts a man in rich garments and a full uncovered belly, riding in an elaborate chariot.  You could put this on a friendly elephant.",
+        },
+        {
+            id = "singh",
+            text = "A full barding for elephants, consisting of boiled leather with cloth underneath.  This caparison depicts several identical smiling men in turbans of various bright colors performing a dance.  You could put this on a friendly elephant.",
+        },
+        {
+            id = "triceratops",
+            text = "A full barding for elephants, consisting of boiled leather with cloth underneath.  This caparison depicts a fierce, three-horned dinosaur bursting out the side of a 1970s-era van.  You could put this on a friendly elephant.",
+        },
+    },
+    materials = { "cotton", "leather" },
+    pet_armor = { thickness = 6 },
+}

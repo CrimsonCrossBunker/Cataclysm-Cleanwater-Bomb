@@ -127,3 +127,25 @@ ccb.content.define_item {
         effects = { "NOGIB", "NON_FOULING" },
     },
 }
+
+ccb.content.define_item {
+    id = "match",
+    name = ccb.content.plural_text("match", "matches"),
+    description = "A small stick with a red part at the end.  Strike it against a matchbook to light it.",
+    symbol = "|",
+    color = "red",
+    category = "tools",
+    mass = "1 mg",
+    volume = "4 ml",
+    flags = { "TRADER_AVOID" },
+    materials = { "wood" },
+    use_actions = {
+        {
+            kind = "firestarter",
+            moves = 500,
+            slow_moves = 6000,
+            qualities = { STRIKING_SURFACE = 1 },
+        },
+    },
+    ammunition = { type = "match" },
+}

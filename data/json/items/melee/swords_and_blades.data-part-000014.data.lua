@@ -38,3 +38,21 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "qt_zweihander",
+    copy_from = "mc_zweihander",
+    name = "tempered steel zweihänder",
+    description = "A huge two-handed sword from Germany.  It packs a real wallop.\n\nMade of tempered steel, this is a masterpiece.  The grip, the balance, the blade, all perfect.  This is the peak of the swordsmith's craft.",
+    replace_materials = { mc_steel = "qt_steel", leather = "kevlar" },
+    tool = {},
+    inheritance = {
+        scale = { price = 1.15, survival_price = 1.15 },
+        offset = {
+            melee_damage = { cut = 5 },
+            qualities = {
+                { id = "BUTCHER", level = 3 },
+            },
+        },
+    },
+}

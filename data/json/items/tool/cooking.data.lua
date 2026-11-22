@@ -26,3 +26,16 @@ ccb.content.define_item {
     melee_damage = { bash = 6 },
     use_actions = { "HEAT_ALL_ITEMS" },
 }
+
+ccb.content.define_item {
+    id = "multi_cooker_filled",
+    copy_from = "multi_cooker",
+    name = ccb.content.plural_text("multi-cooker - cooking", "multi-cookers - cooking"),
+    description = "A professional-grade multi-cooker, with a battery slot for camping trips or tailgating.  There is a dish cooking inside it.",
+    tool = {},
+    inheritance = {
+        remove = {
+            qualities = { "CONTAIN" },
+        },
+    },
+}

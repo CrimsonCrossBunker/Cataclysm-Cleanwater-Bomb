@@ -489,3 +489,60 @@ ccb.content.define_item {
         thickness = 0.2,
     },
 }
+
+ccb.content.define_item {
+    id = "denim_shirt",
+    name = "denim shirt",
+    description = "A long sleeved button-down shirt made from denim.",
+    symbol = "[",
+    color = "light_blue",
+    looks_like = "dress_shirt",
+    mass = "680 g",
+    volume = "1 L",
+    price = "50 USD",
+    survival_price = "50 cent",
+    snippet_category = {
+        {
+            id = "denim_shirt1",
+            text = "A long sleeved button-down blue shirt made from denim.",
+        },
+        {
+            id = "denim_shirt2",
+            text = "A long sleeved button-down shirt made from denim, dyed black.",
+        },
+        {
+            id = "denim_shirt3",
+            text = "A long sleeved button-down cowboy wash shirt made from denim.",
+        },
+    },
+    flags = { "VARSIZE" },
+    materials = { "denim" },
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "400 ml",
+            mass_limit = "4 kg",
+            max_item_length = "10 cm",
+            moves = 75,
+        },
+    },
+    faults = {
+        { group = "fabric_denim" },
+    },
+    armor = {
+        thickness = 0.8,
+        warmth = 10,
+        portions = {
+            {
+                covers = { "torso" },
+                coverage = 95,
+                encumbrance = { 4, 5 },
+            },
+            {
+                covers = { "arm_l", "arm_r" },
+                coverage = 95,
+                encumbrance = { 4, 4 },
+            },
+        },
+    },
+}

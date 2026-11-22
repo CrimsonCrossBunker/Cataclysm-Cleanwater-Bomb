@@ -991,3 +991,53 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "briefcase_smg",
+    copy_from = "hk_mp5k",
+    name = "MP5 operational briefcase",
+    description = "A hard-sided briefcase with a trigger in the handle and a concealed hole in the side.  To fire the internally mounted MP5K-PDW, one braces the briefcase at the waist, ensures the hole is pointed at the enemy, and squeezes the trigger.  Precision and handling are severely hampered by the shape of the briefcase, but if you need to 'hand over the goods' or look low profile while bodyguarding, this is your gun.  When the briefcase is open, the MP5 may be reloaded or dismounted.",
+    looks_like = "hk_briefcase",
+    variant_kind = "gun",
+    mass = "3800 g",
+    volume = "15232 ml",
+    length = "544 mm",
+    price = "4 kUSD 800 USD",
+    survival_price = "50 USD",
+    flags = { "OVERSIZE", "RELOAD_EJECT", "BELTED", "RESTRICT_HANDS", "NO_TURRET" },
+    melee_damage = { bash = 15 },
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            rigid = true,
+            allowed_items = { "mp5mag", "mp5mag_10rd", "mp5mag_15rd", "mp5mag_20rd" },
+        },
+    },
+    variants = {
+        {
+            id = "briefcase_smg",
+            name = "H&K operational briefcase",
+            description = "A hard-sided briefcase with a trigger in the handle and a concealed hole in the side.  To fire the internally mounted MP5K-PDW, one braces the briefcase at the waist, ensures the hole is pointed at the enemy, and squeezes the trigger.  Precision and handling are severely hampered by the shape of the briefcase, but if you need to 'hand over the goods' or look low profile while bodyguarding, this is your gun.  When the briefcase is open, the MP5 may be reloaded or dismounted.",
+        },
+    },
+    armor = {
+        sided = true,
+        portions = {
+            {
+                covers = { "arm_l", "arm_r", "hand_l", "hand_r" },
+                coverage = 10,
+                encumbrance = 30,
+                materials = {
+                    { id = "steel", thickness = 2.0, coverage = 100 },
+                    { id = "plastic", thickness = 2.0, coverage = 100 },
+                },
+            },
+        },
+    },
+    gun = {
+        dispersion = 520,
+        sight_dispersion = 520,
+        mod_locations = {},
+    },
+    subtype_order = { "armor", "gun" },
+}

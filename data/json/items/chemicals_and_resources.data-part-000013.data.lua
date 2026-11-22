@@ -179,3 +179,22 @@ ccb.content.define_item {
     display_type = "BY_VOLUME",
     comestible = { quench = -15, healthy = -1, kind = "INVALID", servings = 1 },
 }
+
+ccb.content.define_item {
+    id = "pur_tablets",
+    name = "water purification tablet",
+    description = "Intended for the clarification and disinfection of unsafe drinking water while camping or traveling, this sodium dichloroisocyanurate-based purification tablet removes dangerous contaminants using powerful chemicals.  The label says to use one tablet per liter (4 units of water).",
+    symbol = "!",
+    color = "white",
+    category = "chems",
+    display_type = "BY_WEIGHT",
+    mass = "1 g",
+    volume = "2 ml",
+    price = "9 cent",
+    survival_price = "20 cent",
+    stackable = true,
+    flags = { "NO_INGEST", "WATER_DISSOLVE" },
+    materials = { "powder" },
+    variables = { water_per_tablet = 4 },
+    comestible = { kind = "MED" },
+}

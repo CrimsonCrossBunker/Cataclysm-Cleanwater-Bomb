@@ -79,3 +79,58 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "poppy_sleep",
+    name = ccb.content.plural_text("poppy sleep", "poppy sleep"),
+    description = "A potent sleep aid extracted from mutated poppy seeds.  Effective, but as an opiate it can be addictive.",
+    symbol = "!",
+    color = "magenta",
+    display_type = "BY_VOLUME",
+    mass = "1 g",
+    volume = "2 ml",
+    price = "20 cent",
+    survival_price = "25 cent",
+    stackable = true,
+    flags = { "NO_TEMP" },
+    materials = { "drug_filler" },
+    use_actions = {
+        { kind = "consume_drug", message = "You take a %s." },
+    },
+    comestible = {
+        kind = "MED",
+        healthy = -2,
+        sleepiness = -40,
+        addictions = { "sleeping pill", "opiate" },
+        vitamins = {
+            { id = "vit_mme", amount = 200 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "poppysyrup",
+    name = ccb.content.plural_text("poppy cough syrup", "poppy cough syrup"),
+    description = "Cough syrup made from mutated poppy.  Will make you sleepy.",
+    symbol = "~",
+    color = "magenta",
+    phase = "liquid",
+    display_type = "BY_VOLUME",
+    default_container = "bottle_plastic_small",
+    mass = "48 g",
+    volume = "250 ml",
+    price = "25 USD",
+    survival_price = "2 USD 50 cent",
+    use_actions = { "FLUSLEEP" },
+    comestible = {
+        kind = "MED",
+        healthy = -1,
+        stimulation = -3,
+        addiction_potential = 15,
+        servings = 5,
+        addictions = { "sleeping pill", "opiate" },
+        vitamins = {
+            { id = "vit_mme", amount = 200 },
+        },
+    },
+}

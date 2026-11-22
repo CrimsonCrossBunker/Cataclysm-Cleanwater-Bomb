@@ -84,3 +84,43 @@ ccb.content.define_item {
     volume = "150 L",
     pet_armor = { thickness = 4 },
 }
+
+ccb.content.define_item {
+    id = "leather_armor_ostrich",
+    copy_from = "ostrich_armor",
+    name = ccb.content.plural_text("boiled leather ostrich barding with caparison", "boiled leather ostrich bardings with caparison"),
+    description = "A full barding for ostriches, consisting of boiled leather with cloth underneath.  This caparison depicts four men in heavy metal armor riddled with bullet marks.  You could put this on a friendly ostrich.",
+    color = "green",
+    mass = "15 kg",
+    volume = "150 L",
+    price = "300 USD",
+    survival_price = "30 USD",
+    snippet_category = {
+        {
+            id = "kelly",
+            text = "A full barding for ostriches, consisting of boiled leather with cloth underneath.  This caparison depicts four men in heavy metal armor riddled with bullet marks.  You could put this on a friendly ostrich.",
+        },
+        {
+            id = "raac",
+            text = "A full barding for ostriches, consisting of boiled leather with cloth underneath.  This caparison depicts a crown floating above an armored tank in profile above the word AUSTRALIA.  You could put this on a friendly ostrich.",
+        },
+        {
+            id = "emuwar",
+            text = "A full barding for ostriches, consisting of boiled leather with cloth underneath.  This caparison depicts several charging emus trampling enemy machine gunners and a field of wheat.  You could put this on a friendly ostrich.",
+        },
+        {
+            id = "ostrichking",
+            text = "A full barding for ostriches, consisting of boiled leather with cloth underneath.  This caparison depicts a man wearing a crown of ostrich feathers and fields with many ostriches.  You could put this on a friendly ostrich.",
+        },
+        {
+            id = "marie",
+            text = "A full barding for ostriches, consisting of boiled leather with cloth underneath.  This caparison depicts a woman in rich blue velvet garments with white ostrich feathers flaring dramatically from her pouf hairstyle.  You could put this on a friendly ostrich.",
+        },
+        {
+            id = "tyrannosaurus",
+            text = "A full barding for ostriches, consisting of boiled leather with cloth underneath.  This caparison depicts a fierce tyrannosaurus rex bursting out the side of a 1970s-era van.  You could put this on a friendly ostrich.",
+        },
+    },
+    materials = { "cotton", "leather" },
+    pet_armor = { thickness = 6 },
+}

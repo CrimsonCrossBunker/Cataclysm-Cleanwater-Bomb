@@ -512,3 +512,18 @@ ccb.content.define_item {
         vitamins = { { id = "calcium", amount = 19 }, { id = "iron", amount = 5 } },
     },
 }
+
+ccb.content.define_item {
+    id = "milk_raw",
+    copy_from = "milk",
+    name = ccb.content.plural_text("raw milk", "raw milk"),
+    description = "This is raw, unhomogenized and unpasteurized milk from a cow.  It couldn't be any fresher unless you drank it straight from the cow, which might upset it.  Depending on your dietary sensibilities, you might want to pasteurize or even boil this before drinking.",
+    price = "19 cent",
+    survival_price = "50 cent",
+    comestible = {
+        shelf_life = "12 hours",
+        contamination = {
+            { disease = "bad_food", probability = 5 },
+        },
+    },
+}

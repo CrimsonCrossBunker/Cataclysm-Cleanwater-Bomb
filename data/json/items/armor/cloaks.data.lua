@@ -503,3 +503,61 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "artifact_energy_shield",
+    name = ccb.content.plural_text("distorted air", "distorted air"),
+    description = "The empty air around you vibrates faintly.",
+    symbol = "o",
+    color = "blue",
+    mass = "10 g",
+    volume = "1 ml",
+    max_worn = 1,
+    max_energy_shield_hp = 100,
+    flags = {
+        "AURA",
+        "ENERGY_SHIELD",
+        "OVERSIZE",
+        "TRADER_AVOID",
+        "NO_TAKEOFF",
+        "NONCONDUCTIVE",
+        "ALLOWS_NATURAL_ATTACKS",
+        "ALLOWS_WING_ARMS",
+        "ALLOWS_WINGS",
+    },
+    materials = { "anomaly" },
+    armor = {
+        thickness = 2,
+        portions = {
+            { coverage = 100, covers_all = true, encumbrance = 0 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "debug_energy_shield",
+    name = "weak energy shield",
+    description = "A weak energy shield that protects against ballistic damage.",
+    symbol = "o",
+    color = "blue",
+    mass = "1 g",
+    volume = "1 ml",
+    max_worn = 1,
+    max_energy_shield_hp = 4,
+    flags = {
+        "AURA",
+        "ENERGY_SHIELD",
+        "OVERSIZE",
+        "TRADER_AVOID",
+        "NO_TAKEOFF",
+        "NONCONDUCTIVE",
+        "ALLOWS_NATURAL_ATTACKS",
+    },
+    materials = { "ballistic_shield" },
+    armor = {
+        thickness = 0.3,
+        portions = {
+            { coverage = 100, covers_all = true, encumbrance = 0 },
+        },
+    },
+}

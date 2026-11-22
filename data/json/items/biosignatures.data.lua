@@ -77,3 +77,29 @@ ccb.content.define_item {
     flags = { "TRADER_AVOID", "INEDIBLE" },
     comestible = { kind = "FOOD", shelf_life = "60 days" },
 }
+
+ccb.content.define_item {
+    id = "feces_bird",
+    name = ccb.content.plural_text("bird litter", "bird litter"),
+    description = "Bird droppings, feathers, and soiled bits of rubbish.",
+    symbol = "%",
+    color = "brown",
+    category = "chems",
+    mass = "40 g",
+    volume = "62 ml",
+    price = "1 cent",
+    survival_price = "1 cent",
+    flags = { "INEDIBLE" },
+    materials = { "feces" },
+    comestible = {
+        kind = "FOOD",
+        calories = 26,
+        fun = -25,
+        quench = -3,
+        healthy = -1,
+        shelf_life = "4 days 16 hours",
+        contamination = {
+            { disease = "highly_contaminated_food", probability = 100 },
+        },
+    },
+}

@@ -3,94 +3,14 @@
     "type": "mapgen",
     "nested_mapgen_id": "labyrinth2_9x9_square_room_nest",
     "object": {
-      "mapgensize": [ 9, 9 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "         ",
-        "         ",
-        "         ",
-        "         ",
-        "         ",
-        "         ",
-        "         ",
-        "         ",
-        "         "
+      "mapgensize": [
+        9,
+        9
       ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_square_room_nest",
-    "object": {
-      "mapgensize": [ 9, 9 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "         ",
-        "         ",
-        "         ",
-        "   ###   ",
-        "   #<o   ",
-        "   ###   ",
-        "         ",
-        "         ",
-        "         "
+      "rotation": [
+        0,
+        3
       ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "terrain": { "<": "t_nl_stairs_up", "o": "t_nl_archway" },
-      "place_nested": [ { "chunks": [ [ "labyrinth_stairs_2_to_1_teleporter", 1 ] ], "x": 2, "y": 2, "z": 1 } ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_square_room_nest",
-    "object": {
-      "mapgensize": [ 9, 9 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "         ",
-        "         ",
-        "         ",
-        "         ",
-        "    A    ",
-        "         ",
-        "         ",
-        "         ",
-        "         "
-      ],
-      "terrain": { "A": "t_nl2_obelisk_altaros" },
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_square_room_nest",
-    "object": {
-      "mapgensize": [ 9, 9 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "         ",
-        " ÇÇÇ ÇÇÇ ",
-        "         ",
-        " ϴÇÇÇÇϴ  ",
-        "         ",
-        "  ϴÇÇÇÇ  ",
-        "         ",
-        "   ÇÇÇÇÇ ",
-        "         "
-      ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_square_room_nest",
-    "object": {
-      "mapgensize": [ 9, 9 ],
-      "rotation": [ 0, 3 ],
       "rows": [
         "         ",
         " ÇÇÇ ÇÇÇ ",
@@ -102,17 +22,37 @@
         "  ϴÇÇÇçÇ ",
         "         "
       ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "computers": { "ç": { "name": "Active Terminal", "eocs": [ "EOC_LS_Computer" ], "chat_topics": [ "COMP_LS2_MAP" ] } }
+      "palettes": [
+        "labyrinth2_nest_palette"
+      ],
+      "flags": [
+        "ERASE_ALL_BEFORE_PLACING_TERRAIN"
+      ],
+      "computers": {
+        "ç": {
+          "name": "Active Terminal",
+          "eocs": [
+            "EOC_LS_Computer"
+          ],
+          "chat_topics": [
+            "COMP_LS2_MAP"
+          ]
+        }
+      }
     }
   },
   {
     "type": "mapgen",
     "nested_mapgen_id": "labyrinth2_9x9_square_room_nest",
     "object": {
-      "mapgensize": [ 9, 9 ],
-      "rotation": [ 0, 3 ],
+      "mapgensize": [
+        9,
+        9
+      ],
+      "rotation": [
+        0,
+        3
+      ],
       "rows": [
         "         ",
         " ÇÇÇ ÇÇÇ ",
@@ -124,293 +64,37 @@
         "  ÇÇÇÇÇÇ ",
         "         "
       ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "computers": { "ç": { "name": "Active Terminal", "eocs": [ "EOC_LS_Computer" ], "chat_topics": [ "COMP_LS2_MAP" ] } }
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           "
+      "palettes": [
+        "labyrinth2_nest_palette"
       ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "           ",
-        "  MM   MM  ",
-        "  MM   MM  ",
-        "           ",
-        "           ",
-        "           ",
-        "  MM   MM  ",
-        "  MM   MM  ",
-        "           ",
-        "           "
+      "flags": [
+        "ERASE_ALL_BEFORE_PLACING_TERRAIN"
       ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
+      "computers": {
+        "ç": {
+          "name": "Active Terminal",
+          "eocs": [
+            "EOC_LS_Computer"
+          ],
+          "chat_topics": [
+            "COMP_LS2_MAP"
+          ]
+        }
+      }
     }
   },
   {
     "type": "mapgen",
     "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
     "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "           ",
-        "   ṪṪ ṪṪ   ",
-        "   ßß ßß   ",
-        "           ",
-        "     L     ",
-        "           ",
-        "   ṪṪ ṪṪ   ",
-        "   ßß ßß   ",
-        "           ",
-        "           "
+      "mapgensize": [
+        11,
+        11
       ],
-      "palettes": [ "labyrinth2_nest_palette", "labyrinthine_item_palette_dining_tier0" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "   M   M   ",
-        "   c   C   ",
-        "           ",
-        "     Ṫ     ",
-        "     ß     ",
-        "           ",
-        "   U   U   ",
-        "   X   X   ",
-        "           ",
-        "           "
+      "rotation": [
+        0,
+        3
       ],
-      "palettes": [ "labyrinth2_nest_palette", "labyrinthine_item_palette_utility_tier0" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "           ",
-        "  ϟϟ   ϟϟ  ",
-        "  (     (  ",
-        "  (     (  ",
-        "  (     (  ",
-        "  (     (  ",
-        "  (     (  ",
-        "  ϟϟ   ϟϟ  ",
-        "           ",
-        "           "
-      ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "   b   B   ",
-        "   B   b   ",
-        "           ",
-        "     L     ",
-        "           ",
-        "     L     ",
-        "           ",
-        "   b   B   ",
-        "   B   b   ",
-        "           "
-      ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "   c   C   ",
-        "  c     C  ",
-        "           ",
-        "     U     ",
-        "     U     ",
-        "           ",
-        "           ",
-        "  C     c  ",
-        "   C   c   ",
-        "           "
-      ],
-      "palettes": [ "labyrinth2_nest_palette", "labyrinthine_item_palette_utility_tier0" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "   Ƥ   Ƥ   ",
-        "           ",
-        "   ƥ   ƥ   ",
-        "           ",
-        "     Ṫ     ",
-        "     ß     ",
-        "           ",
-        "   U   U   ",
-        "           ",
-        "           "
-      ],
-      "palettes": [ "labyrinth2_nest_palette", "labyrinthine_item_palette_utility_tier0" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "           ",
-        "    ϟϟϟ    ",
-        "   ϟϟϟϟϟ   ",
-        "  ϟϟϟϟϟϟϟ  ",
-        "  ϟϟϟϟϟϟϟ  ",
-        "  ϟϟϟϟϟϟϟ  ",
-        "   ϟϟϟϟϟ   ",
-        "    ϟϟϟ    ",
-        "           ",
-        "           "
-      ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "      UU   ",
-        "           ",
-        "  ƥ  ƥ  ƥM ",
-        "  MM MM MM ",
-        "           ",
-        "           ",
-        " ϟϟϟ     U ",
-        "  ϟ     U  ",
-        "   ϟϟ  U   ",
-        "           "
-      ],
-      "palettes": [ "labyrinth2_nest_palette", "labyrinthine_item_palette_utility_tier0" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "     t     ",
-        "           ",
-        "           ",
-        "           ",
-        "           ",
-        "           "
-      ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
-      "rows": [
-        "           ",
-        "   Ç   Ç   ",
-        "  Ç M M Ç  ",
-        "   M   M   ",
-        "     L     ",
-        "  (     (  ",
-        "     L     ",
-        "   M   M   ",
-        "  Ç M M Ç  ",
-        "   Ç   Ç   ",
-        "           "
-      ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
-    }
-  },
-  {
-    "type": "mapgen",
-    "nested_mapgen_id": "labyrinth2_9x9_circle_room_nest",
-    "object": {
-      "mapgensize": [ 11, 11 ],
-      "rotation": [ 0, 3 ],
       "rows": [
         "           ",
         "   Ç   Ç   ",
@@ -424,9 +108,23 @@
         "   Ç   Ç   ",
         "           "
       ],
-      "palettes": [ "labyrinth2_nest_palette" ],
-      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
-      "computers": { "ç": { "name": "Active Terminal", "eocs": [ "EOC_LS_Computer" ], "chat_topics": [ "COMP_LS2_MAP" ] } }
+      "palettes": [
+        "labyrinth2_nest_palette"
+      ],
+      "flags": [
+        "ERASE_ALL_BEFORE_PLACING_TERRAIN"
+      ],
+      "computers": {
+        "ç": {
+          "name": "Active Terminal",
+          "eocs": [
+            "EOC_LS_Computer"
+          ],
+          "chat_topics": [
+            "COMP_LS2_MAP"
+          ]
+        }
+      }
     }
   }
 ]

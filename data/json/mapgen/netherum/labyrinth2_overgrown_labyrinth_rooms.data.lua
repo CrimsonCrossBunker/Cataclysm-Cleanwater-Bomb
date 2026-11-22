@@ -1948,3 +1948,186 @@ ccb.content.define_mapgen {
         item_placements = { { id = "bio_power_storage", x = 0, y = 0, chance = 60 } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth_overgrown_12x12_room_circle",
+    layout = {
+        rows = {
+            "    #++#    ",
+            "  ###..###  ",
+            " ##......## ",
+            " #........# ",
+            "##........##",
+            "+..........+",
+            "+..........+",
+            "##........##",
+            " #........# ",
+            " ##......## ",
+            "  ###..###  ",
+            "    #++#    ",
+        },
+        size = { width = 12, height = 12 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        rotation = { 0, 3 },
+        palettes = { "labyrinthine_overgrown_room_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth_overgrown_12x12_room_circle",
+    layout = {
+        rows = {
+            "    #++#    ",
+            "  ###..###  ",
+            " ##......## ",
+            " #1.....1.# ",
+            "##........##",
+            "+..........+",
+            "+..........+",
+            "##1.....1.##",
+            " #........# ",
+            " ##......## ",
+            "  ###..###  ",
+            "    #++#    ",
+        },
+        size = { width = 12, height = 12 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        rotation = { 0, 3 },
+        palettes = { "labyrinthine_overgrown_room_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth_overgrown_12x12_room_circle",
+    layout = {
+        rows = {
+            "    #++#    ",
+            "  ###..###  ",
+            " ##......## ",
+            " #..L..L..# ",
+            "##........##",
+            "+..........+",
+            "+..........+",
+            "##..L..L..##",
+            " #........# ",
+            " ##......## ",
+            "  ###..###  ",
+            "    #++#    ",
+        },
+        size = { width = 12, height = 12 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        rotation = { 0, 3 },
+        palettes = { "labyrinthine_overgrown_room_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth_overgrown_12x12_room_circle",
+    layout = {
+        rows = {
+            "    #++#    ",
+            "  ###..###  ",
+            " ##PP..PP## ",
+            " #--------# ",
+            "##........##",
+            "+..........+",
+            "+..........+",
+            "##........##",
+            " #--------# ",
+            " ##PP..PP## ",
+            "  ###..###  ",
+            "    #++#    ",
+        },
+        size = { width = 12, height = 12 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        rotation = { 0, 3 },
+        palettes = { "labyrinthine_overgrown_room_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth_overgrown_12x12_room_circle",
+    layout = {
+        rows = {
+            "    #++#    ",
+            "  ###..###  ",
+            " ##U....U## ",
+            " #.U....U.# ",
+            "##.U....U.##",
+            "+..........+",
+            "+..........+",
+            "##.U....U.##",
+            " #.U....U.# ",
+            " ##U....U## ",
+            "  ###..###  ",
+            "    #++#    ",
+        },
+        size = { width = 12, height = 12 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        rotation = { 0, 3 },
+        palettes = { "labyrinthine_overgrown_room_palette", "labyrinthine_item_palette_utility_tier0" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "labyrinth_overgrown_12x12_room_circle",
+    layout = {
+        rows = {
+            "    #++#    ",
+            "  ###..###  ",
+            " ##ÇÇ..ÇÇ## ",
+            " #........# ",
+            "##.ÇÇÇ.ÇÇ.##",
+            "+..........+",
+            "+..Ç.......+",
+            "##.Ç.Ç.Ç.Ç##",
+            " #.Ç.Ç.Ç.Ç# ",
+            " ##....Ç.## ",
+            "  ###..###  ",
+            "    #++#    ",
+        },
+        size = { width = 12, height = 12 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        rotation = { 0, 3 },
+        palettes = { "labyrinthine_overgrown_room_palette" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ls_overgrown_bubblecell_6x6_room_Eentry",
+    layout = {
+        rows = { " #####", " __Ll#", " ____b", " ___ßṪ", " __((#", " #####" },
+        size = { width = 6, height = 6 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        palettes = { "labyrinthine_overgrown_room_palette", "labyrinthine_item_palette_bunk_room_tier0" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ls_overgrown_bubblecell_6x6_room_Eentry",
+    layout = {
+        rows = { " #####", " _ϟ(B#", " ____l", " ____l", " _ϟ(B#", " #####" },
+        size = { width = 6, height = 6 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        palettes = { "labyrinthine_overgrown_room_palette", "labyrinthine_item_palette_bunk_room_tier0" },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "nested",
+    id = "ls_overgrown_bubblecell_6x6_room_Eentry",
+    layout = {
+        rows = { " #####", " _ϟ(_#", " ____Ç", " ____Ç", " _ϟ(_#", " #####" },
+        size = { width = 6, height = 6 },
+        flags = { "ERASE_ALL_BEFORE_PLACING_TERRAIN" },
+        palettes = { "labyrinthine_overgrown_room_palette", "labyrinthine_item_palette_bunk_room_tier0" },
+    },
+}

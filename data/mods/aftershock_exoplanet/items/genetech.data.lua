@@ -154,3 +154,57 @@ ccb.content.define_trait_group {
         { trait = "FASTHEALER", weight = 100 },
     },
 }
+
+ccb.content.define_item {
+    id = "afs_gene_disp",
+    name = "Mercurial Genetech",
+    description = "A single-use genetic treatment that can grant or remove the contained trait.  Can be used in gene editing machinery, which Mercurial normally offers free of charge in a bid to popularize augmentation in the general public.",
+    symbol = "(",
+    color = "light_red",
+    category = "chems",
+    looks_like = "c4armed",
+    mass = "40 g",
+    volume = "10 ml",
+    price = "1 kUSD",
+    trait_group = "GENETECH_TRAITS",
+    flags = { "GENE_TECH", "NANOFAB_TEMPLATE_SINGLE_USE" },
+    materials = { "steel" },
+    accuracy = -5,
+    tool = {},
+}
+
+ccb.content.define_item {
+    id = "afs_gene_template",
+    name = "Mercurial Genetech",
+    description = "A reusable genetic treatment that can grant or remove the contained trait as many times as needed.",
+    symbol = "(",
+    color = "light_red",
+    category = "chems",
+    looks_like = "c4armed",
+    mass = "40 g",
+    volume = "10 ml",
+    price = "75 kUSD",
+    trait_group = "GENETECH_TRAITS",
+    flags = { "GENE_TECH" },
+    materials = { "steel" },
+    accuracy = -5,
+    tool = {},
+}
+
+ccb.content.define_item {
+    id = "afs_gene_template_combat_brute",
+    copy_from = "afs_gene_disp",
+    name = "Project Sobek Genetech",
+    description = "A genetic treatment from Project Sobek, part of Mercurial's own military augmentation program.  The whole treatment is designed for general combat enhancement, without the xenobiology-derived traits that are rumored to exist in more secretive programs.",
+    price = "75 kUSD",
+    trait_group = "GENETECH_COMBAT_BRUTE_TRAITS",
+    tool = {},
+}
+
+ccb.content.define_item {
+    id = "afs_gene_disp_low_tier",
+    copy_from = "afs_gene_disp",
+    name = "Mercurial Genetech",
+    trait_group = "GENETECH_TRAITS_LOW_TIER",
+    tool = {},
+}

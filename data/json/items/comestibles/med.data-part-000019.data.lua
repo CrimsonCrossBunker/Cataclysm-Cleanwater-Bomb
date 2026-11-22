@@ -25,3 +25,21 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "strong_antibiotic",
+    name = ccb.content.plural_text("broad-spectrum antibiotics", "broad-spectrum antibiotics"),
+    description = "A broad-spectrum antibacterial medication designed to prevent or stop the spread of infection.  It contains nearly toxic levels of antibiotics, but can treat any bacterial infections you may encounter.  One dose lasts twelve hours.",
+    symbol = "!",
+    color = "white",
+    default_container = "bottle_plastic_pill_prescription",
+    mass = "611 mg",
+    volume = "1 ml",
+    price = "75 cent",
+    survival_price = "3 USD",
+    stackable = true,
+    flags = { "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" },
+    materials = { "drug_filler" },
+    use_actions = { "STRONG_ANTIBIOTIC" },
+    comestible = { kind = "MED", healthy = -10 },
+}

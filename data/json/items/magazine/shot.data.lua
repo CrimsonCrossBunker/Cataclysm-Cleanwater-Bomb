@@ -302,3 +302,41 @@ ccb.content.define_item {
     pockets = { { kind = "MAGAZINE", rigid = true, ammunition = { shot = 20 } } },
     magazine = { ammunition = { "shot" }, jam_multiplier = 2 },
 }
+
+ccb.content.define_item {
+    id = "shotbelt_20",
+    name = "20-round shotshell belt",
+    description = "A non-disintegrating cloth ammo belt which can hold up to 20 shotgun shells.  Notably less reliable than metal ammo belts.",
+    symbol = "#",
+    color = "light_gray",
+    mass = "17 g",
+    volume = "35 ml",
+    price = "10 USD",
+    survival_price = "50 cent",
+    flags = { "MAG_EJECT", "BELTED", "OVERSIZE", "WATER_FRIENDLY" },
+    materials = { "cotton" },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            rigid = true,
+            ammunition = { shot = 20 },
+        },
+    },
+    armor = {
+        portions = {
+            {
+                covers = { "torso" },
+                subparts = { "torso_upper" },
+                coverage = 10,
+                encumbrance = 2,
+                materials = {
+                    { id = "cotton", thickness = 1.0, coverage = 100 },
+                },
+            },
+        },
+    },
+    magazine = {
+        ammunition = { "shot" },
+    },
+    subtype_order = { "armor", "magazine" },
+}

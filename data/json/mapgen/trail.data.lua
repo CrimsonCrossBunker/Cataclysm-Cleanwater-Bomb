@@ -764,3 +764,76 @@ ccb.content.define_mapgen {
         palettes = { "trail_palette", { parameter = "den_palette" } },
     },
 }
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "forest_trail_end",
+    weight = { global = "vanilla_trail_intersection_weight", fallback = 1000 },
+    layout = {
+        fallback_predecessor_mapgen = "forest_thick",
+        nested = {
+            {
+                choices = {
+                    { id = "24x24_forest_trail_end_basic", weight = 3 },
+                    { id = "24x24_forest_trail_end_spread", weight = 3 },
+                    { id = "24x24_forest_trail_end_split", weight = 3 },
+                    { id = "24x24_forest_trail_intersection", weight = 1 },
+                },
+                x = 0,
+                y = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "forest_trail_tee",
+    weight = { global = "vanilla_trail_intersection_weight", fallback = 1000 },
+    layout = {
+        fallback_predecessor_mapgen = "forest_thick",
+        nested = {
+            {
+                choices = {
+                    { id = "24x24_forest_trail_tee_basic", weight = 2 },
+                    { id = "24x24_forest_trail_tee_split", weight = 3 },
+                    { id = "24x24_forest_trail_intersection", weight = 1 },
+                },
+                x = 0,
+                y = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "forest_trail_four_way",
+    weight = { global = "vanilla_trail_intersection_weight", fallback = 1000 },
+    layout = {
+        fallback_predecessor_mapgen = "forest_thick",
+        nested = {
+            {
+                choices = {
+                    "24x24_forest_trail_four_way_basic",
+                    "24x24_forest_trail_four_way_high_low",
+                    "24x24_forest_trail_intersection",
+                },
+                x = 0,
+                y = 0,
+            },
+        },
+    },
+}
+
+ccb.content.define_mapgen {
+    kind = "overmap",
+    id = "forest_trail_intersection",
+    weight = { global = "vanilla_trail_intersection_weight", fallback = 1000 },
+    layout = {
+        predecessor_mapgen = "forest_thick",
+        nested = {
+            { id = "24x24_forest_trail_intersection", x = 0, y = 0 },
+        },
+    },
+}

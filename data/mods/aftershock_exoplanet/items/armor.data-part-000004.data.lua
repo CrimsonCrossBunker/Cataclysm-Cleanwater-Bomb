@@ -101,3 +101,28 @@ ccb.content.define_item {
         portions = { { encumbrance = { 2, 5 }, coverage = 90, covers = { "torso", "arm_l", "arm_r" } } },
     },
 }
+
+ccb.content.define_item {
+    id = "q_solarpack_on",
+    copy_from = "q_solarpack",
+    name = ccb.content.plural_text("quantum solar backpack (unfolded)", "quantum solar backpacks (unfolded)"),
+    description = "Unfolded array of portable quantum solar panels ready to push some power into an active cable charger system.",
+    color = "blue",
+    volume = "15 L",
+    solar_efficiency = 0.3,
+    flags = { "FRAGILE", "BELTED", "OVERSIZE", "SOLARPACK_ON" },
+    melee_damage = { bash = 4 },
+    use_actions = { "SOLARPACK_OFF" },
+    tool = {},
+    armor = {
+        thickness = 1,
+        portions = {
+            {
+                covers = { "torso" },
+                coverage = 40,
+                encumbrance = 20,
+            },
+        },
+    },
+    subtype_order = { "tool", "armor" },
+}

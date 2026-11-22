@@ -69,3 +69,51 @@ ccb.content.define_item {
     volume = "150 L",
     pet_armor = { thickness = 4 },
 }
+
+ccb.content.define_item {
+    id = "leather_armor_horse",
+    copy_from = "horse_armor",
+    name = ccb.content.plural_text("boiled leather horse barding with caparison", "boiled leather horse bardings with caparison"),
+    description = "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts a battle between a monstrous dragon and regal griffin.  You could put this on a friendly horse.",
+    color = "green",
+    mass = "15 kg",
+    volume = "150 L",
+    price = "300 USD",
+    survival_price = "30 USD",
+    snippet_category = {
+        {
+            id = "battle",
+            text = "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts a battle between a monstrous dragon and regal griffin.  You could put this on a friendly horse.",
+        },
+        {
+            id = "ancientdragon",
+            text = "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts a red dragon breathing fire on cities.  You could put this on a friendly horse.",
+        },
+        {
+            id = "criticalbear",
+            text = "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts a bear standing on its hind legs, forelegs outstretched in a menacing manner.  You could put this on a friendly horse.",
+        },
+        {
+            id = "orange",
+            text = "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts an assortment of fruits and vegetables with a very large orange featured in the foreground.  You could put this on a friendly horse.",
+        },
+        {
+            id = "vulture",
+            text = "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts a massive vulture perched on a mountain.  You could put this on a friendly horse.",
+        },
+        {
+            id = "direboar",
+            text = "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison depicts the mythical Erymanthian boar in various artistic forms.  You could put this on a friendly horse.",
+        },
+        {
+            id = "rycon",
+            text = "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison seems to be sponsored by Rycon Construction, with a tag line of \"From down under to your home, we play all the roles from start to finish!\".  You could put this on a friendly horse.",
+        },
+        {
+            id = "coregentech",
+            text = "A full barding for horses consisting of boiled leather and cloth undercovering.  This caparison seems to be sponsored by Core Generator Tech, with a tag line of \"Providing power solutions from culinary to graphic design, we have the magic touch for your problems!\".  You could put this on a friendly horse.",
+        },
+    },
+    materials = { "cotton", "leather" },
+    pet_armor = { thickness = 6 },
+}

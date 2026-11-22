@@ -91,3 +91,36 @@ ccb.content.define_item {
         },
     },
 }
+
+ccb.content.define_item {
+    id = "item_salamander_cooking_heat",
+    name = ccb.content.plural_text("stove's caress", "stove's caress"),
+    description = "Heat from your hands.  You may cook with it at will.",
+    symbol = "$",
+    color = "red",
+    mass = "0 g",
+    volume = "0 L",
+    price = "1 cent",
+    survival_price = "1 cent",
+    flags = {
+        "PERSONAL",
+        "PADDED",
+        "UNBREAKABLE",
+        "INTEGRATED",
+        "SEMITANGIBLE",
+        "ZERO_WEIGHT",
+        "NO_DROP",
+    },
+    qualities = {
+        { id = "BLOW_HOT_AIR", level = 1 },
+    },
+    use_actions = { "HEAT_FOOD" },
+    tool = {},
+    armor = {},
+    artifact = {
+        enchantments = {
+            "ITEM_ENCH_Xedra_Evolved_item_salamander_cooking_heat_0",
+        },
+    },
+    subtype_order = { "tool", "armor", "artifact" },
+}
