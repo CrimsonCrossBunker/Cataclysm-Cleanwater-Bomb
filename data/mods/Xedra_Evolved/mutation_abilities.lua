@@ -249,3 +249,46 @@ ccb.runtime.handler("gracken_arm_push1", function(context)
         }))
     end
 end)
+
+local function dismiss_temporary_trait(character, trait_id, message)
+    value(mutations.erase(character, id("mutation", trait_id)))
+    player_message(character, ccb.services.translate(message), "neutral")
+end
+
+ccb.runtime.handler("dismiss_ethereal_wings", function(context)
+    dismiss_temporary_trait(context.character, "ethereal_wings", "The wings behind you fade out of existence.")
+end)
+
+local karma_arm_parts = {
+    "karma_arm_up_r",
+    "karma_arm_up_l",
+    "karma_arm_lw_r",
+    "karma_arm_lw_l",
+}
+
+local karma_arm_cured_effects = {
+    "bleed",
+    "infected",
+    "bite",
+}
+
+ccb.runtime.handler("dismiss_karma_arms", function(context)
+    local character = context.character
+    for _, part in ipairs(karma_arm_parts) do
+        local bp = id("body_part", part)
+        local cur = value(services.characters.hp(character, bp))
+        value(services.characters.set_hp(character, bp, math.modf(cur + 150), true))
+        for _, eff in ipairs(karma_arm_cured_effects) do
+            value(effects.remove(character, id("effect", eff), bp))
+        end
+    end
+    dismiss_temporary_trait(character, "karma_arms", "The cyan arms grow dim and finally disappear.")
+end)
+
+ccb.runtime.handler("dismiss_devil_tail", function(context)
+    dismiss_temporary_trait(context.character, "devil_tail", "Your devil tail fades away.")
+end)
+
+ccb.runtime.handler("dismiss_stalker_eyes", function(context)
+    dismiss_temporary_trait(context.character, "stalker_eyes", "The great new world visible to your eyes disappears.")
+end)
