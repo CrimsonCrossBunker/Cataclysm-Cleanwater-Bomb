@@ -18,7 +18,7 @@ require("lua.requirements")
 
 require("lua.enchantments")
 
-require("bionic_enchantments")
+require("lua.bionic_enchantments")
 
 require("construction_groups")
 
@@ -47,3 +47,4 @@ require("monster_groups")
 require("lua.migrations")
 require("lua.damage_types")
 require("lua.bionics")
+require("lua.comestibles")

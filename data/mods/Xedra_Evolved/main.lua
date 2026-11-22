@@ -298,3 +298,7 @@ require("spell_level_scaling")
 
 require("monster_attack_predicates")
 require("addictions")
+
+if require("ccb").content.is_mod_active("bombastic_perks") then
+    require("mod_interactions.bombastic_perks.runtime_interaction")
+end

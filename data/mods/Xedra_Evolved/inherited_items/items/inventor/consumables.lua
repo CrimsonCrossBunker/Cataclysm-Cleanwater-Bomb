@@ -39,7 +39,7 @@ do
         item:material(material, 1)
     end
     item:flag("INVENTOR_CRAFTED")
-    item:comestible { type = "FOOD", calories = 900, fun = 60, quench = 24, spoils_in_turns = 86400 }
+    item:comestible { type = "FOOD", calories = 900, fun = 60, quench = 24, spoils_in_turns = 86400, charges = 0 }
     item:vitamin("vitC", 30)
     item:vitamin("calcium", 20)
     item:vitamin("iron", 38)

@@ -407,7 +407,7 @@ content.add(content.Enchantment {
     load_character_inputs = { skills = { "computer" } },
     native_modifier_order = true,
 }
-    :skill("computers", { add = 2 }))
+    :skill("computer", { add = 2 }))
 
 ccb.runtime.handler("progression_enchantment_active_inline_ench_homullus_can_use_computers_1", function(ctx)
     return (ctx.character_inputs.skills["computer"] <= 8)
@@ -419,7 +419,7 @@ content.add(content.Enchantment {
     load_character_inputs = { skills = { "computer" } },
     native_modifier_order = true,
 }
-    :skill("computers", { add = 1 }))
+    :skill("computer", { add = 1 }))
 
 -- mutations/playable_changeling.json
 ccb.runtime.handler("progression_enchantment_active_inline_ench_changeling_noble_inhuman_mindset_3", function(ctx)

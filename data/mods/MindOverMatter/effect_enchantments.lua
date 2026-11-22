@@ -141,7 +141,7 @@ content.add(content.Enchantment { id = "INLINE_ENCH_effect_vitakinetic_healing_d
     :value("REGEN_STAMINA", { multiply = -0.3 }))
 
 content.add(content.Enchantment { id = "INLINE_ENCH_effect_nether_silent_one_resistances_0" }
-    :incoming_damage("head", { multiply = -0.45 })
+    :incoming_damage("heat", { multiply = -0.45 })
     :incoming_damage("electric", { multiply = -0.95 })
     :incoming_damage("psi_telepathic_damage", { multiply = -0.5 }))
 

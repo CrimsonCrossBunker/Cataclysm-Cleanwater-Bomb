@@ -390,7 +390,7 @@ add_spell {
     min_aoe = 4,
     max_aoe = 12,
     targeted_species = { "CYBORG", "ROBOT", "ROBOT_FLYING" },
-    ignored_species = { "PSI_NULL", "YRAX_CONSTRUCT" },
+    ignored_species = { "PSI_NULL" },
     additional_spells = { calorie_cost },
 }
 

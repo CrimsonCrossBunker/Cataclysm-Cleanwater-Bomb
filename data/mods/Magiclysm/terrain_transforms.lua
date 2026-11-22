@@ -228,6 +228,7 @@ content.add(content.TerrainTransform { id = "druid_summoned_brambles" }
         },
         results = { "f_druid_brambles" },
         message = ccb.content.text("The ground churns as thick, tangled brambles burst forth and grow in moments."),
+        optional_ids = { "t_grass_tall", "t_grass_long", "f_golden_reed", "f_barnacle_weed", "f_whiskflower" },
     })
 
 content.add(content.TerrainTransform { id = "ter_druid_cause_rot_terrain" }

@@ -11013,13 +11013,6 @@ content.replace(definition)
 end
 do
 local definition = content.ItemAction {
-    id = "DIVE_TANK_ACTIVATE",
-    name = "Use regulator",
-}
-content.replace(definition)
-end
-do
-local definition = content.ItemAction {
     id = "SOLARPACK",
     name = "Unfold",
 }
@@ -11351,13 +11344,6 @@ do
 local definition = content.ItemAction {
     id = "WEATHER_TOOL",
     name = "Check weather information",
-}
-content.replace(definition)
-end
-do
-local definition = content.ItemAction {
-    id = "WEED_CAKE",
-    name = "Consume",
 }
 content.replace(definition)
 end

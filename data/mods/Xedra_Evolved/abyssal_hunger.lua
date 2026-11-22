@@ -177,7 +177,7 @@ local shard_location = content.Furniture {
 for _, flag in ipairs { "NOCOLLIDE", "NO_PICKUP_ON_EXAMINE", "TRANSPARENT" } do
     shard_location:flag(flag)
 end
-content.add(shard_location:on_examine("take_abyssal_hunger_shard"))
+content.replace(shard_location:on_examine("take_abyssal_hunger_shard"))
 
 content.add(content.Recipe {
     id = "bait_abyssal_hunger",

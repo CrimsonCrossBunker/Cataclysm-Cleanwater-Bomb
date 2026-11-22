@@ -124,6 +124,8 @@ require("book_items")
 
 require("generic_items")
 
+require("comestibles")
+
 require("ice_harvesting")
 
 require("inherited_items")

@@ -250,3 +250,7 @@ require("trap_triggers")
 require("power_statistics")
 
 require("monster_attack_predicates")
+
+if require("ccb").content.is_mod_active("bombastic_perks") then
+    require("mod_interactions.bombastic_perks.runtime_interaction")
+end

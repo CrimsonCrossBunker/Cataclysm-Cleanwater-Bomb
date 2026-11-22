@@ -1,6 +1,6 @@
 local content = require("ccb").content
 
-content.add(content.Monster {
+content.upsert(content.Monster {
     id = "mon_zombie_bio_op",
     name = content.text("zombie bio-operator"),
     description = content.text("This armored soldier zombie appears to have been some sort of special forces agent.  Its malfunctioning equipment sends out occasional showers of sparks."),

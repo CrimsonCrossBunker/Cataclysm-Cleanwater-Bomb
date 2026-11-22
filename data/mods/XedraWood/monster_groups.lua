@@ -29,8 +29,7 @@ content.add(content.MonsterGroup {
     :group("GROUP_CHANGELING_MIRRORED_FIELD", 3, 10, 1, 1)
     :group("GROUP_CHANGELING_MIRRORED_FIELD", 1, 15, 2, 6)
     :group("GROUP_CHANGELING_STRIKE_FORCE", 1, 15, 2, 6)
-    :group("GROUP_TRIFFID", 2, 15, 2, 6)
-    :group("GROUP_OVERLAND_RENFIELD", 2, 5, 1, 1))
+    :group("GROUP_TRIFFID", 2, 15, 2, 6))
 
 content.add(content.MonsterGroup { id = "GROUP_FOREST", load_mode = "append" }
     :group("GROUP_WILDERNESS_FOREST_MAMMAL", 75, 1, 1, 1, {

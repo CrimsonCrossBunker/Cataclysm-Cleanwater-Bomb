@@ -25,3 +25,7 @@ require("attack_vectors")
 require("bionics")
 require("limb_traits")
 require("limb_changing")
+
+if require("ccb").content.is_mod_active("mindovermatter") then
+    require("mod_interactions.mindovermatter.runtime_interaction")
+end

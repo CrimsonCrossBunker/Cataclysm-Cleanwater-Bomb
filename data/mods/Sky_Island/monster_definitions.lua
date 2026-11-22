@@ -8,7 +8,7 @@ content.add(content.Monster {
     default_faction = "zombie",
 })
 
-content.add(content.Monster {
+content.upsert(content.Monster {
     id = "mon_zombie_bio_op",
     name = ccb.content.text("zombie bio-operator"),
     description = ccb.content.text("This armored soldier zombie appears to have been some sort of special forces agent.  Its malfunctioning equipment sends out occasional showers of sparks."),

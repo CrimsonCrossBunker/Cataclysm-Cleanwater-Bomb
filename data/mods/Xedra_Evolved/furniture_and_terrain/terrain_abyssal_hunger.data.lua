@@ -50,3 +50,15 @@ ccb.content.define_terrain {
     flags = { "NOITEM", "SUPPORTS_ROOF", "WALL", "NO_SCENT", "BLOCK_WIND" },
     looks_like = "t_concrete_wall_flesh",
 }
+
+ccb.content.define_furniture {
+    id = "f_shard_location",
+    name = ccb.content.text("shard-filled brain chunk"),
+    description = ccb.content.text("A chunk of brain matter holding some shards akin to the one you are looking for.  Examine to pick one."),
+    symbol = "S",
+    color = "i_dark_gray",
+    move_cost_mod = -1,
+    coverage = 100,
+    required_strength = -1,
+    flags = { "NOCOLLIDE", "NO_PICKUP_ON_EXAMINE", "TRANSPARENT" },
+}

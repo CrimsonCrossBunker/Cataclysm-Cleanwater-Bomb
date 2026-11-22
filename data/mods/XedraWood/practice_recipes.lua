@@ -14,5 +14,5 @@ content.add(content.Recipe {
     practice = { min_difficulty = 0, max_difficulty = 1, skill_limit = 1 },
     autolearn = true,
 }
-    :learn_automatically("occult", 0)
+    :learn_automatically("deduction", 0)
 )

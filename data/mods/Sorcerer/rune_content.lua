@@ -8,7 +8,7 @@ local rune = content.Item {
     name = ccb.content.text("counterfeit rune"),
     description = ccb.content.text("This magical pebble is infused with a sorcerer's power.  It can trick spells that require runes to cast to think that you have the rune required."),
 }
-rune:tool():volume_ml(5):mass_grams(1):material("stone"):flag("TRADER_AVOID")
+rune:tool():volume_ml(5):mass_grams(1):material("stone", 1):flag("TRADER_AVOID")
 content.add(rune)
 
 content.upsert_spell(content.Spell {

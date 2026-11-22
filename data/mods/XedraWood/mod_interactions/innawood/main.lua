@@ -25,3 +25,6 @@ filter:entry("xe_lilin_scenario_naked_afraid")
 filter:entry("once_bitten")
 filter:entry("once_bitten_naked_and_afraid")
 content.replace(filter)
+
+content.add(content.MonsterGroup { id = "GROUP_FOREST_THICK", load_mode = "append", is_animal = true }
+    :group("GROUP_OVERLAND_RENFIELD", 2, 5, 1, 1))
