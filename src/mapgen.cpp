@@ -7106,7 +7106,7 @@ void dress_atlas_site( mapgendata &dat, std::string_view id )
                     if( !street_tree ) {
                         street_tree = north_america::street_tree_at( dat.pos().xy() );
                     }
-                    if( street_tree->is_null() ) {
+                    if( *street_tree == ter_t_null ) {
                         return;
                     }
                     here.ter_set( p, *street_tree );

@@ -167,17 +167,15 @@ struct habitat_atlas {
                 entry.shrub_percent = jo.get_int( "shrub_percent", 0 );
                 entry.rock_percent = jo.get_int( "rock_percent", 0 );
                 entry.water_percent = jo.get_int( "water_percent", 0 );
-                for( const int percent : {
-                         entry.tree_percent, entry.shrub_percent,
-                         entry.rock_percent, entry.water_percent
-                     } ) {
+                for( const int percent : { entry.tree_percent, entry.shrub_percent,
+                                          entry.rock_percent, entry.water_percent } ) {
                     if( percent < 0 || percent > 100 ) {
                         jo.throw_error( "Habitat cover percentages must be between zero and 100" );
                     }
                 }
                 for( const JsonArray grove : jo.get_array( "groves" ) ) {
                     entry.groves.push_back( { grove.get_float( 0 ), grove.get_float( 1 ),
-                                              grove.get_float( 2 ) } );
+                                             grove.get_float( 2 ) } );
                 }
                 for( const JsonArray vertex : jo.get_array( "corridor" ) ) {
                     entry.corridor.push_back( { vertex.get_float( 1 ), vertex.get_float( 0 ) } );
@@ -221,7 +219,7 @@ double treeline_at( regional_climate::coordinates location, std::string_view reg
         for( std::size_t i = 1; i < heights.size(); ++i ) {
             if( location.latitude < heights[i].first ) {
                 const double fraction = std::clamp( ( location.latitude - heights[i - 1].first ) /
-                                                    ( heights[i].first - heights[i - 1].first ), 0.0, 1.0 );
+                                        ( heights[i].first - heights[i - 1].first ), 0.0, 1.0 );
                 return heights[i - 1].second + fraction * ( heights[i].second - heights[i - 1].second );
             }
         }
@@ -287,14 +285,14 @@ const habitat *habitat_at( point_abs_omt pos, std::string_view region, bool wet 
         }
         const double above_treeline = *height - treeline_height;
         const double margin = std::min( { *height - entry.minimum_m, entry.maximum_m - *height,
-                                          above_treeline - entry.treeline_minimum_m,
-                                          entry.treeline_maximum_m - above_treeline } );
+                                         above_treeline - entry.treeline_minimum_m,
+                                         entry.treeline_maximum_m - above_treeline } );
         if( margin <= 0 || habitat_roll( pos ) >= std::min( 1.0, margin / entry.transition_m ) ) {
             continue;
         }
         if( !entry.groves.empty() && std::none_of( entry.groves.begin(), entry.groves.end(),
         [&geo]( const auto & grove ) {
-        return horizontal_distance_km( geo, grove[0], grove[1] ) <= grove[2];
+            return horizontal_distance_km( geo, grove[0], grove[1] ) <= grove[2];
         } ) ) {
             continue;
         }
@@ -829,7 +827,7 @@ ter_id street_tree_at( point_abs_omt pos )
 {
     const ecology_profile *profile = profile_at( pos );
     if( !profile ) {
-        return ter_id::NULL_ID();
+        return ter_str_id::NULL_ID().id();
     }
 
     static const std::unordered_set<ter_str_id> street_species = {
@@ -849,7 +847,7 @@ ter_id street_tree_at( point_abs_omt pos )
         }
     }
     const ter_id *tree = trees.pick();
-    return tree ? *tree : ter_id::NULL_ID();
+    return tree ? *tree : ter_str_id::NULL_ID().id();
 }
 
 oter_id wilderness_terrain( point_abs_omt pos, const oter_id &original )
@@ -863,8 +861,8 @@ oter_id wilderness_terrain( point_abs_omt pos, const oter_id &original )
     }
     const ecology_profile *profile = profile_at( pos );
     const habitat *local = habitat_at( pos, profile ? std::string_view( profile->ecoregion ) :
-                                       std::string_view(),
-                                       type == "forest_water" );
+                                      std::string_view(),
+                                      type == "forest_water" );
     return local && local->terrain.is_valid() ? local->terrain.id() : original;
 }
 
