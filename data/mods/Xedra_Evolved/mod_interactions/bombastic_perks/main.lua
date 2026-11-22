@@ -78,3 +78,15 @@ content.upsert_enchantment(content.Enchantment {
         add_handler = "interaction_enchantment_inline_ench_perk_xe_vampire_killer_0_melee_damage_2_add",
         load_skills = {}
     }))
+
+ccb.runtime.handler("perk_grack_pack", function(context)
+    local services = ccb.services
+    local id = services.types.id
+    local character = context.character
+    local activity = services.activities.assign_timed(
+        character, id("activity", "ACT_GENERIC_EOC"), services.time.duration_from_turns(1.5))
+    if not activity.ok then error(activity.error.message) end
+    local cast = services.characters.cast_spell(
+        character, id("spell", "perk_GRACKEN_FRIENDSHIP_spell"), { targeted = true })
+    if not cast.ok then error(cast.error.message) end
+end)

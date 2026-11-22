@@ -1,4 +1,5 @@
 local ccb = require("ccb")
+local content = ccb.content
 local services = ccb.services
 local id = services.types.id
 local mutations = services.mutations
@@ -121,3 +122,35 @@ ccb.runtime.handler("pooka_maintain_partial_form", function(context)
         value(spells.set_mana_raw(character, mana - 1))
     end
 end)
+
+ccb.runtime.handler("reflex_pooka_quadruped", function(context)
+    if not context.has_speaker or not context.speaker then
+        return false
+    end
+    local actor = context.speaker
+    return value(services.movement_modes_snapshot(actor)).current_id == "crouch"
+        and not value(services.inventory.weapon_state(actor)).can_drop
+end)
+
+content.add(content.Mutation {
+    id = "POOKA_QUADRUPED_TRAITS",
+    name = content.text("Quadruped"),
+    points = 2,
+    purifiable = false,
+    visibility = 8,
+    ugliness = 6,
+    description = content.text("Your arms, hands, and legs are animal-like, allowing you to move quickly when running on all fours, but preventing you from wearing shoes or gloves."),
+    categories = { "FAIR_FOLK_COMMONER_POOKA" },
+}
+    :relationship("restricts_gear", "foot_l")
+    :relationship("restricts_gear", "foot_r")
+    :relationship("restricts_gear", "hand_l")
+    :relationship("restricts_gear", "hand_r")
+    :relationship("enchantment", "INLINE_ENCH_POOKA_QUADRUPED_TRAITS_0")
+    :reflex({
+        {
+            handler = "reflex_pooka_quadruped",
+            message_on = content.text("You drop down on all fours."),
+            message_off = content.text("You come out of your quadrupedal posture."),
+        },
+    }))

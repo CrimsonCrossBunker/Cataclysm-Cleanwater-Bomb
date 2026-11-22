@@ -1,6 +1,26 @@
 local ccb = require("ccb")
 
 ccb.content.define_mutation {
+    id = "XEDRA_CHRONOMANCER",
+    name = ccb.content.text("Living Paradox"),
+    points = 0,
+    description = ccb.content.text("You have an intimate sense for the flow of time, and you can use your power to manipulate it.  Activate this trait to spend learned insight."),
+    types = { "HERITAGE" },
+    starting_trait = false,
+    purifiable = false,
+    valid = false,
+    spells_learned = {
+        xedra_chronomancer_time_freeze_target = 6,
+        xedra_chronomancer_normalize_time = 1,
+    },
+    vitamin_intervals = { xedra_chronomancer_insight = -86400 },
+    active = true,
+    activation_message = "",
+    flags = { "ATTUNEMENT" },
+    on_activate = "open_chronomancer_insight_menu",
+}
+
+ccb.content.define_mutation {
     id = "XEDRA_CHRONOMANCER_LOOPING_WOUND",
     name = ccb.content.text("Time Looped Knife Wound"),
     points = -4,

@@ -298,3 +298,10 @@ end
 
 register_meditation("wound")
 register_meditation("equipment")
+
+runtime.handler("open_chronomancer_insight_menu", function(context)
+    local character = context.character
+    local insight = checked(services.needs.get_vitamin(character, id("vitamin", "xedra_chronomancer_insight")))
+    checked(services.variables.set(character, "xedra_chronomancer_insight_count", insight, { include_before = false }))
+    checked(services.characters.open_topic(character, id("talk_topic", "TALK_CHRONOMANCER_INSIGHT_MENU_MAIN")))
+end)

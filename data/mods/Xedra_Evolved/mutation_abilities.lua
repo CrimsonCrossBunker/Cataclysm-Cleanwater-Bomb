@@ -181,3 +181,71 @@ ccb.runtime.handler("sylph_leave_cloud_form", function(context)
     remove_effect(character, "incorporeal")
     value(mutations.erase(character, id("mutation", "SYLPH_CLOUD_FORM_APPEARANCE")))
 end)
+
+local function wielded_item(character)
+    local page = value(services.items.page(
+        { kind = "character", character = character, slot = "wielded" },
+        { page_size = 1, recursive = false }
+    ))
+    return page.items[1] and page.items[1].handle or nil
+end
+
+ccb.runtime.handler("bloodthorne_summon_heartwhip", function(context)
+    local character = context.character
+    if value(services.creatures.snapshot(character)).has_weapon then
+        player_message(character, ccb.services.translate("Your hands need to be free to summon the heartwhip."), "bad")
+        return
+    end
+    value(services.characters.cast_spell(character, id("spell", "bloodthorne_druid_summon_whip"), { hit_self = true }))
+    add_effect(character, "bleed", 300, { intensity = 1, body_part = id("body_part", "arm_r") })
+    local wielded = wielded_item(character)
+    if wielded and not value(services.items.has_flag(wielded, id("json_flag", "NO_UNWIELD"))) then
+        value(services.items.set_flag(wielded, id("json_flag", "NO_UNWIELD"), true))
+    end
+    ccb.tasks.after_character_turn(character, 10, "bloodthorne_heartwhip_remove_blood")
+end)
+
+ccb.runtime.handler("bloodthorne_heartwhip_remove_blood", function(context)
+    value(effects.remove(context.character, id("effect", "bleed"), id("body_part", "arm_r")))
+end)
+
+ccb.runtime.handler("bloodthorne_unsummon_heartwhip", function(context)
+    local character = context.character
+    local wielded = wielded_item(character)
+    if wielded
+        and value(services.items.has_flag(wielded, id("json_flag", "MAGIC_FOCUS")))
+        and value(services.items.has_flag(wielded, id("json_flag", "REACH3")))
+    then
+        player_message(character, ccb.services.translate("The heartwhip retracts, slithering through your grip and back within your body."), "neutral")
+        value(services.inventory.remove_type(character, id("item", "heartvine_whip")))
+    end
+end)
+
+ccb.runtime.handler("changeling_right_of_passage_on", function(context)
+    local character = context.character
+    if not value(effects.has(character, id("effect", "effect_changeling_noble_broken_right_of_passage"))) then
+        value(mutations.replace(character, id("mutation", "CHANGELING_NOBLE_RIGHT_OF_PASSAGE_MECHANICS")))
+    else
+        player_message(character, ccb.services.translate("After your actions you may not invoke the right of passage."), "bad")
+        ccb.tasks.after_character_turn(character, 0, "changeling_right_of_passage_deactivate")
+    end
+end)
+
+ccb.runtime.handler("changeling_right_of_passage_off", function(context)
+    value(mutations.erase(context.character, id("mutation", "CHANGELING_NOBLE_RIGHT_OF_PASSAGE_MECHANICS")))
+end)
+
+ccb.runtime.handler("changeling_right_of_passage_deactivate", function(context)
+    value(mutations.invoke_activation(context.character, id("mutation", "CHANGELING_NOBLE_RIGHT_OF_PASSAGE"), false))
+end)
+
+ccb.runtime.handler("gracken_arm_push1", function(context)
+    local character = context.character
+    if value(services.needs.get(character)).stamina > 0 then
+        value(services.characters.adjust(character, { moves = -100 }))
+        value(services.characters.cast_spell(character, id("spell", "gracken_arm_push_spell"), {
+            targeted = true,
+            message = ccb.services.translate("You lash out and push your target away!"),
+        }))
+    end
+end)

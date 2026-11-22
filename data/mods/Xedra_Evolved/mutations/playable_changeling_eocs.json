@@ -105,21 +105,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_CHANGELING_NOBLE_RIGHT_OF_PASSAGE_ON",
-    "condition": { "not": { "u_has_effect": "effect_changeling_noble_broken_right_of_passage" } },
-    "effect": [ { "u_add_trait": "CHANGELING_NOBLE_RIGHT_OF_PASSAGE_MECHANICS" } ],
-    "false_effect": [
-      { "u_message": "After your actions you may not invoke the right of passage.", "type": "bad" },
-      { "run_eocs": "EOC_CHANGELING_NOBLE_RIGHT_OF_PASSAGE_deactivate_future", "time_in_future": 0 }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_CHANGELING_NOBLE_RIGHT_OF_PASSAGE_OFF",
-    "effect": [ { "u_lose_trait": "CHANGELING_NOBLE_RIGHT_OF_PASSAGE_MECHANICS" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_CHANGELING_NOBLE_RIGHT_OF_PASSAGE_deactivate_future",
     "//": "This is necessary because calling u_deactivate_trait from within the trait EoC does not work",
     "effect": { "u_deactivate_trait": "CHANGELING_NOBLE_RIGHT_OF_PASSAGE" }

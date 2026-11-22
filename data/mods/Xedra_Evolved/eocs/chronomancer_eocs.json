@@ -166,14 +166,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_XEDRA_CHRONOMANCER_OPEN_INSIGHT_MENU",
-    "effect": [
-      { "math": [ "u_xedra_chronomancer_insight_count=u_vitamin('xedra_chronomancer_insight')" ] },
-      { "open_dialogue": { "topic": "TALK_CHRONOMANCER_INSIGHT_MENU_MAIN" } }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_XEDRA_CHRONOMANCER_STABLE_TIMELOOP_GAIN_EFFECT",
     "eoc_type": "EVENT",
     "required_event": "character_gains_effect",
