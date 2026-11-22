@@ -1,6 +1,16 @@
 local ccb = require("ccb")
 
 ccb.content.define_mutation {
+    id = "perk_mysterious_stranger",
+    name = ccb.content.text("Mysterious Stranger"),
+    points = 0,
+    description = ccb.content.text("Someone must be watching over you!  Whenever you're in combat, you can call for the help of a stranger for a short amount of time."),
+    categories = { "perk" },
+    active = true,
+    on_activate = "mysterious_stranger_activate",
+}
+
+ccb.content.define_mutation {
     id = "perk_extra_life",
     name = ccb.content.text("Living on a Prayer"),
     points = 0,
