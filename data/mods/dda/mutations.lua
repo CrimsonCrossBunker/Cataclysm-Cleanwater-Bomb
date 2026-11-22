@@ -1,4 +1,5 @@
 local ccb = require("ccb")
+local content = ccb.content
 local services = ccb.services
 local id = services.types.id
 
@@ -154,3 +155,272 @@ ccb.runtime.handler("give_random_mission", function(context)
     checked(services.mutations.erase(c, id("mutation", "GETS_RANDOM_MISSION")))
     checked(services.mutations.erase(c, id("mutation", "GETS_RANDOM_MISSION_NOMOVE")))
 end)
+
+local quadruped_thresholds = {
+    "THRESH_BEAST",
+    "THRESH_LUPINE",
+    "THRESH_RABBIT",
+    "THRESH_FELINE",
+}
+
+local function has_any_trait(character, traits)
+    for _, trait in ipairs(traits) do
+        if checked(services.mutations.has_id_text(character, trait)) then
+            return true
+        end
+    end
+    return false
+end
+
+local function move_mode(character)
+    return checked(services.movement_modes_snapshot(character)).current_id
+end
+
+local function can_drop_weapon(character)
+    return checked(services.inventory.weapon_state(character)).can_drop
+end
+
+local function has_flag(character, flag)
+    return checked(services.characters.has_flag(character, id("json_flag", flag)))
+end
+
+ccb.runtime.handler("reflex_quadruped_paws", function(context)
+    if not context.has_speaker or not context.speaker then
+        return false
+    end
+    local actor = context.speaker
+    return move_mode(actor) == "crouch"
+        and has_any_trait(actor, quadruped_thresholds)
+        and not can_drop_weapon(actor)
+        and not has_flag(actor, "QUADRUPED_RUN")
+end)
+
+ccb.runtime.handler("reflex_legs_bat", function(context)
+    if not context.has_speaker or not context.speaker then
+        return false
+    end
+    local actor = context.speaker
+    local mode = move_mode(actor)
+    return (mode == "run" or mode == "crouch")
+        and not can_drop_weapon(actor)
+        and checked(services.mutations.has_id_text(actor, "WINGS_BAT"))
+end)
+
+ccb.runtime.handler("reflex_animal_feet", function(context)
+    if not context.has_speaker or not context.speaker then
+        return false
+    end
+    local actor = context.speaker
+    local mode = move_mode(actor)
+    return (mode == "run" or mode == "crouch")
+        and not can_drop_weapon(actor)
+        and has_any_trait(actor, quadruped_thresholds)
+        and has_flag(actor, "QUADRUPED_CROUCH")
+end)
+
+ccb.runtime.handler("reflex_jekyll_morale", function(context)
+    if not context.has_speaker or not context.speaker then
+        return false
+    end
+    return checked(services.needs.morale(context.speaker)).total < -50
+end)
+
+ccb.runtime.handler("reflex_jekyll_night", function(context)
+    if not context.has_speaker or not context.speaker then
+        return false
+    end
+    local now = services.time.now()
+    local turns = now:hour_of_day() * 3600 + now:minute_of_hour() * 60 + now:second_of_minute()
+    return turns < 6 * 3600 or turns > 21 * 3600
+end)
+
+content.add(content.Mutation {
+    id = "PAWS",
+    name = content.text("Paws"),
+    description = content.text("Your hands have fused into quasi-paws.  Fine manipulation is a challenge: permanent hand encumbrance of 10, difficulty with delicate craftwork, and your gloves don't fit.  But they handle water better and bear weight well, allowing you to move on all fours when crouching and unarmed."),
+    categories = { "LUPINE", "FELINE", "BEAST", "URSINE" },
+    types = { "HANDS" },
+    points = 0,
+    mixed_effect = true,
+    vitamin_cost = 160,
+    visibility = 3,
+    ugliness = 2,
+    flags = { "QUADRUPED_CROUCH" },
+}
+    :relationship("prereq", "NAILS")
+    :relationship("prereq", "CLAWS")
+    :relationship("prereq", "CLAWS_RETRACT")
+    :relationship("prereq", "CLAWS_RAT")
+    :relationship("prereq2", "SHORTER_FINGERS")
+    :relationship("replace_with", "PAWS_LARGE")
+    :relationship("cancel", "TALONS")
+    :integer_value("craft_skill_bonus", "electronics", -2)
+    :integer_value("craft_skill_bonus", "tailor", -2)
+    :integer_value("craft_skill_bonus", "mechanics", -2)
+    :relationship("restricts_gear", "hand_l")
+    :relationship("restricts_gear", "hand_r")
+    :relationship("enchantment", "ench_quadruped_movement_half")
+    :relationship("enchantment", "INLINE_ENCH_PAWS_1")
+    :reflex({
+        {
+            handler = "reflex_quadruped_paws",
+            message_on = content.text("You drop down on all fours."),
+            message_off = content.text("You come out of your quadrupedal posture."),
+        },
+    }))
+
+content.add(content.Mutation {
+    id = "PAWS_LARGE",
+    name = content.text("Broad Paws"),
+    description = content.text("Your paws are much larger now.  Manual dexterity is difficult: you have a penalty to your grip and manipulation scores, serious problems crafting, and can't wear gloves.  In return, though, you can swim better and move on all fours when crouching and unarmed."),
+    categories = { "BEAST", "URSINE" },
+    types = { "HANDS" },
+    points = 0,
+    mixed_effect = true,
+    vitamin_cost = 160,
+    visibility = 4,
+    ugliness = 3,
+    flags = { "QUADRUPED_CROUCH" },
+}
+    :relationship("prereq", "PAWS")
+    :relationship("cancel", "TALONS")
+    :relationship("restricts_gear", "hand_l")
+    :relationship("restricts_gear", "hand_r")
+    :integer_value("craft_skill_bonus", "electronics", -4)
+    :integer_value("craft_skill_bonus", "tailor", -4)
+    :integer_value("craft_skill_bonus", "mechanics", -4)
+    :integer_value("craft_skill_bonus", "firstaid", -2)
+    :integer_value("craft_skill_bonus", "computer", -2)
+    :integer_value("craft_skill_bonus", "traps", -2)
+    :integer_value("craft_skill_bonus", "fabrication", -2)
+    :integer_value("craft_skill_bonus", "cooking", -2)
+    :integer_value("craft_skill_bonus", "survival", -2)
+    :relationship("enchantment", "ench_quadruped_movement_half")
+    :relationship("enchantment", "INLINE_ENCH_PAWS_LARGE_1")
+    :reflex({
+        {
+            handler = "reflex_quadruped_paws",
+            message_on = content.text("You drop down on all fours."),
+            message_off = content.text("You come out of your quadrupedal posture."),
+        },
+    }))
+
+content.add(content.Mutation {
+    id = "PAWS_LITTLE",
+    name = content.text("Little Paws"),
+    description = content.text("Your hands have elongated and look a bit more like paws.  It makes fine manipulation a little more difficult, and you'll have a harder time with firearms, but you can still probably manage.  Plus, they allow you to move on all fours when crouching and unarmed."),
+    categories = { "RABBIT" },
+    types = { "HANDS" },
+    points = 0,
+    mixed_effect = true,
+    vitamin_cost = 160,
+    visibility = 2,
+    ugliness = 1,
+    flags = { "QUADRUPED_CROUCH" },
+}
+    :relationship("prereq", "NAILS")
+    :relationship("prereq2", "LONGER_FINGERS")
+    :relationship("cancel", "TALONS")
+    :integer_value("craft_skill_bonus", "electronics", -1)
+    :integer_value("craft_skill_bonus", "tailor", -1)
+    :integer_value("craft_skill_bonus", "mechanics", -1)
+    :relationship("enchantment", "ench_quadruped_movement_half")
+    :relationship("enchantment", "ench_dextrous_paws_need_practice")
+    :relationship("enchantment", "INLINE_ENCH_PAWS_LITTLE_2")
+    :reflex({
+        {
+            handler = "reflex_quadruped_paws",
+            message_on = content.text("You drop down on all fours."),
+            message_off = content.text("You come out of your quadrupedal posture."),
+        },
+    }))
+
+content.add(content.Mutation {
+    id = "LEGS_BAT",
+    name = content.text("Bow-legged"),
+    description = content.text("Your lower limbs have shortened and splayed, slowing your bipedal movement.  As long as you're not wielding anything and you've got both wings, you're able to crawl quickly and quietly when you run or crouch."),
+    categories = { "CHIROPTERAN" },
+    types = { "LEGS" },
+    points = -3,
+    mixed_effect = true,
+    vitamin_cost = 160,
+    visibility = 2,
+    ugliness = 2,
+}
+    :relationship("prereq", "PADDED_FEET")
+    :relationship("prereq", "WINGS_BAT")
+    :relationship("threshold_requirement", "THRESH_CHIROPTERAN")
+    :relationship("enchantment", "INLINE_ENCH_LEGS_BAT_0")
+    :relationship("enchantment", "INLINE_ENCH_LEGS_BAT_1")
+    :relationship("enchantment", "INLINE_ENCH_LEGS_BAT_2")
+    :wet_protection("foot_l", 0, 10, 0)
+    :wet_protection("foot_r", 0, 10, 0)
+    :reflex({
+        {
+            handler = "reflex_legs_bat",
+            message_on = content.text("You hunch forward to crawl quickly on folded wings."),
+            message_off = content.text("You rise up to walk like a human."),
+        },
+    }))
+
+content.add(content.Mutation {
+    id = "ANIMAL_FEET",
+    name = content.text("Digitigrade Legs"),
+    description = content.text("The heels of your feet have shifted up off the ground in a rather animalistic fashion, reducing your carry weight limit and preventing you from wearing shoes.  These hind feet are a bad match for human arms, but could pair well with matching forepaws."),
+    categories = { "LUPINE", "FELINE", "BEAST", "RABBIT" },
+    types = { "FEET" },
+    points = -3,
+    vitamin_cost = 160,
+    visibility = 2,
+    ugliness = 2,
+    flags = { "QUADRUPED_RUN" },
+    destroys_gear = true,
+}
+    :relationship("prereq", "PADDED_FEET")
+    :relationship("replace_with", "RABBIT_FEET")
+    :relationship("restricts_gear", "foot_l")
+    :relationship("restricts_gear", "foot_r")
+    :relationship("enchantment", "ench_quadruped_movement_full")
+    :relationship("enchantment", "INLINE_ENCH_ANIMAL_FEET_1")
+    :relationship("enchantment", "INLINE_ENCH_ANIMAL_FEET_2")
+    :relationship("enchantment", "INLINE_ENCH_ANIMAL_FEET_3")
+    :relationship("enchantment", "INLINE_ENCH_ANIMAL_FEET_4")
+    :wet_protection("foot_l", 0, 10, 0)
+    :wet_protection("foot_r", 0, 10, 0)
+    :reflex({
+        {
+            handler = "reflex_animal_feet",
+            message_on = content.text("You drop down on all fours."),
+            message_off = content.text("You assume a less bestial posture."),
+        },
+    }))
+
+content.add(content.Mutation {
+    id = "JEKYLL",
+    name = content.text("Normal Human"),
+    description = content.text("You're a normal human; there's nothing wrong with you.  No need to worry."),
+    categories = { "MEDICAL" },
+    points = 0,
+    vitamin_cost = 60,
+    purifiable = false,
+    transform = {
+        target = "HYDE",
+        message = content.text("The anger overtakes you!"),
+        active = false,
+        moves = 10,
+    },
+}
+    :reflex({
+        {
+            handler = "reflex_jekyll_morale",
+            message_on = content.text("Everything is terrible and this makes you so ANGRY!"),
+            message_on_type = "mixed",
+        },
+    })
+    :reflex({
+        {
+            handler = "reflex_jekyll_night",
+            message_on = content.text("Everything is terrible and this makes you so ANGRY!"),
+            message_on_type = "mixed",
+        },
+    }))

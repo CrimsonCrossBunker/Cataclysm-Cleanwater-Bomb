@@ -1,36 +1,6 @@
 [
   {
     "type": "mutation",
-    "id": "JEKYLL",
-    "name": { "str": "Normal Human" },
-    "description": "You're a normal human; there's nothing wrong with you.  No need to worry.",
-    "category": [ "MEDICAL" ],
-    "points": 0,
-    "vitamin_cost": 60,
-    "purifiable": false,
-    "transform": { "target": "HYDE", "msg_transform": "The anger overtakes you!", "active": false, "moves": 10 },
-    "triggers": [
-      [
-        {
-          "condition": { "math": [ "u_val('morale') < -50" ] },
-          "msg_on": { "text": "Everything is terrible and this makes you so ANGRY!", "rating": "mixed" }
-        }
-      ],
-      [
-        {
-          "condition": {
-            "or": [
-              { "math": [ "time_since('midnight', 'unit': 'hours') < 6" ] },
-              { "math": [ "time_since('midnight', 'unit': 'hours') > 21" ] }
-            ]
-          },
-          "msg_on": { "text": "Everything is terrible and this makes you so ANGRY!", "rating": "mixed" }
-        }
-      ]
-    ]
-  },
-  {
-    "type": "mutation",
     "id": "HYDE",
     "name": { "str": "Violent Monster" },
     "description": "Anger clouds your mind; you can't think straight, but you feel strong.",
