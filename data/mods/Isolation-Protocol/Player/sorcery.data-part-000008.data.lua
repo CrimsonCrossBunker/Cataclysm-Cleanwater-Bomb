@@ -1,0 +1,30 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "iso_eldritch_mass_aoe_zombie_destruction_secondary",
+    shape = "blast",
+    effect = "attack",
+    spell_class = "iso_eldritch_sorcery",
+    damage_type = "pure",
+    magic_type = "iso_eldritch_sorcery",
+    name = ccb.content.text_without_extraction("The Most Excellent Obliteration of Blasphemies Continuing Damage"),
+    description = ccb.content.text_without_extraction("The extra pulses from The Most Excellent Obliteration of Blasphemies.  You shouldn't see this."),
+    flags = {
+        "EVOCATION_SPELL",
+        "RANDOM_DAMAGE",
+        "IGNORE_WALLS",
+        "SPLIT_DAMAGE",
+        "VERBAL",
+        "SOMATIC",
+        "NO_LEGS",
+        "SILENT",
+    },
+    valid_targets = { "hostile", "ground" },
+    targeted_species = { "NETHER", "MUTANT", "ZOMBIE", "FERAL" },
+    min_damage = { handler = "wave14a_isolation_protocol_stat_1", fallback = 0 },
+    max_damage = { handler = "wave14a_isolation_protocol_stat_2", fallback = 0 },
+    min_aoe = { handler = "wave14a_isolation_protocol_stat_3", fallback = 0 },
+    base_energy_cost = 50,
+    difficulty = 15,
+    max_level = 30,
+}

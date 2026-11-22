@@ -20,3 +20,28 @@ ccb.content.define_spell {
     base_energy_cost = 1000,
     base_casting_time = 3000,
 }
+
+ccb.content.define_spell {
+    id = "xe_werewolf_stun_machine_spell",
+    skill = "deduction",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "sensor_stun",
+    spell_class = "WEREWOLF_SPELLS",
+    magic_type = "xe_werewolf_powers",
+    name = "Gremlinize",
+    description = "You can cause just enough change in a machine to confuse the rigid requirements of its programming, stunning it.",
+    message = "The machine stops in its tracks.",
+    teachable = false,
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "ally", "hostile" },
+    targeted_species = { "ROBOT", "ROBOT_FLYING", "CYBORG" },
+    ignored_species = { "YRAX" },
+    min_range = { handler = "wave14a_xedra_evolved_stat_443", fallback = 0 },
+    max_range = { handler = "wave14a_xedra_evolved_stat_443", fallback = 0 },
+    min_duration = { handler = "wave14a_xedra_evolved_stat_450", fallback = 0 },
+    max_duration = { handler = "wave14a_xedra_evolved_stat_451", fallback = 0 },
+    base_energy_cost = 150,
+    difficulty = 4,
+    base_casting_time = 50,
+}

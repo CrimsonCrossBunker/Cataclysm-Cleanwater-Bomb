@@ -606,3 +606,4 @@ require("attack_conditions")
 
 require("monster_attack_predicates")
 require("addictions")
+require("spell_math_handlers")

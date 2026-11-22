@@ -307,3 +307,16 @@ ccb.content.define_spell {
     effect = "attack",
     effect_data = "foxs_cunning",
 }
+
+ccb.content.define_spell {
+    id = "druid_renew_forest_spell_real",
+    shape = "blast",
+    effect = "ter_transform",
+    effect_data = "ter_druid_renew_forest",
+    name = ccb.content.text_without_extraction("Renewing the Forest Real"),
+    description = ccb.content.text_without_extraction("The actual spell that casts Renewing the Forest.  It's a bug if you have it."),
+    flags = { "CHANNELING_SPELL", "SILENT", "VERBAL", "IGNORE_WALLS" },
+    valid_targets = { "ground" },
+    min_aoe = { handler = "wave14a_magiclysm_stat_26", fallback = 0 },
+    max_aoe = { handler = "wave14a_magiclysm_stat_26", fallback = 0 },
+}

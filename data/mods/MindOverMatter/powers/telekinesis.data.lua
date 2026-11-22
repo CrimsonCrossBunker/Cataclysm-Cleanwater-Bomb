@@ -91,3 +91,21 @@ ccb.content.define_spell {
     min_aoe = { handler = "scale_telekinetic_earthshaker_bash_terrain_min_aoe", fallback = 0.0 },
     max_aoe = 35,
 }
+
+ccb.content.define_spell {
+    id = "telekinetic_force_shove_real",
+    skill = "metaphysics",
+    shape = "blast",
+    effect = "directed_push",
+    name = ccb.content.text_without_extraction("[Ψ]Force Shove Push Real"),
+    description = ccb.content.text_without_extraction("The actual effect that causes the force shove away.  It's a bug if you have it."),
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" },
+    valid_targets = { "ally", "hostile" },
+    min_damage = { handler = "wave14a_mindovermatter_stat_6", fallback = 0 },
+    min_range = 50,
+    max_range = 50,
+    difficulty = 1,
+    max_level = 30,
+}

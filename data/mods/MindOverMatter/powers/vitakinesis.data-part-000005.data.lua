@@ -1,0 +1,47 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "vita_degenerating_touch_self_character",
+    skill = "metaphysics",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "effect_vita_degenerating_touch",
+    damage_type = "biological",
+    name = ccb.content.text_without_extraction("[Ψ]Degenerating Touch Self Character"),
+    description = ccb.content.text_without_extraction("You are degenerating.  RIP."),
+    message = "",
+    teachable = false,
+    flags = {
+        "PSIONIC",
+        "SILENT",
+        "NO_HANDS",
+        "NO_LEGS",
+        "SPLIT_DAMAGE",
+        "RANDOM_DURATION",
+        "NO_EXPLOSION_SFX",
+    },
+    valid_targets = { "self" },
+    min_dot = { handler = "wave14a_mindovermatter_stat_14", fallback = 0 },
+    max_dot = { handler = "wave14a_mindovermatter_stat_14", fallback = 0 },
+    min_duration = { handler = "wave14a_mindovermatter_stat_15", fallback = 0 },
+    max_duration = { handler = "wave14a_mindovermatter_stat_15", fallback = 0 },
+}
+
+ccb.content.define_spell {
+    id = "vita_degenerating_touch_self_monster",
+    skill = "metaphysics",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "effect_vita_degenerating_touch",
+    damage_type = "biological",
+    name = ccb.content.text_without_extraction("[Ψ]Degenerating Touch Self Monster"),
+    description = ccb.content.text_without_extraction("You are degenerating.  RIP."),
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    min_dot = { handler = "wave14a_mindovermatter_stat_16", fallback = 0 },
+    max_dot = { handler = "wave14a_mindovermatter_stat_16", fallback = 0 },
+    min_duration = { handler = "wave14a_mindovermatter_stat_15", fallback = 0 },
+    max_duration = { handler = "wave14a_mindovermatter_stat_15", fallback = 0 },
+}

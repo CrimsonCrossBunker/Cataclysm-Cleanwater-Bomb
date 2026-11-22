@@ -18,3 +18,21 @@ ccb.content.define_spell {
     max_aoe = 7,
     aoe_increment = 0.12,
 }
+
+ccb.content.define_spell {
+    id = "lava_bomb_shrapnel",
+    shape = "blast",
+    effect = "attack",
+    damage_type = "cut",
+    name = ccb.content.text_without_extraction("Lava Bomb Shrapnel"),
+    description = ccb.content.text_without_extraction("This is a sub spell for the Lava Bomb spell."),
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE" },
+    valid_targets = { "hostile", "ally", "self", "ground" },
+    min_damage = { handler = "wave14a_magiclysm_stat_22", fallback = 0 },
+    max_damage = { handler = "wave14a_magiclysm_stat_23", fallback = 0 },
+    min_aoe = 1,
+    aoe_increment = 0.1,
+    max_aoe = 3,
+    multiple_projectiles = { handler = "wave14a_magiclysm_stat_10", fallback = 0 },
+    max_level = 35,
+}

@@ -120,3 +120,4 @@ require("bionics")
 require("damage_types")
 
 require("monster_attack_predicates")
+require("spell_math_handlers")

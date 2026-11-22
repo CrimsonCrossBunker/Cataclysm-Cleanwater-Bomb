@@ -5,8 +5,15 @@
     "name": "Deeds of Lughnasadh",
     "description": "Enhance yourself or an ally with the athleticism and prowess of the dancers, runners, and hurlers of Lughnasadh.  This increases movement and attack speed, dodging ability, and allows the target to leap to a rooftop from a standing start.",
     "message": "",
-    "flags": [ "NO_FAIL", "VERBAL", "RANDOM_DURATION" ],
-    "valid_targets": [ "self", "ally" ],
+    "flags": [
+      "NO_FAIL",
+      "VERBAL",
+      "RANDOM_DURATION"
+    ],
+    "valid_targets": [
+      "self",
+      "ally"
+    ],
     "spell_class": "CHANGELING_MAGIC",
     "difficulty": 5,
     "skill": "gramarye",
@@ -16,105 +23,27 @@
     "shape": "blast",
     "min_range": 1,
     "max_range": 1,
-    "min_duration": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 550) + (u_skill('gramarye') * 3900) + 22500" ] },
-    "max_duration": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 1230) + (u_skill('gramarye') * 8900) + 69100" ] },
+    "min_duration": {
+      "math": [
+        "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 550) + (u_skill('gramarye') * 3900) + 22500"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 1230) + (u_skill('gramarye') * 8900) + 69100"
+      ]
+    },
     "magic_type": "xe_fey_magick",
     "base_energy_cost": {
-      "math": [ "max(( 300 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 2) - (u_skill('gramarye') * 25)), 100)" ]
+      "math": [
+        "max(( 300 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 2) - (u_skill('gramarye') * 25)), 100)"
+      ]
     },
     "base_casting_time": {
-      "math": [ "max(( 200 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 2) - (u_skill('gramarye') * 10)), 50)" ]
+      "math": [
+        "max(( 200 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 2) - (u_skill('gramarye') * 10)), 50)"
+      ]
     }
-  },
-  {
-    "id": "changeling_noble_summon_ghosts_spell",
-    "type": "SPELL",
-    "name": "Hosts of Samhain",
-    "description": "Summon the hosts of Samhain, the spirits of the victorious dead, to defeat your enemies.  The hosts of Samhain are mighty in battle but cannot abide the light of the sun.",
-    "message": "As you gesture, shadowy figures appear around your target.",
-    "flags": [ "NO_FAIL", "VERBAL", "SOMATIC", "RANDOM_DAMAGE", "SPAWN_GROUP", "NO_PROJECTILE" ],
-    "valid_targets": [ "self", "ally", "ground", "hostile" ],
-    "spell_class": "CHANGELING_MAGIC",
-    "difficulty": 8,
-    "skill": "gramarye",
-    "max_level": 1,
-    "effect": "summon",
-    "effect_str": "GROUP_HOSTS_OF_SAMHAIN",
-    "shape": "blast",
-    "min_damage": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.04) + (u_skill('gramarye') * 0.1) + 1" ] },
-    "max_damage": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.12) + (u_skill('gramarye') * 0.25) + 2" ] },
-    "min_range": 20,
-    "max_range": 20,
-    "min_aoe": 3,
-    "max_aoe": 3,
-    "min_duration": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 340) + (u_skill('gramarye') * 2700) + 14200" ] },
-    "max_duration": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 620) + (u_skill('gramarye') * 11300) + 52300" ] },
-    "magic_type": "xe_fey_magick",
-    "base_energy_cost": {
-      "math": [ "max(( 1200 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 15) - (u_skill('gramarye') * 40)), 550)" ]
-    },
-    "base_casting_time": {
-      "math": [ "max(( 400 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 8) - (u_skill('gramarye') * 15)), 150)" ]
-    }
-  },
-  {
-    "id": "changeling_noble_command_commoners_spell",
-    "type": "SPELL",
-    "name": "Sovereign's Command",
-    "description": "With a stern word of command, you can glamour one of the common fae, the redcaps or brownies or pooka or bannermen, into defending you from your enemies.",
-    "message": "You snap out an order to your target.",
-    "valid_targets": [ "ally", "hostile" ],
-    "flags": [ "VERBAL", "RECHARM", "RANDOM_DAMAGE", "RANDOM_DURATION", "NO_FAIL", "NO_PROJECTILE", "SILENT" ],
-    "effect": "charm_monster",
-    "shape": "blast",
-    "spell_class": "CHANGELING_MAGIC",
-    "difficulty": 5,
-    "skill": "gramarye",
-    "max_level": 1,
-    "min_damage": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 4.5) + (u_skill('gramarye') * 20) + 10" ] },
-    "max_damage": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 9) + (u_skill('gramarye') * 30) + 30" ] },
-    "min_duration": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 691) + (u_skill('gramarye') * 3246) + 8259" ] },
-    "max_duration": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 1685) + (u_skill('gramarye') * 8388) + 26221" ] },
-    "min_range": 15,
-    "max_range": 15,
-    "magic_type": "xe_fey_magick",
-    "base_energy_cost": {
-      "math": [ "max(( 450 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 5) - (u_skill('gramarye') * 15)), 150)" ]
-    },
-    "base_casting_time": {
-      "math": [ "max(( 150 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 3) - (u_skill('gramarye') * 8)), 50)" ]
-    },
-    "targeted_monster_species": [ "CHANGELING" ],
-    "ignored_monster_species": [ "CHANGELING_NOBLE" ]
-  },
-  {
-    "id": "changeling_noble_charm_humans_spell",
-    "type": "SPELL",
-    "name": "Come Away, O Human Child",
-    "description": "With a stern word of command or a whispered entreaty, you can glamour a human into defending you from your enemies.",
-    "message": "You cast your glamour over your target.",
-    "valid_targets": [ "ally", "hostile" ],
-    "flags": [ "VERBAL", "RECHARM", "RANDOM_DAMAGE", "RANDOM_DURATION", "NO_FAIL", "NO_PROJECTILE", "SILENT" ],
-    "effect": "charm_monster",
-    "shape": "blast",
-    "spell_class": "CHANGELING_MAGIC",
-    "difficulty": 7,
-    "skill": "gramarye",
-    "max_level": 1,
-    "min_damage": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 3) + (u_skill('gramarye') * 20) + 10" ] },
-    "max_damage": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 7) + (u_skill('gramarye') * 30) + 30" ] },
-    "min_duration": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 286) + (u_skill('gramarye') * 2455) + 5824" ] },
-    "max_duration": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 773) + (u_skill('gramarye') * 6250) + 19375" ] },
-    "min_range": 10,
-    "max_range": 10,
-    "magic_type": "xe_fey_magick",
-    "base_energy_cost": {
-      "math": [ "max(( 700 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 9) - (u_skill('gramarye') * 25)), 300)" ]
-    },
-    "base_casting_time": {
-      "math": [ "max(( 150 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 3) - (u_skill('gramarye') * 8)), 50)" ]
-    },
-    "targeted_monster_species": [ "FERAL", "HUMAN" ]
   },
   {
     "id": "changeling_brownie_blink_indoors_spell",
@@ -122,8 +51,13 @@
     "name": "Slip Through the Cracks",
     "description": "When in danger of being discovered, brownies can slip away in moments.  This glamour allows you to vanish and reappear elsewhere in the house.  It cannot be used outdoors.",
     "message": "",
-    "flags": [ "NO_FAIL", "SOMATIC" ],
-    "valid_targets": [ "self" ],
+    "flags": [
+      "NO_FAIL",
+      "SOMATIC"
+    ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "CHANGELING_MAGIC",
     "difficulty": 7,
     "skill": "gramarye",
@@ -148,8 +82,13 @@
     "type": "SPELL",
     "name": "Hurry Home",
     "description": "You always know your home and can return to it at need.  When standing in a doorway, you can use this glamour to return to the last place you slept, as long as you spent at least a day at that place previously and as long as you are unobserved.",
-    "flags": [ "NO_FAIL", "SOMATIC" ],
-    "valid_targets": [ "self" ],
+    "flags": [
+      "NO_FAIL",
+      "SOMATIC"
+    ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "CHANGELING_MAGIC",
     "difficulty": 9,
     "skill": "gramarye",
@@ -170,83 +109,19 @@
     }
   },
   {
-    "id": "changeling_pooka_charm_animals_spell",
-    "type": "SPELL",
-    "name": "Friend to Birds and Beasts",
-    "description": "You have learned to speak the secret tongues of birds and beasts and may use it to ask them for aid.  Casting this spell on a mammal or a bird will ally them with you, causing them to defend you against your enemies.",
-    "message": "You whisper a few words in the language of beasts.",
-    "valid_targets": [ "ally", "hostile" ],
-    "flags": [ "VERBAL", "RECHARM", "RANDOM_DAMAGE", "RANDOM_DURATION", "NO_FAIL", "NO_PROJECTILE", "SILENT" ],
-    "effect": "charm_monster",
-    "shape": "blast",
-    "spell_class": "CHANGELING_MAGIC",
-    "difficulty": 6,
-    "skill": "gramarye",
-    "max_level": 1,
-    "min_damage": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 3) + (u_skill('gramarye') * 10) + 15" ] },
-    "max_damage": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 7) + (u_skill('gramarye') * 25) + 60" ] },
-    "min_duration": {
-      "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 286) + (u_skill('gramarye') * 3455) + 9450" ]
-    },
-    "max_duration": {
-      "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 850) + (u_skill('gramarye') * 8641) + 33145" ]
-    },
-    "min_range": 10,
-    "max_range": 10,
-    "magic_type": "xe_fey_magick",
-    "base_energy_cost": {
-      "math": [
-        "max(( 600 - (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 8) - (u_skill('gramarye') * 25)), 250)"
-      ]
-    },
-    "base_casting_time": {
-      "math": [ "max(( 200 - (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 4) - (u_skill('gramarye') * 8)), 50)" ]
-    },
-    "targeted_monster_species": [ "MAMMAL", "BIRD" ]
-  },
-  {
-    "id": "selkie_beguilement_spell",
-    "type": "SPELL",
-    "name": "Beguilement",
-    "description": "With a wink and a bit of fae glamour, you can enchant a target to defend you for a brief time.  This glamour only <color_yellow>only works</color> on humans.",
-    "message": "You cast your glamour over your target.",
-    "valid_targets": [ "ally", "hostile" ],
-    "flags": [ "VERBAL", "RECHARM", "RANDOM_DAMAGE", "RANDOM_DURATION", "NO_FAIL", "NO_PROJECTILE", "SILENT" ],
-    "effect": "charm_monster",
-    "shape": "blast",
-    "spell_class": "CHANGELING_MAGIC",
-    "difficulty": 7,
-    "skill": "gramarye",
-    "max_level": 1,
-    "min_damage": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') * 3) + (u_skill('gramarye') * 10) + 10" ] },
-    "max_damage": { "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') * 7) + (u_skill('gramarye') * 20) + 30" ] },
-    "min_duration": {
-      "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') * 286) + (u_skill('gramarye') * 2455) + 5824" ]
-    },
-    "max_duration": {
-      "math": [ "(u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') * 773) + (u_skill('gramarye') * 6250) + 19375" ]
-    },
-    "min_range": 10,
-    "max_range": 10,
-    "magic_type": "xe_fey_magick",
-    "base_energy_cost": {
-      "math": [
-        "max(( 750 - (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') * 9) - (u_skill('gramarye') * 25)), 350)"
-      ]
-    },
-    "base_casting_time": {
-      "math": [ "max(( 200 - (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') * 4) - (u_skill('gramarye') * 8)), 50)" ]
-    },
-    "targeted_monster_species": [ "FERAL", "HUMAN" ]
-  },
-  {
     "id": "selkie_fog_cloak_spell",
     "type": "SPELL",
     "name": "Cloak of Fog",
     "description": "Call a thick fog from the surrounding air, breaking line of sight with your enemies and obscuring your presence.  Weave the glamour again to dispel it.",
     "message": "Thick fog billows up around you.",
-    "valid_targets": [ "self" ],
-    "flags": [ "VERBAL", "RANDOM_DURATION", "NO_FAIL" ],
+    "valid_targets": [
+      "self"
+    ],
+    "flags": [
+      "VERBAL",
+      "RANDOM_DURATION",
+      "NO_FAIL"
+    ],
     "effect": "effect_on_condition",
     "effect_str": "EOC_SELKIE_FOG_CLOAK",
     "shape": "blast",
@@ -271,7 +146,9 @@
       ]
     },
     "base_casting_time": {
-      "math": [ "max(( 100 - u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') - (u_skill('gramarye') * 3)), 40)" ]
+      "math": [
+        "max(( 100 - u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') - (u_skill('gramarye') * 3)), 40)"
+      ]
     }
   },
   {
@@ -280,8 +157,14 @@
     "name": "Chant of Obscuring Mists",
     "description": "Manipulate the weather, pulling the water from the air and cause a thick fog to form and blanket the countryside.  Weave the glamour again to dispel it.",
     "message": "",
-    "valid_targets": [ "self" ],
-    "flags": [ "VERBAL", "RANDOM_DURATION", "NO_FAIL" ],
+    "valid_targets": [
+      "self"
+    ],
+    "flags": [
+      "VERBAL",
+      "RANDOM_DURATION",
+      "NO_FAIL"
+    ],
     "effect": "effect_on_condition",
     "effect_str": "EOC_SELKIE_CHANGE_WEATHER_DENSE_FOG",
     "shape": "blast",
@@ -317,8 +200,14 @@
     "name": "Aria of the Droplets",
     "description": "Manipulate the weather, causing the sky to cloud over and rain to fall.  Weave the glamour again to dispel it.  You cannot control the weather if the temperature is too cold.",
     "message": "",
-    "valid_targets": [ "self" ],
-    "flags": [ "VERBAL", "RANDOM_DURATION", "NO_FAIL" ],
+    "valid_targets": [
+      "self"
+    ],
+    "flags": [
+      "VERBAL",
+      "RANDOM_DURATION",
+      "NO_FAIL"
+    ],
     "effect": "effect_on_condition",
     "effect_str": "EOC_SELKIE_CHANGE_WEATHER_RAINS",
     "shape": "blast",
@@ -354,8 +243,14 @@
     "name": "Canticle of Rainstorms",
     "description": "Manipulate the weather, causing the sky to cloud over and heavy rains to fall.  Weave the glamour again to dispel it.  You cannot control the weather if the temperature is too cold.",
     "message": "",
-    "valid_targets": [ "self" ],
-    "flags": [ "VERBAL", "RANDOM_DURATION", "NO_FAIL" ],
+    "valid_targets": [
+      "self"
+    ],
+    "flags": [
+      "VERBAL",
+      "RANDOM_DURATION",
+      "NO_FAIL"
+    ],
     "effect": "effect_on_condition",
     "effect_str": "EOC_SELKIE_CHANGE_WEATHER_RAINSTORM",
     "shape": "blast",
@@ -391,8 +286,14 @@
     "name": "Symphony of Levin",
     "description": "Manipulate the weather, transforming a rainstorm into a violent lightning storm.  It must already be raining heavily to transform the weather into a lightning storm, and a lightning storm cannot be controlled after the glamour is woven.",
     "message": "",
-    "valid_targets": [ "self" ],
-    "flags": [ "VERBAL", "RANDOM_DURATION", "NO_FAIL" ],
+    "valid_targets": [
+      "self"
+    ],
+    "flags": [
+      "VERBAL",
+      "RANDOM_DURATION",
+      "NO_FAIL"
+    ],
     "effect": "effect_on_condition",
     "effect_str": "EOC_SELKIE_CHANGE_WEATHER_LIGHTNINGSTORM",
     "shape": "blast",
@@ -413,47 +314,25 @@
     }
   },
   {
-    "id": "trow_make_noise_spell",
-    "type": "SPELL",
-    "name": "The One Who Knocks",
-    "description": "Make a distant knocking sound, leading others astray.",
-    "message": "A loud thump resounds.",
-    "flags": [ "NO_FAIL", "VERBAL", "SOMATIC", "RANDOM_DAMAGE", "NO_PROJECTILE" ],
-    "valid_targets": [ "ground", "self", "ally", "hostile" ],
-    "spell_class": "CHANGELING_MAGIC",
-    "difficulty": 2,
-    "skill": "gramarye",
-    "max_level": 1,
-    "effect": "noise",
-    "shape": "blast",
-    "min_damage": 25,
-    "max_damage": 35,
-    "min_range": 30,
-    "max_range": 30,
-    "min_aoe": 1,
-    "max_aoe": 1,
-    "magic_type": "xe_fey_magick",
-    "base_energy_cost": {
-      "math": [ "max(( 200 - (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_TROW') * 2) - (u_skill('gramarye') * 5)), 35)" ]
-    },
-    "base_casting_time": {
-      "math": [ "max(( 150 - (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_TROW') * 3) - (u_skill('gramarye') * 6)), 50)" ]
-    },
-    "sound_description": "a loud thump"
-  },
-  {
     "id": "selkie_cultivate_goblin_fruit",
     "type": "SPELL",
     "name": "Cultivate Goblin Fruit",
     "description": "You may spin a bit of fae magic into water, bringing forth a goblin fruit.  Goblin fruit have a variety of effects, never predictable but always at least somewhat beneficial.  This spell may only be cast near water or under the rain.",
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "skill": "gramarye",
     "effect": "effect_on_condition",
     "effect_str": "EOC_SELKIE_GOBLIN_FRUIT",
     "shape": "blast",
     "spell_class": "CHANGELING_MAGIC",
     "teachable": false,
-    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS", "NO_HANDS" ],
+    "flags": [
+      "SOMATIC",
+      "VERBAL",
+      "NO_LEGS",
+      "NO_HANDS"
+    ],
     "max_level": 1,
     "difficulty": 8,
     "base_casting_time": {
@@ -473,14 +352,21 @@
     "type": "SPELL",
     "name": "Cultivate Goblin Fruit",
     "description": "You may spin a bit of fae magic into the air, bringing forth a goblin fruit.  Goblin fruit have a variety of effects, never predictable but always at least somewhat beneficial.  This spell may only be cast indoors, when nobody is watching.",
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "skill": "gramarye",
     "effect": "effect_on_condition",
     "effect_str": "EOC_BROWNIE_GOBLIN_FRUIT",
     "shape": "blast",
     "spell_class": "CHANGELING_MAGIC",
     "teachable": false,
-    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS", "NO_HANDS" ],
+    "flags": [
+      "SOMATIC",
+      "VERBAL",
+      "NO_LEGS",
+      "NO_HANDS"
+    ],
     "max_level": 1,
     "difficulty": 8,
     "base_casting_time": {
@@ -500,14 +386,21 @@
     "type": "SPELL",
     "name": "Cultivate Goblin Fruit",
     "description": "You may spin a bit of fae magic into the air, bringing forth a goblin fruit.  Goblin fruit have a variety of effects, never predictable but always at least somewhat beneficial.  This spell may only be cast near an animal.",
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "skill": "gramarye",
     "effect": "effect_on_condition",
     "effect_str": "EOC_POOKA_GOBLIN_FRUIT",
     "shape": "blast",
     "spell_class": "CHANGELING_MAGIC",
     "teachable": false,
-    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS", "NO_HANDS" ],
+    "flags": [
+      "SOMATIC",
+      "VERBAL",
+      "NO_LEGS",
+      "NO_HANDS"
+    ],
     "max_level": 1,
     "difficulty": 8,
     "base_casting_time": {
@@ -517,7 +410,9 @@
     },
     "magic_type": "xe_fey_magick",
     "base_energy_cost": {
-      "math": [ "max(( 450 - (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 2) - (u_skill('gramarye') * 5)), 350)" ]
+      "math": [
+        "max(( 450 - (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 2) - (u_skill('gramarye') * 5)), 350)"
+      ]
     }
   },
   {
@@ -525,14 +420,21 @@
     "type": "SPELL",
     "name": "Cultivate Goblin Fruit",
     "description": "You may spin a bit of fae magic into the earth, bringing forth a goblin fruit.  Goblin fruit have a variety of effects, never predictable but always at least somewhat beneficial.  This spell may only be cast underground or at night.",
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "skill": "gramarye",
     "effect": "effect_on_condition",
     "effect_str": "EOC_TROW_GOBLIN_FRUIT",
     "shape": "blast",
     "spell_class": "CHANGELING_MAGIC",
     "teachable": false,
-    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS", "NO_HANDS" ],
+    "flags": [
+      "SOMATIC",
+      "VERBAL",
+      "NO_LEGS",
+      "NO_HANDS"
+    ],
     "max_level": 1,
     "difficulty": 8,
     "base_casting_time": {
@@ -542,7 +444,9 @@
     },
     "magic_type": "xe_fey_magick",
     "base_energy_cost": {
-      "math": [ "max(( 450 - (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_TROW') * 2) - (u_skill('gramarye') * 5)), 350)" ]
+      "math": [
+        "max(( 450 - (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_TROW') * 2) - (u_skill('gramarye') * 5)), 350)"
+      ]
     }
   },
   {
@@ -550,22 +454,33 @@
     "type": "SPELL",
     "name": "Cultivate Goblin Fruit",
     "description": "You may spin a bit of fae magic into the air, bringing forth a goblin fruit.  Goblin fruit have a variety of effects, never predictable but always at least somewhat beneficial.  This spell may only be cast near a human or a Fae.",
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "skill": "gramarye",
     "effect": "effect_on_condition",
     "effect_str": "EOC_NOBLE_GOBLIN_FRUIT",
     "shape": "blast",
     "spell_class": "CHANGELING_MAGIC",
     "teachable": false,
-    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS", "NO_HANDS" ],
+    "flags": [
+      "SOMATIC",
+      "VERBAL",
+      "NO_LEGS",
+      "NO_HANDS"
+    ],
     "max_level": 1,
     "difficulty": 8,
     "base_casting_time": {
-      "math": [ "max(( 180000 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 2500) - (u_skill('gramarye') * 4500)), 100)" ]
+      "math": [
+        "max(( 180000 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 2500) - (u_skill('gramarye') * 4500)), 100)"
+      ]
     },
     "magic_type": "xe_fey_magick",
     "base_energy_cost": {
-      "math": [ "max(( 450 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 2) - (u_skill('gramarye') * 5)), 350)" ]
+      "math": [
+        "max(( 450 - (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 2) - (u_skill('gramarye') * 5)), 350)"
+      ]
     }
   }
 ]

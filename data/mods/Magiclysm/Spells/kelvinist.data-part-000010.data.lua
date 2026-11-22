@@ -1,0 +1,31 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "kelvinist_set_everyone_on_fire_secondary",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "onfire",
+    field = "fd_fire",
+    damage_type = "heat",
+    name = ccb.content.text_without_extraction("Flames of the Apocalypse Target"),
+    description = ccb.content.text_without_extraction("Stop hitting yourself (with the flames of the apocalypse). You should never see this."),
+    flags = {
+        "EVOCATION_SPELL",
+        "RANDOM_DAMAGE",
+        "CONCENTRATE",
+        "VERBAL",
+        "SOMATIC",
+        "SPLIT_DAMAGE",
+    },
+    valid_targets = { "self", "ground", "ally", "hostile" },
+    field_chance = 2,
+    min_field_intensity = 2,
+    max_field_intensity = 3,
+    min_damage = { handler = "wave14a_magiclysm_stat_13", fallback = 0 },
+    max_damage = { handler = "wave14a_magiclysm_stat_14", fallback = 0 },
+    min_aoe = { handler = "wave14a_magiclysm_stat_15", fallback = 0 },
+    max_aoe = { handler = "wave14a_magiclysm_stat_15", fallback = 0 },
+    min_duration = 1000,
+    max_duration = 2500,
+    max_level = 25,
+}

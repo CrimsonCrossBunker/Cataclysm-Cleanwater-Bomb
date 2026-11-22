@@ -75,3 +75,19 @@ ccb.content.define_spell {
     max_level = 35,
     extend_flags = { "RANDOM_DAMAGE" },
 }
+
+ccb.content.define_spell {
+    abstract = "horizon_vortex_abstract",
+    shape = "blast",
+    effect = "attack",
+    name = ccb.content.text_without_extraction("Horizon Vortex Abstract"),
+    description = ccb.content.text_without_extraction("Causes some damage in the Horizon Vortex spell.  Subspell; you aren't allowed to see it except in debug mode."),
+    message = "",
+    flags = { "NO_PROJECTILE", "LOUD", "RANDOM_TARGET" },
+    valid_targets = { "hostile" },
+    min_damage = { handler = "wave14a_magiclysm_stat_20", fallback = 0 },
+    max_damage = { handler = "wave14a_magiclysm_stat_21", fallback = 0 },
+    min_range = 10,
+    range_increment = 0.45,
+    max_range = 25,
+}

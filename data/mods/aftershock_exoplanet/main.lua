@@ -171,3 +171,4 @@ require("attack_conditions")
 require("zenit_control")
 
 require("monster_attack_predicates")
+require("spell_math_handlers")

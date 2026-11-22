@@ -126,3 +126,18 @@ ccb.content.define_spell {
     effect = "vomit",
     shape = "blast",
 }
+
+ccb.content.define_spell {
+    id = "mace_pipe_magic_throw",
+    shape = "blast",
+    effect = "attack",
+    damage_type = "bash",
+    name = ccb.content.text_without_extraction("Throw The Hammer"),
+    description = ccb.content.text_without_extraction("You throw the hammer."),
+    flags = { "SOMATIC", "SILENT", "NON_MAGICAL", "RANDOM_DAMAGE", "NO_EXPLOSION_SFX" },
+    valid_targets = { "hostile" },
+    min_damage = { handler = "wave14a_xedra_evolved_stat_406", fallback = 0 },
+    max_damage = { handler = "wave14a_xedra_evolved_stat_407", fallback = 0 },
+    min_range = { handler = "wave14a_xedra_evolved_stat_408", fallback = 0 },
+    max_range = { handler = "wave14a_xedra_evolved_stat_408", fallback = 0 },
+}

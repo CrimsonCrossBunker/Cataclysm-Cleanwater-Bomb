@@ -36,3 +36,23 @@ ccb.content.define_spell {
     base_casting_time = 0,
     flags = { "SILENT", "NO_FAIL", "PERCENT_DAMAGE" },
 }
+
+ccb.content.define_spell {
+    id = "night_sight",
+    skill = "deduction",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "night_sight",
+    magic_type = "xedra_magic_generic",
+    name = "Night Sight",
+    description = "Gives you the power to see in the dark.",
+    message = "Your eyes glow lavender for a moment.  Now your sight can pierce the darkest shadows.",
+    valid_targets = { "self" },
+    min_duration = 18000,
+    duration_increment = 18000,
+    max_duration = 1080000,
+    base_energy_cost = 1200,
+    difficulty = 6,
+    max_level = 20,
+    base_casting_time = 2000,
+}

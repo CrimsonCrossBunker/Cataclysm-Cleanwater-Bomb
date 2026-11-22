@@ -17,3 +17,25 @@ ccb.content.define_spell {
     max_duration = 500,
     shape = "blast",
 }
+
+ccb.content.define_spell {
+    id = "call_daffodil_real",
+    shape = "blast",
+    effect = "summon",
+    effect_data = "mon_fetch_daffodil_warrior",
+    spell_class = "NONE",
+    name = ccb.content.text_without_extraction("Call Daffodil"),
+    description = ccb.content.text_without_extraction("Hidden spell that spawns the daffodil"),
+    flags = { "NO_LEGS", "SILENT", "NO_EXPLOSION_SFX", "NO_FAIL", "NO_HANDS", "NON_MAGICAL" },
+    valid_targets = { "ground" },
+    min_damage = 5,
+    max_damage = 5,
+    min_range = 3,
+    max_range = 3,
+    min_aoe = 3,
+    max_aoe = 3,
+    min_duration = 8640000,
+    max_duration = 8640000,
+    difficulty = 0,
+    max_level = 1,
+}

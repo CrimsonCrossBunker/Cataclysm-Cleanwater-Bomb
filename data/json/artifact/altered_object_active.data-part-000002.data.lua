@@ -61,3 +61,30 @@ ccb.content.define_spell {
     flags = { "SILENT", "MUTATE_TRAIT" },
     valid_targets = { "self", "ally" },
 }
+
+ccb.content.define_spell {
+    id = "AO_BOOK_SNAP",
+    sound_type = "combat",
+    sound_id = "thunder_near",
+    sound_variant = "environment",
+    shape = "blast",
+    effect = "attack",
+    field = "fd_plasma",
+    damage_type = "bash",
+    name = ccb.content.text_without_extraction("Grimoire Snap"),
+    description = ccb.content.text_without_extraction("Creates a shockwave that damages nearby enemies."),
+    message = "The tome snaps shut with tremendous force.",
+    flags = { "RANDOM_DAMAGE", "NO_EXPLOSION_SFX", "SILENT" },
+    valid_targets = { "hostile", "ally", "ground" },
+    field_chance = 4,
+    min_field_intensity = 1,
+    max_field_intensity = 2,
+    min_damage = { handler = "wave14a_dda_stat_1", fallback = 0 },
+    max_damage = { handler = "wave14a_dda_stat_2", fallback = 0 },
+    min_aoe = 5,
+    max_aoe = 5,
+    extra_spells = {
+        { spell = "AO_BOOK_SNAP_PUSH", self = true },
+        { spell = "AO_BOOK_SNAP_PUSH", self = true },
+    },
+}

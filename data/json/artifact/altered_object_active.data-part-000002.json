@@ -2,11 +2,22 @@
   {
     "id": "AO_SURFACE",
     "type": "SPELL",
-    "name": { "str": "Artifact surfacing", "//~": "NO_I18N" },
-    "description": { "str": "Sends you to the surface.", "//~": "NO_I18N" },
+    "name": {
+      "str": "Artifact surfacing",
+      "//~": "NO_I18N"
+    },
+    "description": {
+      "str": "Sends you to the surface.",
+      "//~": "NO_I18N"
+    },
     "message": "You reel as your sense of balance falters, but you didn't fall anywhere.",
-    "valid_targets": [ "self" ],
-    "flags": [ "SILENT", "NO_EXPLOSION_SFX" ],
+    "valid_targets": [
+      "self"
+    ],
+    "flags": [
+      "SILENT",
+      "NO_EXPLOSION_SFX"
+    ],
     "shape": "blast",
     "min_range": 1,
     "max_range": 1,
@@ -17,32 +28,18 @@
     "type": "effect_on_condition",
     "id": "EOC_AO_SURFACE",
     "effect": [
-      { "u_location_variable": { "context_val": "surface" }, "z_adjust": 0, "z_override": true },
-      { "u_teleport": { "context_val": "surface" } }
+      {
+        "u_location_variable": {
+          "context_val": "surface"
+        },
+        "z_adjust": 0,
+        "z_override": true
+      },
+      {
+        "u_teleport": {
+          "context_val": "surface"
+        }
+      }
     ]
-  },
-  {
-    "id": "AO_BOOK_SNAP",
-    "type": "SPELL",
-    "name": { "str": "Grimoire Snap", "//~": "NO_I18N" },
-    "description": { "str": "Creates a shockwave that damages nearby enemies.", "//~": "NO_I18N" },
-    "message": "The tome snaps shut with tremendous force.",
-    "flags": [ "RANDOM_DAMAGE", "NO_EXPLOSION_SFX", "SILENT" ],
-    "valid_targets": [ "hostile", "ally", "ground" ],
-    "effect": "attack",
-    "shape": "blast",
-    "min_damage": { "math": [ "(u_artifact_resonance() / 20) + 10" ] },
-    "max_damage": { "math": [ "(u_artifact_resonance() / 15) + 30" ] },
-    "min_aoe": 5,
-    "max_aoe": 5,
-    "damage_type": "bash",
-    "sound_id": "thunder_near",
-    "sound_variant": "environment",
-    "sound_type": "combat",
-    "field_chance": 4,
-    "field_id": "fd_plasma",
-    "min_field_intensity": 1,
-    "max_field_intensity": 2,
-    "extra_effects": [ { "id": "AO_BOOK_SNAP_PUSH", "hit_self": true }, { "id": "AO_BOOK_SNAP_PUSH", "hit_self": true } ]
   }
 ]

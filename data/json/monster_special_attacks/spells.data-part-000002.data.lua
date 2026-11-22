@@ -110,3 +110,24 @@ ccb.content.define_spell {
     min_field_intensity = 2,
     max_field_intensity = 2,
 }
+
+ccb.content.define_spell {
+    id = "HEKATONKHEIRE_REND_AND_TEAR",
+    shape = "blast",
+    effect = "attack",
+    damage_type = "cut",
+    name = ccb.content.text_without_extraction("Rend and Tear"),
+    description = ccb.content.text_without_extraction("Begins drawing and quartering the victim."),
+    flags = { "LOUD", "SPLIT_DAMAGE", "RANDOM_DAMAGE" },
+    valid_targets = { "hostile" },
+    min_damage = { handler = "wave14a_dda_stat_7", fallback = 0 },
+    max_damage = { handler = "wave14a_dda_stat_8", fallback = 0 },
+    min_range = 1,
+    range_increment = 1,
+    max_range = 1,
+    min_aoe = 1,
+    aoe_increment = 1,
+    max_aoe = 1,
+    max_level = 1,
+    base_casting_time = 0,
+}

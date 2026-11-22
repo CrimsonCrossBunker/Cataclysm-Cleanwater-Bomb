@@ -4,13 +4,25 @@
     "type": "SPELL",
     "name": "Baking Hands",
     "description": "With the tiniest amount of heat, unfreeze an item of food or drink and heat it up to a comfortable temperature.",
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "KELVINIST",
-    "flags": [ "CHANNELING_SPELL", "CONCENTRATE", "VERBAL", "SOMATIC" ],
+    "flags": [
+      "CHANNELING_SPELL",
+      "CONCENTRATE",
+      "VERBAL",
+      "SOMATIC"
+    ],
     "effect": "effect_on_condition",
     "effect_str": "EOC_KELVINIST_HEAT_FOOD_SPELL",
     "components": "spell_components_baking_hands",
-    "extra_effects": [ { "id": "eoc_channeling_setup", "hit_self": true } ],
+    "extra_effects": [
+      {
+        "id": "eoc_channeling_setup",
+        "hit_self": true
+      }
+    ],
     "shape": "blast",
     "difficulty": 1,
     "max_level": 15,
@@ -26,9 +38,26 @@
     "effect": [
       {
         "u_run_inv_eocs": "manual",
-        "search_data": [ { "category": "food" }, { "category": "drink" } ],
+        "search_data": [
+          {
+            "category": "food"
+          },
+          {
+            "category": "drink"
+          }
+        ],
         "true_eocs": [
-          { "id": "EOC_KELVINIST_HEAT_FOOD_SPELL_ITEM", "effect": [ { "npc_set_flag": "HOT" }, { "npc_unset_flag": "FROZEN" } ] }
+          {
+            "id": "EOC_KELVINIST_HEAT_FOOD_SPELL_ITEM",
+            "effect": [
+              {
+                "npc_set_flag": "HOT"
+              },
+              {
+                "npc_unset_flag": "FROZEN"
+              }
+            ]
+          }
         ]
       }
     ]
@@ -38,13 +67,26 @@
     "type": "SPELL",
     "name": "Flames of the Apocalypse",
     "description": "Force a large amount of burning mana into every hostile target affected by the spell, causing them to explode in flames.  Knowledge of this spell required licensing and registration before the Cataclysm, but you're pretty sure the ATF isn't going to be hassling you any time soon.",
-    "valid_targets": [ "hostile", "ground" ],
+    "valid_targets": [
+      "hostile",
+      "ground"
+    ],
     "spell_class": "KELVINIST",
-    "flags": [ "EVOCATION_SPELL", "CONCENTRATE", "VERBAL", "SOMATIC" ],
+    "flags": [
+      "EVOCATION_SPELL",
+      "CONCENTRATE",
+      "VERBAL",
+      "SOMATIC"
+    ],
     "effect": "effect_on_condition",
     "effect_str": "EOC_KELVINIST_SET_EVERYONE_ON_FIRE",
     "components": "spell_components_kelvinist_set_everyone_on_fire",
-    "extra_effects": [ { "id": "eoc_evocation_setup", "hit_self": true } ],
+    "extra_effects": [
+      {
+        "id": "eoc_evocation_setup",
+        "hit_self": true
+      }
+    ],
     "shape": "blast",
     "difficulty": 15,
     "max_level": 25,
@@ -63,37 +105,22 @@
     "id": "EOC_KELVINIST_SET_EVERYONE_ON_FIRE",
     "condition": "has_alpha",
     "effect": [
-      { "math": [ "u_kelvinist_explosion_level = n_spell_level('kelvinist_set_everyone_on_fire')" ] },
+      {
+        "math": [
+          "u_kelvinist_explosion_level = n_spell_level('kelvinist_set_everyone_on_fire')"
+        ]
+      },
       {
         "u_cast_spell": {
           "id": "kelvinist_set_everyone_on_fire_secondary",
-          "min_level": { "math": [ "u_kelvinist_explosion_level" ] },
+          "min_level": {
+            "math": [
+              "u_kelvinist_explosion_level"
+            ]
+          },
           "hit_self": true
         }
       }
     ]
-  },
-  {
-    "id": "kelvinist_set_everyone_on_fire_secondary",
-    "type": "SPELL",
-    "name": { "str": "Flames of the Apocalypse Target", "//~": "NO_I18N" },
-    "description": { "str": "Stop hitting yourself (with the flames of the apocalypse). You should never see this.", "//~": "NO_I18N" },
-    "valid_targets": [ "self", "ground", "ally", "hostile" ],
-    "flags": [ "EVOCATION_SPELL", "RANDOM_DAMAGE", "CONCENTRATE", "VERBAL", "SOMATIC", "SPLIT_DAMAGE" ],
-    "effect": "attack",
-    "effect_str": "onfire",
-    "shape": "blast",
-    "max_level": 25,
-    "min_damage": { "math": [ "(u_kelvinist_explosion_level * 4) + 25" ] },
-    "max_damage": { "math": [ "(u_kelvinist_explosion_level * 10) + 45" ] },
-    "damage_type": "heat",
-    "min_duration": 1000,
-    "max_duration": 2500,
-    "min_aoe": { "math": [ "(u_kelvinist_explosion_level * 0.333) + 0" ] },
-    "max_aoe": { "math": [ "(u_kelvinist_explosion_level * 0.333) + 0" ] },
-    "field_id": "fd_fire",
-    "min_field_intensity": 2,
-    "max_field_intensity": 3,
-    "field_chance": 2
   }
 ]

@@ -1,42 +1,20 @@
 [
   {
-    "id": "changeling_summer_bonus_stamina_near_enemies_spell",
-    "type": "SPELL",
-    "name": "A Fire in the Blood",
-    "description": "Infuse the energy of the summer sun into your yourself, preparing for battle.  Your stamina will regenerate faster in proportion to the number of adjacent enemies, and you will have an easier time dodging enemy attacks.  In the winter the glamour <color_yellow>is less effective</color>.",
-    "message": "",
-    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS" ],
-    "magic_type": "xe_fey_seasonal_magick_summer",
-    "spell_class": "CHANGELING_SEASONAL_MAGIC_SUMMER",
-    "valid_targets": [ "self" ],
-    "teachable": false,
-    "skill": "gramarye",
-    "max_level": 1,
-    "shape": "blast",
-    "difficulty": 6,
-    "effect": "attack",
-    "effect_str": "effect_changeling_summer_bonus_stamina_near_enemies",
-    "min_duration": {
-      "math": [ "( ( 3825 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 1152) + (u_skill('gramarye') * 4852) ) )" ]
-    },
-    "max_duration": {
-      "math": [ "( ( 8642 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 2852) + (u_skill('gramarye') * 9852) ) )" ]
-    },
-    "base_energy_cost": {
-      "math": [ "max( ( 550 - (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 5) - (u_skill('gramarye') * 10)), 200)" ]
-    },
-    "base_casting_time": 75
-  },
-  {
     "id": "changeling_summer_create_thunderstorm_spell",
     "type": "SPELL",
     "name": "Summer Thunder",
     "description": "Conjure up a thunderstorm, causing the sky to cloud over, rain to fall, and eventually lightning to flash.  You have no control over the storm once you set it in motion.  This glamour <color_red>will not work</color> if you are indoors or if the temperature is below freezing.",
     "message": "",
-    "flags": [ "VERBAL", "RANDOM_DURATION", "NO_LEGS" ],
+    "flags": [
+      "VERBAL",
+      "RANDOM_DURATION",
+      "NO_LEGS"
+    ],
     "magic_type": "xe_fey_seasonal_magick_summer",
     "spell_class": "CHANGELING_SEASONAL_MAGIC_SUMMER",
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "teachable": false,
     "skill": "gramarye",
     "max_level": 1,
@@ -56,7 +34,9 @@
       ]
     },
     "base_energy_cost": {
-      "math": [ "max( ( 700 - (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 4) - (u_skill('gramarye') * 8)), 400)" ]
+      "math": [
+        "max( ( 700 - (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 4) - (u_skill('gramarye') * 8)), 400)"
+      ]
     },
     "base_casting_time": {
       "math": [
@@ -65,50 +45,20 @@
     }
   },
   {
-    "id": "changeling_summer_stay_awake_in_sunlight_spell",
-    "type": "SPELL",
-    "name": "Invigorating Sunlight",
-    "description": "Absorb the energy of the sun, allaying sleep.  As long as the glamour is in effect and you remain outside in the light, your sleepiness will not increase.  In the winter the glamour <color_red>cannot be woven</color>.",
-    "message": "You extend both hands upward and feel the warmth of the sun.",
-    "flags": [ "SOMATIC", "VERBAL", "NO_LEGS" ],
-    "magic_type": "xe_fey_seasonal_magick_summer",
-    "spell_class": "CHANGELING_SEASONAL_MAGIC_SUMMER",
-    "valid_targets": [ "self" ],
-    "caster_condition": { "and": [ "u_is_outside", { "not": { "is_season": "winter" } } ] },
-    "caster_condition_fail_message": "The glamour must be woven outside and cannot be woven in the winter.",
-    "teachable": false,
-    "skill": "gramarye",
-    "max_level": 1,
-    "shape": "blast",
-    "difficulty": 8,
-    "effect": "attack",
-    "effect_str": "effect_changeling_summer_stay_awake_in_sunlight",
-    "components": "spell_components_changeling_dreamsparks_2",
-    "min_duration": {
-      "math": [
-        "( ( 80925 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 45932) + (u_skill('gramarye') * 70478) ) )"
-      ]
-    },
-    "max_duration": {
-      "math": [
-        "( ( 199862 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 76236) + (u_skill('gramarye') * 136945) ) )"
-      ]
-    },
-    "base_energy_cost": {
-      "math": [ "max( ( 750 - (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SUMMER') * 3) - (u_skill('gramarye') * 7)), 500)" ]
-    },
-    "base_casting_time": 3000
-  },
-  {
     "id": "changeling_summer_ring_of_flames_spell",
     "type": "SPELL",
     "name": "Ring of Champions",
     "description": "Summon up a circle of flames around yourself and a nearby enemy, allowing you to fight undisturbed.  You will be immune to the heat of the flames while they last, though stepping into them will end this protection.  The death of the chosen enemy will end the glamour.  You must be <color_yellow>outdoors</color> for this glamour to have any effect.  In the summer, the flames are <color_green>even hotter</color>.  Reweave the glamour to dispel it.",
     "message": "",
-    "flags": [ "VERBAL", "NO_LEGS" ],
+    "flags": [
+      "VERBAL",
+      "NO_LEGS"
+    ],
     "spell_class": "CHANGELING_SEASONAL_MAGIC_SUMMER",
     "magic_type": "xe_fey_seasonal_magick_summer",
-    "valid_targets": [ "hostile" ],
+    "valid_targets": [
+      "hostile"
+    ],
     "teachable": false,
     "skill": "gramarye",
     "max_level": 1,

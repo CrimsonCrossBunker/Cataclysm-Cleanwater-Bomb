@@ -186,3 +186,4 @@ require("attack_conditions")
 
 require("monster_attack_predicates")
 require("tileset")
+require("spell_math_handlers")

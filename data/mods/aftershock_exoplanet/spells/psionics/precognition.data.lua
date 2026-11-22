@@ -1,0 +1,25 @@
+local ccb = require("ccb")
+
+ccb.content.define_spell {
+    id = "afs_precog_damage_foresee",
+    skill = "metaphysics",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "effect_afs_precog_damage_foresee",
+    spell_class = "AFS_PRECOG",
+    magic_type = "aftershock_psionics",
+    name = "[Ψ]Forewarned (C)",
+    description = "By taking a moment to peer through possible futures, you can determine if any harm may come to you in the near future and therefore avoid it.  This requires a moment in trance to sift through the visions.",
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    min_duration = { handler = "wave14a_aftershock_exoplanet_stat_10", fallback = 0 },
+    max_duration = { handler = "wave14a_aftershock_exoplanet_stat_11", fallback = 0 },
+    base_energy_cost = 5000,
+    difficulty = 3,
+    max_level = { handler = "wave14a_aftershock_exoplanet_stat_3", fallback = 0 },
+    base_casting_time = 6000,
+    final_casting_time = 3000,
+    casting_time_increment = -100,
+}

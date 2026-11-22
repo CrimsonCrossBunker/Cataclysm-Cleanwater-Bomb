@@ -20,3 +20,28 @@ ccb.content.define_spell {
     base_casting_time = 6000,
     base_energy_cost = 300,
 }
+
+ccb.content.define_spell {
+    id = "technomancer_robot_shutdown",
+    shape = "blast",
+    effect = "mod_moves",
+    spell_class = "TECHNOMANCER",
+    magic_type = "magiclysm_enervation_magic",
+    name = "Shutdown",
+    description = "Overload the target, stunning it briefly.  Originally developed during the Roman Empire to target out-of-control golems, this spell became significantly more popular in modern times when it was discovered it also worked on robots and machinery.",
+    flags = { "ENERVATION_SPELL", "VERBAL", "SOMATIC", "RANDOM_DAMAGE", "SILENT" },
+    valid_targets = { "hostile", "ally" },
+    targeted_species = { "GOLEM", "ROBOT", "CYBORG" },
+    min_damage = { handler = "wave14a_magiclysm_stat_16", fallback = 0 },
+    max_damage = { handler = "wave14a_magiclysm_stat_17", fallback = 0 },
+    min_range = 5,
+    range_increment = 1,
+    max_range = 20,
+    base_energy_cost = 250,
+    difficulty = 6,
+    max_level = 15,
+    base_casting_time = 150,
+    extra_spells = {
+        { spell = "eoc_enervation_setup", self = true },
+    },
+}

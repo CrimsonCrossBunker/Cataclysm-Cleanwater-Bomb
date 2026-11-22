@@ -75,3 +75,24 @@ ccb.content.define_spell {
     energy_increment = -8,
     difficulty = 6,
 }
+
+ccb.content.define_spell {
+    id = "armor_frost_counterattack",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "slow_freeze_effect",
+    spell_class = "KELVINIST",
+    damage_type = "cold",
+    magic_type = "magiclysm_evocation_magic",
+    name = ccb.content.text_without_extraction("Frost Armor Counterattack"),
+    description = ccb.content.text_without_extraction("Attacks anyone who hits you when using frost armor"),
+    flags = { "RANDOM_DAMAGE", "CONCENTRATE", "SOMATIC", "RANDOM_DURATION" },
+    valid_targets = { "hostile" },
+    min_damage = 8,
+    max_damage = 24,
+    min_range = 1,
+    max_range = 1,
+    min_duration = { handler = "wave14a_magiclysm_stat_11", fallback = 0 },
+    max_duration = { handler = "wave14a_magiclysm_stat_12", fallback = 0 },
+    multiple_projectiles = 2,
+}

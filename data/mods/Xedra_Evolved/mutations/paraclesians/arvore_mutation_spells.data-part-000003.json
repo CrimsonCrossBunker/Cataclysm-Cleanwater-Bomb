@@ -1,148 +1,18 @@
 [
   {
-    "id": "arvore_climbing_vine_spell",
-    "type": "SPELL",
-    "name": "Creeper Ascends the Wall",
-    "description": "Cause a cluster of vines to burst out of diggable ground and rise up into the sky in moments.  It will be easy to climb once its growth is finished.",
-    "message": "The soil churns as thick vines burst forth and shoots toward the sky.",
-    "flags": [ "VERBAL", "SOMATIC" ],
-    "valid_targets": [ "ground" ],
-    "skill": "gramarye",
-    "spell_class": "ARVORE",
-    "max_level": 15,
-    "difficulty": 3,
-    "effect": "ter_transform",
-    "effect_str": "ter_arvore_climbing_vine",
-    "shape": "blast",
-    "min_range": 1,
-    "teachable": false,
-    "magic_type": "xedra_arvore_magick",
-    "base_casting_time": { "math": [ "max( (150 + (u_spell_count('school': 'ARVORE') * -1.1) + (u_skill('gramarye') * -1.5) ), 75)" ] },
-    "base_energy_cost": { "math": [ "max( (350 + (u_spell_count('school': 'ARVORE') * -1.8) + (u_skill('gramarye') * -3) ), 200)" ] },
-    "learn_spells": { "arvore_roots_spell": 8, "arvore_create_living_tent_spell": 10, "arvore_summon_floral_boat": 16 }
-  },
-  {
-    "type": "SPELL",
-    "id": "arvore_create_living_tent_spell",
-    "name": "Den of Brambles",
-    "description": "When outside on diggable ground, create a small structure of wood near the Arvore, offering shelter against the elements.",
-    "flags": [ "SOMATIC", "VERBAL", "NO_FAIL" ],
-    "valid_targets": [ "ground" ],
-    "skill": "gramarye",
-    "max_level": 15,
-    "difficulty": 5,
-    "teachable": false,
-    "spell_class": "ARVORE",
-    "effect": "ter_transform",
-    "effect_str": "ter_arvore_living_tent",
-    "shape": "blast",
-    "min_range": 1,
-    "max_range": 1,
-    "magic_type": "xedra_arvore_magick",
-    "base_casting_time": { "math": [ "max( (12000 + (u_spell_count('school': 'ARVORE') * -305.1) + (u_skill('gramarye') * -561.8) ), 1500)" ] },
-    "base_energy_cost": { "math": [ "max( (500 + (u_spell_count('school': 'ARVORE') * -10.9) + (u_skill('gramarye') * -15.6) ), 250)" ] },
-    "learn_spells": { "arvore_summon_floral_boat": 8 }
-  },
-  {
-    "id": "arvore_summon_grass_field_spell",
-    "type": "SPELL",
-    "name": { "str": "Commanding the Grasses" },
-    "description": "Your command over plants allows you to cause grass to grow in profusion from the soil, making the terrain very difficult for enemies to traverse.",
-    "valid_targets": [ "hostile", "ground" ],
-    "flags": [ "VERBAL", "SOMATIC", "NO_PROJECTILE", "NO_HANDS", "NO_LEGS" ],
-    "max_level": 15,
-    "skill": "gramarye",
-    "teachable": false,
-    "difficulty": 1,
-    "spell_class": "ARVORE",
-    "effect": "ter_transform",
-    "effect_str": "ter_arvore_command_grasses",
-    "shape": "blast",
-    "damage_type": "bash",
-    "min_range": {
-      "math": [
-        "min( ( (3 + (u_spell_count('school': 'ARVORE') * 0.45) + (u_skill('gramarye') * 0.8) ) * scaling_factor(u_val('intelligence') ) ), 35)"
-      ]
-    },
-    "max_range": {
-      "math": [
-        "min( ( (3 + (u_spell_count('school': 'ARVORE') * 0.45) + (u_skill('gramarye') * 0.8) ) * scaling_factor(u_val('intelligence') ) ), 35)"
-      ]
-    },
-    "min_aoe": {
-      "math": [
-        "min( ( (2 + (u_spell_count('school': 'ARVORE') * 0.2) + (u_skill('gramarye') * 0.45) ) * scaling_factor(u_val('intelligence') ) ), 20)"
-      ]
-    },
-    "max_aoe": {
-      "math": [
-        "min( ( (2 + (u_spell_count('school': 'ARVORE') * 0.2) + (u_skill('gramarye') * 0.45) ) * scaling_factor(u_val('intelligence') ) ), 20)"
-      ]
-    },
-    "magic_type": "xedra_arvore_magick",
-    "base_casting_time": { "math": [ "max( (100 + (u_spell_count('school': 'ARVORE') * -1.9) + (u_skill('gramarye') * -2.5) ), 35)" ] },
-    "base_energy_cost": { "math": [ "max( (150 + (u_spell_count('school': 'ARVORE') * -2.8) + (u_skill('gramarye') * -4.2) ), 50)" ] },
-    "learn_spells": { "arvore_roots_spell": 6 }
-  },
-  {
-    "id": "arvore_roots_spell",
-    "type": "SPELL",
-    "name": { "//~": "The name is a reference to the poem \"Goblin Market\" by Christina Rossetti.", "str": "Hungry Thirsty Roots" },
-    "description": "Your command over plants allows you to call forth roots from the earth to clutch and grasp at your enemies.",
-    "valid_targets": [ "hostile", "ground" ],
-    "flags": [ "VERBAL", "NO_PROJECTILE", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" ],
-    "max_level": 15,
-    "skill": "gramarye",
-    "teachable": false,
-    "difficulty": 3,
-    "spell_class": "ARVORE",
-    "effect": "attack",
-    "effect_str": "effect_hungry_roots",
-    "shape": "blast",
-    "damage_type": "bash",
-    "min_range": {
-      "math": [
-        "min( ( (2 + (u_spell_count('school': 'ARVORE') * 0.4) + (u_skill('gramarye') * 0.65) ) * scaling_factor(u_val('perception') ) ), 40)"
-      ]
-    },
-    "max_range": {
-      "math": [
-        "min( ( (2 + (u_spell_count('school': 'ARVORE') * 0.4) + (u_skill('gramarye') * 0.65) ) * scaling_factor(u_val('perception') ) ), 40)"
-      ]
-    },
-    "min_aoe": {
-      "math": [
-        "min( ( (0 + (u_spell_count('school': 'ARVORE') * 0.08) + (u_skill('gramarye') * 0.15) ) * scaling_factor(u_val('perception') ) ), 3)"
-      ]
-    },
-    "max_aoe": {
-      "math": [
-        "min( ( (0 + (u_spell_count('school': 'ARVORE') * 0.08) + (u_skill('gramarye') * 0.15) ) * scaling_factor(u_val('perception') ) ), 3)"
-      ]
-    },
-    "min_dot": { "math": [ "min( (0.15 + (u_spell_count('school': 'ARVORE') * 0.04) + (u_skill('gramarye') * 0.08) ), 3)" ] },
-    "max_dot": { "math": [ "min( (0.15 + (u_spell_count('school': 'ARVORE') * 0.04) + (u_skill('gramarye') * 0.08) ), 3)" ] },
-    "min_duration": {
-      "math": [
-        "( 150 + (u_spell_count('school': 'ARVORE') * 55) + (u_skill('gramarye') * 112) ) * scaling_factor(u_val('perception') )"
-      ]
-    },
-    "max_duration": {
-      "math": [
-        "( 680 + (u_spell_count('school': 'ARVORE') * 105) + (u_skill('gramarye') * 252) ) * scaling_factor(u_val('perception') )"
-      ]
-    },
-    "magic_type": "xedra_arvore_magick",
-    "base_casting_time": { "math": [ "max( (150 + (u_spell_count('school': 'ARVORE') * -2.2) + (u_skill('gramarye') * -3.1) ), 50)" ] },
-    "base_energy_cost": { "math": [ "max( (225 + (u_spell_count('school': 'ARVORE') * -2.2) + (u_skill('gramarye') * -3.1) ), 125)" ] }
-  },
-  {
     "id": "paraclesian_spell_dodge_bonus_arvore",
     "type": "SPELL",
     "name": "The Wind Blows, the Willow Bends",
     "description": "Like the flitting wind or the flexible willow, the spell allows you to avoid attacks much more easily.  It has <color_yellow>reduced effects</color> when on artificial terrain.",
-    "flags": [ "SOMATIC", "VERBAL", "NO_EXPLOSION_SFX", "RANDOM_DURATION" ],
-    "valid_targets": [ "self" ],
+    "flags": [
+      "SOMATIC",
+      "VERBAL",
+      "NO_EXPLOSION_SFX",
+      "RANDOM_DURATION"
+    ],
+    "valid_targets": [
+      "self"
+    ],
     "skill": "gramarye",
     "max_level": 15,
     "effect": "effect_on_condition",
@@ -161,7 +31,11 @@
       ]
     },
     "magic_type": "xedra_arvore_magick",
-    "base_energy_cost": { "math": [ "max( (600 + (u_spell_count('school': 'ARVORE') * -4.8) + (u_skill('gramarye') * -6.7) ), 400)" ] },
+    "base_energy_cost": {
+      "math": [
+        "max( (600 + (u_spell_count('school': 'ARVORE') * -4.8) + (u_skill('gramarye') * -6.7) ), 400)"
+      ]
+    },
     "base_casting_time": 150
   },
   {
@@ -169,8 +43,14 @@
     "type": "SPELL",
     "name": "Perennial Rebirth",
     "description": "Bind your soul to the heart of the forest, rebirthing yourself if you should die.  You may only perform this in thick forests or at an arvore altar, you may be reborn no more than once in a lunar month.",
-    "flags": [ "SOMATIC", "VERBAL", "NO_FAIL" ],
-    "valid_targets": [ "self" ],
+    "flags": [
+      "SOMATIC",
+      "VERBAL",
+      "NO_FAIL"
+    ],
+    "valid_targets": [
+      "self"
+    ],
     "skill": "gramarye",
     "teachable": false,
     "spell_class": "ARVORE",
@@ -188,8 +68,13 @@
     "type": "SPELL",
     "name": "Overgrowth",
     "description": "While outdoors and not underground, the Arvore can create a profusion of life around themselves, causing grass to grow through pavement, bushes and flowers to sprout, and trees to grow to full height in moments.",
-    "flags": [ "SOMATIC", "VERBAL" ],
-    "valid_targets": [ "self" ],
+    "flags": [
+      "SOMATIC",
+      "VERBAL"
+    ],
+    "valid_targets": [
+      "self"
+    ],
     "max_level": 15,
     "skill": "gramarye",
     "spell_class": "ARVORE",
@@ -198,51 +83,21 @@
     "effect": "effect_on_condition",
     "effect_str": "EOC_ARVORE_OVERGROWTH",
     "magic_type": "xedra_arvore_magick",
-    "base_casting_time": { "math": [ "max( (500 + (u_spell_count('school': 'ARVORE') * -8.2) + (u_skill('gramarye') * -12.6) ), 250)" ] },
-    "base_energy_cost": { "math": [ "max( (1500 + (u_spell_count('school': 'ARVORE') * -19.7) + (u_skill('gramarye') * -28.9) ), 750)" ] },
-    "learn_spells": { "arvore_tree_singing_spell": 5, "arvore_turn_into_tree": 9, "arvore_damage_zombies_heal_living": 12 }
-  },
-  {
-    "id": "arvore_cause_decay",
-    "type": "SPELL",
-    "name": "Fallen Trees Decay to Soil",
-    "description": "Even the mightiest tree returns to soil in the end.  The Arvore may channel this natural process into an area around themselves, infecting everyone within with the energies of rot.\n\n<color_yellow>This spell is indiscriminate</color> and <color_red>should not be used near allies</color>.",
-    "flags": [ "SOMATIC", "NO_PROJECTILE", "RANDOM_DURATION", "VERBAL" ],
-    "valid_targets": [ "hostile", "ground", "ally" ],
-    "skill": "gramarye",
-    "teachable": false,
-    "effect": "attack",
-    "shape": "blast",
-    "max_level": 15,
-    "difficulty": 9,
-    "spell_class": "ARVORE",
-    "damage_type": "biological",
-    "min_aoe": {
+    "base_casting_time": {
       "math": [
-        "min( ( (3 + (u_spell_count('school': 'ARVORE') * 0.45) + (u_skill('gramarye') * 0.8) ) * scaling_factor(u_val('perception') ) ), 25)"
+        "max( (500 + (u_spell_count('school': 'ARVORE') * -8.2) + (u_skill('gramarye') * -12.6) ), 250)"
       ]
     },
-    "max_aoe": {
+    "base_energy_cost": {
       "math": [
-        "min( ( (3 + (u_spell_count('school': 'ARVORE') * 0.45) + (u_skill('gramarye') * 0.8) ) * scaling_factor(u_val('perception') ) ), 25)"
+        "max( (1500 + (u_spell_count('school': 'ARVORE') * -19.7) + (u_skill('gramarye') * -28.9) ), 750)"
       ]
     },
-    "min_dot": { "math": [ "min( (1 + (u_spell_count('school': 'ARVORE') * 0.18) + (u_skill('gramarye') * 0.25) ), 6)" ] },
-    "max_dot": { "math": [ "min( (1 + (u_spell_count('school': 'ARVORE') * 0.18) + (u_skill('gramarye') * 0.25) ), 6)" ] },
-    "min_duration": {
-      "math": [
-        "( 482 + (u_spell_count('school': 'ARVORE') * 75) + (u_skill('gramarye') * 258) ) * scaling_factor(u_val('perception') )"
-      ]
-    },
-    "max_duration": {
-      "math": [
-        "( 2842 + (u_spell_count('school': 'ARVORE') * 210) + (u_skill('gramarye') * 458) ) * scaling_factor(u_val('perception') )"
-      ]
-    },
-    "magic_type": "xedra_arvore_magick",
-    "base_casting_time": { "math": [ "max( (150 + (u_spell_count('school': 'ARVORE') * 2.1) + (u_skill('gramarye') * -4.5) ), 75)" ] },
-    "base_energy_cost": { "math": [ "max( (1000 + (u_spell_count('school': 'ARVORE') * -25.9) + (u_skill('gramarye') * -31.3) ), 500)" ] },
-    "learn_spells": { "arvore_damage_zombies_heal_living": 7 }
+    "learn_spells": {
+      "arvore_tree_singing_spell": 5,
+      "arvore_turn_into_tree": 9,
+      "arvore_damage_zombies_heal_living": 12
+    }
   },
   {
     "id": "arvore_traverse_the_wilds",
@@ -250,9 +105,15 @@
     "name": "Traverse the Wilds",
     "description": "Roots grow together and so forests are connected.  The Arvore may use this connection to quickly transport themselves tree to tree, stepping into an adjacent tree and then stepping out of another one within the spell's range.",
     "message": "",
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "skill": "gramarye",
-    "flags": [ "VERBAL", "SOMATIC", "SILENT" ],
+    "flags": [
+      "VERBAL",
+      "SOMATIC",
+      "SILENT"
+    ],
     "effect": "effect_on_condition",
     "effect_str": "EOC_ARVORE_WALK_WILDS_TELEPORT_CHECK",
     "shape": "blast",
@@ -261,8 +122,16 @@
     "teachable": false,
     "max_level": 15,
     "magic_type": "xedra_arvore_magick",
-    "base_casting_time": { "math": [ "max( (250 + (u_spell_count('school': 'ARVORE') * 4.1) + (u_skill('gramarye') * -6.8) ), 125)" ] },
-    "base_energy_cost": { "math": [ "max( (250 + (u_spell_count('school': 'ARVORE') * 5.3) + (u_skill('gramarye') * -7.6) ), 80)" ] }
+    "base_casting_time": {
+      "math": [
+        "max( (250 + (u_spell_count('school': 'ARVORE') * 4.1) + (u_skill('gramarye') * -6.8) ), 125)"
+      ]
+    },
+    "base_energy_cost": {
+      "math": [
+        "max( (250 + (u_spell_count('school': 'ARVORE') * 5.3) + (u_skill('gramarye') * -7.6) ), 80)"
+      ]
+    }
   },
   {
     "id": "arvore_forest_translocate",
@@ -270,15 +139,26 @@
     "name": "From Root to Root the Forest Is Joined",
     "description": "All forests are connected at their hearts.  You can use this connection to travel from the depths of a forest to the depths of another forest, if you properly attune to your destination.",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "ARVORE",
     "skill": "gramarye",
-    "flags": [ "VERBAL", "SOMATIC" ],
+    "flags": [
+      "VERBAL",
+      "SOMATIC"
+    ],
     "caster_condition": {
       "and": [
         "u_is_outside",
-        { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_IN_THE_FOREST" },
-        { "not": { "u_at_om_location": "field" } }
+        {
+          "test_eoc": "EOC_CONDITION_CHECK_ARVORE_IN_THE_FOREST"
+        },
+        {
+          "not": {
+            "u_at_om_location": "field"
+          }
+        }
       ]
     },
     "caster_condition_fail_message": "You must be outdoors and within the depths of the forest to cast this spell.",
@@ -296,15 +176,27 @@
     "name": "Root to Root Attunement",
     "description": "Attune to a location for later traveling.  You must attune within the depths of a forest.",
     "teachable": false,
-    "valid_targets": [ "ground" ],
+    "valid_targets": [
+      "ground"
+    ],
     "spell_class": "ARVORE",
     "skill": "gramarye",
-    "flags": [ "VERBAL", "SOMATIC", "NO_FAIL" ],
+    "flags": [
+      "VERBAL",
+      "SOMATIC",
+      "NO_FAIL"
+    ],
     "caster_condition": {
       "and": [
         "u_is_outside",
-        { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_IN_THE_FOREST" },
-        { "not": { "u_at_om_location": "field" } }
+        {
+          "test_eoc": "EOC_CONDITION_CHECK_ARVORE_IN_THE_FOREST"
+        },
+        {
+          "not": {
+            "u_at_om_location": "field"
+          }
+        }
       ]
     },
     "caster_condition_fail_message": "You must be outdoors and within the depths of the forest to cast this spell.",
@@ -317,7 +209,9 @@
     "min_range": 1,
     "base_energy_cost": 0,
     "base_casting_time": {
-      "math": [ "max( (2880000 + (u_spell_count('school': 'ARVORE') * 59341) + (u_skill('gramarye') * -98963) ), 180000)" ]
+      "math": [
+        "max( (2880000 + (u_spell_count('school': 'ARVORE') * 59341) + (u_skill('gramarye') * -98963) ), 180000)"
+      ]
     }
   },
   {
@@ -325,9 +219,16 @@
     "type": "SPELL",
     "name": "Verdant Imprisonment",
     "description": "The ultimate expression of nature's power, you can turn your target into a tree that might have stood for a century or more.  It works best on an already-weakened target, and does not work at all on non-organic targets.",
-    "valid_targets": [ "hostile" ],
+    "valid_targets": [
+      "hostile"
+    ],
     "skill": "gramarye",
-    "flags": [ "VERBAL", "SOMATIC", "SILENT", "RANDOM_DAMAGE" ],
+    "flags": [
+      "VERBAL",
+      "SOMATIC",
+      "SILENT",
+      "RANDOM_DAMAGE"
+    ],
     "caster_condition": "u_is_outside",
     "caster_condition_fail_message": "You must be outdoors to cast Verdant Imprisonment.",
     "target_condition": "npc_is_outside",
@@ -350,35 +251,21 @@
       ]
     },
     "magic_type": "xedra_arvore_magick",
-    "base_casting_time": { "math": [ "max( (200 + (u_spell_count('school': 'ARVORE') * 2.1) + (u_skill('gramarye') * -2.9) ), 100)" ] },
-    "base_energy_cost": { "math": [ "max( (1750 + (u_spell_count('school': 'ARVORE') * 27.4) + (u_skill('gramarye') * -38.1) ), 850)" ] },
-    "ignored_monster_species": [ "NETHER_EMANATION", "ROBOT", "ROBOT_FLYING" ]
-  },
-  {
-    "id": "arvore_turn_into_tree_banish",
-    "type": "SPELL",
-    "name": { "str": "Verdant Imprisonment Self", "//~": "NO_I18N" },
-    "description": { "str": "This is the banishment that the target casts on themselves.", "//~": "NO_I18N" },
-    "valid_targets": [ "self" ],
-    "skill": "gramarye",
-    "flags": [ "VERBAL", "SOMATIC", "SILENT", "RANDOM_DAMAGE" ],
-    "effect": "banishment",
-    "shape": "blast",
-    "spell_class": "ARVORE",
-    "teachable": false,
-    "min_damage": {
+    "base_casting_time": {
       "math": [
-        "( 25 + (u_arvore_turn_into_tree_spell_count * 2.6) + (u_arvore_turn_into_tree_gramarye_level * 3.4) ) * u_arvore_turn_into_tree_intelligence"
+        "max( (200 + (u_spell_count('school': 'ARVORE') * 2.1) + (u_skill('gramarye') * -2.9) ), 100)"
       ]
     },
-    "max_damage": {
+    "base_energy_cost": {
       "math": [
-        "( 100 + (u_arvore_turn_into_tree_spell_count * 5.6) + (u_arvore_turn_into_tree_gramarye_level * 7.1) ) * u_arvore_turn_into_tree_intelligence"
+        "max( (1750 + (u_spell_count('school': 'ARVORE') * 27.4) + (u_skill('gramarye') * -38.1) ), 850)"
       ]
     },
-    "min_range": 0,
-    "max_range": 0,
-    "ignored_monster_species": [ "NETHER_EMANATION", "ROBOT", "ROBOT_FLYING" ]
+    "ignored_monster_species": [
+      "NETHER_EMANATION",
+      "ROBOT",
+      "ROBOT_FLYING"
+    ]
   },
   {
     "id": "arvore_damage_zombies_heal_living",
@@ -386,8 +273,16 @@
     "name": "Embrace of the Verdant Mother",
     "description": "While outdoors and not underground, the Arvore can unleash the power of nature against their enemies.  The walking dead and most creatures not native to the world suffer the Earthmother's wrath, while animals and humans are healed.  Triffids, being plants, are healed as well.\n\nNote that this power is <color_yellow>indiscriminate</color>: if the Arvore has somehow bound a Nether creature to their service, it will be damaged, and hostile humans will be healed.",
     "message": "",
-    "flags": [ "SOMATIC", "VERBAL", "RANDOM_DAMAGE", "IGNORE_WALLS" ],
-    "valid_targets": [ "hostile", "ally" ],
+    "flags": [
+      "SOMATIC",
+      "VERBAL",
+      "RANDOM_DAMAGE",
+      "IGNORE_WALLS"
+    ],
+    "valid_targets": [
+      "hostile",
+      "ally"
+    ],
     "max_level": 15,
     "skill": "gramarye",
     "spell_class": "ARVORE",
@@ -406,7 +301,15 @@
       ]
     },
     "magic_type": "xedra_arvore_magick",
-    "base_casting_time": { "math": [ "max( (350 + (u_spell_count('school': 'ARVORE') * 6.3) + (u_skill('gramarye') * -8.6) ), 100)" ] },
-    "base_energy_cost": { "math": [ "max( (2200 + (u_spell_count('school': 'ARVORE') * 25.6) + (u_skill('gramarye') * -37.9) ), 1500)" ] }
+    "base_casting_time": {
+      "math": [
+        "max( (350 + (u_spell_count('school': 'ARVORE') * 6.3) + (u_skill('gramarye') * -8.6) ), 100)"
+      ]
+    },
+    "base_energy_cost": {
+      "math": [
+        "max( (2200 + (u_spell_count('school': 'ARVORE') * 25.6) + (u_skill('gramarye') * -37.9) ), 1500)"
+      ]
+    }
   }
 ]

@@ -21,3 +21,32 @@ ccb.content.define_spell {
     extra_spells = { { spell = "eoc_restoration_setup", self = true } },
     max_level = 15,
 }
+
+ccb.content.define_spell {
+    id = "druid_healing",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "flask_regeneration",
+    spell_class = "DRUID",
+    magic_type = "magiclysm_restoration_magic",
+    name = "Restoration",
+    description = "Slowly heal your wounds by drawing on the power of nature.\n\nYou must be <color_yellow>outdoors and in a natural area</color> away from civilization to cast Restoration.",
+    caster_condition_fail_message = "You must be surrounded by nature to use its power to heal.",
+    flags = { "RESTORATION_SPELL", "CONCENTRATE", "SOMATIC", "VERBAL", "NO_LEGS" },
+    valid_targets = { "self" },
+    min_duration = 15000,
+    duration_increment = 3000,
+    max_duration = 90000,
+    base_energy_cost = 800,
+    final_energy_cost = 500,
+    energy_increment = -12,
+    difficulty = 8,
+    max_level = 25,
+    base_casting_time = 12000,
+    final_casting_time = 3000,
+    casting_time_increment = -360,
+    caster_when = "wave14a_magiclysm_cond_1",
+    extra_spells = {
+        { spell = "eoc_restoration_setup", self = true },
+    },
+}

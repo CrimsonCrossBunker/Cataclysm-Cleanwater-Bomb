@@ -18,3 +18,4 @@ require("book_items")
 
 require("explosion_lights")
 require("jmath")
+require("spell_math_handlers")

@@ -6,25 +6,54 @@
     "description": "You can improve your strength and agility with your powers.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
     "message": "",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "caster_condition": {
       "and": [
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1b" } },
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1a" } }
+        {
+          "not": {
+            "u_has_bionics": "bio_exodii_cyberframe_1b"
+          }
+        },
+        {
+          "not": {
+            "u_has_bionics": "bio_exodii_cyberframe_1a"
+          }
+        }
       ]
     },
     "caster_condition_fail_message": "You do not have organic limbs.",
     "spell_class": "BIOKINETIC",
     "magic_type": "mom_psionics",
     "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "flags": [
+      "PSIONIC",
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS",
+      "RANDOM_DURATION",
+      "NO_EXPLOSION_SFX"
+    ],
     "difficulty": 2,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
+    "max_level": {
+      "math": [
+        "mom_biokinesis_max_power_formula()"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_BIOKIN_PHYSICAL_ENHANCE_INITIATE",
     "shape": "blast",
-    "min_duration": { "math": [ "( (u_spell_level('biokin_physical_enhance') * 1500) + 9000) * psionic_power_modifiers()" ] },
-    "max_duration": { "math": [ "( (u_spell_level('biokin_physical_enhance') * 9000) + 45000) * psionic_power_modifiers()" ] },
+    "min_duration": {
+      "math": [
+        "( (u_spell_level('biokin_physical_enhance') * 1500) + 9000) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( (u_spell_level('biokin_physical_enhance') * 9000) + 45000) * psionic_power_modifiers()"
+      ]
+    },
     "base_energy_cost": {
       "math": [
         "u_effect_intensity('effect_biokin_physical') > -1 ? 0 : max( (3500 - (u_spell_level('biokin_physical_enhance') * 175) ), 1250)"
@@ -43,18 +72,39 @@
     "description": "You can lessen the impact of pain on your performance, though this has no effect on the underlying injuries.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
     "message": "",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "BIOKINETIC",
     "magic_type": "mom_psionics",
     "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "flags": [
+      "PSIONIC",
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS",
+      "RANDOM_DURATION",
+      "NO_EXPLOSION_SFX"
+    ],
     "difficulty": 1,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
+    "max_level": {
+      "math": [
+        "mom_biokinesis_max_power_formula()"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_BIOKIN_PAIN_INITIATE",
     "shape": "blast",
-    "min_duration": { "math": [ "( (u_spell_level('biokin_overcome_pain') * 2000) + 30000) * psionic_power_modifiers()" ] },
-    "max_duration": { "math": [ "( (u_spell_level('biokin_overcome_pain') * 7500) + 130000) * psionic_power_modifiers()" ] },
+    "min_duration": {
+      "math": [
+        "( (u_spell_level('biokin_overcome_pain') * 2000) + 30000) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( (u_spell_level('biokin_overcome_pain') * 7500) + 130000) * psionic_power_modifiers()"
+      ]
+    },
     "base_energy_cost": {
       "math": [
         "u_effect_intensity('effect_biokin_overcome_pain') > 0 ? 0 : max((1750 - (u_spell_level('biokin_overcome_pain') * 75)), 850)"
@@ -73,18 +123,39 @@
     "description": "You can make the entire surface of your skin selectively permeable, allowing you to 'breathe' through it.  You can breathe in low-oxygen environments or underwater, but are more vulnerable to toxic gas.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.  Oxygen Absorption <color_red>cannot be active</color> with Sealed System.",
     "message": "",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "BIOKINETIC",
     "magic_type": "mom_psionics",
     "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "flags": [
+      "PSIONIC",
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS",
+      "RANDOM_DURATION",
+      "NO_EXPLOSION_SFX"
+    ],
     "difficulty": 2,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
+    "max_level": {
+      "math": [
+        "mom_biokinesis_max_power_formula()"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_BIOKIN_BREATHE_SKIN_INITIATE",
     "shape": "blast",
-    "min_duration": { "math": [ "( (u_spell_level('biokin_breathe_skin') * 3600) + 18000) * psionic_power_modifiers()" ] },
-    "max_duration": { "math": [ "( (u_spell_level('biokin_breathe_skin') * 7200) + 54000) * psionic_power_modifiers()" ] },
+    "min_duration": {
+      "math": [
+        "( (u_spell_level('biokin_breathe_skin') * 3600) + 18000) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( (u_spell_level('biokin_breathe_skin') * 7200) + 54000) * psionic_power_modifiers()"
+      ]
+    },
     "base_energy_cost": {
       "math": [
         "u_effect_intensity('effect_biokin_breathe_skin') > 0 ? 0 : max((2500 - (u_spell_level('biokin_breathe_skin') * 85)), 1200)"
@@ -97,99 +168,32 @@
     }
   },
   {
-    "id": "biokin_flexibility",
-    "type": "SPELL",
-    "name": "[Ψ]Flexibility",
-    "description": "You can make your limbs move far beyond the normal human range of motion, allowing you to twist out of others' grasp and reduce fall damage.",
-    "message": "You body begins twisting in unbelievable ways.",
-    "teachable": false,
-    "valid_targets": [ "self" ],
-    "caster_condition": {
-      "and": [
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1b" } },
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1a" } }
-      ]
-    },
-    "caster_condition_fail_message": "You do not have organic limbs.",
-    "spell_class": "BIOKINETIC",
-    "magic_type": "mom_psionics",
-    "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
-    "difficulty": 3,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
-    "effect": "attack",
-    "effect_str": "effect_biokin_flexibility",
-    "shape": "blast",
-    "base_energy_cost": 2500,
-    "final_energy_cost": 1250,
-    "energy_increment": -175,
-    "min_duration": 200,
-    "max_duration": 500,
-    "base_casting_time": 50,
-    "final_casting_time": 15,
-    "casting_time_increment": -2.5
-  },
-  {
-    "id": "biokin_dash",
-    "type": "SPELL",
-    "name": "[Ψ]Burst of Speed",
-    "description": "Like a cheetah, you can run with incredible speed for a short distance.",
-    "message": "You move almost faster than the eye can see.",
-    "teachable": false,
-    "valid_targets": [ "ground", "ally", "hostile" ],
-    "spell_class": "BIOKINETIC",
-    "magic_type": "mom_psionics",
-    "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
-    "difficulty": 3,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
-    "caster_condition": {
-      "and": [
-        { "not": { "u_has_effect": "grabbed", "bodypart": "head" } },
-        { "not": { "u_has_effect": "grabbed", "bodypart": "torso" } },
-        { "not": { "u_has_effect": "grabbed", "bodypart": "arm_l" } },
-        { "not": { "u_has_effect": "grabbed", "bodypart": "arm_r" } },
-        { "not": { "u_has_effect": "grabbed", "bodypart": "leg_l" } },
-        { "not": { "u_has_effect": "grabbed", "bodypart": "leg_r" } },
-        { "not": { "u_has_effect": "disabled", "bodypart": "leg_l" } },
-        { "not": { "u_has_effect": "disabled", "bodypart": "leg_r" } },
-        { "not": { "u_is_on_terrain_with_flag": "DEEP_WATER" } },
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1b" } },
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1a" } }
-      ]
-    },
-    "caster_condition_fail_message": "Your circumstances prevent you from moving freely right now.",
-    "effect": "dash",
-    "shape": "blast",
-    "min_damage": 0,
-    "damage_type": "biological",
-    "min_range": {
-      "math": [
-        "min( ( ( (u_spell_level('biokin_dash') * 0.5) + 3 ) * psionic_power_modifiers()), 12) * (u_effect_intensity('effect_biokin_combat_dance') > -1 ? (1.25 + (u_spell_level('biokin_combat_dance') * 0.03) ) : 1 )"
-      ]
-    },
-    "max_range": 12,
-    "base_energy_cost": 3000,
-    "final_energy_cost": 1500,
-    "energy_increment": -190,
-    "base_casting_time": 75,
-    "final_casting_time": 15,
-    "casting_time_increment": -4.5
-  },
-  {
     "id": "biokin_change_appearance",
     "type": "SPELL",
     "name": "[Ψ]Flesh of Clay",
     "description": "You can reshape your physical appearance, changing hair, skin, or eye color.  Your own mother wouldn't recognize you when you're done.",
     "message": "You physical appearance shifts!",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "BIOKINETIC",
     "magic_type": "mom_psionics",
     "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "flags": [
+      "PSIONIC",
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS",
+      "RANDOM_DURATION",
+      "NO_EXPLOSION_SFX"
+    ],
     "difficulty": 4,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
+    "max_level": {
+      "math": [
+        "mom_biokinesis_max_power_formula()"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_BIOKIN_CHANGE_APPEARANCE",
     "shape": "blast",
@@ -207,25 +211,54 @@
     "description": "You can increase the strength of your skin, making it almost like armor while still allowing you to move freely.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
     "message": "",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "caster_condition": {
       "and": [
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1b" } },
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1a" } }
+        {
+          "not": {
+            "u_has_bionics": "bio_exodii_cyberframe_1b"
+          }
+        },
+        {
+          "not": {
+            "u_has_bionics": "bio_exodii_cyberframe_1a"
+          }
+        }
       ]
     },
     "caster_condition_fail_message": "Your skin has mostly been replaced with metal.",
     "spell_class": "BIOKINETIC",
     "magic_type": "mom_psionics",
     "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "flags": [
+      "PSIONIC",
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS",
+      "RANDOM_DURATION",
+      "NO_EXPLOSION_SFX"
+    ],
     "difficulty": 4,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
+    "max_level": {
+      "math": [
+        "mom_biokinesis_max_power_formula()"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_BIOKIN_HARDENED_SKIN_INITIATE",
     "shape": "blast",
-    "min_duration": { "math": [ "( (u_spell_level('biokin_armor_skin') * 8600) + 35600) * psionic_power_modifiers()" ] },
-    "max_duration": { "math": [ "( (u_spell_level('biokin_armor_skin') * 24400) + 69300) * psionic_power_modifiers()" ] },
+    "min_duration": {
+      "math": [
+        "( (u_spell_level('biokin_armor_skin') * 8600) + 35600) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( (u_spell_level('biokin_armor_skin') * 24400) + 69300) * psionic_power_modifiers()"
+      ]
+    },
     "base_energy_cost": {
       "math": [
         "u_effect_intensity('effect_biokin_armor_skin') > 0 ? 0 : max((2500 - (u_spell_level('biokin_armor_skin') * 125)), 750)"
@@ -244,13 +277,25 @@
     "description": "With a moment of concentration, you can trigger a surge of adrenaline.  This provides a speed boost, albeit at a draining cost when the boost expires.",
     "message": "Your heartbeat surges as your body floods with adrenaline.",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "BIOKINETIC",
     "magic_type": "mom_psionics",
     "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX" ],
+    "flags": [
+      "PSIONIC",
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS",
+      "NO_EXPLOSION_SFX"
+    ],
     "difficulty": 4,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
+    "max_level": {
+      "math": [
+        "mom_biokinesis_max_power_formula()"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_BIOKIN_ADRENALINE_TRIGGER",
     "shape": "blast",
@@ -268,18 +313,39 @@
     "description": "You can increase the heat dissipation and retention of your body, allowing you to function in a much wider range of temperatures.  Temperature Adaptability and Sealed System <color_red>will cancel each other</color>.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
     "message": "",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "BIOKINETIC",
     "magic_type": "mom_psionics",
     "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "flags": [
+      "PSIONIC",
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS",
+      "RANDOM_DURATION",
+      "NO_EXPLOSION_SFX"
+    ],
     "difficulty": 4,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
+    "max_level": {
+      "math": [
+        "mom_biokinesis_max_power_formula()"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_BIOKIN_CLIMATE_CONTROL_INITIATE",
     "shape": "blast",
-    "min_duration": { "math": [ "( (u_spell_level('biokin_climate_control') * 18000) + 30000 ) * psionic_power_modifiers()" ] },
-    "max_duration": { "math": [ "( (u_spell_level('biokin_climate_control') * 36000) + 60000) * psionic_power_modifiers()" ] },
+    "min_duration": {
+      "math": [
+        "( (u_spell_level('biokin_climate_control') * 18000) + 30000 ) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( (u_spell_level('biokin_climate_control') * 36000) + 60000) * psionic_power_modifiers()"
+      ]
+    },
     "base_energy_cost": {
       "math": [
         "u_effect_intensity('effect_biokin_climate_control') > 0 ? 0 : max((3500 - (u_spell_level('biokin_climate_control') * 175)), 1250)"
@@ -298,26 +364,55 @@
     "description": "Increase your range of motion and flexibility such that you can move more easily even in encumbering gear.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
     "message": "",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "caster_condition": {
       "and": [
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1b" } },
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1a" } }
+        {
+          "not": {
+            "u_has_bionics": "bio_exodii_cyberframe_1b"
+          }
+        },
+        {
+          "not": {
+            "u_has_bionics": "bio_exodii_cyberframe_1a"
+          }
+        }
       ]
     },
     "caster_condition_fail_message": "You do not have organic limbs.",
     "spell_class": "BIOKINETIC",
     "magic_type": "mom_psionics",
     "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "NO_EXPLOSION_SFX", "RANDOM_DURATION" ],
+    "flags": [
+      "PSIONIC",
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS",
+      "NO_EXPLOSION_SFX",
+      "RANDOM_DURATION"
+    ],
     "difficulty": 5,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
+    "max_level": {
+      "math": [
+        "mom_biokinesis_max_power_formula()"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_BIOKIN_ENHANCE_MOBILITY_INITIATE",
     "shape": "blast",
     "min_damage": 1,
-    "min_duration": { "math": [ "( (u_spell_level('biokin_enhance_mobility') * 4500 ) + 30000) * psionic_power_modifiers()" ] },
-    "max_duration": { "math": [ "( (u_spell_level('biokin_enhance_mobility') * 12000 ) + 90000) * psionic_power_modifiers()" ] },
+    "min_duration": {
+      "math": [
+        "( (u_spell_level('biokin_enhance_mobility') * 4500 ) + 30000) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( (u_spell_level('biokin_enhance_mobility') * 12000 ) + 90000) * psionic_power_modifiers()"
+      ]
+    },
     "base_energy_cost": {
       "math": [
         "u_effect_intensity('effect_biokin_enhance_mobility') > 0 ? 0 : max((4500 - (u_spell_level('biokin_enhance_mobility') * 150)), 2500)"
@@ -336,25 +431,54 @@
     "description": "Who needs tools?  You can apply enough raw force or torque with your bare hands to substitute for many simple tools.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
     "message": "",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "caster_condition": {
       "and": [
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1b" } },
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1a" } }
+        {
+          "not": {
+            "u_has_bionics": "bio_exodii_cyberframe_1b"
+          }
+        },
+        {
+          "not": {
+            "u_has_bionics": "bio_exodii_cyberframe_1a"
+          }
+        }
       ]
     },
     "caster_condition_fail_message": "You do not have organic limbs.",
     "spell_class": "BIOKINETIC",
     "magic_type": "mom_psionics",
     "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "flags": [
+      "PSIONIC",
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS",
+      "RANDOM_DURATION",
+      "NO_EXPLOSION_SFX"
+    ],
     "difficulty": 5,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
+    "max_level": {
+      "math": [
+        "mom_biokinesis_max_power_formula()"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_BIOKIN_HAMMERHAND_INITIATE",
     "shape": "blast",
-    "min_duration": { "math": [ "( (u_spell_level('biokin_hammerhand') * 45000) + 180000) * psionic_power_modifiers()" ] },
-    "max_duration": { "math": [ "( (u_spell_level('biokin_hammerhand') * 75000) + 540000) * psionic_power_modifiers()" ] },
+    "min_duration": {
+      "math": [
+        "( (u_spell_level('biokin_hammerhand') * 45000) + 180000) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( (u_spell_level('biokin_hammerhand') * 75000) + 540000) * psionic_power_modifiers()"
+      ]
+    },
     "base_energy_cost": {
       "math": [
         "u_effect_intensity('effect_biokin_hammerhand') > 0 ? 0 : max((4500 - (u_spell_level('biokin_hammerhand') * 225)), 2250)"
@@ -373,25 +497,54 @@
     "description": "You can improve your sensory acuity and the speed at which your brain processes sensory inputs.\n\nThis power <color_yellow>is maintained by concentration</color> and <color_red>may fail</color> if <color_yellow>concentration is interrupted</color>.",
     "message": "",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "caster_condition": {
       "and": [
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1b" } },
-        { "not": { "u_has_bionics": "bio_exodii_cyberframe_1a" } }
+        {
+          "not": {
+            "u_has_bionics": "bio_exodii_cyberframe_1b"
+          }
+        },
+        {
+          "not": {
+            "u_has_bionics": "bio_exodii_cyberframe_1a"
+          }
+        }
       ]
     },
     "caster_condition_fail_message": "You do not have organic limbs.",
     "spell_class": "BIOKINETIC",
     "magic_type": "mom_psionics",
     "skill": "metaphysics",
-    "flags": [ "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION", "NO_EXPLOSION_SFX" ],
+    "flags": [
+      "PSIONIC",
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS",
+      "RANDOM_DURATION",
+      "NO_EXPLOSION_SFX"
+    ],
     "difficulty": 6,
-    "max_level": { "math": [ "mom_biokinesis_max_power_formula()" ] },
+    "max_level": {
+      "math": [
+        "mom_biokinesis_max_power_formula()"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_BIOKIN_REFLEX_ENHANCE_INITIATE",
     "shape": "blast",
-    "min_duration": { "math": [ "( (u_spell_level('biokin_reflex_enhance') * 1500) + 9000) * psionic_power_modifiers()" ] },
-    "max_duration": { "math": [ "( (u_spell_level('biokin_reflex_enhance') * 9000) + 45000) * psionic_power_modifiers()" ] },
+    "min_duration": {
+      "math": [
+        "( (u_spell_level('biokin_reflex_enhance') * 1500) + 9000) * psionic_power_modifiers()"
+      ]
+    },
+    "max_duration": {
+      "math": [
+        "( (u_spell_level('biokin_reflex_enhance') * 9000) + 45000) * psionic_power_modifiers()"
+      ]
+    },
     "base_energy_cost": {
       "math": [
         "u_effect_intensity('effect_biokin_reflex') > -1 ? 0 : max((5500 - (u_spell_level('biokin_reflex_enhance') * 205)), 2250)"

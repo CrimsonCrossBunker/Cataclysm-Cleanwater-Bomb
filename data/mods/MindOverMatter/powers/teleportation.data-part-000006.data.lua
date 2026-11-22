@@ -18,3 +18,21 @@ ccb.content.define_spell {
     min_aoe = 1,
     max_aoe = 2,
 }
+
+ccb.content.define_spell {
+    id = "teleport_warper_combat_warp_chance_attacker",
+    skill = "metaphysics",
+    shape = "blast",
+    effect = "short_range_teleport",
+    spell_class = "TELEPORTER",
+    magic_type = "mom_psionics",
+    name = ccb.content.text_without_extraction("[Ψ]Flickerflash Stance Attacker Warp Chance"),
+    description = ccb.content.text_without_extraction("Chance to teleport when attacking a target"),
+    message = "",
+    teachable = false,
+    flags = { "PSIONIC", "SILENT", "NO_HANDS", "NO_LEGS", "TARGET_TELEPORT", "IGNORE_WALLS" },
+    valid_targets = { "ground", "hostile" },
+    min_range = 4,
+    min_aoe = { handler = "wave14a_mindovermatter_stat_13", fallback = 0 },
+    max_aoe = { handler = "wave14a_mindovermatter_stat_13", fallback = 0 },
+}

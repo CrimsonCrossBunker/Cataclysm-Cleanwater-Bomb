@@ -2,65 +2,27 @@
   {
     "id": "ierde_no_sleep_meditate_spell",
     "type": "SPELL",
-    "name": { "str": "Unsleeping Earth Vigil Spell", "//~": "NO_I18N" },
+    "name": {
+      "str": "Unsleeping Earth Vigil Spell",
+      "//~": "NO_I18N"
+    },
     "description": {
       "str": "The spell cast by the Unsleeping Earth Vigil mutation.  It's a bug if you have it directly.",
       "//~": "NO_I18N"
     },
     "message": "",
     "teachable": false,
-    "valid_targets": [ "self" ],
-    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS" ],
+    "valid_targets": [
+      "self"
+    ],
+    "flags": [
+      "SILENT",
+      "NO_HANDS",
+      "NO_LEGS"
+    ],
     "effect": "effect_on_condition",
     "effect_str": "EOC_IERDE_NO_SLEEP_MEDITATE",
     "shape": "blast"
-  },
-  {
-    "id": "ierde_smashing_punch_spell",
-    "type": "SPELL",
-    "name": { "str": "Avalanche Blow Spell", "//~": "NO_I18N" },
-    "description": { "str": "The spell cast by the Avalanche Blow mutation.  It's a bug if you have it directly.", "//~": "NO_I18N" },
-    "message": "",
-    "teachable": false,
-    "valid_targets": [ "ground" ],
-    "flags": [ "LOUD", "RANDOM_DAMAGE", "NO_LEGS" ],
-    "effect": "bash",
-    "shape": "blast",
-    "min_damage": { "math": [ "u_val('strength') * 2.5" ] },
-    "max_damage": { "math": [ "u_val('strength') * 3.5" ] },
-    "min_range": 1,
-    "max_range": 1
-  },
-  {
-    "id": "ierde_create_pits_spell",
-    "type": "SPELL",
-    "name": "Earthen Grasp",
-    "description": "Open the ground beneath your enemies' feet, dumping them into pits.",
-    "teachable": false,
-    "valid_targets": [ "hostile", "ground", "ally" ],
-    "spell_class": "IERDE",
-    "skill": "deduction",
-    "flags": [ "VERBAL", "SOMATIC" ],
-    "difficulty": 4,
-    "max_level": { "math": [ "str_to_level(1)" ] },
-    "effect": "ter_transform",
-    "effect_str": "ierde_create_pits_transform",
-    "shape": "blast",
-    "min_range": {
-      "math": [ "min( ( ( (u_spell_level('ierde_create_pits_spell') * 0.8) + 5) * (scaling_factor(u_val('strength') ) ) ), 40)" ]
-    },
-    "max_range": 40,
-    "min_aoe": {
-      "math": [ "min( ( ( (u_spell_level('ierde_create_pits_spell') * 0.4) + 0) * (scaling_factor(u_val('strength') ) ) ), 10)" ]
-    },
-    "max_aoe": 10,
-    "magic_type": "xe_fey_magick",
-    "base_energy_cost": 450,
-    "base_casting_time": 150,
-    "sound_description": "the ground shakes!",
-    "sound_id": "earth_spell",
-    "sound_variant": "strong",
-    "learn_spells": { "ierde_entrap_target_in_stone": 6 }
   },
   {
     "id": "ierde_tunnel_translocation_spell",
@@ -68,12 +30,21 @@
     "name": "Traveling the Veins of the Earth",
     "description": "The earth is crisscrossed with fissures, with layers of rock and veins of metal, and deeper, with flows of molten rock.  The Ierde can flow along those paths, traveling deep within the earth to any point they have previously been to.",
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "IERDE",
     "skill": "deduction",
-    "flags": [ "VERBAL", "SOMATIC" ],
+    "flags": [
+      "VERBAL",
+      "SOMATIC"
+    ],
     "difficulty": 9,
-    "max_level": { "math": [ "per_to_level(1)" ] },
+    "max_level": {
+      "math": [
+        "per_to_level(1)"
+      ]
+    },
     "effect": "effect_on_condition",
     "effect_str": "EOC_IERDE_TUNNEL_TRANSLOCATE_CHECK",
     "shape": "blast",
@@ -84,16 +55,25 @@
   {
     "id": "ierde_tunnel_translocation_attune",
     "type": "SPELL",
-    "name": { "str": "Traveling the Veins of the Earth Attunement", "//~": "NO_I18N" },
+    "name": {
+      "str": "Traveling the Veins of the Earth Attunement",
+      "//~": "NO_I18N"
+    },
     "description": {
       "str": "Attune to a location for later traveling.  You must attune deep within the earth on the living rock.",
       "//~": "NO_I18N"
     },
     "teachable": false,
-    "valid_targets": [ "self" ],
+    "valid_targets": [
+      "self"
+    ],
     "spell_class": "IERDE",
     "skill": "deduction",
-    "flags": [ "VERBAL", "SOMATIC", "NO_FAIL" ],
+    "flags": [
+      "VERBAL",
+      "SOMATIC",
+      "NO_FAIL"
+    ],
     "difficulty": 1,
     "max_level": 1,
     "effect": "effect_on_condition",
@@ -101,6 +81,10 @@
     "shape": "blast",
     "magic_type": "xe_fey_magick",
     "base_energy_cost": 0,
-    "base_casting_time": { "math": [ "2880000 - max(( u_spell_level('ierde_tunnel_translocation_spell') * 108000), 180000)" ] }
+    "base_casting_time": {
+      "math": [
+        "2880000 - max(( u_spell_level('ierde_tunnel_translocation_spell') * 108000), 180000)"
+      ]
+    }
   }
 ]
