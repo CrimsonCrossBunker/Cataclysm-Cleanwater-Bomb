@@ -5567,6 +5567,9 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     content.set_function( "edit", [register_definition]( const sol::object & value ) {
         register_definition( value, definition_operation::edit );
     } );
+    content.set_function( "upsert", [register_definition]( const sol::object & value ) {
+        register_definition( value, definition_operation::upsert );
+    } );
     auto edit_catalog = [transaction]( const std::string & id, auto & registrations,
     const char *kind ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
@@ -7570,7 +7573,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 detail::rotatable_symbol_registry_group( definition.symbols.front() );
             validate_operation( entry.operation, !current.empty(), definition.key,
                                 "rotatable symbol" );
-            if( check_engine_state && entry.operation == definition_operation::add ) {
+            if( check_engine_state && ( entry.operation == definition_operation::add ||
+                                        ( entry.operation == definition_operation::upsert && current.empty() ) ) ) {
                 for( const std::uint32_t symbol : candidate ) {
                     if( !detail::rotatable_symbol_registry_group( symbol ).empty() ) {
                         throw std::runtime_error( "rotatable symbol '" + definition.key +

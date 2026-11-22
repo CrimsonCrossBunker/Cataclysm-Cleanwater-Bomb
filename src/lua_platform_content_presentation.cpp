@@ -58,7 +58,8 @@ enum class definition_operation : int {
     add,
     replace,
     edit,
-    append
+    append,
+    upsert
 };
 
 enum class handle_lifecycle : int {
@@ -464,6 +465,8 @@ std::string operation_name( const definition_operation operation )
             return "edit";
         case definition_operation::append:
             return "append";
+        case definition_operation::upsert:
+            return "upsert";
     }
     return "unknown";
 }
@@ -869,13 +872,15 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
 bool presentation_content_transaction::register_definition( const sol::object &value,
         const int raw_operation )
 {
-    if( raw_operation < 0 || raw_operation > 2 ) {
+    if( raw_operation < 0 || ( raw_operation > 2 && raw_operation != 4 ) ) {
         throw std::runtime_error( "invalid Platform content operation" );
     }
     if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
         throw std::runtime_error( "content transaction is no longer building" );
     }
-    const definition_operation operation = static_cast<definition_operation>( raw_operation );
+    const definition_operation operation = raw_operation == 4 ?
+                                           definition_operation::upsert :
+                                           static_cast<definition_operation>( raw_operation );
     const auto register_catalog = [this, operation]( auto handle, auto & registrations,
     const char *kind ) {
         if( handle.token != pimpl_->token ) {
@@ -1484,8 +1489,9 @@ bool presentation_content_transaction::apply( std::string &error )
         for( const snippet_category_registration &entry : pimpl_->snippet_categories ) {
             const snippet_category_definition_data &source = *entry.definition;
             auto previous = SNIPPET.snippets_by_category.find( source.id );
-            if( entry.operation == definition_operation::replace &&
-                previous != SNIPPET.snippets_by_category.end() ) {
+            const bool replaces_category = entry.operation == definition_operation::replace ||
+                                           entry.operation == definition_operation::upsert;
+            if( replaces_category && previous != SNIPPET.snippets_by_category.end() ) {
                 for( const snippet_library::weighted_id &value : previous->second.ids ) {
                     SNIPPET.snippets_by_id.erase( value.value );
                     SNIPPET.name_by_id.erase( value.value );
@@ -1494,7 +1500,7 @@ bool presentation_content_transaction::apply( std::string &error )
             }
             snippet_library::category_snippets &category =
                 SNIPPET.snippets_by_category[source.id];
-            if( entry.operation == definition_operation::replace ) {
+            if( replaces_category ) {
                 category.ids.clear();
                 category.no_id.clear();
             }

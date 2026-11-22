@@ -2185,13 +2185,15 @@ character_content_transaction::~character_content_transaction() = default;
 bool character_content_transaction::register_definition( const sol::object &value,
         const int raw_operation )
 {
-    if( raw_operation < 0 || raw_operation > 2 ) {
+    if( raw_operation < 0 || ( raw_operation > 2 && raw_operation != 4 ) ) {
         throw std::runtime_error( "invalid Platform content operation" );
     }
     if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
         throw std::runtime_error( "content transaction is no longer building" );
     }
-    const definition_operation operation = static_cast < definition_operation >( raw_operation );
+    const definition_operation operation = raw_operation == 4 ?
+                                           definition_operation::upsert :
+                                           static_cast<definition_operation>( raw_operation );
     const auto register_catalog = [this, operation]( auto handle, auto & registrations,
     const char *kind ) {
         if( handle.token != pimpl_->token ) {
@@ -7323,7 +7325,8 @@ void character_content_transaction::impl::apply_technique()
             native.lua_platform_apply_handler = source.position_handler;
         }
         native.was_loaded = true;
-        if( entry.operation == definition_operation::replace ) {
+        if( entry.operation == definition_operation::replace ||
+            ( entry.operation == definition_operation::upsert && id.is_valid() ) ) {
             detail::ma_technique_registry().restore( native );
         } else {
             detail::ma_technique_registry().insert( native );

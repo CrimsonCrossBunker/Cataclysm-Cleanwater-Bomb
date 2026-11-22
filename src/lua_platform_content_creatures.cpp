@@ -4169,13 +4169,15 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
 bool creatures_content_transaction::register_definition( const sol::object &value,
         const int raw_operation )
 {
-    if( raw_operation < 0 || raw_operation > 2 ) {
+    if( raw_operation < 0 || ( raw_operation > 2 && raw_operation != 4 ) ) {
         throw std::runtime_error( "invalid Platform content operation" );
     }
     if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
         throw std::runtime_error( "content transaction is no longer building" );
     }
-    const definition_operation operation = static_cast<definition_operation>( raw_operation );
+    const definition_operation operation = raw_operation == 4 ?
+                                           definition_operation::upsert :
+                                           static_cast<definition_operation>( raw_operation );
     const auto register_catalog = [this, operation]( auto handle, auto & registrations,
     const char *kind ) {
         if( handle.token != pimpl_->token ) {
@@ -6063,7 +6065,8 @@ void creatures_content_transaction::impl::apply_monster()
         const monster_definition_data &source = *entry.definition;
         const mtype_id id( source.id );
         const mtype *previous = id.is_valid() ? &id.obj() : nullptr;
-        if( entry.operation == definition_operation::add && previous && !previous->src.empty() &&
+        if( ( entry.operation == definition_operation::add ||
+              entry.operation == definition_operation::upsert ) && previous && !previous->src.empty() &&
             loader.source_load_order( previous->src.back().second.str() ) >
             loader.source_load_order( this->owner ) ) {
             continue;

@@ -81,7 +81,8 @@ enum class lifecycle : int {
 enum class operation : int {
     add,
     replace,
-    edit
+    edit,
+    upsert
 };
 
 struct token {
@@ -2966,10 +2967,11 @@ void world_content_transaction::impl::install_vehicle_api( sol::table &content )
 bool world_content_transaction::register_definition( const sol::object &value,
         const int raw_operation )
 {
-    if( raw_operation < 0 || raw_operation > 2 ) {
+    if( raw_operation < 0 || ( raw_operation > 2 && raw_operation != 4 ) ) {
         throw std::runtime_error( "invalid Platform content operation" );
     }
-    const operation op = static_cast<operation>( raw_operation );
+    const operation op = raw_operation == 4 ? operation::upsert :
+                         static_cast<operation>( raw_operation );
     const auto register_value = [this, op]( auto handle, auto & entries, const char *kind ) {
         if( handle.owner != pimpl_->handle_token ) {
             throw std::runtime_error( std::string( "cannot register a " ) + kind +

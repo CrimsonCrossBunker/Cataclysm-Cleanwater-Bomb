@@ -11256,6 +11256,9 @@ function CcbPlatformContent.add(definition) end
 function CcbPlatformContent.replace(definition) end
 ---@param definition PlatformContentDefinition Clone of a definition staged earlier by this Mod.
 function CcbPlatformContent.edit(definition) end
+---Registers a definition at this Mod's load position, adding it when absent or replacing an earlier definition when present.
+---@param definition PlatformContentDefinition
+function CcbPlatformContent.upsert(definition) end
 ---@param definition ItemGroupDefinition Entry-only patch for an existing group of the same kind; preserves prior entries and rolls back transactionally.
 function CcbPlatformContent.extend_item_group(definition) end
 ---@param definition ItemGroupDefinition Complete group definition. Adds it when absent or replaces it at the owning Mod's load position when present.

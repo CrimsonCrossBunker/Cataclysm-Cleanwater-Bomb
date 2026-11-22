@@ -54,7 +54,8 @@ namespace
 enum class definition_operation : int {
     add,
     replace,
-    edit
+    edit,
+    upsert
 };
 
 enum class handle_lifecycle : int {
@@ -72,7 +73,8 @@ struct owner_token {
 std::string operation_name( const definition_operation operation )
 {
     return operation == definition_operation::add ? "add" :
-           operation == definition_operation::replace ? "replace" : "edit";
+           operation == definition_operation::replace ? "replace" :
+           operation == definition_operation::upsert ? "upsert" : "edit";
 }
 
 void hash_part( std::uint64_t &state, const std::string_view value )
@@ -3504,10 +3506,12 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
 bool worldgen_content_transaction::register_definition( const sol::object &value,
         const int raw_operation )
 {
-    if( raw_operation < 0 || raw_operation > 2 ) {
+    if( raw_operation < 0 || ( raw_operation > 2 && raw_operation != 4 ) ) {
         throw std::runtime_error( "invalid Platform content operation" );
     }
-    const definition_operation operation = static_cast<definition_operation>( raw_operation );
+    const definition_operation operation = raw_operation == 4 ?
+                                           definition_operation::upsert :
+                                           static_cast<definition_operation>( raw_operation );
     const auto register_value = [this, operation]( auto handle, auto & entries,
     const char *kind ) {
         if( handle.token != pimpl_->token ) {

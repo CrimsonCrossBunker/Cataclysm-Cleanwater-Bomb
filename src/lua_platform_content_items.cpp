@@ -5838,7 +5838,7 @@ requirement_data items_content_transaction::read_inline_requirement( const sol::
 bool items_content_transaction::register_definition( const sol::object &value,
         const int raw_operation )
 {
-    if( raw_operation < 0 || raw_operation > 2 ) {
+    if( raw_operation < 0 || ( raw_operation > 2 && raw_operation != 4 ) ) {
         throw std::runtime_error( "invalid Platform content operation" );
     }
     const definition_operation operation = static_cast<definition_operation>( raw_operation );
