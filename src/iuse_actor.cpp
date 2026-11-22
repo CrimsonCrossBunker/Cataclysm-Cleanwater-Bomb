@@ -3609,9 +3609,6 @@ void repair_item_actor::load( const JsonObject &obj, const std::string & )
     mandatory( obj, false, "materials", materials );
 
     optional( obj, false, "skill", used_skill );
-    if( !used_skill.is_empty() && !used_skill.is_valid() ) {
-        obj.throw_error_at( "skill", "Invalid skill" );
-    }
 
     mandatory( obj, false, "cost_scaling", cost_scaling );
 
@@ -3620,6 +3617,14 @@ void repair_item_actor::load( const JsonObject &obj, const std::string & )
     optional( obj, false, "trains_skill_to", trains_skill_to, 5 );
     // gross
     trains_skill_to -= 1;
+}
+
+void repair_item_actor::finalize( const itype_id &my_item_type )
+{
+    if( !used_skill.is_empty() && !used_skill.is_valid() ) {
+        debugmsg( "Item %s repair_item actor has invalid skill '%s'", my_item_type.c_str(),
+                  used_skill.c_str() );
+    }
 }
 
 bool repair_item_actor::can_use_tool( const Character &p, const item &tool, bool print_msg ) const
@@ -6421,8 +6426,13 @@ void sew_advanced_actor::load( const JsonObject &obj, const std::string & )
     mandatory( obj, false, "clothing_mods", materials );
 
     optional( obj, false, "skill", used_skill );
+}
+
+void sew_advanced_actor::finalize( const itype_id &my_item_type )
+{
     if( !used_skill.is_empty() && !used_skill.is_valid() ) {
-        obj.throw_error_at( "skill", "Invalid skill" );
+        debugmsg( "Item %s sew_advanced actor has invalid skill '%s'", my_item_type.c_str(),
+                  used_skill.c_str() );
     }
 }
 

@@ -517,11 +517,7 @@ void mutation_branch::load( const JsonObject &jo, std::string_view src )
 
     for( JsonArray ja : jo.get_array( "craft_skill_bonus" ) ) {
         const skill_id skid( ja.next_string() );
-        if( skid.is_valid() ) {
-            craft_skill_bonus.emplace( skid, ja.next_int() );
-        } else {
-            jo.throw_error( "invalid skill_id" );
-        }
+        craft_skill_bonus.emplace( skid, ja.next_int() );
     }
 
     for( JsonArray ja : jo.get_array( "lumination" ) ) {
@@ -777,6 +773,12 @@ void mutation_branch::check_consistency()
             const trait_id tid = mid->transform->target;
             if( !tid.is_valid() ) {
                 debugmsg( "mutation %s transform uses undefined target %s", mid.c_str(), tid.c_str() );
+            }
+        }
+        for( const std::pair<const skill_id, int> &elem : mdata.craft_skill_bonus ) {
+            if( !elem.first.is_valid() ) {
+                debugmsg( "mutation %s craft_skill_bonus uses undefined skill %s", mid.c_str(),
+                          elem.first.c_str() );
             }
         }
         for( const std::pair<const species_id, int> &elem : an_id ) {
