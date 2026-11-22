@@ -45,6 +45,7 @@ struct city_zone_center {
 
 const std::array<city_zone_center, 4> &city_zone_centers( std::size_t city_index );
 std::string ecoregion_code( point_abs_omt pos );
+ter_id street_tree_at( point_abs_omt pos );
 oter_id wilderness_terrain( point_abs_omt pos, const oter_id &original );
 bool draw_native_habitat( mapgendata &dat );
 void place_native_vegetation( mapgendata &dat );

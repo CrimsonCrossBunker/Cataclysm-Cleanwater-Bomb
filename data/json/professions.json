@@ -8880,5 +8880,15 @@
       "ANTIWHEAT",
       "UGLY"
     ]
+  },
+  {
+    "type": "profession",
+    "id": "university_student",
+    "copy-from": "student",
+    "name": "University Student",
+    "description": "You had a full course load and a room in student residence.  You never expected either to become a survival lesson.",
+    "age_lower": 18,
+    "age_upper": 35,
+    "flags": [ "SCEN_ONLY" ]
   }
 ]

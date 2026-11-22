@@ -142,6 +142,7 @@ class start_location
         }
         /** @returns true if this start location requires a city */
         bool requires_city() const;
+        bool requires_campus() const;
         /** @returns whether the start location at specified tripoint can belong to the specified city. */
         bool can_belong_to_city( const tripoint_om_omt &p, const city &cit ) const;
     private:

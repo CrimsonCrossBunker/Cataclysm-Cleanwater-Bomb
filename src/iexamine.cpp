@@ -3458,6 +3458,11 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
                                    get_plant_water( *seed ), get_plant_max_water( here.furn( p ).obj() ),
                                    status.daily_need_mm,
                                    plant_age_description( *seed, here.furn( p )->plant->growth_multiplier ) );
+            if( seed->has_var( "crop_field_sown" ) ) {
+                const time_point sowing = time_point::from_turn( static_cast<int>(
+                                              seed->get_var( "crop_field_sown", 0.0 ) ) );
+                desc += '\n' + string_format( _( "Sown: %s" ), to_string( sowing, true ) );
+            }
             desc += '\n' + string_format( _( "Growing degree days: %.1f / %.1f" ),
                                           seed->get_var( "crop_degree_days", 0.0 ), seed->type->seed->climate->degree_days );
             desc += '\n' + string_format( _( "Recorded rain: %.1f mm" ),

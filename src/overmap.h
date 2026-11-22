@@ -994,6 +994,8 @@ class overmap
          * @param enabled_specials specifies what specials to place, and tracks how many have been placed.
          **/
         void place_specials( overmap_special_batch &enabled_specials );
+        void place_atlas_campuses( const std::vector<north_america::road_cell> &network,
+                                   const std::vector<north_america::terrain> &coast );
         void place_atlas_roads( const std::vector<north_america::road_cell> &network,
                                 const std::vector<north_america::terrain> &coast );
         /**

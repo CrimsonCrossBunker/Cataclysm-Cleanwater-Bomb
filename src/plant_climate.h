@@ -33,11 +33,12 @@ struct field_crop {
     int planting_day;
     int harvest_day;
 
-    // Year fractions use a non-leap Gregorian calendar and scale with the world year.
+    // Dates follow the displayed game calendar and scale with the configured year length.
     std::optional<time_point> sowing_date( time_point when ) const;
 };
 
-std::optional<field_crop> regional_field_crop( std::string_view region, unsigned field_roll );
+std::optional<field_crop> regional_field_crop( std::string_view region, unsigned field_roll,
+        const itype_id &existing_seed = itype_id::NULL_ID() );
 
 struct fruit_climate_profile {
     crop_climate_profile growth;

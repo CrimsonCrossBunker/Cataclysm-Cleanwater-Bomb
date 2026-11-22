@@ -823,6 +823,33 @@ std::string ecoregion_code( point_abs_omt pos )
     return profile ? profile->ecoregion : std::string();
 }
 
+ter_id street_tree_at( point_abs_omt pos )
+{
+    const ecology_profile *profile = profile_at( pos );
+    if( !profile ) {
+        return ter_str_id::NULL_ID().id();
+    }
+
+    static const std::unordered_set<ter_str_id> street_species = {
+        ter_str_id( "t_tree_paper_birch" ), ter_str_id( "t_tree_oregon_white_oak" ),
+        ter_str_id( "t_tree_blue_oak" ), ter_str_id( "t_tree_southern_live_oak" ),
+        ter_str_id( "t_tree_bur_oak" ), ter_str_id( "t_tree_shagbark_hickory" ),
+        ter_str_id( "t_tree_pacific_madrone" ), ter_str_id( "t_tree_netleaf_oak" ),
+        ter_str_id( "t_tree_texas_mesquite" ), ter_str_id( "t_tree_gumbo_limbo" ),
+        ter_str_id( "t_tree_spanish_cedar" ), ter_str_id( "t_tree_montezuma_pine" ),
+        ter_str_id( "t_tree_white_spruce" ), ter_str_id( "t_tree_ponderosa_pine" )
+    };
+    weighted_int_list<ter_id> trees;
+    for( const plant &species : profile->plants ) {
+        if( !species.shrub && species.weight > 0 && street_species.count( species.terrain ) &&
+            species.terrain.is_valid() ) {
+            trees.add( species.terrain.id(), species.weight );
+        }
+    }
+    const ter_id *tree = trees.pick();
+    return tree ? *tree : ter_str_id::NULL_ID().id();
+}
+
 oter_id wilderness_terrain( point_abs_omt pos, const oter_id &original )
 {
     const std::string &type = original->get_type_id().str();

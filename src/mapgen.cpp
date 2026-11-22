@@ -3665,8 +3665,7 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                 const std::optional<field_crop> crop = regional_field_crop(
                         north_america::jurisdiction_at( abs_field ), roll );
                 if( crop && crop->seed.is_valid() ) {
-                    const auto sown = crop->sowing_date( std::min( dat.when(),
-                                                         calendar::start_of_cataclysm ) );
+                    const auto sown = crop->sowing_date( calendar::start_of_cataclysm );
                     if( !sown ) {
                         return;
                     }
@@ -6941,6 +6940,184 @@ void map::temp_based_phase_change_at( const tripoint_bub_ms &p, const weather_ge
     }
 }
 
+void map::generate_atlas_tower_floor( const tripoint_abs_omt &p )
+{
+    restore_on_out_of_scope generation_mode( mapgen_in_progress );
+    mapgen_in_progress = true;
+    vertical_origin = p.z();
+    const tripoint_abs_sm base = project_to<coords::sm>( p );
+    set_abs_sub( base );
+    static const ter_str_id ter_t_open_air( "t_open_air" );
+    std::vector<std::unique_ptr<submap>> scratch;
+    for( int y = 0; y < my_MAPSIZE; ++y ) {
+        for( int x = 0; x < my_MAPSIZE; ++x ) {
+            auto tile = std::make_unique<submap>();
+            tile->set_all_ter( ter_t_open_air, true );
+            setsubmap( get_nonant( tripoint_rel_sm( x, y, p.z() ) ), tile.get() );
+            scratch.push_back( std::move( tile ) );
+        }
+    }
+
+    mapgendata dat( p, *this, 1.0f, calendar::turn, nullptr );
+    draw_map( dat );
+    set_queued_points();
+    for( int y = 0; y < my_MAPSIZE; ++y ) {
+        for( int x = 0; x < my_MAPSIZE; ++x ) {
+            auto &tile = scratch[y * my_MAPSIZE + x];
+            tile->last_touched = calendar::turn;
+            if( x < 2 && y < 2 && !MAPBUFFER.submap_exists( base + point( x, y ) ) ) {
+                MAPBUFFER.add_submap( base + point( x, y ), tile );
+            }
+            setsubmap( get_nonant( tripoint_rel_sm( x, y, p.z() ) ), nullptr );
+        }
+    }
+}
+
+namespace
+{
+struct regional_site_style {
+    ter_str_id siding;
+    ter_str_id diner_floor;
+    furn_str_id farm_storage;
+    furn_str_id diner_table;
+};
+
+const regional_site_style &site_style_at( point_abs_ms pos )
+{
+    static const regional_site_style northern = {
+        ter_str_id( "t_wood_wall_gray" ), ter_str_id( "t_linoleum_white" ),
+        furn_str_id( "f_rack_wood" ), furn_str_id( "f_table" )
+    };
+    static const regional_site_style pacific = {
+        ter_str_id( "t_wood_wall_brown" ), ter_str_id( "t_linoleum_gray" ),
+        furn_str_id( "f_rack_wood" ),
+        furn_str_id( "f_table_fancy" )
+    };
+    static const regional_site_style prairie = {
+        ter_str_id( "t_wood_wall_r" ), ter_str_id( "t_linoleum_gray" ),
+        furn_str_id( "f_rack" ), furn_str_id( "f_table" )
+    };
+    static const regional_site_style southern = {
+        ter_str_id( "t_wood_wall_w" ), ter_str_id( "t_linoleum_white" ),
+        furn_str_id( "f_rack_wood" ),
+        furn_str_id( "f_table_fancy" )
+    };
+    static const regional_site_style southwest = {
+        ter_str_id( "t_adobe_brick_wall" ), ter_str_id( "t_linoleum_gray" ),
+        furn_str_id( "f_rack_wood" ), furn_str_id( "f_table" )
+    };
+    static const regional_site_style eastern = {
+        ter_str_id( "t_brick_wall" ), ter_str_id( "t_linoleum_white" ),
+        furn_str_id( "f_rack" ), furn_str_id( "f_table_fancy" )
+    };
+    const std::string_view region = north_america::jurisdiction_at( pos );
+    const overmap_special_id house = north_america::regional_house_for( region );
+    const std::string_view name = house.str();
+    if( name == "house_regional_adobe" || name == "house_regional_mexican_patio" ) {
+        return southwest;
+    }
+    if( name == "house_regional_craftsman" ) {
+        return pacific;
+    }
+    if( name == "house_regional_shotgun" || region == "US-FL" ) {
+        return southern;
+    }
+    if( name == "house_regional_prairie" || name == "house_regional_ranch" ) {
+        return prairie;
+    }
+    if( name == "house_regional_cape_cod" || name == "house_regional_quebec" ) {
+        return northern;
+    }
+    return eastern;
+}
+
+void dress_atlas_site( mapgendata &dat, std::string_view id )
+{
+    if( dat.zlevel() != 0 ) {
+        return;
+    }
+    const bool diner = id == "s_restaurant" || id == "s_restaurant_3";
+    const bool farm = id.rfind( "2farm_", 0 ) == 0 ||
+                      ( id.rfind( "farm_", 0 ) == 0 && id.size() == 6 ) ||
+                      id.rfind( "farm_horse_", 0 ) == 0 || id.rfind( "dairy_farm_", 0 ) == 0 ||
+                      id.rfind( "farm_dairy_twd_", 0 ) == 0;
+    const oter_id &terrain = dat.terrain_type();
+    const bool street = terrain->is_road() || terrain->is_highway() ||
+                        north_america::is_avenue_flank( terrain ) || terrain->is_highway_reserved();
+    if( ( !diner && !farm && !street ) || !north_america::active() ) {
+        return;
+    }
+    if( street && !north_america::in_urban_footprint( dat.pos().xy() ) ) {
+        return;
+    }
+    static const ter_str_id ter_t_sidewalk( "t_sidewalk" );
+    static const ter_str_id ter_t_zebra( "t_zebra" );
+    static const ter_str_id ter_t_wall_wood( "t_wall_wood" );
+    static const ter_str_id ter_t_linoleum_white( "t_linoleum_white" );
+    static const ter_str_id ter_t_linoleum_gray( "t_linoleum_gray" );
+    static const furn_str_id furn_f_rack( "f_rack" );
+    static const furn_str_id furn_f_table( "f_table" );
+    const point_abs_ms origin = project_to<coords::ms>( dat.pos().xy() );
+    const regional_site_style *style = street ? nullptr : &site_style_at( origin );
+    std::optional<ter_id> street_tree;
+    map &here = dat.m;
+    constexpr int width = 2 * SEEX;
+    constexpr int height = 2 * SEEY;
+    for( int y = 0; y < height; ++y ) {
+        for( int x = 0; x < width; ++x ) {
+            const point_bub_ms p( x, y );
+            const ter_id ground = here.ter( p );
+            if( style ) {
+                if( ground == ter_t_wall_wood ) {
+                    here.ter_set( p, style->siding.id() );
+                } else if( diner && ( ground == ter_t_linoleum_white || ground == ter_t_linoleum_gray ) ) {
+                    here.ter_set( p, style->diner_floor.id() );
+                }
+                if( farm && here.furn( p ) == furn_f_rack ) {
+                    here.furn_set( p, style->farm_storage.id() );
+                } else if( diner && here.furn( p ) == furn_f_table ) {
+                    here.furn_set( p, style->diner_table.id() );
+                }
+                continue;
+            }
+            if( ( ground != ter_t_sidewalk && ground != ter_t_grass ) ||
+                here.has_furn( p ) || !here.i_at( p ).empty() ) {
+                continue;
+            }
+            for( const point &inward : {
+                     point::north, point::east, point::south, point::west
+                 } ) {
+                const point along( -inward.y, inward.x );
+                const point curb = p.raw() + inward * 3;
+                const point_abs_ms abs = origin + p.raw();
+                const int spacing = inward.x == 0 ? abs.x() : abs.y();
+                const int spacing_offset = inward.x == 0 ? abs.y() : abs.x();
+                const int planting_index = spacing + spacing_offset * 3;
+                if( ( planting_index % 13 + 13 ) % 13 != 6 || curb.x < 0 || curb.x >= width ||
+                    curb.y < 0 || curb.y >= height || x < 2 || x >= width - 2 || y < 2 || y >= height - 2 ) {
+                    continue;
+                }
+                const point_bub_ms edge( curb );
+                if( here.ter( p + inward ) == ter_t_sidewalk &&
+                    here.ter( p + inward * 2 ) == ter_t_sidewalk &&
+                    here.ter( p + inward + along * 2 ) == ter_t_sidewalk &&
+                    here.ter( p + inward - along * 2 ) == ter_t_sidewalk &&
+                    here.has_flag_ter( ter_furn_flag::TFLAG_ROAD, edge ) && here.ter( edge ) != ter_t_zebra ) {
+                    if( !street_tree ) {
+                        street_tree = north_america::street_tree_at( dat.pos().xy() );
+                    }
+                    if( *street_tree == ter_t_null ) {
+                        return;
+                    }
+                    here.ter_set( p, *street_tree );
+                    break;
+                }
+            }
+        }
+    }
+}
+} // namespace
+
 void map::draw_map( mapgendata &dat )
 {
     const oter_id &terrain_type = dat.terrain_type();
@@ -6953,7 +7130,8 @@ void map::draw_map( mapgendata &dat )
         debugmsg( "Error: tried to generate map for omtype %s, \"%s\" (id_mapgen %s)",
                   terrain_type.id().c_str(), terrain_type->get_name( om_vision_level::full ), function_key.c_str() );
         // Fallback to the default mapgen for this z-level or just a grass fill if something has gone horribly wrong
-        const oter_id &default_oter = dat.region.default_oter[OVERMAP_DEPTH + dat.zlevel()].id();
+        const oter_id &default_oter = dat.region.default_oter[OVERMAP_DEPTH +
+                                                    std::clamp( dat.zlevel(), -OVERMAP_DEPTH, OVERMAP_HEIGHT )].id();
         if( terrain_type == default_oter || !run_mapgen_func( default_oter->get_mapgen_id(), dat ) ) {
             fill_background( this, ter_t_grass );
         }
@@ -6961,6 +7139,7 @@ void map::draw_map( mapgendata &dat )
 
     resolve_regional_terrain_and_furniture( dat );
     north_america::place_wide_highway_surface( dat );
+    dress_atlas_site( dat, function_key );
     north_america::place_native_vegetation( dat );
     north_america::place_native_soil( dat );
     north_america::grade_generated_surface( dat );

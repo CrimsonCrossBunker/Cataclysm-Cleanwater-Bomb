@@ -2342,8 +2342,12 @@ void draw_location( avatar &you )
 
     char_creation::draw_action_button( _( "Starting location:" ), "CHOOSE_LOCATION" );
     ImGui::SameLine();
-    ImGui::Checkbox( _( "Start on the far outskirts" ), &you.start_outskirts );
-    char_creation::draw_action_button( _( "Toggle far-outskirts start" ), "TOGGLE_START_OUTSKIRTS" );
+    const start_location &location = you.random_start_location ?
+                                     get_scenario()->start_location().obj() : you.start_location.obj();
+    if( !location.requires_campus() ) {
+        ImGui::Checkbox( _( "Start on the far outskirts" ), &you.start_outskirts );
+        char_creation::draw_action_button( _( "Toggle far-outskirts start" ), "TOGGLE_START_OUTSKIRTS" );
+    }
 
     if( you.random_start_location ) {
         cataimgui::draw_colored_text( random_start_location_text, c_red );
