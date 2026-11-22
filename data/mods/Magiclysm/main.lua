@@ -185,3 +185,4 @@ require("spell_level_scaling")
 require("attack_conditions")
 
 require("monster_attack_predicates")
+require("tileset")
