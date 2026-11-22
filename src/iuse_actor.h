@@ -412,6 +412,7 @@ class change_scent_iuse : public iuse_actor
         change_scent_iuse() : iuse_actor( "change_scent" ) { }
         ~change_scent_iuse() override = default;
         void load( const JsonObject &obj, const std::string & ) override;
+        void finalize( const itype_id &my_item_type ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map *, const tripoint_bub_ms & ) const override;
         std::unique_ptr<iuse_actor> clone() const override;

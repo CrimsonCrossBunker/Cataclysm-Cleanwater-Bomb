@@ -3172,7 +3172,9 @@ void load_static_item( const sol::table &options, const std::string &source )
         write_item_inheritance( json, *inheritance );
     }
     json.end_object();
-    items::load( json_loader::from_string( serialized.str() ).get_object(), source );
+    const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
+    static_cast<void>( definition.get_string( "type" ) );
+    items::load( definition, source );
 }
 
 sol::table static_gendered_dialogue_line( sol::this_state state, const std::string &text,

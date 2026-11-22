@@ -13,6 +13,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <set>
 #include <unordered_map>
 #include <utility>
 
@@ -372,12 +373,25 @@ std::string enum_to_string<ter_furn_flag>( ter_furn_flag data )
 } // namespace io
 
 static std::unordered_map<std::string, connect_group> ter_connects_map;
+static std::set<std::string> provisional_connect_groups;
+static bool connect_groups_finalized = false;
+
+static void validate_provisional_connect_groups()
+{
+    connect_groups_finalized = true;
+    for( const std::string &grp : provisional_connect_groups ) {
+        debugmsg( "can't find terrain group %s", grp.c_str() );
+        ter_connects_map.erase( grp );
+    }
+    provisional_connect_groups.clear();
+}
 
 const connect_group *cata::lua_platform::detail::connect_group_registry_find(
     const std::string &id )
 {
     const auto found = ter_connects_map.find( id );
-    return found == ter_connects_map.end() ? nullptr : &found->second;
+    return found == ter_connects_map.end() || provisional_connect_groups.count( id ) != 0 ?
+           nullptr : &found->second;
 }
 
 std::size_t cata::lua_platform::detail::connect_group_registry_size()
@@ -392,18 +406,21 @@ void cata::lua_platform::detail::connect_group_registry_set( const connect_group
     replacement.index = found == ter_connects_map.end() ?
                         static_cast<int>( ter_connects_map.size() ) : found->second.index;
     ter_connects_map[value.id.str()] = std::move( replacement );
+    provisional_connect_groups.erase( value.id.str() );
 }
 
 void cata::lua_platform::detail::connect_group_registry_erase( const std::string &id )
 {
     ter_connects_map.erase( id );
+    provisional_connect_groups.erase( id );
 }
 
 /** @relates string_id */
 template<>
 bool connect_group_id::is_valid() const
 {
-    return ter_connects_map.find( str() ) != ter_connects_map.end();
+    return ter_connects_map.find( str() ) != ter_connects_map.end() &&
+           provisional_connect_groups.count( str() ) == 0;
 }
 
 connect_group get_connect_group( const std::string &name )
@@ -427,11 +444,14 @@ void connect_group::load( const JsonObject &jo )
     }
 
     ter_connects_map[ result.id.str() ] = result;
+    provisional_connect_groups.erase( result.id.str() );
 }
 
 void connect_group::reset()
 {
     ter_connects_map.clear();
+    provisional_connect_groups.clear();
+    connect_groups_finalized = false;
 }
 
 static void load_map_bash_tent_centers( const JsonArray &ja, std::vector<furn_str_id> &centers )
@@ -1113,6 +1133,7 @@ void load_furniture( const JsonObject &jo, const std::string &src )
 
 void finalize_furniture( )
 {
+    validate_provisional_connect_groups();
     furniture_data.finalize();
 }
 
@@ -1126,6 +1147,7 @@ void load_terrain( const JsonObject &jo, const std::string &src )
 
 void finalize_terrain( )
 {
+    validate_provisional_connect_groups();
     terrain_data.finalize();
 }
 
@@ -1223,6 +1245,17 @@ void map_data_common_t::set_groups( std::bitset<NUM_TERCONN> &bits,
                 bits.reset( it->second.index );
             } else {
                 bits.set( it->second.index );
+            }
+        } else if( !connect_groups_finalized && ter_connects_map.size() < NUM_TERCONN ) {
+            connect_group provisional;
+            provisional.id = connect_group_id( grp );
+            provisional.index = static_cast<int>( ter_connects_map.size() );
+            ter_connects_map[grp] = provisional;
+            provisional_connect_groups.insert( grp );
+            if( remove ) {
+                bits.reset( provisional.index );
+            } else {
+                bits.set( provisional.index );
             }
         } else {
             debugmsg( "can't find terrain group %s", group.c_str() );

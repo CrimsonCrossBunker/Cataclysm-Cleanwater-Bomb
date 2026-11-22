@@ -662,5 +662,7 @@ void item_melee_damage::deserialize( const JsonObject &jo )
     // ^this is not true, objects are loaded as they are encountered, and in mod load order
     // Being loaded in mod load order particularly is the risk here!
     // FIXME: call finalize in the right place
-    finalize();
+    if( !damage_type::get_all().empty() ) {
+        finalize();
+    }
 }

@@ -6654,15 +6654,20 @@ std::unique_ptr<iuse_actor> sew_advanced_actor::clone() const
 void change_scent_iuse::load( const JsonObject &obj, const std::string & )
 {
     scenttypeid = scenttype_id( obj.get_string( "scent_typeid" ) );
-    if( !scenttypeid.is_valid() ) {
-        obj.throw_error_at( "scent_typeid", "Invalid scent type id." );
-    }
     optional( obj, false, "effects", effects );
     optional( obj, false, "moves", moves, 100 );
     optional( obj, false, "charges_to_use", charges_to_use, 1 );
     optional( obj, false, "scent_mod", scent_mod, 0 );
     optional( obj, false, "duration", duration );
     optional( obj, false, "waterproof", waterproof, false );
+}
+
+void change_scent_iuse::finalize( const itype_id &my_item_type )
+{
+    if( !scenttypeid.is_valid() ) {
+        debugmsg( "Item %s has invalid scent_typeid '%s'", my_item_type.c_str(),
+                  scenttypeid.c_str() );
+    }
 }
 
 

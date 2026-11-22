@@ -399,6 +399,10 @@ void Item_factory::finalize_pre( itype &obj )
         obj.item_tags.insert( flag_NO_REPAIR );
     }
 
+    if( !obj.melee.damage_map.empty() ) {
+        obj.melee.finalize();
+    }
+
     if( obj.thrown_damage.empty() ) {
         obj.thrown_damage.add_damage( damage_bash, obj.melee.damage_map[damage_bash] * 0.75 );
     }
