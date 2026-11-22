@@ -473,3 +473,54 @@ ccb.content.define_fixed_overmap_special {
     occurrences = { 0, 2 },
     flags = { "CLASSIC" },
 }
+
+ccb.content.define_mutable_overmap_special {
+    id = "highway_support_mutable",
+    root = "support_top",
+    flags = { "CLASSIC" },
+    occurrences = { 0, 0 },
+    joins = {
+        {
+            id = "support_join",
+            into_locations = { "lake_surface", "open_air", "lake_water_cube", "lake_bed" },
+        },
+    },
+    overmaps = {
+        support_top = {
+            overmap = "hw_supports_north",
+            locations = { "lake_surface", "open_air" },
+            below = { id = "support_join", type = "available" },
+        },
+        support = {
+            overmap = "hw_supports_north",
+            locations = { "open_air", "lake_water_cube" },
+            above = { id = "support_join", type = "available" },
+            below = { id = "support_join", type = "available" },
+        },
+        support_bottom = {
+            overmap = "hw_supports_north",
+            locations = { "water", "lake_bed", "subterranean" },
+            above = { id = "support_join", type = "available" },
+        },
+    },
+    phases = {
+        {
+            {
+                name = "support_middle",
+                chunk = {
+                    { overmap = "support", rot = "north" },
+                },
+                max = 10,
+            },
+        },
+        {
+            {
+                name = "support_end",
+                chunk = {
+                    { overmap = "support_bottom", rot = "north" },
+                },
+                max = 1,
+            },
+        },
+    },
+}

@@ -1,0 +1,414 @@
+local ccb = require("ccb")
+
+ccb.content.define_mutable_overmap_special {
+    id = "Mesa Mutable",
+    root = "mesa_root",
+    locations = { "field", "forest_with_swamp", "open_air" },
+    flags = { "CLASSIC" },
+    occurrences = { 0, 12 },
+    city_sizes = { 0, -1 },
+    city_distance = { 0, -1 },
+    check_for_locations_area = {
+        {
+            from = { -4, -4, 0 },
+            to = { 4, 4, 0 },
+            locations = { "field", "forest_with_swamp" },
+        },
+    },
+    joins = { "mesa_to_mesa", "mesa_to_edge", "mesa_to_top" },
+    overmaps = {
+        mesa_root = {
+            overmap = "mesa",
+            north = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+            south = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+            east = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+            west = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+            above = {
+                id = "mesa_to_top",
+                alternatives = { "mesa_to_edge" },
+            },
+        },
+        mesa_core_ground = {
+            overmap = "mesa",
+            north = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+            south = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+            east = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+            west = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+        },
+        mesa_filler_ground = {
+            overmap = "mesa",
+            north = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+            south = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+            east = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+            west = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+        },
+        mesa_edge_ground_v1 = {
+            overmap = "mesa_edge_v1_north",
+            north = { id = "mesa_to_mesa" },
+        },
+        mesa_corner_ground_v1 = {
+            overmap = "mesa_corner_v1_north",
+            north = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+            east = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+        },
+        mesa_2way_ground_v1 = {
+            overmap = "mesa_2way_v1_east",
+            north = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+            south = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+        },
+        mesa_3way_ground_v1 = {
+            overmap = "mesa_3way_v1_north",
+            north = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+            east = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+            west = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+        },
+        mesa_core = { overmap = "mesa" },
+        mesa_filler = { overmap = "mesa" },
+        mesa_root_filler = {
+            overmap = "mesa",
+            below = {
+                id = "mesa_to_top",
+                alternatives = { "mesa_to_edge" },
+            },
+        },
+        mesa_top = { overmap = "field" },
+        mesa_edge_v1 = { overmap = "mesa_edge_v1_north" },
+        mesa_corner_v1 = { overmap = "mesa_corner_v1_north" },
+        mesa_2way_v1 = { overmap = "mesa_2way_v1_east" },
+        mesa_3way_v1 = { overmap = "mesa_3way_v1_north" },
+        mesa_edge_top_v1 = { overmap = "mesa_edge_top_v1_north" },
+        mesa_corner_top_v1 = { overmap = "mesa_corner_top_v1_north" },
+        mesa_2way_top_v1 = { overmap = "mesa_2way_top_v1_east" },
+        mesa_3way_top_v1 = { overmap = "mesa_3way_top_v1_north" },
+        mesa_edge_ground_v2 = {
+            overmap = "mesa_edge_v2_north",
+            north = { id = "mesa_to_mesa" },
+        },
+        mesa_corner_ground_v2 = {
+            overmap = "mesa_corner_v2_north",
+            north = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+            east = {
+                id = "mesa_to_mesa",
+                alternatives = { "mesa_to_edge" },
+            },
+        },
+        mesa_2way_ground_v2 = {
+            overmap = "mesa_2way_v2_east",
+            north = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+            south = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+        },
+        mesa_3way_ground_v2 = {
+            overmap = "mesa_3way_v2_north",
+            north = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+            east = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+            west = {
+                id = "mesa_to_mesa",
+                type = "available",
+                alternatives = { "mesa_to_edge" },
+            },
+        },
+        mesa_edge_v2 = { overmap = "mesa_edge_v2_north" },
+        mesa_corner_v2 = { overmap = "mesa_corner_v2_north" },
+        mesa_2way_v2 = { overmap = "mesa_2way_v2_east" },
+        mesa_3way_v2 = { overmap = "mesa_3way_v2_north" },
+        mesa_edge_top_v2 = { overmap = "mesa_edge_top_v2_north" },
+        mesa_corner_top_v2 = { overmap = "mesa_corner_top_v2_north" },
+        mesa_2way_top_v2 = { overmap = "mesa_2way_top_v2_east" },
+        mesa_3way_top_v2 = { overmap = "mesa_3way_top_v2_north" },
+    },
+    phases = {
+        {
+            {
+                name = "mesa core",
+                chunk = {
+                    {
+                        overmap = "mesa_core_ground",
+                        pos = { 0, 0, 0 },
+                    },
+                    {
+                        overmap = "mesa_core",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_top",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+                max = { poisson = 250 },
+            },
+        },
+        {
+            {
+                name = "mesa edge v1",
+                weight = 1,
+                chunk = {
+                    {
+                        overmap = "mesa_edge_ground_v1",
+                        pos = { 0, 0, 0 },
+                    },
+                    {
+                        overmap = "mesa_edge_v1",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_edge_top_v1",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+            },
+            {
+                name = "mesa edge v2",
+                weight = 1,
+                chunk = {
+                    {
+                        overmap = "mesa_edge_ground_v2",
+                        pos = { 0, 0, 0 },
+                    },
+                    {
+                        overmap = "mesa_edge_v2",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_edge_top_v2",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+            },
+        },
+        {
+            {
+                name = "mesa corner v1",
+                weight = 1,
+                chunk = {
+                    {
+                        overmap = "mesa_corner_ground_v1",
+                        pos = { 0, 0, 0 },
+                    },
+                    {
+                        overmap = "mesa_corner_v1",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_corner_top_v1",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+            },
+            {
+                name = "mesa corner v2",
+                weight = 1,
+                chunk = {
+                    {
+                        overmap = "mesa_corner_ground_v2",
+                        pos = { 0, 0, 0 },
+                    },
+                    {
+                        overmap = "mesa_corner_v2",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_corner_top_v2",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+            },
+        },
+        {
+            {
+                name = "mesa 2way v1",
+                weight = 1,
+                chunk = {
+                    {
+                        overmap = "mesa_2way_ground_v1",
+                        pos = { 0, 0, 0 },
+                    },
+                    {
+                        overmap = "mesa_2way_v1",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_2way_top_v1",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+            },
+            {
+                name = "mesa 2way v2",
+                weight = 1,
+                chunk = {
+                    {
+                        overmap = "mesa_2way_ground_v2",
+                        pos = { 0, 0, 0 },
+                    },
+                    {
+                        overmap = "mesa_2way_v2",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_2way_top_v2",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+            },
+        },
+        {
+            {
+                name = "mesa 3way v1",
+                weight = 1,
+                chunk = {
+                    {
+                        overmap = "mesa_3way_ground_v1",
+                        pos = { 0, 0, 0 },
+                    },
+                    {
+                        overmap = "mesa_3way_v1",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_3way_top_v1",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+            },
+            {
+                name = "mesa 3way v2",
+                weight = 1,
+                chunk = {
+                    {
+                        overmap = "mesa_3way_ground_v2",
+                        pos = { 0, 0, 0 },
+                    },
+                    {
+                        overmap = "mesa_3way_v2",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_3way_top_v2",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+            },
+        },
+        {
+            {
+                name = "mesa filler",
+                weight = 1,
+                chunk = {
+                    {
+                        overmap = "mesa_filler_ground",
+                        pos = { 0, 0, 0 },
+                    },
+                    {
+                        overmap = "mesa_filler",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_top",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+            },
+        },
+        {
+            {
+                name = "mesa filler root",
+                weight = 1,
+                chunk = {
+                    {
+                        overmap = "mesa_root_filler",
+                        pos = { 0, 0, 1 },
+                    },
+                    {
+                        overmap = "mesa_top",
+                        pos = { 0, 0, 2 },
+                    },
+                },
+            },
+        },
+    },
+}
