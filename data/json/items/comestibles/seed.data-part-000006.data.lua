@@ -30,7 +30,7 @@ ccb.content.define_item {
 ccb.content.define_item {
     id = "roasted_coffee_bean",
     copy_from = "coffee_bean",
-    category = "FOOD",
+    category = "food",
     name = ccb.content.plural_text("roasted coffee beans", "roasted coffee beans"),
     description = ccb.content.text("Some roasted coffee beans, can be ground into powder."),
     comestible = {},

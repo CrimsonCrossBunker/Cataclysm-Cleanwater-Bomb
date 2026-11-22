@@ -2,7 +2,7 @@ local ccb = require("ccb")
 
 ccb.content.define_item {
     id = "anathema_blood_catalyst_unready",
-    category = "drug",
+    category = "drugs",
     looks_like = "vampire_blood",
     name = ccb.content.plural_text("churning vampire blood mixture", "churning vampire blood mixture"),
     description = ccb.content.text("Vampire blood mixed with blood none would consume and different toxic substances.  The hostile environment is already driving the vampire blood to devour itself.  It will be ready to consume in a few days."),

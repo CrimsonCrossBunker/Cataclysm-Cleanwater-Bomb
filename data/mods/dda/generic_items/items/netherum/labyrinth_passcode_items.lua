@@ -50,7 +50,7 @@ do
     local item = content.Item {
         id = "ls_sd_passcode",
         name = ccb.content.plural_text("holographic shard", "holographic shards"),
-        category = "artifact",
+        category = "artifacts",
         symbol = ",",
         color = "blue",
         description = ccb.content.text("A palm-sized shard of alien glass, reflecting light in holographic prisms.  You think you can see something in its depths.  Activate it to look closer."),
@@ -68,7 +68,7 @@ do
     local item = content.Item {
         id = "ls_sd_passcode_used",
         name = ccb.content.plural_text("holographic shard (used)", "holographic shards (used)"),
-        category = "artifact",
+        category = "artifacts",
         symbol = ",",
         color = "blue",
         description = ccb.content.text("A palm-sized shard of alien glass, reflecting light in holographic prisms."),

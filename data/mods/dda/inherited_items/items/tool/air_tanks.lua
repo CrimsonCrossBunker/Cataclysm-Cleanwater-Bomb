@@ -4,7 +4,7 @@ local content = ccb.content
 do
     local item = content.Item {
         id = "scuba_tank",
-        category = "tool",
+        category = "tools",
         name = ccb.content.plural_text("diving cylinder", "diving cylinders"),
         looks_like = "oxygen_tank",
         description = ccb.content.text("A high-pressure 232 bar diving tank that can contain up to 12 L of a compressed mixture of oxygen and nitrogen.  Activate it to open it."),
@@ -38,7 +38,7 @@ do
         id = "scuba_tank_on",
         copy_from = "scuba_tank",
         looks_like = "scuba_tank",
-        category = "tool",
+        category = "tools",
         name = ccb.content.plural_text("diving cylinder (open)", "diving cylinders (open)"),
         description = ccb.content.text("A high-pressure 232 bar diving tank that can contain up to 12 L of a compressed mixture of oxygen and nitrogen.  It is currently open.  Activate it to close it."),
     }
@@ -62,7 +62,7 @@ end
 do
     local item = content.Item {
         id = "small_scuba_tank",
-        category = "tool",
+        category = "tools",
         name = ccb.content.plural_text("small diving cylinder", "small diving cylinders"),
         description = ccb.content.text("A small, high-pressure 200 bar diving tank that can contain 4 L of a compressed mixture of oxygen and nitrogen.  Activate it to open it."),
         looks_like = "smoxygen_tank",
@@ -96,7 +96,7 @@ do
         id = "small_scuba_tank_on",
         copy_from = "small_scuba_tank",
         looks_like = "small_scuba_tank",
-        category = "tool",
+        category = "tools",
         name = ccb.content.plural_text("small diving cylinder (open)", "small diving cylinders (open)"),
         description = ccb.content.text("A small, high-pressure 200 bar backup diving tank that can contain 4 L of a compressed mixture of oxygen and nitrogen.  It is currently open.  Activate it to close it."),
     }
@@ -120,7 +120,7 @@ end
 do
     local item = content.Item {
         id = "firefighter_scba_tank",
-        category = "tool",
+        category = "tools",
         name = ccb.content.plural_text("firefighter SCBA cylinder", "firefighter SCBA cylinders"),
         description = ccb.content.text("A lightweight aluminum cylinder wrapped in carbon fiber, holding a highly compressed mixture of oxygen and nitrogen.  Activate it to open it."),
         looks_like = "smoxygen_tank",
@@ -154,7 +154,7 @@ do
         id = "firefighter_scba_tank_on",
         copy_from = "firefighter_scba_tank",
         looks_like = "firefighter_scba_tank",
-        category = "tool",
+        category = "tools",
         name = ccb.content.plural_text("firefighter SCBA cylinder (open)", "firefighter SCBA cylinders (open)"),
         description = ccb.content.text("A lightweight aluminum cylinder wrapped in carbon fiber, holding a highly compressed mixture of oxygen and nitrogen.  It is currently open.  Activate it to close it."),
     }

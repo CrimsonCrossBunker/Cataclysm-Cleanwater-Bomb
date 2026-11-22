@@ -360,7 +360,7 @@ do
 local definition = content.MutationCategory {
     id = "MYCUS",
     name = ccb.content.text("Mycus"),
-    mutagen_message = ccb.content.text(""),
+    mutagen_message = "",
     threshold_mutation = "THRESH_MYCUS",
     memorial_message = "Dissolved into the collective.",
     vitamin = "null",

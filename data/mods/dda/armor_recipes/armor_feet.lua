@@ -2244,7 +2244,7 @@ content.add(content.Recipe {
 }
     :component("filament", 1200, true)
     :quality("CUT", 2, 1)
-    :requirement("tailoring_cotton", 1.5)
+    :requirement("tailoring_cotton", 1)
     :proficiency("prof_basketweaving")
 )
 
@@ -2261,7 +2261,7 @@ content.add(content.Recipe {
 }
     :component("rope_natural_short", 1, true)
     :quality("CUT", 2, 1)
-    :requirement("tailoring_cotton", 1.5)
+    :requirement("tailoring_cotton", 1)
     :proficiency("prof_basketweaving")
     :byproduct("string_36", 2)
 )

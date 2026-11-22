@@ -129,7 +129,6 @@ content.add(content.Recipe {
     duration_moves = 2160000,
     activity_level = LIGHT_EXERCISE,
     autolearn = true,
-    reversible = true,
     skill = "tailor",
     difficulty = 2,
     flags = { "NO_RESIZE" },

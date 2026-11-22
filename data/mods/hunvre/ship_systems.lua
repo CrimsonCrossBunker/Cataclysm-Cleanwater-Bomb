@@ -79,8 +79,12 @@ ccb.runtime.handler("hunvre_toggle_blackout_use", function(context)
     return 0
 end)
 
-local smartphone = content.edit_item("smart_phone_hunvre")
+local smartphone = content.Item {
+    id = "smart_phone_hunvre",
+    copy_from = "smart_phone_hunvre",
+}
 smartphone:on_use("hunvre_toggle_blackout_use", content.text("Switch the lights"))
+content.upsert(smartphone)
 
 ccb.runtime.handler("hunvre_blackout_due", function(payload)
     local character = payload.character

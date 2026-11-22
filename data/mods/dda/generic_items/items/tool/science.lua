@@ -128,7 +128,7 @@ do
     -- this is based on Wikipedia's page on barometers, in section 'water barometers'
     local item = content.Item {
         id = "weather_glass",
-        category = "TOOL",
+        category = "tools",
         name = ccb.content.plural_text("weather glass", "weather glass"),
         description = ccb.content.text("Also called storm glass or 'Goethe barometer', The weather glass barometer consists of a glass container with a sealed body, half filled with water.  A narrow spout connects to the body below the water level and rises above the water level.  The difference between the sealed water level in the body and the narrow open spout determines the atmospheric pressure.  Activate to get current atmospheric pressure."),
         mass_milligrams = 6000000,

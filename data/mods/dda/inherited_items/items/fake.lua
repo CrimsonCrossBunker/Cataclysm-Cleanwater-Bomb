@@ -463,7 +463,7 @@ do
         looks_like = "fake_crafting_tool",
         replace_pockets = true,
     }
-    item:magazine_well { default_magazine = "pseudo_battery" }
+    item:magazine_well {}
     item:tool { ammo_types = { "battery" } }
     content.add(item)
 end
@@ -605,7 +605,6 @@ do
     item:magazine_well {
         max_volume_ml = 200000000,
         max_weight_milligrams = 2000000000000,
-        default_magazine = "pseudo_battery",
     }
     content.add(item)
 end

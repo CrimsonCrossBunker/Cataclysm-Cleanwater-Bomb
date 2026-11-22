@@ -83,7 +83,7 @@ do
 local definition = content.MutationCategory {
     id = "FAIR_FOLK_NOBLE",
     name = ccb.content.text("Fair Folk Noble"),
-    mutagen_message = ccb.content.text(""),
+    mutagen_message = "",
     threshold_mutation = "THRESH_FAIR_FOLK_NOBLE",
     memorial_message = "Empty your heart of its mortal dream.",
     vitamin = "mutagen_fair_folk_noble",
@@ -94,7 +94,7 @@ do
 local definition = content.MutationCategory {
     id = "FAIR_FOLK_COMMONER_BROWNIE",
     name = ccb.content.text("Fair Folk Commoner, Brownie"),
-    mutagen_message = ccb.content.text(""),
+    mutagen_message = "",
     threshold_mutation = "THRESH_FAIR_FOLK_COMMONER_BROWNIE",
     memorial_message = "Empty your heart of its mortal dream.",
     vitamin = "mutagen_fair_folk_commoner_brownie",
@@ -105,7 +105,7 @@ do
 local definition = content.MutationCategory {
     id = "FAIR_FOLK_COMMONER_POOKA",
     name = ccb.content.text("Fair Folk Commoner, Pooka"),
-    mutagen_message = ccb.content.text(""),
+    mutagen_message = "",
     threshold_mutation = "THRESH_FAIR_FOLK_COMMONER_POOKA",
     memorial_message = "Empty your heart of its mortal dream.",
     vitamin = "mutagen_fair_folk_commoner_pooka",
@@ -116,7 +116,7 @@ do
 local definition = content.MutationCategory {
     id = "FAIR_FOLK_COMMONER_SELKIE",
     name = ccb.content.text("Fair Folk Commoner, Selkie"),
-    mutagen_message = ccb.content.text(""),
+    mutagen_message = "",
     threshold_mutation = "THRESH_FAIR_FOLK_COMMONER_SELKIE",
     memorial_message = "Empty your heart of its mortal dream.",
     vitamin = "mutagen_fair_folk_commoner_selkie",
@@ -127,7 +127,7 @@ do
 local definition = content.MutationCategory {
     id = "FAIR_FOLK_COMMONER_TROW",
     name = ccb.content.text("Fair Folk Commoner, Trow"),
-    mutagen_message = ccb.content.text(""),
+    mutagen_message = "",
     threshold_mutation = "THRESH_FAIR_FOLK_COMMONER_TROW",
     memorial_message = "Empty your heart of its mortal dream.",
     vitamin = "mutagen_fair_folk_commoner_trow",
@@ -138,7 +138,7 @@ do
 local definition = content.MutationCategory {
     id = "LILIN",
     name = ccb.content.text("Lilin"),
-    mutagen_message = ccb.content.text(""),
+    mutagen_message = "",
     threshold_mutation = "THRESH_LILIN",
     memorial_message = "The dawn breaks, and the owl lays down for its final rest.",
     vitamin = "mutagen_lilin",

@@ -25,7 +25,7 @@ ccb.content.define_item {
 
 ccb.content.define_item {
     id = "afs_military_cloak",
-    category = "ARMOR",
+    category = "armor",
     looks_like = "poncho",
     name = ccb.content.text("ablative combat cloak"),
     description = ccb.content.text("A military poncho made from heat dissipating ablative fibers.  It is designed to be worn over armor and provide additional protection against direct energy attacks.  Its ablative properties make it disposable and relatively fragile, its not rated to survive more than a single combat engagement."),

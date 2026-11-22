@@ -1091,6 +1091,18 @@ content.add(definition)
 end
 do
 local definition = content.FieldType {
+    id = "fd_study_zone",
+    priority = 1,
+    display_field = true,
+}
+definition:intensity {
+    name = ccb.content.text("study zone"),
+    symbol = "S",
+}
+content.add(definition)
+end
+do
+local definition = content.FieldType {
     id = "fd_vehicle_repair_zone",
     priority = 1,
     display_field = true,

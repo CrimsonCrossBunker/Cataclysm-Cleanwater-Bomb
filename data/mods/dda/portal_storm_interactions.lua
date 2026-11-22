@@ -29,10 +29,14 @@ calming:on_use("portal_calming_anomaly_use", content.text("Activate"),
     content.text("Seems like it could calm local conditions."))
 content.upsert(calming)
 
-local backpack = content.edit_item("debug_backpack")
+local backpack = content.Item {
+    id = "debug_backpack",
+    copy_from = "debug_backpack",
+}
 backpack:clear_use_actions()
 backpack:on_use("portal_debug_backpack_use", content.text("Activate"),
     content.text("Seems like it could calm local conditions."))
+content.upsert(backpack)
 
 ccb.runtime.handler("portal_dungeon_exit_trigger", function(payload)
     local character = payload.creature

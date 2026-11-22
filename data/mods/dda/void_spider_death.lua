@@ -73,4 +73,4 @@ for _, flag in ipairs {
 } do
     monster:flag(flag)
 end
-ccb.content.register(monster)
+ccb.content.upsert(monster)

@@ -38,7 +38,7 @@ ccb.content.define_item {
     abstract = true,
     name = ccb.content.text_without_extraction("fake appliance tool"),
     copy_from = "fake_item",
-    pockets = { { kind = "MAGAZINE_WELL", default_magazine = "pseudo_battery" } },
+    pockets = { { kind = "MAGAZINE_WELL" } },
     inheritance = { add = { flags = { "ALLOWS_REMOTE_USE", "PSEUDO" } } },
     tool = { ammo_types = { "battery" } },
 }

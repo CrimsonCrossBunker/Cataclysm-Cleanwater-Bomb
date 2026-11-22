@@ -87,7 +87,7 @@ do
     local item = content.Item {
         id = "gracken_improvement_general",
         abstract = true,
-        category = "MED",
+        category = "drugs",
         name = content.plural_text("abstract gracken improvement", "abstract gracken improvements"),
         mass_milligrams = 1900000,
         volume_ml = 2500,

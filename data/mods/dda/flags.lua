@@ -1188,6 +1188,23 @@ content.add(content.JsonFlag { id = "BIONIC_GUN" })
 -- This bionic is a weapon bionic and activating it will create (or destroy) bionic's fake_item in user's hands.  Prevents all other activation effects.
 content.add(content.JsonFlag { id = "BIONIC_WEAPON" })
 
+-- Built-in C++ character/bionic flags referenced by bionic definitions across dda and bundled mods.
+content.add(content.JsonFlag { id = "BIONIC_REMOVABLE" })
+content.add(content.JsonFlag { id = "BIONIC_SHOCKPROOF" })
+content.add(content.JsonFlag { id = "BIONIC_SLEEP_FRIENDLY" })
+content.add(content.JsonFlag { id = "CBQ_LEARN_BONUS" })
+content.add(content.JsonFlag { id = "EMP_ENERGYDRAIN_IMMUNE" })
+content.add(content.JsonFlag { id = "EYE_MEMBRANE" })
+content.add(content.JsonFlag { id = "GLARE_RESIST" })
+content.add(content.JsonFlag { id = "HEATSINK" })
+content.add(content.JsonFlag { id = "IMMUNE_HEARING_DAMAGE" })
+content.add(content.JsonFlag { id = "IMMUNE_SPOIL" })
+content.add(content.JsonFlag { id = "NIGHT_VISION" })
+content.add(content.JsonFlag { id = "NO_SCENT" })
+content.add(content.JsonFlag { id = "PARAIMMUNE" })
+content.add(content.JsonFlag { id = "SAFECRACK_NO_TOOL" })
+content.add(content.JsonFlag { id = "STOP_SLEEP_DEPRIVATION" })
+
 content.add(content.JsonFlag {
     id = "BIONIC_ARMOR_INTERFACE",
     info = ccb.content.text("This bionic can provide power to powered armor."),
