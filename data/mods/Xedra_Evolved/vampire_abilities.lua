@@ -4,8 +4,10 @@ local services = ccb.services
 local id = services.types.id
 local mutations = services.mutations
 local effects = services.effects
+local spells = services.spells
 local needs = services.needs
 local variables = services.variables
+local shapeshift_armor = require("shapeshift_armor")
 local blood_vitamin = id("vitamin", "human_blood_vitamin")
 
 local function value(result)
@@ -577,3 +579,245 @@ ccb.content.add(content.Spell {
     shape = "blast",
     base_casting_time = 200,
 }:lua_impact("vampire_bloodhaste_spell"))
+
+local function scale_calories(character, factor)
+    local current = value(needs.get(character)).stored_kcal
+    local delta = math.modf(current * factor - current)
+    value(needs.modify_calories(character, delta, true))
+end
+
+-- Feign death
+ccb.runtime.handler("vampire_feign_death_off", function(context)
+    local character = context.character
+    local seen = false
+    local offset = 0
+    while true do
+        local page = services.creatures.nearby(character, { radius = 45, limit = 256, offset = offset })
+        for _, entry in ipairs(page.items) do
+            if value(services.creatures.can_see(entry.handle, character)) then
+                seen = true
+                break
+            end
+        end
+        if seen or page.returned == 0 then
+            break
+        end
+        offset = offset + page.returned
+        if offset >= page.total then
+            break
+        end
+    end
+    if seen then
+        value(effects.add(character, id("effect", "effect_vampire_feign_death_ended"),
+            services.time.duration_from_turns(services.random.native_int(180, 360))))
+    end
+end)
+
+-- Shapeshift forms
+local form_entries = {
+    { key = "bat", mutation = "VAMPIRE_BAT_FORM", active_trait = "VAMPIRE_BAT_FORM_TRAITS" },
+    { key = "wolf", mutation = "VAMPIRE_WOLF_FORM", active_trait = "VAMPIRE_WOLF_FORM_TRAITS" },
+    { key = "mist", mutation = "VAMPIRE_MIST_FORM", active_trait = "VAMPIRE_MIST_FORM_TRAITS" },
+    { key = "shadow", mutation = "VAMPIRE_SHADOW_FORM", active_trait = "VAMPIRE_SHADOW_FORM_TRAITS" },
+}
+
+local function cancel_other_forms(character, keep_key)
+    for _, entry in ipairs(form_entries) do
+        if entry.key ~= keep_key and has_trait(character, entry.active_trait) then
+            deactivate_trait(character, entry.mutation)
+        end
+    end
+end
+
+local function leave_shadow_form(character)
+    if not has_trait(character, "VAMPIRE_SHADOW_FORM_TRAITS") then
+        return
+    end
+    player_message(character, "Your eyes stop glowing and the shadows surrounding you dissipate.", "neutral")
+    value(mutations.erase(character, id("mutation", "VAMPIRE_SHADOW_FORM_TRAITS")))
+end
+
+local function leave_bat_form(character)
+    if not has_trait(character, "VAMPIRE_BAT_FORM_TRAITS") then
+        return
+    end
+    leave_shadow_form(character)
+    ccb.tasks.after_character_turn(character, 0, "vampire_shadow_form_deactivate")
+    player_message(character, "Your wings recede and you land on now-humanoid legs.", "neutral")
+    value(mutations.erase(character, id("mutation", "VAMPIRE_BAT_FORM_TRAITS")))
+    value(mutations.erase(character, id("mutation", "ECHOLOCATION")))
+    scale_calories(character, 4)
+    value(spells.set_level(character, id("spell", "vampire_bat_form_fly_upward"), -1))
+    shapeshift_armor.restore(character)
+end
+
+ccb.runtime.handler("vampire_bat_form_on", function(context)
+    local character = context.character
+    if has_trait(character, "VAMPIRE_BAT_FORM_TRAITS") then
+        leave_bat_form(character)
+        return
+    end
+    if blood_amount(character) < -500 then
+        player_message(character, "You don't have enough blood to transform into a bat.", "bad")
+        ccb.tasks.after_character_turn(character, 0, "vampire_bat_form_deactivate")
+        return
+    end
+    cancel_other_forms(character, "bat")
+    assign_activity(character, 1.5)
+    modify_blood(character, has_trait(character, "VAMPIRE_FORM_UPGRADE") and -300 or -600)
+    shapeshift_armor.subsume(character)
+    value(mutations.replace(character, id("mutation", "VAMPIRE_BAT_FORM_TRAITS")))
+    value(mutations.replace(character, id("mutation", "ECHOLOCATION")))
+    scale_calories(character, 0.25)
+    if has_trait(character, "VAMPIRE_BAT_FORM_REFINEMENT_SWARM") then
+        player_message(character,
+            "Your body splits into a multitude of bats and as your transformation completes, you take to the air on many wings.",
+            "good")
+    else
+        player_message(character,
+            "Your fingers lengthen as flaps of skin grow between them and as your legs shorten, you take to the air.",
+            "good")
+    end
+end)
+
+ccb.runtime.handler("vampire_bat_form_off", function(context)
+    leave_bat_form(context.character)
+end)
+
+ccb.runtime.handler("vampire_bat_form_deactivate", function(context)
+    deactivate_trait(context.character, "VAMPIRE_BAT_FORM")
+end)
+
+local function leave_wolf_form(character)
+    if not has_trait(character, "VAMPIRE_WOLF_FORM_TRAITS") then
+        return
+    end
+    player_message(character, "Your fur disappears and you walk once again on two legs.", "neutral")
+    value(mutations.erase(character, id("mutation", "VAMPIRE_WOLF_FORM_TRAITS")))
+    shapeshift_armor.restore(character)
+end
+
+ccb.runtime.handler("vampire_wolf_form_on", function(context)
+    local character = context.character
+    if has_trait(character, "VAMPIRE_WOLF_FORM_TRAITS") then
+        leave_wolf_form(character)
+        return
+    end
+    if blood_amount(character) < -500 then
+        player_message(character, "You don't have enough blood to transform into a wolf.", "bad")
+        ccb.tasks.after_character_turn(character, 0, "vampire_wolf_form_deactivate")
+        return
+    end
+    cancel_other_forms(character, "wolf")
+    assign_activity(character, 1.5)
+    shapeshift_armor.subsume(character)
+    modify_blood(character, has_trait(character, "VAMPIRE_FORM_UPGRADE") and -300 or -600)
+    value(mutations.replace(character, id("mutation", "VAMPIRE_WOLF_FORM_TRAITS")))
+    player_message(character,
+        "Your nose pushes out into a muzzle as you fall forward on all fours and let out a snarl.", "good")
+end)
+
+ccb.runtime.handler("vampire_wolf_form_off", function(context)
+    leave_wolf_form(context.character)
+end)
+
+ccb.runtime.handler("vampire_wolf_form_deactivate", function(context)
+    deactivate_trait(context.character, "VAMPIRE_WOLF_FORM")
+end)
+
+local function leave_mist_form(character)
+    if not has_trait(character, "VAMPIRE_MIST_FORM_TRAITS") then
+        return
+    end
+    player_message(character, "You reconstitute yourself from the billowing mists.", "neutral")
+    remove_effect(character, "effect_vampire_mist_form")
+    remove_effect(character, "incorporeal")
+    value(mutations.erase(character, id("mutation", "VAMPIRE_MIST_FORM_TRAITS")))
+    value(spells.set_level(character, id("spell", "vampire_mist_form_pass_through_doors_and_windows"), -1))
+end
+
+ccb.runtime.handler("vampire_mist_form_on", function(context)
+    local character = context.character
+    if has_trait(character, "VAMPIRE_MIST_FORM_TRAITS") then
+        leave_mist_form(character)
+        return
+    end
+    if blood_amount(character) < -500 then
+        player_message(character, "You don't have enough blood to transform into mist.", "bad")
+        ccb.tasks.after_character_turn(character, 0, "vampire_mist_form_deactivate")
+        return
+    end
+    cancel_other_forms(character, "mist")
+    assign_activity(character, 1.5)
+    modify_blood(character, has_trait(character, "VAMPIRE_FORM_UPGRADE") and -300 or -600)
+    value(mutations.replace(character, id("mutation", "VAMPIRE_MIST_FORM_TRAITS")))
+    add_permanent_effect(character, "effect_vampire_mist_form")
+    add_permanent_effect(character, "incorporeal")
+    value(spells.set_level(character, id("spell", "vampire_mist_form_pass_through_doors_and_windows"), 0))
+    player_message(character, "Your body falls apart into billowing mist.", "good")
+end)
+
+ccb.runtime.handler("vampire_mist_form_off", function(context)
+    leave_mist_form(context.character)
+end)
+
+ccb.runtime.handler("vampire_mist_form_deactivate", function(context)
+    deactivate_trait(context.character, "VAMPIRE_MIST_FORM")
+end)
+
+ccb.runtime.handler("vampire_mist_form_move_cost", function()
+    local character = services.creatures.avatar()
+    if not has_trait(character, "VAMPIRE_MIST_FORM_TRAITS") then
+        return
+    end
+    if blood_amount(character) >= -500 then
+        modify_blood(character, -2)
+    else
+        player_message(character, "You don't have enough blood to maintain your mist form.", "bad")
+        leave_mist_form(character)
+        ccb.tasks.after_character_turn(character, 0, "vampire_mist_form_deactivate")
+    end
+end)
+ccb.runtime.on("game:avatar_moves", "vampire_mist_form_move_cost")
+
+ccb.runtime.handler("vampire_shadow_form_on", function(context)
+    local character = context.character
+    if has_trait(character, "VAMPIRE_SHADOW_FORM_TRAITS") then
+        leave_shadow_form(character)
+        return
+    end
+    if blood_amount(character) < 500 then
+        player_message(character, "You don't have enough blood to shroud yourself in shadow.", "bad")
+        ccb.tasks.after_character_turn(character, 0, "vampire_shadow_form_deactivate")
+        return
+    end
+    cancel_other_forms(character, "shadow")
+    assign_activity(character, 1.5)
+    modify_blood(character, has_trait(character, "VAMPIRE_FORM_UPGRADE") and -400 or -800)
+    value(mutations.replace(character, id("mutation", "VAMPIRE_SHADOW_FORM_TRAITS")))
+    player_message(character, "Shadows surround you until only your now-glowing eyes remain visible.", "good")
+end)
+
+ccb.runtime.handler("vampire_shadow_form_off", function(context)
+    leave_shadow_form(context.character)
+end)
+
+ccb.runtime.handler("vampire_shadow_form_deactivate", function(context)
+    deactivate_trait(context.character, "VAMPIRE_SHADOW_FORM")
+end)
+
+ccb.runtime.handler("vampire_shadow_form_process", function(context)
+    local character = context.character
+    if not has_trait(character, "VAMPIRE_SHADOW_FORM_TRAITS") then
+        return
+    end
+    if blood_amount(character) >= -500 and not sleeping_or_torpor(character) then
+        modify_blood(character, -5)
+    else
+        if blood_amount(character) < -500 then
+            player_message(character, "You don't have enough blood to maintain the shadows surrounding you.", "bad")
+        end
+        leave_shadow_form(character)
+        ccb.tasks.after_character_turn(character, 0, "vampire_shadow_form_deactivate")
+    end
+end)
