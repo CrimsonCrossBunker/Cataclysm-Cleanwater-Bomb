@@ -1,21 +1,5 @@
 [
   {
-    "id": "spell_blood_haste",
-    "type": "SPELL",
-    "name": "Blood-Driven Speed",
-    "description": "Stolen blood allows you to move as quick as lightning, scything through your enemies or outrunning a car.",
-    "message": "",
-    "teachable": false,
-    "valid_targets": [ "self" ],
-    "flags": [ "NO_HANDS", "SILENT", "NO_FAIL", "NO_PROJECTILE" ],
-    "skill": "deduction",
-    "spell_class": "VAMPIRE",
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_BLOODHASTE_activated",
-    "shape": "blast",
-    "base_casting_time": 200
-  },
-  {
     "id": "vampire_bat_form_fly_upward",
     "type": "SPELL",
     "name": "(Bat Form) Ascend",
