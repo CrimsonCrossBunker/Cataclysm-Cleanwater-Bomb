@@ -61,6 +61,7 @@ extern "C" {
 #include "condition.h"
 #include "construction.h"
 #include "construction_group.h"
+#include "crafting_gui.h"
 #include "damage.h"
 #include "dialogue.h"
 #include "enum_conversions.h"
@@ -102,11 +103,13 @@ extern "C" {
 #include "overmap_connection.h"
 #include "overmap_location.h"
 #include "output.h"
+#include "pet_slot.h"
 #include "profession.h"
 #include "proficiency.h"
 #include "recipe_dictionary.h"
 #include "regional_climate.h"
 #include "regional_settings.h"
+#include "riding_config.h"
 #include "scenario.h"
 #include "start_location.h"
 #include "subbodypart.h"
@@ -5175,6 +5178,198 @@ void write_static_fixed_overmap_special( JsonOut &json, const sol::table &option
     write_placement_member<int>( json, options, "priority", "priority" );
 }
 
+void write_static_mutable_overmap_join_entry( JsonOut &json, const sol::object &entry )
+{
+    if( entry.get_type() == sol::type::string ) {
+        json.write( entry.as<std::string>() );
+        return;
+    }
+    const sol::table join = entry.as<sol::table>();
+    json.start_object();
+    json.member( "id", join.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, join, { { "opposite", "opposite" } } );
+    write_item_ids( json, join, { { "into_locations", "into_locations" } } );
+    json.end_object();
+}
+
+void write_static_mutable_terrain_join( JsonOut &json, const char *dir, const sol::object &entry )
+{
+    if( entry.get_type() == sol::type::nil ) {
+        return;
+    }
+    if( entry.get_type() == sol::type::string ) {
+        json.member( dir, entry.as<std::string>() );
+        return;
+    }
+    const sol::table join = entry.as<sol::table>();
+    json.member( dir );
+    json.start_object();
+    json.member( "id", join.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, join, { { "type", "type" } } );
+    write_item_ids( json, join, { { "alternatives", "alternatives" } } );
+    json.end_object();
+}
+
+void write_static_mutable_phase_max( JsonOut &json, const sol::object &value )
+{
+    if( value.get_type() == sol::type::nil ) {
+        return;
+    }
+    if( value.get_type() == sol::type::number ) {
+        json.member( "max", value.as<int>() );
+        return;
+    }
+    const sol::table dist = value.as<sol::table>();
+    const sol::object poisson = dist.raw_get<sol::object>( "poisson" );
+    const sol::object binomial = dist.raw_get<sol::object>( "binomial" );
+    const sol::object bounds = dist.raw_get<sol::object>( "bounds" );
+    if( poisson.get_type() == sol::type::nil && binomial.get_type() == sol::type::nil &&
+        bounds.get_type() == sol::type::nil ) {
+        // 2-element uniform array { lo, hi }
+        write_mapgen_range( json, "max", value );
+        return;
+    }
+    json.member( "max" );
+    json.start_object();
+    if( poisson.get_type() != sol::type::nil ) {
+        json.member( "poisson", poisson.as<double>() );
+    }
+    if( binomial.get_type() == sol::type::table ) {
+        const sol::table pair = binomial.as<sol::table>();
+        if( checked_dense_array_size( pair, "binomial", 2 ) != 2 ) {
+            throw std::invalid_argument( "mutable overmap phase max.binomial requires { n, p }" );
+        }
+        json.member( "binomial" );
+        json.start_array();
+        json.write( pair.raw_get<int>( 1 ) );
+        json.write( pair.raw_get<double>( 2 ) );
+        json.end_array();
+    }
+    write_mapgen_range( json, "bounds", bounds );
+    json.end_object();
+}
+
+void write_static_mutable_overmap_special( JsonOut &json, const sol::table &options )
+{
+    json.member( "subtype", "mutable" );
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "root", "root" }
+    } );
+    write_item_ids( json, options, { { "locations", "locations" }, { "flags", "flags" } } );
+    write_mapgen_range( json, "occurrences", options.raw_get<sol::object>( "occurrences" ) );
+    write_mapgen_range( json, "city_sizes", options.raw_get<sol::object>( "city_sizes" ) );
+    write_mapgen_range( json, "city_distance", options.raw_get<sol::object>( "city_distance" ) );
+    write_placement_member<int>( json, options, "priority", "priority" );
+    if( const auto spawns = options.get<sol::optional<sol::table>>( "spawns" ) ) {
+        json.member( "spawns" );
+        json.start_object();
+        json.member( "group", spawns->get<std::string>( "group" ) );
+        write_mapgen_range( json, "population", spawns->raw_get<sol::object>( "population" ) );
+        write_mapgen_range( json, "radius", spawns->raw_get<sol::object>( "radius" ) );
+        json.end_object();
+    }
+    if( const auto checks = options.get<sol::optional<sol::table>>( "check_for_locations" ) ) {
+        json.member( "check_for_locations" );
+        write_static_values<sol::table>( json, *checks, "check_for_locations",
+        []( JsonOut & out, const sol::table & entry ) {
+            out.start_array();
+            const sol::table point = entry.get<sol::table>( "point" );
+            if( checked_dense_array_size( point, "point", 3 ) != 3 ) {
+                throw std::invalid_argument( "check_for_locations point requires three integers" );
+            }
+            out.start_array();
+            for( int i = 1; i <= 3; ++i ) {
+                out.write( point.raw_get<int>( i ) );
+            }
+            out.end_array();
+            out.write( bounded_string_array( entry.get<sol::table>( "locations" ),
+                                             "locations", std::numeric_limits<std::size_t>::max(),
+                                             "check_for_locations" ) );
+            out.end_array();
+        } );
+    }
+    write_static_catalog_array( json, options, "check_for_locations_area",
+                                "check_for_locations_area",
+    []( JsonOut & out, const sol::table & area ) {
+        out.start_object();
+        write_static_int_triplet( out, area, "from" );
+        write_static_int_triplet( out, area, "to" );
+        const auto locs = area.get<sol::optional<sol::table>>( "locations" );
+        const auto legacy_type = area.get<sol::optional<sol::table>>( "type" );
+        if( !locs && !legacy_type ) {
+            throw std::invalid_argument( "check_for_locations_area requires locations" );
+        }
+        const sol::table &targets = locs ? *locs : *legacy_type;
+        out.member( "type", bounded_string_array( targets, "locations",
+                    std::numeric_limits<std::size_t>::max(), "check_for_locations_area" ) );
+        out.end_object();
+    } );
+    if( const auto joins = options.get<sol::optional<sol::table>>( "joins" ) ) {
+        json.member( "joins" );
+        write_static_values<sol::object>( json, *joins, "joins",
+                                          write_static_mutable_overmap_join_entry );
+    }
+    if( const auto overmaps = options.get<sol::optional<sol::table>>( "overmaps" ) ) {
+        std::map<std::string, sol::table> ordered;
+        for( const auto &[key, value] : *overmaps ) {
+            ordered.emplace( key.as<std::string>(), value.as<sol::table>() );
+        }
+        json.member( "overmaps" );
+        json.start_object();
+        for( const auto &[name, tile] : ordered ) {
+            json.member( name );
+            json.start_object();
+            write_item_fields<std::string>( json, tile, {
+                { "overmap", "overmap" }, { "camp", "camp" }, { "camp_name", "camp_name" }
+            } );
+            write_item_ids( json, tile, { { "locations", "locations" } } );
+            for( const char *dir : { "north", "south", "east", "west", "above", "below" } ) {
+                write_static_mutable_terrain_join( json, dir, tile.raw_get<sol::object>( dir ) );
+            }
+            if( const auto conns = tile.get<sol::optional<sol::table>>( "connections" ) ) {
+                std::map<std::string, sol::table> ordered_conns;
+                for( const auto &[ckey, cval] : *conns ) {
+                    ordered_conns.emplace( ckey.as<std::string>(), cval.as<sol::table>() );
+                }
+                json.member( "connections" );
+                json.start_object();
+                for( const auto &[dir, conn] : ordered_conns ) {
+                    json.member( dir );
+                    write_static_overmap_connection( json, conn );
+                }
+                json.end_object();
+            }
+            json.end_object();
+        }
+        json.end_object();
+    }
+    if( const auto phases = options.get<sol::optional<sol::table>>( "phases" ) ) {
+        json.member( "phases" );
+        write_static_values<sol::table>( json, *phases, "phases",
+        []( JsonOut & out, const sol::table & phase ) {
+            write_static_values<sol::table>( out, phase, "phase",
+            []( JsonOut & rule_out, const sol::table & rule ) {
+                rule_out.start_object();
+                write_item_fields<std::string>( rule_out, rule, {
+                    { "name", "name" }, { "overmap", "overmap" }
+                } );
+                write_static_catalog_array( rule_out, rule, "chunk", "chunk",
+                []( JsonOut & chunk_out, const sol::table & piece ) {
+                    chunk_out.start_object();
+                    chunk_out.member( "overmap", piece.get<std::string>( "overmap" ) );
+                    write_static_int_triplet( chunk_out, piece, "pos" );
+                    write_item_fields<std::string>( chunk_out, piece, { { "rot", "rot" } } );
+                    chunk_out.end_object();
+                } );
+                write_placement_member<int>( rule_out, rule, "weight", "weight" );
+                write_static_mutable_phase_max( rule_out, rule.raw_get<sol::object>( "max" ) );
+                rule_out.end_object();
+            } );
+        } );
+    }
+}
+
 void write_static_external_option( JsonOut &json, const sol::table &options )
 {
     json.member( "name", options.get<std::string>( "id" ) );
@@ -6760,13 +6955,149 @@ void write_static_start_location( JsonOut &json, const sol::table &options )
         write_mapgen_range( json, native, options.raw_get<sol::object>( field ) );
     }
     write_item_ids( json, options, { { "flags", "flags" } } );
-    if( const auto flags = options.get<sol::optional<sol::table>>( "extend_flags" ) ) {
+    const auto extend_flags = options.get<sol::optional<sol::table>>( "extend_flags" );
+    const auto extend_targets = options.get<sol::optional<sol::table>>( "extend_targets" );
+    if( extend_flags || extend_targets ) {
         json.member( "extend" );
         json.start_object();
-        json.member( "flags", bounded_string_array( *flags, "extend_flags",
-                     std::numeric_limits<std::size_t>::max(), "start location" ) );
+        if( extend_flags ) {
+            json.member( "flags", bounded_string_array( *extend_flags, "extend_flags",
+                         std::numeric_limits<std::size_t>::max(), "start location" ) );
+        }
+        if( extend_targets ) {
+            json.member( "terrain" );
+            write_static_values<sol::object>( json, *extend_targets, "extend_targets",
+                                              write_static_start_location_target );
+        }
         json.end_object();
     }
+}
+
+void write_static_pet_slot( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    write_item_fields<std::string>( json, options, {
+        { "min_creature_volume", "min_creature_volume" },
+        { "max_creature_volume", "max_creature_volume" },
+        { "min_storage", "min_storage" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "pet_armor", "pet_armor" }, { "mount_only", "mount_only" }
+    } );
+    write_item_fields<int>( json, options, {
+        { "mount_threshold_delta", "mount_threshold_delta" }
+    } );
+    write_item_fields<double>( json, options, {
+        { "melee_hit_multiplier", "melee_hit_multiplier" },
+        { "melee_damage_multiplier", "melee_damage_multiplier" },
+        { "fear_multiplier", "fear_multiplier" },
+        { "spook_multiplier", "spook_multiplier" },
+        { "mounted_move_cost_multiplier", "mounted_move_cost_multiplier" }
+    } );
+    write_item_ids( json, options, {
+        { "required_flags", "required_flags" }, { "forbidden_flags", "forbidden_flags" },
+        { "bodytypes", "bodytypes" }, { "passive_effects", "passive_effects" },
+        { "sub_slots", "sub_slots" }, { "creature_size_range", "creature_size_range" }
+    } );
+}
+
+void write_static_riding_config( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<int>( json, options, {
+        { "saddled_mount_difficulty", "saddled_mount_difficulty" },
+        { "unsaddled_mount_difficulty", "unsaddled_mount_difficulty" },
+        { "legacy_survival_conversion_cap", "legacy_survival_conversion_cap" },
+        { "move_practice_chance", "move_practice_chance" },
+        { "move_practice", "move_practice" },
+        { "melee_practice", "melee_practice" },
+        { "ranged_practice", "ranged_practice" },
+        { "mount_refusal_distance", "mount_refusal_distance" },
+        { "mounted_ranged_dispersion_penalty", "mounted_ranged_dispersion_penalty" },
+        { "ranged_dispersion_skill_reduction", "ranged_dispersion_skill_reduction" },
+        { "mounted_ranged_proficiency_bonus", "mounted_ranged_proficiency_bonus" },
+        { "proficiency_practice_seconds", "proficiency_practice_seconds" }
+    } );
+    write_item_fields<double>( json, options, {
+        { "mount_skill_weight", "mount_skill_weight" },
+        { "mount_dexterity_weight", "mount_dexterity_weight" },
+        { "legacy_survival_conversion_ratio", "legacy_survival_conversion_ratio" },
+        { "mount_refusal_base_chance", "mount_refusal_base_chance" },
+        { "tamed_mount_fear_multiplier", "tamed_mount_fear_multiplier" },
+        { "animal_walk_speed_multiplier", "animal_walk_speed_multiplier" },
+        { "animal_trot_speed_multiplier", "animal_trot_speed_multiplier" },
+        { "spook_skill_reduction", "spook_skill_reduction" },
+        { "balance_skill_reduction", "balance_skill_reduction" },
+        { "melee_fall_base_chance", "melee_fall_base_chance" },
+        { "melee_fall_damage_scale", "melee_fall_damage_scale" },
+        { "mounted_move_cost_penalty", "mounted_move_cost_penalty" },
+        { "move_cost_skill_reduction", "move_cost_skill_reduction" },
+        { "minimum_move_cost_multiplier", "minimum_move_cost_multiplier" },
+        { "mounted_melee_hit_penalty", "mounted_melee_hit_penalty" },
+        { "melee_hit_skill_reduction", "melee_hit_skill_reduction" },
+        { "mounted_melee_proficiency_hit_bonus", "mounted_melee_proficiency_hit_bonus" },
+        { "mounted_melee_proficiency_damage_bonus", "mounted_melee_proficiency_damage_bonus" }
+    } );
+    write_item_fields<std::string>( json, options, {
+        { "mounted_combat_proficiency", "mounted_combat_proficiency" },
+        { "mounted_ranged_proficiency", "mounted_ranged_proficiency" },
+        { "mounted_bashing_proficiency", "mounted_bashing_proficiency" },
+        { "mounted_cutting_proficiency", "mounted_cutting_proficiency" },
+        { "mounted_piercing_proficiency", "mounted_piercing_proficiency" }
+    } );
+}
+
+void write_static_ter_furn_migration( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "from_ter", "from_ter" }, { "from_furn", "from_furn" },
+        { "to_ter", "to_ter" }, { "to_furn", "to_furn" }
+    } );
+}
+
+void write_static_recipe_category( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, { { "copy_from", "copy-from" } } );
+    write_item_fields<bool>( json, options, {
+        { "is_hidden", "is_hidden" }, { "is_practice", "is_practice" },
+        { "is_building", "is_building" }, { "is_wildcard", "is_wildcard" }
+    } );
+    write_item_ids( json, options, { { "subcategories", "recipe_subcategories" } } );
+    if( const auto extend = options.get<sol::optional<sol::table>>( "extend_subcategories" ) ) {
+        json.member( "extend" );
+        json.start_object();
+        json.member( "recipe_subcategories", bounded_string_array( *extend, "extend_subcategories",
+                     std::numeric_limits<std::size_t>::max(), "recipe category" ) );
+        json.end_object();
+    }
+    if( const auto del = options.get<sol::optional<sol::table>>( "delete_subcategories" ) ) {
+        json.member( "delete" );
+        json.start_object();
+        json.member( "recipe_subcategories", bounded_string_array( *del, "delete_subcategories",
+                     std::numeric_limits<std::size_t>::max(), "recipe category" ) );
+        json.end_object();
+    }
+}
+
+void write_static_addiction_type( JsonOut &json, const sol::table &options )
+{
+    json.member( "id", options.get<std::string>( "id" ) );
+    write_item_fields<std::string>( json, options, {
+        { "copy_from", "copy-from" }, { "craving_morale", "craving_morale" },
+        { "builtin", "builtin" }
+    } );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "type_name", options.raw_get<sol::object>( "type_name" ), false );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    const sol::object sated = options.raw_get<sol::object>( "sated" );
+    if( sated.get_type() == sol::type::string ) {
+        json.member( "sated", sated.as<std::string>() );
+    } else if( sated.get_type() == sol::type::number ) {
+        json.member( "sated", sated.as<int>() );
+    }
+    write_item_ids( json, options, { { "satisfying_effects", "satisfying_effects" } } );
 }
 
 void write_static_profession_text( JsonOut &json, const sol::table &options, const char *field )
@@ -7645,6 +7976,158 @@ void write_static_technique( JsonOut &json, const sol::table &options )
     } );
 }
 
+void write_static_martial_art_buff( JsonOut &json, const sol::table &buff )
+{
+    json.start_object();
+    write_item_fields<std::string>( json, buff, { { "id", "id" } } );
+    write_item_text( json, "name", buff.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "description", buff.raw_get<sol::object>( "description" ), false );
+    const sol::object duration = buff.raw_get<sol::object>( "buff_duration" );
+    if( duration.get_type() == sol::type::string ) {
+        json.member( "buff_duration", duration.as<std::string>() );
+    } else if( duration.get_type() == sol::type::number ) {
+        json.member( "buff_duration", duration.as<int>() );
+    }
+    write_item_fields<int>( json, buff, {
+        { "max_stacks", "max_stacks" }, { "bonus_dodges", "bonus_dodges" },
+        { "free_dodges", "free_dodges" }, { "bonus_blocks", "bonus_blocks" }
+    } );
+    write_item_fields<bool>( json, buff, {
+        { "persists", "persists" }, { "quiet", "quiet" }, { "stealthy", "stealthy" },
+        { "melee_bash_damage_cap_bonus", "melee_bash_damage_cap_bonus" },
+        { "unarmed_allowed", "unarmed_allowed" }, { "melee_allowed", "melee_allowed" },
+        { "strictly_unarmed", "strictly_unarmed" }, { "wall_adjacent", "wall_adjacent" }
+    } );
+    const sol::object weapon_cats = buff.raw_get<sol::object>( "weapon_categories_allowed" );
+    if( weapon_cats.get_type() == sol::type::string ) {
+        json.member( "weapon_categories_allowed", weapon_cats.as<std::string>() );
+    } else if( weapon_cats.get_type() == sol::type::table ) {
+        json.member( "weapon_categories_allowed",
+                     bounded_string_array( weapon_cats.as<sol::table>(),
+                                           "weapon_categories_allowed",
+                                           std::numeric_limits<std::size_t>::max(),
+                                           "martial art buff" ) );
+    }
+    write_item_ids( json, buff, {
+        { "flags", "flags" }, { "required_buffs_all", "required_buffs_all" },
+        { "required_buffs_any", "required_buffs_any" },
+        { "forbidden_buffs_all", "forbidden_buffs_all" },
+        { "forbidden_buffs_any", "forbidden_buffs_any" },
+        { "req_flags", "req_flags" }, { "required_char_flags", "required_char_flags" },
+        { "required_char_flags_all", "required_char_flags_all" },
+        { "forbidden_char_flags", "forbidden_char_flags" }
+    } );
+    write_static_catalog_array( json, buff, "skill_requirements", "skill_requirements",
+    []( JsonOut & out, const sol::table & req ) {
+        out.start_object();
+        if( const auto name = req.get<sol::optional<std::string>>( "name" ) ) {
+            out.member( "name", *name );
+        } else {
+            out.member( "name", req.get<std::string>( "id" ) );
+        }
+        out.member( "level", req.get<int>( "level" ) );
+        out.end_object();
+    } );
+    write_static_catalog_array( json, buff, "weapon_damage_requirements",
+                                "weapon_damage_requirements",
+    []( JsonOut & out, const sol::table & req ) {
+        out.start_object();
+        out.member( "type", req.get<std::string>( "type" ) );
+        if( const auto min_val = req.get<sol::optional<int>>( "min" ) ) {
+            out.member( "min", *min_val );
+        } else {
+            out.member( "min", req.get<int>( "minimum" ) );
+        }
+        out.end_object();
+    } );
+    const auto write_bonus = []( JsonOut & out, const sol::table & entry ) {
+        out.start_object();
+        out.member( "stat", entry.get<std::string>( "stat" ) );
+        out.member( "scale", entry.get<double>( "scale" ) );
+        if( const auto dtype = entry.get<sol::optional<std::string>>( "type" ) ) {
+            out.member( "type", *dtype );
+        } else {
+            write_placement_member<std::string>( out, entry, "damage_type", "type" );
+        }
+        if( const auto scaling = entry.get<sol::optional<std::string>>( "scaling_stat" ) ) {
+            out.member( "scaling-stat", *scaling );
+        } else {
+            write_placement_member<std::string>( out, entry, "scaling-stat", "scaling-stat" );
+        }
+        out.end_object();
+    };
+    write_static_catalog_array( json, buff, "flat_bonuses", "flat_bonuses", write_bonus );
+    write_static_catalog_array( json, buff, "mult_bonuses", "mult_bonuses", write_bonus );
+    json.end_object();
+}
+
+void write_static_martial_art( JsonOut &json, const sol::table &options )
+{
+    write_item_fields<std::string>( json, options, {
+        { "id", "id" }, { "copy_from", "copy-from" }, { "primary_skill", "primary_skill" }
+    } );
+    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
+    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    if( const auto initiate = options.get<sol::optional<sol::table>>( "initiate" ) ) {
+        json.member( "initiate" );
+        write_static_values<sol::object>( json, *initiate, "martial art initiate",
+        []( JsonOut & out, const sol::object & msg ) {
+            write_item_text_value( out, "martial art initiate", msg, false );
+        } );
+    }
+    write_static_catalog_array( json, options, "autolearn", "autolearn",
+    []( JsonOut & out, const sol::table & entry ) {
+        out.start_array();
+        if( const auto skill = entry.get<sol::optional<std::string>>( "skill" ) ) {
+            out.write( *skill );
+            out.write( entry.get<int>( "level" ) );
+        } else if( const auto id = entry.get<sol::optional<std::string>>( "id" ) ) {
+            out.write( *id );
+            out.write( entry.get<int>( "level" ) );
+        } else {
+            out.write( entry.get<std::string>( 1 ) );
+            out.write( entry.get<int>( 2 ) );
+        }
+        out.end_array();
+    } );
+    write_item_fields<int>( json, options, {
+        { "priority", "priority" }, { "learn_difficulty", "learn_difficulty" },
+        { "leg_block", "leg_block" }, { "arm_block", "arm_block" },
+        { "nonstandard_block", "nonstandard_block" }
+    } );
+    write_item_fields<bool>( json, options, {
+        { "teachable", "teachable" }, { "strictly_melee", "strictly_melee" },
+        { "strictly_unarmed", "strictly_unarmed" }, { "allow_all_weapons", "allow_all_weapons" },
+        { "force_unarmed", "force_unarmed" },
+        { "prevent_weapon_blocking", "prevent_weapon_blocking" },
+        { "arm_block_with_bio_armor_arms", "arm_block_with_bio_armor_arms" },
+        { "leg_block_with_bio_armor_legs", "leg_block_with_bio_armor_legs" }
+    } );
+    write_item_ids( json, options, {
+        { "techniques", "techniques" }, { "weapons", "weapons" },
+        { "weapon_category", "weapon_category" }
+    } );
+    for( const char *buff_list : {
+             "static_buffs", "onmove_buffs", "onpause_buffs", "onhit_buffs", "onattack_buffs",
+             "ondodge_buffs", "onblock_buffs", "ongethit_buffs", "onmiss_buffs",
+             "oncrit_buffs", "onkill_buffs"
+         } ) {
+        write_static_catalog_array( json, options, buff_list, buff_list,
+                                    write_static_martial_art_buff );
+    }
+    for( const char *operation : { "extend", "delete" } ) {
+        if( const auto op = options.get<sol::optional<sol::table>>( operation ) ) {
+            json.member( operation );
+            json.start_object();
+            write_item_ids( json, *op, {
+                { "weapons", "weapons" }, { "techniques", "techniques" },
+                { "weapon_category", "weapon_category" }
+            } );
+            json.end_object();
+        }
+    }
+}
+
 void write_static_spell_energy( JsonOut &json, const sol::table &options )
 {
     const sol::object energy = options.raw_get<sol::object>( "energy_source" );
@@ -7993,6 +8476,24 @@ void load_mod_content_with_data( const mod_source &source,
     content.set_function( "define_fixed_overmap_special", static_catalog_definition(
                               resolved.id, "overmap_special", write_static_fixed_overmap_special,
                               overmap_specials::load ) );
+    content.set_function( "define_mutable_overmap_special", static_catalog_definition(
+                              resolved.id, "overmap_special", write_static_mutable_overmap_special,
+                              overmap_specials::load ) );
+    content.set_function( "define_pet_slot", static_catalog_definition(
+                              resolved.id, "pet_slot", write_static_pet_slot,
+                              load_pet_slots ) );
+    content.set_function( "define_riding_config", static_catalog_definition(
+                              resolved.id, "riding_config", write_static_riding_config,
+                              load_riding_config ) );
+    content.set_function( "define_ter_furn_migration", static_catalog_definition(
+                              resolved.id, "ter_furn_migration", write_static_ter_furn_migration,
+                              ter_furn_migrations::load ) );
+    content.set_function( "define_recipe_category", static_catalog_definition(
+                              resolved.id, "recipe_category", write_static_recipe_category,
+                              load_recipe_category ) );
+    content.set_function( "define_addiction_type", static_catalog_definition(
+                              resolved.id, "addiction_type", write_static_addiction_type,
+                              add_type::load_add_types ) );
     content.set_function( "define_weakpoint_set", [&resolved]( const sol::table & options ) {
         load_static_weakpoint_set( options, resolved.id );
     } );
@@ -8054,6 +8555,9 @@ void load_mod_content_with_data( const mod_source &source,
                               resolved.id, "SPELL", write_static_spell, spell_type::load_spell ) );
     content.set_function( "define_technique", static_catalog_definition(
                               resolved.id, "technique", write_static_technique, load_technique ) );
+    content.set_function( "define_martial_art", static_catalog_definition(
+                              resolved.id, "martial_art", write_static_martial_art,
+                              load_martial_art ) );
     content.set_function( "define_achievement", static_catalog_definition(
                               resolved.id, "achievement", write_static_achievement, achievement::load_achievement ) );
     content.set_function( "define_conduct", static_catalog_definition(

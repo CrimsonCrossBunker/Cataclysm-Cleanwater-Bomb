@@ -7647,6 +7647,184 @@ function CcbPlatformContent.define_city_building(options) end
 ---@param options StaticFixedOvermapSpecialOptions
 function CcbPlatformContent.define_fixed_overmap_special(options) end
 
+---@class StaticMutableOvermapJoinOptions
+---@field id string
+---@field opposite? string
+---@field into_locations? string[]
+
+---@class StaticMutableTerrainJoinOptions
+---@field id string
+---@field type? string
+---@field alternatives? string[]
+
+---@class StaticMutableOvermapTileOptions
+---@field overmap string
+---@field locations? string[]
+---@field camp? string
+---@field camp_name? string
+---@field north? string|StaticMutableTerrainJoinOptions
+---@field south? string|StaticMutableTerrainJoinOptions
+---@field east? string|StaticMutableTerrainJoinOptions
+---@field west? string|StaticMutableTerrainJoinOptions
+---@field above? string|StaticMutableTerrainJoinOptions
+---@field below? string|StaticMutableTerrainJoinOptions
+---@field connections? table<string, StaticOvermapConnection>
+
+---@class StaticMutableOvermapChunkPiece
+---@field overmap string
+---@field pos [integer, integer, integer]
+---@field rot? string
+
+---@class StaticMutableOvermapPhaseMaxDistribution
+---@field poisson? number
+---@field binomial? [integer, number]
+---@field bounds? [integer, integer]
+
+---@class StaticMutableOvermapPlacementRule
+---@field name? string
+---@field overmap? string
+---@field chunk? StaticMutableOvermapChunkPiece[]
+---@field weight? integer
+---@field max? integer|[integer, integer]|StaticMutableOvermapPhaseMaxDistribution
+
+---@class StaticMutableLocationCheck
+---@field point [integer, integer, integer]
+---@field locations string[]
+
+---@class StaticMutableLocationAreaCheck
+---@field from [integer, integer, integer]
+---@field to [integer, integer, integer]
+---@field locations? string[]
+---@field type? string[]
+
+---@class StaticMutableOvermapSpecialOptions
+---@field id string
+---@field copy_from? string
+---@field root? string
+---@field locations? string[]
+---@field flags? string[]
+---@field occurrences? [integer, integer]
+---@field city_sizes? [integer, integer]
+---@field city_distance? [integer, integer]
+---@field priority? integer
+---@field spawns? StaticOvermapSpawns
+---@field check_for_locations? StaticMutableLocationCheck[]
+---@field check_for_locations_area? StaticMutableLocationAreaCheck[]
+---@field joins? (string|StaticMutableOvermapJoinOptions)[]
+---@field overmaps? table<string, StaticMutableOvermapTileOptions>
+---@field phases? StaticMutableOvermapPlacementRule[][]
+
+---Define a mutable overmap special in file order during ordered data loading.
+---@param options StaticMutableOvermapSpecialOptions
+function CcbPlatformContent.define_mutable_overmap_special(options) end
+
+---@class StaticPetSlotOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field required_flags? string[]
+---@field forbidden_flags? string[]
+---@field min_creature_volume? string
+---@field max_creature_volume? string
+---@field creature_size_range? [string, string]
+---@field bodytypes? string[]
+---@field min_storage? string
+---@field pet_armor? boolean
+---@field mount_only? boolean
+---@field passive_effects? string[]
+---@field mount_threshold_delta? integer
+---@field melee_hit_multiplier? number
+---@field melee_damage_multiplier? number
+---@field fear_multiplier? number
+---@field spook_multiplier? number
+---@field mounted_move_cost_multiplier? number
+---@field sub_slots? string[]
+
+---Define a pet equipment slot in file order during ordered data loading.
+---@param options StaticPetSlotOptions
+function CcbPlatformContent.define_pet_slot(options) end
+
+---@class StaticRidingConfigOptions
+---@field saddled_mount_difficulty? integer
+---@field unsaddled_mount_difficulty? integer
+---@field mount_skill_weight? number
+---@field mount_dexterity_weight? number
+---@field legacy_survival_conversion_cap? integer
+---@field legacy_survival_conversion_ratio? number
+---@field move_practice_chance? integer
+---@field move_practice? integer
+---@field melee_practice? integer
+---@field ranged_practice? integer
+---@field mount_refusal_distance? integer
+---@field mount_refusal_base_chance? number
+---@field tamed_mount_fear_multiplier? number
+---@field animal_walk_speed_multiplier? number
+---@field animal_trot_speed_multiplier? number
+---@field spook_skill_reduction? number
+---@field balance_skill_reduction? number
+---@field melee_fall_base_chance? number
+---@field melee_fall_damage_scale? number
+---@field mounted_move_cost_penalty? number
+---@field move_cost_skill_reduction? number
+---@field minimum_move_cost_multiplier? number
+---@field mounted_melee_hit_penalty? number
+---@field melee_hit_skill_reduction? number
+---@field mounted_melee_proficiency_hit_bonus? number
+---@field mounted_melee_proficiency_damage_bonus? number
+---@field mounted_ranged_dispersion_penalty? integer
+---@field ranged_dispersion_skill_reduction? integer
+---@field mounted_ranged_proficiency_bonus? integer
+---@field proficiency_practice_seconds? integer
+---@field mounted_combat_proficiency? string
+---@field mounted_ranged_proficiency? string
+---@field mounted_bashing_proficiency? string
+---@field mounted_cutting_proficiency? string
+---@field mounted_piercing_proficiency? string
+
+---Configure mounted riding balance and proficiency parameters during ordered data loading.
+---@param options StaticRidingConfigOptions
+function CcbPlatformContent.define_riding_config(options) end
+
+---@class StaticTerFurnMigrationOptions
+---@field from_ter? string
+---@field from_furn? string
+---@field to_ter? string
+---@field to_furn? string
+
+---Define a terrain or furniture migration mapping during ordered data loading.
+---@param options StaticTerFurnMigrationOptions
+function CcbPlatformContent.define_ter_furn_migration(options) end
+
+---@class StaticRecipeCategoryOptions
+---@field id string
+---@field copy_from? string
+---@field is_hidden? boolean
+---@field is_practice? boolean
+---@field is_building? boolean
+---@field is_wildcard? boolean
+---@field subcategories? string[]
+---@field extend_subcategories? string[]
+---@field delete_subcategories? string[]
+
+---Define or extend a crafting recipe category during ordered data loading.
+---@param options StaticRecipeCategoryOptions
+function CcbPlatformContent.define_recipe_category(options) end
+
+---@class StaticAddictionTypeOptions
+---@field id string
+---@field copy_from? string
+---@field name? string|LocalizedText
+---@field type_name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field sated? string|integer
+---@field satisfying_effects? string[]
+---@field craving_morale? string
+---@field builtin? string
+
+---Define a static addiction type during ordered data loading.
+---@param options StaticAddictionTypeOptions
+function CcbPlatformContent.define_addiction_type(options) end
+
 ---@class StaticWeakpointAttackValues
 ---@field all? number
 ---@field melee? number
@@ -8329,6 +8507,7 @@ function CcbPlatformContent.define_proficiency(options) end
 ---@field z_levels? [integer, integer]
 ---@field flags? string[]
 ---@field extend_flags? string[]
+---@field extend_targets? (string|StaticStartLocationTarget)[]
 
 ---Define a start location at its ordered position during native content loading.
 ---@param options StaticStartLocationOptions
@@ -18940,6 +19119,109 @@ function CcbPlatformContent.define_spell(options) end
 ---Load a martial technique with native rules at this definition's position in Mod data order.
 ---@param options StaticTechniqueOptions
 function CcbPlatformContent.define_technique(options) end
+
+---@class StaticMartialArtAutolearnSkill
+---@field skill? string
+---@field id? string
+---@field level? integer
+---@field [1]? string
+---@field [2]? integer
+
+---@class StaticMartialArtBonus
+---@field stat string
+---@field scale number
+---@field type? string
+---@field damage_type? string
+---@field scaling_stat? string
+
+---@class StaticMartialArtSkillRequirement
+---@field name? string
+---@field id? string
+---@field level integer
+
+---@class StaticMartialArtWeaponDamageRequirement
+---@field type string
+---@field min? integer
+---@field minimum? integer
+
+---@class StaticMartialArtBuff
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field buff_duration? integer|string
+---@field max_stacks? integer
+---@field persists? boolean
+---@field bonus_dodges? integer
+---@field free_dodges? integer
+---@field bonus_blocks? integer
+---@field quiet? boolean
+---@field stealthy? boolean
+---@field melee_bash_damage_cap_bonus? boolean
+---@field unarmed_allowed? boolean
+---@field melee_allowed? boolean
+---@field strictly_unarmed? boolean
+---@field wall_adjacent? boolean
+---@field weapon_categories_allowed? string|string[]
+---@field flags? string[]
+---@field required_buffs_all? string[]
+---@field required_buffs_any? string[]
+---@field forbidden_buffs_all? string[]
+---@field forbidden_buffs_any? string[]
+---@field req_flags? string[]
+---@field required_char_flags? string[]
+---@field required_char_flags_all? string[]
+---@field forbidden_char_flags? string[]
+---@field skill_requirements? StaticMartialArtSkillRequirement[]
+---@field weapon_damage_requirements? StaticMartialArtWeaponDamageRequirement[]
+---@field flat_bonuses? StaticMartialArtBonus[]
+---@field mult_bonuses? StaticMartialArtBonus[]
+
+---@class StaticMartialArtModifySet
+---@field weapons? string[]
+---@field techniques? string[]
+---@field weapon_category? string[]
+
+---@class StaticMartialArtOptions
+---@field id string
+---@field copy_from? string
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field initiate? (string|LocalizedText)[]
+---@field autolearn? ([string, integer]|StaticMartialArtAutolearnSkill)[]
+---@field priority? integer
+---@field primary_skill? string
+---@field learn_difficulty? integer
+---@field teachable? boolean
+---@field strictly_melee? boolean
+---@field strictly_unarmed? boolean
+---@field allow_all_weapons? boolean
+---@field force_unarmed? boolean
+---@field prevent_weapon_blocking? boolean
+---@field leg_block? integer
+---@field arm_block? integer
+---@field nonstandard_block? integer
+---@field arm_block_with_bio_armor_arms? boolean
+---@field leg_block_with_bio_armor_legs? boolean
+---@field techniques? string[]
+---@field weapons? string[]
+---@field weapon_category? string[]
+---@field static_buffs? StaticMartialArtBuff[]
+---@field onmove_buffs? StaticMartialArtBuff[]
+---@field onpause_buffs? StaticMartialArtBuff[]
+---@field onhit_buffs? StaticMartialArtBuff[]
+---@field onattack_buffs? StaticMartialArtBuff[]
+---@field ondodge_buffs? StaticMartialArtBuff[]
+---@field onblock_buffs? StaticMartialArtBuff[]
+---@field ongethit_buffs? StaticMartialArtBuff[]
+---@field onmiss_buffs? StaticMartialArtBuff[]
+---@field oncrit_buffs? StaticMartialArtBuff[]
+---@field onkill_buffs? StaticMartialArtBuff[]
+---@field extend? StaticMartialArtModifySet
+---@field delete? StaticMartialArtModifySet
+
+---Load a martial art style in file order during ordered data loading.
+---@param options StaticMartialArtOptions
+function CcbPlatformContent.define_martial_art(options) end
 
 ---@class StaticAchievementTarget
 ---@field type string Native event statistic value type, e.g. 'trait_id'.
