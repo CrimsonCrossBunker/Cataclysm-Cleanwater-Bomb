@@ -4,8 +4,8 @@ local id = services.types.id
 local mutations = services.mutations
 local effects = services.effects
 local spells = services.spells
-local items = services.items
 local variables = services.variables
+local shapeshift_armor = require("shapeshift_armor")
 
 local function value(result)
     if not result.ok then error(result.error.message) end
@@ -46,62 +46,6 @@ end
 local function assign_shift_activity(character, turns)
     value(services.activities.assign_timed(
         character, id("activity", "ACT_GENERIC_EOC"), services.time.duration_from_turns(turns)))
-end
-
-local function collect_slot_items(character, slot, recursive, out)
-    local holder = { kind = "character", character = character, slot = slot }
-    local options = { page_size = 256, recursive = recursive }
-    local page = value(items.page(holder, options))
-    while true do
-        for _, entry in ipairs(page.items) do
-            out[#out + 1] = entry.handle
-        end
-        if not page.continuation then
-            break
-        end
-        page = value(items.page(holder, options, page.continuation))
-    end
-end
-
-local subsumed_armor_flags = {
-    "SHAPESHIFTED_ARMOR",
-    "SEMITANGIBLE",
-    "UNRESTRICTED",
-    "INTANGIBLE_ARMOR",
-    "UNBREAKABLE",
-}
-
-local function item_has_flag(item_handle, flag_name)
-    return value(items.has_flag(item_handle, id("json_flag", flag_name)))
-end
-
-local function subsume_worn_armor(character)
-    local worn = {}
-    collect_slot_items(character, "worn", false, worn)
-    for _, handle in ipairs(worn) do
-        if not item_has_flag(handle, "SEMITANGIBLE")
-            and not item_has_flag(handle, "UNRESTRICTED")
-            and not item_has_flag(handle, "INTEGRATED")
-        then
-            for _, flag_name in ipairs(subsumed_armor_flags) do
-                value(items.set_flag(handle, id("json_flag", flag_name), true))
-            end
-        end
-    end
-end
-
-local function return_subsumed_armor(character)
-    local all_items = {}
-    for _, slot in ipairs({ "worn", "wielded", "inventory" }) do
-        collect_slot_items(character, slot, true, all_items)
-    end
-    for _, handle in ipairs(all_items) do
-        if item_has_flag(handle, "SHAPESHIFTED_ARMOR") then
-            for _, flag_name in ipairs(subsumed_armor_flags) do
-                value(items.set_flag(handle, id("json_flag", flag_name), false))
-            end
-        end
-    end
 end
 
 -- Silver claws
@@ -352,7 +296,7 @@ local function leave_wolf_form(character)
     player_message(character, "Your body shifts and contracts and you return to your humanoid form.", "neutral")
     value(mutations.erase(character, id("mutation", "VAMPIRE_WOLF_FORM_TRAITS")))
     value(mutations.erase(character, id("mutation", "CARNIVORE")))
-    return_subsumed_armor(character)
+    shapeshift_armor.restore(character)
 end
 
 local function leave_hybrid_form(character)
@@ -364,7 +308,7 @@ local function leave_hybrid_form(character)
     value(mutations.erase(character, id("mutation", "WEREWOLF_HYBRID_FORM_TRAITS")))
     value(mutations.erase(character, id("mutation", "CARNIVORE")))
     scale_calories(character, 1 / 3)
-    return_subsumed_armor(character)
+    shapeshift_armor.restore(character)
 end
 
 local function leave_primal_form(character)
@@ -394,7 +338,7 @@ ccb.runtime.handler("werewolf_wolf_form_on", function(context)
     if mana >= 20 then
         assign_shift_activity(character, 1.5)
         value(spells.set_mana_raw(character, mana - 20))
-        subsume_worn_armor(character)
+        shapeshift_armor.subsume(character)
         value(mutations.replace(character, id("mutation", "VAMPIRE_WOLF_FORM_TRAITS")))
         value(mutations.replace(character, id("mutation", "CARNIVORE")))
         player_message(character,
@@ -432,7 +376,7 @@ ccb.runtime.handler("werewolf_hybrid_form_on", function(context)
         value(spells.set_mana_raw(character, mana - 20))
         scale_calories(character, 3)
         value(variables.set(character, "werewolf_healing_tick_counter", 0, { include_before = false }))
-        subsume_worn_armor(character)
+        shapeshift_armor.subsume(character)
         value(mutations.replace(character, id("mutation", "WEREWOLF_HYBRID_FORM_TRAITS")))
         value(mutations.replace(character, id("mutation", "CARNIVORE")))
         player_message(character,
