@@ -311,3 +311,243 @@ ccb.runtime.handler("undine_water_form_off", function(context)
     value(mutations.erase(character, id("mutation", "UNDINE_WATER_FORM_CAMOUFLAGE")))
     player_message(character, "Your body reconstitutes itself from the waters.", "neutral")
 end)
+
+local function terrain_id(position)
+    return value(services.map.snapshot(value(services.map.tile(position)))).terrain.value
+end
+
+local function arvore_on_natural_terrain(position)
+    local tile = terrain_id(position)
+    return env.terrain_has_flag(position, "SHRUB")
+        or env.terrain_has_flag(position, "DIGGABLE")
+        or env.terrain_has_flag(position, "YOUNG")
+        or tile == "t_barkfloor"
+        or tile == "t_barkfloor_noroof"
+end
+
+local unsuitable_ierde_earth = {
+    t_vitrified_sand = true,
+    t_pit_corpsed = true,
+    t_fungus = true,
+    t_glassed_sand = true,
+    t_rubber_mulch = true,
+    t_swater_surf = true,
+    t_woodchips = true,
+}
+
+local function ierde_on_natural_earth_or_underground(position)
+    if position.z <= -1 then
+        return true
+    end
+    local tile = terrain_id(position)
+    if unsuitable_ierde_earth[tile] then
+        return false
+    end
+    return env.terrain_has_flag(position, "DIGGABLE")
+        or tile == "t_rock_floor"
+        or tile == "t_rock_floor_no_roof"
+end
+
+-- Arvore abilities
+ccb.runtime.handler("arvore_seed_bearer", function(context)
+    local character = context.character
+    local snap = value(services.creatures.snapshot(character))
+    if not (snap.outside and arvore_on_natural_terrain(snap.position)
+        and read_number(character, "arvore_is_in_wilderness") == 1)
+    then
+        player_message(character, "You must be surrounded by the wild to call forth regional seeds.", "bad")
+        return
+    end
+    local is_winter = services.time.now():season() == "winter"
+    if not has_effect(character, "effect_arvore_seedbearer_cooldown") and not is_winter then
+        remove_effect(character, "effect_arvore_seedbearer_available")
+        player_message(character, "You bring forth seeds.", "good")
+        local count = value(mutations.category_count(character, id("mutation_category", "ARVORE"), "ALL", true))
+        local iterations = 1 + math.modf(count / 5)
+        for _ = 1, iterations do
+            value(services.inventory.receive_group(character, id("item_group", "farming_seeds")))
+        end
+        add_effect(character, "effect_arvore_seedbearer_cooldown", 432000 + services.random.native_int(0, 431999))
+    elseif is_winter then
+        player_message(character, "Your seeds slumber and dream of spring.", "mixed")
+    else
+        player_message(character, "You need more time before you can summon seeds again.", "bad")
+    end
+end)
+
+ccb.runtime.handler("arvore_vine_drag", function(context)
+    cast_generic_spell_mutation(context.character, "arvore_vine_drag_spell", 1,
+        "Vines lash out and drag your target in!",
+        "You are too parched to lash out with any vines.", 0)
+end)
+
+ccb.runtime.handler("arvore_tree_form_on", function(context)
+    local character = context.character
+    local snap = value(services.creatures.snapshot(character))
+    if snap.outside and arvore_on_natural_terrain(snap.position) then
+        value(mutations.replace(character, id("mutation", "CHLOROMORPH")))
+        value(mutations.replace(character, id("mutation", "LEAVES3")))
+        value(mutations.replace(character, id("mutation", "ARVORE_TREE_FORM_TRAITS")))
+    else
+        player_message(character, "You must be outside on diggable ground to become one with the forest.", "bad")
+    end
+end)
+
+ccb.runtime.handler("arvore_tree_form_off", function(context)
+    local character = context.character
+    value(mutations.erase(character, id("mutation", "CHLOROMORPH")))
+    value(mutations.erase(character, id("mutation", "LEAVES3")))
+    value(mutations.erase(character, id("mutation", "ARVORE_TREE_FORM_TRAITS")))
+    remove_effect(character, "effect_arvore_tree_immobility")
+end)
+
+-- Homullus abilities
+ccb.runtime.handler("homullus_doll_form_toggle", function(context)
+    local character = context.character
+    if not has_trait(character, "HOMULLUS_DOLL_FORM_TRAITS") then
+        value(mutations.replace(character, id("mutation", "HOMULLUS_DOLL_FORM_TRAITS")))
+        if not has_trait(character, "HOMULLUS_DOLL_FORM_ANGER_RELATIONS_ATTACKER") then
+            value(mutations.replace(character, id("mutation", "HOMULLUS_DOLL_FORM_ANGER_RELATIONS")))
+        end
+        local pos = value(services.creatures.snapshot(character)).position
+        if value(services.monsters.count_nearby(pos, nil, { radius = 45, attitude = "both" })) == 0 then
+            set_number(character, "doll_form_movement", 0)
+            if has_trait(character, "HOMULLUS_DOLL_FORM_ANGER_RELATIONS_ATTACKER") then
+                value(mutations.erase(character, id("mutation", "HOMULLUS_DOLL_FORM_ANGER_RELATIONS_ATTACKER")))
+                value(mutations.replace(character, id("mutation", "HOMULLUS_DOLL_FORM_ANGER_RELATIONS")))
+            end
+        end
+        player_message(character, "Your limbs stiffen and your skin takes on an even more waxen appearance.", "good")
+    else
+        value(mutations.erase(character, id("mutation", "HOMULLUS_DOLL_FORM_TRAITS")))
+        value(mutations.erase(character, id("mutation", "HOMULLUS_DOLL_FORM_ANGER_RELATIONS")))
+        player_message(character, "A small semblance of life returns to you.", "neutral")
+    end
+end)
+
+ccb.runtime.handler("homullus_doll_form_process", function(context)
+    local character = context.character
+    local movement = read_number(character, "doll_form_movement")
+    if movement > 0 then
+        set_number(character, "doll_form_movement", math.max(0, movement - (services.random.native_int(0, 3) + 1)))
+    end
+end)
+
+-- Ierde abilities
+ccb.runtime.handler("ierde_no_sleep_meditate", function(context)
+    local character = context.character
+    if value(services.creatures.snapshot(character)).position.z <= -1 then
+        cast_generic_spell_mutation(character, "ierde_no_sleep_meditate_spell", 1,
+            "You settle down, feeling the ground beneath you, and begin your vigil", "", 0)
+    else
+        player_message(character, "You must be underground to begin your vigil!", "bad")
+    end
+end)
+
+ccb.runtime.handler("ierde_detect_monsters_on", function(context)
+    local character = context.character
+    if ierde_on_natural_earth_or_underground(value(services.creatures.snapshot(character)).position) then
+        add_permanent_effect(character, "effect_ierde_sense_nearby_monsters")
+    else
+        player_message(character,
+            "You must be in contact with the living earth or underground to activate The Soil Knows Those Who Tread Upon It",
+            "bad")
+    end
+end)
+
+ccb.runtime.handler("ierde_detect_monsters_off", function(context)
+    remove_effect(context.character, "effect_ierde_sense_nearby_monsters")
+end)
+
+ccb.runtime.handler("ierde_smashing_punch", function(context)
+    cast_generic_spell_mutation(context.character, "ierde_smashing_punch_spell", 0.5,
+        "You gather yourself for a moment and strike.", "", 0)
+end)
+
+ccb.runtime.handler("ierde_sink_into_earth", function(context)
+    local character = context.character
+    local pos = value(services.creatures.snapshot(character)).position
+    local tile = terrain_id(pos)
+    if not ((env.terrain_has_flag(pos, "DIGGABLE")
+        or tile == "t_soil"
+        or tile == "t_rock"
+        or tile == "t_rock_floor"
+        or tile == "t_railroad_rubble"
+        or tile == "t_dirt_underground")
+        and tile ~= "t_grass_alien"
+        and not unsuitable_ierde_earth[tile])
+    then
+        player_message(character, "You must be on living earth or stone to sink into it.", "bad")
+        return
+    end
+    if pos.z == -9 then
+        local saved = value(services.variables.get_tripoint(character, "IERDE_sleep_in_earth_starting_point"))
+        if saved.exists and saved.value then
+            value(services.relocation.teleport_character(character, saved.value))
+        end
+        player_message(character, "You feel yourself rising until you stand in the clear air once again.", "good")
+        return
+    end
+    if tile == "t_rock_floor_no_roof"
+        or tile == "t_rock_floor"
+        or tile == "t_rock_smooth"
+        or (env.terrain_has_flag(pos, "DIGGABLE") and tile ~= "t_grass_alien" and not unsuitable_ierde_earth[tile])
+    then
+        value(services.variables.set(character, "IERDE_sleep_in_earth_starting_point", pos, { include_before = false }))
+        local dest = services.coords.tripoint_abs_ms(pos.x, pos.y, -9)
+        player_message(character, "The earth parts beneath you and you sink down into the stone.", "good")
+        value(services.relocation.teleport_character(character, dest, { force = true }))
+        value(mutations.replace(character, id("mutation", "IERDE_STONE_SLEEP")))
+    else
+        player_message(character, "You must be standing on the living earth to sink into the stone!", "bad")
+    end
+end)
+
+ccb.runtime.handler("ierde_rooted_in_place_on", function(context)
+    local character = context.character
+    if ierde_on_natural_earth_or_underground(value(services.creatures.snapshot(character)).position) then
+        add_permanent_effect(character, "effect_ierde_rooted_in_place")
+    else
+        player_message(character, "You must be standing on the living earth to root yourself in place.", "bad")
+    end
+end)
+
+ccb.runtime.handler("ierde_rooted_in_place_off", function(context)
+    local character = context.character
+    if has_effect(character, "effect_ierde_rooted_in_place") then
+        remove_effect(character, "effect_ierde_rooted_in_place")
+    end
+end)
+
+-- Omitting legacy morale_perm_fancy, which is undefined in content data and rejected by id("morale", ...).
+local full_morale_neutralization_ids = {
+    "morale_bile", "morale_food_good", "morale_food_hot", "morale_chat", "morale_chat_uncaring",
+    "morale_ate_with_table", "morale_ate_without_table", "morale_music", "morale_honey", "morale_game",
+    "morale_marloss", "morale_mutagen", "morale_feeling_good", "morale_support", "morale_photos",
+    "morale_craving_nicotine", "morale_craving_caffeine", "morale_craving_alcohol", "morale_craving_opiate",
+    "morale_craving_speed", "morale_craving_cocaine", "morale_craving_crack", "morale_craving_mutagen",
+    "morale_craving_diazepam", "morale_craving_marloss", "morale_food_bad", "morale_cannibal",
+    "morale_demicannibal", "morale_vegetarian", "morale_antiveggy", "morale_meatarian", "morale_antimeat",
+    "morale_antifruit", "morale_lactose", "morale_antijunk", "morale_antiwheat", "morale_sweettooth",
+    "morale_no_digest", "morale_wet", "morale_dried_off", "morale_cold", "morale_hot", "morale_feeling_bad",
+    "morale_bad_protein_bar", "morale_killed_innocent", "morale_killed_friend", "morale_killed_monster",
+    "morale_mutilate_corpse", "morale_mutagen_elf", "morale_mutagen_chimera", "morale_mutagen_mutation",
+    "morale_moodswing", "morale_book", "morale_comfy", "morale_scream", "morale_perm_masochist",
+    "morale_perm_radiophile", "morale_perm_noface", "morale_perm_fpmode_on", "morale_perm_hoarder",
+    "morale_perm_optimist", "morale_perm_badtemper", "morale_perm_numb", "morale_perm_constrained",
+    "morale_perm_nomad", "morale_game_found_kitten", "morale_haircut", "morale_shave", "morale_vomited",
+    "morale_play_with_pet", "morale_pyromania_startfire", "morale_pyromania_nearfire",
+    "morale_pyromania_nofire", "morale_perm_filthy", "morale_butcher", "morale_gravedigger",
+    "morale_funeral", "morale_tree_communion", "morale_accomplishment", "morale_failure", "morale_nightmare",
+    "morale_migo_bio_tech", "morale_impossible_shape", "morale_afs_drugs", "morale_social", "morale_asocial",
+    "morale_sunrise", "morale_sunset", "morale_ate_dross", "morale_drank_blood",
+    "morale_craving_lotus_blossom", "morale_forest_unity", "morale_broke_fae_ban",
+    "morale_homullus_self_deception", "morale_ierde_meditation", "morale_boring_fruit", "morale_vw_no_fun",
+}
+
+ccb.runtime.handler("ierde_full_morale_neutralization", function(context)
+    local character = context.character
+    for _, morale_id in ipairs(full_morale_neutralization_ids) do
+        value(needs.remove_morale(character, id("morale", morale_id)))
+    end
+end)

@@ -170,27 +170,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_HOMULLUS_DOLL_FORM_ON",
-    "condition": { "not": { "u_has_trait": "HOMULLUS_DOLL_FORM_TRAITS" } },
-    "effect": [
-      { "u_add_trait": "HOMULLUS_DOLL_FORM_TRAITS" },
-      { "run_eocs": [ "EOC_HOMULLUS_DOLL_FORM_ANGER_RELATIONS", "EOC_HOMULLUS_DOLL_FORM_MOVEMENT_RESETTER" ] },
-      { "u_message": "Your limbs stiffen and your skin takes on an even more waxen appearance.", "type": "good" }
-    ],
-    "false_effect": [
-      { "u_lose_trait": "HOMULLUS_DOLL_FORM_TRAITS" },
-      { "u_lose_trait": "HOMULLUS_DOLL_FORM_ANGER_RELATIONS" },
-      { "u_message": "A small semblance of life returns to you.", "type": "neutral" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_HOMULLUS_DOLL_FORM_MOVEMENT_COUNTER",
-    "condition": { "math": [ "u_doll_form_movement > 0" ] },
-    "effect": [ { "math": [ "u_doll_form_movement -= rand(3) + 1" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_HOMULLUS_DOLL_FORM_MOVEMENT_COUNTER_ZERO_CHECKER",
     "recurrence": "1 s",
     "condition": { "u_has_trait": "HOMULLUS_DOLL_FORM_TRAITS" },
@@ -248,12 +227,6 @@
       },
       { "run_eocs": "EOC_HOMULLUS_DOLL_FORM_ANGER_RELATIONS_LOSE" }
     ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_HOMULLUS_DOLL_FORM_ANGER_RELATIONS",
-    "condition": { "not": { "u_has_trait": "HOMULLUS_DOLL_FORM_ANGER_RELATIONS_ATTACKER" } },
-    "effect": [ { "u_add_trait": "HOMULLUS_DOLL_FORM_ANGER_RELATIONS" } ]
   },
   {
     "type": "effect_on_condition",
