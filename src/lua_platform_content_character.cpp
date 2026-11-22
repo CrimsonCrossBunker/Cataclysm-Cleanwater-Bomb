@@ -5070,8 +5070,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
         for( const spell_registration &entry : pimpl_->spells ) {
             const spell_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "spell" );
-            if( definition.name.empty() || definition.description.empty() ||
-                definition.valid_targets.empty() ) {
+            if( definition.name.empty() || definition.valid_targets.empty() ) {
                 throw std::runtime_error( "spell '" + definition.id +
                                           "' requires name, description, and targets" );
             }

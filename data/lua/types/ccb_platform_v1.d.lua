@@ -1236,10 +1236,17 @@ function ItemDefinition:assemble_ammo_belt(belt) end
 ---@field intensity? integer Native effect intensity; defaults to zero.
 ---@field permanent? boolean Whether the effect is permanent.
 
+---@class ItemActivationDamageOverTimeOptions
+---@field damage_type string Native damage type id.
+---@field duration_turns? integer Duration in turns; defaults to zero.
+---@field amount? number Damage (or healing when negative) amount per turn; defaults to zero.
+---@field bodyparts string[] Target body part ids.
+
 ---@class ItemActivationEffectsOptions
 ---@field message? string|LocalizedText Message displayed after activation.
 ---@field move_cost? integer Cost in moves; defaults to 100.
 ---@field effects ItemActivationEffectOptions[] Ordered native effects applied to the activator.
+---@field damage_over_time? ItemActivationDamageOverTimeOptions[] Optional damage-over-time entries applied on activation.
 
 ---Activate an item through the native drug action, including tolerance modifiers and charge consumption.
 ---@param options ItemActivationEffectsOptions

@@ -6873,7 +6873,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     !native_int( value.power_per_increment ) ||
                     value.power_per_increment == 0 || !native_float( value.increment ) ||
                     value.increment == 0.0 || !native_float( value.minimum ) ||
-                    !native_float( value.maximum ) || value.minimum > value.maximum ||
+                    !native_float( value.maximum ) ||
                     !io::enum_is_valid<enchantment::has>( value.has ) ) {
                     throw std::runtime_error( "relic procgen '" + definition.id +
                                               "' has an invalid passive value" );
@@ -8284,6 +8284,33 @@ bool content_transaction::validate( const runtime &owner_runtime,
         if( !pimpl_->worldgen.validate(
                 worldgen_index, check_engine_state, error ) ) {
             return false;
+        }
+        if( check_engine_state ) {
+            const auto oter_pending = []( const std::string & id ) {
+                if( detail::overmap_terrain_type_is_pending( id ) ) {
+                    return true;
+                }
+                for( const std::string_view suffix : { "_north", "_east", "_south", "_west" } ) {
+                    if( id.size() > suffix.size() &&
+                        id.compare( id.size() - suffix.size(), suffix.size(), suffix ) == 0 &&
+                        detail::overmap_terrain_type_is_pending( id.substr( 0, id.size() - suffix.size() ) ) ) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            for( const runtime::declarative_mapgen_definition &definition :
+                 owner_runtime.declarative_mapgens ) {
+                for( const std::string &terrain : definition.terrain_ids ) {
+                    if( !pimpl_->world.defines_overmap_terrain_exact( terrain ) &&
+                        !oter_str_id( terrain ).is_valid() && !oter_pending( terrain ) ) {
+                        error = "Lua-first Mod '" + owner_runtime.mod_id +
+                                "' mapgen definition '" + definition.id +
+                                "' references unknown overmap terrain '" + terrain + "'";
+                        return false;
+                    }
+                }
+            }
         }
 
         error.clear();
@@ -10848,6 +10875,19 @@ void content_transaction::rollback()
 
     pimpl_->creatures.rollback_phase( creatures_content_rollback_phase::anatomy );
 
+    for( auto it = pimpl_->attack_vector_undo.rbegin();
+         it != pimpl_->attack_vector_undo.rend(); ++it ) {
+        if( it->second ) {
+            detail::attack_vector_registry().restore( *it->second );
+        } else {
+            detail::attack_vector_registry().erase( it->first );
+        }
+    }
+    if( !pimpl_->attack_vector_undo.empty() ) {
+        detail::refresh_attack_vector_registry();
+    }
+    pimpl_->attack_vector_undo.clear();
+
     pimpl_->creatures.rollback_phase( creatures_content_rollback_phase::body_part );
 
     pimpl_->creatures.rollback_phase( creatures_content_rollback_phase::wound_type );
@@ -10942,18 +10982,6 @@ void content_transaction::rollback()
 
     pimpl_->character.rollback_phase( character_content_rollback_phase::movement_mode );
     pimpl_->character.rollback_phase( character_content_rollback_phase::magic_type );
-    for( auto it = pimpl_->attack_vector_undo.rbegin();
-         it != pimpl_->attack_vector_undo.rend(); ++it ) {
-        if( it->second ) {
-            detail::attack_vector_registry().restore( *it->second );
-        } else {
-            detail::attack_vector_registry().erase( it->first );
-        }
-    }
-    if( !pimpl_->attack_vector_undo.empty() ) {
-        detail::refresh_attack_vector_registry();
-    }
-    pimpl_->attack_vector_undo.clear();
 
     pimpl_->character.rollback_phase( character_content_rollback_phase::technique );
     pimpl_->character.rollback_phase( character_content_rollback_phase::martial_art );
@@ -13052,16 +13080,6 @@ bool validate_runtime( const std::shared_ptr<runtime> &value,
                     definition.id + "' references unknown fill terrain '" +
                     definition.fill_terrain + "'";
             return false;
-        }
-        if( check_engine_state ) {
-            for( const std::string &terrain : definition.terrain_ids ) {
-                if( !oter_str_id( terrain ).is_valid() ) {
-                    error = "Lua-first Mod '" + value->mod_id +
-                            "' mapgen definition '" + definition.id +
-                            "' references unknown overmap terrain '" + terrain + "'";
-                    return false;
-                }
-            }
         }
     }
     for( const auto &[topic_id, handler_id] : value->dialogue_topics ) {

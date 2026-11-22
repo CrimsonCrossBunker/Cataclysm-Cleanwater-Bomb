@@ -544,10 +544,17 @@ struct item_definition_data {
         std::int64_t intensity = 0;
         bool permanent = false;
     };
+    struct activation_damage_over_time_data {
+        std::string damage_type;
+        std::int64_t duration_turns = 0;
+        double amount = 0.0;
+        std::vector<std::string> bodyparts;
+    };
     struct activation_data {
         authored_text message;
         std::int64_t move_cost = 100;
         std::vector<activation_effect_data> effects;
+        std::vector<activation_damage_over_time_data> damage_over_time;
     };
     struct ammunition_data {
         std::string type;
@@ -2361,6 +2368,37 @@ struct item_definition_handle {
                 effect.get_or( "permanent", false )
             } );
         }
+        const sol::object dots_object = options.raw_get<sol::object>( "damage_over_time" );
+        if( dots_object.valid() && dots_object.get_type() != sol::type::nil ) {
+            if( dots_object.get_type() != sol::type::table ) {
+                throw std::invalid_argument( "item activation damage_over_time must be an array table" );
+            }
+            const sol::table dots = dots_object.as<sol::table>();
+            const std::size_t dot_count = require_dense_array( dots, "item activation damage_over_time", 1 );
+            for( std::size_t index = 1; index <= dot_count; ++index ) {
+                const sol::object entry_object = dots.raw_get<sol::object>( index );
+                if( entry_object.get_type() != sol::type::table ) {
+                    throw std::invalid_argument( "item activation damage_over_time entry must be a table" );
+                }
+                const sol::table dot = entry_object.as<sol::table>();
+                item_definition_data::activation_damage_over_time_data dot_data;
+                dot_data.damage_type = dot.get_or( "damage_type", std::string() );
+                dot_data.duration_turns = dot.get_or<std::int64_t>( "duration_turns", 0 );
+                dot_data.amount = dot.get_or( "amount", 0.0 );
+                const sol::object bps_object = dot.raw_get<sol::object>( "bodyparts" );
+                if( !bps_object.valid() || bps_object.get_type() != sol::type::table ) {
+                    throw std::invalid_argument( "item activation damage_over_time bodyparts must be an array table" );
+                }
+                const sol::table bodyparts = bps_object.as<sol::table>();
+                const std::size_t bp_count = require_dense_array(
+                                                 bodyparts, "item activation damage_over_time bodyparts", 1 );
+                dot_data.bodyparts.reserve( bp_count );
+                for( std::size_t bp_index = 1; bp_index <= bp_count; ++bp_index ) {
+                    dot_data.bodyparts.push_back( bodyparts.get<std::string>( bp_index ) );
+                }
+                value.damage_over_time.push_back( std::move( dot_data ) );
+            }
+        }
         definition->activation = std::move( value );
         return *this;
     }
@@ -2884,9 +2922,11 @@ struct recipe_definition_handle {
     recipe_definition_handle &requirement( const std::string &id,
                                            std::int64_t multiplier ) {
         require_building_handle( token, *definition, "recipe" );
-        if( id.empty() || multiplier <= 0 || multiplier > std::numeric_limits<int>::max() ) {
+        if( id.empty() || multiplier == 0 ||
+            multiplier < std::numeric_limits<int>::min() ||
+            multiplier > std::numeric_limits<int>::max() ) {
             throw std::runtime_error(
-                "recipe external requirement needs a non-empty id and positive multiplier" );
+                "recipe external requirement needs a non-empty id and non-zero native multiplier" );
         }
         auto &requirements = definition->external_requirements;
         const auto existing = std::find_if( requirements.begin(), requirements.end(),
@@ -6263,6 +6303,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 declared_item_ids.insert( entry.definition->id );
             }
         }
+        std::set<std::string> item_migration_ids;
         for( const auto &entry : pimpl_->item_migrations ) {
             const migration &native = entry->specification;
             require_valid_id( native.replace.str(), "item migration replacement" );
@@ -6271,6 +6312,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 if( id == native.replace ) {
                     throw std::runtime_error( "item migration cannot replace '" + id.str() + "' with itself" );
                 }
+                item_migration_ids.insert( id.str() );
             }
             for( const migration::content &carried : native.contents ) {
                 require_valid_id( carried.id.str(), "item migration content" );
@@ -6543,6 +6585,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                        requirement_ids.count( component.id ) != 0 ||
                                        requirement_data::registry().count( requirement_id( component.id ) ) != 0 :
                                        declared_item_ids.count( component.id ) != 0 ||
+                                       item_migration_ids.count( component.id ) != 0 ||
                                        item::type_is_defined( item_id ) || item_controller->has_template_migration( item_id );
                     if( !valid ) {
                         throw std::runtime_error( "requirement '" + id + "' references unknown " +
@@ -7186,6 +7229,26 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                         throw std::runtime_error( "item '" + definition.id + "' has invalid activation effect values" );
                     }
                 }
+                for( const auto &dot : activation.damage_over_time ) {
+                    if( dot.damage_type.empty() || dot.duration_turns < 0 || !native_int( dot.duration_turns ) ||
+                        !finite_native_float( dot.amount ) || dot.bodyparts.empty() ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' has invalid activation damage_over_time values" );
+                    }
+                    if( check_engine_state && damage_type_ids.count( dot.damage_type ) == 0 &&
+                        !damage_type_id( dot.damage_type ).is_valid() ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' references unknown damage type '" + dot.damage_type + "'" );
+                    }
+                    for( const std::string &bp : dot.bodyparts ) {
+                        if( bp.empty() || ( check_engine_state &&
+                                            !ctx_defines( context.defines_body_part, bp ) &&
+                                            !bodypart_str_id( bp ).is_valid() ) ) {
+                            throw std::runtime_error( "item '" + definition.id +
+                                                      "' references unknown body part '" + bp + "'" );
+                        }
+                    }
+                }
             }
             if( definition.has_magazine_capacity &&
                 ( definition.magazine_capacity <= 0 || !native_int( definition.magazine_capacity ) ) ) {
@@ -7410,7 +7473,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
             const auto validate_recipe_requirements = [&]( const recipe_requirement_sets &requirements ) {
                 for( const auto &[requirement, multiplier] : requirements ) {
-                    if( requirement.empty() || multiplier <= 0 || !native_int( multiplier ) ||
+                    if( requirement.empty() || multiplier == 0 || !native_int( multiplier ) ||
                         ( check_engine_state && requirement_ids.count( requirement ) == 0 &&
                           requirement_data::registry().count( requirement_id( requirement ) ) == 0 ) ) {
                         throw std::runtime_error( "recipe '" + definition.id +
@@ -7436,6 +7499,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                            requirement_ids.count( component.id ) != 0 ||
                                            requirement_data::registry().count( requirement_id( component.id ) ) != 0 :
                                            declared_item_ids.count( component.id ) != 0 ||
+                                           item_migration_ids.count( component.id ) != 0 ||
                                            item::type_is_defined( itype_id( component.id ) ) ||
                                            item_controller->has_template_migration( itype_id( component.id ) );
                         // Native item inheritance is resolved before the engine-state pass.
@@ -9216,6 +9280,16 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                     bodypart_str_id::NULL_ID().id(), effect.permanent );
                             native_effect.intensity = static_cast<int>( effect.intensity );
                             actor->effects.push_back( std::move( native_effect ) );
+                        }
+                        for( const auto &dot : source.damage_over_time ) {
+                            damage_over_time_data native_dot;
+                            native_dot.type = damage_type_id( dot.damage_type );
+                            native_dot.duration = time_duration::from_turns( static_cast<int>( dot.duration_turns ) );
+                            native_dot.amount = dot.amount;
+                            for( const std::string &bp : dot.bodyparts ) {
+                                native_dot.bps.push_back( bodypart_str_id( bp ).id() );
+                            }
+                            actor->damage_over_time.push_back( std::move( native_dot ) );
                         }
                         native->use_methods.insert_or_assign( "consume_drug", use_function( std::move( actor ) ) );
                     }
@@ -11279,6 +11353,14 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                         hash_part( state, std::to_string( effect.duration_turns ) );
                         hash_part( state, std::to_string( effect.intensity ) );
                         hash_part( state, effect.permanent ? "permanent" : "temporary" );
+                    }
+                    for( const auto &dot : v.activation->damage_over_time ) {
+                        hash_part( state, dot.damage_type );
+                        hash_part( state, std::to_string( dot.duration_turns ) );
+                        hash_part( state, std::to_string( dot.amount ) );
+                        for( const std::string &bp : dot.bodyparts ) {
+                            hash_part( state, bp );
+                        }
                     }
                 }
                 if( !v.learned_spells.empty() ) {
