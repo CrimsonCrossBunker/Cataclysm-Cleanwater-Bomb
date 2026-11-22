@@ -1,4 +1,50 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FORGE_DIVINER_FIND_WHAT",
+    line = ccb.content.text("Perhaps.  What do you seek?"),
+    replies = {
+        {
+            text = ccb.content.text("A dangerous location."),
+            next_topic = "TALK_FORGE_LORD_DIVINER_DANGEROUS",
+        },
+        {
+            text = ccb.content.text("A man made structure."),
+            next_topic = "TALK_FORGE_LORD_DIVINER_MAN_MADE",
+            when = predicates.handler("dlg_p_magiclysm_941728746d69"),
+        },
+        {
+            text = ccb.content.text("A man made structure."),
+            next_topic = "TALK_FORGE_LORD_DIVINER_MAN_MADE_INNAWOOD",
+            when = predicates.handler("dlg_p_magiclysm_7c2159134cc6"),
+        },
+        {
+            text = ccb.content.text("A geological formation."),
+            next_topic = "TALK_FORGE_LORD_DIVINER_GEOLOGY",
+        },
+        {
+            text = ccb.content.text("A plant."),
+            next_topic = "TALK_FORGE_LORD_DIVINER_PLANT",
+        },
+        {
+            text = ccb.content.text("An animal."),
+            next_topic = "TALK_FORGE_LORD_DIVINER_ANIMAL",
+        },
+        {
+            text = ccb.content.text("A god."),
+            next_topic = "TALK_FORGE_LORD_DIVINER_GOD",
+        },
+        {
+            text = ccb.content.text("About something else…"),
+            next_topic = "TALK_NONE",
+        },
+        {
+            text = ccb.content.text("Nevermind."),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_FORGE_LORD_DIVINER_DANGEROUS",

@@ -1,4 +1,41 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_SCAVENGER_1_HIRE",
+    line = ccb.content.text("Are you interested in the scavenging runs or one of the other tasks that I might have for you?"),
+    replies = {
+        {
+            text = ccb.content.text("Tell me more about the scavenging runs."),
+            next_topic = "TALK_RANCH_SCAVENGER_1",
+            actions = { actions.handler("dlg_a_dda_cae9c6cdf218") },
+        },
+        {
+            text = ccb.content.text("What kind of tasks do you have for me?"),
+            next_topic = "TALK_MISSION_LIST",
+        },
+        {
+            text = ccb.content.text("No, thanks."),
+            next_topic = "TALK_RANCH_SCAVENGER_1",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_SCAVENGER_ANESTHETIC_FOR_DOCTOR",
+    line = ccb.content.text("We don't have any of the parts needed right now, but we could send out a scavenging party to a hospital if you have anyone willing to go."),
+    replies = {
+        {
+            text = ccb.content.text("Tell me more about the scavenging runs."),
+            next_topic = "TALK_RANCH_SCAVENGER_1",
+            actions = { actions.handler("dlg_a_dda_7c9def81e689") },
+        },
+        {
+            text = ccb.content.text("Not right now."),
+            next_topic = "TALK_RANCH_SCAVENGER_1",
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "MISSION_RANCH_SCAVENGER_1",

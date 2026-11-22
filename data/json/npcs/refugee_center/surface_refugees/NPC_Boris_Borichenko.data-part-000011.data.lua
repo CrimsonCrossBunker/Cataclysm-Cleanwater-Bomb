@@ -1,4 +1,47 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_Boris_MakeDoWith2",
+    line = ccb.content.gendered_line("Hmm, well it is not ideal but I appreciate you trying and being willing to help.  I will have to do my best despite the bad memories.  Thank you, my friend.", { "speaker" }),
+    on_enter = {
+        { actions = { actions.handler("dlg_a_dda_d027843b7b0d"), actions.set_actor_value("interlocutor", "mission_Boris_mission_1_cleanup_asked", "yes") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("OK, let's get to work."),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_Boris_MakeDoWith3",
+    line = ccb.content.gendered_line("Thank you for trying, my friend.  With you and me that will be five, I will do my best to be strong and assist in the cleanup.", { "speaker" }),
+    on_enter = {
+        { actions = { actions.handler("dlg_a_dda_6f847e7a3114"), actions.set_actor_value("interlocutor", "mission_Boris_mission_1_cleanup_asked", "yes") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("OK, let's get to work."),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_Boris_MakeDoWith4",
+    line = ccb.content.gendered_line("That is quite alright, four should be enough though I appreciate your offer.  Four people will make the job much easier and I will do my best even if it is painful.  My thanks, friend.", { "speaker" }),
+    on_enter = {
+        { actions = { actions.handler("dlg_a_dda_1771a2e9be11"), actions.set_actor_value("interlocutor", "mission_Boris_mission_1_cleanup_asked", "yes") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Good to hear.  I'm sure everyone will appreciate that place being cleaned up."),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "MISSION_REFUGEE_Boris_CLEANUP",

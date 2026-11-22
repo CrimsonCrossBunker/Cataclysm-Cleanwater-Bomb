@@ -3,6 +3,28 @@ local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
+    id = "TALK_RC_John_Bailey_1",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "u_met_John_Bailey" } }),
+        yes = ccb.content.text("*looks up at you, taking a moment to place your face, then grins broadly.  He looks about the same as when you last saw him, perhaps a little more fit.  \"So, you're still playing on the 'living' team, huh?  Glad to see you're still kicking around.  Always good to run into a familiar face nowadays.\""),
+        no = ccb.content.text("*glances your way, then makes eye contact as you move closer to speak.  He is a strong-looking man in his mid forties, his hair graying and his face flecked with stubble and travel dust.  The clothes he's wearing are clearly scavenged, though they fit well, and he has the build of someone who until recently had the luxury of carrying a few extra pounds.  \"Hi there.\"  He presents his hand to shake.  \"You don't look like you belong here.  Name's Bailey, John Bailey.\""),
+    },
+    on_enter = {
+        { actions = { actions.set_actor_value("speaker", "u_met_John_Bailey", "yes"), actions.set_first_topic("TALK_RC_John_Bailey_1a"), actions.handler("dlg_a_dda_fbd5e2022429") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Hi John.  What are you doing here?"),
+            next_topic = "TALK_RC_John_Bailey_2",
+        },
+        {
+            text = ccb.content.text("Hi John.  <end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
     id = "TALK_RC_John_Bailey_2",
     line = {
         joined = {

@@ -3,15 +3,30 @@
     "id": "EOC_MOM_BIOKINESIS_VITAKINESIS_LAB_SHADOW_URGE_SELECT_BIOKINETIC_CRYSTAL",
     "type": "effect_on_condition",
     "effect": [
-      { "set_string_var": "no", "target_var": { "u_val": "activated_shadow_urge_machine" } },
+      {
+        "set_string_var": "no",
+        "target_var": {
+          "u_val": "activated_shadow_urge_machine"
+        }
+      },
       {
         "u_run_inv_eocs": "manual",
         "title": "Which crystal do you enter?",
-        "search_data": [ { "flags": [ "MATRIX_CRYSTAL_BIOKINESIS" ] } ],
+        "search_data": [
+          {
+            "flags": [
+              "MATRIX_CRYSTAL_BIOKINESIS"
+            ]
+          }
+        ],
         "true_eocs": [
           {
             "id": "EOC_MOM_BIOKINESIS_VITAKINESIS_LAB_SHADOW_URGE_SELECT_BIOKINETIC_CRYSTAL_SELECTED",
-            "effect": [ { "npc_set_flag": "MOM_SHADOW_URGE_CHOICE" } ]
+            "effect": [
+              {
+                "npc_set_flag": "MOM_SHADOW_URGE_CHOICE"
+              }
+            ]
           }
         ]
       }
@@ -23,11 +38,25 @@
     "effect": [
       {
         "u_run_inv_eocs": "random",
-        "search_data": [ { "flags": [ "MOM_SHADOW_URGE_CHOICE" ] } ],
+        "search_data": [
+          {
+            "flags": [
+              "MOM_SHADOW_URGE_CHOICE"
+            ]
+          }
+        ],
         "true_eocs": [
           {
             "id": "EOC_MOM_BIOKINESIS_VITAKINESIS_LAB_SHADOW_URGE_SELECTED_BIOKINETIC_CRYSTAL_CONSUME_RUN",
-            "effect": [ "npc_die", { "set_string_var": "yes", "target_var": { "u_val": "activated_shadow_urge_machine" } } ]
+            "effect": [
+              "npc_die",
+              {
+                "set_string_var": "yes",
+                "target_var": {
+                  "u_val": "activated_shadow_urge_machine"
+                }
+              }
+            ]
           }
         ]
       }
@@ -37,15 +66,30 @@
     "id": "EOC_MOM_BIOKINESIS_VITAKINESIS_LAB_SHADOW_URGE_SELECT_VITAKINETIC_CRYSTAL",
     "type": "effect_on_condition",
     "effect": [
-      { "set_string_var": "no", "target_var": { "u_val": "activated_shadow_urge_machine" } },
+      {
+        "set_string_var": "no",
+        "target_var": {
+          "u_val": "activated_shadow_urge_machine"
+        }
+      },
       {
         "u_run_inv_eocs": "manual",
         "title": "Which crystal do you enter?",
-        "search_data": [ { "flags": [ "MATRIX_CRYSTAL_VITAKINESIS" ] } ],
+        "search_data": [
+          {
+            "flags": [
+              "MATRIX_CRYSTAL_VITAKINESIS"
+            ]
+          }
+        ],
         "true_eocs": [
           {
             "id": "EOC_MOM_BIOKINESIS_VITAKINESIS_LAB_SHADOW_URGE_SELECT_VITAKINETIC_CRYSTAL_SELECTED",
-            "effect": [ { "npc_set_flag": "MOM_SHADOW_URGE_CHOICE" } ]
+            "effect": [
+              {
+                "npc_set_flag": "MOM_SHADOW_URGE_CHOICE"
+              }
+            ]
           }
         ]
       }
@@ -57,48 +101,27 @@
     "effect": [
       {
         "u_run_inv_eocs": "random",
-        "search_data": [ { "flags": [ "MOM_SHADOW_URGE_CHOICE" ] } ],
+        "search_data": [
+          {
+            "flags": [
+              "MOM_SHADOW_URGE_CHOICE"
+            ]
+          }
+        ],
         "true_eocs": [
           {
             "id": "EOC_MOM_BIOKINESIS_VITAKINESIS_LAB_SHADOW_URGE_SELECTED_VITAKINETIC_CRYSTAL_CONSUME_RUN",
-            "effect": [ "npc_die", { "set_string_var": "yes", "target_var": { "u_val": "activated_shadow_urge_machine" } } ]
+            "effect": [
+              "npc_die",
+              {
+                "set_string_var": "yes",
+                "target_var": {
+                  "u_val": "activated_shadow_urge_machine"
+                }
+              }
+            ]
           }
         ]
-      }
-    ]
-  },
-  {
-    "id": [ "TALK_MOM_SHADOW_URGE_MACHINE" ],
-    "type": "talk_topic",
-    "dynamic_line": [
-      {
-        "u_is_on_furniture": "f_biokinetic_physiology_improver",
-        "yes": "&You sit down and activate the screen, trying to ignore your awkward positioning, and within a few moments are greeted with a login prompt.\n\n\"Project SHADOW URGE.  Enter login credentials.\"",
-        "no": "&You poke at the computer, and while it does turn on and you see a login screen for a moment, it's quickly replaced with a popup that reads:\n\n\"No occupant detected.  SHADOW URGE functions unavailable.\""
-      }
-    ],
-    "responses": [
-      {
-        "text": "Input the SHADOW URGE access codes you have.",
-        "topic": "COMP_MOM_SHADOW_URGE_COMPUTER_KNOWN_PASS",
-        "condition": {
-          "and": [ { "u_is_on_furniture": "f_biokinetic_physiology_improver" }, { "u_has_item": "lab_file_shadow_urge_password" } ]
-        }
-      },
-      {
-        "text": "Try a random username and password.",
-        "topic": "COMP_MOM_SHADOW_URGE_COMPUTER_RANDOM_PASS",
-        "condition": {
-          "and": [
-            { "u_is_on_furniture": "f_biokinetic_physiology_improver" },
-            { "not": { "u_has_item": "lab_file_shadow_urge_password" } }
-          ]
-        }
-      },
-      {
-        "text": "Better sit down.",
-        "topic": "TALK_DONE",
-        "condition": { "not": { "u_is_on_furniture": "f_biokinetic_physiology_improver" } }
       }
     ]
   }

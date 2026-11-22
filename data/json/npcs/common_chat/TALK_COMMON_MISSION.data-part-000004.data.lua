@@ -1,0 +1,131 @@
+local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_MISSION_INQUIRE",
+    replies = {
+        {
+            text = ccb.content.text("I'm sorry… I failed."),
+            next_topic = "TALK_MISSION_FAILURE",
+            when = predicates.actor_state("interlocutor", "mission_failed"),
+            opinion = { trust = -1, value = -1, anger = 1 },
+        },
+        {
+            text = ccb.content.text("Not yet."),
+            when = predicates.actor_state("interlocutor", "mission_failed"),
+            trial = { kind = "lie", difficulty = 10, modifiers = { { score = "TRUST", scale = 3 } } },
+            success = { next_topic = "TALK_NONE" },
+            failure = { next_topic = "TALK_MISSION_FAILURE", opinion = { trust = -3, value = -1, anger = 2 } },
+        },
+        {
+            text = ccb.content.text("Not yet."),
+            next_topic = "TALK_NONE",
+            when = predicates.actor_state("interlocutor", "mission_incomplete"),
+        },
+        {
+            text = ccb.content.text("I killed him."),
+            false_text = ccb.content.text("I killed it."),
+            text_when = predicates.handler("dlg_p_dda_1236053a2f9b"),
+            when = predicates.handler("dlg_p_dda_b5438c3b18da"),
+            trial = { kind = "lie", difficulty = 10, modifiers = { { score = "TRUST", scale = 5 } } },
+            success = { next_topic = "TALK_MISSION_SUCCESS", actions = { "mission_success" } },
+            failure = { next_topic = "TALK_MISSION_SUCCESS_LIE", opinion = { trust = -5, value = -1, anger = 5 } },
+        },
+        {
+            text = ccb.content.text("No.  I'll get back to it, bye!"),
+            next_topic = "TALK_DONE",
+            when = predicates.actor_state("interlocutor", "mission_incomplete"),
+        },
+        {
+            text = ccb.content.text("Yup!  Here it is!"),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.handler("dlg_p_dda_9df400458154"),
+            actions = { "mission_success" },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("We're here!"),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.handler("dlg_p_dda_6b028eae1cf6"),
+            actions = { "mission_success" },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("Here I am."),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.handler("dlg_p_dda_735c3ce07a5e"),
+            actions = { "mission_success" },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("I talked to them."),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.handler("dlg_p_dda_aaeabe75dc28"),
+            actions = { "mission_success" },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("Here it is!"),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.handler("dlg_p_dda_da2dac1c4495"),
+            actions = { "mission_success" },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("Justice has been served."),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.handler("dlg_p_dda_d7d86c55d371"),
+            actions = { "mission_success" },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("I killed it."),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.handler("dlg_p_dda_61b3cdccfe99"),
+            actions = { "mission_success" },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("I killed them.  All of them."),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.handler("dlg_p_dda_1d08495c348b"),
+            actions = { "mission_success" },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("I brought 'em."),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.handler("dlg_p_dda_5c7f7def7d93"),
+            actions = { "mission_success" },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("I've taken care of it."),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.handler("dlg_p_dda_e1ce49b951c6"),
+            actions = { "mission_success" },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("I found it, but I'm keeping it, and I'll find you another one.  <done_conversation_section>"),
+            next_topic = "TALK_NONE",
+            when = predicates.handler("dlg_p_dda_198cb07b916b"),
+            actions = { actions.add_effect("interlocutor", "npc_player_still_looking", { turns = 43200 }) },
+        },
+        {
+            text = ccb.content.text("I found it, but I'm keeping it, and I'll find you another one.  <end_talking_bye>"),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("dlg_p_dda_198cb07b916b"),
+            actions = { actions.add_effect("interlocutor", "npc_player_still_looking", { turns = 43200 }) },
+        },
+        {
+            text = ccb.content.text("Mission success!  I don't know what else to say."),
+            next_topic = "TALK_MISSION_SUCCESS",
+            when = predicates.actor_state("interlocutor", "mission_complete"),
+            actions = { "mission_success" },
+            switch = true,
+            default = true,
+        },
+    },
+}

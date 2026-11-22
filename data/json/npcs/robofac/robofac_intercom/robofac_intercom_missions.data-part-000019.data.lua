@@ -1,4 +1,29 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = { "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_OFFER", "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_OFFER_ADVICE_Gun", "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_OFFER_ADVICE_Trifacet" },
+    line = ccb.content.text("One of our scout drones spotted a partially-malfunctioning robot of unconventional make while tracking an anomalous radiation spike close by.  We project that much knowledge could be gained from a close examination of this subject, and you would be tasked to retrieve it for us intact.  We will equip you with a prototype rifle and instructions on how to use it and deactivate the robot, if you accept.\"\n\n\"The success of this contract requires that the subject be brought back in an inactive state, and *not* destroyed.  A ruined robot is of no scientific value.  We emphasize that you use the prototype to complete this task; an EMP blast would likely destroy the subject outright.\"\n\n\"Completion of this contract awards 2 HGC, and you will be able to keep the prototype and the equipment used to operate it."),
+    replies = {
+        {
+            text = ccb.content.text("You've got a deal.  I'll track down your robot."),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_ACCEPTED",
+            actions = { actions.assign_mission("MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1"), actions.handler("dlg_a_dda_ea2ba23445ef") },
+        },
+        {
+            text = ccb.content.text("Tell me about this prototype."),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_OFFER_ADVICE_Gun",
+        },
+        {
+            text = ccb.content.text("What is this robot, and what does it look like?"),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_OFFER_ADVICE_Trifacet",
+        },
+        {
+            text = ccb.content.text("What else do you have available?"),
+            next_topic = "TALK_ROBOFAC_INTERCOM_CONTRACTS",
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "MISSION_ROBOFAC_INTERCOM_ROBOT_SM_1_OFFER_ADVICE_Gun",

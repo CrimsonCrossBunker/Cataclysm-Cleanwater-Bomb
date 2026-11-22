@@ -3,6 +3,53 @@ local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
+    id = { "TALK_NPC_CABIN_CHEMIST", "TALK_NPC_CABIN_CHEMIST_INTRO" },
+    replies = {
+        {
+            text = ccb.content.text("Who are you?"),
+            next_topic = "TALK_NPC_CABIN_CHEMIST_STORY",
+            when = predicates.all({ predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_story_told_u_backstory" } })), predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }) }),
+        },
+        {
+            text = ccb.content.text("Could you tell me about yourself again?"),
+            next_topic = "TALK_NPC_CABIN_CHEMIST_STORY",
+            when = predicates.all({ predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_story_told_u_backstory" } }), predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }) }),
+        },
+        {
+            text = ccb.content.text("I'd like to ask you a few questions."),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+            when = predicates.handler("dlg_p_dda_2c514690302b"),
+        },
+        {
+            text = ccb.content.text("What is this place?"),
+            next_topic = "TALK_NPC_CABIN_CHEMIST_HOME",
+            when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }),
+        },
+        {
+            text = ccb.content.text("Brewed anything new lately?"),
+            next_topic = "TALK_NPC_CABIN_CHEMIST_ASK_INTERVAL",
+            when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }),
+        },
+        {
+            text = ccb.content.text("Care to trade?"),
+            next_topic = "TALK_NPC_CABIN_CHEMIST_INTRO",
+            when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }),
+            actions = { "start_trade" },
+        },
+        {
+            text = ccb.content.text("I'd like to buy in bulk."),
+            next_topic = "TALK_CABIN_CHEMIST_BULK_SELL",
+            when = predicates.all({ predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }), predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_trade_mass_chem_tradeable" } }) }),
+        },
+        {
+            text = ccb.content.text("Any jobs you need done?"),
+            next_topic = "TALK_MISSION_LIST",
+            when = predicates.all({ predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }), predicates.negate(predicates.assigned_missions(1, 1)), predicates.negate(predicates.assigned_missions(2)) }),
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
     id = "TALK_NPC_CABIN_CHEMIST",
     line = {
         when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }),

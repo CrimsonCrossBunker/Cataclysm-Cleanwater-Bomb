@@ -10,7 +10,13 @@
       {
         "text": "Two minutes?  Ah, shit.",
         "topic": "TALK_DONE",
-        "effect": { "run_eocs": "EOC_EXODII_HATES_YOU", "time_in_future": [ "100 seconds", "140 seconds" ] }
+        "effect": {
+          "run_eocs": "EOC_EXODII_HATES_YOU",
+          "time_in_future": [
+            "100 seconds",
+            "140 seconds"
+          ]
+        }
       }
     ]
   },
@@ -27,11 +33,26 @@
             "true_eocs": {
               "id": "exodii_buy_riot_gear_success",
               "effect": [
-                { "u_spawn_item": "armor_riot", "count": 5 },
-                { "u_spawn_item": "helmet_riot", "count": 5 },
-                { "u_spawn_item": "armor_riot_arm", "count": 5 },
-                { "u_spawn_item": "armor_riot_leg", "count": 5 },
-                { "npc_add_var": "npc_dialogue_exodii_npc_bought_riot_gear", "value": "yes" }
+                {
+                  "u_spawn_item": "armor_riot",
+                  "count": 5
+                },
+                {
+                  "u_spawn_item": "helmet_riot",
+                  "count": 5
+                },
+                {
+                  "u_spawn_item": "armor_riot_arm",
+                  "count": 5
+                },
+                {
+                  "u_spawn_item": "armor_riot_leg",
+                  "count": 5
+                },
+                {
+                  "npc_add_var": "npc_dialogue_exodii_npc_bought_riot_gear",
+                  "value": "yes"
+                }
               ]
             }
           }
@@ -42,32 +63,14 @@
         "text": "Any chance I can buy gear this on layaway?",
         "topic": "TALK_EXODII_MERCHANT_You_Buy_Riot_Gear_On_Credit"
       },
-      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
-      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "id": "TALK_EXODII_MERCHANT_You_Buy_Riot_Gear_On_Credit",
-    "type": "talk_topic",
-    "dynamic_line": {
-      "//~": "If you survive, we can give you twenty-odd days to pay us back.",
-      "str": "If'n you survive, we can give you a fortnight and six odd days to pay us'n back."
-    },
-    "responses": [
       {
-        "text": "Thanks Rubik, I'll be back with your payment soon.",
-        "effect": [
-          { "u_spawn_item": "armor_riot", "count": 5 },
-          { "u_spawn_item": "helmet_riot", "count": 5 },
-          { "u_spawn_item": "armor_riot_arm", "count": 5 },
-          { "u_spawn_item": "armor_riot_leg", "count": 5 },
-          { "assign_mission": "MISSION_EXODII_PAY_BACK_RIOT_GEAR" },
-          { "npc_add_var": "npc_dialogue_exodii_npc_bought_riot_gear", "value": "yes" }
-        ],
+        "text": "<done_conversation_section>",
         "topic": "TALK_EXODII_MERCHANT_Talk"
       },
-      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
-      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
+      {
+        "text": "<end_talking_leave>  See you later, Rubik.",
+        "topic": "TALK_DONE"
+      }
     ]
   },
   {
@@ -82,14 +85,25 @@
             "u_spend_cash": 40000,
             "true_eocs": {
               "id": "exodii_pay_back_riot_gear_success",
-              "effect": [ { "finish_mission": "MISSION_EXODII_PAY_BACK_RIOT_GEAR", "success": true } ]
+              "effect": [
+                {
+                  "finish_mission": "MISSION_EXODII_PAY_BACK_RIOT_GEAR",
+                  "success": true
+                }
+              ]
             }
           }
         ],
         "topic": "TALK_EXODII_MERCHANT_Talk"
       },
-      { "text": "<done_conversation_section>", "topic": "TALK_EXODII_MERCHANT_Talk" },
-      { "text": "<end_talking_leave>  See you later, Rubik.", "topic": "TALK_DONE" }
+      {
+        "text": "<done_conversation_section>",
+        "topic": "TALK_EXODII_MERCHANT_Talk"
+      },
+      {
+        "text": "<end_talking_leave>  See you later, Rubik.",
+        "topic": "TALK_DONE"
+      }
     ]
   },
   {
@@ -103,7 +117,13 @@
       {
         "text": "Two minutes to get out of here?  Ah, shit.",
         "topic": "TALK_DONE",
-        "effect": { "run_eocs": "EOC_EXODII_HATES_YOU", "time_in_future": [ "100 seconds", "140 seconds" ] }
+        "effect": {
+          "run_eocs": "EOC_EXODII_HATES_YOU",
+          "time_in_future": [
+            "100 seconds",
+            "140 seconds"
+          ]
+        }
       }
     ]
   }

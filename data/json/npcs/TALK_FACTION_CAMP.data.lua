@@ -1,4 +1,83 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_CAMP_GENERAL",
+    line = ccb.content.text("What about faction camps?"),
+    replies = {
+        {
+            text = ccb.content.text("Tell me how faction camps work."),
+            next_topic = "TALK_CAMP_TUTORIAL_INTRO",
+        },
+        {
+            text = ccb.content.text("Tell me how faction camps have changed."),
+            next_topic = "TALK_CAMP_TUTORIAL_CHANGES",
+        },
+        {
+            text = ccb.content.text("I want you to build a camp here."),
+            next_topic = "TALK_HALLU_CAMP",
+            when = predicates.has_trait("interlocutor", "HALLUCINATION"),
+            switch = true,
+        },
+        {
+            text = ccb.content.text("I want you to build a camp here."),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("dlg_p_dda_0a469b3f65f6"),
+            actions = { "start_camp" },
+            switch = true,
+            default = true,
+        },
+        {
+            text = ccb.content.text("Since we can't build a camp here, where can we build a camp?"),
+            next_topic = "TALK_CAMP_SITES",
+            when = predicates.handler("dlg_p_dda_717555b46202"),
+            switch = true,
+            default = true,
+        },
+        {
+            text = ccb.content.text("We need to abandon this camp."),
+            next_topic = "TALK_ABANDON",
+            when = predicates.handler("dlg_p_dda_c5904e1a60f2"),
+        },
+        {
+            text = ccb.content.text("Show me what needs to be done at the camp."),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("dlg_p_dda_c5904e1a60f2"),
+            actions = { "basecamp_mission" },
+        },
+        {
+            text = ccb.content.text("Nothing.  <done_conversation_section>"),
+            next_topic = "TALK_FRIEND",
+        },
+        {
+            text = ccb.content.text("Never mind, let's talk about other things you can do."),
+            next_topic = "TALK_ALLY_TUTORIAL",
+        },
+        {
+            text = ccb.content.text("Nothing.  Let's get back to work."),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_CAMP_SITES",
+    line = { special = "list_faction_camp_sites" },
+    replies = {
+        {
+            text = ccb.content.text("Interesting.  <done_conversation_section>"),
+            next_topic = "TALK_FRIEND",
+        },
+        {
+            text = ccb.content.text("Well, until we go there, let's talk about camps more."),
+            next_topic = "TALK_NONE",
+        },
+        {
+            text = ccb.content.text("Well, then.  Let's get back to work."),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_CAMP_TUTORIAL_INTRO",

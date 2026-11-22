@@ -1,4 +1,29 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Mission_Success",
+    line = ccb.content.text("*looks over the papers for a moment, before pocketing them.  \"I'd say this is sufficient, here's some money for your trouble.  I'll get somebody on this.\""),
+    replies = {
+        {
+            text = ccb.content.text("Glad to help."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("dlg_a_dda_8224d2ff1410"), actions.clear_actor_value("speaker", "general_trade_u_think_suspicious_price"), actions.handler("dlg_a_dda_9d4a5a864597"), actions.transfer_items("godcotrader_accounting_records_dirty") },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANT_TEAMSTER_Godco_Trader_Mission_Fail",
+    line = ccb.content.text("*looks over the papers for a moment, before pocketing them.  \"This seems perfectly alright to me.  I don't know what you have against them, but give it up and quit wasting our time.\""),
+    replies = {
+        {
+            text = ccb.content.text("Alright then, <name_b>.  I guess that's what I get for my troubles."),
+            next_topic = "TALK_DONE",
+            actions = { actions.clear_actor_value("speaker", "general_trade_u_think_suspicious_price"), actions.finish_mission("MISSION_INVESTIGATE_TRADER", { success = false }), actions.transfer_items("godcotrader_accounting_records_clean") },
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "directions_isherwood",

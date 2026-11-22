@@ -1,4 +1,25 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_Liam_Meeting1",
+    line = {
+        when = predicates.any_equal({ "ddotd", { scope = "speaker", key = "flag_modded" } }),
+        yes = ccb.content.text("<talk_snippet_modded_liam_meeting1>"),
+        no = ccb.content.text("*, your old friend, stares at you with blank, confused eyes.  He is standing over a freshly mangled corpse, a smoking shotgun at his feet.  \"Holy shit dude.\"  He blinks.  \"Is this about Chris?  If you're here to kill me, just get it over with man.  I don't know what the fuck is happening but I can't take you out too.\""),
+    },
+    on_enter = {
+        { actions = { actions.set_actor_value("speaker", "talked_liam", "yes") }, opinion = { trust = 5, fear = -4, value = 10, anger = -6 } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Get ahold of yourself, man.  What's happening?  Chris?"),
+            next_topic = "TALK_Liam_Meeting2",
+            when = predicates.negate(predicates.any_equal({ "ddotd", { scope = "speaker", key = "flag_modded" } })),
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_Liam_Meeting2",

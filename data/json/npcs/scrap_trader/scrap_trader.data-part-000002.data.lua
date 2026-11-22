@@ -3,6 +3,26 @@ local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
+    id = { "TALK_NPC_SCRAP_TRADER_INTRO", "TALK_NPC_SCRAP_TRADER_STORY", "TALK_NPC_SCRAP_TRADER_FORT" },
+    replies = {
+        {
+            text = ccb.content.text("I'd like to ask you a few questions."),
+            next_topic = "TALK_FRIEND_CONVERSATION",
+            when = predicates.handler("dlg_p_dda_2c514690302b"),
+        },
+        {
+            text = ccb.content.text("Can I buy anything?"),
+            next_topic = "TALK_SCRAP_TRADER_BULK_SELL",
+        },
+        {
+            text = ccb.content.text("Any jobs you need done?"),
+            next_topic = "TALK_MISSION_LIST",
+            when = predicates.all({ predicates.negate(predicates.assigned_missions(1, 1)), predicates.negate(predicates.assigned_missions(2)) }),
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
     id = "TALK_NPC_SCRAP_TRADER",
     line = {
         when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_knows_u" } }),

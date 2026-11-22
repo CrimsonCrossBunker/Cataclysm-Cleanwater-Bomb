@@ -1,4 +1,33 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_Bartender_done",
+    line = ccb.content.text("Ever since you got the bartender set up, our liquor business has been running so much better!  As thanks for your efforts, I wanted to reward you with a portion of recent profits."),
+    on_enter = {
+        { actions = { actions.handler("dlg_a_dda_74a06dbaf8f4"), actions.clear_actor_value("speaker", "mission_flag_Bartender_rewarded") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Thanks."),
+            next_topic = "TALK_RANCH_FOREMAN_reward",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_Doctor_done",
+    line = ccb.content.text("I heard you helped jumpstart our local medical services.  With that basic need covered, everyone has been able to focus on their work a lot more, so to thank you for your efforts, I wanted to reward you."),
+    on_enter = {
+        { actions = { actions.handler("dlg_a_dda_b97e0f4a1de0"), actions.clear_actor_value("speaker", "mission_flag_Doctor_rewarded") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Thanks."),
+            next_topic = "TALK_RANCH_FOREMAN_reward",
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "MISSION_RANCH_FOREMAN_1",

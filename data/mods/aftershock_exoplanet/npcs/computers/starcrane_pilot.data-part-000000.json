@@ -1,0 +1,92 @@
+[
+  {
+    "type": "talk_topic",
+    "id": [
+      "THI_CONTROL_START",
+      "THI_CONTROL_BAY_RAMP_STATUS"
+    ],
+    "dynamic_line": "&●◐ Tristar Heavy Industries\nTHI-14 StarCrane\n\n**Welcome Captain.**\n",
+    "responses": [
+      {
+        "condition": {
+          "math": [
+            "your_ship_ramp_up != 1"
+          ]
+        },
+        "text": "> Plot a course.  <color_light_red>ERROR: BAY RAMP MUST CLOSE BEFORE TAKEOFF</color>",
+        "topic": "THI_CONTROL_START"
+      },
+      {
+        "condition": {
+          "math": [
+            "your_ship_ramp_up == 1"
+          ]
+        },
+        "text": "> Plot a course to a known destination.",
+        "topic": "THI_CONTROL_PLOT_KNOWN"
+      },
+      {
+        "condition": {
+          "math": [
+            "your_ship_ramp_up == 1"
+          ]
+        },
+        "text": "> Plot a manual course.",
+        "topic": "THI_CONTROL_MANUAL_READY",
+        "effect": {
+          "run_eocs": "EOC_SHIP_THI_MANUAL_QUERY"
+        }
+      },
+      {
+        "condition": {
+          "math": [
+            "your_ship_ramp_up != 1"
+          ]
+        },
+        "text": "> Close bay ramp.",
+        "topic": "THI_CONTROL_BAY_RAMP_STATUS",
+        "effect": {
+          "run_eocs": "EOC_SHIP_RAMP"
+        }
+      },
+      {
+        "text": "Shut down.",
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": [
+      "THI_CONTROL_MANUAL_READY"
+    ],
+    "dynamic_line": "&************************************************\n\nINTEGRITY CHK : ███████████████ 100% (COMPLETE)\nNAV TRANSFER :  ███████████████ 100% (COMPLETE)\n\n************************************************\n*  Operation Successful                         *\n************************************************",
+    "responses": [
+      {
+        "condition": {
+          "math": [
+            "ship_can_travel != 1"
+          ]
+        },
+        "text": "<color_light_red>Invalid course.  Destination must be clear of obstacles and at least 5 map tiles away.</color>",
+        "topic": "THI_CONTROL_START"
+      },
+      {
+        "condition": {
+          "math": [
+            "ship_can_travel == 1"
+          ]
+        },
+        "text": "Pilot the ship",
+        "topic": "THI_CONTROL_CONTROL_READY",
+        "effect": {
+          "run_eocs": "EOC_SHIP_THI_MANUAL_CONTROL"
+        }
+      },
+      {
+        "text": "Cancel.",
+        "topic": "THI_CONTROL_START"
+      }
+    ]
+  }
+]

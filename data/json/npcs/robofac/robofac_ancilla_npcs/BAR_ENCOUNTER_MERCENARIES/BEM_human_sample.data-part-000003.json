@@ -4,36 +4,60 @@
     "type": "talk_topic",
     "dynamic_line": {
       "gendered_line": "&The mercenary gives you a quick appraisal.  \"Five coins for three, special price just for you.  Pay in advance, and I'll arrange a drop in the subway rails here for you to pick within two days.  Deal or not?\"",
-      "relevant_genders": [ "npc" ]
+      "relevant_genders": [
+        "npc"
+      ]
     },
     "responses": [
       {
         "text": "[5 HGC] Its a deal.",
         "topic": "TALK_DONE",
-        "condition": { "u_has_items": { "item": "RobofacCoin", "count": 5 } },
+        "condition": {
+          "u_has_items": {
+            "item": "RobofacCoin",
+            "count": 5
+          }
+        },
         "effect": [
-          { "u_sell_item": "RobofacCoin", "count": 5 },
-          { "run_eocs": "EOC_BEM_HUMAN_SAMPLE_BUY", "time_in_future": [ "2 days", "2 days" ] }
+          {
+            "u_sell_item": "RobofacCoin",
+            "count": 5
+          },
+          {
+            "run_eocs": "EOC_BEM_HUMAN_SAMPLE_BUY",
+            "time_in_future": [
+              "2 days",
+              "2 days"
+            ]
+          }
         ]
       },
       {
         "text": "Sure, just let me find the cash.",
         "topic": "TALK_DONE",
-        "condition": { "not": { "u_has_items": { "item": "RobofacCoin", "count": 5 } } }
+        "condition": {
+          "not": {
+            "u_has_items": {
+              "item": "RobofacCoin",
+              "count": 5
+            }
+          }
+        }
       },
-      { "text": "No deal.", "topic": "TALK_DONE" }
+      {
+        "text": "No deal.",
+        "topic": "TALK_DONE"
+      }
     ]
-  },
-  {
-    "id": "BEM_HUMAN_SAMPLE_FINISH",
-    "type": "talk_topic",
-    "dynamic_line": "&<mypronoun> quickly removes the offending piece of meat from your hand and places two golden coins on the table, apparently unshaken by the prospect of meeting someone who casually visits bars while carrying cuts of human flesh.  \"Now if you please, I have a meal to get rid of.\" <mypronoun> says, between poorly masked bouts of nausea.",
-    "speaker_effect": { "effect": [ { "u_sell_item": "human_sample", "count": 1 }, { "u_spawn_item": "RobofacCoin", "count": 2 } ] },
-    "responses": [ { "text": "Leave.", "topic": "TALK_DONE", "effect": "end_conversation" } ]
   },
   {
     "type": "effect_on_condition",
     "id": "EOC_BEM_HUMAN_SAMPLE_BUY",
-    "effect": [ { "mapgen_update": "EOC_BEM_HUMAN_SAMPLE_BUY_MAP", "om_terrain": "robofachq_subline_a1" } ]
+    "effect": [
+      {
+        "mapgen_update": "EOC_BEM_HUMAN_SAMPLE_BUY_MAP",
+        "om_terrain": "robofachq_subline_a1"
+      }
+    ]
   }
 ]

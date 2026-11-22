@@ -7,9 +7,19 @@
       {
         "text": "All right.  Let's kick some alien butt.",
         "effect": [
-          { "math": [ "isherwood_family_coming = 0" ] },
-          { "run_eocs": "isherwood_mission_initialization_eoc" },
-          { "math": [ "npc_isherwood_barry_rescue_attempts++" ] }
+          {
+            "math": [
+              "isherwood_family_coming = 0"
+            ]
+          },
+          {
+            "run_eocs": "isherwood_mission_initialization_eoc"
+          },
+          {
+            "math": [
+              "npc_isherwood_barry_rescue_attempts++"
+            ]
+          }
         ],
         "topic": "TALK_DONE"
       },
@@ -21,8 +31,14 @@
         "text": "You mentioned that Carlos, Eddie and Luke probably can't help in a firefight.  Is there any other way we could use them?",
         "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_THE_ISHERWOODS"
       },
-      { "text": "<done_conversation_section>", "topic": "TALK_ISHERWOOD_CHRIS_TOPICS" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+      {
+        "text": "<done_conversation_section>",
+        "topic": "TALK_ISHERWOOD_CHRIS_TOPICS"
+      },
+      {
+        "text": "<end_talking_leave>",
+        "topic": "TALK_DONE"
+      }
     ]
   },
   {
@@ -32,20 +48,40 @@
     "responses": [
       {
         "text": "What about Lisa?  She seems like she could handle herself.",
-        "condition": { "compare_string": [ "yes", { "u_val": "u_met_lisa_isherwood" } ] },
+        "condition": {
+          "compare_string": [
+            "yes",
+            {
+              "u_val": "u_met_lisa_isherwood"
+            }
+          ]
+        },
         "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_TAKE_LISA2"
       },
       {
         "text": "You mentioned that Carlos, Eddie and Luke probably can't help in a firefight.  Is there any other way we could use them?",
         "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_THE_ISHERWOODS"
       },
-      { "text": "<done_conversation_section>", "topic": "TALK_ISHERWOOD_CHRIS_TOPICS" },
+      {
+        "text": "<done_conversation_section>",
+        "topic": "TALK_ISHERWOOD_CHRIS_TOPICS"
+      },
       {
         "text": "Well, I guess it's just us.  <lets_go>",
         "effect": [
-          { "math": [ "isherwood_family_coming = 0" ] },
-          { "run_eocs": "isherwood_mission_initialization_eoc" },
-          { "math": [ "npc_isherwood_barry_rescue_attempts++" ] }
+          {
+            "math": [
+              "isherwood_family_coming = 0"
+            ]
+          },
+          {
+            "run_eocs": "isherwood_mission_initialization_eoc"
+          },
+          {
+            "math": [
+              "npc_isherwood_barry_rescue_attempts++"
+            ]
+          }
         ],
         "topic": "TALK_DONE"
       }
@@ -58,8 +94,15 @@
     "speaker_effect": {
       "sentinel": "plan_to_take_lisa",
       "effect": [
-        { "u_add_var": "lisa_isherwood_coming_too", "value": "yes" },
-        { "math": [ "timer_chris_talked_to_lisa = time('now')" ] }
+        {
+          "u_add_var": "lisa_isherwood_coming_too",
+          "value": "yes"
+        },
+        {
+          "math": [
+            "timer_chris_talked_to_lisa = time('now')"
+          ]
+        }
       ]
     },
     "responses": [
@@ -67,87 +110,48 @@
         "text": "You mentioned that Carlos, Eddie and Luke probably can't help in a firefight.  Is there any other way we could use them?",
         "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_THE_ISHERWOODS"
       },
-      { "text": "<done_conversation_section>", "topic": "TALK_ISHERWOOD_CHRIS_TOPICS" },
+      {
+        "text": "<done_conversation_section>",
+        "topic": "TALK_ISHERWOOD_CHRIS_TOPICS"
+      },
       {
         "text": "All right.  Let's kick some alien butt.",
         "effect": [
-          { "math": [ "isherwood_family_coming = 0" ] },
-          { "run_eocs": "isherwood_mission_lisa_coming", "time_in_future": "1 hour" },
-          { "run_eocs": "isherwood_mission_initialization_eoc" },
-          { "math": [ "npc_isherwood_barry_rescue_attempts++" ] }
+          {
+            "math": [
+              "isherwood_family_coming = 0"
+            ]
+          },
+          {
+            "run_eocs": "isherwood_mission_lisa_coming",
+            "time_in_future": "1 hour"
+          },
+          {
+            "run_eocs": "isherwood_mission_initialization_eoc"
+          },
+          {
+            "math": [
+              "npc_isherwood_barry_rescue_attempts++"
+            ]
+          }
         ],
         "topic": "TALK_DONE"
       },
       {
         "text": "Okay, I'll give you about an hour to talk with her about it.  I'll be back soon.",
         "effect": [
-          { "math": [ "isherwood_family_coming = 0" ] },
-          { "run_eocs": "isherwood_mission_lisa_coming", "time_in_future": "1 hour" }
+          {
+            "math": [
+              "isherwood_family_coming = 0"
+            ]
+          },
+          {
+            "run_eocs": "isherwood_mission_lisa_coming",
+            "time_in_future": "1 hour"
+          }
         ],
         "topic": "TALK_DONE"
       }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_THE_ISHERWOODS",
-    "dynamic_line": "Probably.  They'd want to, for sure.\"  He looks thoughtful.  \"I'm sure we could use more help, but this isn't my strong suit.  Let me think about it.  If you have any ideas, run them by me.",
-    "speaker_effect": { "sentinel": "chris_thinking_about_plan", "effect": { "math": [ "npc_timer_thinking_about_plan = time('now')" ] } },
-    "responses": [
-      {
-        "text": "Is there anyone else around here that could help us?",
-        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_TAKE_LISA"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_ISHERWOOD_CHRIS_TOPICS" },
-      { "text": "OK.  Let's talk about it again in a bit.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN",
-    "dynamic_line": "Yeah.  I think they should cover our exit.  We've got an old truck they could set up as a platform, where Dad can put down covering fire without his knee being an issue.  Eddie can drive, instead of shoot, and Luke or Mom can be ready with some first aid supplies.  Then when we get out, we've got an easy getaway set up, and there's less chance of us getting flanked while we're in there looking for Barry.\"  He looks at you, suddenly nervous.  \"Is that a good plan?",
-    "responses": [
-      {
-        "text": "Seems like a good plan to me.",
-        "effect": [ { "math": [ "isherwood_family_coming = 1" ] } ],
-        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN2"
-      },
-      {
-        "text": "I think it's better we take my vehicle, and just leave them out of it.",
-        "effect": [ { "math": [ "isherwood_family_coming = 0" ] } ],
-        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN_Cancel"
-      },
-      {
-        "text": "Is there anyone else around here that could help us?",
-        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_TAKE_LISA"
-      },
-      {
-        "text": "I don't think one farmer with a hunting rifle is going to be enough to keep our backs safe.",
-        "condition": { "math": [ "isherwood_gear_status < 1" ] },
-        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN_Gear"
-      },
-      {
-        "text": "I think we need some kind of secure fallback point for the family, maybe a defensive wall?",
-        "condition": {
-          "and": [
-            { "not": { "u_has_mission": "MISSION_ISHERWOOD_CHRIS_1_GET_WALL_BAGS" } },
-            { "math": [ "isherwood_wall_status < 1" ] }
-          ]
-        },
-        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN_Wall"
-      },
-      {
-        "text": "We're going to need some way to breach the tower itself, possibly some form of explosives.  Do you know anyone who could help us with that?",
-        "condition": {
-          "and": [
-            { "compare_string": [ "yes", { "u_val": "u_been_to_migos" } ] },
-            { "not": { "compare_string": [ "yes", { "u_val": "chris_planned_for_bomb" } ] } }
-          ]
-        },
-        "topic": "TALK_ISHERWOOD_CHRIS_RESCUE_BARRY_PLAN_Bomb"
-      },
-      { "text": "<done_conversation_section>", "topic": "TALK_ISHERWOOD_CHRIS_TOPICS" },
-      { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
     ]
   }
 ]

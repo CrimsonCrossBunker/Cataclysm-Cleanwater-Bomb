@@ -45,3 +45,4 @@ require("terrain_transforms")
 
 require("consumable_effects")
 require("jmath")
+require("dialogue_handlers")

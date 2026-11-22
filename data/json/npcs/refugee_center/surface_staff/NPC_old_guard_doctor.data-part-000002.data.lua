@@ -1,4 +1,28 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_SCIENCE_REP_CBM",
+    line = ccb.content.text("You've got one of those interfaces?  Sure.  Let me fire up the robot."),
+    replies = {
+        {
+            text = ccb.content.text("Would you be able to help me install a bionic implant?"),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("dlg_p_dda_9aa5249d2b43"),
+            actions = { "bionic_install" },
+        },
+        {
+            text = ccb.content.text("Would you be able to take out one of my bionic implants?"),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("dlg_p_dda_9aa5249d2b43"),
+            actions = { "bionic_remove" },
+        },
+        {
+            text = ccb.content.text("Never mind…"),
+            next_topic = "TALK_SCIENCE_REP",
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "MISSION_SCIENCE_REP_1",

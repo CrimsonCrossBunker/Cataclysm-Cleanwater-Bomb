@@ -1,4 +1,23 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RC_SURVIVOR_1",
+    line = ccb.content.text("Hey there.  Do you work here, or what?"),
+    on_enter = {
+        { actions = { actions.set_first_topic("TALK_RC_SURVIVOR_2"), actions.handler("dlg_a_dda_c231e68b393b") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Me?  No, I'm just passing through, how about you?"),
+            next_topic = "TALK_RC_SURVIVOR_Story",
+        },
+        {
+            text = ccb.content.text("Work here?  No, of course not.  <end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_RC_SURVIVOR_2",

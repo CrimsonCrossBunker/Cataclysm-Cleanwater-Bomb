@@ -3,73 +3,130 @@
     "id": "TALK_FREE_MERCHANTS_MERCHANT",
     "type": "talk_topic",
     "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Gavin" } ],
-      "yes": [ "Welcome back.", "Hello again.  What do you need?", "*looks up.  \"Hey.\"" ],
+      "compare_string": [
+        "yes",
+        {
+          "u_val": "general_meeting_u_met_Gavin"
+        }
+      ],
+      "yes": [
+        "Welcome back.",
+        "Hello again.  What do you need?",
+        "*looks up.  \"Hey.\""
+      ],
       "no": "*waves you over.  \"I haven't seen you before.  Welcome to our little homely house.\""
     },
     "responses": [
       {
         "text": "Who are you?  This is a refugee center, right?",
         "topic": "TALK_FREE_MERCHANTS_MERCHANT_Intro",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Gavin" } ] } },
-        "effect": { "u_add_var": "general_meeting_u_met_Gavin", "value": "yes" }
+        "condition": {
+          "not": {
+            "compare_string": [
+              "yes",
+              {
+                "u_val": "general_meeting_u_met_Gavin"
+              }
+            ]
+          }
+        },
+        "effect": {
+          "u_add_var": "general_meeting_u_met_Gavin",
+          "value": "yes"
+        }
       },
       {
         "text": "I'm looking for a specific, strange building.  I wonder if you've heard anything about it, maybe from some of the traders coming through?",
         "topic": "TALK_EVAC_MERCHANT_EXODII_MISSION_WAREHOUSE",
         "condition": {
           "and": [
-            { "u_has_mission": "EXODII_MISSION_WAREHOUSE" },
-            { "not": { "compare_string": [ "yes", { "npc_val": "asked_about_exodii_warehouse_mission" } ] } }
+            {
+              "u_has_mission": "EXODII_MISSION_WAREHOUSE"
+            },
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "npc_val": "asked_about_exodii_warehouse_mission"
+                  }
+                ]
+              }
+            }
           ]
         },
-        "effect": { "run_eocs": [ "EOC_exodii_mission_wh_directions_chance" ] }
+        "effect": {
+          "run_eocs": [
+            "EOC_exodii_mission_wh_directions_chance"
+          ]
+        }
       },
       {
         "text": "Just passing through, don't mind me.",
         "topic": "TALK_DONE",
-        "condition": { "not": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Gavin" } ] } }
+        "condition": {
+          "not": {
+            "compare_string": [
+              "yes",
+              {
+                "u_val": "general_meeting_u_met_Gavin"
+              }
+            ]
+          }
+        }
       },
       {
         "text": "I wanted to talk.",
         "topic": "TALK_FREE_MERCHANTS_MERCHANT_Talk",
-        "condition": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Gavin" } ] }
+        "condition": {
+          "compare_string": [
+            "yes",
+            {
+              "u_val": "general_meeting_u_met_Gavin"
+            }
+          ]
+        }
       },
       {
         "text": "Let's trade.",
-        "condition": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Gavin" } ] },
+        "condition": {
+          "compare_string": [
+            "yes",
+            {
+              "u_val": "general_meeting_u_met_Gavin"
+            }
+          ]
+        },
         "trial": {
           "type": "CONDITION",
-          "condition": { "math": [ "faction_food_supply('free_merchants', 'vitamin':'human_flesh_vitamin')", "<", "1" ] }
+          "condition": {
+            "math": [
+              "faction_food_supply('free_merchants', 'vitamin':'human_flesh_vitamin')",
+              "<",
+              "1"
+            ]
+          }
         },
-        "success": { "effect": "start_trade", "topic": "TALK_FREE_MERCHANTS_MERCHANT_DoneTrading" },
-        "failure": { "topic": "TALK_FREE_MERCHANTS_MERCHANT_CANNIBAL_GTFO" }
+        "success": {
+          "effect": "start_trade",
+          "topic": "TALK_FREE_MERCHANTS_MERCHANT_DoneTrading"
+        },
+        "failure": {
+          "topic": "TALK_FREE_MERCHANTS_MERCHANT_CANNIBAL_GTFO"
+        }
       },
       {
         "text": "Just saying hello.  Keep safe.",
         "topic": "TALK_DONE",
-        "condition": { "compare_string": [ "yes", { "u_val": "general_meeting_u_met_Gavin" } ] }
+        "condition": {
+          "compare_string": [
+            "yes",
+            {
+              "u_val": "general_meeting_u_met_Gavin"
+            }
+          ]
+        }
       }
-    ]
-  },
-  {
-    "id": "TALK_FREE_MERCHANTS_MERCHANT_DoneTrading",
-    "type": "talk_topic",
-    "dynamic_line": [ "Hope it helps.", "Give me second to write that down… okay, done.", "You know where to find me." ],
-    "speaker_effect": [ { "effect": "distribute_food_auto" } ],
-    "responses": [
-      { "text": "About other things…", "topic": "TALK_FREE_MERCHANTS_MERCHANT_Talk" },
-      {
-        "text": "Let's trade.",
-        "trial": {
-          "type": "CONDITION",
-          "condition": { "math": [ "faction_food_supply('free_merchants', 'vitamin':'human_flesh_vitamin')", "<", "1" ] }
-        },
-        "success": { "effect": "start_trade", "topic": "TALK_FREE_MERCHANTS_MERCHANT_DoneTrading" },
-        "failure": { "topic": "TALK_FREE_MERCHANTS_MERCHANT_CANNIBAL_GTFO" }
-      },
-      { "text": "When will you have new stuff in stock?", "topic": "TALK_FREE_MERCHANTS_MERCHANT_AskedRestock" },
-      { "text": "That's all for now.  <end_talking_bye>", "topic": "TALK_DONE" }
     ]
   }
 ]

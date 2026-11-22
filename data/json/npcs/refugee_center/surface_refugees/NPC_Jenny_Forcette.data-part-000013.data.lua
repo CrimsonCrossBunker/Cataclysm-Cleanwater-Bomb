@@ -1,4 +1,62 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_JENNY_Refugees2_Borichenko",
+    line = {
+        when = predicates.handler("dlg_p_dda_3b14879c9833"),
+        yes = ccb.content.text("I didn't get to know Boris, Garry, and Stan so well for the first while.  They kinda kept to themselves.  Boris and Stan had just lost their son, you know.  It's pretty lucky that Garry was with them, he's Stan's little brother.  Together, they're a pretty good team.  I feel bad for thinking they were standoffish before.  They probably do the most to pull their weight around here whenever there's work to be done."),
+        no = ccb.content.text("Boris and Stan are married, I guess.  They kinda keep to themselves, they seem a bit standoffish if you ask me.  Garry is Stan's brother, I think, but I'm not totally sure.  He seems nice enough, but he's a man of few words.  I can't get a good bead on them.  I've learned not to pry too much though."),
+    },
+    replies = {
+        {
+            text = ccb.content.text("<done_conversation_section>"),
+            next_topic = "TALK_NONE",
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_JENNY_Refugees2_Singh",
+    line = {
+        when = predicates.handler("dlg_p_dda_179329b6cb3b"),
+        yes = ccb.content.text("The Singhs are really shy, and I think they feel pretty bad about making it through this together.  They're the only complete family I've seen since <the_cataclysm>.  That has to feel really weird, and I think it's made them stick really close together.  I think… I think they also just don't really like any of us."),
+        no = ccb.content.text("I really can't get a bead on them.  They never really talk to anyone outside of their little family group, they just sit in their own spot and speak Punjabi.  They always seem nice, and they do their share, they just don't have any social connection."),
+    },
+    replies = {
+        {
+            text = ccb.content.text("<done_conversation_section>"),
+            next_topic = "TALK_NONE",
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_JENNY_Refugees2_Others",
+    line = {
+        when = predicates.handler("dlg_p_dda_fe3a896fea99"),
+        yes = ccb.content.text("Vanessa… I'm doing my best, I really am, but we just do not get along.  One of these days one of us is probably going to brain the other with a tire iron, and I'm just grateful I spend more time around the tire irons.  Uyen and Rhyzaea are both excellent people, and I genuinely like them, but I can't stand this ongoing political bullshit they've got going on.  Alonso is just a… he's… there's no polite word for what he is.  A lot of the others are fine with it, and okay, sure, I guess.  John is a walking stereotype, but he's a great poker buddy.  I admit I kinda like him."),
+        no = ccb.content.text("Vanessa… well, she's nice, I guess.  I gotta say, she kinda drives me nuts, but we're in this together so I try not to be too harsh.  Uyen and Rhyzaea both seem to want to run the show here, but I try to stay out of those politics and just focus on building stuff.  I don't see much good coming of it.  Alonso is fine, he's clearly interested in me, and also in every other single person here.  Not my thing, in a group this small.  John is a walking stereotype, I imagine there must be more depth to him, but I haven't seen it yet."),
+    },
+    replies = {
+        {
+            text = ccb.content.text("<done_conversation_section>"),
+            next_topic = "TALK_NONE",
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "MISSION_REFUGEE_Jenny_GET_PNEUMATICS",

@@ -5,31 +5,20 @@
     "dynamic_line": "Listen, buddy.  We were putting away some of the last food you gave us and noticed it was… off.  Okay I'll cut the shit- It was people.  I don't know how you got it, or what you did, but we aren't taking any chances.  You are not welcome here anymore.  <color_red>I'll give you one minute</color> to fuck off and never come back.",
     "speaker_effect": [
       {
-        "effect": [ "end_conversation", { "run_eocs": [ "EOC_GAVE_BEGGAR_CANNIBAL_PROOF" ], "time_in_future": "1 minutes" } ]
+        "effect": [
+          "end_conversation",
+          {
+            "run_eocs": [
+              "EOC_GAVE_BEGGAR_CANNIBAL_PROOF"
+            ],
+            "time_in_future": "1 minutes"
+          }
+        ]
       }
     ],
-    "responses": [ { "text": "But I-", "topic": "TALK_DONE" } ]
-  },
-  {
-    "id": "TALK_EVAC_MERCHANT_DEAL_NEGOTIATE",
-    "type": "talk_topic",
-    "dynamic_line": "Sure, we could use some around here for repairs and whatnot.  What are the terms?",
     "responses": [
       {
-        "text": "Well, how about 250 merch for 100 pounds of…",
-        "effect": { "u_spawn_item": "trade_writ" },
-        "topic": "TALK_DONE"
-      }
-    ]
-  },
-  {
-    "id": "TALK_EVAC_MERCHANT_DEAL_NEGOTIATE_CHEM",
-    "type": "talk_topic",
-    "dynamic_line": "Chemicals?  I'm sure we could find some use for them, and we are in need of medical supplies.  What's the offer?",
-    "responses": [
-      {
-        "text": "Well, how about 300 merch for 10 liters of…",
-        "effect": { "u_spawn_item": "trade_writ" },
+        "text": "But I-",
         "topic": "TALK_DONE"
       }
     ]

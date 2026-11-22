@@ -1,80 +1,30 @@
 [
   {
     "type": "talk_topic",
-    "id": "COMP_labyrinthine_safehouse_computer_blood_tax",
-    "dynamic_line": "&<color_light_green> @User > skill -ENTER -@User\n\n<color_light_green> Blood required for reality stabilization.\n\nA drawer on the side of the terminal slides open, revealing a small, thin needle.\n\n<color_light_green> @User > _",
-    "responses": [
-      {
-        "text": "[Prick yourself with the needle]",
-        "topic": "COMP_labyrinthine_safehouse_computer_blood_tax_yes",
-        "effect": [ { "math": [ "u_vitamin('blood') -= 500" ] }, { "math": [ "u_vitamin('redcells') -= 500" ] } ]
-      },
-      { "text": "Log off.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "COMP_labyrinthine_safehouse_computer_blood_tax_reenter",
-    "dynamic_line": "&<color_light_green> @User > skill -ENTER -@User\n\n<color_light_green> Blood required for reality stabilization.\n\nA drawer on the side of the terminal slides open, revealing a small, thin needle.\n\n<color_light_green> @User > _",
-    "responses": [
-      {
-        "text": "[Prick yourself with the needle]",
-        "topic": "COMP_labyrinthine_safehouse_computer_blood_tax_reenter_yes",
-        "effect": [ { "math": [ "u_vitamin('blood') -= 250" ] }, { "math": [ "u_vitamin('redcells') -= 250" ] } ]
-      },
-      { "text": "Log off.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "COMP_labyrinthine_safehouse_computer_blood_tax_yes",
     "dynamic_line": "&You place your hand on the terminal.  There is a pinch, then a wet, mechanical hiss, as the needle draws a bit of blood.  Your vision blurs.",
-    "responses": [ { "text": "…", "topic": "TALK_DONE", "effect": { "run_eocs": "EOC_LS_SAFEHOUSE_Teleport_to_labyrinth" } } ]
+    "responses": [
+      {
+        "text": "…",
+        "topic": "TALK_DONE",
+        "effect": {
+          "run_eocs": "EOC_LS_SAFEHOUSE_Teleport_to_labyrinth"
+        }
+      }
+    ]
   },
   {
     "type": "talk_topic",
     "id": "COMP_labyrinthine_safehouse_computer_blood_tax_reenter_yes",
     "dynamic_line": "&You place your hand on the terminal.  There is a pinch, then a wet, mechanical hiss, as the needle draws a bit of blood.  Your vision blurs.",
-    "responses": [ { "text": "…", "topic": "TALK_DONE", "effect": { "run_eocs": "EOC_LS_SAFEHOUSE_Teleport_to_labyrinth_reenter" } } ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "COMP_labyrinthine_safehouse_missions_list",
-    "dynamic_line": "&<color_light_green> @User > update\n\n .  .  .  .  .  .  %100\n\n Update available from AltarOS remote.",
     "responses": [
-      { "text": "Help.", "topic": "COMP_labyrinthine_safehouse_computer_missions_help" },
       {
-        "text": "[Update ELECTRIC POWER available]",
-        "condition": { "math": [ "nl_boiler_placed != 1" ] },
-        "topic": "COMP_labyrinthine_safehouse_missions_boiler"
-      },
-      {
-        "text": "[Update BIONIC POWER available]",
-        "condition": { "and": [ { "math": [ "nl_autodoc_obelisk_placed != 1" ] }, { "math": [ "nl_boiler_placed == 1" ] } ] },
-        "topic": "COMP_labyrinthine_safehouse_missions_autodoc"
-      },
-      {
-        "text": "[Update HUMAN DESIRES: STORAGE available]",
-        "condition": { "and": [ { "math": [ "nl_utility_space_obelisk_placed != 1" ] }, { "math": [ "nl_boiler_placed == 1" ] } ] },
-        "topic": "COMP_labyrinthine_safehouse_missions_utility_space"
-      },
-      {
-        "text": "[Update HUMAN NEEDS: WATER available]",
-        "condition": { "and": [ { "math": [ "nl_water_cooler_placed != 1" ] }, { "math": [ "nl_boiler_placed == 1" ] } ] },
-        "topic": "COMP_labyrinthine_safehouse_missions_water_cooler"
-      },
-      {
-        "text": "[Update HUMAN DESIRES: LIVING SPACE available]",
-        "condition": {
-          "and": [
-            { "math": [ "nl_living_space_1_obelisk_placed != 1" ] },
-            { "math": [ "nl_boiler_placed == 1" ] },
-            { "math": [ "nl_water_cooler_placed == 1" ] }
-          ]
-        },
-        "topic": "COMP_labyrinthine_safehouse_missions_living_space_1"
-      },
-      { "text": "Exit.", "topic": "COMP_labyrinthine_safehouse_computer" }
+        "text": "…",
+        "topic": "TALK_DONE",
+        "effect": {
+          "run_eocs": "EOC_LS_SAFEHOUSE_Teleport_to_labyrinth_reenter"
+        }
+      }
     ]
   },
   {
@@ -82,8 +32,17 @@
     "id": "COMP_labyrinthine_safehouse_missions_boiler",
     "dynamic_line": "&<color_light_green> @User > update -ELECTRICPOWER\n\n .  .  .  .  .  .  %100\n\n Update to ELECTRIC POWER available from AltarOS remote.  Route a path to cache?  Y/N",
     "responses": [
-      { "text": "Yes.", "effect": { "run_eocs": "EOC_LS_mission_boiler_teleport_to_labyrinth" }, "topic": "TALK_DONE" },
-      { "text": "No.", "topic": "COMP_labyrinthine_safehouse_computer" }
+      {
+        "text": "Yes.",
+        "effect": {
+          "run_eocs": "EOC_LS_mission_boiler_teleport_to_labyrinth"
+        },
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "No.",
+        "topic": "COMP_labyrinthine_safehouse_computer"
+      }
     ]
   },
   {
@@ -94,7 +53,9 @@
       {
         "text": "Yes.",
         "effect": [
-          { "run_eocs": "EOC_LS_SAFEHOUSE_UPDATE_UTILITY_SPACE_OBELISK" },
+          {
+            "run_eocs": "EOC_LS_SAFEHOUSE_UPDATE_UTILITY_SPACE_OBELISK"
+          },
           {
             "u_message": "The ground shakes for a moment, then you hear a distant, mechanical grinding.",
             "popup": true
@@ -102,7 +63,10 @@
         ],
         "topic": "TALK_DONE"
       },
-      { "text": "No.", "topic": "COMP_labyrinthine_safehouse_computer" }
+      {
+        "text": "No.",
+        "topic": "COMP_labyrinthine_safehouse_computer"
+      }
     ]
   },
   {
@@ -113,7 +77,9 @@
       {
         "text": "Yes.",
         "effect": [
-          { "run_eocs": "EOC_LS_SAFEHOUSE_UPDATE_AUTODOC_OBELISK" },
+          {
+            "run_eocs": "EOC_LS_SAFEHOUSE_UPDATE_AUTODOC_OBELISK"
+          },
           {
             "u_message": "The ground shakes for a moment, then you hear a distant, mechanical grinding.",
             "popup": true
@@ -121,7 +87,10 @@
         ],
         "topic": "TALK_DONE"
       },
-      { "text": "No.", "topic": "COMP_labyrinthine_safehouse_computer" }
+      {
+        "text": "No.",
+        "topic": "COMP_labyrinthine_safehouse_computer"
+      }
     ]
   },
   {
@@ -129,8 +98,17 @@
     "id": "COMP_labyrinthine_safehouse_missions_water_cooler",
     "dynamic_line": "&<color_light_green> @User > update -HUMANNEEDS\n\n .  .  .  .  .  .  %100\n\n Update to HUMAN NEEDS: WATER available from AltarOS remote.  Route a path to cache?  Y/N",
     "responses": [
-      { "text": "Yes.", "effect": { "run_eocs": "EOC_LS_mission_water_coolor_teleport_to_labyrinth" }, "topic": "TALK_DONE" },
-      { "text": "No.", "topic": "COMP_labyrinthine_safehouse_computer" }
+      {
+        "text": "Yes.",
+        "effect": {
+          "run_eocs": "EOC_LS_mission_water_coolor_teleport_to_labyrinth"
+        },
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "No.",
+        "topic": "COMP_labyrinthine_safehouse_computer"
+      }
     ]
   },
   {
@@ -141,7 +119,9 @@
       {
         "text": "Yes.",
         "effect": [
-          { "run_eocs": "EOC_LS_SAFEHOUSE_UPDATE_LIVING_SPACE_1_OBELISK" },
+          {
+            "run_eocs": "EOC_LS_SAFEHOUSE_UPDATE_LIVING_SPACE_1_OBELISK"
+          },
           {
             "u_message": "The ground shakes for a moment, then you hear a distant, mechanical grinding.",
             "popup": true
@@ -149,7 +129,10 @@
         ],
         "topic": "TALK_DONE"
       },
-      { "text": "No.", "topic": "COMP_labyrinthine_safehouse_computer" }
+      {
+        "text": "No.",
+        "topic": "COMP_labyrinthine_safehouse_computer"
+      }
     ]
   }
 ]

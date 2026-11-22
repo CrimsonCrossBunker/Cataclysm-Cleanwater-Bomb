@@ -1,4 +1,19 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_OLD_GUARD_REP_Accept_Boris_Mission_1",
+    line = ccb.content.text("It's your lucky day: I just made contact with a couple volunteers like yourself, and that's exactly the sort of project I can put them to."),
+    on_enter = {
+        { actions = { actions.set_actor_value("interlocutor", "mission_Boris_mission_1_cleanup_asked", "yes"), actions.handler("dlg_a_dda_70d7de14f9c9") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Thanks, that's great news!"),
+            next_topic = "TALK_OLD_GUARD_REP",
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "MISSION_OLD_GUARD_REP_1",

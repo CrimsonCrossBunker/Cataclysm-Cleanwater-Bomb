@@ -1,4 +1,36 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_EXODII_MERCHANT_Exodize",
+    line = {
+        when = predicates.handler("dlg_p_translate_dialogue_3b4f437cadf3"),
+        yes = {
+            joined = {
+                ccb.content.text("Oh HO!  Well, well.  Now you're yarkin' the King's Anglic.  Aye, us'n can fix ye good, if'n ye're tassed to repay it in kind.  Us'll speak it as clear-like as this Rubik can.  If ye'n use it to put the dead back in the ground, us'n can fix ye with some goods like this, aye.  Stuck in the flesh and to the bone, wired into the brain.  Ye kennit?  If no, us'll speak to the Great Grey for a pint o' the ol' clarity-draught."),
+                ccb.content.text("\"\n\n[TRANSLATE:] \""),
+                ccb.content.text("Oh HO!  Well, now you're speaking my language.  We can fix you up good, if you're willing to pay us back.  I'll say it as clearly as I can.  If you help us kill the undead, we can help you get fixed up like us, yeah.  Stuck right into your flesh and bone and wired into your brain.  You understand?  If not, we'll ask the Great Grey to help clear it up."),
+            },
+        },
+        no = {
+            when = predicates.handler("dlg_p_translate_dialogue_eecffe980cd4"),
+            yes = {
+                joined = {
+                    ccb.content.text("Oh HO!  Well, well.  Now you're yarkin' the King's Anglic.  Aye, us'n can fix ye good, if'n ye're tassed to repay it in kind.  Us'll speak it as clear-like as this Rubik can.  If ye'n use it to put the dead back in the ground, us'n can fix ye with some goods like this, aye.  Stuck in the flesh and to the bone, wired into the brain.  Ye kennit?  If no, us'll speak to the Great Grey for a pint o' the ol' clarity-draught."),
+                    ccb.content.text("\"\n\n[TRANSLATE:] \""),
+                    ccb.content.text("Oh HO!  Well, now you're speaking my language.  We can fix you up good, if you're willing to pay us back.  I'll say it as clearly as I can.  If you help us kill the undead, we can help you get fixed up like us, yeah.  Stuck right into your flesh and bone and wired into your brain.  You understand?  If not, we'll ask the Great Grey to help clear it up."),
+                },
+            },
+            no = {
+                joined = {
+                    ccb.content.text("Ah, well.  Us'll put that into the key and lock, if'n you're ken.  Mayhap you could bring us a mite and trade, and we'll see if we can fix you good soon and soon.  Let no Exodii turn away a willin' Benny, and so it is."),
+                    ccb.content.text("\"\n\n[TRANSLATE:] \""),
+                    ccb.content.text("Ah, well.  I'll file that away, so to speak.  Maybe you could bring us a little more trade, and we'll fix you up as soon as possible.  The Exodii won't turn away a willing convert."),
+                },
+            },
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_EXODII_MERCHANT_ExodizeDialect",

@@ -1,4 +1,17 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_TEST_TOPIC_ITEM_MUTATOR_2",
+    line = ccb.content.text("This is a test conversation that shouldn't appear in the game."),
+    replies = {
+        {
+            text = ccb.content.text("This is a basic test response."),
+            next_topic = "TALK_DONE",
+            actions = { actions.handler("dlg_a_dda_ba7d9970962a") },
+        },
+    },
+}
 
 ccb.content.define_npc_class {
     id = "test_shop_class",

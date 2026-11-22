@@ -1,4 +1,24 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_Uyen_Situation",
+    line = {
+        joined = {
+            ccb.content.text("We've got it okay, I guess"),
+            {
+            when = predicates.handler("dlg_p_dda_3845f6520b02"),
+            yes = ccb.content.text(".  Things have been getting better.  I wasn't even sure it was possible"),
+            no = ccb.content.text(", as long as this doesn't last too long."),
+        },
+            {
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "mission_completed_Boris_mission_1" } }),
+            yes = ccb.content.text(".  With the back room cleared, we've had some chances to come and go, and spread out a bit.  It's made a huge difference to morale.\"  She looks around at the other refugees.  \"We'll have to see what the future holds."),
+            no = ccb.content.text(".  The situation is pretty tight, though.\"  She glances around at the huddled crowds of people in the room.  \"If we're stuck here for too long people are going to start getting a bit stir crazy."),
+        },
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "MISSION_REFUGEE_Uyen_1",

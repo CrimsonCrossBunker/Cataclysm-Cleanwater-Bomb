@@ -1,4 +1,41 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_SCIENCE_REP",
+    line = {
+        when = predicates.has_any_trait("speaker", { "PROF_FED" }),
+        yes = ccb.content.text("Marshal…"),
+        no = ccb.content.text("Citizen…"),
+    },
+    replies = {
+        {
+            text = ccb.content.text("Who are you?"),
+            next_topic = "TALK_SCIENCE_REP_NEW",
+        },
+        {
+            text = ccb.content.text("Heard anything about the outside world?"),
+            next_topic = "TALK_SCIENCE_REP_WORLD",
+        },
+        {
+            text = ccb.content.text("Can I trade for supplies?"),
+            next_topic = "TALK_SCIENCE_REP_ASK_TRADE",
+        },
+        {
+            text = ccb.content.text("Can I do anything for you?"),
+            next_topic = "TALK_MISSION_LIST",
+        },
+        {
+            text = ccb.content.text("Can you help me with my bionic implants?"),
+            next_topic = "TALK_SCIENCE_REP_CBM",
+            when = predicates.handler("dlg_p_dda_9aa5249d2b43"),
+        },
+        {
+            text = ccb.content.text("<end_talking_bye>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_SCIENCE_REP_NEW",

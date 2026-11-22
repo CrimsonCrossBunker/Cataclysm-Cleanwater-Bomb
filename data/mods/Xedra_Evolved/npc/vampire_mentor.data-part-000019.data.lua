@@ -1,4 +1,40 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_MENTOR_CHAT",
+    line = {
+        choices = {
+            {
+            when = predicates.minimum_attribute("interlocutor", "intelligence", 8),
+            yes = ccb.content.text("<insightfulchitchat>"),
+            no = ccb.content.text("<thoughtfulchitchat>"),
+        },
+            {
+            when = predicates.minimum_attribute("interlocutor", "perception", 8),
+            yes = ccb.content.text("<insightfulchitchat>"),
+            no = ccb.content.text("<thoughtfulchitchat>"),
+        },
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("<chitchat_player_responses>"),
+            next_topic = "TALK_DONE",
+            when = predicates.negate(predicates.has_trait("speaker", "PSYCHOPATH")),
+            actions = { "morale_chat_activity", actions.add_effect("interlocutor", "asked_to_socialize", { turns = 7000 }) },
+            switch = true,
+        },
+        {
+            text = ccb.content.text("<chitchat_player_responses>"),
+            next_topic = "TALK_DONE",
+            when = predicates.has_trait("speaker", "PSYCHOPATH"),
+            actions = { actions.handler("dlg_a_xedra_evolved_1a6836919060"), actions.add_effect("interlocutor", "asked_to_socialize", { turns = 7000 }) },
+            switch = true,
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "KILL_YOUR_BEST_FRIEND",

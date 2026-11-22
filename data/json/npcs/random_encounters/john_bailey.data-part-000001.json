@@ -1,45 +1,51 @@
 [
   {
     "type": "talk_topic",
-    "id": "TALK_RC_John_Bailey_1",
-    "dynamic_line": {
-      "compare_string": [ "yes", { "u_val": "u_met_John_Bailey" } ],
-      "yes": "*looks up at you, taking a moment to place your face, then grins broadly.  He looks about the same as when you last saw him, perhaps a little more fit.  \"So, you're still playing on the 'living' team, huh?  Glad to see you're still kicking around.  Always good to run into a familiar face nowadays.\"",
-      "no": "*glances your way, then makes eye contact as you move closer to speak.  He is a strong-looking man in his mid forties, his hair graying and his face flecked with stubble and travel dust.  The clothes he's wearing are clearly scavenged, though they fit well, and he has the build of someone who until recently had the luxury of carrying a few extra pounds.  \"Hi there.\"  He presents his hand to shake.  \"You don't look like you belong here.  Name's Bailey, John Bailey.\""
-    },
-    "speaker_effect": {
-      "effect": [
-        { "u_add_var": "u_met_John_Bailey", "value": "yes" },
-        { "npc_first_topic": "TALK_RC_John_Bailey_1a" },
-        { "math": [ "n_zkc_john = 2 * time_since('cataclysm', 'unit': 'days')" ] },
-        { "math": [ "n_zkc_john += rand(10)" ] }
-      ]
-    },
-    "responses": [
-      { "text": "Hi John.  What are you doing here?", "topic": "TALK_RC_John_Bailey_2" },
-      { "text": "Hi John.  <end_talking_leave>", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_RC_John_Bailey_1a",
     "dynamic_line": "*nods as you approach, then smiles and stretches casually.  \"Anything I can do for you, friend?\"",
     "responses": [
-      { "text": "What are you doing here?", "topic": "TALK_RC_John_Bailey_2" },
-      { "text": "What do you know about this place?", "topic": "TALK_RC_John_Bailey_RefCenter" },
-      { "text": "You looking for any kind of work?", "topic": "TALK_RC_John_Bailey_Work" },
+      {
+        "text": "What are you doing here?",
+        "topic": "TALK_RC_John_Bailey_2"
+      },
+      {
+        "text": "What do you know about this place?",
+        "topic": "TALK_RC_John_Bailey_RefCenter"
+      },
+      {
+        "text": "You looking for any kind of work?",
+        "topic": "TALK_RC_John_Bailey_Work"
+      },
       {
         "text": "I'm looking for a very specific building in the wilderness.  Have you seen it?",
         "topic": "TALK_JOHN_BAILEY_EXODII_MISSION_WAREHOUSE",
         "condition": {
           "and": [
-            { "u_has_mission": "EXODII_MISSION_WAREHOUSE" },
-            { "not": { "compare_string": [ "yes", { "npc_val": "asked_about_exodii_warehouse_mission" } ] } }
+            {
+              "u_has_mission": "EXODII_MISSION_WAREHOUSE"
+            },
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "npc_val": "asked_about_exodii_warehouse_mission"
+                  }
+                ]
+              }
+            }
           ]
         },
-        "effect": { "run_eocs": [ "EOC_exodii_mission_wh_directions_chance" ] }
+        "effect": {
+          "run_eocs": [
+            "EOC_exodii_mission_wh_directions_chance"
+          ]
+        }
       },
-      { "text": "Not at the moment, thanks.", "topic": "TALK_DONE" }
+      {
+        "text": "Not at the moment, thanks.",
+        "topic": "TALK_DONE"
+      }
     ]
   }
 ]

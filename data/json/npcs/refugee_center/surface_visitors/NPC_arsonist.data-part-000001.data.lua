@@ -1,4 +1,50 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ARSONIST",
+    line = {
+        when = predicates.wears("speaker", "badge_marshal"),
+        yes = ccb.content.text("That sure is a shiny badge you got there!"),
+        no = ccb.content.text("Heh, you look important."),
+    },
+    replies = {
+        {
+            text = ccb.content.text("I'm actually new."),
+            next_topic = "TALK_ARSONIST_NEW",
+        },
+        {
+            text = ccb.content.text("What are you doing here?"),
+            next_topic = "TALK_ARSONIST_DOING",
+        },
+        {
+            text = ccb.content.text("Heard anything about the outside world?"),
+            next_topic = "TALK_ARSONIST_WORLD",
+        },
+        {
+            text = ccb.content.text("Is there any way I can join your group?"),
+            next_topic = "TALK_ARSONIST_JOIN",
+        },
+        {
+            text = ccb.content.text("Do you have any jobs for me?"),
+            next_topic = "TALK_MISSION_LIST",
+        },
+        {
+            text = ccb.content.text("What's with your ears?"),
+            next_topic = "TALK_ARSONIST_MUTATION",
+            when = predicates.handler("dlg_p_dda_e3eb48cfc8df"),
+        },
+        {
+            text = ccb.content.text("How are you doing these days?"),
+            next_topic = "TALK_ARSONIST_TRADING",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "talk_flag_TALK_ARSONIST_SUPPLIED" } }),
+        },
+        {
+            text = ccb.content.text("<end_talking_bye>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_ARSONIST_NEW",

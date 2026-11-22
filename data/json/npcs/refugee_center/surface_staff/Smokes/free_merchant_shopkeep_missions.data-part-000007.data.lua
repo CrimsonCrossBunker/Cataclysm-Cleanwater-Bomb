@@ -1,4 +1,29 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANTS_MERCHANT_BorisCleanup",
+    line = ccb.content.text("Hmm.\"  Smokes looks thoughtful, rubbing his chin.  \"Well, most of the people downstairs aren't willing to come up for things like that, and a lot of folks that are up here have a lot of bad memories from that.  You could try asking around some of the people we have upstairs, but it'll be tough.  If you have some merch you could spare, though, I could get some people off guard duty and into your little crew for some hazard pay.  You might also have luck asking the Old Guard rep in the southwest bay, near the library - I hear they've got some volunteers lately."),
+    replies = {
+        {
+            text = ccb.content.text("[5 merch] Five merch for someone sounds fair to me."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_BorisCleanup1",
+            when = predicates.has_inventory("speaker", "FMCNote", 5),
+            actions = { actions.handler("dlg_a_dda_1771a2e9be11"), actions.set_actor_value("interlocutor", "mission_Boris_mission_1_cleanup_asked", "yes"), actions.handler("dlg_a_dda_0a12ed09c118") },
+        },
+        {
+            text = ccb.content.text("[10 merch] How about ten merch to do it?"),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_BorisCleanup2",
+            when = predicates.has_inventory("speaker", "FMCNote", 10),
+            actions = { actions.handler("dlg_a_dda_b041becec6c3"), actions.set_actor_value("interlocutor", "mission_Boris_mission_1_cleanup_asked", "yes"), actions.handler("dlg_a_dda_73da091850f1") },
+        },
+        {
+            text = ccb.content.text("Thanks for the advice.  Maybe I'll come back with some more merch."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_Talk",
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_FREE_MERCHANTS_MERCHANT_BorisCleanup1",

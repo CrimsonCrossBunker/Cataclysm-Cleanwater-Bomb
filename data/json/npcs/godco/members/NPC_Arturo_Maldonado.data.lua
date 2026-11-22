@@ -1,4 +1,96 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = { "TALK_GODCO_Arturo_Firstmeet", "TALK_GODCO_Arturo_2", "TALK_GODCO_Arturo_Story", "TALK_GODCO_Arturo_Mood", "TALK_GODCO_Arturo_Community", "TALK_GODCO_Arturo_Hallucinations" },
+    replies = {
+        {
+            text = ccb.content.text("What's your story?"),
+            next_topic = "TALK_GODCO_Arturo_Story",
+            when = predicates.handler("dlg_p_dda_f98058ef3692"),
+        },
+        {
+            text = ccb.content.text("How are things around here?"),
+            next_topic = "TALK_GODCO_Arturo_Mood",
+        },
+        {
+            text = ccb.content.text("Could you tell me about the community?"),
+            next_topic = "TALK_GODCO_Arturo_Community",
+        },
+        {
+            text = ccb.content.text("Want to come with me?"),
+            next_topic = "TALK_GODCO_Arturo_Recruit",
+            when = predicates.handler("dlg_p_dda_f98058ef3692"),
+        },
+        {
+            text = ccb.content.text("What do you see in your visions?"),
+            next_topic = "TALK_GODCO_Arturo_Hallucinations",
+            when = predicates.handler("dlg_p_dda_8a1122999849"),
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_GODCO_Arturo_1",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_godco_godco_notalk_to_u" } }),
+        yes = ccb.content.text("I must be seeing things again!  Stay away from me!"),
+        no = {
+            when = predicates.handler("dlg_p_dda_3ae720d7aecb"),
+            yes = ccb.content.text("* eyes you menacingly with a scowl on his face.  \"What do you want?\""),
+            no = {
+                when = predicates.handler("dlg_p_dda_f98058ef3692"),
+                yes = ccb.content.text("Hi, <name_g>.  It's good to see you again."),
+                no = {
+                    when = predicates.has_effect("interlocutor", "Arturo_visions_timer"),
+                    yes = ccb.content.text("Hi, <name_g>.  Could I pat you on the shoulder?  I wanna be sure you're here."),
+                    no = {
+                        when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "general_meeting_u_met_godco_arturo" } }),
+                        yes = ccb.content.text("Hi, <name_g>.  What's up?"),
+                        no = ccb.content.text("Hi, <name_g>.  Could I pat you on the shoulder?  I wanna be sure you're here."),
+                    },
+                },
+            },
+        },
+    },
+    on_enter = {
+        { when = predicates.handler("dlg_p_dda_8ca9b00d29dd"), actions = { actions.add_effect("interlocutor", "Arturo_visions_timer", { turns = 18000 }) } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Are you alright?"),
+            next_topic = "TALK_GODCO_Arturo_Firstmeet",
+            when = predicates.all({ predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "general_meeting_u_met_godco_arturo" } })), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_godco_godco_notalk_to_u" } })) }),
+            actions = { actions.set_actor_value("interlocutor", "general_meeting_u_met_godco_arturo", "yes") },
+        },
+        {
+            text = ccb.content.text("Are you alright?"),
+            next_topic = "TALK_GODCO_Arturo_U_Mutant",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_godco_godco_notalk_to_u" } }),
+        },
+        {
+            text = ccb.content.text("Hey Arturo, how are ya?"),
+            next_topic = "TALK_GODCO_Arturo_2",
+            when = predicates.handler("dlg_p_dda_637b4ce53f79"),
+        },
+        {
+            text = ccb.content.text("Hey Arturo, how are ya?"),
+            next_topic = "TALK_GODCO_Arturo_Angry",
+            when = predicates.handler("dlg_p_dda_5e2ab24f1845"),
+        },
+        {
+            text = ccb.content.text("Nothing, I'll see you later."),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("dlg_p_dda_5e2ab24f1845"),
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+            when = predicates.handler("dlg_p_dda_637b4ce53f79"),
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_GODCO_Arturo_Firstmeet",

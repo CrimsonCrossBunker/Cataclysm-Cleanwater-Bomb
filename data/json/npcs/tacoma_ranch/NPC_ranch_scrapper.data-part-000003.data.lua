@@ -1,4 +1,25 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_SCRAPPER_ANESTHETIC_FOR_DOCTOR",
+    line = ccb.content.gendered_line("Hmm, let me think.  There might be a few things I could scrounge up to help, but it's going to take some time to sort through the scrap to find exactly what you need.  How about this… some of my tools are getting a bit worn and are in need of replacement.  If you could bring me a new angle grinder and a hacksaw, I should be able to find all the parts you need by the time you get back.", { "interlocutor" }),
+    replies = {
+        {
+            text = ccb.content.text("An angle grinder and a hacksaw?  I'll see what I can do."),
+            next_topic = "TALK_DONE",
+            actions = { actions.offer_mission("MISSION_RANCH_SCRAPPER_TOOLS_FOR_SCRAP") },
+        },
+        {
+            text = ccb.content.text("<end_talking_nevermind>"),
+            next_topic = "TALK_NONE",
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "MISSION_RANCH_SCRAPPER_TOOLS_FOR_SCRAP",

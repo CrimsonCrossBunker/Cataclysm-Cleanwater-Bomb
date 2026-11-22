@@ -1,4 +1,17 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_OLD_GUARD_NEC_COMMO_FREQ",
+    line = ccb.content.text("I was expecting the captain to send a runner.  Here is the list you are looking for.  What we can identify from here are simply the frequencies that have traffic on them.  Many of the transmissions are indecipherable without repairing or replacing the equipment here.  When the facility was being overrun, standard procedure was to destroy encryption hardware to protect federal secrets and maintain the integrity of the comms network.  We are hoping a few plain text messages can get picked up though."),
+    replies = {
+        {
+            text = ccb.content.text("Thanks."),
+            next_topic = "TALK_NONE",
+            actions = { actions.handler("dlg_a_no_hope_8683ce392b9e"), actions.add_effect("speaker", "has_og_comm_freq", { permanent = true }) },
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "MISSION_OLD_GUARD_NEC_COMMO_1",

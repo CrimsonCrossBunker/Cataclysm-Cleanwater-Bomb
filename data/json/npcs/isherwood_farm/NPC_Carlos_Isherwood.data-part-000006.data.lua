@@ -1,4 +1,50 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ISHERWOOD_CARLOS_TOPICS",
+    line = ccb.content.text("Go on…"),
+    replies = {
+        {
+            text = ccb.content.text("I heard about Barry, can you tell me what captured him?"),
+            next_topic = "TALK_CARLOS_BARRY",
+            when = predicates.all({ predicates.any_equal({ "yes", { scope = "speaker", key = "u_learned_barry_missing" } }), predicates.negate(predicates.wears("speaker", "badge_marshal")) }),
+        },
+        {
+            text = ccb.content.text("Is your forge operational?"),
+            next_topic = "TALK_CARLOS_FORGE1",
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "carlos_has_anvil" } })),
+        },
+        {
+            text = ccb.content.text("Is your forge operational?"),
+            next_topic = "TALK_CARLOS_FORGE2",
+            when = predicates.handler("dlg_p_dda_97cadd917dd3"),
+        },
+        {
+            text = ccb.content.text("Is your forge operational?"),
+            next_topic = "TALK_CARLOS_FORGE3",
+            when = predicates.handler("dlg_p_dda_e8988dc59f31"),
+        },
+        {
+            text = ccb.content.text("Where can I find Chris?"),
+            next_topic = "TALK_CARLOS_CHRIS1",
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "u_found_chris_for_carlos" } })),
+        },
+        {
+            text = ccb.content.text("Where can I find Chris?"),
+            next_topic = "TALK_CARLOS_CHRIS2",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "u_found_chris_for_carlos" } }),
+        },
+        {
+            text = ccb.content.text("Can I do anything for you?"),
+            next_topic = "TALK_MISSION_LIST",
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
 ccb.content.define_mission {
     id = "MISSION_ISHERWOOD_CARLOS_1",

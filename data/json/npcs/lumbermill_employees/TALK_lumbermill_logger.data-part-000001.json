@@ -4,14 +4,28 @@
     "id": "TALK_NPC_LUMBERMILL_LOGGER_INTRO",
     "dynamic_line": "Do you need something?",
     "responses": [
-      { "text": "What's your story?", "topic": "TALK_NPC_LUMBERMILL_LOGGER_STORY" },
+      {
+        "text": "What's your story?",
+        "topic": "TALK_NPC_LUMBERMILL_LOGGER_STORY"
+      },
       {
         "text": "I'd like to ask you a few questions.",
         "topic": "TALK_FRIEND_CONVERSATION",
         "condition": {
           "and": [
-            { "math": [ "n_npc_trust() >= 2" ] },
-            { "compare_string": [ "yes", { "npc_val": "dialogue_first_meeting_talked_to_logger" } ] }
+            {
+              "math": [
+                "n_npc_trust() >= 2"
+              ]
+            },
+            {
+              "compare_string": [
+                "yes",
+                {
+                  "npc_val": "dialogue_first_meeting_talked_to_logger"
+                }
+              ]
+            }
           ]
         }
       },
@@ -20,51 +34,48 @@
         "topic": "TALK_NPC_LUMBERMILL_LOGGER_MISSION_WAREHOUSE",
         "condition": {
           "and": [
-            { "u_has_mission": "EXODII_MISSION_WAREHOUSE" },
-            { "not": { "compare_string": [ "yes", { "npc_val": "asked_about_exodii_warehouse_mission" } ] } }
+            {
+              "u_has_mission": "EXODII_MISSION_WAREHOUSE"
+            },
+            {
+              "not": {
+                "compare_string": [
+                  "yes",
+                  {
+                    "npc_val": "asked_about_exodii_warehouse_mission"
+                  }
+                ]
+              }
+            }
           ]
         },
-        "effect": { "run_eocs": [ "EOC_exodii_mission_wh_directions_chance" ] }
+        "effect": {
+          "run_eocs": [
+            "EOC_exodii_mission_wh_directions_chance"
+          ]
+        }
       },
-      { "text": "How do things work around here now?", "topic": "TALK_NPC_LUMBERMILL_LOGGER_TALK_TO_MANAGER" },
+      {
+        "text": "How do things work around here now?",
+        "topic": "TALK_NPC_LUMBERMILL_LOGGER_TALK_TO_MANAGER"
+      },
       {
         "text": "Any jobs you need done?",
-        "condition": { "and": [ { "not": "has_assigned_mission" }, { "not": "has_many_assigned_missions" } ] },
+        "condition": {
+          "and": [
+            {
+              "not": "has_assigned_mission"
+            },
+            {
+              "not": "has_many_assigned_missions"
+            }
+          ]
+        },
         "topic": "TALK_MISSION_LIST"
       },
-      { "text": "Nah, see ya.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_NPC_LUMBERMILL_LOGGER_MISSION_WAREHOUSE",
-    "dynamic_line": {
-      "concatenate": [
-        "&You describe the warehouse to the best of your ability.  The logger considers for a moment",
-        {
-          "compare_string": [ "no", { "npc_val": "exodii_mission_wh_correct" } ],
-          "yes": {
-            "gendered_line": ", then frowns.  \"I think I'd remember something like that, no.  Sorry.\"",
-            "relevant_genders": [ "npc" ]
-          },
-          "no": {
-            "gendered_line": ", looking thoughtful.  \"You know, around the time things really went bad, I remember a really awful portal storm.  A while later, I saw something like that in the distance.  Could be what you're talking about.\"",
-            "relevant_genders": [ "npc" ]
-          }
-        }
-      ]
-    },
-    "speaker_effect": { "effect": { "npc_add_var": "asked_about_exodii_warehouse_mission", "value": "yes" } },
-    "responses": [
       {
-        "//": "The other responses are stored in common_talk.json in the exodii folder, to avoid repetition.",
-        "text": "Oh well.  Thanks anyway.  I'll go ask around.",
-        "topic": "TALK_DONE",
-        "condition": { "compare_string": [ "no", { "npc_val": "exodii_mission_wh_correct" } ] },
-        "effect": [
-          { "math": [ "exodii_mission_wh_chance -= 1" ] },
-          { "math": [ "exodii_mission_wh_chance = max( exodii_mission_wh_chance, 1 )" ] }
-        ]
+        "text": "Nah, see ya.",
+        "topic": "TALK_DONE"
       }
     ]
   }

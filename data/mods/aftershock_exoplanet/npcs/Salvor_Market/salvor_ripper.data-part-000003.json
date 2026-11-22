@@ -1,9 +1,0 @@
-[
-  {
-    "type": "talk_topic",
-    "id": "TALK_SALVOR_RIPPER_BRIBE_SUCCESS",
-    "dynamic_line": "Alright, alright.  You can buy stuff here, but don't expect help when you get in over your head.",
-    "speaker_effect": { "effect": [ { "math": [ "u_cash -= 400" ] }, { "math": [ "n_skill('speech') = 8" ] } ] },
-    "responses": [ { "text": "Wont be a problem.", "topic": "TALK_SALVOR_RIPPER_MAIN" } ]
-  }
-]

@@ -3,6 +3,44 @@ local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
+    id = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_4",
+    line = ccb.content.text("Exodii?  What can you tell us about them?"),
+    on_enter = {
+        { actions = { actions.set_actor_value("speaker", "u_give_robofac_exodii_info", "yes"), actions.set_actor_value("speaker", "u_informed_robofac_of_exodii", "yes"), actions.handler("dlg_a_dda_419b707aa4cf") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("I mean, just look at me!  They're cyborgs from another dimension.  They turn humans and maybe other beings into cyborgs, and jump from here to there, dodging cataclysms like ours."),
+            next_topic = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_5",
+            actions = { actions.adjust_faction_trust(1), actions.handler("dlg_a_dda_6174ecbde742") },
+        },
+        {
+            text = ccb.content.text("They are a race of inter-dimensional beings.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic."),
+            next_topic = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_5",
+            actions = { actions.adjust_faction_trust(2), actions.handler("dlg_a_dda_6174ecbde742") },
+        },
+        {
+            text = ccb.content.text("They are a race of inter-dimensional beings that use a mix of futuristic and ancient technology, the latter being mostly due to their last landing place being an ancient battlefield of some sort.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  While their choice for personal defense was more along the lines of ancient gear like spears and swords.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic."),
+            next_topic = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_5",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "u_talk_exodii_about_medieval_stock" } }),
+            actions = { actions.adjust_faction_trust(3), actions.handler("dlg_a_dda_6174ecbde742") },
+        },
+        {
+            text = ccb.content.text("They are a race of inter-dimensional beings.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.  They are here to mine this place of any useful metal, gather any tech they deem worth saving and maybe even grab a couple of survivors to join their ranks before they move out."),
+            next_topic = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_5",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "u_know_exodii_purpose2" } }),
+            actions = { actions.adjust_faction_trust(4), actions.handler("dlg_a_dda_6174ecbde742") },
+        },
+        {
+            text = ccb.content.text("They are a race of inter-dimensional beings that use a mix of futuristic and ancient technology the latter being mostly due to their last landing place being an ancient battlefield of some sort.  These guys are more metal than man in my opinion and use automated machinery to do their fighting and heavy lifting.  However their choice for personal defense was more along the lines of ancient gear like spears and swords.  They do understand English to a certain extent and when talking they use a strange dialect they like to call Anglic.  They are here to mine this place of any useful metal, gather any tech they deem worth saving and maybe even grab a couple of survivors to join their ranks before they move out."),
+            next_topic = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_5",
+            when = predicates.all({ predicates.any_equal({ "yes", { scope = "speaker", key = "u_know_exodii_purpose2" } }), predicates.any_equal({ "yes", { scope = "speaker", key = "u_talk_exodii_about_medieval_stock" } }) }),
+            actions = { actions.adjust_faction_trust(5), actions.handler("dlg_a_dda_6174ecbde742") },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
     id = "TALK_ROBOFAC_INTERCOM_CYBORG_INTRO_5",
     line = ccb.content.text("Interesting, interesting, interesting.  Hm.  I'll note that information.  Now, about that dangerous task."),
     replies = {

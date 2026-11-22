@@ -1,4 +1,37 @@
 local ccb = require("ccb")
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = { "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER", "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Recorder", "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Outside", "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Hold", "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Replacement" },
+    line = ccb.content.text("As we mentioned before, our research into the portal storm phenomena requires that we obtain additional data to verify our own local measurements.  Recording this data will require you to carry a scientific instrument called an NRE recorder on your person while outside in the storm for around six minutes.  The recording instrument will be provided at no cost if you choose to accept.\"\n\n\"We are willing to offer 1 HGC for each standard-length recording.  Higher-quality data may be obtained by collecting more data before printing a report, and as a result, we are willing to provide higher pay for better recordings."),
+    replies = {
+        {
+            text = ccb.content.text("Sure, why not?  Let's do some science."),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_ACCEPTED",
+            actions = { actions.assign_mission("MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1"), actions.handler("dlg_a_dda_bfa0da4ca246") },
+        },
+        {
+            text = ccb.content.text("How does the recorder work?"),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Recorder",
+        },
+        {
+            text = ccb.content.text("How will I know when I've been outside long enough?"),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Outside",
+        },
+        {
+            text = ccb.content.text("Do I need to physically hold the recorder in my hand?"),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Hold",
+        },
+        {
+            text = ccb.content.text("If I lose the recorder or break it, what should I do?"),
+            next_topic = "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Replacement",
+        },
+        {
+            text = ccb.content.text("What else do you have available?"),
+            next_topic = "TALK_ROBOFAC_INTERCOM_CONTRACTS",
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "MISSION_ROBOFAC_INTERCOM_PORTAL_SM_1_OFFER_ADVICE_Recorder",

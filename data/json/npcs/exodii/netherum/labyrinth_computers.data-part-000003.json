@@ -1,67 +1,35 @@
 [
   {
     "type": "talk_topic",
-    "id": "COMP_LS2_MAP_2",
-    "dynamic_line": "&<color_light_green> @User > map get --update\n<color_light_green> Error: Insufficient confidence.  Blood tax requested.\n\n</color>A drawer on the side of the terminal slides open, revealing a a bloodstained stone with the outline of a human hand.",
-    "responses": [
-      {
-        "text": "[Place your hand on the stone]",
-        "topic": "TALK_DONE",
-        "effect": [
-          { "math": [ "u_vitamin('blood') -= 6250" ] },
-          { "math": [ "u_vitamin('redcells') -= 6250" ] },
-          { "u_location_variable": { "context_val": "loc" } },
-          { "reveal_map": { "context_val": "loc" }, "radius": 30 },
-          {
-            "u_message": "You place your hand on the stone.  There is a pinch, then a wet, mechanical hiss, as something draws a lot of blood.  The terminal immediately displays a topological map of the surrounding labyrinthian structures."
-          }
-        ]
-      },
-      { "text": "Log off.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "COMP_LS_Passcode_Door",
-    "dynamic_line": "&You see a strangely mundane black computer screen, with a blinking green cursor awaiting input.\n\n<color_light_green> @User > _</color>",
-    "responses": [
-      {
-        "text": "Unlock connected doors",
-        "effect": { "math": [ "n_LS_door_requests = 1" ] },
-        "topic": "COMP_LS_Passcode_Door2",
-        "condition": { "math": [ "n_LS_door_requests < 1" ] }
-      },
-      {
-        "text": "Lock connected doors",
-        "effect": { "math": [ "n_LS_door_requests += 1" ] },
-        "topic": "COMP_LS_Passcode_Door3",
-        "condition": { "math": [ "n_LS_door_requests == 1" ] }
-      },
-      {
-        "text": "Unlock connected doors",
-        "topic": "COMP_LS_Passcode_Door4",
-        "condition": { "math": [ "n_LS_door_requests == 2" ] }
-      },
-      {
-        "text": "Now all the doors are *gone*, what the hell.",
-        "topic": "COMP_LS_Passcode_Door5",
-        "condition": { "math": [ "n_LS_door_requests == 3" ] }
-      },
-      { "text": "Log off.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "COMP_LS_Passcode_Door2",
     "dynamic_line": "&<color_light_green> @User > doorstatus --update=unlock\n<color_light_green>Command accepted.\n<color_light_green>Nearby doors unlocked.\n<color_light_green>Thank you for using AltarOS.\n\n<color_light_green> @User > _",
     "responses": [
-      { "text": "Log off.", "effect": { "run_eocs": [ "EOC_LS_Unlock", "EOC_LS_Passcode_Generator" ] }, "topic": "TALK_DONE" }
+      {
+        "text": "Log off.",
+        "effect": {
+          "run_eocs": [
+            "EOC_LS_Unlock",
+            "EOC_LS_Passcode_Generator"
+          ]
+        },
+        "topic": "TALK_DONE"
+      }
     ]
   },
   {
     "type": "talk_topic",
     "id": "COMP_LS_Passcode_Door3",
     "dynamic_line": "&<color_light_green> @User > doorstatus --update=lock\n<color_light_green>Command accepted.\n<color_light_green>Nearby doors locked.\n<color_light_green>Warning: What is done cannot be undone.  This does not represent a return to how things were.  You can never go back.\n\n<color_light_green> @User > _",
-    "responses": [ { "text": "Log off.", "effect": { "run_eocs": [ "EOC_LS_Lock" ] }, "topic": "TALK_DONE" } ]
+    "responses": [
+      {
+        "text": "Log off.",
+        "effect": {
+          "run_eocs": [
+            "EOC_LS_Lock"
+          ]
+        },
+        "topic": "TALK_DONE"
+      }
+    ]
   }
 ]

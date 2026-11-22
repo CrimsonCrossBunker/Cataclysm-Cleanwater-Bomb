@@ -50,6 +50,7 @@
 #include "translation.h"
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     #include "lua_platform_dialogue.h"
+    #include "lua_platform_loader.h"
     #include "lua_platform_runtime.h"
     #include "lua_platform_sol.h"
 #endif
@@ -201,6 +202,13 @@ static void change_om_type( const std::string &new_type )
 
 static npc &prep_test( dialogue &d, bool shopkeep = false )
 {
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    static bool platform_world_ready = false;
+    if( !platform_world_ready ) {
+        cata::lua_platform::on_world_ready( true );
+        platform_world_ready = true;
+    }
+#endif
     map &here = get_map();
     clear_avatar();
     clear_vehicles();
