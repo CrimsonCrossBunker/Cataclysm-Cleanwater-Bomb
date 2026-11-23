@@ -169,6 +169,7 @@
     "type": "recipe",
     "copy-from": "household_water_heater",
     "time": "4 h",
+    "qualities": [ { "id": "SCREW", "level": 1 }, { "id": "DRILL", "level": 1 }, { "id": "WRENCH", "level": 1 } ],
     "components": [
       [ [ "pipe", 1 ] ],
       [ [ "scrap", 6 ] ],
