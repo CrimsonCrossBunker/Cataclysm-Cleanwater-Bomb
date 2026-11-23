@@ -2449,7 +2449,7 @@ static void character_edit_menu()
 
     if( np != nullptr ) {
         std::stringstream data;
-        data << np->get_name() << " - " << ( np->male ? _( "Male" ) : _( "Female" ) ) << " " <<
+        data << np->get_name() << " - " << ( np->get_gender() ? _( "Male" ) : _( "Female" ) ) << " " <<
              np->myclass->get_name() << " " << _( "class ID:" ) << np->myclass.obj().id << std::endl;
         if( !np->get_unique_id().empty() ) {
             data << string_format( _( "Unique Id: %s" ), np->get_unique_id() ) << std::endl;

@@ -16,13 +16,13 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <list>
 #include <map>
 #include <memory>
 #include <new>
-#include <numeric>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -36,10 +36,44 @@
 #include <utility>
 #include <vector>
 
+#include "activity_tracker.h"
+#include "character_attire.h"
+#include "craft_result_state.h"
+#include "dialogue.h"
+#include "dialogue_helpers.h"
+#include "enum_conversions.h"
+#include "flexbuffer_json.h"
+#include "generic_factory.h"
+#include "global_vars.h"
+#include "grab.h"
+#include "hash_utils.h"
+#include "item_components.h"
+#include "item_load_context.h"
+#include "item_uid.h"
+#include "iuse.h"
+#include "kill_statistics.h"
+#include "list.h"
+#include "lua_platform_state.h"
+#include "magic_enchantment.h"
+#include "map_scale_constants.h"
+#include "mapgendata.h"
+#include "math_parser_diag_value.h"
+#include "mdarray.h"
+#include "mission_companion.h"
+#include "monster_uid.h"
+#include "npc_opinion.h"
+#include "pet_slot.h"
+#include "pocket_type.h"
+#include "safe_reference.h"
+#include "string_formatter.h"
+#include "trap.h"
+#include "type_id.h"
+#include "units.h"
+#include "vehicle_uid.h"
+
 #include "active_item_cache.h"
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
-#include "activity_type.h"
 #include "addiction.h"
 #include "auto_pickup.h"
 #include "avatar.h"
@@ -74,11 +108,9 @@
 #include "event_bus.h"
 #include "faction.h"
 #include "field.h"
-#include "field_type.h"
 #include "flag.h"
 #include "flat_set.h"
 #include "game.h"
-#include "game_constants.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_source.h"
@@ -89,8 +121,6 @@
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
-#include "kill_tracker.h"
-#include "lru_cache.h"
 #include "magic.h"
 #include "magic_teleporter_list.h"
 #include "map.h"
@@ -106,7 +136,6 @@
 #include "mutation.h"
 #include "north_america_elevation.h"
 #include "npc.h"
-#include "options.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
 #include "player_activity.h"
@@ -134,10 +163,8 @@
 #include "vehicle.h"
 #include "vitamin.h"
 #include "vpart_position.h"
-#include "vpart_range.h"
 #include "weather.h"
 
-struct mutation_branch;
 struct oter_type_t;
 
 static const activity_id ACT_FETCH_REQUIRED( "ACT_FETCH_REQUIRED" );
@@ -1366,7 +1393,9 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
 
     data.read( "slow_rad", slow_rad );
     data.read( "scent", scent );
-    data.read( "male", male );
+    bool loaded_gender = get_gender();
+    data.read( "male", loaded_gender );
+    set_gender( loaded_gender, false );
     data.read( "free_dodges_left", free_dodges_left );
     data.read( "cash", cash );
     data.read( "recoil", recoil );
@@ -2207,7 +2236,9 @@ void Character::load_player_state( const JsonObject &snapshot )
         read( "last_sleep_check", last_sleep_check );
         read( "slow_rad", slow_rad );
         read( "scent", scent );
-        read( "male", male );
+        bool loaded_gender = get_gender();
+        read( "male", loaded_gender );
+        set_gender( loaded_gender, false );
         read( "free_dodges_left", free_dodges_left );
         read( "cash", cash );
         read( "recoil", recoil );
@@ -7840,10 +7871,9 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
     } else if( member_name == "surface_grades" ) {
         const JsonArray grades = jv.get_array();
         for( const JsonArray entry : grades ) {
-            const int x = entry.get_int( 0 );
-            const int y = entry.get_int( 1 );
-            if( x >= 0 && x < SEEX && y >= 0 && y < SEEY ) {
-                set_grade( point_sm_ms( x, y ), { entry.get_int( 2 ), entry.get_int( 3 ) } );
+            const point_sm_ms position( entry.get_int( 0 ), entry.get_int( 1 ) );
+            if( position.x() >= 0 && position.x() < SEEX && position.y() >= 0 && position.y() < SEEY ) {
+                set_grade( position, { entry.get_int( 2 ), entry.get_int( 3 ) } );
             }
         }
     } else if( member_name == "terrain_growth" ) {
