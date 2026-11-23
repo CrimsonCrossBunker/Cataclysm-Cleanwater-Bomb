@@ -199,6 +199,7 @@ bool dispatch_native_hook(
     const native_callback_arguments &arguments = {} );
 bool dispatch_befor_installs_cbm( const Character &character, const Character &installer,
                                   std::string_view bionic, bool autodoc );
+void dispatch_character_gender_changed( Character &character, bool old_male, bool new_male );
 bool dispatch_avatar_fatal( Character &character, const Creature *killer );
 bool dispatch_npc_fatal( Character &character, const Creature *killer );
 bool has_native_hook( std::string_view name );

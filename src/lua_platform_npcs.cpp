@@ -37,6 +37,7 @@
 #include "basecamp.h"
 #include "calendar.h"
 #include "coordinates.h"
+#include "enum_conversions.h"
 #include "faction.h"
 #include "game.h"
 #include "game_constants.h"
@@ -648,7 +649,7 @@ npc_snapshot_data capture_npc_snapshot(
     snapshot.mission = io::enum_to_string( entry.mission );
     snapshot.status = entry.get_current_status();
     snapshot.activity = entry.get_current_activity();
-    snapshot.male = entry.male;
+    snapshot.male = entry.get_gender();
     snapshot.dead = entry.is_dead();
     snapshot.hallucination = entry.is_hallucination();
     snapshot.enemy = entry.is_enemy();

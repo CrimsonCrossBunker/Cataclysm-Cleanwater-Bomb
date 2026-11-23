@@ -296,6 +296,9 @@ bool GetDesktopDisplayMode( int displayIndex, SDL_DisplayMode *mode );
 // SDL3: SDL_GetRenderDriverInfo removed; SDL_GetRenderDriver returns name directly.
 int GetNumRenderDrivers();
 const char *GetRenderDriverName( int index );
+// GPU drivers compiled into SDL, like "vulkan" or "direct3d12"
+int GetNumGPUDrivers();
+const char *GetGPUDriverName( int index );
 
 // SDL3: SDL_RendererInfo struct removed. Name via SDL_GetRendererName,
 // capabilities via SDL_GetRendererProperties.

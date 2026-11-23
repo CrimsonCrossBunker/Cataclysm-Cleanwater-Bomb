@@ -1687,6 +1687,8 @@ class vehicle
         * @param e is the index of the engine in the engines array
         */
         units::power engine_fuel_usage( const vehicle_part &vp ) const;
+        std::optional<double> combined_liquid_fuel_consumption( map &here ) const;
+        double propulsion_power_w( map &here, double speed_mps, bool afloat, bool flying ) const;
         // Returns all active, available, non-destroyed vehicle lights
         std::vector < vehicle_part * > lights();
 

@@ -165,7 +165,7 @@ TEST_CASE( "starting_items", "[slow]" )
                     player_character.remove_weapon();
                     player_character.inv->clear();
                     player_character.calc_encumbrance();
-                    player_character.male = i == 0;
+                    player_character.set_gender( i == 0, false );
 
                     player_character.add_profession_items();
                     std::set<const item *> items_visited;

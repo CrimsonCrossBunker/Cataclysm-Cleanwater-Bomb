@@ -53,6 +53,7 @@
 #include "npc.h"
 #include "npc_lifetime.h"
 #include "options.h"
+#include "options_helpers.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
@@ -70,11 +71,13 @@
 #include "vpart_range.h"
 
 static const activity_id ACT_FORAGE( "ACT_FORAGE" );
+static const activity_id ACT_HARVEST( "ACT_HARVEST" );
 static const activity_id ACT_WAIT( "ACT_WAIT" );
 
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_spores( "spores" );
 
+static const furn_str_id furn_f_cattails( "f_cattails" );
 static const furn_str_id furn_f_dahlia( "f_dahlia" );
 static const furn_str_id furn_f_flower_marloss( "f_flower_marloss" );
 static const furn_str_id furn_f_mutpoppy( "f_mutpoppy" );
@@ -99,6 +102,7 @@ furn_test_f_planter_no_overgrowth_seedling( "test_f_planter_no_overgrowth_seedli
 
 static const itype_id itype_apple( "apple" );
 static const itype_id itype_bottle_plastic( "bottle_plastic" );
+static const itype_id itype_cattail_stalk( "cattail_stalk" );
 static const itype_id itype_dahlia_root( "dahlia_root" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_fertilizer_commercial( "fertilizer_commercial" );
@@ -140,6 +144,7 @@ static const ter_str_id ter_t_tree_hickory_dead( "t_tree_hickory_dead" );
 static const ter_str_id ter_t_tree_maple( "t_tree_maple" );
 static const ter_str_id ter_t_tree_maple_tapped( "t_tree_maple_tapped" );
 static const ter_str_id ter_t_underbrush( "t_underbrush" );
+static const ter_str_id ter_t_water_sh( "t_water_sh" );
 static const ter_str_id ter_test_t_terrain_growth_final( "test_t_terrain_growth_final" );
 static const ter_str_id ter_test_t_terrain_growth_middle( "test_t_terrain_growth_middle" );
 static const ter_str_id ter_test_t_terrain_growth_seed( "test_t_terrain_growth_seed" );
@@ -2392,6 +2397,49 @@ TEST_CASE( "foraging_duration_and_completion_are_authoritative_and_bound_to_the_
         CHECK( here.ter( bush ) == ter_t_underbrush );
         CHECK( capture_rng_state() == random_before );
     }
+}
+
+TEST_CASE( "walking_queues_cattail_harvest_even_if_the_step_spends_the_last_move",
+           "[plant][harvest][auto_forage]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    const override_option auto_features( "AUTO_FEATURES", "true" );
+    const override_option auto_foraging( "AUTO_FORAGING", "all" );
+    const restore_on_out_of_scope restore_mostseen( g->mostseen );
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    g->mostseen = 0;
+    calendar::turn = calendar::turn_zero + calendar::season_length() / 2;
+    REQUIRE( season_of_year( calendar::turn ) == SPRING );
+
+    map &here = get_map();
+    avatar &who = get_avatar();
+    const tripoint_bub_ms start( 60, 60, 0 );
+    const tripoint_bub_ms destination = start + tripoint::east;
+    const tripoint_bub_ms water = destination + tripoint::east;
+    who.setpos( here, start, false );
+    here.ter_set( start, ter_t_dirt );
+    here.ter_set( destination, ter_t_dirt );
+    here.ter_set( water, ter_t_water_sh );
+    here.furn_set( water, furn_f_cattails );
+    const int moves = GENERATE( 1, 1000 );
+    who.set_moves( moves );
+
+    REQUIRE( g->walk_move( destination ) );
+    CHECK( who.pos_bub() == destination );
+    CHECK( ( who.get_moves() <= 0 ) == ( moves == 1 ) );
+    REQUIRE( who.activity.id() == ACT_HARVEST );
+    CHECK( who.activity.placement == here.get_abs( water ) );
+    CHECK( who.activity.moves_left > 0 );
+    CHECK( here.furn( water ) == furn_f_cattails );
+
+    REQUIRE( process_activity_bounded( who, 20, 40 ) );
+    CHECK_FALSE( here.has_furn( water ) );
+    bool found_stalk = who.has_amount( itype_cattail_stalk, 1 );
+    for( const item &product : here.i_at( destination ) ) {
+        found_stalk = found_stalk || product.typeId() == itype_cattail_stalk;
+    }
+    CHECK( found_stalk );
 }
 
 TEST_CASE( "harvest_self_care_callbacks_cannot_erase_new_work_or_the_remaining_yield",

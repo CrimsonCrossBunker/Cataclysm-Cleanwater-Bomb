@@ -320,7 +320,7 @@ capabilities:
     status: complete
     target_surface: Explicit typed abs_ms MapTileToken map holders, bounded map snapshots/edits, and token-consistent item page/transfer migration without raw position fallbacks.
     legacy_dependency: none
-    evidence: [src/lua_platform_world.h, src/lua_platform_world.cpp, src/lua_platform_items.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/lua_platform_world.h, src/lua_platform_world.cpp, src/lua_platform_items.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: monster-relocation
@@ -328,7 +328,7 @@ capabilities:
     status: complete
     target_surface: Exact Monster-only services.relocation.move with generation-safe GameHandle input, a loaded MapTileToken target, strict-only options, and a typed result envelope/value; Character/Avatar/NPC are tracked by character-npc-relocation, while Vehicle and other subtypes remain unsupported here.
     legacy_dependency: none
-    evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py]
     verification: passed
     next_actions: []
   - id: horde-domain
@@ -344,7 +344,7 @@ capabilities:
     status: complete
     target_surface: "Scoped dialogue sessions bind owner/runtime/world/native identity; dialogue teardown and runtime/world moves retire sessions; open_dialogue requires exact NPC and avatar handles plus a required topic; Platform topics are isolated to their owning runtime; implicit open_dialogue migration remains a TODO."
     legacy_dependency: none
-    evidence: [src/lua_platform_dialogue.h, src/lua_platform_dialogue.cpp, src/lua_platform_npcs.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    evidence: [src/lua_platform_dialogue.h, src/lua_platform_dialogue.cpp, src/lua_platform_npcs.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py]
     verification: passed
     next_actions: []
   - id: npc-mission-provider-bridge
@@ -352,7 +352,7 @@ capabilities:
     status: complete
     target_surface: "Exact participants are a live NPC provider GameHandle and, for owner-bearing calls, an explicit avatar GameHandle; nine methods are state, select, offer, add_assigned, assign_selected, succeed_selected, fail_selected, clear_selected, and claim_selected_reward. MissionToken selection is provider-bound; generic reward is persistent and idempotent (one owed credit, save/load claim state, repeated claim returns already_claimed); independent review P1 is fixed; no implicit provider or owner fallback."
     legacy_dependency: none
-    evidence: [src/lua_platform_npc_services.cpp, src/lua_platform_npc_services.h, src/lua_platform_missions.cpp, src/lua_platform_missions.h, src/lua_platform_runtime.cpp, src/mission.h, src/mission.cpp, src/savegame_json.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/mission_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    evidence: [src/lua_platform_npc_services.cpp, src/lua_platform_npc_services.h, src/lua_platform_missions.cpp, src/lua_platform_missions.h, src/lua_platform_runtime.cpp, src/mission.h, src/mission.cpp, src/savegame_json.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/mission_test.cpp, tools/migrate_lua_first.py]
     verification: passed
     next_actions: []
   - id: item-category-spawn-rate
@@ -360,7 +360,7 @@ capabilities:
     status: complete
     target_surface: "Bounded services.item_categories spawn-rate surface: spawn_rate, set_spawn_rate, and set_spawn_rates accept exact GameId<item_category> ids, finite rates in 0..1000000, and dense unique batches of at most 256 updates with before/after/changed results. Snapshot/rollback coverage is recorded; LuaLS, migrator, tests, and replacement-ledger mappings are recorded; independent review has no P1."
     legacy_dependency: none
-    evidence: [src/lua_platform_items.cpp, src/lua_platform_runtime.cpp, src/item_category.cpp, src/item_category.h, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp, ai/lua-first-replacement-ledger.yml]
+    evidence: [src/lua_platform_items.cpp, src/lua_platform_runtime.cpp, src/item_category.cpp, src/item_category.h, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp, ai/lua-first-replacement-ledger.yml]
     verification: passed
     next_actions: []
   - id: overmap-reveal-route-contract
@@ -368,7 +368,7 @@ capabilities:
     status: complete
     target_surface: "Bounded overmap reveal route contract for explicit OvermapTileToken targets and Platform-owned visibility mutation; the legacy reveal route is deleted from Platform, core reveal behavior is retained, unsupported or legacy overmap_at/local_at shapes remain explicit migrator TODOs, and independent review has no P1."
     legacy_dependency: none
-    evidence: [src/lua_platform_overmap.h, src/lua_platform_overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/lua_platform_overmap.h, src/lua_platform_overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: delayed-actor-run-eocs-reacquisition
@@ -376,7 +376,7 @@ capabilities:
     status: complete
     target_surface: "Delayed Character run-EOC tasks persist only owner Mod plus stable character_id, reacquire an exact current-generation Character handle at dispatch, keep live handles out of persistent payloads, retire invalid tasks, and fail closed against task-vector mutation during payload migration."
     legacy_dependency: none
-    evidence: [data/lua/LUA_FIRST_EOC_WORKFLOW.md, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [data/lua/LUA_FIRST_EOC_WORKFLOW.md, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: delayed-item-run-eocs-reacquisition
@@ -384,7 +384,7 @@ capabilities:
     status: complete
     target_surface: "Delayed Item run-EOC tasks persist item_uid plus a bounded advisory lookup hint, reacquire only a currently loaded exact Item, and inject a fresh generation-bound handle without serializing live handles or map tokens."
     legacy_dependency: none
-    evidence: [src/item.h, src/item_location.h, src/item_location.cpp, src/item_wakeup.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/item.h, src/item_location.h, src/item_location.cpp, src/item_wakeup.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: monster-persistent-identity
@@ -408,7 +408,7 @@ capabilities:
     status: complete
     target_surface: "Delayed run_eocs with explicit alpha/beta talkers persist a bounded typed participant set, reacquire every exact participant before dispatch, and restore callback-local talker roles without ambient fallbacks."
     legacy_dependency: none
-    evidence: [src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: character-npc-relocation
@@ -416,7 +416,7 @@ capabilities:
     status: complete
     target_surface: Exact Character/Avatar/NPC services.relocation.move with generation-safe GameHandle input, a loaded MapTileToken target, strict-only options, and a typed result envelope/value; Avatar stays within the loaded bubble without map shift and preserves cache state, while NPC movement keeps native on_move, linked-item, mission, camp, and death guards.
     legacy_dependency: none
-    evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp, tools/test_migrate_lua_first.py]
+    evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: vehicle-relocation
@@ -424,7 +424,7 @@ capabilities:
     status: complete
     target_surface: Exact Vehicle services.relocation.move with generation-safe GameHandle input, a loaded MapTileToken target, strict-only options, and a typed result envelope/value; full-footprint part_collision preflight and teleport_vehicle commit preserve linked items, mutation epoch, and Vehicle/Part identity while remote, towing, grabbing, and boarded states are rejected.
     legacy_dependency: none
-    evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, src/lua_platform_world.cpp, src/lua_platform_creatures.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, src/lua_platform_world.cpp, src/lua_platform_creatures.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py]
     verification: passed
     next_actions: []
   - id: overmap-tile-travel
@@ -432,7 +432,7 @@ capabilities:
     status: complete
     target_surface: Exact Avatar-only services.relocation.travel_to_omt with a value-only OvermapTileToken bound to explicit abs_omt plus runtime/world/owner generations, typed CcbResult tile_token issuance, strict-only options, place_player_overmap map shifting, standard relocation result/mutation-epoch/no-op behavior, and no maintained overmap_at route.
     legacy_dependency: none
-    evidence: [src/lua_platform_overmap.h, src/lua_platform_overmap.cpp, src/lua_platform_world_services.h, src/lua_platform_world_services.cpp, src/lua_platform_runtime.cpp, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    evidence: [src/lua_platform_overmap.h, src/lua_platform_overmap.cpp, src/lua_platform_world_services.h, src/lua_platform_world_services.cpp, src/lua_platform_runtime.cpp, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py]
     verification: passed
     next_actions: []
   - id: overmap-tile-edit
@@ -440,7 +440,7 @@ capabilities:
     status: complete
     target_surface: Exact token snapshot/edit with five-field CAS, rollback, and bulk revision.
     legacy_dependency: none
-    evidence: [src/lua_platform_overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/lua_platform_overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: transactional-mapgen
@@ -448,7 +448,7 @@ capabilities:
     status: complete
     target_surface: "OvermapTileToken+MapgenUpdateToken, immediate transaction, complete loaded-submap snapshot, collision verify, queued point rollback, four-state errors, commit-only publication/revision; transform fail-closed; old services.world.apply_mapgen_update deleted."
     legacy_dependency: none
-    evidence: [src/lua_platform_mapgen.h, src/lua_platform_mapgen.cpp, src/lua_platform_mapgen_dispatch.h, src/lua_platform_mapgen_dispatch.cpp, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    evidence: [src/lua_platform_mapgen.h, src/lua_platform_mapgen.cpp, src/lua_platform_mapgen_dispatch.h, src/lua_platform_mapgen_dispatch.cpp, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py]
     verification: passed
     next_actions: []
   - id: mapgen-callback-transaction
@@ -491,7 +491,7 @@ capabilities:
     status: complete
     target_surface: "detached bounded catalog/current/generator/forecast snapshots; checked override controls; bounded, keyed-idempotent custom light; literal+dynamic is_weather; lightning/next_weather/custom_light migration; old services.gameplay.environment.set_light_override route deleted."
     legacy_dependency: none
-    evidence: [src/lua_platform_weather.h, src/lua_platform_weather.cpp, src/lua_platform_runtime.h, src/lua_platform_runtime.cpp, src/weather.h, src/weather.cpp, src/weather_gen.h, src/weather_gen.cpp, src/weather_type.h, src/weather_type.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/weather_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    evidence: [src/lua_platform_weather.h, src/lua_platform_weather.cpp, src/lua_platform_runtime.h, src/lua_platform_runtime.cpp, src/weather.h, src/weather.cpp, src/weather_gen.h, src/weather_gen.cpp, src/weather_type.h, src/weather_type.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/weather_test.cpp, tools/migrate_lua_first.py]
     verification: passed
     next_actions: []
   - id: zones-domain
@@ -515,7 +515,7 @@ capabilities:
     status: complete
     target_surface: Explicit Platform camp creation/removal and stable expansion identity, lifecycle, persistence, and bounded domain operations.
     legacy_dependency: none
-    evidence: [src/lua_platform_camps.cpp, src/lua_platform_camps.h, src/basecamp.cpp, src/basecamp.h, src/savegame_json.cpp, src/overmap.cpp, src/faction_camp.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/lua_platform_camps.cpp, src/lua_platform_camps.h, src/basecamp.cpp, src/basecamp.h, src/savegame_json.cpp, src/overmap.cpp, src/faction_camp.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: camp-basecamp-workflows
@@ -531,7 +531,7 @@ capabilities:
     status: complete
     target_surface: Persistent Platform-owned CampTask records with one kind registry, executor dispatch, deferred actor reconciliation, explicit retirement, and reservation-safe lifecycle transitions.
     legacy_dependency: none
-    evidence: [src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/overmapbuffer.cpp, src/overmap.cpp, src/npc.cpp, src/lua_platform_camps.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/overmapbuffer.cpp, src/overmap.cpp, src/npc.cpp, src/lua_platform_camps.cpp, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: camp-resource-work
@@ -539,7 +539,7 @@ capabilities:
     status: complete
     target_surface: Registry-owned resource_work tasks with typed resource/food deltas, persisted input reservations, liability-aware capacity, atomic refund/complete transitions, and explicit terminal discard.
     legacy_dependency: none
-    evidence: [src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: camp-recipe-work
@@ -547,7 +547,7 @@ capabilities:
     status: complete
     target_surface: Typed recipe_work tasks with exact item staging, persisted escrow, authoritative detached settlement, explicit refund/claim recovery, and save/load lifecycle boundaries.
     legacy_dependency: none
-    evidence: [src/lua_platform_items.cpp, src/lua_platform_camps.cpp, src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/lua_platform_items.cpp, src/lua_platform_camps.cpp, src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: camp-upgrade-work
@@ -555,7 +555,7 @@ capabilities:
     status: complete
     target_surface: Typed upgrade_work tasks with exact camp-core/ExpansionToken targets, authoritative blueprint requirements, transactional mapgen publication, generation markers, recoverable escrow, and idempotent terminal settlement.
     legacy_dependency: none
-    evidence: [src/basecamp.h, src/basecamp.cpp, src/mapgen_functions.h, src/mapgen.cpp, src/overmap.cpp, src/lua_platform_camps.cpp, src/savegame_json.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/basecamp.h, src/basecamp.cpp, src/mapgen_functions.h, src/mapgen.cpp, src/overmap.cpp, src/lua_platform_camps.cpp, src/savegame_json.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: trade-quote
@@ -571,7 +571,7 @@ capabilities:
     status: complete
     target_surface: Atomic explicit avatar-to-NPC or NPC-to-avatar Character inventory trade commit with exact Item holders, full revalidation, destination-first capacity, full/partial rollback, single-use QuoteToken consumption, and npc_debt-only settlement publication; this does not claim generic NPC-to-NPC currency settlement.
     legacy_dependency: none
-    evidence: [src/lua_platform_trade.h, src/lua_platform_trade.cpp, src/lua_platform_items.h, src/lua_platform_items.cpp, src/lua_platform_runtime.cpp, src/lua_platform_dialogue.h, src/lua_platform_dialogue.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/lua_platform_trade.h, src/lua_platform_trade.cpp, src/lua_platform_items.h, src/lua_platform_items.cpp, src/lua_platform_runtime.cpp, src/lua_platform_dialogue.h, src/lua_platform_dialogue.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: equipment-trade-cleanup
@@ -579,7 +579,7 @@ capabilities:
     status: complete
     target_surface: Explicit Character/NPC equipment transactions plus removal of legacy Platform inventory, NPC-equipment, and unregistered trade wrappers; explicit Item/holder boundaries remain fail-closed in migration.
     legacy_dependency: none
-    evidence: [src/lua_platform_items.cpp, src/lua_platform_npc_services.cpp, src/lua_platform_trade.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/lua_platform_items.cpp, src/lua_platform_npc_services.cpp, src/lua_platform_trade.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: camp-resources-food-inventory
@@ -587,7 +587,7 @@ capabilities:
     status: complete
     target_surface: Explicit camp resource keys, owner-faction food supply mutations, and storage-tile holders delegated to the shared Item page/transfer APIs.
     legacy_dependency: none
-    evidence: [src/basecamp.h, src/basecamp.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    evidence: [src/basecamp.h, src/basecamp.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
     verification: passed
     next_actions: []
   - id: complex-registrar

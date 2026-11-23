@@ -31,7 +31,7 @@ def store_groups(policy, existing):
 
     for code, fruit, vegetable, pantry, outerwear in policy["jurisdictions"]:
         dry, canned, liquid, sauce, bread = policy["pantries"][pantry]
-        for stem, additions in {
+        regional_additions = {
             "produce": [item(fruit, 20), item(vegetable, 20)],
             "fresh_produce": [item(fruit, 20), item(vegetable, 20)],
             "small_crate_of_fruits": [item(fruit, 40, count=[3, 12])],
@@ -45,7 +45,16 @@ def store_groups(policy, existing):
             "coats_unisex": [
                 item(coat, 25) for coat in policy["outerwear"][outerwear]
             ],
-        }.items():
+        }
+        for stem, dishes in policy["regional_dishes"].items():
+            local_dishes = [
+                item(dish, 12)
+                for dish, codes in dishes.items()
+                if code in codes
+            ]
+            if local_dishes:
+                regional_additions.setdefault(stem, []).extend(local_dishes)
+        for stem, additions in regional_additions.items():
             destination = apparel if stem == "coats_unisex" else food
             destination.append(group(
                 f"{stem}-{code}",
@@ -104,11 +113,6 @@ def armory_groups(policy):
             magazines.append(item(mag, weight))
             reserve.append(reference(ammo, weight))
 
-        regional_patrol_kit = f"regional_patrol_kit-{country}"
-        groups.append(group(regional_patrol_kit, [
-            reference("regional_service_kit_rifle-" + country),
-            reference(equipment["rifle"][2]),
-        ], "collection"))
         patrol_groups = [
             reference(ident, 20) for ident in equipment["police_longarms"]
         ]
@@ -121,6 +125,11 @@ def armory_groups(policy):
         police_rifle, police_rifle_mag, spare_rifle = (
             equipment["police_field_rifle"]
         )
+        regional_patrol_kit = f"regional_patrol_kit-{country}"
+        groups.append(group(regional_patrol_kit, [
+            weapon_entry(police_rifle), item(police_rifle_mag),
+            reference("ammo_can_223_any_full"),
+        ], "collection"))
         pistol_in_field = weapon_entry(
             police_pistol, charges=[0, 8], damage=[0, 3]
         )
@@ -211,6 +220,49 @@ def armory_groups(policy):
     return groups
 
 
+def service_apparel_groups(policy, existing, items):
+    results = []
+    for country in policy["armories"]:
+        prefix = f"regional_{country.lower()}_"
+        uniforms = {
+            "jacket_army_modern": "blouse", "combat_shirt": "shirt",
+            "pants_army": "trousers", "winter_jacket_army": "winter_coat",
+            "winter_pants_army": "winter_trousers",
+        }
+
+        def replace_items(value):
+            if isinstance(value, list):
+                return [replace_items(entry) for entry in value]
+            if isinstance(value, dict):
+                result = {
+                    key: replace_items(entry) for key, entry in value.items()
+                }
+                original = result.get("item")
+                if original in replacements:
+                    result["item"] = prefix + replacements[original]
+                    result.pop("variant", None)
+                return result
+            return value
+
+        for stem in policy["service_apparel_groups"]:
+            replacements = uniforms.copy()
+            if stem.startswith("military_ballistic_vest"):
+                replacements["ballistic_vest_esapi"] = "plate_carrier"
+            elif stem.startswith("swat_ballistic_vest"):
+                replacements["ballistic_vest_esapi"] = "tactical_carrier"
+            elif stem == "cop_armor":
+                replacements["level_3_vest"] = "patrol_vest"
+            if not all(prefix + replacement in items
+                       for replacement in replacements.values()):
+                raise ValueError(f"Missing {country} service apparel item")
+            original = {key: value for key, value in existing[stem].items()
+                        if not key.startswith("//")}
+            localized = replace_items(original)
+            localized["id"] = f"{stem}-{country}"
+            results.append(localized)
+    return results
+
+
 def validate_references(generated, existing, items):
     ids = {obj["id"] for obj in generated}
     if len(ids) != len(generated) or ids.intersection(existing):
@@ -245,6 +297,7 @@ def build():
                        if path.name != "regional_supplies_north_america.json")
     items = records(ITEMS.rglob("*.json"))
     food, apparel = store_groups(policy, existing)
+    apparel.extend(service_apparel_groups(policy, existing, items))
     service = armory_groups(policy)
     validate_references(food + apparel + service, existing, items)
     return {

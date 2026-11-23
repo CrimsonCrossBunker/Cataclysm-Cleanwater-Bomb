@@ -11449,7 +11449,16 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles,
         set_floor_cache_dirty( z );
         set_pathfinding_cache_dirty( z );
         if( ( z < -OVERMAP_DEPTH || z > OVERMAP_HEIGHT ) && !MAPBUFFER.submap_exists( pos ) ) {
-            MAPBUFFER.generate_uniform( pos, z < 0 ? ter_t_rock : ter_t_open_air );
+            const tripoint_abs_omt omt( grid_abs_omt.xy(), z );
+            const oter_id terrain = overmap_buffer.ter_existing( omt );
+            if( z > OVERMAP_HEIGHT && terrain && !terrain->has_uniform_terrain() &&
+                north_america::elevation_active() ) {
+                tinymap tower;
+                swap_map swap( *tower.cast_to_map() );
+                tower.cast_to_map()->generate_atlas_tower_floor( omt );
+            } else {
+                MAPBUFFER.generate_uniform( pos, z < 0 ? ter_t_rock : ter_t_open_air );
+            }
         }
         submap *const tmpsub = MAPBUFFER.lookup_submap( pos );
         const size_t index = get_nonant( tripoint_rel_sm( grid.x(), grid.y(), z ) );

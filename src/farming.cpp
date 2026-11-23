@@ -524,12 +524,14 @@ item *resolve_planted_seed( map &here, const item_source &source )
     return seed && seed->uid().get_value() == source.path.front() ? seed : nullptr;
 }
 
-bool execute_farming_command( Character &who, const farming_command &command )
+bool execute_farming_command( Character &who, const farming_command &command, bool auto_forage )
 {
     map &here = get_map();
     const tripoint_abs_ms position = command.target.position;
-    if( cata_mp::is_client_mode() || who.activity || who.get_moves() <= 0 || who.is_dead_state() ||
-        !here.inbounds( position ) ||
+    // An automatic harvest can be queued after walking spends the current moves.
+    const bool automatic_harvest = auto_forage && command.action == farming_action::gather;
+    if( cata_mp::is_client_mode() || who.activity || who.is_dead_state() ||
+        ( who.get_moves() <= 0 && !automatic_harvest ) || !here.inbounds( position ) ||
         position.z() != who.pos_abs().z() || rl_dist( who.pos_abs(), position ) > 1 ||
         !command.target.matches( here ) ) {
         return false;
@@ -581,7 +583,7 @@ bool execute_farming_command( Character &who, const farming_command &command )
             if( command.seed || !allowed || who.is_mounted() ) {
                 return false;
             }
-            who.assign_activity( harvest_activity_actor( tile ) );
+            who.assign_activity( harvest_activity_actor( tile, automatic_harvest ) );
             return lifetime && who.activity.id() == activity_id( "ACT_HARVEST" );
         }
         case farming_action::forage:

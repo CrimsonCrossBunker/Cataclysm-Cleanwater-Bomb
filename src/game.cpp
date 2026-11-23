@@ -71,7 +71,6 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_imgui.h"
-#include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -114,7 +113,6 @@
 #include "faction.h"
 #include "field.h"
 #include "field_type.h"
-#include "filesystem.h"
 #include "flag.h"
 #include "flood_fill.h"
 #include "game_constants.h"
@@ -193,7 +191,6 @@
 #include "overmapbuffer.h"
 #include "panels.h"
 #include "past_achievements_info.h"
-#include "path_info.h"
 #include "pathfinding.h"
 #include "pickup.h"
 #include "pimpl.h"
@@ -229,7 +226,6 @@
 #include "timed_event.h"
 #include "translation.h"
 #include "translation_cache.h"
-#include "translation_manager.h"
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
@@ -984,9 +980,13 @@ bool game::start_game()
             u.world_origin = u.starting_city->pos_om;
         }
         const point_abs_om origin = u.world_origin.value_or( point_abs_om() );
-        if( u.start_outskirts ) {
-            std::tie( omtstart, associated_parameters ) =
-                start_loc.find_player_initial_location_on_outskirts( origin );
+        const bool atlas_start = north_america::active();
+        const bool campus_start = start_loc.requires_campus();
+        const city *selected_city = u.starting_city ? &*u.starting_city : nullptr;
+        if( u.start_outskirts && !campus_start ) {
+            std::tie( omtstart, associated_parameters ) = atlas_start ?
+                    start_loc.find_atlas_start( origin, selected_city, true ) :
+                    start_loc.find_player_initial_location_on_outskirts( origin );
             if( omtstart.is_invalid() ) {
                 if( !query_yn(
                         _( "No valid far-outskirts start was found for %s. Use the regular starting location?" ),
@@ -996,10 +996,15 @@ bool game::start_game()
                 u.start_outskirts = false;
             }
         }
-        if( !u.start_outskirts ) {
-            std::tie( omtstart, associated_parameters ) = use_legacy_city ?
-                    start_loc.find_player_initial_location( *u.starting_city ) :
-                    start_loc.find_player_initial_location( origin );
+        if( !u.start_outskirts || campus_start ) {
+            if( atlas_start || campus_start ) {
+                std::tie( omtstart, associated_parameters ) =
+                    start_loc.find_atlas_start( origin, selected_city, false );
+            } else {
+                std::tie( omtstart, associated_parameters ) = use_legacy_city ?
+                        start_loc.find_player_initial_location( *u.starting_city ) :
+                        start_loc.find_player_initial_location( origin );
+            }
         }
         if( omtstart.is_invalid() ) {
 
@@ -4782,7 +4787,7 @@ void game::knockback( std::vector<tripoint_bub_ms> &traj, int stun, int dam_mult
                     add_msg( _( "%s collided with something else and sent it flying!" ),
                              targ->name() );
                 } else if( npc *const guy = creatures.creature_at<npc>( traj.front() ) ) {
-                    if( guy->male ) {
+                    if( guy->get_gender() ) {
                         add_msg( _( "%s collided with someone else and sent him flying!" ),
                                  targ->name() );
                     } else {
@@ -4857,7 +4862,7 @@ void game::knockback( std::vector<tripoint_bub_ms> &traj, int stun, int dam_mult
                     add_msg( _( "%s collided with something else and sent it flying!" ),
                              targ->get_name() );
                 } else if( npc *const guy = creatures.creature_at<npc>( traj_front ) ) {
-                    if( guy->male ) {
+                    if( guy->get_gender() ) {
                         add_msg( _( "%s collided with someone else and sent him flying!" ),
                                  targ->get_name() );
                     } else {
@@ -4938,7 +4943,7 @@ void game::knockback( std::vector<tripoint_bub_ms> &traj, int stun, int dam_mult
                 if( creatures.creature_at<monster>( traj.front() ) ) {
                     add_msg( _( "You collided with something and sent it flying!" ) );
                 } else if( npc *const guy = creatures.creature_at<npc>( traj.front() ) ) {
-                    if( guy->male ) {
+                    if( guy->get_gender() ) {
                         add_msg( _( "You collided with someone and sent him flying!" ) );
                     } else {
                         add_msg( _( "You collided with someone and sent her flying!" ) );

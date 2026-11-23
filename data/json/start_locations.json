@@ -806,5 +806,12 @@
       { "om_terrain": "park", "om_terrain_match_type": "TYPE" }
     ],
     "flags": [ "ALLOW_OUTSIDE" ]
+  },
+  {
+    "type": "start_location",
+    "id": "sloc_university_dorm",
+    "name": "University residence hall",
+    "allowed_z_levels": [ 0, 0 ],
+    "terrain": [ { "om_terrain": "atlas_campus_dorm", "om_terrain_match_type": "TYPE" } ]
   }
 ]

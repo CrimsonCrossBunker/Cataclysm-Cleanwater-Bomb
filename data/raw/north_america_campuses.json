@@ -1,0 +1,707 @@
+[
+  [
+    "University of Alaska Fairbanks",
+    64.856,
+    -147.825
+  ],
+  [
+    "University of Alabama",
+    33.21,
+    -87.546
+  ],
+  [
+    "Auburn University",
+    32.603,
+    -85.486
+  ],
+  [
+    "University of Arkansas",
+    36.068,
+    -94.174
+  ],
+  [
+    "Arizona State University",
+    33.421,
+    -111.933
+  ],
+  [
+    "University of Arizona",
+    32.231,
+    -110.95
+  ],
+  [
+    "UC Berkeley",
+    37.872,
+    -122.259
+  ],
+  [
+    "UC Davis",
+    38.539,
+    -121.753
+  ],
+  [
+    "UCLA",
+    34.072,
+    -118.444
+  ],
+  [
+    "UC San Diego",
+    32.881,
+    -117.237
+  ],
+  [
+    "UC Santa Cruz",
+    36.989,
+    -122.06
+  ],
+  [
+    "San Diego State University",
+    32.775,
+    -117.071
+  ],
+  [
+    "Fresno State",
+    36.813,
+    -119.75
+  ],
+  [
+    "Cal Poly San Luis Obispo",
+    35.304,
+    -120.661
+  ],
+  [
+    "Cal State Fullerton",
+    33.881,
+    -117.885
+  ],
+  [
+    "University of Colorado Boulder",
+    40.007,
+    -105.265
+  ],
+  [
+    "Colorado State University",
+    40.575,
+    -105.088
+  ],
+  [
+    "University of Connecticut",
+    41.807,
+    -72.252
+  ],
+  [
+    "University of Delaware",
+    39.679,
+    -75.752
+  ],
+  [
+    "University of Florida",
+    29.643,
+    -82.353
+  ],
+  [
+    "Florida State University",
+    30.441,
+    -84.299
+  ],
+  [
+    "University of Central Florida",
+    28.602,
+    -81.2
+  ],
+  [
+    "University of Georgia",
+    33.95,
+    -83.375
+  ],
+  [
+    "Georgia Tech",
+    33.777,
+    -84.398
+  ],
+  [
+    "University of Hawaii at Manoa",
+    21.297,
+    -157.817
+  ],
+  [
+    "University of Iowa",
+    41.663,
+    -91.536
+  ],
+  [
+    "Iowa State University",
+    42.028,
+    -93.648
+  ],
+  [
+    "University of Idaho",
+    46.729,
+    -117.015
+  ],
+  [
+    "University of Illinois Urbana-Champaign",
+    40.108,
+    -88.227
+  ],
+  [
+    "Southern Illinois University",
+    37.714,
+    -89.219
+  ],
+  [
+    "Indiana University Bloomington",
+    39.168,
+    -86.523
+  ],
+  [
+    "Purdue University",
+    40.429,
+    -86.913
+  ],
+  [
+    "University of Kansas",
+    38.954,
+    -95.255
+  ],
+  [
+    "Kansas State University",
+    39.196,
+    -96.582
+  ],
+  [
+    "University of Kentucky",
+    38.033,
+    -84.504
+  ],
+  [
+    "Louisiana State University",
+    30.412,
+    -91.179
+  ],
+  [
+    "University of Massachusetts Amherst",
+    42.391,
+    -72.528
+  ],
+  [
+    "University of Massachusetts Boston",
+    42.314,
+    -71.038
+  ],
+  [
+    "University of Massachusetts Lowell",
+    42.649,
+    -71.324
+  ],
+  [
+    "University of Massachusetts Dartmouth",
+    41.628,
+    -71.001
+  ],
+  [
+    "University of Maryland College Park",
+    38.986,
+    -76.941
+  ],
+  [
+    "University of Maine",
+    44.9,
+    -68.671
+  ],
+  [
+    "University of Michigan",
+    42.278,
+    -83.738
+  ],
+  [
+    "Michigan State University",
+    42.729,
+    -84.481
+  ],
+  [
+    "University of Minnesota Twin Cities",
+    44.974,
+    -93.237
+  ],
+  [
+    "University of Minnesota Duluth",
+    46.818,
+    -92.085
+  ],
+  [
+    "University of Missouri",
+    38.943,
+    -92.328
+  ],
+  [
+    "University of Mississippi",
+    34.364,
+    -89.538
+  ],
+  [
+    "Mississippi State University",
+    33.455,
+    -88.789
+  ],
+  [
+    "University of Montana",
+    46.86,
+    -113.985
+  ],
+  [
+    "UNC Chapel Hill",
+    35.905,
+    -79.047
+  ],
+  [
+    "NC State University",
+    35.786,
+    -78.674
+  ],
+  [
+    "University of North Dakota",
+    47.922,
+    -97.07
+  ],
+  [
+    "University of Nebraska Lincoln",
+    40.817,
+    -96.701
+  ],
+  [
+    "University of New Hampshire",
+    43.137,
+    -70.935
+  ],
+  [
+    "Rutgers New Brunswick",
+    40.503,
+    -74.451
+  ],
+  [
+    "University of New Mexico",
+    35.084,
+    -106.62
+  ],
+  [
+    "UNLV",
+    36.108,
+    -115.141
+  ],
+  [
+    "University of Nevada Reno",
+    39.544,
+    -119.816
+  ],
+  [
+    "SUNY Albany",
+    42.686,
+    -73.824
+  ],
+  [
+    "University at Buffalo",
+    43.001,
+    -78.789
+  ],
+  [
+    "Stony Brook University",
+    40.916,
+    -73.124
+  ],
+  [
+    "Binghamton University",
+    42.087,
+    -75.968
+  ],
+  [
+    "Ohio State University",
+    40.004,
+    -83.019
+  ],
+  [
+    "Ohio University",
+    39.326,
+    -82.102
+  ],
+  [
+    "University of Oklahoma",
+    35.206,
+    -97.446
+  ],
+  [
+    "Oklahoma State University",
+    36.124,
+    -97.072
+  ],
+  [
+    "University of Oregon",
+    44.045,
+    -123.072
+  ],
+  [
+    "Oregon State University",
+    44.565,
+    -123.278
+  ],
+  [
+    "Penn State University Park",
+    40.8,
+    -77.861
+  ],
+  [
+    "University of Pittsburgh",
+    40.443,
+    -79.953
+  ],
+  [
+    "University of Rhode Island",
+    41.486,
+    -71.525
+  ],
+  [
+    "University of South Carolina",
+    33.996,
+    -81.029
+  ],
+  [
+    "Clemson University",
+    34.676,
+    -82.836
+  ],
+  [
+    "University of South Dakota",
+    42.788,
+    -96.924
+  ],
+  [
+    "University of Tennessee Knoxville",
+    35.955,
+    -83.929
+  ],
+  [
+    "University of Texas at Austin",
+    30.286,
+    -97.738
+  ],
+  [
+    "Texas A&M University",
+    30.614,
+    -96.342
+  ],
+  [
+    "Texas Tech University",
+    33.584,
+    -101.878
+  ],
+  [
+    "University of North Texas",
+    33.209,
+    -97.151
+  ],
+  [
+    "University of Houston",
+    29.72,
+    -95.342
+  ],
+  [
+    "University of Utah",
+    40.765,
+    -111.849
+  ],
+  [
+    "University of Virginia",
+    38.036,
+    -78.505
+  ],
+  [
+    "Virginia Tech",
+    37.229,
+    -80.424
+  ],
+  [
+    "University of Vermont",
+    44.478,
+    -73.198
+  ],
+  [
+    "University of Washington",
+    47.654,
+    -122.306
+  ],
+  [
+    "Washington State University",
+    46.731,
+    -117.161
+  ],
+  [
+    "University of Wisconsin Madison",
+    43.075,
+    -89.405
+  ],
+  [
+    "West Virginia University",
+    39.634,
+    -79.956
+  ],
+  [
+    "University of Wyoming",
+    41.312,
+    -105.58
+  ],
+  [
+    "University of British Columbia",
+    49.261,
+    -123.25
+  ],
+  [
+    "Simon Fraser University",
+    49.279,
+    -122.923
+  ],
+  [
+    "University of Victoria",
+    48.463,
+    -123.311
+  ],
+  [
+    "University of Alberta",
+    53.525,
+    -113.525
+  ],
+  [
+    "University of Calgary",
+    51.078,
+    -114.133
+  ],
+  [
+    "University of Saskatchewan",
+    52.132,
+    -106.633
+  ],
+  [
+    "University of Manitoba Fort Garry",
+    49.807,
+    -97.135
+  ],
+  [
+    "University of Winnipeg",
+    49.89,
+    -97.153
+  ],
+  [
+    "University of Toronto Scarborough",
+    43.784,
+    -79.188
+  ],
+  [
+    "University of Waterloo",
+    43.472,
+    -80.544
+  ],
+  [
+    "Western University",
+    43.008,
+    -81.275
+  ],
+  [
+    "Universite Laval",
+    46.779,
+    -71.275
+  ],
+  [
+    "Universite de Montreal",
+    45.505,
+    -73.615
+  ],
+  [
+    "University of New Brunswick",
+    45.946,
+    -66.642
+  ],
+  [
+    "Dalhousie University",
+    44.637,
+    -63.593
+  ],
+  [
+    "University of Prince Edward Island",
+    46.259,
+    -63.138
+  ],
+  [
+    "Memorial University",
+    47.573,
+    -52.732
+  ],
+  [
+    "Yukon University",
+    60.751,
+    -135.096
+  ],
+  [
+    "UNAM Ciudad Universitaria",
+    19.332,
+    -99.187
+  ],
+  [
+    "Universidad Autonoma Metropolitana Iztapalapa",
+    19.361,
+    -99.071
+  ],
+  [
+    "Universidad Autonoma de Nuevo Leon",
+    25.728,
+    -100.312
+  ],
+  [
+    "Universidad de Guadalajara CUCEI",
+    20.657,
+    -103.326
+  ],
+  [
+    "Universidad Autonoma de Baja California Mexicali",
+    32.633,
+    -115.445
+  ],
+  [
+    "Universidad de Sonora",
+    29.083,
+    -110.963
+  ],
+  [
+    "Universidad Autonoma de Chihuahua",
+    28.66,
+    -106.088
+  ],
+  [
+    "Universidad Autonoma de Sinaloa",
+    24.824,
+    -107.384
+  ],
+  [
+    "Universidad Autonoma de Coahuila",
+    25.444,
+    -100.992
+  ],
+  [
+    "Universidad Autonoma de San Luis Potosi",
+    22.146,
+    -101.015
+  ],
+  [
+    "Universidad Autonoma de Yucatan",
+    21.049,
+    -89.641
+  ],
+  [
+    "Universidad Autonoma de Queretaro",
+    20.591,
+    -100.409
+  ],
+  [
+    "BUAP Ciudad Universitaria",
+    18.999,
+    -98.197
+  ],
+  [
+    "Universidad Veracruzana Xalapa",
+    19.512,
+    -96.917
+  ],
+  [
+    "Universidad Autonoma de Chiapas",
+    16.751,
+    -93.171
+  ],
+  [
+    "Universidad Autonoma del Estado de Mexico",
+    19.289,
+    -99.674
+  ],
+  [
+    "Universidad Michoacana",
+    19.689,
+    -101.202
+  ],
+  [
+    "Universidad Autonoma de Zacatecas",
+    22.762,
+    -102.584
+  ],
+  [
+    "Universidad Juarez del Estado de Durango",
+    24.02,
+    -104.663
+  ],
+  [
+    "Universidad Autonoma de Guerrero",
+    17.546,
+    -99.503
+  ],
+  [
+    "Universidad Autonoma de Nayarit",
+    21.492,
+    -104.892
+  ],
+  [
+    "Universidad de Colima",
+    19.245,
+    -103.698
+  ],
+  [
+    "Universidad Autonoma de Aguascalientes",
+    21.915,
+    -102.32
+  ],
+  [
+    "Universidad Juarez Autonoma de Tabasco",
+    18.016,
+    -92.932
+  ],
+  [
+    "Universidad Autonoma de Campeche",
+    19.823,
+    -90.545
+  ],
+  [
+    "Universidad Autonoma del Estado de Quintana Roo",
+    18.526,
+    -88.272
+  ],
+  [
+    "Universidad Autonoma Benito Juarez de Oaxaca",
+    17.045,
+    -96.714
+  ],
+  [
+    "Universidad Autonoma de Tlaxcala",
+    19.304,
+    -98.236
+  ],
+  [
+    "Universidad Autonoma del Estado de Hidalgo",
+    20.095,
+    -98.709
+  ],
+  [
+    "Universidad Autonoma del Estado de Morelos",
+    18.983,
+    -99.236
+  ],
+  [
+    "Universidad de Guanajuato Campus Leon",
+    21.142,
+    -101.684
+  ],
+  [
+    "Universidad Autonoma de Tamaulipas Tampico",
+    22.277,
+    -97.87
+  ],
+  [
+    "Universidad Autonoma de Baja California Sur",
+    24.102,
+    -110.312
+  ]
+]

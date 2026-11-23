@@ -127,7 +127,7 @@ overmap_special_id north_america::regional_house_for( std::string_view jurisdict
         add( "house_regional_craftsman", { "US-CA", "US-OR", "US-WA", "CA-BC" } );
         add( "house_regional_shotgun", { "US-AL", "US-GA", "US-LA", "US-MS", "US-SC" } );
         add( "house_regional_prairie", { "US-AK", "US-MN", "US-MT", "US-ND", "US-NE", "US-SD",
-                                         "CA-AB", "CA-MB", "CA-SK"
+                                         "CA-AB", "CA-MB", "CA-NT", "CA-NU", "CA-SK", "CA-YT"
                                        } );
         add( "house_regional_brick_bungalow", { "US-IA", "US-IL", "US-IN", "US-MI", "US-MO",
                                                 "US-NJ", "US-NY", "US-OH", "US-PA", "US-WI", "CA-ON"
@@ -697,6 +697,21 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
             continue;
         }
         const auto &large = buildings_for( lot.zone ).large;
+        if( lot.zone == urban_zone::downtown && north_america::elevation_active() && one_in( 3 ) ) {
+            const north_america::place *owner = owners[urban_cell( lot.pos.xy() )];
+            if( owner ) {
+                const int tier = owner->population >= 1000000 ? 3 : owner->population >= 250000 ? 2 : 1;
+                const overmap_special_id tower( std::string( one_in( 3 ) ? "atlas_tall_hotel_" :
+                                                "atlas_tall_office_" ) + std::to_string( tier ) );
+                bool placed = false;
+                for( unsigned i = 0; i < lot.frontage && !placed; ++i ) {
+                    placed = try_place( lot, tower, lot.entrances[i] );
+                }
+                if( placed ) {
+                    continue;
+                }
+            }
+        }
         const overmap_special_id &building = random_entry( large );
         for( unsigned i = 0; i < lot.frontage; ++i ) {
             if( try_place( lot, building, lot.entrances[i] ) ) {

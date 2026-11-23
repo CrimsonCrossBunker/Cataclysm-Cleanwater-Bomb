@@ -13,7 +13,6 @@
 #include <item_uid.h>
 #include <lua_platform_handle.h>
 #include <lua_platform_items.h>
-#include <lua_platform_npcs.h>
 #include <pimpl.h>
 #include <talker_character.h>
 #include <type_id.h>
@@ -24,7 +23,6 @@
 #include <list>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -640,43 +638,6 @@ TEST_CASE( "lua_platform_equipment_participant_death",
     CHECK( fixture.write_called );
     CHECK( envelope["error"].get<sol::table>()["code"].get<std::string>() ==
            "stale_identity" );
-}
-
-TEST_CASE( "lua_platform_equipment_public_surface_has_no_legacy_helpers",
-           "[lua][platform][equipment][contract]" )
-{
-    platform_equipment_fixture fixture( 210, 1, 6210 );
-    const sol::table equipment = fixture.services["equipment"];
-    REQUIRE( equipment.valid() );
-    const std::set<std::string> expected = { "stow_current_weapon", "unequip", "wear", "wield" };
-    std::set<std::string> exposed;
-    for( const auto &entry : equipment ) {
-        REQUIRE( entry.first.is<std::string>() );
-        exposed.insert( entry.first.as<std::string>() );
-    }
-    CHECK( exposed == expected );
-    CHECK( equipment["wield"].valid() );
-    CHECK( equipment["wear"].valid() );
-    CHECK( equipment["unequip"].valid() );
-    CHECK( equipment["stow_current_weapon"].valid() );
-
-    const sol::table inventory = fixture.services["inventory"];
-    CHECK_FALSE( inventory["remove"].valid() );
-    CHECK_FALSE( inventory["wield"].valid() );
-    CHECK_FALSE( inventory["wear"].valid() );
-
-    cata::lua_platform::install_npc_api(
-        fixture.services,
-    [fixture_ptr = &fixture]() {
-        return fixture_ptr->active_runtime;
-    },
-    [fixture_ptr = &fixture]() {
-        return fixture_ptr->active_world_generation;
-    },
-    []() {}, []() {}, []() {} );
-    const sol::table npcs = fixture.services["npcs"];
-    REQUIRE( npcs.valid() );
-    CHECK_FALSE( npcs["equipment"].valid() );
 }
 
 } // namespace

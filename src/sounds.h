@@ -6,6 +6,7 @@
 #include <optional>
 #include <string> // IWYU pragma: keep
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 

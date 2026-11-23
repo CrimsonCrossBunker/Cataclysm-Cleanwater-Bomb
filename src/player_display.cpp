@@ -21,6 +21,7 @@
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_modifier.h"
 #include "color.h"
 #include "coordinates.h"
@@ -1101,15 +1102,15 @@ static void draw_tip( const catacurses::window &w_tip, const Character &you,
     if( you.crossed_threshold() ) {
         //~ player info window: 1s - name, 2s - gender, 3s - Prof or Mutation name
         mvwprintz( w_tip, point::zero, c_white, _( " %1$s | %2$s | %3$s" ), you.get_name(),
-                   you.male ? _( "Male" ) : _( "Female" ), race );
+                   you.get_gender() ? _( "Male" ) : _( "Female" ), race );
     } else {
         std::string profession = you.disp_profession();
         if( !profession.empty() ) {
             mvwprintz( w_tip, point::zero, c_white, _( " %1$s | %2$s | %3$s " ), you.get_name(),
-                       you.male ? _( "Male" ) : _( "Female" ), profession );
+                       you.get_gender() ? _( "Male" ) : _( "Female" ), profession );
         } else {
             mvwprintz( w_tip, point::zero, c_white, _( " %1$s | %2$s " ), you.get_name(),
-                       you.male ? _( "Male" ) : _( "Female" ) );
+                       you.get_gender() ? _( "Male" ) : _( "Female" ) );
         }
     }
 
@@ -1151,8 +1152,12 @@ static void on_customize_character( Character &you )
     if( cmenu.ret == 1 ) {
         if( ( get_option<bool>( "PLAYER_ARBITRARY_CHANGE_GENDER" ) ||
               you.has_flag( json_flag_GENDER_FLUIDITY ) ) && !you.has_flag( json_flag_GENDER_INVARIANCE ) ) {
-            you.male = !you.male;
-            popup( _( "Gender set to %s." ), you.male ? _( "Male" ) : _( "Female" ) );
+            const character_action_guard lifetime( you );
+            you.set_gender( !you.get_gender() );
+            if( !lifetime.get() ) {
+                return;
+            }
+            popup( _( "Gender set to %s." ), you.get_gender() ? _( "Male" ) : _( "Female" ) );
         } else {
             popup( _( "You can't reset your gender, because %s." ),
                    get_option<bool>( "PLAYER_ARBITRARY_CHANGE_GENDER" ) ? _( "you don't have that ability" ) :

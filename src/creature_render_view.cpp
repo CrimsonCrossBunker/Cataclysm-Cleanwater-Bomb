@@ -1,10 +1,14 @@
 #include "creature_render_view.h"
 
+#include <functional>
+#include <memory>
+#include <set>
+
 #include "avatar.h"
 #include "character.h"
+#include "coordinates.h"
 #include "creature_tracker.h"
 #include "dialogue.h"
-#include "effect.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "mapdata.h"
@@ -13,6 +17,12 @@
 #include "monster.h"
 #include "mutation.h"
 #include "npc.h"
+#include "pimpl.h"
+#include "point.h"
+#include "type_id.h"
+
+static const efftype_id effect_ridden( "ridden" );
+static const trait_id trait_INATTENTIVE( "INATTENTIVE" );
 
 namespace
 {
@@ -26,7 +36,7 @@ entity_render_view capture_character_render_view( const Character &ch,
         FacingDirection facing_override )
 {
     entity_render_view view;
-    view.male = ch.male;
+    view.male = ch.get_gender();
     view.rotation = rotation_for( facing_override == FacingDirection::NONE ? ch.facing :
                                   facing_override );
     const std::vector<trait_id> mutations = ch.get_functioning_mutations( true,
@@ -34,8 +44,8 @@ entity_render_view capture_character_render_view( const Character &ch,
         return mut.override_look.has_value();
     } );
     if( mutations.empty() ) {
-        view.body = ch.is_npc() ? ( ch.male ? "npc_male" : "npc_female" ) :
-                    ( ch.male ? "player_male" : "player_female" );
+        view.body = ch.is_npc() ? ( ch.get_gender() ? "npc_male" : "npc_female" ) :
+                    ( ch.get_gender() ? "player_male" : "player_female" );
         view.category = "none";
         view.overlays = ch.get_overlay_ids();
     } else {
@@ -89,7 +99,7 @@ std::optional<creature_render_view> capture_creature_render_view( const map &her
         view.body = mon->type->id.str();
         view.species = mon->type->species.empty() ? std::string{} :
                        mon->type->species.begin()->str();
-        if( mon->has_effect( efftype_id( "ridden" ) ) ) {
+        if( mon->has_effect( effect_ridden ) ) {
             view.ridden_body = "rid_" + view.body;
             if( mon->mounted_player ) {
                 view.rider = capture_character_render_view( *mon->mounted_player, FacingDirection::NONE );
@@ -143,7 +153,7 @@ std::string capture_creature_disposition( const map &here, Character &you, const
         return {};
     }
     std::string id = "overlay_" + Creature::attitude_raw_string( attitude );
-    if( sees && !you.has_trait( trait_id( "INATTENTIVE" ) ) ) {
+    if( sees && !you.has_trait( trait_INATTENTIVE ) ) {
         id += "_sees_player";
     }
     return id;

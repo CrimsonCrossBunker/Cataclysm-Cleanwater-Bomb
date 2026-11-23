@@ -2054,7 +2054,7 @@ void iexamine::locked_object( Character &you, const tripoint_bub_ms &examp )
         you.add_msg_if_player( _( "You attempt to pry open the %1$s using your %2$s…" ),
                                target_name, best_prying.tname() );
         if( you.is_avatar() && cata_mp::client_examine_pry(
-                item_location( you, &best_prying ), here.get_abs( examp ) ) ) {
+                form_loc_recursive<Character>( you, best_prying ), here.get_abs( examp ) ) ) {
             return;
         }
         iuse::crowbar( &you, &best_prying, examp );
@@ -2123,7 +2123,8 @@ void iexamine::locked_object_pickable( Character &you, const tripoint_bub_ms &ex
     } );
 
     for( item *it : picklocks ) {
-        int required_moves = lockpick_activity_actor::lockpicking_moves( item_location{you, it}, you );
+        const item_location pick_loc = form_loc_recursive<Character>( you, *it );
+        int required_moves = lockpick_activity_actor::lockpicking_moves( pick_loc, you );
         time_duration required_time = time_duration::from_turns( required_moves / you.get_speed() );
         const std::string time_string = colorize( to_string( required_time, true ), c_light_gray );
         std::string query = string_format( _( "Pick the lock of %1$s using your %2$s?" ),
@@ -2141,7 +2142,7 @@ void iexamine::locked_object_pickable( Character &you, const tripoint_bub_ms &ex
         if( can_use.success() ) {
             std::string method = "PICK_LOCK";
             if( you.is_avatar() && cata_mp::client_activate_item(
-                    item_location( you, it ), method, here.get_abs( examp ) ) ) {
+                    pick_loc, method, here.get_abs( examp ) ) ) {
                 return;
             }
             iuse_fn->call( &you, *it, examp );
@@ -2369,12 +2370,13 @@ void iexamine::fswitch( Character &you, const tripoint_bub_ms &examp )
 
 namespace
 {
-void submit_farming_choice( Character &who, const farming_command &command )
+void submit_farming_choice( Character &who, const farming_command &command,
+                            bool auto_forage = false )
 {
     if( who.is_avatar() && cata_mp::client_farming_command( command ) ) {
         return;
     }
-    execute_farming_command( who, command );
+    execute_farming_command( who, command, auto_forage );
 }
 } // namespace
 
@@ -2611,7 +2613,7 @@ void query_gathering( Character &who, const tripoint_bub_ms &position, bool auto
         return;
     }
     if( lifetime && context ) {
-        submit_farming_choice( who, choice );
+        submit_farming_choice( who, choice, automatic );
     }
 }
 } // namespace
@@ -3456,9 +3458,15 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
                                    get_plant_water( *seed ), get_plant_max_water( here.furn( p ).obj() ),
                                    status.daily_need_mm,
                                    plant_age_description( *seed, here.furn( p )->plant->growth_multiplier ) );
-            desc += string_format( _( "\nRecorded rain: %.1f mm  |  Growing degree days: %.1f / %.1f" ),
-                                   seed->get_var( "crop_sampled_rain_mm", 0.0 ),
-                                   seed->get_var( "crop_degree_days", 0.0 ), seed->type->seed->climate->degree_days );
+            if( seed->has_var( "crop_field_sown" ) ) {
+                const time_point sowing = time_point::from_turn( static_cast<int>(
+                                              seed->get_var( "crop_field_sown", 0.0 ) ) );
+                desc += '\n' + string_format( _( "Sown: %s" ), to_string( sowing, true ) );
+            }
+            desc += '\n' + string_format( _( "Growing degree days: %.1f / %.1f" ),
+                                          seed->get_var( "crop_degree_days", 0.0 ), seed->type->seed->climate->degree_days );
+            desc += '\n' + string_format( _( "Recorded rain: %.1f mm" ),
+                                          seed->get_var( "crop_sampled_rain_mm", 0.0 ) );
             if( status.soil_moisture_mm + status.irrigation_mm < status.daily_need_mm ) {
                 desc += _( "\n<color_yellow>Water supply is below one day's demand.</color>" );
             } else {

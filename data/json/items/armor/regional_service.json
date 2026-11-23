@@ -1,0 +1,156 @@
+[
+  {
+    "id": "regional_ca_blouse",
+    "copy-from": "jacket_army_modern",
+    "looks_like": "jacket_army_modern",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "CADPAT combat blouse" },
+    "description": "A combat blouse in the CADPAT camouflage pattern."
+  },
+  {
+    "id": "regional_ca_shirt",
+    "copy-from": "combat_shirt",
+    "looks_like": "combat_shirt",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "CADPAT combat shirt" },
+    "description": "A breathable combat shirt with sleeves in CADPAT camouflage."
+  },
+  {
+    "id": "regional_ca_trousers",
+    "copy-from": "pants_army",
+    "looks_like": "pants_army",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str_sp": "CADPAT combat trousers" },
+    "description": "A pair of military cargo trousers in CADPAT camouflage."
+  },
+  {
+    "id": "regional_ca_winter_coat",
+    "copy-from": "winter_jacket_army",
+    "looks_like": "winter_jacket_army",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "Canadian Armed Forces cold-weather jacket" },
+    "description": "An insulated military jacket patterned in CADPAT camouflage."
+  },
+  {
+    "id": "regional_ca_winter_trousers",
+    "copy-from": "winter_pants_army",
+    "looks_like": "winter_pants_army",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str_sp": "Canadian Armed Forces cold-weather trousers" },
+    "description": "Insulated trousers patterned in CADPAT camouflage."
+  },
+  {
+    "id": "regional_ca_plate_carrier",
+    "copy-from": "ballistic_vest_esapi",
+    "looks_like": "ballistic_vest_esapi",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "Canadian Armed Forces plate carrier" },
+    "description": "A plate carrier in CADPAT camouflage, with pockets for front, back, and side plates.",
+    "variants": [  ]
+  },
+  {
+    "id": "regional_ca_patrol_vest",
+    "copy-from": "level_3_vest",
+    "looks_like": "level_3_vest",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "RCMP patrol vest" },
+    "description": "A dark duty vest with pockets for protective inserts, marked for RCMP service.",
+    "variants": [  ],
+    "color": "dark_gray"
+  },
+  {
+    "id": "regional_ca_tactical_carrier",
+    "copy-from": "ballistic_vest_esapi",
+    "looks_like": "ballistic_vest_esapi",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "RCMP tactical plate carrier" },
+    "description": "A dark plate carrier fitted with attachment points and marked for RCMP tactical teams.",
+    "variants": [  ],
+    "color": "dark_gray"
+  },
+  {
+    "id": "regional_mx_blouse",
+    "copy-from": "jacket_army_modern",
+    "looks_like": "jacket_army_modern",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "Mexican woodland digital combat blouse" },
+    "description": "A combat blouse in the Mexican woodland digital camouflage pattern."
+  },
+  {
+    "id": "regional_mx_shirt",
+    "copy-from": "combat_shirt",
+    "looks_like": "combat_shirt",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "Mexican woodland digital combat shirt" },
+    "description": "A breathable combat shirt with sleeves in Mexican woodland digital camouflage."
+  },
+  {
+    "id": "regional_mx_trousers",
+    "copy-from": "pants_army",
+    "looks_like": "pants_army",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str_sp": "Mexican woodland digital combat trousers" },
+    "description": "A pair of military cargo trousers in Mexican woodland digital camouflage."
+  },
+  {
+    "id": "regional_mx_winter_coat",
+    "copy-from": "winter_jacket_army",
+    "looks_like": "winter_jacket_army",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "Mexican armed forces cold-weather jacket" },
+    "description": "An insulated military jacket patterned in Mexican woodland digital camouflage."
+  },
+  {
+    "id": "regional_mx_winter_trousers",
+    "copy-from": "winter_pants_army",
+    "looks_like": "winter_pants_army",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str_sp": "Mexican armed forces cold-weather trousers" },
+    "description": "Insulated trousers patterned in Mexican woodland digital camouflage."
+  },
+  {
+    "id": "regional_mx_plate_carrier",
+    "copy-from": "ballistic_vest_esapi",
+    "looks_like": "ballistic_vest_esapi",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "Mexican armed forces plate carrier" },
+    "description": "A plate carrier in Mexican woodland digital camouflage, with pockets for front, back, and side plates.",
+    "variants": [  ]
+  },
+  {
+    "id": "regional_mx_patrol_vest",
+    "copy-from": "level_3_vest",
+    "looks_like": "level_3_vest",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "Mexican police patrol vest" },
+    "description": "A dark duty vest with pockets for protective inserts, marked for Mexican police service.",
+    "variants": [  ],
+    "color": "dark_gray"
+  },
+  {
+    "id": "regional_mx_tactical_carrier",
+    "copy-from": "ballistic_vest_esapi",
+    "looks_like": "ballistic_vest_esapi",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "Mexican police tactical plate carrier" },
+    "description": "A dark plate carrier fitted with attachment points and marked for Mexican police tactical teams.",
+    "variants": [  ],
+    "color": "dark_gray"
+  }
+]
