@@ -1675,7 +1675,7 @@ std::optional<bool> invoke_mission_condition_handler(
         { "has_interlocutor", dialogue.has_beta },
         {
             "mission_type", cata::lua_platform::native_callback_id{
-                "mission_type", std::string( mission_type ) }
+                "mission", std::string( mission_type ) }
         },
         { "phase", std::string( phase ) }
     } );
@@ -1718,7 +1718,7 @@ std::optional<std::int64_t> invoke_mission_deadline_handler(
         { "has_interlocutor", dialogue.has_beta },
         {
             "mission_type", cata::lua_platform::native_callback_id{
-                "mission_type", std::string( mission_type ) }
+                "mission", std::string( mission_type ) }
         },
         { "phase", std::string( "deadline" ) }
     } );
@@ -1760,7 +1760,7 @@ std::optional<bool> invoke_mission_place_handler(
     sol::table payload = platform_callback_payload( *owner, {
         {
             "mission_type", cata::lua_platform::native_callback_id{
-                "mission_type", std::string( mission_type ) }
+                "mission", std::string( mission_type ) }
         },
         {
             "position", cata::lua_platform::native_callback_point{
@@ -1806,7 +1806,7 @@ void invoke_mission_phase_handler(
         },
         {
             "mission_type", cata::lua_platform::native_callback_id{
-                "mission_type", std::string( mission_type ) }
+                "mission", std::string( mission_type ) }
         },
         { "phase", std::string( phase ) }
     } );
