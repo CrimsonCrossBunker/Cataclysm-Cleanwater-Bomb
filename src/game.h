@@ -299,6 +299,7 @@ class game
          * @return false if the player cancels while resolving missing mods.
          */
         bool setup();
+        bool load_new_character_world();
         /**
          * Reset all per-game runtime state (ID counters, weather, trackers,
          * EOC queues, global variables, etc.) to a clean slate. Called by
@@ -1043,7 +1044,7 @@ class game
     private:
         // Game-start procedures
         bool load( const save_t &name ); // Load a player-specific save file
-        void load_master(); // Load the master data file, with factions &c
+        bool load_master(); // Load the master data file, with factions &c
 #if defined(__ANDROID__)
         void load_shortcuts( const cata_path &path );
 #endif
@@ -1054,7 +1055,8 @@ class game
         bool save_factions_missions_npcs();
         bool save_external_options_record();
         bool save_dimension_data();
-        bool load_dimension_data();
+        bool load_dimension_data( bool allow_new_dimension = false );
+        bool unserialize_legacy_dimension_data( const cata_path &path, std::istream &fin );
         void reset_npc_dispositions();
         void serialize_dimension_data( std::ostream &fout );
         void serialize_master( std::ostream &fout );
@@ -1572,6 +1574,7 @@ class game
     private:
         // the currently occupied dimension
         dimension_id dimension_prefix;
+        bool save_loading_failed = false;
 };
 
 // Returns temperature modifier from direct heat radiation of nearby sources

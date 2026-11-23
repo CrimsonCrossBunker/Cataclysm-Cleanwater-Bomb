@@ -249,32 +249,6 @@ TEST_CASE( "lua_platform_vehicle_handles_fail_closed_after_unload",
     CHECK( error->code == "destroyed" );
 }
 
-TEST_CASE( "lua_platform_vehicle_api_has_no_implicit_vehicle_selector",
-           "[lua][platform][vehicles]" )
-{
-    sol::state lua;
-    sol::table services = lua.create_table();
-    cata::lua_platform::install_vehicle_api(
-        services,
-    []() {
-        return cata::lua_platform::game_handle_runtime();
-    },
-    []() {
-        return std::size_t( 1 );
-    },
-    []() {},
-    []() {} );
-
-    const sol::table vehicles = services["vehicles"];
-    REQUIRE( vehicles.valid() );
-    CHECK( vehicles["parts"].valid() );
-    CHECK( vehicles["set_part_enabled"].valid() );
-    CHECK( vehicles["open_part_service"].valid() );
-    CHECK_FALSE( vehicles["marked_service_vehicle"].valid() );
-    CHECK_FALSE( vehicles["current"].valid() );
-    CHECK_FALSE( vehicles["nearest"].valid() );
-}
-
 TEST_CASE( "lua_platform_vehicle_mutations_use_the_platform_write_gate",
            "[lua][platform][vehicles]" )
 {

@@ -48,6 +48,7 @@
   },
   {
     "abstract": "gas_turbine_engine",
+    "fuel_model_turbine": true,
     "copy-from": "engine_combustion",
     "type": "vehicle_part",
     "fuel_type": "gasoline",
@@ -66,6 +67,8 @@
     "epower": "-350 W",
     "power": "223800 W",
     "energy_consumption": "559500 W",
+    "displacement_ml": 6000,
+    "rated_rpm": 2400,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 30, 40 ] },
       { "item": "ch_steel_chunk", "count": [ 30, 40 ] },
@@ -92,6 +95,8 @@
     "epower": "-200 W",
     "power": "93250 W",
     "energy_consumption": "266000 W",
+    "displacement_ml": 1600,
+    "rated_rpm": 3750,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 20, 30 ] },
       { "item": "ch_steel_chunk", "count": [ 20, 30 ] },
@@ -118,6 +123,8 @@
     "epower": "-200 W",
     "power": "23300 W",
     "energy_consumption": "58200 W",
+    "displacement_ml": 500,
+    "rated_rpm": 3000,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 10, 20 ] },
       { "item": "ch_steel_chunk", "count": [ 10, 20 ] },
@@ -143,6 +150,8 @@
     "epower": "-250 W",
     "power": "149200 W",
     "energy_consumption": "373000 W",
+    "displacement_ml": 2800,
+    "rated_rpm": 4000,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 30, 40 ] },
       { "item": "ch_steel_chunk", "count": [ 30, 40 ] },
@@ -169,6 +178,8 @@
     "epower": "-350 W",
     "power": "242450 W",
     "energy_consumption": "606250 W",
+    "displacement_ml": 4500,
+    "rated_rpm": 3600,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 30, 40 ] },
       { "item": "ch_steel_chunk", "count": [ 30, 40 ] },
@@ -194,6 +205,8 @@
     "durability": 150,
     "power": "7370 W",
     "energy_consumption": "18425 W",
+    "displacement_ml": 50,
+    "rated_rpm": 8500,
     "folded_volume": "12 L",
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 1, 2 ] },
@@ -220,6 +233,8 @@
     "durability": 150,
     "power": "21000 W",
     "energy_consumption": "49800 W",
+    "displacement_ml": 200,
+    "rated_rpm": 8250,
     "folded_volume": "42 L",
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 4, 8 ] },
@@ -253,6 +268,8 @@
     "durability": 150,
     "power": "22000 W",
     "energy_consumption": "55000 W",
+    "displacement_ml": 200,
+    "rated_rpm": 5000,
     "folded_volume": "42 L",
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 4, 8 ] },
@@ -279,6 +296,8 @@
     "durability": 120,
     "power": "3728 W",
     "energy_consumption": "9320 W",
+    "displacement_ml": 20,
+    "rated_rpm": 9500,
     "folded_volume": "6 L",
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 0, 1 ] },
@@ -306,6 +325,8 @@
     "epower": "-200 W",
     "power": "111900 W",
     "energy_consumption": "373000 W",
+    "displacement_ml": 5240,
+    "rated_rpm": 2700,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 30, 40 ] },
       { "item": "ch_steel_chunk", "count": [ 30, 40 ] },
@@ -332,6 +353,8 @@
     "epower": "-150 W",
     "power": "93250 W",
     "energy_consumption": "311000 W",
+    "displacement_ml": 1600,
+    "rated_rpm": 6000,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 20, 30 ] },
       { "item": "ch_steel_chunk", "count": [ 20, 30 ] },
@@ -358,6 +381,8 @@
     "epower": "-350 W",
     "power": "447600 W",
     "energy_consumption": "1492000 W",
+    "displacement_ml": 7000,
+    "rated_rpm": 6500,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 45, 58 ] },
       { "item": "ch_steel_chunk", "count": [ 45, 58 ] },
@@ -384,6 +409,8 @@
     "epower": "-400 W",
     "power": "447600 W",
     "energy_consumption": "1119000 W",
+    "displacement_ml": 7000,
+    "rated_rpm": 2600,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 45, 58 ] },
       { "item": "ch_steel_chunk", "count": [ 45, 58 ] },
@@ -410,6 +437,8 @@
     "epower": "-200 W",
     "power": "149200 W",
     "energy_consumption": "497500 W",
+    "displacement_ml": 2800,
+    "rated_rpm": 5800,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 30, 40 ] },
       { "item": "ch_steel_chunk", "count": [ 30, 40 ] },
@@ -436,6 +465,8 @@
     "epower": "-250 W",
     "power": "242450 W",
     "energy_consumption": "808200 W",
+    "displacement_ml": 4500,
+    "rated_rpm": 5600,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 40, 50 ] },
       { "item": "ch_steel_chunk", "count": [ 40, 50 ] },
@@ -462,6 +493,8 @@
     "epower": "-50 W",
     "power": "37300 W",
     "energy_consumption": "124500 W",
+    "displacement_ml": 600,
+    "rated_rpm": 6800,
     "breaks_into": [
       { "item": "ch_steel_lump", "count": [ 7, 15 ] },
       { "item": "ch_steel_chunk", "count": [ 7, 15 ] },

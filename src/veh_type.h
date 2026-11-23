@@ -155,6 +155,9 @@ struct vpslot_engine {
     float damaged_power_factor = 0.0f;
     int noise_factor = 0;
     int m2c = 100;
+    int displacement_ml = 0;
+    int rated_rpm = 0;
+    bool turbine = false;
     std::vector<std::string> exclusions;
     std::vector<itype_id> fuel_opts;
 

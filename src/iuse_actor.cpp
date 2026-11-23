@@ -1,21 +1,22 @@
 #include "iuse_actor.h"
 
-#include <cstdint>
-
-#include "item_activation.h"
-#include "item_source.h"
-#include "inventory_ui.h"
-
+#include <cached_options.h>
+#include <cata_scope_helpers.h>
 #include <color.h>
+#include <craft_command.h>
 #include <imgui/imgui.h>
+#include <item_uid.h>
 #include <iuse.h>
 #include <ret_val.h>
+#include <tool_activity_target.h>
 #include <translation.h>
 #include <units.h>
+#include <vehicle_power_connection.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -31,21 +32,16 @@
 #include "avatar.h" // IWYU pragma: keep
 #include "bionics.h"
 #include "bodypart.h"
-#include "cached_options.h"
 #include "calendar.h"
 #include "cata_imgui.h"
-#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
-#include "charcoal_kiln.h"
-#include "smoking_rack.h"
-#include "repair_activity.h"
 #include "character_id.h"
+#include "charcoal_kiln.h"
 #include "clothing_mod.h"
 #include "clzones.h"
 #include "condition.h"
 #include "coordinates.h"
-#include "craft_command.h"
 #include "crafting.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -68,20 +64,21 @@
 #include "generic_factory.h"
 #include "hsv_color.h"
 #include "input_popup.h"
+#include "inventory_ui.h"
 #include "item.h"
-#include "item_healing.h"
+#include "item_activation.h"
 #include "item_components.h"
 #include "item_contents.h"
+#include "item_healing.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_source.h"
 #include "item_transformation.h"
-#include "item_uid.h"
 #include "itype.h"
 #include "localized_comparator.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
-#include "mp_client_conn.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "map_selector.h"
@@ -90,6 +87,7 @@
 #include "memory_fast.h"
 #include "messages.h"
 #include "monster.h"
+#include "mp_client_conn.h"
 #include "mtype.h"
 #include "music.h"
 #include "mutation.h"
@@ -107,14 +105,15 @@
 #include "projectile.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
+#include "repair_activity.h"
 #include "requirements.h"
 #include "rng.h"
 #include "safe_reference.h"
+#include "smoking_rack.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "talker.h"
 #include "temp_crafting_inventory.h"
-#include "tool_activity_target.h"
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
@@ -124,7 +123,6 @@
 #include "veh_appliance.h"
 #include "veh_type.h"
 #include "vehicle.h"
-#include "vehicle_power_connection.h"
 #include "vehicle_selector.h"
 #include "vfx_emit.h"
 #include "visitable.h"
@@ -882,7 +880,9 @@ std::optional<int> mp3_iuse::use( Character *p, item &it, map *, const tripoint_
         p->add_msg_if_player( msg.translated() );
         it.convert( transform, p ).active = false;
         p->mod_moves( -200 );
-        music::deactivate_music_id( music::music_id::mp3 );
+        if( p->is_avatar() ) {
+            music::deactivate_music_id( music::music_id::mp3 );
+        }
     }
 
     return 0;
@@ -1540,7 +1540,7 @@ static ret_val<tripoint_bub_ms> check_deploy_square( Character *p, item &it,
         // Check that there is no liquid on the floor.
         // If there is, it needs to be mopped dry with a mop.
         if( here->terrain_moppable( pnt ) ) {
-            if( get_avatar().crafting_inventory().has_quality( qual_MOP ) ) {
+            if( p->crafting_inventory().has_quality( qual_MOP ) ) {
                 here->mop_spills( pnt );
                 p->add_msg_if_player( m_info, _( "You mopped up the spill with a nearby mop when deploying a %s." ),
                                       it.tname() );
@@ -1646,7 +1646,7 @@ void reveal_map_actor::load( const JsonObject &obj, const std::string & )
     optional( obj, false, "atlas_jurisdiction", atlas_jurisdiction );
 }
 
-void reveal_map_actor::reveal_targets( const tripoint_abs_omt &center,
+void reveal_map_actor::reveal_targets( Character &who, const tripoint_abs_omt &center,
                                        const std::pair<std::string, ot_match_type> &target,
                                        int reveal_distance ) const
 {
@@ -1654,8 +1654,7 @@ void reveal_map_actor::reveal_targets( const tripoint_abs_omt &center,
                         target.second );
     for( const tripoint_abs_omt &place : places ) {
         if( overmap_buffer.seen( place ) != om_vision_level::full ) {
-            // Should be replaced with the character using the item passed as an argument if NPCs ever learn to use maps
-            get_avatar().map_revealed_omts.emplace( place );
+            who.map_revealed_omts.emplace( place );
         }
         overmap_buffer.reveal( place, reveal_distance );
     }
@@ -1706,7 +1705,7 @@ std::optional<int> reveal_map_actor::use( Character *p, item &it, map *,
     p->map_revealed_omts.clear();
     for( const auto &omt : omt_types ) {
         for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
-            reveal_targets( tripoint_abs_omt( center.xy(), z ), omt, 0 );
+            reveal_targets( *p, tripoint_abs_omt( center.xy(), z ), omt, 0 );
         }
     }
 
@@ -2129,15 +2128,16 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
     if( tool.has_flag( flag_REQUIRES_TINDER ) ) {
         // Search inventory and adjacent tiles (same scope as the
         // tinder picker in fire_start_activity_actor::do_turn).
-        item_location tinder;
-        who.visit_items( [&tinder, &who, &tool]( item * it, item * ) -> VisitResponse {
+        item *tinder_item = nullptr;
+        who.visit_items( [&tinder_item, &tool]( item * it, item * ) -> VisitResponse {
             if( it != &tool && it->has_flag( flag_TINDER ) )
             {
-                tinder = item_location( who, it );
+                tinder_item = it;
                 return VisitResponse::ABORT;
             }
             return VisitResponse::NEXT;
         } );
+        item_location tinder = tinder_item ? form_loc_recursive( who, *tinder_item ) : item_location();
         if( !tinder ) {
             // Check adjacent ground tiles.
             for( const tripoint_bub_ms &adj : here.points_in_radius( who.pos_bub(), 1 ) ) {
@@ -2192,11 +2192,14 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
     }
 
     // Multi-turn activity.
-    item_location tool_loc( who, &tool );
+    const item_location tool_loc = locate_cutting_tool( who, tool );
+    if( !tool_loc ) {
+        return false;
+    }
     who.assign_activity( fire_start_activity_actor(
                              here.get_abs( fire_pos ), tool_loc,
                              potential_skill_gain, moves, tinder_consumed ) );
-    return true;
+    return static_cast<bool>( who.activity );
 }
 
 void salvage_actor::load( const JsonObject &obj, const std::string & )
@@ -4114,11 +4117,12 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
 
     if( roll == SUCCESS && ( action == RT_REPAIR || action == RT_REFIT ||
                              action == RT_DOWNSIZING || action == RT_UPSIZING ) ) {
-        if( !handle_components( pl, *fix, false, false, true, material ) || !lifetime || !fix ) {
+        if( !handle_components( pl, *fix, false, true, true, material ) || !lifetime || !fix ) {
             return AS_CANT;
         }
     }
 
+    // Consuming components can spill and relocate the workpiece, so apply the repair first.
     if( action == RT_REPAIR ) {
         if( roll == SUCCESS ) {
             const std::string startdurability = fix->durability_indicator( true );
@@ -4133,7 +4137,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                 pl.add_msg_if_player( m_good, _( "You repair your %s completely!  ( %s-> %s)" ),
                                       fix->tname( 1, false ), startdurability, resultdurability );
             }
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
 
         return AS_RETRY;
@@ -4148,7 +4152,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
 
                 pl.calc_encumbrance();
             }
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
 
         return AS_RETRY;
@@ -4161,7 +4165,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->set_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
         return AS_RETRY;
     }
@@ -4173,7 +4177,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->unset_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
         return AS_RETRY;
     }
@@ -5220,7 +5224,8 @@ void molle_detach_actor::load( const JsonObject &jo, const std::string & )
 std::optional<int> install_bionic_actor::use( Character *p, item &it,
         map *, const tripoint_bub_ms & ) const
 {
-    if( p->can_install_bionics( *it.type, *p, false ) ) {
+    const auto source = it.get_safe_reference();
+    if( p->can_install_bionics( *it.type, *p, false ) && source ) {
         if( !p->has_trait( trait_DEBUG_BIONICS ) && !p->has_flag( json_flag_MANUAL_CBM_INSTALLATION ) ) {
             p->consume_installation_requirement( it.type->bionic->id );
             p->consume_anesth_requirement( *it.type, *p );
@@ -6680,7 +6685,7 @@ std::optional<int> change_scent_iuse::use( Character *p, item &it, map *,
     p->add_effect( effect_masked_scent, duration, false, scent_mod );
     p->set_type_of_scent( scenttypeid );
     p->mod_moves( -moves );
-    add_msg( m_info, _( "You use the %s to mask your scent" ), it.tname() );
+    p->add_msg_if_player( m_info, _( "You use the %s to mask your scent" ), it.tname() );
 
     // Apply the various effects.
     for( const iuse::effect_data &eff : effects ) {
@@ -6750,7 +6755,7 @@ std::optional<int> effect_on_conditions_actor::use( Character *p, item &it,
         } else if( npc *n = p->as_npc() ) {
             char_ptr = n;
         }
-        loc = item_location( *p->as_character(), &it );
+        loc = form_loc( *p, here, pos, it );
     } else {
         loc = item_location( map_cursor( here, pos ), &it );
     }

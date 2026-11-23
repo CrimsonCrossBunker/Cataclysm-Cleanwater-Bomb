@@ -434,6 +434,7 @@ class overmapbuffer
         void populate_followers_vec( std::vector<npc *> &followers, bool only_following = false,
                                      bool ignore_hallu = false ) const;
         void foreach_npc( const std::function<void( npc & )> &callback );
+        void clear_npcs();
         shared_ptr_fast<npc> find_npc_by_unique_id( const std::string &unique_id );
         /**
          * Get all NPCs active on the overmap

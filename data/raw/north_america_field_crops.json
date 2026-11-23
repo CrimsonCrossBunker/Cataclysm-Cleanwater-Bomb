@@ -5,6 +5,7 @@
     "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3210035901",
     "https://gov.mb.ca/agriculture/crops/seasonal-reports/pubs/early-seeding-considerations.pdf",
     "https://gov.mb.ca/agriculture/crops/crop-management/grain-corn/corn-seed-bed-preparation.html",
+    "https://www.uaex.uada.edu/farm-ranch/crops-commercial-horticulture/docs/2024-arkansas-corn-quick-facts.pdf",
     "https://www.ontario.ca/page/publication-811-agronomy-guide-field-crops",
     "https://nube.agricultura.gob.mx/calendario_agricola/",
     "https://nube.agricultura.gob.mx/panorama_dgsiap/2025.pdf"
@@ -30,7 +31,7 @@
       [ "seed_wheat", 29, 427, 921 ],
       [ "seed_canola", 28, 505, 1010 ],
       [ "soybean_seed", 14, 510, 1007 ],
-      [ "seed_corn", 10, 515, 1015 ],
+      [ "seed_corn", 10, 507, 1015 ],
       [ "seed_oats", 9, 426, 919 ],
       [ "seed_potato_raw", 10, 501, 1007 ]
     ],
@@ -125,7 +126,7 @@
     ],
     "US-AR": [
       [ "soybean_seed", 58, 423, 1031 ],
-      [ "seed_corn", 23, 319, 912 ],
+      [ "seed_corn", 23, 410, 912 ],
       [ "seed_cotton_boll", 12, 424, 1106 ],
       [ "seed_red_winter_wheat", 7, 1027, 614 ]
     ],

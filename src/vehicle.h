@@ -1687,6 +1687,8 @@ class vehicle
         * @param e is the index of the engine in the engines array
         */
         units::power engine_fuel_usage( const vehicle_part &vp ) const;
+        std::optional<double> combined_liquid_fuel_consumption( map &here ) const;
+        double propulsion_power_w( map &here, double speed_mps, bool afloat, bool flying ) const;
         // Returns all active, available, non-destroyed vehicle lights
         std::vector < vehicle_part * > lights();
 
@@ -1926,6 +1928,7 @@ class vehicle
 
         int get_z_change() const;
         bool is_flying_in_air() const;
+        std::optional<double> flight_altitude() const;
         void set_flying( bool new_flying_value );
         // True only for genuine rotorcraft: rotors providing enough lift to fly
         bool is_rotorcraft( map &here ) const;
@@ -2674,6 +2677,11 @@ class vehicle
         mutable bool in_water = false;
         // is the vehicle currently flying
         mutable bool is_flying = false;
+        std::optional<double> flight_altitude_m;
+        vehicle *move_atlas_aircraft( map &here, tripoint_rel_ms dp, const tileray &facing,
+                                      Character *pilot );
+        bool change_speed_on_grade( map &here, const tripoint_bub_ms &from,
+                                    const tripoint_bub_ms &to, float traction );
         bool flyable = true;
         int requested_z_change = 0;
 

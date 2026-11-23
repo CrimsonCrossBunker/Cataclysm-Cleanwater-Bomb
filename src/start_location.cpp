@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <climits>
+#include <cstdlib>
 #include <functional>
 #include <initializer_list>
 #include <optional>
@@ -11,6 +12,7 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_utility.h"
 #include "cata_variant.h"
 #include "character.h"
 #include "city.h"
@@ -25,6 +27,7 @@
 #include "field_type.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "line.h"
 #include "lua_platform_content.h"
 #include "map.h"
 #include "map_extras.h"
@@ -34,6 +37,7 @@
 #include "mapgen_parameter.h"
 #include "mapgendata.h"
 #include "mdarray.h"
+#include "north_america.h"
 #include "omdata.h"
 #include "output.h"
 #include "overmap.h"
@@ -151,6 +155,11 @@ bool start_location::requires_city() const
 {
     return constraints_.city_size.min > 0 ||
            constraints_.city_distance.max < std::max( OMAPX, OMAPY );
+}
+
+bool start_location::requires_campus() const
+{
+    return id == start_location_id( "sloc_university_dorm" );
 }
 
 bool start_location::can_belong_to_city( const tripoint_om_omt &p, const city &cit ) const
@@ -336,6 +345,233 @@ void start_location::prepare_map( tinymap &m ) const
     } else {
         m.translate( ter_t_window_domestic, ter_t_curtains );
     }
+}
+
+std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
+        start_location::find_atlas_start( const point_abs_om &origin, const city *selected_city,
+                bool outskirts ) const
+{
+    const point_abs_omt anchor = selected_city ?
+                                 project_combine( selected_city->pos_om, selected_city->pos ) :
+                                 project_combine( origin, point_om_omt( OMAPX / 2, OMAPY / 2 ) );
+    const int min_z = std::max( -OVERMAP_DEPTH, constraints_.allowed_z_levels.min );
+    const int max_z = std::min( OVERMAP_HEIGHT, constraints_.allowed_z_levels.max );
+    std::unordered_map<oter_id, const omt_types_parameters *> matches;
+    const auto match = [&]( const oter_id & terrain ) -> const omt_types_parameters * {
+        auto [cached, inserted] = matches.try_emplace( terrain, nullptr );
+        if( inserted )
+        {
+            for( const omt_types_parameters &variant : _locations ) {
+                const bool regional_house = variant.omt == "house_w_1" &&
+                terrain->get_type_id().str().rfind( "house_regional_", 0 ) == 0 &&
+                !string_ends_with( terrain->get_type_id().str(), "_roof" );
+                const bool atlas_river = variant.omt == "river" && terrain->is_river() &&
+                !terrain->is_road() && terrain->is_water();
+                if( regional_house || atlas_river || is_ot_match( variant.omt, terrain, variant.omt_type ) ) {
+                    cached->second = &variant;
+                    break;
+                }
+            }
+        }
+        return cached->second;
+    };
+
+    const bool campus_start = requires_campus();
+    static const overmap_special_id campus( "atlas_public_university" );
+    constexpr int radius = 2;
+    const auto nearby = closest_points_first( origin, radius );
+    if( campus_start ) {
+        tripoint_abs_omt best = tripoint_abs_omt::invalid;
+        int best_distance = INT_MAX;
+        const omt_types_parameters *chosen = nullptr;
+        // Search known campus maps before the generic fallback can place a new special.
+        for( const point_abs_om &omp : nearby ) {
+            const overmap *omap = overmap_buffer.get_existing( omp );
+            if( !omap && north_america::active() && !north_america::public_campuses_in( omp ).empty() ) {
+                omap = &overmap_buffer.get( omp );
+            }
+            if( !omap ) {
+                continue;
+            }
+            for( int y = 0; y < OMAPY; ++y ) {
+                for( int x = 0; x < OMAPX; ++x ) {
+                    const tripoint_om_omt p( x, y, 0 );
+                    const auto *variant = match( omap->ter( p ) );
+                    if( !variant || omap->overmap_special_at( p ) != campus ) {
+                        continue;
+                    }
+                    const tripoint_abs_omt abs = project_combine( omp, p );
+                    const int distance = square_dist( anchor.raw(), abs.xy().raw() );
+                    if( distance < best_distance ) {
+                        best_distance = distance;
+                        best = abs;
+                        chosen = variant;
+                    }
+                }
+            }
+        }
+        if( chosen ) {
+            return { best, chosen->parameters };
+        }
+    }
+
+    struct placement {
+        const overmap_special *special;
+        om_direction::type rotation;
+        tripoint_rel_omt target;
+    };
+    std::optional<std::vector<placement>> placements;
+    for( const point_abs_om &omp : nearby ) {
+        overmap &omap = overmap_buffer.get( omp );
+        const auto allowed_site = [&]( const tripoint_om_omt & p ) {
+            return ( campus_start || !outskirts || omap.is_far_from_city( p ) ) &&
+                   ( !requires_city() || std::any_of( omap.cities.begin(), omap.cities.end(),
+            [&]( const city & candidate ) {
+                return can_belong_to_city( p, candidate );
+            } ) );
+        };
+        const auto distance = [&]( const point_om_omt & p ) {
+            return square_dist( anchor.raw(), project_combine( omp, p ).raw() );
+        };
+        int best_distance = INT_MAX;
+        tripoint_om_omt best = tripoint_om_omt::invalid;
+        const omt_types_parameters *target = nullptr;
+        for( int z = min_z; !campus_start && z <= max_z; ++z ) {
+            for( int y = 0; y < OMAPY; ++y ) {
+                for( int x = 0; x < OMAPX; ++x ) {
+                    const tripoint_om_omt p( x, y, z );
+                    if( const auto *variant = match( omap.ter( p ) ) ) {
+                        const int dist = distance( p.xy() );
+                        if( ( dist < best_distance || ( dist == best_distance &&
+                                                        std::abs( z ) < std::abs( best.z() ) ) ) && allowed_site( p ) ) {
+                            best = p;
+                            best_distance = dist;
+                            target = variant;
+                        }
+                    }
+                }
+            }
+        }
+        if( target ) {
+            return { project_combine( omp, best ), target->parameters };
+        }
+
+        if( id == start_location_id( "sloc_desert_island" ) && min_z <= 0 && max_z >= 0 ) {
+            // Atlas islands use ordinary ground terrain. Find an entire small landmass
+            // without altering the coastline or using the clipped edge of a mainland.
+            const point_abs_omt corner = project_to<coords::omt>( omp );
+            auto surface = north_america::raster( corner, OMAPX, OMAPY );
+            const auto index = []( const point & p ) {
+                return p.y * OMAPX + p.x;
+            };
+            std::vector<point> island;
+            for( int y = 0; y < OMAPY; ++y ) {
+                for( int x = 0; x < OMAPX; ++x ) {
+                    const point first( x, y );
+                    if( surface[index( first )] != north_america::terrain::land ) {
+                        continue;
+                    }
+                    island.clear();
+                    island.push_back( first );
+                    surface[index( first )] = north_america::terrain::ocean;
+                    bool crosses_boundary = false;
+                    for( std::size_t i = 0; i < island.size(); ++i ) {
+                        const point tile = island[i];
+                        for( const point &d : four_cardinal_directions ) {
+                            const point adjacent = tile + d;
+                            if( adjacent.x < 0 || adjacent.x >= OMAPX || adjacent.y < 0 || adjacent.y >= OMAPY ) {
+                                crosses_boundary = true;
+                            } else if( surface[index( adjacent )] == north_america::terrain::land ) {
+                                island.push_back( adjacent );
+                                surface[index( adjacent )] = north_america::terrain::ocean;
+                            }
+                        }
+                    }
+                    if( crosses_boundary || island.size() > 256 ) {
+                        continue;
+                    }
+                    for( const point &tile : island ) {
+                        const tripoint_om_omt candidate( tile.x, tile.y, 0 );
+                        const oter_id &terrain = omap.ter( candidate );
+                        const int dist = distance( candidate.xy() );
+                        if( dist < best_distance && allowed_site( candidate ) &&
+                            ( is_ot_match( "field", terrain, ot_match_type::type ) ||
+                              is_ot_match( "forest", terrain, ot_match_type::prefix ) ) ) {
+                            best = candidate;
+                            best_distance = dist;
+                        }
+                    }
+                }
+            }
+            if( !best.is_invalid() ) {
+                return { project_combine( omp, best ), {} };
+            }
+        }
+
+        if( !placements ) {
+            placements.emplace();
+            for( const overmap_special &special : overmap_specials::get_all() ) {
+                if( ( campus_start && special.id != campus ) || special.has_flag( "BLOB" ) ||
+                    special.has_flag( "AUTO_NESTED" ) ) {
+                    continue;
+                }
+                // Mutable layouts can only promise their root; their other rooms are
+                // eligible when found in an already generated layout.
+                const auto tiles = special.get_subtype() == overmap_special_subtype::fixed ?
+                                   special.get_terrains() : special.preview_terrains();
+                for( const overmap_special_terrain &tile : tiles ) {
+                    if( tile.terrain.is_null() || tile.p.z() < min_z || tile.p.z() > max_z ) {
+                        continue;
+                    }
+                    for( const om_direction::type dir : om_direction::all ) {
+                        if( match( tile.terrain->get_rotated( dir ) ) ) {
+                            placements->push_back( { &special, dir, om_direction::rotate( tile.p, dir ) } );
+                        }
+                        if( !special.is_rotatable() ) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if( placements->empty() ) {
+            continue;
+        }
+
+        // Prefer the nearest legal site on this overmap before generating more of the atlas.
+        std::vector<point_om_omt> sites;
+        sites.reserve( OMAPX * OMAPY );
+        for( int y = 2; y < OMAPY - 2; ++y ) {
+            for( int x = 2; x < OMAPX - 2; ++x ) {
+                const tripoint_om_omt p( x, y, 0 );
+                if( !omap.ter( p )->is_road() && !omap.ter( p )->is_highway_reserved() ) {
+                    sites.push_back( p.xy() );
+                }
+            }
+        }
+        std::stable_sort( sites.begin(), sites.end(), [&]( const point_om_omt & a,
+        const point_om_omt & b ) {
+            return distance( a ) < distance( b );
+        } );
+        for( const point_om_omt &site : sites ) {
+            const tripoint_om_omt root( site, 0 );
+            if( !allowed_site( root ) ) {
+                continue;
+            }
+            for( const placement &entry : *placements ) {
+                const tripoint_om_omt p = root + entry.target;
+                if( p.xy() != site && ( !overmap::inbounds( p ) || !allowed_site( p ) ) ) {
+                    continue;
+                }
+                if( !omap.place_atlas_start_special( *entry.special, root, entry.rotation ).empty() ) {
+                    if( const auto *variant = match( omap.ter( p ) ) ) {
+                        return { project_combine( omp, p ), variant->parameters };
+                    }
+                }
+            }
+        }
+    }
+    return { tripoint_abs_omt::invalid, {} };
 }
 
 std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>

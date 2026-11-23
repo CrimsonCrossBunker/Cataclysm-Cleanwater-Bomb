@@ -277,24 +277,21 @@ zzip_stack::file_temp zzip_stack::temp_of_file( std::filesystem::path const &zzi
 const
 {
     // Don't open all the zzips if we don't have to.
-    auto end = path_temp_map_.end();
-    decltype( end ) it;
-    if( !cold_ ) {
-        if( !warm_ ) {
-            hot();
-            if( ( it = path_temp_map_.find( zzip_relative_path ) ) != end ) {
-                return it->second;
-            }
-            warm();
-        }
-        if( ( it = path_temp_map_.find( zzip_relative_path ) ) != end ) {
-            return it->second;
-        }
-        cold();
+    hot();
+    auto entry = path_temp_map_.find( zzip_relative_path );
+    if( entry != path_temp_map_.end() && entry->second == file_temp::hot ) {
+        return entry->second;
     }
-    if( ( it = path_temp_map_.find( zzip_relative_path ) ) != end ) {
-        return it->second;
-    };
+    warm();
+    entry = path_temp_map_.find( zzip_relative_path );
+    if( entry != path_temp_map_.end() && entry->second == file_temp::warm ) {
+        return entry->second;
+    }
+    cold();
+    entry = path_temp_map_.find( zzip_relative_path );
+    if( entry != path_temp_map_.end() ) {
+        return entry->second;
+    }
     return file_temp::unknown;
 }
 

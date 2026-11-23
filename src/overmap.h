@@ -485,6 +485,8 @@ class overmap
                                          std::optional<city> target_city = std::nullopt ) const;
         bool is_far_from_city( const tripoint_om_omt &p ) const;
         tripoint_om_omt place_outskirts_shelter();
+        std::vector<tripoint_om_omt> place_atlas_start_special( const overmap_special &special,
+                const tripoint_om_omt &site, om_direction::type rotation );
         tripoint_om_omt find_random_omt( const std::string &omt_base_type,
                                          ot_match_type match_type = ot_match_type::type,
                                          std::optional<city> target_city = std::nullopt ) const {
@@ -992,6 +994,8 @@ class overmap
          * @param enabled_specials specifies what specials to place, and tracks how many have been placed.
          **/
         void place_specials( overmap_special_batch &enabled_specials );
+        void place_atlas_campuses( const std::vector<north_america::road_cell> &network,
+                                   const std::vector<north_america::terrain> &coast );
         void place_atlas_roads( const std::vector<north_america::road_cell> &network,
                                 const std::vector<north_america::terrain> &coast );
         /**

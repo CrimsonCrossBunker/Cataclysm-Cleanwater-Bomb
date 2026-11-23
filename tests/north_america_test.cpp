@@ -9,6 +9,7 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "city.h"
 #include "coordinates.h"
 #include "game.h"
 #include "item.h"
@@ -17,8 +18,10 @@
 #include "north_america.h"
 #include "north_america_soil.h"
 #include "north_america_transport.h"
+#include "omdata.h"
 #include "options.h"
 #include "options_helpers.h"
+#include "overmap.h"
 #include "point.h"
 #include "regional_climate.h"
 #include "type_id.h"
@@ -164,7 +167,14 @@ TEST_CASE( "atlas_housing_resolves_by_jurisdiction", "[north_america][worldgen]"
     const auto check = []( std::string_view code, const char *expected ) {
         const overmap_special_id home = north_america::regional_house_for( code );
         CHECK( home == overmap_special_id( expected ) );
-        CHECK( home.is_valid() );
+        REQUIRE( home.is_valid() );
+        const auto generated = std::make_unique<overmap>( point_abs_om::zero );
+        const tripoint_om_omt origin( 60, 60, 0 );
+        REQUIRE_FALSE( generated->place_special( *home, origin, om_direction::type::north,
+                       city{}, false, true ).empty() );
+        CHECK( generated->ter( origin )->get_type_id() == oter_type_str_id( expected ) );
+        CHECK( generated->ter( origin + tripoint::above )->get_type_id() ==
+               oter_type_str_id( std::string( expected ) + "_roof" ) );
     };
 
     check( "US-MA", "house_regional_cape_cod" );

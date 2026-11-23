@@ -727,7 +727,7 @@ int Character::get_oxygen_max() const
     if( !north_america::elevation_active() || !get_map().inbounds( pos_bub() ) ) {
         return capacity;
     }
-    const double altitude = north_america::altitude_at( get_map(), pos_bub() );
+    const double altitude = north_america::occupant_altitude( get_map(), pos_bub() );
     return std::max( 1, static_cast<int>( std::lround( capacity *
                                           std::min( 1.2, north_america::pressure_ratio_at_height( altitude ) ) ) ) );
 }
@@ -5470,14 +5470,15 @@ void Character::recalculate_enchantment_cache( bool update_body )
 {
     enchantment_cache->clear();
     std::optional<const_dialogue> context;
-    const auto add_enchantment = [this, &context]( const enchantment &ench ) {
+    const auto add_enchantment = [this, &context]( const enchantment & ench ) {
         if( !context ) {
             context.emplace( get_const_talker_for( *this ), nullptr );
         }
         enchantment_cache->force_add_with_dialogue( ench, *context );
     };
 
-    cache_visit_items_with( "is_relic", &item::is_relic, [this, &add_enchantment]( const item_location & it ) {
+    cache_visit_items_with( "is_relic", &item::is_relic, [this,
+    &add_enchantment]( const item_location & it ) {
         if( !has_item( *it ) ) {
             return;
         }

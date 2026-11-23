@@ -3389,6 +3389,10 @@ void options_manager::add_options_graphics()
         add( "RENDERER", page_id, to_translation( "Renderer" ),
              to_translation( "Set which renderer to use.  Requires restart." ), renderer_list,
              default_renderer, renderer_hide );
+
+        add( "GPU_BACKEND", page_id, to_translation( "GPU backend" ),
+             to_translation( "Sets which graphics API the GPU renderer uses.  Try another one if the game crashes or draws wrongly.  An SDL_GPU_DRIVER environment variable overrides this.  Requires restart." ),
+             cata_tiles::build_gpu_backend_list(), "auto", COPT_CURSES_HIDE );
 #   endif
 
 #else
@@ -3531,8 +3535,8 @@ void options_manager::add_options_world_default()
        );
 
     add( "WORLD_MAP_GENERATION", "world_default", to_translation( "Map generation" ),
-         to_translation( "Choose the default surface map for a new world. North America uses real geography. "
-                         "Classic random generates terrain and settlements procedurally. "
+         to_translation( "Choose the default surface map for a new world.  North America uses real geography.  "
+                         "Classic random generates terrain and settlements procedurally.  "
     "Custom regions and pregenerated maps supplied by mods take precedence." ), {
         { "north_america", to_translation( "North America" ) },
         { "classic_random", to_translation( "Classic random" ) }
@@ -4337,9 +4341,10 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         ingame = false;
     }
 
-    const auto show_option = [ingame]( const std::string & name ) {
-        // The map mode is fixed once the world starts generating terrain.
-        return !( ingame && name == "WORLD_MAP_GENERATION" ) &&
+    const auto show_option = [ingame, world_options_only, with_tabs]( const std::string & name ) {
+        // The basic creation screen has its own selector; an existing world cannot change modes.
+        return !( name == "WORLD_MAP_GENERATION" &&
+                  ( ingame || ( world_options_only && !with_tabs ) ) ) &&
                !get_options().get_option( name ).is_hidden();
     };
 

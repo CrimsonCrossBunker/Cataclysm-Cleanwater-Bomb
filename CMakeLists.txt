@@ -519,6 +519,15 @@ if (CCACHE_FOUND AND CATA_CCACHE)
     endif ()
 endif ()
 
+if (MSVC AND CMAKE_GENERATOR MATCHES "Ninja")
+    include(MSVCDependencies)
+    ccb_msvc_dependencies()
+endif ()
+
+if (MSVC)
+    add_link_options(/OPT:NOICF)
+endif ()
+
 add_subdirectory(src)
 add_subdirectory(data)
 if (NOT MSVC)

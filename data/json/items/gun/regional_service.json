@@ -1,0 +1,69 @@
+[
+  {
+    "id": "c7a2",
+    "copy-from": "bren2_556",
+    "looks_like": "bren2_556",
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "name": { "str": "C7A2 service rifle" },
+    "description": "A Canadian issue rifle in a green and black finish.",
+    "variants": [  ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "750" ] ],
+    "default_mods": [ "adjustable_stock" ],
+    "extend": { "valid_mod_locations": [ [ "stock", 1 ] ] }
+  },
+  {
+    "id": "c8a3",
+    "copy-from": "bren2_556",
+    "looks_like": "bren2_556",
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "name": { "str": "C8A3 carbine" },
+    "description": "A compact Canadian service carbine with a collapsible stock.",
+    "variants": [  ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "750" ] ],
+    "default_mods": [ "adjustable_stock" ],
+    "extend": { "valid_mod_locations": [ [ "stock", 1 ] ] }
+  },
+  {
+    "id": "c9a2",
+    "copy-from": "m249",
+    "looks_like": "m249",
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "name": { "str": "C9A2 light machine gun" },
+    "description": "A Canadian service light machine gun with green furniture."
+  },
+  {
+    "id": "c6a1",
+    "copy-from": "m240",
+    "looks_like": "m240",
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "name": { "str": "C6A1 general-purpose machine gun" },
+    "description": "A Canadian issue general-purpose machine gun."
+  },
+  {
+    "id": "fx05",
+    "copy-from": "bren2_556",
+    "looks_like": "bren2_556",
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "name": { "str": "FX-05 Xiuhcoatl rifle" },
+    "description": "A Mexican army rifle with a distinctive angular receiver.",
+    "variants": [  ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "750" ] ],
+    "default_mods": [ "folding_stock" ]
+  },
+  {
+    "id": "fx05_patrol",
+    "copy-from": "bren2_556",
+    "looks_like": "bren2_556",
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "name": { "str": "FX-05 patrol carbine" },
+    "description": "A semiautomatic patrol carbine from the Mexican FX-05 family.",
+    "variants": [  ],
+    "default_mods": [ "folding_stock" ]
+  }
+]

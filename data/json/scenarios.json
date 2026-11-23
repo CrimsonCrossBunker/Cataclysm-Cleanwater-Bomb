@@ -1478,5 +1478,16 @@
     "requirement": "achievement_survive_one_day",
     "flags": [ "CITY_START", "LONE_START", "SUR_START" ],
     "surround_groups": [ [ "GROUP_BLACK_ROAD", 70.0 ] ]
+  },
+  {
+    "type": "scenario",
+    "id": "university_student",
+    "name": "University Student",
+    "points": 0,
+    "description": "You stayed in the residence hall after classes were canceled.  The campus is quiet now, and you have your room, your books and whatever you can carry.",
+    "allowed_locs": [ "sloc_university_dorm" ],
+    "professions": [ "university_student" ],
+    "start_name": "University Residence",
+    "flags": [ "CITY_START", "LONE_START" ]
   }
 ]

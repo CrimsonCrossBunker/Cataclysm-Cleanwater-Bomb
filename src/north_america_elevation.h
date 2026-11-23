@@ -8,6 +8,7 @@
 #include "point.h"
 
 class map;
+class mapgendata;
 
 namespace regional_climate
 {
@@ -35,10 +36,16 @@ int minimum_overmap_z( point_abs_omt location );
 int maximum_overmap_z( point_abs_omt location );
 std::optional<tripoint_abs_omt> overmap_at_altitude( point_abs_omt location, double metres );
 double altitude_at( const map &here, const tripoint_bub_ms &position );
+double occupant_altitude( const map &here, const tripoint_bub_ms &position );
 bool within_altitude_limits( double metres );
+void grade_generated_surface( mapgendata &dat );
+void extend_foundation( map &here, const tripoint_bub_ms &p, double previous_altitude );
 
 // Grade is rise divided by horizontal distance. Positive grades are uphill.
+inline constexpr double walking_grade_limit = 1.0;
+inline constexpr double rope_grade_limit = 4.0;
 double grade_move_multiplier( double grade );
+bool sheer_slope( const map &here, const tripoint_bub_ms &from, const tripoint_bub_ms &to );
 double grade_between( const map &here, const tripoint_bub_ms &from,
                       const tripoint_bub_ms &to );
 point surface_slope( const map &here, const tripoint_bub_ms &position );

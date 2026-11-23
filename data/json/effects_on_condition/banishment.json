@@ -1,0 +1,25 @@
+[
+  {
+    "type": "SPELL",
+    "id": "SPELL_BANISH_SELF",
+    "name": { "str": "SPELL_BANISH_SELF", "//~": "NO_I18N" },
+    "description": { "str": "SPELL_BANISH_SELF", "//~": "NO_I18N" },
+    "valid_targets": [ "ground", "self" ],
+    "base_casting_time": 0,
+    "min_damage": 9999,
+    "max_damage": 9999,
+    "shape": "blast",
+    "effect": "banishment"
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_BANISH_SELF",
+    "effect": [ { "u_cast_spell": { "id": "SPELL_BANISH_SELF" } } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_BANISH_TARGET_MONSTER",
+    "eoc_type": "ACTIVATION",
+    "effect": [ { "npc_cast_spell": { "id": "SPELL_BANISH_SELF" } } ]
+  }
+]

@@ -453,6 +453,9 @@ void vpslot_engine::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "noise_factor", noise_factor, 0 );
     optional( jo, was_loaded, "damaged_power_factor", damaged_power_factor, 0.f );
     optional( jo, was_loaded, "m2c", m2c, 100 );
+    optional( jo, was_loaded, "displacement_ml", displacement_ml, 0 );
+    optional( jo, was_loaded, "rated_rpm", rated_rpm, 0 );
+    optional( jo, was_loaded, "fuel_model_turbine", turbine, false );
     optional( jo, was_loaded, "muscle_power_factor", muscle_power_factor, 0 );
     optional( jo, was_loaded, "exclusions", exclusions, string_reader{} );
     optional( jo, was_loaded, "fuel_options", fuel_opts, string_id_reader<itype> {} );
