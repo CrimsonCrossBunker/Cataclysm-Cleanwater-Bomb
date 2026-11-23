@@ -48,11 +48,11 @@ struct creature_render_view {
 };
 
 // Owner-only disposition query; returns an owned icon id, empty for the avatar.
-std::string capture_creature_disposition( const map &here, Character &observer,
+std::string capture_creature_disposition( const map &here, Character &you,
         const Creature &actor );
 
 // Owner-only capture entry. The returned view can outlive every input actor.
 std::optional<creature_render_view> capture_creature_render_view( const map &here,
-        Character &observer, const Creature *critter, const tripoint_bub_ms &pos, bool invisible );
+        Character &you, const Creature *critter, const tripoint_bub_ms &p, bool invisible );
 
 #endif // CATA_SRC_CREATURE_RENDER_VIEW_H

@@ -7,29 +7,32 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <ratio>
+#include <set>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
-#include "activity_type.h"
 #include "cached_options.h" // IWYU pragma: keep
 #include "calendar.h"
 #include "character.h"
 #include "coordinates.h"
+#include "creature.h"
 #include "creature_tracker.h"
 #include "current_map.h"
 #include "debug.h"
 #include "effect.h"
 #include "enums.h"
 #include "game.h"
-#include "game_constants.h"
+#include "item.h"
 #include "itype.h" // IWYU pragma: keep
 #include "line.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "map_scale_constants.h"
 #include "map_simulation_regions.h"
+#include "mapdata.h"
 #include "messages.h"
 #include "monster.h"
 #include "mp_client_conn.h"
@@ -38,17 +41,20 @@
 #include "north_america_soil.h"
 #include "npc.h"
 #include "output.h"
+#include "overmap_ui.h"
 #include "overmapbuffer.h"
 #include "player_activity.h"
 #include "point.h"
 #include "rng.h"
 #include "safemode_ui.h"
 #include "string_formatter.h"
+#include "translation.h"
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
 #include "uistate.h"
 #include "units.h"
+#include "value_ptr.h"
 #include "veh_type.h" // IWYU pragma: keep
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -485,7 +491,7 @@ static void deliver_sound( const centroid &cluster, const tripoint_abs_ms &sourc
         overmap_buffer.signal_hordes( project_to<coords::sm>( source ), signal );
     }
     const tripoint_bub_ms primary_source = primary.get_bub( source );
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     for( monster &critter : g->all_monsters() ) {
         const int dist = sound_distance( primary_source, critter.pos_bub( primary ) );
         if( vol * 2 <= dist ) {
@@ -529,7 +535,7 @@ void sounds::process_sounds()
         return;
     }
     map &primary = get_map();
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     const auto views = session.active_maps( primary );
     std::optional<map_simulation_regions> regions;
     if( session.has_regions() ) {
@@ -1553,7 +1559,7 @@ void sfx::do_player_death_hurt( const Character &target, bool death )
     const bool indoors = !is_creature_outside( get_player_character() );
     const bool night = is_night( calendar::turn );
     int heard_volume = get_heard_volume( target.pos_bub() );
-    const bool male = target.male;
+    const bool male = target.get_gender();
     if( !male && !death ) {
         play_variant_sound( "deal_damage", "hurt_f", seas_str, indoors, night, heard_volume );
     } else if( male && !death ) {
@@ -1647,20 +1653,20 @@ void sfx::do_low_stamina_sfx()
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .74 &&
                player_character.get_stamina() >= player_character.get_stamina_max() * .5 &&
-               player_character.male && !is_channel_playing( channel::stamina_75 ) ) {
+               player_character.get_gender() && !is_channel_playing( channel::stamina_75 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_m_low", seas_str, indoors,
                                     night, 100, channel::stamina_75, 1000 );
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .49 &&
                player_character.get_stamina() >= player_character.get_stamina_max() * .25 &&
-               player_character.male && !is_channel_playing( channel::stamina_50 ) ) {
+               player_character.get_gender() && !is_channel_playing( channel::stamina_50 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_m_med", seas_str, indoors,
                                     night, 100, channel::stamina_50, 1000 );
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .24 &&
-               player_character.get_stamina() >= 0 && player_character.male &&
+               player_character.get_stamina() >= 0 && player_character.get_gender() &&
                !is_channel_playing( channel::stamina_35 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_m_high", seas_str, indoors,
@@ -1668,20 +1674,20 @@ void sfx::do_low_stamina_sfx()
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .74 &&
                player_character.get_stamina() >= player_character.get_stamina_max() * .5 &&
-               !player_character.male && !is_channel_playing( channel::stamina_75 ) ) {
+               !player_character.get_gender() && !is_channel_playing( channel::stamina_75 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_f_low", seas_str, indoors,
                                     night, 100, channel::stamina_75, 1000 );
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .49 &&
                player_character.get_stamina() >= player_character.get_stamina_max() * .25 &&
-               !player_character.male && !is_channel_playing( channel::stamina_50 ) ) {
+               !player_character.get_gender() && !is_channel_playing( channel::stamina_50 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_f_med", seas_str, indoors,
                                     night, 100, channel::stamina_50, 1000 );
         return;
     } else if( player_character.get_stamina() <= player_character.get_stamina_max() * .24 &&
-               player_character.get_stamina() >= 0 && !player_character.male &&
+               player_character.get_stamina() >= 0 && !player_character.get_gender() &&
                !is_channel_playing( channel::stamina_35 ) ) {
         fade_audio_group( group::low_stamina, 1000 );
         play_ambient_variant_sound( "plmove", "fatigue_f_high", seas_str, indoors,

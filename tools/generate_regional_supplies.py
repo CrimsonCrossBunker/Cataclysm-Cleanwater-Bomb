@@ -47,7 +47,11 @@ def store_groups(policy, existing):
             ],
         }
         for stem, dishes in policy["regional_dishes"].items():
-            local_dishes = [item(dish, 12) for dish, codes in dishes.items() if code in codes]
+            local_dishes = [
+                item(dish, 12)
+                for dish, codes in dishes.items()
+                if code in codes
+            ]
             if local_dishes:
                 regional_additions.setdefault(stem, []).extend(local_dishes)
         for stem, additions in regional_additions.items():
@@ -230,7 +234,9 @@ def service_apparel_groups(policy, existing, items):
             if isinstance(value, list):
                 return [replace_items(entry) for entry in value]
             if isinstance(value, dict):
-                result = {key: replace_items(entry) for key, entry in value.items()}
+                result = {
+                    key: replace_items(entry) for key, entry in value.items()
+                }
                 original = result.get("item")
                 if original in replacements:
                     result["item"] = prefix + replacements[original]
@@ -246,7 +252,8 @@ def service_apparel_groups(policy, existing, items):
                 replacements["ballistic_vest_esapi"] = "tactical_carrier"
             elif stem == "cop_armor":
                 replacements["level_3_vest"] = "patrol_vest"
-            if not all(prefix + replacement in items for replacement in replacements.values()):
+            if not all(prefix + replacement in items
+                       for replacement in replacements.values()):
                 raise ValueError(f"Missing {country} service apparel item")
             original = {key: value for key, value in existing[stem].items()
                         if not key.startswith("//")}
