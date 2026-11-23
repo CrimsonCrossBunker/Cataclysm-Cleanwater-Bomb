@@ -15,13 +15,14 @@
 #include "localized_comparator.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "mapdata.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "requirements.h"
 #include "string_formatter.h"
-#include "temp_crafting_inventory.h"
 #include "type_id.h"
 #include "units.h"
+#include "veh_type.h"
 #include "vehicle.h"
 
 static const bionic_id test_bio_reserve_two_pseudo( "test_bio_reserve_two_pseudo" );
