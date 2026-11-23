@@ -157,6 +157,11 @@ bool start_location::requires_city() const
            constraints_.city_distance.max < std::max( OMAPX, OMAPY );
 }
 
+bool start_location::requires_campus() const
+{
+    return id == start_location_id( "sloc_university_dorm" );
+}
+
 bool start_location::can_belong_to_city( const tripoint_om_omt &p, const city &cit ) const
 {
     if( !requires_city() ) {
@@ -371,17 +376,55 @@ std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
         return cached->second;
     };
 
+    const bool campus_start = requires_campus();
+    static const overmap_special_id campus( "atlas_public_university" );
+    constexpr int radius = 2;
+    const auto nearby = closest_points_first( origin, radius );
+    if( campus_start ) {
+        tripoint_abs_omt best = tripoint_abs_omt::invalid;
+        int best_distance = INT_MAX;
+        const omt_types_parameters *chosen = nullptr;
+        // Search known campus maps before the generic fallback can place a new special.
+        for( const point_abs_om &omp : nearby ) {
+            const overmap *omap = overmap_buffer.get_existing( omp );
+            if( !omap && north_america::active() && !north_america::public_campuses_in( omp ).empty() ) {
+                omap = &overmap_buffer.get( omp );
+            }
+            if( !omap ) {
+                continue;
+            }
+            for( int y = 0; y < OMAPY; ++y ) {
+                for( int x = 0; x < OMAPX; ++x ) {
+                    const tripoint_om_omt p( x, y, 0 );
+                    const auto *variant = match( omap->ter( p ) );
+                    if( !variant || omap->overmap_special_at( p ) != campus ) {
+                        continue;
+                    }
+                    const tripoint_abs_omt abs = project_combine( omp, p );
+                    const int distance = square_dist( anchor.raw(), abs.xy().raw() );
+                    if( distance < best_distance ) {
+                        best_distance = distance;
+                        best = abs;
+                        chosen = variant;
+                    }
+                }
+            }
+        }
+        if( chosen ) {
+            return { best, chosen->parameters };
+        }
+    }
+
     struct placement {
         const overmap_special *special;
         om_direction::type rotation;
         tripoint_rel_omt target;
     };
     std::optional<std::vector<placement>> placements;
-    constexpr int radius = 2;
-    for( const point_abs_om &omp : closest_points_first( origin, radius ) ) {
+    for( const point_abs_om &omp : nearby ) {
         overmap &omap = overmap_buffer.get( omp );
         const auto allowed_site = [&]( const tripoint_om_omt & p ) {
-            return ( !outskirts || omap.is_far_from_city( p ) ) &&
+            return ( campus_start || !outskirts || omap.is_far_from_city( p ) ) &&
                    ( !requires_city() || std::any_of( omap.cities.begin(), omap.cities.end(),
             [&]( const city & candidate ) {
                 return can_belong_to_city( p, candidate );
@@ -393,7 +436,7 @@ std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
         int best_distance = INT_MAX;
         tripoint_om_omt best = tripoint_om_omt::invalid;
         const omt_types_parameters *target = nullptr;
-        for( int z = min_z; z <= max_z; ++z ) {
+        for( int z = min_z; !campus_start && z <= max_z; ++z ) {
             for( int y = 0; y < OMAPY; ++y ) {
                 for( int x = 0; x < OMAPX; ++x ) {
                     const tripoint_om_omt p( x, y, z );
@@ -468,7 +511,8 @@ std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
         if( !placements ) {
             placements.emplace();
             for( const overmap_special &special : overmap_specials::get_all() ) {
-                if( special.has_flag( "BLOB" ) || special.has_flag( "AUTO_NESTED" ) ) {
+                if( ( campus_start && special.id != campus ) || special.has_flag( "BLOB" ) ||
+                    special.has_flag( "AUTO_NESTED" ) ) {
                     continue;
                 }
                 // Mutable layouts can only promise their root; their other rooms are

@@ -3493,6 +3493,11 @@ void veh_interact::display_stats( map &here ) const
 
     // advance to next column if necessary
     i = std::max( i, stats_h );
+    if( const auto economy = veh->combined_liquid_fuel_consumption( here ) ) {
+        trim_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
+                        string_format( _( "Fuel: %.1f L/100 km" ), *economy ) );
+        ++i;
+    }
 
     //This lambda handles printing parts in the "Most damaged" and "Needs repair" cases
     //for the veh_interact ui

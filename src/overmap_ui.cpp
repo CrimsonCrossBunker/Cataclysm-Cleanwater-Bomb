@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <functional>
 #include <map>
@@ -14,6 +15,7 @@
 #include <ratio>
 #include <set>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -2016,7 +2018,158 @@ static std::vector<tripoint_abs_omt> get_overmap_path_to( const tripoint_abs_omt
     }
 }
 
-static void show_north_america_chart( point_abs_omt center, bool reveal_all )
+namespace
+{
+struct atlas_projected_point {
+    double east;
+    double north;
+};
+
+class atlas_utm
+{
+    public:
+        explicit atlas_utm( int zone ) : meridian( 6.0 * zone - 183.0 ) {}
+
+        std::optional<atlas_projected_point> project( regional_climate::coordinates geo ) const {
+            const double delta = std::remainder( geo.longitude - meridian, 360.0 );
+            if( geo.latitude < 0 || geo.latitude > 84 || std::abs( delta ) > 95 ) {
+                return std::nullopt;
+            }
+            const double phi = geo.latitude * radians;
+            const double lambda = delta * radians;
+            const double tau = std::sinh( std::asinh( std::tan( phi ) ) -
+                                          eccentricity * std::atanh( eccentricity * std::sin( phi ) ) );
+            const double xi = std::atan2( tau, std::cos( lambda ) );
+            const double eta = std::asinh( std::sin( lambda ) / std::hypot( tau, std::cos( lambda ) ) );
+            if( std::abs( eta ) > 1.65 ) {
+                return std::nullopt;
+            }
+            const atlas_projected_point correction = series( alpha, xi, eta );
+            return atlas_projected_point{ false_easting + scale * correction.east, scale * correction.north };
+        }
+
+        std::optional<regional_climate::coordinates> unproject( atlas_projected_point p ) const {
+            const double xi = p.north / scale;
+            const double eta = ( p.east - false_easting ) / scale;
+            if( xi < 0 || xi > 1.65 || std::abs( eta ) > 1.65 ) {
+                return std::nullopt;
+            }
+            const atlas_projected_point sphere = series( beta, xi, eta );
+            const double cos_xi = std::cos( sphere.north );
+            const double sinh_eta = std::sinh( sphere.east );
+            const double lambda = std::atan2( sinh_eta, cos_xi ) / radians;
+            const double psi = std::asinh( std::sin( sphere.north ) / std::hypot( sinh_eta, cos_xi ) );
+            double phi = std::atan( std::sinh( psi ) );
+            for( int i = 0; i < 5; ++i ) {
+                phi = std::atan( std::sinh( psi + eccentricity *
+                                          std::atanh( eccentricity * std::sin( phi ) ) ) );
+            }
+            const double lat = phi / radians;
+            if( lat < 0 || lat > 84 || std::abs( lambda ) > 95 ) {
+                return std::nullopt;
+            }
+            return regional_climate::coordinates{ lat, std::remainder( meridian + lambda, 360.0 ) };
+        }
+
+        static int zone_at( regional_climate::coordinates geo ) {
+            return std::clamp( 1 + static_cast<int>( std::floor( ( geo.longitude + 180 ) / 6 ) ), 1, 60 );
+        }
+
+    private:
+        // Fourth-order Kruger series on WGS84. Use one central meridian for the entire viewport.
+        static constexpr double radians = 0.017453292519943295;
+        static constexpr double flattening = 1.0 / 298.257223563;
+        static constexpr double eccentricity = 0.0818191908426215;
+        static constexpr double n = flattening / ( 2 - flattening );
+        static constexpr double n2 = n * n;
+        static constexpr double n3 = n2 * n;
+        static constexpr double n4 = n2 * n2;
+        static constexpr double false_easting = 500000;
+        static constexpr double scale = 0.9996 * 6378137 / ( 1 + n ) * ( 1 + n2 / 4 + n4 / 64 );
+        static constexpr std::array<double, 4> alpha = {
+            n / 2 - 2 * n2 / 3 + 5 * n3 / 16 + 41 * n4 / 180,
+            13 * n2 / 48 - 3 * n3 / 5 + 557 * n4 / 1440,
+            61 * n3 / 240 - 103 * n4 / 140, 49561 * n4 / 161280
+        };
+        static constexpr std::array<double, 4> beta = {
+            -( n / 2 - 2 * n2 / 3 + 37 * n3 / 96 - n4 / 360 ),
+            -( n2 / 48 + n3 / 15 - 437 * n4 / 1440 ),
+            -( 17 * n3 / 480 - 37 * n4 / 840 ), -4397 * n4 / 161280
+        };
+        double meridian;
+
+        static atlas_projected_point series( const std::array<double, 4> &coeffs, double xi,
+                                            double eta ) {
+            atlas_projected_point result{ eta, xi };
+            for( std::size_t i = 0; i < coeffs.size(); ++i ) {
+                const double harmonic = 2.0 * ( i + 1 );
+                result.north += coeffs[i] * std::sin( harmonic * xi ) * std::cosh( harmonic * eta );
+                result.east += coeffs[i] * std::cos( harmonic * xi ) * std::sinh( harmonic * eta );
+            }
+            return result;
+        }
+};
+
+struct atlas_chart_cell {
+    std::optional<point_abs_ms> position;
+    regional_climate::coordinates geo{};
+    bool known = false;
+    north_america::terrain surface = north_america::terrain::ocean;
+    unsigned lanes = 0;
+    std::optional<double> metres;
+    char glyph = ' ';
+    nc_color color = c_dark_gray;
+};
+
+static double atlas_cell_aspect()
+{
+#if defined(TILES)
+    return static_cast<double>( std::max( 1, fontheight ) ) / std::max( 1, fontwidth );
+#else
+    return 2.0;
+#endif
+}
+
+static void color_atlas_cell( atlas_chart_cell &cell, bool elevation )
+{
+    using north_america::terrain;
+    if( cell.surface != terrain::ocean ) {
+        cell.glyph = '.';
+    }
+    if( !cell.known ) {
+        return;
+    }
+    cell.color = c_green;
+    if( cell.surface == terrain::lake || cell.surface == terrain::river ) {
+        cell.glyph = '~';
+        cell.color = c_light_blue;
+    }
+    if( elevation && cell.metres ) {
+        const double metres = *cell.metres;
+        if( metres < 0 ) {
+            cell.glyph = ':';
+            cell.color = c_cyan;
+        } else if( metres < 250 ) {
+            cell.glyph = '.';
+            cell.color = c_light_green;
+        } else if( metres < 1000 ) {
+            cell.glyph = ';';
+            cell.color = c_yellow;
+        } else if( metres < 2500 ) {
+            cell.glyph = '^';
+            cell.color = c_brown;
+        } else {
+            cell.glyph = 'A';
+            cell.color = c_white;
+        }
+    } else if( cell.lanes > 0 ) {
+        cell.glyph = cell.lanes >= 4 ? '=' : '-';
+        cell.color = cell.lanes >= 4 ? c_yellow : c_light_gray;
+    }
+}
+} // namespace
+
+static void show_north_america_chart( point_abs_omt initial_center, bool reveal_all )
 {
     input_context controls( "OVERMAP" );
     controls.register_directions();
@@ -2027,15 +2180,38 @@ static void show_north_america_chart( point_abs_omt center, bool reveal_all )
     controls.register_action( "QUIT" );
     controls.register_action( "HELP_KEYBINDINGS" );
 
-    const point_abs_omt start = center;
+    constexpr int omt_metres = coords::map_squares_per( coords::scale::overmap_terrain );
+    const auto start = north_america::location( project_to<coords::ms>( initial_center ) );
+    regional_climate::coordinates center = start;
     int stride = 512;
+    bool elevation = false;
+    bool refresh = true;
+    double cell_width = 0;
+    double cell_height = 0;
+    int zone = atlas_utm::zone_at( center );
     catacurses::window chart;
     ui_adaptor ui;
     ui.on_screen_resize( [&]( ui_adaptor & adaptor ) {
         chart = catacurses::newwin( TERMY, TERMX, point::zero );
         adaptor.position_from_window( chart );
+        refresh = true;
     } );
     ui.mark_resize();
+
+    std::vector<atlas_chart_cell> cells;
+    std::string location;
+    std::unordered_map<std::string_view, bool> discovered;
+    const auto known = [&]( std::string_view jurisdiction ) {
+        if( reveal_all || jurisdiction.empty() ) {
+            return reveal_all;
+        }
+        auto [entry, inserted] = discovered.try_emplace( jurisdiction );
+        if( inserted ) {
+            entry->second = static_cast<bool>( get_avatar().maybe_get_value(
+                                                north_america::chart_discovery_key( jurisdiction ) ) );
+        }
+        return entry->second;
+    };
 
     ui.on_redraw( [&]( const ui_adaptor & ) {
         werase( chart );
@@ -2046,64 +2222,145 @@ static void show_north_america_chart( point_abs_omt center, bool reveal_all )
             return;
         }
         const point cursor( width / 2, height / 2 );
-        const point_abs_omt origin = center - cursor * stride;
-        const auto water = north_america::raster( origin, width, height, stride, true );
-        const auto roads = north_america::chart_roads( origin, width, height, stride );
-        const auto known = [&]( std::string_view jurisdiction ) {
-            return reveal_all || ( !jurisdiction.empty() &&
-                                   get_avatar().maybe_get_value( north_america::chart_discovery_key( jurisdiction ) ) );
-        };
-
-        mvwprintz( chart, point::zero, c_white, _( "North America atlas" ) );
-        for( int y = 0; y < height; ++y ) {
-            for( int x = 0; x < width; ++x ) {
-                const std::size_t index = y * width + x;
-                const point_abs_omt position = origin + point( x, y ) * stride;
-                const auto type = water[index];
-                const bool detail = known( north_america::jurisdiction_at( project_to<coords::ms>( position ) ) );
-                char glyph = ' ';
-                nc_color color = c_dark_gray;
-                if( type != north_america::terrain::ocean ) {
-                    glyph = '.';
-                }
-                if( detail ) {
-                    color = c_green;
-                    if( type == north_america::terrain::lake || type == north_america::terrain::river ) {
-                        glyph = '~';
-                        color = c_light_blue;
+        if( refresh ) {
+            refresh = false;
+            cells.assign( width * height, atlas_chart_cell{} );
+            cell_width = static_cast<double>( stride ) * omt_metres;
+            cell_height = cell_width * atlas_cell_aspect();
+            zone = stride >= 1024 && atlas_utm( 14 ).project( center ) ? 14 : atlas_utm::zone_at( center );
+            const atlas_utm projection( zone );
+            const auto midpoint = projection.project( center );
+            const point_abs_ms center_pos = north_america::position_at( center );
+            const std::string_view code = north_america::jurisdiction_at( center_pos );
+            const bool center_known = known( code );
+            location = center_known ? std::string( code ) : _( "Read a regional road map to reveal details." );
+            if( midpoint ) {
+                point min_omt = project_to<coords::omt>( center_pos ).raw();
+                point max_omt = min_omt;
+                for( int y = 0; y < height; ++y ) {
+                    for( int x = 0; x < width; ++x ) {
+                        const auto geo = projection.unproject( {
+                            midpoint->east + ( x - cursor.x ) * cell_width,
+                            midpoint->north - ( y - cursor.y ) * cell_height
+                        } );
+                        if( !geo ) {
+                            continue;
+                        }
+                        const point_abs_ms pos = north_america::position_at( *geo );
+                        const point omt = project_to<coords::omt>( pos ).raw();
+                        atlas_chart_cell &cell = cells[y * width + x];
+                        cell.position = pos;
+                        cell.geo = *geo;
+                        cell.known = known( north_america::jurisdiction_at( pos ) );
+                        min_omt.x = std::min( min_omt.x, omt.x );
+                        min_omt.y = std::min( min_omt.y, omt.y );
+                        max_omt.x = std::max( max_omt.x, omt.x );
+                        max_omt.y = std::max( max_omt.y, omt.y );
                     }
-                    if( roads[index] ) {
-                        glyph = roads[index] >= 4 ? '=' : '-';
-                        color = roads[index] >= 4 ? c_yellow : c_light_gray;
+                }
+                const point extent = max_omt - min_omt;
+                const int source_stride = std::max( { 1, stride / 2, std::max( extent.x, extent.y ) / 512 + 1 } );
+                const point_abs_omt origin( min_omt );
+                const point rounding( source_stride / 2, source_stride / 2 );
+                const int source_width = extent.x / source_stride + 3;
+                const int source_height = extent.y / source_stride + 3;
+                const auto water = north_america::raster( origin, source_width, source_height, source_stride, true );
+                const auto roads = elevation ? std::vector<unsigned>() :
+                                   north_america::chart_roads( origin, source_width, source_height, source_stride );
+                const auto screen_at = [&]( regional_climate::coordinates geo ) -> std::optional<point> {
+                    const auto p = projection.project( geo );
+                    if( !p ) {
+                        return std::nullopt;
+                    }
+                    const point screen(
+                        cursor.x + static_cast<int>( std::lround( ( p->east - midpoint->east ) / cell_width ) ),
+                        cursor.y - static_cast<int>( std::lround( ( p->north - midpoint->north ) / cell_height ) ) );
+                    return screen.x >= 0 && screen.x < width && screen.y >= 0 && screen.y < height ?
+                           std::optional<point>( screen ) : std::nullopt;
+                };
+                for( atlas_chart_cell &cell : cells ) {
+                    if( !cell.position ) {
+                        continue;
+                    }
+                    const point source = ( ( project_to<coords::omt>( *cell.position ) - origin ).raw() +
+                                           rounding ) / source_stride;
+                    const int index = source.y * source_width + source.x;
+                    cell.surface = water[index];
+                    if( elevation && cell.known && cell.surface == north_america::terrain::land ) {
+                        cell.metres = north_america::dem_elevation( cell.geo );
                     }
                 }
-                mvwputch( chart, point( x, y + 1 ), color, glyph );
+                // Project thin lines forward as well, so pixel resampling does not break them up.
+                if( !elevation ) {
+                    for( int y = 0; y < source_height; ++y ) {
+                        for( int x = 0; x < source_width; ++x ) {
+                            const int index = y * source_width + x;
+                            if( !roads[index] && water[index] != north_america::terrain::river ) {
+                                continue;
+                            }
+                            const point_abs_omt pos = origin + point( x, y ) * source_stride;
+                            const point_abs_ms sample = project_to<coords::ms>( pos ) +
+                                                        point( omt_metres / 2, omt_metres / 2 );
+                            const auto target = screen_at( north_america::location( sample ) );
+                            if( target ) {
+                                atlas_chart_cell &cell = cells[target->y * width + target->x];
+                                if( !cell.known ) {
+                                    continue;
+                                }
+                                cell.lanes = std::max( cell.lanes, roads[index] );
+                                if( water[index] == north_america::terrain::river ) {
+                                    cell.surface = north_america::terrain::river;
+                                }
+                            }
+                        }
+                    }
+                }
+                for( atlas_chart_cell &cell : cells ) {
+                    color_atlas_cell( cell, elevation );
+                }
+                if( !elevation ) {
+                    int center_population = -1;
+                    for( const north_america::place &city : north_america::cities() ) {
+                        if( stride >= 512 && city.population < 500000 ) {
+                            continue;
+                        }
+                        const point_abs_ms pos = project_to<coords::ms>( city.position );
+                        const auto p = screen_at( north_america::location( pos ) );
+                        if( p && known( north_america::jurisdiction_at( pos ) ) ) {
+                            atlas_chart_cell &cell = cells[p->y * width + p->x];
+                            if( !cell.known ) {
+                                continue;
+                            }
+                            cell.glyph = 'o';
+                            cell.color = c_white;
+                            if( *p == cursor && center_known && city.population > center_population ) {
+                                location = city.name;
+                                center_population = city.population;
+                            }
+                        }
+                    }
+                } else if( const auto metres = cells[cursor.y * width + cursor.x].metres ) {
+                    location = string_format( _( "%s  %.0f m" ), location, *metres );
+                }
             }
         }
-        std::string city_name;
-        for( const north_america::place &city : north_america::cities() ) {
-            if( stride >= 512 && city.population < 500000 ) {
-                continue;
-            }
-            const point screen = divide_xy_round_to_minus_infinity(
-                                     city.position.raw() - origin.raw(), stride );
-            if( screen.x < 0 || screen.y < 0 || screen.x >= width || screen.y >= height ||
-                !known( north_america::jurisdiction_at( project_to<coords::ms>( city.position ) ) ) ) {
-                continue;
-            }
-            mvwputch( chart, screen + point::south, c_white, 'o' );
-            if( screen == cursor ) {
-                city_name = city.name;
+
+        const bool overview = stride >= 1024 && zone == 14;
+        const std::string title = elevation ? _( "North America elevation" ) : _( "North America transport" );
+        mvwprintz( chart, point::zero, c_white, overview ? _( "%s / Extended UTM %dN" ) : _( "%s / UTM %dN" ),
+                   title, zone );
+        for( int y = 0; y < height; ++y ) {
+            for( int x = 0; x < width; ++x ) {
+                const atlas_chart_cell &cell = cells[y * width + x];
+                mvwputch( chart, point( x, y + 1 ), cell.color, cell.glyph );
             }
         }
         mvwputch( chart, cursor + point::south, c_white, '+' );
-        const std::string_view code = north_america::jurisdiction_at( project_to<coords::ms>( center ) );
-        const std::string location = city_name.empty() ? std::string( code ) : city_name;
-        mvwprintz( chart, point( 0, height + 1 ), c_light_gray, _( "%.1f km/cell  %s" ),
-                   stride * SEEX * 2 / 1000.0, known( code ) ? location :
-                   _( "Read a regional road map to reveal details." ) );
+        mvwprintz( chart, point( 0, height + 1 ), c_light_gray, _( "%.1f km/column  %s" ),
+                   cell_width / 1000.0, location );
         mvwprintz( chart, point( 0, height + 2 ), c_light_gray,
-                   _( "= Highway  - Road  ~ Water  o City  [%s] Overmap" ),
+                   elevation ? _( ": <0  . 0+  ; 250+  ^ 1000+  A 2500+ m  [%s] Overmap" ) :
+                   _( "= Highway  - Road  ~ Water  o City  [%s] Elevation" ),
                    controls.get_desc( "NORTH_AMERICA_ATLAS" ) );
         wnoutrefresh( chart );
     } );
@@ -2112,20 +2369,33 @@ static void show_north_america_chart( point_abs_omt center, bool reveal_all )
         ui.invalidate_ui();
         ui_manager::redraw();
         const std::string action = controls.handle_input();
-        if( action == "QUIT" || action == "NORTH_AMERICA_ATLAS" ) {
+        if( action == "QUIT" || ( action == "NORTH_AMERICA_ATLAS" && elevation ) ) {
             return;
         }
-        if( const auto direction = controls.get_direction_rel_omt( action ) ) {
-            const point next = center.raw() + direction->xy().raw() * stride * 3;
-            center = point_abs_omt( std::clamp( next.x, -450000, 450000 ),
-                                    std::clamp( next.y, -450000, 450000 ) );
+        if( action == "NORTH_AMERICA_ATLAS" ) {
+            elevation = true;
+        } else if( const auto direction = controls.get_direction_rel_omt( action ) ) {
+            const atlas_utm projection( zone );
+            if( const auto pos = projection.project( center ) ) {
+                const auto next = projection.unproject( { pos->east + direction->x() * cell_width * 3,
+                                  pos->north - direction->y() * cell_height * 3 } );
+                if( next ) {
+                    const point omt = project_to<coords::omt>( north_america::position_at( *next ) ).raw();
+                    if( std::abs( omt.x ) <= 450000 && std::abs( omt.y ) <= 450000 ) {
+                        center = *next;
+                    }
+                }
+            }
         } else if( action == "zoom_in" ) {
             stride = std::max( 8, stride / 2 );
         } else if( action == "zoom_out" ) {
             stride = std::min( 8192, stride * 2 );
         } else if( action == "CENTER" ) {
             center = start;
+        } else {
+            continue;
         }
+        refresh = true;
     }
 }
 

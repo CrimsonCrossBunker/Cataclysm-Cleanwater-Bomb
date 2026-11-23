@@ -981,8 +981,9 @@ bool game::start_game()
         }
         const point_abs_om origin = u.world_origin.value_or( point_abs_om() );
         const bool atlas_start = north_america::active();
+        const bool campus_start = start_loc.requires_campus();
         const city *selected_city = u.starting_city ? &*u.starting_city : nullptr;
-        if( u.start_outskirts ) {
+        if( u.start_outskirts && !campus_start ) {
             std::tie( omtstart, associated_parameters ) = atlas_start ?
                     start_loc.find_atlas_start( origin, selected_city, true ) :
                     start_loc.find_player_initial_location_on_outskirts( origin );
@@ -995,8 +996,8 @@ bool game::start_game()
                 u.start_outskirts = false;
             }
         }
-        if( !u.start_outskirts ) {
-            if( atlas_start ) {
+        if( !u.start_outskirts || campus_start ) {
+            if( atlas_start || campus_start ) {
                 std::tie( omtstart, associated_parameters ) =
                     start_loc.find_atlas_start( origin, selected_city, false );
             } else {
