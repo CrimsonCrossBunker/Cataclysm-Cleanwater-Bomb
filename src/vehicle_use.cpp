@@ -23,28 +23,33 @@
 #include <type_id.h>
 #include <algorithm>
 #include <array>
+#include <climits>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <initializer_list>
+#include <functional>
 #include <list>
+#include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "action.h"
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "activity_handlers.h"
 #include "avatar.h"
 #include "character.h"
-#include "clzones.h"
+#include "character_id.h"
+#include "clone_ptr.h"
 #include "faction.h"
 #include "color.h"
 #include "craft_reservation.h"
 #include "creature.h"
-#include "creature_tracker.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "effect_on_condition.h"
@@ -53,13 +58,12 @@
 #include "event_bus.h"
 #include "flat_set.h"
 #include "game.h"
-#include "game_inventory.h"
 #include "gates.h"
-#include "handle_liquid.h"
 #include "iexamine.h"
 #include "item.h"
 #include "item_activation.h"
 #include "item_pocket.h"
+#include "item_uid.h"
 #include "itype.h"
 #include "iuse.h"
 #include "lua_platform_runtime.h"
@@ -68,29 +72,27 @@
 #include "map_scale_constants.h"
 #include "mapdata.h"
 #include "messages.h"
-#include "monster.h"
-#include "mtype.h"
 #include "north_america_soil.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
 #include "player_activity.h"
 #include "pocket_type.h"
-#include "requirements.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "smart_controller_ui.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "temp_crafting_inventory.h"
 #include "translations.h"
-#include "uilist.h"
 #include "units.h"
 #include "value_ptr.h"
-#include "veh_interact.h"
 #include "veh_type.h"
 #include "veh_utils.h"
 #include "vehicle_selector.h"
+#include "vehicle_turning.h"
+#include "vehicle_uid.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "weather.h"
@@ -100,9 +102,6 @@ static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
 static const ammotype ammo_battery( "battery" );
 
 static const damage_type_id damage_bash( "bash" );
-
-
-static const efftype_id effect_tied( "tied" );
 
 static const fault_id fault_engine_starter( "fault_engine_starter" );
 
@@ -126,8 +125,6 @@ static const itype_id itype_pseudo_magazine( "pseudo_magazine" );
 static const itype_id itype_pseudo_magazine_mod( "pseudo_magazine_mod" );
 static const itype_id itype_small_repairkit( "small_repairkit" );
 static const itype_id itype_soldering_iron( "soldering_iron" );
-static const itype_id itype_water( "water" );
-static const itype_id itype_water_clean( "water_clean" );
 static const itype_id itype_water_faucet( "water_faucet" );
 static const itype_id itype_welder( "welder" );
 static const itype_id itype_welder_crude( "welder_crude" );
@@ -140,8 +137,6 @@ static const skill_id skill_mechanics( "mechanics" );
 static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
 
 static const vpart_id vpart_horn_bicycle( "horn_bicycle" );
-
-static const zone_type_id zone_type_VEHICLE_PATROL( "VEHICLE_PATROL" );
 
 void handbrake( map &here )
 {
@@ -207,7 +202,7 @@ void vehicle::control_doors( map &here )
     run_electronics_menu( here, *this, "doors" );
 }
 
-void vehicle::build_electronics_menu( map &here, veh_menu &menu )
+void vehicle::build_electronics_menu( map &here, veh_menu &menu ) const
 {
     const int64_t id = uid().get_value();
     for( const vehicle_electronics_option &option :
