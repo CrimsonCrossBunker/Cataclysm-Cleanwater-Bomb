@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "cata_scope_helpers.h"
 #include "color.h"
 #include "condition.h"
 #include "debug.h"
@@ -65,6 +66,8 @@ static trait_replacement trait_migration_remove{ std::nullopt, std::nullopt, tru
 namespace
 {
 generic_factory<mutation_branch> trait_factory( "trait" );
+bool finalizing_all_mutations = false;
+std::unordered_map<trait_id, std::vector<std::pair<std::string, resistances>>> deferred_part_type_armor;
 } // namespace
 
 generic_factory<mutation_branch> &cata::lua_platform::detail::mutation_registry()
@@ -578,18 +581,26 @@ void mutation_branch::load( const JsonObject &jo, std::string_view src )
         allowed_items.insert( flag_id( line ) );
     }
 
+    if( !was_loaded ) {
+        deferred_part_type_armor.erase( id );
+    } else if( jo.has_string( "copy-from" ) ) {
+        const trait_id parent_id( jo.get_string( "copy-from" ) );
+        if( parent_id != id ) {
+            deferred_part_type_armor.erase( id );
+            const auto parent_it = deferred_part_type_armor.find( parent_id );
+            if( parent_it != deferred_part_type_armor.end() ) {
+                deferred_part_type_armor[id] = parent_it->second;
+            }
+        }
+    }
+
     for( JsonObject ao : jo.get_array( "armor" ) ) {
         std::set<std::string> ignored_by_resist = { "part_types", "parts" };
         const resistances res = load_resistances_instance( ao, ignored_by_resist );
-        // Set damage resistances for all body parts of the specified type(s)
+        // Defer part_types expansion until finalize_all() so body parts loaded
+        // later (e.g., via Lua Platform content) are present.
         for( const std::string &type_string : ao.get_tags( "part_types" ) ) {
-            for( const body_part_type &bp : body_part_type::get_all() ) {
-                if( type_string == "ALL" ) {
-                    armor[bp.id] += res;
-                } else if( bp.limbtypes.count( io::string_to_enum<bp_type>( type_string ) ) > 0 ) {
-                    armor[bp.id] += res * bp.limbtypes.at( io::string_to_enum<bp_type>( type_string ) );
-                }
-            }
+            deferred_part_type_armor[id].emplace_back( type_string, res );
         }
         // Set damage resistances for specific body parts
         for( const std::string &part_string : ao.get_tags( "parts" ) ) {
@@ -970,6 +981,7 @@ void mutation_branch::reset_all()
     trait_groups.clear();
     trait_groups.emplace( Trait_group_EMPTY_GROUP,
                           make_shared_fast<Trait_group_collection>( 100 ) );
+    deferred_part_type_armor.clear();
 }
 
 std::vector<std::string> dream::messages() const
@@ -1085,6 +1097,35 @@ const trait_replacement &mutation_branch::trait_migration( const trait_id &tid )
 
 void mutation_branch::finalize()
 {
+    const auto reconcile_subparts = []( std::set<bodypart_str_id> &parts,
+    std::set<sub_bodypart_str_id> &subparts ) {
+        for( auto it = subparts.begin(); it != subparts.end(); ) {
+            const bodypart_str_id bp( it->str() );
+            if( bp.is_valid() ) {
+                parts.insert( bp );
+                it = subparts.erase( it );
+            } else {
+                ++it;
+            }
+        }
+    };
+    reconcile_subparts( restricts_gear, restricts_gear_subparts );
+    reconcile_subparts( remove_rigid, remove_rigid_subparts );
+    if( finalizing_all_mutations ) {
+        const auto it = deferred_part_type_armor.find( id );
+        if( it != deferred_part_type_armor.end() ) {
+            for( const auto &[type_string, res] : it->second ) {
+                for( const body_part_type &bp : body_part_type::get_all() ) {
+                    if( type_string == "ALL" ) {
+                        armor[bp.id] += res;
+                    } else if( bp.limbtypes.count( io::string_to_enum<bp_type>( type_string ) ) > 0 ) {
+                        armor[bp.id] += res * bp.limbtypes.at( io::string_to_enum<bp_type>( type_string ) );
+                    }
+                }
+            }
+            deferred_part_type_armor.erase( it );
+        }
+    }
     for( auto &armr : armor ) {
         finalize_damage_map( armr.second.resist_vals );
     }
@@ -1092,6 +1133,8 @@ void mutation_branch::finalize()
 
 void mutation_branch::finalize_all()
 {
+    restore_on_out_of_scope restore_finalizing( finalizing_all_mutations );
+    finalizing_all_mutations = true;
     trait_factory.finalize();
     cata::lua_platform::detail::refresh_mutation_registry_cache();
     finalize_trait_blacklist();
