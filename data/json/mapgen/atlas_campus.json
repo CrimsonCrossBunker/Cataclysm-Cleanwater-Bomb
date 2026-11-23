@@ -30,9 +30,43 @@
         "..........pppp.........."
       ],
       "fill_ter": "t_grass",
-      "terrain": {".": "t_grass", " ": "t_floor", "b": "t_floor", "d": "t_floor", "t": "t_floor", "c": "t_floor", "T": "t_floor", "h": "t_floor", "C": "t_floor", "S": "t_floor", "u": "t_floor", "#": "t_brick_wall", "W": "t_window_domestic", "p": "t_sidewalk", "+": "t_door_c"},
-      "furniture": {"b": "f_bed", "d": "f_dresser", "t": "f_desk", "T": "f_table", "h": "f_chair", "C": "f_counter", "S": "f_sink", "u": "f_toilet", "c": "f_chair"},
-      "items": {"b": {"item": "bed", "chance": 45}, "d": [ { "item": "dresser", "chance": 100, "repeat": [ 2, 4 ] }, { "item": "bedroom", "chance": 40 }, { "item": "bags", "chance": 10 } ], "t": {"item": "office", "chance": 45}}
+      "terrain": {
+        ".": "t_grass",
+        " ": "t_floor",
+        "b": "t_floor",
+        "d": "t_floor",
+        "t": "t_floor",
+        "c": "t_floor",
+        "T": "t_floor",
+        "h": "t_floor",
+        "C": "t_floor",
+        "S": "t_floor",
+        "u": "t_floor",
+        "#": "t_brick_wall",
+        "W": "t_window_domestic",
+        "p": "t_sidewalk",
+        "+": "t_door_c"
+      },
+      "furniture": {
+        "b": "f_bed",
+        "d": "f_dresser",
+        "t": "f_desk",
+        "T": "f_table",
+        "h": "f_chair",
+        "C": "f_counter",
+        "S": "f_sink",
+        "u": "f_toilet",
+        "c": "f_chair"
+      },
+      "items": {
+        "b": { "item": "bed", "chance": 45 },
+        "d": [
+          { "item": "dresser", "chance": 100, "repeat": [ 2, 4 ] },
+          { "item": "bedroom", "chance": 40 },
+          { "item": "bags", "chance": 10 }
+        ],
+        "t": { "item": "office", "chance": 45 }
+      }
     }
   },
   {
@@ -65,7 +99,7 @@
         "........................",
         "........................"
       ],
-      "terrain": {".": "t_open_air", "r": "t_flat_roof"}
+      "terrain": { ".": "t_open_air", "r": "t_flat_roof" }
     }
   },
   {
@@ -98,8 +132,8 @@
         "..........pppp..........",
         "..........pppp.........."
       ],
-      "terrain": {".": "t_grass", "p": "t_sidewalk", "T": "t_tree_young"},
-      "furniture": {"b": "f_bench"},
+      "terrain": { ".": "t_grass", "p": "t_sidewalk", "T": "t_tree_young" },
+      "furniture": { "b": "f_bench" },
       "fill_ter": "t_grass"
     }
   },
@@ -167,7 +201,15 @@
         "..........pppp..........",
         "..........pppp.........."
       ],
-      "terrain": { ".": "t_grass", "p": "t_sidewalk", "r": "t_sidewalk", "L": "t_sidewalk", "w": "t_rock_wall", "P": "t_brick_wall", "g": "t_gate_metal_o" },
+      "terrain": {
+        ".": "t_grass",
+        "p": "t_sidewalk",
+        "r": "t_sidewalk",
+        "L": "t_sidewalk",
+        "w": "t_rock_wall",
+        "P": "t_brick_wall",
+        "g": "t_gate_metal_o"
+      },
       "furniture": { "r": "f_bike_rack", "L": "f_street_light" }
     }
   },
