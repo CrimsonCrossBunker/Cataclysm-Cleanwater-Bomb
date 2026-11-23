@@ -7087,7 +7087,7 @@ std::optional<tripoint_bub_ms> install_atlas_hvac( mapgendata &dat, double econo
                     continue;
                 }
                 item head( itype_id( "atlas_split_hvac_indoor" ) );
-                head.set_var( "hvac_link", here.get_abs( out ) );
+                set_split_hvac_link( head, here.get_abs( out ), itype_id( "pipe" ), 1 );
                 if( place_unowned_appliance( here, in, indoor_id, head ) ) {
                     return in;
                 }

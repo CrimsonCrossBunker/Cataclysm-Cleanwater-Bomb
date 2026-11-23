@@ -6,6 +6,7 @@
 #include <optional>
 
 #include "craft_command.h"
+#include "type_id.h"
 
 class Character;
 class JsonObject;
@@ -36,6 +37,8 @@ void add_vehicle_appliance_menu( veh_menu &menu, map &here, vehicle &target,
                                  const tripoint_abs_ms &position );
 
 bool is_hvac_indoors( const map &here, const tripoint_bub_ms &position );
+void set_split_hvac_link( item &unit, const tripoint_abs_ms &outdoor, const itype_id &material,
+                          int quantity );
 void update_vehicle_climate( map &here, vehicle &target );
 double room_appliance_watts( map &here, vehicle &target, const tripoint_bub_ms &position,
                              double outside_c, double room_c );

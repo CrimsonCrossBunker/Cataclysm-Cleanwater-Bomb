@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "calendar.h"
+#include "cata_utility.h"
 #include "character.h"
 #include "character_action_guard.h"
 #include "crafting.h"
@@ -440,10 +441,20 @@ bool is_hvac_indoors( const map &here, const tripoint_bub_ms &position )
            ( position.z() < 0 || here.has_flag( ter_furn_flag::TFLAG_INDOORS, position ) );
 }
 
+void set_split_hvac_link( item &unit, const tripoint_abs_ms &outdoor, const itype_id &material,
+                          int quantity )
+{
+    unit.set_var( "hvac_link", outdoor );
+    unit.set_var( "hvac_link_material", material.str() );
+    unit.set_var( "hvac_link_quantity", quantity );
+}
+
 namespace
 {
 const tripoint_abs_ms no_hvac_link( tripoint::min );
 constexpr int link_range = 8;
+constexpr int split_pipe_span = 2;
+constexpr int hose_span = 4;
 
 int hvac_part_at( const vehicle &target, const tripoint_abs_ms &p, const std::string &flag )
 {
@@ -530,9 +541,20 @@ void choose_thermostat( item &unit, bool cabin )
 void choose_hvac_link( Character &who, map &here, const tripoint_bub_ms &source,
                       item &unit, bool radiator )
 {
+    if( !radiator && unit.has_var( "hvac_link" ) ) {
+        return;
+    }
+    if( !radiator && !is_hvac_indoors( here, source ) ) {
+        who.add_msg_if_player( _( "Install the indoor air conditioner inside before connecting it." ) );
+        return;
+    }
+
     uilist choices;
     choices.title = radiator ? _( "Connect radiator to boiler" ) : _( "Connect indoor and outdoor units" );
-    choices.addentry( 0, true, 'd', _( "Disconnect" ) );
+    choices.desc_enabled = !radiator;
+    if( radiator ) {
+        choices.addentry( 0, true, 'd', _( "Disconnect" ) );
+    }
     std::vector<tripoint_abs_ms> endpoints;
     for( const tripoint_bub_ms &p : here.points_in_radius( source, link_range ) ) {
         if( !here.inbounds( p ) || p == source || ( !radiator && is_hvac_indoors( here, p ) ) ) {
@@ -543,27 +565,91 @@ void choose_hvac_link( Character &who, map &here, const tripoint_bub_ms &source,
         if( v && hvac_part_at( v->vehicle(), abs,
                               radiator ? "HYDRONIC_BOILER" : "SPLIT_HVAC_OUTDOOR" ) >= 0 ) {
             endpoints.push_back( abs );
-            choices.addentry( static_cast<int>( endpoints.size() ), true, 0,
-                              string_format( _( "%s (%d tiles away)" ), v->vehicle().name,
-                                             square_dist( source.xy(), p.xy() ) ) );
+            const int index = static_cast<int>( endpoints.size() );
+            const int distance = square_dist( source.xy(), p.xy() );
+            const std::string label = string_format( _( "%s (%d tiles away)" ), v->vehicle().name,
+                                      distance );
+            if( radiator ) {
+                choices.addentry( index, true, 0, label );
+            } else {
+                choices.addentry_desc( index, true, 0, label,
+                                       string_format( _( "Use %d rigid pipe section(s) or %d hose length(s)." ),
+                                               divide_round_up( distance, split_pipe_span ),
+                                               divide_round_up( distance, hose_span ) ) );
+            }
         }
     }
+    if( choices.entries.empty() ) {
+        who.add_msg_if_player( _( "No unit installed outdoors is in range." ) );
+        return;
+    }
+
     choices.query();
-    if( choices.ret == 0 ) {
+    if( radiator && choices.ret == 0 ) {
         unit.erase_var( "hvac_link" );
     } else if( choices.ret > 0 && static_cast<std::size_t>( choices.ret ) <= endpoints.size() ) {
-        for( const itype_id &material : { itype_id( "pipe" ), itype_id( "hose" ),
-                                         itype_id( "makeshift_hose" ), itype_id( "hose_garden" ) } ) {
-            const tripoint_abs_ms &end = endpoints[choices.ret - 1];
-            const int length = square_dist( source.xy(), here.get_bub( end ).xy() );
-            const int lengths = material == itype_id( "pipe" ) ? length : ( length + 3 ) / 4;
-            if( who.has_amount( material, lengths ) && !who.use_amount( material, lengths ).empty() ) {
-                unit.set_var( "hvac_link", end );
+        std::vector<std::pair<itype_id, int>> materials = {
+            { itype_id( "pipe" ), radiator ? 1 : split_pipe_span },
+            { itype_id( "hose" ), hose_span },
+            { itype_id( "makeshift_hose" ), hose_span },
+            { itype_id( "hose_garden" ), hose_span }
+        };
+        if( !radiator ) {
+            materials.insert( materials.begin() + 1, {
+                { itype_id( "cu_pipe" ), split_pipe_span },
+                { itype_id( "hd_pipe" ), split_pipe_span },
+                { itype_id( "pipe_cpvc" ), split_pipe_span }
+            } );
+            const item_location wielded = who.get_wielded_item();
+            const auto held_material = std::find_if( materials.begin(), materials.end(),
+            [&wielded]( const auto &entry ) {
+                return wielded && wielded->typeId() == entry.first;
+            } );
+            if( held_material != materials.end() ) {
+                std::iter_swap( materials.begin(), held_material );
+            }
+        }
+        const tripoint_abs_ms &end = endpoints[choices.ret - 1];
+        const int distance = square_dist( source.xy(), here.get_bub( end ).xy() );
+        for( const auto &[material, span] : materials ) {
+            const int quantity = divide_round_up( distance, span );
+            if( who.has_amount( material, quantity ) && !who.use_amount( material, quantity ).empty() ) {
+                if( radiator ) {
+                    unit.set_var( "hvac_link", end );
+                } else {
+                    set_split_hvac_link( unit, end, material, quantity );
+                }
                 return;
             }
         }
         who.add_msg_if_player( _( "You need enough pipe or hose to reach that unit." ) );
     }
+}
+
+void disconnect_split_hvac( Character &who, item &unit )
+{
+    if( !unit.has_var( "hvac_link" ) ) {
+        return;
+    }
+
+    // Old saves only recorded the destination. Recover one pipe from those links.
+    const itype_id material( unit.get_var( "hvac_link_material", "pipe" ) );
+    const int quantity = static_cast<int>( std::clamp( unit.get_var( "hvac_link_quantity", 1.0 ),
+                         0.0, static_cast<double>( link_range ) ) );
+    if( material.is_valid() ) {
+        for( int remaining = quantity; remaining > 0; --remaining ) {
+            item recovered( material );
+            if( !who.i_add_or_drop( recovered ) ) {
+                unit.set_var( "hvac_link_quantity", remaining );
+                who.add_msg_if_player( _( "Make room for the remaining pipe or hose first." ) );
+                return;
+            }
+        }
+    }
+    unit.erase_var( "hvac_link" );
+    unit.erase_var( "hvac_link_material" );
+    unit.erase_var( "hvac_link_quantity" );
+    unit.erase_var( "hvac_output" );
 }
 
 void operate_boiler( Character &who, map &here, vehicle &target, item &boiler )
@@ -620,8 +706,9 @@ void operate_boiler( Character &who, map &here, vehicle &target, item &boiler )
 
 void add_hvac_menu( veh_menu &menu, map &here, vehicle &target, const tripoint_abs_ms &pos )
 {
-    const auto add = [&]( const std::string &label, int index, const std::string &role ) {
-        menu.add( label ).on_submit( [&here, &target, pos, index, role] {
+    const auto add = [&]( const std::string &label, int index, const std::string &role,
+    bool enabled = true ) {
+        menu.add( label ).enable( enabled ).on_submit( [&here, &target, pos, index, role] {
             if( cata_mp::is_client_mode() ) {
                 get_player_character().add_msg_if_player( _( "Climate controls are only available to the host." ) );
                 return;
@@ -633,6 +720,8 @@ void add_hvac_menu( veh_menu &menu, map &here, vehicle &target, const tripoint_a
             Character &who = get_player_character();
             if( role == "HYDRONIC_BOILER" ) {
                 operate_boiler( who, here, target, *unit );
+            } else if( role == "DISCONNECT_SPLIT_HVAC" ) {
+                disconnect_split_hvac( who, *unit );
             } else if( role == "SPLIT_HVAC_INDOOR" || role == "HYDRONIC_RADIATOR" ) {
                 choose_hvac_link( who, here, here.get_bub( pos ), *unit, role == "HYDRONIC_RADIATOR" );
             } else {
@@ -640,8 +729,17 @@ void add_hvac_menu( veh_menu &menu, map &here, vehicle &target, const tripoint_a
             }
         } );
     };
+    const int split_index = hvac_part_at( target, pos, "SPLIT_HVAC_INDOOR" );
+    if( split_index >= 0 ) {
+        if( const item_location unit = target.part_base( split_index ) ) {
+            const bool linked = unit->has_var( "hvac_link" );
+            add( _( "Connect the split air conditioner" ), split_index, "SPLIT_HVAC_INDOOR", !linked );
+            if( linked ) {
+                add( _( "Disconnect the split air conditioner" ), split_index, "DISCONNECT_SPLIT_HVAC" );
+            }
+        }
+    }
     for( const auto &[role, label] : std::initializer_list<std::pair<std::string, std::string>> {
-             { "SPLIT_HVAC_INDOOR", _( "Connect the split air conditioner" ) },
              { "HYDRONIC_BOILER", _( "Operate water boiler" ) },
              { "HYDRONIC_RADIATOR", _( "Connect the radiator" ) }
          } ) {
