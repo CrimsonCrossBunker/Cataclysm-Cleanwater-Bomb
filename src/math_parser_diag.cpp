@@ -1645,7 +1645,8 @@ void item_rot_ass( double val, dialogue &d, char scope, std::vector<diag_value> 
             double turns = val;
             if( !unit_val.is_empty() ) {
                 std::string_view unit = unit_val.str( d );
-                const auto *iter = std::find_if( time_duration::units.cbegin(), time_duration::units.cend(),
+                decltype( time_duration::units )::const_iterator iter = std::find_if( time_duration::units.cbegin(),
+                        time_duration::units.cend(),
                 [&unit]( std::pair<std::string_view, time_duration> const & u ) {
                     return u.first == unit;
                 } );

@@ -171,7 +171,9 @@ struct client_replication_state {
 };
 
 struct world_replication_state {
-    entity_registry entity_ids;
+    // Aggregate initialization from {} cannot use the explicit entity_registry constructor.
+    // NOLINTNEXTLINE(readability-redundant-member-init)
+    entity_registry entity_ids{};
     bool applying_remote_note = false;
     client_replication_state client;
 };

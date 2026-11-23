@@ -61,10 +61,12 @@
 
 struct bionic;
 
-static const flag_id json_flag_FIT( "FIT" );
-static const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
 static const efftype_id effect_pacified( "pacified" );
 static const efftype_id effect_pet( "pet" );
+
+static const flag_id json_flag_FIT( "FIT" );
+
+static const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
 
 std::string talker_character_const::disp_name() const
 {
