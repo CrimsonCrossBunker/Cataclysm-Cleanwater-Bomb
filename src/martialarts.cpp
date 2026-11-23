@@ -846,6 +846,7 @@ std::string martialart_difficulty( const matype_id &mstyle )
 
 void clear_techniques_and_martial_arts()
 {
+    attack_vector::reset();
     martialarts.reset();
     ma_buffs.reset();
     ma_techniques.reset();

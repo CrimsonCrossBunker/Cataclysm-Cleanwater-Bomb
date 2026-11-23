@@ -748,6 +748,7 @@ void DynamicDataLoader::unload_data()
     emit::reset();
     help::reset();
     enchantment::reset();
+    end_screen::reset();
     event_statistic::reset();
     effect_on_conditions::reset();
     event_transformation::reset();
@@ -760,6 +761,7 @@ void DynamicDataLoader::unload_data()
     gates::reset();
     harvest_drop_type::reset();
     harvest_list::reset();
+    item_action_generator::generator().reset();
     item_category::reset();
     items::reset();
     jmath_func::reset();
@@ -778,6 +780,7 @@ void DynamicDataLoader::unload_data()
     morale_type_data::reset();
     mutation_branch::reset_all();
     mutation_category_trait::reset();
+    reset_mutation_types();
     mutations_category.clear();
     npc_class::reset_npc_classes();
     npc_template::reset();
@@ -795,6 +798,7 @@ void DynamicDataLoader::unload_data()
     map_data_placeholders::reset();
     profession::reset();
     profession_blacklist::reset();
+    profession_group::reset();
     proficiency::reset();
     proficiency_category::reset();
     proficiency_migration::reset();
@@ -844,6 +848,7 @@ void DynamicDataLoader::unload_data()
     shopkeeper_whitelist::reset();
     shopkeeper_cons_rates::reset();
     Skill::reset();
+    SkillDisplayType::reset();
     SNIPPET.clear_snippets();
     magic_type::reset_all();
     spell_type::reset_all();

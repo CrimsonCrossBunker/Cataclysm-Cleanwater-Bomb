@@ -87,6 +87,7 @@ class item_action_generator
         }
 
         void load_item_action( const JsonObject &jo );
+        void reset();
         void check_consistency() const;
 };
 

@@ -35,6 +35,7 @@ class end_screen_ui_impl : public cataimgui::window
 struct end_screen {
     public:
         static void load_end_screen( const JsonObject &jo, const std::string &src );
+        static void reset();
 
         void load( const JsonObject &jo, std::string_view );
         static const std::vector<end_screen> &get_all();

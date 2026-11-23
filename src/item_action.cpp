@@ -306,6 +306,11 @@ void item_action_generator::load_item_action( const JsonObject &jo )
     item_actions[ia.id] = ia;
 }
 
+void item_action_generator::reset()
+{
+    item_actions.clear();
+}
+
 void item_action_generator::check_consistency() const
 {
     for( const auto &elem : item_actions ) {

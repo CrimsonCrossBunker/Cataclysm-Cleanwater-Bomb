@@ -34,6 +34,11 @@ void profession_group::load_profession_group( const JsonObject &jo, const std::s
     profession_group_factory.load( jo, src );
 }
 
+void profession_group::reset()
+{
+    profession_group_factory.reset();
+}
+
 void profession_group::load( const JsonObject &jo, std::string_view )
 {
     mandatory( jo, was_loaded, "professions", profession_list );
