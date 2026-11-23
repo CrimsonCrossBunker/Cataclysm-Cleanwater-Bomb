@@ -29,7 +29,7 @@ H.char_has_any_trait = function(actor, ids)
 end
 H.safe_id = function(kind, name)
     local ok, gid = pcall(services.types.id, kind, name)
-    if not ok then return nil end
+    if not ok or not gid or not gid:is_valid() then return nil end
     return gid
 end
 H.creature_snap = function(actor)
@@ -126,6 +126,11 @@ H.chars_nearby = function(actor, rad, attitude)
     local r = services.characters.count_nearby(s.creature.position, { radius = math.floor(rad or 1000), attitude = attitude or "any" })
     if not r.ok then return 0 end
     return r.value or 0
+end
+H.set_var_indirect = function(ctx, ind_key, val)
+    local sc, act, key = H.resolve_var_ref(ctx, ind_key)
+    if key == "" then return end
+    return H.set_var(sc, act, ctx, key, val)
 end
 H.set_var = function(scope, actor, ctx, key, val)
     if scope == "indirect" then

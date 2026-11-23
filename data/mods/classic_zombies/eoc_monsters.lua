@@ -137,7 +137,7 @@ H.run_eoc = function(eid, ctx, vars_ovr, alpha_ovr, beta_ovr)
 end
 H.safe_id = function(kind, name)
     local ok, gid = pcall(services.types.id, kind, name)
-    if not ok then return nil end
+    if not ok or not gid or not gid:is_valid() then return nil end
     return gid
 end
 H.species_nearby = function(actor, species_ids, rad, loc)

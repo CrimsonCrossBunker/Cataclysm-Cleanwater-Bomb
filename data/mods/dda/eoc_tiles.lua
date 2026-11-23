@@ -6,7 +6,7 @@ local H = E.H
 if H.safe_id == nil then
 H.safe_id = function(kind, name)
     local ok, gid = pcall(services.types.id, kind, name)
-    if not ok then return nil end
+    if not ok or not gid or not gid:is_valid() then return nil end
     return gid
 end
 end
@@ -201,12 +201,32 @@ H.run_eoc = function(eid, ctx, vars_ovr, alpha_ovr, beta_ovr)
 end
 end
 if H.item_matches_search == nil then
-H.item_matches_search = function(snap, crit)
+H.item_matches_search = function(snap, crit, item)
     if not crit then return true end
-    if crit.id and snap.id and snap.id.value ~= crit.id then return false end
-    if crit.category and snap.category ~= crit.category then return false end
+    if crit.id and (not snap.id or snap.id.value ~= crit.id) then return false end
+    if crit.category then
+        local cat = type(snap.category) == "table" and snap.category.id or snap.category
+        if cat ~= crit.category then return false end
+    end
     if crit.worn_only and snap.location_kind ~= "worn" then return false end
     if crit.wielded_only and snap.location_kind ~= "wielded" then return false end
+    if crit.flags and item then
+        for _, fl in ipairs(crit.flags) do
+            local fg = H.safe_id("json_flag", fl)
+            if not fg then return false end
+            local fr = services.items.has_flag(item, fg)
+            if not fr.ok or fr.value ~= true then return false end
+        end
+    end
+    if crit.excluded_flags and item then
+        for _, fl in ipairs(crit.excluded_flags) do
+            local fg = H.safe_id("json_flag", fl)
+            if fg then
+                local fr = services.items.has_flag(item, fg)
+                if fr.ok and fr.value == true then return false end
+            end
+        end
+    end
     return true
 end
 end
@@ -227,7 +247,7 @@ H.eoc_map_run_item_eocs = function(actor, ctx, mode, pos, min_r, max_r, title, s
             local sr = services.items.snapshot(item)
             local snap = sr.ok and sr.value or {}
             for _, crit in ipairs(search_list) do
-                if H.item_matches_search(snap, crit) then ok_match = true break end
+                if H.item_matches_search(snap, crit, item) then ok_match = true break end
             end
         end
         if ok_match then table.insert(matches, item) end

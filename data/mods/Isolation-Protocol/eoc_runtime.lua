@@ -38,7 +38,7 @@ H.char_bionic_power = function(actor, which)
 end
 H.safe_id = function(kind, name)
     local ok, gid = pcall(services.types.id, kind, name)
-    if not ok then return nil end
+    if not ok or not gid or not gid:is_valid() then return nil end
     return gid
 end
 H.char_has_flag = function(actor, flag_id)
@@ -138,6 +138,17 @@ H.char_val_extra = function(actor, aspect)
         if aspect == "morale" then return cs.morale or 0 end
     end
     return 0
+end
+H.is_avatar = function(actor)
+    if not actor then return false end
+    if actor.subtype ~= nil then return actor.subtype == "avatar" end
+    local s = H.char_snap(actor)
+    return s ~= nil and s.avatar == true
+end
+H.set_var_indirect = function(ctx, ind_key, val)
+    local sc, act, key = H.resolve_var_ref(ctx, ind_key)
+    if key == "" then return end
+    return H.set_var(sc, act, ctx, key, val)
 end
 H.set_var = function(scope, actor, ctx, key, val)
     if scope == "indirect" then
@@ -430,29 +441,46 @@ H.run_eoc = function(eid, ctx, vars_ovr, alpha_ovr, beta_ovr)
         pcall(ccb.runtime.call_creature, "eoc:" .. tostring(eid), u)
     end
 end
-H.item_matches_search = function(snap, crit)
+H.item_matches_search = function(snap, crit, item)
     if not crit then return true end
-    if crit.id and snap.id and snap.id.value ~= crit.id then return false end
-    if crit.category and snap.category ~= crit.category then return false end
+    if crit.id and (not snap.id or snap.id.value ~= crit.id) then return false end
+    if crit.category then
+        local cat = type(snap.category) == "table" and snap.category.id or snap.category
+        if cat ~= crit.category then return false end
+    end
     if crit.worn_only and snap.location_kind ~= "worn" then return false end
     if crit.wielded_only and snap.location_kind ~= "wielded" then return false end
+    if crit.flags and item then
+        for _, fl in ipairs(crit.flags) do
+            local fg = H.safe_id("json_flag", fl)
+            if not fg then return false end
+            local fr = services.items.has_flag(item, fg)
+            if not fr.ok or fr.value ~= true then return false end
+        end
+    end
+    if crit.excluded_flags and item then
+        for _, fl in ipairs(crit.excluded_flags) do
+            local fg = H.safe_id("json_flag", fl)
+            if fg then
+                local fr = services.items.has_flag(item, fg)
+                if fr.ok and fr.value == true then return false end
+            end
+        end
+    end
     return true
 end
 H.eoc_run_inv_eocs = function(actor, ctx, mode, title, search_list, true_eocs, false_eocs)
     if not actor then return end
     local matches = {}
-    local cont = nil
-    for _ = 1, 32 do
-        local p = services.inventory.carried_items(actor)
-        local pr = services.items.page({ character = actor }, { page_size = 256 }, cont)
-        if not pr.ok or not pr.value then break end
-        for _, item in ipairs(pr.value.items or {}) do
+    local p = services.inventory.carried_items(actor)
+    if p.ok and p.value then
+        for _, item in ipairs(p.value) do
             local ok_match = (not search_list or #search_list == 0)
             if not ok_match then
                 local sr = services.items.snapshot(item)
                 local snap = sr.ok and sr.value or {}
                 for _, crit in ipairs(search_list) do
-                    if H.item_matches_search(snap, crit) then
+                    if H.item_matches_search(snap, crit, item) then
                         local cond_ok = true
                         if crit._cond_fn then
                             cond_ok = crit._cond_fn(H.ctx_new(ctx.u, item, ctx.vars))
@@ -463,8 +491,6 @@ H.eoc_run_inv_eocs = function(actor, ctx, mode, title, search_list, true_eocs, f
             end
             if ok_match then table.insert(matches, item) end
         end
-        if not pr.value.has_more then break end
-        cont = pr.value.continuation
     end
     if #matches == 0 then
         for _, fe in ipairs(false_eocs or {}) do H.run_eoc(fe, ctx) end

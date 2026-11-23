@@ -195,8 +195,13 @@ H.run_eoc = function(eid, ctx, vars_ovr, alpha_ovr, beta_ovr)
 end
 H.safe_id = function(kind, name)
     local ok, gid = pcall(services.types.id, kind, name)
-    if not ok then return nil end
+    if not ok or not gid or not gid:is_valid() then return nil end
     return gid
+end
+H.set_var_indirect = function(ctx, ind_key, val)
+    local sc, act, key = H.resolve_var_ref(ctx, ind_key)
+    if key == "" then return end
+    return H.set_var(sc, act, ctx, key, val)
 end
 H.set_var = function(scope, actor, ctx, key, val)
     if scope == "indirect" then

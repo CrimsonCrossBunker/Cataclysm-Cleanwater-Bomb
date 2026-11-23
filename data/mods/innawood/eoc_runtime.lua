@@ -169,8 +169,21 @@ H.run_eoc = function(eid, ctx, vars_ovr, alpha_ovr, beta_ovr)
 end
 H.safe_id = function(kind, name)
     local ok, gid = pcall(services.types.id, kind, name)
-    if not ok then return nil end
+    if not ok or not gid or not gid:is_valid() then return nil end
     return gid
+end
+H.resolve_var_ref = function(ctx, vname)
+    if type(vname) ~= "string" or vname == "" then return "global", nil, "" end
+    if string.sub(vname, 1, 2) == "u_" then return "actor", (ctx and ctx:speaker() or nil), string.sub(vname, 3) end
+    if string.sub(vname, 1, 2) == "n_" then return "actor", (ctx and ctx:interlocutor() or nil), string.sub(vname, 3) end
+    if string.sub(vname, 1, 4) == "npc_" then return "actor", (ctx and ctx:interlocutor() or nil), string.sub(vname, 5) end
+    if string.sub(vname, 1, 1) == "_" then return "context", nil, string.sub(vname, 2) end
+    return "global", nil, vname
+end
+H.set_var_indirect = function(ctx, ind_key, val)
+    local sc, act, key = H.resolve_var_ref(ctx, ind_key)
+    if key == "" then return end
+    return H.set_var(sc, act, ctx, key, val)
 end
 H.set_var = function(scope, actor, ctx, key, val)
     if scope == "indirect" then

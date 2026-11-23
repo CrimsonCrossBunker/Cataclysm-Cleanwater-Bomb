@@ -5,7 +5,7 @@ local E = { run = {}, cond = {}, dyn_cond = {}, H = H }
 
 H.safe_id = function(kind, name)
     local ok, gid = pcall(services.types.id, kind, name)
-    if not ok then return nil end
+    if not ok or not gid or not gid:is_valid() then return nil end
     return gid
 end
 H.char_snap = function(actor)
@@ -356,6 +356,17 @@ H.set_char_val_extra = function(actor, aspect, val, op)
             services.monsters.set_disposition(actor, { [aspect] = math.floor(nxt + 0.5) })
         end
     end
+end
+H.is_avatar = function(actor)
+    if not actor then return false end
+    if actor.subtype ~= nil then return actor.subtype == "avatar" end
+    local s = H.char_snap(actor)
+    return s ~= nil and s.avatar == true
+end
+H.set_var_indirect = function(ctx, ind_key, val)
+    local sc, act, key = H.resolve_var_ref(ctx, ind_key)
+    if key == "" then return end
+    return H.set_var(sc, act, ctx, key, val)
 end
 H.set_var = function(scope, actor, ctx, key, val)
     if scope == "indirect" then
