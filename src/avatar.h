@@ -29,7 +29,6 @@
 #include "type_id.h"
 #include "units.h"
 
-class Creature;
 class JsonObject;
 class JsonOut;
 class advanced_inv_area;
@@ -42,6 +41,7 @@ class memorized_tile;
 class monster;
 class npc;
 class talker;
+class time_duration;
 enum class character_type : int;
 enum class pool_type;
 struct bionic;
