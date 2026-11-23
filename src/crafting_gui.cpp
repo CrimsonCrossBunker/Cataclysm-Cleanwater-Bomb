@@ -3268,15 +3268,84 @@ static std::string intrinsic_source_name( const intrinsic_quality_source &src,
     return std::string();
 }
 
+quality_provider_list list_quality_providers( const quality_requirement &qr,
+        const temp_crafting_inventory &inv, const Character &crafter )
+{
+    quality_provider_list result;
+    for( const intrinsic_quality_source &src : crafter.intrinsic_quality_sources( qr.type,
+            qr.level ) ) {
+        const std::string name = intrinsic_source_name( src, crafter );
+        if( !name.empty() ) {
+            result.intrinsic.insert( name );
+        }
+    }
+
+    std::set<itype_id> own_tools;
+    for( const item &it : crafter.crafting_pseudo_items() ) {
+        own_tools.insert( it.typeId() );
+    }
+
+    // Same walk and measure as has_provider_quality, so this list agrees with the
+    // requirement's color in the crafting menu.
+    std::map<std::string, quality_provider> nearby_by_name;
+    std::set<itype_id> nearby_types;
+    inv.visit_items( [&]( item * node, item * ) {
+        const int level = provider_quality_level( *node, qr.type, &crafter, true );
+        if( level < qr.level ) {
+            return VisitResponse::NEXT;
+        }
+        const std::set<std::string> &sources = inv.pseudo_sources( *node );
+        std::string name;
+        if( !sources.empty() ) {
+            name = enumerate_as_string( sources, enumeration_conjunction::none );
+        } else if( own_tools.count( node->typeId() ) &&
+                   ( node->has_flag( flag_PSEUDO ) || is_fake_tool( *node->type ) ) ) {
+            // The crafter's bionic and trait tools, listed under "Provided by" instead.
+            return VisitResponse::NEXT;
+        } else {
+            name = node->type_name();
+            nearby_types.insert( node->typeId() );
+        }
+        const auto found = nearby_by_name.emplace( name,
+                           quality_provider{ name, level, node->typeId() } );
+        found.first->second.level = std::max( found.first->second.level, level );
+        return VisitResponse::NEXT;
+    } );
+
+    result.nearby.reserve( nearby_by_name.size() );
+    for( const auto &entry : nearby_by_name ) {
+        result.nearby.push_back( entry.second );
+    }
+
+    for( const itype *type : item_controller->all() ) {
+        if( nearby_types.count( type->get_id() ) || is_fake_tool( *type ) ||
+            item_is_blacklisted( type->get_id() ) ) {
+            continue;
+        }
+        const auto plain = type->qualities.find( qr.type );
+        if( plain != type->qualities.end() && plain->second.level >= qr.level ) {
+            result.others.push_back( { type->nname( 1 ), plain->second.level, type->get_id() } );
+            continue;
+        }
+        const auto charged = type->charged_qualities.find( qr.type );
+        if( charged != type->charged_qualities.end() && charged->second.level >= qr.level ) {
+            //~ Item name in the list of items with a tool quality. %s: item name.
+            result.others.push_back( { string_format( _( "%s (needs charges)" ), type->nname( 1 ) ),
+                                       charged->second.level, type->get_id() } );
+        }
+    }
+
+    const auto by_name = []( const quality_provider & a, const quality_provider & b ) {
+        return localized_compare( a.name, b.name );
+    };
+    std::sort( result.nearby.begin(), result.nearby.end(), by_name );
+    std::sort( result.others.begin(), result.others.end(), by_name );
+    return result;
+}
+
 void show_quality_providers( const std::vector<quality_requirement> &alternatives,
                              const temp_crafting_inventory &inv, const Character &crafter )
 {
-    struct quality_provider {
-        std::string name;
-        int level = 0;
-        itype_id type;
-    };
-
     uilist menu;
     std::vector<itype_id> entry_types;
     const bool several = alternatives.size() > 1;
@@ -3290,92 +3359,21 @@ void show_quality_providers( const std::vector<quality_requirement> &alternative
         add_entry( false, txt, std::string(), itype_id::NULL_ID() );
     };
 
-    std::set<itype_id> own_tools;
-    for( const item &it : crafter.crafting_pseudo_items() ) {
-        own_tools.insert( it.typeId() );
-    }
-
     for( const quality_requirement &qr : alternatives ) {
         if( several ) {
             add_header( qr.to_string() );
         }
 
-        std::set<std::string> intrinsic;
-        for( const intrinsic_quality_source &src : crafter.intrinsic_quality_sources( qr.type,
-                qr.level ) ) {
-            const std::string name = intrinsic_source_name( src, crafter );
-            if( !name.empty() ) {
-                intrinsic.insert( name );
-            }
-        }
-
-        // Same walk and measure as has_provider_quality, so this list agrees with the
-        // requirement's color in the crafting menu.
-        std::map<std::string, quality_provider> nearby_by_name;
-        std::set<itype_id> nearby_types;
-        inv.visit_items( [&]( item * node, item * ) {
-            const int level = provider_quality_level( *node, qr.type, &crafter, true );
-            if( level < qr.level ) {
-                return VisitResponse::NEXT;
-            }
-            const std::set<std::string> &sources = inv.pseudo_sources( *node );
-            std::string name;
-            if( !sources.empty() ) {
-                name = enumerate_as_string( sources, enumeration_conjunction::none );
-            } else if( own_tools.count( node->typeId() ) &&
-                       ( node->has_flag( flag_PSEUDO ) || is_fake_tool( *node->type ) ) ) {
-                // The crafter's bionic and trait tools, listed under "Provided by" instead.
-                return VisitResponse::NEXT;
-            } else {
-                name = node->type_name();
-                nearby_types.insert( node->typeId() );
-            }
-            const auto found = nearby_by_name.emplace( name,
-                               quality_provider{ name, level, node->typeId() } );
-            found.first->second.level = std::max( found.first->second.level, level );
-            return VisitResponse::NEXT;
-        } );
-
-        std::vector<quality_provider> nearby;
-        nearby.reserve( nearby_by_name.size() );
-        for( const auto &entry : nearby_by_name ) {
-            nearby.push_back( entry.second );
-        }
-
-        std::vector<quality_provider> others;
-        for( const itype *type : item_controller->all() ) {
-            if( nearby_types.count( type->get_id() ) || is_fake_tool( *type ) ||
-                item_is_blacklisted( type->get_id() ) ) {
-                continue;
-            }
-            const auto plain = type->qualities.find( qr.type );
-            if( plain != type->qualities.end() && plain->second.level >= qr.level ) {
-                others.push_back( { type->nname( 1 ), plain->second.level, type->get_id() } );
-                continue;
-            }
-            const auto charged = type->charged_qualities.find( qr.type );
-            if( charged != type->charged_qualities.end() && charged->second.level >= qr.level ) {
-                //~ Item name in the list of items with a tool quality. %s: item name.
-                others.push_back( { string_format( _( "%s (needs charges)" ), type->nname( 1 ) ),
-                                    charged->second.level, type->get_id() } );
-            }
-        }
-
-        const auto by_name = []( const quality_provider & a, const quality_provider & b ) {
-            return localized_compare( a.name, b.name );
-        };
-        std::sort( nearby.begin(), nearby.end(), by_name );
-        std::sort( others.begin(), others.end(), by_name );
-
-        if( intrinsic.empty() && nearby.empty() && others.empty() ) {
+        const quality_provider_list found = list_quality_providers( qr, inv, crafter );
+        if( found.intrinsic.empty() && found.nearby.empty() && found.others.empty() ) {
             add_header( indent + _( "No item has this quality." ) );
             continue;
         }
-        if( !intrinsic.empty() ) {
+        if( !found.intrinsic.empty() ) {
             //~ %1$s: crafter name ("you" for the player),
             //~ %2$s: list of the crafter's bionics, mutations or body parts.
             add_header( indent + string_format( _( "Provided by %1$s: %2$s" ), crafter.disp_name(),
-                                                enumerate_as_string( intrinsic ) ) );
+                                                enumerate_as_string( found.intrinsic ) ) );
         }
         const auto add_providers = [&]( const std::string & header,
         const std::vector<quality_provider> &providers ) {
@@ -3388,8 +3386,8 @@ void show_quality_providers( const std::vector<quality_requirement> &alternative
                            entry.type );
             }
         };
-        add_providers( _( "Within crafting range:" ), nearby );
-        add_providers( _( "Other items:" ), others );
+        add_providers( _( "Within crafting range:" ), found.nearby );
+        add_providers( _( "Other items:" ), found.others );
     }
 
     menu.settext( several ? _( "Any one of these qualities is enough:" ) :

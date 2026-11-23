@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_CRAFTING_GUI_H
 #define CATA_SRC_CRAFTING_GUI_H
 
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -37,11 +38,27 @@ std::pair<Character *, const recipe *> select_crafter_and_crafting_recipe( int &
 std::pair<std::vector<const recipe *>, bool> recipes_from_cat( const recipe_subset
         &available_recipes, const crafting_category_id &cat, const std::string &subcat );
 
+struct quality_provider {
+    std::string name;
+    int level = 0;
+    itype_id type;
+};
+
+struct quality_provider_list {
+    std::set<std::string> intrinsic;
+    std::vector<quality_provider> nearby;
+    std::vector<quality_provider> others;
+};
+
 /**
- * List what satisfies any of the alternative quality requirements: the crafter's own
- * bionics, mutations and body parts, providers in `inv`, and every other item type with
- * the quality.
+ * What satisfies `qr`: the crafter's own bionics, mutations and body parts, providers in
+ * `inv`, and every other item type with the quality.  `nearby` and `others` are sorted by
+ * localized name.
  */
+quality_provider_list list_quality_providers( const quality_requirement &qr,
+        const temp_crafting_inventory &inv, const Character &crafter );
+
+/** Menu of list_quality_providers for any of the alternative quality requirements. */
 void show_quality_providers( const std::vector<quality_requirement> &alternatives,
                              const temp_crafting_inventory &inv, const Character &crafter );
 
