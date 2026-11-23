@@ -3352,8 +3352,9 @@ int vehicle::avail_linkable_part( const tripoint_rel_ms &pt, bool to_ports ) con
     const std::string link_flag = to_ports ? "CABLE_PORTS" : "BATTERY";
     for( const int p : parts_at_relative( pt, /* use_cache = */ false ) ) {
         const vehicle_part &vp_here = this->part( p );
-        if( !vp_here.is_broken() &&
-            ( vp_here.info().has_flag( "APPLIANCE" ) || vp_here.info().has_flag( link_flag ) ) ) {
+        const vpart_info &info = vp_here.info();
+        if( !vp_here.is_broken() && !info.has_flag( "NO_POWER_CONNECTION" ) &&
+            ( info.has_flag( "APPLIANCE" ) || info.has_flag( link_flag ) ) ) {
             return p;
         }
     }
@@ -7669,7 +7670,8 @@ void vehicle::refresh( const bool remove_fakes )
         if( vpi.has_flag( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
             accessories.push_back( p );
         }
-        if( vpi.has_flag( VPFLAG_CABLE_PORTS ) || vpi.has_flag( VPFLAG_APPLIANCE ) ) {
+        if( ( vpi.has_flag( VPFLAG_CABLE_PORTS ) || vpi.has_flag( VPFLAG_APPLIANCE ) ) &&
+            !vpi.has_flag( "NO_POWER_CONNECTION" ) ) {
             cable_ports.push_back( p );
         }
         if( vpi.has_control_req() ) {

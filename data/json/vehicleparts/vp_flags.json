@@ -51,6 +51,10 @@
     "info": "You can connect electrical cables to this part."
   },
   {
+    "id": "NO_POWER_CONNECTION",
+    "type": "json_flag"
+  },
+  {
     "id": "CARGO",
     "type": "json_flag",
     "info": "You can store items here."

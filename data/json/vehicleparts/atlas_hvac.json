@@ -51,6 +51,7 @@
     "name": { "str": "wood stove with a water boiler" },
     "item": "atlas_wood_hydronic_boiler",
     "description": "A wood stove with a forty-litre water tank and fittings for a hot-water radiator loop.",
+    "extend": { "flags": [ "NO_POWER_CONNECTION" ] },
     "requirements": { "removal": { "time": "6 m", "using": [ [ "vehicle_wrench_1", 1 ] ] } },
     "breaks_into": [ { "item": "scrap", "count": [ 3, 6 ] }, { "item": "pipe", "count": [ 1, 2 ] } ]
   },

@@ -540,12 +540,33 @@ double update_boiler( map &here, vehicle &target, item &boiler, double ambient )
     return water_c;
 }
 
-void choose_thermostat( item &unit, bool cabin )
+std::string split_hvac_power_action( const item &unit )
+{
+    return unit.get_var( "hvac_mode", 0.0 ) == 0 ? _( "Turn on the air conditioner" ) :
+           _( "Turn off the air conditioner" );
+}
+
+void toggle_split_hvac( Character &who, item &unit )
+{
+    const double mode = unit.get_var( "hvac_mode", 0.0 );
+    if( mode == 0 ) {
+        unit.set_var( "hvac_mode", unit.get_var( "hvac_previous_mode", 1.0 ) );
+        who.add_msg_if_player( _( "You turn on the air conditioner." ) );
+    } else {
+        unit.set_var( "hvac_previous_mode", mode );
+        unit.set_var( "hvac_mode", 0 );
+        unit.erase_var( "hvac_output" );
+        who.add_msg_if_player( _( "You turn off the air conditioner." ) );
+    }
+}
+
+void choose_thermostat( Character &who, item &unit, bool cabin )
 {
     const int old_setpoint = static_cast<int>( unit.get_var( "hvac_setpoint", 22.0 ) );
     uilist modes;
     modes.title = string_format( _( "Climate control (set to %d C)" ), old_setpoint );
-    modes.addentry( 0, true, 'o', _( "Off" ) );
+    modes.addentry( 0, true, cabin ? 'o' : 'p',
+                    cabin ? _( "Off" ) : split_hvac_power_action( unit ) );
     modes.addentry( 1, true, 'c', _( "Cooling" ) );
     modes.addentry( 2, true, 'h', _( "Heating" ) );
     modes.addentry( 3, true, 'e', _( "Energy saver (wider temperature range)" ) );
@@ -557,7 +578,11 @@ void choose_thermostat( item &unit, bool cabin )
         return;
     }
     if( modes.ret == 0 ) {
-        unit.set_var( "hvac_mode", 0 );
+        if( cabin ) {
+            unit.set_var( "hvac_mode", 0 );
+        } else {
+            toggle_split_hvac( who, unit );
+        }
         return;
     }
     uilist setpoints;
@@ -780,8 +805,10 @@ void add_hvac_menu( veh_menu &menu, map &here, vehicle &target, const tripoint_a
                 disconnect_hvac( who, *unit );
             } else if( role == "SPLIT_HVAC_INDOOR" || role == "HYDRONIC_RADIATOR" ) {
                 choose_hvac_link( who, here, here.get_bub( pos ), *unit, role == "HYDRONIC_RADIATOR" );
+            } else if( role == "SPLIT_HVAC_POWER" ) {
+                toggle_split_hvac( who, *unit );
             } else {
-                choose_thermostat( *unit, true );
+                choose_thermostat( who, *unit, role == "CABIN_HVAC" );
             }
         } );
     };
@@ -799,6 +826,12 @@ void add_hvac_menu( veh_menu &menu, map &here, vehicle &target, const tripoint_a
             }
         }
     };
+    if( const int index = hvac_part_at( target, pos, "SPLIT_HVAC_INDOOR" ); index >= 0 ) {
+        if( const item_location unit = target.part_base( index ) ) {
+            add( split_hvac_power_action( *unit ), index, "SPLIT_HVAC_POWER" );
+            add( _( "Set air conditioner mode and temperature" ), index, "SPLIT_HVAC_THERMOSTAT" );
+        }
+    }
     add_link( "SPLIT_HVAC_INDOOR", _( "Connect the split air conditioner" ),
               _( "Disconnect the split air conditioner" ) );
     add_link( "HYDRONIC_RADIATOR", _( "Connect the radiator" ), _( "Disconnect the radiator" ) );
@@ -839,19 +872,20 @@ std::optional<int> use_hvac_remote( Character *who, item *, const tripoint_bub_m
         return std::nullopt;
     }
     map &here = get_map();
+    const tripoint_bub_ms origin = who->pos_bub( here );
     uilist choices;
     choices.title = _( "Select an indoor air conditioner" );
     std::vector<item_location> units;
-    for( const tripoint_bub_ms &p : here.points_in_radius( who->pos_bub(), link_range ) ) {
-        if( !here.inbounds( p ) || !who->sees( here, p ) ) {
+    for( const tripoint_bub_ms &p : here.points_in_radius( origin, link_range ) ) {
+        if( !here.inbounds( p ) ) {
             continue;
         }
         const optional_vpart_position v = here.veh_at( p );
         const int index = v ? hvac_part_at( v->vehicle(), here.get_abs( p ), "SPLIT_HVAC_INDOOR" ) : -1;
-        if( index >= 0 ) {
+        if( index >= 0 && here.sees( origin, p, link_range, false ) ) {
             choices.addentry( static_cast<int>( units.size() ), true, 0,
                               string_format( _( "%s (%d tiles away)" ), v->vehicle().name,
-                                             square_dist( p.xy(), who->pos_bub().xy() ) ) );
+                                             square_dist( p.xy(), origin.xy() ) ) );
             units.push_back( v->vehicle().part_base( index ) );
         }
     }
@@ -860,9 +894,11 @@ std::optional<int> use_hvac_remote( Character *who, item *, const tripoint_bub_m
         return std::nullopt;
     }
     choices.query();
-    if( choices.ret >= 0 && static_cast<std::size_t>( choices.ret ) < units.size() && units[choices.ret] ) {
-        choose_thermostat( *units[choices.ret], false );
+    if( choices.ret < 0 || static_cast<std::size_t>( choices.ret ) >= units.size() ||
+        !units[choices.ret] ) {
+        return std::nullopt;
     }
+    choose_thermostat( *who, *units[choices.ret], false );
     return 0;
 }
 
@@ -894,6 +930,10 @@ double room_appliance_watts( map &here, vehicle &target, const tripoint_bub_ms &
     }
     item_location unit = target.part_base( index );
     if( !unit ) {
+        return 0;
+    }
+    const int mode = static_cast<int>( unit->get_var( "hvac_mode", 0.0 ) );
+    if( !radiator && mode == 0 ) {
         return 0;
     }
     const tripoint_abs_ms link = unit->get_var( "hvac_link", no_hvac_link );
@@ -930,7 +970,6 @@ double room_appliance_watts( map &here, vehicle &target, const tripoint_bub_ms &
             other->set_var( "hvac_water_c", water_c - 60 * output / ( liters * 4184 ) );
         }
     } else {
-        const int mode = static_cast<int>( unit->get_var( "hvac_mode", 0.0 ) );
         const double demand = unit->get_var( "hvac_setpoint", 22.0 ) - room_c;
         const double deadband = mode == 3 ? 2.0 : 0.75;
         const bool heat = ( mode == 2 || mode == 3 ) && demand > deadband && outside_c > -12;

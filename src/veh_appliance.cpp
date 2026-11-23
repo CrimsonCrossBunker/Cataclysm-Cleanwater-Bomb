@@ -133,14 +133,15 @@ static bool place_appliance_impl( map &here, const tripoint_bub_ms &p, const vpa
     here.add_vehicle_to_cache( veh );
 
     // Connect to any neighbouring appliances or wires once
-    std::unordered_set<const vehicle *> connected_vehicles;
-    for( const tripoint_bub_ms &trip : here.points_in_radius( p, 1 ) ) {
-        const optional_vpart_position vp = here.veh_at( trip );
-        if( !vp ) {
-            continue;
-        }
-        vehicle &veh_target = vp->vehicle();
-        if( &veh_target != veh && veh_target.has_tag( flag_APPLIANCE ) ) {
+    if( veh->avail_linkable_part( point_rel_ms::zero, true ) >= 0 ) {
+        std::unordered_set<const vehicle *> connected_vehicles;
+        for( const tripoint_bub_ms &trip : here.points_in_radius( p, 1 ) ) {
+            const optional_vpart_position vp = here.veh_at( trip );
+            if( !vp || &vp->vehicle() == veh || !vp->vehicle().has_tag( flag_APPLIANCE ) ||
+                vp->vehicle().avail_linkable_part( vp->mount_pos3(), true ) < 0 ) {
+                continue;
+            }
+            vehicle &veh_target = vp->vehicle();
             if( veh->is_powergrid() && veh_target.is_powergrid() &&
                 veh->merge_appliance_into_grid( &here, veh_target ) ) {
                 add_msg( _( "You merge it into the adjacent power grid." ) );
@@ -712,14 +713,15 @@ void veh_app_interact::populate_app_actions( map &here )
     } );
     imenu.addentry( -1, veh->can_unmount( *vp, true ).success(), ctxt.keys_bound_to( "REMOVE" ).front(),
                     ctxt.get_action_name( "REMOVE" ) );
-    // Plug
-    app_actions.emplace_back( [&here, this]() {
-        plug( here );
-    } );
-    imenu.addentry( -1, true, ctxt.keys_bound_to( "PLUG" ).front(),
-                    string_format( "%s%s", ctxt.get_action_name( "PLUG" ),
-                                   //~ An addendum to Plug In's description, as in: Plug in appliance / merge power grid".
-                                   veh->is_powergrid() ? _( " / merge power grid" ) : "" ) );
+    if( veh->avail_linkable_part( a_point, true ) >= 0 ) {
+        app_actions.emplace_back( [&here, this]() {
+            plug( here );
+        } );
+        imenu.addentry( -1, true, ctxt.keys_bound_to( "PLUG" ).front(),
+                        string_format( "%s%s", ctxt.get_action_name( "PLUG" ),
+                                       //~ An addendum to Plug In's description, as in: Plug in appliance / merge power grid".
+                                       veh->is_powergrid() ? _( " / merge power grid" ) : "" ) );
+    }
 #if defined(TILES)
     // Hide connections
     app_actions.emplace_back( []() {
