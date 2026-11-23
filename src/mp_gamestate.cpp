@@ -59,6 +59,7 @@
 #include "map_scale_constants.h"
 #include "map_simulation_regions.h"
 #include "mapdata.h"
+#include "math_parser_diag_value.h"
 #include "memory_fast.h"
 #include "messages.h"
 #include "message_routing.h"
@@ -89,7 +90,6 @@
 #include "rng.h"
 #include "sleep.h"
 #include "sounds.h"
-#include "scent_map.h"
 #include "string_formatter.h"
 #include "string_input_popup.h"
 #include "tileray.h"
@@ -102,6 +102,7 @@
 #include "units.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_uid.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "worldfactory.h"
@@ -153,7 +154,6 @@
 #include <string_view>
 #include <system_error>
 #include <thread>
-#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -3287,8 +3287,8 @@ static void mp_drain_pending_omsync()
     for( ; p.cursor < end; ++p.cursor ) {
         if( p.ok[p.cursor] ) {
             overmap_buffer.ter_set(
-                tripoint_abs_omt( p.ox + static_cast<int>( p.cursor % p.w ),
-                                  p.oy + static_cast<int>( p.cursor / p.w ), p.z ),
+                tripoint_abs_omt( p.origin.x + static_cast<int>( p.cursor % p.w ),
+                                  p.origin.y + static_cast<int>( p.cursor / p.w ), p.z ),
                 p.cells[p.cursor] );
             ++applied;
         }
@@ -5249,7 +5249,7 @@ static void apply_pending_terrain()
             ++it;
             continue;
         }
-        const auto &chunk = it->second;
+        const client_replication_state::terrain_chunk &chunk = it->second;
         const tripoint_bub_ms origin = terrain.get_bub( project_to<coords::ms>( position ) );
         for( int y = 0; y < SEEY; ++y ) {
             for( int x = 0; x < SEEX; ++x ) {
@@ -5322,6 +5322,7 @@ static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::s
         g->load_npcs();
         mp_session().client_host_actor.bind_view( *host_npc, g->npc_lifetimes() );
         mp_session().client_host_spawned = true;
+        mp_session().replication.client.client_host_gender_initialized = false;
 
         // Apply ally status AFTER load_npcs so the NPC is fully wired into the
         // game state (faction manager, critter tracker, etc.).
@@ -5746,8 +5747,7 @@ bool client_apply_message( const std::string &msg )
             // ~32k ter_set calls don't freeze the main thread for seconds on receipt.
             pending_omsync_t p;
             p.z = z;
-            p.ox = o.x;
-            p.oy = o.y;
+            p.origin = o;
             p.w = w;
             p.cells.assign( total, oter_id() );
             p.ok.assign( total, 0 );
@@ -5868,12 +5868,13 @@ bool client_apply_message( const std::string &msg )
                 client_replication_state::terrain_chunk chunk;
                 if( decode( cell.get_array( "t" ), terrain_palette, chunk.terrain ) &&
                     decode( cell.get_array( "f" ), furniture_palette, chunk.furniture ) ) {
-                    pending.insert_or_assign( position, std::move( chunk ) );
+                    pending.insert_or_assign( position, chunk );
                 }
             }
             apply_pending_terrain();
-            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                     std::chrono::steady_clock::now() - t0 ).count();
+            const std::chrono::milliseconds::rep elapsed =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - t0 ).count();
             mp_log( "[ccb-mp] MAPSYNC recv: pending=" + std::to_string( pending.size() ) +
                     " ms=" + std::to_string( elapsed ) );
         } catch( const JsonError &e ) {
@@ -6142,9 +6143,6 @@ bool client_apply_message( const std::string &msg )
                 mp_session().replication.client.client_host_worn_sig = sig;
                 npc *host_npc = mp_host_view_actor();
                 if( host_npc ) {
-                    if( jo.has_bool( "host_male" ) ) {
-                        host_npc->male = jo.get_bool( "host_male" );
-                    }
                     host_npc->clear_worn();
                     std::string applied_log;
                     for( const JsonValue &wv : jo.get_array( "host_worn" ) ) {
@@ -6257,6 +6255,14 @@ bool client_apply_message( const std::string &msg )
                         }
                     }
                 }
+            }
+        }
+
+        if( jo.has_bool( "host_male" ) && mp_session().client_host_spawned ) {
+            if( npc *host_npc = mp_host_view_actor() ) {
+                const bool notify = mp_session().replication.client.client_host_gender_initialized;
+                mp_session().replication.client.client_host_gender_initialized = true;
+                host_npc->set_gender( jo.get_bool( "host_male" ), notify );
             }
         }
 
@@ -7857,7 +7863,7 @@ static void apply_vehicle_sync( JsonObject &jo )
             }
             vehicle *previous = lookup( identity );
             if( !previous ) {
-                const auto at_origin = m.veh_at( m.get_bub( new_abs ) );
+                const optional_vpart_position at_origin = m.veh_at( m.get_bub( new_abs ) );
                 if( at_origin && at_origin->vehicle().pos_abs() == new_abs &&
                     !host_uids.count( at_origin->vehicle().uid().get_value() ) ) {
                     previous = &at_origin->vehicle();
@@ -8060,7 +8066,7 @@ static void apply_vehicle_sync( JsonObject &jo )
     // Full lists contain every authoritative vehicle in the same loaded region.
     // Preserve the avatar's current vehicle until boarding state is reconciled.
     if( host_uids.size() == incoming.size() ) {
-        const auto avatar_part = m.veh_at( get_avatar().pos_bub() );
+        const optional_vpart_position avatar_part = m.veh_at( get_avatar().pos_bub() );
         const vehicle *avatar_vehicle = avatar_part ? &avatar_part->vehicle() : nullptr;
         for( const wrapped_vehicle &local : m.get_vehicles() ) {
             if( local.v && local.v != avatar_vehicle && !host_uids.count( local.v->uid().get_value() ) ) {
@@ -8911,7 +8917,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
         }
     }
 
-    const std::string host_male_str = host.male ? "true" : "false";
+    const std::string host_male_str = host.get_gender() ? "true" : "false";
 
     // Build host mutation array — ALL active mutations (cosmetics like skin/hair
     // plus physical mutations like Fangs / Sleek Fur / Spines / Feathered Arms).

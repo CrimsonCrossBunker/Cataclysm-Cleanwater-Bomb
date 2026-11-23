@@ -3,7 +3,7 @@
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "regional_nanaimo_bar",
-    "name": { "str": "Nanaimo bar", "str_pl": "Nanaimo bars" },
+    "name": { "str": "Nanaimo bar" },
     "description": "A chilled dessert bar with a coconut and cocoa crumb base, a layer of buttercream, and a thin chocolate top.",
     "weight": "72 g",
     "volume": "100 ml",

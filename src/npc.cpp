@@ -8,6 +8,7 @@
 #include <inventory.h>
 #include <item_location.h>
 #include "item_disposition.h"
+#include "item_uid.h"
 #include <lru_cache.h>
 #include <map_scale_constants.h>
 #include <memory_fast.h>
@@ -77,7 +78,6 @@
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
-#include "lua_platform_handle.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
 #include "magic.h"
@@ -94,6 +94,7 @@
 #include "monster.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "npc_autonomy.h"
 #include "npc_class.h"
 #include "npctalk.h"
 #include "npctrade.h"
@@ -644,11 +645,21 @@ void npc::load_npc_template( const string_id<npc_template> &ident )
 
     idz = ident;
     myclass = npc_class_id( tguy.myclass );
-    randomize( myclass, ident );
-    if( tem.gender_override != npc_template::gender::random ) {
-        male = tem.gender_override == npc_template::gender::male;
+    if( !getID().is_valid() ) {
+        setID( g->assign_npc_id() );
     }
-    name = SNIPPET.expand( male ? "<male_full_name>" : "<female_full_name>" );
+    const character_action_guard lifetime( *this );
+    randomize( myclass, ident );
+    if( !lifetime.get() ) {
+        return;
+    }
+    if( tem.gender_override != npc_template::gender::random ) {
+        set_gender( tem.gender_override == npc_template::gender::male );
+        if( !lifetime.get() ) {
+            return;
+        }
+    }
+    name = SNIPPET.expand( get_gender() ? "<male_full_name>" : "<female_full_name>" );
     if( !tem.name_unique.empty() ) {
         name = tem.name_unique.translated();
     }
@@ -693,9 +704,14 @@ void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
     if( !getID().is_valid() ) {
         setID( g->assign_npc_id() );
     }
+    const bool previous_gender = get_gender();
+    const character_action_guard lifetime( *this );
     if( type.is_null() || type == NC_NONE ) {
         Character::randomize( false );
         starting_inv_passtime();
+        if( lifetime.get() ) {
+            notify_gender_change( previous_gender );
+        }
         return;
     }
 
@@ -704,7 +720,10 @@ void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
     randomize_personality();
     moves = 100;
     mission = NPC_MISSION_NULL;
-    male = one_in( 2 );
+    set_gender( one_in( 2 ) );
+    if( !lifetime.get() ) {
+        return;
+    }
     pick_name();
     randomize_height();
     set_base_age( rng( NPC_RAND_AGE_MIN, NPC_RAND_AGE_MAX ) );
@@ -785,7 +804,7 @@ void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
         set_stored_kcal( get_healthy_kcal() );
     }
     starting_weapon( myclass );
-    starting_clothes( *this, myclass, male );
+    starting_clothes( *this, myclass, get_gender() );
     starting_inv( *this, myclass );
     has_new_items = true;
     clear_mutations();
@@ -2275,14 +2294,14 @@ void npc::say( const std::string &line, const sounds::sound_t spriority ) const
     // Sound happens even if we can't hear it
     if( spriority == sounds::sound_t::order || spriority == sounds::sound_t::alert ) {
         sounds::sound( pos_bub(), get_shout_volume(), spriority, sound, false, "speech",
-                       male ? "NPC_m" : "NPC_f" );
+                       get_gender() ? "NPC_m" : "NPC_f" );
     } else {
         // Always shouting when in danger or short time since being in danger
         sounds::sound( pos_bub(), danger_assessment() > NPC_DANGER_VERY_LOW ?
                        get_shout_volume() : indoor_voice(),
                        sounds::sound_t::speech,
                        sound, false, "speech",
-                       male ? "NPC_m_loud" : "NPC_f_loud" );
+                       get_gender() ? "NPC_m_loud" : "NPC_f_loud" );
     }
 }
 
@@ -4199,7 +4218,7 @@ std::vector<std::string> npc::extended_description() const
 std::string npc::get_epilogue() const
 {
     return SNIPPET.random_from_category(
-               male ? "epilogue_npc_male" : "epilogue_npc_female"
+               get_gender() ? "epilogue_npc_male" : "epilogue_npc_female"
            ).value_or( translation() ).translated();
 }
 
@@ -4214,7 +4233,7 @@ std::pair<std::string, nc_color> npc::hp_description() const
     int cur_hp = hp_percentage();
     std::string damage_info;
     std::string pronoun;
-    if( male ) {
+    if( get_gender() ) {
         pronoun = _( "He " );
     } else {
         pronoun = _( "She " );
