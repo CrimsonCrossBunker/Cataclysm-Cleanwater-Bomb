@@ -273,7 +273,7 @@
     "replace": "rifle_huge_hmg"
   },
   {
-    "id": [ "m134", "m249", "m240", "m60", "rm614_lmg" ],
+    "id": [ "m134", "m249", "m240", "m60", "rm614_lmg", "c9a2", "c6a1" ],
     "type": "MIGRATION",
     "replace": "rifle_lmg"
   },
@@ -371,6 +371,10 @@
       "aksemi",
       "805_bren",
       "bren2_556",
+      "c7a2",
+      "c8a3",
+      "fx05",
+      "fx05_patrol",
       "robofac_gun",
       "psl",
       "xedra_gun",
