@@ -1437,6 +1437,11 @@
   },
   {
     "type": "construction_group",
+    "id": "place_atlas_hydronic_boiler",
+    "name": "Place Electric Hot-Water Boiler"
+  },
+  {
+    "type": "construction_group",
     "id": "place_heater_large",
     "name": "Place Large Heater"
   },
