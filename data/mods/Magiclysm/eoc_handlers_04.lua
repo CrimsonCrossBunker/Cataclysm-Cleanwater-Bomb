@@ -123,7 +123,7 @@ return function(E, H)
     return true
     end
     EOC["EOC_SHAPESHIFTING_ARMOR_CHECK_RETURN_ARMOR_TO_NORMAL"] = function(ctx)
-    H.eoc_run_inv_eocs(H.u(ctx), ctx, "all", nil, { {  } }, { "EOC_SHAPESHIFTING_ARMOR_CHECK_SUBSUME_INTO_FORM_REMOVE_FLAGS" }, {  })
+    H.eoc_run_inv_eocs(H.u(ctx), ctx, "all", nil, { { flags = { "SHAPESHIFTED_ARMOR" } } }, { "EOC_SHAPESHIFTING_ARMOR_CHECK_SUBSUME_INTO_FORM_REMOVE_FLAGS" }, {  })
     return true
     end
     COND["EOC_DISPEL_MAGIC_REMOVE_ITEMS"] = function(ctx)

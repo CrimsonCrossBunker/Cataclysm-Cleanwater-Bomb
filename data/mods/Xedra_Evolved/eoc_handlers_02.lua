@@ -94,7 +94,7 @@ return function(E, H)
     end
     EOC["EOC_INVENTOR_CRAFTED_DEGRADATION"] = function(ctx)
     if ((not ((H.char_has_trait(H.u(ctx), "INVENTOR") == 1)))) then
-        H.eoc_run_inv_eocs(H.u(ctx), ctx, "all", nil, { {  } }, { "EOC_RUST_INVENTOR_ITEMS" }, {  })
+        H.eoc_run_inv_eocs(H.u(ctx), ctx, "all", nil, { { flags = { "INVENTOR_CRAFTED" } } }, { "EOC_RUST_INVENTOR_ITEMS" }, {  })
         return true
     end
     return false
@@ -154,7 +154,7 @@ return function(E, H)
     end
     EOC["EOC_INVENTOR_CRAFTED_GEAR"] = function(ctx)
     if ((H.char_has_trait(H.u(ctx), "INVENTOR") == 1)) then
-        H.eoc_run_inv_eocs(H.u(ctx), ctx, "all", nil, { {  } }, { "EOC_GEAR_INVENTOR_ITEMS" }, {  })
+        H.eoc_run_inv_eocs(H.u(ctx), ctx, "all", nil, { { flags = { "INVENTOR_CRAFTED" } } }, { "EOC_GEAR_INVENTOR_ITEMS" }, {  })
         return true
     end
     return false

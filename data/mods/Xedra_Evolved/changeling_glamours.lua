@@ -17,15 +17,21 @@ local function has_trait(character, trait)
 end
 
 local function has_effect(character, effect)
-    return checked(services.effects.has(character, id("effect", effect), id("body_part", "bp_null"), -1))
+    local effect_id = id("effect", effect)
+    if not effect_id:is_valid() then return false end
+    return checked(services.effects.has(character, effect_id, id("body_part", "bp_null"), -1))
 end
 
 local function remove_effect(character, effect)
-    checked(services.effects.remove(character, id("effect", effect)))
+    local effect_id = id("effect", effect)
+    if not effect_id:is_valid() then return end
+    checked(services.effects.remove(character, effect_id))
 end
 
 local function add_effect(character, effect, turns, options)
-    local result = services.effects.add(character, id("effect", effect), services.time.duration_from_turns(turns), options)
+    local effect_id = id("effect", effect)
+    if not effect_id:is_valid() then return end
+    local result = services.effects.add(character, effect_id, services.time.duration_from_turns(turns), options)
     if not result.ok and result.error.code ~= "rejected" then checked(result) end
 end
 
@@ -43,7 +49,10 @@ local function disguised(character)
 end
 
 local function clear_disguise(character)
-    for _, trait in ipairs(disguises) do checked(services.mutations.erase(character, id("mutation", trait))) end
+    for _, trait in ipairs(disguises) do
+        local mut = id("mutation", trait)
+        if mut:is_valid() then checked(services.mutations.erase(character, mut)) end
+    end
 end
 
 local running = "effect_changeling_summer_run_for_long_periods"
@@ -281,6 +290,7 @@ local cures = {
 
 local function heal_condition(target, cure, part)
     local effect = id("effect", cure[1])
+    if not effect:is_valid() then return end
     local body_part = id("body_part", part or "bp_null")
     if not checked(services.effects.has(target, effect, body_part, -1)) then return end
     if cure.mortal and is_character(target) and has_trait(target, "VAMPIRE") then return end
