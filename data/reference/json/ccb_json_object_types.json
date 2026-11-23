@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:87f51655e4ae4459e53b0681cc30bef355fdf6e710dfd74f59875cfabad7f70b",
+    "source_fingerprint": "sha256:d5304b26057cc39aa6841a6a95adbf97feec20a135d6c3b58ce89b5f9ecdc288",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6886,
-    "top_level_objects": 97901,
+    "tracked_json_files": 6888,
+    "top_level_objects": 97919,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15370,
+        "occurrences": 15376,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -4676,7 +4676,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 931,
+        "occurrences": 937,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -10557,7 +10557,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 608,
+        "occurrences": 614,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",
