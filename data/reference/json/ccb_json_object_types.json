@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:df213581fe05c71a48bc20ac5881ad739b9441ef991c4f2f96da790f80db7982",
+    "source_fingerprint": "sha256:87f51655e4ae4459e53b0681cc30bef355fdf6e710dfd74f59875cfabad7f70b",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6883,
-    "top_level_objects": 97862,
+    "tracked_json_files": 6886,
+    "top_level_objects": 97901,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15339,
+        "occurrences": 15370,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -457,7 +457,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 4195,
+        "occurrences": 4188,
         "examples": [
           {
             "path": "data/json/monsters/LIXA_monsters.json",
@@ -796,7 +796,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2356,
+        "occurrences": 2353,
         "examples": [
           {
             "path": "data/core/sentinels.json",
@@ -820,7 +820,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3813
+            "line": 3815
           }
         ],
         "confidence": "lexical_only"
@@ -2123,7 +2123,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 493,
+        "occurrences": 500,
         "examples": [
           {
             "path": "data/json/obsoletion_and_migration_0.I/obsolete_city_building.json",
@@ -3047,7 +3047,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5639,
+        "occurrences": 5603,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3216,7 +3216,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1693,
+        "occurrences": 1692,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -3299,7 +3299,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5828
+            "line": 5830
           }
         ],
         "confidence": "lexical_only"
@@ -3766,7 +3766,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5366
+            "line": 5368
           }
         ],
         "confidence": "lexical_only"
@@ -4558,7 +4558,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9780,
+        "occurrences": 9816,
         "examples": [
           {
             "path": "data/json/deconstruction.json",
@@ -4971,7 +4971,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9664,
+        "occurrences": 9670,
         "examples": [
           {
             "path": "data/json/effects_on_condition/npc_eocs/ref_center_exodii_updater.json",
@@ -5148,7 +5148,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 608,
+        "occurrences": 605,
         "examples": [
           {
             "path": "data/json/npcs/Backgrounds/OtherSurvivorStories/Brigitte_LaCroix_Background.json",
@@ -5514,7 +5514,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1109,
+        "occurrences": 1108,
         "examples": [
           {
             "path": "data/json/mapgen/animalpound.json",
@@ -5656,7 +5656,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4421
+            "line": 4423
           }
         ],
         "confidence": "lexical_only"
@@ -6615,7 +6615,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 535,
+        "occurrences": 536,
         "examples": [
           {
             "path": "data/json/mapgen/debug.json",
@@ -6733,7 +6733,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2762,
+        "occurrences": 2768,
         "examples": [
           {
             "path": "data/json/mapgen/debug.json",
@@ -7077,7 +7077,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 751,
+        "occurrences": 752,
         "examples": [
           {
             "path": "data/json/hobbies.json",
@@ -7485,7 +7485,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8215,
+        "occurrences": 8225,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -8704,7 +8704,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 204,
+        "occurrences": 205,
         "examples": [
           {
             "path": "data/json/obsoletion_and_migration_0.I/blacklist_scenarios.json",
@@ -8727,8 +8727,8 @@
         "status": "lexically_mentioned",
         "evidence": [
           {
-            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 2718
+            "path": "doc/JSON/JSON_FLAGS.md",
+            "line": 1327
           }
         ],
         "confidence": "lexical_only"
@@ -9171,7 +9171,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 937,
+        "occurrences": 934,
         "examples": [
           {
             "path": "data/core/tips.json",
@@ -9195,7 +9195,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4363
+            "line": 4365
           }
         ],
         "confidence": "lexical_only"
@@ -9362,7 +9362,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3967
+            "line": 3969
           }
         ],
         "confidence": "lexical_only"
@@ -9510,7 +9510,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 152,
+        "occurrences": 153,
         "examples": [
           {
             "path": "data/json/start_locations.json",
@@ -9628,7 +9628,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 4682,
+        "occurrences": 4677,
         "examples": [
           {
             "path": "data/json/effects_on_condition/mapgen_eocs/furniture_eocs.json",
@@ -9652,7 +9652,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4314
+            "line": 4316
           }
         ],
         "confidence": "lexical_only"
@@ -9864,7 +9864,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 184,
+        "occurrences": 182,
         "examples": [
           {
             "path": "data/json/effects_on_condition/mutation_eocs/mutation_sleep_eocs.json",
@@ -9888,7 +9888,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5563
+            "line": 5565
           }
         ],
         "confidence": "lexical_only"
@@ -11274,7 +11274,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3256
+            "line": 3258
           }
         ],
         "confidence": "lexical_only"
