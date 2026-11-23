@@ -173,6 +173,15 @@ static bool z_is_valid( int z )
     return get_map().inbounds_z( z );
 }
 
+bool monster::can_climb_vehicle_window( const map &here, const tripoint_bub_ms &p ) const
+{
+    if( !get_pathfinding_settings().allow_climb_vehicle_windows || !here.passable_ter_furn( p ) ) {
+        return false;
+    }
+    const optional_vpart_position vehicle_tile = here.veh_at( p );
+    return vehicle_tile && vehicle_tile->can_climb_through_window();
+}
+
 bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
 {
     if( !flies() && !climbs() && north_america::sheer_slope( *here, pos_bub( *here ), p ) ) {
@@ -203,7 +212,8 @@ bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
         return false;
     }
 
-    if( !tile.passable_skip_fields() || tile.has_flag( ter_furn_flag::TFLAG_CLIMBABLE ) ||
+    if( ( !tile.passable_skip_fields() && !can_climb_vehicle_window( *here, p ) ) ||
+        tile.has_flag( ter_furn_flag::TFLAG_CLIMBABLE ) ||
         ( has_impassable_fields && !immune_to_impassable_fields() ) ) {
         if( digging() ) {
             if( !tile.has_flag( ter_furn_flag::TFLAG_BURROWABLE ) ) {
@@ -1781,6 +1791,9 @@ int monster::calc_movecost( const map &here, const tripoint_bub_ms &from,
             // TODO: maybe make monsters with climbing be faster in vehicles?
             const vpart_position vp( const_cast<vehicle &>( *veh ), part );
             int veh_movecost = vp.get_movecost();
+            if( veh_movecost == 0 && can_climb_vehicle_window( here, where ) ) {
+                veh_movecost = vpart_position::window_climb_movecost;
+            }
             int fieldcost = get_filtered_fieldcost( field );
             if( ( veh_movecost <= 0 || fieldcost < 0 ) && where == from ) {
                 debugmsg( "%s cannot move to %s. monster::calc_movecost expects to be called with valid destination.",
@@ -1938,7 +1951,7 @@ bool monster::bash_at( const tripoint_bub_ms &p )
     }
 
     //Hallucinations can't bash stuff.
-    if( is_hallucination() ) {
+    if( is_hallucination() || ( can_climb_vehicle_window( here, p ) && can_move_to( p ) ) ) {
         return false;
     }
 

@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:d14b6fdc98c8186ce60b387115156cf840eefd731667636dda41bad4c939f24c",
+    "source_fingerprint": "sha256:2d26bc4479aa38d8ed4064e6f2442cb071490c34523fe8c24fd932a542c29ae8",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -30,7 +30,7 @@
     ],
     "observed_not_registered": [],
     "tracked_json_files": 6888,
-    "top_level_objects": 97923,
+    "top_level_objects": 97936,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15376,
+        "occurrences": 15377,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -2467,7 +2467,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 912,
+        "occurrences": 915,
         "examples": [
           {
             "path": "data/json/construction/appliances.json",
@@ -2580,7 +2580,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 527,
+        "occurrences": 530,
         "examples": [
           {
             "path": "data/json/construction_group.json",
@@ -7485,7 +7485,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8226,
+        "occurrences": 8229,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -10557,7 +10557,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 614,
+        "occurrences": 617,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",

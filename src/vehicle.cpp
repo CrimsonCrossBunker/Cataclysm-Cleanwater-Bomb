@@ -596,7 +596,7 @@ void vehicle::init_state( map &placed_on, int init_veh_fuel, veh_spawn_status in
             rng_fuel_amount( pt, pt.ammo_current() );
         }
 
-        if( vp.has_feature( "OPENABLE" ) ) { // doors are closed
+        if( vp.has_feature( "OPENABLE" ) && !vp.has_feature( "CABIN_WINDOW" ) ) {
             if( !pt.open && one_in( 4 ) ) {
                 open( placed_on, p );
             }
@@ -3083,6 +3083,16 @@ int vpart_position::get_movecost() const
     }
 }
 
+bool vpart_position::can_climb_through_window() const
+{
+    if( vehicle().is_moving() || vehicle().vertical_velocity != 0 ) {
+        return false;
+    }
+    const auto window = avail_part_with_feature( "CABIN_WINDOW" );
+    const auto obstacle = obstacle_at_part();
+    return window && window->part().open && obstacle && obstacle->has_feature( VPFLAG_OPENABLE );
+}
+
 std::optional<vpart_reference> vpart_position::part_displayed() const
 {
     int part_id = vehicle().part_displayed_at( mount_pos3(), true );
@@ -3471,7 +3481,8 @@ int vehicle::next_part_to_close( int p, bool outside ) const
          ++part_it ) {
         const vehicle_part &vp = part( *part_it );
         const vpart_info &vpi = vp.info();
-        if( vpi.has_flag( VPFLAG_OPENABLE ) && vp.is_available() && vp.open == 1
+        if( vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" ) &&
+            vp.is_available() && vp.open == 1
             && ( !outside || !vpi.has_flag( "OPENCLOSE_INSIDE" ) ) ) {
             return *part_it;
         }
@@ -3487,7 +3498,8 @@ int vehicle::next_part_to_open( int p, bool outside ) const
     for( const int elem : parts_at_relative( parts[p].mount_pos3(), true, true ) ) {
         const vehicle_part &vp = part( elem );
         const vpart_info &vpi = vp.info();
-        if( vpi.has_flag( VPFLAG_OPENABLE ) && vp.is_available() && vp.open == 0 &&
+        if( vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" ) &&
+            vp.is_available() && vp.open == 0 &&
             !( vp.locked && has_lock ) &&
             ( !outside || !vpi.has_flag( "OPENCLOSE_INSIDE" ) ) ) {
             return elem;

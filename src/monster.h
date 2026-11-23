@@ -180,6 +180,7 @@ class monster : public Creature
         bool can_submerge() const; // MF_AQUATIC or swims() or MF_NO_BREATH, and not MF_ELECTRONIC
         bool can_drown() const;    // MF_AQUATIC or swims() or MF_NO_BREATHE or flies()
         bool can_climb() const;         // climbs() or flies()
+        bool can_climb_vehicle_window( const map &here, const tripoint_bub_ms &p ) const;
         bool digging() const override;  // digs() or can_dig() and diggable terrain
         bool can_dig() const;
         bool digs() const;

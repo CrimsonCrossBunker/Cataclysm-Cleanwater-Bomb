@@ -62,6 +62,7 @@
 #include "veh_appliance.h"
 #include "veh_interact.h"
 #include "veh_type.h"
+#include "vehicle_appliance.h"
 #include "vpart_position.h"
 
 static const activity_id ACT_MORTAR_AIMING( "ACT_MORTAR_AIMING" );
@@ -105,10 +106,18 @@ void appliance_convert_examine_actor::call( Character &you, const tripoint_bub_m
     const auto still_there = [&]() {
         return lifetime && context && you.pos_abs() == choice.origin && choice.target.matches( here );
     };
-    if( !query_yn( _( "Connect %s to grid?" ), item::nname( appliance_item ) ) || !still_there() ) {
+    const bool connect = query_yn( _( "Connect %s to grid?" ), item::nname( appliance_item ) );
+    if( !still_there() ) {
         return;
     }
     const vpart_id part = vpart_appliance_from_item( appliance_item );
+    if( !connect ) {
+        if( part.is_valid() && part->has_flag( "HYDRONIC_BOILER" ) &&
+            here.furn( examp )->keg_capacity > 0_ml ) {
+            iexamine::keg( you, examp );
+        }
+        return;
+    }
     if( part.is_valid() && part->has_flag( "HALF_CIRCLE_LIGHT" ) ) {
         const restore_on_out_of_scope restore_rng( rng_get_engine() );
         choice.direction = units::to_degrees( query_vehicle_part_direction( here, examp, part.obj(),
@@ -162,10 +171,51 @@ bool appliance_convert_examine_actor::execute( Character &who, map &here,
     const auto direction = choice.direction ? std::make_optional( units::from_degrees(
                                *choice.direction ) ) :
                            std::nullopt;
-    if( !place_appliance( here, tile, part, who, std::nullopt, direction ) ) {
+    std::optional<item> base;
+    std::vector<item *> stored_water;
+    if( actor->furn_set && part->has_flag( "HYDRONIC_BOILER" ) &&
+        here.furn( tile )->keg_capacity > 0_ml ) {
+        static const itype_id water( "water" );
+        static const itype_id clean_water( "water_clean" );
+        int charges = 0;
+        double temperature_sum = 0;
+        bool clean = true;
+        for( item &liquid : here.i_at( tile ) ) {
+            if( !liquid.made_of_from_type( phase_id::LIQUID ) || liquid.charges <= 0 ) {
+                continue;
+            }
+            if( liquid.typeId() != water && liquid.typeId() != clean_water ) {
+                who.add_msg_if_player( _( "Drain liquids other than water before connecting the heater." ) );
+                return false;
+            }
+            if( craft_reservation::contains_reserved( liquid ) ) {
+                who.add_msg_if_player( _( "The stored water is reserved for a craft." ) );
+                return false;
+            }
+            stored_water.push_back( &liquid );
+            charges += liquid.charges;
+            const double degrees = liquid.temperature > units::from_kelvin( 0 ) ?
+                                   units::to_celsius( liquid.temperature ) : 15.0;
+            temperature_sum += degrees * liquid.charges;
+            clean = clean && liquid.typeId() == clean_water && liquid.poison == 0;
+        }
+        if( charges > 0 ) {
+            const int per_liter = item( water ).charges_per_volume( 1000_ml );
+            if( per_liter <= 0 ) {
+                return false;
+            }
+            base.emplace( part->base_item );
+            store_boiler_water( *base, static_cast<double>( charges ) / per_liter,
+                                temperature_sum / charges, clean );
+        }
+    }
+    if( !place_appliance( here, tile, part, who, base, direction ) ) {
         return false;
     }
     // Install first so a failed placement leaves the original tile and contents intact.
+    for( item *liquid : stored_water ) {
+        here.i_rem( tile, liquid );
+    }
     if( actor->ter_set ) {
         here.ter_set( tile, *actor->ter_set );
     }

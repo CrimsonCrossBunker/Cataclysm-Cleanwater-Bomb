@@ -108,6 +108,42 @@
   },
   {
     "type": "construction",
+    "id": "app_atlas_wood_hydronic_boiler",
+    "group": "place_atlas_wood_hydronic_boiler",
+    "category": "APPLIANCE",
+    "required_skills": [ [ "fabrication", 0 ] ],
+    "time": "5 m",
+    "components": [ [ [ "atlas_wood_hydronic_boiler", 1 ] ] ],
+    "pre_special": "check_empty",
+    "post_special": "done_appliance",
+    "activity_level": "BRISK_EXERCISE"
+  },
+  {
+    "type": "construction",
+    "id": "app_household_water_heater",
+    "group": "place_household_water_heater",
+    "category": "APPLIANCE",
+    "required_skills": [ [ "fabrication", 0 ] ],
+    "time": "8 m",
+    "components": [ [ [ "household_water_heater", 1 ] ] ],
+    "pre_special": "check_empty",
+    "post_special": "done_appliance",
+    "activity_level": "BRISK_EXERCISE"
+  },
+  {
+    "type": "construction",
+    "id": "app_household_water_heater_family",
+    "group": "place_household_water_heater_family",
+    "category": "APPLIANCE",
+    "required_skills": [ [ "fabrication", 0 ] ],
+    "time": "10 m",
+    "components": [ [ [ "household_water_heater_family", 1 ] ] ],
+    "pre_special": "check_empty",
+    "post_special": "done_appliance",
+    "activity_level": "BRISK_EXERCISE"
+  },
+  {
+    "type": "construction",
     "id": "app_autoclave",
     "group": "place_autoclave",
     "category": "APPLIANCE",

@@ -46,6 +46,32 @@
   },
   {
     "type": "vehicle_part",
+    "id": "atlas_wood_hydronic_boiler",
+    "copy-from": "atlas_hydronic_boiler",
+    "name": { "str": "wood stove with a water boiler" },
+    "item": "atlas_wood_hydronic_boiler",
+    "description": "A wood stove with a forty-litre water tank and fittings for a hot-water radiator loop.",
+    "requirements": { "removal": { "time": "6 m", "using": [ [ "vehicle_wrench_1", 1 ] ] } },
+    "breaks_into": [ { "item": "scrap", "count": [ 3, 6 ] }, { "item": "pipe", "count": [ 1, 2 ] } ]
+  },
+  {
+    "type": "vehicle_part",
+    "id": "ap_household_water_heater",
+    "copy-from": "atlas_hydronic_boiler",
+    "name": { "str": "household water heater" },
+    "item": "household_water_heater",
+    "description": "A 100-litre electric water heater with fittings for a hot-water radiator loop."
+  },
+  {
+    "type": "vehicle_part",
+    "id": "ap_household_water_heater_family",
+    "copy-from": "ap_household_water_heater",
+    "name": { "str": "family–sized household water heater" },
+    "item": "household_water_heater_family",
+    "description": "A 200-litre electric water heater with fittings for a hot-water radiator loop."
+  },
+  {
+    "type": "vehicle_part",
     "id": "atlas_hydronic_radiator",
     "name": { "str": "hot-water radiator" },
     "description": "A metal panel that warms an enclosed room when piped to a hot-water boiler.",
