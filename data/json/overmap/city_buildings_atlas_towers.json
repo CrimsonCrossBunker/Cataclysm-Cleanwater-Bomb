@@ -1,8 +1,32 @@
 [
-  {"type": "city_building", "id": "atlas_tall_office_1", "copy-from": "office_tower_large"},
-  {"type": "city_building", "id": "atlas_tall_office_2", "copy-from": "office_tower_large"},
-  {"type": "city_building", "id": "atlas_tall_office_3", "copy-from": "office_tower_large"},
-  {"type": "city_building", "id": "atlas_tall_hotel_1", "copy-from": "hotel_1"},
-  {"type": "city_building", "id": "atlas_tall_hotel_2", "copy-from": "hotel_1"},
-  {"type": "city_building", "id": "atlas_tall_hotel_3", "copy-from": "hotel_1"}
+  {
+    "type": "city_building",
+    "id": "atlas_tall_office_1",
+    "copy-from": "office_tower_large"
+  },
+  {
+    "type": "city_building",
+    "id": "atlas_tall_office_2",
+    "copy-from": "office_tower_large"
+  },
+  {
+    "type": "city_building",
+    "id": "atlas_tall_office_3",
+    "copy-from": "office_tower_large"
+  },
+  {
+    "type": "city_building",
+    "id": "atlas_tall_hotel_1",
+    "copy-from": "hotel_1"
+  },
+  {
+    "type": "city_building",
+    "id": "atlas_tall_hotel_2",
+    "copy-from": "hotel_1"
+  },
+  {
+    "type": "city_building",
+    "id": "atlas_tall_hotel_3",
+    "copy-from": "hotel_1"
+  }
 ]

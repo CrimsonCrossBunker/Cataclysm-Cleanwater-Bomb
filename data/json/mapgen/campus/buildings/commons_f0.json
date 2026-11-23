@@ -107,8 +107,28 @@
         "___________________b?..[...[.||:%%:||.[..?bb____",
         "___________________bb.?..?.?...____......bb_____"
       ],
-      "terrain": { "C": "t_floor", "T": "t_floor", "K": "t_floor", "A": "t_floor", "S": "t_floor", "P": "t_floor", "F": "t_floor", "O": "t_floor", "W": "t_floor" },
-      "furniture": { "C": "f_chair", "T": "f_table", "K": "f_bookcase", "A": "f_filing_cabinet", "S": "f_sofa", "P": "f_counter", "F": "f_fridge", "O": "f_oven", "W": "f_sink" },
+      "terrain": {
+        "C": "t_floor",
+        "T": "t_floor",
+        "K": "t_floor",
+        "A": "t_floor",
+        "S": "t_floor",
+        "P": "t_floor",
+        "F": "t_floor",
+        "O": "t_floor",
+        "W": "t_floor"
+      },
+      "furniture": {
+        "C": "f_chair",
+        "T": "f_table",
+        "K": "f_bookcase",
+        "A": "f_filing_cabinet",
+        "S": "f_sofa",
+        "P": "f_counter",
+        "F": "f_fridge",
+        "O": "f_oven",
+        "W": "f_sink"
+      },
       "items": { "K": { "item": "textbooks", "chance": 45 }, "A": { "item": "office", "chance": 18 } },
       "palettes": [ "campus_common" ]
     }

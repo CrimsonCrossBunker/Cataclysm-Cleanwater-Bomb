@@ -32,9 +32,7 @@
       "regional_green_chile_stew": [ "US-NM" ],
       "regional_louisiana_gumbo": [ "US-LA" ]
     },
-    "dry_goods": {
-      "regional_sonoran_machaca": [ "MX-SON", "MX-CHH" ]
-    }
+    "dry_goods": { "regional_sonoran_machaca": [ "MX-SON", "MX-CHH" ] }
   },
   "atlas_map_groups": [
     "roadmap_stock"
