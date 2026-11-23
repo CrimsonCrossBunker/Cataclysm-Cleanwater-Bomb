@@ -111,6 +111,7 @@
 #include "units_utility.h"
 #include "value_ptr.h"
 #include "veh_type.h"
+#include "vehicle_appliance.h"
 #include "vehicle_palette.h"
 #include "vehicle_part_location.h"
 #include "vehicle_selector.h"
@@ -6806,6 +6807,9 @@ void vehicle::idle( map &here, bool on_map )
     avg_velocity = ( velocity + avg_velocity ) / 2;
 
     power_parts( here );
+    if( on_map && calendar::once_every( 1_minutes ) ) {
+        update_vehicle_climate( here, *this );
+    }
     Character &player_character = get_player_character();
     if( engine_on && total_power( here ) > 0_W ) {
         // Consume fuel at here only if the vehicle is not thrusting.
@@ -6871,8 +6875,13 @@ void vehicle::idle( map &here, bool on_map )
         if( pt.is_unavailable() || !pt.enabled ) {
             continue;
         }
-        for( const emit_id &e : pt.info().emissions ) {
-            here.emit_field( bub_part_pos( here, pt ), e );
+        const tripoint_bub_ms emitter = bub_part_pos( here, pt );
+        // Enclosed stationary heaters deliver heat through the room model.
+        if( !( is_appliance() && pt.info().has_flag( "SPACE_HEATER" ) &&
+               is_hvac_indoors( here, emitter ) ) ) {
+            for( const emit_id &e : pt.info().emissions ) {
+                here.emit_field( emitter, e );
+            }
         }
         for( const emit_id &e : pt.info().exhaust ) {
             if( exhaust_and_muffle.first == -1 ) {

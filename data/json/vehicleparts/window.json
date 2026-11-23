@@ -1,5 +1,12 @@
 [
   {
+    "type": "vehicle_part",
+    "id": "atlas_roll_down_window",
+    "copy-from": "door_window",
+    "name": { "str": "roll-down door window" },
+    "extend": { "flags": [ "OPENABLE", "CABIN_WINDOW" ] }
+  },
+  {
     "id": "door_window",
     "type": "vehicle_part",
     "name": { "str": "door window" },

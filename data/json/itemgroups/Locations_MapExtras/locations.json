@@ -2223,6 +2223,7 @@
     "ammo": 75,
     "magazine": 100,
     "items": [
+      { "item": "atlas_hvac_remote", "prob": 6 },
       { "group": "soda_in_small_container", "prob": 370 },
       [ "file", 90 ],
       { "group": "magazines", "prob": 130 },

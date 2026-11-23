@@ -27,6 +27,9 @@ bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart
                       const Character &owner, const std::optional<item> &base = std::nullopt,
                       std::optional<units::angle> direction = std::nullopt );
 
+bool place_unowned_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
+                              const std::optional<item> &base = std::nullopt );
+
 /**
  * Appliance interaction UI. Works similarly to veh_interact, but has
  * a much simpler design. The intended usage is:

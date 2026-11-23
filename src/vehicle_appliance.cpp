@@ -1,7 +1,10 @@
 #include "vehicle_appliance.h"
 
 #include <algorithm>
+#include <cmath>
+#include <initializer_list>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "calendar.h"
@@ -10,11 +13,15 @@
 #include "crafting.h"
 #include "flag.h"
 #include "game.h"
+#include "handle_liquid.h"
 #include "item.h"
+#include "item_location.h"
 #include "item_stack.h"
 #include "itype.h"
 #include "json.h"
 #include "map.h"
+#include "mapdata.h"
+#include "mp_client_conn.h"
 #include "mp_inventory_activity.h"
 #include "pocket_type.h"
 #include "string_formatter.h"
@@ -26,6 +33,8 @@
 #include "vehicle.h"
 #include "vehicle_control.h"
 #include "vpart_range.h"
+#include "weather.h"
+#include "weather_gen.h"
 
 namespace
 {
@@ -424,9 +433,442 @@ void use_vehicle_appliance( Character &who, map &here, vehicle &target, int part
     }
 }
 
+
+bool is_hvac_indoors( const map &here, const tripoint_bub_ms &position )
+{
+    return here.inbounds( position ) &&
+           ( position.z() < 0 || here.has_flag( ter_furn_flag::TFLAG_INDOORS, position ) );
+}
+
+namespace
+{
+const tripoint_abs_ms no_hvac_link( tripoint::min );
+constexpr int link_range = 8;
+
+int hvac_part_at( const vehicle &target, const tripoint_abs_ms &p, const std::string &flag )
+{
+    for( const vpart_reference &part : target.get_avail_parts( flag ) ) {
+        if( part.pos_abs() == p ) {
+            return part.part_index();
+        }
+    }
+    return -1;
+}
+
+bool hvac_power( map &here, vehicle &target, int watts )
+{
+    const int energy_kj = ( watts * 60 + 999 ) / 1000;
+    return energy_kj > 0 && !cata_mp::is_client_mode() &&
+           target.battery_left( here ) >= energy_kj &&
+           target.discharge_battery( here, energy_kj ) == 0;
+}
+
+int hvac_minute()
+{
+    return to_minutes<int>( calendar::turn - calendar::turn_zero );
+}
+
+double update_boiler( map &here, vehicle &target, item &boiler, double ambient )
+{
+    const int now = hvac_minute();
+    const int last = static_cast<int>( boiler.get_var( "hvac_minute", now - 1.0 ) );
+    const double liters = boiler.get_var( "hvac_water_l", 0.0 );
+    double water_c = boiler.get_var( "hvac_water_c", ambient );
+    if( last == now || cata_mp::is_client_mode() ) {
+        return water_c;
+    }
+    const int elapsed = std::max( 0, now - last );
+    water_c = ambient + ( water_c - ambient ) * std::exp( -elapsed / 240.0 );
+    const bool boil = boiler.get_var( "hvac_mode", 0.0 ) == 2;
+    const double target_c = boil ? 100 : 75;
+    if( elapsed > 0 && liters > 0 && boiler.get_var( "hvac_mode", 0.0 ) != 0 &&
+        water_c < target_c - 0.01 && hvac_power( here, target, 4500 ) ) {
+        water_c = std::min( target_c, water_c + 4500.0 * 60 / ( liters * 4184 ) );
+        if( boil && water_c >= 100 ) {
+            boiler.set_var( "hvac_clean", 1 );
+            boiler.set_var( "hvac_mode", 0 );
+        }
+    }
+    boiler.set_var( "hvac_minute", now );
+    boiler.set_var( "hvac_water_c", water_c );
+    return water_c;
+}
+
+void choose_thermostat( item &unit, bool cabin )
+{
+    const int old_setpoint = static_cast<int>( unit.get_var( "hvac_setpoint", 22.0 ) );
+    uilist modes;
+    modes.title = string_format( _( "Climate control (set to %d C)" ), old_setpoint );
+    modes.addentry( 0, true, 'o', _( "Off" ) );
+    modes.addentry( 1, true, 'c', _( "Cooling" ) );
+    modes.addentry( 2, true, 'h', _( "Heating" ) );
+    modes.addentry( 3, true, 'e', _( "Energy saver (wider temperature range)" ) );
+    if( cabin ) {
+        modes.addentry( 4, true, 'a', _( "Automatic" ) );
+    }
+    modes.query();
+    if( modes.ret < 0 ) {
+        return;
+    }
+    if( modes.ret == 0 ) {
+        unit.set_var( "hvac_mode", 0 );
+        return;
+    }
+    uilist setpoints;
+    setpoints.title = _( "Set target temperature" );
+    for( int c = 16; c <= 30; ++c ) {
+        setpoints.addentry( c, true, 0, string_format( _( "%d C" ), c ) );
+    }
+    setpoints.selected = std::clamp( old_setpoint, 16, 30 ) - 16;
+    setpoints.query();
+    if( setpoints.ret >= 16 ) {
+        unit.set_var( "hvac_mode", modes.ret );
+        unit.set_var( "hvac_setpoint", setpoints.ret );
+    }
+}
+
+void choose_hvac_link( Character &who, map &here, const tripoint_bub_ms &source,
+                      item &unit, bool radiator )
+{
+    uilist choices;
+    choices.title = radiator ? _( "Connect radiator to boiler" ) : _( "Connect indoor and outdoor units" );
+    choices.addentry( 0, true, 'd', _( "Disconnect" ) );
+    std::vector<tripoint_abs_ms> endpoints;
+    for( const tripoint_bub_ms &p : here.points_in_radius( source, link_range ) ) {
+        if( !here.inbounds( p ) || p == source || ( !radiator && is_hvac_indoors( here, p ) ) ) {
+            continue;
+        }
+        const optional_vpart_position v = here.veh_at( p );
+        const tripoint_abs_ms abs = here.get_abs( p );
+        if( v && hvac_part_at( v->vehicle(), abs,
+                              radiator ? "HYDRONIC_BOILER" : "SPLIT_HVAC_OUTDOOR" ) >= 0 ) {
+            endpoints.push_back( abs );
+            choices.addentry( static_cast<int>( endpoints.size() ), true, 0,
+                              string_format( _( "%s (%d tiles away)" ), v->vehicle().name,
+                                             square_dist( source.xy(), p.xy() ) ) );
+        }
+    }
+    choices.query();
+    if( choices.ret == 0 ) {
+        unit.erase_var( "hvac_link" );
+    } else if( choices.ret > 0 && static_cast<std::size_t>( choices.ret ) <= endpoints.size() ) {
+        for( const itype_id &material : { itype_id( "pipe" ), itype_id( "hose" ),
+                                         itype_id( "makeshift_hose" ), itype_id( "hose_garden" ) } ) {
+            const tripoint_abs_ms &end = endpoints[choices.ret - 1];
+            const int length = square_dist( source.xy(), here.get_bub( end ).xy() );
+            const int lengths = material == itype_id( "pipe" ) ? length : ( length + 3 ) / 4;
+            if( who.has_amount( material, lengths ) && !who.use_amount( material, lengths ).empty() ) {
+                unit.set_var( "hvac_link", end );
+                return;
+            }
+        }
+        who.add_msg_if_player( _( "You need enough pipe or hose to reach that unit." ) );
+    }
+}
+
+void operate_boiler( Character &who, map &here, vehicle &target, item &boiler )
+{
+    const double water_c = update_boiler( here, target, boiler,
+                                         units::to_celsius( get_weather().temperature ) );
+    const item water_sample( water );
+    const int per_liter = water_sample.charges_per_volume( units::from_milliliter( 1000 ) );
+    if( per_liter <= 0 ) {
+        return;
+    }
+    const double liters = boiler.get_var( "hvac_water_l", 0.0 );
+    const int empty = static_cast<int>( ( 40 - liters ) * per_liter + 0.0001 );
+    uilist options;
+    options.title = string_format( _( "Boiler: %.1f / 40 L at %.1f C" ), liters, water_c );
+    options.addentry( 0, true, 'o', _( "Turn off" ) );
+    options.addentry( 1, liters > 0, 'h', _( "Heat the radiator loop" ) );
+    options.addentry( 2, liters > 0, 'b', _( "Boil the water, then switch off" ) );
+    options.addentry( 3, empty > 0, 'f', _( "Add water from carried containers" ) );
+    options.addentry( 4, liters > 0, 'd', _( "Draw water into a container" ) );
+    options.query();
+    if( options.ret >= 0 && options.ret <= 2 ) {
+        boiler.set_var( "hvac_mode", options.ret );
+    } else if( options.ret == 3 ) {
+        int total = 0;
+        for( const itype_id &kind : { clean_water, water } ) {
+            const int n = std::min( empty - total, who.charges_of( kind ) );
+            if( n > 0 && who.use_charges_if_avail( kind, n ) ) {
+                total += n;
+                if( kind == water ) {
+                    boiler.set_var( "hvac_clean", 0 );
+                } else if( liters == 0 && total == n ) {
+                    boiler.set_var( "hvac_clean", 1 );
+                }
+            }
+        }
+        const double added = total / static_cast<double>( per_liter );
+        if( added > 0 ) {
+            boiler.set_var( "hvac_water_l", liters + added );
+            boiler.set_var( "hvac_water_c", ( water_c * liters + 15.0 * added ) / ( liters + added ) );
+        }
+    } else if( options.ret == 4 ) {
+        const int original = static_cast<int>( liters * per_liter + 0.0001 );
+        item drawn( boiler.get_var( "hvac_clean", 0.0 ) == 1 ? clean_water : water,
+                    calendar::turn, original );
+        if( liquid_handler::consume_liquid( drawn, 0 ) ) {
+            boiler.set_var( "hvac_water_l", drawn.charges / static_cast<double>( per_liter ) );
+            if( drawn.charges == 0 ) {
+                boiler.set_var( "hvac_mode", 0 );
+            }
+        }
+    }
+}
+
+void add_hvac_menu( veh_menu &menu, map &here, vehicle &target, const tripoint_abs_ms &pos )
+{
+    const auto add = [&]( const std::string &label, int index, const std::string &role ) {
+        menu.add( label ).on_submit( [&here, &target, pos, index, role] {
+            if( cata_mp::is_client_mode() ) {
+                get_player_character().add_msg_if_player( _( "Climate controls are only available to the host." ) );
+                return;
+            }
+            item_location unit = target.part_base( index );
+            if( !unit ) {
+                return;
+            }
+            Character &who = get_player_character();
+            if( role == "HYDRONIC_BOILER" ) {
+                operate_boiler( who, here, target, *unit );
+            } else if( role == "SPLIT_HVAC_INDOOR" || role == "HYDRONIC_RADIATOR" ) {
+                choose_hvac_link( who, here, here.get_bub( pos ), *unit, role == "HYDRONIC_RADIATOR" );
+            } else {
+                choose_thermostat( *unit, true );
+            }
+        } );
+    };
+    for( const auto &[role, label] : std::initializer_list<std::pair<std::string, std::string>> {
+             { "SPLIT_HVAC_INDOOR", _( "Connect the split air conditioner" ) },
+             { "HYDRONIC_BOILER", _( "Operate water boiler" ) },
+             { "HYDRONIC_RADIATOR", _( "Connect the radiator" ) }
+         } ) {
+        const int index = hvac_part_at( target, pos, role );
+        if( index >= 0 ) {
+            add( label, index, role );
+        }
+    }
+    for( const vpart_reference &part : target.get_avail_parts( "CABIN_HVAC" ) ) {
+        add( _( "Cabin climate control" ), part.part_index(), "CABIN_HVAC" );
+        break;
+    }
+    std::vector<int> closed_windows;
+    std::vector<int> open_windows;
+    for( const vpart_reference &window : target.get_avail_parts( "CABIN_WINDOW" ) ) {
+        ( window.part().open ? open_windows : closed_windows ).push_back( window.part_index() );
+    }
+    const auto add_windows = [&]( const std::string &label, std::vector<int> indices, bool opening ) {
+        if( !indices.empty() ) {
+            menu.add( label ).enable( !cata_mp::is_client_mode() )
+            .on_submit( [&here, &target, indices = std::move( indices ), opening] {
+                for( const int index : indices ) {
+                    if( opening ) {
+                        target.open( here, index );
+                    } else if( target.can_close( index, get_player_character() ) ) {
+                        target.close( here, index );
+                    }
+                }
+            } );
+        }
+    };
+    add_windows( _( "Open cabin windows" ), std::move( closed_windows ), true );
+    add_windows( _( "Close cabin windows" ), std::move( open_windows ), false );
+}
+} // namespace
+
+std::optional<int> use_hvac_remote( Character *who, item *, const tripoint_bub_ms & )
+{
+    if( !who || who->is_npc() || cata_mp::is_client_mode() ) {
+        return std::nullopt;
+    }
+    map &here = get_map();
+    uilist choices;
+    choices.title = _( "Select an indoor air conditioner" );
+    std::vector<item_location> units;
+    for( const tripoint_bub_ms &p : here.points_in_radius( who->pos_bub(), link_range ) ) {
+        if( !here.inbounds( p ) || !who->sees( here, p ) ) {
+            continue;
+        }
+        const optional_vpart_position v = here.veh_at( p );
+        const int index = v ? hvac_part_at( v->vehicle(), here.get_abs( p ), "SPLIT_HVAC_INDOOR" ) : -1;
+        if( index >= 0 ) {
+            choices.addentry( static_cast<int>( units.size() ), true, 0,
+                              string_format( _( "%s (%d tiles away)" ), v->vehicle().name,
+                                             square_dist( p.xy(), who->pos_bub().xy() ) ) );
+            units.push_back( v->vehicle().part_base( index ) );
+        }
+    }
+    if( units.empty() ) {
+        who->add_msg_if_player( _( "No indoor unit is in range." ) );
+        return std::nullopt;
+    }
+    choices.query();
+    if( choices.ret >= 0 && static_cast<std::size_t>( choices.ret ) < units.size() && units[choices.ret] ) {
+        choose_thermostat( *units[choices.ret], false );
+    }
+    return 0;
+}
+
+double room_appliance_watts( map &here, vehicle &target, const tripoint_bub_ms &position,
+                             double outside_c, double room_c )
+{
+    const tripoint_abs_ms abs = here.get_abs( position );
+    const int boiler_index = hvac_part_at( target, abs, "HYDRONIC_BOILER" );
+    if( boiler_index >= 0 ) {
+        item_location boiler = target.part_base( boiler_index );
+        if( boiler ) {
+            update_boiler( here, target, *boiler, outside_c );
+        }
+        return 0;
+    }
+    if( !is_hvac_indoors( here, position ) ) {
+        return 0;
+    }
+    const int heater_index = hvac_part_at( target, abs, "SPACE_HEATER" );
+    if( heater_index >= 0 && target.part( heater_index ).enabled ) {
+        return std::max( 0.0, -static_cast<double>( units::to_watt(
+                             target.part( heater_index ).info().epower ) ) );
+    }
+    const int radiator_index = hvac_part_at( target, abs, "HYDRONIC_RADIATOR" );
+    const bool radiator = radiator_index >= 0;
+    const int index = radiator ? radiator_index : hvac_part_at( target, abs, "SPLIT_HVAC_INDOOR" );
+    if( index < 0 ) {
+        return 0;
+    }
+    item_location unit = target.part_base( index );
+    if( !unit ) {
+        return 0;
+    }
+    const tripoint_abs_ms link = unit->get_var( "hvac_link", no_hvac_link );
+    if( link == no_hvac_link || abs == link || abs.z() != link.z() ||
+        square_dist( abs.xy(), link.xy() ) > link_range ) {
+        return 0;
+    }
+    const tripoint_bub_ms connected = here.get_bub( link );
+    if( !here.inbounds( connected ) || ( !radiator && is_hvac_indoors( here, connected ) ) ) {
+        return 0;
+    }
+    const optional_vpart_position vp = here.veh_at( connected );
+    const int other_index = vp ? hvac_part_at( vp->vehicle(), link,
+                            radiator ? "HYDRONIC_BOILER" : "SPLIT_HVAC_OUTDOOR" ) : -1;
+    if( other_index < 0 ) {
+        return 0;
+    }
+    vehicle &supply = vp->vehicle();
+    item_location other = supply.part_base( other_index );
+    if( !other ) {
+        return 0;
+    }
+    const int now = hvac_minute();
+    if( unit->get_var( "hvac_minute", -1.0 ) == now || cata_mp::is_client_mode() ) {
+        return unit->get_var( "hvac_output", 0.0 );
+    }
+    double output = 0;
+    if( radiator ) {
+        const double liters = other->get_var( "hvac_water_l", 0.0 );
+        if( liters > 0 ) {
+            const double water_c = update_boiler( here, supply, *other, outside_c );
+            const double difference = std::max( 0.0, water_c - room_c );
+            output = std::min( { 2000.0, 35 * difference, liters * 4184 * difference / 60 } );
+            other->set_var( "hvac_water_c", water_c - 60 * output / ( liters * 4184 ) );
+        }
+    } else {
+        const int mode = static_cast<int>( unit->get_var( "hvac_mode", 0.0 ) );
+        const double demand = unit->get_var( "hvac_setpoint", 22.0 ) - room_c;
+        const double deadband = mode == 3 ? 2.0 : 0.75;
+        const bool heat = ( mode == 2 || mode == 3 ) && demand > deadband && outside_c > -12;
+        const bool cool = ( mode == 1 || mode == 3 ) && demand < -deadband &&
+                          outside_c > 5 && outside_c < 55;
+        const double capacity = heat ? 3500 * std::clamp( ( outside_c + 12 ) / 19, 0.0, 1.0 ) :
+                                3500 * std::clamp( ( 55 - outside_c ) / 20, 0.0, 1.0 );
+        const double cop = heat ? std::clamp( 2.0 + 0.07 * outside_c, 1.05, 3.6 ) :
+                           std::clamp( 4.3 - 0.065 * ( outside_c - 25 ), 1.8, 4.5 );
+        if( ( heat || cool ) && other->get_var( "hvac_minute", -1.0 ) != now ) {
+            const double watts = std::min( capacity, std::abs( demand ) * 700 );
+            if( hvac_power( here, supply, static_cast<int>( std::ceil( watts / cop + 35 ) ) ) ) {
+                other->set_var( "hvac_minute", now );
+                output = heat ? watts : -watts;
+            }
+        }
+    }
+    unit->set_var( "hvac_minute", now );
+    unit->set_var( "hvac_output", output );
+    return output;
+}
+
+void update_vehicle_climate( map &here, vehicle &target )
+{
+    if( cata_mp::is_client_mode() ) {
+        return;
+    }
+    const double ambient_c = units::to_celsius( get_weather().weather_precise->temperature );
+    for( const vpart_reference &part : target.get_avail_parts( "HYDRONIC_BOILER" ) ) {
+        item_location boiler = target.part_base( part.part_index() );
+        if( boiler && boiler->get_var( "hvac_water_l", 0.0 ) > 0 ) {
+            update_boiler( here, target, *boiler, ambient_c );
+        }
+    }
+    for( const vpart_reference &part : target.get_avail_parts( "CABIN_HVAC" ) ) {
+        item_location unit = target.part_base( part.part_index() );
+        if( !unit ) {
+            continue;
+        }
+        const int now = hvac_minute();
+        const int last = static_cast<int>( unit->get_var( "hvac_minute", now - 1.0 ) );
+        double delta = unit->get_var( "hvac_cabin_delta", 0.0 );
+        if( last == now ) {
+            return;
+        }
+        const auto openings = target.get_any_parts( "OPENABLE" );
+        const int open = std::count_if( openings.begin(), openings.end(), []( const vpart_reference &p ) {
+            return ( p.part().open || p.part().is_broken() ) &&
+                   ( p.has_feature( "CABIN_WINDOW" ) || p.has_feature( VPFLAG_OBSTACLE ) );
+        } );
+        const double retention = 1.0 / ( 1.0 + 0.7 * open );
+        const int elapsed = std::max( 0, now - last );
+        delta *= std::exp( -elapsed / ( 8.0 * retention ) );
+        const int mode = static_cast<int>( unit->get_var( "hvac_mode", 0.0 ) );
+        const double demand = unit->get_var( "hvac_setpoint", 22.0 ) - ambient_c - delta;
+        const double deadband = mode == 3 ? 2.5 : 0.75;
+        const bool heat = mode >= 2 && demand > deadband;
+        const bool cool = mode != 0 && mode != 2 && demand < -deadband;
+        if( elapsed > 0 && ( heat || cool ) ) {
+            const bool combustion_running = target.engine_on &&
+                                            ( target.has_engine_type( itype_id( "gasoline" ), true ) ||
+                                              target.has_engine_type( itype_id( "diesel" ), true ) );
+            const int peak_watts = cool ? ( combustion_running ? 550 : 950 ) :
+                                   ( combustion_running ? 120 : 1200 );
+            const double duty = std::clamp( std::abs( demand ) / 5, 0.20, 1.0 );
+            if( hvac_power( here, target, static_cast<int>( std::ceil( peak_watts * duty ) ) ) ) {
+                delta += std::clamp( demand, -2.5 * duty, 2.0 * duty ) * retention;
+            }
+        }
+        unit->set_var( "hvac_minute", now );
+        unit->set_var( "hvac_cabin_delta", delta );
+        return;
+    }
+}
+
+double cabin_temperature_delta( const map &here, const tripoint_bub_ms &position )
+{
+    const optional_vpart_position seat = here.veh_at( position );
+    if( seat && !seat->vehicle().is_appliance() && seat->is_inside() ) {
+        vehicle &target = seat->vehicle();
+        for( const vpart_reference &part : target.get_avail_parts( "CABIN_HVAC" ) ) {
+            if( item_location unit = target.part_base( part.part_index() ) ) {
+                return unit->get_var( "hvac_cabin_delta", 0.0 );
+            }
+        }
+    }
+    return 0;
+}
+
 void add_vehicle_appliance_menu( veh_menu &menu, map &here, vehicle &target,
                                  const tripoint_abs_ms &position )
 {
+    add_hvac_menu( menu, here, target, position );
     struct entry {
         const char *flag;
         const char *hotkey;

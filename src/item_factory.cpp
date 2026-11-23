@@ -77,6 +77,7 @@
 #include "units.h"
 #include "value_ptr.h"
 #include "veh_type.h"
+#include "vehicle_appliance.h"
 #include "vitamin.h"
 #include "weighted_list.h"
 
@@ -2335,6 +2336,7 @@ void Item_factory::init()
     add_iuse( "RADIO_TICK", &iuse::radio_tick );
     add_iuse( "BINDER_ADD_RECIPE", &iuse::binder_add_recipe );
     add_iuse( "BINDER_MANAGE_RECIPE", &iuse::binder_manage_recipe );
+    add_iuse( "HVAC_REMOTE", &use_hvac_remote );
     add_iuse( "REMOTEVEH", &iuse::remoteveh );
     add_iuse( "REMOTEVEH_TICK", &iuse::remoteveh_tick );
     add_iuse( "REMOVE_ALL_MODS", &iuse::remove_all_mods );

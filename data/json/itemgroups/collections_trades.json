@@ -4,6 +4,9 @@
     "id": "hardware",
     "//": "A general hardware group for retail, workshops, etc.",
     "items": [
+      { "item": "atlas_hydronic_boiler", "prob": 5 },
+      { "item": "atlas_hydronic_radiator", "prob": 8 },
+      { "item": "atlas_split_hvac_outdoor", "prob": 5 },
       { "group": "tools_general", "prob": 50 },
       { "group": "supplies_hardware", "prob": 50 },
       { "group": "hardware_clothing", "prob": 10 },

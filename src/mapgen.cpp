@@ -114,6 +114,8 @@
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "veh_appliance.h"
+#include "vehicle_appliance.h"
 #include "vehicle_group.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
@@ -7031,6 +7033,93 @@ const regional_site_style &site_style_at( point_abs_ms pos )
     return eastern;
 }
 
+void place_atlas_hvac( mapgendata &dat, std::string_view id )
+{
+    if( dat.zlevel() < 0 || !north_america::active() ) {
+        return;
+    }
+    const auto starts = [id]( std::string_view prefix ) {
+        return id.rfind( prefix, 0 ) == 0;
+    };
+    const bool upscale = starts( "mansion" ) || starts( "hotel" ) || starts( "office_tower" ) ||
+                         starts( "office_skyscraper" );
+    const bool modest = starts( "trailer_residential" ) || starts( "mobile_home" ) ||
+                        starts( "trailer_hub" );
+    if( !upscale && !modest && !starts( "house" ) && !starts( "bungalow" ) &&
+        !starts( "rural_house" ) && !starts( "duplex" ) &&
+        !starts( "apart" ) && !starts( "office" ) &&
+        !starts( "atlas_campus_dorm" ) ) {
+        return;
+    }
+    const tripoint_abs_ms absolute = project_to<coords::ms>( dat.pos() );
+    const auto climate = dat.region.get_settings_weather().climate_at( absolute );
+    if( !climate ) {
+        return;
+    }
+    // June–August mean from the atlas normals.
+    double summer = 0;
+    for( int month = 5; month <= 7; ++month ) {
+        summer += ( climate->months[month].high_c + climate->months[month].low_c ) / 6;
+    }
+    const double economic_adjustment = upscale ? 18 : modest ? -12 : 0;
+    const double hot_climate = std::clamp( ( 29 - summer ) / 8, 0.0, 1.0 );
+    const int chance = std::clamp( static_cast<int>( 4 + 6 * ( summer - 13 ) +
+                                   economic_adjustment * hot_climate ), 3, 98 );
+    if( rng( 1, 100 ) > chance ) {
+        return;
+    }
+
+    map &here = dat.m;
+    const auto clear = [&]( const tripoint_bub_ms &p ) {
+        return here.passable( p ) && !here.is_open_air( p ) &&
+               !here.has_furn( p ) && !here.veh_at( p ) && here.i_at( p ).empty() &&
+               !here.has_flag_ter( ter_furn_flag::TFLAG_SWIMMABLE, p ) &&
+               !here.has_flag_ter( ter_furn_flag::TFLAG_NO_FLOOR, p );
+    };
+    static const vpart_id indoor_id( "atlas_split_hvac_indoor" );
+    static const vpart_id outdoor_id( "atlas_split_hvac_outdoor" );
+    if( !indoor_id.is_valid() || !outdoor_id.is_valid() ) {
+        return;
+    }
+    for( int y = 2; y < 2 * SEEY - 2; ++y ) {
+        for( int x = 2; x < 2 * SEEX - 2; ++x ) {
+            const tripoint_bub_ms in( x, y, dat.zlevel() );
+            if( !is_hvac_indoors( here, in ) || !clear( in ) ) {
+                continue;
+            }
+            for( const point &step : { point::north, point::east, point::south, point::west } ) {
+                const tripoint_bub_ms wall = in + step;
+                const tripoint_bub_ms out = wall + step;
+                if( ( !here.has_flag_ter( ter_furn_flag::TFLAG_WALL, wall ) &&
+                      !here.has_flag_ter( ter_furn_flag::TFLAG_WINDOW, wall ) ) ||
+                    is_hvac_indoors( here, out ) || !clear( out ) ||
+                    here.has_flag_ter( ter_furn_flag::TFLAG_ROAD, out ) ||
+                    here.has_flag_ter( ter_furn_flag::TFLAG_DOOR, out ) ) {
+                    continue;
+                }
+                if( !place_unowned_appliance( here, out, outdoor_id ) ) {
+                    continue;
+                }
+                item head( itype_id( "atlas_split_hvac_indoor" ) );
+                head.set_var( "hvac_link", here.get_abs( out ) );
+                if( place_unowned_appliance( here, in, indoor_id, head ) ) {
+                    // Put the matched remote on a free tile beside the head.
+                    const tripoint_bub_ms remote = in - step;
+                    if( is_hvac_indoors( here, remote ) && clear( remote ) ) {
+                        here.add_item_or_charges( remote, item( itype_id( "atlas_hvac_remote" ) ) );
+                    } else {
+                        here.add_item_or_charges( in, item( itype_id( "atlas_hvac_remote" ) ) );
+                    }
+                    return;
+                }
+                if( const optional_vpart_position placed = here.veh_at( out ) ) {
+                    here.destroy_vehicle( &placed->vehicle() );
+                }
+            }
+        }
+    }
+}
+
 void dress_atlas_site( mapgendata &dat, std::string_view id )
 {
     if( dat.zlevel() != 0 ) {
@@ -7143,6 +7232,7 @@ void map::draw_map( mapgendata &dat )
     north_america::place_native_vegetation( dat );
     north_america::place_native_soil( dat );
     north_america::grade_generated_surface( dat );
+    place_atlas_hvac( dat, function_key );
     // End of draw_map
 }
 

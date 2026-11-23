@@ -1,4 +1,10 @@
 [
+  { "id": "SPLIT_HVAC_INDOOR", "type": "json_flag" },
+  { "id": "SPLIT_HVAC_OUTDOOR", "type": "json_flag" },
+  { "id": "HYDRONIC_BOILER", "type": "json_flag" },
+  { "id": "HYDRONIC_RADIATOR", "type": "json_flag" },
+  { "id": "CABIN_HVAC", "type": "json_flag" },
+  { "id": "CABIN_WINDOW", "type": "json_flag" },
   {
     "id": "DECK_STAIRS",
     "type": "json_flag",

@@ -301,8 +301,9 @@ class weather_manager
         };
         std::unordered_map<int, room_heat_layer> heated_rooms;
         std::optional<dimension_id> heat_dimension;
-        units::temperature_delta get_room_heat( const map &here, const tripoint_bub_ms &location,
-                                                const tripoint_bub_ms &player );
+        units::temperature_delta get_room_heat( map &here, const tripoint_bub_ms &location,
+                                                const tripoint_bub_ms &player,
+                                                double outside_c, double base_c );
 
         struct historical_weather_cell {
             std::optional<regional_climate::normals> normals;

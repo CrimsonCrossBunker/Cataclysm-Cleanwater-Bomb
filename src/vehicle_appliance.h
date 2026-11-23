@@ -11,6 +11,7 @@ class Character;
 class JsonObject;
 class JsonOut;
 class map;
+class item;
 class vehicle;
 class veh_menu;
 
@@ -33,5 +34,12 @@ bool execute_vehicle_appliance( Character &who, map &here, vehicle &target,
 void use_vehicle_appliance( Character &who, map &here, vehicle &target, int part );
 void add_vehicle_appliance_menu( veh_menu &menu, map &here, vehicle &target,
                                  const tripoint_abs_ms &position );
+
+bool is_hvac_indoors( const map &here, const tripoint_bub_ms &position );
+void update_vehicle_climate( map &here, vehicle &target );
+double room_appliance_watts( map &here, vehicle &target, const tripoint_bub_ms &position,
+                             double outside_c, double room_c );
+double cabin_temperature_delta( const map &here, const tripoint_bub_ms &position );
+std::optional<int> use_hvac_remote( Character *who, item *remote, const tripoint_bub_ms &position );
 
 #endif // CATA_SRC_VEHICLE_APPLIANCE_H

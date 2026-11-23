@@ -64,6 +64,8 @@
 #include "uistate.h"
 #include "units.h"
 #include "value_ptr.h"
+#include "vehicle.h"
+#include "vehicle_appliance.h"
 #include "weather_gen.h"
 #include "weather_type.h"
 
@@ -1459,8 +1461,8 @@ double room_heat_retention( const map &here, const tripoint_bub_ms &location, do
 }
 } // namespace
 
-units::temperature_delta weather_manager::get_room_heat( const map &here,
-        const tripoint_bub_ms &location, const tripoint_bub_ms &player )
+units::temperature_delta weather_manager::get_room_heat( map &here,
+        const tripoint_bub_ms &location, const tripoint_bub_ms &player, double outside_c, double base_c )
 {
     constexpr int radius = 18;
     const auto indoors = [&]( const tripoint_bub_ms & p ) {
@@ -1516,6 +1518,23 @@ units::temperature_delta weather_manager::get_room_heat( const map &here,
     const auto in_range = [&]( const tripoint_bub_ms & p ) {
         return square_dist( p.xy(), player.xy() ) <= radius;
     };
+    const tripoint_bub_ms center( player.xy(), location.z() );
+    std::unordered_map<tripoint_bub_ms, double> appliance_heat;
+    for( const wrapped_vehicle &wrapped : here.get_vehicles( center - point( radius, radius ),
+            center + point( radius, radius ) ) ) {
+        const tripoint_bub_ms &p = wrapped.pos;
+        if( p.z() != location.z() || !here.inbounds( p ) || !in_range( p ) ||
+            !wrapped.v->is_appliance() ) {
+            continue;
+        }
+        const auto old = previous.assignments.find( here.get_abs( p ) );
+        const double residual = old == previous.assignments.end() ? 0.0 :
+                                previous.rooms[old->second].excess;
+        const double output = room_appliance_watts( here, *wrapped.v, p, outside_c, base_c + residual );
+        if( output != 0 ) {
+            appliance_heat[p] += output;
+        }
+    }
     const auto add_room = [&]( const tripoint_bub_ms & start ) {
         if( !in_range( start ) || !indoors( start ) || here.ter( start )->movecost == 0 ) {
             return;
@@ -1534,6 +1553,10 @@ units::temperature_delta weather_manager::get_room_heat( const map &here,
             const auto old = previous.assignments.find( here.get_abs( p ) );
             if( old != previous.assignments.end() ) {
                 retained += previous.rooms[old->second].excess;
+            }
+            const auto appliance = appliance_heat.find( p );
+            if( appliance != appliance_heat.end() ) {
+                watts += appliance->second;
             }
             const int intensity = here.get_field_intensity( p, fire );
             if( intensity > 0 ) {
@@ -1571,15 +1594,14 @@ units::temperature_delta weather_manager::get_room_heat( const map &here,
         // leakage (W/K) and the participating mass of the room contents (J/K).
         const double area = tiles.size();
         const double conductance = 3.5 * area + losses;
-        layer.rooms.push_back( { retained / area, std::min( 65.0, watts / conductance ),
+        layer.rooms.push_back( { retained / area, std::clamp( watts / conductance, -25.0, 65.0 ),
                                  12'000 * area / conductance } );
     };
 
     const bool has_residual = std::any_of( previous.rooms.begin(), previous.rooms.end(),
     []( const room_heat & room ) {
-        return room.excess >= 0.05;
+        return std::abs( room.excess ) >= 0.05;
     } );
-    const tripoint_bub_ms center( player.xy(), location.z() );
     for( const tripoint_bub_ms &p : here.points_in_radius( center, radius ) ) {
         if( !here.inbounds( p ) ) {
             continue;
@@ -1589,8 +1611,8 @@ units::temperature_delta weather_manager::get_room_heat( const map &here,
             continue;
         }
         const auto old = has_residual ? previous.assignments.find( absolute ) : previous.assignments.end();
-        if( ( old != previous.assignments.end() && previous.rooms[old->second].excess >= 0.05 ) ||
-            here.get_field_intensity( p, fire ) > 0 ) {
+        if( ( old != previous.assignments.end() && std::abs( previous.rooms[old->second].excess ) >= 0.05 ) ||
+            appliance_heat.count( p ) || here.get_field_intensity( p, fire ) > 0 ) {
             add_room( p );
         }
     }
@@ -1615,7 +1637,7 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
                               temperature;
 
     if( !g->new_game && !g->swapping_dimensions ) {
-        const map &here = get_map();
+        map &here = get_map();
         const tripoint_bub_ms player = get_player_character().pos_bub();
         if( location.z() >= 0 && here.inbounds( location ) && north_america::elevation_active() ) {
             const double current = north_america::altitude_at( here, location );
@@ -1623,18 +1645,21 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
             temp = units::from_celsius( units::to_celsius( temp ) +
                                         north_america::temperature_delta_at_height( current, sampled ) );
         }
+        const double ambient_c = units::to_celsius( temp );
         if( location.z() >= 0 && here.inbounds( location ) &&
             std::abs( location.z() - player.z() ) <= 1 &&
             square_dist( location.xy().raw(), player.xy().raw() ) <= 18 &&
-            ( !here.is_outside( location ) || here.is_roofed( location ) ) ) {
+            is_hvac_indoors( here, location ) ) {
+            const time_point midnight = calendar::turn - time_past_midnight( calendar::turn );
             if( !indoor_reference_time || calendar::turn < *indoor_reference_time ||
+                *indoor_reference_time < midnight ||
                 calendar::turn - *indoor_reference_time >= 30_minutes ) {
                 const weather_generator &generator = get_cur_weather_gen();
                 const tripoint_abs_ms origin = here.get_abs( player );
                 double mean_c = 0;
                 for( int hours = 2; hours < 24; hours += 4 ) {
                     mean_c += units::to_celsius( generator.get_weather_temperature(
-                                                     origin, calendar::turn - hours * 1_hours, g->get_seed() ) ) / 6;
+                                                     origin, midnight + hours * 1_hours, g->get_seed() ) ) / 6;
                 }
                 indoor_reference_temperature = units::from_celsius( mean_c );
                 indoor_reference_time = calendar::turn;
@@ -1647,7 +1672,11 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
         units::temperature_delta temp_mod;
         temp_mod = get_heat_radiation( location );
         temp_mod += get_convection_temperature( location );
-        temp_mod += get_room_heat( here, location, player );
+        temp_mod += get_room_heat( here, location, player, ambient_c, units::to_celsius( temp ) );
+        if( here.inbounds( location ) && location.z() == player.z() &&
+            square_dist( location.xy(), player.xy() ) <= 18 ) {
+            temp_mod += units::from_kelvin_delta( cabin_temperature_delta( here, location ) );
+        }
         temp_mod += get_map().get_temperature_mod( location );
         if( location.z() >= 0 || !north_america::active() ) {
             temp_mod += weather_id->temperature_modifier;

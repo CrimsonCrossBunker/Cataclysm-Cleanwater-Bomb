@@ -88,8 +88,8 @@ vpart_id vpart_appliance_from_item( const itype_id &item_id )
     return vpart_ap_standing_lamp;
 }
 
-bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
-                      const Character &owner, const std::optional<item> &base,
+static bool place_appliance_impl( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
+                      const Character *owner, const std::optional<item> &base,
                       std::optional<units::angle> direction )
 {
 
@@ -140,7 +140,7 @@ bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart
             continue;
         }
         vehicle &veh_target = vp->vehicle();
-        if( veh_target.has_tag( flag_APPLIANCE ) ) {
+        if( &veh_target != veh && veh_target.has_tag( flag_APPLIANCE ) ) {
             if( veh->is_powergrid() && veh_target.is_powergrid() &&
                 veh->merge_appliance_into_grid( &here, veh_target ) ) {
                 add_msg( _( "You merge it into the adjacent power grid." ) );
@@ -162,8 +162,23 @@ bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart
             orient_part( here, veh, vpinfo, partnum );
         }
     }
-    veh->set_owner( owner );
+    if( owner ) {
+        veh->set_owner( *owner );
+    }
     return true;
+}
+
+bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
+                      const Character &owner, const std::optional<item> &base,
+                      std::optional<units::angle> direction )
+{
+    return place_appliance_impl( here, p, vpart, &owner, base, direction );
+}
+
+bool place_unowned_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
+                              const std::optional<item> &base )
+{
+    return place_appliance_impl( here, p, vpart, nullptr, base, std::nullopt );
 }
 
 void veh_app_interact::run( map &here, vehicle &veh, const point_rel_ms &p )
