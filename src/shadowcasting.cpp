@@ -1,11 +1,13 @@
 #include "shadowcasting.h"
 
+#include <lightmap.h>
+#include <map_scale_constants.h>
+#include <mdarray.h>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
-#include <functional>
 #include <iterator>
-#include <vector>
+#include <ratio>
 
 #include "coordinates.h"
 #include "cuboid_rectangle.h"
@@ -659,8 +661,8 @@ void cast_zlight( const array_of_grids_of<T> &out,
     // Axes and diagonals overlap. Legacy/shared-output casting stays serial;
     // map vision uses owned snapshots and private outputs for bounded workers.
     if( dir != vertical_direction::UP ) {
-        const auto start = horizontal_cost_ms ? std::chrono::steady_clock::now() :
-                           std::chrono::steady_clock::time_point{};
+        const std::chrono::steady_clock::time_point start = horizontal_cost_ms ?
+                std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         {
             CATA_PROFILE_SCOPE_NAMED( "vision.horizontal_segments" );
             for( unsigned i = 0; i < 8; ++i ) {
@@ -677,8 +679,8 @@ void cast_zlight( const array_of_grids_of<T> &out,
                 penalty, numerator, use_trig_distance, floor_blocked_caches );
     }
     if( dir != vertical_direction::DOWN ) {
-        const auto start = horizontal_cost_ms ? std::chrono::steady_clock::now() :
-                           std::chrono::steady_clock::time_point{};
+        const std::chrono::steady_clock::time_point start = horizontal_cost_ms ?
+                std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         {
             CATA_PROFILE_SCOPE_NAMED( "vision.horizontal_segments" );
             for( unsigned i = 0; i < 8; ++i ) {

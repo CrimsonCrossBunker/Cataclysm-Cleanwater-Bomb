@@ -2,6 +2,9 @@
 #ifndef CATA_SRC_VISION_PREPARATION_H
 #define CATA_SRC_VISION_PREPARATION_H
 
+#include <map_scale_constants.h>
+#include <mdarray.h>
+#include <point.h>
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -9,10 +12,9 @@
 #include <thread>
 #include <vector>
 
+#include "compute_budget.h"
 #include "coordinates.h"
 #include "shadowcasting.h"
-
-#include "compute_budget.h"
 
 class cata_thread_pool;
 
@@ -44,7 +46,7 @@ void cast_horizontal( const array_of_grids_of<float> &out,
 void cast_vertical( const array_of_grids_of<float> &out,
                     const array_of_grids_of<const float> &in,
                     const array_of_grids_of<const bool> &floors,
-                    const tripoint_bub_ms &origin, int offset_distance,
+                    const tripoint_bub_ms &origin, int penalty,
                     float numerator, vertical_direction direction, bool trig_distance,
                     const array_of_grids_of<float> *floor_blocked_caches = nullptr );
 

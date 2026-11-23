@@ -1,11 +1,16 @@
 #include "vision_preparation.h"
 
+#include <compute_budget.h>
+#include <coordinates.h>
+#include <shadowcasting.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <numeric>
 #include <future>
 #include <limits>
+#include <new>
+#include <numeric>
+#include <ratio>
 #include <system_error>
 #include <utility>
 
@@ -134,7 +139,8 @@ bool frame::prepare( const bool capture_floor_blocked )
                     in[z] = &values.transparency[z];
                     floors[z] = &values.floors[z];
                 }
-                const auto start = std::chrono::steady_clock::now();
+                const std::chrono::steady_clock::time_point start =
+                    std::chrono::steady_clock::now();
                 for( unsigned segment = begin; segment < end; ++segment ) {
                     if( cancelled_.load( std::memory_order_relaxed ) ) {
                         break;

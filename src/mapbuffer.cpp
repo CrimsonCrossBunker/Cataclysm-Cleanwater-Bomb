@@ -1,5 +1,7 @@
 #include "mapbuffer.h"
 
+#include <omdata.h>
+#include <world_identity.h>
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
@@ -33,9 +35,7 @@
 #include "map_scale_constants.h"
 #include "map_storage_context.h"
 #include "output.h"
-#include "overmap_types.h"
 #include "overmapbuffer.h"
-#include "path_info.h"
 #include "point.h"
 #include "popup.h"
 #include "profiling.h"

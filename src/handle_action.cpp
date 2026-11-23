@@ -18,7 +18,6 @@
 #include <map>
 #include <sstream>
 #include <string>
-#include <string_view>
 #include <utility>
 
 #include "action.h"
@@ -31,7 +30,6 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "bodygraph.h"
-#include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
 #include "catacharset.h"
@@ -53,7 +51,6 @@
 #include "event_bus.h"
 #include "faction.h"
 #include "flag.h"
-#include "game_constants.h"
 #include "game_inventory.h"
 #include "gamemode.h"
 #include "grab.h"
@@ -75,10 +72,10 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "mapdata.h"
-#include "melee.h"
 #include "mapsharing.h"
 #include "math_parser_diag_value.h"
 #include "mdarray.h"
+#include "melee.h"
 #include "messages.h"
 #include "monster.h"
 #include "move_mode.h"
@@ -92,10 +89,10 @@
 #include "panels.h"
 #include "pathfinding.h"
 #include "player_activity.h"
-#include "ret_val.h"
 #include "point.h"
 #include "popup.h"
 #include "profiling.h"
+#include "ret_val.h"
 #if defined(TILES)
     #include "render3d.h"
 #endif
@@ -111,7 +108,6 @@
 #endif
 #include "sleep.h"
 #include "sling.h"
-#include "sounds.h"
 #include "string_formatter.h"
 #include "timed_event.h"
 #include "translation.h"
