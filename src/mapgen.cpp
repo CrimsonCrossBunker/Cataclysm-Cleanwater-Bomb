@@ -7033,40 +7033,26 @@ const regional_site_style &site_style_at( point_abs_ms pos )
     return eastern;
 }
 
-void place_atlas_hvac( mapgendata &dat, std::string_view id )
+std::optional<tripoint_bub_ms> install_atlas_hvac( mapgendata &dat, double economic_adjustment )
 {
-    if( dat.zlevel() < 0 || !north_america::active() ) {
-        return;
-    }
-    const auto starts = [id]( std::string_view prefix ) {
-        return id.rfind( prefix, 0 ) == 0;
-    };
-    const bool upscale = starts( "mansion" ) || starts( "hotel" ) || starts( "office_tower" ) ||
-                         starts( "office_skyscraper" );
-    const bool modest = starts( "trailer_residential" ) || starts( "mobile_home" ) ||
-                        starts( "trailer_hub" );
-    if( !upscale && !modest && !starts( "house" ) && !starts( "bungalow" ) &&
-        !starts( "rural_house" ) && !starts( "duplex" ) &&
-        !starts( "apart" ) && !starts( "office" ) &&
-        !starts( "atlas_campus_dorm" ) ) {
-        return;
+    if( !north_america::active() ) {
+        return std::nullopt;
     }
     const tripoint_abs_ms absolute = project_to<coords::ms>( dat.pos() );
     const auto climate = dat.region.get_settings_weather().climate_at( absolute );
     if( !climate ) {
-        return;
+        return std::nullopt;
     }
     // June–August mean from the atlas normals.
     double summer = 0;
     for( int month = 5; month <= 7; ++month ) {
         summer += ( climate->months[month].high_c + climate->months[month].low_c ) / 6;
     }
-    const double economic_adjustment = upscale ? 18 : modest ? -12 : 0;
     const double hot_climate = std::clamp( ( 29 - summer ) / 8, 0.0, 1.0 );
     const int chance = std::clamp( static_cast<int>( 4 + 6 * ( summer - 13 ) +
                                    economic_adjustment * hot_climate ), 3, 98 );
     if( rng( 1, 100 ) > chance ) {
-        return;
+        return std::nullopt;
     }
 
     map &here = dat.m;
@@ -7079,7 +7065,7 @@ void place_atlas_hvac( mapgendata &dat, std::string_view id )
     static const vpart_id indoor_id( "atlas_split_hvac_indoor" );
     static const vpart_id outdoor_id( "atlas_split_hvac_outdoor" );
     if( !indoor_id.is_valid() || !outdoor_id.is_valid() ) {
-        return;
+        return std::nullopt;
     }
     for( int y = 2; y < 2 * SEEY - 2; ++y ) {
         for( int x = 2; x < 2 * SEEX - 2; ++x ) {
@@ -7103,20 +7089,63 @@ void place_atlas_hvac( mapgendata &dat, std::string_view id )
                 item head( itype_id( "atlas_split_hvac_indoor" ) );
                 head.set_var( "hvac_link", here.get_abs( out ) );
                 if( place_unowned_appliance( here, in, indoor_id, head ) ) {
-                    // Put the matched remote on a free tile beside the head.
-                    const tripoint_bub_ms remote = in - step;
-                    if( is_hvac_indoors( here, remote ) && clear( remote ) ) {
-                        here.add_item_or_charges( remote, item( itype_id( "atlas_hvac_remote" ) ) );
-                    } else {
-                        here.add_item_or_charges( in, item( itype_id( "atlas_hvac_remote" ) ) );
-                    }
-                    return;
+                    return in;
                 }
                 if( const optional_vpart_position placed = here.veh_at( out ) ) {
                     here.destroy_vehicle( &placed->vehicle() );
                 }
             }
         }
+    }
+    return std::nullopt;
+}
+
+void place_atlas_hvac( mapgendata &dat, std::string_view id )
+{
+    if( dat.zlevel() < 0 ) {
+        return;
+    }
+    const auto starts = [id]( std::string_view prefix ) {
+        return id.rfind( prefix, 0 ) == 0;
+    };
+    const bool upscale = starts( "mansion" ) || starts( "hotel" ) || starts( "office_tower" ) ||
+                         starts( "office_skyscraper" );
+    const bool modest = starts( "trailer_residential" ) || starts( "mobile_home" ) ||
+                        starts( "trailer_hub" );
+    if( !upscale && !modest && !starts( "house" ) && !starts( "bungalow" ) &&
+        !starts( "rural_house" ) && !starts( "duplex" ) && !starts( "apart" ) &&
+        !starts( "office" ) && !starts( "atlas_campus_dorm" ) ) {
+        return;
+    }
+    const double economic_adjustment = upscale ? 18 : modest ? -12 : 0;
+    const std::optional<tripoint_bub_ms> head = install_atlas_hvac( dat, economic_adjustment );
+    if( !head && !one_in( 10 ) ) {
+        return;
+    }
+
+    static const std::array<furn_str_id, 7> remote_surfaces = {
+        furn_str_id( "f_dresser" ), furn_str_id( "f_sofa" ), furn_str_id( "f_armchair" ),
+        furn_str_id( "f_desk" ), furn_str_id( "f_table" ), furn_str_id( "f_table_fancy" ),
+        furn_str_id( "f_coffee_table" )
+    };
+    map &here = dat.m;
+    std::vector<tripoint_bub_ms> candidates;
+    for( int y = 0; y < 2 * SEEY; ++y ) {
+        for( int x = 0; x < 2 * SEEX; ++x ) {
+            const tripoint_bub_ms p( x, y, dat.zlevel() );
+            if( !here.has_furn( p ) || !is_hvac_indoors( here, p ) ||
+                ( head && square_dist( p.xy(), head->xy() ) > 8 ) ) {
+                continue;
+            }
+            const furn_str_id &furniture = here.furn( p ).id();
+            if( std::find( remote_surfaces.begin(), remote_surfaces.end(), furniture ) !=
+                remote_surfaces.end() ) {
+                candidates.push_back( p );
+            }
+        }
+    }
+    if( const auto surface = random_entry_opt( candidates ) ) {
+        here.add_item_or_charges( *surface, item( itype_id( "atlas_hvac_remote" ) ), false );
     }
 }
 

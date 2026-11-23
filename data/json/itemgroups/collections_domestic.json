@@ -457,7 +457,6 @@
       { "group": "magazines", "prob": 265 },
       { "item": "basket_laundry", "prob": 20 },
       { "item": "television", "prob": 30 },
-      { "item": "atlas_hvac_remote", "prob": 12 },
       { "item": "clock", "prob": 10 },
       { "item": "fp_loyalty_card", "prob": 5 },
       { "item": "cola", "prob": 20, "container-item": "bottle_plastic", "sealed": false },
