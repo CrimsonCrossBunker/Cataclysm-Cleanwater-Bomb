@@ -98,6 +98,14 @@ VARIANT_CHECK_PAIR_BLACKLIST = {
     # one is semi-auto, another is pump-action,
     # but we do not represent the difference between two meaningfully,
     # except min_cycle_recoil, but this validator do not check it
+    # regional service weapons with their own ids, spawned by id from the
+    # regional supply item groups
+    ("m249", "c9a2"),
+    ("m240", "c6a1"),
+    ("bren2_556", "fx05_patrol"),
+    ("c7a2", "c8a3"),
+    ("c7a2", "fx05"),
+    ("c8a3", "fx05"),
 
 }
 IDENTIFIER_CHECK_BLACKLIST = {
