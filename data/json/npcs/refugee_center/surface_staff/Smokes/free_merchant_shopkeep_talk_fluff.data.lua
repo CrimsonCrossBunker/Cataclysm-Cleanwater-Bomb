@@ -1,4 +1,151 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting",
+    line = ccb.content.text("A lot of the time, yes.  Our address is on the info boards of most of the evac shelters around here, and people keep showing up that we have to turn away.  It gets easier when you have something you can read off a script."),
+    replies = {
+        {
+            text = ccb.content.text("I'm sorry."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_End",
+        },
+        {
+            text = ccb.content.text("That sounds a little cruel."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_Cruel",
+        },
+        {
+            text = ccb.content.text("[Cannibal + Uncaring] Wait, I thought you were having food problems."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_Cannibal",
+            when = predicates.all({ predicates.has_trait("speaker", "CANNIBAL"), predicates.has_flag("speaker", "PSYCHOPATH") }),
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_End",
+    line = ccb.content.text("*shrugs.  \"Did you need something else?\""),
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_Cruel",
+    line = ccb.content.text("*bristles.  \"I know, alright?  I do.  I hate it too.  But we are packed to the gills right now, and the only way we're going to stay alive is if we keep our gates closed fast.  I don't know what made the scavengers out there so ruthless, but some of us have had to kill our own kids.  Please show some consideration.\""),
+    replies = {
+        {
+            text = ccb.content.text("I'm sorry."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_End",
+        },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_Cannibal",
+    line = ccb.content.text("We are.  That's why we're turning people away."),
+    replies = {
+        {
+            text = ccb.content.text("I'm saying you're giving up a potential source of meat."),
+            success = {
+                opinion = { trust = -5, fear = -2, value = -1, anger = 1 },
+                next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_Cannibal2",
+            },
+        },
+        {
+            text = ccb.content.text("<end_talking_nevermind>  Don't know where I was going with that."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_End",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_Cannibal2",
+    line = ccb.content.text("I can't tell if you're joking or not, but that is seriously fucked up, and I don't want to hear another word about it.  Okay?"),
+    replies = {
+        {
+            text = ccb.content.text("Alright, alright, I'm sorry.  Bad joke."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutGreeting_End",
+        },
+        { text = ccb.content.text("Your loss."), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = {
+        "TALK_FREE_MERCHANTS_MERCHANT_AboutMe", "TALK_FREE_MERCHANTS_MERCHANT_AboutMe_Basic",
+        "TALK_FREE_MERCHANTS_MERCHANT_AboutMe_Smokes2",
+    },
+    line = ccb.content.text("Not much to say.  What did you want to hear?"),
+    replies = {
+        {
+            text = ccb.content.text("How'd you end up here?"),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutMe_Basic",
+        },
+        {
+            text = ccb.content.text("Smokes?  That's quite a name."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutMe_Smokes",
+        },
+        {
+            text = ccb.content.text("That's fine for now."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_Talk",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANTS_MERCHANT_AboutMe_Basic",
+    line = ccb.content.text("Well, I'm Gavin, like I said.  I was a fireman before <the_cataclysm>, and I was also on duty when everything fell apart.  I'd rather not go into detail, but other than that, I wasn't really much to write home about.  My family was Irish, I never married, and I liked woodworking.  I volunteered to take inventory of what the center had when I got off the bus, one thing leads to another, and now I'm here."),
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANTS_MERCHANT_AboutMe_Smokes",
+    line = ccb.content.text("*rolls his eyes.  \"Tell me about it.  My actual name is Gavin, which I think I told you.  I used to be a firefighter, and people started recognizing me because of the helmet.  Someone called me 'smokes' because of it, and it stuck.  I hate it.  I've never even touched a cigarette.\""),
+    replies = {
+        {
+            text = ccb.content.text("[PER 8] If you hate it, then why are you smiling?"),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutMe_Smokes2",
+            when = predicates.minimum_attribute("speaker", "perception", 8),
+        },
+        {
+            text = ccb.content.text("Can't say I blame you."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AboutMe",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANTS_MERCHANT_AboutMe_Smokes2",
+    line = ccb.content.text("*laughs.  \"Well, I think it's ridiculous, but I guess I don't mind it that much.  I figure it's all in good fun, and people could really use the laugh these days, y'know?  I'm sure they'd stop if I asked.  The helmet is like… a badge of office, at this point.  You can call me Smokes if you really want.\""),
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_FREE_MERCHANTS_MERCHANT_AboutMerch",
+    line = ccb.content.text("Oh, merch.  They're just paper notes we've started using for local cash.  We started out paying each other with dollar bills, but there's so much paper money out there that it's just useless now.  For our internal use, we started certifying bills that represent food and labor in the center here.  We started trading them internally, and then they started circling around, and now other people have started adopting them, too."),
+}
+
+ccb.content.define_dialogue_topic {
+    id = {
+        "TALK_FREE_MERCHANTS_MERCHANT_AskJoin", "TALK_FREE_MERCHANTS_MERCHANT_AskJoin1",
+        "TALK_FREE_MERCHANTS_MERCHANT_AskJoin2",
+    },
+    line = ccb.content.text("I'm sorry, but the last thing we need is another mouth to feed.  Most of us lack any real survival skills, so keeping our group small enough to survive on the food we trade for is the main thing keeping us alive."),
+    replies = {
+        {
+            text = ccb.content.text("Another time, then."),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_Talk",
+        },
+        {
+            text = ccb.content.text("I can pull my own weight!"),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AskJoin1",
+        },
+        {
+            text = ccb.content.text("Maybe I could change your mind…?~"),
+            next_topic = "TALK_FREE_MERCHANTS_MERCHANT_AskJoin2",
+            when = predicates.has_item("speaker", "condom"),
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_FREE_MERCHANTS_MERCHANT_AskJoin1",
