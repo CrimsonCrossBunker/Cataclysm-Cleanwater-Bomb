@@ -1,55 +1,6 @@
 local ccb = require("ccb")
 local services = ccb.services
-local H = {}
-
-H.safe_id = function(kind, name)
-    local ok, gid = pcall(services.types.id, kind, name)
-    if not ok or not gid or not gid:is_valid() then return nil end
-    return gid
-end
-
-H.char_has_item = function(actor, item_id)
-    if not actor then return false end
-    local gid = H.safe_id("item", item_id)
-    if not gid then return false end
-    local r = services.inventory.has_type(actor, gid)
-    return r.ok and r.value == true
-end
-
-H.consume_item = function(actor, item_id, count, charges)
-    if not actor then return end
-    local gid = H.safe_id("item", item_id)
-    if not gid then return end
-    services.inventory.consume_by_type(actor, gid, math.floor(count or 0), math.floor(charges or 0))
-end
-
-H.npc = function(ctx)
-    return ctx:interlocutor()
-end
-
-H.set_var = function(scope, actor, ctx, key, val)
-    if scope == "context" then
-        if val == nil then ctx:remove(key) else ctx:set(key, val) end
-        return
-    end
-    if scope == "global" then
-        if val == nil then services.variables.remove_global(key) else services.variables.set_global(key, val) end
-        return
-    end
-    if not actor then return end
-    if val == nil then services.variables.remove(actor, key) else services.variables.set(actor, key, val) end
-end
-
-H.u = function(ctx)
-    return ctx:speaker()
-end
-
-H.var_num = function(actor, key)
-    if not actor then return 0 end
-    local r = services.variables.get_number(actor, key)
-    if not r.ok or not r.value or not r.value.exists or r.value.value == nil then return 0 end
-    return r.value.value
-end
+local H = require("ccb_runtime_helpers").create()
 
 ccb.runtime.handler("dlg_p_magiclysm_5418beee4326", function(ctx)
     return (H.var_num(H.u(ctx), "num_perks") > 0)
