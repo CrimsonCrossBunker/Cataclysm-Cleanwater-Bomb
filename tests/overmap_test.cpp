@@ -55,6 +55,15 @@
 #include "value_ptr.h"
 #include "vehicle.h"
 #include "vpart_position.h"
+#include "overmap_ui.h"
+#include "catacharset.h"
+#include "overmap_map_data_cache.h"
+#include "color.h"
+#include "cata_scope_helpers.h"
+#include "mod_manager.h"
+#include "options_helpers.h"
+#include "overmap_debug.h"
+#include "overmap_noise.h"
 
 static const oter_str_id oter_cabin( "cabin" );
 static const oter_str_id oter_cabin_east( "cabin_east" );
@@ -181,7 +190,7 @@ TEST_CASE( "default_overmap_generation_always_succeeds", "[overmap][slow]" )
             continue;
         }
         overmap_special_batch test_specials = overmap_specials::get_default_batch( candidate_addr,
-                                              city_size );
+            city_size );
         overmap_buffer.create_custom_overmap( candidate_addr, test_specials );
         for( const overmap_special_placement &special_placement : test_specials ) {
             const overmap_special *special = special_placement.special_details;
@@ -963,7 +972,7 @@ TEST_CASE( "highway_neighbor_missing_connections_no_crash", "[overmap][highway]"
 {
     const int broken_direction = GENERATE( 0, 1, 2, 3 );
     const tripoint_om_omt missing_connection = GENERATE( tripoint_om_omt::zero,
-            tripoint_om_omt::invalid );
+        tripoint_om_omt::invalid );
     const bool include_valid_neighbor = GENERATE( false, true );
     CAPTURE( broken_direction, missing_connection, include_valid_neighbor );
     const int valid_direction = ( broken_direction + 2 ) % 4;
@@ -989,7 +998,7 @@ TEST_CASE( "highway_neighbor_missing_connections_no_crash", "[overmap][highway]"
 
     const std::string diagnostics = capture_debugmsg_during( [&]() {
         REQUIRE( overmap_test_helper::select_highway_end_points( *victim, neighbors,
-                 end_points, connections ) );
+            end_points, connections ) );
     } );
     CHECK( diagnostics.empty() );
     CHECK_FALSE( connections[broken_direction] );
@@ -1112,8 +1121,8 @@ TEST_CASE( "railroad_stations_join_the_network", "[.][overmap][railroads]" )
 {
     const overmap_special_id id( GENERATE( "Railway Station", "railroad_station_city" ) );
     const om_direction::type direction = GENERATE( om_direction::type::north,
-                                         om_direction::type::east, om_direction::type::south,
-                                         om_direction::type::west );
+        om_direction::type::east, om_direction::type::south,
+        om_direction::type::west );
     CAPTURE( id.str(), direction );
     REQUIRE( id.is_valid() );
     REQUIRE( overmap_connection_local_railroad.is_valid() );
@@ -1196,3 +1205,202 @@ TEST_CASE( "special_road_connections_keep_their_city_target", "[overmap][connect
     CHECK( road.has( om->ter( entrance ) ) );
     CHECK( road.has( om->ter( tripoint_om_omt( target, 0 ) ) ) );
 }
+
+namespace merged_overmap_label_visibility_test
+{
+
+TEST_CASE( "overmap_labels_do_not_reveal_underground_camps", "[overmap][ui]" )
+{
+    CHECK( ui::omap::label_visible_at_z( -2, -2 ) );
+    CHECK_FALSE( ui::omap::label_visible_at_z( -2, -1 ) );
+    CHECK_FALSE( ui::omap::label_visible_at_z( -2, 0 ) );
+    CHECK_FALSE( ui::omap::label_visible_at_z( -2, 3 ) );
+    CHECK_FALSE( ui::omap::label_visible_at_z( 0, -2 ) );
+    CHECK( ui::omap::label_visible_at_z( 0, 0 ) );
+    CHECK( ui::omap::label_visible_at_z( 0, 3 ) );
+    CHECK( ui::omap::label_visible_at_z( 3, 3 ) );
+    CHECK_FALSE( ui::omap::label_visible_at_z( 3, 0 ) );
+}
+
+} // namespace merged_overmap_label_visibility_test
+
+namespace merged_overmap_map_data_cache_test
+{
+
+static const oter_str_id oter_road_nesw( "road_nesw" );
+static const oter_str_id oter_solid_earth( "solid_earth" );
+
+static const string_id<map_data_summary> map_data_summary_empty_omt( "empty_omt" );
+static const string_id<map_data_summary> map_data_summary_full_omt( "full_omt" );
+
+TEST_CASE( "default_OMT_is_passable", "[hordes][overmap][map_data]" )
+{
+    std::unique_ptr<overmap> test_overmap = std::make_unique<overmap>( point_abs_om() );
+    // Pick an arbitrary OMT.weapname_
+    tripoint_om_omt arbitrary_omt{ rng( 0, 179 ), rng( 0, 179 ), 0 };
+    CAPTURE( test_overmap->ter( arbitrary_omt ) );
+    for( point_omt_ms omt_cursor; omt_cursor.y() < 24; ++omt_cursor.y() ) {
+        for( omt_cursor.x() = 0; omt_cursor.x() < 24; ++omt_cursor.x() ) {
+            CAPTURE( omt_cursor );
+            CHECK( test_overmap->passable( project_combine( arbitrary_omt, omt_cursor ) ) );
+        }
+    }
+    // Toggle to impassable.
+    test_overmap->ter_set( arbitrary_omt, oter_solid_earth );
+    CAPTURE( test_overmap->ter( arbitrary_omt ) );
+    for( point_omt_ms omt_cursor; omt_cursor.y() < 24; ++omt_cursor.y() ) {
+        for( omt_cursor.x() = 0; omt_cursor.x() < 24; ++omt_cursor.x() ) {
+            CAPTURE( omt_cursor );
+            CHECK( !test_overmap->passable( project_combine( arbitrary_omt, omt_cursor ) ) );
+        }
+    }
+    // Toggle back to passable.
+    test_overmap->ter_set( arbitrary_omt, oter_road_nesw );
+    CAPTURE( test_overmap->ter( arbitrary_omt ) );
+    for( point_omt_ms omt_cursor; omt_cursor.y() < 24; ++omt_cursor.y() ) {
+        for( omt_cursor.x() = 0; omt_cursor.x() < 24; ++omt_cursor.x() ) {
+            CAPTURE( omt_cursor );
+            CHECK( test_overmap->passable( project_combine( arbitrary_omt, omt_cursor ) ) );
+        }
+    }
+}
+
+TEST_CASE( "check_placeholders_in_isolation", "[map_data]" )
+{
+    const map_data_summary &full_omt = *map_data_summary_full_omt;
+    for( point cursor; cursor.y < 24; ++cursor.y ) {
+        for( cursor.x = 0; cursor.x < 24; ++cursor.x ) {
+            CAPTURE( cursor );
+            CHECK( !full_omt.passable[ cursor.y * 24 + cursor.x ] );
+        }
+    }
+    const map_data_summary &empty_omt = *map_data_summary_empty_omt;
+    for( point cursor; cursor.y < 24; ++cursor.y ) {
+        for( cursor.x = 0; cursor.x < 24; ++cursor.x ) {
+            CAPTURE( cursor );
+            CHECK( empty_omt.passable[ cursor.y * 24 + cursor.x ] );
+        }
+    }
+}
+
+TEST_CASE( "round_trip_bitset_to_base64", "[map_data][hordes]" )
+{
+    map_data_summary test_summary;
+    int bitset_size = test_summary.passable.size();
+    REQUIRE( bitset_size == 576 );
+    REQUIRE( test_summary.passable.none() );
+    // Set some bits to yes at random.
+    for( int i = 0; i < bitset_size; ++i ) {
+        test_summary.passable.set( i, one_in( 5 ) );
+    }
+    // Verify we set at least something.
+    REQUIRE( test_summary.passable.any() );
+    std::string packed_bitset = base64_encode_bitset( test_summary.passable );
+    CAPTURE( packed_bitset );
+    map_data_summary copied_summary;
+    base64_decode_bitset( packed_bitset, copied_summary.passable );
+    CHECK( test_summary.passable == copied_summary.passable );
+}
+
+} // namespace merged_overmap_map_data_cache_test
+
+namespace merged_overmap_mission_visibility_test
+{
+
+TEST_CASE( "overmap_mission_markers_indicate_the_target_level", "[overmap][ui][mission]" )
+{
+    const int viewed_z = GENERATE( -2, 0, 2 );
+    const int target_z = GENERATE( -2, 0, 2 );
+    const bool highlight_mission = GENERATE( false, true );
+    const bool blink = GENERATE( false, true );
+    const tripoint_abs_omt viewed( 10, 20, viewed_z );
+    oter_display_options opts( viewed, 0 );
+    opts.blink = blink;
+    opts.hilite_mission = highlight_mission;
+    opts.show_pc = false;
+    opts.showhordes = false;
+    oter_display_args args( om_vision_level::unseen );
+    args.los = 0;
+    const std::pair<std::string, nc_color> terrain = oter_symbol_and_color( viewed, args, opts );
+
+    opts.mission_target = tripoint_abs_omt( viewed.xy() + point::east, target_z );
+    CHECK( oter_symbol_and_color( viewed, args, opts ) == terrain );
+
+    opts.mission_target = tripoint_abs_omt( viewed.xy(), target_z );
+    const std::pair<std::string, nc_color> marker = oter_symbol_and_color( viewed, args, opts );
+    if( target_z == viewed_z && highlight_mission ) {
+        CHECK( marker.first == terrain.first );
+        CHECK( marker.second == red_background( terrain.second ) );
+    } else if( blink || highlight_mission ) {
+        CHECK( marker.first == ( target_z > viewed_z ? "^" : target_z < viewed_z ? "v" : "*" ) );
+        CHECK( marker.second == c_red );
+    } else {
+        CHECK( marker == terrain );
+    }
+}
+
+} // namespace merged_overmap_mission_visibility_test
+
+namespace merged_overmap_mod_source_test
+{
+
+static const oter_str_id oter_test_forest_very_thick( "test_forest_very_thick" );
+
+TEST_CASE( "overmap_mod_source_can_be_hidden_at_every_elevation", "[overmap][mod_source]" )
+{
+    const int z = GENERATE( -1, 0, 1 );
+    const tripoint_abs_omt pos( 60, 60, z );
+    const oter_id old_terrain = overmap_buffer.ter( pos );
+    const om_vision_level old_vision = overmap_buffer.seen( pos );
+    on_out_of_scope restore( [&]() {
+        overmap_buffer.ter_set( pos, old_terrain );
+        overmap_buffer.set_seen( pos, old_vision );
+    } );
+    overmap_buffer.ter_set( pos, oter_test_forest_very_thick.id() );
+    overmap_buffer.set_seen( pos, om_vision_level::full );
+
+    const std::string origin = get_origin( oter_test_forest_very_thick->get_type_id()->src );
+    REQUIRE_FALSE( oter_test_forest_very_thick->get_type_id()->src.empty() );
+    const tripoint_abs_sm where = project_to<coords::sm>( pos );
+    std::string shown;
+    {
+        const override_option enabled( "SHOW_OVERMAP_MOD_SOURCE", "true" );
+        shown = overmap_buffer.get_description_at( where,
+            get_option<bool>( "SHOW_OVERMAP_MOD_SOURCE" ) );
+        CHECK( shown.find( origin ) != std::string::npos );
+    }
+    {
+        const override_option disabled( "SHOW_OVERMAP_MOD_SOURCE", "false" );
+        const std::string hidden = overmap_buffer.get_description_at( where,
+            get_option<bool>( "SHOW_OVERMAP_MOD_SOURCE" ) );
+        CHECK( hidden.find( origin ) == std::string::npos );
+        // Hiding attribution must not change the terrain or city description.
+        CHECK( shown == hidden + "\n" + origin );
+    }
+}
+
+} // namespace merged_overmap_mod_source_test
+
+namespace merged_overmap_noise_test
+{
+
+TEST_CASE( "om_noise_layer_forest_export", "[.]" )
+{
+    const om_noise::om_noise_layer_forest f( point_abs_omt(), 1920237457 );
+    om_debug::export_raw_noise( "forest-map-raw.pgm", f, OMAPX, OMAPY );
+}
+
+TEST_CASE( "om_noise_layer_floodplain_export", "[.]" )
+{
+    const om_noise::om_noise_layer_floodplain f( point_abs_omt(), 1920237457 );
+    om_debug::export_raw_noise( "floodplain-map-raw.pgm", f, OMAPX, OMAPY );
+}
+
+TEST_CASE( "om_noise_layer_lake_export", "[.]" )
+{
+    const om_noise::om_noise_layer_lake f( point_abs_omt(), 1920237457 );
+    om_debug::export_raw_noise( "lake-map-raw.pgm", f, OMAPX * 5, OMAPY * 5 );
+    om_debug::export_interpreted_noise( "lake-map-interp.pgm", f, OMAPX * 5, OMAPY * 5, 0.25, false );
+}
+
+} // namespace merged_overmap_noise_test
