@@ -1320,9 +1320,11 @@ void game::simulate_turn_suffix()
         session.visit_resident_maps( m, [&]( map & terrain ) {
             const swap_map context( terrain );
             terrain.furniture_terrain_emit_fields( &regions );
+            terrain.process_indoor_crops( &regions );
         } );
     } else {
         m.furniture_terrain_emit_fields();
+        m.process_indoor_crops();
     }
     // required after monsters move and fields emit
     mon_info_update();
