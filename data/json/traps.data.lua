@@ -1,6 +1,1116 @@
 local ccb = require("ccb")
 
 ccb.content.define_trap {
+    id = "tr_bubblewrap",
+    name = ccb.content.text("bubble wrap"),
+    color = "light_cyan",
+    memorial_male = ccb.content.text("Stepped on bubble wrap.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped on bubble wrap.", "memorial_female"),
+    symbol = "_",
+    visibility = -1,
+    avoidance = 8,
+    difficulty = 0,
+    action = "bubble",
+    drops = { "bubblewrap" },
+    vehicle = { sound_volume = 18, sound = ccb.content.text("Pop!") },
+}
+
+ccb.content.define_trap {
+    id = "tr_glass",
+    name = ccb.content.text("glass shards"),
+    color = "light_cyan",
+    memorial_male = ccb.content.text("Stepped on glass.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped on glass.", "memorial_female"),
+    symbol = "_",
+    visibility = 6,
+    avoidance = 8,
+    difficulty = 0,
+    action = "glass",
+    drops = { "glass_shard" },
+    vehicle = { sound_volume = 10, sound = ccb.content.text("Crunch!") },
+}
+
+ccb.content.define_trap {
+    id = "tr_cot",
+    name = ccb.content.text("cot"),
+    color = "green",
+    symbol = "#",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    comfort = 4,
+    floor_bedding_warmth = -500,
+    action = "cot",
+    drops = { "cot" },
+    benign = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_funnel",
+    name = ccb.content.text("funnel"),
+    color = "yellow",
+    symbol = "V",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    drops = { "funnel" },
+    benign = true,
+    funnel_radius_mm = 300,
+}
+
+ccb.content.define_trap {
+    id = "tr_makeshift_funnel",
+    name = ccb.content.text("makeshift funnel"),
+    color = "yellow",
+    symbol = "v",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    drops = { "makeshift_funnel" },
+    benign = true,
+    funnel_radius_mm = 200,
+}
+
+ccb.content.define_trap {
+    id = "tr_mattress",
+    name = ccb.content.text("mattress"),
+    color = "white",
+    symbol = "0",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    comfort = 4,
+    floor_bedding_warmth = 800,
+    action = "none",
+    drops = { "mattress" },
+    benign = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_down_mattress",
+    name = ccb.content.text("down mattress"),
+    color = "white",
+    symbol = "0",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    comfort = 4,
+    floor_bedding_warmth = 800,
+    action = "none",
+    drops = { "down_mattress" },
+    benign = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_rollmat",
+    name = ccb.content.text("roll mat"),
+    color = "blue",
+    symbol = "#",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    comfort = 4,
+    floor_bedding_warmth = -1000,
+    action = "none",
+    drops = { "rollmat" },
+    benign = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_fur_rollmat",
+    name = ccb.content.text("fur roll mat"),
+    color = "brown",
+    symbol = "#",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    comfort = 4,
+    floor_bedding_warmth = -1000,
+    action = "none",
+    drops = { "fur_rollmat" },
+    benign = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_microlab_shifting_hall",
+    name = ccb.content.text("microlab shifting hall"),
+    color = "brown",
+    memorial_male = ccb.content.text("Triggered a dimensional anomaly.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a dimensional anomaly.", "memorial_female"),
+    symbol = ".",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "map_regen",
+    map_regen = "microlab_shifting_hall",
+    benign = false,
+}
+
+ccb.content.define_trap {
+    id = "tr_microlab_shifting_hall_2",
+    name = ccb.content.text("microlab shifting hall"),
+    color = "brown",
+    memorial_male = ccb.content.text("Triggered a dimensional anomaly.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a dimensional anomaly.", "memorial_female"),
+    symbol = ".",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "map_regen",
+    map_regen = "microlab_shifting_hall_2",
+    benign = false,
+}
+
+ccb.content.define_trap {
+    id = "tr_microlab_portal_elevator_physics_shift",
+    name = ccb.content.text("microlab shifting elevator"),
+    color = "magenta",
+    memorial_male = ccb.content.text("Triggered a dimensional anomaly.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a dimensional anomaly.", "memorial_female"),
+    symbol = ".",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "map_regen",
+    map_regen = "microlab_portal_elevator_physics_shift",
+    benign = false,
+}
+
+ccb.content.define_trap {
+    id = "tr_glimmer_floor",
+    name = ccb.content.text("glimmering floor"),
+    color = "yellow",
+    symbol = "#",
+    visibility = 99,
+    avoidance = 4,
+    difficulty = 99,
+    trap_radius = 4,
+    action = "none",
+    always_invisible = true,
+    benign = false,
+    flags = { "CONSUME_ON_TRIGGER" },
+    trigger_handler = "random_telepad",
+}
+
+ccb.content.define_trap {
+    id = "tr_light_snare",
+    name = ccb.content.text("light snare trap"),
+    color = "brown",
+    symbol = "^",
+    visibility = 1,
+    avoidance = 8,
+    difficulty = 0,
+    action = "snare_light",
+}
+
+ccb.content.define_trap {
+    id = "tr_beartrap",
+    trigger_weight = "200 g",
+    name = ccb.content.text("bear trap"),
+    color = "blue",
+    memorial_male = ccb.content.text("Caught by a beartrap.", "memorial_male"),
+    memorial_female = ccb.content.text("Caught by a beartrap.", "memorial_female"),
+    symbol = "^",
+    visibility = 2,
+    avoidance = 7,
+    difficulty = 3,
+    action = "beartrap",
+    drops = { "beartrap" },
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    vehicle = {
+        damage = 300,
+        sound_volume = 8,
+        sound = ccb.content.text("SNAP!"),
+        sound_type = "trap",
+        sound_variant = "bear_trap",
+        remove_trap = true,
+        spawn_items = { "beartrap" },
+    },
+}
+
+ccb.content.define_trap {
+    id = "tr_beartrap_buried",
+    trigger_weight = "200 g",
+    name = ccb.content.text("buried bear trap"),
+    color = "blue",
+    memorial_male = ccb.content.text("Caught by a beartrap.", "memorial_male"),
+    memorial_female = ccb.content.text("Caught by a beartrap.", "memorial_female"),
+    symbol = "^",
+    visibility = 9,
+    avoidance = 8,
+    difficulty = 4,
+    action = "beartrap",
+    drops = { "beartrap" },
+    flags = { "SONAR_DETECTABLE" },
+    vehicle = {
+        damage = 300,
+        sound_volume = 8,
+        sound = ccb.content.text("SNAP!"),
+        sound_type = "trap",
+        sound_variant = "bear_trap",
+        remove_trap = true,
+        spawn_items = { "beartrap" },
+    },
+}
+
+ccb.content.define_trap {
+    id = "tr_nailboard",
+    name = ccb.content.text("spiked board"),
+    color = "light_gray",
+    memorial_male = ccb.content.text("Stepped on a spiked board.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped on a spiked board.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "_",
+    visibility = 1,
+    avoidance = 6,
+    difficulty = 0,
+    action = "board",
+    drops = { "board_trap" },
+    vehicle = { damage = 300 },
+}
+
+ccb.content.define_trap {
+    id = "tr_caltrops",
+    name = ccb.content.text("caltrops"),
+    color = "dark_gray",
+    memorial_male = ccb.content.text("Stepped on a caltrop.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped on a caltrop.", "memorial_female"),
+    symbol = "_",
+    visibility = 4,
+    avoidance = 6,
+    difficulty = 0,
+    action = "caltrops",
+    drops = { "caltrops" },
+    vehicle = { damage = 300 },
+}
+
+ccb.content.define_trap {
+    id = "tr_caltrops_glass",
+    name = ccb.content.text("glass caltrops"),
+    color = "dark_gray",
+    memorial_male = ccb.content.text("Stepped on a glass caltrop.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped on a glass caltrop.", "memorial_female"),
+    symbol = "_",
+    visibility = 6,
+    avoidance = 6,
+    difficulty = 0,
+    action = "caltrops_glass",
+    drops = { "caltrops_glass" },
+    vehicle = { damage = 300 },
+}
+
+ccb.content.define_trap {
+    id = "tr_tripwire",
+    name = ccb.content.text("tripwire"),
+    color = "light_red",
+    memorial_male = ccb.content.text("Tripped on a tripwire.", "memorial_male"),
+    memorial_female = ccb.content.text("Tripped on a tripwire.", "memorial_female"),
+    symbol = "^",
+    visibility = 6,
+    avoidance = 4,
+    difficulty = 0,
+    action = "tripwire",
+    drops = { "string_36" },
+}
+
+ccb.content.define_trap {
+    id = "tr_crossbow",
+    trigger_weight = "200 g",
+    name = ccb.content.text("crossbow trap"),
+    color = "green",
+    memorial_male = ccb.content.text("Triggered a crossbow trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a crossbow trap.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "^",
+    visibility = 5,
+    avoidance = 4,
+    difficulty = 0,
+    action = "crossbow",
+    drops = { "string_36", "crossbow", "bolt_steel" },
+    vehicle = {
+        chance = 30,
+        damage = 300,
+        sound_volume = 1,
+        sound = ccb.content.text("Clank!"),
+        sound_type = "fire_gun",
+        sound_variant = "crossbow",
+        remove_trap = true,
+        spawn_items = { "crossbow", "string_6", { id = "bolt_steel", chance = 0.9 } },
+    },
+}
+
+ccb.content.define_trap {
+    id = "tr_shotgun_2",
+    trigger_weight = "200 g",
+    name = ccb.content.text("shotgun trap"),
+    color = "red",
+    memorial_male = ccb.content.text("Triggered a shotgun trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a shotgun trap.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "^",
+    visibility = 4,
+    avoidance = 5,
+    difficulty = 0,
+    action = "shotgun",
+    drops = { "string_36", "slamfire_shotgun_d", { item = "shot_00", quantity = 2, charges = 1 } },
+    vehicle = {
+        chance = 70,
+        damage = 300,
+        sound_volume = 60,
+        sound = ccb.content.text("Bang!"),
+        sound_type = "fire_gun",
+        sound_variant = "shotgun_d",
+        set_trap = "tr_shotgun_2_1",
+    },
+}
+
+ccb.content.define_trap {
+    id = "tr_shotgun_2_1",
+    trigger_weight = "200 g",
+    name = ccb.content.text("shotgun trap"),
+    color = "red",
+    memorial_male = ccb.content.text("Triggered a shotgun trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a shotgun trap.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "^",
+    visibility = 4,
+    avoidance = 5,
+    difficulty = 0,
+    action = "shotgun",
+    drops = { "string_36", "slamfire_shotgun_d", { item = "shot_00", quantity = 1, charges = 1 } },
+    vehicle = {
+        chance = 70,
+        damage = 300,
+        sound_volume = 60,
+        sound = ccb.content.text("Bang!"),
+        sound_type = "fire_gun",
+        sound_variant = "shotgun_d",
+        remove_trap = true,
+        spawn_items = { "slamfire_shotgun_d", "string_6" },
+    },
+}
+
+ccb.content.define_trap {
+    id = "tr_shotgun_1",
+    trigger_weight = "200 g",
+    name = ccb.content.text("shotgun trap"),
+    color = "red",
+    memorial_male = ccb.content.text("Triggered a shotgun trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a shotgun trap.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "^",
+    visibility = 4,
+    avoidance = 5,
+    difficulty = 0,
+    action = "shotgun",
+    drops = { "string_36", "slamfire_shotgun", { item = "shot_00", quantity = 1, charges = 1 } },
+    vehicle = {
+        chance = 70,
+        damage = 300,
+        sound_volume = 60,
+        sound = ccb.content.text("Bang!"),
+        sound_type = "fire_gun",
+        sound_variant = "shotgun_s",
+        remove_trap = true,
+        spawn_items = { "four_winds_shotgun", "string_6" },
+    },
+}
+
+-- 撤销 PR #86231 — 恢复刀片陷阱引擎定义
+ccb.content.define_trap {
+    id = "tr_engine",
+    trigger_weight = "200 g",
+    name = ccb.content.text("spinning blade engine"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    color = "light_red",
+    symbol = "_",
+    visibility = 0,
+    avoidance = 0,
+    difficulty = 2,
+    trap_radius = 1,
+    action = "none",
+    drops = { "motor_small", "blade", "blade", "string_36" },
+}
+
+ccb.content.define_trap {
+    id = "tr_blade",
+    name = ccb.content.text("spinning blade"),
+    color = "cyan",
+    memorial_male = ccb.content.text("Triggered a blade trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a blade trap.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "\\",
+    visibility = 0,
+    avoidance = 4,
+    difficulty = 99,
+    action = "blade",
+    vehicle = {
+        damage = 300,
+        sound_volume = 1,
+        sound = ccb.content.text("Swinnng!"),
+        sound_type = "smash_success",
+        sound_variant = "hit_vehicle",
+    },
+}
+
+ccb.content.define_trap {
+    id = "tr_landmine",
+    trigger_weight = "200 g",
+    name = ccb.content.text("land mine"),
+    color = "red",
+    memorial_male = ccb.content.text("Stepped on a land mine.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped on a land mine.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "^",
+    visibility = 1,
+    avoidance = 14,
+    difficulty = 10,
+    action = "landmine",
+    drops = { "landmine" },
+    vehicle = {
+        explosion = true,
+        damage = 1000,
+        shrapnel = 8,
+        sound_volume = 10,
+        sound = ccb.content.text("Boom!"),
+        sound_type = "explosion",
+        sound_variant = "default",
+    },
+}
+
+ccb.content.define_trap {
+    id = "tr_landmine_buried",
+    trigger_weight = "200 g",
+    name = ccb.content.text("buried land mine"),
+    color = "red",
+    memorial_male = ccb.content.text("Stepped on a land mine.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped on a land mine.", "memorial_female"),
+    symbol = "_",
+    visibility = 10,
+    avoidance = 14,
+    difficulty = 10,
+    action = "landmine",
+    drops = { "landmine" },
+    flags = { "SONAR_DETECTABLE" },
+    vehicle = {
+        explosion = true,
+        damage = 1000,
+        shrapnel = 8,
+        sound_volume = 10,
+        sound = ccb.content.text("Boom!"),
+        sound_type = "explosion",
+        sound_variant = "default",
+    },
+}
+
+ccb.content.define_trap {
+    id = "tr_telepad",
+    trigger_weight = "200 g",
+    name = ccb.content.text("teleport pad"),
+    color = "magenta",
+    memorial_male = ccb.content.text("Triggered a teleport trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a teleport trap.", "memorial_female"),
+    symbol = "_",
+    visibility = 0,
+    avoidance = 15,
+    difficulty = 20,
+    action = "none",
+    drops = { "telepad" },
+    flags = { "CONSUME_ON_TRIGGER" },
+    trigger_handler = "random_telepad",
+}
+
+ccb.content.define_trap {
+    id = "tr_goo",
+    name = ccb.content.text("goo pit"),
+    color = "dark_gray",
+    memorial_male = ccb.content.text("Stepped into thick goo.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped into thick goo.", "memorial_female"),
+    symbol = "_",
+    visibility = 0,
+    avoidance = 15,
+    difficulty = 15,
+    action = "goo",
+}
+
+ccb.content.define_trap {
+    id = "tr_dissector",
+    name = ccb.content.text("exposed high-energy conduit"),
+    color = "cyan",
+    memorial_male = ccb.content.text("Stepped into an exposed high-energy conduit.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped into an exposed high-energy conduit.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "7",
+    visibility = 2,
+    avoidance = 20,
+    difficulty = 99,
+    action = "dissector",
+    vehicle = {
+        damage = 500,
+        sound_volume = 10,
+        sound = ccb.content.text("BRZZZAP!"),
+        sound_type = "trap",
+        sound_variant = "dissector",
+    },
+}
+
+ccb.content.define_trap {
+    id = "tr_sinkhole",
+    name = ccb.content.text("sinkhole"),
+    color = "brown",
+    memorial_male = ccb.content.text("Stepped into a sinkhole.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped into a sinkhole.", "memorial_female"),
+    symbol = "_",
+    visibility = 10,
+    avoidance = 14,
+    difficulty = 99,
+    action = "sinkhole",
+    flags = { "SONAR_DETECTABLE" },
+    vehicle = { damage = 500 },
+}
+
+ccb.content.define_trap {
+    id = "tr_pit",
+    name = ccb.content.text("pit"),
+    color = "brown",
+    memorial_male = ccb.content.text("Fell in a pit.", "memorial_male"),
+    memorial_female = ccb.content.text("Fell in a pit.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE", "PIT" },
+    symbol = "0",
+    visibility = 0,
+    avoidance = 8,
+    difficulty = 99,
+    action = "pit",
+    vehicle = { damage = 500 },
+}
+
+ccb.content.define_trap {
+    id = "tr_thin_ice",
+    name = ccb.content.text("thin ice"),
+    color = "light_cyan",
+    memorial_male = ccb.content.text("Fell through thin ice into water.", "memorial_male"),
+    memorial_female = ccb.content.text("Fell through thin ice into water.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "/",
+    visibility = 0,
+    avoidance = 12,
+    difficulty = 99,
+    action = "thin_ice",
+    avatar_message = ccb.content.text("The ice cracks beneath you!"),
+    vehicle = { chance = 80, damage = 30, remove_trap = true },
+}
+
+ccb.content.define_trap {
+    id = "tr_thick_ice",
+    name = ccb.content.text("thick ice"),
+    color = "cyan",
+    memorial_male = ccb.content.text("Stumbled on ice.", "memorial_male"),
+    memorial_female = ccb.content.text("Stumbled on ice.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "/",
+    visibility = 0,
+    avoidance = 4,
+    difficulty = 99,
+    action = "thick_ice",
+    avatar_message = ccb.content.text("You stumbled on the ice!"),
+}
+
+ccb.content.define_trap {
+    id = "tr_spike_pit",
+    name = ccb.content.text("spiked pit"),
+    color = "blue",
+    memorial_male = ccb.content.text("Fell into a spiked pit.", "memorial_male"),
+    memorial_female = ccb.content.text("Fell into a spiked pit.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE", "PIT" },
+    symbol = "0",
+    visibility = 0,
+    avoidance = 8,
+    difficulty = 99,
+    action = "pit_spikes",
+    vehicle = { damage = 500 },
+}
+
+ccb.content.define_trap {
+    id = "tr_lava",
+    name = ccb.content.text("lava"),
+    color = "red",
+    memorial_male = ccb.content.text("Stepped into lava.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped into lava.", "memorial_female"),
+    symbol = "~",
+    visibility = 0,
+    avoidance = 99,
+    difficulty = 99,
+    action = "lava",
+    flags = { "CONVECTS_TEMPERATURE" },
+    vehicle = { damage = 500 },
+    avatar_message = ccb.content.text("You stepped into lava!"),
+    npc_message = ccb.content.text("<npcname> stepped into lava!"),
+}
+
+ccb.content.define_trap {
+    id = "tr_portal",
+    name = ccb.content.text("shimmering portal"),
+    color = "magenta",
+    memorial_male = ccb.content.text("Triggered a teleport trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a teleport trap.", "memorial_female"),
+    symbol = "%",
+    visibility = 0,
+    avoidance = 99,
+    difficulty = 99,
+    action = "none",
+    flags = { "CONSUME_ON_TRIGGER" },
+    trigger_handler = "random_telepad",
+}
+
+ccb.content.define_trap {
+    id = "tr_boobytrap",
+    trigger_weight = "200 g",
+    name = ccb.content.text("booby trap"),
+    color = "light_cyan",
+    memorial_male = ccb.content.text("Triggered a booby trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a booby trap.", "memorial_female"),
+    symbol = "^",
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    visibility = 5,
+    avoidance = 4,
+    difficulty = 0,
+    action = "boobytrap",
+    drops = { "boobytrap" },
+    vehicle = {
+        explosion = true,
+        damage = 1000,
+        shrapnel = 12,
+        sound_volume = 18,
+        sound = ccb.content.text("Boom!"),
+        sound_type = "explosion",
+        sound_variant = "default",
+    },
+}
+
+ccb.content.define_trap {
+    id = "tr_temple_flood",
+    name = ccb.content.text("ledge"),
+    color = "light_gray",
+    memorial_male = ccb.content.text("Triggered a flood trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a flood trap.", "memorial_female"),
+    flags = { "ECHOLOCATION_DETECTABLE" },
+    symbol = "^",
+    visibility = 9,
+    avoidance = 20,
+    difficulty = 99,
+    action = "temple_flood",
+}
+
+ccb.content.define_trap {
+    id = "tr_temple_toggle",
+    name = "",
+    color = "white",
+    symbol = "^",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "temple_toggle",
+    always_invisible = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_glow",
+    name = "",
+    color = "white",
+    symbol = "^",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "glow",
+    always_invisible = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_hum",
+    name = "",
+    color = "white",
+    symbol = "^",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "hum",
+    always_invisible = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_shadow",
+    name = "",
+    color = "white",
+    memorial_male = ccb.content.text("Triggered a shadow trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a shadow trap.", "memorial_female"),
+    symbol = "^",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "shadow",
+    always_invisible = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_drain",
+    name = "",
+    color = "white",
+    memorial_male = ccb.content.text("Triggered a life-draining trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a life-draining trap.", "memorial_female"),
+    symbol = "^",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "drain",
+    always_invisible = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_snake",
+    name = "",
+    color = "white",
+    memorial_male = ccb.content.text("Triggered a shadow snake trap.", "memorial_male"),
+    memorial_female = ccb.content.text("Triggered a shadow snake trap.", "memorial_female"),
+    symbol = "^",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "snake",
+    always_invisible = true,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "summon_trapspider",
+    name = ccb.content.text_without_extraction("Summon Trapdoor Spider"),
+    description = ccb.content.text_without_extraction("This spell summons hostile trapdoor spiders from the earth."),
+    effect = "summon",
+    effect_data = "GROUP_SPIDER_TRAPDOOR",
+    shape = "blast",
+    valid_targets = { "ground" },
+    flags = { "PERMANENT", "HOSTILE_SUMMON", "NO_EXPLOSION_SFX", "SPAWN_GROUP" },
+    max_level = 15,
+    min_aoe = 2,
+    max_aoe = 2,
+    min_damage = 1,
+    max_damage = 1,
+    min_range = 1,
+    max_range = 1,
+    min_duration = 30000,
+    max_duration = 120000,
+    duration_increment = 6000,
+    spell_class = "NONE",
+    base_casting_time = 400,
+    base_energy_cost = 600,
+    energy_source = "MANA",
+    difficulty = 6,
+}
+
+ccb.content.define_trap {
+    id = "tr_dermatik",
+    name = ccb.content.text("burrowed dermatik"),
+    color = "green",
+    symbol = "#",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    trap_radius = 4,
+    action = "none",
+    always_invisible = true,
+    avatar_message = ccb.content.text("Something burrows out of the ground at your feet!"),
+    npc_message = ccb.content.text("Something burrows out of the ground at the feet of <npcname>! "),
+    flags = { "CONSUME_ON_TRIGGER" },
+    trigger_handler = "disturb_dermatik_trap",
+}
+
+ccb.content.define_trap {
+    id = "tr_glass_pit",
+    name = ccb.content.text("glass pit"),
+    color = "cyan",
+    memorial_male = ccb.content.text("Fell into a pit filled with glass shards.", "memorial_male"),
+    memorial_female = ccb.content.text("Fell into a pit filled with glass shards.", "memorial_female"),
+    symbol = "0",
+    visibility = 0,
+    avoidance = 8,
+    difficulty = 99,
+    flags = { "PIT", "ECHOLOCATION_DETECTABLE" },
+    action = "pit_glass",
+    vehicle = { damage = 500 },
+}
+
+ccb.content.define_trap {
+    id = "tr_leather_funnel",
+    name = ccb.content.text("leather funnel"),
+    color = "brown",
+    symbol = "v",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    drops = { "leather_funnel" },
+    benign = true,
+    funnel_radius_mm = 200,
+}
+
+ccb.content.define_trap {
+    id = "tr_birchbark_funnel",
+    name = ccb.content.text("birchbark funnel"),
+    color = "white",
+    symbol = "v",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    drops = { "birchbark_funnel" },
+    benign = true,
+    funnel_radius_mm = 200,
+}
+
+ccb.content.define_trap {
+    id = "tr_downspout_funnel",
+    name = ccb.content.text("downspout funnel"),
+    color = "brown",
+    symbol = "v",
+    visibility = 999,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    benign = true,
+    funnel_radius_mm = 1200,
+}
+
+ccb.content.define_trap {
+    id = "tr_metal_funnel",
+    name = ccb.content.text("metal funnel"),
+    color = "dark_gray",
+    symbol = "V",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    drops = { "metal_funnel" },
+    benign = true,
+    funnel_radius_mm = 400,
+}
+
+ccb.content.define_trap {
+    id = "tr_firewood_source",
+    name = ccb.content.text("firewood source"),
+    color = "green",
+    symbol = "x",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    benign = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_practice_target",
+    name = ccb.content.text("practice target"),
+    color = "red",
+    symbol = "x",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    benign = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_target_spinner",
+    name = ccb.content.text("spinner target"),
+    color = "light_gray",
+    symbol = "%",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    drops = { "target_spinner" },
+    benign = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_unfinished_construction",
+    name = ccb.content.text("unfinished construction"),
+    color = "white",
+    symbol = "U",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    benign = true,
+}
+
+ccb.content.define_trap {
+    id = "tr_raincatcher",
+    name = ccb.content.text("raincatcher"),
+    color = "blue",
+    symbol = "V",
+    visibility = -1,
+    avoidance = 0,
+    difficulty = 0,
+    action = "none",
+    drops = { "tarp_raincatcher" },
+    benign = true,
+    funnel_radius_mm = 342,
+}
+
+ccb.content.define_trap {
+    id = "tr_swirling_vortex",
+    name = ccb.content.text("swirling vortex"),
+    color = "green",
+    symbol = "#",
+    visibility = -1,
+    avoidance = 99,
+    difficulty = 99,
+    trap_radius = 2,
+    flags = { "UNDODGEABLE", "AVATAR_ONLY", "CONSUME_ON_TRIGGER" },
+    action = "none",
+    trigger_handler = "swirling_vortex",
+}
+
+ccb.content.define_trap {
+    id = "tr_teeth",
+    name = ccb.content.text("scattered monster teeth"),
+    color = "light_cyan",
+    memorial_male = ccb.content.text("Stepped on teeth.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped on teeth.", "memorial_female"),
+    symbol = "_",
+    visibility = 6,
+    avoidance = 8,
+    difficulty = 0,
+    action = "caltrops",
+    drops = { "nm_teeth" },
+    vehicle = { sound_volume = 10, sound = ccb.content.text("Crunch!") },
+}
+
+ccb.content.define_trap {
+    id = "tr_caltrops_teeth",
+    name = ccb.content.text("monster teeth caltrops"),
+    color = "dark_gray",
+    memorial_male = ccb.content.text("Stepped on a tooth caltrop.", "memorial_male"),
+    memorial_female = ccb.content.text("Stepped on a tooth caltrop.", "memorial_female"),
+    symbol = "_",
+    visibility = 6,
+    avoidance = 6,
+    difficulty = 0,
+    action = "caltrops",
+    drops = { "caltrops_teeth" },
+    vehicle = { damage = 600 },
+}
+
+-- netherum labyrinth trap that takes you out of the dungeon when you fall into a chasm
+ccb.content.define_trap {
+    id = "tr_nl_chasm",
+    name = ccb.content.text("sparkling chasm"),
+    color = "dark_gray",
+    visibility = 1000,
+    always_invisible = true,
+    action = "none",
+    extend_flags = { "CONSUME_ON_TRIGGER" },
+    trigger_handler = "trigger_labyrinth_chasm",
+    copy_from = "tr_swirling_vortex",
+}
+
+ccb.content.define_trap {
+    id = "tr_nl_stairs_1_to_2",
+    name = ccb.content.text("mysterious staircase"),
+    symbol = "#",
+    color = "white",
+    action = "none",
+    visibility = 1000,
+    avoidance = 99,
+    difficulty = 99,
+    trap_radius = 2,
+    flags = { "UNDODGEABLE", "AVATAR_ONLY", "CONSUME_ON_TRIGGER" },
+    always_invisible = true,
+    trigger_handler = "labyrinth_stairs_down",
+}
+
+ccb.content.define_trap {
+    id = "tr_nl_stairs_2_to_1",
+    name = ccb.content.text("mysterious staircase"),
+    symbol = "#",
+    color = "white",
+    action = "none",
+    visibility = 1000,
+    avoidance = 99,
+    difficulty = 99,
+    trap_radius = 2,
+    flags = { "UNDODGEABLE", "AVATAR_ONLY", "CONSUME_ON_TRIGGER" },
+    always_invisible = true,
+    trigger_handler = "labyrinth_stairs_up",
+}
+
+ccb.content.define_trap {
+    id = "tr_lixa_fall_down",
+    symbol = "#",
+    name = ccb.content.text("open air"),
+    color = "dark_gray",
+    action = "none",
+    visibility = 1000,
+    avoidance = 99,
+    difficulty = 99,
+    trap_radius = 2,
+    flags = { "UNDODGEABLE", "AVATAR_ONLY", "CONSUME_ON_TRIGGER" },
+    always_invisible = true,
+    trigger_handler = "lixa_step_off_ledge",
+}
+
+ccb.content.define_trap {
+    id = "tr_lixa_climbing_fall_down",
+    symbol = "#",
+    name = ccb.content.text("open air"),
+    color = "dark_gray",
+    action = "none",
+    visibility = 1000,
+    avoidance = 99,
+    difficulty = 99,
+    trap_radius = 2,
+    flags = { "UNDODGEABLE", "AVATAR_ONLY", "CONSUME_ON_TRIGGER" },
+    always_invisible = true,
+    trigger_handler = "lixa_lose_grip",
+}
+
+-- Needs to be AVATAR_ONLY, otherwise the summoned monsters trigger the trap again.
+ccb.content.define_trap {
+    id = "tr_alien_tree_trap_roots",
+    name = ccb.content.text("alien roots"),
+    color = "dark_gray",
+    symbol = "/",
+    visibility = 12,
+    avoidance = 10,
+    difficulty = 99,
+    flags = { "UNDODGEABLE", "AVATAR_ONLY", "CONSUME_ON_TRIGGER" },
+    action = "none",
+    trigger_weight = "50000 g",
+    avatar_message = ccb.content.text("As you step on the roots, they twitch slightly."),
+    npc_message = ccb.content.text("As <npcname> steps on the roots, they twitch slightly."),
+    trigger_handler = "disturb_alien_roots",
+}
+
+ccb.content.define_trap {
+    id = "tr_inner_cabins_void",
+    name = ccb.content.text("fluid void"),
+    color = "black",
+    memorial_male = ccb.content.text("Lost to a pool of darkness.", "memorial_male"),
+    memorial_female = ccb.content.text("Lost to a pool of darkness.", "memorial_female"),
+    symbol = "~",
+    visibility = 1000,
+    avoidance = 99,
+    difficulty = 99,
+    vehicle = { damage = 5000 },
+    flags = { "UNDODGEABLE", "CONSUME_ON_TRIGGER" },
+    action = "none",
+    always_invisible = true,
+    trigger_handler = "inner_cabins_void_trap",
+}
+
+ccb.content.define_trap {
     id = "tr_inner_cabins_exit_portal",
     name = ccb.content.text("swirling vortex"),
     symbol = "O",

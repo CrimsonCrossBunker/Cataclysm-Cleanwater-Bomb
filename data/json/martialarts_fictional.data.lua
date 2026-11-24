@@ -1,5 +1,401 @@
 local ccb = require("ccb")
 
+ccb.content.define_mutation {
+    id = "MARTIAL_ARTS4",
+    name = ccb.content.text("Venom Mob Protege"),
+    points = 2,
+    description = ccb.content.text("You are a pupil of the Venom Clan.  You start with one of the five deadly venoms: Centipede, Viper, Scorpion, Lizard, or Toad."),
+    starting_trait = false,
+    initial_martial_arts = { "style_centipede", "style_venom_snake", "style_scorpion", "style_lizard", "style_toad" },
+    valid = false,
+}
+
+ccb.content.define_technique {
+    id = "tec_biojutsu_disarm",
+    name = ccb.content.text("Disarm"),
+    messages = {
+        ccb.content.text("You effortlessly disarm and stun %s"),
+        ccb.content.text("<npcname> effortlessly disarms and stuns %s"),
+    },
+    skills = { { id = "unarmed", level = 1 } },
+    unarmed_allowed = true,
+    weighting = 2,
+    disarms = true,
+    effects = {
+        {
+            id = "disarmed",
+            chance = 100,
+            duration_turns = 400,
+            on_damage = true,
+            message = ccb.content.text("The weapon of %s has been forced out of their hands!"),
+        },
+    },
+    stun_dur = 1,
+    attack_vectors = { "vector_grasp" },
+}
+
+ccb.content.define_technique {
+    id = "tec_biojutsu_strike_melee",
+    name = ccb.content.text("Measured Strike (melee)"),
+    messages = {
+        ccb.content.text("You make an efficient strike against %s"),
+        ccb.content.text("<npcname> makes an efficient strike against %s"),
+    },
+    melee_allowed = true,
+    mult_bonuses = { { stat = "movecost", scale = 0.8 } },
+    attack_vectors = { "vector_null" },
+}
+
+ccb.content.define_technique {
+    id = "tec_biojutsu_strike_unarmed",
+    name = ccb.content.text("Measured Strike (unarmed)"),
+    messages = {
+        ccb.content.text("You make an efficient strike against %s"),
+        ccb.content.text("<npcname> makes an efficient strike against %s"),
+    },
+    unarmed_allowed = true,
+    crit_ok = true,
+    mult_bonuses = { { stat = "movecost", scale = 0.8 } },
+    attack_vectors = { "vector_punch" },
+}
+
+ccb.content.define_technique {
+    id = "tec_biojutsu_impale",
+    name = ccb.content.text("Biojutsu Impale"),
+    messages = {
+        ccb.content.text("You brutally impale %s with your weapon"),
+        ccb.content.text("<npcname> brutally impales %s with their weapon"),
+    },
+    skills = { { id = "melee", level = 3 } },
+    melee_allowed = true,
+    crit_tec = true,
+    mult_bonuses = {
+        { stat = "damage", damage_type = "bash", scale = 1.5 },
+        { stat = "damage", damage_type = "cut", scale = 1.5 },
+        { stat = "damage", damage_type = "stab", scale = 1.5 },
+    },
+    stun_dur = 1,
+    attack_vectors = { "vector_null" },
+}
+
+ccb.content.define_technique {
+    id = "tec_biojutsu_takedown",
+    name = ccb.content.text("Biojutsu Takedown"),
+    messages = {
+        ccb.content.text("You kick and slam %s to the ground"),
+        ccb.content.text("<npcname> kicks and slams %s to the ground"),
+    },
+    skills = { { id = "unarmed", level = 2 } },
+    unarmed_allowed = true,
+    weighting = 2,
+    crit_ok = true,
+    down_dur = 2,
+    attack_vectors = {
+        "vector_foot_toes",
+        "vector_avian_talons",
+        "vector_hoof_kick",
+        "vector_digitigrade_paws",
+    },
+    when = "allow_tec_biojutsu_takedown",
+    condition_description = ccb.content.text("* Only works on a <info>non-downed</info> target"),
+}
+
+ccb.content.define_technique {
+    id = "tec_biojutsu_wide",
+    name = ccb.content.text("Biojutsu Cleave"),
+    messages = {
+        ccb.content.text("You quickly cleave through %s and those nearby"),
+        ccb.content.text("<npcname> quickly cleaves through %s and those nearby"),
+    },
+    skills = { { id = "melee", level = 5 } },
+    weapon_categories = { "BIONIC_WEAPONRY" },
+    melee_allowed = true,
+    weighting = 2,
+    crit_tec = true,
+    aoe = "wide",
+    attack_vectors = { "vector_null" },
+}
+
+ccb.content.define_technique {
+    id = "tec_lizard_rapid",
+    name = ccb.content.text("Lizard Strike"),
+    messages = {
+        ccb.content.text("You spearhand strike %s"),
+        ccb.content.text("<npcname> spearhand strikes %s"),
+    },
+    unarmed_allowed = true,
+    mult_bonuses = {
+        { stat = "movecost", scale = 0.5 },
+        { stat = "damage", damage_type = "bash", scale = 0.66 },
+        { stat = "damage", damage_type = "cut", scale = 0.66 },
+        { stat = "damage", damage_type = "stab", scale = 0.66 },
+    },
+    attack_vectors = { "vector_punch" },
+}
+
+ccb.content.define_technique {
+    id = "tec_lizard_tail",
+    name = ccb.content.text("Lizard Tail"),
+    messages = { ccb.content.text("You leap and kick %s"), ccb.content.text("<npcname> leaps and kicks %s") },
+    skills = { { id = "unarmed", level = 1 } },
+    unarmed_allowed = true,
+    crit_ok = true,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 1.2 } },
+    attack_vectors = {
+        "vector_foot_toes",
+        "vector_avian_talons",
+        "vector_hoof_kick",
+        "vector_digitigrade_paws",
+    },
+}
+
+ccb.content.define_technique {
+    id = "tec_lizard_break",
+    name = ccb.content.text("Grab Break"),
+    messages = {
+        ccb.content.text("You were almost grabbed by %s, but you outmaneuver it"),
+        ccb.content.text("<npcname> was almost grabbed by %s, but they outmaneuver it"),
+    },
+    skills = { { id = "unarmed", level = 3 } },
+    unarmed_allowed = true,
+    melee_allowed = true,
+    defensive = true,
+    grab_break = true,
+}
+
+ccb.content.define_technique {
+    id = "tec_lizard_walldive",
+    name = ccb.content.text("Lizard Wall Dive"),
+    messages = {
+        ccb.content.text("You push off a nearby wall and strike down at %s"),
+        ccb.content.text("<npcname> pushes off a nearby wall and strikes down at %s"),
+    },
+    skills = { { id = "unarmed", level = 4 } },
+    unarmed_allowed = true,
+    crit_tec = true,
+    wall_adjacent = true,
+    stun_dur = 2,
+    knockback_dist = 1,
+    knockback_spread = 1,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 2.5 } },
+    attack_vectors = { "vector_shoulder" },
+}
+
+ccb.content.define_technique {
+    id = "tec_venom_snake_feint",
+    name = ccb.content.text("Viper Hiss"),
+    messages = {
+        ccb.content.text("You hiss threateningly at %s"),
+        ccb.content.text("<npcname> hisses threateningly at %s"),
+    },
+    skills = { { id = "unarmed", level = 1 } },
+    unarmed_allowed = true,
+    melee_allowed = true,
+    defensive = true,
+    miss_recovery = true,
+}
+
+ccb.content.define_technique {
+    id = "tec_venom_snake_rapid",
+    name = ccb.content.text("Viper Fist"),
+    messages = { ccb.content.text("You quickly chop %s"), ccb.content.text("<npcname> quickly chops %s") },
+    unarmed_allowed = true,
+    mult_bonuses = {
+        { stat = "movecost", scale = 0.5 },
+        { stat = "damage", damage_type = "bash", scale = 0.66 },
+        { stat = "damage", damage_type = "cut", scale = 0.66 },
+        { stat = "damage", damage_type = "stab", scale = 0.66 },
+    },
+    attack_vectors = { "vector_wrist" },
+}
+
+ccb.content.define_technique {
+    id = "tec_venom_snake_bite",
+    name = ccb.content.text("Viper Bite"),
+    messages = {
+        ccb.content.text("You lash out at %s with a Viper Bite"),
+        ccb.content.text("<npcname> lashes out at %s with a Viper Bite"),
+    },
+    skills = { { id = "unarmed", level = 2 } },
+    unarmed_allowed = true,
+    crit_tec = true,
+    stun_dur = 2,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 1.25 } },
+    attack_vectors = { "vector_punch" },
+}
+
+ccb.content.define_technique {
+    id = "tec_venom_snake_tail",
+    name = ccb.content.text("Viper Tail"),
+    messages = {
+        ccb.content.text("You beat %s down with a powerful Viper Tail"),
+        ccb.content.text("<npcname> beats %s down with a powerful Viper Tail"),
+    },
+    skills = { { id = "unarmed", level = 3 } },
+    unarmed_allowed = true,
+    weighting = 2,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 1.5 } },
+    attack_vectors = { "vector_punch" },
+    when = "allow_tec_venom_snake_tail",
+    condition_description = ccb.content.text("Requires a stunned target"),
+}
+
+ccb.content.define_technique {
+    id = "tec_venom_snake_strike",
+    name = ccb.content.text("Viper Strike"),
+    messages = {
+        ccb.content.text("You devastate %s with a spectacular Viper Strike"),
+        ccb.content.text("<npcname> devastates %s with a spectacular Viper Strike"),
+    },
+    skills = { { id = "unarmed", level = 4 } },
+    unarmed_allowed = true,
+    weighting = 2,
+    crit_tec = true,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 2.0 } },
+    attack_vectors = { "vector_punch" },
+    when = "allow_tec_venom_snake_tail",
+    condition_description = ccb.content.text("Requires a stunned target"),
+}
+
+ccb.content.define_technique {
+    id = "tec_scorpion_roundhouse",
+    name = ccb.content.text("Roundhouse Kick"),
+    messages = {
+        ccb.content.text("You roundhouse kick %s"),
+        ccb.content.text("<npcname> roundhouse kicks %s"),
+    },
+    unarmed_allowed = true,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 1.2 } },
+    attack_vectors = { "vector_foot_heel" },
+}
+
+ccb.content.define_technique {
+    id = "tec_scorpion_brutal",
+    name = ccb.content.text("Stinger Kick"),
+    skills = { { id = "unarmed", level = 5 } },
+    unarmed_allowed = true,
+    crit_tec = true,
+    stun_dur = 2,
+    knockback_dist = 3,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 2.0 } },
+    messages = {
+        ccb.content.text("Your Stinger Kick sends %s flying"),
+        ccb.content.text("<npcname>'s Stinger Kick sends %s flying"),
+    },
+    attack_vectors = { "vector_foot_sole" },
+}
+
+ccb.content.define_technique {
+    id = "tec_scorpion_precise",
+    name = ccb.content.text("Pincer Fist"),
+    messages = {
+        ccb.content.text("You stun %s with your Pincer Fist"),
+        ccb.content.text("<npcname> jabs %s with a Pincer Fist"),
+    },
+    skills = { { id = "unarmed", level = 4 } },
+    unarmed_allowed = true,
+    required_buffs_all = { "buff_scorpion_onmove" },
+    stun_dur = 1,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 1.25 } },
+    attack_vectors = {
+        "vector_foot_toes",
+        "vector_avian_talons",
+        "vector_hoof_kick",
+        "vector_digitigrade_paws",
+    },
+}
+
+ccb.content.define_technique {
+    id = "tec_toad_cross",
+    name = ccb.content.text("Toad Smack"),
+    messages = {
+        ccb.content.text("You give %s a hardy smack"),
+        ccb.content.text("<npcname> gives %s a hardy smack"),
+    },
+    skills = { { id = "unarmed", level = 4 } },
+    crit_ok = true,
+    unarmed_allowed = true,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 1.25 } },
+    attack_vectors = { "vector_punch" },
+}
+
+ccb.content.define_technique {
+    id = "tec_toad_crit",
+    name = ccb.content.text("Toad Slam"),
+    messages = {
+        ccb.content.text("You meet %s head-on with a stunning slam"),
+        ccb.content.text("<npcname> meet %s head-on with a stunning slam"),
+    },
+    skills = { { id = "unarmed", level = 4 } },
+    unarmed_allowed = true,
+    crit_tec = true,
+    stun_dur = 1,
+    mult_bonuses = { { stat = "damage", damage_type = "bash", scale = 1.4 } },
+    attack_vectors = { "vector_arm" },
+}
+
+ccb.content.define_technique {
+    id = "tec_toad_grab",
+    name = ccb.content.text("Toad's Tongue"),
+    messages = {
+        ccb.content.text("You snatch and slug %s"),
+        ccb.content.text("<npcname> snatches and slug %s"),
+    },
+    skills = { { id = "unarmed", level = 1 } },
+    unarmed_allowed = true,
+    required_buffs_all = { "buff_toad_ongethit" },
+    crit_ok = true,
+    down_dur = 2,
+    mult_bonuses = { { stat = "movecost", scale = 0.5 } },
+    attack_vectors = { "vector_grasp" },
+    when = "allow_tec_biojutsu_takedown",
+    condition_description = ccb.content.text("* Only works on a <info>non-downed</info> target"),
+}
+
+ccb.content.define_technique {
+    id = "tec_centipede_break",
+    name = ccb.content.text("Grab Break"),
+    messages = {
+        ccb.content.text("You were almost grabbed by %s, but you skitter free"),
+        ccb.content.text("<npcname> was almost grabbed by %s, but they skitter free"),
+    },
+    skills = { { id = "unarmed", level = 3 } },
+    unarmed_allowed = true,
+    defensive = true,
+    grab_break = true,
+}
+
+ccb.content.define_technique {
+    id = "tec_centipede_rapid",
+    name = ccb.content.text("Centipede Strike"),
+    messages = { ccb.content.text("You swiftly hit %s"), ccb.content.text("<npcname> swiftly hits %s") },
+    unarmed_allowed = true,
+    mult_bonuses = {
+        { stat = "movecost", scale = 0.5 },
+        { stat = "damage", damage_type = "bash", scale = 0.66 },
+        { stat = "damage", damage_type = "cut", scale = 0.66 },
+        { stat = "damage", damage_type = "stab", scale = 0.66 },
+    },
+    attack_vectors = { "vector_punch" },
+}
+
+ccb.content.define_technique {
+    id = "tec_centipede_bite",
+    name = ccb.content.text("Centipede Bite"),
+    messages = {
+        ccb.content.text("You palm strike %s with a painful Centipede Bite"),
+        ccb.content.text("<npcname> palm strikes %s with a painful Centipede Bite"),
+    },
+    skills = { { id = "unarmed", level = 2 } },
+    unarmed_allowed = true,
+    crit_tec = true,
+    down_dur = 1,
+    mult_bonuses = { { stat = "movecost", scale = 0.5 } },
+    attack_vectors = { "vector_palm" },
+    when = "allow_tec_biojutsu_takedown",
+    condition_description = ccb.content.text("* Only works on a <info>non-downed</info> target"),
+}
+
 ccb.content.define_technique {
     id = "tec_centipede_disarm",
     name = ccb.content.text("Disarm"),
