@@ -454,13 +454,6 @@ function CcbWorldApi.find_location(origin, selector, options) end
 ---@return CcbResult result `value` is a CcbWorldTransformRadiusResult.
 function CcbWorldApi.transform_radius(position, radius, transform, options) end
 
----Append a native temporary place-name override; duplicate keys are retained.
----@param name string Already translated place name.
----@param duration TimeDuration Native duration; expiry uses the native calendar and one-turn offset.
----@param key? string Optional native timed-event key; defaults to empty.
----@return CcbResult result value contains name, when and key.
-function CcbWorldApi.override_place_name(name, duration, key) end
-
 ---@param position TripointCoord Explicit absolute overmap-terrain coordinate.
 ---@param delay TimeDuration Full native signed-int turn range, including zero and negative delays.
 ---@param key? string|fun():string Raw event key (nil means empty), or synchronous provider called once for each of four submaps.
@@ -16358,22 +16351,6 @@ function CcbInventoryApi.receive_item(character, item_type, quantity, options) e
 ---@param options? CcbInventoryReceiptOptions
 ---@return CcbResult result value contains id, attempted_instances and accepted_instances. Uses native group generation and drop fallback.
 function CcbInventoryApi.receive_group(character, group, options) end
-
----Deliver native-default items through Character::i_add_or_drop, including ground drops when inventory cannot accept them.
----Charge-counted items receive exactly quantity charges. Other items receive native default ammunition and are attempted quantity times.
----PRESERVE_SPAWN_LOC records the Character's position. No dialogue popup or item-handle snapshot is produced.
----@param character GameHandle Exact live Character.
----@param item_type GameId GameId<item>.
----@param quantity integer Native signed-int quantity; nonpositive instance counts perform no attempts, while charge counts retain the native value.
----@return CcbResult result value contains id, name, attempted_instances and accepted_instances; accepted deliveries may be carried or dropped.
-function CcbInventoryApi.receive_item(character, item_type, quantity) end
-
----Generate the complete native item group and deliver each top-level item through Character::i_add_or_drop.
----Keeps native containers, charges, ammunition and global RNG order; no snapshot page limit or dialogue popup applies.
----@param character GameHandle Exact live Character.
----@param group GameId GameId<item_group>.
----@return CcbResult result value contains attempted_instances and accepted_instances; accepted deliveries may be carried or dropped.
-function CcbInventoryApi.receive_group(character, group) end
 ---@param character GameHandle Exact live Character handle.
 ---@param item_type GameId GameId<item>
 ---@param count? integer
