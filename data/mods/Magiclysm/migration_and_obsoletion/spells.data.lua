@@ -1,5 +1,99 @@
 local ccb = require("ccb")
 
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "pertifying_touch_moves",
+    name = ccb.content.text_without_extraction("Petrifying Touch Moves Removing"),
+    description = ccb.content.text_without_extraction("Delete some amount of moves from monster, and inflict DoT.  You can see it only in debug mode."),
+    valid_targets = { "hostile" },
+    flags = { "EVOCATION_SPELL", "SILENT", "NO_EXPLOSION_SFX", "SPLIT_DAMAGE" },
+    effect = "mod_moves",
+    shape = "blast",
+    min_damage = -1000,
+    max_damage = -1,
+    damage_increment = 50,
+    min_dot = 0,
+    max_dot = 10,
+    dot_increment = 0.5,
+    max_level = 20,
+}
+
+ccb.content.define_spell {
+    id = "summon_shambling_mound",
+    name = ccb.content.text("Call of Mound"),
+    description = ccb.content.text("Summons a Shambling Mound, a giant carnivorous plant mess with devastating area attacks.  It is too slow for a normal fight, but excels at defending its shaman."),
+    valid_targets = { "ground" },
+    flags = { "CONJURATION_SPELL", "SOMATIC", "VERBAL", "CONCENTRATE" },
+    extra_spells = { { spell = "eoc_summon_setup", self = true } },
+    effect = "summon",
+    effect_data = "mon_shambling_mound",
+    shape = "blast",
+    spell_class = "SHAMAN",
+    energy_source = "MANA",
+    difficulty = 7,
+    max_level = 35,
+    base_casting_time = 1200,
+    casting_time_increment = -26,
+    final_casting_time = 300,
+    base_energy_cost = 800,
+    energy_increment = -9,
+    final_energy_cost = 500,
+    min_damage = 1,
+    max_damage = 1,
+    min_range = 1,
+    max_range = 8,
+    range_increment = 0.2,
+    min_aoe = 8,
+    max_aoe = 1,
+    aoe_increment = -0.2,
+    min_duration = 14400,
+    max_duration = 144000,
+    duration_increment = 4000,
+}
+
+-- obsoleted
+-- half a minute
+ccb.content.define_spell {
+    id = "summon_decayed_pouncer",
+    name = ccb.content.text("Summon Decayed Pouncer"),
+    description = ccb.content.text("A decrepit looking large cat rises from the depths of the earth to fight for you.  You may be able to summon more with a higher level in this spell."),
+    valid_targets = { "ground" },
+    min_damage = 1,
+    max_damage = 3,
+    damage_increment = 0.1,
+    max_level = -1,
+    difficulty = 10,
+    spell_class = "ANIMIST",
+    effect = "summon",
+    effect_data = "mon_zougar",
+    shape = "blast",
+    energy_source = "HP",
+    base_energy_cost = 30,
+    base_casting_time = 3000,
+    min_range = 3,
+    max_range = 3,
+    min_aoe = 2,
+    max_aoe = 2,
+    flags = { "SOMATIC", "VERBAL", "CONCENTRATE" },
+    min_duration = 36000,
+    max_duration = 1080000,
+    duration_increment = 36000,
+}
+
+ccb.content.define_spell {
+    id = "earthshaper_map_real",
+    name = ccb.content.text("Reading the Earthbones Real Spell"),
+    description = ccb.content.text("This is the spell that actually fires when you cast Reading the Earthbones.  It's a bug if you have it."),
+    valid_targets = { "none" },
+    message = ccb.content.text("The secrets of the living earth are revealed to you."),
+    flags = { "NO_HANDS", "SILENT" },
+    effect = "map",
+    shape = "blast",
+    max_level = 1,
+    min_aoe = { handler = "scaled_earthshaper_map_real_min_aoe", fallback = 7.0 },
+}
+
 -- Remove after 0.J
 ccb.content.define_spell {
     id = "magus_baleful_polymorph",

@@ -1,5 +1,12 @@
 local ccb = require("ccb")
 
+ccb.content.define_mutation {
+    id = "FOREST_STEALTH",
+    name = ccb.content.text("Cloak of Elvenkind: Forest Stealth"),
+    description = ccb.content.text("You have a much easier time hiding in the forest."),
+    points = 2,
+}
+
 ccb.content.define_trait_migration {
     id = "BIOMANCER_EAT_TONS_OF_FOOD_01",
     remove = true,
