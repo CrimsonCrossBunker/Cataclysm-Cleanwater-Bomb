@@ -9458,6 +9458,7 @@ function CcbHordesApi.remove_legacy_group(token) end
 ---@field variables CcbVariablesApi
 ---@field vehicles CcbVehiclesApi
 ---@field vitamins CcbVitaminsApi
+---@field environment_models CcbEnvironmentModelsApi
 ---@field weather CcbWeatherApi
 ---@field wounds CcbPlatformWoundsApi
 ---@field world CcbWorldApi
@@ -12781,3 +12782,61 @@ local CcbMonstersApi = {}
 ---@param friendly boolean True sets permanent friendliness (-1); false sets 0.
 ---@return CcbResult result
 function CcbMonstersApi.set_friendly(monster, friendly) end
+
+---@class CcbIonosphereSample
+---@field d_electrons_m3 number D-region electron density in electrons per cubic meter.
+---@field e_electrons_m3 number E-region electron density in electrons per cubic meter.
+---@field f_electrons_m3 number F-region electron density in electrons per cubic meter.
+---@field total_electrons_m3 number Sum of all three regions.
+---@field plasma_frequency_hz number Local electron plasma frequency in Hz, not a link prediction.
+
+---@class CcbTroposphereReference
+---@field altitude_m number Reference altitude above mean sea level, from -500 to 11000 m.
+---@field temperature_k number Reference temperature, from 180 to 340 K.
+---@field pressure_pa number Reference pressure, from 10000 to 120000 Pa.
+
+---@class CcbTroposphereSample
+---@field temperature_k number Temperature in kelvin.
+---@field pressure_pa number Pressure in pascals.
+---@field density_kg_m3 number Dry air density in kilograms per cubic meter.
+---@field speed_of_sound_m_s number Speed of sound in meters per second.
+
+---@class CcbNearEarthOrbitElements
+---@field perigee_altitude_km number Perigee above the 6371 km reference sphere, at least 160 km.
+---@field apogee_altitude_km number Apogee at or above perigee, at most 2000 km.
+---@field inclination_deg number Inclination from 0 to 180 degrees.
+---@field ascending_node_deg number Longitude of ascending node from 0 to 360 degrees.
+---@field argument_of_perigee_deg number Argument of perigee from 0 to 360 degrees.
+---@field mean_anomaly_deg number Mean anomaly at elapsed_s = 0, from 0 to 360 degrees.
+
+---@class CcbEnvironmentModelVector
+---@field x number X component.
+---@field y number Y component.
+---@field z number Z component.
+
+---@class CcbNearEarthOrbitState
+---@field position_km CcbEnvironmentModelVector Earth-centered inertial position in km.
+---@field velocity_km_s CcbEnvironmentModelVector Earth-centered inertial velocity in km/s.
+---@field altitude_km number Radial altitude above the 6371 km reference sphere.
+---@field period_s number Orbital period in seconds.
+
+---@class CcbEnvironmentModelsApi
+local CcbEnvironmentModelsApi = {}
+
+---Gameplay approximation using D/E/F Chapman profiles; no space-weather inputs.
+---@param altitude_km number Altitude from 60 to 1000 km.
+---@param solar_elevation_deg number Sun elevation above local horizon, from -90 to 90 degrees.
+---@return CcbIonosphereSample
+function CcbEnvironmentModelsApi.ionosphere(altitude_km, solar_elevation_deg) end
+
+---Dry hydrostatic column with a fixed lapse rate; no humidity or weather effects.
+---@param altitude_m number Altitude above mean sea level, from -500 to 11000 m.
+---@param reference? CcbTroposphereReference Defaults to 0 m, 288.15 K and 101325 Pa.
+---@return CcbTroposphereSample
+function CcbEnvironmentModelsApi.troposphere(altitude_m, reference) end
+
+---Two-body propagation in an Earth-centered inertial frame with +Z north and +X at zero ascending-node longitude. No drag, precession or Earth rotation.
+---@param elements CcbNearEarthOrbitElements Orbital elements at elapsed_s = 0.
+---@param elapsed_s number Finite time offset from the supplied epoch in seconds, positive or negative.
+---@return CcbNearEarthOrbitState
+function CcbEnvironmentModelsApi.near_earth_orbit(elements, elapsed_s) end

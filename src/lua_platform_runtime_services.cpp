@@ -106,6 +106,7 @@ extern "C" {
 #include "lua_platform_variables.h"
 #include "lua_platform_vehicles.h"
 #include "lua_platform_vitamins.h"
+#include "lua_platform_environment_models.h"
 #include "lua_platform_weather.h"
 #include "lua_platform_world.h"
 #include "lua_platform_world_info.h"
@@ -3173,6 +3174,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         services, runtime_generation, world_generation,
         require_read, require_write );
     cata::lua_platform::install_weather_api( services, require_read, require_write );
+    cata::lua_platform::install_environment_models_api( services, require_read );
     cata::lua_platform::install_crafting_api(
         services, runtime_generation, world_generation,
         require_read, require_write );
