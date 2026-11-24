@@ -1,6 +1,63 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "kevlar_shears",
+    name = ccb.content.plural_text("pair of Kevlar cutters", "pairs of Kevlar cutters"),
+    description = ccb.content.text("These are a pair of heavy-duty shears with a blade suitable for cutting particularly tough materials, from polyaramid fabrics to tough plastics and thin metals.  The blades feature a flat shearing edge and a fine serration."),
+    ascii_picture = "scissors",
+    mass = "113 g",
+    volume = "145 ml",
+    price = "35 USD",
+    survival_price = "3 USD 50 cent",
+    accuracy = -1,
+    materials = { "steel", "plastic" },
+    symbol = ",",
+    color = "yellow",
+    qualities = {
+        { id = "CUT", level = 2 },
+        { id = "BUTCHER", level = 5 },
+        { id = "FABRIC_CUT", level = 2 },
+        { id = "SHEAR", level = 1 },
+    },
+    flags = { "BELT_CLIP", "SHEATH_KNIFE" },
+    weapon_categories = { "SHIVS" },
+    melee_damage = { stab = 10 },
+    tool = {},
+}
+
+ccb.content.define_item {
+    id = "sewing_kit",
+    name = ccb.content.plural_text("sewing kit", "sewing kits"),
+    description = ccb.content.text("This is a wrapped leather kit with a variety of needles, some wooden spools for thread, small scissors, and a few other useful textile tools.  Use a sewing kit on an article of clothing to attempt to repair or reinforce that clothing.  This uses your tailoring skill."),
+    mass = "85 g",
+    volume = "250 ml",
+    price = "10 USD",
+    survival_price = "5 USD",
+    accuracy = -1,
+    materials = { "wood", "steel" },
+    symbol = ",",
+    color = "red",
+    pockets = { { kind = "MAGAZINE", ammunition = { thread = 200 } } },
+    qualities = { { id = "SEW", level = 3 }, { id = "FABRIC_CUT", level = 1 }, { id = "CUT", level = 2 } },
+    flags = { "ALLOWS_REMOTE_USE" },
+    tool = { charges_per_use = 1 },
+    use_actions = {
+        {
+            kind = "repair_item",
+            id = "repair_fabric",
+            materials = {
+                "cotton", "leather", "lycra", "nylon", "wool", "fur", "faux_fur", "nomex", "kevlar",
+                "kevlar_layered", "gutskin",
+            },
+            skill = "tailor",
+            tool_quality = 0,
+            cost_scaling = 0.1,
+            move_cost = 1000,
+        },
+    },
+}
+
+ccb.content.define_item {
     id = "fibercloth_patchwork",
     category = "spare_parts",
     name = ccb.content.plural_text("fibercloth patch", "fibercloth patches"),
