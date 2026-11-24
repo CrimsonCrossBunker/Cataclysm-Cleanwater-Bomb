@@ -268,6 +268,7 @@ json_flag_TEMPORARY_SHAPESHIFT_NO_HANDS( "TEMPORARY_SHAPESHIFT_NO_HANDS" );
 static const json_character_flag json_flag_WALL_CLING( "WALL_CLING" );
 
 static const material_id material_glass( "glass" );
+static const material_id material_mushroom( "mushroom" );
 
 static const mtype_id mon_zombie( "mon_zombie" );
 
@@ -2821,6 +2822,13 @@ void map::refresh_furniture_cache( const tripoint_bub_ms &p, const furn_t &old_f
 {
     if( !old_f.emissions.empty() || !new_f.emissions.empty() ) {
         update_tile_index( field_furn_locs, p, !new_f.emissions.empty() );
+    }
+    if( old_f.has_flag( ter_furn_flag::TFLAG_PLANT ) != new_f.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+        if( new_f.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+            crop_locs.insert( p );
+        } else {
+            crop_locs.erase( p );
+        }
     }
     if( old_f.transparent != new_f.transparent ||
         old_f.has_flag( ter_furn_flag::TFLAG_TRANSLUCENT ) != new_f.has_flag(
@@ -10788,6 +10796,7 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
     }
     field_furn_locs.clear();
     field_ter_locs.clear();
+    crop_locs.clear();
     support_cache_dirty.clear();
     submaps_with_active_items.clear();
     submaps_with_active_items_dirty.clear();
@@ -10962,6 +10971,13 @@ void map::shift_traps( const point_rel_sm &shift )
 {
     // Offset needs to have sign opposite to shift direction
     const tripoint_rel_ms offset( -shift.x() * SEEX, -shift.y() * SEEY, 0 );
+    std::set<tripoint_bub_ms> shifted_crops;
+    for( const tripoint_bub_ms &p : crop_locs ) {
+        if( inbounds( p + offset ) ) {
+            shifted_crops.insert( p + offset );
+        }
+    }
+    crop_locs.swap( shifted_crops );
     for( auto iter = field_furn_locs.begin(); iter != field_furn_locs.end(); ) {
         tripoint_bub_ms &pos = *iter;
         pos += offset;
@@ -11523,12 +11539,52 @@ void map::grow_terrain_plant( const tripoint_bub_ms &p )
     }
 }
 
+static constexpr time_duration indoor_crop_light_interval = 10_minutes;
+
+bool map::crop_is_sheltered( const tripoint_bub_ms &p ) const
+{
+    return p.z() < 0 || has_flag( ter_furn_flag::TFLAG_INDOORS, p ) ||
+           ( has_loaded_submap( p + tripoint::above ) && is_roofed( p ) );
+}
+
+void map::process_indoor_crops( const map_simulation_regions *regions )
+{
+    if( crop_locs.empty() || !calendar::once_every( indoor_crop_light_interval ) ) {
+        return;
+    }
+    std::map<int, std::vector<tripoint_bub_ms>> crops_by_level;
+    for( const tripoint_bub_ms &p : crop_locs ) {
+        if( ( !regions || regions->owns( *this, project_to<coords::sm>( get_abs( p ) ) ) ) &&
+            crop_is_sheltered( p ) ) {
+            crops_by_level[p.z()].push_back( p );
+        }
+    }
+    const auto context = get_context_reference();
+    for( const auto &[z, crops] : crops_by_level ) {
+        // Each level needs its complete lightmap, including powered lamps and window light.
+        set_lightmap_cache_dirty( z );
+        build_map_cache( z );
+        for( const tripoint_bub_ms &p : crops ) {
+            grow_plant( p, nullptr, true, ambient_light_at( p ) >= LIGHT_AMBIENT_DIM );
+            if( !context ) {
+                return;
+            }
+        }
+    }
+}
+
 void map::grow_plant( const tripoint_bub_ms &p )
 {
     grow_plant( p, &get_avatar() );
 }
 
 void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_crop_interval )
+{
+    grow_plant( p, grower, finish_crop_interval, std::nullopt );
+}
+
+void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_crop_interval,
+                      std::optional<bool> indoor_light )
 {
     const furn_t &initial_furn = this->furn( p ).obj();
     if( !initial_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
@@ -11567,8 +11623,41 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
         return;
     }
 
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
-                seed->type->seed->get_growth_stages();
+    const islot_seed &seed_data = *seed->type->seed;
+    const auto &growth_stages = seed_data.get_growth_stages();
+    std::optional<time_duration> light_exposure;
+    const bool sheltered = indoor_light.has_value() || crop_is_sheltered( p );
+    const itype *fruit = sheltered && !seed_data.fruit_id.is_null() ?
+                         item::find_type( seed_data.fruit_id ) : nullptr;
+    if( sheltered && !( fruit && fruit->materials.count( material_mushroom ) > 0 ) ) {
+        if( !seed->has_var( "seed_effective_growth_turns" ) ) {
+            const int stage = iexamine::get_plant_current_stage_idx( *this, p, growth_stages );
+            const time_duration visible_growth = iexamine::get_plant_stage_threshold( seed_data, stage );
+            iexamine::set_plant_effective_growth_turns( *seed, to_turns<int>( visible_growth ) );
+        }
+        iexamine::set_plant_last_water_check( *seed, calendar::turn );
+        if( !indoor_light ) {
+            return;
+        }
+        if( !*indoor_light ) {
+            seed->erase_var( "crop_last_lit_turn" );
+            return;
+        }
+        const int now = to_turn<int>( calendar::turn );
+        const int last_lit_turn = static_cast<int>( seed->get_var( "crop_last_lit_turn", now ) );
+        const time_point last_lit = time_point::from_turn( last_lit_turn );
+        const time_duration elapsed = calendar::turn - last_lit;
+        seed->set_var( "crop_last_lit_turn", now );
+        // Only credit time between consecutive lit samples. Reloading a map or turning
+        // the light on cannot make up for an interval with no confirmed light.
+        if( elapsed <= 0_seconds || elapsed > indoor_crop_light_interval ) {
+            return;
+        }
+        light_exposure = elapsed;
+        iexamine::set_plant_last_water_check( *seed, last_lit );
+    } else {
+        seed->erase_var( "crop_last_lit_turn" );
+    }
 
     // Cache world options once per call; they are read repeatedly below.
     const float crop_growth_speed = ::get_option<float>( "CROP_GROWTH_SPEED" );
@@ -11585,7 +11674,7 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
     } else if( initial_max_water > 0 ) {
         const time_point last_check = iexamine::get_plant_last_water_check( *seed );
         if( !seed->has_var( "seed_effective_growth_turns" ) ||
-            last_check == time_point::from_turn( 0 ) ) {
+            ( !light_exposure && last_check == time_point::from_turn( 0 ) ) ) {
             // Old saves / first actualization: estimate effective growth time (base growth
             // units) from current age, applying both the furniture multiplier and the world
             // crop-growth-speed option so mapgen plants catch up consistently with player-grown
@@ -11608,7 +11697,13 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
             iexamine::set_plant_effective_growth_turns( *seed,
                     to_turns<int>( effective_growth_time ) );
         } else {
-            const time_duration elapsed = calendar::turn - last_check;
+            time_duration elapsed = calendar::turn - last_check;
+            if( light_exposure ) {
+                // Legacy irrigation runs in whole simulated days, which can span several lit periods.
+                elapsed += time_duration::from_turns( seed->get_var( "crop_pending_lit_turns", 0.0 ) );
+                seed->set_var( "crop_pending_lit_turns", to_turns<int>( elapsed % 1_days ) );
+                iexamine::set_plant_last_water_check( *seed, calendar::turn );
+            }
             const int elapsed_days = to_days<int>( elapsed );
             int effective_growth_turns = iexamine::get_plant_effective_growth_turns( *seed );
             effective_growth_time = time_duration::from_turns( effective_growth_turns );
@@ -11639,7 +11734,7 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
                                                                     crop_water_consumption ) );
 
                     // Rainwater collection for outdoor irrigable planters.
-                    if( !this->is_roofed( p ) ) {
+                    if( !sheltered ) {
                         const weather_type_id w = current_weather( this->get_abs( p ),
                                                   last_check + day * 1_days );
                         const int rain_water = iexamine::rain_water_for_weather( w );
@@ -11671,8 +11766,9 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
                 }
 
                 iexamine::set_plant_water( *seed, current_water );
-                iexamine::set_plant_last_water_check( *seed,
-                                                      last_check + elapsed_days * 1_days );
+                if( !light_exposure ) {
+                    iexamine::set_plant_last_water_check( *seed, last_check + elapsed_days * 1_days );
+                }
                 iexamine::set_plant_effective_growth_turns( *seed,
                         to_turns<int>( effective_growth_time ) );
             }
@@ -11683,8 +11779,8 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
         // authoritative effective-growth-time variable in sync so helpers that
         // rely on it agree with the stage computed here.
         const time_point last_check = iexamine::get_plant_last_water_check( *seed );
-        const time_duration elapsed = last_check == time_point::from_turn( 0 )
-                                      ? seed->age() : calendar::turn - last_check;
+        const time_duration elapsed = light_exposure.value_or( last_check == time_point::from_turn( 0 )
+                                      ? seed->age() : calendar::turn - last_check );
         if( seed->has_var( "seed_effective_growth_turns" ) ) {
             effective_growth_time = time_duration::from_turns(
                                         iexamine::get_plant_effective_growth_turns( *seed ) );
@@ -12115,8 +12211,12 @@ void map::index_submap_location( const submap &sm, const point_sm_ms &local,
                                  const tripoint_bub_ms &p )
 {
     const ter_t &ter = sm.get_ter( local ).obj();
-    if( !sm.get_furn( local )->emissions.empty() ) {
+    const furn_t &furn = sm.get_furn( local ).obj();
+    if( !furn.emissions.empty() ) {
         field_furn_locs.push_back( p );
+    }
+    if( furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+        crop_locs.insert( p );
     }
     if( !ter.emissions.empty() ) {
         field_ter_locs.push_back( p );
@@ -12176,7 +12276,11 @@ void map::actualize( const tripoint_rel_sm &grid, const map_simulation_regions *
             }
 
             if( furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
-                grow_plant( pnt );
+                if( crop_is_sheltered( pnt ) ) {
+                    grow_plant( pnt, &get_avatar(), false, false );
+                } else {
+                    grow_plant( pnt );
+                }
             }
             grow_terrain_plant( pnt );
 

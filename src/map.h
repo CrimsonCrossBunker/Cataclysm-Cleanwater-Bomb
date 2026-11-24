@@ -989,6 +989,7 @@ class map
         }
 
         void furniture_terrain_emit_fields( const map_simulation_regions *regions = nullptr );
+        void process_indoor_crops( const map_simulation_regions *regions = nullptr );
 
         int get_map_damage( const tripoint_bub_ms &p ) const;
         void set_map_damage( const tripoint_bub_ms &p, int dmg );
@@ -2158,6 +2159,9 @@ class map
 
         void player_in_field( Character &you );
         void monster_in_field( monster &z );
+        bool crop_is_sheltered( const tripoint_bub_ms &p ) const;
+        void grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_crop_interval,
+                         std::optional<bool> indoor_light );
         /**
          * As part of the map shifting, this shifts the trap locations stored in @ref traplocs.
          * @param shift The amount shifting in submap, the same as go into @ref shift.
@@ -2414,6 +2418,7 @@ class map
          * Vector of tripoints containing active field-emitting terrain
          */
         std::vector<tripoint_bub_ms> field_ter_locs;
+        std::set<tripoint_bub_ms> crop_locs;
         /**
          * Holds free'd caches because we probably don't have to return the memory to the OS.
          */
