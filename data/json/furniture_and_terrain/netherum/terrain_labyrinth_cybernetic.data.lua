@@ -1,6 +1,87 @@
 local ccb = require("ccb")
 
 ccb.content.define_terrain {
+    id = "t_nl_obelisk_0",
+    name = ccb.content.text("Obelisk0"),
+    description = ccb.content.text("Obelisk"),
+    looks_like = "f_machinery_old",
+    symbol = "A",
+    color = "green",
+    coverage = 70,
+    move_cost = -1,
+    flags = { "NOITEM", "NO_SCENT", "BLOCK_WIND" },
+    examine_handler = "examine_t_nl_obelisk_0",
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_obelisk_1",
+    copy_from = "t_nl_obelisk_0",
+    name = ccb.content.text("Obelisk1"),
+    description = ccb.content.text("Obelisk"),
+    symbol = "A",
+    color = "blue",
+    examine_handler = "examine_t_nl_obelisk_1",
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_obelisk_2",
+    copy_from = "t_nl_obelisk_0",
+    name = ccb.content.text("Obelisk2"),
+    description = ccb.content.text("Obelisk"),
+    symbol = "A",
+    color = "yellow",
+    examine_handler = "examine_t_nl_obelisk_2",
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_obelisk_3",
+    copy_from = "t_nl_obelisk_0",
+    name = ccb.content.text("Obelisk3"),
+    description = ccb.content.text("Obelisk"),
+    symbol = "A",
+    color = "red",
+    examine_handler = "examine_t_nl_obelisk_3",
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_obelisk_mission_boiler",
+    name = ccb.content.text("Obelisk"),
+    description = ccb.content.text("A tall, drab grey, metallic pillar covered in swirling patterns.  You could Examine it closer to try and discern the shapes."),
+    looks_like = "f_machinery_old",
+    symbol = "A",
+    color = "green",
+    coverage = 70,
+    move_cost = -1,
+    flags = { "NOITEM", "NO_SCENT", "BLOCK_WIND" },
+    examine_handler = "examine_t_nl_obelisk_mission_boiler",
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_obelisk_mission_water_cooler",
+    name = ccb.content.text("Obelisk"),
+    description = ccb.content.text("A tall, cerulean-blue, metallic pillar covered in swirling patterns.  You could Examine it closer to try and discern the shapes."),
+    symbol = "A",
+    color = "cyan",
+    coverage = 70,
+    move_cost = -1,
+    flags = { "NOITEM", "NO_SCENT", "BLOCK_WIND" },
+    examine_handler = "examine_t_nl_obelisk_mission_water_cooler",
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_mission_water_cooler",
+    name = ccb.content.text("bulbous water tank"),
+    description = ccb.content.text("This would almost look like an earthly water cooler, except the base is made up of cobbled together scrap metal, and the tank is a clouded fishbowl of green liquid.  Where the tap would be is a very thin, sharp spike, which feeds a dribble-tube that might flow into the tank itself."),
+    symbol = "W",
+    color = "blue",
+    looks_like = "f_water_purifier",
+    coverage = 70,
+    move_cost = -1,
+    flags = { "NOITEM", "NO_SCENT", "BLOCK_WIND" },
+    examine_handler = "examine_t_nl_mission_water_cooler",
+}
+
+ccb.content.define_terrain {
     id = "t_nl_door_l",
     name = ccb.content.text("mysterious locked door"),
     looks_like = "t_door_metal_locked",
@@ -453,4 +534,52 @@ ccb.content.define_terrain {
         terrain = "t_nl_metal_floor",
         drops = { { item = "mc_steel_chunk", count = { 1, 4 } }, { item = "scrap", count = { 3, 6 } } },
     },
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_stairs_up",
+    looks_like = "t_stairs_up",
+    name = ccb.content.text("mysterious stairs"),
+    description = ccb.content.text("A tightly wound spiral staircase vanishing into the depths above."),
+    symbol = "<",
+    color = "yellow",
+    move_cost = 2,
+    connect_groups = "INDOORFLOOR",
+    flags = { "SUPPORTS_ROOF", "TRANSPARENT", "GOES_UP", "INDOORS", "PLACE_ITEM" },
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_stairs_up_false",
+    looks_like = "t_nl_stairs_up",
+    name = ccb.content.text("mysterious stairs"),
+    description = ccb.content.text("A tightly wound spiral staircase going up.  However, it stops at the ceiling, perfectly flush with it, as if it were supposed to go up, but couldn't."),
+    symbol = "<",
+    color = "yellow",
+    move_cost = 2,
+    connect_groups = "INDOORFLOOR",
+    flags = { "SUPPORTS_ROOF", "TRANSPARENT", "INDOORS", "PLACE_ITEM" },
+}
+
+ccb.content.define_terrain {
+    id = "t_nl_stairs_down",
+    looks_like = "t_stairs_down",
+    name = ccb.content.text("mysterious stairs"),
+    description = ccb.content.text("A tightly wound spiral staircase vanishing into the depths below."),
+    symbol = ">",
+    color = "yellow",
+    move_cost = 2,
+    connect_groups = "INDOORFLOOR",
+    flags = { "SUPPORTS_ROOF", "TRANSPARENT", "GOES_DOWN", "INDOORS", "PLACE_ITEM" },
+}
+
+ccb.content.define_terrain {
+    id = "t_nl2_obelisk_altaros",
+    copy_from = "t_nl_obelisk_0",
+    name = ccb.content.text("Strange Obelisk"),
+    description = ccb.content.text("A dark gray obelisk.  Despite its solid appearance, the face of it seems to slightly ripple, as if it were sand, loosely suspended in space.  The depths of the ripples scream with an eerie, green fluorescence."),
+    symbol = "A",
+    color = "dark_gray",
+    light_color = { 220, 255, 200 },
+    light_emitted = 200,
+    examine_handler = "examine_t_nl2_obelisk_altaros",
 }
