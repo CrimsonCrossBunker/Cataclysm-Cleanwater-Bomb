@@ -67,6 +67,7 @@
     "monsters": [
       { "group": "GROUP_MANSION_PURSUERS", "weight": 1600 },
       { "monster": "mon_feral_fancy_rapier", "weight": 200 },
+      { "monster": "mon_feral_fancy_crossbow", "weight": 50, "cost_multiplier": 5 },
       { "monster": "mon_feral_fancy_rapier_fake", "weight": 300 }
     ]
   },

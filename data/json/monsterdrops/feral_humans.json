@@ -221,6 +221,12 @@
   {
     "type": "item_group",
     "subtype": "collection",
+    "id": "feral_fancy_death_drops_crossbow",
+    "entries": [ { "item": "rep_crossbow", "damage": [ 1, 3 ] }, { "group": "default_fancy_clothes" } ]
+  },
+  {
+    "type": "item_group",
+    "subtype": "collection",
     "id": "feral_armored_death_drops_mace",
     "entries": [ { "group": "maces", "prob": 100, "damage": [ 2, 4 ] }, { "group": "default_armored_clothes", "prob": 100 } ]
   },
@@ -565,6 +571,27 @@
     "ammo": 20,
     "entries": [
       { "group": "guns_pistol_common", "prob": 30, "charges": [ 1, 30 ], "damage": [ 0, 2 ] },
+      { "group": "mon_feral_prepper_gear" }
+    ]
+  },
+  {
+    "id": "mon_feral_prepper_gun_death_drops",
+    "type": "item_group",
+    "subtype": "collection",
+    "magazine": 100,
+    "entries": [
+      { "item": "m9", "charges": 0, "damage": [ 1, 4 ] },
+      { "item": "mace_pipe", "damage": [ 2, 4 ] },
+      { "group": "mon_feral_prepper_gear" }
+    ]
+  },
+  {
+    "id": "mon_feral_prepper_gear",
+    "type": "item_group",
+    "subtype": "collection",
+    "magazine": 100,
+    "ammo": 20,
+    "entries": [
       { "group": "clothing_outdoor_set", "damage": [ 1, 4 ] },
       { "group": "bags", "damage": [ 1, 4 ], "prob": 100 },
       { "group": "book_survival", "prob": 40 },
