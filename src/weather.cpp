@@ -1607,19 +1607,24 @@ void weather_manager::sample_room_heat( map &here, const tripoint_bub_ms &center
             }
             for( const point &step : directions ) {
                 const tripoint_bub_ms next = p + step;
-                if( !here.inbounds( next ) || !in_range( next ) ) {
+                if( !here.inbounds( next ) ) {
                     losses += 20;
                     continue;
                 }
                 const ter_t &terrain = here.ter( next ).obj();
                 if( terrain.movecost == 0 ) {
                     const bool exterior = here.is_outside( next + step );
-                    losses += terrain.has_flag( ter_furn_flag::TFLAG_WINDOW ) ? 7 :
-                              terrain.has_flag( ter_furn_flag::TFLAG_DOOR ) ? 4 : exterior ? 3 : 1;
+                    const double exterior_loss = terrain.has_flag( ter_furn_flag::TFLAG_WINDOW ) ? 4.0 :
+                                                 terrain.has_flag( ter_furn_flag::TFLAG_DOOR ) ? 3.0 : 1.5;
+                    losses += exterior ? exterior_loss : 0.5;
                     continue;
                 }
                 if( !indoors( next ) ) {
                     losses += 35 + 3 * windspeed;
+                    continue;
+                }
+                if( !in_range( next ) ) {
+                    losses += 2.5;
                     continue;
                 }
                 if( layer.assignments.emplace( here.get_abs( next ), room_id ).second ) {
@@ -1627,10 +1632,10 @@ void weather_manager::sample_room_heat( map &here, const tripoint_bub_ms &center
                 }
             }
         }
-        // Single-zone energy balance. Floor area estimates both background heat
-        // leakage (W/K) and the participating mass of the room contents (J/K).
+        // Allow for floor and ceiling losses plus background infiltration per square metre.
+        // Exterior walls, windows and open paths are accounted for separately above.
         const double area = tiles.size();
-        const double conductance = 3.5 * area + losses;
+        const double conductance = 0.85 * area + losses;
         layer.rooms.push_back( { retained / area, std::clamp( watts / conductance, -25.0, 65.0 ),
                                  12'000 * area / conductance } );
     };

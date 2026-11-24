@@ -41,6 +41,7 @@ void add_vehicle_appliance_menu( veh_menu &menu, map &here, vehicle &target,
 
 bool is_hvac_indoors( const map &here, const tripoint_bub_ms &position );
 bool has_wood_boiler( const map &here, const tripoint_bub_ms &position );
+void record_wood_boiler_burn( map &here, const tripoint_bub_ms &position, double fuel_grams );
 void set_hvac_link( item &unit, const tripoint_abs_ms &destination, const itype_id &material,
                     int quantity );
 void store_boiler_water( item &boiler, double liters, double temperature_c, bool clean );

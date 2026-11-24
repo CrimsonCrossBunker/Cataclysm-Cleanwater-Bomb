@@ -1028,6 +1028,7 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
                             !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_FIRE_CONTAINER );
     // A contained fire does not consume the terrain beneath its firebox.
     const bool can_burn = can_spread && ( ter.is_flammable() || frn.is_flammable() );
+    double boiler_fuel_grams = 0.0;
     // The huge indent below should probably be somehow moved away from here
     // without forcing the function to use i_at( p ) for fires without items
     if( !is_sealed && map_tile.get_item_count() > 0 ) {
@@ -1056,6 +1057,8 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
             // destroyed by the fire, this changes the item weight, but may not actually
             // destroy it. We need to spawn products anyway.
             const units::mass old_weight = fuel->weight( false );
+            const int old_burnt = fuel->burnt;
+            const float old_fuel = frd.fuel_produced;
             bool destroyed = fuel->burn( frd );
             // If the item is considered destroyed, it may have negative charge count,
             // see `item::burn?. This in turn means `item::weight` returns a negative value,
@@ -1063,6 +1066,17 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
             const units::mass new_weight = destroyed ? 0_gram : fuel->weight( false );
             if( old_weight != new_weight ) {
                 here.create_burnproducts( p, *fuel, old_weight - new_weight );
+            }
+            if( wood_boiler && frd.fuel_produced > old_fuel ) {
+                if( fuel->count_by_charges() ) {
+                    boiler_fuel_grams += units::to_gram( old_weight - new_weight );
+                } else if( destroyed || fuel->burnt > old_burnt ) {
+                    // Non-charge items only lose item mass when burning destroys them.
+                    const int threshold = std::max( 1, 3 * static_cast<int>( fuel->base_volume() / 250_ml ) );
+                    const int progress = destroyed ? threshold : std::min( threshold, fuel->burnt );
+                    const double fraction = static_cast<double>( std::max( 0, progress - old_burnt ) ) / threshold;
+                    boiler_fuel_grams += units::to_gram( old_weight ) * fraction;
+                }
             }
 
             if( destroyed ) {
@@ -1086,6 +1100,9 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
         here.spawn_items( p, new_content );
         smoke = roll_remainder( frd.smoke_produced );
         time_added = 1_turns * roll_remainder( frd.fuel_produced );
+    }
+    if( boiler_fuel_grams > 0.0 ) {
+        record_wood_boiler_burn( here, p, boiler_fuel_grams );
     }
 
     int part;
