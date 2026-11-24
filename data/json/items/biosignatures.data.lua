@@ -1,6 +1,65 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "feces_cow",
+    name = ccb.content.text("cow pie"),
+    copy_from = "feces_bird",
+    mass = "750 g",
+    volume = "250 ml",
+    description = ccb.content.text("A fresh cow pie; this could probably be used to make some great fertilizer."),
+    comestible = {},
+}
+
+ccb.content.define_item {
+    id = "feces_dog",
+    name = ccb.content.text("dog dung"),
+    copy_from = "feces_manure",
+    description = ccb.content.text("Droppings from a canine."),
+    comestible = {},
+}
+
+ccb.content.define_item {
+    id = "feces_manure",
+    name = ccb.content.plural_text("manure", "manure"),
+    copy_from = "feces_bird",
+    mass = "250 g",
+    volume = "125 ml",
+    description = ccb.content.text("Common manure, could probably be used to make some great fertilizer."),
+    comestible = {},
+}
+
+ccb.content.define_item {
+    id = "feces_roach",
+    name = ccb.content.plural_text("roach dirt", "roach dirt"),
+    copy_from = "feces_bird",
+    description = ccb.content.text("Large black pellets of rotting material."),
+    comestible = {},
+}
+
+ccb.content.define_item {
+    id = "fetid_goop",
+    name = "fetid goop",
+    description = "A foul-smelling goop.  It has a disgusting texture and a powerful smell that overwhelms every other smell around it.",
+    symbol = "~",
+    color = "white",
+    mass = "750 g",
+    volume = "1 L",
+    flags = { "INEDIBLE" },
+    use_actions = {
+        {
+            kind = "change_scent",
+            scent_typeid = "sc_fetid",
+            duration = "1 h",
+            moves = 200,
+            charges_to_use = 1,
+            effects = {
+                { id = "fetid_goop", duration = 3600 },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
     id = "insect_dust",
     name = ccb.content.plural_text("chitin dust", "chitin dust"),
     category = "spare_parts",
